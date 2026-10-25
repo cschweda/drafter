@@ -18,13 +18,20 @@ export interface Result {
 }
 
 /** Runs the CLI in this process, capturing what it prints. */
-export async function drafter(...args: string[]): Promise<Result> {
+export const drafter = (...args: string[]) => drafterAt({}, ...args);
+
+/** Runs the CLI as `drafter` does, with standard output a terminal when `terminal` says so. */
+export async function drafterAt(
+  { terminal = false }: { terminal?: boolean },
+  ...args: string[]
+): Promise<Result> {
   const out: Array<string | Uint8Array> = [];
   const err: string[] = [];
   const code = await run(args, {
     out: (data) => out.push(data),
     err: (text) => err.push(text),
     cwd: root,
+    terminal,
   });
   const encoder = new TextEncoder();
   const chunks = out.map((data) => (typeof data === 'string' ? encoder.encode(data) : data));

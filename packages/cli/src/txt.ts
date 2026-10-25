@@ -30,10 +30,14 @@ class Grid {
   }
 }
 
-/** A control character would break the grid, so it prints as a space, keeping its column. */
+/**
+ * A control character (C0, DEL, or C1) would break the grid or drive a
+ * terminal, so it prints as a space, keeping its column. So do the Unicode
+ * line and paragraph separators.
+ */
 const printable = (char: string) => {
   const c = char.charCodeAt(0);
-  return c < 0x20 || c === 0x7f || c === 0x85 || c === 0x2028 || c === 0x2029 ? ' ' : char;
+  return c < 0x20 || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029 ? ' ' : char;
 };
 
 const textOf = (line: LayoutLine) => line.runs.map((run) => run.text).join('');

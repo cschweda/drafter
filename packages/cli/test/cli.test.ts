@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { drafter, repo, tempDir } from './helpers';
+import { drafter, drafterAt, repo, tempDir } from './helpers';
 
 const short = 'fixtures/layout/short.fountain';
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -193,6 +193,54 @@ describe('drafter check', () => {
     const result = await drafter('check', join(dir(), 'missing.fountain'));
     expect(result.code).toBe(1);
     expect(result.err).toMatch(/can't read .*missing\.fountain/);
+  });
+});
+
+describe('untrusted text', () => {
+  const dir = tempDir();
+  // A control character other than tab, newline, or form feed: C0, DEL, or C1.
+  const hasRaw = (text: string) =>
+    [...text].some((char) => {
+      const c = char.charCodeAt(0);
+      return (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) || (c >= 0x7f && c <= 0x9f);
+    });
+
+  it('shows control characters from a script as escapes, never raw', async () => {
+    const script = join(dir(), 'hostile.fountain');
+    const name = '\u001b]0;pwned\u0007\u009b31m';
+    writeFileSync(
+      script,
+      `Action.\n\n/* drafter\n${JSON.stringify({ v: 1, template: name })}\n*/\n`,
+    );
+    const result = await drafter('check', script);
+    expect(hasRaw(result.err)).toBe(false);
+    expect(result.err).toContain('\\u001b]0;pwned\\u0007\\u009b31m');
+  });
+
+  it('does the same for a template file and a file name', async () => {
+    const bad = join(dir(), '\u001b[2Jbad.json');
+    writeFileSync(
+      bad,
+      JSON.stringify({
+        id: 'bad',
+        name: 'Bad',
+        extends: 'us-screenplay',
+        roles: { '\u001b[31mx': {} },
+      }),
+    );
+    const result = await drafter('check', short, '--template', bad);
+    expect(result.code).toBe(1);
+    expect(hasRaw(result.err)).toBe(false);
+    expect(result.err).toContain('\\u001b[31mx');
+  });
+
+  it("won't write a PDF to a terminal", async () => {
+    const result = await drafter('build', short, '--pdf', '-').catch(() => null);
+    expect(result?.code).toBe(0);
+    const terminal = await drafterAt({ terminal: true }, 'build', short, '--pdf', '-');
+    expect(terminal.code).toBe(1);
+    expect(terminal.err).toMatch(/terminal/);
+    expect(terminal.bytes.length).toBe(0);
   });
 });
 

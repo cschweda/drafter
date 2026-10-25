@@ -48,8 +48,8 @@ describe('renderText', () => {
     expect(output.endsWith('\n')).toBe(true);
   });
 
-  it('prints control characters as spaces', () => {
-    expect(text('Bell\u0007rings.').split('\n')[6]).toBe(`${' '.repeat(15)}Bell rings.`);
+  it('prints control characters as spaces, C1 included', () => {
+    expect(text('Bell\u0007rings\u009b.').split('\n')[6]).toBe(`${' '.repeat(15)}Bell rings .`);
   });
 
   it('prints nothing for an empty script', () => {

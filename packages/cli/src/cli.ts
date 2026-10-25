@@ -19,13 +19,33 @@ export interface IO {
   err(text: string): void;
   /** Where relative paths start. */
   cwd: string;
+  /** Standard output is a terminal, so binary output there is refused. */
+  terminal?: boolean;
 }
 
 const nodeIO = (): IO => ({
   out: (data) => process.stdout.write(data),
   err: (text) => process.stderr.write(text),
   cwd: process.cwd(),
+  terminal: process.stdout.isTTY === true,
 });
+
+/**
+ * Text made safe to print: control characters other than tab, newline, and
+ * form feed (C0, DEL, and C1) show as `\u001b`-style escapes. File names,
+ * scripts, and templates can come from anyone, and a raw escape sequence in
+ * one could restyle, retitle, or rewrite the user's terminal.
+ */
+function inert(text: string): string {
+  let out = '';
+  for (const char of text) {
+    const c = char.charCodeAt(0);
+    const control =
+      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) || (c >= 0x7f && c <= 0x9f);
+    out += control ? `\\u${c.toString(16).padStart(4, '0')}` : char;
+  }
+  return out;
+}
 
 /** A problem the user can fix: printed as a message, without a stack trace. */
 class CliError extends Error {}
@@ -44,7 +64,13 @@ interface BuildOptions {
  * Runs the `drafter` command line on `argv` (without the node and script
  * paths) and resolves to the exit code: 0 on success, 1 on any error.
  */
-export async function run(argv: readonly string[], io: IO = nodeIO()): Promise<number> {
+export async function run(argv: readonly string[], streams: IO = nodeIO()): Promise<number> {
+  // Everything printed as text goes through inert(); PDF bytes go out as they are.
+  const io: IO = {
+    ...streams,
+    out: (data) => streams.out(typeof data === 'string' ? inert(data) : data),
+    err: (text) => streams.err(inert(text)),
+  };
   let code = 0;
   const handle =
     <A extends unknown[]>(task: (...args: A) => Promise<number>) =>
@@ -111,6 +137,11 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
   if (outputs.length === 0) outputs.push(['pdf', defaultPdf(input)]);
   if (outputs.filter(([, target]) => target === '-').length > 1) {
     throw new CliError('only one output can go to standard output (-)');
+  }
+  if (io.terminal && outputs.some(([kind, target]) => kind === 'pdf' && target === '-')) {
+    throw new CliError(
+      "won't write a PDF to a terminal; redirect standard output to a file or a pipe",
+    );
   }
   const source = resolve(io.cwd, input);
   for (const [, target] of outputs) {
