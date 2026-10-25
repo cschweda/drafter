@@ -11,7 +11,7 @@ Every dependency is listed here with the reason it's needed. A new one gets an e
 | `@drafter/fountain` | nothing | The parser is self-contained. |
 | `@drafter/templates` | `@drafter/fountain` | Types only (`Block`, `BlockKind`); nothing from it runs. |
 | `@drafter/layout` | `@drafter/fountain`, `@drafter/templates` | Reads parsed documents and resolves roles. |
-| `@drafter/render-pdf` (next) | `pdf-lib`, `@pdf-lib/fontkit` | Writing PDF files. pdf-lib can only embed the 14 standard PDF fonts without fontkit, and Drafter embeds Courier Prime. General-purpose PDF libraries, not screenwriting tools. |
+| `@drafter/render-pdf` | `@drafter/layout`, `@drafter/templates`, `pdf-lib`, `@pdf-lib/fontkit` | Writing PDF files, from layouts, at the template's paper size. pdf-lib can only embed the 14 standard PDF fonts without fontkit, and Drafter embeds Courier Prime. General-purpose PDF libraries, not screenwriting tools. Its tests also use `@drafter/fountain`, as a development dependency. |
 | `@drafter/cli` (next) | `commander` | Command-line argument parsing. General-purpose. |
 
 ## Development
@@ -25,7 +25,7 @@ All of these are general-purpose tools, declared once at the repository root.
 | `vitest` | Tests and benchmarks. |
 | `fast-check` | Property tests: generated scripts and arbitrary strings. |
 | `@biomejs/biome` | Formatting and linting. |
-| `pdfjs-dist` (next) | Reading text and positions back out of generated PDFs in tests. |
+| `pdfjs-dist` | Reading text and positions back out of generated PDFs in tests. Mozilla's general-purpose PDF reader. |
 
 ## Fonts
 

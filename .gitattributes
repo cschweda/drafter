@@ -1,3 +1,6 @@
 # Fixtures must stay byte-exact: some test CRLF line endings and a leading BOM.
 fixtures/** -text
 samples/** -text
+
+# Fonts are binary.
+*.ttf binary

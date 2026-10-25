@@ -45,3 +45,15 @@ Choices made where the design documents are silent, and contradictions between t
 - **2026-10-25** — **Title page (`centered-feature`).** Title, Credit, Author or Authors, and Source print centered in that order, from line 22 of the paper, one blank line between groups; Contact prints bottom left and Draft date (or Date) bottom right, level with the contact block's last line, each wrapped to half the text column so they can't collide. Copyright, Notes, and unknown keys don't print. A title page with nothing to print is left out, and the script still starts on page 1. When the fields don't fit, the centered block moves up, and if they still don't fit, the excess is dropped with a `title-page-overflow` diagnostic.
 - **2026-10-25** — **Page furniture.** A page number sits flush with the right margin: its column is the text width minus its length. The template's `header` and `footer` are copied to every body page with `{n}` replaced by the page number. Layout diagnostics are all warnings, listed in document order.
 - **2026-10-25** — **Property tests.** "No page starts with a blank line" applies to body pages; the title page is placed, not filled, and starts blank by design. "No character or scene-heading line is the last content line on a page" is tested as no keep-with-next role (cues, headings, parentheticals, act and scene headings) at the foot of a page, except where a forced break or the end of the script ends it.
+
+## `@drafter/render-pdf`
+
+- **2026-10-25** — **Spaces are position.** A run's leading and trailing spaces move the pen instead of being drawn, so every visible character still lands on its column and text extraction doesn't pick up stray spaces. Control characters, which pdf-lib would treat as line breaks, print as spaces, and unpaired surrogates as U+FFFD, each in the column the character took.
+- **2026-10-25** — **Fonts.** The caller passes all four Courier Prime styles, and `renderPdf` checks for them up front, but only the styles a script uses are embedded, each as a subset. Each embedded font gets a fixed name, because pdf-lib otherwise tags a subset's name at random.
+- **2026-10-25** — **Same input, same bytes.** The document carries no creation or modification date and no random identifiers. Its creator is "Drafter", and its title is the title page's title when there is one.
+- **2026-10-25** — **Header and footer.** The template's header prints at column 0 on the page number's line, `numbering.line` from the top edge; the footer prints at column 0 the same distance from the bottom edge. The design gives them no position.
+- **2026-10-25** — **An empty layout prints one blank page** at the template's paper size. pdf-lib would add a default page of its own to an empty document, but not at the template's size.
+
+## Tooling, continued
+
+- **2026-10-25** — **Node 22.13 or later.** `pdfjs-dist` 6, used in the PDF tests, requires Node 22.13, and `commander` 15, the CLI's argument parser, requires 22.12. The root `engines` field says 22.13; `.nvmrc` stays `22`, which installs the latest 22.x.

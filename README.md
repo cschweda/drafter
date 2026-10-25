@@ -3,7 +3,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: Phase 0, the engine, is under way.** The Fountain parser, the template loader, and the pagination engine are built and tested; the PDF renderer and the CLI are next. There is no app yet. See the [roadmap](#roadmap).
+> **Status: Phase 0, the engine, is under way.** The Fountain parser, the template loader, the pagination engine, and the PDF renderer are built and tested; the CLI is next. There is no app yet. See the [roadmap](#roadmap).
 
 drafter.dev (planned) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
@@ -258,7 +258,7 @@ Drafter tells you when the recovery copy isn't safe, because the browser blocks 
 
 ## Development
 
-You need Node 22 (pinned in `.nvmrc`) and pnpm 10.
+You need Node 22.13 or later (`.nvmrc` pins Node 22) and pnpm 10.
 
 ```sh
 nvm use               # Node 22, from .nvmrc
@@ -271,7 +271,7 @@ pnpm biome check .
 
 `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
 
-Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), and [`layout`](packages/layout/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
+Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), and [`render-pdf`](packages/render-pdf/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
 The CLI arrives at the end of Phase 0:
 
