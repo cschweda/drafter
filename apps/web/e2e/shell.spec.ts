@@ -59,6 +59,21 @@ test.describe('on a desktop', () => {
     );
   });
 
+  test('marks the selected tab in forced-colors mode', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'forced colors are emulated in Chromium');
+    // Windows High Contrast drops backgrounds and box-shadows, which is how
+    // the selected tab normally stands out; a border survives.
+    await page.emulateMedia({ forcedColors: 'active' });
+    const right = page.getByRole('tablist', { name: 'Right pane' });
+    const bottomBorder = (name: string) =>
+      right.getByRole('tab', { name }).evaluate((el) => {
+        const style = getComputedStyle(el);
+        return `${style.borderBottomStyle} ${style.borderBottomWidth}`;
+      });
+    expect(await bottomBorder('Script')).toMatch(/^solid [1-9]/);
+    expect(await bottomBorder('Problems')).not.toMatch(/^solid/);
+  });
+
   test('moves focus between the panes with F6', async ({ page }) => {
     await page.getByRole('tabpanel', { name: 'Source' }).focus();
     await page.keyboard.press('F6');
@@ -145,12 +160,29 @@ test.describe('on a phone', () => {
     await expect(page.getByRole('tabpanel', { name: 'Script' })).toBeVisible();
   });
 
-  test('fits a 360px screen without horizontal scrolling', async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 740 });
+  // How far the page is wider than the screen at `width`. It loads at that
+  // width, as a phone would, and waits for images and fonts, so the logo has
+  // settled. In mobile emulation the layout viewport (innerWidth) grows to fit
+  // whatever overflows, so measure against the root's client width instead.
+  async function overflowAt(page: Page, width: number) {
+    await page.setViewportSize({ width, height: 740 });
+    await page.reload();
     await expect(page.getByRole('tablist', { name: 'Panes' })).toBeVisible();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    ).toBe(true);
+    return page.evaluate(async () => {
+      await document.fonts.ready;
+      await Promise.all([...document.images].map((img) => img.decode().catch(() => undefined)));
+      return document.documentElement.scrollWidth - document.documentElement.clientWidth;
+    });
+  }
+
+  test('fits a 360px screen without horizontal scrolling', async ({ page }) => {
+    expect(await overflowAt(page, 360)).toBeLessThanOrEqual(0);
+  });
+
+  test('fits a 320px screen without horizontal scrolling, as WCAG reflow requires', async ({
+    page,
+  }) => {
+    expect(await overflowAt(page, 320)).toBeLessThanOrEqual(0);
   });
 
   test('has no accessibility violations on a phone', async ({ page }) => {

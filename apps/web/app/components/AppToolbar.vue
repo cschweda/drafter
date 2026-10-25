@@ -19,7 +19,12 @@ const ACTIONS = [
 <template>
   <header class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter" class="logo">
+    <!-- Below 400px the wordmark gives way to the mark, so the toolbar fits a
+         320px screen (WCAG 1.4.10). -->
+    <picture class="logo">
+      <source media="(max-width: 399.98px)" srcset="/mark.svg">
+      <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
+    </picture>
     <div class="actions">
       <button
         v-for="action in ACTIONS"
@@ -64,6 +69,10 @@ const ACTIONS = [
   border-bottom: 1px solid var(--line);
 }
 .logo {
+  flex: none;
+}
+.logo img {
+  display: block;
   height: 28px;
   width: auto;
 }
@@ -147,7 +156,7 @@ kbd {
   .toolbar {
     padding: 8px 10px;
   }
-  .logo {
+  .logo img {
     height: 22px;
   }
   .label {

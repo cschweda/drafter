@@ -13,6 +13,8 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'phone', use: { ...devices['Pixel 7'] } },
+    // iPhones run WebKit whatever the browser, so phone sizes get it too.
+    { name: 'phone-webkit', use: { ...devices['iPhone SE'] } },
   ],
   webServer: {
     command: 'node scripts/serve.mjs .output/public 4173',

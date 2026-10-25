@@ -288,7 +288,7 @@ pnpm -r test          # every package's tests
 pnpm bench            # parse and pagination timings for a feature-length script
 pnpm biome check .
 pnpm dev              # the app, at http://localhost:3000
-pnpm e2e              # builds the app and runs its browser tests
+pnpm e2e              # builds the app from clean, as Netlify would, and runs its browser tests
 ```
 
 The browser tests need Playwright's browsers, installed once with `pnpm --filter @drafter/web exec playwright install chromium firefox webkit`.

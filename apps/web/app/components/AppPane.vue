@@ -108,6 +108,13 @@ function onKeydown(event: KeyboardEvent, index: number) {
   color: var(--text);
   box-shadow: inset 0 -2px 0 var(--heading);
 }
+/* Forced colors (Windows High Contrast) drop the background and the
+   box-shadow, so a border marks the selected tab there. */
+@media (forced-colors: active) {
+  .tab.on {
+    border-bottom: 2px solid CanvasText;
+  }
+}
 .slim {
   padding: 5px 12px;
   background: var(--chrome-2);

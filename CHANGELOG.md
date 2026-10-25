@@ -38,7 +38,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Page shell:** `/` is prerendered with Drafter's title, description, and share image. Its loading screen carries the description, for search engines and for readers without JavaScript.
   - **Defaults:** dark by default, with fonts and icons served from drafter.dev itself.
   - **Commands:** `pnpm dev` runs it, and `pnpm e2e` builds it and runs its browser tests in Chromium, Firefox, WebKit, and a phone-sized Chromium.
-- Netlify configuration, `apps/web/netlify.toml`, with the build command, the publish directory, and Node 22. Netlify's site settings had the site on Node 16; this overrides them.
+- Netlify configuration, `apps/web/netlify.toml`, with the build command, the publish directory, and Node 22. Netlify's site settings had the site on Node 16; this overrides them. The app pins Nitro's `static` preset, since on Netlify Nitro would otherwise write the site somewhere the publish directory doesn't look. `pnpm e2e` builds from clean, with Netlify's environment variable set, to keep it that way.
   - **Content security policy:** every build writes a `_headers` file whose policy allows only the inline scripts that build produced, by hash.
   - **Other headers:** `nosniff`, no referrer, no camera, microphone, or location access, and long caching for the fingerprinted build files.
   - **Tests:** the browser tests run under the policy and check that it blocks nothing Drafter needs. They also check that a visitor who chose the light theme gets it before the page draws.
@@ -47,7 +47,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Keyboard:** the divider resizes with a pointer or arrow keys, and F6 moves between the panes.
   - **Toolbar:** round action buttons and a light/dark switch that's remembered.
   - **Status bar** along the bottom.
-  - **Phones:** below 1024px, one pane shows at a time, opening on the Script tab.
+  - **Phones:** below 1024px, one pane shows at a time, opening on the Script tab. The page fits a 320px screen without scrolling sideways, tested in Chromium on a Pixel 7 and in WebKit on an iPhone SE.
+  - **High contrast:** in Windows High Contrast, a border marks the selected tab.
   - **Colors:** design tokens for both themes, with every text color tested for WCAG contrast.
   - **Tests:** the browser tests check the layout, keyboard use, visible focus on every control, and axe in both themes. The toolbar's actions wait for the editor and files in later plans.
 

@@ -15,6 +15,10 @@ export default defineNuxtConfig({
   // The editor runs in the browser; `/` is prerendered as a shell that
   // carries the metadata and the loading template's description.
   routeRules: { '/': { ssr: false } },
+  // Always plain static files in .output/public. On Netlify, Nitro would
+  // otherwise pick its netlify-static preset and write dist/ instead, which
+  // netlify.toml's publish directory and scripts/csp.mjs don't read.
+  nitro: { preset: 'static' },
   devtools: { enabled: false },
   telemetry: false,
   app: {
