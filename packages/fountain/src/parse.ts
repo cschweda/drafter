@@ -440,7 +440,10 @@ function readTitlePage(
     const current = fields[fields.length - 1];
     if (current && /^(?:\t| {3,})/.test(line.keptText)) {
       const value = line.keptText.trim();
-      if (value) current.value.push(value);
+      if (value) {
+        current.value.push(value);
+        current.runs.push(parseInline(source, trim(source, line.kept), true));
+      }
       current.span.to = line.to;
       k++;
       continue;
@@ -449,7 +452,13 @@ function readTitlePage(
     if (!keyLine) return none;
     const { key, value } = keyLine;
     if (TITLE_KEYS.has(key.toLowerCase())) recognized = true;
-    fields.push({ key, value: value ? [value] : [], span: { from: line.from, to: line.to } });
+    const valueSegs = trim(source, dropStart(line.kept, line.keptText.indexOf(':') + 1));
+    fields.push({
+      key,
+      value: value ? [value] : [],
+      runs: value ? [parseInline(source, valueSegs, true)] : [],
+      span: { from: line.from, to: line.to },
+    });
     k++;
   }
   if (!recognized) return none;
@@ -496,6 +505,7 @@ function readMeta(ctx: Ctx, blocks: Block[], diagnostics: ParseDiagnostic[]): Dr
 class LineNode implements Line {
   readonly span: Span;
   readonly raw: string;
+  readonly transparent: boolean;
   readonly #ctx: Ctx;
   readonly #info: LineInfo;
   readonly #kind: BlockKind;
@@ -505,6 +515,7 @@ class LineNode implements Line {
   constructor(ctx: Ctx, info: LineInfo, kind: BlockKind, forcedFirst: boolean) {
     this.span = { from: info.from, to: info.to };
     this.raw = info.raw;
+    this.transparent = info.transparent;
     this.#ctx = ctx;
     this.#info = info;
     this.#kind = kind;

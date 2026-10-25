@@ -71,6 +71,27 @@ describe('document structure', () => {
     ]);
   });
 
+  it('marks a line holding only a note as transparent, but not a two-space line', () => {
+    const cue = parse("MARGARET\n[[She doesn't look up.]]\nYou said you'd call.\n").blocks[0];
+    expect(cue?.lines.map((l) => l.transparent)).toEqual([false, true]);
+    const speech = parse('MARGARET\nTen.\n  \nEleven.\n').blocks[1];
+    expect(speech?.lines.map((l) => l.transparent)).toEqual([false, false, false]);
+  });
+
+  it('parses emphasis in title-page values, inline and continued', () => {
+    const fields = parse('Title:\n    _**THE CALL**_\nAuthor: *A.* Writer\n\nAction.\n').titlePage
+      ?.fields;
+    const styled = (runs: InlineRun[][] | undefined) =>
+      runs?.map((line) => line.map((r) => [r.text, style(r)]));
+    expect(styled(fields?.[0]?.runs)).toEqual([[['THE CALL', 'bu']]]);
+    expect(styled(fields?.[1]?.runs)).toEqual([
+      [
+        ['A.', 'i'],
+        [' Writer', ''],
+      ],
+    ]);
+  });
+
   it('gives page breaks no semantic data', () => {
     expect(parse('===\n').blocks[0]?.sem).toBeNull();
   });

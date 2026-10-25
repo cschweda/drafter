@@ -35,6 +35,11 @@ export interface Line {
   readonly raw: string;
   /** The printable text as styled runs, with markers, notes, and boneyard removed. */
   readonly inline: InlineRun[];
+  /**
+   * The line holds only notes or boneyard: it prints nothing. (An empty line
+   * that isn't transparent, such as a two-space line in a speech, prints blank.)
+   */
+  readonly transparent: boolean;
 }
 
 export interface SceneHeadingSem {
@@ -102,6 +107,8 @@ export interface TitleField {
   key: string;
   /** One entry per value line: the inline value, then any indented continuation lines. */
   value: string[];
+  /** The printable text of each value line as styled runs, emphasis markers removed. */
+  runs: InlineRun[][];
   span: Span;
 }
 
@@ -146,7 +153,8 @@ export interface TextChange {
 
 export interface DocJSON {
   v: 1;
-  titlePage: TitlePage | null;
+  /** Derived runs are left out, as they are for lines. */
+  titlePage: { span: Span; raw: string; fields: Array<Omit<TitleField, 'runs'>> } | null;
   blocks: Array<{
     kind: BlockKind;
     forced: boolean;
