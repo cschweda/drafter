@@ -1,0 +1,67 @@
+{
+  "template": "us-screenplay",
+  "pages": 4,
+  "firstLineOf": {
+    "4": {
+      "page": 1,
+      "line": 0
+    },
+    "6": {
+      "page": 1,
+      "line": 2
+    },
+    "27": {
+      "page": 1,
+      "line": 23,
+      "col": 22
+    },
+    "28": {
+      "page": 1,
+      "line": 24,
+      "col": 10
+    },
+    "33": {
+      "page": 1,
+      "line": 29
+    },
+    "54": {
+      "page": 1,
+      "line": 50,
+      "col": 53
+    },
+    "56": {
+      "page": 2,
+      "line": 0
+    },
+    "58": {
+      "page": 2,
+      "line": 2
+    },
+    "84": {
+      "page": 2,
+      "line": 28
+    },
+    "85": {
+      "page": 2,
+      "line": 29,
+      "col": 16
+    },
+    "86": {
+      "page": 2,
+      "line": 30
+    },
+    "90": {
+      "page": 2,
+      "line": 34
+    },
+    "111": {
+      "page": 3,
+      "line": 0,
+      "col": 26
+    }
+  },
+  "textOf": {
+    "54": "CUT TO:",
+    "111": "THE END"
+  }
+}

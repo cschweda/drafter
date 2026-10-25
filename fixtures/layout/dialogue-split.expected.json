@@ -1,0 +1,85 @@
+{
+  "template": "templates/split-test.json",
+  "pages": 5,
+  "firstLineOf": {
+    "1": {
+      "page": 1,
+      "line": 0
+    },
+    "50": {
+      "page": 1,
+      "line": 49,
+      "col": 22
+    },
+    "51": {
+      "page": 1,
+      "line": 50,
+      "col": 10
+    },
+    "60": {
+      "page": 2,
+      "line": 7
+    },
+    "104": {
+      "page": 3,
+      "line": 0,
+      "col": 22
+    },
+    "105": {
+      "page": 3,
+      "line": 1
+    },
+    "112": {
+      "page": 3,
+      "line": 8
+    },
+    "154": {
+      "page": 4,
+      "line": 0,
+      "col": 22
+    },
+    "155": {
+      "page": 4,
+      "line": 1
+    },
+    "160": {
+      "page": 4,
+      "line": 6
+    },
+    "203": {
+      "page": 4,
+      "line": 49,
+      "col": 22
+    },
+    "204": {
+      "page": 4,
+      "line": 50
+    }
+  },
+  "synthetic": [
+    {
+      "page": 1,
+      "line": 53,
+      "col": 22,
+      "text": "(MORE)"
+    },
+    {
+      "page": 2,
+      "line": 0,
+      "col": 22,
+      "text": "MARGARET (CONT'D)"
+    },
+    {
+      "page": 4,
+      "line": 53,
+      "col": 22,
+      "text": "(MORE)"
+    },
+    {
+      "page": 5,
+      "line": 0,
+      "col": 22,
+      "text": "DANNY (V.O.) (CONT'D)"
+    }
+  ]
+}

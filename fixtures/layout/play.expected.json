@@ -1,0 +1,103 @@
+{
+  "template": "stage-play-standard",
+  "pages": 1,
+  "firstLineOf": {
+    "1": {
+      "page": 1,
+      "line": 0,
+      "col": 26
+    },
+    "3": {
+      "page": 1,
+      "line": 2,
+      "col": 26
+    },
+    "5": {
+      "page": 1,
+      "line": 4,
+      "col": 10
+    },
+    "7": {
+      "page": 1,
+      "line": 6,
+      "col": 26
+    },
+    "8": {
+      "page": 1,
+      "line": 7,
+      "col": 10
+    },
+    "9": {
+      "page": 1,
+      "line": 8,
+      "col": 0
+    },
+    "11": {
+      "page": 1,
+      "line": 10,
+      "col": 22
+    },
+    "12": {
+      "page": 1,
+      "line": 11,
+      "col": 0
+    },
+    "14": {
+      "page": 1,
+      "line": 13,
+      "col": 10
+    },
+    "16": {
+      "page": 1,
+      "line": 15,
+      "col": 26
+    },
+    "17": {
+      "page": 1,
+      "line": 16,
+      "col": 10
+    },
+    "19": {
+      "page": 1,
+      "line": 18,
+      "col": 0
+    },
+    "21": {
+      "page": 1,
+      "line": 20,
+      "col": 26
+    },
+    "23": {
+      "page": 1,
+      "line": 22,
+      "col": 10
+    },
+    "25": {
+      "page": 1,
+      "line": 24,
+      "col": 10
+    },
+    "27": {
+      "page": 1,
+      "line": 26,
+      "col": 27
+    },
+    "28": {
+      "page": 1,
+      "line": 27,
+      "col": 0
+    }
+  },
+  "textOf": {
+    "1": "ACT ONE",
+    "3": "Scene 1",
+    "11": "DANNY (OFFSTAGE)",
+    "25": "INT. KITCHEN - NIGHT"
+  },
+  "diagnostics": [
+    {
+      "code": "disabled-element",
+      "line": 25
+    }
+  ]
+}

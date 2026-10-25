@@ -1,0 +1,46 @@
+{
+  "template": "us-screenplay",
+  "pages": 4,
+  "firstLineOf": {
+    "1": {
+      "page": 1,
+      "line": 0
+    },
+    "52": {
+      "page": 2,
+      "line": 0
+    },
+    "54": {
+      "page": 2,
+      "line": 2
+    },
+    "60": {
+      "page": 2,
+      "line": 8
+    },
+    "104": {
+      "page": 3,
+      "line": 0
+    },
+    "105": {
+      "page": 3,
+      "line": 1
+    },
+    "110": {
+      "page": 3,
+      "line": 6
+    },
+    "153": {
+      "page": 4,
+      "line": 0
+    },
+    "155": {
+      "page": 4,
+      "line": 2
+    },
+    "156": {
+      "page": 4,
+      "line": 3
+    }
+  }
+}

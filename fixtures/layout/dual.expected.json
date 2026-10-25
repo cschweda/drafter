@@ -1,0 +1,44 @@
+{
+  "template": "us-screenplay",
+  "pages": 1,
+  "firstLineOf": {
+    "1": {
+      "page": 1,
+      "line": 0
+    },
+    "3": {
+      "page": 1,
+      "line": 2,
+      "col": 8
+    },
+    "4": {
+      "page": 1,
+      "line": 3,
+      "col": 0
+    },
+    "7": {
+      "page": 1,
+      "line": 2,
+      "col": 40
+    },
+    "8": {
+      "page": 1,
+      "line": 3,
+      "col": 36
+    },
+    "9": {
+      "page": 1,
+      "line": 4,
+      "col": 32
+    },
+    "11": {
+      "page": 1,
+      "line": 6,
+      "col": 0
+    }
+  },
+  "textOf": {
+    "3": "MARGARET",
+    "7": "DANNY"
+  }
+}

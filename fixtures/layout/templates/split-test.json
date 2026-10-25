@@ -1,0 +1,8 @@
+{
+  "id": "split-test",
+  "name": "Split test (minLinesAfter 3)",
+  "extends": "us-screenplay",
+  "dialogueSplit": {
+    "minLinesAfter": 3
+  }
+}

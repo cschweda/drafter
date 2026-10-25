@@ -1,0 +1,30 @@
+{
+  "template": "us-screenplay",
+  "pages": 4,
+  "firstLineOf": {
+    "3": {
+      "page": 1,
+      "line": 0
+    },
+    "5": {
+      "page": 1,
+      "line": 2
+    },
+    "18": {
+      "page": 2,
+      "line": 0
+    },
+    "20": {
+      "page": 2,
+      "line": 2
+    },
+    "75": {
+      "page": 3,
+      "line": 0
+    },
+    "81": {
+      "page": 4,
+      "line": 0
+    }
+  }
+}

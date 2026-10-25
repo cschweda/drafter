@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Phase 0 workspace: pnpm 10, TypeScript 5.9 (strict, ESM), Vitest 5 with one project per package, tsdown builds, Biome, and fast-check.
 - `@drafter/fountain`: the lossless Fountain parser. `parse`, `reparse`, `print`, `toJSON`, `blockAt`, `characters`, and `locations`, with diagnostics for unclosed notes and boneyard, invalid metadata, and lenient readings. Tests cover 41 hand-written classification fixtures, 10,000 arbitrary strings for round-tripping, and 1,000 random edit sequences for `reparse`; `pnpm bench` times a 200 KB parse (about 1.5 ms against a 5 ms budget).
 - `@drafter/templates`: the template schema and loader, with inch conversion, `extends` merging, and validation that reports every problem with its path; `resolveRole`; and the `us-screenplay` and `stage-play-standard` built-ins.
+- Layout fixtures in `fixtures/layout/`: seven scripts with hand-derived page positions and the arithmetic behind them, written before the layout code and awaiting review.
 - `docs/DECISIONS.md` and `docs/DEFERRED.md`, recording choices the design leaves open and work saved for later phases.
 
 ### Changed
