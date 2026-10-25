@@ -29,6 +29,15 @@ importers:
 
   packages/fountain: {}
 
+  packages/layout:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+
   packages/templates:
     dependencies:
       '@drafter/fountain':

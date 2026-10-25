@@ -1,0 +1,35 @@
+{
+  "name": "@drafter/layout",
+  "version": "0.0.1",
+  "description": "Pagination for Drafter: lays a parsed Fountain script out on pages, as a template describes.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/layout"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  }
+}

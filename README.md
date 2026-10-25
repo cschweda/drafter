@@ -3,7 +3,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: design phase.** There is no code yet. The design lives in [`docs/`](docs/), and Phase 0, the engine, is next. See the [roadmap](#roadmap).
+> **Status: Phase 0, the engine, is under way.** The Fountain parser, the template loader, and the pagination engine are built and tested; the PDF renderer and the CLI are next. There is no app yet. See the [roadmap](#roadmap).
 
 drafter.dev (planned) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
@@ -145,7 +145,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 
 | Phase | Theme | Status |
 |---|---|---|
-| [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Next** |
+| [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **In progress** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | Planned |
 | [2](#phase-2--structure) | Structure: outline, cards, snapshots, spellcheck | Planned |
 | [3](#phase-3--formats) | Formats: Final Draft, TV, radio, UK, user templates | Planned |
@@ -257,23 +257,22 @@ Drafter tells you when the recovery copy isn't safe, because the browser blocks 
 
 ## Development
 
-There is nothing to build yet. After cloning, enable the repository's Git hooks once:
+You need Node 22 (pinned in `.nvmrc`) and pnpm 10.
 
 ```sh
-nvm use                                  # Node 22, from .nvmrc
-git config core.hooksPath .githooks      # enables the changelog check on push
-```
-
-Once Phase 0 lands:
-
-```sh
-pnpm install
+nvm use               # Node 22, from .nvmrc
+pnpm install          # also enables the repository's Git hooks
 pnpm -r build
-pnpm -r test
+pnpm -r test          # every package's tests
+pnpm bench            # parse and pagination timings for a feature-length script
 pnpm biome check .
 ```
 
-And the CLI:
+`pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
+
+Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), and [`layout`](packages/layout/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
+
+The CLI arrives at the end of Phase 0:
 
 ```sh
 drafter build script.fountain --pdf script.pdf --txt script.txt

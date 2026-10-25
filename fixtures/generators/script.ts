@@ -1,6 +1,7 @@
 // A deterministic, feature-length script for benchmarks: scenes are repeated,
 // with numbered locations, until the text reaches `minChars` characters. A
-// 120-page feature is about 200 KB.
+// 120-page feature is about 200 KB; these scenes have shorter lines than most
+// scripts, so 200 KB of them lays out to about 190 pages.
 
 function scene(n: number): string {
   return `INT. KITCHEN ${n} - NIGHT

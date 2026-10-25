@@ -19,7 +19,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/fountain`: the lossless Fountain parser. `parse`, `reparse`, `print`, `toJSON`, `blockAt`, `characters`, and `locations`, with diagnostics for unclosed notes and boneyard, invalid metadata, and lenient readings. Tests cover 41 hand-written classification fixtures, 10,000 arbitrary strings for round-tripping, and 1,000 random edit sequences for `reparse`; `pnpm bench` times a 200 KB parse (about 1.5 ms against a 5 ms budget).
 - `@drafter/fountain`: `line.transparent`, so pagination can tell a line holding only a note from a blank line inside a speech, and styled `runs` for title-page values.
 - `@drafter/templates`: the template schema and loader, with inch conversion, `extends` merging, and validation that reports every problem with its path; `resolveRole`; and the `us-screenplay` and `stage-play-standard` built-ins.
-- Layout fixtures in `fixtures/layout/`: seven scripts with hand-derived page positions and the arithmetic behind them, written before the layout code and awaiting review.
+- Layout fixtures in `fixtures/layout/`: seven scripts with hand-derived page positions and the arithmetic behind them, written and reviewed before the layout code existed.
+- `@drafter/layout`: `paginate` and `wrap`. Lays a parsed script out on pages as a template describes: word wrap, keep-with-next look-ahead, speeches split with `(MORE)` and `(CONT'D)`, the continued-speech `(CONT'D)`, dual dialogue, scene and page numbers, forced breaks that never make a blank page, and the `centered-feature` title page. Tested against the seven layout fixtures, structural properties over generated scripts in both built-in templates, and hostile inputs that must lay out in under a second; `pnpm bench` times a 190-page script at about 7 ms.
 - `docs/DECISIONS.md` and `docs/DEFERRED.md`, recording choices the design leaves open and work saved for later phases.
 
 ### Changed

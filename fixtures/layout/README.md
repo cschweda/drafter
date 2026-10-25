@@ -1,6 +1,6 @@
 # Layout fixtures
 
-Hand-derived page positions for `@drafter/layout`. **Status: awaiting the maintainer's review.** These expectations were written before any layout code, from technical design §5 and the template values, and should be frozen only once someone other than their author has checked them.
+Hand-derived page positions for `@drafter/layout`. **Status: reviewed and frozen.** These expectations were written before any layout code, from technical design §5 and the template values, and the maintainer reviewed them before the layout was built. Change one only with a derivation that shows why the old number was wrong.
 
 Each fixture has three files:
 
