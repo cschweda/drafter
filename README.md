@@ -43,7 +43,7 @@ Drafter does for screenwriting what the Inform 7 IDE does for interactive fictio
 │ You said you'd call.         │        You said you'd call.      │
 │                              │                                  │
 ├──────────────────────────────┴──────────────────────────────────┤
-│ p. 7 of 94 · 2 problems · autosaved 3s ago · US Screenplay      │
+│ p. 7 of 94 · 2 problems · saved 2 min ago · US Screenplay       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -64,7 +64,7 @@ Either pane can be collapsed, for "just write" or "just read."
 ## Principles
 
 1. **The source is the truth.** A `.fountain` file is the whole project. Anything Drafter adds, such as scene colors, a script dictionary, or revision marks, is stored in Fountain syntax or in a single metadata block at the end of the file that other Fountain tools ignore. The file stays readable in Beat, Highland, Slugline, BetterFountain, or any text editor.
-2. **Local-first, offline-first.** Your work lives in browser storage and, where the browser allows it, in a file on your own disk. Drafter is a static site: nothing to pay for, nothing to log into, nothing that can be shut off.
+2. **Local-first, offline-first.** Your work lives in files on your own disk, with a recovery copy in your browser. Drafter is a static site: nothing to pay for, nothing to log into, nothing that can be shut off.
 3. **Formats are templates, and templates are data.** US screenplay, stage play, sitcom, radio drama: each is a declarative JSON template that the engine applies. You can add your own.
 
 ## What makes it different
@@ -183,7 +183,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - The CodeMirror 6 source pane: highlighting driven by the one parser, Tab and Enter conveniences that insert plain Fountain, autocomplete for characters, locations, transitions, and sections, and folding by scene and section.
 - The Script tab, with live pagination in a Web Worker.
 - The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
-- Autosave to IndexedDB, a request for persistent storage, and honest notices where the browser may discard data.
+- Saving like a desktop app: Save and Save As to a `.fountain` file, a warning before leaving with unsaved changes, and an always-on recovery copy in the browser, with a warning when the browser may clear it.
 - Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF and `.txt`.
 - A template switcher for screenplay and stage play, with a sample script for each on the start screen.
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
@@ -241,16 +241,19 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 ## Storage and browsers
 
-Drafter never needs an account. Your script lives in your browser and, where possible, in a file on your disk.
+Drafter never needs an account, and it saves like a desktop app. Your script is a `.fountain` file: Save writes it, and Drafter warns you before you leave with unsaved changes. Behind that, your browser keeps a recovery copy of the script at all times, updated as you type, so a crash or a closed tab loses almost nothing.
 
 | | Chrome, Edge, and other Chromium browsers | Firefox | Safari |
 |---|---|---|---|
-| Autosave in the browser | ✅ | ✅ | ✅ |
-| Open a `.fountain` file and save back to it | ✅ | Download instead | Download instead |
+| Recovery copy in the browser | ✅ | ✅ | ✅ |
+| Save back to the file you opened | ✅ | Downloads a new copy | Downloads a new copy |
+| Warning before leaving with unsaved changes | ✅ | ✅ | ✅ |
 | Import by drag-and-drop or file picker | ✅ | ✅ | ✅ |
 | Export by download | ✅ | ✅ | ✅ |
 
-Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. Safari can clear storage for websites you haven't used recently. Installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it. On every browser, a download is a complete `.fountain` file, so any downloaded copy is a full backup. The full table and policy are in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
+Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. The leave warning is a desktop-browser feature; phones and tablets don't show it reliably, which is one more reason the recovery copy is always on.
+
+Drafter tells you when the recovery copy isn't safe, because the browser blocks storage or may clear it. Safari, for example, can clear storage for websites you haven't used recently; installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it. Every saved file is a complete `.fountain`, so any copy is a full backup. The full policy is in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
 
 ## Development
 

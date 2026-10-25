@@ -13,7 +13,7 @@ Drafter is to screenwriting what the Inform 7 IDE is to interactive fiction: a t
 Three principles, in priority order:
 
 1. **The source is the truth.** A `.fountain` file is the whole project. Anything Drafter adds (scene colors, synopses, notes, revision marks) is expressed in Fountain syntax or Fountain-compatible metadata so the file stays readable in Beat, Highland, Slugline, BetterFountain, or a text editor.
-2. **Local-first, offline-first, forever.** Browser storage plus your own disk. Static deploy. Nothing to pay for, nothing to log into, nothing that can be shut off.
+2. **Local-first, offline-first, forever.** Files on your own disk, with a recovery copy in the browser. Static deploy. Nothing to pay for, nothing to log into, nothing that can be shut off.
 3. **Formats are templates, templates are data.** US screenplay, stage play, sitcom, radio drama — each is a declarative template the engine applies. Users can add their own.
 
 Clean-room note: Drafter is built from the public Fountain spec and the publicly documented FDX XML format. It borrows *ideas* from Beat (GPL-3) and others but no code, so Drafter can be MIT-licensed. If you ever want to pull in Beat code, the whole project becomes GPL — decide once, early. Recommendation: **MIT**.
@@ -39,7 +39,7 @@ Clean-room note: Drafter is built from the public Fountain spec and the publicly
 │                                     │  │      You said you'd call.     │  │
 │                                     │  └───────────────────────────────┘  │
 ├─────────────────────────────────────┴─────────────────────────────────────┤
-│  status: p. 7 of 94 · 2 problems · autosaved 3s ago · US Screenplay        │
+│  status: p. 7 of 94 · 2 problems · saved 2 min ago · US Screenplay        │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,19 +163,20 @@ The file stays valid and readable everywhere; the block never interrupts the pro
 
 ## 6. Storage and files (no logins, ever)
 
-Three layers, all local:
+Drafter saves the way a desktop app does: the file is the document, and Drafter warns you before you lose unsaved work. Behind that, the browser keeps a recovery copy at all times. Three layers, all local:
 
-1. **IndexedDB (Dexie)** — the working copy, in every browser. Autosave on every change (debounced). Holds the project list, each project's source, a rolling snapshot history, templates, and UI state. This is what makes "close the tab, come back tomorrow" work without any file dialog.
-2. **A file on disk** — where the browser allows it, a project can be bound to `~/scripts/boca.fountain` and Drafter saves straight to it. Where it doesn't, "Save" means "download the `.fountain`," and the project list remains the working copy.
+1. **The file** — a script is a `.fountain` file you save, like any document. `Mod+S` saves and `Mod+Shift+S` saves as. Where the browser allows it, Drafter writes straight back to the file you opened or saved, such as `~/scripts/boca.fountain`. Where it doesn't, Save downloads a fresh copy of the file.
+2. **The recovery copy: IndexedDB (Dexie)** — kept in every browser, whether or not the script has a file, and written as you type. Holds the project list, each project's source, a rolling snapshot history, templates, and UI state. It's what brings your work back after a crash, a killed tab, or a closed window, and it makes "close the tab, come back tomorrow" work without any file dialog.
 3. **Export** — one-click to `.fountain` (canonical), `.fdx` (Final Draft), `.pdf`, `.html` (standalone, self-contained), `.txt` (fixed-width), `.md` outline, `.json` (CST). Import from `.fountain`, `.fdx`, `.txt`. PDF import is out of scope through Phase 4 — it is a bottomless well.
 
 **6.1 The honest browser table.** "Local-first forever" is only as strong as the browser's storage guarantees, and those differ a lot. This table is also user documentation; it should appear in the app's docs.
 
 | Capability | Chrome, Edge, and other Chromium browsers | Firefox | Safari (macOS / iOS) |
 |---|---|---|---|
-| Autosave to IndexedDB | ✅ | ✅ | ✅ |
+| Recovery copy in IndexedDB | ✅ | ✅ | ✅ |
 | Open a `.fountain` and **save back to the same file** | ✅ File System Access API | ❌ | ❌ |
-| Remember the file across sessions | ✅ (re-prompts for permission) | — | — |
+| Remember the file across sessions | ✅ (asks again, unless the user chose "Allow on every visit") | — | — |
+| Warning before leaving with unsaved changes | ✅ desktop | ✅ desktop | ✅ macOS; unreliable on iOS |
 | Drag-and-drop / picker import | ✅ | ✅ | ✅ |
 | Download exports | ✅ | ✅ | ✅ |
 | `navigator.storage.persist()` honored | Usually, after some site engagement | Prompts the user | Only when installed as an app |
@@ -184,13 +185,14 @@ Three layers, all local:
 
 Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari.
 
-**6.2 Policy for browsers without save-in-place.** Drafter does *not* force exports or nag on every edit — that punishes people for their browser choice and trains them to click through. Instead:
+**6.2 Saving like a desktop app.** The same rules apply in every browser:
 
-- Autosave works identically everywhere; the project list is the working copy.
-- On first use, request `storage.persist()`. If it is refused or unavailable, show one persistent, dismissible notice with the two real remedies: *install as an app* (which on Safari is what makes storage durable) or *download a copy*.
-- A quiet **"last downloaded N days ago"** indicator sits in the status bar; it turns amber after 7 days of edits without a download on browsers flagged as evictable, and never on Chromium with a bound file.
-- "Download on close" is an opt-in setting, off by default.
-- Every export is a complete `.fountain`, so a downloaded copy is a full backup, not a partial one.
+- **Unsaved changes are always visible.** The tab title and status bar mark a script whose changes aren't in its file yet, and the status bar says when it was last saved.
+- **Leaving with unsaved changes asks first.** Closing the tab, reloading, or leaving the site triggers the browser's own confirmation. Moving elsewhere inside the app, to the docs say, shows Drafter's own dialog: *Save*, *Leave without saving*, or *Cancel*. The browser's dialog uses its own generic wording and isn't reliable on phones and tablets, or when the system kills a tab; those are the cases the recovery copy exists for.
+- **The recovery copy is always on.** Every change reaches IndexedDB within a second of a pause in typing, and at least every few seconds while typing, never on a long timer. Reopening Drafter brings each script back as you left it, with unsaved changes included and still marked unsaved. *Revert to Saved* discards them.
+- **Drafter says when the recovery copy isn't safe.** On first use it requests `storage.persist()`. If storage is unavailable (blocked, full, or failing to write) or not persistent (refused, Safari without installing, or a private window), a warning says so and offers the real remedies: save to a file, or install Drafter as an app, which on Safari is what makes storage durable.
+- **Firefox, Safari, and Brave save by download.** A web page there can't write to a file it opened, so every Save downloads a fresh copy, and the leave warning effectively means "download again." Repeated saves pile up as numbered copies in the Downloads folder. That's the honest cost of app-style saving where the browser can't save in place.
+- Every saved file is a complete `.fountain`, so any copy is a full backup, not a partial one.
 
 Snapshots are stored as full text (scripts are tiny), with a retention schedule (all labeled; unlabeled thinned by age). A **Compare** view renders two snapshots as script pages with changed lines marked — the backbone of revision-mode export.
 
@@ -334,7 +336,7 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 **Phase 0 — Engine (no UI).** `@drafter/fountain` CST parser with lossless round-trip and fast full reparse; `@drafter/templates` schema + `us-screenplay` + `stage-play-standard`; `@drafter/layout` pagination; `@drafter/render-pdf`. A CLI that turns a `.fountain` into a correct PDF. Full test suite. *If this phase is right, everything else is UI.*
 
-**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the starter lint rules and Strict Fountain checks**; IndexedDB autosave with `storage.persist()` and the §6.2 notices; open/save `.fountain` (bound file on Chromium, download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**, each with a sample script on the start screen; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
+**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the starter lint rules and Strict Fountain checks**; app-style saving per §6.2 (Save and Save As, an unsaved-changes warning, and an always-on recovery copy in IndexedDB with `storage.persist()` and honest warnings); open/save `.fountain` (in place on Chromium, by download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**, each with a sample script on the start screen; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
 
 **Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats; nspell with project dictionary; Reference tab.
 
@@ -348,7 +350,7 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 ## 14. Open questions
 
-Decided (see `drafter-technical-design.md` §17 for the full log): MIT license and no GPL code; one parser with decoration-driven highlighting; CST with lossless print; full reparse on every change; lenient readings backed by Strict Fountain lint rules; notes end at a blank line; role rules match exact names; nspell-only spellcheck; characters × lines as units; metadata in a trailing boneyard block; download-not-force on Firefox/Safari; PDF import out of scope; no plugin API in v1.
+Decided (see `drafter-technical-design.md` §17 for the full log): MIT license and no GPL code; one parser with decoration-driven highlighting; CST with lossless print; full reparse on every change; lenient readings backed by Strict Fountain lint rules; notes end at a blank line; role rules match exact names; nspell-only spellcheck; characters × lines as units; metadata in a trailing boneyard block; app-style saving with an always-on recovery copy; PDF import out of scope; no plugin API in v1.
 
 Still open:
 

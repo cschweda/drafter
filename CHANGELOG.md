@@ -27,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - Pagination rules are now precise: keep-with-next look-ahead, corrected dialogue-split thresholds, engine-added `(CONT'D)` for continued speeches, and no blank pages from forced breaks.
   - Phase 0 tooling is updated: tsdown, Vitest `test.projects`, pnpm 10, `@pdf-lib/fontkit`, `pdfjs-dist`, `@types/node`, and a "Done means" command that works.
   - The kickoff prompt adds rules for changelog entries, commit trailers, and hook setup.
+- Saving now works like a desktop app (design, Phase 1): Save and Save As write a `.fountain` file, in place on Chromium and by download elsewhere; leaving with unsaved changes asks first; and an always-on recovery copy in IndexedDB is written as you type, with warnings when the browser blocks it or may clear it. This replaces the earlier policy of never warning.
 - Tightened three v0.2 rules found while writing the samples: a character cue is a name plus optional extensions and nothing else, so `MARGARET (60s) sits…` stays action; dual dialogue never takes a continued-speech `(CONT'D)`; and Brave saves by download, because it ships with the File System Access API turned off.
 
 [Unreleased]: https://github.com/cschweda/drafter/commits/main

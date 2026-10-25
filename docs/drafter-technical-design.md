@@ -44,7 +44,7 @@ No source code from Beat, Final Draft, Trelby, Scrite, BetterFountain, afterwrit
                      │      render-html            render-pdf   stats  │
                      │      (right pane)           (export)            │
                      └──────────────────────────────────────────────────┘
-                                  │ autosave               ▲ open/import
+                                  │ recovery copy          ▲ open/import
                                   ▼                        │
                      IndexedDB (Dexie) ◀──────────▶ File System Access / download
 ```
@@ -253,6 +253,8 @@ The keymap is a layer of *conveniences* over plain text editing. Every command i
 | `Mod+Shift+D` | in dialogue group | append `^` to the character line (dual dialogue) |
 | `Mod+/` | selection | wrap in `[[ … ]]` (note) |
 | `Mod+Shift+/` | selection | wrap in `/* … */` (boneyard) |
+| `Mod+S` | anywhere | save to file (§8.2), suppressing the browser's own Save Page |
+| `Mod+Shift+S` | anywhere | save as a new file |
 
 Auto-uppercasing applies only in cue mode after `Tab` on a blank line and in scene headings whose prefix matched rule 11. It is an input filter (`EditorState.transactionFilter`) that rewrites inserted text, so it is visible, immediate, and undoable, and it never retroactively changes text already typed. `Enter` never auto-indents, because a whitespace-only line can change how Fountain reads the lines around it (§2.5).
 
@@ -520,7 +522,7 @@ Every operation returns `TextChange[]` for the editor to apply in one transactio
 
 ```ts
 db.version(1).stores({
-  projects:  'id, title, updatedAt',        // { id, title, templateId, source, meta, updatedAt, fsHandleId? }
+  projects:  'id, title, updatedAt',        // { id, title, templateId, source, meta, updatedAt, savedHash?, savedAt?, fsHandleId? }
   snapshots: 'id, projectId, createdAt',    // { id, projectId, createdAt, source, label? }
   templates: 'id',                          // user templates
   handles:   'id',                          // { id, handle: FileSystemFileHandle }  (Chromium only)
@@ -530,31 +532,46 @@ db.version(1).stores({
 
 `templateId` and `meta` are caches derived from `source` on every save; when they disagree, `source` wins.
 
-### 8.2 Autosave
+### 8.2 Saving and the recovery copy
 
-Every editor transaction updates an in-memory `source`; a 750 ms trailing debounce writes `projects.source`. Pending writes also flush on `visibilitychange` (when the page is hidden) and `pagehide`. `beforeunload` can't wait for IndexedDB, so the design keeps the debounce short instead of relying on it. The status bar shows "autosaved Ns ago" from the last successful write, and turns amber if a write has failed (quota, private mode).
+Drafter saves like a desktop app (architecture §6.2). Two kinds of save never mix:
 
-### 8.3 Persistence hardening
+- **Save to file** is explicit. `Mod+S` writes the file; `Mod+Shift+S`, or the first save of a new script, picks a new one. On Chromium both go through the File System Access handle (§8.5); elsewhere they download a complete `.fountain`. A project records `savedHash`, a hash of the source as last saved to file, and `savedAt`, and the script has unsaved changes whenever the hash of the current source differs from `savedHash`. *Revert to Saved* restores the snapshot taken at the last save (§8.4).
+- **The recovery copy** is automatic. Every editor transaction updates an in-memory `source`; a 750 ms trailing debounce, with a 5-second maximum wait during continuous typing, writes `projects.source`. Pending writes also flush on `visibilitychange` (when the page is hidden) and `pagehide`, because `beforeunload` can't wait for IndexedDB. Reopening Drafter restores each project from its recovery copy, with unsaved changes included and still marked unsaved.
 
-On first project creation: `navigator.storage.persist()`. If it resolves `false` (Safari, or Chromium without engagement), the UI shows a persistent, dismissible notice explaining that the browser may discard local data and offering two fixes: install as an app (PWA) or save to a file. The project list shows a shield icon for persisted storage. This is the honest answer to the "forever" promise: Drafter makes it as durable as the browser allows and tells the user the truth.
+**Leave warnings.** While a script has unsaved changes, Drafter registers a `beforeunload` handler, and it removes the handler once the script is saved, because a permanent one can keep the page out of the back/forward cache. The browser shows its own generic confirmation; custom text isn't possible. Navigating away from the editor inside the app goes through a Nuxt route guard that shows Drafter's dialog: *Save*, *Leave without saving* (the changes stay in the recovery copy), or *Cancel*. Neither warning is reliable on phones and tablets, or when the system kills a tab, which is why the recovery copy is written continuously rather than on a timer.
+
+The status bar shows the file's state ("saved 2 min ago" or "unsaved changes") and, separately, the recovery copy's state (§8.3).
+
+### 8.3 Recovery-copy warnings
+
+On first project creation, Drafter calls `navigator.storage.persist()`. It then checks the recovery copy's health at every launch and after any failed write:
+
+| State | Detected by | What the user sees |
+|---|---|---|
+| Persistent | `navigator.storage.persisted()` resolves `true` | "Recovery copy: kept in this browser" in the status bar, and a shield icon in the project list |
+| Not persistent | `persisted()` resolves `false`: refused, not yet granted (Chromium without site engagement), Safari without installing, or a private window | a persistent, dismissible warning that this browser may clear the recovery copy, with two remedies: save to a file, or install Drafter as an app |
+| Unavailable | IndexedDB won't open, or a write fails (quota, blocked site data) | a warning that stays until the problem clears: the changes exist only in memory until the script is saved to a file |
+
+Private windows can't always be detected, so the warning says the browser *may* clear the copy rather than claiming it will. This is the honest answer to the "forever" promise: Drafter makes storage as durable as the browser allows and tells the user the truth.
 
 ### 8.4 Snapshots
 
-A snapshot is the full source (a feature is ~150–250 KB). Created: every 10 minutes of active editing, on explicit "Snapshot" (with optional label), before any outline operation, and before FDX import. Retention: keep all labeled snapshots; keep all unlabeled from the last 24 hours; thin to one per hour for 7 days; one per day for 90 days; then delete. Compare view diffs two snapshots at the line level (Myers diff on lines), renders both as pages, and marks changed lines; this is also the input to revision-mode PDF.
+A snapshot is the full source (a feature is ~150–250 KB). Created: every 10 minutes of active editing, on every save to file, on explicit "Snapshot" (with optional label), before any outline operation, and before FDX import. Retention: keep all labeled snapshots; keep all unlabeled from the last 24 hours; thin to one per hour for 7 days; one per day for 90 days; then delete. Compare view diffs two snapshots at the line level (Myers diff on lines), renders both as pages, and marks changed lines; this is also the input to revision-mode PDF.
 
 ### 8.5 Files on disk
 
 | Capability | Chrome, Edge, and other Chromium browsers | Firefox | Safari |
 |---|---|---|---|
 | Open file, keep handle, save in place | ✅ `showOpenFilePicker` | ❌ | ❌ |
-| Persisted handle across sessions | ✅ (stored in IDB; re-prompts for permission) | — | — |
+| Persisted handle across sessions | ✅ (stored in IDB; asks again unless the user chose "Allow on every visit") | — | — |
 | Drag-and-drop import | ✅ | ✅ | ✅ |
 | Download export | ✅ | ✅ | ✅ |
 | `storage.persist()` honored | usually | prompts the user | only if installed |
 
 Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. Feature-detect `showOpenFilePicker` rather than sniffing the browser.
 
-On Chromium a project may be bound to a file: `Save` writes through the handle; `Open` from disk reads it and watches `lastModified` on focus to detect external edits (prompt: reload / keep mine / snapshot both). On other browsers "Save" means "download `.fountain`" and the project list is the source of truth. The UI uses the same verbs everywhere and explains the difference once.
+On Chromium a project may be bound to a file. Save writes through the handle; Save As, or the first save of a new script, uses `showSaveFilePicker`. The handle is stored in IndexedDB (§8.1). On a later visit Drafter calls `requestPermission()`, and Chrome's three-way prompt lets the user choose "Allow on every visit," after which Save never asks again. Drafter watches the file's `lastModified` on focus to detect external edits (prompt: reload / keep mine / snapshot both). On Firefox, Safari, and Brave, Save downloads a complete `.fountain` named after the title page's `Title`, and repeated saves land in the Downloads folder as numbered copies. The UI uses the same verbs everywhere and explains the difference once.
 
 ### 8.6 Drafter metadata in the file
 
@@ -701,7 +718,7 @@ Fixtures are written for this project. Scripts under copyright are not included;
 | Spellcheck | nspell only; native off. `en_US` bundled; others opt-in with license shown. |
 | Units | characters × lines; inches converted at load. |
 | Metadata location | single `/* drafter … */` boneyard at end of file. |
-| FS access on Firefox/Safari | download/upload; persistence notice; PWA nudge. |
+| Saving | Like a desktop app: Save writes the file (in place on Chromium, by download elsewhere), with a warning before leaving with unsaved changes. An always-on recovery copy in IndexedDB is written as you type, with warnings when it's unavailable or may be cleared. |
 | PDF import | out of scope through Phase 4. |
 | Plugins | none in v1; worker-sandboxed design reserved. |
 | License | MIT; no code from GPL screenwriting projects. |
