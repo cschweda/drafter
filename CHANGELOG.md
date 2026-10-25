@@ -38,6 +38,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Page shell:** `/` is prerendered with Drafter's title, description, and share image. Its loading screen carries the description, for search engines and for readers without JavaScript.
   - **Defaults:** dark by default, with fonts and icons served from drafter.dev itself.
   - **Commands:** `pnpm dev` runs it, and `pnpm e2e` builds it and runs its browser tests in Chromium, Firefox, WebKit, and a phone-sized Chromium.
+- Netlify configuration, `apps/web/netlify.toml`, with the build command, the publish directory, and Node 22. Netlify's site settings had the site on Node 16; this overrides them.
+  - **Content security policy:** every build writes a `_headers` file whose policy allows only the inline scripts that build produced, by hash.
+  - **Other headers:** `nosniff`, no referrer, no camera, microphone, or location access, and long caching for the fingerprinted build files.
+  - **Tests:** the browser tests run under the policy and check that it blocks nothing Drafter needs. They also check that a visitor who chose the light theme gets it before the page draws.
 
 ### Changed
 

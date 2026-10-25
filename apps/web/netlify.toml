@@ -1,0 +1,11 @@
+# Netlify site settings: package directory apps/web, base directory empty.
+# The build runs from the repository root, where pnpm installs the workspace
+# (its version comes from the root package.json's packageManager field).
+[build]
+  command = "pnpm --filter @drafter/web... run build"
+  publish = "apps/web/.output/public"
+
+# Node 22, the latest 22.x: the workspace needs 22.13 or later. This
+# overrides the Node version chosen in Netlify's site settings.
+[build.environment]
+  NODE_VERSION = "22"

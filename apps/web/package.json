@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "node scripts/sync-assets.mjs && nuxt dev",
-    "build": "node scripts/sync-assets.mjs && nuxt generate",
+    "build": "node scripts/sync-assets.mjs && nuxt generate && node scripts/csp.mjs .output/public",
     "preview": "node scripts/serve.mjs .output/public 4173",
     "e2e": "pnpm build && playwright test",
     "test": "vitest run",

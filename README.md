@@ -307,6 +307,8 @@ pnpm drafter check samples/stage-play.fountain                 # diagnostics; ex
 
 The stage play picks its own template from the metadata block at the end of the file; `--template` overrides it. The [CLI's README](packages/cli/README.md) has every option.
 
+**Deployment.** drafter.dev deploys on Netlify from this repository, with the site's package directory set to `apps/web`. That directory's [`netlify.toml`](apps/web/netlify.toml) sets the build command, the publish directory, and Node 22. Each build writes a `_headers` file whose content security policy allows only the inline scripts that build produced.
+
 ## Clean-room implementation
 
 Drafter is written from scratch, from public specifications, without reading anyone else's implementation. This section explains what that means, why it works, why it matters for a project like this, and what it asks of everyone who works on Drafter from here on. It describes the project's practice; it isn't legal advice.
