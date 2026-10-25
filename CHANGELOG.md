@@ -42,6 +42,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Content security policy:** every build writes a `_headers` file whose policy allows only the inline scripts that build produced, by hash.
   - **Other headers:** `nosniff`, no referrer, no camera, microphone, or location access, and long caching for the fingerprinted build files.
   - **Tests:** the browser tests run under the policy and check that it blocks nothing Drafter needs. They also check that a visitor who chose the light theme gets it before the page draws.
+- The editor's shell in `apps/web`, laid out like the Inform 7 IDE:
+  - **Panes:** two of them, each with Source, Script, and Problems tabs. A tab shows in one pane at a time, so choosing one that's open in the other pane swaps them.
+  - **Keyboard:** the divider resizes with a pointer or arrow keys, and F6 moves between the panes.
+  - **Toolbar:** round action buttons and a light/dark switch that's remembered.
+  - **Status bar** along the bottom.
+  - **Phones:** below 1024px, one pane shows at a time, opening on the Script tab.
+  - **Colors:** design tokens for both themes, with every text color tested for WCAG contrast.
+  - **Tests:** the browser tests check the layout, keyboard use, visible focus on every control, and axe in both themes. The toolbar's actions wait for the editor and files in later plans.
 
 ### Changed
 

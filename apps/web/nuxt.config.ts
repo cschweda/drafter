@@ -1,7 +1,10 @@
+import { fileURLToPath } from 'node:url';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
+  // The sample scripts live at the repository root, in samples/.
+  alias: { '#samples': fileURLToPath(new URL('../../samples', import.meta.url)) },
   modules: ['@nuxt/ui'],
   css: ['~/assets/css/main.css'],
   // Fonts are self-hosted (main.css), and icons are bundled into the build:

@@ -1,0 +1,49 @@
+/* Drafter's design tokens: the colors of the approved mockup, with the
+   faint tones and the light theme's goldenrod darkened to pass WCAG
+   contrast. test/tokens.test.ts checks every text color against the
+   backgrounds it's used on. The dark theme is also the default, before
+   color mode sets a class. */
+:root,
+.dark {
+  --bg: #0f1013;
+  --chrome: #15171c;
+  --chrome-2: #1a1d23;
+  --line: #262a31;
+  --text: #e6e8ec;
+  --muted: #8c93a1;
+  --faint: #7a8191;
+  --gutter: #7a8191;
+  --tab-on: #23272f;
+  --desk: #0b0c0f;
+  --page: #1b1e25;
+  --ink: #e8eaee;
+  --ink-muted: #9aa1ae;
+  --heading: #e5b04a;
+  --cue: #8db8e8;
+  --paren: #8c93a1;
+  --trans: #f5a9c0;
+  --note: #9bd3a0;
+  --title: #f49c84;
+}
+
+.light {
+  --bg: #f4f4f2;
+  --chrome: #ffffff;
+  --chrome-2: #f7f7f5;
+  --line: #e2e4e8;
+  --text: #1c1d21;
+  --muted: #5f6575;
+  --faint: #656b7a;
+  --gutter: #656b7a;
+  --tab-on: #ecedef;
+  --desk: #e9e9e6;
+  --page: #ffffff;
+  --ink: #1c1c1c;
+  --ink-muted: #5c6270;
+  --heading: #8a5a00;
+  --cue: #2f6db5;
+  --paren: #5f6575;
+  --trans: #b23a68;
+  --note: #2e7d4f;
+  --title: #b5502f;
+}

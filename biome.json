@@ -46,6 +46,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/web/app/pages/**/*.vue"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useVueMultiWordComponentNames": "off"
+          }
+        }
+      }
     }
   ]
 }

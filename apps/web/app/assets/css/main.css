@@ -1,5 +1,17 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+@import "./tokens.css";
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* One focus ring for every control, in the brand's goldenrod. */
+:focus-visible {
+  outline: 2px solid var(--heading);
+  outline-offset: 2px;
+}
 
 /* Inter Tight, the interface face: one variable font, weights 400 to 800,
    split by character set as Google's stylesheet splits it (see the README
