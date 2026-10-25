@@ -571,7 +571,7 @@ A snapshot is the full source (a feature is ~150–250 KB). Created: every 10 mi
 
 Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. Feature-detect `showOpenFilePicker` rather than sniffing the browser.
 
-On Chromium a project may be bound to a file. Save writes through the handle; Save As, or the first save of a new script, uses `showSaveFilePicker`. The handle is stored in IndexedDB (§8.1). On a later visit Drafter calls `requestPermission()`, and Chrome's three-way prompt lets the user choose "Allow on every visit," after which Save never asks again. Drafter watches the file's `lastModified` on focus to detect external edits (prompt: reload / keep mine / snapshot both). On Firefox, Safari, and Brave, Save downloads a complete `.fountain` named after the title page's `Title`, and repeated saves land in the Downloads folder as numbered copies. The UI uses the same verbs everywhere and explains the difference once.
+On Chromium a project may be bound to a file. Save writes through the handle; Save As, or the first save of a new script, uses `showSaveFilePicker`. The handle is stored in IndexedDB (§8.1). On a later visit Drafter calls `requestPermission()`, and Chrome's three-way prompt lets the user choose "Allow on every visit," after which Save never asks again. Drafter watches the file's `lastModified` on focus to detect external edits (the flow in the Phase 1 design, §9.6). On Firefox, Safari, and Brave, Save downloads a complete `.fountain` named after the title page's `Title`, and repeated saves land in the Downloads folder as numbered copies. The UI uses the same verbs everywhere and explains the difference once.
 
 ### 8.6 Drafter metadata in the file
 
@@ -636,6 +636,8 @@ Every rule has fixtures that assert both hits and *non*-hits.
 
 **Engine: nspell only.** One checker, one dictionary set, one set of squiggles. Native browser spellcheck is explicitly disabled on the editor (`spellcheck="false"`) to avoid conflicting underlines.
 
+Until nspell arrives in Phase 2, Phase 1 turns on the browser's own spellcheck in the Source pane, with a setting to turn it off (Phase 1 design §5.3).
+
 - Bundled: `en_US` (SCOWL-derived Hunspell dictionary, permissive license). Other languages are downloadable dictionary packs the user adds; each pack ships its own license file and the UI shows it. This keeps the MIT app free of GPL dictionary data.
 - Checking runs in its own worker (nspell is pure JS, and its suggestions are slow enough to delay layout if they shared one) on the changed blocks only, skipping: character names (every `sem.name`), every token in a scene heading's location, words in the project dictionary, all-caps tokens of ≤ 3 letters, and anything inside `[[ ]]` or boneyard by default (toggle).
 - Project dictionary = `meta.dictionary` (persisted in the file) ∪ harvested names/locations (not persisted; recomputed). "Add to dictionary" writes to `meta.dictionary`. "Add to personal dictionary" writes to IndexedDB `settings.personalDictionary`, which applies across projects.
@@ -658,12 +660,12 @@ Web Speech API. The command walks dialogue groups; each distinct character is as
 
 ## 13. Accessibility
 
-Target WCAG 2.2 AA from the first public release, verified with axe and manual NVDA/VoiceOver passes.
+Target WCAG 2.2 AA from the first public release, verified automatically from Phase 1 (axe, keyboard tests, and accessibility-tree assertions) and with NVDA and VoiceOver from Phase 2.
 
 - **Source pane:** CodeMirror's content element is `contenteditable` with `role="textbox"` and `aria-multiline`. Drafter adds a live region that announces element kind on block change ("Character", "Dialogue") so a screen-reader user hears structure. (A per-line `aria-roledescription` wouldn't work: browsers don't expose it on elements without a role, such as CodeMirror's line elements.)
 - **Rendered pane:** the script is one landmark region labeled "Script," not one region per page (a feature would have 120), and each page starts with a visually hidden "Page N" marker. Headings follow what prints, so heading navigation walks the script's structure: scene headings are `<h2>`, and in templates that print sections (the stage play), act headings are `<h2>` and scene headings `<h3>`. Character cues aren't headings, since a feature has about a thousand; each dialogue group is a group labeled by its cue. Synthetic lines (`(MORE)`, page numbers) are `aria-hidden`.
 - **Keyboard:** every pane, tab, and command reachable without a mouse; `F6` cycles panes; the command palette (`Mod+K`) exposes every action.
-- **Visual:** respects `prefers-reduced-motion`, `prefers-color-scheme`, and a user font-size setting that scales both panes (the rendered pane scales uniformly so pagination is unchanged).
+- **Visual:** respects `prefers-reduced-motion`; offers a dark theme by default, a light theme, and a "Match system appearance" setting that's off by default; and a user font-size setting that scales both panes (the rendered pane scales uniformly so pagination is unchanged).
 - The outline, cards, and stats views are plain lists/tables first, with drag-and-drop as an enhancement that always has a keyboard equivalent ("Move scene up/down").
 
 ---
@@ -700,7 +702,7 @@ Fixtures are written for this project. Scripts under copyright are not included;
 ## 16. Build and deploy
 
 - pnpm workspace; each package builds with `tsdown` to ESM with `.d.ts` (tsup, the original choice, is no longer maintained); `apps/web` imports workspace packages directly. One root `vitest.config.ts` lists the packages under `test.projects`.
-- Nuxt 4, `nuxi generate`, route rules per `drafter-architecture.md` §3 note: `/editor/**` is `ssr: false`; `/`, `/docs/**`, `/templates` prerendered.
+- Nuxt 4 and `nuxi generate`. `/` is the editor, client-rendered (`ssr: false`) and prerendered as a shell carrying the page's metadata; `/docs/**` is prerendered. Deploy settings live in `apps/web/netlify.toml`.
 - Workers are built by Vite from `new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' })`.
 - PWA via `@vite-pwa/nuxt`: precache the app shell, fonts, and `en_US` dictionary; network-first for nothing (there is no network).
 - Netlify publishes `.output/public`; `_headers` sets the CSP; `_redirects` is generated by Nuxt's Netlify preset. No functions directory exists.

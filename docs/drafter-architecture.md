@@ -67,6 +67,8 @@ Clean-room note: Drafter is built from the public Fountain spec and the publicly
 
 Layout is resizable; either pane can be collapsed for "just write" mode or "just read" mode.
 
+Either pane can show any tab, one pane at a time: choosing a tab that's open in the other pane swaps them.
+
 ---
 
 ## 3. Stack
@@ -324,7 +326,7 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 3. **Templates as data, including stage plays.** Every other app hard-codes two or three formats. Playwrights are badly served; a proper Dramatists Guild template with a documented Fountain convention is a real gap.
 4. **Lossless outline ⇄ script.** Because outline structure lives in the source.
 5. **Runs everywhere, installs nowhere.** Beat is Apple-only; Trelby and Scrite are desktop installs; most web options want an account. Drafter is a URL that works on a Chromebook, a Linux box, or a Windows machine with zero sign-up, and works offline once installed. (On Safari and iPad it works, with the storage caveats in §6.1 — install it as an app.)
-6. **Accessibility as a first-class goal.** Screenwriting software is a wasteland for screen-reader users (and Final Draft's accessibility is weak). The source pane is the easy half; the real work is a rendered pane whose scene headings are real headings, so a screen-reader user navigates the script by structure, plus keyboard equivalents for every drag-and-drop. This is a feature in its own right and one you're unusually qualified to deliver. WCAG 2.2 AA from the first public release, with a11y work items in every phase (§13).
+6. **Accessibility as a first-class goal.** Screenwriting software is a wasteland for screen-reader users (and Final Draft's accessibility is weak). The source pane is the easy half; the real work is a rendered pane whose scene headings are real headings, so a screen-reader user navigates the script by structure, plus keyboard equivalents for every drag-and-drop. This is a feature in its own right and one you're unusually qualified to deliver. WCAG 2.2 AA from the first public release, with a11y work items in every phase (§13). Testing with NVDA and VoiceOver starts in Phase 2. Until it's done, Drafter is built and tested to WCAG 2.2 AA but claims no conformance.
 7. **Engine as a library.** `@drafter/layout` and `@drafter/fountain` on npm mean the pagination engine outlives the app and can power a CLI (`drafter build script.fountain --pdf`), CI checks, or other tools.
 8. **Table-read.** Web Speech API reads the script aloud, a different voice per character, action in a neutral voice, skipping parentheticals. Voice quality and offline availability depend on the OS; the UI says so.
 
@@ -352,7 +354,7 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 **Phase 3 — Formats.** FDX import/export; import from Highland, Fade In, and Celtx; TV single/multi-cam, radio, UK, and novel templates; user-added templates and template export; standalone `.html` export.
 
-**Phase 4 — Craft.** Remaining lint rules; revision marks and colored-page PDF; production revisions (locked pages, OMITTED scenes, scene numbers that start anywhere); alternate versions of a line; "clean" display mode (markers hidden by decoration); table-read; PWA install flow and offline dictionary caching.
+**Phase 4 — Craft.** Remaining lint rules; revision marks and colored-page PDF; production revisions (locked pages, OMITTED scenes, scene numbers that start anywhere); alternate versions of a line; proof mode: readers add notes to a copy of the script as standard Fountain notes, Drafter shows them in the margin like Word comments, and carries them into the current draft; "clean" display mode (markers hidden by decoration); table-read; PWA install flow and offline dictionary caching.
 
 **Later.** Direct Open and Save for Dropbox and Google Drive, signed in with those services, never with Drafter (§6).
 

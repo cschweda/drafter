@@ -153,7 +153,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Next** |
 | [2](#phase-2--structure) | Structure: outline, cards, beat board, storylines, snapshots, spellcheck, screen-reader testing | Planned |
 | [3](#phase-3--formats) | Formats: Final Draft and other imports; TV, radio, UK, and novel templates; user templates | Planned |
-| [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, clean display mode, table read, offline install | Planned |
+| [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
 | [Later](#later) | Open from and save to Dropbox and Google Drive directly | Planned |
 
@@ -227,6 +227,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Revision marks and colored-page PDF.
 - Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
 - Alternate versions of a line, switchable in place.
+- Proof mode: readers add notes to a copy of the script, kept as standard Fountain notes. Drafter shows them in the margin like Word comments and carries them into the current draft.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
 - A PWA install flow and offline dictionary caching.

@@ -2,7 +2,7 @@
 
 *The first public release: the editor at drafter.dev, a sample script and a guided tour on the first visit, saving like a desktop app, and PDF export.*
 
-Status: Draft for review · 2026-10-25 · Builds on the [architecture](drafter-architecture.md) and the [technical design](drafter-technical-design.md), both v0.2
+Status: Approved · 2026-10-25 · Builds on the [architecture](drafter-architecture.md) and the [technical design](drafter-technical-design.md), both v0.2
 
 ---
 
@@ -485,9 +485,9 @@ Each is marked **Call** where it appears.
   - Playwright for the app, in Chromium, Firefox, and WebKit at desktop and phone sizes
   - axe on every major state: the first visit, each tour step, editing, Problems, focus mode, each dialog, and both themes
 
-## 17. Changes to the earlier documents
+## 17. Changes made to the earlier documents
 
-These follow once this design is approved:
+Made when this design was approved:
 
 - **Technical design §13:** the dark theme is the default; following the system's appearance is a setting.
 - **Technical design §16:** `/` is the editor, prerendered with its metadata; `/docs/**` is prerendered; there's no `/editor` route.

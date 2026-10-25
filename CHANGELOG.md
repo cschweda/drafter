@@ -57,6 +57,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Phase 3** adds imports from Highland, Fade In, and Celtx, and a template for novels.
   - **Phase 4** adds production revisions and alternate versions of a line.
   - **A later phase** adds direct Open and Save for Dropbox and Google Drive. You sign in with those services, never with Drafter.
+- The Phase 1 design is approved, and the architecture and technical design now match it:
+  - either pane can show any tab
+  - the theme is dark by default
+  - a file changed elsewhere goes through the new check
+  - screen-reader testing starts in Phase 2
+
+  Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
 
 ### Security
 
