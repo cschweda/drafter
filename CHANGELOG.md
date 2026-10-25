@@ -39,6 +39,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - The kickoff prompt adds rules for changelog entries, commit trailers, and hook setup.
 - Saving now works like a desktop app (design, Phase 1): Save and Save As write a `.fountain` file, in place on Chromium and by download elsewhere; leaving with unsaved changes asks first; and an always-on recovery copy in IndexedDB is written as you type, with warnings when the browser blocks it or may clear it. This replaces the earlier policy of never warning.
 - Tightened three v0.2 rules found while writing the samples: a character cue is a name plus optional extensions and nothing else, so `MARGARET (60s) sits…` stays action; dual dialogue never takes a continued-speech `(CONT'D)`; and Brave saves by download, because it ships with the File System Access API turned off.
+- Developing Drafter now needs Node 22.13 or later (the root `engines` field): `pdfjs-dist` 6, which the PDF tests use, requires it, and the CLI's `commander` 15 requires 22.12. `.nvmrc` still says `22`, which installs the latest 22.x.
+- The README marks Phase 0 done and shows how to install, build, test, benchmark, and run `pnpm drafter` from the repository root. PDFs built from `samples/` and `fixtures/` are ignored by Git.
 
 ### Security
 
