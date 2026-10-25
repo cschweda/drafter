@@ -1,3 +1,5 @@
+![Drafter: screenplays and stage plays, written in plain text](brand/og-image.svg)
+
 # Drafter
 
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
@@ -358,7 +360,8 @@ The documents are drafts (v0.2) and will change as Phase 0 settles open question
 - [Fountain](https://fountain.io), the plain-text screenplay format created by John August and Stu Maschwitz, with many contributors.
 - The Inform 7 IDE, whose source-and-compiled-story layout inspired the two-pane design.
 - [Courier Prime](https://fonts.google.com/specimen/Courier+Prime), the screenplay typeface Drafter targets, released under the SIL Open Font License.
+- [Inter Tight](https://fonts.google.com/specimen/Inter+Tight), the typeface of Drafter's wordmark and interface, also under the SIL Open Font License.
 
 ## License
 
-[MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime is distributed under the SIL Open Font License, with its license file alongside the fonts.
+[MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/).

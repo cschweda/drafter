@@ -38,3 +38,6 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/tasks.json
 .idea/
+
+# Brainstorming mockups (superpowers visual companion)
+.superpowers/
