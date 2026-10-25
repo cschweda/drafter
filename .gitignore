@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.output/
+.nuxt/
+.nitro/
+.netlify/
+.cache/
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Editors: shared VS Code settings are allowed; everything else (including
+# extension logs such as .server-controller-port.log) stays local.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
