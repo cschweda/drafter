@@ -15,4 +15,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `.gitignore` for a pnpm, Node, and Nuxt monorepo.
 - Pre-push hook (`.githooks/pre-push`) that rejects a push unless at least one of its commits updates this changelog.
 
+### Changed
+
+- Revised the design documents to v0.2 after a pre-implementation review:
+  - The parser reads two common mistakes leniently: a heading or transition with no blank line after it, and a parenthetical wrapped across lines. Each is flagged for a Strict Fountain lint rule that rewrites the source into spec form.
+  - Notes end at the first blank line, per the spec, and an unclosed `[[` stays literal text.
+  - Every edit triggers a full reparse; the windowed incremental design is set aside.
+  - The parse result gains `doc.trailing`, so printing is lossless for files that end in a newline, plus parse diagnostics for `drafter check`.
+  - Templates gain a reserved `omit` role for elements that never print, a physical paper size, exact-name role rules instead of regular expressions, and explicit `extends` merge rules.
+  - Pagination rules are now precise: keep-with-next look-ahead, corrected dialogue-split thresholds, engine-added `(CONT'D)` for continued speeches, and no blank pages from forced breaks.
+  - Phase 0 tooling is updated: tsdown, Vitest `test.projects`, pnpm 10, `@pdf-lib/fontkit`, `pdfjs-dist`, `@types/node`, and a "Done means" command that works.
+  - The kickoff prompt adds rules for changelog entries, commit trailers, and hook setup.
+
 [Unreleased]: https://github.com/cschweda/drafter/commits/main

@@ -2,7 +2,7 @@
 
 *Open-source, local-first, zero-login screenwriting and playwriting IDE. Source on the left, the script on the right.*
 
-Author: Christopher Schweda · Status: Draft v0.1 · October 2026
+Author: Christopher Schweda · Status: Draft v0.2 · October 2026
 
 ---
 
@@ -31,7 +31,7 @@ Clean-room note: Drafter is built from the public Fountain spec and the publicly
 │                                     │  │              7.               │  │
 │  MARGARET sits at the table,        │  │  INT. KITCHEN - NIGHT         │  │
 │  not eating.                        │  │                               │  │
-│                                     │  │  Margaret sits at the table,  │  │
+│                                     │  │  MARGARET sits at the table,  │  │
 │  MARGARET                           │  │  not eating.                  │  │
 │  (quietly)                          │  │                               │  │
 │  You said you'd call.               │  │           MARGARET            │  │
@@ -109,7 +109,9 @@ drafter/
 │   ├── lint/                 # Rules over the AST → diagnostics
 │   ├── outline/              # Condense / expand, reorder, scene operations
 │   ├── spell/                # nspell wrapper, dictionary loading, project dictionary
-│   └── cm-fountain/          # CodeMirror 6 language support (grammar, keymaps, autocomplete)
+│   ├── stats/                # Page count, runtime, dialogue share, pacing
+│   ├── cm-fountain/          # CodeMirror 6 integration (decorations, keymaps, autocomplete)
+│   └── cli/                  # `drafter build` / `drafter check`
 ├── templates/                # Community templates live here as plain JSON
 └── docs/
 ```
@@ -142,7 +144,7 @@ type Element =
 
 Inline emphasis (`*italic*`, `**bold**`, `_underline_`) is parsed within `text`. Scene colors, revision marks, and other non-prose state are **not** stored as inline notes (they'd litter the source and render as visible notes in other apps); they live in one metadata block at the end of the file (§5.3).
 
-**5.2 Round-trip is a hard requirement.** `print(parse(src)) === src` for *every* input, well-formed or not — guaranteed by the CST keeping raw text. Structural equality after an incremental reparse is checked against a full reparse, comparing kinds and text but not positions. FDX gets its own invariant (export → import → export is stable on supported fields). This is what lets Outline, Cards, and Expand rewrite the source safely. The test corpus is the Fountain spec's examples plus original and synthetic fixtures written for this project — screenplays are almost never public domain, so no third-party scripts are included.
+**5.2 Round-trip is a hard requirement.** `print(parse(src)) === src` for *every* input, well-formed or not — guaranteed by the CST keeping raw text. Every edit triggers a full reparse (technical design §2.7), so there's one parsing path to trust. FDX gets its own invariant (export → import → export is stable on supported fields). This is what lets Outline, Cards, and Expand rewrite the source safely. The test corpus is original and synthetic fixtures written for this project: screenplays are almost never public domain, so no third-party scripts are included, and the spec's own examples aren't copied in.
 
 **5.3 Project metadata.** Human-meaningful fields live in the Fountain title page (`Title:`, `Author:`, `Draft date:`). Drafter-specific state lives in a single boneyard block at the end of the file, which every other Fountain tool ignores:
 
@@ -200,10 +202,10 @@ A template is a JSON document that answers two questions: *how is each element f
 Measurements are in **characters and lines**, the engine's native units (Courier 12pt: 10 chars and 6 lines per inch). Inches are accepted as `{ "in": 1.5 }` and converted at load; the engine never sees inches.
 
 ```jsonc
-{
+{                                   // abridged; the full schema is in the technical design §4.2
   "id": "us-screenplay",
   "name": "US Screenplay (Feature)",
-  "page": { "width": 85, "height": 66, "margin": { "top": 6, "bottom": 6, "left": 15, "right": 10 },
+  "page": { "paper": "letter", "width": 85, "height": 66, "margin": { "top": 6, "bottom": 6, "left": 15, "right": 10 },
             "font": { "family": "Courier Prime", "monospace": true, "pt": 12 } },
   "roles": {
     "scene_heading": { "indent": 0,  "width": 60, "case": "upper", "spaceBefore": 2, "keepWithNext": true },
@@ -213,16 +215,18 @@ Measurements are in **characters and lines**, the engine's native units (Courier
     "dialogue":      { "indent": 10, "width": 35, "spaceBefore": 0 },
     "transition":    { "indent": 40, "width": 20, "case": "upper", "align": "right", "spaceBefore": 1 }
   },
-  "roleMap": [ { "kind": "*", "role": "@kind" } ],
-  "dialogueSplit": { "more": "(MORE)", "contd": "(CONT'D)", "minLinesBefore": 2, "minLinesAfter": 2 },
-  "sceneNumbers": { "enabled": true, "left": -10, "right": 61 },
+  "roleMap": [ { "kind": ["section", "synopsis", "note", "boneyard"], "role": "omit" },
+               { "kind": "*", "role": "@kind" } ],
+  "dialogueSplit": { "more": "(MORE)", "contd": "(CONT'D)", "moreIndent": 22,
+                     "minLinesBefore": 2, "minLinesAfter": 2, "contdAfterAction": true },
+  "sceneNumbers": { "enabled": false, "left": -10, "right": 61 },
   "titlePage": { "layout": "centered-feature" }
 }
 ```
 
 Built-in templates to ship with v1:
 
-- **US Screenplay (Feature)** — the default; this is the one that must be pixel-faithful
+- **US Screenplay (Feature)** — the default; this is the one whose formatting rules must be exact, verified by hand-checked fixtures
 - **TV Single-Camera** (same as feature plus act breaks and `TEASER`/`ACT ONE` centered)
 - **TV Multi-Camera / Sitcom** (double-spaced dialogue, uppercase action)
 - **Stage Play — Dramatists Guild standard** (character names centered or left; stage directions in parentheses/italic; ACT/SCENE headings; no sluglines)
@@ -230,7 +234,7 @@ Built-in templates to ship with v1:
 - **Radio / Audio Drama** (numbered cues, SFX/MUSIC elements)
 - **UK/BBC Screenplay** (A4, slightly different margins)
 
-Templates can `extends` another and override. Users add templates by dropping a JSON file into the Templates panel (stored in IndexedDB) or by URL. The `templates/` folder in the repo is the community library; a PR adds a format.
+Templates can `extends` another and override. Users add templates by dropping a JSON file into the Templates panel (stored in IndexedDB) or by pasting JSON. Loading by URL is deferred, because it needs a broader content security policy. The `templates/` folder in the repo is the community library; a PR adds a format.
 
 Because playwriting and radio formats use elements Fountain doesn't name (stage direction, act/scene heading, sound cue), the template declares a **role map**: ordered rules that assign a *role* to each Fountain block based on its kind and content, first match wins. No new syntax is needed:
 
@@ -238,15 +242,16 @@ Because playwriting and radio formats use elements Fountain doesn't name (stage 
 "roleMap": [
   { "kind": "section", "depth": 1, "role": "act_heading" },
   { "kind": "section", "depth": 2, "role": "scene_heading_play" },
-  { "kind": "character", "name": "^(SFX|FX|SOUND)$", "role": "sfx_cue" },
+  { "kind": "character", "names": ["SFX", "FX", "SOUND"], "role": "sfx_cue" },
   { "kind": "dialogue", "afterRole": "sfx_cue", "role": "sfx_text" },
   { "kind": "action", "role": "stage_direction" },
   { "kind": "scene_heading", "role": "disabled" },
+  { "kind": ["section", "synopsis", "note", "boneyard"], "role": "omit" },
   { "kind": "*", "role": "@kind" }
 ]
 ```
 
-So a radio script's `SFX` is typed as a character cue (which is how radio scripts are conventionally typed anyway) and still reads correctly in every other Fountain tool. The one documented extension to the spec is **multi-line parentheticals** for wrapped stage directions inside a speech; other tools show the continuation lines as dialogue, which degrades readably. This convention — "Fountain for the stage" — is a small spec that doesn't exist yet and ships in the Reference tab and `/docs`.
+So a radio script's `SFX` is typed as a character cue (which is how radio scripts are conventionally typed anyway) and still reads correctly in every other Fountain tool. Stage plays are the caveat: their act and scene headings are `#` sections, which other Fountain tools don't print, so a Drafter play printed elsewhere loses those headings, though the source still shows them. Drafter also reads a few things more generously than the spec, such as **multi-line parentheticals** for wrapped stage directions inside a speech, or a heading with no blank line after it. Each has a Strict Fountain lint rule that rewrites the source into spec form (technical design §2.5). This convention — "Fountain for the stage" — is a small spec that doesn't exist yet and ships in the Reference tab and `/docs`.
 
 ---
 
@@ -254,10 +259,10 @@ So a radio script's `SFX` is typed as a character cue (which is how radio script
 
 A pure function: `paginate(ast, template): Page[]`. No DOM, no side effects, runs in a Web Worker so typing never stutters.
 
-- Measures in **lines**, not pixels: Courier at 12pt is monospace and 6 lines/inch, so a US letter page is 54–55 usable lines and every element's width is a known character count. This is why screenplays can be laid out without a browser. (Proportional fonts for some stage formats need a measured fallback; use canvas `measureText` in the worker.)
+- Measures in **lines**, not pixels: Courier at 12pt is monospace and 6 lines/inch, so a US letter page is 54–55 usable lines and every element's width is a known character count. This is why screenplays can be laid out without a browser. (Proportional fonts for some stage formats will be measured from the font file's own advance widths, so layout stays deterministic and identical in Node and the browser.)
 - Handles: keep-with-next (headings, character cues), dialogue splitting with `(MORE)`/`(CONT'D)`, dual dialogue columns, scene numbers, page numbers, `===` forced breaks, title page, and template-driven header/footer.
 - Emits a page model where each line carries its source range, so the HTML renderer and the PDF renderer are both thin and the right pane can map clicks back to the source.
-- Layout is asynchronous: requests carry a sequence number, results older than the latest request are discarded, and the right pane always shows the newest *received* layout with a subtle "updating" state if it lags. A full paginate of a feature is single-digit milliseconds; the worker exists so a pathological document can never stall typing.
+- Layout is asynchronous: requests carry a sequence number, a result is rendered only if it's newer than the last one rendered, and the right pane always shows the newest finished layout, with a subtle "updating" state if it lags. A full paginate of a feature is single-digit milliseconds; the worker exists so a pathological document can never stall typing.
 - The HTML pane waits for Courier Prime to load (`document.fonts.load`) before rendering, so `1ch` measurements are correct and screen matches PDF.
 
 The regression suite is hand-counted position fixtures (frozen once verified) plus structural property tests — no page overflows, no page starts blank, no orphaned character cue, every line maps to its block.
@@ -266,7 +271,7 @@ The regression suite is hand-counted position fixtures (frozen once verified) pl
 
 ## 9. Spellcheck
 
-**One checker: nspell** (Hunspell dictionaries in JS), offline, running in the worker on changed blocks. Browser-native spellcheck is **disabled** on the editor — two checkers that disagree about "Keokuk" is worse than either alone.
+**One checker: nspell** (Hunspell dictionaries in JS), offline, running in its own worker on changed blocks. Browser-native spellcheck is **disabled** on the editor — two checkers that disagree about "Keokuk" is worse than either alone.
 
 - `en_US` is bundled (SCOWL-derived, permissive license). Other languages are opt-in dictionary packs the user adds; each shows its license, which keeps GPL-licensed dictionary data out of the MIT app bundle.
 - Character names and slugline locations are auto-harvested from the CST and never flagged. "Add to dictionary" writes to the file's metadata block so it travels with the script; "Add to personal dictionary" applies across all projects.
@@ -293,14 +298,15 @@ Rules run over the CST after each parse and surface in the gutter and the Proble
 
 - Unclosed `[[note` or `/* boneyard` — error
 - `(CONT'D)` typed manually — the engine adds these; offers a fix
-- Character cue with no dialogue — an uppercase line followed by an indented or parenthetical line
-- Scene heading missing `INT.`/`EXT.` or time of day — off in play templates; time-of-day is an option
-- Similar character names (`MARGARET` / `MARGERET`) — Damerau-Levenshtein ≤ 1 *and* one of the names is used ≤ 2 times *and* neither is a prefix of the other (so MAX/MAC and ANN/ANNA aren't flagged); info-level, with "mark as distinct" stored in metadata
+- Character cue cut off from its dialogue — an all-caps line, a blank line, then a parenthetical or dialogue-shaped line
+- Scene heading missing a time of day — off in play templates. (A missing `INT.`/`EXT.` can only happen on a forced heading, so that check is off by default.)
+- Similar character names (`MARGARET` / `MARGERET`) — Damerau-Levenshtein ≤ 1 *and* both names at least five letters *and* one of the names is used ≤ 2 times *and* neither is a prefix of the other (so MAX/MAC, too short, and ANN/ANNA, a prefix, aren't flagged); info-level, with "mark as distinct" stored in metadata
 - First mention of a character in action not in caps — checks only the *first* action occurrence of the exact token, so `the WAITRESS` vs. `WAITRESS` is not flagged
 - Dialogue block longer than N lines; scene longer than N pages (needs layout) — both configurable
 - Transition not immediately before a heading/section/end
 - Dual dialogue taller than a page
 - Locked scene numbers out of order
+- Strict Fountain — every place Drafter read the file more generously than the spec, with a fix that rewrites it into spec form
 
 ---
 
@@ -308,11 +314,11 @@ Rules run over the CST after each parse and surface in the gutter and the Proble
 
 Honest competitive framing — Beat already does a lot, and does it well on macOS. Drafter's distinct bets:
 
-1. **The IDE split.** Source + compiled view, always both. Nobody else treats a screenplay as something you *compile*. Writers who came from Markdown, LaTeX, or code will immediately understand it; everyone else gets the Tab/Enter workflow they already know and can ignore the markup.
-2. **Problems pane.** A real linter for scripts — continuity, naming, format — with click-to-jump. This doesn't exist anywhere.
+1. **The IDE split.** Source + compiled view, always both, with the source as the only document. Writers who came from Markdown, LaTeX, or code will immediately understand it; everyone else gets the Tab/Enter workflow they already know and can ignore the markup.
+2. **Problems pane.** A real linter for scripts — continuity, naming, format, and portability to strict Fountain — with click-to-jump.
 3. **Templates as data, including stage plays.** Every other app hard-codes two or three formats. Playwrights are badly served; a proper Dramatists Guild template with a documented Fountain convention is a real gap.
 4. **Lossless outline ⇄ script.** Because outline structure lives in the source.
-5. **Runs everywhere, installs nowhere.** Beat is Mac-only; Trelby and Scrite are desktop installs; the web options all want an account. Drafter is a URL that works on a Chromebook, a Linux box, or a Windows machine with zero sign-up, and works offline once installed. (On Safari and iPad it works, with the storage caveats in §6.1 — install it as an app.)
+5. **Runs everywhere, installs nowhere.** Beat is Apple-only; Trelby and Scrite are desktop installs; most web options want an account. Drafter is a URL that works on a Chromebook, a Linux box, or a Windows machine with zero sign-up, and works offline once installed. (On Safari and iPad it works, with the storage caveats in §6.1 — install it as an app.)
 6. **Accessibility as a first-class goal.** Screenwriting software is a wasteland for screen-reader users (and Final Draft's accessibility is weak). The source pane is the easy half; the real work is a rendered pane whose scene headings are real headings, so a screen-reader user navigates the script by structure, plus keyboard equivalents for every drag-and-drop. This is a feature in its own right and one you're unusually qualified to deliver. WCAG 2.2 AA from the first public release, with a11y work items in every phase (§13).
 7. **Engine as a library.** `@drafter/layout` and `@drafter/fountain` on npm mean the pagination engine outlives the app and can power a CLI (`drafter build script.fountain --pdf`), CI checks, or other tools.
 8. **Table-read.** Web Speech API reads the script aloud, a different voice per character, action in a neutral voice, skipping parentheticals. Voice quality and offline availability depend on the OS; the UI says so.
@@ -323,9 +329,9 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 
 The ordering principle: **the reasons to choose Drafter over Beat must be on screen at the first public release.** That means the Problems pane, the stage-play template, and accessibility move up, and FDX/radio/TV move down.
 
-**Phase 0 — Engine (no UI).** `@drafter/fountain` CST parser with lossless round-trip and incremental reparse; `@drafter/templates` schema + `us-screenplay` + `stage-play-standard`; `@drafter/layout` pagination; `@drafter/render-pdf`. A CLI that turns a `.fountain` into a correct PDF. Full test suite. *If this phase is right, everything else is UI.*
+**Phase 0 — Engine (no UI).** `@drafter/fountain` CST parser with lossless round-trip and fast full reparse; `@drafter/templates` schema + `us-screenplay` + `stage-play-standard`; `@drafter/layout` pagination; `@drafter/render-pdf`. A CLI that turns a `.fountain` into a correct PDF. Full test suite. *If this phase is right, everything else is UI.*
 
-**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the first six lint rules**; IndexedDB autosave with `storage.persist()` and the §6.2 notices; open/save `.fountain` (bound file on Chromium, download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
+**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the starter lint rules and Strict Fountain checks**; IndexedDB autosave with `storage.persist()` and the §6.2 notices; open/save `.fountain` (bound file on Chromium, download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
 
 **Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats; nspell with project dictionary; Reference tab.
 
@@ -339,11 +345,11 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 ## 14. Open questions
 
-Decided (see `drafter-technical-design.md` §17 for the full log): MIT license and no GPL code; one parser with decoration-driven highlighting; CST with lossless print; nspell-only spellcheck; characters × lines as units; metadata in a trailing boneyard block; download-not-force on Firefox/Safari; PDF import out of scope; no plugin API in v1.
+Decided (see `drafter-technical-design.md` §17 for the full log): MIT license and no GPL code; one parser with decoration-driven highlighting; CST with lossless print; full reparse on every change; lenient readings backed by Strict Fountain lint rules; notes end at a blank line; role rules match exact names; nspell-only spellcheck; characters × lines as units; metadata in a trailing boneyard block; download-not-force on Firefox/Safari; PDF import out of scope; no plugin API in v1.
 
 Still open:
 
 - **FDX fidelity.** Which Final Draft features are worth round-tripping beyond elements, title page, and scene numbers (ScriptNotes, revisions, scene properties)? Start minimal; add as users ask.
-- **Proportional-font templates** (some stage formats use Times). The engine supports measured layout via `OffscreenCanvas`, but all v1 built-in templates are monospace. Decide whether to ship a Times-based play template in Phase 3.
-- **Scene identity for colors.** Scene ids are heading text + occurrence index, so colors survive reordering but not renaming. Good enough? Alternative: a short random id written as `#id#`-style metadata, which would show in other tools.
-- **Multi-line parentheticals.** The one place Drafter reads Fountain more generously than the spec. Keep, or push for a Fountain spec amendment?
+- **Proportional-font templates** (some stage formats use Times). Proportional layout will measure from the font file's own advance widths (technical design §5.2), but all v1 built-in templates are monospace. Decide whether to ship a Times-based play template in Phase 3.
+- **Scene identity for colors.** Scene ids are heading text + occurrence index, so colors survive reordering but not renaming. Good enough? (A `#id#` suffix on the heading isn't an option: at the end of a heading, `#…#` is Fountain's scene-number syntax, so every tool would print it as the scene number.)
+- **Multi-line parentheticals.** One of Drafter's lenient readings (technical design §2.5), with a Strict Fountain fix. Keep, or push for a Fountain spec amendment?

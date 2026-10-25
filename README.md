@@ -69,7 +69,7 @@ Either pane can be collapsed, for "just write" or "just read."
 ## What makes it different
 
 - **Source and script side by side, always.** You edit text, not a rich document, and the markup stays visible. Tab and Enter conveniences insert plain Fountain, so the familiar screenwriting-app keystrokes still work.
-- **A Problems pane.** A linter for scripts: unclosed notes, cues with no dialogue, near-duplicate character names, and more, with click-to-jump.
+- **A Problems pane.** A linter for scripts: unclosed notes, cues with no dialogue, near-duplicate character names, and more, with click-to-jump. Drafter reads common Fountain mistakes leniently, and its Strict Fountain checks can rewrite the file into spec form for other tools.
 - **Stage plays as a first-class format.** A Dramatists Guild–style template and a documented convention for writing plays in standard Fountain.
 - **Lossless outline ⇄ script.** Sections, synopses, and scene headings already live in the file, so outlining and reordering are edits to the source, not a second document that can drift.
 - **Runs anywhere with a browser.** Chromebook, Linux, Windows, Mac, or iPad, with no install and no sign-up. It works offline once installed as an app.
@@ -98,7 +98,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 
 | Package | What it does | Phase |
 |---|---|---|
-| `@drafter/fountain` | Fountain text ⇄ syntax tree: lossless printing, incremental reparsing | 0 |
+| `@drafter/fountain` | Fountain text ⇄ syntax tree: lossless printing, fast full reparse | 0 |
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
 | `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded | 0 |
@@ -141,7 +141,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 **Builds**
 
-- `@drafter/fountain`: a concrete-syntax-tree parser and printer with incremental reparsing. Every block keeps its raw text, so printing is lossless.
+- `@drafter/fountain`: a concrete-syntax-tree parser and printer that reparses in full on every change. Every block keeps its raw text, so printing is lossless. Where the spec's strict reading would garble a common mistake, the parser reads leniently and flags the spot.
 - `@drafter/templates`: the template schema and loader (validation, `extends`, inch-to-character conversion) and two built-in templates, **US Screenplay (Feature)** and **Stage Play (Dramatists Guild standard)**.
 - `@drafter/layout`: `paginate(doc, template)`, covering word wrap, keep-with-next, dialogue splitting with `(MORE)` and `(CONT'D)`, dual dialogue, scene numbers, forced page breaks, and the title page.
 - `@drafter/render-pdf`: PDF output with Courier Prime embedded. It runs in Node and in a browser worker.
@@ -150,7 +150,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 **Done when**
 
 - Printing a parse reproduces the input exactly, for 10,000 random strings and every fixture.
-- Incremental parsing matches a full parse across 1,000 random edit sequences.
+- Reparsing after multi-range edits matches a fresh parse across 1,000 random edit sequences.
 - Every classification fixture matches its expected element sequence.
 - Layout property tests pass: no overfull page, no page that starts blank, no character cue stranded at the bottom of a page, and every line maps back to its source.
 - Hand-checked position fixtures match, the PDF's text and page count match the layout, and pagination is deterministic.
@@ -165,7 +165,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs.
 - The CodeMirror 6 source pane: highlighting driven by the one parser, Tab and Enter conveniences that insert plain Fountain, autocomplete for characters, locations, transitions, and sections, and folding by scene and section.
 - The Script tab, with live pagination in a Web Worker.
-- The Problems tab, with the starter set of lint rules.
+- The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
 - Autosave to IndexedDB, a request for persistent storage, and honest notices where the browser may discard data.
 - Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF and `.txt`.
 - A template switcher for screenplay and stage play.
@@ -276,7 +276,7 @@ drafter check script.fountain    # parse and paginate; exits non-zero on errors
 - [Technical design](docs/drafter-technical-design.md): how each package works, from the parser and pagination to storage, linting, accessibility, security, and testing.
 - [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md): the self-contained brief for building the engine.
 
-The documents are drafts (v0.1) and will change as Phase 0 settles open questions.
+The documents are drafts (v0.2) and will change as Phase 0 settles open questions.
 
 ## Acknowledgments
 
