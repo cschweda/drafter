@@ -33,6 +33,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - focus mode, typewriter scrolling, a sprint timer, a daily goal, and counts
   - saving into synced folders, with a check for a file changed on another computer before you type over it
   - phones, one pane at a time
+- The first of five Phase 1 implementation plans, `docs/plans/2026-10-25-phase1-plan1-shell-and-deploy.md`: the app shell, Netlify configuration, and the content security policy.
 
 ### Changed
 
