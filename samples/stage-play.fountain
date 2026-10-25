@@ -1,0 +1,87 @@
+Title: The Call
+Credit: A play in one act by
+Author: A. Writer
+Draft date: October 2026
+Contact:
+    A. Writer
+    writer@example.com
+
+[[This is a short sample stage play: the same story as the screenplay sample, written for the theater. Notes in double brackets never print.]]
+
+# Act One
+
+## Scene 1
+
+[[In a play, # starts an act and ## starts a scene, and both print as headings. Other Fountain apps treat these lines as outline markers and leave them out of the printed script.]]
+
+A kitchen, late at night. A table, two chairs, a telephone on the wall. The clock reads twenty to midnight.
+
+MARGARET, in her sixties, sits at the table in front of a plate she hasn't touched. She watches the telephone.
+
+[[Paragraphs between speeches are stage directions. A play has no INT. or EXT. headings: the set is described in a stage direction instead.]]
+
+MARGARET
+(quietly)
+You said you'd call.
+
+Silence. She scrapes the plate into the trash. A knock at the back door.
+
+DANNY (offstage)
+Mom? It's me. I lost my phone.
+
+[[An offstage voice is marked (offstage), rather than the screenplay's (O.S.).]]
+
+MARGARET
+Of course you did.
+
+She opens the door. DANNY, in his thirties and soaked through, holds out a bakery box gone soft in the rain.
+
+DANNY
+I *did* call. From a pay phone. Do you know how hard it is to find a pay phone?
+
+MARGARET
+(taking the box from him and setting it
+on the table without looking inside)
+Harder than finding your mother's house, apparently.
+
+[[A direction can wrap onto a second line inside a speech. Drafter keeps it as one parenthetical; other Fountain apps show the second line as dialogue.]]
+
+DANNY
+Look inside.
+
+She lifts the lid.
+
+MARGARET
+Is that a cake?
+
+DANNY
+It was a cake.
+
+They look at each other. She almost laughs.
+
+MARGARET
+Sit down before you drip on everything.
+
+He sits. She hands him a dish towel and, after a long moment, a fork. The lights fade.
+
+[[A play has no CUT TO: or other camera directions. A lighting change is written as a stage direction.]]
+
+## Scene 2
+
+The back step, later. The rain has stopped. MARGARET and DANNY eat the ruined cake straight from the box.
+
+DANNY
+Next year I'll call from the bakery.
+
+MARGARET
+Next year you'll come at seven.
+
+Blackout.
+
+> END OF SAMPLE <
+
+[[The block at the very end tells Drafter to open this file with the stage-play template. Other Fountain apps ignore it.]]
+
+/* drafter
+{ "v": 1, "template": "stage-play-standard" }
+*/

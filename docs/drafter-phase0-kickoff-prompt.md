@@ -30,6 +30,7 @@ drafter/
 ├── vitest.config.ts          # root config; test.projects: ['packages/*']
 ├── .gitattributes            # fixtures/** -text, so CRLF and BOM fixtures stay byte-exact
 ├── docs/                     # the design docs (already present)
+├── samples/                  # a sample screenplay and stage play (already present)
 ├── fixtures/                 # shared test scripts (see "Fixtures")
 └── packages/
     ├── fountain/             # @drafter/fountain   — CST parser + printer + full reparse
@@ -133,7 +134,7 @@ The root `package.json` gets a `drafter` script (`node packages/cli/dist/index.j
 
 ## Fixtures
 
-Write all fixtures yourself. **Do not** download or copy any existing screenplay, Fountain sample file, or another project's test corpus. Create under `fixtures/`:
+Write all fixtures yourself. **Do not** download or copy any existing screenplay, Fountain sample file, or another project's test corpus. (The two scripts in `samples/` are original and part of this repository; use them freely.) Create under `fixtures/`:
 
 - `classification/*.fountain` + `*.expected.json` — one file per row of the §2.5 table, plus:
   - an uppercase action line;
@@ -177,6 +178,7 @@ Fixture content must be original and short; placeholder names and nonsense dialo
 8. **Template validation:** each of these malformed templates throws `TemplateError` with the right message, and nothing is partially loaded: a missing role, a rule that produces an undefined role, a negative width, an unknown `extends`, an `extends` cycle, and an inch value off the character grid.
 9. **CLI:** from the repository root, `pnpm drafter build fixtures/layout/short.fountain --pdf out.pdf --txt out.txt --json out.json` exits 0 and writes all three; `pnpm drafter check` on a fixture with an unclosed boneyard exits non-zero.
 10. `pnpm -r build && pnpm -r test && pnpm biome check .` are all clean.
+11. **Samples:** `pnpm drafter check` exits 0 on both files in `samples/`, and `pnpm drafter build` turns each into a PDF. The stage-play sample gets its template from its metadata block, with no `--template` flag.
 
 ## Working rules
 

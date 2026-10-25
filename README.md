@@ -13,6 +13,7 @@ drafter.dev (planned) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 - [Principles](#principles)
 - [What makes it different](#what-makes-it-different)
 - [How it works](#how-it-works)
+- [Samples](#samples)
 - [Packages](#packages)
 - [Roadmap](#roadmap)
 - [Stack](#stack)
@@ -92,6 +93,21 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 - **Pagination is a pure function.** Screenplays use 12-point Courier: 10 characters and 6 lines to the inch. Layout works in characters and lines rather than pixels, so it runs anywhere (a Web Worker in the app, Node in the CLI), and the screen and the PDF come from the same page model.
 - **Templates drive the format.** A template sets the page size and margins; each element's indent, width, case, and spacing; dialogue-splitting rules (`(MORE)` and `(CONT'D)`); and a *role map* that assigns roles such as stage direction, act heading, or sound cue to standard Fountain elements, so no new syntax is needed.
 
+## Samples
+
+[`samples/`](samples/) holds two short scripts that tell the same story, one as a [screenplay](samples/screenplay.fountain) and one as a [stage play](samples/stage-play.fountain). Neither is complete; together they show how Drafter's Fountain works and how the two formats differ. Notes in double brackets explain each piece of syntax in the source and never print. In the app (Phase 1), both open from the start screen.
+
+| | Screenplay | Stage play |
+|---|---|---|
+| Template | US Screenplay, the default | Stage Play, chosen by the metadata block at the end of the file |
+| Scenes | `INT. KITCHEN - NIGHT` | `## Scene 1`, with the set described in a stage direction |
+| Acts | `# Act One`, an outline marker that doesn't print | `# Act One`, printed as a centered heading |
+| Description | Action, in plain type | Stage directions, indented and in italics |
+| Character names | Indented about 3.7 inches from the page edge | Centered |
+| A voice from off stage | `(O.S.)` | `(offstage)` |
+| Transitions | `CUT TO:` | None; lighting changes are stage directions |
+| A speaker continuing after action | `(CONT'D)`, added automatically | Not marked |
+
 ## Packages
 
 The engine is a set of framework-free TypeScript packages, published as `@drafter/*`. The web app lives in `apps/web`. Only `render-html` touches the DOM, and only `cm-fountain` depends on CodeMirror.
@@ -118,6 +134,7 @@ drafter/
 ├── apps/web/      # the Nuxt 4 app for drafter.dev (Phase 1)
 ├── packages/      # the @drafter/* engine packages
 ├── templates/     # community templates, as plain JSON
+├── samples/       # a sample screenplay and stage play
 ├── fixtures/      # original test scripts
 └── docs/          # design documents
 ```
@@ -168,7 +185,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
 - Autosave to IndexedDB, a request for persistent storage, and honest notices where the browser may discard data.
 - Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF and `.txt`.
-- A template switcher for screenplay and stage play.
+- A template switcher for screenplay and stage play, with a sample script for each on the start screen.
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
 - Deployment to drafter.dev.
 
@@ -226,14 +243,14 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 Drafter never needs an account. Your script lives in your browser and, where possible, in a file on your disk.
 
-| | Chromium (Chrome, Edge, Brave, Arc) | Firefox | Safari |
+| | Chrome, Edge, and other Chromium browsers | Firefox | Safari |
 |---|---|---|---|
 | Autosave in the browser | ✅ | ✅ | ✅ |
 | Open a `.fountain` file and save back to it | ✅ | Download instead | Download instead |
 | Import by drag-and-drop or file picker | ✅ | ✅ | ✅ |
 | Export by download | ✅ | ✅ | ✅ |
 
-Safari can clear storage for websites you haven't used recently. Installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it. On every browser, a download is a complete `.fountain` file, so any downloaded copy is a full backup. The full table and policy are in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
+Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. Safari can clear storage for websites you haven't used recently. Installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it. On every browser, a download is a complete `.fountain` file, so any downloaded copy is a full backup. The full table and policy are in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
 
 ## Development
 

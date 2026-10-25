@@ -1,0 +1,99 @@
+Title: The Call
+Credit: Written by
+Author: A. Writer
+Draft date: October 2026
+Contact:
+    A. Writer
+    writer@example.com
+
+[[This is a short sample screenplay, not a finished script. The "Key: value" lines at the top make the title page. Notes in double brackets, like this one, stay in the source but never print. Delete them when you're done exploring.]]
+
+# Act One
+
+= Margaret waits up for a call that never comes.
+
+[[A line starting with # is a section, and one starting with = is a synopsis. They build the outline and never print.]]
+
+INT. KITCHEN - NIGHT
+
+[[A scene heading starts with INT. or EXT. and usually ends with the time of day.]]
+
+A small kitchen, cleaner than it needs to be. The wall clock reads 11:40.
+
+MARGARET (60s), cardigan buttoned wrong, sits at the table in front of a plate she hasn't touched. She watches the phone on the wall.
+
+!SILENCE.
+Just the clock.
+
+[[Without the ! at the start, SILENCE would read as a character saying "Just the clock." The ! forces the lines to be action.]]
+
+MARGARET
+(quietly)
+You said you'd call.
+
+[[A name in capitals on its own line, followed directly by speech, is a character cue. A line in parentheses right under the name is a parenthetical.]]
+
+She scrapes the plate into the trash and sets it in the sink harder than she needs to.
+
+A KNOCK at the back door.
+
+DANNY (O.S.)
+Mom? It's me. I lost my phone.
+
+[[(O.S.) means off screen: we hear Danny before we see him.]]
+
+Margaret doesn't move.
+
+MARGARET
+Of course you did.
+
+She opens the door. DANNY (30s), soaked through, holds out a bakery box gone soft in the rain.
+
+DANNY
+I *did* call. From a pay phone. Do you know how hard it is to find a pay phone?
+
+MARGARET
+Harder than finding your mother's house, apparently.
+
+He sets the box on the table and lifts the lid. Something that used to be a cake.
+
+[[Margaret speaks again right after a line of action, so Drafter adds (CONT'D) to her name by itself. Don't type it.]]
+
+MARGARET
+Is that a cake?
+
+DANNY
+It was a cake.
+
+They both start talking at once.
+
+[[A ^ after the second name sets two speeches side by side.]]
+
+MARGARET
+You can't just turn up at midnight with--
+
+DANNY ^
+I know, I know. I'm sorry. I--
+
+/* MARGARET
+You look just like your father when you do that. */
+
+[[Text between /* and */ is cut but kept, in case you want it back. It never prints.]]
+
+They both stop. Margaret hands him a dish towel and, after a long moment, a fork.
+
+CUT TO:
+
+EXT. BACK PORCH - LATER
+
+The rain has stopped. Margaret and Danny sit on the step, eating the ruined cake straight from the box.
+
+DANNY
+_Next_ year I'll call from the bakery.
+
+MARGARET
+**Next** year you'll come at seven.
+
+[[Single *stars* make italics, double **stars** make bold, and _underscores_ underline. A line wrapped in > and < is centered.]]
+
+> END OF SAMPLE <

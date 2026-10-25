@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `.nvmrc` pinning Node 22.
 - `.gitignore` for a pnpm, Node, and Nuxt monorepo.
 - Pre-push hook (`.githooks/pre-push`) that rejects a push unless at least one of its commits updates this changelog.
+- Sample scripts in `samples/`: a short screenplay and a short stage play that tell the same story, with notes in the source explaining each piece of Fountain.
 
 ### Changed
 
@@ -26,5 +27,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - Pagination rules are now precise: keep-with-next look-ahead, corrected dialogue-split thresholds, engine-added `(CONT'D)` for continued speeches, and no blank pages from forced breaks.
   - Phase 0 tooling is updated: tsdown, Vitest `test.projects`, pnpm 10, `@pdf-lib/fontkit`, `pdfjs-dist`, `@types/node`, and a "Done means" command that works.
   - The kickoff prompt adds rules for changelog entries, commit trailers, and hook setup.
+- Tightened three v0.2 rules found while writing the samples: a character cue is a name plus optional extensions and nothing else, so `MARGARET (60s) sits…` stays action; dual dialogue never takes a continued-speech `(CONT'D)`; and Brave saves by download, because it ships with the File System Access API turned off.
 
 [Unreleased]: https://github.com/cschweda/drafter/commits/main

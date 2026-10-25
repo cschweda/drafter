@@ -150,12 +150,12 @@ Rules are tried in order on the first line of each *run*: the lines of a physica
 | 9 | starts with `.` followed by a letter or digit | `scene_heading` (forced) | this line |
 | 10 | entirely uppercase, ending in `TO:` with nothing after it | `transition` | this line |
 | 11 | matches `^(INT\.?/EXT\|INT\|EXT\|EST\|I/E)[. ]` (case-insensitive), and either the run is one line or the line is entirely uppercase | `scene_heading` | this line |
-| 12 | the character name is entirely uppercase, and the run has at least one more line | `character` | the run, as a dialogue group (§2.2) |
+| 12 | the line is shaped like a cue (below), its character name is entirely uppercase, and the run has at least one more line | `character` | the run, as a dialogue group (§2.2) |
 | 13 | otherwise | `action` | the run |
 
 A line that rules 1–3 match always starts a new run, even in the middle of an action paragraph, because the spec defines sections, synopses, and page breaks line by line. Inside a dialogue group, every line belongs to the speech: only parentheticals (§4.3) and `~` lyrics are recognized there. When one of rules 8–11 matches a line that has more lines after it in the run, that's the first lenient reading below.
 
-**Entirely uppercase** means the text contains at least one uppercase letter (`\p{Lu}`) and no lowercase letters (`\p{Ll}`); digits, punctuation, and spaces are allowed. Scripts without letter case, such as Chinese or Japanese, therefore never produce an automatic cue; use `@`. For rule 12 the test applies to the *character name*: the text before the first `(`, with a trailing `^` and whitespace removed. The parenthetical extension may be any case, as in the spec's own `HANS (on the radio)`, and is parsed into `sem.extension`. A trailing `^` marks dual dialogue (`sem.dual = true`) and is stripped from the name.
+**Entirely uppercase** means the text contains at least one uppercase letter (`\p{Lu}`) and no lowercase letters (`\p{Ll}`); digits, punctuation, and spaces are allowed. Scripts without letter case, such as Chinese or Japanese, therefore never produce an automatic cue; use `@`. For rule 12, the line must be shaped like a cue: a *character name*, then optionally one or more parenthetical extensions, then optionally `^`, and nothing else. The uppercase test applies to the name alone. So an extension may be any case, as in the spec's own `HANS (on the radio)`, while an action line that opens `MARGARET (60s), cardigan buttoned wrong,` is not a cue. Extensions are parsed into `sem.extension`. A trailing `^` marks dual dialogue (`sem.dual = true`) and is stripped from the name.
 
 Rule 12's "at least one more line" is the spec's requirement that a character cue be followed by dialogue; a lone uppercase line is action (a shouted word, a sound), full stop. A look-ahead exception ("the next block is dialogue-shaped") was considered and rejected. The lint rule `character-without-dialogue` catches the usual typo instead.
 
@@ -446,7 +446,7 @@ When a dialogue block of `n` wrapped lines doesn't fit in the `remaining` lines 
 
 Otherwise, move the whole group to the next page. Character cues have `keepWithNext`, so a cue is never orphaned. With the default thresholds of 2 and 2, `minLinesAfter` never blocks a split, because a speech that doesn't fit always leaves at least two lines over; it starts to matter at 3.
 
-**Continued speeches.** With `dialogueSplit.contdAfterAction`, a cue also gets `(CONT'D)` when the same character spoke the previous dialogue group in the same scene and only non-dialogue blocks came between. A cue that already ends in `(CONT'D)` isn't extended again. That's why nobody needs to type `(CONT'D)`: the `manual-contd` rule (§9) offers to remove one the engine would add anyway.
+**Continued speeches.** With `dialogueSplit.contdAfterAction`, a cue also gets `(CONT'D)` when the same character spoke the previous dialogue group in the same scene and only non-dialogue blocks came between. A cue that already ends in `(CONT'D)` isn't extended again, and dual dialogue neither gets nor triggers a continued-speech `(CONT'D)`. That's why nobody needs to type `(CONT'D)`: the `manual-contd` rule (§9) offers to remove one the engine would add anyway.
 
 ### 5.5 Dual dialogue
 
@@ -544,13 +544,15 @@ A snapshot is the full source (a feature is ~150–250 KB). Created: every 10 mi
 
 ### 8.5 Files on disk
 
-| Capability | Chromium (Chrome/Edge/Brave/Arc) | Firefox | Safari |
+| Capability | Chrome, Edge, and other Chromium browsers | Firefox | Safari |
 |---|---|---|---|
 | Open file, keep handle, save in place | ✅ `showOpenFilePicker` | ❌ | ❌ |
 | Persisted handle across sessions | ✅ (stored in IDB; re-prompts for permission) | — | — |
 | Drag-and-drop import | ✅ | ✅ | ✅ |
 | Download export | ✅ | ✅ | ✅ |
 | `storage.persist()` honored | usually | prompts the user | only if installed |
+
+Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. Feature-detect `showOpenFilePicker` rather than sniffing the browser.
 
 On Chromium a project may be bound to a file: `Save` writes through the handle; `Open` from disk reads it and watches `lastModified` on focus to detect external edits (prompt: reload / keep mine / snapshot both). On other browsers "Save" means "download `.fountain`" and the project list is the source of truth. The UI uses the same verbs everywhere and explains the difference once.
 
@@ -567,7 +569,7 @@ Non-prose state that must travel with the file (template id, scene colors, locke
 */
 ```
 
-The metadata block is the file's last block: a boneyard whose text starts with `drafter` and a line break, followed only by whitespace. A `/* drafter` block anywhere else is an ordinary boneyard. The parser exposes its JSON as `doc.meta` (`null`, with an `invalid-meta` diagnostic, if it doesn't parse), and the printer writes it back verbatim. When Drafter writes the block, it escapes every `/` inside JSON strings as `\/`, so no value can contain `*/` and close the boneyard early. Other Fountain tools ignore boneyards entirely, so the file is portable. Keeping it at the end, as one block, means it never interrupts reading the source. (Title-page keys are reserved for human-meaningful fields.)
+The metadata block is the file's last block: a boneyard that opens with `/* drafter` and a line break, followed only by whitespace. A `/* drafter` block anywhere else is an ordinary boneyard. The parser exposes its JSON as `doc.meta` (`null`, with an `invalid-meta` diagnostic, if it doesn't parse), and the printer writes it back verbatim. When Drafter writes the block, it escapes every `/` inside JSON strings as `\/`, so no value can contain `*/` and close the boneyard early. Other Fountain tools ignore boneyards entirely, so the file is portable. Keeping it at the end, as one block, means it never interrupts reading the source. (Title-page keys are reserved for human-meaningful fields.)
 
 The template comes from, in order: an explicit choice (the CLI's `--template`, or the app's switcher), `meta.template`, then `us-screenplay`. An unknown id falls back to `us-screenplay` with a warning, as in §4.5.
 

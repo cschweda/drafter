@@ -113,6 +113,7 @@ drafter/
 │   ├── cm-fountain/          # CodeMirror 6 integration (decorations, keymaps, autocomplete)
 │   └── cli/                  # `drafter build` / `drafter check`
 ├── templates/                # Community templates live here as plain JSON
+├── samples/                  # A short screenplay and stage play: the same story in both formats
 └── docs/
 ```
 
@@ -170,7 +171,7 @@ Three layers, all local:
 
 **6.1 The honest browser table.** "Local-first forever" is only as strong as the browser's storage guarantees, and those differ a lot. This table is also user documentation; it should appear in the app's docs.
 
-| Capability | Chromium (Chrome, Edge, Brave, Arc) | Firefox | Safari (macOS / iOS) |
+| Capability | Chrome, Edge, and other Chromium browsers | Firefox | Safari (macOS / iOS) |
 |---|---|---|---|
 | Autosave to IndexedDB | ✅ | ✅ | ✅ |
 | Open a `.fountain` and **save back to the same file** | ✅ File System Access API | ❌ | ❌ |
@@ -180,6 +181,8 @@ Three layers, all local:
 | `navigator.storage.persist()` honored | Usually, after some site engagement | Prompts the user | Only when installed as an app |
 | Risk of the browser **silently evicting** local data | Low once persisted | Low once persisted | **Real**: non-installed sites can lose IndexedDB after ~7 days of non-use |
 | Install as PWA | ✅ | ❌ (desktop) | ✅ "Add to Dock / Home Screen" |
+
+Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari.
 
 **6.2 Policy for browsers without save-in-place.** Drafter does *not* force exports or nag on every edit — that punishes people for their browser choice and trains them to click through. Instead:
 
@@ -331,7 +334,7 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 **Phase 0 — Engine (no UI).** `@drafter/fountain` CST parser with lossless round-trip and fast full reparse; `@drafter/templates` schema + `us-screenplay` + `stage-play-standard`; `@drafter/layout` pagination; `@drafter/render-pdf`. A CLI that turns a `.fountain` into a correct PDF. Full test suite. *If this phase is right, everything else is UI.*
 
-**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the starter lint rules and Strict Fountain checks**; IndexedDB autosave with `storage.persist()` and the §6.2 notices; open/save `.fountain` (bound file on Chromium, download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
+**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the starter lint rules and Strict Fountain checks**; IndexedDB autosave with `storage.persist()` and the §6.2 notices; open/save `.fountain` (bound file on Chromium, download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**, each with a sample script on the start screen; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
 
 **Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats; nspell with project dictionary; Reference tab.
 
