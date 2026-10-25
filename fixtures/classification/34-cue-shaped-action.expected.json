@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "character",
+      "line": 4,
+      "sem": {
+        "name": "MARGARET",
+        "extension": "(quietly)"
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 5
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,7 @@
+{
+  "blocks": [
+    { "kind": "action", "line": 1, "sem": { "text": "[[A note" } },
+    { "kind": "action", "line": 3, "sem": { "text": "that tries to span a blank line.]]" } }
+  ],
+  "diagnostics": [{ "code": "unclosed-note", "line": 1 }]
+}

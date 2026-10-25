@@ -1,0 +1,19 @@
+{
+  "blocks": [
+    {
+      "kind": "centered",
+      "line": 1,
+      "sem": {
+        "text": "THE END"
+      }
+    },
+    {
+      "kind": "centered",
+      "line": 3,
+      "sem": {
+        "text": "Intermission\nFifteen minutes"
+      }
+    }
+  ],
+  "diagnostics": []
+}

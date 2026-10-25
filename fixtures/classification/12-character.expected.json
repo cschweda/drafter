@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1,
+      "sem": {
+        "name": "MARGARET",
+        "extension": null,
+        "dual": false
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 2,
+      "sem": {
+        "text": "You said you'd call."
+      }
+    }
+  ],
+  "diagnostics": []
+}

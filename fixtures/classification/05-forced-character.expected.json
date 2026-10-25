@@ -1,0 +1,19 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1,
+      "forced": true,
+      "sem": {
+        "name": "McCLANE",
+        "extension": null,
+        "dual": false
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 2
+    }
+  ],
+  "diagnostics": []
+}

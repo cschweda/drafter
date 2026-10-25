@@ -1,0 +1,24 @@
+{
+  "blocks": [
+    {
+      "kind": "section",
+      "line": 1,
+      "sem": {
+        "depth": 1,
+        "text": "ACT ONE"
+      }
+    },
+    {
+      "kind": "synopsis",
+      "line": 2,
+      "sem": {
+        "text": "Margaret waits; Danny arrives late."
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 4
+    }
+  ],
+  "diagnostics": []
+}

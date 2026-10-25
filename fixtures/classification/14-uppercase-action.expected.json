@@ -1,0 +1,17 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "action",
+      "line": 3
+    },
+    {
+      "kind": "action",
+      "line": 5
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,17 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1,
+      "forced": true,
+      "sem": {
+        "text": "FLASHBACK"
+      }
+    },
+    {
+      "kind": "action",
+      "line": 3
+    }
+  ],
+  "diagnostics": []
+}

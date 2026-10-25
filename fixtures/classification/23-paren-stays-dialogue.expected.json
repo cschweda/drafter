@@ -1,0 +1,16 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1
+    },
+    {
+      "kind": "dialogue",
+      "line": 2,
+      "sem": {
+        "text": "(to Horatio) Look.\nIs that a ghost?)"
+      }
+    }
+  ],
+  "diagnostics": []
+}

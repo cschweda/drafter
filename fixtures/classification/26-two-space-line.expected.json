@@ -1,0 +1,24 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1
+    },
+    {
+      "kind": "dialogue",
+      "line": 2,
+      "sem": {
+        "text": "Ten.\n\nEleven. He's not coming."
+      }
+    },
+    {
+      "kind": "action",
+      "line": 6
+    },
+    {
+      "kind": "action",
+      "line": 8
+    }
+  ],
+  "diagnostics": []
+}

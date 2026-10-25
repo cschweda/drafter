@@ -1,0 +1,48 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1,
+      "forced": true,
+      "sem": {
+        "text": "MONTAGE"
+      }
+    },
+    {
+      "kind": "action",
+      "line": 3,
+      "forced": true
+    },
+    {
+      "kind": "character",
+      "line": 6,
+      "forced": true,
+      "sem": {
+        "name": "dad"
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 7
+    },
+    {
+      "kind": "lyric",
+      "line": 9,
+      "forced": true
+    },
+    {
+      "kind": "transition",
+      "line": 11,
+      "forced": true,
+      "sem": {
+        "text": "CUT TO BLACK."
+      }
+    },
+    {
+      "kind": "centered",
+      "line": 13,
+      "forced": true
+    }
+  ],
+  "diagnostics": []
+}

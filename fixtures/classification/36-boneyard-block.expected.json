@@ -1,0 +1,17 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1
+    },
+    {
+      "kind": "boneyard",
+      "line": 3
+    },
+    {
+      "kind": "action",
+      "line": 9
+    }
+  ],
+  "diagnostics": []
+}

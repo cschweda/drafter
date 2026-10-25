@@ -1,0 +1,59 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1,
+      "sem": {
+        "prefix": "INT.",
+        "location": "KITCHEN",
+        "time": "NIGHT"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 3,
+      "sem": {
+        "prefix": "EXT.",
+        "location": "BACK PORCH",
+        "time": "LATER"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 5,
+      "sem": {
+        "prefix": "INT./EXT.",
+        "location": "CAR - MOVING",
+        "time": "DAY"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 7,
+      "sem": {
+        "prefix": "I/E",
+        "location": "VAN",
+        "time": "CONTINUOUS"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 9,
+      "sem": {
+        "prefix": "EST.",
+        "location": "CITY SKYLINE",
+        "time": "DAWN"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 11,
+      "sem": {
+        "prefix": "int.",
+        "location": "hallway",
+        "time": "night"
+      }
+    }
+  ],
+  "diagnostics": []
+}

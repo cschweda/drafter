@@ -1,0 +1,42 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1,
+      "sem": {
+        "name": "HANS",
+        "extension": "(on the radio)",
+        "dual": false
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 2
+    },
+    {
+      "kind": "character",
+      "line": 4,
+      "sem": {
+        "name": "MOM",
+        "extension": "(O. S.)"
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 5
+    },
+    {
+      "kind": "character",
+      "line": 7,
+      "sem": {
+        "name": "DANNY",
+        "extension": "(V.O.) (CONT'D)"
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 8
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "section",
+      "line": 2,
+      "sem": {
+        "depth": 1,
+        "text": "Act Two"
+      }
+    },
+    {
+      "kind": "action",
+      "line": 3
+    }
+  ],
+  "diagnostics": []
+}

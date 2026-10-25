@@ -1,0 +1,16 @@
+{
+  "blocks": [
+    {
+      "kind": "note",
+      "line": 1
+    },
+    {
+      "kind": "action",
+      "line": 4,
+      "sem": {
+        "text": "Margaret waits. The phone stays silent."
+      }
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,9 @@
+{
+  "blocks": [
+    { "kind": "character", "line": 1 },
+    { "kind": "dialogue", "line": 2, "sem": { "text": "(crossing to the window" } },
+    { "kind": "parenthetical", "line": 3, "sem": { "text": "(beat)" } },
+    { "kind": "dialogue", "line": 4, "sem": { "text": "and looking out)\nTo be." } }
+  ],
+  "diagnostics": []
+}

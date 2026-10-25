@@ -1,0 +1,31 @@
+{
+  "name": "@drafter/fountain",
+  "version": "0.0.1",
+  "description": "A lossless Fountain parser and printer: the concrete syntax tree behind Drafter.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/fountain"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

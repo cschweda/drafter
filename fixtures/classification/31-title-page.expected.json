@@ -1,0 +1,33 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 9
+    }
+  ],
+  "diagnostics": [],
+  "titlePage": {
+    "fields": [
+      {
+        "key": "Title",
+        "value": ["The Call"]
+      },
+      {
+        "key": "Credit",
+        "value": ["Written by"]
+      },
+      {
+        "key": "Author",
+        "value": ["A. Writer"]
+      },
+      {
+        "key": "Draft date",
+        "value": ["October 2026"]
+      },
+      {
+        "key": "Contact",
+        "value": ["A. Writer", "writer@example.com"]
+      }
+    ]
+  }
+}

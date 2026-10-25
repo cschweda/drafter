@@ -1,0 +1,27 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1,
+      "sem": {
+        "text": "INT. KITCHEN - NIGHT",
+        "prefix": "INT."
+      }
+    },
+    {
+      "kind": "action",
+      "line": 3,
+      "sem": {
+        "text": "Margaret waits."
+      }
+    },
+    {
+      "kind": "transition",
+      "line": 5,
+      "sem": {
+        "text": "CUT TO:"
+      }
+    }
+  ],
+  "diagnostics": []
+}

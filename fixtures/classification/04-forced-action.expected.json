@@ -1,0 +1,13 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1,
+      "forced": true,
+      "sem": {
+        "text": "SILENCE.\nJust the clock."
+      }
+    }
+  ],
+  "diagnostics": []
+}

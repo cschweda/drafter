@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1
+    },
+    {
+      "kind": "action",
+      "line": 3
+    },
+    {
+      "kind": "boneyard",
+      "line": 5
+    }
+  ],
+  "diagnostics": [],
+  "meta": {
+    "v": 1,
+    "template": "stage-play-standard"
+  }
+}

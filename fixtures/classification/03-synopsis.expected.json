@@ -1,0 +1,20 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1
+    },
+    {
+      "kind": "synopsis",
+      "line": 3,
+      "sem": {
+        "text": "Margaret waits for a call that never comes."
+      }
+    },
+    {
+      "kind": "action",
+      "line": 5
+    }
+  ],
+  "diagnostics": []
+}

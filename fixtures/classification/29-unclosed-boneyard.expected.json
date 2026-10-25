@@ -1,0 +1,18 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "boneyard",
+      "line": 3
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "unclosed-boneyard",
+      "line": 3
+    }
+  ]
+}

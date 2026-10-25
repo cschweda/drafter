@@ -1,0 +1,12 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1,
+      "sem": {
+        "text": "INT. McDONALD'S - DAY\nMargaret orders coffee."
+      }
+    }
+  ],
+  "diagnostics": []
+}

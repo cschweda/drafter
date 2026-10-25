@@ -1,0 +1,30 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1
+    },
+    {
+      "kind": "action",
+      "line": 2
+    },
+    {
+      "kind": "transition",
+      "line": 4
+    },
+    {
+      "kind": "scene_heading",
+      "line": 5
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "heading-blank-after",
+      "line": 1
+    },
+    {
+      "code": "heading-blank-after",
+      "line": 4
+    }
+  ]
+}

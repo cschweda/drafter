@@ -1,0 +1,14 @@
+{
+  "blocks": [
+    {
+      "kind": "boneyard",
+      "line": 1
+    },
+    {
+      "kind": "action",
+      "line": 5
+    }
+  ],
+  "diagnostics": [],
+  "meta": null
+}

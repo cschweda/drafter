@@ -1,0 +1,18 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1
+    },
+    {
+      "kind": "action",
+      "line": 3,
+      "forced": true
+    },
+    {
+      "kind": "action",
+      "line": 5
+    }
+  ],
+  "diagnostics": []
+}

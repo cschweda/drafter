@@ -1,0 +1,29 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1,
+      "sem": {
+        "name": "MARGARET",
+        "dual": false
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 2
+    },
+    {
+      "kind": "character",
+      "line": 4,
+      "sem": {
+        "name": "DANNY",
+        "dual": true
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 5
+    }
+  ],
+  "diagnostics": []
+}

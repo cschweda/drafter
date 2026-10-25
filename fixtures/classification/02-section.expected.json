@@ -1,0 +1,33 @@
+{
+  "blocks": [
+    {
+      "kind": "section",
+      "line": 1,
+      "sem": {
+        "depth": 1,
+        "text": "Act One"
+      }
+    },
+    {
+      "kind": "section",
+      "line": 3,
+      "sem": {
+        "depth": 2,
+        "text": "The Kitchen"
+      }
+    },
+    {
+      "kind": "section",
+      "line": 5,
+      "sem": {
+        "depth": 3,
+        "text": "Margaret waits"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 7
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,10 @@
+{
+  "blocks": [
+    {
+      "kind": "lyric",
+      "line": 1,
+      "forced": true
+    }
+  ],
+  "diagnostics": []
+}

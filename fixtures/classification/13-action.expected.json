@@ -1,0 +1,16 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1,
+      "sem": {
+        "text": "Margaret sits at the table, not eating.\nThe clock ticks."
+      }
+    },
+    {
+      "kind": "action",
+      "line": 4
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,25 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1
+    },
+    {
+      "kind": "parenthetical",
+      "line": 2,
+      "sem": {
+        "text": "(taking the box from him and setting it\non the table without looking inside)"
+      }
+    },
+    {
+      "kind": "dialogue",
+      "line": 4
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "multiline-parenthetical",
+      "line": 2
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1,
+      "sem": {
+        "text": "Margaret waits. [[Check the time on the clock."
+      }
+    },
+    {
+      "kind": "action",
+      "line": 3
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "unclosed-note",
+      "line": 1
+    }
+  ]
+}

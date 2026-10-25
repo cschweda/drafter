@@ -1,0 +1,23 @@
+{
+  "blocks": [
+    {
+      "kind": "scene_heading",
+      "line": 1,
+      "sem": {
+        "number": "1",
+        "text": "INT. KITCHEN - NIGHT",
+        "time": "NIGHT"
+      }
+    },
+    {
+      "kind": "scene_heading",
+      "line": 3,
+      "sem": {
+        "number": "12A",
+        "text": "EXT. YARD - NIGHT",
+        "location": "YARD"
+      }
+    }
+  ],
+  "diagnostics": []
+}

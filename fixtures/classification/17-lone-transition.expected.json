@@ -1,0 +1,26 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "transition",
+      "line": 3
+    },
+    {
+      "kind": "action",
+      "line": 5
+    },
+    {
+      "kind": "action",
+      "line": 7
+    },
+    {
+      "kind": "transition",
+      "line": 9,
+      "forced": true
+    }
+  ],
+  "diagnostics": []
+}

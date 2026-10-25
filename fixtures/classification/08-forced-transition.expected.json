@@ -1,0 +1,17 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "transition",
+      "line": 3,
+      "forced": true,
+      "sem": {
+        "text": "FADE TO BLACK."
+      }
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    {
+      "kind": "character",
+      "line": 1
+    },
+    {
+      "kind": "parenthetical",
+      "line": 2
+    },
+    {
+      "kind": "lyric",
+      "line": 3
+    },
+    {
+      "kind": "dialogue",
+      "line": 5
+    }
+  ],
+  "diagnostics": []
+}

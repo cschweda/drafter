@@ -1,0 +1,19 @@
+{
+  "blocks": [
+    {
+      "kind": "action",
+      "line": 1
+    },
+    {
+      "kind": "boneyard",
+      "line": 3
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "invalid-meta",
+      "line": 3
+    }
+  ],
+  "meta": null
+}
