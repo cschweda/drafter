@@ -26,6 +26,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/cli`: `drafter build` writes a script as PDF, fixed-width text, or JSON, choosing the template from `--template`, the file's metadata block, or `us-screenplay`, with `--scene-numbers` and `-` for standard output. `drafter check` lists every parse and layout diagnostic as `file:line:column` and exits 1 on any error. The root `pnpm drafter` script runs it from the repository root; tests run it that way too, covering the kickoff's acceptance tests 9 and 11 and its "Done means" command.
 - Drafter's visual identity, in `brand/`: the mark (plain-text source on one side of a line, the formatted script on the other, on a tile of revision-page colors), the "drafter" wordmark in Inter Tight, a palette taken from the colors of revised script pages, a 1200 × 630 share image for links (`og-image.svg` and `.png`), navbar logos for dark and light backgrounds, and favicons and app icons from 16 to 512 px. Every letter is an outline, so the SVGs render the same everywhere; `node brand/build.mjs` regenerates them all, byte for byte. Inter Tight ships in `brand/fonts/` under the SIL Open Font License.
 - A README section on the clean-room implementation: what it means, why it works, why it matters for an MIT-licensed engine, and what it asks of future contributors, including those using AI assistants. `docs/DEPENDENCIES.md` lists every dependency and why it's needed.
+- The Phase 1 design, `docs/drafter-phase1-design.md`, with clickable mockups and screenshots in `docs/phase1/`. It covers:
+  - the first visit: drafter.dev opens on a sample screenplay, with a welcome dialog and a guided tour built on ICJIA's `nuxt-guided-tour` module
+  - the editor, laid out like the Inform 7 IDE and dark by default
+  - autocomplete for character names and locations
+  - focus mode, typewriter scrolling, a sprint timer, a daily goal, and counts
+  - saving into synced folders, with a check for a file changed on another computer before you type over it
+  - phones, one pane at a time
 
 ### Changed
 
@@ -43,6 +50,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Developing Drafter now needs Node 22.13 or later (the root `engines` field): `pdfjs-dist` 6, which the PDF tests use, requires it, and the CLI's `commander` 15 requires 22.12. `.nvmrc` still says `22`, which installs the latest 22.x.
 - The README marks Phase 0 done and shows how to install, build, test, benchmark, and run `pnpm drafter` from the repository root. PDFs built from `samples/` and `fixtures/` are ignored by Git.
 - The README opens with Drafter's share image.
+- The roadmap grows:
+  - **Phase 1** adds the first visit and its tour, the Inform-style layout, focus mode, typewriter scrolling, a sprint timer, a daily goal, and counts.
+  - **Phase 2** adds a Beat Board, storylines, writing statistics by day, and screen time per character. Testing with NVDA and VoiceOver moves to Phase 2. Phase 1 checks accessibility with automated tests and doesn't claim WCAG conformance.
+  - **Phase 3** adds imports from Highland, Fade In, and Celtx, and a template for novels.
+  - **Phase 4** adds production revisions and alternate versions of a line.
+  - **A later phase** adds direct Open and Save for Dropbox and Google Drive. You sign in with those services, never with Drafter.
 
 ### Security
 

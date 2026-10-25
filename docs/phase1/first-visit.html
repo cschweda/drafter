@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drafter first visit mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #121318; color: #E6E8EC; font-family: 'Inter Tight', system-ui, sans-serif; line-height: 1.5; }
+
+  .dx-app {
+    --bg: #0F1013; --chrome: #15171C; --chrome-2: #1A1D23; --line: #262A31; --text: #E6E8EC; --muted: #8C93A1; --faint: #5B6170;
+    --tab-on: #23272F; --desk: #0B0C0F; --page: #1B1E25; --ink: #E8EAEE;
+    --heading: #E5B04A; --cue: #8DB8E8; --paren: #8C93A1; --trans: #F5A9C0; --note: #9BD3A0; --title: #F49C84; --gutter: #4A5060;
+    position: relative; width: 1100px; height: 700px; margin: 0 auto;
+    font-family: 'Inter Tight', sans-serif; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    display: grid; grid-template-rows: auto 1fr auto; box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  .dx-toolbar { display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: var(--chrome); border-bottom: 1px solid var(--line); }
+  .dx-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 19px; letter-spacing: -0.04em; margin-right: 6px; }
+  .dx-act { display: flex; align-items: center; gap: 7px; font: 600 13px 'Inter Tight', sans-serif; color: var(--text); }
+  .dx-round { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+  .dx-round svg { width: 15px; height: 15px; }
+  .dx-template { font-weight: 600; font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-left: 4px; white-space: nowrap; }
+  .dx-spacer { flex: 1; }
+  .dx-search { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--faint); background: var(--chrome-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; white-space: nowrap; }
+  .dx-search kbd { font: 600 11px 'Inter Tight', sans-serif; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
+  .dx-toggle { font: 600 12px 'Inter Tight', sans-serif; color: var(--text); background: var(--chrome-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; white-space: nowrap; }
+
+  .dx-panes { display: grid; grid-template-columns: 1fr 6px 1fr; min-height: 0; }
+  .dx-divider { background: var(--line); display: grid; place-items: center; }
+  .dx-divider::after { content: ''; width: 2px; height: 28px; border-radius: 2px; background: var(--faint); }
+  .dx-pane { display: grid; grid-template-rows: auto auto auto 1fr; min-height: 0; background: var(--bg); }
+  .dx-pane.right { grid-template-rows: auto auto 1fr; }
+  .dx-tabs { display: flex; gap: 2px; padding: 7px 10px 0; background: var(--chrome); border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .dx-tabs > span { color: var(--muted); padding: 6px 9px 8px; border-radius: 7px 7px 0 0; }
+  .dx-tabs > span.on { color: var(--text); background: var(--tab-on); box-shadow: inset 0 -2px 0 var(--heading); }
+  .dx-sub { display: flex; align-items: center; gap: 10px; padding: 5px 12px; background: var(--chrome-2); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .dx-sub .right { margin-left: auto; display: flex; gap: 2px; }
+  .dx-sub .right span { padding: 3px 8px; border-radius: 6px; }
+  .dx-sub .right span.on { color: var(--text); background: var(--tab-on); }
+
+  .dx-sample { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; font-size: 12.5px; color: var(--text); background: color-mix(in srgb, var(--heading) 10%, var(--bg)); border-bottom: 1px solid color-mix(in srgb, var(--heading) 30%, var(--line)); }
+  .dx-sample b { font-weight: 700; margin-right: 2px; }
+  .dx-pill { font: 600 12px 'Inter Tight', sans-serif; padding: 4px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--heading) 45%, var(--line)); color: var(--text); background: var(--chrome); white-space: nowrap; }
+
+  .dx-source { position: relative; overflow: hidden; min-height: 0; padding: 8px 0; font-family: 'Courier Prime', monospace; font-size: 13.5px; line-height: 21px; }
+  .dx-l { display: grid; grid-template-columns: 38px 1fr; padding-right: 14px; }
+  .dx-l .n { color: var(--gutter); text-align: right; padding-right: 12px; user-select: none; }
+  .dx-l.cur { background: color-mix(in srgb, var(--heading) 7%, transparent); }
+  .dx-l .t { white-space: pre-wrap; }
+  .tk-section { color: var(--title); font-weight: 700; }
+  .tk-syn { color: var(--paren); font-style: italic; }
+  .tk-heading { color: var(--heading); font-weight: 700; }
+  .tk-cue { color: var(--cue); font-weight: 700; }
+  .tk-paren { color: var(--paren); font-style: italic; }
+  .tk-note { color: var(--note); font-style: italic; }
+  .tk-marker { color: var(--faint); }
+  .tk-caret { display: inline-block; width: 2px; height: 16px; margin-left: 1px; vertical-align: -3px; background: var(--heading); }
+
+  .dx-script { position: relative; overflow: hidden; min-height: 0; background: var(--desk); }
+  .dx-page { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); width: 85ch; height: 66em; background: var(--page); color: var(--ink); border-radius: 3px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-family: 'Courier Prime', monospace; font-size: 8.6px; line-height: 1; margin: 0; padding: 0; white-space: pre; }
+  .dx-page .sh { font-weight: 700; }
+  .dx-page .hl { background: color-mix(in srgb, var(--heading) 22%, transparent); }
+
+  .dx-status { display: flex; gap: 16px; align-items: center; padding: 6px 14px; background: var(--chrome); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .dx-status b { color: var(--text); font-weight: 600; }
+  .dx-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; background: #8DB8E8; }
+
+  /* The welcome dialog */
+  .dx-backdrop { position: absolute; inset: 0; background: rgba(5, 6, 8, 0.62); display: grid; place-items: center; }
+  .dx-dialog { width: 430px; background: var(--chrome); border: 1px solid var(--line); border-radius: 16px; padding: 26px 26px 20px; box-shadow: 0 24px 60px rgba(0,0,0,0.5); }
+  .dx-dialog h2 { font-size: 22px; letter-spacing: -0.02em; margin: 14px 0 8px; font-weight: 800; }
+  .dx-dialog p { margin: 0 0 10px; font-size: 14.5px; color: var(--text); line-height: 1.5; }
+  .dx-dialog p.small { font-size: 13px; color: var(--muted); }
+  .dx-dialog .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
+  .dx-ghost { font: 600 13.5px 'Inter Tight', sans-serif; color: var(--muted); background: none; border: none; padding: 8px 4px; }
+  .dx-primary { font: 700 13.5px 'Inter Tight', sans-serif; color: #111216; background: var(--heading); border: none; border-radius: 999px; padding: 9px 16px; }
+
+  /* One tour step: a spotlight on the Script pane */
+  .dx-spot { position: absolute; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(5, 6, 8, 0.62); outline: 2px solid var(--heading); outline-offset: 2px; pointer-events: none; }
+  .dx-pop { position: absolute; width: 300px; background: var(--chrome); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,0.5); }
+  .dx-pop::after { content: ''; position: absolute; right: -7px; top: 40px; width: 12px; height: 12px; background: var(--chrome); border-top: 1px solid var(--line); border-right: 1px solid var(--line); transform: rotate(45deg); }
+  .dx-pop .step { font: 700 11px 'Inter Tight', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--heading); }
+  .dx-pop h3 { margin: 4px 0 6px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+  .dx-pop p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text); }
+  .dx-pop .foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .dx-pop .skip { font-size: 12.5px; color: var(--muted); margin-right: auto; }
+  .dx-pop .back { font: 600 13px 'Inter Tight', sans-serif; color: var(--text); background: var(--chrome-2); border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; }
+  .dx-dots { display: flex; gap: 4px; margin-top: 12px; }
+  .dx-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+  .dx-dots span.on { background: var(--heading); }
+  .dx-app:not(.tour) .dx-spot, .dx-app:not(.tour) .dx-pop { display: none; }
+  .dx-app.tour .dx-backdrop { display: none; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="fv-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8DB8E8"/><stop offset="0.5" stop-color="#F5A9C0"/><stop offset="1" stop-color="#F6E07A"/>
+    </linearGradient>
+    <symbol id="fv-mark" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="14" fill="url(#fv-grad)"/><g fill="#111216" transform="translate(4 4)"><rect x="11" y="17" width="13" height="4" rx="2"/><rect x="11" y="26" width="9" height="4" rx="2"/><rect x="11" y="35" width="13" height="4" rx="2"/><rect x="27.25" y="13" width="1.5" height="30" opacity="0.35"/><rect x="35" y="17" width="9" height="4" rx="2"/><rect x="32" y="26" width="15" height="4" rx="2"/><rect x="32" y="35" width="13" height="4" rx="2"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="dx-app" id="fv-app">
+  <div class="dx-toolbar">
+    <div class="dx-brand"><svg width="26" height="26"><use href="#fv-mark"/></svg>drafter</div>
+    <div class="dx-act"><span class="dx-round" style="background:#9BD3A0"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg></span>Open</div>
+    <div class="dx-act"><span class="dx-round" style="background:#8DB8E8"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7M5 6.8 8 9.8l3-3"/><path d="M3 11.5v2h10v-2"/></svg></span>Save</div>
+    <div class="dx-act"><span class="dx-round" style="background:#E5B04A"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h5.5L12 4.5V14H4z"/><path d="M6.5 8.5h3M6.5 11h3"/></svg></span>Export</div>
+    <div class="dx-act"><span class="dx-round" style="background:#F5A9C0"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6V3h3M10 3h3v3M13 10v3h-3M6 13H3v-3"/></svg></span>Focus</div>
+    <div class="dx-template">US Screenplay ▾</div>
+    <div class="dx-spacer"></div>
+    <div class="dx-search">⌕ Go to scene or command <kbd>⌘K</kbd></div>
+    <div class="dx-toggle">☀ Light</div>
+  </div>
+
+  <div class="dx-panes">
+    <div class="dx-pane left">
+      <div class="dx-tabs"><span class="on">Source</span><span>Script</span><span>Problems</span></div>
+      <div class="dx-sub"><span>The Call · sample screenplay</span></div>
+      <div class="dx-sample"><b>This is a sample.</b> Start your own: <span class="dx-pill">New screenplay</span><span class="dx-pill">New stage play</span><span class="dx-pill">Open a file…</span></div>
+      <div class="dx-source" id="fv-source"></div>
+    </div>
+    <div class="dx-divider"></div>
+    <div class="dx-pane right" id="fv-right">
+      <div class="dx-tabs"><span>Source</span><span class="on">Script</span><span>Problems</span></div>
+      <div class="dx-sub"><span>Page 1 of 2</span><span class="right"><span class="on">Fit width</span><span>100%</span></span></div>
+      <div class="dx-script"><pre class="dx-page" id="fv-page"></pre></div>
+    </div>
+  </div>
+
+  <div class="dx-status">
+    <span><span class="dx-dot"></span><b>Sample</b> · your edits stay in this browser</span>
+    <span class="dx-spacer"></span>
+    <span><b>p. 1</b> of 2</span>
+    <span>No problems</span>
+    <span>US Screenplay</span>
+  </div>
+
+  <div class="dx-backdrop">
+    <div class="dx-dialog" role="dialog" aria-labelledby="fv-title">
+      <svg width="44" height="44"><use href="#fv-mark"/></svg>
+      <h2 id="fv-title">Welcome to Drafter</h2>
+      <p>This is a short sample screenplay. You write plain text on the left, and Drafter turns it into formatted pages on the right, ready to print.</p>
+      <p class="small">The tour takes about two minutes. The green notes in the sample explain the rest, and they never print.</p>
+      <div class="foot"><span class="dx-ghost">No thanks, I'll look around</span><span class="dx-primary">▶ Take the tour</span></div>
+    </div>
+  </div>
+
+  <div class="dx-spot" id="fv-spot"></div>
+  <div class="dx-pop" id="fv-pop">
+    <div class="step">Step 3 of 10</div>
+    <h3>The script, as it prints</h3>
+    <p>These are the real pages, laid out exactly like the PDF. Type on the left and they update here. Click any line to jump to it in the source.</p>
+    <div class="dx-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="foot"><span class="skip">Skip tour · Esc</span><span class="back">Back</span><span class="dx-primary">Next</span></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SRC = [
+    [9, 'note', '[[This is a short sample screenplay, not a finished script. The "Key: value" lines at the top make the title page. Notes in double brackets, like this one, stay in the source but never print. Delete them when you\'re done exploring.]]'],
+    [10, 'blank'], [11, 'section', '# Act One'], [12, 'blank'],
+    [13, 'syn', '= Margaret waits up for a call that never comes.'], [14, 'blank'],
+    [15, 'note', '[[A line starting with # is a section, and one starting with = is a synopsis. They build the outline and never print.]]'],
+    [16, 'blank'], [17, 'heading', 'INT. KITCHEN - NIGHT', true], [18, 'blank'],
+    [19, 'note', '[[A scene heading starts with INT. or EXT. and usually ends with the time of day.]]'], [20, 'blank'],
+    [21, 'action', 'A small kitchen, cleaner than it needs to be. The wall clock reads 11:40.'], [22, 'blank'],
+    [23, 'action', "MARGARET (60s), cardigan buttoned wrong, sits at the table in front of a plate she hasn't touched. She watches the phone on the wall."],
+    [24, 'blank'], [25, 'forced', 'SILENCE.'], [26, 'action', 'Just the clock.'], [27, 'blank'],
+    [28, 'note', '[[Without the ! at the start, SILENCE would read as a character saying "Just the clock." The ! forces the lines to be action.]]'],
+    [29, 'blank'], [30, 'cue', 'MARGARET'], [31, 'paren', '(quietly)'], [32, 'action', "You said you'd call."]
+  ];
+  var CLS = { note: 'tk-note', section: 'tk-section', syn: 'tk-syn', heading: 'tk-heading', cue: 'tk-cue', paren: 'tk-paren' };
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  var html = '';
+  SRC.forEach(function (l) {
+    var body = l[1] === 'blank' ? ' ' : l[1] === 'forced' ? '<span class="tk-marker">!</span>' + esc(l[2])
+      : CLS[l[1]] ? '<span class="' + CLS[l[1]] + '">' + esc(l[2]) + '</span>' : esc(l[2]);
+    html += '<div class="dx-l' + (l[3] ? ' cur' : '') + '"><span class="n">' + l[0] + '</span><span class="t">' + body + (l[3] ? '<span class="tk-caret"></span>' : '') + '</span></div>';
+  });
+  document.getElementById('fv-source').innerHTML = html;
+
+  // Page 1 of samples/screenplay.fountain, as `drafter build --txt` lays it out: [column, text], null for a blank line.
+  var PAGE = [null, null, null, null, null, null,
+    [15, 'INT. KITCHEN - NIGHT', 'sh hl'], null,
+    [15, 'A small kitchen, cleaner than it needs to be. The wall clock'], [15, 'reads 11:40.'], null,
+    [15, 'MARGARET (60s), cardigan buttoned wrong, sits at the table'], [15, "in front of a plate she hasn't touched. She watches the"], [15, 'phone on the wall.'], null,
+    [15, 'SILENCE.'], [15, 'Just the clock.'], null,
+    [37, 'MARGARET'], [31, '(quietly)'], [25, "You said you'd call."], null,
+    [15, 'She scrapes the plate into the trash and sets it in the sink'], [15, 'harder than she needs to.'], null,
+    [15, 'A KNOCK at the back door.'], null,
+    [37, 'DANNY (O.S.)'], [25, "Mom? It's me. I lost my phone."], null,
+    [15, "Margaret doesn't move."], null,
+    [37, 'MARGARET'], [25, 'Of course you did.'], null,
+    [15, 'She opens the door. DANNY (30s), soaked through, holds out a'], [15, 'bakery box gone soft in the rain.'], null,
+    [37, 'DANNY'], [25, 'I did call. From a pay phone. Do'], [25, 'you know how hard it is to find a'], [25, 'pay phone?'], null,
+    [37, 'MARGARET'], [25, "Harder than finding your mother's"], [25, 'house, apparently.'], null,
+    [15, 'He sets the box on the table and lifts the lid. Something'], [15, 'that used to be a cake.'], null,
+    [37, "MARGARET (CONT'D)"], [25, 'Is that a cake?'], null,
+    [37, 'DANNY'], [25, 'It was a cake.'], null,
+    [15, 'They both start talking at once.']];
+  var pre = '';
+  PAGE.forEach(function (l) {
+    if (!l) { pre += '\n'; return; }
+    var pad = new Array(l[0] + 1).join(' ');
+    pre += pad + (l[2] ? '<span class="' + l[2] + '">' + esc(l[1]) + '</span>' : esc(l[1])) + '\n';
+  });
+  document.getElementById('fv-page').innerHTML = pre;
+
+  if (location.hash === '#tour') {
+    var app = document.getElementById('fv-app');
+    app.classList.add('tour');
+    var a = app.getBoundingClientRect(), r = document.getElementById('fv-right').getBoundingClientRect();
+    var spot = document.getElementById('fv-spot'), pop = document.getElementById('fv-pop');
+    spot.style.left = (r.left - a.left + 6) + 'px';
+    spot.style.top = (r.top - a.top + 6) + 'px';
+    spot.style.width = (r.width - 12) + 'px';
+    spot.style.height = (r.height - 12) + 'px';
+    pop.style.left = (r.left - a.left - 300 - 22) + 'px';
+    pop.style.top = (r.top - a.top + 110) + 'px';
+  }
+})();
+</script>
+</body>
+</html>

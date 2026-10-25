@@ -58,6 +58,7 @@ The left pane is a [CodeMirror 6](https://codemirror.net) editor showing the raw
 | **Problems** | Lint results, like a compiler's error list. Click to jump. | Phase 1 |
 | **Outline** | Sections, scenes, synopses, scene colors, and page counts. Reorder scenes by drag or keyboard, and the source is rewritten. | Phase 2 |
 | **Cards** | An index-card view of scenes with synopsis and color. | Phase 2 |
+| **Beat Board** | A free canvas of idea cards to color, link, and move into the outline, with storylines shown in color. | Phase 2 |
 | **Notes** | Every `[[note]]` and `/* boneyard */` in one place, linked to its position. | Phase 2 |
 | **Stats** | Page count, estimated runtime, dialogue share per character, INT/EXT and DAY/NIGHT breakdowns, pacing. | Phase 2 |
 | **Reference** | Fountain syntax and the active template's formatting rules, built in. | Phase 2 |
@@ -98,7 +99,7 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 
 ## Samples
 
-[`samples/`](samples/) holds two short scripts that tell the same story, one as a [screenplay](samples/screenplay.fountain) and one as a [stage play](samples/stage-play.fountain). Neither is complete; together they show how Drafter's Fountain works and how the two formats differ. Notes in double brackets explain each piece of syntax in the source and never print. In the app (Phase 1), both open from the start screen.
+[`samples/`](samples/) holds two short scripts that tell the same story, one as a [screenplay](samples/screenplay.fountain) and one as a [stage play](samples/stage-play.fountain). Neither is complete; together they show how Drafter's Fountain works and how the two formats differ. Notes in double brackets explain each piece of syntax in the source and never print. In the app (Phase 1), a first visit opens on the screenplay, and both are under Open → Samples.
 
 | | Screenplay | Stage play |
 |---|---|---|
@@ -150,10 +151,11 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Next** |
-| [2](#phase-2--structure) | Structure: outline, cards, snapshots, spellcheck | Planned |
-| [3](#phase-3--formats) | Formats: Final Draft, TV, radio, UK, user templates | Planned |
-| [4](#phase-4--craft) | Craft: revisions, clean display mode, table read, offline install | Planned |
+| [2](#phase-2--structure) | Structure: outline, cards, beat board, storylines, snapshots, spellcheck, screen-reader testing | Planned |
+| [3](#phase-3--formats) | Formats: Final Draft and other imports; TV, radio, UK, and novel templates; user templates | Planned |
+| [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
+| [Later](#later) | Open from and save to Dropbox and Google Drive directly | Planned |
 
 ### Phase 0 — Engine (no UI)
 
@@ -182,31 +184,40 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 **Builds**
 
-- The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs.
+- The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs, laid out like the Inform 7 IDE: two facing panes that can each show any tab, a toolbar of round buttons, and a status bar. Dark by default, with a light theme.
+- A first visit that opens on a sample screenplay, with a welcome dialog, an optional two-minute guided tour, and New screenplay, New stage play, and Open a file one click away.
 - The CodeMirror 6 source pane: highlighting driven by the one parser, Tab and Enter conveniences that insert plain Fountain, autocomplete for characters, locations, transitions, and sections, and folding by scene and section.
+- Focus mode, which leaves only the page you're writing on, and typewriter scrolling, which keeps the line you're typing in the middle of the screen.
+- A sprint timer, a daily goal, and a count of pages, scenes, words, and running time.
 - The Script tab, with live pagination in a Web Worker.
 - The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
 - Saving like a desktop app: Save and Save As to a `.fountain` file, a warning before leaving with unsaved changes, and an always-on recovery copy in the browser, with a warning when the browser may clear it.
-- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF and `.txt`.
-- A template switcher for screenplay and stage play, with a sample script for each on the start screen.
+- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF and `.txt`. On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
+- A template switcher for screenplay and stage play, and a sample script for each.
+- Phones and tablets, with one pane at a time on a phone.
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
 - Deployment to drafter.dev.
 
-**Done when** a person can write a feature or a play in it, and a screen-reader user can read it.
+**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. Testing with NVDA and VoiceOver follows in Phase 2. The [Phase 1 design](docs/drafter-phase1-design.md) has the details.
 
 ### Phase 2 — Structure
 
 - Outline, Cards, and Notes tabs, where every change is an edit to the source.
+- A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
+- Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
 - Condense to outline and expand from outline, plus scene reordering with a keyboard equivalent for every drag.
 - Snapshots with a retention schedule, and a Compare view that renders two snapshots as script pages with changed lines marked.
-- The Stats tab.
+- The Stats tab, including screen time per character and who shares scenes with whom.
+- Writing statistics by day, kept on your device.
 - Spellcheck with nspell and a per-script dictionary that knows your character names.
 - The built-in Reference tab.
+- Testing with NVDA and VoiceOver.
 
 ### Phase 3 — Formats
 
 - Final Draft `.fdx` import and export.
-- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates.
+- Import from Highland, Fade In, and Celtx.
+- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
 - User-added templates, dropped in as JSON, and template export.
 - Standalone `.html` export.
 
@@ -214,6 +225,8 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 - The remaining lint rules.
 - Revision marks and colored-page PDF.
+- Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
+- Alternate versions of a line, switchable in place.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
 - A PWA install flow and offline dictionary caching.
@@ -225,7 +238,11 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - A VS Code extension.
 - A plugin API, only if there's demand, sandboxed in a Web Worker.
 
-**Not planned:** accounts, a Drafter server, or cloud sync through Drafter. If sync ever arrives, it will be "sync a folder" through your own Dropbox, iCloud, or Syncthing, or peer-to-peer. PDF import is out of scope through Phase 4.
+### Later
+
+- Open from and save to Dropbox and Google Drive directly. You sign in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server.
+
+**Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
 
 ## Stack
 
@@ -352,8 +369,9 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 - [High-level architecture](docs/drafter-architecture.md): the vision, the IDE model, the data model, storage, templates, and the phased plan.
 - [Technical design](docs/drafter-technical-design.md): how each package works, from the parser and pagination to storage, linting, accessibility, security, and testing.
 - [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md): the self-contained brief for building the engine.
+- [Phase 1 design](docs/drafter-phase1-design.md): the first public release, from the first visit and its guided tour to the editor, saving, export, focus mode, and phones, with mockups in [`docs/phase1/`](docs/phase1/).
 
-The documents are drafts (v0.2) and will change as Phase 0 settles open questions.
+The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 
 ## Acknowledgments
 

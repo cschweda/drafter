@@ -196,7 +196,7 @@ Brave is the exception among Chromium browsers: it ships with the File System Ac
 
 Snapshots are stored as full text (scripts are tiny), with a retention schedule (all labeled; unlabeled thinned by age). A **Compare** view renders two snapshots as script pages with changed lines marked — the backbone of revision-mode export.
 
-There is no cloud sync in v1. If it ever comes, it's "sync a folder" (the user's own Dropbox/iCloud/Syncthing) or Yjs over WebRTC — never a Drafter server.
+There is no sync through Drafter, ever. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. A later phase adds direct Open and Save for Dropbox and Google Drive: the user signs in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server. Peer-to-peer sync (Yjs over WebRTC) remains a possibility.
 
 ---
 
@@ -336,13 +336,25 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 **Phase 0 — Engine (no UI).** `@drafter/fountain` CST parser with lossless round-trip and fast full reparse; `@drafter/templates` schema + `us-screenplay` + `stage-play-standard`; `@drafter/layout` pagination; `@drafter/render-pdf`. A CLI that turns a `.fountain` into a correct PDF. Full test suite. *If this phase is right, everything else is UI.*
 
-**Phase 1 — Minimum IDE (first public release).** Nuxt shell; CodeMirror source pane with decoration-driven highlighting, keymap, autocomplete, folding; Script tab with live pagination; **Problems tab with the starter lint rules and Strict Fountain checks**; app-style saving per §6.2 (Save and Save As, an unsaved-changes warning, and an always-on recovery copy in IndexedDB with `storage.persist()` and honest warnings); open/save `.fountain` (in place on Chromium, by download elsewhere); export PDF and `.txt`; **template switcher with screenplay and stage play**, each with a sample script on the start screen; keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev. *A person can write a feature or a play in it, and a screen-reader user can read it.*
+**Phase 1 — Minimum IDE (first public release).**
+- **Layout:** a Nuxt shell laid out like Inform 7's, with two facing panes that can each show any tab. Dark by default, with a light theme.
+- **First visit:** opens on the sample screenplay, with a welcome dialog and an optional guided tour.
+- **Source pane:** CodeMirror with decoration-driven highlighting, keymap, autocomplete for characters and locations, and folding.
+- **Writing sessions:** focus mode, typewriter scrolling, a sprint timer, a daily goal, and counts of pages, scenes, words, and running time.
+- **Script and Problems:** a Script tab with live pagination, and a **Problems tab with the starter lint rules and Strict Fountain checks**.
+- **Saving:** app-style per §6.2 (Save and Save As, an unsaved-changes warning, and an always-on recovery copy in IndexedDB with `storage.persist()` and honest warnings). Open and save `.fountain` (in place on Chromium, which syncs through synced folders, and by download elsewhere). Export PDF and `.txt`.
+- **Templates:** a **template switcher with screenplay and stage play**, and a sample script for each.
+- **Reach:** works on phones, one pane at a time. Keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev.
 
-**Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats; nspell with project dictionary; Reference tab.
+*A person can write a feature or a play in it, and the script is built for screen readers to read by its structure, checked by automated tests. Testing with NVDA and VoiceOver follows in Phase 2.* The details are in [the Phase 1 design](drafter-phase1-design.md).
 
-**Phase 3 — Formats.** FDX import/export; TV single/multi-cam, radio, UK templates; user-added templates and template export; standalone `.html` export.
+**Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; a Beat Board of idea cards kept in the file as Fountain; storylines (A, B, and C plots) shown as lanes on the outline, on the cards, and in the margin; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats, with screen time per character and who shares scenes; writing statistics by day, kept on the device; nspell with project dictionary; Reference tab; testing with NVDA and VoiceOver.
 
-**Phase 4 — Craft.** Remaining lint rules; revision marks and colored-page PDF; "clean" display mode (markers hidden by decoration); table-read; PWA install flow and offline dictionary caching.
+**Phase 3 — Formats.** FDX import/export; import from Highland, Fade In, and Celtx; TV single/multi-cam, radio, UK, and novel templates; user-added templates and template export; standalone `.html` export.
+
+**Phase 4 — Craft.** Remaining lint rules; revision marks and colored-page PDF; production revisions (locked pages, OMITTED scenes, scene numbers that start anywhere); alternate versions of a line; "clean" display mode (markers hidden by decoration); table-read; PWA install flow and offline dictionary caching.
+
+**Later.** Direct Open and Save for Dropbox and Google Drive, signed in with those services, never with Drafter (§6).
 
 **Phase 5 — Community.** Template gallery, docs site, `@drafter/*` on npm, `@drafter/cli`, VS Code extension; plugin API only if there's demand, worker-sandboxed per the technical design.
 

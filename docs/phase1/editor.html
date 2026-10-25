@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drafter Phase 1 mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; padding: 20px 16px 40px; background: #121318; color: #E6E8EC; font-family: 'Inter Tight', system-ui, sans-serif; line-height: 1.5; }
+  @media (min-width: 760px) { body { padding: 32px; } }
+  h1 { font-size: 1.35rem; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .p1-sub { color: #AEB4C0; font-size: 0.95rem; margin: 0 0 16px; max-width: 70ch; }
+  .p1-try { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+  .p1-try button { font: 600 14px 'Inter Tight', sans-serif; min-height: 44px; padding: 10px 16px; border-radius: 999px; border: 1px solid #343843; background: #1D2027; color: #E6E8EC; cursor: pointer; }
+  .p1-try button[aria-pressed="true"] { border-color: #E5B04A; color: #F6E07A; }
+  .p1-stage { position: relative; overflow: hidden; width: 100%; }
+  .p1-hint { color: #8C93A1; font-size: 0.85rem; margin: 8px 0 0; }
+  @media (min-width: 1140px) { .p1-hint { display: none; } }
+  .p1-notes { margin: 18px 0 0; padding-left: 18px; color: #AEB4C0; font-size: 0.92rem; max-width: 80ch; }
+  .p1-notes li { margin-bottom: 8px; }
+  .p1-notes b { color: #E6E8EC; }
+
+  .dx-app {
+    --bg: #0F1013; --chrome: #15171C; --chrome-2: #1A1D23; --line: #262A31; --text: #E6E8EC; --muted: #8C93A1; --faint: #5B6170;
+    --tab-on: #23272F; --desk: #0B0C0F; --page: #1B1E25; --ink: #E8EAEE; --ink-muted: #9AA1AE;
+    --heading: #E5B04A; --cue: #8DB8E8; --paren: #8C93A1; --trans: #F5A9C0; --note: #9BD3A0; --title: #F49C84; --gutter: #4A5060;
+    position: absolute; top: 0; left: 0; width: 1100px; height: 640px; transform-origin: 0 0;
+    font-family: 'Inter Tight', sans-serif; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    display: grid; grid-template-rows: auto 1fr auto; box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  .dx-app.light {
+    --bg: #F4F4F2; --chrome: #FFFFFF; --chrome-2: #F7F7F5; --line: #E2E4E8; --text: #1C1D21; --muted: #6A7080; --faint: #A3A8B3;
+    --tab-on: #ECEDEF; --desk: #E9E9E6; --page: #FFFFFF; --ink: #1C1C1C; --ink-muted: #5C6270;
+    --heading: #A36B00; --cue: #2F6DB5; --paren: #6A7080; --trans: #B23A68; --note: #2E7D4F; --title: #B5502F; --gutter: #B4B9C3;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+  }
+
+  .dx-toolbar { display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: var(--chrome); border-bottom: 1px solid var(--line); }
+  .dx-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 19px; letter-spacing: -0.04em; margin-right: 6px; }
+  .dx-act { display: flex; align-items: center; gap: 7px; font: 600 13px 'Inter Tight', sans-serif; color: var(--text); background: none; border: none; padding: 0; cursor: pointer; }
+  .dx-round { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+  .dx-round svg { width: 15px; height: 15px; }
+  .dx-template { font-weight: 600; font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-left: 4px; white-space: nowrap; }
+  .dx-spacer { flex: 1; }
+  .dx-search { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--faint); background: var(--chrome-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; white-space: nowrap; }
+  .dx-search kbd { font: 600 11px 'Inter Tight', sans-serif; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
+  .dx-toggle { display: flex; align-items: center; gap: 6px; font: 600 12px 'Inter Tight', sans-serif; color: var(--text); background: var(--chrome-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; cursor: pointer; white-space: nowrap; }
+
+  .dx-panes { display: grid; grid-template-columns: 1fr 6px 1fr; min-height: 0; }
+  .dx-divider { background: var(--line); display: grid; place-items: center; }
+  .dx-divider::after { content: ''; width: 2px; height: 28px; border-radius: 2px; background: var(--faint); }
+  .dx-pane { display: grid; grid-template-rows: auto auto 1fr; min-height: 0; background: var(--bg); }
+  .dx-tabs { display: flex; gap: 2px; padding: 7px 10px 0; background: var(--chrome); border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .dx-tabs > span { color: var(--muted); padding: 6px 9px 8px; border-radius: 7px 7px 0 0; }
+  .dx-tabs > span.on { color: var(--text); background: var(--tab-on); box-shadow: inset 0 -2px 0 var(--heading); }
+  .dx-badge { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 4px; border-radius: 8px; background: #D9466B; color: #fff; font-size: 10.5px; line-height: 16px; text-align: center; }
+  .dx-sub { display: flex; align-items: center; gap: 10px; padding: 5px 12px; background: var(--chrome-2); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .dx-sub .right { margin-left: auto; display: flex; gap: 2px; }
+  .dx-sub .right span { padding: 3px 8px; border-radius: 6px; cursor: pointer; }
+  .dx-sub .right span.on { color: var(--text); background: var(--tab-on); }
+
+  .dx-source { position: relative; overflow: hidden; min-height: 0; font-family: 'Courier Prime', monospace; font-size: 13.5px; line-height: 21px; }
+  .dx-lines { position: absolute; left: 0; right: 0; top: 0; padding: 10px 0; transition: transform 240ms ease; }
+  .dx-l { display: grid; grid-template-columns: 38px 1fr; padding-right: 14px; }
+  .dx-l .n { color: var(--gutter); text-align: right; padding-right: 12px; user-select: none; }
+  .dx-l.cur { background: color-mix(in srgb, var(--heading) 7%, transparent); }
+  .dx-l .t { white-space: pre-wrap; }
+  .tk-title { color: var(--title); }
+  .tk-heading { color: var(--heading); font-weight: 700; }
+  .tk-cue { color: var(--cue); font-weight: 700; }
+  .tk-paren { color: var(--paren); font-style: italic; }
+  .tk-trans { color: var(--trans); font-weight: 700; }
+  .tk-note { color: var(--note); font-style: italic; }
+  .tk-caret { display: inline-block; width: 2px; height: 16px; margin-left: 1px; vertical-align: -3px; background: var(--heading); }
+
+  .dx-script { position: relative; overflow: hidden; min-height: 0; background: var(--desk); }
+  .dx-page { position: absolute; left: 50%; top: 18px; margin-left: -200px; width: 400px; min-height: 540px; background: var(--page); color: var(--ink); border-radius: 3px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); padding: 34px 30px 30px 52px; font-family: 'Courier Prime', monospace; font-size: 11.2px; line-height: 15px; transition: transform 240ms ease; }
+  .dx-page p { margin: 0; white-space: pre-wrap; }
+  .dx-page .sh { font-weight: 700; margin-top: 30px; }
+  .dx-page .sh.first { margin-top: 0; }
+  .dx-page .ac { margin-top: 15px; }
+  .dx-page .cu { margin: 15px 0 0 120px; }
+  .dx-page .pa { margin-left: 86px; }
+  .dx-page .di { margin-left: 56px; max-width: 200px; }
+  .dx-page .tr { margin-top: 15px; text-align: right; }
+  .dx-page .hl { background: color-mix(in srgb, var(--heading) 18%, transparent); border-radius: 2px; }
+
+  .dx-status { display: flex; gap: 16px; align-items: center; padding: 6px 14px; background: var(--chrome); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .dx-status b { color: var(--text); font-weight: 600; }
+  .dx-dot { width: 7px; height: 7px; border-radius: 50%; background: #9BD3A0; display: inline-block; margin-right: 6px; }
+  .dx-dot.unsaved { background: #E5B04A; }
+
+  /* Focus mode: everything but the page you're writing on goes away. */
+  .dx-app.focus { grid-template-rows: 1fr; }
+  .dx-app.focus .dx-toolbar, .dx-app.focus .dx-status, .dx-app.focus .dx-divider, .dx-app.focus .dx-pane.right,
+  .dx-app.focus .dx-tabs, .dx-app.focus .dx-sub { display: none; }
+  .dx-app.focus .dx-panes { grid-template-columns: 1fr; background: var(--desk); }
+  .dx-app.focus .dx-pane.left { background: var(--desk); grid-template-rows: 1fr; justify-items: center; padding-top: 30px; }
+  .dx-app.focus .dx-source { width: min(620px, 90%); background: var(--page); border-radius: 3px 3px 0 0; box-shadow: 0 6px 24px rgba(0,0,0,0.35); }
+  .dx-app.focus .dx-l { display: block; padding: 0 52px; }
+  .dx-app.focus .dx-l .n { display: none; }
+  .dx-focus-chip { display: none; position: absolute; top: 9px; right: 14px; font: 600 12px 'Inter Tight', sans-serif; color: var(--muted); align-items: center; gap: 4px; cursor: pointer; }
+  .dx-focus-chip kbd { font: 600 11px 'Inter Tight', sans-serif; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 10px; }
+  .dx-app.focus .dx-focus-chip { display: flex; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="p1-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8DB8E8"/><stop offset="0.5" stop-color="#F5A9C0"/><stop offset="1" stop-color="#F6E07A"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<h1>Phase 1: focus mode and typewriter scrolling</h1>
+<p class="p1-sub">The look you approved, cut down to what Phase 1 ships. Tap the buttons: focus mode leaves only the page you're writing on, and typewriter scrolling keeps the line you're typing in the middle of the screen.</p>
+
+<div class="p1-try">
+  <button type="button" id="p1-focus" aria-pressed="false">Focus mode</button>
+  <button type="button" id="p1-type">Type the next line</button>
+  <button type="button" id="p1-tw" aria-pressed="true">Typewriter scrolling</button>
+  <button type="button" id="p1-theme2" aria-pressed="false">Light theme</button>
+</div>
+
+<div class="p1-stage" id="p1-stage">
+<div class="dx-app" id="p1-app">
+  <div class="dx-toolbar">
+    <div class="dx-brand">
+      <svg width="26" height="26" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="14" fill="url(#p1-grad)"/><g fill="#111216" transform="translate(4 4)"><rect x="11" y="17" width="13" height="4" rx="2"/><rect x="11" y="26" width="9" height="4" rx="2"/><rect x="11" y="35" width="13" height="4" rx="2"/><rect x="27.25" y="13" width="1.5" height="30" opacity="0.35"/><rect x="35" y="17" width="9" height="4" rx="2"/><rect x="32" y="26" width="15" height="4" rx="2"/><rect x="32" y="35" width="13" height="4" rx="2"/></g></svg>
+      drafter
+    </div>
+    <button type="button" class="dx-act"><span class="dx-round" style="background:#9BD3A0"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg></span>Open</button>
+    <button type="button" class="dx-act" id="p1-save"><span class="dx-round" style="background:#8DB8E8"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7M5 6.8 8 9.8l3-3"/><path d="M3 11.5v2h10v-2"/></svg></span>Save</button>
+    <button type="button" class="dx-act"><span class="dx-round" style="background:#E5B04A"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h5.5L12 4.5V14H4z"/><path d="M6.5 8.5h3M6.5 11h3"/></svg></span>Export</button>
+    <button type="button" class="dx-act" id="p1-focus-tool"><span class="dx-round" style="background:#F5A9C0"><svg viewBox="0 0 16 16" fill="none" stroke="#111216" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6V3h3M10 3h3v3M13 10v3h-3M6 13H3v-3"/></svg></span>Focus</button>
+    <div class="dx-template">US Screenplay ▾</div>
+    <div class="dx-spacer"></div>
+    <div class="dx-search">⌕ Go to scene or command <kbd>⌘K</kbd></div>
+    <button type="button" class="dx-toggle" id="p1-theme">☀ Light</button>
+  </div>
+
+  <div class="dx-panes">
+    <div class="dx-pane left">
+      <div class="dx-tabs"><span class="on">Source</span><span>Script</span><span>Problems</span></div>
+      <div class="dx-sub"><span>The Call.fountain</span><span class="right"><span id="p1-twchip" class="on">Typewriter</span></span></div>
+      <div class="dx-source" id="p1-source"><div class="dx-lines" id="p1-lines"></div></div>
+    </div>
+
+    <div class="dx-divider"></div>
+
+    <div class="dx-pane right">
+      <div class="dx-tabs"><span>Source</span><span class="on">Script</span><span>Problems<span class="dx-badge">1</span></span></div>
+      <div class="dx-sub"><span>Page 1 of 3</span><span class="right"><span class="on">Fit width</span><span>100%</span></span></div>
+      <div class="dx-script" id="p1-desk"><div class="dx-page" id="p1-page"></div></div>
+    </div>
+  </div>
+
+  <div class="dx-status">
+    <span><span class="dx-dot" id="p1-dot"></span><b id="p1-saved">Saved</b> <span id="p1-when">2 min ago</span></span>
+    <span>Recovery copy on</span>
+    <span class="dx-spacer"></span>
+    <span><b>p. 1</b> of 3</span>
+    <span><b>1</b> problem</span>
+    <span>US Screenplay</span>
+  </div>
+
+  <div class="dx-focus-chip" id="p1-chip"><span class="dx-dot" id="p1-dot2"></span><span id="p1-saved2">Saved</span><kbd>Esc</kbd>&nbsp;leaves focus</div>
+</div>
+</div>
+<p class="p1-hint">The editor is drawn at desktop size and shrunk to fit. Turn your phone sideways, or pinch to zoom, for a closer look.</p>
+
+<ul class="p1-notes">
+  <li><b>Focus mode</b> hides the toolbar, tabs, status bar, and the Script pane, and sets the source on a page in the middle of the screen. Esc, or the same shortcut, brings everything back. A small saved or unsaved marker stays in the corner, because Drafter promises unsaved changes are always visible.</li>
+  <li><b>Typewriter scrolling</b> is a separate switch in the Source pane's bar and the command palette. It works with or without focus mode, and Drafter remembers both settings.</li>
+  <li>Not in Phase 1: the earlier mockup's <b>Read aloud</b> button (Phase 4) and <b>Reference</b> search (Phase 2). The tabs for later phases appear when they exist rather than sitting there dimmed.</li>
+</ul>
+
+<script>
+(function () {
+  var W = 1100, H0 = 640;
+  var app = document.getElementById('p1-app');
+  var stage = document.getElementById('p1-stage');
+  var src = document.getElementById('p1-source');
+  var linesEl = document.getElementById('p1-lines');
+  var desk = document.getElementById('p1-desk');
+  var page = document.getElementById('p1-page');
+  var focusBtn = document.getElementById('p1-focus');
+  var typeBtn = document.getElementById('p1-type');
+  var twBtn = document.getElementById('p1-tw');
+  var twChip = document.getElementById('p1-twchip');
+  var themeBtn = document.getElementById('p1-theme');
+  var themeBtn2 = document.getElementById('p1-theme2');
+
+  var START = [
+    ['title', 'Title:', ' The Call'], ['title', 'Author:', ' A. Writer'], ['blank'],
+    ['heading', 'INT. KITCHEN - NIGHT'], ['blank'],
+    ['action', 'A small kitchen, cleaner than it needs to be. The wall clock reads 11:40.'], ['blank'],
+    ['cue', 'MARGARET'], ['paren', '(quietly)'], ['dialogue', "You said you'd call."], ['blank'],
+    ['note', '[[Hold on the clock before the knock.]]'], ['blank'],
+    ['action', 'A KNOCK at the back door.'], ['blank'],
+    ['cue', 'DANNY (O.S.)'], ['dialogue', "Mom? It's me. I lost my phone."], ['blank'],
+    ['trans', 'CUT TO:'], ['blank'],
+    ['heading', 'EXT. BACK PORCH - LATER']
+  ];
+  var NEXT = [
+    ['blank'], ['action', 'Margaret opens the door. Danny, nineteen and soaked through, holds up an empty hand.'],
+    ['blank'], ['cue', 'DANNY'], ['dialogue', "It's in a cab somewhere."],
+    ['blank'], ['cue', 'MARGARET'], ['dialogue', 'Come in before you drown.'],
+    ['blank'], ['action', "She steps aside. He doesn't move."]
+  ];
+  var doc, queue, shift = 0, pshift = 0, typing = false, typewriter = true;
+
+  function fit() {
+    var s = Math.min(1, stage.clientWidth / W);
+    app.style.transform = 'scale(' + s + ')';
+    stage.style.height = Math.ceil(H0 * s) + 'px';
+  }
+
+  function reset() {
+    doc = START.map(function (l) { return l.slice(); });
+    queue = NEXT.map(function (l) { return l.slice(); });
+    shift = 0; pshift = 0;
+    typeBtn.textContent = 'Type the next line';
+    setSaved(true, '2 min ago');
+  }
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  var TOKEN = { heading: 'tk-heading', cue: 'tk-cue', paren: 'tk-paren', trans: 'tk-trans', note: 'tk-note' };
+  var PRINT = { heading: 'sh', action: 'ac', cue: 'cu', paren: 'pa', dialogue: 'di', trans: 'tr' };
+
+  function sourceHtml(l) {
+    if (l[0] === 'blank') return '';
+    if (l[0] === 'title') return '<span class="tk-title">' + esc(l[1]) + '</span>' + esc(l[2]);
+    return TOKEN[l[0]] ? '<span class="' + TOKEN[l[0]] + '">' + esc(l[1]) + '</span>' : esc(l[1]);
+  }
+
+  function render() {
+    var cur = doc.length - 1, html = '', i;
+    for (i = 0; i < doc.length; i++) {
+      html += '<div class="dx-l' + (i === cur ? ' cur' : '') + '"><span class="n">' + (i + 1) + '</span><span class="t">' +
+        (sourceHtml(doc[i]) || ' ') + (i === cur ? '<span class="tk-caret"></span>' : '') + '</span></div>';
+    }
+    linesEl.innerHTML = html;
+
+    var last = -1;
+    for (i = 0; i < doc.length; i++) if (PRINT[doc[i][0]]) last = i;
+    var p = '', first = true;
+    for (i = 0; i < doc.length; i++) {
+      var cls = PRINT[doc[i][0]];
+      if (!cls) continue;
+      var text = esc(doc[i][1]);
+      p += '<p class="' + cls + (first ? ' first' : '') + '">' + (i === last ? '<span class="hl">' + text + '</span>' : text) + '</p>';
+      first = false;
+    }
+    page.innerHTML = p;
+  }
+
+  function position() {
+    var H = src.clientHeight, cur = linesEl.lastElementChild;
+    if (!cur || !H) return;
+    var bottom = cur.offsetTop + cur.offsetHeight, top = bottom - 21;
+    if (typewriter) {
+      shift = Math.round(H / 2 - (bottom - 10.5));
+    } else {
+      if (bottom + shift > H - 10) shift = H - 10 - bottom;
+      if (top + shift < 10) shift = 10 - top;
+    }
+    linesEl.style.transform = 'translateY(' + shift + 'px)';
+
+    var hl = page.querySelector('.hl'), D = desk.clientHeight;
+    if (hl && D) {
+      var hTop = 18 + hl.offsetTop, hBottom = hTop + hl.offsetHeight;
+      if (hBottom + pshift > D - 24) pshift = D - 24 - hBottom;
+      if (hTop + pshift < 12) pshift = Math.min(0, 12 - hTop);
+      page.style.transform = 'translateY(' + pshift + 'px)';
+    }
+  }
+
+  function update() { render(); position(); }
+
+  function setSaved(saved, when) {
+    ['p1-dot', 'p1-dot2'].forEach(function (id) { document.getElementById(id).classList.toggle('unsaved', !saved); });
+    document.getElementById('p1-saved').textContent = saved ? 'Saved' : 'Unsaved changes';
+    document.getElementById('p1-saved2').textContent = saved ? 'Saved' : 'Unsaved changes';
+    document.getElementById('p1-when').textContent = saved ? when : '';
+  }
+
+  function typeNext() {
+    if (typing) return;
+    if (!queue.length) { reset(); update(); return; }
+    while (queue.length && queue[0][0] === 'blank') doc.push(queue.shift());
+    if (!queue.length) { update(); return; }
+    typing = true;
+    var target = queue.shift(), line = [target[0], ''], n = 0;
+    doc.push(line);
+    setSaved(false);
+    (function step() {
+      line[1] = target[1].slice(0, ++n);
+      update();
+      if (n < target[1].length) { setTimeout(step, 24); return; }
+      typing = false;
+      if (!queue.length) typeBtn.textContent = 'Start over';
+    })();
+  }
+
+  function setFocus(on) {
+    app.classList.toggle('focus', on);
+    focusBtn.setAttribute('aria-pressed', String(on));
+    focusBtn.textContent = on ? 'Leave focus mode' : 'Focus mode';
+    position();
+  }
+
+  function setTypewriter(on) {
+    typewriter = on;
+    twBtn.setAttribute('aria-pressed', String(on));
+    twBtn.textContent = on ? 'Typewriter scrolling' : 'Typewriter scrolling off';
+    twChip.classList.toggle('on', on);
+    position();
+  }
+
+  function setTheme(light) {
+    app.classList.toggle('light', light);
+    themeBtn.textContent = light ? '☾ Dark' : '☀ Light';
+    themeBtn2.setAttribute('aria-pressed', String(light));
+    themeBtn2.textContent = light ? 'Dark theme' : 'Light theme';
+  }
+
+  focusBtn.addEventListener('click', function () { setFocus(!app.classList.contains('focus')); });
+  document.getElementById('p1-focus-tool').addEventListener('click', function () { setFocus(true); });
+  document.getElementById('p1-chip').addEventListener('click', function () { setFocus(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && app.classList.contains('focus')) setFocus(false); });
+  typeBtn.addEventListener('click', typeNext);
+  twBtn.addEventListener('click', function () { setTypewriter(!typewriter); });
+  twChip.addEventListener('click', function () { setTypewriter(!typewriter); });
+  document.getElementById('p1-save').addEventListener('click', function () { setSaved(true, 'just now'); });
+  themeBtn.addEventListener('click', function () { setTheme(!app.classList.contains('light')); });
+  themeBtn2.addEventListener('click', function () { setTheme(!app.classList.contains('light')); });
+  window.addEventListener('resize', function () { fit(); position(); });
+
+  fit();
+  reset();
+  update();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(position);
+})();
+</script>
+</body>
+</html>
