@@ -41,7 +41,8 @@ class Checker {
     this.problems.push(`${path} ${message}`);
   }
 
-  object(parent: Obj, key: string, path: string, allowed: string[]): Obj | null {
+  /** `allowed` lists the fields the object may have; null allows any, as in `roles`. */
+  object(parent: Obj, key: string, path: string, allowed: readonly string[] | null): Obj | null {
     const value = parent[key];
     if (value === undefined) {
       this.fail(path, 'is required');
@@ -51,8 +52,10 @@ class Checker {
       this.fail(path, `must be an object (got ${describe(value)})`);
       return null;
     }
-    for (const field of Object.keys(value)) {
-      if (!allowed.includes(field)) this.fail(`${path}.${field}`, 'is an unknown field');
+    if (allowed) {
+      for (const field of Object.keys(value)) {
+        if (!allowed.includes(field)) this.fail(`${path}.${field}`, 'is an unknown field');
+      }
     }
     return value;
   }
@@ -241,7 +244,7 @@ export function validate(t: Obj): string[] {
 
   // Roles: each style must fit the text column.
   const roleNames = new Set<string>();
-  const roles = c.object(t, 'roles', 'roles', Object.keys(isPlainObject(t.roles) ? t.roles : {}));
+  const roles = c.object(t, 'roles', 'roles', null);
   if (roles) {
     for (const name of Object.keys(roles)) {
       const path = `roles.${name}`;

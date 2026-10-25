@@ -133,6 +133,17 @@ describe('loadTemplate', () => {
     expect(problems).toHaveLength(3);
   });
 
+  it('reports any number of problems as a TemplateError, in linear time', () => {
+    // Hostile input: a bad style per role, more problems than a call can take as arguments.
+    const roles = Object.fromEntries(Array.from({ length: 200_000 }, (_, i) => [`r${i}`, {}]));
+    const start = performance.now();
+    const problems = problemsOf(() =>
+      loadTemplate({ id: 'many', name: 'Many', extends: 'us-screenplay', roles }),
+    );
+    expect(problems.length).toBeGreaterThan(200_000);
+    expect(performance.now() - start).toBeLessThan(2000);
+  }, 60_000);
+
   it('rejects input that is not an object', () => {
     expect(problemsOf(() => loadTemplate('us-screenplay'))).toEqual([
       expect.stringMatching(/JSON object/),

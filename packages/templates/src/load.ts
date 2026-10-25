@@ -37,7 +37,8 @@ export function load(json: unknown, registry: ReadonlyMap<string, Template>): Te
   }
   const problems: string[] = [];
   convertInches(merged, problems);
-  problems.push(...validate(merged));
+  // One at a time: a hostile template can have too many problems to spread into a call.
+  for (const problem of validate(merged)) problems.push(problem);
   if (problems.length > 0) throw new TemplateError(problems, id);
   return { ...merged, keepWithNextLines: merged.keepWithNextLines ?? 2 } as Template;
 }
