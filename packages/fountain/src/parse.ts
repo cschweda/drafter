@@ -49,11 +49,13 @@ interface Proto {
   end: number;
 }
 
+// Every pattern here is anchored and unambiguous, so it runs in linear time on
+// any line; cues, title-page keys, and scene numbers are scanned by hand
+// (`parseCue`, `readKeyLine`, `sceneNumber`) for the same reason.
 const HEADING = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;
 const HEADING_PREFIX = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)(?:\.|(?=\s)|$)/i;
-const SCENE_NUMBER = /\s*#([\p{L}\p{N}.-]+)#$/u;
-const CUE = /^([^(^]*?)\s*((?:\([^)]*\)\s*)*)(\^)?\s*$/;
-const KEY_LINE = /^([\p{L}\p{N}][\p{L}\p{N} _'-]*?)\s*:(.*)$/u;
+const SCENE_NUMBER_TEXT = /^[\p{L}\p{N}.-]+$/u;
+const TITLE_KEY = /^[\p{L}\p{N}][\p{L}\p{N} _'-]*$/u;
 const TITLE_KEYS = new Set([
   'title',
   'credit',
@@ -79,13 +81,73 @@ function isUpper(text: string): boolean {
   return /\p{Lu}/u.test(text) && !/\p{Ll}/u.test(text);
 }
 
+const isSpaceAt = (text: string, i: number) => i < text.length && /\s/.test(text.charAt(i));
+
+/**
+ * Reads a cue line: a name, then any parenthetical extensions, then an optional
+ * `^`, and nothing else. Returns null when the line has any other shape.
+ */
 export function parseCue(text: string): CharacterSem | null {
-  const m = CUE.exec(text);
-  if (!m) return null;
-  const name = (m[1] as string).trim();
+  let i = 0;
+  while (i < text.length && text[i] !== '(' && text[i] !== '^') i++;
+  const name = text.slice(0, i).trim();
   if (!name) return null;
-  const extension = (m[2] as string).trim();
-  return { name, extension: extension || null, dual: m[3] === '^' };
+  const extensionStart = i;
+  let extensionEnd = i;
+  for (;;) {
+    while (isSpaceAt(text, i)) i++;
+    if (text[i] !== '(') break;
+    const close = text.indexOf(')', i + 1);
+    if (close === -1) return null;
+    i = close + 1;
+    extensionEnd = i;
+  }
+  const dual = text[i] === '^';
+  if (dual) i++;
+  while (isSpaceAt(text, i)) i++;
+  if (i !== text.length) return null;
+  const extension = text.slice(extensionStart, extensionEnd).trim();
+  return { name, extension: extension || null, dual };
+}
+
+/** Splits a title-page line into key and value, or returns null if it isn't one. */
+function readKeyLine(text: string): { key: string; value: string } | null {
+  const colon = text.indexOf(':');
+  if (colon <= 0) return null;
+  const key = text.slice(0, colon).trimEnd();
+  if (!TITLE_KEY.test(key)) return null;
+  return { key, value: text.slice(colon + 1).trim() };
+}
+
+/**
+ * Finds a trailing scene number such as ` #12A#`: its text, and how many
+ * characters it occupies at the end of `text`, counting the spaces before it.
+ */
+function sceneNumber(text: string): { number: string; length: number } | null {
+  if (text.length < 3 || !text.endsWith('#')) return null;
+  const open = text.lastIndexOf('#', text.length - 2);
+  if (open === -1) return null;
+  const number = text.slice(open + 1, -1);
+  if (!SCENE_NUMBER_TEXT.test(number)) return null;
+  let start = open;
+  while (start > 0 && isSpaceAt(text, start - 1)) start--;
+  return { number, length: text.length - start };
+}
+
+/** The regions that overlap `span`, found by binary search over sorted regions. */
+function regionsIn(regions: Region[], span: Span): Region[] {
+  let lo = 0;
+  let hi = regions.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((regions[mid] as Region).to <= span.from) lo = mid + 1;
+    else hi = mid;
+  }
+  const out: Region[] = [];
+  for (let k = lo; k < regions.length && (regions[k] as Region).from < span.to; k++) {
+    out.push(regions[k] as Region);
+  }
+  return out;
 }
 
 export function parse(source: string): Doc {
@@ -111,6 +173,11 @@ export function parse(source: string): Doc {
 
   // Classifies a run: lines of one physical block between line-level markers.
   const classifyRun = (start: number, end: number) => {
+    // The run's last content line, found once: a block that takes "the run"
+    // ends there, and trailing transparent lines become their own block.
+    let lastContent = end - 1;
+    while (lastContent >= start && at(lastContent).transparent) lastContent--;
+    const runEnd = lastContent + 1;
     let i = start;
     while (i < end) {
       if (at(i).transparent) {
@@ -120,10 +187,7 @@ export function parse(source: string): Doc {
         i = j;
         continue;
       }
-      let runEnd = end;
-      while (runEnd > i + 1 && at(runEnd - 1).transparent) runEnd--;
-      let contentAfter = false;
-      for (let k = i + 1; k < runEnd; k++) if (!at(k).transparent) contentAfter = true;
+      const contentAfter = lastContent > i;
       const { t, tt } = at(i);
       const single = (kind: BlockKind, forced: boolean) => {
         emit(kind, i, i + 1, forced);
@@ -381,11 +445,10 @@ function readTitlePage(
       k++;
       continue;
     }
-    const m = KEY_LINE.exec(line.keptText);
-    if (!m) return none;
-    const key = (m[1] as string).trim();
+    const keyLine = readKeyLine(line.keptText);
+    if (!keyLine) return none;
+    const { key, value } = keyLine;
     if (TITLE_KEYS.has(key.toLowerCase())) recognized = true;
-    const value = (m[2] as string).trim();
     fields.push({ key, value: value ? [value] : [], span: { from: line.from, to: line.to } });
     k++;
   }
@@ -502,9 +565,9 @@ function computeSem(block: BlockNode, ctx: Ctx, infos: LineInfo[]): BlockSem | n
       return null;
     case 'note':
     case 'boneyard': {
-      const inner = ctx.regions
-        .filter((r) => r.from < block.span.to && r.to > block.span.from)
-        .map((r) => ctx.source.slice(r.from + 2, r.closed ? r.to - 2 : r.to));
+      const inner = regionsIn(ctx.regions, block.span).map((r) =>
+        ctx.source.slice(r.from + 2, r.closed ? r.to - 2 : r.to),
+      );
       return { text: inner.join('\n').trim() };
     }
     case 'section': {
@@ -526,7 +589,7 @@ function computeSem(block: BlockNode, ctx: Ctx, infos: LineInfo[]): BlockSem | n
 }
 
 function sceneHeadingSem(text: string, unmarked: string): SceneHeadingSem {
-  const number = SCENE_NUMBER.exec(unmarked.trimEnd())?.[1] ?? null;
+  const number = sceneNumber(unmarked.trimEnd())?.number ?? null;
   const prefixMatch = HEADING_PREFIX.exec(text);
   const prefix = prefixMatch ? prefixMatch[0] : null;
   const rest = prefix ? text.slice(prefix.length).trim() : text;
@@ -574,8 +637,8 @@ function displaySegs(source: string, info: LineInfo, kind: BlockKind, forcedFirs
     case 'scene_heading': {
       segs = trim(source, segs);
       if (forcedFirst) segs = dropStart(segs, 1);
-      const number = SCENE_NUMBER.exec(info.tt);
-      return number ? trimEnd(source, dropEnd(segs, number[0].length)) : segs;
+      const number = sceneNumber(info.tt);
+      return number ? trimEnd(source, dropEnd(segs, number.length)) : segs;
     }
     case 'section': {
       const depth = /^#*/.exec(info.tt)?.[0].length ?? 0;

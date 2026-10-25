@@ -10,6 +10,8 @@ interface Delimiter {
   at: number;
   canOpen: boolean;
   canClose: boolean;
+  /** Its position in the stack of open delimiters, once pushed. */
+  index: number;
 }
 
 const MARKERS = /[*_\\]/;
@@ -17,11 +19,15 @@ const MARKERS = /[*_\\]/;
 const isSpace = (code: number | undefined) =>
   code === undefined || /\s/.test(String.fromCharCode(code));
 
+/** One opener stack per kind of delimiter: `*`, `**`, `***`, and `_`. */
+const slot = (d: Delimiter) => (d.marker === 95 ? 3 : d.length - 1);
+
 /**
  * Parses emphasis (technical design §2.6) in the text that `segs` select from
  * `source`: `*italic*`, `**bold**`, `***bold italic***`, `_underline_`. A
  * delimiter run matches only a run of the same marker and length; a backslash
  * makes the next `*`, `_`, or `\` literal; unmatched markers stay as text.
+ * Runs in linear time on any line.
  */
 export function parseInline(source: string, segs: readonly Seg[], emphasis: boolean): InlineRun[] {
   if (segs.length === 0) return [];
@@ -53,110 +59,116 @@ export function parseInline(source: string, segs: readonly Seg[], emphasis: bool
       offsets.push(i);
     }
   }
-  if (codes.length === 0) return [];
+  const n = codes.length;
+  if (n === 0) return [];
 
-  // Per char: 0 = text, 1 = removed (escape backslash or matched delimiter).
-  const removed = new Uint8Array(codes.length);
-  const bold = new Int16Array(codes.length);
-  const italic = new Int16Array(codes.length);
-  const underline = new Int16Array(codes.length);
+  // Removed chars (escaping backslashes, matched delimiters), and per-style
+  // difference arrays: +1 where a styled stretch starts, -1 where it ends.
+  const removed = new Uint8Array(n);
+  const bold = new Int32Array(n + 1);
+  const italic = new Int32Array(n + 1);
+  const underline = new Int32Array(n + 1);
 
-  if (emphasis) {
-    const delimiters: Delimiter[] = [];
-    for (let i = 0; i < codes.length; i++) {
-      const c = codes[i] as number;
-      if (c === 92 /* \ */ && i + 1 < codes.length) {
-        const next = codes[i + 1];
-        if (next === 42 || next === 95 || next === 92) {
-          removed[i] = 1;
-          i++; // the escaped char stays as literal text
-          continue;
-        }
-      }
-      if (c === 42 || c === 95) {
-        let j = i;
-        while (j < codes.length && codes[j] === c) j++;
-        const length = j - i;
-        const usable = c === 42 ? length <= 3 : length === 1;
-        if (usable) {
-          delimiters.push({
-            marker: c,
-            length,
-            at: i,
-            canOpen: !isSpace(codes[j]),
-            canClose: !isSpace(codes[i - 1]),
-          });
-        }
-        i = j - 1;
+  const delimiters: Delimiter[] = [];
+  for (let i = 0; i < n; i++) {
+    const c = codes[i] as number;
+    if (c === 92 /* \ */ && i + 1 < n) {
+      const next = codes[i + 1];
+      if (next === 42 || next === 95 || next === 92) {
+        removed[i] = 1;
+        i++; // the escaped char stays as literal text
+        continue;
       }
     }
-
-    const open: Delimiter[] = [];
-    for (const d of delimiters) {
-      if (d.canClose) {
-        const k = findOpener(open, d);
-        if (k !== -1) {
-          const opener = open[k] as Delimiter;
-          open.length = k; // openers above the match stay literal
-          applyStyle(opener, d, removed, bold, italic, underline);
-          continue;
-        }
+    if (c === 42 || c === 95) {
+      let j = i;
+      while (j < n && codes[j] === c) j++;
+      const length = j - i;
+      if (c === 42 ? length <= 3 : length === 1) {
+        delimiters.push({
+          marker: c,
+          length,
+          at: i,
+          canOpen: !isSpace(codes[j]),
+          canClose: !isSpace(codes[i - 1]),
+          index: -1,
+        });
       }
-      if (d.canOpen) open.push(d);
+      i = j - 1;
+    }
+  }
+
+  const open: Delimiter[] = [];
+  const stacks: Delimiter[][] = [[], [], [], []];
+  for (const d of delimiters) {
+    if (d.canClose) {
+      const stack = stacks[slot(d)] as Delimiter[];
+      // Skip openers already discarded by an outer match.
+      while (stack.length > 0) {
+        const top = stack[stack.length - 1] as Delimiter;
+        if (open[top.index] === top) break;
+        stack.pop();
+      }
+      const opener = stack.pop();
+      if (opener) {
+        open.length = opener.index; // openers above the match stay literal
+        for (let k = 0; k < opener.length; k++) removed[opener.at + k] = 1;
+        for (let k = 0; k < d.length; k++) removed[d.at + k] = 1;
+        const start = opener.at + opener.length;
+        if (d.marker === 95) {
+          (underline[start] as number)++;
+          (underline[d.at] as number)--;
+        } else {
+          if (d.length >= 2) {
+            (bold[start] as number)++;
+            (bold[d.at] as number)--;
+          }
+          if (d.length !== 2) {
+            (italic[start] as number)++;
+            (italic[d.at] as number)--;
+          }
+        }
+        continue;
+      }
+    }
+    if (d.canOpen) {
+      d.index = open.length;
+      open.push(d);
+      (stacks[slot(d)] as Delimiter[]).push(d);
     }
   }
 
   // Merge chars with the same style into runs.
   const runs: InlineRun[] = [];
   let current: InlineRun | null = null;
-  for (let i = 0; i < codes.length; i++) {
+  let b = 0;
+  let it = 0;
+  let u = 0;
+  for (let i = 0; i < n; i++) {
+    b += bold[i] as number;
+    it += italic[i] as number;
+    u += underline[i] as number;
     if (removed[i]) continue;
-    const b = (bold[i] as number) > 0;
-    const it = (italic[i] as number) > 0;
-    const u = (underline[i] as number) > 0;
     const offset = offsets[i] as number;
     const ch = String.fromCharCode(codes[i] as number);
-    if (current && current.bold === b && current.italic === it && current.underline === u) {
+    if (
+      current &&
+      current.bold === b > 0 &&
+      current.italic === it > 0 &&
+      current.underline === u > 0
+    ) {
       current.text += ch;
       current.span.to = offset + 1;
     } else {
       current = {
         text: ch,
-        bold: b,
-        italic: it,
-        underline: u,
+        bold: b > 0,
+        italic: it > 0,
+        underline: u > 0,
         span: { from: offset, to: offset + 1 },
       };
       runs.push(current);
     }
   }
   return runs;
-}
-
-function findOpener(open: Delimiter[], closer: Delimiter): number {
-  for (let k = open.length - 1; k >= 0; k--) {
-    const o = open[k] as Delimiter;
-    if (o.marker === closer.marker && o.length === closer.length) return k;
-  }
-  return -1;
-}
-
-function applyStyle(
-  opener: Delimiter,
-  closer: Delimiter,
-  removed: Uint8Array,
-  bold: Int16Array,
-  italic: Int16Array,
-  underline: Int16Array,
-): void {
-  for (let i = opener.at; i < opener.at + opener.length; i++) removed[i] = 1;
-  for (let i = closer.at; i < closer.at + closer.length; i++) removed[i] = 1;
-  const start = opener.at + opener.length;
-  for (let i = start; i < closer.at; i++) {
-    if (opener.marker === 95) underline[i] = (underline[i] as number) + 1;
-    else {
-      if (opener.length >= 2) bold[i] = (bold[i] as number) + 1;
-      if (opener.length !== 2) italic[i] = (italic[i] as number) + 1;
-    }
-  }
 }

@@ -29,6 +29,10 @@ const OPENER = /\/\*|\[\[/g;
 export function scanRegions(source: string): { regions: Region[]; diagnostics: ParseDiagnostic[] } {
   const regions: Region[] = [];
   const diagnostics: ParseDiagnostic[] = [];
+  // A failed search for `]]` proves there is none before the blank line where it
+  // stopped, so later `[[` up to that point fail the same way without rescanning.
+  // That keeps the pre-pass linear even for a paragraph full of unclosed notes.
+  let noCloseUntil = -1;
   OPENER.lastIndex = 0;
   let match = OPENER.exec(source);
   while (match) {
@@ -49,7 +53,12 @@ export function scanRegions(source: string): { regions: Region[]; diagnostics: P
       regions.push({ kind: 'boneyard', from, to: close + 2, closed: true });
       OPENER.lastIndex = close + 2;
     } else {
-      const close = findNoteEnd(source, from + 2);
+      let close = -1;
+      if (from + 2 > noCloseUntil) {
+        const found = findNoteEnd(source, from + 2);
+        if (found.close === -1) noCloseUntil = found.stoppedAt;
+        close = found.close;
+      }
       if (close === -1) {
         diagnostics.push({
           code: 'unclosed-note',
@@ -68,15 +77,20 @@ export function scanRegions(source: string): { regions: Region[]; diagnostics: P
   return { regions, diagnostics };
 }
 
-/** The offset of the `]]` that closes a note opened before `start`, or -1. */
-function findNoteEnd(source: string, start: number): number {
+/**
+ * Looks for the `]]` that closes a note opened just before `start`. On failure,
+ * `stoppedAt` is the line break before the blank line that ended the search, or
+ * the end of the source.
+ */
+function findNoteEnd(source: string, start: number): { close: number; stoppedAt: number } {
   for (let i = start; i < source.length; i++) {
     const c = source.charCodeAt(i);
-    if (c === 93 /* ] */ && source.charCodeAt(i + 1) === 93) return i;
+    if (c === 93 /* ] */ && source.charCodeAt(i + 1) === 93) return { close: i, stoppedAt: i };
     if (c === 10 /* \n */) {
       const lineEnd = source.indexOf('\n', i + 1);
-      if (isBlankText(source.slice(i + 1, lineEnd === -1 ? source.length : lineEnd))) return -1;
+      const next = source.slice(i + 1, lineEnd === -1 ? source.length : lineEnd);
+      if (isBlankText(next)) return { close: -1, stoppedAt: i };
     }
   }
-  return -1;
+  return { close: -1, stoppedAt: source.length };
 }

@@ -50,6 +50,11 @@ describe('document structure', () => {
     expect(doc.blocks.map((b) => b.kind)).toEqual(['action', 'scene_heading']);
   });
 
+  it('needs every line of a title page to be a key line or a continuation', () => {
+    const doc = parse('Title: The Call\nINT. HOUSE: KITCHEN - DAY\n\nMargaret waits.\n');
+    expect(doc.titlePage).toBeNull();
+  });
+
   it('keeps unknown title-page keys', () => {
     const doc = parse('Title: The Call\nRevision: Blue\n\nMargaret waits.\n');
     expect(doc.titlePage?.fields).toEqual([
@@ -106,6 +111,13 @@ describe('inline emphasis', () => {
   it('leaves markers that cannot open or close as text', () => {
     expect(runsOf('Rates rise 5 * 3 and _ stays.')).toEqual([
       ['Rates rise 5 * 3 and _ stays.', ''],
+    ]);
+  });
+
+  it('keeps an opener inside a closed pair literal, even when a later closer could match it', () => {
+    expect(runsOf('_x *y_ z*')).toEqual([
+      ['x *y', 'u'],
+      [' z*', ''],
     ]);
   });
 
