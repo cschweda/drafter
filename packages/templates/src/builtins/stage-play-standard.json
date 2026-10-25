@@ -1,0 +1,72 @@
+{
+  "id": "stage-play-standard",
+  "name": "Stage Play (Dramatists Guild standard)",
+  "page": {
+    "paper": "letter",
+    "width": 85,
+    "height": 66,
+    "margin": { "top": 6, "bottom": 6, "left": 15, "right": 10 },
+    "font": { "family": "Courier Prime", "monospace": true, "pt": 12 },
+    "numbering": { "position": "top-right", "line": 3, "firstNumbered": 2, "format": "{n}." }
+  },
+  "roles": {
+    "act_heading": {
+      "indent": 0,
+      "width": 60,
+      "align": "center",
+      "case": "upper",
+      "spaceBefore": 2,
+      "keepWithNext": true
+    },
+    "scene_heading_play": {
+      "indent": 0,
+      "width": 60,
+      "align": "center",
+      "spaceBefore": 1,
+      "keepWithNext": true
+    },
+    "character": {
+      "indent": 0,
+      "width": 60,
+      "align": "center",
+      "case": "upper",
+      "spaceBefore": 1,
+      "keepWithNext": true
+    },
+    "parenthetical": {
+      "indent": 10,
+      "width": 40,
+      "spaceBefore": 0,
+      "keepWithNext": true,
+      "style": { "italic": true }
+    },
+    "dialogue": { "indent": 0, "width": 60, "spaceBefore": 0 },
+    "lyric": { "indent": 10, "width": 50, "spaceBefore": 1, "style": { "italic": true } },
+    "stage_direction": { "indent": 10, "width": 50, "spaceBefore": 1, "style": { "italic": true } },
+    "centered": { "indent": 0, "width": 60, "align": "center", "spaceBefore": 1 }
+  },
+  "roleMap": [
+    { "kind": "section", "depth": 1, "role": "act_heading" },
+    { "kind": "section", "depth": 2, "role": "scene_heading_play" },
+    { "kind": ["section", "synopsis", "note", "boneyard"], "role": "omit" },
+    { "kind": "action", "role": "stage_direction" },
+    { "kind": ["scene_heading", "transition"], "role": "disabled" },
+    { "kind": "*", "role": "@kind" }
+  ],
+  "keepWithNextLines": 2,
+  "dialogueSplit": {
+    "more": "(MORE)",
+    "contd": "(CONT'D)",
+    "moreIndent": 27,
+    "minLinesBefore": 2,
+    "minLinesAfter": 2,
+    "contdAfterAction": false
+  },
+  "dual": {
+    "gap": 4,
+    "width": 28,
+    "indent": { "character": 8, "parenthetical": 4, "dialogue": 0 }
+  },
+  "sceneNumbers": { "enabled": false, "left": -10, "right": 61 },
+  "titlePage": { "layout": "centered-feature" }
+}
