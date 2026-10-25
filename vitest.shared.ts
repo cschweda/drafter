@@ -2,6 +2,9 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const packages = ['fountain', 'templates', 'layout', 'render-pdf', 'cli'];
+// Each package's importable entry. The CLI's index.ts is the `drafter` binary,
+// which runs on import, so its library entry is cli.ts.
+const entry = (name: string) => (name === 'cli' ? 'cli' : 'index');
 
 // Tests import sibling packages from source, so a change in one package is
 // visible to the others without a rebuild. Exact-match patterns leave subpath
@@ -10,7 +13,9 @@ export default defineConfig({
   resolve: {
     alias: packages.map((name) => ({
       find: new RegExp(`^@drafter/${name}$`),
-      replacement: fileURLToPath(new URL(`./packages/${name}/src/index.ts`, import.meta.url)),
+      replacement: fileURLToPath(
+        new URL(`./packages/${name}/src/${entry(name)}.ts`, import.meta.url),
+      ),
     })),
   },
 });

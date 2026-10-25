@@ -57,3 +57,11 @@ Choices made where the design documents are silent, and contradictions between t
 ## Tooling, continued
 
 - **2026-10-25** — **Node 22.13 or later.** `pdfjs-dist` 6, used in the PDF tests, requires Node 22.13, and `commander` 15, the CLI's argument parser, requires 22.12. The root `engines` field says 22.13; `.nvmrc` stays `22`, which installs the latest 22.x.
+
+## `@drafter/cli`
+
+- **2026-10-25** — **`build` builds; `check` judges.** `build` prints errors and warnings to standard error and still writes its outputs with exit code 0, since a script with an unclosed boneyard still lays out. `check` prints every diagnostic, notes included, and exits 1 on any error. Diagnostics print as `file:line:column: severity: message [code]`, with columns counted in code points after any byte-order mark, and parse severity `info` printed as `note`.
+- **2026-10-25** — **Outputs.** With no output named, `build` writes a PDF beside the input: `script.fountain` becomes `script.pdf`, and any other name gets `.pdf` added, so the default can never be the input itself. An output of `-` goes to standard output, one at most, and no output may be the input file.
+- **2026-10-25** — **Template names.** An unknown `--template` id is an error; an unknown template in the metadata block is a warning, and the script falls back to `us-screenplay`, as the app will (technical design §4.5). A name is a built-in only if it's one of the built-ins' own keys, so a metadata block naming `constructor` or `__proto__` gets the fallback, not an inherited object. `--template` reads a file when its value ends in `.json` or contains a path separator. `check` takes `--template` too, since the template changes the page count and layout diagnostics.
+- **2026-10-25** — **Fixed-width text.** `--txt` prints each page as the template's full grid, margins included, with page numbers, scene numbers, header, and footer at their columns. Trailing spaces and the blank rows at the foot of each page are left off, and a form feed separates pages. Control characters print as spaces, so the grid stays aligned in a terminal.
+- **2026-10-25** — **Entry points.** The kickoff names `packages/cli/dist/index.js` as the binary, so `src/index.ts` is the executable and `src/cli.ts` the importable entry (`run`, `renderText`), which the package exports and the tests alias to.

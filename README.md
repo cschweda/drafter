@@ -3,7 +3,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: Phase 0, the engine, is under way.** The Fountain parser, the template loader, the pagination engine, and the PDF renderer are built and tested; the CLI is next. There is no app yet. See the [roadmap](#roadmap).
+> **Status: Phase 0, the engine, is complete.** The Fountain parser, the template loader, the pagination engine, the PDF renderer, and the `drafter` command line are built and tested, and `pnpm drafter build script.fountain` turns a script into a paginated PDF. The app is Phase 1, next. See the [roadmap](#roadmap).
 
 drafter.dev (planned) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
@@ -146,8 +146,8 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 
 | Phase | Theme | Status |
 |---|---|---|
-| [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **In progress** |
-| [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | Planned |
+| [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
+| [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Next** |
 | [2](#phase-2--structure) | Structure: outline, cards, snapshots, spellcheck | Planned |
 | [3](#phase-3--formats) | Formats: Final Draft, TV, radio, UK, user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions, clean display mode, table read, offline install | Planned |
@@ -271,14 +271,17 @@ pnpm biome check .
 
 `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
 
-Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), and [`render-pdf`](packages/render-pdf/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
+Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), and [`cli`](packages/cli/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
-The CLI arrives at the end of Phase 0:
+After a build, the CLI runs from the repository root:
 
 ```sh
-drafter build script.fountain --pdf script.pdf --txt script.txt
-drafter check script.fountain    # parse and paginate; exits non-zero on errors
+pnpm drafter build samples/screenplay.fountain                 # writes samples/screenplay.pdf
+pnpm drafter build samples/stage-play.fountain --txt -         # fixed-width text to the terminal
+pnpm drafter check samples/stage-play.fountain                 # diagnostics; exits 1 on any error
 ```
+
+The stage play picks its own template from the metadata block at the end of the file; `--template` overrides it. The [CLI's README](packages/cli/README.md) has every option.
 
 ## Clean-room implementation
 

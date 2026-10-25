@@ -13,6 +13,10 @@ dist/
 # Tests
 coverage/
 
+# Scripts built from the samples and fixtures
+samples/*.pdf
+fixtures/**/*.pdf
+
 # Logs
 *.log
 

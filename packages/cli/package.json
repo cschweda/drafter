@@ -1,0 +1,40 @@
+{
+  "name": "@drafter/cli",
+  "version": "0.0.1",
+  "description": "The Drafter command line: lays out Fountain scripts and writes them as PDF, text, or JSON.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/cli"
+  },
+  "bin": {
+    "drafter": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/cli.ts",
+      "types": "./dist/cli.d.ts",
+      "default": "./dist/cli.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "@drafter/layout": "workspace:*",
+    "@drafter/render-pdf": "workspace:*",
+    "@drafter/templates": "workspace:*",
+    "commander": "^15.0.0"
+  }
+}
