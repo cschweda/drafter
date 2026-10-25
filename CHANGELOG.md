@@ -15,6 +15,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `.gitignore` for a pnpm, Node, and Nuxt monorepo.
 - Pre-push hook (`.githooks/pre-push`) that rejects a push unless at least one of its commits updates this changelog.
 - Sample scripts in `samples/`: a short screenplay and a short stage play that tell the same story, with notes in the source explaining each piece of Fountain.
+- Phase 0 workspace: pnpm 10, TypeScript 5.9 (strict, ESM), Vitest 5 with one project per package, tsdown builds, Biome, and fast-check.
+- `docs/DECISIONS.md` and `docs/DEFERRED.md`, recording choices the design leaves open and work saved for later phases.
 
 ### Changed
 
