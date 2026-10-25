@@ -1,0 +1,22 @@
+import { defineConfig, devices } from '@playwright/test';
+
+// The tests run against the generated site (`pnpm e2e` builds it first),
+// served with its `_headers`, so they see what drafter.dev serves.
+export default defineConfig({
+  testDir: 'e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  reporter: process.env.CI ? 'github' : 'list',
+  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'phone', use: { ...devices['Pixel 7'] } },
+  ],
+  webServer: {
+    command: 'node scripts/serve.mjs .output/public 4173',
+    url: 'http://localhost:4173',
+    reuseExistingServer: !process.env.CI,
+  },
+});

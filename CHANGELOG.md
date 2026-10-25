@@ -34,6 +34,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - saving into synced folders, with a check for a file changed on another computer before you type over it
   - phones, one pane at a time
 - The first of five Phase 1 implementation plans, `docs/plans/2026-10-25-phase1-plan1-shell-and-deploy.md`: the app shell, Netlify configuration, and the content security policy.
+- `apps/web`, the Nuxt app for drafter.dev (Nuxt 4 with Nuxt UI 4), generated as static files.
+  - **Page shell:** `/` is prerendered with Drafter's title, description, and share image. Its loading screen carries the description, for search engines and for readers without JavaScript.
+  - **Defaults:** dark by default, with fonts and icons served from drafter.dev itself.
+  - **Commands:** `pnpm dev` runs it, and `pnpm e2e` builds it and runs its browser tests in Chromium, Firefox, WebKit, and a phone-sized Chromium.
 
 ### Changed
 

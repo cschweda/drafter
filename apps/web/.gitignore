@@ -1,0 +1,16 @@
+# Copied in by scripts/sync-assets.mjs from brand/ and packages/render-pdf/fonts/.
+public/fonts/
+public/favicon.svg
+public/favicon.ico
+public/apple-touch-icon.png
+public/icon-192.png
+public/icon-512.png
+public/icon-maskable-512.png
+public/og-image.png
+public/logo-dark.svg
+public/logo-light.svg
+public/mark.svg
+
+# Playwright
+test-results/
+playwright-report/

@@ -287,7 +287,11 @@ pnpm -r build
 pnpm -r test          # every package's tests
 pnpm bench            # parse and pagination timings for a feature-length script
 pnpm biome check .
+pnpm dev              # the app, at http://localhost:3000
+pnpm e2e              # builds the app and runs its browser tests
 ```
+
+The browser tests need Playwright's browsers, installed once with `pnpm --filter @drafter/web exec playwright install chromium firefox webkit`.
 
 `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
 
