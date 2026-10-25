@@ -11,6 +11,10 @@ public/logo-dark.svg
 public/logo-light.svg
 public/mark.svg
 
+# nuxt generate links dist to .output/public; the root's `dist/` rule only
+# matches directories, not a link.
+dist
+
 # Playwright
 test-results/
 playwright-report/
