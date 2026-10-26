@@ -162,6 +162,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Holding:** opening a script takes the Web Lock `drafter:project:<id>` and keeps it until the script closes or the tab goes. A second tab finds it taken and opens the script read-only (no typing, no recovery writes, no stash, no leave warning), under a bar that reads "This script is open for editing in another tab".
   - **Edit here instead:** asks the other tab over the `drafter` channel. It writes its recovery copy, turns read-only, and lets go; the asking tab then reloads the script from IndexedDB and applies a leftover stash only if the stash is newer. If the other tab can't write, it keeps the script and the bar says it didn't let go.
   - **No Web Locks, or no `BroadcastChannel`:** no guard; every tab edits, as before.
+- `apps/web`: new scripts, and switching between this browser's scripts and the samples, from the toolbar's **Open** menu.
+  - **The menu:** **New screenplay**, **New stage play**, this browser's scripts (most recent first, the open one marked), and **Samples**: Screenplay and Stage play. It works from the keyboard (Enter or Space opens it, Escape closes it and returns to **Open**) and closes when focus or a click leaves it.
+  - **A new script** is a title page to fill in (title, credit, author, and today's date), with the cursor ready to type below it. A stage play also carries the metadata block that names its template. It has its own undo history, like every script you switch to.
+  - **Untouched new scripts don't count as changed:** a new script remembers the text it started from, so leaving it before you type asks nothing, and typing it back to the template ends the changes.
+  - **Samples** open as scripts of their own that stay in this browser with your edits to them. Switching keeps the script you leave first; if it can't be kept, nothing is switched.
+  - **Remove from this browser** asks first and says the file isn't touched (and when the script has never been saved to a file, that removing it deletes the only copy). Removing the open script opens the most recent other one, or the screenplay sample. A script another tab has open is never removed, and the menu says so.
+  - **Another tab:** switching to a script another tab holds opens it read-only, and the script you left is let go.
 
 ### Changed
 

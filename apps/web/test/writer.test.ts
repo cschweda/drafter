@@ -143,3 +143,62 @@ describe('createWriter', () => {
     expect(write.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('discard', () => {
+  test('drops what is pending and its timers, so nothing is written later', async () => {
+    const write = vi.fn(async (_: string) => {});
+    const writer = createWriter(write);
+    writer.schedule('about to be removed');
+    writer.discard();
+    expect(writer.pending).toBe(false);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await writer.flush();
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  test('waits for a write already in flight when flushed after', async () => {
+    let finish: () => void = () => {};
+    const write = vi.fn(
+      (_: string) =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const writer = createWriter(write);
+    writer.schedule('x');
+    const first = writer.flush();
+    await vi.advanceTimersByTimeAsync(0);
+    writer.discard();
+    let done = false;
+    void writer.flush().then(() => {
+      done = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(done).toBe(false);
+    finish();
+    await first;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(done).toBe(true);
+  });
+});
+
+test('a discarded writer ignores later text, and a write that fails after the discard stays dropped', async () => {
+  let fail: (e: Error) => void = () => {};
+  const write = vi.fn(
+    (_: string) =>
+      new Promise<void>((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  const writer = createWriter(write);
+  writer.schedule('x');
+  const inFlight = writer.flush().catch(() => {});
+  await vi.advanceTimersByTimeAsync(0);
+  writer.discard();
+  writer.schedule('y');
+  fail(new Error('down'));
+  await inFlight;
+  await writer.flush();
+  expect(write).toHaveBeenCalledTimes(1);
+  expect(writer.pending).toBe(false);
+});

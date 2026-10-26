@@ -11,8 +11,8 @@ function toggleTheme() {
   colorMode.preference = dark.value ? 'light' : 'dark';
 }
 
-// The round actions wait for the editor and files (Plans 3 and 4): until
-// then they show, but say they're unavailable.
+// Open is the scripts menu. The others wait for files (Plans 3 and 4): until then they show, but
+// say they're unavailable.
 const ACTIONS = [
   { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
   { label: 'Save', icon: 'i-lucide-save', kind: 'save', tour: 'save' },
@@ -31,17 +31,30 @@ const ACTIONS = [
       <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
     </picture>
     <div class="actions">
-      <button
-        v-for="action in ACTIONS"
-        :key="action.kind"
-        type="button"
-        class="act"
-        aria-disabled="true"
-        :data-tour="action.tour"
-      >
-        <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-        <span class="label">{{ action.label }}</span>
-      </button>
+      <template v-for="action in ACTIONS" :key="action.kind">
+        <ScriptsMenu v-if="action.kind === 'open'" v-slot="{ toggle, expanded, controls }">
+          <button
+            type="button"
+            class="act"
+            :aria-expanded="expanded ? 'true' : 'false'"
+            :aria-controls="expanded ? controls : undefined"
+            @click="toggle"
+          >
+            <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+            <span class="label">{{ action.label }}</span>
+          </button>
+        </ScriptsMenu>
+        <button
+          v-else
+          type="button"
+          class="act"
+          aria-disabled="true"
+          :data-tour="action.tour"
+        >
+          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+          <span class="label">{{ action.label }}</span>
+        </button>
+      </template>
     </div>
     <button type="button" class="chip template" aria-disabled="true" data-tour="template">
       {{ templateName }}

@@ -9,18 +9,20 @@ import {
   shallowRef,
   watch,
 } from 'vue';
-import { SAMPLE_SCREENPLAY } from '../editor/samples';
+import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
 import { db } from './db';
 import { guardControl, useGuard } from './guard';
 import { hashText } from './hash';
 import { checkRecovery, type RecoveryState, requestPersistence } from './health';
+import { newScriptText } from './new-script';
 import {
   createProject,
   getProject,
   getSavedText,
   listProjects,
   type Project,
+  removeProject,
   writeSource,
 } from './projects';
 import { allStashes, clearStash, readStash, stash } from './unwritten';
@@ -41,6 +43,18 @@ export interface ScriptSession {
   dismissWarning(): void;
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
+  /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
+  newScript(kind: SampleKind): Promise<void>;
+  /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
+  openSample(kind: SampleKind): Promise<void>;
+  /** This browser's scripts, most recently updated first. Samples are not among them. */
+  scripts(): Promise<Project[]>;
+  /**
+   * Removes script `id` from this browser (never its file). Removing the open script opens the most
+   * recent other one, or the screenplay sample. A script another tab has open is not removed:
+   * the answer is `'held'`.
+   */
+  remove(id: string): Promise<'removed' | 'held'>;
 }
 
 /** How long a failing recovery copy waits before it tries again on its own. */
@@ -50,7 +64,8 @@ const text = (source: string) => Text.of(source.split('\n'));
 
 /**
  * What "unchanged" means for a script (technical design §8.2): the text last saved to its file, or,
- * for a script with no file yet, nothing (a sample: its own text). Null when the file's text is
+ * for a script with no file yet, the text it started from (a sample's own text, a new script's
+ * template), else nothing. Null when the file's text is
  * unknown, so the script counts as changed.
  */
 async function baselineOf(project: Project): Promise<Text | null> {
@@ -59,7 +74,8 @@ async function baselineOf(project: Project): Promise<Text | null> {
     if (saved !== undefined) return text(saved);
     return (await hashText(project.source)) === project.savedHash ? text(project.source) : null;
   }
-  return text(project.sample === 'screenplay' ? SAMPLE_SCREENPLAY : '');
+  if (project.baseline !== undefined) return text(project.baseline);
+  return text(project.sample ? SAMPLE_TEXT[project.sample] : '');
 }
 
 let session: ScriptSession | undefined;
@@ -261,20 +277,73 @@ function create(): ScriptSession {
    */
   const switching = ref(false);
 
-  async function open(id: string) {
-    if (project.value?.id === id) return;
+  /**
+   * Makes the script `resolve` returns the current one. `removing` is the current script's id when
+   * it is being removed: it goes once the replacement exists, and a failure anywhere leaves it open.
+   */
+  async function switchTo(resolve: () => Promise<Project>, removing?: string): Promise<void> {
     switching.value = true;
     try {
       // A failed flush stops here: the text it couldn't keep must not be replaced.
       await writer?.flush();
-      const next = await getProject(id);
-      if (!next) throw new Error(`There is no script ${id}.`);
+      const next = await resolve();
+      if (next.id === project.value?.id) return;
       const from = await baselineOf(next);
+      if (removing) {
+        // Nothing is pending (the flush wrote it, and the editor is read-only), so what the writer
+        // would write next can't bring the script back.
+        await removeProject(removing);
+        writer?.discard();
+        clearStash(removing);
+      }
       attach(next, from, false, await guardControl.claim(next.id));
       guardControl.finish();
     } finally {
       switching.value = false;
     }
+  }
+
+  async function open(id: string) {
+    if (project.value?.id === id) return;
+    await switchTo(async () => {
+      const next = await getProject(id);
+      if (!next) throw new Error(`There is no script ${id}.`);
+      return next;
+    });
+  }
+
+  async function newScript(kind: SampleKind) {
+    const { text: source, cursor } = newScriptText(kind, new Date());
+    await switchTo(() => createProject({ source, baseline: source }));
+    editor.goto(cursor);
+  }
+
+  async function sampleProject(kind: SampleKind): Promise<Project> {
+    const existing = (await listProjects()).find((p) => p.sample === kind);
+    return existing ?? createProject({ source: SAMPLE_TEXT[kind], sample: kind });
+  }
+
+  const openSample = (kind: SampleKind) => switchTo(() => sampleProject(kind));
+
+  async function scripts(): Promise<Project[]> {
+    // The title in the list is the text's, so the text is written first.
+    await writer?.flush().catch(() => {});
+    return (await listProjects()).filter((p) => !p.sample);
+  }
+
+  async function remove(id: string): Promise<'removed' | 'held'> {
+    if (project.value?.id !== id) {
+      const removed = await guardControl.whileFree(id, () => removeProject(id));
+      if (removed) clearStash(id);
+      return removed ? 'removed' : 'held';
+    }
+    // Another tab has it, and this one only shows it.
+    if (guard.readOnly.value) return 'held';
+    await switchTo(async () => {
+      const others = (await listProjects()).filter((p) => p.id !== id);
+      return others.find((p) => !p.sample) ?? (await sampleProject('screenplay'));
+    }, id);
+    return 'removed';
   }
 
   // ---- Two tabs ------------------------------------------------------------------------------
@@ -369,6 +438,10 @@ function create(): ScriptSession {
       dismissed.value = true;
     },
     open,
+    newScript,
+    openSample,
+    scripts,
+    remove,
   };
 }
 

@@ -20,6 +20,12 @@ export interface Project {
   savedAt?: number;
   /** The file began with a byte-order mark, which writing it restores; absent on a script that came from no file. Unindexed, so it needed no new version. */
   bom?: boolean;
+  /**
+   * The text a new script started from. Until the script has a file, "changed" means different
+   * from this, so a new script nobody has typed in is not changed. Unindexed, so it needed no
+   * new version; a script that came from no template has none.
+   */
+  baseline?: string;
   /** The file's name, for the Source pane's slim bar. */
   fileName?: string;
   fsHandleId?: string;

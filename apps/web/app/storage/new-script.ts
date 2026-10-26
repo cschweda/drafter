@@ -1,0 +1,34 @@
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/** The metadata block that names the stage-play template, as fixed text (Phase 1 design §6). */
+const STAGE_PLAY_META = '/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n';
+
+/**
+ * A new script's text: a title page to fill in, then a blank line, and for a stage play the
+ * metadata block naming its template. The date is the local calendar's, written out so it reads
+ * the same in every locale. `cursor` is where typing starts: the end of a screenplay, and the
+ * blank line before a stage play's metadata block.
+ */
+export function newScriptText(
+  kind: 'screenplay' | 'stage-play',
+  today: Date,
+): { text: string; cursor: number } {
+  const title = kind === 'screenplay' ? 'Untitled Screenplay' : 'Untitled Play';
+  const date = `${MONTHS[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
+  const titlePage = `Title: ${title}\nCredit: Written by\nAuthor: Your Name\nDraft date: ${date}\n\n`;
+  if (kind === 'screenplay') return { text: titlePage, cursor: titlePage.length };
+  return { text: `${titlePage}\n${STAGE_PLAY_META}`, cursor: titlePage.length };
+}

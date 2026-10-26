@@ -137,6 +137,20 @@ describe('projects', () => {
     expect(db.table('projects').schema.idxByName.bom).toBeUndefined();
   });
 
+  test('keeps the text a new script started from, with no index and no new version', async () => {
+    const started = await createProject({
+      source: 'Title: Untitled\n\n',
+      baseline: 'Title: Untitled\n\n',
+    });
+    const plain = await createProject({ source: 'Title: Two\n' });
+    expect((await getProject(started.id))?.baseline).toBe('Title: Untitled\n\n');
+    expect((await getProject(plain.id))?.baseline).toBeUndefined();
+    await updateProject(started.id, { source: 'Title: Untitled\n\nTyped.' });
+    expect((await getProject(started.id))?.baseline).toBe('Title: Untitled\n\n');
+    expect(db.verno).toBe(1);
+    expect(db.table('projects').schema.idxByName.baseline).toBeUndefined();
+  });
+
   test('has the whole version-1 schema', () => {
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'handles',

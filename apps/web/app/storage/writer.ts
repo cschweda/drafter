@@ -3,6 +3,8 @@ export interface Writer {
   schedule(source: string): void;
   /** Writes what's pending now, after any write in flight; rejects if that write fails. */
   flush(): Promise<void>;
+  /** Drops the pending text and its timers, for a script that is being removed. The writer writes nothing more, even if the write in flight fails; `flush` waits for that write. */
+  discard(): void;
   /** There is text that hasn't been written yet, or is being written. */
   readonly pending: boolean;
 }
@@ -22,6 +24,7 @@ export function createWriter(
   const maxWait = options.maxWait ?? 5000;
 
   let queued: string | null = null;
+  let dead = false;
   let writing = false;
   let debounce: ReturnType<typeof setTimeout> | undefined;
   let ceiling: ReturnType<typeof setTimeout> | undefined;
@@ -43,7 +46,7 @@ export function createWriter(
       await write(source);
     } catch (error) {
       // Newer text, if any, supersedes this; otherwise it's still unwritten.
-      if (queued === null) queued = source;
+      if (queued === null && !dead) queued = source;
       throw error;
     } finally {
       writing = false;
@@ -59,12 +62,18 @@ export function createWriter(
 
   return {
     schedule(source) {
+      if (dead) return;
       queued = source;
       clearTimeout(debounce);
       debounce = setTimeout(() => void enqueue().catch(() => {}), delay);
       ceiling ??= setTimeout(() => void enqueue().catch(() => {}), maxWait);
     },
     flush: enqueue,
+    discard() {
+      dead = true;
+      clearTimers();
+      queued = null;
+    },
     get pending() {
       return queued !== null || writing;
     },
