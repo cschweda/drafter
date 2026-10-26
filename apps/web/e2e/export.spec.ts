@@ -93,6 +93,38 @@ test.describe('exporting where the browser downloads', () => {
     expect(await readFile(await file.path(), 'utf8')).toContain('Second: Draft');
   });
 
+  test('refuses to export a script with nothing in it', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'typing into the editor is covered on the desktop');
+    await start(page);
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Delete');
+    const downloads: string[] = [];
+    page.on('download', (file) => downloads.push(file.suggestedFilename()));
+    for (const item of [pdfItem, txtItem]) {
+      await exportButton(page).click();
+      await item(page).click();
+      await expect(
+        page.getByRole('alert').filter({ hasText: 'Nothing to export yet.' }),
+      ).toBeVisible();
+    }
+    await expect(toast(page)).toHaveText('');
+    await page.waitForTimeout(300);
+    expect(downloads).toEqual([]);
+  });
+
+  test('exports both kinds when asked for one after the other', async ({ page }) => {
+    await start(page);
+    const names: string[] = [];
+    page.on('download', (file) => names.push(file.suggestedFilename()));
+    await exportButton(page).click();
+    await pdfItem(page).click();
+    await exportButton(page).click();
+    await txtItem(page).click();
+    await expect.poll(() => [...names].sort()).toEqual(['The Call.pdf', 'The Call.txt']);
+    await expect(ready(page)).toHaveText('Exported The Call.txt.');
+  });
+
   test('fetches the fonts from its own origin only, once', async ({ page, baseURL }) => {
     await page.addInitScript(() => {
       (window as unknown as { __violations: string[] }).__violations = [];

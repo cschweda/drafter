@@ -8,7 +8,7 @@ import { getHandle, getProject } from './projects';
 import { say } from './say';
 import { useScript } from './script';
 import { encodeFile, fileNameFor, titleOf } from './text';
-import { inTurn } from './turn';
+import { inTurn, whenIdle } from './turn';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
 export const saveError = ref('');
@@ -57,24 +57,12 @@ function messageFor(error: unknown): string {
   return 'Couldn’t save the file.';
 }
 
-/** Resolves once no switch of scripts is under way. */
-function idle(script: ReturnType<typeof useScript>): Promise<void> {
-  if (!script.busy.value) return Promise.resolve();
-  return new Promise((resolve) => {
-    const stop = watch(script.busy, (on) => {
-      if (on) return;
-      stop();
-      resolve();
-    });
-  });
-}
-
 async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   const files = useFiles();
   const script = useScript();
   const editor = useEditor();
   // A switch under way finishes first: the save is of the script that is open when it starts.
-  await idle(script);
+  await whenIdle(script.busy);
   const held = script.project.value;
   const id = held?.id;
   const title = titleOf(editor.doc.value);

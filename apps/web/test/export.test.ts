@@ -1,17 +1,34 @@
 // @vitest-environment jsdom
-import { parse } from '@drafter/fountain';
 import { builtins } from '@drafter/templates';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { shallowRef } from 'vue';
 import type { FileAccess, FileRef } from '../app/storage/files';
 
 const TEXT = 'Title: The Call: Part 1\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n';
-vi.mock('../app/editor/session', () => {
-  const doc = shallowRef(parse(TEXT));
-  const template = shallowRef(builtins['us-screenplay']);
+const OTHER = 'Title: The Crossing\n\nINT. HALL - DAY\n\nHi.\n';
+
+// The editor shows `shown.text`; a test changes it to be another script's. A script switch in
+// flight is `busy`.
+const shown = vi.hoisted(() => ({ text: '' }));
+const switching = vi.hoisted(() => ({ busy: undefined as undefined | { value: boolean } }));
+vi.mock('../app/editor/session', async () => {
+  const { parse } = await import('@drafter/fountain');
+  const { builtins } = await import('@drafter/templates');
+  const template = { value: builtins['us-screenplay'] };
   return {
-    useEditor: () => ({ doc, template, view: { state: { doc: { toString: () => TEXT } } } }),
+    useEditor: () => ({
+      get doc() {
+        return { value: parse(shown.text) };
+      },
+      template,
+      view: { state: { doc: { toString: () => shown.text } } },
+    }),
   };
+});
+vi.mock('../app/storage/script', async () => {
+  const { ref } = await import('vue');
+  const busy = ref(false);
+  switching.busy = busy;
+  return { useScript: () => ({ busy }) };
 });
 
 const render = vi.fn();
@@ -48,6 +65,7 @@ function recorder(options: { inPlace: boolean }) {
 
 async function load(options: { inPlace: boolean }) {
   vi.resetModules();
+  shown.text = TEXT;
   render.mockReset();
   render.mockImplementation(async () => {
     return 'text';
@@ -143,5 +161,81 @@ describe('exporting', () => {
     expect(await first).toBe('saved');
     expect(await second).toBe('saved');
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  for (const kind of ['pdf', 'txt'] as const) {
+    for (const [what, text] of [
+      ['empty', ''],
+      ['only blank lines', '\n\n  \n\n'],
+    ] as const) {
+      test(`refuses an ${what} script as ${kind}, before any picker`, async () => {
+        const t = await load({ inPlace: true });
+        shown.text = text;
+        expect(await t.exportScript(kind)).toBe('cancelled');
+        expect(t.exportError.value).toBe('Nothing to export yet.');
+        expect(t.exportNotice.value).toBe('');
+        expect(t.log).toEqual([]);
+        expect(render).not.toHaveBeenCalled();
+        expect(t.written).toEqual([]);
+      });
+    }
+  }
+
+  test('waits for a script switch, and names and renders the same script', async () => {
+    const t = await load({ inPlace: true });
+    const busy = switching.busy as { value: boolean };
+    busy.value = true;
+    const done = t.exportScript('txt');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Nothing has been asked or read while the switch is under way.
+    expect(t.log).toEqual([]);
+    // The switch ends: the editor shows the other script.
+    shown.text = OTHER;
+    busy.value = false;
+    expect(await done).toBe('saved');
+    expect(t.log[0]).toBe('pick The Crossing.txt txt');
+    expect(render).toHaveBeenCalledWith(expect.objectContaining({ source: OTHER }));
+    expect(t.exportNotice.value).toBe('Exported The Crossing.txt.');
+  });
+
+  test('renders the text it named, even if the editor changes while the picker is open', async () => {
+    const t = await load({ inPlace: true });
+    const pick = t.access.pickToSave;
+    t.access.pickToSave = async (name, kind) => {
+      shown.text = OTHER;
+      return pick(name, kind);
+    };
+    await t.exportScript('txt');
+    expect(t.log[0]).toBe('pick The Call Part 1.txt txt');
+    expect(render).toHaveBeenCalledWith(expect.objectContaining({ source: TEXT }));
+  });
+
+  test('queues a different kind after the one under way, and produces both', async () => {
+    const t = await load({ inPlace: true });
+    let release: (() => void) | undefined;
+    render.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(new Uint8Array([1]));
+        }),
+    );
+    render.mockResolvedValueOnce('text');
+    const pdf = t.exportScript('pdf');
+    const txt = t.exportScript('txt');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // One render at a time: the worker's replies are matched in order.
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(t.log).toEqual(['pick The Call Part 1.pdf pdf']);
+    release?.();
+    expect(await pdf).toBe('saved');
+    expect(await txt).toBe('saved');
+    expect(t.log).toEqual([
+      'pick The Call Part 1.pdf pdf',
+      'write',
+      'pick The Call Part 1.txt txt',
+      'write',
+    ]);
+    expect(t.written.map((w) => w.name)).toEqual(['The Call Part 1.pdf', 'The Call Part 1.txt']);
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt.');
   });
 });
