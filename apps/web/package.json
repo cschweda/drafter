@@ -25,6 +25,7 @@
     "@drafter/cm-fountain": "workspace:*",
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
+    "@drafter/lint": "workspace:*",
     "@drafter/render-html": "workspace:*",
     "@drafter/templates": "workspace:*",
     "@iconify-json/lucide": "^1.2.147",

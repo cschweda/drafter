@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
 - `apps/web`: settings, kept in this browser (IndexedDB) and set from a Settings dialog (File > Settings…, Mod+,). They are match system appearance, text size (90% to 150%, scaling the Source pane and, at 100%, the Script pane), spellcheck, Strict Fountain (its rules become warnings at once), and line numbers.
 - `apps/web`: line numbers in the Source pane, off to begin with, in the leftmost gutter. A "Line numbers" button on the pane's bar, the Show and Hide line numbers commands, and the dialog toggle them, and Drafter remembers the choice.
+- `apps/web`: the Problems tab lists what the Source gutter marks, each with its severity, message, and line. Choosing one selects its text in the Source pane, and a problem with a fix has a button for it (a fix only applies to the text it was found in). The tab shows a count of errors and warnings, the status bar reads "No problems", "1 problem", or "N problems", and with Strict Fountain on a **Fix all** button applies every Strict fix in one undoable change.
 
 ### Changed
 

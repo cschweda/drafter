@@ -34,6 +34,11 @@ export interface EditorSession {
    * it; these are not. Returns a function that removes it.
    */
   onState(listener: (state: EditorState) => void): () => void;
+  /**
+   * Calls `listener` after every update that changes the text or carries an effect (a new set of
+   * lint diagnostics is one), and after `load`. `onState` hears of edits and moves only.
+   */
+  onUpdate(listener: (state: EditorState) => void): () => void;
   /** Selects `select` (default: the offset), scrolls it into view, shows the Source tab, and focuses the editor. */
   goto(offset: number, options?: { select?: Span }): void;
 }
@@ -47,6 +52,7 @@ function create(): EditorSession {
   const panes = usePanes();
   let locked = false;
   const listeners = new Set<(state: EditorState) => void>();
+  const updateListeners = new Set<(state: EditorState) => void>();
 
   /** Brings what the session shows up to date with `state`. */
   function follow(state: EditorState) {
@@ -69,6 +75,9 @@ function create(): EditorSession {
     EditorView.updateListener.of((update) => {
       if (update.docChanged) follow(update.state);
       if (update.docChanged || update.selectionSet) for (const l of listeners) l(update.state);
+      if (update.docChanged || update.transactions.some((tr) => tr.effects.length > 0)) {
+        for (const l of updateListeners) l(update.state);
+      }
     }),
   ];
   const view = new EditorView({
@@ -91,6 +100,7 @@ function create(): EditorSession {
     // The new text starts at the top, whatever the old one's scroller was showing.
     view.dispatch({ effects: EditorView.scrollIntoView(0) });
     for (const l of listeners) l(view.state);
+    for (const l of updateListeners) l(view.state);
   }
 
   function setReadOnly(on: boolean) {
@@ -102,6 +112,11 @@ function create(): EditorSession {
   function onState(listener: (state: EditorState) => void) {
     listeners.add(listener);
     return () => listeners.delete(listener);
+  }
+
+  function onUpdate(listener: (state: EditorState) => void) {
+    updateListeners.add(listener);
+    return () => updateListeners.delete(listener);
   }
 
   function goto(offset: number, options: { select?: Span } = {}) {
@@ -126,7 +141,7 @@ function create(): EditorSession {
     });
   }
 
-  return { view, doc, cursor, template, load, setReadOnly, onState, goto };
+  return { view, doc, cursor, template, load, setReadOnly, onState, onUpdate, goto };
 }
 
 /** The editor, created on first use in the browser and kept for the visit. */

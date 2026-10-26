@@ -170,7 +170,7 @@ test.describe('on a phone', () => {
   test('shows one pane with all three tabs on a phone', async ({ page }) => {
     await expect(page.getByRole('tablist')).toHaveCount(1);
     const tabs = page.getByRole('tablist', { name: 'Panes' }).getByRole('tab');
-    await expect(tabs).toHaveText(['Source', 'Script', 'Problems']);
+    await expect(tabs).toHaveText(['Source', 'Script', /^Problems(\s+\d+)?\s*$/]);
     await expect(page.getByRole('tab', { name: 'Script' })).toHaveAttribute(
       'aria-selected',
       'true',
