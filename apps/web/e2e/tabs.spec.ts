@@ -217,6 +217,64 @@ test.describe('one tab at a time', () => {
     expect(asks).toBe(false);
   });
 
+  test('leaves a stash for the text it is still writing while it hands the script over', async ({
+    context,
+  }) => {
+    const a = await openTab(context);
+    const b = await openTab(context);
+    const [row] = await stored(a);
+    // A transaction that keeps the projects store busy: A's next write waits behind it.
+    await a.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const open = indexedDB.open('drafter');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('projects', 'readwrite');
+            const spin = () => {
+              if ((window as unknown as { __hold?: boolean }).__hold === false) return;
+              tx.objectStore('projects').count().onsuccess = spin;
+            };
+            (window as unknown as { __hold?: boolean }).__hold = true;
+            spin();
+            resolve();
+          };
+        }),
+    );
+    await typeAtStart(a, 'Typed during the handover.\n');
+    await editHere(b).click();
+    // A is read-only at once and its write is still waiting.
+    await expect(bar(a)).toBeVisible();
+    await a.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    const left = await a.evaluate((key) => localStorage.getItem(key), stashKey(row.id));
+    expect(left).toContain('Typed during the handover.');
+    await a.evaluate(() => {
+      (window as unknown as { __hold?: boolean }).__hold = false;
+    });
+    await expect(bar(b)).toHaveCount(0);
+    await expect(editor(b)).toContainText('Typed during the handover.');
+  });
+
+  test('announces the bar from a status region that was already in the page', async ({
+    context,
+  }) => {
+    const a = await openTab(context);
+    const region = a.locator('p[role="status"]');
+    await expect(region).toHaveCount(1);
+    await expect(region).toHaveText('');
+    await region.evaluate((el) => {
+      el.setAttribute('data-mark', 'same');
+    });
+    const b = await openTab(context);
+    await editHere(b).click();
+    await expect(bar(a)).toBeVisible();
+    await expect(a.locator('p[role="status"][data-mark="same"]')).toContainText(
+      'This script is open for editing in another tab.',
+    );
+  });
+
   test('guards nothing without Web Locks', async ({ context }) => {
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });

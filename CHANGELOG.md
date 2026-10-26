@@ -200,6 +200,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - The "unavailable" warning is announced at once (`role="alert"`); "may be cleared" stays a status.
   - The text a closing page leaves behind is kept per script (`drafter:unwritten:<id>`), so two tabs on two scripts can't overwrite each other's; a launch writes each one that is newer than its script's stored copy and clears the rest.
   - A write for a script that is no longer open now fails, so the writer keeps the text, instead of reporting success.
+- `apps/web`: fixes from the two-tab guard's review.
+  - A lint quick fix no longer changes the text of a read-only editor (`@drafter/cm-fountain`).
+  - Switching scripts takes the new script's lock before letting go of the old one, and the editor can't be typed in during the switch, so another tab can't take the old script while this one can still edit it.
+  - A tab that is handing a script over still leaves its unwritten text for a closing page.
+  - The read-only bar's text is announced: it sits in a status region that is always in the page, and its two sentences are punctuated.
 
 ### Security
 

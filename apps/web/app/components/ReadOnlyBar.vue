@@ -5,12 +5,13 @@ const { readOnly, failed, editHere } = useGuard();
 </script>
 
 <template>
-  <div v-if="readOnly" role="status" class="bar">
-    <p>
-      This script is open for editing in another tab
-      <span v-if="failed" class="failed">The other tab didn’t let go. Try again.</span>
+  <div :class="{ bar: readOnly }">
+    <!-- The status region stays in the page and only its text changes, so a screen reader hears it. -->
+    <p role="status">
+      <template v-if="readOnly">This script is open for editing in another tab.</template>
+      <span v-if="readOnly && failed" class="failed">The other tab didn’t let go. Try again.</span>
     </p>
-    <button type="button" class="take" @click="editHere">Edit here instead</button>
+    <button v-if="readOnly" type="button" class="take" @click="editHere">Edit here instead</button>
   </div>
 </template>
 

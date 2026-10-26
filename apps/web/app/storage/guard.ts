@@ -40,6 +40,8 @@ let channel: BroadcastChannel | undefined;
 let currentId: string | null = null;
 let heldId: string | null = null;
 let releaseHeld: (() => void) | null = null;
+/** The lock a `claim` replaced, let go by `finish`. */
+let stale: (() => void) | null = null;
 let handingOver = false;
 let taking = false;
 
@@ -104,8 +106,11 @@ export const guardControl = {
   },
 
   /**
-   * Takes the lock for script `id` (letting go of the one held before), or finds it taken. Sets
-   * `readOnly` to match, and resolves to whether this tab may edit.
+   * Takes the lock for script `id`, or finds it taken. Sets `readOnly` to match, and resolves to
+   * whether this tab may edit. The lock held before is kept until `finish`: the caller makes the
+   * editor read-only for the whole switch, shows the new script, and only then lets the old one
+   * go, so the old script is never editable here without its lock, and no other tab can take it
+   * in between and write the same copy.
    */
   async claim(id: string): Promise<boolean> {
     currentId = id;
@@ -119,14 +124,20 @@ export const guardControl = {
       readOnly.value = false;
       return true;
     }
-    drop();
     const release = await request(id, { ifAvailable: true });
-    if (release) {
-      heldId = id;
-      releaseHeld = release;
-    }
+    // A handover may have let the old lock go meanwhile; then there is nothing to keep.
+    stale = releaseHeld;
+    releaseHeld = release;
+    heldId = release ? id : null;
     readOnly.value = release === null;
     return release !== null;
+  },
+
+  /** Lets go of the lock the last `claim` replaced. Call it once the new script is shown. */
+  finish() {
+    const old = stale;
+    stale = null;
+    old?.();
   },
 
   /** Runs `write` only if no other tab holds script `id`; resolves to whether it ran. */

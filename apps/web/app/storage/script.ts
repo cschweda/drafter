@@ -148,10 +148,12 @@ function create(): ScriptSession {
 
   /** For a page being hidden or closed: keep the pending text where a closing page can, and write it. */
   const flushQuietly = () => {
-    // Another tab keeps this script; nothing here is its to write.
-    if (guard.readOnly.value) return;
-    if (writer?.pending && project.value) stash(project.value.id, view.state.doc.toString());
-    void writer?.flush().catch(() => {});
+    // No writer: another tab keeps this script, and nothing here is its to write. A tab that is
+    // handing the script over is read-only but still has its writer, and the text it hasn't
+    // written yet is still its to leave.
+    if (!writer) return;
+    if (writer.pending && project.value) stash(project.value.id, view.state.doc.toString());
+    void writer.flush().catch(() => {});
   };
 
   // ---- Opening scripts ---------------------------------------------------------------------
@@ -227,13 +229,16 @@ function create(): ScriptSession {
         const created = await createProject({ source: typed });
         await guardControl.claim(created.id);
         attach(created, text(''), true, true);
+        guardControl.finish();
       } else if (newest) {
         attach(newest, from, false, await guardControl.claim(newest.id));
+        guardControl.finish();
       } else {
         askBrowserToKeep();
         const created = await createProject({ source: SAMPLE_SCREENPLAY, sample: 'screenplay' });
         await guardControl.claim(created.id);
         attach(created, text(SAMPLE_SCREENPLAY), true, true);
+        guardControl.finish();
       }
       failing = false;
       clearTimeout(retry);
@@ -249,21 +254,38 @@ function create(): ScriptSession {
     ready.value = true;
   }
 
+  /**
+   * The editor can't be typed in while a switch is under way: from the first flush until the new
+   * script is shown, the old one is flushed and then left alone, and its lock is let go only
+   * after the new one is shown.
+   */
+  const switching = ref(false);
+
   async function open(id: string) {
-    // A failed flush stops here: the text it couldn't keep must not be replaced.
-    await writer?.flush();
-    const next = await getProject(id);
-    if (!next) throw new Error(`There is no script ${id}.`);
-    const from = await baselineOf(next);
-    await writer?.flush();
-    attach(next, from, false, await guardControl.claim(next.id));
+    if (project.value?.id === id) return;
+    switching.value = true;
+    try {
+      // A failed flush stops here: the text it couldn't keep must not be replaced.
+      await writer?.flush();
+      const next = await getProject(id);
+      if (!next) throw new Error(`There is no script ${id}.`);
+      const from = await baselineOf(next);
+      attach(next, from, false, await guardControl.claim(next.id));
+      guardControl.finish();
+    } finally {
+      switching.value = false;
+    }
   }
 
   // ---- Two tabs ------------------------------------------------------------------------------
 
   // The editor follows the guard: read-only while another tab holds the script.
   effectScope(true).run(() => {
-    watch(guard.readOnly, (on) => editor.setReadOnly(on), { immediate: true, flush: 'sync' });
+    watch(
+      () => guard.readOnly.value || switching.value,
+      (on) => editor.setReadOnly(on),
+      { immediate: true, flush: 'sync' },
+    );
   });
   guardControl.bind({
     async giveUp() {

@@ -23,6 +23,8 @@ function actionFor(fix: Fix, linted?: Doc): Action {
   return {
     name: fix.title,
     apply(view: EditorView) {
+      // `@codemirror/lint` doesn't check this: a read-only editor takes no fix.
+      if (view.state.readOnly) return;
       if (linted && view.state.field(parsedDoc) !== linted) {
         forceLinting(view);
         return;

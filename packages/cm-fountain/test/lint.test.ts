@@ -43,6 +43,24 @@ describe('toCodeMirror', () => {
     view.destroy();
   });
 
+  it('applies nothing while the editor is read-only', () => {
+    const [found] = toCodeMirror([
+      {
+        ruleId: 'x',
+        severity: 'info',
+        span: { from: 2, to: 5 },
+        message: 'M',
+        fix: { title: 'Fix', changes: [{ from: 1, to: 2, insert: 'Z' }] },
+      },
+    ]);
+    const view = new EditorView({
+      state: EditorState.create({ doc: 'abcdef', extensions: EditorState.readOnly.of(true) }),
+    });
+    found?.actions?.[0]?.apply(view, 2, 5);
+    expect(view.state.doc.toString()).toBe('abcdef');
+    view.destroy();
+  });
+
   it('applies all of a fix together, in the offsets of the linted text', () => {
     const [found] = toCodeMirror([
       {
