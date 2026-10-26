@@ -16,5 +16,5 @@ export {
   wrapInBoneyard,
   wrapInNote,
 } from './keymap';
-export { fountainLint, toCodeMirror } from './lint';
+export { fountainLint, relint, toCodeMirror } from './lint';
 export { parsedDoc } from './state';

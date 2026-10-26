@@ -105,8 +105,8 @@ const ACTIONS = [
 .round {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   color: #111216;
 }
@@ -123,8 +123,8 @@ const ACTIONS = [
   background: #f5a9c0;
 }
 .icon {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 .chip {
   display: flex;
@@ -166,7 +166,7 @@ kbd {
     margin-right: 6px;
   }
   .logo img {
-    height: 22px;
+    height: 24px;
   }
   .label {
     position: absolute;
@@ -180,8 +180,12 @@ kbd {
   kbd {
     display: none;
   }
+  /* Icons alone, the search and theme chips match the action circles. */
   .chip {
-    padding: 6px 8px;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
   }
 }
 </style>

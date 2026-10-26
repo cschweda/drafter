@@ -38,9 +38,10 @@ new EditorView({
 | `fountainCompletion()` | `autocompletion({ override: [fountainCompletionSource] })`, with `parsedDoc` added. |
 | `fountainFolding()` | Folds sections and scenes. It brings `parsedDoc` and a `codeFolding` with its placeholder. |
 | `cursorElement(state)` | The `{ blockIndex, lineIndex, kind }` under the main cursor, or null on a blank line. The title page is `blockIndex` -1 and `kind` `'title_page'`. |
-| `onCursorElement(callback)` | Calls back when `cursorElement` changes, after a move or an edit. |
+| `onCursorElement(callback)` | Calls back when `cursorElement` changes, after a move or an edit. The callback runs inside the view's update, so it must not dispatch. |
 | `fountainLint({ template, options })` | `@codemirror/lint`'s linter (300 ms) and gutter, running `@drafter/lint` on `parsedDoc`. `template` and `options` are read at each lint. |
-| `toCodeMirror(diagnostics)` | Lint's diagnostics as CodeMirror's: a fix becomes one action, named by its title. |
+| `relint(view)` | Lints now, with no edit. Call it after the template or the options change. |
+| `toCodeMirror(diagnostics)` | Lint's diagnostics as CodeMirror's: a fix becomes one action, named by its title. Its actions are unguarded and apply their changes to whatever text the editor holds; use `fountainLint`, whose actions apply only to the text that was linted. |
 
 ## The parse
 
@@ -79,7 +80,7 @@ The package ships no CSS: the app's theme styles these classes.
 
 - **Read from the text.** The parse reads a cue that is still being typed as action, so where the cursor is comes from the text of its line, by the rules of technical design §2.5. Only a cue's name has to be in capitals, so an extension may be in any case.
 - **When it opens.** Typing opens the list once two characters of what is being completed are typed. Asking for it (`context.explicit`) opens it at any length, and on an empty line after a blank one, where it lists the cast. A name that needs an `@` to be a cue (`McCLANE`, or a name with no case) is offered only after one.
-- **Enter.** The list opens with its first option selected, so Enter would accept it. A label that is the text it would replace, ignoring case, is left out for that reason: with `MARGARET` typed in full there is nothing to offer, no list opens, and Enter goes on to the speech.
+- **Enter.** The list opens with its first option selected, so Enter would accept it. When the text typed is already one of the labels, ignoring case, nothing is offered, for that reason: with `MARGARET` typed in full there is nothing to offer, no list opens, and Enter goes on to the speech. That holds when a longer name starts with it, too (`DAN` beside `DANNY`): Enter would lengthen the writer's name, so the writer types `DANN` to reach `DANNY`.
 - **Its own matching.** The options come in the order the source ranks them, matched from the start of the text and ignoring case, with `filter: false`, and the source is asked again after each keystroke. A pass costs about 0.6 ms in a script of 100 KB.
 
 ## The keymap
@@ -101,7 +102,7 @@ The blank lines before the next heading are left out of the fold, a heading with
 
 ## Lint
 
-`fountainLint` runs `lint(doc, template, options)` on the parse 300 ms after typing stops, and shows the result in CodeMirror's gutter and tooltips. The rule ids are the diagnostics' `source`. A fix is an action that applies its changes as one transaction, and only if the text is still the text that was linted: the offsets in a fix cannot be moved the way CodeMirror moves a diagnostic's range. After an edit, choosing a stale fix asks for a new lint and changes nothing, and the new diagnostics carry fixes that fit. Call `forceLinting(view)` after changing the template or the options.
+`fountainLint` runs `lint(doc, template, options)` on the parse 300 ms after typing stops, and shows the result in CodeMirror's gutter and tooltips. The rule ids are the diagnostics' `source`. A fix is an action that applies its changes as one transaction, and only if the text is still the text that was linted: the offsets in a fix cannot be moved the way CodeMirror moves a diagnostic's range. After an edit, choosing a stale fix asks for a new lint and changes nothing, and the new diagnostics carry fixes that fit. A fix inserts the editor's own line break, `\r\n` in a CRLF file. Call `relint(view)` after changing the template or the options: `forceLinting` alone runs only a lint that is already pending, and a change to the options is no edit, so it would change nothing until the next keystroke.
 
 ## License
 

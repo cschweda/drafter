@@ -55,6 +55,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Phones:** below 1024px, one pane shows at a time, opening on the Script tab. The page fits a 320px screen without scrolling sideways, tested in Chromium on a Pixel 7 and in WebKit on an iPhone SE.
   - **High contrast:** in Windows High Contrast, a border marks the selected tab.
   - **Toolbar spacing:** more room between the logo and the toolbar's buttons: 28px on a desktop, 14px on smaller screens.
+  - **Toolbar icons:** the action buttons' circles are 24px, down from 30px, so they sit below the logo's height. 24px is still the minimum touch-target size. Below 1024px, where the toolbar shows icons only, the search and theme buttons are 24px circles too, down from 31 by 27.
   - **Colors:** design tokens for both themes, with every text color tested for WCAG contrast.
   - **Tests:** the browser tests check the layout, keyboard use, visible focus on every control, and axe in both themes. The toolbar's actions wait for the editor and files in later plans.
 - `@drafter/render-text`: `renderText(layout, template)`, the fixed-width text renderer, moved out of `@drafter/cli` into a package of its own, so the app can export plain text without depending on the command line. The text is unchanged: `drafter build --txt` writes what it always did, and the CLI now imports the renderer, so its entry point exports only `run`.
@@ -105,6 +106,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
     - Tab does nothing, and so the browser's own Tab moves focus, wherever the table of technical design §3.3 gives it no meaning: a heading, a transition, a line of speech, a note, the title page, a selection, and so on. The editor doesn't trap the keyboard.
   - **Other keys:** `Mod-Alt-1` to `7` force a line's kind (heading, action, cue, parenthetical, transition, centered text, lyric), replacing the marker or wrapper it has and never changing case. `Mod-Shift-d` toggles `^` on the cue of the speech the cursor is in. `Mod-/` and `Mod-Shift-/` wrap the selection in a note or a boneyard, or insert an empty pair with the cursor inside. The save keys are the app's.
   - **Input filters:** `fountainInput()` upper-cases what is typed in a cue started with Tab and in a scene heading after its prefix, and nowhere else. `cueMode` is on from the Tab until Enter, until the cursor leaves the line, or until the `@` is deleted. Only typing is changed, as it is typed, over whole code points, surrogate pairs included. Text already in the document, a paste, a completion, and a change the app makes keep their case.
+  - **Notes and boneyards:** one typed on a scene heading or a cue line stays as typed (`INT. HALL - DAY [[check the location`), and forcing the kind of a file's first line keeps its byte-order mark.
   - **Tests:**
     - Every row of the keymap table; the keys pressed in a jsdom view; and a Tab that must pass through, unprevented, wherever it has no meaning.
     - The edge cases of each command, and a scene typed from the keyboard that the parser reads as the writer meant.
@@ -116,12 +118,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Transitions and sections:** on a line that starts with `>`, the script's transitions, then `CUT TO:`, `DISSOLVE TO:`, `SMASH CUT TO:`, and `FADE OUT.`. After `#`, its section titles.
   - **Where:** the parser reads a cue that is still being typed as action, so where the cursor is comes from the text of its line, by the parser's own rules, and what to offer comes from the parse.
   - **When:** the list opens when asked (Ctrl+Space), or once two characters of what is being completed are typed.
-  - **Enter:** a name typed in full is not offered, so Enter goes on to the speech and does not accept a list that would change nothing. With nothing else to offer, no list opens. Case is ignored, and every list works this way. Names are matched from their start, so `OC` doesn't offer `DOCTOR`.
+  - **Enter:** a name typed in full is not offered, so Enter goes on to the speech and does not accept a list that would change nothing. When the text typed is already one of the names, no list opens at all, even if a longer name starts with it (`DAN` beside `DANNY`): the writer types `DANN` to reach `DANNY`. Case is ignored, and every list works this way. Names are matched from their start, so `OC` doesn't offer `DOCTOR`.
   - **Tests:** what each place offers, and in what order; where a cue line can and can't be; the full name that leaves Enter alone, in the source and in a view with CodeMirror's own completion; and hostile scripts (a hundred thousand different names, places, times, transitions, sections, and extensions, and lines of a million characters) that must be answered in under a second.
 - `@drafter/cm-fountain`: folding, the cursor's element, lint, and `fountain()`, which composes the whole package.
   - **Folding:** `fountainFolding()` folds a section to the next section of equal or shallower depth, and a scene to the next heading or section, from the end of the heading to the end of the last block. A folded scene shows its heading and its first synopsis; a folded section shows its title.
   - **Cursor:** `cursorElement(state)` is the block, line, and kind under the main cursor, null on a blank line, and the title page as `blockIndex` -1. `onCursorElement(callback)` calls back when that changes.
-  - **Lint:** `fountainLint({ template, options })` runs `@drafter/lint` on the parse 300 ms after typing stops, with CodeMirror's gutter and tooltips, and `toCodeMirror` maps the diagnostics, a fix becoming an action. A fix applies only to the text that was linted: after an edit it asks for a new lint and changes nothing.
+  - **Lint:** `fountainLint({ template, options })` runs `@drafter/lint` on the parse 300 ms after typing stops, with CodeMirror's gutter and tooltips, and `toCodeMirror` maps the diagnostics, a fix becoming an action. A fix applies only to the text that was linted, and inserts the editor's own line break (`\r\n` in a CRLF file). `relint(view)` lints now, with no edit, for after the template or the options change. After an edit a stale fix asks for a new lint and changes nothing.
   - **`fountain(options)`:** the parse, highlighting, input filters, keymap (at `Prec.high`), completion, and folding, and, given a `template`, lint, and given `onCursorElement`, the callback. Tab on a blank line starts a cue and opens the list of names.
   - **Completion:** a cue right under a section, synopsis, or page break is a cue line. Ctrl+Space on any other line offers the character names for the word before the cursor.
 - `apps/web`: the Source pane is the editor now. It runs CodeMirror with `@drafter/cm-fountain`, so the script is colored by element, Tab and Enter work as writers expect, names and locations complete, scenes and sections fold, lint marks the gutter, and Find, undo, and redo work. The text, its undo history, and its cursor stay put when the panes swap or the window changes between one pane and two.
@@ -173,11 +175,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - screen-reader testing starts in Phase 2
 
   Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
-
-### Fixed
-
-- `apps/web`: the editor keeps its scroll position and its focus when the panes swap or the phone changes tab; before, a long script jumped back to the top. The Drafter packages resolve to their source through an alias for those packages alone, no longer a `source` export condition on every dependency, which would have compiled `@internationalized/date`'s raw TypeScript. The focus-ring test checks the editor's text and not the controls inside the editor, and the Escape-then-Tab test checks that focus lands on another element.
-- `@drafter/cm-fountain`: the editor no longer upper-cases a note or boneyard typed on a scene heading or a cue line (`INT. HALL - DAY [[check the location` stays as typed), and forcing the kind of a file's first line keeps its byte-order mark.
 
 ### Security
 

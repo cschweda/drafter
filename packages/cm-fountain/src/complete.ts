@@ -27,8 +27,11 @@ const NONE: readonly string[] = [];
 interface Target {
   /** The start of the text it replaces, which runs to the cursor. */
   from: number;
-  /** What to offer, best first. It reads the parse, so it is called only if a list may open. */
-  labels: () => string[];
+  /**
+   * What to offer, best first, from the parse without the cursor's own line. It reads the parse,
+   * so it is called only if a list may open.
+   */
+  labels: (doc: Doc) => string[];
 }
 
 /**
@@ -38,19 +41,20 @@ interface Target {
  * text between where the completion starts and the cursor, ignoring case, and ranked here, so the
  * list is not filtered or reordered again.
  *
- * A label that is the typed text itself is left out. The list opens with its first option
- * selected, so Enter would accept it, to change nothing, instead of going on to the line below.
- * With nothing else left, no list opens (Phase 1 design §5.3).
+ * When the typed text is already one of the labels, nothing is offered. The list opens with its
+ * first option selected, so Enter would accept it: for a name that is a longer one (`DANNY` for the
+ * `DAN` typed), and otherwise the same text, to change nothing, instead of going on to the line
+ * below. The writer types another letter to reach the longer name (Phase 1 design §5.3).
  *
  * The state must have `parsedDoc`.
  */
 export function fountainCompletionSource(context: CompletionContext): CompletionResult | null {
   const { state, pos, explicit } = context;
   const doc = state.field(parsedDoc);
-  for (const { from, labels } of targets(state, doc, pos, explicit)) {
+  for (const { from, labels } of targets(state, pos, explicit)) {
     const query = state.sliceDoc(from, pos);
     if (!explicit && query.length < 2) continue;
-    const options = optionsAfter(query, labels());
+    const options = optionsAfter(query, labels(withoutLine(doc, state.doc.lineAt(pos))));
     if (options.length > 0) {
       // The typed start of each label is the part that matched.
       const matched = query ? [0, query.length] : [];
@@ -69,16 +73,32 @@ export function fountainCompletion(): Extension {
 }
 
 /**
- * The labels that go on from `query`, ignoring case, as options. A label as long as `query` is
- * `query` itself, whatever its case, and is left out.
+ * The parse without the blocks on `line`. The cursor's own line is being typed, and the parser
+ * may already read it as a cue, a heading, or a section: it must not be a label, or the text
+ * typed would always equal one.
+ */
+function withoutLine(doc: Doc, line: Line): Doc {
+  const blocks = doc.blocks.filter(
+    (block) => block.span.to < line.from || block.span.from > line.to,
+  );
+  return blocks.length === doc.blocks.length ? doc : { ...doc, blocks };
+}
+
+/**
+ * The labels that go on from `query`, ignoring case, as options. If a label is `query` itself,
+ * whatever its case, there are none: the writer has typed a whole name, and the list would open
+ * with a longer one selected, so that Enter lengthened the name instead of going on. To reach the
+ * longer name the writer types another letter.
  */
 function optionsAfter(query: string, labels: readonly string[]): Completion[] {
   const start = query.toLowerCase();
   const options: Completion[] = [];
   for (const label of labels) {
-    if (label.length > query.length && label.slice(0, query.length).toLowerCase() === start) {
-      options.push({ label });
+    if (label.length < query.length || label.slice(0, query.length).toLowerCase() !== start) {
+      continue;
     }
+    if (label.length === query.length) return [];
+    options.push({ label });
   }
   return options;
 }
@@ -87,22 +107,22 @@ function optionsAfter(query: string, labels: readonly string[]): Completion[] {
 const lengthOf = (pattern: RegExp, text: string) => pattern.exec(text)?.[0].length ?? 0;
 
 /** The places where the cursor's line can be completed, best first; most lines have none. */
-function targets(state: EditorState, doc: Doc, pos: number, explicit: boolean): Target[] {
+function targets(state: EditorState, pos: number, explicit: boolean): Target[] {
   const line = state.doc.lineAt(pos);
   // Leading space is no part of the line to the parser, and none to the completion.
   const text = state.sliceDoc(line.from, pos).trimStart();
   const start = pos - text.length;
   if (text.startsWith('#')) {
-    return [{ from: start + lengthOf(/^#+\s*/, text), labels: () => sectionTitles(doc) }];
+    return [{ from: start + lengthOf(/^#+\s*/, text), labels: (d) => sectionTitles(d) }];
   }
   if (text.startsWith('>')) {
-    return [{ from: start + lengthOf(/^>\s*/, text), labels: () => transitions(doc) }];
+    return [{ from: start + lengthOf(/^>\s*/, text), labels: (d) => transitions(d) }];
   }
   const prefix = HEADING_PREFIX.exec(text);
-  if (prefix) return headingTargets(doc, text.slice(prefix[0].length), start + prefix[0].length);
-  const cue = cueTargets(state, doc, line, text, start, explicit);
+  if (prefix) return headingTargets(text.slice(prefix[0].length), start + prefix[0].length);
+  const cue = cueTargets(state, line, text, start, explicit);
   // Asking for a list on a line that is no other context completes the word before the cursor.
-  return explicit ? [...cue, anywhereTarget(doc, line, text, start)] : cue;
+  return explicit ? [...cue, anywhereTarget(line, text, start)] : cue;
 }
 
 const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
@@ -130,21 +150,21 @@ function wordStart(text: string): number {
  * Ctrl+Space anywhere (Phase 1 design §5.3): every name that goes on from the word before the
  * cursor, as text. It is no cue, so a name that needs an `@` to be one is offered like the rest.
  */
-function anywhereTarget(doc: Doc, line: Line, text: string, start: number): Target {
+function anywhereTarget(line: Line, text: string, start: number): Target {
   const at = wordStart(text);
   // With no word yet, the cast is listed only where a word may begin: not after `)` or a `,`.
   const none = at === text.length && text !== '' && !/\s$/u.test(text);
-  return { from: start + at, labels: () => (none ? NONE.slice() : names(doc, line.from, true)) };
+  return { from: start + at, labels: (d) => (none ? NONE.slice() : names(d, line.from, true)) };
 }
 
 /** After a scene heading's prefix and its space: a location, or after the last ` - `, a time. */
-function headingTargets(doc: Doc, rest: string, from: number): Target[] {
+function headingTargets(rest: string, from: number): Target[] {
   // The parser splits a heading on its last hyphen or en dash with a space on each side.
   const dash = Math.max(rest.lastIndexOf(' - '), rest.lastIndexOf(' \u2013 '));
-  if (dash === -1) return [{ from, labels: () => places(doc) }];
+  if (dash === -1) return [{ from, labels: (d) => places(d) }];
   const time = dash + 3;
   const skipped = lengthOf(/^\s*/, rest.slice(time));
-  return [{ from: from + time + skipped, labels: () => times(doc) }];
+  return [{ from: from + time + skipped, labels: (d) => times(d) }];
 }
 
 /**
@@ -158,7 +178,6 @@ function headingTargets(doc: Doc, rest: string, from: number): Target[] {
  */
 function cueTargets(
   state: EditorState,
-  doc: Doc,
   line: Line,
   text: string,
   start: number,
@@ -174,16 +193,16 @@ function cueTargets(
 
   const paren = body.lastIndexOf('(');
   if (paren === -1) {
-    const found: Target[] = [{ from, labels: () => names(doc, line.from, forced) }];
+    const found: Target[] = [{ from, labels: (d) => names(d, line.from, forced) }];
     // After a name and a space, unless the name goes on (`OLD MAN`).
     if (body.length > body.trimEnd().length) {
-      found.push({ from: from + body.length, labels: () => extensions(doc) });
+      found.push({ from: from + body.length, labels: (d) => extensions(d) });
     }
     return found;
   }
   // From the last parenthesis, if it is still open and a name comes before it.
   const open = name !== '' && !body.includes(')', paren);
-  return open ? [{ from: from + paren, labels: () => extensions(doc) }] : [];
+  return open ? [{ from: from + paren, labels: (d) => extensions(d) }] : [];
 }
 
 /** Blank as the parser reads it: empty or spaces, except exactly two spaces, which join lines. */

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -35,6 +35,14 @@ test.describe('on a desktop', () => {
     const open = await page.getByRole('button', { name: 'Open' }).boundingBox();
     if (!logo || !open) throw new Error('the logo or the Open button is missing');
     expect(open.x - (logo.x + logo.width)).toBeGreaterThanOrEqual(24);
+  });
+
+  test('keeps the action icons smaller than the logo', async ({ page }) => {
+    const logo = await page.getByRole('img', { name: 'Drafter' }).boundingBox();
+    const circle = await page.getByRole('button', { name: 'Open' }).locator('.round').boundingBox();
+    if (!logo || !circle) throw new Error('the logo or the Open icon is missing');
+    expect(circle.height).toBeLessThan(logo.height);
+    expect(circle.height).toBeGreaterThanOrEqual(24); // WCAG 2.5.8's minimum target
   });
 
   test('swaps panes when a tab open in the other pane is chosen', async ({ page }) => {
@@ -193,6 +201,33 @@ test.describe('on a phone', () => {
     page,
   }) => {
     expect(await overflowAt(page, 320)).toBeLessThanOrEqual(0);
+  });
+
+  test('gives every toolbar button at least a 24px target on a phone', async ({ page }) => {
+    const small: string[] = [];
+    for (const button of await page.getByRole('banner').getByRole('button').all()) {
+      const box = await button.boundingBox();
+      if (!box || box.width < 24 || box.height < 24) {
+        small.push(
+          `${(await button.getAttribute('aria-label')) ?? (await button.textContent())}: ${box?.width}x${box?.height}`,
+        );
+      }
+    }
+    expect(small).toEqual([]);
+  });
+
+  test('sizes the search and theme buttons like the action circles', async ({ page }) => {
+    const banner = page.getByRole('banner');
+    const size = async (target: Locator) => {
+      const box = await target.boundingBox();
+      if (!box) throw new Error('a toolbar button is missing');
+      return `${Math.round(box.width)}x${Math.round(box.height)}`;
+    };
+    const circle = await size(banner.getByRole('button', { name: 'Open' }).locator('.round'));
+    expect(await size(banner.getByRole('button', { name: 'Go to scene or command' }))).toBe(circle);
+    expect(await size(banner.getByRole('button', { name: /^Switch to (light|dark) theme$/ }))).toBe(
+      circle,
+    );
   });
 
   test('has no accessibility violations on a phone', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { type Diagnostic, forceLinting, forEachDiagnostic } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { fountainLint, parsedDoc, toCodeMirror } from '@drafter/cm-fountain';
+import { fountainLint, parsedDoc, relint, toCodeMirror } from '@drafter/cm-fountain';
 import type { LintDiagnostic } from '@drafter/lint';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -169,6 +169,46 @@ describe('fountainLint', () => {
     view.dispatch({ changes: { from: view.state.doc.length, insert: '\n' } });
     forceLinting(view);
     await vi.waitFor(() => expect(diagnosticsOf(view)).toEqual([]), { timeout: 3000 });
+  });
+
+  it('re-lints after the options change, with no edit', async () => {
+    let strict = false;
+    const heading = 'INT. HALL - DAY\nShe waits.\n';
+    const view = mount(heading, { template: () => template, options: () => ({ strict }) });
+    await linted(view, (d) => d.length > 0);
+    expect(diagnosticsOf(view).map((d) => d.severity)).toEqual(['info']);
+    // Only what the options return changes: the text is as it was, and no lint is pending.
+    strict = true;
+    relint(view);
+    await vi.waitFor(
+      () => expect(diagnosticsOf(view).map((d) => d.severity)).toEqual(['warning']),
+      { timeout: 3000 },
+    );
+    expect(view.state.doc.toString()).toBe(heading);
+  });
+
+  it("applies a fix with the editor's own line break", async () => {
+    const heading = 'INT. HALL - DAY\r\nShe waits.\r\n';
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: heading,
+        extensions: [
+          EditorState.lineSeparator.of('\r\n'),
+          fountainLint({ template: () => template }),
+        ],
+      }),
+      parent,
+    });
+    views.push(view);
+    const [found] = await linted(view, (d) => d.length > 0);
+    expect(found?.actions?.[0]?.name).toBe('Insert a blank line');
+    expect(view.state.doc.lines).toBe(3);
+    found?.actions?.[0]?.apply(view, found.from, found.to);
+    // The document gains a real line, not a line with a bare \n in it.
+    expect(view.state.doc.lines).toBe(4);
+    expect(view.state.sliceDoc(0)).toBe('INT. HALL - DAY\r\n\r\nShe waits.\r\n');
   });
 
   it('shows a lint gutter', () => {
