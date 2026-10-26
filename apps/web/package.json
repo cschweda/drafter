@@ -39,7 +39,7 @@
     "dexie": "^4.4.7",
     "mdast-util-from-markdown": "^2.1.0",
     "nuxt": "^4.6.2",
-    "nuxt-guided-tour": "^0.5.1",
+    "nuxt-guided-tour": "0.5.1",
     "tailwindcss": "^4.3.3",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0"
