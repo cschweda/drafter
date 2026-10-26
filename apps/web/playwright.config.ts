@@ -15,7 +15,22 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',
-  use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
+  use: {
+    baseURL: `http://localhost:${port}`,
+    trace: 'retain-on-failure',
+    // Every test begins as a first visit, which the guided tour would greet with a dialog over the
+    // page. The tour's "seen" key (nuxt-guided-tour: `drafter-tour-v1`, see app/tour/tour.config.ts)
+    // is set in advance; e2e/tour.spec.ts starts with an empty storage instead.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${port}`,
+          localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+        },
+      ],
+    },
+  },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },

@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
+import { TOUR_ICONS } from './scripts/tour-icons.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 /** The workspace packages, at the repository root. */
@@ -15,7 +16,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
   // The sample scripts live at the repository root, in samples/.
   alias: { '#samples': fileURLToPath(new URL('../../samples', import.meta.url)) },
-  modules: ['@nuxt/ui'],
+  modules: ['@nuxt/ui', 'nuxt-guided-tour'],
+  // The guided tour (app/tour/tour.config.ts). The highlight is the brand's goldenrod. The module's inline
+  // `<style>` for it is fixed text at build time, which `style-src 'unsafe-inline'` allows (Plan 1).
+  guidedTour: { highlightColor: '#E5B04A', highlightColorBright: '#F2CB7A' },
+  // The module's components use `ref`, `computed`, and the like without importing them, as Nuxt's
+  // auto-imports allow in an app's own files; Nuxt leaves `node_modules` out of that unless told.
+  imports: { transform: { include: [/nuxt-guided-tour/] } },
   css: ['~/assets/css/main.css'],
   // Fonts are self-hosted (main.css), and icons are bundled into the build:
   // nothing is fetched from another site at runtime.
@@ -28,7 +35,8 @@ export default defineNuxtConfig({
     provider: 'none',
     clientBundle: {
       scan: { globInclude: ['**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml,ts}'] },
-      icons: moduleIcons,
+      // The modules' icons, and the tour's Heroicons (scripts/tour-icons.mjs).
+      icons: [...moduleIcons, ...TOUR_ICONS],
     },
   },
   // The Drafter packages resolve to their TypeScript, so the build compiles it and never reads a

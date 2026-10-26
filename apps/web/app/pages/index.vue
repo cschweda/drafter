@@ -89,6 +89,7 @@ onBeforeUnmount(() => {
     <ModuleConfirmDialog />
     <CommandPalette />
     <SettingsDialog />
+    <AppTour />
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane

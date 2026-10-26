@@ -6,6 +6,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { TOUR_ICONS } from './tour-icons.mjs';
 
 /** Text that is in the fixture and in nothing else: its toolbar button and its command. */
 export const FIXTURE_MARKERS = ['Count scenes', 'Fixture: add a note'];
@@ -36,8 +37,9 @@ async function filesUnder(dir, pattern) {
 
 /**
  * @param {string} siteDir the generated site (`.output/public`)
- * @param {{ fixture: boolean, icons: string[] }} expected whether the build is a test build, and the
- *   icon names (without `i-lucide-`) its bundle must have
+ * @param {{ fixture: boolean, icons: string[], heroicons?: string[] }} expected whether the build is a
+ *   test build, the icon names (without `i-lucide-`) its bundle must have, and the Heroicons
+ *   (without `heroicons:`) the guided tour draws, which the bundle must have in its Heroicons set
  * @returns {Promise<{ problems: string[] }>}
  */
 export async function checkBuild(siteDir, expected) {
@@ -64,6 +66,16 @@ export async function checkBuild(siteDir, expected) {
       problems.push(`The icon bundle has no “${name}” (i-lucide-${name}), which the app names.`);
     }
   }
+
+  // The guided tour's Heroicons are named in the module's files, which the scan doesn't read
+  // (scripts/tour-icons.mjs lists them): a name must be in a bundle that is the Heroicons set.
+  for (const name of expected.heroicons ?? []) {
+    const entry = new RegExp(`\\\\*"${name}\\\\*"\\s*:\\s*\\{[^}]*?\\\\*"body\\\\*"`);
+    const set = /\\*"prefix\\*"\s*:\s*\\*"heroicons\\*"/;
+    if (!texts.some(([, text]) => set.test(text) && entry.test(text))) {
+      problems.push(`The icon bundle has no Heroicons “${name}”, which the guided tour draws.`);
+    }
+  }
   return { problems };
 }
 
@@ -86,6 +98,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const { problems } = await checkBuild(siteDir, {
     fixture: process.env.DRAFTER_TEST_MODULES === '1',
     icons: await iconsNamedInTs(appDir),
+    heroicons: TOUR_ICONS.map((name) => name.replace(/^heroicons:/, '')),
   });
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);

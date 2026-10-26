@@ -84,10 +84,11 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-txt': 'i-lucide-file-type',
 };
 
-// Help: the group at the end of the menu. Reset sample is first (off unless a sample is open); the
-// tour and the help pages join it as their commands arrive.
+// Help: the group at the end of the menu. Take the tour is first (always on); Reset sample is last (off
+// unless a sample is open); the help pages join them as their commands arrive.
 const helpItems = computed<DropdownMenuItem[]>(() => [
   { type: 'label', label: 'Help' },
+  ...entry('take-the-tour', 'i-lucide-compass'),
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
 ]);
 

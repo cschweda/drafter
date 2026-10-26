@@ -17,6 +17,7 @@ import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { requestTour } from '~/tour/state';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
@@ -204,6 +205,14 @@ export function registerBuiltinCommands(): void {
       run: () => {
         if (script.resetSample()) editor.goto(view.state.selection.main.head);
       },
+    },
+    // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
+    // section of the app menu lists it too. It waits for any dialog or the palette to close.
+    {
+      id: 'take-the-tour',
+      title: 'Take the tour',
+      group: 'Help',
+      run: requestTour,
     },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF or plain text; a Markdown document as its Markdown file or plain text (a PDF of one is deferred).

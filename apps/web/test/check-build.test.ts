@@ -45,4 +45,29 @@ describe('checking a build', () => {
       ),
     ).toMatch(/drama/);
   });
+
+  test('finds a Heroicons name the tour draws that the bundle lacks, and ignores one in another set', async () => {
+    const hero = await site({
+      'a.js':
+        'JSON.parse("{\\"prefix\\":\\"heroicons\\",\\"icons\\":{\\"play\\":{\\"width\\":24,\\"body\\":\\"<path/>\\"}}}")',
+    });
+    expect(
+      (await checkBuild(hero, { fixture: false, icons: [], heroicons: ['play'] })).problems,
+    ).toEqual([]);
+    expect(
+      (
+        await checkBuild(hero, { fixture: false, icons: [], heroicons: ['play', 'check'] })
+      ).problems.join('\n'),
+    ).toMatch(/Heroicons .check/);
+    // The same name in the Lucide set doesn't count.
+    const lucide = await site({
+      'a.js':
+        'JSON.parse("{\\"prefix\\":\\"lucide\\",\\"icons\\":{\\"play\\":{\\"width\\":24,\\"body\\":\\"<path/>\\"}}}")',
+    });
+    expect(
+      (await checkBuild(lucide, { fixture: false, icons: [], heroicons: ['play'] })).problems.join(
+        '\n',
+      ),
+    ).toMatch(/Heroicons .play/);
+  });
 });
