@@ -114,6 +114,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **When:** the list opens when asked (Ctrl+Space), or once two characters of what is being completed are typed.
   - **Enter:** a name typed in full is not offered, so Enter goes on to the speech and does not accept a list that would change nothing. With nothing else to offer, no list opens. Case is ignored, and every list works this way. Names are matched from their start, so `OC` doesn't offer `DOCTOR`.
   - **Tests:** what each place offers, and in what order; where a cue line can and can't be; the full name that leaves Enter alone, in the source and in a view with CodeMirror's own completion; and hostile scripts (a hundred thousand different names, places, times, transitions, sections, and extensions, and lines of a million characters) that must be answered in under a second.
+- `@drafter/cm-fountain`: folding, the cursor's element, lint, and `fountain()`, which composes the whole package.
+  - **Folding:** `fountainFolding()` folds a section to the next section of equal or shallower depth, and a scene to the next heading or section, from the end of the heading to the end of the last block. A folded scene shows its heading and its first synopsis; a folded section shows its title.
+  - **Cursor:** `cursorElement(state)` is the block, line, and kind under the main cursor, null on a blank line, and the title page as `blockIndex` -1. `onCursorElement(callback)` calls back when that changes.
+  - **Lint:** `fountainLint({ template, options })` runs `@drafter/lint` on the parse 300 ms after typing stops, with CodeMirror's gutter and tooltips, and `toCodeMirror` maps the diagnostics, a fix becoming an action. A fix applies only to the text that was linted: after an edit it asks for a new lint and changes nothing.
+  - **`fountain(options)`:** the parse, highlighting, input filters, keymap (at `Prec.high`), completion, and folding, and, given a `template`, lint, and given `onCursorElement`, the callback. Tab on a blank line starts a cue and opens the list of names.
+  - **Completion:** a cue right under a section, synopsis, or page break is a cue line. Ctrl+Space on any other line offers the character names for the word before the cursor.
 
 ### Changed
 

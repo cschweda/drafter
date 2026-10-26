@@ -8,6 +8,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import * as api from '@drafter/cm-fountain';
 import { fountainCompletion, fountainCompletionSource } from '@drafter/cm-fountain';
+import { parse } from '@drafter/fountain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stateOf } from './helpers';
 
@@ -160,7 +161,6 @@ describe('character names', () => {
     it('has no lower case, unless it is forced with an @', () => {
       const script = (cue: string) => text('MARGARET', 'Hello.', '', cue);
       expect(ask(script('Ma|'))).toBeNull();
-      expect(ask(script('Ma|'), true)).toBeNull();
       expect(ask(script('ma|'))).toBeNull();
       expect(ask(script('@Ma|'))).toEqual({ labels: ['MARGARET'], replaces: 'Ma' });
       // Prose in capitals is not offered a name it doesn't begin with.
@@ -183,13 +183,64 @@ describe('character names', () => {
     });
   });
 
+  it('offers names on a cue right under a section or synopsis', () => {
+    // The parser starts a new block at a `#`, `=`, or `===` line, so a cue right under one is a cue
+    // with no blank line between. The completion reads such a line as blank too.
+    const speech = text('MARGARET', 'Hello.', '');
+    for (const above of ['# ACT ONE', '## Act one', '= She arrives.', '===']) {
+      const script = text(speech, above, 'MA|', 'Hi.');
+      const blocks = parse(script.replace('|', '')).blocks;
+      expect(blocks.at(-2)?.kind).toBe('character');
+      expect(ask(script)).toEqual({ labels: ['MARGARET'], replaces: 'MA' });
+      expect(ask(text(speech, above, '@|'), true)).toEqual({ labels: ['MARGARET'], replaces: '' });
+    }
+    // Under anything else it is not a cue line: dialogue and action are not blank.
+    expect(ask(text(speech, 'She waits.', 'MA|'))).toBeNull();
+    expect(ask(text(speech, '#', 'MA|'))).not.toBeNull();
+  });
+
+  it('offers names anywhere when asked', () => {
+    const script = (line: string) =>
+      text('MARGARET', 'Hello.', '', 'BRICK', 'Hi.', '', 'MARGARET', 'Bye.', '', line);
+    // In action text, the word before the cursor is completed, in any case, or all names if none.
+    expect(ask(script('She sees Mar|'), true)).toEqual({ labels: ['MARGARET'], replaces: 'Mar' });
+    expect(ask(script('She sees |'), true)).toEqual({
+      labels: ['MARGARET', 'BRICK'],
+      replaces: '',
+    });
+    expect(ask(script('She sees B|'), true)).toEqual({ labels: ['BRICK'], replaces: 'B' });
+    // Also inside a speech, on the lines under a cue.
+    const speech = text('MARGARET', 'Hello.', '', 'BRICK', 'Tell mar|');
+    expect(ask(speech, true)).toEqual({ labels: ['MARGARET'], replaces: 'mar' });
+    // The first word of an action line, though a name is not a cue in lower case.
+    expect(ask(script('Ma|'), true)).toEqual({ labels: ['MARGARET'], replaces: 'Ma' });
+    // Only when asked: typing offers nothing in action.
+    expect(ask(script('She sees Mar|'))).toBeNull();
+    // Nothing that starts with the word, nothing offered; the word is a name in full, likewise.
+    expect(ask(script('She sees Zed|'), true)).toBeNull();
+    expect(ask(script('She sees MARGARET|'), true)).toBeNull();
+    // A name that needs an @ to be a cue is a name all the same, in the middle of a line.
+    const odd = text('@McCLANE', 'Yippee.', '', 'Then Mc|');
+    expect(ask(odd, true)).toEqual({ labels: ['McCLANE'], replaces: 'Mc' });
+    // An apostrophe is part of a word, a space or punctuation is not.
+    expect(ask(script('Marge, Mar|'), true)).toEqual({ labels: ['MARGARET'], replaces: 'Mar' });
+    // With no word yet, the cast is listed after a space but not after punctuation.
+    expect(ask(script('Hello,|'), true)).toBeNull();
+    // A very long word costs no more than its length.
+    const started = performance.now();
+    expect(ask(script(`${'a'.repeat(200_000)}|`), true)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(1000);
+    // Other lists keep their own lines.
+    expect(ask(script('INT. MAR|'), true)).toBeNull();
+    expect(ask(script('>MAR|'), true)).toBeNull();
+  });
+
   it('leaves out the names that need an @ unless the cue has one', () => {
     const script = (cue: string) =>
       text('MARGARET', 'Hello.', '', '@McCLANE', 'Yippee.', '', '@田中一郎', 'はい。', '', cue);
     // Without an @ the cue would not be a cue: a name with lower case, or with no case at all.
     expect(ask(script('MC|'))).toBeNull();
     expect(ask(script('田中|'))).toBeNull();
-    expect(ask(script('MC|'), true)).toBeNull();
     expect(ask(script('|'), true)).toEqual({ labels: ['MARGARET'], replaces: '' });
     // With one, any name will do.
     expect(ask(script('@MC|'))).toEqual({ labels: ['McCLANE'], replaces: 'MC' });

@@ -100,7 +100,41 @@ function targets(state: EditorState, doc: Doc, pos: number, explicit: boolean): 
   }
   const prefix = HEADING_PREFIX.exec(text);
   if (prefix) return headingTargets(doc, text.slice(prefix[0].length), start + prefix[0].length);
-  return cueTargets(state, doc, line, text, start, explicit);
+  const cue = cueTargets(state, doc, line, text, start, explicit);
+  // Asking for a list on a line that is no other context completes the word before the cursor.
+  return explicit ? [...cue, anywhereTarget(doc, line, text, start)] : cue;
+}
+
+const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
+const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+const WORD_CHARACTER = /^[\p{L}\p{N}'\u2019]$/u;
+
+/**
+ * Where the word before the cursor starts in `text`, which ends at the cursor. It steps back
+ * one character at a time, since a pattern anchored at the end of a long run of letters costs
+ * the square of its length.
+ */
+function wordStart(text: string): number {
+  let at = text.length;
+  while (at > 0) {
+    const pair =
+      at > 1 && isLowSurrogate(text.charCodeAt(at - 1)) && isHighSurrogate(text.charCodeAt(at - 2));
+    const size = pair ? 2 : 1;
+    if (!WORD_CHARACTER.test(text.slice(at - size, at))) break;
+    at -= size;
+  }
+  return at;
+}
+
+/**
+ * Ctrl+Space anywhere (Phase 1 design §5.3): every name that goes on from the word before the
+ * cursor, as text. It is no cue, so a name that needs an `@` to be one is offered like the rest.
+ */
+function anywhereTarget(doc: Doc, line: Line, text: string, start: number): Target {
+  const at = wordStart(text);
+  // With no word yet, the cast is listed only where a word may begin: not after `)` or a `,`.
+  const none = at === text.length && text !== '' && !/\s$/u.test(text);
+  return { from: start + at, labels: () => (none ? NONE.slice() : names(doc, line.from, true)) };
 }
 
 /** After a scene heading's prefix and its space: a location, or after the last ` - `, a time. */
@@ -130,7 +164,7 @@ function cueTargets(
   start: number,
   explicit: boolean,
 ): Target[] {
-  if (line.number > 1 && !isBlank(state.doc.line(line.number - 1).text)) return [];
+  if (line.number > 1 && !isBlankAbove(state.doc.line(line.number - 1).text)) return [];
   const forced = text.startsWith('@');
   const mark = forced ? lengthOf(/^@\s*/, text) : 0;
   const body = text.slice(mark);
@@ -156,6 +190,15 @@ function cueTargets(
 function isBlank(line: string): boolean {
   const text = line.endsWith('\r') ? line.slice(0, -1) : line;
   return text !== '  ' && text.trim() === '';
+}
+
+/**
+ * Whether a cue can follow this line directly. A blank line, and a line that starts a section
+ * (`#`), a synopsis (`=`), or a page break (`===`), each end the block above and are a block of
+ * their own, so the parser reads a cue right under one as it reads one under a blank line.
+ */
+function isBlankAbove(line: string): boolean {
+  return isBlank(line) || /^\s*[#=]/.test(line);
 }
 
 function hasTwoLetters(text: string): boolean {

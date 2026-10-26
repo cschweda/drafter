@@ -114,7 +114,7 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 
 ## Packages
 
-The engine is a set of framework-free TypeScript packages, published as `@drafter/*`. The web app lives in `apps/web`. Only `render-html` touches the DOM, and only `cm-fountain` depends on CodeMirror.
+The engine is a set of framework-free TypeScript packages, published as `@drafter/*`. The web app lives in `apps/web`. Two packages touch the DOM: `render-html` builds it, and `cm-fountain` drives CodeMirror's view, which does. Only `cm-fountain` depends on CodeMirror. The rest run anywhere Node does.
 
 | Package | What it does | Phase |
 |---|---|---|
