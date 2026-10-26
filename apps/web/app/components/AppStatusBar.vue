@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
+import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
 import { openError } from '~/storage/open';
@@ -10,6 +11,7 @@ import { type RecoveryState, useScript } from '~/storage/script';
 const { doc } = useEditor();
 const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
+const { count } = useProblems();
 const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
 
 // "Saved 4 min ago" is worked out from this, which moves every 30 seconds (and when a save lands).
@@ -82,6 +84,7 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="page">{{ pageLabel(page) }}</span>
+    <span>{{ problemsLabel(count) }}</span>
     <span class="spacer" />
     <template v-if="ready">
       <button

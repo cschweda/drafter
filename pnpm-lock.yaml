@@ -68,6 +68,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../../packages/layout
+      '@drafter/lint':
+        specifier: workspace:*
+        version: link:../../packages/lint
       '@drafter/render-html':
         specifier: workspace:*
         version: link:../../packages/render-html

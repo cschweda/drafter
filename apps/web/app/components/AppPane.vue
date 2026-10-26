@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
+import { problemsLabel, useProblems } from '~/editor/problems';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import { TABS, type TabId } from '~/utils/panes';
@@ -16,11 +17,17 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
-// Until the Problems list arrives (Plan 3), its panel holds a placeholder: a line of text.
 const { project } = useScript();
+const { problems, count, canFixAll, fixAll } = useProblems();
+const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
 const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
-  problems: 'No problems',
+  // Advice (info) isn't counted as a problem, so it's named apart.
+  problems:
+    problemsLabel(count.value) +
+    (suggestions.value > 0
+      ? ` · ${suggestions.value} ${suggestions.value === 1 ? 'suggestion' : 'suggestions'}`
+      : ''),
 }));
 const { settings, set } = useSettings();
 
@@ -69,6 +76,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
         @keydown="onKeydown($event, index)"
       >
         {{ tab.label }}
+        <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
       </button>
     </div>
     <div class="slim">
@@ -104,6 +112,10 @@ function onKeydown(event: KeyboardEvent, index: number) {
             </button>
           </div>
         </template>
+        <template v-else-if="props.selected === 'problems' && canFixAll">
+          <span class="spacer" />
+          <button type="button" class="fix-all" @click="fixAll()">Fix all</button>
+        </template>
       </template>
     </div>
     <div
@@ -117,7 +129,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
     >
       <SourcePane v-if="props.selected === 'source'" />
       <ScriptPane v-else-if="props.selected === 'script'" />
-      <p v-else class="placeholder">No problems found.</p>
+      <ProblemsPane v-else />
     </div>
   </section>
 </template>
@@ -211,9 +223,31 @@ function onKeydown(event: KeyboardEvent, index: number) {
 .panel.editing {
   overflow: hidden;
 }
-.placeholder {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
+.badge {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: var(--chrome-2);
+  color: var(--text);
+  font-size: 11px;
+}
+.tab.on .badge {
+  background: var(--chrome);
+}
+.fix-all {
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--heading);
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (forced-colors: active) {
+  .badge {
+    border: 1px solid CanvasText;
+  }
 }
 </style>

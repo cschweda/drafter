@@ -109,4 +109,33 @@ describe('settings', () => {
       put.mockRestore();
     }
   });
+
+  test('keeps the defaults when the rows read are not rows', async () => {
+    // A merge that throws must not reject `ready`: the page waits on it to apply anything.
+    const toArray = vi.spyOn(db.settings, 'toArray').mockResolvedValue([null] as never);
+    try {
+      const store = createSettings();
+      await expect(store.ready).resolves.toBeUndefined();
+      expect(store.settings.value).toEqual(DEFAULT_SETTINGS);
+      expect(store.read.value).toBe(false);
+    } finally {
+      toArray.mockRestore();
+    }
+  });
+
+  test('says whether the table was read', async () => {
+    const store = createSettings();
+    expect(store.read.value).toBe(false);
+    await store.ready;
+    expect(store.read.value).toBe(true);
+
+    const toArray = vi.spyOn(db.settings, 'toArray').mockRejectedValue(new Error('no database'));
+    try {
+      const failed = createSettings();
+      await failed.ready;
+      expect(failed.read.value).toBe(false);
+    } finally {
+      toArray.mockRestore();
+    }
+  });
 });
