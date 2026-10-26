@@ -5,7 +5,9 @@ import { type Doc, parse, type Span } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { nextTick, type ShallowRef, shallowRef } from 'vue';
 import { usePanes } from '~/composables/usePanes';
+import { useSettings } from '~/settings/settings';
 import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
+import { applyEditorSettings } from './apply-settings';
 import { editorExtensions, readOnly, readOnlyExtension } from './extensions';
 import { SAMPLE_SCREENPLAY } from './samples';
 import { templateIdOf } from './template';
@@ -53,10 +55,13 @@ function create(): EditorSession {
     if (next !== template.value) template.value = next;
   }
 
+  const { settings } = useSettings();
+
   // Everything but the text, so `load` can make a new state from the same pieces.
   const extensions = [
     editorExtensions({
       template: () => template.value,
+      lintOptions: () => ({ strict: settings.value.strict }),
       onCursorElement: (element) => {
         cursor.value = element;
       },
@@ -77,8 +82,10 @@ function create(): EditorSession {
   function load(text: string) {
     // `setState` tells no update listener, so the session catches up by hand.
     view.setState(EditorState.create({ doc: text, extensions }));
-    // The compartments start from their first values again, so read-only is put back.
+    // The compartments start from their first values again, so read-only is put back, and so
+    // are the settings that live in them (spellcheck, line numbers) and Strict Fountain's lint.
     if (locked) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
+    applyEditorSettings(view, settings.value);
     follow(view.state);
     cursor.value = cursorElement(view.state);
     // The new text starts at the top, whatever the old one's scroller was showing.

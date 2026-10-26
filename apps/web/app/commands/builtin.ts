@@ -7,6 +7,8 @@ import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-f
 import { nextTick } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { useEditor } from '~/editor/session';
+import { settingsOpen } from '~/settings/dialog';
+import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
 import { save, saveAs } from '~/storage/save';
@@ -34,6 +36,7 @@ export function registerBuiltinCommands(): void {
   const guard = useGuard();
   const panes = usePanes();
   const colorMode = useColorMode();
+  const { settings, set } = useSettings();
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -151,6 +154,17 @@ export function registerBuiltinCommands(): void {
       },
     },
 
+    {
+      id: 'settings',
+      title: 'Settings…',
+      group: 'File',
+      keys: 'Mod-,',
+      global: true,
+      run: () => {
+        settingsOpen.value = true;
+      },
+    },
+
     // Go
     { id: 'go-to-scene', title: 'Go to scene…', group: 'Go', run: () => openPalette('scene') },
     { id: 'go-to-line', title: 'Go to line…', group: 'Go', run: () => openPalette('line') },
@@ -180,6 +194,20 @@ export function registerBuiltinCommands(): void {
       run: () => {
         colorMode.preference = colorMode.value === 'light' ? 'dark' : 'light';
       },
+    },
+    {
+      id: 'show-line-numbers',
+      title: 'Show line numbers',
+      group: 'View',
+      enabled: () => !settings.value.lineNumbers,
+      run: () => void set('lineNumbers', true),
+    },
+    {
+      id: 'hide-line-numbers',
+      title: 'Hide line numbers',
+      group: 'View',
+      enabled: () => settings.value.lineNumbers,
+      run: () => void set('lineNumbers', false),
     },
     {
       id: 'fold-all',

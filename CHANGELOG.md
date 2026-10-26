@@ -11,7 +11,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: the command palette. Mod+K (or the toolbar's search field) opens it from anywhere, the editor included. It lists the scenes by their heading text with their source lines, "Go to line N" when you type a number, and every command that applies, with its keys. Esc closes it and focus goes back where it was.
 - `apps/web`: a command registry (`registerCommands`, `useCommands`, `formatKeys`). File, Edit, View, and Go commands, among them New screenplay (Mod+Alt+N), New stage play, Open (Mod+O), Save, Save As, Remove from this browser, Next and Previous problem (F8, Shift+F8), Show Source, Show Script, Show Problems, Switch theme, Fold all, Unfold all, Undo, Redo, Find, and the Fountain commands (make a scene heading through a lyric, dual dialogue, wrap in a note, cut to the boneyard).
 - `apps/web`: Shift+F8 goes to the previous problem, and Mod+Shift+Z redoes on every platform.
-- `apps/web`: the browser tests' server port' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
+- `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
+- `apps/web`: settings, kept in this browser (IndexedDB) and set from a Settings dialog (File > Settings…, Mod+,). They are match system appearance, text size (90% to 150%, scaling the Source pane and, at 100%, the Script pane), spellcheck, Strict Fountain (its rules become warnings at once), and line numbers.
+- `apps/web`: line numbers in the Source pane, off to begin with, in the leftmost gutter. A "Line numbers" button on the pane's bar, the Show and Hide line numbers commands, and the dialog toggle them, and Drafter remembers the choice.
 
 ### Changed
 

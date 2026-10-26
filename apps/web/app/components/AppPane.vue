@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
+import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import { TABS, type TabId } from '~/utils/panes';
 
@@ -21,6 +22,7 @@ const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
   problems: 'No problems',
 }));
+const { settings, set } = useSettings();
 
 const { page, updating } = useLayout();
 const zoom = useScriptZoom();
@@ -87,7 +89,22 @@ function onKeydown(event: KeyboardEvent, index: number) {
           </button>
         </div>
       </template>
-      <template v-else>{{ SLIM[props.selected] }}</template>
+      <template v-else>
+        {{ SLIM[props.selected] }}
+        <template v-if="props.selected === 'source'">
+          <span class="spacer" />
+          <div role="group" aria-label="Source view" class="zoom">
+            <button
+              type="button"
+              class="zoom-button"
+              :aria-pressed="settings.lineNumbers ? 'true' : 'false'"
+              @click="set('lineNumbers', !settings.lineNumbers)"
+            >
+              Line numbers
+            </button>
+          </div>
+        </template>
+      </template>
     </div>
     <div
       :id="`panel-${props.selected}`"

@@ -12,12 +12,13 @@ export const theme = EditorView.theme({
     color: 'var(--text)',
     backgroundColor: 'var(--bg)',
     fontFamily: 'var(--font-mono)',
-    fontSize: '13.5px',
+    // The text size setting scales the Source pane through --text-scale (settings/apply.ts).
+    fontSize: 'calc(13.5px * var(--text-scale, 1))',
   },
   // The focus ring goes around the whole editor, gutters too, inside the pane's edge.
   // `:focus-within` is there because CodeMirror adds `cm-focused` a moment after focus lands.
   '&.cm-focused, &:focus-within': { outline: '2px solid var(--heading)', outlineOffset: '-2px' },
-  '.cm-scroller': { fontFamily: 'inherit', lineHeight: '21px' },
+  '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
   '.cm-content': { padding: '12px 0', caretColor: 'var(--text)' },
   '.cm-line': { padding: '0 16px 0 8px' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--text)' },

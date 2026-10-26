@@ -2,6 +2,7 @@
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installGlobalKeys } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
+import { applySettings } from '~/settings/apply';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
@@ -39,17 +40,20 @@ useHead({
 registerBuiltinCommands();
 let removeKeys: (() => void) | undefined;
 let stopWatchingSave: (() => void) | undefined;
+let stopSettings: (() => void) | undefined;
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
   removeKeys = installGlobalKeys();
   stopWatchingSave = watchSaveError();
+  stopSettings = applySettings();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   removeKeys?.();
   stopWatchingSave?.();
+  stopSettings?.();
 });
 </script>
 
@@ -64,6 +68,7 @@ onBeforeUnmount(() => {
     <SameTitleDialog />
     <RemoveDialog />
     <CommandPalette />
+    <SettingsDialog />
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane

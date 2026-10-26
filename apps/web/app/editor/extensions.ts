@@ -4,7 +4,7 @@ import { foldGutter, foldKeymap } from '@codemirror/language';
 import { lintKeymap, previousDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import { drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view';
+import { drawSelection, EditorView, keymap, lineNumbers, ViewPlugin } from '@codemirror/view';
 import { type CursorElement, fountain, relint as relintView } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
 import { theme } from './theme';
@@ -56,17 +56,28 @@ export function relint(): void {
   if (active) relintView(active);
 }
 
+/** `lineNumbersGutter.reconfigure(lineNumbersExtension(on))` shows or hides the numbers. */
+export function lineNumbersExtension(on: boolean): Extension {
+  return on ? lineNumbers() : [];
+}
+
 export interface EditorHooks {
   template: () => Template;
+  /** Read at each lint; the Strict Fountain setting is in it. */
+  lintOptions?: () => { strict?: boolean };
   onCursorElement: (element: CursorElement | null) => void;
 }
 
 /** Everything the one editor is made of, around `fountain()` (technical design §3). */
-export function editorExtensions({ template, onCursorElement }: EditorHooks): Extension {
+export function editorExtensions({
+  template,
+  lintOptions,
+  onCursorElement,
+}: EditorHooks): Extension {
   return [
     remember,
     lineNumbersGutter.of([]),
-    fountain({ template, onCursorElement }),
+    fountain({ template, lintOptions, onCursorElement }),
     history(),
     drawSelection(),
     foldGutter(),
