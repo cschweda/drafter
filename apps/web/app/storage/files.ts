@@ -186,8 +186,11 @@ export const browserFiles: FileAccess = {
       const writable = await handle.createWritable();
       try {
         await writable.write(encode(data) as BufferSource);
-      } finally {
         await writable.close();
+      } catch (error) {
+        // Give the half-written stream up, so the file keeps what it had and the error is the real one.
+        await writable.abort().catch(() => {});
+        throw error;
       }
     } catch (error) {
       if (isGone(error)) throw new FileGoneError();

@@ -60,7 +60,13 @@ export interface ScriptSession {
    * becomes a new script of the writer's own, which the editor then shows (the sample is left as
    * it was). Failing to record it is not failing to save: the file has the text.
    */
-  saved(info: { text: string; fileName: string; ref: FileRef | null }): Promise<void>;
+  saved(info: {
+    text: string;
+    fileName: string;
+    ref: FileRef | null;
+    /** The script the save started on. If another is open now, the record goes to this one. */
+    id?: string;
+  }): Promise<void>;
   /** Whether `p`'s text differs from what was last saved to its file (or from where it started). */
   changed(p: Project): Promise<boolean>;
   /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
@@ -403,11 +409,17 @@ function create(): ScriptSession {
     text: savedText,
     fileName,
     ref,
+    id,
   }: {
     text: string;
     fileName: string;
     ref: FileRef | null;
+    id?: string;
   }) {
+    // The writer switched scripts while the file was being written: the record is the starting
+    // script's, and the open one is left as it is.
+    if (id !== undefined && project.value?.id !== id)
+      return savedElsewhere(id, savedText, fileName, ref);
     // The file has this text, whatever happens to the record of it.
     baseline.value = text(savedText);
     const current = project.value;
@@ -446,6 +458,49 @@ function create(): ScriptSession {
         savedAt,
         fileName,
         ...(fsHandleId ? { fsHandleId } : {}),
+      });
+    } catch {
+      // The file was written; the recovery copy's state says if the database is the problem.
+    }
+  }
+
+  /** Records a save against script `id`, which is not the one open. */
+  async function savedElsewhere(
+    id: string,
+    savedText: string,
+    fileName: string,
+    ref: FileRef | null,
+  ) {
+    try {
+      const hash = await hashText(savedText);
+      const savedAt = Date.now();
+      await exclusive(async () => {
+        const stored = await getProject(id);
+        // Removed meanwhile: the file has the text, and there is no record to make.
+        if (!stored) return;
+        if (stored.sample) {
+          // The sample stays as it was; a script of the writer's own takes the text, without being opened.
+          const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
+          const created = await createProject({
+            source: savedText,
+            fileName,
+            savedHash: hash,
+            savedAt,
+            ...(handleId ? { fsHandleId: handleId } : {}),
+          });
+          await setSavedText(created.id, savedText);
+          return;
+        }
+        const fsHandleId = ref
+          ? await putHandle(stored.fsHandleId ?? crypto.randomUUID(), ref)
+          : stored.fsHandleId;
+        await setSavedText(id, savedText);
+        await updateProject(id, {
+          savedHash: hash,
+          savedAt,
+          fileName,
+          ...(fsHandleId ? { fsHandleId } : {}),
+        });
       });
     } catch {
       // The file was written; the recovery copy's state says if the database is the problem.

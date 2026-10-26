@@ -3,7 +3,7 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
-import { saveError } from '~/storage/save';
+import { saveAnnouncement, saveError } from '~/storage/save';
 import { type RecoveryState, useScript } from '~/storage/script';
 
 const { doc } = useEditor();
@@ -21,12 +21,11 @@ onMounted(() => {
 });
 onBeforeUnmount(() => clearInterval(tick));
 // What a screen reader hears when a save lands; the visible text keeps counting minutes.
-const announcement = ref('');
+const announcement = saveAnnouncement;
 watch(
   () => project.value?.savedAt,
-  (at, before) => {
+  () => {
     now.value = Date.now();
-    announcement.value = at !== undefined && at !== before ? 'Saved' : '';
   },
 );
 

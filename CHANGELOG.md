@@ -203,6 +203,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- A save is recorded against the script it started on. If the writer switched scripts while the file was being picked or written, the other script used to be given the file's name, handle, and saved text; now the record goes to the script that was saved, and Save waits for a switch that is under way.
+- Every save is announced to a screen reader, not only the first, and opening a saved script or reloading the page announces nothing.
+- A refused write no longer hides its real error behind a failed close, the message points to Save As, and it goes away when the script changes.
 - `apps/web`: fixes from the recovery copy's review.
   - The "may clear your recovery copy" banner no longer flashes on every launch before the storage has been checked.
   - The "unavailable" warning is announced at once (`role="alert"`); "may be cleared" stays a status.

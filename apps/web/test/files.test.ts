@@ -75,6 +75,8 @@ function memoryFiles(options: { inPlace?: boolean } = {}) {
     answers: [] as (string | null)[],
     /** Makes the next write fail with this. */
     failNext: null as Error | null,
+    /** Runs at the start of the next write, once: the writer switches scripts meanwhile. */
+    duringWrite: null as (() => Promise<void>) | null,
   };
   let next = 1;
   const bytesOf = (data: string | Uint8Array) =>
@@ -101,6 +103,9 @@ function memoryFiles(options: { inPlace?: boolean } = {}) {
       return { bytes: file.bytes, lastModified: 0 };
     },
     async write(ref, data) {
+      const meanwhile = control.duringWrite;
+      control.duringWrite = null;
+      await meanwhile?.();
       if (control.failNext) {
         const error = control.failNext;
         control.failNext = null;
@@ -137,7 +142,7 @@ async function fresh(options: { inPlace?: boolean } = {}) {
   const { useEditor } = await import('../app/editor/session');
   (useEditor() as unknown as { reset(): void }).reset();
   const { useScript } = await import('../app/storage/script');
-  const { save, saveAs, saveError } = await import('../app/storage/save');
+  const { save, saveAs, saveError, saveAnnouncement } = await import('../app/storage/save');
   const { decodeFile } = await import('../app/storage/text');
   const { hashText } = await import('../app/storage/hash');
   const projects = await import('../app/storage/projects');
@@ -156,6 +161,7 @@ async function fresh(options: { inPlace?: boolean } = {}) {
     save,
     saveAs,
     saveError,
+    saveAnnouncement,
     db,
     decodeFile,
     hashText,
@@ -388,5 +394,86 @@ describe('saving through a FileAccess', () => {
     // One question, then a write in place.
     expect(t.log.picks).toHaveLength(1);
     expect(t.log.writes).toHaveLength(2);
+  });
+});
+
+describe('a save belongs to the script it started on', () => {
+  test('records a save against the script it started on, even after a switch', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    t.type('FIRST\n');
+    const a = t.script.project.value?.id ?? '';
+    const textOfA = t.shown();
+    // The writer switches scripts while the file is being written.
+    t.control.duringWrite = () => t.script.newScript('stage-play');
+    expect(await t.save()).toBe('saved');
+
+    const b = t.script.project.value?.id ?? '';
+    expect(b).not.toBe(a);
+    const rowA = await t.projects.getProject(a);
+    expect(rowA?.fileName).toBe('Untitled Screenplay.fountain');
+    expect(rowA?.savedHash).toBe(await t.hashText(textOfA));
+    expect(rowA?.fsHandleId).toBeTruthy();
+    expect(await t.projects.getSavedText(a)).toBe(textOfA);
+    // B, which is open now, has nothing of A's, in the database or in the session.
+    const rowB = await t.projects.getProject(b);
+    expect(rowB?.fileName).toBeUndefined();
+    expect(rowB?.savedHash).toBeUndefined();
+    expect(rowB?.fsHandleId).toBeUndefined();
+    expect(t.script.project.value?.fileName).toBeUndefined();
+    expect(t.script.project.value?.fsHandleId).toBeUndefined();
+    // And B's text still counts from where B started: a new script nobody typed in is unchanged.
+    expect(t.script.dirty.value).toBe(false);
+    t.type('B TEXT\n');
+    expect(t.script.dirty.value).toBe(true);
+  });
+
+  test('waits for a switch that is under way before saving', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    t.type('FIRST\n');
+    const switching = t.script.newScript('stage-play');
+    const saving = t.save();
+    await switching;
+    expect(await saving).toBe('saved');
+    // It saved the script that was open when it ran.
+    const id = t.script.project.value?.id ?? '';
+    expect((await t.projects.getProject(id))?.fileName).toBe('Untitled Play.fountain');
+  });
+
+  test('announces every save, not only the first', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    t.type('A\n');
+    const heard: string[] = [];
+    const { watch } = await import('vue');
+    watch(t.saveAnnouncement, (text) => text && heard.push(text), { flush: 'sync' });
+    await t.save();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(heard).toEqual(['Saved']);
+    expect(t.saveAnnouncement.value).toBe('');
+    t.type('B\n');
+    await t.save();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(heard).toEqual(['Saved', 'Saved']);
+  });
+
+  test('says nothing for a save that was cancelled or failed', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    t.control.answers.push(null);
+    await t.save();
+    t.control.failNext = new DOMException('no', 'NotAllowedError');
+    await t.save().catch(() => {});
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(t.saveAnnouncement.value).toBe('');
+  });
+
+  test('points to Save As when the file may not be written', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    t.control.failNext = new DOMException('no', 'NotAllowedError');
+    await t.save().catch(() => {});
+    expect(t.saveError.value).toMatch(/Save As/);
   });
 });

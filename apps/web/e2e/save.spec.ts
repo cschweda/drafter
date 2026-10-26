@@ -316,6 +316,31 @@ test.describe('saving where the browser can’t save in place', () => {
     expect((await again).suggestedFilename()).toBe('Untitled Screenplay.fountain');
   });
 
+  test('announces every save to a screen reader, and not a reload', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'same on a phone');
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.evaluate(() => {
+      const w = window as unknown as { __heard: string[] };
+      w.__heard = [];
+      const region = document.querySelector('[data-tour="status"] [role="status"]');
+      new MutationObserver(() => {
+        if (region?.textContent) w.__heard.push(region.textContent);
+      }).observe(region as Node, { childList: true, characterData: true, subtree: true });
+    });
+    const heard = () =>
+      page.evaluate(() => (window as unknown as { __heard: string[] }).__heard.length);
+    await page.keyboard.insertText('ONE');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect.poll(heard).toBe(1);
+    await page.keyboard.insertText(' TWO');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect.poll(heard).toBe(2);
+    await page.reload();
+    await expect(editor(page)).toContainText('TWO');
+    await expect(status(page).locator('[role="status"]')).toHaveText('');
+  });
+
   test('downloads a sample under its title and makes it the writer’s own', async ({
     page,
     isMobile,

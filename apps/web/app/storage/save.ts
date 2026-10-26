@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
 import { FileGoneError, type FileRef, useFiles } from './files';
@@ -8,6 +8,27 @@ import { encodeFile, fileNameFor, titleOf } from './text';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
 export const saveError = ref('');
+
+/**
+ * What a screen reader hears when a save lands: "Saved", then nothing again a moment later, so the
+ * next save is a change in the live region and is heard too. Spoken from the save itself, not from
+ * the script's record of it, so opening a saved script says nothing.
+ */
+export const saveAnnouncement = ref('');
+let clearing: ReturnType<typeof setTimeout> | undefined;
+let speaking: ReturnType<typeof setTimeout> | undefined;
+function announceSave() {
+  clearTimeout(clearing);
+  clearTimeout(speaking);
+  saveAnnouncement.value = '';
+  // After the empty text has been drawn.
+  speaking = setTimeout(() => {
+    saveAnnouncement.value = 'Saved';
+    clearing = setTimeout(() => {
+      saveAnnouncement.value = '';
+    }, 2000);
+  }, 100);
+}
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -20,16 +41,31 @@ function inTurn<T>(run: () => Promise<T>): Promise<T> {
 
 function messageFor(error: unknown): string {
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
-    return 'Drafter isn’t allowed to write that file.';
+    return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
   }
   return 'Couldn’t save the file.';
+}
+
+/** Resolves once no switch of scripts is under way. */
+function idle(script: ReturnType<typeof useScript>): Promise<void> {
+  if (!script.busy.value) return Promise.resolve();
+  return new Promise((resolve) => {
+    const stop = watch(script.busy, (on) => {
+      if (on) return;
+      stop();
+      resolve();
+    });
+  });
 }
 
 async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   const files = useFiles();
   const script = useScript();
   const editor = useEditor();
+  // A switch under way finishes first: the save is of the script that is open when it starts.
+  await idle(script);
   const held = script.project.value;
+  const id = held?.id;
   const title = titleOf(editor.doc.value);
   const name = held?.fileName ?? fileNameFor(title, '.fountain');
   const lineBreak = held?.lineBreak ?? '\n';
@@ -40,7 +76,7 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   if (!files.canSaveInPlace) {
     const text = shown();
     files.download(name, encodeFile(text, lineBreak, bom), 'text/plain');
-    await script.saved({ text, fileName: name, ref: null });
+    await script.saved({ text, fileName: name, ref: null, ...(id ? { id } : {}) });
     return 'saved';
   }
 
@@ -59,7 +95,12 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
     const text = shown();
     try {
       await files.write(target as FileRef, encodeFile(text, lineBreak, bom));
-      await script.saved({ text, fileName: (target as FileRef).name, ref: target as FileRef });
+      await script.saved({
+        text,
+        fileName: (target as FileRef).name,
+        ref: target as FileRef,
+        ...(id ? { id } : {}),
+      });
       return 'saved';
     } catch (error) {
       // The file the script came from has moved or gone: where to now?
@@ -73,7 +114,9 @@ async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
   return inTurn(async () => {
     saveError.value = '';
     try {
-      return await run(ask);
+      const result = await run(ask);
+      if (result === 'saved') announceSave();
+      return result;
     } catch (error) {
       saveError.value = messageFor(error);
       throw error;
@@ -107,5 +150,15 @@ export function installSaveKeys(): () => void {
     else fileKeys.save();
   };
   window.addEventListener('keydown', onKeydown, true);
-  return () => window.removeEventListener('keydown', onKeydown, true);
+  // What went wrong with one script's save isn't news about the next one.
+  const stop = watch(
+    () => useScript().project.value?.id,
+    () => {
+      saveError.value = '';
+    },
+  );
+  return () => {
+    window.removeEventListener('keydown', onKeydown, true);
+    stop();
+  };
 }
