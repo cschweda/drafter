@@ -22,6 +22,9 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palett
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+const status = (page: Page) => page.locator('[data-tour="status"]');
+/** Two panes, the full bar; below 1024px one pane and the bar's compact row. */
+const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
 
 interface Row {
   id: string;
@@ -109,26 +112,40 @@ test.describe('a first visit', () => {
     await page.keyboard.insertText('ZZ');
     await expect(page.locator('.cm-line', { hasText: `ZZ${HEADING}` })).toBeVisible();
     expect(await text(page)).toContain(`ZZ${HEADING}`);
+
+    // Ctrl+Home goes back to the very top: the title page.
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect(status(page)).toContainText('Title page');
   });
 
   test('offers new scripts and Open from the sample bar', async ({ page }) => {
     // Browsers without a picker read a file through an input, which every browser can do here.
     await removePickers(page);
     await start(page);
-    await showSource(page);
 
+    // The bar is above the panes, so it is there whichever tab is showing.
     await expect(bar(page)).toBeVisible();
-    await expect(bar(page)).toContainText('This is a sample. Start your own:');
-    // The New buttons are the document types, in their order, then Open.
-    await expect(barButtons(page)).toHaveText([
-      'New screenplay',
-      'New stage play',
-      'New Markdown document',
-      'Open a file…',
-    ]);
-
-    await barButtons(page).nth(1).click();
+    if (wide(page)) {
+      await expect(bar(page)).toContainText('This is a sample. Start your own:');
+      // The New buttons are the document types, in their order, then Open.
+      await expect(barButtons(page)).toHaveText([
+        'New screenplay',
+        'New stage play',
+        'New Markdown document',
+        'Open a file…',
+      ]);
+      await barButtons(page).nth(1).click();
+    } else {
+      // A phone: one row, "Sample", the first button, and a menu with the rest.
+      await expect(bar(page)).not.toContainText('Start your own');
+      await expect(barButtons(page)).toHaveText(['New screenplay', 'More']);
+      await barButtons(page).last().click();
+      const items = page.getByRole('menu').getByRole('menuitem');
+      await expect(items).toHaveText(['New stage play', 'New Markdown document', 'Open a file…']);
+      await items.first().click();
+    }
     await expect(bar(page)).toHaveCount(0);
+    await showSource(page);
     await expect.poll(() => text(page)).toContain('Title: Untitled Play');
     await expect(editor(page)).toBeFocused();
     // The sample stays where it was, and the new play is a script of the writer's own.
@@ -140,9 +157,13 @@ test.describe('a first visit', () => {
       .getByRole('menuitem', { name: /^Open sample: Screenplay/ })
       .click();
     await expect(bar(page)).toBeVisible();
-    await showSource(page);
     const chooser = page.waitForEvent('filechooser');
-    await bar(page).getByRole('button', { name: 'Open a file…' }).click();
+    if (wide(page)) {
+      await bar(page).getByRole('button', { name: 'Open a file…' }).click();
+    } else {
+      await bar(page).getByRole('button', { name: 'More' }).click();
+      await page.getByRole('menuitem', { name: 'Open a file…' }).click();
+    }
     await (await chooser).setFiles({
       name: 'Door.fountain',
       mimeType: 'text/plain',
@@ -152,9 +173,32 @@ test.describe('a first visit', () => {
     await expect(bar(page)).toHaveCount(0);
   });
 
-  test('reaches the sample bar from the keyboard', async ({ page, browserName }) => {
+  test('shows the sample bar on every tab', async ({ page }) => {
     await start(page);
-    await showSource(page);
+    await expect(bar(page)).toBeVisible();
+    for (const name of ['Source', 'Script', 'Problems']) {
+      await page.getByRole('tab', { name }).first().click();
+      await expect(page.getByRole('tab', { name, selected: true })).toBeVisible();
+      await expect(bar(page)).toBeVisible();
+    }
+  });
+
+  test('keeps the sample bar to one row on a small phone', async ({ page }) => {
+    test.skip(wide(page), 'a phone-width screen only');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await start(page);
+    const box = await bar(page).boundingBox();
+    expect(box?.height ?? 999).toBeLessThan(52);
+    // Nothing runs past the edge of the screen (WCAG 1.4.10).
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      320,
+    );
+    await expect(barButtons(page).last()).toBeInViewport();
+  });
+
+  test('reaches the sample bar from the keyboard', async ({ page, browserName }) => {
+    test.skip(!wide(page), 'a phone has no keyboard');
+    await start(page);
     if (browserName === 'webkit') {
       // Safari leaves buttons out of the Tab order unless the user asks for it, so the bar's
       // buttons are focused directly and chosen with Enter.
@@ -165,8 +209,8 @@ test.describe('a first visit', () => {
       await expect(bar(page)).toHaveCount(0);
       return;
     }
-    // From the Source tab's bar, Tab goes on through the panel to the sample bar, in order.
-    await page.getByRole('group', { name: 'Source view' }).getByRole('button').focus();
+    // From the toolbar's last control, Tab goes on to the sample bar, in order.
+    await page.getByRole('button', { name: /Switch to (light|dark) theme/ }).focus();
     const reached: string[] = [];
     for (let i = 0; i < 8 && reached.length < 4; i++) {
       await page.keyboard.press('Tab');
@@ -265,21 +309,20 @@ test.describe('a returning visit', () => {
     page,
   }) => {
     await start(page);
-    await showSource(page);
     await expect(bar(page)).toBeVisible();
 
     // The sample is the most recent script: it opens again, with its bar.
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
     await showSource(page);
+    await expect(editor(page)).toContainText('The Call');
     await expect(bar(page)).toBeVisible();
 
     // A script of the writer's own: no bar.
     await barButtons(page).first().click();
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
     await page.reload();
-    await expect(editor(page)).toContainText('Title: Untitled Screenplay');
     await showSource(page);
+    await expect(editor(page)).toContainText('Title: Untitled Screenplay');
     await expect(bar(page)).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });

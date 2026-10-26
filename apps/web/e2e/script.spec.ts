@@ -33,6 +33,9 @@ test.describe('the Script pane on a desktop', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await expect(pages(page).first()).toBeVisible();
+    // The first visit has opened the sample and put the cursor on its first scene heading (page 1):
+    // the session is ready. A jump made before then is not what these tests are about.
+    await expect(status(page)).toContainText('Page 1 of');
   });
 
   test('shows the sample’s pages', async ({ page }) => {
@@ -282,6 +285,9 @@ test.describe('the Script pane on a phone', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await expect(pages(page).first()).toBeVisible();
+    // The first visit has opened the sample and put the cursor on its first scene heading (page 1):
+    // the session is ready. A jump made before then is not what these tests are about.
+    await expect(status(page)).toContainText('Page 1 of');
   });
 
   test('opens on the script, fitted to the screen', async ({ page }) => {

@@ -199,6 +199,10 @@ test.describe('on a phone', () => {
     await page.getByRole('tablist', { name: 'Panes' }).getByRole('tab', { name: 'Source' }).click();
     await expect(page.locator('.cm-content')).toBeVisible();
     await page.locator('.cm-content').click();
+    // The click lands on whatever line is under it (a first visit scrolls to a scene heading, whose
+    // line is typed in capitals): type at the end of the text instead.
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.press('Enter');
     await page.keyboard.type('On a phone.');
     await expect(page.locator('.cm-content')).toContainText('On a phone.');
   });

@@ -80,6 +80,7 @@ onBeforeUnmount(() => {
       <ReadOnlyBar />
       <FileBar />
       <StorageWarning />
+      <SampleBar />
     </div>
     <DropZone />
     <SameTitleDialog />

@@ -59,15 +59,25 @@ vi.mock('../app/editor/session', async () => {
 });
 
 /** A session over the database as it is: `keep` leaves the stored scripts alone (a later visit). */
-async function visit(options: { keep?: boolean } = {}) {
+async function visit(
+  options: {
+    keep?: boolean;
+    /** Runs on the database before the session starts: a way to make it fail. */
+    breakDb?: (db: typeof import('../app/storage/db').db) => void;
+    /** Runs on the editor as soon as the session starts, before it has opened anything. */
+    before?: (editor: ReturnType<typeof import('../app/editor/session').useEditor>) => void;
+  } = {},
+) {
   vi.resetModules();
   vi.stubGlobal('crypto', webcrypto);
   const { db } = await import('../app/storage/db');
   if (!options.keep) await Promise.all(db.tables.map((table) => table.clear()));
   const { useEditor } = await import('../app/editor/session');
   (useEditor() as unknown as { reset(): void }).reset();
+  options.breakDb?.(db);
   const script = await import('../app/storage/script');
   const session = script.useScript();
+  options.before?.(useEditor());
   // Before the first project is open, a visit has not been decided.
   expect(script.isFirstVisit()).toBe(false);
   await vi.waitFor(() => expect(session.ready.value).toBe(true));
@@ -110,6 +120,50 @@ describe('a first visit', () => {
     expect(editor.view.state.selection.main.empty).toBe(true);
   });
 
+  test('does not move a cursor the writer placed before the sample was open', async () => {
+    // begin() awaits the database before it opens the sample; a click or jump in that time stays.
+    const t = await visit({
+      before: (editor) => editor.view.dispatch({ selection: { anchor: 12 } }),
+    });
+    expect(t.isFirstVisit()).toBe(true);
+    expect(t.editor.view.state.selection.main.head).toBe(12);
+    const { SAMPLE_SCREENPLAY } = await import('../app/editor/samples');
+    expect(t.editor.view.state.doc.toString()).toBe(SAMPLE_SCREENPLAY);
+  });
+
+  test('keeps text typed before it was ready as the writer’s own script, still a first visit', async () => {
+    const t = await visit({
+      before: (editor) => editor.view.dispatch({ changes: { from: 0, insert: 'TYPED ' } }),
+    });
+    expect(t.isFirstVisit()).toBe(true);
+    expect(t.session.project.value?.sample).toBeUndefined();
+    expect(t.editor.view.state.doc.toString().startsWith('TYPED ')).toBe(true);
+  });
+
+  test('is not a first visit, and makes nothing, when the database cannot be listed', async () => {
+    const t = await visit({
+      breakDb: (db) => {
+        vi.spyOn(db.projects, 'orderBy').mockImplementation(() => {
+          throw new Error('IndexedDB is not available');
+        });
+      },
+    });
+    expect(t.isFirstVisit()).toBe(false);
+    vi.restoreAllMocks();
+    expect(await t.db.projects.count()).toBe(0);
+  });
+
+  test('is not a first visit when the first project cannot be written', async () => {
+    const t = await visit({
+      breakDb: (db) => {
+        vi.spyOn(db.projects, 'add').mockRejectedValue(new Error('QuotaExceededError'));
+      },
+    });
+    expect(t.isFirstVisit()).toBe(false);
+    vi.restoreAllMocks();
+    expect(await t.db.projects.count()).toBe(0);
+  });
+
   test('leaves the cursor alone on a returning visit', async () => {
     await visit();
     const again = await visit({ keep: true });
@@ -141,6 +195,23 @@ describe('Reset sample', () => {
     const before = t.editor.view.state.doc.toString();
     expect(t.session.resetSample()).toBe(false);
     expect(t.editor.view.state.doc.toString()).toBe(before);
+  });
+
+  test('does nothing, and says so, when the text is already the sample’s', async () => {
+    const t = await visit();
+    expect(t.session.resetSample()).toBe(false);
+  });
+
+  test('is refused in a read-only tab', async () => {
+    const t = await visit();
+    const { useGuard } = await import('../app/storage/guard');
+    t.editor.view.dispatch({ changes: { from: 0, insert: 'EDIT ' } });
+    const guard = useGuard();
+    const readOnly = vi.spyOn(guard.readOnly, 'value', 'get').mockReturnValue(true);
+    expect(t.session.canResetSample.value).toBe(false);
+    expect(t.session.resetSample()).toBe(false);
+    expect(t.editor.view.state.doc.toString().startsWith('EDIT Title')).toBe(true);
+    readOnly.mockRestore();
   });
 
   test('resets the stage play to the stage play', async () => {

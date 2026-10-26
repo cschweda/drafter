@@ -13,6 +13,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **Reset sample**, in the palette and in a new Help section of the app menu, puts the open sample's own text back as one change; one Undo brings the edits back. It is off unless a sample is open and editable.
 - `apps/web`: the welcome dialog and the guided tour, built with `nuxt-guided-tour`. A first visit is welcomed once with **Take the tour** or "No thanks, I'll look around."; the tour is "Fountain in 30 seconds" (a card with the scene heading, dialogue, parenthetical, transition, and note) and then ten steps (Source, Script, typing, Problems, template, Save, status bar, Export, Focus, the palette), each lighting its part of the screen in goldenrod, with a step card in the middle. Arrow keys move between steps, Escape leaves, focus stays in the card, and each step is announced to screen readers. It is shown once, can be skipped from its first screen, and comes back only from **Help → Take the tour** (also the palette's **Take the tour**). On a phone a step whose pane isn't showing switches to it first, the template step points at the Drafter menu (the template chip is hidden there), and the writer's own panes come back afterward. It waits for the palette or a dialog to close rather than opening over it, and holds the app's own shortcuts while it is up. Under reduced motion the highlight doesn't pulse.
 
+### Fixed
+
+- `apps/web`: the first visit's cursor placement no longer overrides what the writer did while the sample was opening (a click, a jump, or a `drafter:goto` made first now stays), and it is applied only to an untouched sample. A browser whose database can't be read or written is not treated as a first visit, and makes no project.
+- `apps/web`: the sample bar now shows on every tab, above the panes beside the storage warning, so a phone on the Script tab sees it. On a phone it is one row: "Sample", **New screenplay**, and a **More** menu with the rest.
+- `apps/web`: Reset sample does nothing, and moves nothing, when the text is already the sample's. The Script pane no longer scrolls back to the cursor's line when a resize (a pane being dragged) changes its scale, after the first moment.
+
 ## [0.2.0] - 2026-10-26
 
 **The full editor.** Everything around the writing:

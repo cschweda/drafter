@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { type Command, useCommands } from '~/commands/registry';
+import { useWideScreen } from '~/composables/useWideScreen';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useScript } from '~/storage/script';
 
-// The bar above the Source pane while a sample is open (Phase 1 design §4.2): it says the text is
-// a sample and offers the ways to start the writer's own. Each button runs the command of the same
-// name (`commands/builtin.ts`), so it agrees with the menus, the palette, and the keys, and it is
-// off whenever that command is (a tab that only shows a script, a switch under way).
+// The bar above the panes while a sample is open (Phase 1 design §4.2): it says the text is a
+// sample and offers the ways to start the writer's own, on every tab. Each button runs the command
+// of the same name (`commands/builtin.ts`), so it agrees with the menus, the palette, and the keys,
+// and it is off whenever that command is (a tab that only shows a script, a switch under way). On a
+// phone it is one row: "Sample", the first button, and a "More" menu with the rest.
 const { project } = useScript();
+const wide = useWideScreen();
 const commands = useCommands();
 
 interface Action {
@@ -30,12 +34,22 @@ const actions = computed<Action[]>(() => {
 });
 
 const off = (action: Action) => !action.command || action.command.enabled?.() === false;
+
+/** The phone's menu: every button after the first. */
+const more = computed<DropdownMenuItem[]>(() =>
+  actions.value.slice(1).map((action) => ({
+    label: action.label,
+    disabled: off(action),
+    onSelect: () => action.command?.run(),
+  })),
+);
 </script>
 
 <template>
-  <section v-if="project?.sample" class="bar" aria-label="Sample">
-    <p>This is a sample. Start your own:</p>
-    <div class="actions">
+  <section v-if="project?.sample" class="bar" :class="{ compact: !wide }" aria-label="Sample">
+    <p v-if="wide">This is a sample. Start your own:</p>
+    <strong v-else class="name">Sample</strong>
+    <div v-if="wide" class="actions">
       <button
         v-for="action in actions"
         :key="action.id"
@@ -47,6 +61,20 @@ const off = (action: Action) => !action.command || action.command.enabled?.() ==
         {{ action.label }}
       </button>
     </div>
+    <template v-if="!wide">
+      <button
+        v-if="actions[0]"
+        type="button"
+        class="action"
+        :disabled="off(actions[0])"
+        @click="actions[0].command?.run()"
+      >
+        {{ actions[0].label }}
+      </button>
+      <UDropdownMenu :items="more" :content="{ align: 'end' }">
+        <button type="button" class="action" aria-label="More ways to start your own">More</button>
+      </UDropdownMenu>
+    </template>
   </section>
 </template>
 
@@ -82,6 +110,13 @@ p {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+.compact {
+  flex-wrap: nowrap;
+  padding: 4px 10px;
+}
+.name {
+  margin-right: auto;
 }
 .action:disabled {
   opacity: 0.6;

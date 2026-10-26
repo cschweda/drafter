@@ -47,14 +47,18 @@ const firstVisit = ref(false);
 
 /**
  * Whether this visit is a first one: the browser had no projects (scripts or samples) when the
- * page opened, so the screenplay sample was opened for it. The welcome dialog (Plan 5, Task 6)
- * reads this, and only a first visit gets it.
+ * page opened, so a first project was made for it (the screenplay sample, or a script of its own
+ * when the writer typed before it was ready). The welcome dialog (`AppTour.vue`) reads this, and
+ * only a first visit gets it.
  *
  * Contract:
  * - It is reactive (a watcher or computed that reads it is run again when the answer arrives).
  * - It is false until the first project is open, which is when `ready` turns true; a caller that
  *   needs the answer waits for `useScript().ready`. It is also false if the database can't be
- *   opened, since nothing says the browser is a new one.
+ *   listed or written (`listProjects` or `createProject` rejects), since nothing then says the
+ *   browser is a new one, and no project is made. It is set only after the first project exists.
+ * - It is true when the writer typed before the session was ready: that is still the browser's
+ *   first visit, and what they typed is kept as their own script (not the sample).
  * - It does not change for the rest of the visit: opening or making a script doesn't end the
  *   first visit. A reload is a returning visit, because the first one stored the sample.
  */
@@ -100,7 +104,8 @@ export interface ScriptSession {
   /**
    * Puts the open sample's original text back, as one undoable change: one Undo brings back
    * everything it replaced, and typing afterward isn't joined to it. The cursor goes to the
-   * first scene heading. Returns false, changing nothing, unless `canResetSample`.
+   * first scene heading. Returns false, changing nothing, unless `canResetSample` and the text
+   * differs from the sample's (a text that is already the sample's has nothing to reset).
    */
   resetSample(): boolean;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
@@ -377,9 +382,14 @@ function create(): ScriptSession {
   /**
    * Puts the cursor at the start of `source`'s first scene heading and scrolls so that line is
    * near the top of the Source pane. Not an undo step, and not an edit: the text is untouched.
-   * (The Script pane follows the cursor, so it shows the same place.)
+   * (The Script pane follows the cursor, so it shows the same place.) It happens after several
+   * awaits, so it applies only to an untouched sample: the text is still `source` and the cursor
+   * is still the empty one at 0. A writer who has typed, clicked, or jumped meanwhile (or a
+   * `drafter:goto`) is not moved.
    */
   function cursorAtFirstScene(source: string) {
+    const now = view.state.selection.main;
+    if (view.state.doc.toString() !== source || !now.empty || now.head !== 0) return;
     const at = Math.min(firstSceneStart(source), view.state.doc.length);
     view.dispatch({
       selection: { anchor: at },
@@ -394,7 +404,6 @@ function create(): ScriptSession {
       const projects = await listProjects();
       await restoreUnwritten(projects);
       const first = projects.length === 0;
-      firstVisit.value = first;
       const newest = projects[0];
       const from = newest ? await baselineOf(newest) : null;
       // Anything typed since the page opened is kept, as a script of its own: nothing replaces it.
@@ -405,6 +414,8 @@ function create(): ScriptSession {
         await guardControl.claim(created.id);
         attach(created, text(''), true, true);
         guardControl.finish();
+        // The first project exists (it is the writer's own, from what they typed): a first visit.
+        firstVisit.value = first;
       } else if (newest) {
         attach(newest, from, false, await guardControl.claim(newest.id));
         guardControl.finish();
@@ -414,6 +425,7 @@ function create(): ScriptSession {
         await guardControl.claim(created.id);
         attach(created, text(SAMPLE_SCREENPLAY), true, true);
         guardControl.finish();
+        firstVisit.value = true;
         // A first visit starts where the story does, not on the title page's metadata.
         cursorAtFirstScene(SAMPLE_SCREENPLAY);
       }
@@ -584,7 +596,7 @@ function create(): ScriptSession {
     const kind = project.value?.sample;
     if (!kind || !canResetSample.value) return false;
     const original = SAMPLE_TEXT[kind];
-    if (view.state.doc.toString() === original) return true;
+    if (view.state.doc.toString() === original) return false;
     // One transaction for the whole text, so one undo brings the edits back; an undo step of its
     // own, so typing just after it isn't joined to it (as `replaceWith` does).
     const at = firstSceneStart(original);
