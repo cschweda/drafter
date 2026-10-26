@@ -303,6 +303,56 @@ describe('buildPage', () => {
     expect(lineWith(title, 'Short').dataset.from).toBeDefined();
   });
 
+  // A title page has no blocks, so its two columns are told apart by their fields: the contact
+  // block stands bottom left, the draft date bottom right, level with the contact block's last line.
+  it('reads a wrapped draft date after the whole contact block', () => {
+    for (const template of [screenplay, stagePlay]) {
+      const [title] = pagesOf(
+        'Title: Short\nContact:\n    Jane Writer\n    jane@example.com\nDraft date: Revised Draft - January 15, 2026\n\nINT. HALL - DAY\n',
+        template,
+      );
+      expect(textsIn(title)).toEqual([
+        'Short',
+        'Jane Writer',
+        'jane@example.com',
+        'Revised Draft - January 15,',
+        '2026',
+      ]);
+    }
+  });
+
+  it('reads a draft date longer than the contact block in order', () => {
+    for (const template of [screenplay, stagePlay]) {
+      const [title] = pagesOf(
+        "Title: Short\nContact: Jane Writer\nDraft date: Third revised draft, January 15, 2026, with the director's notes added\n\nINT. HALL - DAY\n",
+        template,
+      );
+      expect(textsIn(title)).toEqual([
+        'Short',
+        'Jane Writer',
+        'Third revised draft, January',
+        "15, 2026, with the director's",
+        'notes added',
+      ]);
+    }
+  });
+
+  it("reads a title page's fields in the order the writer gave them", () => {
+    for (const template of [screenplay, stagePlay]) {
+      // The Fountain spec's own example puts the draft date before the contact block.
+      const [dateFirst] = pagesOf(
+        'Title: Short\nDraft date: 1 January\nContact:\n    Jane Writer\n    jane@example.com\n\nINT. HALL - DAY\n',
+        template,
+      );
+      expect(textsIn(dateFirst)).toEqual(['Short', '1 January', 'Jane Writer', 'jane@example.com']);
+      const [authorFirst] = pagesOf(
+        'Author: A. Writer\nTitle: Short\n\nINT. HALL - DAY\n',
+        template,
+      );
+      expect(textsIn(authorFirst)).toEqual(['A. Writer', 'Short']);
+    }
+  });
+
   it('puts the page furniture where the text renderer puts it', () => {
     const furnished: Template = {
       ...screenplay,

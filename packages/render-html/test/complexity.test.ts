@@ -1,7 +1,8 @@
-import type { LayoutLine, Page } from '@drafter/layout';
+import type { Layout, LayoutLine, Page } from '@drafter/layout';
 import { builtins, type Template } from '@drafter/templates';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildPage } from '../src/page';
+import { createScriptView } from '../src/view';
 
 // A page holds as many lines as its template is tall, and a template can be tall. Each case
 // is a hostile page shaped to make a careless builder super-linear, and it must still build
@@ -20,15 +21,24 @@ function line(role: string, block: number, text: string, right?: LayoutLine): La
   };
 }
 
-const page = (lines: LayoutLine[]): Page => ({
-  number: 1,
+const page = (lines: LayoutLine[], number = 1): Page => ({
+  number,
   lines,
   sceneNumbersLeft: [],
   sceneNumbersRight: [],
 });
 
-const rows = (count: number, make: (i: number) => LayoutLine) =>
+const rows = <T>(count: number, make: (i: number) => T): T[] =>
   Array.from({ length: count }, (_, i) => make(i));
+
+/** A line of a title page: no block, and a span of its own, so its place in the source says where it reads. */
+function titleLine(at: number, text: string, right?: LayoutLine): LayoutLine {
+  return {
+    ...line('contact', -1, text, right),
+    span: { from: at, to: at + 1 },
+    synthetic: 'title',
+  };
+}
 
 const cases: Array<[string, () => Page]> = [
   [
@@ -57,6 +67,15 @@ const cases: Array<[string, () => Page]> = [
     () => page(rows(10_000, (i) => line('action', i, 'Talk.'))),
   ],
   [
+    'a title page of ten thousand rows, two parts to a row, in reverse source order',
+    () =>
+      page(
+        rows(10_000, (i) =>
+          titleLine(20_000 - 2 * i, 'Left.', titleLine(20_000 - 2 * i - 1, 'Right.')),
+        ),
+      ),
+  ],
+  [
     'a line of two million characters, controls among them',
     () => page([line('action', 0, 'word\u0007 '.repeat(300_000))]),
   ],
@@ -71,4 +90,106 @@ describe('hostile pages', () => {
       expect(performance.now() - start).toBeLessThan(1000);
     }, 60_000);
   }
+});
+
+// The view's update runs after every edit: it compares each page with the last one drawn, and
+// builds the pages that changed. These layouts have more pages, or a taller page, than any script
+// does, and every step must still finish inside a second.
+/** A layout of `count` pages with one line each, `word` on every one, `moved` places further on in the source. */
+const layoutOfPages = (count: number, word: string, moved = 0): Layout => ({
+  pages: rows(count, (i) => page([line('action', i + moved, word)], i + 1)),
+  index: rows(count, (i) => ({ page: i + 1, line: 0 })),
+  diagnostics: [],
+});
+
+describe('hostile layouts', () => {
+  // jsdom has no scrollIntoView; reveal calls it once it has found the line.
+  beforeEach(() => {
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: () => {},
+    });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+  });
+
+  /** Runs the steps in order on one view, each of which must take under a second. */
+  async function stepsAreFast(steps: Array<[string, Layout]>) {
+    const view = createScriptView(document.createElement('div'));
+    for (const [step, layout] of steps) {
+      const start = performance.now();
+      await view.update(layout, screenplay);
+      expect(performance.now() - start, step).toBeLessThan(1000);
+      // Not `element.children`: reading that makes jsdom keep a live list up to date, and every
+      // removal after it takes as long as the list is long.
+      expect(view.element.querySelectorAll('.drafter-page'), step).toHaveLength(
+        layout.pages.length,
+      );
+    }
+  }
+
+  it(
+    'draws, compares, and clears ten thousand pages in under a second a step',
+    () =>
+      stepsAreFast([
+        ['draws them all', layoutOfPages(10_000, 'Talk.')],
+        ['finds them all unchanged', layoutOfPages(10_000, 'Talk.')],
+        ['removes them all', layoutOfPages(0, '')],
+      ]),
+    60_000,
+  );
+
+  it('patches ten thousand pages that only moved in under a second', async () => {
+    // Each page's line is a block of its own at its own offset, and one character typed at the
+    // top moves every one of them by one: the case a long script is in after each keystroke.
+    const view = createScriptView(document.createElement('div'));
+    await view.update(layoutOfPages(10_000, 'Talk.'), screenplay);
+    const before = [...view.element.querySelectorAll('.drafter-page')];
+
+    const start = performance.now();
+    await view.update(layoutOfPages(10_000, 'Talk.', 1), screenplay);
+    expect(performance.now() - start).toBeLessThan(1000);
+
+    const after = [...view.element.querySelectorAll('.drafter-page')];
+    expect(after).toHaveLength(10_000);
+    // Patched, not built again, and the offsets and blocks are the moved ones.
+    expect(after.every((el, i) => el === before[i])).toBe(true);
+    for (const i of [0, 4_999, 9_999]) {
+      const el = after[i] as HTMLElement;
+      expect(el.querySelector<HTMLElement>('.drafter-line')?.dataset.from).toBe(String(i + 1));
+      expect(el.querySelector<HTMLElement>('.drafter-block')?.dataset.block).toBe(String(i + 1));
+    }
+  }, 60_000);
+
+  // jsdom takes as long to replace one child as the parent has children (a browser takes the same
+  // time however many there are), so replacing every page of a big layout is quadratic here and
+  // nowhere else. This layout is smaller than the one above for that reason.
+  it(
+    'replaces two thousand pages in under a second',
+    () =>
+      stepsAreFast([
+        ['draws them all', layoutOfPages(2000, 'Talk.')],
+        ['replaces them all', layoutOfPages(2000, 'Said.')],
+      ]),
+    60_000,
+  );
+
+  it('reveals a line on a page of twenty thousand lines in under a second', async () => {
+    const view = createScriptView(document.createElement('div'));
+    const tall = rows(20_000, (i) => line('action', i, 'Talk.'));
+    await view.update(
+      {
+        pages: [page(tall)],
+        index: rows(20_000, (i) => ({ page: 1, line: i })),
+        diagnostics: [],
+      },
+      screenplay,
+    );
+    expect(view.element.querySelectorAll('.drafter-line')).toHaveLength(20_000);
+    const start = performance.now();
+    for (let i = 0; i < 3; i++) view.reveal(19_999 - i);
+    expect(performance.now() - start).toBeLessThan(1000);
+  }, 60_000);
 });
