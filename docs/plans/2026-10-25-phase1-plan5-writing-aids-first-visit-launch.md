@@ -30,7 +30,7 @@
 
 Read it with the [technical design](../drafter-technical-design.md) §13 and §16 and [architecture](../drafter-architecture.md) §6.1 (the browser table for **Saving and your browser**).
 
-**Where this fits.** The last plan of Phase 1, after [Plan 3](2026-10-26-phase1-plan3-write-and-keep.md) (write and keep your work) and [Plan 4](2026-10-26-phase1-plan4-the-full-editor.md) (the full editor). It consumes:
+**Where this fits.** The last plan of Phase 1's web app (Plan 6 then wraps the finished app for the desktop), after [Plan 3](2026-10-26-phase1-plan3-write-and-keep.md) (write and keep your work) and [Plan 4](2026-10-26-phase1-plan4-the-full-editor.md) (the full editor). It consumes:
 - Plan 3's editor session, layout, projects, and recovery copy
 - Plan 4's command registry, settings, and app menu
 
