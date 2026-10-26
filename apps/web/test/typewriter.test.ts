@@ -7,6 +7,7 @@ import {
   appChange,
   centersOn,
   exceedsViewport,
+  movesCursor,
   typewriterScrolling,
   viewportInsets,
 } from '../app/editor/typewriter';
@@ -216,5 +217,42 @@ describe('the room around the text, with a soft keyboard', () => {
     await frame();
     expect(view.contentDOM.style.paddingTop).toBe('250px');
     expect(view.contentDOM.style.paddingBottom).toBe('550px');
+  });
+});
+
+describe('movesCursor', () => {
+  const key = (key: string, init: KeyboardEventInit = {}) =>
+    new KeyboardEvent('keydown', { key, ...init });
+
+  test('is true for the keys that move the cursor, on any keyboard', () => {
+    for (const name of [
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'Home',
+      'End',
+      'PageUp',
+      'PageDown',
+    ]) {
+      expect(movesCursor(key(name), false), name).toBe(true);
+      expect(movesCursor(key(name), true), name).toBe(true);
+    }
+    expect(movesCursor(key('a'), false)).toBe(false);
+    expect(movesCursor(key('Enter'), true)).toBe(false);
+  });
+
+  test("is true for macOS's Control-b, f, n, p, a, e, and v, and only there", () => {
+    for (const letter of ['b', 'f', 'n', 'p', 'a', 'e', 'v', 'N']) {
+      expect(movesCursor(key(letter, { ctrlKey: true }), true), letter).toBe(true);
+      expect(movesCursor(key(letter, { ctrlKey: true }), false), letter).toBe(false);
+    }
+    // Typing the letter, or a chord with Command or Option, is not a move.
+    expect(movesCursor(key('f'), true)).toBe(false);
+    expect(movesCursor(key('f', { ctrlKey: true, metaKey: true }), true)).toBe(false);
+    expect(movesCursor(key('f', { ctrlKey: true, altKey: true }), true)).toBe(false);
+    // Control-d deletes, and Control-k cuts: they are changes, not moves.
+    expect(movesCursor(key('d', { ctrlKey: true }), true)).toBe(false);
+    expect(movesCursor(key('k', { ctrlKey: true }), true)).toBe(false);
   });
 });

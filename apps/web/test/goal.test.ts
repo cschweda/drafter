@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ref } from 'vue';
+import { ref, shallowRef } from 'vue';
 import type { DocumentKind } from '../app/markdown/kind';
 import {
   createGoal,
@@ -104,6 +104,64 @@ describe('a daily goal', () => {
     await store.settled();
     expect(store.goal.value).toEqual({ unit: 'words', target: 500 });
     expect(store.progress.value).toEqual({ done: 100, target: 500, unit: 'words' });
+  });
+
+  test('stays steady when the project is saved again with the same id', async () => {
+    // Autosave and patches put a new object in `project` each time, with the same id: the goal
+    // and the day's progress must not blink out and be read back from the table.
+    const holder = shallowRef({ id: 'p1', sample: false });
+    const words = ref(1000);
+    const store = createGoal({
+      project: () => holder.value.id,
+      sample: () => holder.value.sample,
+      kind: () => 'fountain',
+      counts: () => ({ pages: 10, words: words.value }),
+    });
+    await store.setGoal({ unit: 'words', target: 1000 });
+    words.value = 1100;
+    await store.settled();
+    expect(store.progress.value).toEqual({ done: 100, target: 1000, unit: 'words' });
+
+    const read = vi.spyOn(db.settings, 'get');
+    holder.value = { ...holder.value };
+    // At once, with nothing awaited: no flicker.
+    expect(store.goal.value).toEqual({ unit: 'words', target: 1000 });
+    expect(store.progress.value).toEqual({ done: 100, target: 1000, unit: 'words' });
+    await store.settled();
+    expect(read).not.toHaveBeenCalled();
+    expect(store.progress.value).toEqual({ done: 100, target: 1000, unit: 'words' });
+    read.mockRestore();
+
+    // A different id still starts again.
+    holder.value = { id: 'p2', sample: false };
+    expect(store.goal.value).toBeNull();
+    await store.settled();
+    expect(store.goal.value).toBeNull();
+  });
+
+  test('keeps no goal in a read-only tab', async () => {
+    const readOnly = ref(false);
+    const store = createGoal({
+      project: () => 'p1',
+      sample: () => false,
+      kind: () => 'fountain',
+      counts: () => ({ pages: 10, words: 1000 }),
+      readOnly: () => readOnly.value,
+    });
+    await store.setGoal({ unit: 'words', target: 500 });
+    expect(store.goal.value).toEqual({ unit: 'words', target: 500 });
+    expect(store.locked.value).toBe(false);
+
+    readOnly.value = true;
+    expect(store.locked.value).toBe(true);
+    await store.setGoal({ unit: 'words', target: 900 });
+    await store.setGoal(null);
+    await store.settled();
+    expect(store.goal.value).toEqual({ unit: 'words', target: 500 });
+    expect(await db.settings.get('goal:p1')).toEqual({
+      key: 'goal:p1',
+      value: { unit: 'words', target: 500 },
+    });
   });
 
   test('counts a cut against the goal', async () => {

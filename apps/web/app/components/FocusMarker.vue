@@ -9,8 +9,7 @@ import { kindError, useScript } from '~/storage/script';
 // what the writer must not lose sight of: whether the script has changes that aren't in its file,
 // what a failed save or open said, and a way out for a keyboard with no Esc (a phone).
 //
-// The `sprint` slot is where a sprint's time left goes (Task 4): it is drawn before the save
-// state, inside this group.
+// A sprint's time left is drawn before the save state, inside this group.
 const emit = defineEmits<{ leave: [] }>();
 const { dirty, warning } = useScript();
 const { readOnly } = useGuard();
@@ -40,7 +39,8 @@ const label = computed(() =>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
-    <slot name="sprint" />
+    <!-- The time left of a sprint, as in the status bar. -->
+    <SprintTimer />
     <span class="state" data-focus-state>{{ label }}</span>
     <button type="button" class="leave" @click="emit('leave')">Leave focus mode</button>
   </div>

@@ -3,13 +3,14 @@ import { useEditor } from '~/editor/session';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
 import { isGoal, progressLabel, useGoal } from '~/stats/goal';
+import { parseMinutes, SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 
 defineProps<{ id: string }>();
 const emit = defineEmits<{ close: [] }>();
 
 const { kind } = useEditor();
 const { counts, known } = useCounts();
-const { goal, progress, canSet, setGoal } = useGoal();
+const { goal, progress, canSet, locked, setGoal } = useGoal();
 
 const markdown = computed(() => kind.value === 'markdown');
 const root = ref<HTMLElement>();
@@ -64,6 +65,27 @@ const cut = computed(() =>
   progress.value && progress.value.done < 0 ? Math.abs(progress.value.done) : 0,
 );
 
+// ---- A sprint --------------------------------------------------------------------------------
+const sprint = useSprint();
+const running = computed(() => sprint.state.value.status !== 'idle');
+const minutes = ref('');
+const minutesProblem = ref('');
+
+/** Starts a sprint and closes the panel, so the writer is back in the script. */
+function startSprint(length: number | null) {
+  if (length === null) {
+    minutesProblem.value = 'Enter a whole number of minutes, from 1 to 180.';
+    return;
+  }
+  minutesProblem.value = '';
+  sprint.start(length);
+  emit('close');
+}
+
+function onSprintSubmit() {
+  startSprint(parseMinutes(minutes.value));
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     event.stopPropagation();
@@ -108,6 +130,9 @@ function onKeydown(event: KeyboardEvent) {
         This is a sample. Save your edits as a script of your own to set a goal.
       </p>
       <template v-else>
+        <p v-if="locked" class="note">
+          This tab can’t edit the script, so it can’t change the goal either.
+        </p>
         <p v-if="progress" class="today">
           {{ progressLabel(progress) }}<template v-if="cut">. Cuts since the day began: {{ cut }}.</template>
         </p>
@@ -115,6 +140,7 @@ function onKeydown(event: KeyboardEvent) {
           Set a goal, and the status bar shows how far the script has grown today. Cutting counts against it.
         </p>
         <form class="goal-form" @submit.prevent="onSubmit">
+          <fieldset :disabled="locked" class="bare">
           <label for="counts-goal-target">Goal for today</label>
           <div class="fields">
             <input
@@ -136,11 +162,49 @@ function onKeydown(event: KeyboardEvent) {
           </div>
           <p v-if="problem" id="counts-goal-problem" class="problem" role="alert">{{ problem }}</p>
           <p class="sr-only" role="status">{{ said }}</p>
+          </fieldset>
         </form>
       </template>
     </section>
 
-    <!-- Task 4 adds a "Start a sprint" <section> here. -->
+    <section class="sprint" aria-labelledby="counts-sprint-title">
+      <h3 id="counts-sprint-title">Start a sprint</h3>
+      <p v-if="running" class="note">
+        A sprint is running. Its time left and its Pause, Stop, and Hide controls are in the status bar.
+      </p>
+      <template v-else>
+        <p class="note">
+          A countdown while you write. It says what the sprint added when time is up, and nothing before.
+        </p>
+        <div class="lengths">
+          <button
+            v-for="length in SPRINT_MINUTES"
+            :key="length"
+            type="button"
+            class="btn"
+            @click="startSprint(length)"
+          >
+            {{ length }} minutes
+          </button>
+        </div>
+        <form class="sprint-form" @submit.prevent="onSprintSubmit">
+          <label for="counts-sprint-minutes">Minutes</label>
+          <div class="fields">
+            <input
+              id="counts-sprint-minutes"
+              v-model="minutes"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              :aria-invalid="minutesProblem ? 'true' : 'false'"
+              :aria-describedby="minutesProblem ? 'counts-sprint-problem' : undefined"
+            >
+            <button type="submit" class="btn">Start sprint</button>
+          </div>
+          <p v-if="minutesProblem" id="counts-sprint-problem" class="problem" role="alert">{{ minutesProblem }}</p>
+        </form>
+      </template>
+    </section>
 
     <div class="buttons">
       <button type="button" class="btn" @click="emit('close')">Close</button>
@@ -204,6 +268,28 @@ h3 {
 .today {
   margin: 0 0 6px;
   font-weight: 600;
+}
+.sprint {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.lengths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.sprint-form label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+.bare {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 .goal-form label:not(.sr-only) {
   display: block;

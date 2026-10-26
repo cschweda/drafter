@@ -131,6 +131,7 @@ onBeforeUnmount(() => {
     <CommandPalette />
     <SettingsDialog />
     <AppTour />
+    <SprintNotice />
     <!-- Focus mode: the Source alone, in a column, with the marker in the corner. -->
     <main v-if="focus.on.value" class="focus" data-focus-layout>
       <h1 class="sr-only">Drafter</h1>
