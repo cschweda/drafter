@@ -40,7 +40,7 @@ The [technical design](../drafter-technical-design.md) sections that apply:
 - **This plan** holds only what writing needs, from the old Plans 3 and 4.
 - **[Plan 4](2026-10-26-phase1-plan4-the-full-editor.md)** finishes the editor.
 - **[Plan 5](2026-10-25-phase1-plan5-writing-aids-first-visit-launch.md)** adds the writing aids, the first visit, and the launch.
-- **Plan 6, the last step,** wraps the finished app as a desktop app for Windows, macOS, and Linux: Tauri recommended, Electron the alternative. It's planned and built last, because the app will keep changing until then. This plan prepares for it only through the one seam for files.
+- **Plan 6, the last step,** wraps the finished app as a desktop app: Linux first, then Windows, then macOS. Electron is the likely choice, because Linux comes first and Tauri's Linux engine (WebKitGTK) is its weakest. Plan 6 opens with a half-day spike of both on Linux and decides on the evidence. It's planned and built last, because the app will keep changing until then. This plan prepares for it only through the one seam for files.
 
 **Deploys.** After Task 2 passes review, the branch merges into `main` once, so the editor and its pages go live, with Task 1's interim leave warning. The plan's final merge, after the whole-branch review, makes drafter.dev a place to write.
 
