@@ -82,6 +82,17 @@ describe('Scene list', () => {
     expect(view.text).toBe('The pages couldn’t be made, so scenes can’t be placed on them.');
   });
 
+  test('says the pages could not be made when the layout failed after an earlier one', () => {
+    // The worker made the pages once, then failed on an edit that added a scene: the layout on
+    // hand will never catch up, so the tab says why rather than wait.
+    const ctx = fakeContext({ source: 'INT. A - DAY\n\nOne.\n\nINT. B - DAY\n\nTwo.\n' });
+    ctx.layoutOf = 'INT. A - DAY\n\nOne.\n';
+    ctx.layoutIsFailed = true;
+    expect(draw(tab(), ctx).text).toBe(
+      'The pages couldn’t be made, so scenes can’t be placed on them.',
+    );
+  });
+
   test('says so for a script with no scenes', () => {
     const view = draw(tab(), fakeContext({ source: 'Just action.\n' }));
     expect(view.text).toBe('No scene headings yet.');

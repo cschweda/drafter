@@ -100,7 +100,9 @@ const SceneListTab: Component = {
       if (ctx.kind() === 'markdown')
         return h('p', { class: note }, 'Not available for Markdown documents.');
       const layout = ctx.layout();
-      if (!layout) {
+      // The pages are made in a worker and can lag an edit: until they match the script, wait,
+      // unless the worker failed, when the pages on hand will never catch up.
+      if (!layout || layout.index.length !== ctx.doc().blocks.length) {
         return h(
           'p',
           { class: note },
@@ -109,9 +111,6 @@ const SceneListTab: Component = {
             : 'Laying out…',
         );
       }
-      // The pages are made in a worker and can lag an edit: until they match the script, wait.
-      if (layout.index.length !== ctx.doc().blocks.length)
-        return h('p', { class: note }, 'Laying out…');
       const rows = sceneRows(ctx, layout);
       if (rows.length === 0) return h('p', { class: note }, 'No scene headings yet.');
       return h(
