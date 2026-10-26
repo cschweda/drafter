@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { TEMPLATE_NAMES } from '~/editor/template';
+import { useGuard } from '~/storage/guard';
+import { pickAndOpen } from '~/storage/open';
 import type { Project } from '~/storage/projects';
-import { saveAs } from '~/storage/save';
+import { READ_ONLY_HINT, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
 // The Open menu (Phase 1 design §9.3): new scripts, this browser's scripts, and the samples. The
@@ -10,6 +12,10 @@ import { useScript } from '~/storage/script';
 const script = useScript();
 const { project, busy } = script;
 const idle = computed(() => !!project.value && !busy.value);
+// A tab that only shows a script another tab is editing may show old text: it starts, saves, and
+// opens nothing until the writer chooses "Edit here instead". Switching to a script stays possible.
+const { readOnly } = useGuard();
+const canStart = computed(() => idle.value && !readOnly.value);
 
 const open = ref(false);
 const scripts = ref<Project[]>([]);
@@ -171,7 +177,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
         type="button"
         class="item"
         data-first
-        :disabled="!idle"
+        :disabled="!canStart"
         @click="run(() => script.newScript('screenplay'), false)"
       >
         <UIcon name="i-lucide-file-plus" class="icon" />New screenplay
@@ -179,14 +185,23 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button
         type="button"
         class="item"
-        :disabled="!idle"
+        :disabled="!canStart"
         @click="run(() => script.newScript('stage-play'), false)"
       >
         <UIcon name="i-lucide-drama" class="icon" />New stage play
       </button>
-      <button type="button" class="item" :disabled="busy" @click="run(() => saveAs())">
+      <button
+        type="button"
+        class="item"
+        :disabled="!canStart"
+        @click="run(() => pickAndOpen(), false)"
+      >
+        <UIcon name="i-lucide-folder-open" class="icon" />Open a file…
+      </button>
+      <button type="button" class="item" :disabled="busy || readOnly" @click="run(() => saveAs())">
         <UIcon name="i-lucide-save-all" class="icon" />Save As…
       </button>
+      <p v-if="readOnly" class="message">{{ READ_ONLY_HINT }}</p>
 
       <div role="group" aria-labelledby="scripts-yours">
         <p id="scripts-yours" class="head">In this browser</p>

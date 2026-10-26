@@ -29,6 +29,7 @@ import {
   updateProject,
   writeSource,
 } from './projects';
+import type { LineBreak } from './text';
 import { allStashes, clearStash, readStash, stash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
@@ -66,7 +67,21 @@ export interface ScriptSession {
     ref: FileRef | null;
     /** The script the save started on. If another is open now, the record goes to this one. */
     id?: string;
+    lineBreak?: LineBreak;
+    bom?: boolean;
   }): Promise<void>;
+  /**
+   * Opens a file's text as a script of its own: its line break, BOM and name, its handle if it has
+   * one, and its text as the saved text, so it opens clean. Resolves false if another switch was
+   * under way (nothing is made then). The script that was open is kept first, as for any switch.
+   */
+  openedFile(file: OpenedFile): Promise<boolean>;
+  /**
+   * Puts a file's text in script `id`, in place of what it holds: one undoable change in the
+   * editor, and the script counts as saved to that file. `'held'`: another tab has the script
+   * (it is shown here, and nothing changed); `'busy'`: another switch was under way.
+   */
+  replaceWith(id: string, file: OpenedFile): Promise<'replaced' | 'held' | 'busy'>;
   /** Whether `p`'s text differs from what was last saved to its file (or from where it started). */
   changed(p: Project): Promise<boolean>;
   /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
@@ -77,6 +92,15 @@ export interface ScriptSession {
    * the answer is `'held'`.
    */
   remove(id: string): Promise<'removed' | 'held'>;
+}
+
+/** A file's contents as `openedFile` and `replaceWith` take them: `text` has `\n` line breaks. */
+export interface OpenedFile {
+  text: string;
+  lineBreak: LineBreak;
+  bom: boolean;
+  fileName: string;
+  ref: FileRef | null;
 }
 
 /** How long a failing recovery copy waits before it tries again on its own. */
@@ -373,6 +397,8 @@ function create(): ScriptSession {
   }
 
   async function newScript(kind: SampleKind) {
+    // A tab that only shows a script may show old text; it starts nothing (Phase 1 design §9.3).
+    if (guard.readOnly.value) throw new Error('This tab is read-only.');
     const { text: source, cursor } = newScriptText(kind, new Date());
     if (await switchTo(() => createProject({ source, baseline: source }))) editor.goto(cursor);
   }
@@ -410,16 +436,24 @@ function create(): ScriptSession {
     fileName,
     ref,
     id,
+    lineBreak,
+    bom,
   }: {
     text: string;
     fileName: string;
     ref: FileRef | null;
     id?: string;
+    lineBreak?: LineBreak;
+    bom?: boolean;
   }) {
     // The writer switched scripts while the file was being written: the record is the starting
     // script's, and the open one is left as it is.
     if (id !== undefined && project.value?.id !== id)
       return savedElsewhere(id, savedText, fileName, ref);
+    const format = {
+      ...(lineBreak === undefined ? {} : { lineBreak }),
+      ...(bom === undefined ? {} : { bom }),
+    };
     // The file has this text, whatever happens to the record of it.
     baseline.value = text(savedText);
     const current = project.value;
@@ -440,6 +474,7 @@ function create(): ScriptSession {
               fileName,
               savedHash: hash,
               savedAt,
+              ...format,
               ...(handleId ? { fsHandleId: handleId } : {}),
             });
             await setSavedText(created.id, savedText);
@@ -457,6 +492,7 @@ function create(): ScriptSession {
         savedHash: hash,
         savedAt,
         fileName,
+        ...format,
         ...(fsHandleId ? { fsHandleId } : {}),
       });
     } catch {
@@ -505,6 +541,45 @@ function create(): ScriptSession {
     } catch {
       // The file was written; the recovery copy's state says if the database is the problem.
     }
+  }
+
+  async function openedFile(file: OpenedFile): Promise<boolean> {
+    const hash = await hashText(file.text);
+    return switchTo(async () => {
+      const handleId = file.ref ? await putHandle(crypto.randomUUID(), file.ref) : undefined;
+      try {
+        const created = await createProject({
+          source: file.text,
+          baseline: file.text,
+          lineBreak: file.lineBreak,
+          bom: file.bom,
+          fileName: file.fileName,
+          savedHash: hash,
+          savedAt: Date.now(),
+          ...(handleId ? { fsHandleId: handleId } : {}),
+        });
+        await setSavedText(created.id, file.text);
+        return created;
+      } catch (error) {
+        if (handleId) await db.handles.delete(handleId).catch(() => {});
+        throw error;
+      }
+    });
+  }
+
+  async function replaceWith(id: string, file: OpenedFile): Promise<'replaced' | 'held' | 'busy'> {
+    await open(id);
+    if (project.value?.id !== id) return 'busy';
+    if (guard.readOnly.value || !writer) return 'held';
+    // One transaction for the whole text, so one undo brings the old text back.
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: file.text },
+      selection: { anchor: 0 },
+      scrollIntoView: true,
+      userEvent: 'input.replace',
+    });
+    await saved(file);
+    return 'replaced';
   }
 
   async function changed(p: Project): Promise<boolean> {
@@ -634,6 +709,8 @@ function create(): ScriptSession {
     openSample,
     scripts,
     saved,
+    openedFile,
+    replaceWith,
     changed,
     busy: switching,
     remove,

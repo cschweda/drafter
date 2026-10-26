@@ -2,7 +2,7 @@
 import { useEditor } from '~/editor/session';
 import { installSaveKeys } from '~/storage/save';
 import { useScript } from '~/storage/script';
-import { titleOf } from '~/storage/text';
+import { fileBaseName, titleOf } from '~/storage/text';
 import { otherPane, type PaneId } from '~/utils/panes';
 
 const { tabs, phoneTab, split, choose, resize } = usePanes();
@@ -22,10 +22,15 @@ function onKeydown(event: KeyboardEvent) {
 const { view, doc } = useEditor();
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
-const { dirty } = useScript();
+const { dirty, project } = useScript();
 
 // The tab says which script this is, and whether it has changes that aren't in its file.
-useHead({ title: computed(() => `${dirty.value ? '• ' : ''}${titleOf(doc.value)} — Drafter`) });
+useHead({
+  title: computed(
+    () =>
+      `${dirty.value ? '• ' : ''}${titleOf(doc.value, fileBaseName(project.value?.fileName))} — Drafter`,
+  ),
+});
 
 let removeSaveKeys: (() => void) | undefined;
 
@@ -47,6 +52,8 @@ onBeforeUnmount(() => {
       <ReadOnlyBar />
       <StorageWarning />
     </div>
+    <DropZone />
+    <SameTitleDialog />
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane

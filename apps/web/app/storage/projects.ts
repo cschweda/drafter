@@ -2,7 +2,7 @@ import { type DrafterMeta, parse } from '@drafter/fountain';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import { db } from './db';
 import type { FileRef } from './files';
-import { titleOf } from './text';
+import { fileBaseName, titleOf } from './text';
 
 export interface Project {
   id: string; // crypto.randomUUID()
@@ -33,9 +33,14 @@ export interface Project {
 }
 
 /** `title`, `templateId`, and `meta` are caches of `source`; when they disagree, `source` wins (technical design §8.1). */
-function derive(source: string): Pick<Project, 'title' | 'templateId' | 'meta'> {
+function derive(source: string, fileName?: string): Pick<Project, 'title' | 'templateId' | 'meta'> {
   const doc = parse(source);
-  return { title: titleOf(doc), templateId: templateIdOf(doc), meta: doc.meta };
+  // A script with no title is called after its file, when it has one.
+  return {
+    title: titleOf(doc, fileBaseName(fileName)),
+    templateId: templateIdOf(doc),
+    meta: doc.meta,
+  };
 }
 
 export async function createProject(
@@ -45,7 +50,7 @@ export async function createProject(
   const project: Project = {
     lineBreak: '\n',
     ...init,
-    ...derive(init.source),
+    ...derive(init.source, init.fileName),
     id: crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
@@ -79,7 +84,9 @@ export async function updateProject(
       ...current,
       updatedAt: Date.now(),
       ...patch,
-      ...(patch.source === undefined ? {} : derive(patch.source)),
+      ...(patch.source === undefined
+        ? {}
+        : derive(patch.source, patch.fileName ?? current.fileName)),
       id,
       createdAt: current.createdAt,
     };
@@ -97,9 +104,10 @@ export async function updateProject(
 export async function writeSource(current: Project, source: string): Promise<Project> {
   return db.transaction('rw', db.projects, async () => {
     const stored = await db.projects.get(current.id);
+    const base = stored ?? current;
     const next: Project = {
-      ...(stored ?? current),
-      ...derive(source),
+      ...base,
+      ...derive(source, base.fileName),
       source,
       updatedAt: Date.now(),
     };

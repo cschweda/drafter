@@ -2,6 +2,7 @@ import { ref, watch } from 'vue';
 import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
 import { FileGoneError, type FileRef, useFiles } from './files';
+import { useGuard } from './guard';
 import { getHandle } from './projects';
 import { useScript } from './script';
 import { encodeFile, fileNameFor, titleOf } from './text';
@@ -29,6 +30,19 @@ function announceSave() {
     }, 2000);
   }, 100);
 }
+
+/**
+ * Said by the status bar after Save, Save As, or opening a file is tried in a tab that only shows
+ * a script another tab is editing. That tab may show old text, so it writes nothing and opens
+ * nothing until the writer chooses "Edit here instead".
+ */
+export const READ_ONLY_HINT =
+  'This tab only shows a script that’s open for editing in another tab. Choose “Edit here instead” first.';
+export const readOnlyHint = ref('');
+// It goes away when the tab can edit.
+watch(useGuard().readOnly, (on) => {
+  if (!on) readOnlyHint.value = '';
+});
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -111,6 +125,10 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
 }
 
 async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
+  if (useGuard().readOnly.value) {
+    readOnlyHint.value = READ_ONLY_HINT;
+    return 'cancelled';
+  }
   return inTurn(async () => {
     saveError.value = '';
     try {

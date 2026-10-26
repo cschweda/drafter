@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 
 const colorMode = useColorMode();
+const { readOnly } = useGuard();
 const { doc } = useEditor();
 const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
 const dark = computed(() => colorMode.value !== 'light');
@@ -49,6 +51,7 @@ const ACTIONS = [
           v-else-if="action.kind === 'save'"
           type="button"
           class="act"
+          :aria-disabled="readOnly ? 'true' : undefined"
           :data-tour="action.tour"
           @click="save().catch(() => {})"
         >

@@ -1,6 +1,13 @@
 import { parse } from '@drafter/fountain';
 import { describe, expect, test } from 'vitest';
-import { decodeFile, encodeFile, fileNameFor, titleOf } from '../app/storage/text';
+import {
+  decodeFile,
+  encodeFile,
+  fileBaseName,
+  fileNameFor,
+  NotUtf8Error,
+  titleOf,
+} from '../app/storage/text';
 
 const bytes = (s: string) => new TextEncoder().encode(s);
 
@@ -79,5 +86,30 @@ describe('fileNameFor', () => {
   test('cuts at 120 characters without splitting a surrogate pair', () => {
     const name = fileNameFor('😀'.repeat(200), '.fountain');
     expect(name).toBe(`${'😀'.repeat(120)}.fountain`);
+  });
+});
+
+describe('opening a file strictly', () => {
+  test('refuses bytes that are not UTF-8 instead of replacing them', () => {
+    // "café" in Latin-1: the lone 0xE9 is not UTF-8.
+    const latin1 = new Uint8Array([0x63, 0x61, 0x66, 0xe9]);
+    expect(() => decodeFile(latin1, { strict: true })).toThrow(NotUtf8Error);
+    // Without `strict`, the replacement character is what a writer would have saved over it.
+    expect(decodeFile(latin1).text).toBe('caf\ufffd');
+    expect(decodeFile(bytes('café'), { strict: true }).text).toBe('café');
+    expect(decodeFile(bytes('\ufeffA\r\nB'), { strict: true })).toEqual({
+      text: 'A\nB',
+      lineBreak: '\r\n',
+      bom: true,
+    });
+  });
+
+  test('names a script after its file when it has no title', () => {
+    expect(fileBaseName('The Call.fountain')).toBe('The Call');
+    expect(fileBaseName('notes.v2.txt')).toBe('notes.v2');
+    expect(fileBaseName('README')).toBe('README');
+    expect(fileBaseName('.fountain')).toBe('.fountain');
+    expect(fileBaseName(undefined)).toBe('Untitled');
+    expect(fileBaseName('')).toBe('Untitled');
   });
 });

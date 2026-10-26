@@ -170,9 +170,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Remove from this browser** asks first and says the file isn't touched (and when the script has never been saved to a file, that removing it deletes the only copy). Removing the open script opens the most recent other one, or the screenplay sample. A script another tab has open is never removed, and the menu says so.
   - **Another tab:** switching to a script another tab holds opens it read-only, and the script you left is let go.
 - `apps/web`: Save and Save As. **Save** (toolbar, `Mod+S`) writes the script to its file: in place on Chromium, remembered across reloads, and by download in browsers without the File System Access API. **Save As…** (Open menu, `Mod+Shift+S`) asks where. A sample saved this way becomes a script of the writer's own and the sample is left as it was. The status bar reads "Saved just now", "Saved N min ago", "Saved at 3:42 PM", or "Unsaved changes", and the tab title starts with a bullet while there are changes. Files keep their line breaks and byte-order mark. All file access goes through one `FileAccess` interface (`storage/files.ts`) that a desktop build can replace.
+- Open a file: Open ▸ **Open a file…** (the browser's file picker where it has one, else a file input), or drop a `.fountain` or `.txt` file anywhere on the window, and it opens as a script of its own, clean, with its line breaks and byte-order mark kept for the next save. On Chromium it keeps the file, so Save writes it back in place.
+  - A file that is already open (the same file on disk) opens its script instead of a copy.
+  - Where saving downloads, a file whose title matches a script in the browser asks first: **Replace that script** (one undoable change), **Open beside it**, or **Cancel**.
+  - Files that aren't scripts are refused with a message and nothing changes: over 5 MB, a NUL byte in the first 8 KB, or text that isn't UTF-8 (opening it would replace its characters on the next save).
+  - A script with no title page Title is called after its file.
 
 ### Changed
 
+- In a tab that only shows a script open in another tab, Save, Save As, Open a file, and New are turned off, and say to choose "Edit here instead" first. That tab may show old text. (Save used to be allowed there.)
 - Revised the design documents to v0.2 after a pre-implementation review:
   - The parser reads two common mistakes leniently: a heading or transition with no blank line after it, and a parenthetical wrapped across lines. Each is flagged for a Strict Fountain lint rule that rewrites the source into spec form.
   - Notes end at the first blank line, per the spec, and an unclosed `[[` stays literal text.

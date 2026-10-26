@@ -143,17 +143,21 @@ export const browserFiles: FileAccess = {
   },
 
   async fromDrop(item) {
+    // A dropped item is only readable until the drop handler returns, so everything it can give is
+    // asked for now, before anything is awaited.
     const entry = item as HandleItem;
-    if (typeof entry.getAsFileSystemHandle === 'function') {
-      const handle = await entry.getAsFileSystemHandle();
-      if (handle?.kind === 'file') {
-        const file = handle as FileSystemFileHandle;
-        return pickedFrom(await file.getFile(), file);
-      }
-      return null;
+    const asFile = item.getAsFile();
+    const asHandle =
+      typeof entry.getAsFileSystemHandle === 'function'
+        ? entry.getAsFileSystemHandle().catch(() => null)
+        : Promise.resolve(null);
+    const handle = await asHandle;
+    if (handle?.kind === 'file') {
+      const file = handle as FileSystemFileHandle;
+      return pickedFrom(await file.getFile(), file);
     }
-    const file = item.getAsFile();
-    return file ? pickedFrom(file, null) : null;
+    // No handle (another browser, or a file the page can't keep): the file alone, which opens but can't save in place.
+    return asFile ? pickedFrom(asFile, null) : null;
   },
 
   async pickToSave(suggestedName, kind) {

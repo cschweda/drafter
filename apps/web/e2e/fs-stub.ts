@@ -100,3 +100,19 @@ export async function textOf(page: Page, name: string): Promise<string | null> {
   const bytes = await bytesOf(page, name);
   return bytes ? new TextDecoder().decode(new Uint8Array(bytes)) : null;
 }
+
+/** Puts a file (bytes, or UTF-8 text) in the stand-in file system, for the next pick to answer with. */
+export function putFile(page: Page, name: string, content: string | number[]): Promise<void> {
+  const bytes =
+    typeof content === 'string' ? Array.from(new TextEncoder().encode(content)) : content;
+  return page.evaluate(
+    async ({ n, b }) => {
+      const root = await navigator.storage.getDirectory();
+      const handle = await root.getFileHandle(n, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(new Uint8Array(b));
+      await writable.close();
+    },
+    { n: name, b: bytes },
+  );
+}

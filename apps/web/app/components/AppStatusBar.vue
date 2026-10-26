@@ -3,7 +3,8 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
-import { saveAnnouncement, saveError } from '~/storage/save';
+import { openError } from '~/storage/open';
+import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
 import { type RecoveryState, useScript } from '~/storage/script';
 
 const { doc } = useEditor();
@@ -78,6 +79,8 @@ function onKeydown(event: KeyboardEvent) {
     <span>{{ file }}</span>
     <span class="sr-only" role="status">{{ announcement }}</span>
     <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
+    <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
+    <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="page">{{ pageLabel(page) }}</span>
     <span class="spacer" />
     <template v-if="ready">
