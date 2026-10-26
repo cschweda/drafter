@@ -129,7 +129,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Screen readers:** a hidden live region says the kind of element when the cursor moves to another, and nothing on a blank line. Escape then Tab leaves the editor, so the keyboard is never trapped.
   - **Unsaved edits:** until the recovery copy arrives, the browser asks before the page closes while the text differs from what the editor opened with, and the page isn't asked while they match.
   - **Spellcheck:** the browser's own, on.
-  - **Packages:** the app builds the Drafter packages from their TypeScript (the `source` export condition), so it never reads a stale `dist/`.
+  - **Packages:** the app builds the Drafter packages from their TypeScript (a Vite alias for those packages alone), so it never reads a stale `dist/`.
 - `apps/web`: the Script pane shows the script's pages. A Web Worker parses and paginates the text, so typing never waits on layout, and `@drafter/render-html` draws the result.
   - **Pages:** the title page, then the numbered pages, in the theme's paper and ink. Pages that didn't change keep their elements, so typing in a long script rebuilds only the page being typed in.
   - **Clicking a line** puts the cursor at that line in the Source pane, and shows the Source pane first if it isn't on screen. **Moving the cursor** scrolls its page into view.
@@ -170,6 +170,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/web`: the editor keeps its scroll position and its focus when the panes swap or the phone changes tab; before, a long script jumped back to the top. The Drafter packages resolve to their source through an alias for those packages alone, no longer a `source` export condition on every dependency, which would have compiled `@internationalized/date`'s raw TypeScript. The focus-ring test checks the editor's text and not the controls inside the editor, and the Escape-then-Tab test checks that focus lands on another element.
 - `@drafter/cm-fountain`: the editor no longer upper-cases a note or boneyard typed on a scene heading or a cue line (`INT. HALL - DAY [[check the location` stays as typed), and forcing the kind of a file's first line keeps its byte-order mark.
 
 ### Security

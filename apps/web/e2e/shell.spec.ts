@@ -132,8 +132,10 @@ test.describe('on a desktop', () => {
         if (!el || el === document.body) return null;
         // The focus ring is an outline. (A box-shadow doesn't count: the
         // selected tab's underline is one, focused or not.) The editor's
-        // text is ringed through the whole editor, gutters included.
-        const style = getComputedStyle(el.closest('.cm-editor') ?? el);
+        // text is ringed through the whole editor, gutters included; other
+        // controls inside the editor, such as the search panel's, ring themselves.
+        const ringedElement = el.closest('.cm-content') ? el.closest('.cm-editor') : null;
+        const style = getComputedStyle(ringedElement ?? el);
         const ringed = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
         return {
           name: `${el.tagName.toLowerCase()} ${el.getAttribute('aria-label') ?? el.textContent?.trim().slice(0, 24)}`,

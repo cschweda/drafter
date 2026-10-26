@@ -1,3 +1,11 @@
+<script lang="ts">
+import type { StateEffect } from '@codemirror/state';
+
+// What the editor had when the last SourcePane let it go: the next one (a pane swap mounts it a
+// moment later, in the same flush) puts it back.
+let parked: { scroll: StateEffect<unknown>; focused: boolean } | undefined;
+</script>
+
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
 
@@ -11,9 +19,17 @@ const host = ref<HTMLElement>();
 onMounted(() => {
   host.value?.append(view.dom);
   view.requestMeasure();
+  // A hidden element forgets its scroll position, so the editor is put back where it was.
+  if (parked) {
+    const { scroll, focused } = parked;
+    parked = undefined;
+    view.dispatch({ effects: scroll });
+    if (focused) view.focus();
+  }
 });
 
 onBeforeUnmount(() => {
+  parked = { scroll: view.scrollSnapshot(), focused: view.hasFocus };
   document.querySelector('[data-editor-holder]')?.append(view.dom);
 });
 </script>

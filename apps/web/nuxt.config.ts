@@ -1,6 +1,9 @@
 import { fileURLToPath } from 'node:url';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
+/** The workspace packages, at the repository root. */
+const PACKAGES = fileURLToPath(new URL('../../packages', import.meta.url));
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
   // The sample scripts live at the repository root, in samples/.
@@ -12,9 +15,20 @@ export default defineNuxtConfig({
   ui: { fonts: false },
   colorMode: { preference: 'dark', fallback: 'dark' },
   icon: { provider: 'none', clientBundle: { scan: true } },
-  // The Drafter packages' `source` export condition points at their
-  // TypeScript, so the build compiles it and never reads a stale `dist/`.
-  vite: { resolve: { conditions: ['source'] } },
+  // The Drafter packages resolve to their TypeScript, so the build compiles it and never reads a
+  // stale `dist/`. This is an alias for those packages alone: a global `source` export condition
+  // would reach every dependency, and some (`@internationalized/date`, from Nuxt UI) list it first.
+  // A subpath such as `@drafter/render-html/style.css` isn't matched, and resolves as usual.
+  vite: {
+    resolve: {
+      alias: [
+        {
+          find: /^@drafter\/(cm-fountain|fountain|layout|lint|render-html|templates)$/,
+          replacement: `${PACKAGES}/$1/src/index.ts`,
+        },
+      ],
+    },
+  },
   // The editor runs in the browser; `/` is prerendered as a shell that
   // carries the metadata and the loading template's description.
   routeRules: { '/': { ssr: false } },

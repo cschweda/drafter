@@ -97,6 +97,29 @@ test.describe('on a desktop', () => {
     expect(lines.findLast((line) => line !== '')).toBe(SAMPLE.trimEnd().split('\n').at(-1));
   });
 
+  test('keeps the scroll position when the panes swap', async ({ page }) => {
+    const lines = Array.from({ length: 400 }, (_, i) => `Line ${i + 1} of the action.`);
+    await setText(page, lines.join('\n\n'));
+    const scroller = page.locator('.cm-scroller');
+    await scroller.evaluate((el) => {
+      el.scrollTop = el.scrollHeight / 2;
+    });
+    await page.waitForTimeout(200);
+    const before = await scroller.evaluate((el) => el.scrollTop);
+    expect(before).toBeGreaterThan(1000);
+    await page
+      .getByRole('tablist', { name: 'Right pane' })
+      .getByRole('tab', { name: 'Source' })
+      .click();
+    await expect(
+      page.getByRole('tablist', { name: 'Right pane' }).getByRole('tab', { name: 'Source' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    // Within a line of where it was.
+    await expect
+      .poll(async () => Math.abs((await scroller.evaluate((el) => el.scrollTop)) - before))
+      .toBeLessThan(25);
+  });
+
   test('announces the element under the cursor', async ({ page }) => {
     await setText(page, 'INT. HALL - DAY\n\nMARGARET\nAre you there?');
     const announcer = page.locator('.announcer');
@@ -187,6 +210,12 @@ test.describe('on a desktop', () => {
     await page.keyboard.press('Tab');
     await expect(page.locator('.cm-content')).not.toBeFocused();
     await expect(page.locator('.cm-content')).toBeVisible();
+    // Focus went on to another element, not nowhere.
+    const landed = await page.evaluate(() => {
+      const el = document.activeElement;
+      return { body: el === document.body, inEditor: !!el?.closest('.cm-editor') };
+    });
+    expect(landed).toEqual({ body: false, inEditor: false });
   });
 
   test('has no accessibility violations while editing', async ({ page }) => {
