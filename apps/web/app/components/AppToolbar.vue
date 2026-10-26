@@ -175,8 +175,12 @@ kbd {
   kbd {
     display: none;
   }
+  /* Icons alone, the search and theme chips match the action circles. */
   .chip {
-    padding: 6px 8px;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
   }
 }
 </style>

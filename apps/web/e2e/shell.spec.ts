@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -211,6 +211,20 @@ test.describe('on a phone', () => {
       }
     }
     expect(small).toEqual([]);
+  });
+
+  test('sizes the search and theme buttons like the action circles', async ({ page }) => {
+    const banner = page.getByRole('banner');
+    const size = async (target: Locator) => {
+      const box = await target.boundingBox();
+      if (!box) throw new Error('a toolbar button is missing');
+      return `${Math.round(box.width)}x${Math.round(box.height)}`;
+    };
+    const circle = await size(banner.getByRole('button', { name: 'Open' }).locator('.round'));
+    expect(await size(banner.getByRole('button', { name: 'Go to scene or command' }))).toBe(circle);
+    expect(await size(banner.getByRole('button', { name: /^Switch to (light|dark) theme$/ }))).toBe(
+      circle,
+    );
   });
 
   test('has no accessibility violations on a phone', async ({ page }) => {
