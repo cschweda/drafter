@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { history, undo } from '@codemirror/commands';
-import { ChangeSet, EditorState, type Extension } from '@codemirror/state';
+import { ChangeSet, EditorState, type Extension, Text } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { applyTextChanges } from '../app/editor/apply-changes';
@@ -18,6 +18,7 @@ import {
 import {
   buttonsInMenu,
   collectModules,
+  consentedIds,
   consentMessage,
   isScriptModule,
   loadEnabled,
@@ -28,6 +29,7 @@ import {
   setEnabled,
   useModules,
 } from '../app/modules/registry';
+import { runScope } from '../app/modules/scope';
 import { moduleStorage } from '../app/modules/storage';
 import type { ModuleContext, ScriptModule } from '../app/modules/types';
 import { db } from '../app/storage/db';
@@ -104,15 +106,24 @@ describe('finding the modules', () => {
   });
 
   test('refuses two modules with the same id', () => {
+    // It never throws (that would blank the app): the second is skipped, and the error names both folders.
     const warn = vi.fn();
-    const attempt = () =>
-      collectModules(
-        { [PATH('one')]: { default: module('same') }, [PATH('two')]: { default: module('same') } },
-        warn,
-      );
-    expect(attempt).toThrow(/same/);
-    expect(attempt).toThrow(/modules\/one/);
-    expect(attempt).toThrow(/modules\/two/);
+    const error = vi.fn();
+    const found = collectModules(
+      {
+        [PATH('one')]: { default: module('same', { name: 'First' }) },
+        [PATH('two')]: { default: module('same', { name: 'Second' }) },
+        [PATH('three')]: { default: module('other') },
+      },
+      warn,
+      error,
+    );
+    expect(found.map((m) => m.name)).toEqual(['First', 'other']);
+    const said = String(error.mock.calls[0]?.[0]);
+    expect(error).toHaveBeenCalledOnce();
+    expect(said).toMatch(/same/);
+    expect(said).toMatch(/modules\/one/);
+    expect(said).toMatch(/modules\/two/);
   });
 
   test('refuses two modules with the same id at build time, naming both folders', async () => {
@@ -235,7 +246,9 @@ describe('turning modules on', () => {
     await setEnabled('beta', true);
     await setEnabled('alpha', false);
     expect(useModules().enabled.value).toEqual(['beta']);
-    expect((await db.settings.get('modules:enabled'))?.value).toEqual(['beta']);
+    expect((await db.settings.get('modules:enabled'))?.value).toEqual([
+      { id: 'beta', origins: [] },
+    ]);
 
     // A new visit reads it back.
     useModules().enabled.value;
@@ -247,9 +260,53 @@ describe('turning modules on', () => {
     await db.settings.put({ key: 'modules:enabled', value: 'alpha' });
     await loadEnabled(true);
     expect(useModules().enabled.value).toEqual([]);
-    await db.settings.put({ key: 'modules:enabled', value: ['alpha', 3, null, 'beta'] });
+    await db.settings.put({
+      key: 'modules:enabled',
+      value: [
+        { id: 'alpha', origins: [] },
+        3,
+        null,
+        { id: 7 },
+        { id: 'beta', origins: 'x' },
+        { id: 'gamma', origins: [] },
+      ],
+    });
     await loadEnabled(true);
-    expect(useModules().enabled.value).toEqual(['alpha', 'beta']);
+    expect(useModules().enabled.value).toEqual(['alpha', 'gamma']);
+  });
+
+  test('keeps the origins a writer agreed to with the choice', async () => {
+    await loadEnabled(true);
+    await setEnabled('alpha', true);
+    expect((await db.settings.get('modules:enabled'))?.value).toEqual([
+      { id: 'alpha', origins: [] },
+    ]);
+  });
+
+  test('treats a module whose network origins grew as off until the writer agrees again', () => {
+    const declared = (id: string) =>
+      ({ doctor: ['https://api.example', 'https://more.example'], quiet: [] })[id];
+    const stored = [
+      { id: 'doctor', origins: ['https://api.example'] },
+      { id: 'quiet', origins: [] },
+      { id: 'removed', origins: ['https://old.example'] },
+    ];
+    // Agreed to fewer than it declares now: off. Fewer declared than agreed to: still on.
+    expect(consentedIds(stored, declared)).toEqual(['quiet', 'removed']);
+    expect(
+      consentedIds(
+        [{ id: 'doctor', origins: ['https://more.example', 'https://api.example'] }],
+        declared,
+      ),
+    ).toEqual(['doctor']);
+    expect(consentedIds([{ id: 'doctor', origins: [] }], () => ['https://a.example'])).toEqual([]);
+    expect(
+      consentedIds([{ id: 'doctor', origins: ['https://a.example', 'https://b.example'] }], () => [
+        'https://a.example',
+      ]),
+    ).toEqual(['doctor']);
+    // A module that had no network and now has some is off too.
+    expect(consentedIds([{ id: 'quiet', origins: [] }], () => ['https://new.example'])).toEqual([]);
   });
 
   test('asks in plain words before a module that uses the network', () => {
@@ -469,5 +526,72 @@ describe('changing the script for a module', () => {
     });
     expect(applyTextChanges(view, [{ from: 0, to: 0, insert: 'x' }])).toBe(false);
     expect(view.state.doc.toString()).toBe('Hello');
+  });
+});
+
+describe("a module's run", () => {
+  const text = (value: string) => Text.of(value.split('\n'));
+  function world() {
+    const state = { generation: 0, epoch: 0, on: true, doc: text('Hello') };
+    return {
+      state,
+      world: {
+        generation: () => state.generation,
+        epoch: () => state.epoch,
+        on: () => state.on,
+        doc: () => state.doc,
+      },
+    };
+  }
+
+  test('may change the script it started in while the module stays on', () => {
+    const { world: w } = world();
+    const scope = runScope(w, { checkText: true });
+    expect(scope.mayChange()).toBe(true);
+    expect(scope.live()).toBe(true);
+  });
+
+  test('may not change or report on another script', () => {
+    const { world: w, state } = world();
+    const scope = runScope(w, { checkText: true });
+    state.generation++;
+    expect(scope.live()).toBe(false);
+    expect(scope.mayChange()).toBe(false);
+  });
+
+  test('may not act once the module was turned off, even if it is turned on again', () => {
+    const { world: w, state } = world();
+    const off = runScope(w, { checkText: false });
+    state.on = false;
+    expect(off.live()).toBe(false);
+    const again = runScope(w, { checkText: false });
+    state.on = true;
+    state.epoch++;
+    expect(off.live()).toBe(false);
+    expect(again.live()).toBe(false);
+    expect(runScope(w, { checkText: false }).live()).toBe(true);
+  });
+
+  test('may not change text that was edited since it started, but may go on after its own change', () => {
+    const { world: w, state } = world();
+    const scope = runScope(w, { checkText: true });
+    state.doc = text('Hello!');
+    expect(scope.mayChange()).toBe(false);
+    // Reporting problems doesn't depend on the text; a change does.
+    expect(scope.live()).toBe(true);
+
+    const again = runScope(w, { checkText: true });
+    state.doc = text('Hello there');
+    again.changed();
+    expect(again.mayChange()).toBe(true);
+    state.doc = text('Hello there!');
+    expect(again.mayChange()).toBe(false);
+  });
+
+  test('a view of the script for a tab or settings is checked for the module and script only', () => {
+    const { world: w, state } = world();
+    const scope = runScope(w, { checkText: false });
+    state.doc = text('Typed since');
+    expect(scope.mayChange()).toBe(true);
   });
 });

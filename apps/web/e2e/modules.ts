@@ -89,7 +89,7 @@ export async function runCommand(page: Page, title: string) {
   await expect(paletteInput(page)).toBeFocused();
   await expect(palette(page).locator('[role="option"][data-highlighted]')).toHaveCount(1);
   await page.keyboard.insertText(title);
-  const row = palette(page).getByRole('option', { name: title });
+  const row = palette(page).getByRole('option', { name: title, exact: true });
   await expect(row).toBeVisible();
   await expect(row).toHaveAttribute('data-highlighted', '');
   await page.keyboard.press('Enter');

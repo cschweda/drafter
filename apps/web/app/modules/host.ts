@@ -3,7 +3,7 @@ import { usePanes } from '~/composables/usePanes';
 import { type Command, registerCommands, unregisterCommands } from '../commands/registry';
 import { useEditor } from '../editor/session';
 import { dropTab, PHONE_DEFAULT_TAB } from '../utils/panes';
-import { contextFor } from './context';
+import { contextFor, moduleTurnedOff, runContextFor, scriptChanged } from './context';
 import { clearAllModuleProblems, clearModuleProblems, mapModuleProblems } from './problems';
 import {
   loadEnabled,
@@ -27,7 +27,12 @@ function commandOf(module: ScriptModule, command: Command): Command {
     group: module.name,
     icon: module.icon,
     // A module can't bind keys: the registry would bind them for the whole page.
-    run: () => void runModuleAction(module.name, () => command.run()),
+    // Each run is made afresh, with a context of its own that knows which script and text it began with.
+    run: () =>
+      void runModuleAction(module.name, () => {
+        const fresh = module.commands?.(runContextFor(module)).find((c) => c.id === command.id);
+        return (fresh ?? command).run();
+      }),
     ...(enabled && {
       enabled: () => {
         try {
@@ -71,6 +76,7 @@ export function startModules(): () => void {
   function turnOff(module: ScriptModule) {
     unregisterCommands(on.get(module.id) ?? []);
     on.delete(module.id);
+    moduleTurnedOff(module.id);
     clearModuleProblems(module.id);
     if (module.tab) {
       const tab = moduleTabId(module.id, module.tab.id);
@@ -92,12 +98,17 @@ export function startModules(): () => void {
   );
   const forget = editor.onChange((changes) => {
     if (changes) mapModuleProblems(changes);
-    else clearAllModuleProblems();
+    else {
+      scriptChanged();
+      clearAllModuleProblems();
+    }
   });
   void loadEnabled();
   return () => {
     stop();
     forget();
+    for (const ids of on.values()) unregisterCommands(ids);
+    on.clear();
   };
 }
 

@@ -60,13 +60,19 @@ export interface ModuleContext {
   kind(): DocumentKind;
   /** The offset of the cursor (the head of the main selection). */
   cursor(): number;
-  /** One undoable change, through the editor. It throws if a change lies outside the text or two overlap. */
-  applyChanges(changes: readonly TextChange[]): void;
+  /**
+   * One undoable change, through the editor. It throws if a change lies outside the text or two
+   * overlap. It returns false, changing nothing, when the script can't be edited now, when another
+   * script has been opened or the module turned off since the run began, or, in a run, when the
+   * text has been edited since the run began (apart from by this run's own earlier changes).
+   */
+  applyChanges(changes: readonly TextChange[]): boolean;
   /**
    * Replaces this module's items in the Problems pane, labeled with the module's name; they don't
-   * count toward the problem total.
+   * count toward the problem total. Returns false, doing nothing, once another script has been
+   * opened or the module turned off since the run began.
    */
-  setProblems(items: readonly ModuleProblem[]): void;
+  setProblems(items: readonly ModuleProblem[]): boolean;
   goto(offset: number): void;
   /**
    * This module's own storage in the settings table (`module:<id>:<key>`), kept in this browser

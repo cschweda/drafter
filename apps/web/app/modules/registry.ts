@@ -1,4 +1,4 @@
-import { type Ref, readonly, ref, shallowRef } from 'vue';
+import { computed, type Ref, ref, shallowRef } from 'vue';
 import { db } from '../storage/db';
 import { say } from '../storage/say';
 import { fixture } from './fixture';
@@ -75,11 +75,14 @@ function placeOf(path: string): string {
 /**
  * The modules in `found`, a map from each module's path to what importing it gave (`{ default }`).
  * One without a default export of the right shape is skipped with a warning naming its folder.
- * Two with the same id throw, naming both folders: which one a toggle meant could not be told.
+ * Of two with the same id the second is skipped, and `error` is told, naming both folders: this
+ * never throws, since that would blank the whole app for one module's mistake (the build fails
+ * on a repeated id before it gets here, where the id can be read).
  */
 export function collectModules(
   found: Record<string, unknown>,
   warn: (message: string) => void = (message) => console.warn(message),
+  error: (message: string) => void = (message) => console.error(message),
 ): ScriptModule[] {
   const modules: ScriptModule[] = [];
   const places = new Map<string, string>();
@@ -94,7 +97,10 @@ export function collectModules(
     const module = value as ScriptModule;
     const first = places.get(module.id);
     if (first) {
-      throw new Error(`Two modules have the id “${module.id}”: ${first} and ${place}. Change one.`);
+      error(
+        `Drafter skipped ${place}: it has the id “${module.id}”, which ${first} has. Change one.`,
+      );
+      continue;
     }
     places.set(module.id, place);
     modules.push(module);
@@ -136,6 +142,9 @@ function toast(target: Ref<string>) {
 export const announceNotice = toast(moduleNotice);
 const announceError = toast(moduleError);
 
+/** Shows `message` as the module toast's alert. */
+export const announceModuleError = announceError;
+
 /**
  * Runs something of a module's: a button's `run`, a command, a menu item. A throw or a rejection is
  * caught and shown as a toast naming the module, so a module can't break the editor. Resolves
@@ -158,11 +167,47 @@ export function reportModuleFailure(name: string, error: unknown): void {
 
 // ---- Which modules are on -----------------------------------------------------------------
 
-/** The settings row that holds the ids of the modules that are on. (A module's own rows are `module:<id>:<key>`.) */
+/** The settings row that holds which modules are on. (A module's own rows are `module:<id>:<key>`.) */
 const ENABLED_KEY = 'modules:enabled';
 
-const enabledIds = shallowRef<readonly string[]>([]);
+/** A module the writer turned on, and the network origins it declared when they agreed to it. */
+export interface EnabledEntry {
+  id: string;
+  origins: string[];
+}
+
+const stored = shallowRef<readonly EnabledEntry[]>([]);
 let loading: Promise<void> | undefined;
+
+/**
+ * The ids from `entries` that are on: those whose declared network origins (`declared(id)`; none
+ * for a module that isn't in this build) are all among the ones the writer agreed to. A module
+ * that has since asked for more is off until they agree again.
+ */
+export function consentedIds(
+  entries: readonly EnabledEntry[],
+  declared: (id: string) => readonly string[] | undefined,
+): string[] {
+  return entries
+    .filter((entry) => (declared(entry.id) ?? []).every((origin) => entry.origins.includes(origin)))
+    .map((entry) => entry.id);
+}
+
+const declaredOrigins = (id: string) => MODULES.find((m) => m.id === id)?.permissions.network;
+
+const enabledIds = computed(() => consentedIds(stored.value, declaredOrigins));
+/** Modules the writer turned on whose origins have grown since: off until they agree again. */
+const lapsedIds = computed(() =>
+  stored.value.map((e) => e.id).filter((id) => !enabledIds.value.includes(id)),
+);
+
+function entryOf(value: unknown): EnabledEntry | undefined {
+  if (isText(value)) return { id: value, origins: [] };
+  if (typeof value !== 'object' || value === null) return undefined;
+  const { id, origins } = value as { id?: unknown; origins?: unknown };
+  if (!isText(id) || !Array.isArray(origins) || !origins.every(isText)) return undefined;
+  return { id, origins: [...origins] };
+}
 
 /** Reads which modules are on, once (or again, with `force`). Settles when done, whether or not the table could be read. */
 export function loadEnabled(force = false): Promise<void> {
@@ -170,7 +215,7 @@ export function loadEnabled(force = false): Promise<void> {
     loading = (async () => {
       try {
         const value = (await db.settings.get(ENABLED_KEY))?.value;
-        enabledIds.value = Array.isArray(value) ? value.filter(isText) : [];
+        stored.value = Array.isArray(value) ? value.flatMap((item) => entryOf(item) ?? []) : [];
       } catch {
         // Every module stays off for this visit.
       }
@@ -179,13 +224,17 @@ export function loadEnabled(force = false): Promise<void> {
   return loading;
 }
 
-/** Turns a module on or off and keeps the choice. If the table can't be written, it holds for this visit. */
+/**
+ * Turns a module on or off and keeps the choice. Turning one on records the network origins it
+ * declares now, which is what the writer agreed to. If the table can't be written, it holds for
+ * this visit.
+ */
 export async function setEnabled(id: string, on: boolean): Promise<void> {
   await loadEnabled();
-  const without = enabledIds.value.filter((other) => other !== id);
-  enabledIds.value = on ? [...without, id] : without;
+  const without = stored.value.filter((entry) => entry.id !== id);
+  stored.value = on ? [...without, { id, origins: [...(declaredOrigins(id) ?? [])] }] : without;
   try {
-    await db.settings.put({ key: ENABLED_KEY, value: enabledIds.value });
+    await db.settings.put({ key: ENABLED_KEY, value: stored.value });
   } catch {
     // Held for this visit.
   }
@@ -194,11 +243,19 @@ export async function setEnabled(id: string, on: boolean): Promise<void> {
 export function useModules(): {
   modules: readonly ScriptModule[];
   enabled: Readonly<Ref<readonly string[]>>;
+  /** On in the table, but off now: the module asks for network access the writer hasn't agreed to. */
+  lapsed: Readonly<Ref<readonly string[]>>;
   setEnabled(id: string, on: boolean): Promise<void>;
   /** Settles when the choices have been read. */
   ready: Promise<void>;
 } {
-  return { modules: MODULES, enabled: readonly(enabledIds), setEnabled, ready: loadEnabled() };
+  return {
+    modules: MODULES,
+    enabled: enabledIds,
+    lapsed: lapsedIds,
+    setEnabled,
+    ready: loadEnabled(),
+  };
 }
 
 // ---- Words ----------------------------------------------------------------------------------

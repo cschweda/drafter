@@ -159,11 +159,14 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
-      <component
-        :is="moduleTab.module.tab?.component"
+      <ModuleBoundary
         v-else-if="moduleTab"
-        :context="moduleTab.context"
-      />
+        :key="moduleTab.id"
+        :name="moduleTab.module.name"
+        what="tab"
+      >
+        <component :is="moduleTab.module.tab?.component" :context="moduleTab.context" />
+      </ModuleBoundary>
       <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
       <ProblemsPane v-else />

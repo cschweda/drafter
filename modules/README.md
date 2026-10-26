@@ -76,25 +76,34 @@ Every part is handed a `ModuleContext`:
   state, so a component that calls them while it draws is drawn again when the script changes. In a
   Markdown document `doc()` has no blocks and `layout()` is `null`: Markdown has no Fountain and no
   pages.
-- Changing: `applyChanges(changes)` makes one undoable change through the editor. It throws if a
-  change lies outside the text or two overlap, and does nothing in a tab that only shows the script.
+- Changing: `applyChanges(changes)` makes one undoable change through the editor and returns
+  `true`. It throws if a change lies outside the text or two overlap. It returns `false` and does
+  nothing in a tab that only shows the script, and (so a run that waited can't change what it never
+  saw) once another script has been opened, the module has been turned off, or, for a button's or a
+  command's run, the text has been edited since the run began.
 - Reporting: `setProblems(items)` replaces this module's items in the Problems pane. They are
-  labelled with the module's name and don't count toward the problem total. An item may carry a
-  `fix`. Positions follow the text through edits; an item is dropped when an edit replaces all of its
+  labelled with the module's name and don't count toward the problem total. It returns `false` and
+  does nothing once another script has been opened or the module turned off since the run began. An
+  item may carry a `fix`. Positions follow the text through edits; an item is dropped when an edit replaces all of its
   text, loses its fix when an edit touches it, and all of them go when another script opens.
 - Going: `goto(offset)`.
 - Remembering: `storage.get`, `set`, and `remove`, this module's own rows in the browser's settings
-  table (`module:<id>:<key>`). They never reach the script file.
+  table (`module:<id>:<key>`). They never reach the script file. The prefix keeps one module's rows
+  apart from another's; it is not a security boundary. Anything you store, a key included, is saved
+  as plain text in this browser, and any module you install could read it.
 - Telling: `notify(message)` shows a toast and announces it politely.
 
 A `run` that throws or rejects is caught and shown as a toast naming the module. It doesn't break the
-editor.
+editor, and neither does a tab or settings component that throws while it draws: the host shows a
+notice in its place. A button's or a command's run is given a context of its own, so the host calls
+a module's `commands(ctx)` again for each run of one of its commands.
 
 ### The network
 
 A module that sends the script anywhere declares the origins in `permissions.network`. The writer is
 asked before turning it on ("Script Doctor sends your script to api.anthropic.com when you ask it
-to. Turn it on?"). The declaration is the promise, not the mechanism: Drafter's content security
+to. Turn it on?"), and the origins they agreed to are kept with the choice: if a later version of the
+module declares more, it is off until they agree again. The declaration is the promise, not the mechanism: Drafter's content security
 policy allows only its own origin (`connect-src 'self'`), so a module's requests are blocked until
 the origins are added to `apps/web/scripts/csp.mjs` and the Privacy page is updated. That is a
 decision for the maintainer, recorded when a module that needs it is planned.

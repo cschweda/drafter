@@ -6,7 +6,7 @@ import type { ScriptModule } from '~/modules/types';
 // Settings → Modules (Phase 1 design §5.8): every module built into this copy of Drafter, with
 // what it is, what it may do, and a switch. All are off until turned on, and the choice is kept.
 // A module that uses the network asks first, in plain words; without a yes it stays off.
-const { modules, enabled, setEnabled } = useModules();
+const { modules, enabled, lapsed, setEnabled } = useModules();
 
 const asking = ref<{ module: ScriptModule; question: string } | null>(null);
 const dialog = ref<HTMLDialogElement>();
@@ -63,6 +63,9 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
           <p :id="`module-${module.id}-why`" class="why">
             {{ module.description }}
             {{ networkNotice(module) ?? 'It needs no network: your script stays on this device.' }}
+            <template v-if="lapsed.includes(module.id)">
+              It now asks for network access you haven’t agreed to, so it is off until you turn it on again.
+            </template>
           </p>
         </div>
         <input
@@ -75,7 +78,9 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
           @change="toggle(module, $event)"
         >
       </div>
-      <component :is="module.settings" v-if="module.settings && isOn(module)" :context="contextFor(module)" />
+      <ModuleBoundary v-if="module.settings && isOn(module)" :name="module.name" what="settings">
+        <component :is="module.settings" :context="contextFor(module)" />
+      </ModuleBoundary>
     </div>
     <dialog
       ref="dialog"

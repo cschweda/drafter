@@ -76,7 +76,9 @@ test.describe('script modules', () => {
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();
     await page.keyboard.insertText('Fixture');
-    await expect(palette(page).getByRole('option', { name: 'Fixture: add a note' })).toBeVisible();
+    await expect(
+      palette(page).getByRole('option', { name: 'Fixture: add a note', exact: true }),
+    ).toBeVisible();
     // Under the module's name.
     await expect(palette(page).getByText('Fixture', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
@@ -101,7 +103,9 @@ test.describe('script modules', () => {
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();
     await page.keyboard.insertText('Fixture');
-    await expect(palette(page).getByRole('option', { name: 'Fixture: add a note' })).toHaveCount(0);
+    await expect(
+      palette(page).getByRole('option', { name: 'Fixture: add a note', exact: true }),
+    ).toHaveCount(0);
   });
 
   test('closes the module tab when the module is turned off', async ({ page }) => {
@@ -265,6 +269,127 @@ test.describe('script modules', () => {
     await page.keyboard.press('ControlOrMeta+Home');
     await runCommand(page, 'Fixture: add a note');
     await expect.poll(() => textOf(page)).toMatch(/^\[\[fixture\]\]INT\./);
+  });
+
+  test('lets a run that waited finish only in the script and text it began in', async ({
+    page,
+  }) => {
+    await start(page);
+    await turnOnFixture(page);
+    const later = (reported: boolean, changed: boolean) =>
+      page
+        .getByRole('status')
+        .filter({ hasText: `Later: reported ${reported}, changed ${changed}` });
+    const title = 'Fixture: add a note after a pause';
+
+    // Left alone, it reports and changes.
+    await setText(page, SCRIPT);
+    await page.keyboard.press('ControlOrMeta+Home');
+    await runCommand(page, title);
+    await expect(later(true, true)).toBeAttached({ timeout: 5000 });
+    await expect.poll(() => textOf(page)).toMatch(/^\[\[later\]\]INT\. HALL/);
+
+    // Text edited while it waited: it may report, but not change what it never saw.
+    await runCommand(page, title);
+    await showSource(page);
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.insertText(' Edited meanwhile.');
+    await expect(later(true, false)).toBeAttached({ timeout: 5000 });
+    expect(await textOf(page)).not.toMatch(/\[\[later\]\]\[\[later\]\]/);
+  });
+
+  test('keeps a run that waited out of the next script', async ({ page }) => {
+    await start(page);
+    await turnOnFixture(page);
+    await runCommand(page, 'Fixture: add a note after a pause');
+    await runCommand(page, 'New stage play');
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Later: reported false, changed false' }),
+    ).toBeAttached({ timeout: 5000 });
+    await showSource(page);
+    expect(await textOf(page)).not.toContain('[[later]]');
+    await showProblems(page);
+    await expect(problemsList(page)).not.toContainText('Added later');
+  });
+
+  test('keeps a run that waited from acting after its module is turned off', async ({ page }) => {
+    await start(page);
+    await turnOnFixture(page);
+    await setText(page, SCRIPT);
+    await runCommand(page, 'Fixture: add a note after a pause');
+    await openSettings(page);
+    await fixtureSwitch(page).click();
+    await closeSettings(page);
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Later: reported false, changed false' }),
+    ).toBeAttached({ timeout: 5000 });
+    expect(await textOf(page)).not.toContain('[[later]]');
+    await showProblems(page);
+    await expect(problemsList(page)).not.toContainText('Added later');
+  });
+
+  test('shows a notice, not a broken page, when a module’s tab or settings throws', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => localStorage.setItem('drafter-fixture-throw', '1'));
+    await start(page);
+    await openSettings(page);
+    await fixtureSwitch(page).click();
+    await consentDialog(page).getByRole('button', { name: 'Turn on' }).click();
+    // Its settings component threw while it drew: the section says so, and the dialog still works.
+    await expect(settingsDialog(page)).toContainText('Fixture’s settings couldn’t be shown.');
+    await expect(fixtureSwitch(page)).toBeChecked();
+    await closeSettings(page);
+
+    await fixtureTab(page).first().click();
+    const panel = page.getByRole('tabpanel', { name: 'Fixture' });
+    await expect(panel).toContainText('Fixture’s tab couldn’t be shown.');
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Fixture’s tab couldn’t be shown.' }),
+    ).toBeAttached();
+    // The editor is untouched.
+    await setText(page, SCRIPT);
+    await expect.poll(() => textOf(page)).toContain('Rain on the glass.');
+  });
+
+  test('keeps a module off whose network origins grew since the writer agreed', async ({
+    page,
+  }) => {
+    await start(page);
+    // As if the writer had agreed to the Fixture when it declared no network origin.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('drafter');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const tx = open.result.transaction('settings', 'readwrite');
+            tx.objectStore('settings').put({
+              key: 'modules:enabled',
+              value: [{ id: 'fixture', origins: [] }],
+            });
+            tx.oncomplete = () => {
+              open.result.close();
+              resolve();
+            };
+          };
+        }),
+    );
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await openSettings(page);
+    await expect(fixtureSwitch(page)).not.toBeChecked();
+    await expect(settingsDialog(page)).toContainText(
+      'asks for network access you haven’t agreed to',
+    );
+    await expect(countScenes(page)).toHaveCount(0);
+    // Agreeing again turns it on.
+    await fixtureSwitch(page).click();
+    await consentDialog(page).getByRole('button', { name: 'Turn on' }).click();
+    await expect(fixtureSwitch(page)).toBeChecked();
+    await closeSettings(page);
+    await expect(countScenes(page)).toBeVisible();
   });
 
   test('gives a module no scenes and no pages in a Markdown document', async ({ page }) => {

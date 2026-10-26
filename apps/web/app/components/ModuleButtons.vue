@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { contextFor } from '~/modules/context';
+import { runContextFor } from '~/modules/context';
 import { useModuleButtons } from '~/modules/host';
 import { buttonsInMenu, moduleError, moduleNotice, runModuleAction } from '~/modules/registry';
 import type { ScriptModule } from '~/modules/types';
@@ -13,7 +13,7 @@ const asMenu = computed(() => buttonsInMenu(modules.value.length, wide.value));
 
 function run(module: ScriptModule) {
   const action = module.action;
-  if (action) void runModuleAction(module.name, () => action.run(contextFor(module)));
+  if (action) void runModuleAction(module.name, () => action.run(runContextFor(module)));
 }
 
 const items = computed(() =>
