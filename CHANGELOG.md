@@ -50,6 +50,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Phones:** below 1024px, one pane shows at a time, opening on the Script tab. The page fits a 320px screen without scrolling sideways, tested in Chromium on a Pixel 7 and in WebKit on an iPhone SE.
   - **High contrast:** in Windows High Contrast, a border marks the selected tab.
   - **Toolbar spacing:** more room between the logo and the toolbar's buttons: 28px on a desktop, 14px on smaller screens.
+  - **Toolbar icons:** the action buttons' circles are 24px, down from 30px, so they sit below the logo's height. 24px is still the minimum touch-target size.
   - **Colors:** design tokens for both themes, with every text color tested for WCAG contrast.
   - **Tests:** the browser tests check the layout, keyboard use, visible focus on every control, and axe in both themes. The toolbar's actions wait for the editor and files in later plans.
 
