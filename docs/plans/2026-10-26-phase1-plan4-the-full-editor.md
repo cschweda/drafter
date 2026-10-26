@@ -7,7 +7,7 @@
 - the command registry and the command palette
 - settings, including line numbers
 - the Problems pane, with its fixes
-- the template switcher
+- the template chooser (Screenplay first, Stage play second, then the rest, then Markdown) and plain Markdown documents
 - the host for script modules, which finds them in a `modules/` folder, and three sample modules
 - the app menu, and Revert to Saved
 - the check for a file changed somewhere else
@@ -26,23 +26,23 @@
 - §9.4 and §9.6: Revert, and files changed elsewhere
 - §10: export
 
-Read it with technical design §8.6 and §9, and with §6.2 for `render-pdf`. The script-module host and line numbers were decided by the maintainer on 2026-10-26; Task 6 records the modules in the design.
+Read it with technical design §8.6 and §9, and with §6.2 for `render-pdf`. The script-module host and line numbers were decided by the maintainer on 2026-10-26; Task 7 records the modules in the design.
 
 **Where this fits.** Plan 4 of Phase 1, after [Plan 3](2026-10-26-phase1-plan3-write-and-keep.md). [Plan 5](2026-10-25-phase1-plan5-writing-aids-first-visit-launch.md) follows.
 
 ## Global Constraints
 
-- Everything in Plan 3's Global Constraints, except the branch and the dependencies. That includes the one seam for files: the changed-elsewhere check (Task 9) and export (Task 10) read and write only through `useFiles()`.
+- Everything in Plan 3's Global Constraints, except the branch and the dependencies. That includes the one seam for files: the changed-elsewhere check (Task 10) and export (Task 11) read and write only through `useFiles()`.
   - **Branch:** `phase-1-full-editor`, from `main` after Plan 3 merges. It merges to `main` when everything is green.
-  - **New dependencies:** `@drafter/render-pdf` and `@drafter/render-text` (Task 10), and nothing else.
-- **Modules ship off by default.** Task 6 builds the module host, the local `modules/` folder, and a test fixture; Task 7 adds three sample modules that need no network. The content security policy stays `connect-src 'self'`.
+  - **New dependencies:** `@drafter/render-pdf` and `@drafter/render-text` (Task 11), and `@codemirror/lang-markdown`, `micromark`, and `mdast-util-from-markdown` (Task 6), and nothing else.
+- **Modules ship off by default.** Task 7 builds the module host, the local `modules/` folder, and a test fixture; Task 8 adds three sample modules that need no network. The content security policy stays `connect-src 'self'`.
 
 ## Review Focus
 
 1. **A fix chosen after the text changed** must never apply its offsets to newer text. Covered by Task 4's `applies no fix to text that changed after linting`.
 2. **Script text that looks like markup,** in the palette's scene list and in problem messages, must show as text. Covered by Task 2's `shows a scene named like HTML as text`.
-3. **The file and the browser both changed.** Both versions must survive. Covered by Task 9's `keeps both versions when the file and the browser both changed`.
-4. **A module that throws** must never break the editor. Covered by Task 6's `catches a module that throws`.
+3. **The file and the browser both changed.** Both versions must survive. Covered by Task 10's `keeps both versions when the file and the browser both changed`.
+4. **A module that throws** must never break the editor. Covered by Task 7's `catches a module that throws`.
 5. **Fix all in Strict Fountain** must be one undoable step. Covered by Task 4's `fixes everything at once in Strict Fountain`.
 
 ---
@@ -71,7 +71,7 @@ export function setMeta(doc: Doc, meta: DrafterMeta): TextChange[];
   - `writes the block with the file's own line break`: a CRLF script gets `\r\n` throughout the new block.
   - `round-trips through parse`: for the meta values above, `parse(apply(source, setMeta(parse(source), meta))).meta` equals `{ v: 1, ...meta }`.
   - In `packages/lint/test/names.test.ts`: `leaves names that differ inside a short word alone` (Plan 2's Ruling 11). The pairs `MR. SMITH`/`MRS. SMITH`, `JOHN JR.`/`JOHN SR.`, and `GUARD A`/`GUARD B` aren't reported. `MARIO`/`MARIA` and `OFFICER DAVID`/`OFFICER DAVIS` still are. The rule: when the one edit falls inside a whitespace-separated word of three letters or fewer, the pair is skipped.
-  - In `packages/lint/test/names.test.ts`: `offers to mark two similar names as distinct`. The `similar-names` diagnostic's fix, titled `Mark as distinct`, adds the pair to `meta.distinctNames` (Plan 2, Task 6), and after it the rule reports nothing.
+  - In `packages/lint/test/names.test.ts`: `offers to mark two similar names as distinct`. The `similar-names` diagnostic's fix, titled `Mark as distinct`, adds the pair to `meta.distinctNames` (Plan 2, Task 7), and after it the rule reports nothing.
 - [ ] **Step 2: Run them.** `pnpm vitest run --project fountain --project lint` → FAIL: `setMeta` isn't exported.
 - [ ] **Step 3: Implement** `setMeta`, then give `similar-names` its fix through it: the pair, in upper case and in the order reported, joins any `distinctNames` already there. The existing block is `doc.meta`'s source: the last block, a boneyard opening with `/* drafter`. The line break is the first `\r\n` or `\n` in `doc.source`, else `\n`.
 - [ ] **Step 4: Run them again.** `pnpm vitest run --project fountain --project lint` → PASS. Then `pnpm test`.
@@ -269,7 +269,7 @@ export function mergeFixes(fixes: readonly { changes: readonly TextChange[] }[])
 
 ---
 
-### Task 5: The template switcher
+### Task 5: The template chooser
 
 **Files:**
 - Create: `apps/web/e2e/template.spec.ts`
@@ -284,7 +284,10 @@ export function useTemplate(): {
 };
 ```
 
-- The toolbar chip is a `UDropdownMenu` button reading the template's name, with **Screenplay** and **Stage play** as checkbox items. It drops its `aria-disabled`.
+- **One list, in a fixed order** (decided by the maintainer, 2026-10-26): **Screenplay** (the default), **Stage play**, then any other Fountain template in the registry (Phase 3 adds TV, radio, and UK ones here), then **Markdown (plain text)** (Task 6). `app/editor/template.ts` exports this list as `DOCUMENT_TYPES`, so the toolbar chip, the New menu, and the palette all read the same list in the same order.
+- The toolbar chip is a `UDropdownMenu` button reading the current one's name, with the list as checkbox items. It drops its `aria-disabled`.
+- **Choosing Markdown** isn't a metadata edit: it changes the project's kind (Task 6), and needs a confirmation, because Fountain's formatting stops applying. Undo on the editor doesn't reverse it; choosing Screenplay again does.
+- Plan 3's scripts menu gets the same order: **New screenplay**, **New stage play**, then **New Markdown document**.
 - The session's `template` already follows `templateIdOf(doc)` (Plan 3). A change re-lays out the script and calls `relint()`: the stage play turns off `heading-no-time` and `transition-not-last`.
 - An unknown template id falls back to the screenplay. A visible warning about it is deferred, so add it to `docs/DEFERRED.md`.
 
@@ -293,6 +296,7 @@ export function useTemplate(): {
     - `switches to a stage play and back with undo`: the metadata block appears in the source, and the pages re-lay out with the play's act heading. Mod+Z restores the screenplay and the original text.
     - `shows the template in the toolbar and the status bar`
     - `is reachable from the keyboard`
+    - `lists Screenplay first, Stage play second, and Markdown last, in the chip, the New menu, and the palette`
     - `has no accessibility violations with the menu open`
 - [ ] **Step 2: Run them.** → FAIL.
 - [ ] **Step 3: Implement.**
@@ -301,7 +305,55 @@ export function useTemplate(): {
 
 ---
 
-### Task 6: Script modules — the host
+### Task 6: Markdown documents
+
+A writer who doesn't want screenplay formatting (a treatment, an outline, notes, prose) can write plain Markdown instead. Markdown is a **document kind**, beside Fountain, not a Fountain template.
+
+**Files:**
+- Create:
+  - `apps/web/app/markdown/` (the editor extensions, the preview, and the new-document text)
+  - `apps/web/test/markdown.test.ts`
+  - `apps/web/e2e/markdown.spec.ts`
+- Modify:
+  - `app/storage/projects.ts` (`Project.kind: 'fountain' | 'markdown'`, default `'fountain'`; unindexed, so no migration)
+  - `app/editor/session.ts` and `extensions.ts` (a `language` compartment)
+  - `ScriptPane.vue`, `ScriptsMenu.vue`, `app/storage/open.ts` and `save.ts` (`.md`)
+  - `apps/web/package.json` and `docs/DEPENDENCIES.md`
+
+**Behavior:**
+- **The editor:** `@codemirror/lang-markdown`, the general-purpose CodeMirror Markdown mode, replaces `fountain()`. The Fountain keymap, completion, folding, and lint are off. Plan 2's "no Lezer grammar" rule is about Fountain, whose only parser is `@drafter/fountain`; a Markdown grammar is outside it. Record that in DECISIONS.
+- **The Script pane** becomes **Preview**: the document rendered as headings, paragraphs, emphasis, lists, block quotes, and code, in one flowing column at page width, in the interface's typeface.
+  - It's built as DOM from a parsed tree, by `textContent` only, never `innerHTML`.
+  - Raw HTML in the Markdown shows as text.
+  - Parse with `micromark` and `mdast-util-from-markdown` (CommonMark, general-purpose), each with its DEPENDENCIES row first.
+- **The Problems pane** says "No checks for Markdown documents." The page count becomes a word count.
+- **Files:**
+  - `.md` and `.markdown` open as Markdown; `.fountain` and `.txt` as Fountain.
+  - Save suggests `.md`.
+  - **New Markdown document** starts with `# Untitled`, then a blank line.
+  - Export offers the Markdown file and plain text. PDF for Markdown goes to `docs/DEFERRED.md`.
+- **Switching** a Markdown document to Screenplay or Stage play keeps the text and turns Fountain back on.
+
+- [ ] **Step 1: Write the failing tests.**
+  - `test/markdown.test.ts`:
+    - `renders headings, emphasis, lists, quotes, and code as elements`
+    - `shows raw HTML as text`: `<img src=x onerror=alert(1)>` makes no `img`.
+    - `counts words`
+  - `e2e/markdown.spec.ts`:
+    - `starts a Markdown document from the New menu`
+    - `opens a .md file as Markdown, and saves it as .md`
+    - `previews as you type`
+    - `turns Fountain's keys, completion, and lint off`
+    - `switches to Screenplay and back, keeping the text`
+    - `has no accessibility violations in a Markdown document`: both themes, and on a phone.
+- [ ] **Step 2: Run them.** → FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run them again.** → PASS.
+- [ ] **Step 5: Commit.** `feat(web): write plain Markdown documents`
+
+---
+
+### Task 7: Script modules — the host
 
 A **script module** is an optional feature compiled into the app: Drafter's own code, never something downloaded at runtime. That keeps technical design §14's "no plugin API in v1". The module contract below follows §14's sketch, where a module reads the script and hands back edits and problems, so a sandboxed third-party API could reuse it later. This task builds the host, plus a fixture module that only test builds include. No real module ships in Phase 1. The AI Script Doctor (register a Claude API key; read the script; recommend changes) gets its own plan.
 
@@ -406,7 +458,7 @@ export function useModules(): { modules: readonly ScriptModule[]; enabled: Reado
 
 ---
 
-### Task 7: Sample modules
+### Task 8: Sample modules
 
 Three small modules show how a module works, and none needs the network. Each is a folder in `modules/` with an `index.ts`, a `README.md`, and its own tests. They're written only against `ModuleContext`, so they double as examples for whoever writes the next module.
 
@@ -442,7 +494,7 @@ Three small modules show how a module works, and none needs the network. Each is
 
 ---
 
-### Task 8: The app menu, and Revert to Saved
+### Task 9: The app menu, and Revert to Saved
 
 **Files:**
 - Create: `apps/web/app/components/AppMenu.vue`, `apps/web/e2e/revert.spec.ts`, `apps/web/e2e/app-menu.spec.ts`
@@ -454,7 +506,7 @@ Three small modules show how a module works, and none needs the network. Each is
 - the recent scripts
 - the samples
 - Save, Save As…, and Revert to Saved
-- Export (Task 10 adds it)
+- Export (Task 11 adds it)
 - Settings…
 - Help: Keyboard shortcuts and Take the tour arrive in Plan 5.
 
@@ -480,7 +532,7 @@ Each item runs its registered command, so the menu, the palette, and the keys ne
 
 ---
 
-### Task 9: A file changed somewhere else
+### Task 10: A file changed somewhere else
 
 **Files:**
 - Create: `apps/web/app/storage/check.ts` (`compareVersions`, `useFileCheck`), `apps/web/app/components/FileBar.vue`, `apps/web/app/components/BothChangedDialog.vue`, `apps/web/test/check.test.ts`, `apps/web/e2e/changed.spec.ts`
@@ -522,7 +574,7 @@ Before **Save** writes, the same check runs. When the file changed, the save sto
 
 ---
 
-### Task 10: Export
+### Task 11: Export
 
 **Files:**
 - Create: `apps/web/app/workers/export.worker.ts`, `apps/web/app/storage/export.ts`, `apps/web/app/components/ExportMenu.vue`, `apps/web/e2e/export.spec.ts`
@@ -559,7 +611,7 @@ export function exportScript(kind: 'pdf' | 'txt'): Promise<'saved' | 'cancelled'
 **Plan 4 is done when** these all work, from the keyboard, passing axe in both themes and on a phone, and in every engine:
 - the palette, the app menu, settings, and line numbers
 - Problems with their fixes
-- the template switcher, the module host with its test fixture and local `modules/` folder, and the three sample modules
+- the template chooser, Markdown documents, the module host with its test fixture and local `modules/` folder, and the three sample modules
 - Revert to Saved, the changed-elsewhere check, and both exports
 
 The branch then merges to `main`, and drafter.dev deploys it.
