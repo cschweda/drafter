@@ -1,0 +1,59 @@
+/*
+ * The Script pane's pages. Every line sits at a row and a column of the page's
+ * character grid: Courier Prime at 12 pt is 10 characters and 6 lines to the
+ * inch, so a column is 1ch wide and a row is 1in / 6 tall, which is the grid the
+ * PDF and the text export use. The font itself is the app's to load: it
+ * declares the @font-face rules.
+ *
+ * Colors come from two variables, so the app can theme the paper:
+ *   --drafter-page  the paper (default white)
+ *   --drafter-ink   the type (default black)
+ */
+
+.drafter-script {
+  --line: calc(1in / 6);
+  font:
+    12pt / 1 "Courier Prime",
+    monospace;
+}
+
+.drafter-page {
+  position: relative;
+  width: calc(var(--cols) * 1ch);
+  height: calc(var(--rows) * var(--line));
+  background: var(--drafter-page, #fff);
+  color: var(--drafter-ink, #000);
+}
+
+.drafter-line {
+  position: absolute;
+  top: calc(var(--row) * var(--line));
+  left: calc(var(--col) * 1ch);
+  line-height: var(--line);
+  white-space: pre;
+}
+
+.drafter-line .b {
+  font-weight: bold;
+}
+
+.drafter-line .i {
+  font-style: italic;
+}
+
+.drafter-line .u {
+  text-decoration: underline;
+}
+
+/* Heard, not seen: each page's "Page N" marker. */
+.drafter-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
