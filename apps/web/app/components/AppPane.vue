@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import screenplay from '#samples/screenplay.fountain?raw';
 import { TABS, type TabId } from '~/utils/panes';
 
 const props = defineProps<{
@@ -13,8 +12,8 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
-// Until the editor, the Script view, and the linter arrive (Plans 2 and 3),
-// each panel holds a placeholder: the sample's source, or a line of text.
+// Until the Script view and the Problems list arrive (Plan 3), their panels
+// hold a placeholder: a line of text.
 const SLIM: Record<TabId, string> = {
   source: 'screenplay.fountain',
   script: 'Fit width',
@@ -68,9 +67,10 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :aria-labelledby="`tab-${props.pane}-${props.selected}`"
       tabindex="0"
       class="panel"
+      :class="{ editing: props.selected === 'source' }"
       :data-tour="props.selected"
     >
-      <pre v-if="props.selected === 'source'" class="source">{{ screenplay }}</pre>
+      <SourcePane v-if="props.selected === 'source'" />
       <p v-else-if="props.selected === 'script'" class="placeholder">Formatted pages appear here.</p>
       <p v-else class="placeholder">No problems found.</p>
     </div>
@@ -126,12 +126,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
   min-height: 0;
   overflow: auto;
 }
-.source {
-  margin: 0;
-  padding: 12px 16px;
-  color: var(--text);
-  font: 13.5px/21px var(--font-mono);
-  white-space: pre-wrap;
+/* The editor scrolls itself. */
+.panel.editing {
+  overflow: hidden;
 }
 .placeholder {
   margin: 0;

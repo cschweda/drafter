@@ -124,6 +124,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Lint:** `fountainLint({ template, options })` runs `@drafter/lint` on the parse 300 ms after typing stops, with CodeMirror's gutter and tooltips, and `toCodeMirror` maps the diagnostics, a fix becoming an action. A fix applies only to the text that was linted: after an edit it asks for a new lint and changes nothing.
   - **`fountain(options)`:** the parse, highlighting, input filters, keymap (at `Prec.high`), completion, and folding, and, given a `template`, lint, and given `onCursorElement`, the callback. Tab on a blank line starts a cue and opens the list of names.
   - **Completion:** a cue right under a section, synopsis, or page break is a cue line. Ctrl+Space on any other line offers the character names for the word before the cursor.
+- `apps/web`: the Source pane is the editor now. It runs CodeMirror with `@drafter/cm-fountain`, so the script is colored by element, Tab and Enter work as writers expect, names and locations complete, scenes and sections fold, lint marks the gutter, and Find, undo, and redo work. The text, its undo history, and its cursor stay put when the panes swap or the window changes between one pane and two.
+  - **Template:** the toolbar's chip and the status bar name the script's template, "Screenplay" or "Stage play", from its metadata block.
+  - **Screen readers:** a hidden live region says the kind of element when the cursor moves to another, and nothing on a blank line. Escape then Tab leaves the editor, so the keyboard is never trapped.
+  - **Unsaved edits:** until the recovery copy arrives, the browser asks before the page closes while the text differs from what the editor opened with, and the page isn't asked while they match.
+  - **Spellcheck:** the browser's own, on.
+  - **Packages:** the app builds the Drafter packages from their TypeScript (the `source` export condition), so it never reads a stale `dist/`.
 
 ### Changed
 

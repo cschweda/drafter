@@ -35,6 +35,19 @@ export function chooseTab(tabs: PaneTabs, pane: PaneId, tab: TabId): PaneTabs {
   return { ...tabs, ...swapped, [pane]: tab };
 }
 
+/**
+ * The tabs with `tab` showing. If it isn't already, it opens in the pane other than `from`, the
+ * pane asking (so the writer keeps what they were looking at), or in the left pane when no pane
+ * is asking.
+ */
+export function revealTab(tabs: PaneTabs, tab: TabId, from?: PaneId): PaneTabs {
+  if (tabs.left === tab || tabs.right === tab) return tabs;
+  return { ...tabs, [from ? otherPane(from) : 'left']: tab };
+}
+
+/** The media query for two panes: 1024px, Tailwind's `lg`. */
+export const WIDE_QUERY = '(min-width: 1024px)';
+
 export function clampSplit(ratio: number): number {
   if (Number.isNaN(ratio)) return SPLIT.initial;
   return Math.min(SPLIT.max, Math.max(SPLIT.min, ratio));

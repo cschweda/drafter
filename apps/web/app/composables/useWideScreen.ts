@@ -1,6 +1,8 @@
+import { WIDE_QUERY } from '~/utils/panes';
+
 /** True on screens wide enough for two panes: 1024px, Tailwind's `lg`. */
 export function useWideScreen() {
-  const query = '(min-width: 1024px)';
+  const query = WIDE_QUERY;
   const wide = ref(typeof window !== 'undefined' && window.matchMedia(query).matches);
   let list: MediaQueryList | undefined;
   const update = (event: MediaQueryListEvent) => {

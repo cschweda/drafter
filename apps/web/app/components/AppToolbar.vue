@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import { useEditor } from '~/editor/session';
+import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+
 const colorMode = useColorMode();
+const { doc } = useEditor();
+const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
 const dark = computed(() => colorMode.value !== 'light');
 
 function toggleTheme() {
@@ -39,7 +44,7 @@ const ACTIONS = [
       </button>
     </div>
     <button type="button" class="chip template" aria-disabled="true" data-tour="template">
-      US Screenplay
+      {{ templateName }}
     </button>
     <span class="spacer" />
     <button type="button" class="chip" aria-disabled="true" data-tour="palette">

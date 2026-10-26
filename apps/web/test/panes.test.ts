@@ -5,6 +5,7 @@ import {
   DEFAULT_TABS,
   otherPane,
   PHONE_DEFAULT_TAB,
+  revealTab,
   SPLIT,
   TABS,
 } from '../app/utils/panes';
@@ -51,5 +52,26 @@ describe('panes', () => {
     expect([clampSplit(0.1), clampSplit(0.9), clampSplit(0.5), clampSplit(Number.NaN)]).toEqual([
       0.25, 0.75, 0.5, 0.5,
     ]);
+  });
+
+  test('revealTab leaves the tabs alone when the tab is showing', () => {
+    expect(revealTab(DEFAULT_TABS, 'source')).toBe(DEFAULT_TABS);
+    expect(revealTab(DEFAULT_TABS, 'script', 'left')).toBe(DEFAULT_TABS);
+  });
+
+  test('revealTab opens the tab in the pane other than the one asking', () => {
+    // Problems is hidden. Asked from the left, it opens on the right; from the right, on the left.
+    expect(revealTab(DEFAULT_TABS, 'problems', 'left')).toEqual({
+      left: 'source',
+      right: 'problems',
+    });
+    expect(revealTab(DEFAULT_TABS, 'problems', 'right')).toEqual({
+      left: 'problems',
+      right: 'script',
+    });
+  });
+
+  test('revealTab opens it on the left when no pane is asking', () => {
+    expect(revealTab(DEFAULT_TABS, 'problems')).toEqual({ left: 'problems', right: 'script' });
   });
 });

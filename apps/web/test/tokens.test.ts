@@ -39,6 +39,9 @@ function contrast(a: string, b: string): number {
 const TEXT_PAIRS: Array<[string, string, number]> = [
   ['--text', '--bg', 4.5],
   ['--text', '--chrome', 4.5],
+  // The editor's tooltips, search fields, and chosen completion.
+  ['--text', '--chrome-2', 4.5],
+  ['--text', '--tab-on', 4.5],
   ['--muted', '--bg', 4.5],
   ['--muted', '--chrome', 4.5],
   ['--muted', '--chrome-2', 4.5],

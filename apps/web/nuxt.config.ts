@@ -12,6 +12,9 @@ export default defineNuxtConfig({
   ui: { fonts: false },
   colorMode: { preference: 'dark', fallback: 'dark' },
   icon: { provider: 'none', clientBundle: { scan: true } },
+  // The Drafter packages' `source` export condition points at their
+  // TypeScript, so the build compiles it and never reads a stale `dist/`.
+  vite: { resolve: { conditions: ['source'] } },
   // The editor runs in the browser; `/` is prerendered as a shell that
   // carries the metadata and the loading template's description.
   routeRules: { '/': { ssr: false } },

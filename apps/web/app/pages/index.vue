@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditor } from '~/editor/session';
 import { otherPane, type PaneId } from '~/utils/panes';
 
 const { tabs, phoneTab, split, choose, resize } = usePanes();
@@ -14,7 +15,14 @@ function onKeydown(event: KeyboardEvent) {
   document.getElementById(`panel-${tabs.value[target]}`)?.focus();
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown));
+// The editor is parked here whenever the Source tab isn't showing.
+const { view } = useEditor();
+const holder = ref<HTMLElement>();
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown);
+  if (!view.dom.isConnected) holder.value?.append(view.dom);
+});
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
@@ -49,6 +57,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
       />
     </main>
     <AppStatusBar />
+    <div ref="holder" data-editor-holder hidden />
   </div>
 </template>
 

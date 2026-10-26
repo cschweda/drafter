@@ -1,8 +1,16 @@
+<script setup lang="ts">
+import { useEditor } from '~/editor/session';
+import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+
+const { doc } = useEditor();
+const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
+</script>
+
 <template>
   <footer class="status" data-tour="status">
     <span>Sample</span>
     <span class="spacer" />
-    <span>US Screenplay</span>
+    <span>{{ templateName }}</span>
   </footer>
 </template>
 
