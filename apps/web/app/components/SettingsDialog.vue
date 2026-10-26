@@ -84,6 +84,7 @@ function onSize(event: Event) {
         @change="set(item.key, ($event.target as HTMLInputElement).checked)"
       >
     </div>
+    <ModulesSettings />
     <div class="buttons">
       <button type="button" class="btn" @click="settingsOpen = false">Done</button>
     </div>

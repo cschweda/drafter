@@ -3,6 +3,7 @@ import { registerBuiltinCommands } from '~/commands/builtin';
 import { installGlobalKeys } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
 import { markdownTitle } from '~/markdown/title';
+import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { installFileCheck } from '~/storage/check';
 import { watchSaveError } from '~/storage/save';
@@ -50,6 +51,7 @@ registerBuiltinCommands();
 let removeKeys: (() => void) | undefined;
 let stopWatchingSave: (() => void) | undefined;
 let stopSettings: (() => void) | undefined;
+let stopModules: (() => void) | undefined;
 let removeFileCheck: (() => void) | undefined;
 
 onMounted(() => {
@@ -57,6 +59,7 @@ onMounted(() => {
   removeKeys = installGlobalKeys();
   stopWatchingSave = watchSaveError();
   stopSettings = applySettings();
+  stopModules = startModules();
   removeFileCheck = installFileCheck();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
@@ -65,6 +68,7 @@ onBeforeUnmount(() => {
   removeKeys?.();
   stopWatchingSave?.();
   stopSettings?.();
+  stopModules?.();
   removeFileCheck?.();
 });
 </script>

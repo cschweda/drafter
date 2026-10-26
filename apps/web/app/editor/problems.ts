@@ -4,7 +4,10 @@ import { parsedDoc } from '@drafter/cm-fountain';
 import type { TextChange } from '@drafter/fountain';
 import { lint, STRICT_RULES } from '@drafter/lint';
 import { type ComputedRef, computed, type ShallowRef, shallowRef } from 'vue';
+import { moduleProblems } from '../modules/problems';
+import { reportModuleFailure } from '../modules/registry';
 import { useSettings } from '../settings/settings';
+import { applyTextChanges } from './apply-changes';
 import { relint } from './extensions';
 import { useEditor } from './session';
 
@@ -21,6 +24,18 @@ export interface Problem {
   from: number;
   to: number;
   /** 1-based source line. */
+  line: number;
+  fix?: { title: string; apply(): void };
+}
+
+/** A problem a script module found: listed with the others, labelled with the module's name, and not counted. */
+export interface ModuleRow {
+  key: string;
+  moduleName: string;
+  severity: 'warning' | 'info';
+  message: string;
+  from: number;
+  to: number;
   line: number;
   fix?: { title: string; apply(): void };
 }
@@ -138,9 +153,13 @@ function start() {
   onUpdate(readSoon);
 }
 
+let moduleRows: ComputedRef<readonly ModuleRow[]> | undefined;
+
 /** The problems in the editor, as its gutter shows them (technical design §9). */
 export function useProblems(): {
   problems: Readonly<ShallowRef<readonly Problem[]>>;
+  /** What script modules found. Not in `problems`, and not in `count`. */
+  moduleProblems: Readonly<ComputedRef<readonly ModuleRow[]>>;
   /** Errors and warnings; info isn't counted (it's advice, not a fault). */
   count: Readonly<ComputedRef<number>>;
   /** Whether editing is off (another tab has the script, or a switch is under way): no fix applies. */
@@ -153,6 +172,39 @@ export function useProblems(): {
   if (!started) start();
   const { settings } = useSettings();
   const { view, template, locked } = useEditor();
+
+  // Mapped through every edit by the module host, so the list is new whenever the text changed.
+  moduleRows ??= computed(() => {
+    const seen = new Map<string, number>();
+    return moduleProblems.value.map((p): ModuleRow => {
+      const n = seen.get(p.moduleId) ?? 0;
+      seen.set(p.moduleId, n + 1);
+      const { fix } = p;
+      return {
+        // Apart from a rule's keys (`rule:n`).
+        key: `module:${p.moduleId}:${n}`,
+        moduleName: p.moduleName,
+        severity: p.severity,
+        message: p.message,
+        from: p.from,
+        to: p.to,
+        line: view.state.doc.lineAt(Math.min(p.from, view.state.doc.length)).number,
+        ...(fix && {
+          fix: {
+            title: fix.title,
+            apply: () => {
+              if (locked.value) return;
+              try {
+                applyTextChanges(view, fix.changes);
+              } catch (error) {
+                reportModuleFailure(p.moduleName, error);
+              }
+            },
+          },
+        }),
+      };
+    });
+  });
 
   const count = computed(() => problems.value.filter((p) => p.severity !== 'info').length);
   const canFixAll = computed(
@@ -177,5 +229,5 @@ export function useProblems(): {
     relint();
   }
 
-  return { problems, count, locked, canFixAll, fixAll };
+  return { problems, moduleProblems: moduleRows, count, locked, canFixAll, fixAll };
 }

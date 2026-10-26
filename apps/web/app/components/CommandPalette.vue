@@ -110,7 +110,7 @@ const available = computed(() => {
 function itemOf(c: Command): Item {
   return {
     label: c.title,
-    icon: GROUP_ICON[c.group],
+    icon: c.icon ?? GROUP_ICON[c.group as CommandGroup] ?? 'i-lucide-puzzle',
     ...(c.keys ? { kbds: [formatKeys(c.keys, apple)] } : {}),
     onSelect: () => choose(() => c.run(), c.id),
   };
@@ -125,7 +125,11 @@ const groups = computed(() => {
     out.push({ id: 'scenes', label: 'Scenes', items: scenes.value });
   }
   if (mode.value === 'all') {
-    for (const group of GROUPS) {
+    // The five groups, then a group for each script module that is on, under its name.
+    const others = [...new Set(available.value.map((c) => c.group))].filter(
+      (g) => !GROUPS.includes(g as CommandGroup),
+    );
+    for (const group of [...GROUPS, ...others]) {
       const items = available.value.filter((c) => c.group === group).map(itemOf);
       if (items.length) out.push({ id: `commands-${group}`, label: group, items });
     }

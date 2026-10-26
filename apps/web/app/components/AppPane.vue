@@ -5,6 +5,7 @@ import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { useModuleTabs } from '~/modules/host';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import { TABS, type TabId } from '~/utils/panes';
@@ -34,7 +35,14 @@ function onFixAll() {
   document.getElementById('panel-problems')?.focus();
 }
 const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
-const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
+// The core three tabs, then the tabs of the modules that are on.
+const moduleTabs = useModuleTabs();
+const allTabs = computed<Array<{ id: TabId; label: string }>>(() => [
+  ...TABS,
+  ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
+]);
+const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
+const SLIM = computed<Record<'source' | 'problems', string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
   // Advice (info) isn't counted as a problem, so it's named apart.
   // The pane itself says there are no checks for a Markdown document.
@@ -59,7 +67,7 @@ const tabButtons = ref<HTMLButtonElement[]>([]);
 // Manual activation: arrow keys move focus along the tabs, and Enter or Space
 // chooses one, so arrowing past a tab open in the other pane never swaps them.
 function onKeydown(event: KeyboardEvent, index: number) {
-  const last = TABS.length - 1;
+  const last = allTabs.value.length - 1;
   const moves: Record<string, number> = {
     ArrowRight: index === last ? 0 : index + 1,
     ArrowLeft: index === 0 ? last : index - 1,
@@ -77,7 +85,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
   <section class="pane" :data-pane="props.pane">
     <div role="tablist" :aria-label="props.label" class="tabs">
       <button
-        v-for="(tab, index) in TABS"
+        v-for="(tab, index) in allTabs"
         :id="`tab-${props.pane}-${tab.id}`"
         :key="tab.id"
         ref="tabButtons"
@@ -117,8 +125,11 @@ function onKeydown(event: KeyboardEvent, index: number) {
           </button>
         </div>
       </template>
+      <template v-else-if="moduleTab">
+        {{ moduleTab.module.name }}
+      </template>
       <template v-else>
-        {{ SLIM[props.selected] }}
+        {{ SLIM[props.selected as 'source' | 'problems'] }}
         <template v-if="props.selected === 'source'">
           <span class="spacer" />
           <div role="group" aria-label="Source view" class="zoom">
@@ -148,6 +159,11 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
+      <component
+        :is="moduleTab.module.tab?.component"
+        v-else-if="moduleTab"
+        :context="moduleTab.context"
+      />
       <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
       <ProblemsPane v-else />

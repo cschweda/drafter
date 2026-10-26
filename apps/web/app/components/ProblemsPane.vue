@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { type Problem, useProblems } from '~/editor/problems';
+import { type ModuleRow, type Problem, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 
 // What the Source pane's gutter marks, as a list the writer can read, jump from, and fix from.
-const { problems, locked } = useProblems();
+const { problems, moduleProblems, locked } = useProblems();
+// What script modules found follows the editor's own, each labelled with its module's name.
+const rows = computed<ReadonlyArray<Problem | ModuleRow>>(() => [
+  ...problems.value,
+  ...moduleProblems.value,
+]);
+const sourceOf = (row: Problem | ModuleRow) => ('moduleName' in row ? row.moduleName : undefined);
 const { goto, kind } = useEditor();
 
 const SEVERITY = { error: 'Error', warning: 'Warning', info: 'Info' } as const;
@@ -27,7 +33,7 @@ function onFocusIn(event: FocusEvent) {
   if (focusAfter && event.target !== focusAfter.button) disarm();
 }
 
-function fix(problem: Problem, index: number, event: Event) {
+function fix(problem: Problem | ModuleRow, index: number, event: Event) {
   if (locked.value || !problem.fix) return;
   disarm();
   focusAfter = { index, button: event.currentTarget as Element | null };
@@ -35,7 +41,12 @@ function fix(problem: Problem, index: number, event: Event) {
   problem.fix.apply();
 }
 
-watch(problems, async () => {
+// What a module's items say, not where they are: they are mapped through every edit, which must
+// not look like the list changing (a fix is waiting for the list to change to move focus).
+const moduleSignature = computed(() =>
+  moduleProblems.value.map((p) => `${p.key}\0${p.message}\0${p.fix?.title ?? ''}`).join('\u0001'),
+);
+watch([problems, moduleSignature], async () => {
   if (!focusAfter) return;
   const { index } = focusAfter;
   await nextTick();
@@ -54,11 +65,13 @@ onBeforeUnmount(disarm);
 
 <template>
   <div ref="root">
-    <p v-if="kind === 'markdown'" class="empty">No checks for Markdown documents.</p>
-    <p v-else-if="problems.length === 0" class="empty">No problems found.</p>
+    <p v-if="kind === 'markdown' && rows.length === 0" class="empty">
+      No checks for Markdown documents.
+    </p>
+    <p v-else-if="rows.length === 0" class="empty">No problems found.</p>
     <ul v-else class="problems">
       <li
-        v-for="(problem, index) in problems"
+        v-for="(problem, index) in rows"
         :key="problem.key"
         class="problem"
         :data-severity="problem.severity"
@@ -68,6 +81,7 @@ onBeforeUnmount(disarm);
           class="jump"
           @click="goto(problem.from, { select: { from: problem.from, to: problem.to } })"
         >
+          <span v-if="sourceOf(problem)" class="source">{{ sourceOf(problem) }}</span>
           <span class="severity">{{ SEVERITY[problem.severity] }}:</span>
           <span class="message">{{ problem.message }}</span>
           <span class="line">Line {{ problem.line }}</span>
@@ -134,6 +148,14 @@ onBeforeUnmount(disarm);
 }
 .severity {
   font-weight: 700;
+}
+/* The module that found it. */
+.source {
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .message {
   flex: 1 1 14rem;

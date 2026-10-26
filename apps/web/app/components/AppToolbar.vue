@@ -119,6 +119,7 @@ const ACTIONS = [
           <span class="label">{{ action.label }}</span>
         </button>
       </template>
+      <ModuleButtons />
     </div>
     <UDropdownMenu :items="templateItems" :content="{ align: 'start', onCloseAutoFocus }">
       <button

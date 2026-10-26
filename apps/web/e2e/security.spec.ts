@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { countScenes, runCommand, start, turnOnFixture } from './modules';
 
 declare global {
   interface Window {
@@ -22,6 +23,30 @@ test('loads with no CSP violations', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
   expect(await page.evaluate(() => window.__violations)).toEqual([]);
+});
+
+// `pnpm e2e` builds with the test module (DRAFTER_TEST_MODULES=1), so these see a module on.
+test('loads and runs a module with no CSP violations', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__violations = [];
+    document.addEventListener('securitypolicyviolation', (event) =>
+      window.__violations.push(`${event.violatedDirective} ${event.blockedURI}`),
+    );
+  });
+  await start(page);
+  await turnOnFixture(page);
+  await countScenes(page).click();
+  await runCommand(page, 'Fixture: add a note');
+  await page.waitForLoadState('networkidle');
+  expect(await page.evaluate(() => window.__violations)).toEqual([]);
+});
+
+test('keeps connect-src to the page’s own origin, which a module’s network origins don’t change', async ({
+  request,
+}) => {
+  const csp = (await request.get('/')).headers()['content-security-policy'];
+  expect(csp).toContain("connect-src 'self'");
+  expect(csp).not.toContain('example.invalid');
 });
 
 test('restores the light theme before the page body exists', async ({ page }) => {

@@ -253,6 +253,21 @@ From the left:
 
 **Call:** while a sample is open, the first item reads "Sample · your edits stay in this browser," as in the mockup.
 
+### 5.8 Script modules
+
+A **script module** is an optional feature compiled into the app: Drafter's own code, never something downloaded while Drafter runs. That keeps technical design §14's "no plugin API in v1". The module contract follows §14's sketch, where a module reads the script and hands back edits and problems, so a sandboxed third-party API could reuse it later. Decided 2026-10-26.
+
+- **A module is a folder** at the repository root, `modules/<id>/`, whose `index.ts` default-exports a `ScriptModule` (`apps/web/app/modules/types.ts`). The build finds every such folder. `modules/README.md` explains how to write one and how to install one in a local copy.
+- **On drafter.dev** the modules are the ones in the repository when the site was built, each off until the writer turns it on. A visitor can't add one, because a module is code, and the web version runs only the code drafter.dev serves. **In a local install** (`pnpm install`, then `pnpm --filter @drafter/web dev`, or `build` and `preview`), dropping a folder into `modules/` and restarting adds it to Settings → Modules.
+- **A module may have** a round toolbar button after **Focus**, a tab beside Source, Script, and Problems (in either pane), palette commands under its name, and a section in Settings → Modules while it is on. It reads the script through a context (`source`, `doc`, `layout`, `template`, `title`, and, added by the builder, `kind` and `cursor`), and may make one undoable change (`applyChanges`), set its problems (`setProblems`), go to an offset, keep values in the browser's `settings` table (`module:<id>:<key>`, never written to the script), and say something (`notify`, a toast and a polite announcement).
+- **Settings → Modules** lists every module with its name, description, and permissions, and an on/off switch. Modules are off by default, and the choice is remembered. Turning on a module that declares network origins first asks, in plain words, "Script Doctor sends your script to api.anthropic.com when you ask it to. Turn it on?", and without a yes it stays off. Turning a module off removes its button, tab, and commands, and clears its problems.
+- **Problems** from a module are listed in the Problems pane under the module's name. They don't count toward the problem total. They follow the text through edits and go when another script opens.
+- **A module that throws** is caught and shown as a toast. It never breaks the editor. **A malformed module** (a default export without the shape) is skipped with a console warning naming its folder. **Two modules with one id** are a build error naming both folders.
+- **On phones**, module buttons stay round icon buttons while they fit at 320px (two do); past two they go into one **Modules** menu button.
+- **In a Markdown document** a module's `doc()` has no blocks and `layout()` is null: Markdown has no Fountain and no pages. `source()`, `title()` (the first heading), `kind()`, and the changes work as in any document.
+- **The network.** The content security policy stays `connect-src 'self'`. A module that declares network origins can't work until its own plan adds those origins to `scripts/csp.mjs` and updates the Privacy page. §2's "a script never leaves the device" then becomes "only when you turn on a module that says so, with your own key": the maintainer's decision, recorded when that module is planned.
+- **No real module ships in Phase 1 with the host.** A fixture module (a button, a tab, a command, and a declared network origin), compiled in only when the build sets `DRAFTER_TEST_MODULES=1`, is what the browser tests exercise; `pnpm e2e` sets it, and a production build has none of it. The AI Script Doctor (register a Claude API key, read the script, recommend changes) gets its own plan.
+
 ## 6. Templates and new scripts
 
 The template switcher offers **Screenplay** (`us-screenplay`) and **Stage play** (`stage-play-standard`), Phase 0's two built-ins. Choosing one is an ordinary, undoable edit to the script's metadata block (technical design §8.6), so the choice travels with the file.

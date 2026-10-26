@@ -143,10 +143,12 @@ test.describe('the dialog', () => {
     const inside = () => dialog(page).evaluate((d) => d.contains(document.activeElement));
     expect(await inside()).toBe(true);
     await expect(textSize(page)).toBeFocused();
-    // The dialog has six controls, and Tab goes through them without leaving it. (WebKit's Tab
-    // skips buttons and checkboxes unless the system asks otherwise.)
+    // Tab goes through the dialog's controls (the text size, the switches, a switch for each module,
+    // Done) without leaving it. (WebKit's Tab skips buttons and checkboxes unless the system asks
+    // otherwise.)
     if (browserName !== 'webkit') {
-      for (let i = 0; i < 5; i++) {
+      const controls = await dialog(page).locator('select, input[type="checkbox"], button').count();
+      for (let i = 1; i < controls; i++) {
         await page.keyboard.press('Tab');
         expect(await inside()).toBe(true);
       }
