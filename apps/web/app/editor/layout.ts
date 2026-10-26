@@ -13,7 +13,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
-import { createLayoutClient } from './layout-client';
+import { createLayoutClient, type LayoutClient } from './layout-client';
 import { blockIndexAt, type PagePosition, pageOf } from './pages';
 import { useEditor } from './session';
 
@@ -23,6 +23,8 @@ export interface LayoutSession {
   layoutTemplate: Readonly<ShallowRef<Template | null>>;
   /** True while the newest request hasn't come back. */
   updating: Readonly<Ref<boolean>>;
+  /** The worker couldn't be made or has failed, and no layout has come since. */
+  failed: Readonly<Ref<boolean>>;
   /**
    * The page holding the cursor's block, and the last page's number; null before the first layout.
    * `layout.index[i].page` is a page *number* (0 is the title page), not an index into
@@ -41,32 +43,46 @@ function create(): LayoutSession {
   const layout = shallowRef<Layout | null>(null);
   const layoutTemplate = shallowRef<Template | null>(null);
   const updating = ref(false);
+  const failed = ref(false);
   const cursorBlock = shallowRef(-1);
 
   // The template each pending request was made with, so a layout is drawn with its own.
   const templates = new Map<number, Template>();
   let newest = 0;
 
-  const client = createLayoutClient(
-    new Worker(new URL('../workers/layout.worker.ts', import.meta.url), { type: 'module' }),
-    (next, seq) => {
-      layout.value = next;
-      layoutTemplate.value = templates.get(seq) ?? null;
-      for (const key of templates.keys()) if (key <= seq) templates.delete(key);
-      if (seq >= newest) updating.value = false;
-    },
-    (message, seq) => {
-      // The last layout stays on screen.
-      console.error(`Layout failed: ${message}`);
-      if (seq >= newest) updating.value = false;
-    },
-  );
+  // A browser without module workers, or one that blocks them, throws here: the editor goes on.
+  const make = (): LayoutClient | null => {
+    try {
+      return createLayoutClient(
+        new Worker(new URL('../workers/layout.worker.ts', import.meta.url), { type: 'module' }),
+        (next, seq) => {
+          layout.value = next;
+          layoutTemplate.value = templates.get(seq) ?? null;
+          failed.value = false;
+          for (const key of templates.keys()) if (key <= seq) templates.delete(key);
+          if (seq >= newest) updating.value = false;
+        },
+        (message, seq) => {
+          // The last layout stays on screen.
+          console.error(`Layout failed: ${message}`);
+          failed.value = true;
+          if (seq >= newest) updating.value = false;
+        },
+      );
+    } catch (error) {
+      console.error(`Layout failed: ${error instanceof Error ? error.message : String(error)}`);
+      failed.value = true;
+      return null;
+    }
+  };
+  const client = make();
 
   // The session lives for the visit, so its watchers belong to no component.
   effectScope(true).run(() => {
     watch(
       [doc, template],
       () => {
+        if (!client) return;
         newest = client.request(view.state.doc.toString(), template.value);
         templates.set(newest, template.value);
         updating.value = true;
@@ -93,6 +109,7 @@ function create(): LayoutSession {
     layout,
     layoutTemplate,
     updating,
+    failed,
     cursorBlock,
     page: computed(() => pageOf(layout.value, cursorBlock.value)),
   };

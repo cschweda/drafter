@@ -15,9 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
 // Until the Problems list arrives (Plan 3), its panel holds a placeholder: a line of text.
-const SLIM: Record<TabId, string> = {
+const SLIM: Record<Exclude<TabId, 'script'>, string> = {
   source: 'screenplay.fountain',
-  script: '',
   problems: 'No problems',
 };
 
@@ -165,7 +164,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
   min-height: 24px;
   padding: 0 8px;
   border: 0;
-  border-radius: 5px;
+  /* Always there, so the pressed one's line moves nothing. */
+  border-bottom: 1px solid transparent;
+  border-radius: 5px 5px 0 0;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -175,6 +176,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
 .zoom-button[aria-pressed='true'] {
   background: var(--tab-on);
   color: var(--text);
+  border-bottom-color: var(--heading);
 }
 /* Forced colors drops the background, so a border marks the pressed one. */
 @media (forced-colors: active) {

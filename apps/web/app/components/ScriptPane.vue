@@ -5,7 +5,7 @@ import { useLayout } from '~/editor/layout';
 import { useEditor } from '~/editor/session';
 
 const { goto } = useEditor();
-const { layout, layoutTemplate, cursorBlock } = useLayout();
+const { layout, layoutTemplate, cursorBlock, failed } = useLayout();
 const zoom = useScriptZoom();
 
 const host = ref<HTMLElement>();
@@ -77,6 +77,7 @@ watch(cursorBlock, (block) => {
 <template>
   <div ref="host" class="script-host" tabindex="0">
     <div ref="probe" class="drafter-script probe" :style="{ '--cols': columns }" aria-hidden="true" />
+    <p v-if="failed && !layout" role="status" class="failed">Couldn't lay out the pages.</p>
   </div>
 </template>
 
@@ -95,6 +96,11 @@ watch(cursorBlock, (block) => {
 .script-host:focus-visible {
   outline: 2px solid var(--heading);
   outline-offset: -2px;
+}
+.failed {
+  margin: 0;
+  padding: 8px 0;
+  color: var(--muted);
 }
 .probe {
   position: absolute;

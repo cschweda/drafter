@@ -171,17 +171,62 @@ test.describe('the Script pane on a desktop', () => {
           for (const entry of list.getEntries()) long.push(entry.duration);
         }).observe({ type: 'longtask', buffered: false });
       });
+      const longTasks = () =>
+        page.evaluate(() => (window as unknown as { longTasks: number[] }).longTasks);
+      // Proof the observer sees what it should: a task of about 80 ms is reported once. Then the
+      // list is emptied, so only the typing is judged below.
+      // (A timer's task: the long-task API doesn't count the evaluation itself.)
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            setTimeout(() => {
+              const end = performance.now() + 80;
+              while (performance.now() < end);
+              resolve();
+            }),
+          ),
+      );
+      await expect.poll(async () => (await longTasks()).length).toBe(1);
+      await page.evaluate(() => {
+        (window as unknown as { longTasks: number[] }).longTasks.length = 0;
+      });
+
       // The start of the script is the worst place to type: every later offset moves.
+      const phrase = 'Typing into a long script, one letter at a time.';
       await page.keyboard.press('ControlOrMeta+Home');
-      await page.keyboard.type('Typing into a long script, one letter at a time.', { delay: 60 });
+      await page.keyboard.type(phrase, { delay: 60 });
       await expect(slim(page)).not.toContainText('Updating');
+      // Layout kept up: the first page shows what was typed.
+      await expect(pages(page).first().locator('.drafter-line', { hasText: phrase })).toBeVisible();
       // Let any task still queued run before reading the observer.
       await page.waitForTimeout(500);
-      const long = await page.evaluate(
-        () => (window as unknown as { longTasks: number[] }).longTasks,
-      );
-      expect(long).toEqual([]);
+      expect(await longTasks()).toEqual([]);
     });
+  });
+
+  test('marks the pressed zoom button with a line in the heading color', async ({ page }) => {
+    const cue = (name: string) =>
+      page.getByRole('button', { name, exact: true }).evaluate((el) => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--heading)';
+        document.body.append(probe);
+        const heading = getComputedStyle(probe).color;
+        probe.remove();
+        const style = getComputedStyle(el);
+        return {
+          width: style.borderBottomWidth,
+          line: style.borderBottomStyle,
+          color: style.borderBottomColor,
+          heading,
+        };
+      });
+    const pressed = await cue('Fit width');
+    expect(pressed).toMatchObject({ width: '1px', line: 'solid' });
+    expect(pressed.color).toBe(pressed.heading);
+    // The other button keeps the room but not the color.
+    const other = await cue('100%');
+    expect(other.width).toBe('1px');
+    expect(other.color).not.toBe(other.heading);
   });
 
   test('has no accessibility violations in the Script pane in the dark theme', async ({ page }) => {
@@ -193,6 +238,40 @@ test.describe('the Script pane on a desktop', () => {
   }) => {
     await useLightTheme(page);
     expect(await violations(page)).toEqual([]);
+  });
+});
+
+test.describe('when the pages cannot be laid out', () => {
+  const MESSAGE = "Couldn't lay out the pages.";
+
+  test('says so when the layout worker fails to load', async ({ page }) => {
+    await page.route(/layout\.worker.*\.js/, (route) => route.abort());
+    await page.goto('/');
+    await expect(page.getByText(MESSAGE)).toBeVisible();
+    await expect(pages(page)).toHaveCount(0);
+    // The editor still works.
+    if (!(await page.locator('.cm-content').isVisible())) {
+      await page.getByRole('tab', { name: 'Source' }).click();
+    }
+    await page.locator('.cm-content').click();
+    await page.keyboard.insertText('still typing');
+    await expect(page.locator('.cm-line', { hasText: 'still typing' })).toBeVisible();
+    // The message is not an accessibility problem.
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('says so when a worker cannot be created at all', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.Worker = class {
+        constructor() {
+          throw new Error('workers are not available');
+        }
+      } as unknown as typeof Worker;
+    });
+    await page.goto('/');
+    await expect(page.getByText(MESSAGE)).toBeVisible();
+    // The page loads and the editor is there.
+    await expect(page.locator('.cm-content')).toBeAttached();
   });
 });
 
