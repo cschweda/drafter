@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { registerBuiltinCommands } from '~/commands/builtin';
+import { installGlobalKeys } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
-import { installSaveKeys } from '~/storage/save';
+import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
 import { otherPane, type PaneId } from '~/utils/panes';
@@ -32,16 +34,22 @@ useHead({
   ),
 });
 
-let removeSaveKeys: (() => void) | undefined;
+// The commands and their keys. The registry binds the keys that belong to the app (Save, Open,
+// New, the palette) on the window; the editor's keymap has the rest.
+registerBuiltinCommands();
+let removeKeys: (() => void) | undefined;
+let stopWatchingSave: (() => void) | undefined;
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
-  removeSaveKeys = installSaveKeys();
+  removeKeys = installGlobalKeys();
+  stopWatchingSave = watchSaveError();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
-  removeSaveKeys?.();
+  removeKeys?.();
+  stopWatchingSave?.();
 });
 </script>
 
@@ -54,6 +62,8 @@ onBeforeUnmount(() => {
     </div>
     <DropZone />
     <SameTitleDialog />
+    <RemoveDialog />
+    <CommandPalette />
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane

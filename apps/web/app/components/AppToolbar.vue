@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatKeys, isApple } from '~/commands/keys';
+import { openPalette } from '~/commands/palette';
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
 import { useGuard } from '~/storage/guard';
@@ -8,6 +10,7 @@ const colorMode = useColorMode();
 const { readOnly } = useGuard();
 const { doc } = useEditor();
 const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
+const paletteKeys = formatKeys('Mod-k', isApple());
 const dark = computed(() => colorMode.value !== 'light');
 
 function toggleTheme() {
@@ -74,10 +77,16 @@ const ACTIONS = [
       {{ templateName }}
     </button>
     <span class="spacer" />
-    <button type="button" class="chip" aria-disabled="true" data-tour="palette">
+    <button
+      type="button"
+      class="chip"
+      data-tour="palette"
+      aria-haspopup="dialog"
+      @click="openPalette('all', $event.currentTarget as HTMLElement)"
+    >
       <UIcon name="i-lucide-search" class="icon" />
       <span class="label">Go to scene or command</span>
-      <kbd>⌘K</kbd>
+      <kbd>{{ paletteKeys }}</kbd>
     </button>
     <button
       type="button"
