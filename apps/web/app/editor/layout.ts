@@ -38,7 +38,7 @@ export interface LayoutSession {
 let session: LayoutSession | undefined;
 
 function create(): LayoutSession {
-  const { view, doc, template, onState } = useEditor();
+  const { view, doc, template, kind, onState } = useEditor();
   const layout = shallowRef<Layout | null>(null);
   const layoutTemplate = shallowRef<Template | null>(null);
   const updating = ref(false);
@@ -79,9 +79,10 @@ function create(): LayoutSession {
   // The session lives for the visit, so its watchers belong to no component.
   effectScope(true).run(() => {
     watch(
-      [doc, template],
+      [doc, template, kind],
       () => {
-        if (!client) return;
+        // A Markdown document has no pages: the worker is left alone until it is Fountain again.
+        if (!client || kind.value === 'markdown') return;
         newest = client.request(view.state.doc.toString(), template.value);
         templates.set(newest, template.value);
         updating.value = true;

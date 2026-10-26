@@ -86,6 +86,26 @@ describe('projects', () => {
     expect((await getProject(p.id))?.title).toBe('Kept');
   });
 
+  test('is a Fountain script unless it says it is Markdown, and takes its title from a heading', async () => {
+    const script = await createProject({ source: 'Title: A\n' });
+    expect(script.kind).toBe('fountain');
+    const notes = await createProject({ source: '# The Treatment\n\nWords.\n', kind: 'markdown' });
+    expect(notes).toMatchObject({
+      kind: 'markdown',
+      title: 'The Treatment',
+      templateId: 'us-screenplay',
+      meta: null,
+    });
+    // The kind stays through the recovery copy, and the title follows the text.
+    const written = await writeSource(notes, '# Renamed\n');
+    expect(written).toMatchObject({ kind: 'markdown', title: 'Renamed' });
+    await updateProject(notes.id, { source: 'no heading\n', fileName: 'notes.md' });
+    expect(await getProject(notes.id)).toMatchObject({ kind: 'markdown', title: 'notes' });
+    // A Markdown document's first lines are not a title page, whatever they look like.
+    const odd = await createProject({ source: 'Title: Not a title page\n', kind: 'markdown' });
+    expect(odd.title).toBe('Untitled');
+  });
+
   test('an update to a project that is gone does nothing', async () => {
     await updateProject('missing', { source: 'x' });
     expect(await getProject('missing')).toBeUndefined();

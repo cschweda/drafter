@@ -3,16 +3,19 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
-import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+import { templateIdOf, typeNameOf } from '~/editor/template';
+import { wordsLabel } from '~/markdown/preview';
+import { useMarkdown } from '~/markdown/use-markdown';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
 import { type RecoveryState, useScript } from '~/storage/script';
 
-const { doc } = useEditor();
+const { doc, kind } = useEditor();
+const { words } = useMarkdown();
 const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
 const { count } = useProblems();
-const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
+const templateName = computed(() => typeNameOf(kind.value, templateIdOf(doc.value)));
 
 // "Saved 4 min ago" is worked out from this, which moves every 30 seconds (and when a save lands).
 const now = ref(Date.now());
@@ -83,8 +86,12 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
-    <span v-if="page">{{ pageLabel(page) }}</span>
-    <span>{{ problemsLabel(count) }}</span>
+    <!-- A Markdown document has words, no pages, and no checks. -->
+    <span v-if="kind === 'markdown'">{{ wordsLabel(words) }}</span>
+    <template v-else>
+      <span v-if="page">{{ pageLabel(page) }}</span>
+      <span>{{ problemsLabel(count) }}</span>
+    </template>
     <span class="spacer" />
     <template v-if="ready">
       <button

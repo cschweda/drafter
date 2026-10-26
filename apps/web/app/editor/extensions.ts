@@ -5,8 +5,15 @@ import { lintKeymap, previousDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, lineNumbers, ViewPlugin } from '@codemirror/view';
-import { type CursorElement, fountain, relint as relintView } from '@drafter/cm-fountain';
+import {
+  type CursorElement,
+  fountain,
+  parsedDoc,
+  relint as relintView,
+} from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
+import { markdownMode } from '../markdown/editor';
+import type { DocumentKind } from '../markdown/kind';
 import { theme } from './theme';
 
 /**
@@ -35,6 +42,13 @@ export const readOnly = new Compartment();
 export function readOnlyExtension(on: boolean): Extension {
   return [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
 }
+
+/**
+ * What the Source pane knows about the kind of document: `fountain()` for a screenplay or a stage
+ * play, `markdownMode()` for a Markdown one. In Markdown, Fountain's keys, completion, folding,
+ * highlighting, and lint are all off, because they are all in `fountain()`.
+ */
+export const language = new Compartment();
 
 let active: EditorView | undefined;
 
@@ -68,16 +82,28 @@ export interface EditorHooks {
   onCursorElement: (element: CursorElement | null) => void;
 }
 
-/** Everything the one editor is made of, around `fountain()` (technical design §3). */
-export function editorExtensions({
-  template,
-  lintOptions,
-  onCursorElement,
-}: EditorHooks): Extension {
+/** The language extension for a kind of document: `language.reconfigure(languageExtension(…))` switches it. */
+export function languageExtension(
+  { template, lintOptions, onCursorElement }: EditorHooks,
+  kind: DocumentKind,
+): Extension {
+  return kind === 'markdown'
+    ? markdownMode()
+    : fountain({ template, lintOptions, onCursorElement });
+}
+
+/**
+ * Everything the one editor is made of, around `fountain()` (technical design §3) or, for a
+ * Markdown document, `markdownMode()`. The parse of the text as Fountain (`parsedDoc`) is kept in
+ * both: the session and the layout read it, and it is cheap, so a switch of kind is one
+ * reconfigure of the language and nothing else.
+ */
+export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fountain'): Extension {
   return [
     remember,
     lineNumbersGutter.of([]),
-    fountain({ template, lintOptions, onCursorElement }),
+    parsedDoc,
+    language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),
     foldGutter(),

@@ -7,8 +7,17 @@ import { nextTick, type ShallowRef, shallowRef } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
 import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
+import type { DocumentKind } from '../markdown/kind';
 import { applyEditorSettings } from './apply-settings';
-import { editorExtensions, readOnly, readOnlyExtension, relint } from './extensions';
+import {
+  type EditorHooks,
+  editorExtensions,
+  language,
+  languageExtension,
+  readOnly,
+  readOnlyExtension,
+  relint,
+} from './extensions';
 import { SAMPLE_SCREENPLAY } from './samples';
 import { templateIdOf } from './template';
 
@@ -20,12 +29,19 @@ export interface EditorSession {
   readonly cursor: Readonly<ShallowRef<CursorElement | null>>;
   /** The built-in that `templateIdOf(doc)` names (technical design §8.6); the toolbar's chip writes it (`useTemplate`). */
   readonly template: Readonly<ShallowRef<Template>>;
+  /** What the document is: Fountain, or plain Markdown (no pages, elements, or checks). */
+  readonly kind: Readonly<ShallowRef<DocumentKind>>;
   /**
-   * Gives the one editor a fresh state with `text` (an opened script): its own undo history, its
-   * cursor at the start, and the same extensions. Nothing is kept of the text it held, so the
-   * caller keeps that first.
+   * Gives the one editor a fresh state with `text` (an opened script) of `kind`: its own undo
+   * history, its cursor at the start, and the same extensions. Nothing is kept of the text it
+   * held, so the caller keeps that first.
    */
-  load(text: string): void;
+  load(text: string, kind?: DocumentKind): void;
+  /**
+   * Changes the kind of the open document and keeps its text, history, and cursor: the language
+   * is reconfigured, nothing is typed. Undo does not reverse it.
+   */
+  setKind(kind: DocumentKind): void;
   /** Whether editing is off: another tab has the script, or a switch to another script is under way. */
   readonly locked: Readonly<ShallowRef<boolean>>;
   /** Turns editing off (or on): the script is open for editing in another tab. `load` keeps it. */
@@ -53,6 +69,7 @@ function create(): EditorSession {
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
   const locked = shallowRef(false);
+  const kind = shallowRef<DocumentKind>('fountain');
   const listeners = new Set<(state: EditorState) => void>();
   const updateListeners = new Set<(state: EditorState) => void>();
 
@@ -70,15 +87,17 @@ function create(): EditorSession {
 
   const { settings } = useSettings();
 
+  const hooks: EditorHooks = {
+    template: () => template.value,
+    lintOptions: () => ({ strict: settings.value.strict }),
+    onCursorElement: (element) => {
+      cursor.value = element;
+    },
+  };
+
   // Everything but the text, so `load` can make a new state from the same pieces.
-  const extensions = [
-    editorExtensions({
-      template: () => template.value,
-      lintOptions: () => ({ strict: settings.value.strict }),
-      onCursorElement: (element) => {
-        cursor.value = element;
-      },
-    }),
+  const extensionsFor = (of: DocumentKind) => [
+    editorExtensions(hooks, of),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) follow(update.state);
       if (update.docChanged || update.selectionSet) for (const l of listeners) l(update.state);
@@ -88,26 +107,38 @@ function create(): EditorSession {
     }),
   ];
   const view = new EditorView({
-    state: EditorState.create({ doc: SAMPLE_SCREENPLAY, extensions }),
+    state: EditorState.create({ doc: SAMPLE_SCREENPLAY, extensions: extensionsFor('fountain') }),
   });
 
   doc.value = view.state.field(parsedDoc);
   // onCursorElement doesn't report the element the cursor starts in.
   cursor.value = cursorElement(view.state);
 
-  function load(text: string) {
+  function load(text: string, loaded: DocumentKind = 'fountain') {
+    kind.value = loaded;
     // `setState` tells no update listener, so the session catches up by hand.
-    view.setState(EditorState.create({ doc: text, extensions }));
+    view.setState(EditorState.create({ doc: text, extensions: extensionsFor(loaded) }));
     // The compartments start from their first values again, so read-only is put back, and so
     // are the settings that live in them (spellcheck, line numbers) and Strict Fountain's lint.
     if (locked.value) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
     applyEditorSettings(view, settings.value);
     follow(view.state);
-    cursor.value = cursorElement(view.state);
+    // There are no elements in a Markdown document.
+    cursor.value = loaded === 'fountain' ? cursorElement(view.state) : null;
     // The new text starts at the top, whatever the old one's scroller was showing.
     view.dispatch({ effects: EditorView.scrollIntoView(0) });
     for (const l of listeners) l(view.state);
     for (const l of updateListeners) l(view.state);
+  }
+
+  function setKind(next: DocumentKind) {
+    if (next === kind.value) return;
+    kind.value = next;
+    view.dispatch({ effects: language.reconfigure(languageExtension(hooks, next)) });
+    cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
+    // Fountain's lint starts again for the text it now lints (the reconfigure starts it, too, but
+    // after its delay). Not in this update: a listener may not dispatch.
+    if (next === 'fountain') queueMicrotask(relint);
   }
 
   function setReadOnly(on: boolean) {
@@ -154,7 +185,9 @@ function create(): EditorSession {
     cursor,
     template,
     locked,
+    kind,
     load,
+    setKind,
     setReadOnly,
     onState,
     onUpdate,

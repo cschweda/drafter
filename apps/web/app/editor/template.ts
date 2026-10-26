@@ -1,4 +1,5 @@
 import type { Doc } from '@drafter/fountain';
+import type { DocumentKind } from '../markdown/kind';
 import type { SampleKind } from './samples';
 
 export type TemplateId = 'us-screenplay' | 'stage-play-standard';
@@ -22,9 +23,9 @@ export function templateIdOf(doc: Doc): TemplateId {
 }
 
 /**
- * One kind of document the writer can make or switch to. Today every entry is a Fountain template,
- * chosen through the metadata block; `kind` is the discriminator Task 6 uses to add the Markdown
- * document, which is not a template and changes the project's kind instead.
+ * One kind of document the writer can make or switch to. A Fountain entry is a template, chosen
+ * through the metadata block. The Markdown entry is not a template: choosing it changes the
+ * project's kind (`Project.kind`), so `kind` is the discriminator.
  */
 export interface FountainType {
   kind: 'fountain';
@@ -40,12 +41,34 @@ export interface FountainType {
   newKeys?: string;
 }
 
-export type DocumentType = FountainType;
+export interface MarkdownType {
+  kind: 'markdown';
+  id: 'markdown';
+  /** The chip's name for it. */
+  name: string;
+  newKind: 'markdown';
+  newTitle: string;
+  newIcon: string;
+  newKeys?: undefined;
+}
+
+export type DocumentType = FountainType | MarkdownType;
+
+/** What New makes: a sample's kind for a Fountain template, else `markdown`. */
+export type NewKind = DocumentType['newKind'];
+
+/** The chip's name for a Markdown document. */
+export const MARKDOWN_NAME = 'Markdown (plain text)';
+
+/** The name of the document type a script is: Markdown, else its template's. */
+export function typeNameOf(kind: DocumentKind, template: TemplateId): string {
+  return kind === 'markdown' ? MARKDOWN_NAME : TEMPLATE_NAMES[template];
+}
 
 /**
  * The one list, in the order the maintainer decided (2026-10-26): Screenplay (the default), Stage
  * play, then any other Fountain template (Phase 3 adds TV, radio, and UK ones here), then Markdown
- * (plain text), which Task 6 appends as one more entry of the other `kind`. The toolbar chip, the
+ * (plain text), the one entry of the other `kind`, which stays last. The toolbar chip, the
  * Scripts menu's New items, and the palette's New commands all read this array, so they agree.
  */
 export const DOCUMENT_TYPES: readonly DocumentType[] = [
@@ -65,5 +88,13 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = [
     newKind: 'stage-play',
     newTitle: 'New stage play',
     newIcon: 'i-lucide-drama',
+  },
+  {
+    kind: 'markdown',
+    id: 'markdown',
+    name: MARKDOWN_NAME,
+    newKind: 'markdown',
+    newTitle: 'New Markdown document',
+    newIcon: 'i-lucide-file-text',
   },
 ];

@@ -48,4 +48,10 @@ describe('newScriptText', () => {
     expect(newScriptText('screenplay', TODAY)).toEqual(newScriptText('screenplay', TODAY));
     expect(parse(newScriptText('screenplay', TODAY).text).meta).toBeNull();
   });
+
+  test('starts a Markdown document with a title, a blank line, and the cursor below them', () => {
+    const { text, cursor } = newScriptText('markdown', TODAY);
+    expect(text).toBe('# Untitled\n\n');
+    expect(cursor).toBe(text.length);
+  });
 });

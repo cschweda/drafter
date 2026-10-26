@@ -48,7 +48,10 @@ function onDrop(event: DragEvent) {
     .fromDrop(item)
     .then((file) => {
       if (file) return openFile(file);
-      return say(openError, 'That isn’t a file Drafter can open. Drop a .fountain or .txt file.');
+      return say(
+        openError,
+        'That isn’t a file Drafter can open. Drop a .fountain, .md, or .txt file.',
+      );
     })
     .catch(() => say(openError, 'Couldn’t open the file. Your current script is unchanged.'));
 }
@@ -71,7 +74,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="over" class="zone" data-drop-zone>
-    <p>Drop a .fountain or .txt file to open it</p>
+    <p>Drop a .fountain, .md, or .txt file to open it</p>
   </div>
 </template>
 

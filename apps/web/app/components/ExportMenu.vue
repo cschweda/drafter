@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useEditor } from '~/editor/session';
 import { type ExportKind, exportError, exportNotice, exportScript } from '~/storage/export';
 
-// The toolbar's Export menu (Phase 1 design §9.7): PDF and plain text. The trigger is the toolbar's
+// A Markdown document exports as its Markdown file or as plain text; a PDF of one is deferred.
+const { kind } = useEditor();
+
+// The toolbar's Export menu (Phase 1 design §9.7): PDF and plain text (a Markdown document's are the Markdown file and plain text). The trigger is the toolbar's
 // Export button, drawn by the toolbar and given through the slot. Plan 4's commands and app menu
 // call `exportScript` too. The toast says when the file is ready, or why it isn't.
 const open = ref(false);
@@ -75,7 +79,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       class="panel"
       :style="{ top: `${place.top}px`, left: `${place.left}px` }"
     >
-      <button type="button" class="item" data-first @click="choose('pdf')">
+      <button v-if="kind === 'markdown'" type="button" class="item" data-first @click="choose('md')">
+        <UIcon name="i-lucide-file-text" class="icon" />Markdown (.md)
+      </button>
+      <button v-else type="button" class="item" data-first @click="choose('pdf')">
         <UIcon name="i-lucide-file-text" class="icon" />PDF
       </button>
       <button type="button" class="item" @click="choose('txt')">

@@ -2,6 +2,9 @@
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
+import { useEditor } from '~/editor/session';
+import { wordsLabel } from '~/markdown/preview';
+import { useMarkdown } from '~/markdown/use-markdown';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import { TABS, type TabId } from '~/utils/panes';
@@ -18,6 +21,12 @@ const props = defineProps<{
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
 const { project } = useScript();
+const { kind } = useEditor();
+const { words, updating: previewing } = useMarkdown();
+const markdown = computed(() => kind.value === 'markdown');
+/** The Script tab is the Preview in a Markdown document. */
+const labelOf = (tab: { id: string; label: string }) =>
+  tab.id === 'script' && markdown.value ? 'Preview' : tab.label;
 const { problems, count, canFixAll, fixAll } = useProblems();
 // The button goes when nothing is left to fix, and focus with it: it goes to the panel.
 function onFixAll() {
@@ -28,11 +37,13 @@ const suggestions = computed(() => problems.value.filter((p) => p.severity === '
 const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
   // Advice (info) isn't counted as a problem, so it's named apart.
-  problems:
-    problemsLabel(count.value) +
-    (suggestions.value > 0
-      ? ` · ${suggestions.value} ${suggestions.value === 1 ? 'suggestion' : 'suggestions'}`
-      : ''),
+  // The pane itself says there are no checks for a Markdown document.
+  problems: markdown.value
+    ? ''
+    : problemsLabel(count.value) +
+      (suggestions.value > 0
+        ? ` · ${suggestions.value} ${suggestions.value === 1 ? 'suggestion' : 'suggestions'}`
+        : ''),
 }));
 const { settings, set } = useSettings();
 
@@ -80,12 +91,16 @@ function onKeydown(event: KeyboardEvent, index: number) {
         @click="emit('choose', tab.id)"
         @keydown="onKeydown($event, index)"
       >
-        {{ tab.label }}
+        {{ labelOf(tab) }}
         <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
       </button>
     </div>
     <div class="slim">
-      <template v-if="props.selected === 'script'">
+      <template v-if="props.selected === 'script' && markdown">
+        <span class="page">{{ wordsLabel(words) }}</span>
+        <span v-if="previewing" class="updating">Updating…</span>
+      </template>
+      <template v-else-if="props.selected === 'script'">
         <span class="page">{{ pageLabel(page) }}</span>
         <span v-if="updating" class="updating">Updating…</span>
         <span class="spacer" />
@@ -133,6 +148,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
+      <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
       <ProblemsPane v-else />
     </div>

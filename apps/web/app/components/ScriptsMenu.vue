@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { DOCUMENT_TYPES, TEMPLATE_NAMES } from '~/editor/template';
+import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
-import type { Project } from '~/storage/projects';
+import { kindOf, type Project } from '~/storage/projects';
 import { READ_ONLY_HINT, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
@@ -211,7 +211,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
               @click="run(() => script.open(p.id))"
             >
               <span :id="`script-${p.id}`" class="title">{{ p.title }}</span>
-              <span class="meta">{{ TEMPLATE_NAMES[p.templateId] }}</span>
+              <span class="meta">{{ typeNameOf(kindOf(p), p.templateId) }}</span>
             </button>
             <button
               type="button"

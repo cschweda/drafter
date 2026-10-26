@@ -1,13 +1,15 @@
 import { parse } from '@drafter/fountain';
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import type { DocumentKind } from '../markdown/kind';
+import { retitleMarkdown } from '../markdown/title';
 import { FileGoneError, useFiles } from './files';
 import { useGuard } from './guard';
 import { hashText } from './hash';
-import { getHandle } from './projects';
+import { getHandle, kindOf } from './projects';
 import { say } from './say';
 import { type OpenedFile, useScript } from './script';
-import { decodeFile, fileBaseName, NotUtf8Error, titleOf } from './text';
+import { decodeFile, fileBaseName, NotUtf8Error, titleFor } from './text';
 import { inTurn } from './turn';
 
 /**
@@ -40,7 +42,8 @@ export function compareVersions(hashes: {
  * added to the title page, else a title page is made. A script is called by its Title, so this is
  * what names a copy.
  */
-export function retitle(source: string, title: string): string {
+export function retitle(source: string, title: string, kind: DocumentKind = 'fountain'): string {
+  if (kind === 'markdown') return retitleMarkdown(source, title);
   const doc = parse(source);
   const line = `Title: ${title}`;
   const field = doc.titlePage?.fields.find((f) => f.key.trim().toLowerCase() === 'title');
@@ -206,6 +209,7 @@ async function doCheck(ask: boolean, forSave: boolean): Promise<Outcome> {
       bom: decoded.bom,
       fileName: name,
       ref: handle,
+      kind: kindOf(now),
     };
     const verdict = compareVersions({ saved: now.savedHash, file: fileHash, browser: browserHash });
     if (verdict === 'same' || verdict === 'browser-changed') {
@@ -241,7 +245,8 @@ async function bothChanged(
   opened: OpenedFile,
   currentText: () => string,
 ): Promise<Outcome | 'again'> {
-  const title = titleOf(parse(browserText), fileBaseName(script.project.value?.fileName ?? name));
+  const kind = opened.kind ?? 'fountain';
+  const title = titleFor(kind, browserText, fileBaseName(script.project.value?.fileName ?? name));
   const choice = await askWhichToKeep(title, name);
   // Dismissed: nothing changes, and the next check asks again.
   if (choice === 'later') return 'stop';
@@ -253,8 +258,9 @@ async function bothChanged(
     // would be replaced: the copy must have them, so the question is asked about the text as it is.
     if (currentText() !== browserText) return 'again';
     // The browser's text is kept first: if that fails, nothing is replaced.
-    await script.addScript(retitle(browserText, `${title} (this browser's copy)`), {
+    await script.addScript(retitle(browserText, `${title} (this browser's copy)`, kind), {
       lineBreak: script.project.value?.lineBreak ?? opened.lineBreak,
+      kind,
     });
     if ((await script.replaceWith(id, opened)) === 'replaced') {
       await announce(
@@ -262,9 +268,10 @@ async function bothChanged(
       );
     }
   } else {
-    await script.addScript(retitle(opened.text, `${title} (from the file)`), {
+    await script.addScript(retitle(opened.text, `${title} (from the file)`, kind), {
       lineBreak: opened.lineBreak,
       bom: opened.bom,
+      kind,
     });
     // The file's version is now the one that has been seen: saving writes this browser's text.
     await script.saved(opened);

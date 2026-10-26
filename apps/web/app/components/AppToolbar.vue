@@ -2,7 +2,7 @@
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
 import { useEditor } from '~/editor/session';
-import { DOCUMENT_TYPES, TEMPLATE_NAMES } from '~/editor/template';
+import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
@@ -19,18 +19,28 @@ function onCloseAutoFocus(event: Event) {
   event.preventDefault();
   editor.goto(editor.view.state.selection.main.head);
 }
-const templateName = computed(() => TEMPLATE_NAMES[template.id.value]);
-// The chip's menu: one checked item for the template the script is in, in `DOCUMENT_TYPES` order.
-// A tab that only shows the script, or a script with an unclosed `/*`, can't be switched.
+const templateName = computed(() => typeNameOf(template.kind.value, template.id.value));
+// A Markdown document has no template: its chip names the document, and the label says so.
+const chipLabel = computed(() =>
+  template.kind.value === 'markdown'
+    ? `Document: ${templateName.value}`
+    : `Template: ${templateName.value}`,
+);
+// The chip's menu: one checked item for the template (or the Markdown document) the script is, in
+// `DOCUMENT_TYPES` order. A tab that only shows the script, or a script with an unclosed `/*`, can't
+// be switched to a template; Markdown asks first.
 const templateItems = computed(() =>
   DOCUMENT_TYPES.map((type) => ({
     label: type.name,
     type: 'checkbox' as const,
-    checked: type.id === template.id.value,
-    disabled: !template.canChoose.value,
+    checked:
+      type.kind === 'markdown'
+        ? template.kind.value === 'markdown'
+        : template.kind.value === 'fountain' && type.id === template.id.value,
+    disabled: !template.canChooseType(type),
     onSelect: () => {
       chosen = true;
-      template.choose(type.id);
+      void template.chooseType(type);
     },
   })),
 );
@@ -114,7 +124,7 @@ const ACTIONS = [
       <button
         type="button"
         class="chip template"
-        :aria-label="`Template: ${templateName}`"
+        :aria-label="chipLabel"
         data-tour="template"
       >
         {{ templateName }}

@@ -2,6 +2,7 @@
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installGlobalKeys } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
+import { markdownTitle } from '~/markdown/title';
 import { applySettings } from '~/settings/apply';
 import { installFileCheck } from '~/storage/check';
 import { watchSaveError } from '~/storage/save';
@@ -23,17 +24,24 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 // The editor is parked here whenever the Source tab isn't showing.
-const { view, doc } = useEditor();
+const { view, doc, kind } = useEditor();
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
 
+/** The script's title, as its kind reads it. */
+function pageTitle(): string {
+  const fallback = fileBaseName(project.value?.fileName);
+  // The text changed: the Fountain parse is the signal, and the Markdown title is read from the text.
+  doc.value;
+  return kind.value === 'markdown'
+    ? (markdownTitle(view.state.doc.toString()) ?? fallback)
+    : titleOf(doc.value, fallback);
+}
+
 // The tab says which script this is, and whether it has changes that aren't in its file.
 useHead({
-  title: computed(
-    () =>
-      `${dirty.value ? '• ' : ''}${titleOf(doc.value, fileBaseName(project.value?.fileName))} — Drafter`,
-  ),
+  title: computed(() => `${dirty.value ? '• ' : ''}${pageTitle()} — Drafter`),
 });
 
 // The commands and their keys. The registry binds the keys that belong to the app (Save, Open,
@@ -71,6 +79,7 @@ onBeforeUnmount(() => {
     </div>
     <DropZone />
     <SameTitleDialog />
+    <MarkdownDialog />
     <BothChangedDialog />
     <RemoveDialog />
     <CommandPalette />

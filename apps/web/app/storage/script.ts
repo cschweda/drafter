@@ -11,6 +11,8 @@ import {
 } from 'vue';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
+import type { NewKind } from '../editor/template';
+import type { DocumentKind } from '../markdown/kind';
 import { db } from './db';
 import type { FileRef } from './files';
 import { guardControl, useGuard } from './guard';
@@ -19,8 +21,10 @@ import { checkRecovery, type RecoveryState, requestPersistence } from './health'
 import { newScriptText } from './new-script';
 import {
   createProject,
+  derive,
   getProject,
   getSavedText,
+  kindOf,
   listProjects,
   type Project,
   putHandle,
@@ -49,7 +53,15 @@ export interface ScriptSession {
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
   /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
-  newScript(kind: SampleKind): Promise<void>;
+  newScript(kind: NewKind): Promise<void>;
+  /**
+   * Makes the open script a `kind` document: Markdown, or Fountain again. The text and its undo
+   * history stay; the editor's language and the project's `kind` change, and the title is read
+   * again the way that kind reads it. Not an edit, so undo does not reverse it. Does nothing in a
+   * tab that only shows the script, while a switch is under way, for a sample, or when it is that
+   * kind already.
+   */
+  setKind(kind: DocumentKind): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
@@ -95,7 +107,10 @@ export interface ScriptSession {
    * Keeps `source` as a script of its own, without opening it: the version a changed file or this
    * browser's text had when the writer chose the other (Phase 1 design §9.6).
    */
-  addScript(source: string, format?: { lineBreak?: LineBreak; bom?: boolean }): Promise<Project>;
+  addScript(
+    source: string,
+    format?: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind },
+  ): Promise<Project>;
   /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
   unbindFile(id: string): Promise<void>;
   /**
@@ -113,6 +128,8 @@ export interface OpenedFile {
   bom: boolean;
   fileName: string;
   ref: FileRef | null;
+  /** What the file is: by its name when it is opened, the script's own when it is read again. */
+  kind?: DocumentKind;
 }
 
 /** How long a failing recovery copy waits before it tries again on its own. */
@@ -261,7 +278,7 @@ function create(): ScriptSession {
     if (!fromEditor) {
       loading = true;
       try {
-        editor.load(next.source);
+        editor.load(next.source, kindOf(next));
       } finally {
         loading = false;
       }
@@ -446,11 +463,29 @@ function create(): ScriptSession {
     });
   }
 
-  async function newScript(kind: SampleKind) {
+  async function newScript(kind: NewKind) {
     // A tab that only shows a script may show old text; it starts nothing (Phase 1 design §9.3).
     if (guard.readOnly.value) throw new Error('This tab is read-only.');
     const { text: source, cursor } = newScriptText(kind, new Date());
-    if (await switchTo(() => createProject({ source, baseline: source }))) editor.goto(cursor);
+    const made: DocumentKind = kind === 'markdown' ? 'markdown' : 'fountain';
+    if (await switchTo(() => createProject({ source, baseline: source, kind: made }))) {
+      editor.goto(cursor);
+    }
+  }
+
+  async function setKind(kind: DocumentKind) {
+    const current = project.value;
+    // A sample is the example it is: it stays a screenplay or a stage play.
+    if (!current || current.sample) return;
+    if (guard.readOnly.value || switching.value || writer === undefined) return;
+    if (kindOf(current) === kind) return;
+    const id = current.id;
+    // The editor first, so the text is never shown in the wrong mode longer than this call.
+    editor.setKind(kind);
+    await patch(id, {
+      kind,
+      ...derive(view.state.doc.toString(), current.fileName, kind),
+    });
   }
 
   async function sampleProject(kind: SampleKind): Promise<Project> {
@@ -615,6 +650,7 @@ function create(): ScriptSession {
         const created = await createProject({
           source: file.text,
           baseline: file.text,
+          kind: file.kind ?? 'fountain',
           lineBreak: file.lineBreak,
           bom: file.bom,
           fileName: file.fileName,
@@ -648,10 +684,11 @@ function create(): ScriptSession {
 
   async function addScript(
     source: string,
-    format: { lineBreak?: LineBreak; bom?: boolean } = {},
+    format: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind } = {},
   ): Promise<Project> {
     return createProject({
       source,
+      ...(format.kind === undefined ? {} : { kind: format.kind }),
       ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
       ...(format.bom === undefined ? {} : { bom: format.bom }),
     });
@@ -780,6 +817,7 @@ function create(): ScriptSession {
     },
     open,
     newScript,
+    setKind,
     openSample,
     scripts,
     saved,

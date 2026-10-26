@@ -29,19 +29,26 @@ describe('templateIdOf', () => {
 });
 
 describe('DOCUMENT_TYPES', () => {
-  test('lists Screenplay first and Stage play second', () => {
-    // Task 6 appends the Markdown document last; the chip, the New menu, and the palette read this one list.
+  test('lists Screenplay first, Stage play second, and Markdown last', () => {
+    // The chip, the New menu, and the palette read this one list.
     expect(DOCUMENT_TYPES.slice(0, 2).map((t) => t.name)).toEqual(['Screenplay', 'Stage play']);
     expect(DOCUMENT_TYPES.slice(0, 2).map((t) => t.newTitle)).toEqual([
       'New screenplay',
       'New stage play',
     ]);
+    const last = DOCUMENT_TYPES.at(-1);
+    expect(last?.kind).toBe('markdown');
+    expect(last?.name).toBe('Markdown (plain text)');
+    expect(last?.newTitle).toBe('New Markdown document');
+    // Markdown is the only member that isn't a Fountain template.
+    expect(DOCUMENT_TYPES.filter((t) => t.kind === 'markdown')).toHaveLength(1);
   });
 
   test('has an entry for every built-in template, once', () => {
-    const ids = DOCUMENT_TYPES.filter((t) => t.kind === 'fountain').map((t) => t.id);
+    const fountain = DOCUMENT_TYPES.filter((t) => t.kind === 'fountain');
+    const ids = fountain.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect([...ids].sort()).toEqual(Object.keys(TEMPLATE_NAMES).sort());
-    for (const t of DOCUMENT_TYPES) expect(t.name).toBe(TEMPLATE_NAMES[t.id]);
+    for (const t of fountain) expect(t.name).toBe(TEMPLATE_NAMES[t.id]);
   });
 });

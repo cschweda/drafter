@@ -14,7 +14,7 @@ import { useEditor } from '~/editor/session';
 // with `v-html` when a slot doesn't take them over, and a scene heading is the writer's text, so
 // every label goes through the `item-label` slot: Vue's interpolation, text only.
 const { open, mode } = usePalette();
-const { view, doc, goto } = useEditor();
+const { view, doc, goto, kind } = useEditor();
 const commands = useCommands();
 const apple = isApple();
 
@@ -70,7 +70,8 @@ function choose(act: () => void, id?: string) {
 }
 
 const scenes = computed<Item[]>(() => {
-  if (!open.value) return [];
+  // A Markdown document has no scenes: its text is not read as Fountain.
+  if (!open.value || kind.value === 'markdown') return [];
   const text = view.state.doc;
   const items: Item[] = [];
   for (const block of doc.value.blocks) {
@@ -120,7 +121,7 @@ const groups = computed(() => {
   if (mode.value !== 'scene' && lineItem.value.length) {
     out.push({ id: 'line', label: 'Line', ignoreFilter: true, items: lineItem.value });
   }
-  if (mode.value !== 'line') {
+  if (mode.value !== 'line' && kind.value === 'fountain') {
     out.push({ id: 'scenes', label: 'Scenes', items: scenes.value });
   }
   if (mode.value === 'all') {

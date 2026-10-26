@@ -46,6 +46,17 @@ export const theme = EditorView.theme({
   '.cm-f-u': { textDecoration: 'underline' },
   '.cm-f-marker': { color: 'var(--faint)' },
 
+  // The highlighting classes of the Markdown mode (markdown/editor.ts).
+  '.cm-md-heading': { color: 'var(--heading)', fontWeight: '700' },
+  '.cm-md-b': { fontWeight: '700' },
+  '.cm-md-i': { fontStyle: 'italic' },
+  '.cm-md-code': { color: 'var(--cue)' },
+  '.cm-md-quote': { color: 'var(--paren)', fontStyle: 'italic' },
+  '.cm-md-marker': { color: 'var(--faint)' },
+  '.cm-md-link': { color: 'var(--title)' },
+  '.cm-md-url': { color: 'var(--faint)' },
+  '.cm-md-html': { color: 'var(--note)' },
+
   // Folding, search, tooltips, and the completion list.
   '.cm-foldPlaceholder': {
     backgroundColor: 'var(--chrome-2)',

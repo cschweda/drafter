@@ -158,9 +158,9 @@ test.describe('the template chip', () => {
 });
 
 test.describe('the list of document types', () => {
-  // Markdown (plain text) comes last in each of these once Task 6 adds it; the chip, the New menu
-  // and the palette all read `DOCUMENT_TYPES`, so the assertion there is one more name at the end.
-  test('lists Screenplay first and Stage play second, in the chip, the New menu, and the palette', async ({
+  // The chip, the New menu, and the palette all read `DOCUMENT_TYPES`: Screenplay, Stage play, then
+  // Markdown (plain text) last.
+  test('lists Screenplay, Stage play, then Markdown last, in the chip, the New menu, and the palette', async ({
     page,
     isMobile,
   }) => {
@@ -171,7 +171,7 @@ test.describe('the list of document types', () => {
       const names = await chipMenu(page)
         .getByRole('menuitemcheckbox')
         .evaluateAll((els) => els.map((el) => el.textContent?.trim()));
-      expect(names.slice(0, 2)).toEqual(['Screenplay', 'Stage play']);
+      expect(names).toEqual(['Screenplay', 'Stage play', 'Markdown (plain text)']);
       await page.keyboard.press('Escape');
     }
 
@@ -179,7 +179,11 @@ test.describe('the list of document types', () => {
     const items = await scriptsMenu(page)
       .getByRole('button')
       .evaluateAll((els) => els.map((el) => el.textContent?.trim()));
-    expect(items.slice(0, 2)).toEqual(['New screenplay', 'New stage play']);
+    expect(items.slice(0, 3)).toEqual([
+      'New screenplay',
+      'New stage play',
+      'New Markdown document',
+    ]);
     await page.keyboard.press('Escape');
     await expect(scriptsMenu(page)).toBeHidden();
 
@@ -193,6 +197,15 @@ test.describe('the list of document types', () => {
     const stage = options.findIndex((t) => t?.startsWith('New stage play'));
     expect(screenplay).toBeGreaterThanOrEqual(0);
     expect(stage).toBeGreaterThan(screenplay);
+    // Markdown comes after both.
+    await palette.locator('input').fill('New');
+    await expect(palette.getByRole('option', { name: /^New Markdown document/ })).toBeVisible();
+    const news = await palette
+      .getByRole('option')
+      .evaluateAll((els) => els.map((el) => el.textContent?.trim() ?? ''));
+    const at = (prefix: string) => news.findIndex((t) => t.startsWith(prefix));
+    expect(at('New Markdown document')).toBeGreaterThan(at('New stage play'));
+    expect(at('New stage play')).toBeGreaterThan(at('New screenplay'));
   });
 });
 

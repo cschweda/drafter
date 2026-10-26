@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import { markdownTitle } from '../markdown/title';
 import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
@@ -64,8 +65,12 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   await whenIdle(script.busy);
   const held = script.project.value;
   const id = held?.id;
-  const title = titleOf(editor.doc.value);
-  const name = held?.fileName ?? fileNameFor(title, '.fountain');
+  // A Markdown document is called by its first heading and saved as `.md`.
+  const markdown = editor.kind.value === 'markdown';
+  const title = markdown
+    ? (markdownTitle(editor.view.state.doc.toString()) ?? 'Untitled')
+    : titleOf(editor.doc.value);
+  const name = held?.fileName ?? fileNameFor(title, markdown ? '.md' : '.fountain');
   const lineBreak = held?.lineBreak ?? '\n';
   const bom = held?.bom ?? false;
   // The text is read as late as it can be, so what is written is what the editor shows.
@@ -94,7 +99,7 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   if (!ask && held && !held.sample && held.fsHandleId) target = await getHandle(held.fsHandleId);
   let picked = false;
   const pick = async () => {
-    target = (await files.pickToSave(name, 'fountain')) ?? undefined;
+    target = (await files.pickToSave(name, markdown ? 'markdown' : 'fountain')) ?? undefined;
     picked = true;
     return target !== undefined;
   };

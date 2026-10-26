@@ -8,7 +8,7 @@ const OTHER = 'Title: The Crossing\n\nINT. HALL - DAY\n\nHi.\n';
 
 // The editor shows `shown.text`; a test changes it to be another script's. A script switch in
 // flight is `busy`.
-const shown = vi.hoisted(() => ({ text: '' }));
+const shown = vi.hoisted(() => ({ text: '', kind: 'fountain' as 'fountain' | 'markdown' }));
 const switching = vi.hoisted(() => ({ busy: undefined as undefined | { value: boolean } }));
 vi.mock('../app/editor/session', async () => {
   const { parse } = await import('@drafter/fountain');
@@ -20,6 +20,9 @@ vi.mock('../app/editor/session', async () => {
         return { value: parse(shown.text) };
       },
       template,
+      get kind() {
+        return { value: shown.kind };
+      },
       view: { state: { doc: { toString: () => shown.text } } },
     }),
   };
@@ -66,6 +69,7 @@ function recorder(options: { inPlace: boolean }) {
 async function load(options: { inPlace: boolean }) {
   vi.resetModules();
   shown.text = TEXT;
+  shown.kind = 'fountain';
   render.mockReset();
   render.mockImplementation(async () => {
     return 'text';
@@ -105,6 +109,31 @@ describe('exporting', () => {
     expect(await t.exportScript('txt')).toBe('saved');
     expect(t.log[0]).toBe('pick The Call Part 1.txt txt');
     expect(t.written[0]?.data).toBe('text');
+  });
+
+  test('exports a Markdown document as its own text, as .md or .txt, with no rendering', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = '# The Treatment\n\nWords.\n';
+    shown.kind = 'markdown';
+    expect(await t.exportScript('md')).toBe('saved');
+    expect(await t.exportScript('txt')).toBe('saved');
+    expect(t.log).toEqual([
+      'pick The Treatment.md markdown',
+      'write',
+      'pick The Treatment.txt txt',
+      'write',
+    ]);
+    expect(t.written.map((w) => w.data)).toEqual([shown.text, shown.text]);
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  test('says a PDF of a Markdown document isn’t available, before any picker', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = '# The Treatment\n';
+    shown.kind = 'markdown';
+    expect(await t.exportScript('pdf')).toBe('cancelled');
+    expect(t.exportError.value).toMatch(/PDF of a Markdown document/);
+    expect(t.log).toEqual([]);
   });
 
   test('does nothing when the picker is cancelled', async () => {

@@ -38,7 +38,9 @@ vi.mock('../app/editor/session', async () => {
   const session = {
     view,
     doc,
-    load(text: string) {
+    kind: shallowRef<'fountain' | 'markdown'>('fountain'),
+    load(text: string, kind: 'fountain' | 'markdown' = 'fountain') {
+      session.kind.value = kind;
       state = EditorState.create({ doc: text });
       doc.value = parse(text);
       for (const l of listeners) l(state);
@@ -383,6 +385,16 @@ describe('saving through a FileAccess', () => {
     await t.save();
     expect(t.log.downloads[1]?.name).toBe('Untitled Screenplay.fountain');
     expect(parse(String(t.log.downloads[1]?.data)).titlePage).toBeTruthy();
+  });
+
+  test('suggests .md for a Markdown document, and asks the picker for Markdown', async () => {
+    const t = await fresh({ inPlace: false });
+    await t.script.newScript('markdown');
+    expect(t.shown()).toBe('# Untitled\n\n');
+    t.type('# The Treatment\n');
+    expect(await t.save()).toBe('saved');
+    expect(t.log.downloads[0]?.name).toBe('Untitled.md');
+    expect(t.script.project.value?.fileName).toBe('Untitled.md');
   });
 
   test('saves two requests made together one after the other', async () => {

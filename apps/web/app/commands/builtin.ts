@@ -48,6 +48,9 @@ export function registerBuiltinCommands(): void {
   /** Starting a script needs a tab that can edit, and no switch under way. */
   const canStart = () => idle() && !guard.readOnly.value;
   const canEdit = () => !view.state.readOnly;
+  /** Fountain's own commands, checks, and scenes mean nothing in a Markdown document. */
+  const isFountain = () => editor.kind.value === 'fountain';
+  const isMarkdown = () => editor.kind.value === 'markdown';
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
@@ -87,7 +90,7 @@ export function registerBuiltinCommands(): void {
     title,
     group: 'Edit',
     keys,
-    enabled: canEdit,
+    enabled: () => canEdit() && isFountain(),
     run: onEditor((v) => void act(v)),
   });
 
@@ -115,17 +118,29 @@ export function registerBuiltinCommands(): void {
         run: quietly(() => script.newScript(type.newKind)),
       }),
     ),
-    // Switch the Fountain template (the toolbar's chip is hidden below 1024px, so the palette is how a phone does it). Like
-    // show/hide line numbers, only the ones that apply are listed: not the current one, and none in a read-only tab or
-    // with an unclosed `/*`. Task 6 must also keep them off for a Markdown project, which has no template to switch.
+    // Switch the Fountain template (the toolbar's chip is hidden below 1024px, so the palette is how a phone does it).
+    // Like show/hide line numbers, only the ones that apply are listed: not the current one, and none in a read-only
+    // tab or with an unclosed `/*` that the choice would write after. In a Markdown document they are the way back
+    // to Fountain (the text is kept). Each runs on the editor, so Mod+Z undoes the block it writes.
     ...DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map(
       (type): Command => ({
         id: `template-${type.id}`,
         title: `Template: ${type.name}`,
         group: 'File',
-        enabled: () => template.canChoose.value && template.id.value !== type.id,
-        // Shows the Source tab and focuses the editor first, so Mod+Z undoes the change.
-        run: onEditor(() => template.choose(type.id)),
+        enabled: () =>
+          template.canChooseType(type) && !(isFountain() && template.id.value === type.id),
+        run: onEditor(() => void template.chooseType(type)),
+      }),
+    ),
+    // Markdown is a kind of document, not a template: it is listed in a Fountain script (after asking, because
+    // Fountain's formatting stops applying and undo doesn't bring it back), and not in a Markdown document.
+    ...DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map(
+      (type): Command => ({
+        id: 'document-markdown',
+        title: `Document: ${type.name}`,
+        group: 'File',
+        enabled: () => isFountain() && template.canChooseType(type),
+        run: onEditor(() => void template.chooseType(type)),
       }),
     ),
     {
@@ -177,13 +192,20 @@ export function registerBuiltinCommands(): void {
     },
 
     // Go
-    { id: 'go-to-scene', title: 'Go to scene…', group: 'Go', run: () => openPalette('scene') },
+    {
+      id: 'go-to-scene',
+      title: 'Go to scene…',
+      group: 'Go',
+      enabled: isFountain,
+      run: () => openPalette('scene'),
+    },
     { id: 'go-to-line', title: 'Go to line…', group: 'Go', run: () => openPalette('line') },
     {
       id: 'next-problem',
       title: 'Next problem',
       group: 'Go',
       keys: 'F8',
+      enabled: isFountain,
       run: onEditor((v) => nextDiagnostic(v)),
     },
     {
@@ -191,12 +213,27 @@ export function registerBuiltinCommands(): void {
       title: 'Previous problem',
       group: 'Go',
       keys: 'Shift-F8',
+      enabled: isFountain,
       run: onEditor((v) => previousDiagnostic(v)),
     },
 
     // View
     { id: 'show-source', title: 'Show Source', group: 'View', run: () => showTab('source') },
-    { id: 'show-script', title: 'Show Script', group: 'View', run: () => showTab('script') },
+    {
+      id: 'show-script',
+      title: 'Show Script',
+      group: 'View',
+      enabled: isFountain,
+      run: () => showTab('script'),
+    },
+    // The Script tab is the Preview in a Markdown document.
+    {
+      id: 'show-preview',
+      title: 'Show Preview',
+      group: 'View',
+      enabled: isMarkdown,
+      run: () => showTab('script'),
+    },
     { id: 'show-problems', title: 'Show Problems', group: 'View', run: () => showTab('problems') },
     {
       id: 'switch-theme',

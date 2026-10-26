@@ -4,7 +4,7 @@ import { useEditor } from '~/editor/session';
 
 // What the Source pane's gutter marks, as a list the writer can read, jump from, and fix from.
 const { problems, locked } = useProblems();
-const { goto } = useEditor();
+const { goto, kind } = useEditor();
 
 const SEVERITY = { error: 'Error', warning: 'Warning', info: 'Info' } as const;
 
@@ -54,7 +54,8 @@ onBeforeUnmount(disarm);
 
 <template>
   <div ref="root">
-    <p v-if="problems.length === 0" class="empty">No problems found.</p>
+    <p v-if="kind === 'markdown'" class="empty">No checks for Markdown documents.</p>
+    <p v-else-if="problems.length === 0" class="empty">No problems found.</p>
     <ul v-else class="problems">
       <li
         v-for="(problem, index) in problems"

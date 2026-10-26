@@ -27,7 +27,7 @@ export class FileGoneError extends Error {
   }
 }
 
-export type FileKind = 'fountain' | 'pdf' | 'txt';
+export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'txt';
 
 export interface FileAccess {
   /** Save writes back to the file it came from (Chromium's API; a desktop version: always). */
@@ -73,6 +73,9 @@ const handleOf = (ref: FileRef) => ref as PermissionedHandle;
 
 const TYPES: Record<FileKind, PickerOptions['types']> = {
   fountain: [{ description: 'Fountain script', accept: { 'text/plain': ['.fountain'] } }],
+  markdown: [
+    { description: 'Markdown document', accept: { 'text/markdown': ['.md', '.markdown'] } },
+  ],
   txt: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }],
   pdf: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
 };
@@ -96,7 +99,7 @@ function pickWithInput(): Promise<PickedFile | null> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.fountain,.txt,text/plain';
+    input.accept = '.fountain,.txt,.md,.markdown,text/plain,text/markdown';
     input.hidden = true;
     const done = () => input.remove();
     input.addEventListener('change', () => {
@@ -129,8 +132,8 @@ export const browserFiles: FileAccess = {
       const [handle] = await show.call(window, {
         types: [
           {
-            description: 'Fountain script or text',
-            accept: { 'text/plain': ['.fountain', '.txt'] },
+            description: 'Fountain script, Markdown document, or text',
+            accept: { 'text/plain': ['.fountain', '.txt'], 'text/markdown': ['.md', '.markdown'] },
           },
         ],
       });

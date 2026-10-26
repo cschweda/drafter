@@ -1,5 +1,6 @@
 import { type Ref, ref } from 'vue';
 import { useEditor } from '../editor/session';
+import { markdownTitle } from '../markdown/title';
 import { renderExport } from './export-client';
 import { useFiles } from './files';
 import { say } from './say';
@@ -14,7 +15,11 @@ import { whenIdle } from './turn';
  * menu does until they exist.
  */
 
-export type ExportKind = 'pdf' | 'txt';
+/**
+ * `pdf` and `txt` are a screenplay's or a stage play's; a Markdown document's are `md` (the
+ * Markdown file) and `txt` (the same text, as a plain text file). PDF for Markdown is deferred.
+ */
+export type ExportKind = 'pdf' | 'txt' | 'md';
 
 /** "Exported The Call.pdf.": a toast, and a live region. Empty after a few seconds. */
 export const exportNotice = ref('');
@@ -37,7 +42,12 @@ function toast(target: Ref<string>) {
 const announceReady = toast(exportNotice);
 const announceError = toast(exportError);
 
-const MIME: Record<ExportKind, string> = { pdf: 'application/pdf', txt: 'text/plain' };
+const MIME: Record<ExportKind, string> = {
+  pdf: 'application/pdf',
+  txt: 'text/plain',
+  md: 'text/markdown',
+};
+const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md' } as const;
 
 async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   const files = useFiles();
@@ -48,10 +58,21 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   // The name, the text, and the template are taken together, here, so they are one script's.
   const source = editor.view.state.doc.toString();
   const template = editor.template.value;
-  const name = fileNameFor(titleOf(editor.doc.value), kind === 'pdf' ? '.pdf' : '.txt');
+  const markdown = editor.kind.value === 'markdown';
+  const title = markdown ? (markdownTitle(source) ?? 'Untitled') : titleOf(editor.doc.value);
+  const name = fileNameFor(title, EXTENSION[kind]);
   exportNotice.value = '';
   exportError.value = '';
   try {
+    // The menu offers only what applies; a command or a stale menu can still ask for the other.
+    if (markdown ? kind === 'pdf' : kind === 'md') {
+      await announceError(
+        markdown
+          ? 'A PDF of a Markdown document isn’t available yet. Export the Markdown file or plain text.'
+          : 'Only a Markdown document exports as a Markdown file.',
+      );
+      return 'cancelled';
+    }
     // Nothing to put on a page: say so before a picker or a file.
     if (source.trim() === '') {
       await announceError('Nothing to export yet.');
@@ -60,10 +81,13 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
     // The picker comes first: it needs the click that started this, which a long render could outlast.
     let target: Awaited<ReturnType<typeof files.pickToSave>> = null;
     if (files.canSaveInPlace) {
-      target = await files.pickToSave(name, kind);
+      target = await files.pickToSave(name, kind === 'md' ? 'markdown' : kind);
       if (!target) return 'cancelled';
     }
-    const data = await renderExport({ kind, source, template });
+    // A Markdown document is already text: both of its exports are the text as it stands.
+    const data = markdown
+      ? source
+      : await renderExport({ kind: kind as 'pdf' | 'txt', source, template });
     if (target) await files.write(target, data);
     else files.download(name, data, MIME[kind]);
     await announceReady(`Exported ${target?.name ?? name}.`);
