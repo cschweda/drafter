@@ -5,7 +5,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: Phase 0, the engine, is complete.** The Fountain parser, the template loader, the pagination engine, the PDF renderer, and the `drafter` command line are built and tested, and `pnpm drafter build script.fountain` turns a script into a paginated PDF. The app is Phase 1, next. See the [roadmap](#roadmap).
+> **Status: v0.1.0. You can write at [drafter.dev](https://drafter.dev).** The editor, its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files all work. Saving goes straight back to the file in Chrome and Edge, and downloads a copy elsewhere. The rest of Phase 1 is next: the command palette, settings, the Problems pane, templates and Markdown, export, focus mode, and the tour. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">

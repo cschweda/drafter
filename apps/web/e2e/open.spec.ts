@@ -320,6 +320,8 @@ test.describe('opening a file where there is no picker', () => {
     await page.keyboard.press('Enter');
     await expect(menu(page)).toBeVisible();
     const item = menu(page).getByRole('button', { name: 'Open a file…' });
+    // The menu's items wait while it loads this browser's scripts.
+    await expect(item).toBeEnabled();
     await item.focus();
     const chooser = page.waitForEvent('filechooser');
     await page.keyboard.press('Enter');

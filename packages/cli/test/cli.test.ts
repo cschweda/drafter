@@ -247,7 +247,10 @@ describe('untrusted text', () => {
 describe('drafter', () => {
   it('prints its version and help, and exits 0', async () => {
     const version = await drafter('--version');
-    expect([version.code, version.out.trim()]).toEqual([0, '0.0.1']);
+    const { version: expected } = JSON.parse(
+      readFileSync(repo('packages/cli/package.json'), 'utf8'),
+    );
+    expect([version.code, version.out.trim()]).toEqual([0, expected]);
     const help = await drafter('--help');
     expect(help.code).toBe(0);
     expect(help.out).toMatch(/build.*check/s);

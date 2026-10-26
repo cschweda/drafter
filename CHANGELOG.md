@@ -6,8 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-26
+
+**Write and keep your work at drafter.dev.** The first version you can write a script in:
+- **The editor:** Fountain in CodeMirror, with highlighting, the Fountain keys, name and place completion, folding, and lint markers.
+- **The pages:** the real pages, laid out as you type, exactly as the PDF will print.
+- **A recovery copy** of your script, kept in your browser as you type.
+- **One tab at a time:** a script edits in one tab, and opens read-only in any other.
+- **New screenplays and stage plays,** and switching between your scripts.
+- **Save, Save As, and Open** for `.fountain` files: in place on Chrome and Edge, by download elsewhere, keeping a file's line breaks.
+
+It also includes Phase 0's engine and command line, and the editor packages behind the app.
+
 ### Added
 
+- Release v0.1.0: every package and the app at version 0.1.0, a `v0.1.0` tag, and a GitHub release.
 - The README links [Inform 7](https://ganelson.github.io/inform-website/) wherever it names it, and credits its IDE (its layout and ease of use, not interactive fiction itself) as an inspiration.
 - A screenshot of the editor at the top of the README, in the dark and light themes (`docs/images/`), shown to match the reader's GitHub theme, and a link to drafter.dev.
 - Design documents in `docs/`: the high-level architecture, the technical design, and the Phase 0 kickoff prompt.
@@ -231,4 +244,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/commits/main
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cschweda/drafter/releases/tag/v0.1.0

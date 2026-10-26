@@ -1,6 +1,6 @@
 {
   "name": "@drafter/cm-fountain",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "The editor for Drafter: Fountain in CodeMirror 6, with the parse held in the editor's state and highlighting read from it.",
   "license": "MIT",
   "type": "module",

@@ -220,14 +220,16 @@ test.describe('one tab at a time', () => {
     await expect(menuOf(b)).toBeHidden();
     await expect(bar(b)).toHaveCount(0);
 
-    // A types and closes at once: the newest text is in the stash, and the database is behind it.
+    // A types and closes at once. The newest text is usually only in the stash, with the
+    // database behind it; if the timed write happened to commit first, it's in the database
+    // and the stash was cleared. Either way it must not be lost.
     await a.bringToFront();
     await editor(a).press('End');
     await a.keyboard.insertText(' LAST WORDS');
     await a.close({ runBeforeUnload: false });
-    expect(await b.evaluate((key) => localStorage.getItem(key), stashKey(x.id))).toContain(
-      'LAST WORDS',
-    );
+    const stash = await b.evaluate((key) => localStorage.getItem(key), stashKey(x.id));
+    const saved = (await stored(b)).find((p) => p.id === x.id)?.source ?? '';
+    expect(`${stash ?? ''}${saved}`).toContain('LAST WORDS');
 
     await openMenu(b);
     await menuOf(b)
