@@ -130,6 +130,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Unsaved edits:** until the recovery copy arrives, the browser asks before the page closes while the text differs from what the editor opened with, and the page isn't asked while they match.
   - **Spellcheck:** the browser's own, on.
   - **Packages:** the app builds the Drafter packages from their TypeScript (the `source` export condition), so it never reads a stale `dist/`.
+- `apps/web`: the Script pane shows the script's pages. A Web Worker parses and paginates the text, so typing never waits on layout, and `@drafter/render-html` draws the result.
+  - **Pages:** the title page, then the numbered pages, in the theme's paper and ink. Pages that didn't change keep their elements, so typing in a long script rebuilds only the page being typed in.
+  - **Clicking a line** puts the cursor at that line in the Source pane, and shows the Source pane first if it isn't on screen. **Moving the cursor** scrolls its page into view.
+  - **The bar above the pages** reads "Page N of M", or "Title page", and "Updating…" while a layout is on its way; the status bar reads the same page. A blank line keeps the page of the block before it.
+  - **Fit width and 100%** are a two-button toggle: Fit width, the default, scales the pages to fill the pane, and 100% is real size.
+  - **Layout requests** wait for a 50 ms pause in typing and carry the whole text; a reply older than the one on screen is dropped, and a failed layout leaves the last pages up.
+  - **Tests:** the request debounce, stale replies, errors, and the worker's reply; the page lookup; and in the browser, the sample's three pages, typing, clicks, following the cursor, the zoom toggle, accessibility in both themes and on a phone, and no long task while typing into a 120-page script.
 
 ### Changed
 

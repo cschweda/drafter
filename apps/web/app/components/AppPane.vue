@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useLayout } from '~/editor/layout';
+import { pageLabel } from '~/editor/pages';
 import { TABS, type TabId } from '~/utils/panes';
 
 const props = defineProps<{
@@ -12,13 +14,19 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
-// Until the Script view and the Problems list arrive (Plan 3), their panels
-// hold a placeholder: a line of text.
+// Until the Problems list arrives (Plan 3), its panel holds a placeholder: a line of text.
 const SLIM: Record<TabId, string> = {
   source: 'screenplay.fountain',
-  script: 'Fit width',
+  script: '',
   problems: 'No problems',
 };
+
+const { page, updating } = useLayout();
+const zoom = useScriptZoom();
+const ZOOMS = [
+  { id: 'fit', label: 'Fit width' },
+  { id: 'full', label: '100%' },
+] as const;
 
 const tabButtons = ref<HTMLButtonElement[]>([]);
 
@@ -60,18 +68,37 @@ function onKeydown(event: KeyboardEvent, index: number) {
         {{ tab.label }}
       </button>
     </div>
-    <div class="slim">{{ SLIM[props.selected] }}</div>
+    <div class="slim">
+      <template v-if="props.selected === 'script'">
+        <span class="page">{{ pageLabel(page) }}</span>
+        <span v-if="updating" class="updating">Updating…</span>
+        <span class="spacer" />
+        <div role="group" aria-label="Zoom" class="zoom">
+          <button
+            v-for="option in ZOOMS"
+            :key="option.id"
+            type="button"
+            class="zoom-button"
+            :aria-pressed="zoom === option.id ? 'true' : 'false'"
+            @click="zoom = option.id"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </template>
+      <template v-else>{{ SLIM[props.selected] }}</template>
+    </div>
     <div
       :id="`panel-${props.selected}`"
       role="tabpanel"
       :aria-labelledby="`tab-${props.pane}-${props.selected}`"
       tabindex="0"
       class="panel"
-      :class="{ editing: props.selected === 'source' }"
+      :class="{ editing: props.selected === 'source' || props.selected === 'script' }"
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
-      <p v-else-if="props.selected === 'script'" class="placeholder">Formatted pages appear here.</p>
+      <ScriptPane v-else-if="props.selected === 'script'" />
       <p v-else class="placeholder">No problems found.</p>
     </div>
   </section>
@@ -116,17 +143,50 @@ function onKeydown(event: KeyboardEvent, index: number) {
   }
 }
 .slim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 24px;
   padding: 5px 12px;
   background: var(--chrome-2);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
 }
+.spacer {
+  flex: 1;
+}
+.zoom {
+  display: flex;
+  gap: 2px;
+}
+.zoom-button {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.zoom-button[aria-pressed='true'] {
+  background: var(--tab-on);
+  color: var(--text);
+}
+/* Forced colors drops the background, so a border marks the pressed one. */
+@media (forced-colors: active) {
+  .zoom-button[aria-pressed='true'] {
+    border: 1px solid CanvasText;
+  }
+}
 .panel {
   min-height: 0;
   overflow: auto;
 }
-/* The editor scrolls itself. */
+/* The editor and the Script view scroll themselves. */
 .panel.editing {
   overflow: hidden;
 }

@@ -23,6 +23,8 @@
     "@codemirror/view": "^6.43.15",
     "@drafter/cm-fountain": "workspace:*",
     "@drafter/fountain": "workspace:*",
+    "@drafter/layout": "workspace:*",
+    "@drafter/render-html": "workspace:*",
     "@drafter/templates": "workspace:*",
     "@iconify-json/lucide": "^1.2.147",
     "@nuxt/ui": "^4.12.0",
