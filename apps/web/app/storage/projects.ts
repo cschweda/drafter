@@ -2,6 +2,7 @@ import { type DrafterMeta, parse } from '@drafter/fountain';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
+import { daysOf, goalKey } from '../stats/keys';
 import { db } from './db';
 import type { FileRef } from './files';
 import { fileBaseName, titleOf } from './text';
@@ -148,9 +149,14 @@ export async function writeSource(current: Project, source: string): Promise<Pro
   });
 }
 
-/** Also deletes its snapshot and its file handle; never touches the file. */
+/** Also deletes its snapshot, its file handle, its goal, and its days' counts; never touches the file. */
 export async function removeProject(id: string): Promise<void> {
-  await db.transaction('rw', db.projects, db.snapshots, db.handles, async () => {
+  await db.transaction('rw', db.projects, db.snapshots, db.handles, db.settings, async () => {
+    await db.settings.delete(goalKey(id));
+    await db.settings
+      .where('key')
+      .between(...daysOf(id))
+      .delete();
     const project = await db.projects.get(id);
     if (project?.fsHandleId) await db.handles.delete(project.fsHandleId);
     await db.snapshots.where('projectId').equals(id).delete();
