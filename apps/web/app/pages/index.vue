@@ -3,6 +3,7 @@ import { registerBuiltinCommands } from '~/commands/builtin';
 import { installGlobalKeys } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
 import { applySettings } from '~/settings/apply';
+import { installFileCheck } from '~/storage/check';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
@@ -41,12 +42,14 @@ registerBuiltinCommands();
 let removeKeys: (() => void) | undefined;
 let stopWatchingSave: (() => void) | undefined;
 let stopSettings: (() => void) | undefined;
+let removeFileCheck: (() => void) | undefined;
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
   removeKeys = installGlobalKeys();
   stopWatchingSave = watchSaveError();
   stopSettings = applySettings();
+  removeFileCheck = installFileCheck();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -54,6 +57,7 @@ onBeforeUnmount(() => {
   removeKeys?.();
   stopWatchingSave?.();
   stopSettings?.();
+  removeFileCheck?.();
 });
 </script>
 
@@ -62,10 +66,12 @@ onBeforeUnmount(() => {
     <div class="top">
       <AppToolbar />
       <ReadOnlyBar />
+      <FileBar />
       <StorageWarning />
     </div>
     <DropZone />
     <SameTitleDialog />
+    <BothChangedDialog />
     <RemoveDialog />
     <CommandPalette />
     <SettingsDialog />

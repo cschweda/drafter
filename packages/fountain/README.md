@@ -22,6 +22,7 @@ print(doc) === doc.source; // always true
 |---|---|
 | `parse(source)` | Parses any string into a `Doc`. Never throws. |
 | `reparse(doc, changes)` | Applies `{ from, to, insert }` changes (old-document offsets, sorted, non-overlapping, the shape of a CodeMirror ChangeSet) and parses the result. Throws `RangeError` on invalid changes. |
+| `setMeta(doc, meta)` | The `{ from, to, insert }` changes that make `meta` the script's `/* drafter … */` block: they replace the existing block, or append one after a blank line. The JSON is on one line with every `/` written `\/`, so no value can close the block; `v` defaults to 1; the block uses the script's own line break; and a block that already says it gives `[]`. |
 | `print(doc)` | Writes the document back out, byte for byte. |
 | `toJSON(doc)` | The CST as plain data, with every semantic field filled in. |
 | `blockAt(doc, offset)` | The block containing an offset, and its index. |

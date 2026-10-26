@@ -27,6 +27,8 @@
     "@drafter/layout": "workspace:*",
     "@drafter/lint": "workspace:*",
     "@drafter/render-html": "workspace:*",
+    "@drafter/render-pdf": "workspace:*",
+    "@drafter/render-text": "workspace:*",
     "@drafter/templates": "workspace:*",
     "@iconify-json/lucide": "^1.2.147",
     "@nuxt/ui": "^4.12.0",

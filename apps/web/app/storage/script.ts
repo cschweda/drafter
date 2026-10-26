@@ -87,6 +87,18 @@ export interface ScriptSession {
   /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
   readonly busy: Readonly<ComputedRef<boolean>>;
   /**
+   * The editor is read-only until the script's file can be checked (the browser has not given
+   * Drafter permission to read it). Whoever sets it clears it; showing another script clears it.
+   */
+  readonly fileLocked: Ref<boolean>;
+  /**
+   * Keeps `source` as a script of its own, without opening it: the version a changed file or this
+   * browser's text had when the writer chose the other (Phase 1 design §9.6).
+   */
+  addScript(source: string, format?: { lineBreak?: LineBreak; bom?: boolean }): Promise<Project>;
+  /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
+  unbindFile(id: string): Promise<void>;
+  /**
    * Removes script `id` from this browser (never its file). Removing the open script opens the most
    * recent other one, or the screenplay sample. A script another tab has open is not removed:
    * the answer is `'held'`.
@@ -136,6 +148,7 @@ function create(): ScriptSession {
   const recovery = ref<RecoveryState>('not-persistent');
   const ready = ref(false);
   const dismissed = ref(false);
+  const fileLocked = ref(false);
   // Before a project is open the editor holds the sample, in memory.
   const baseline = shallowRef<Text | null>(text(SAMPLE_SCREENPLAY));
   let writer: Writer | undefined;
@@ -256,6 +269,8 @@ function create(): ScriptSession {
     lastDoc = view.state.doc;
     baseline.value = from;
     project.value = next;
+    // The new script's file has not been checked yet.
+    fileLocked.value = false;
     const id = next.id;
     writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
@@ -631,6 +646,23 @@ function create(): ScriptSession {
     return 'replaced';
   }
 
+  async function addScript(
+    source: string,
+    format: { lineBreak?: LineBreak; bom?: boolean } = {},
+  ): Promise<Project> {
+    return createProject({
+      source,
+      ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
+      ...(format.bom === undefined ? {} : { bom: format.bom }),
+    });
+  }
+
+  async function unbindFile(id: string): Promise<void> {
+    const handleId = (await getProject(id))?.fsHandleId;
+    await patch(id, { fsHandleId: undefined });
+    if (handleId) await db.handles.delete(handleId);
+  }
+
   async function changed(p: Project): Promise<boolean> {
     const from = await baselineOf(p);
     return from === null || !text(p.source).eq(from);
@@ -667,7 +699,7 @@ function create(): ScriptSession {
   // The editor follows the guard: read-only while another tab holds the script.
   effectScope(true).run(() => {
     watch(
-      () => guard.readOnly.value || switching.value,
+      () => guard.readOnly.value || switching.value || fileLocked.value,
       (on) => editor.setReadOnly(on),
       { immediate: true, flush: 'sync' },
     );
@@ -755,6 +787,9 @@ function create(): ScriptSession {
     replaceWith,
     changed,
     busy: switching,
+    fileLocked,
+    addScript,
+    unbindFile,
     remove,
   };
 }

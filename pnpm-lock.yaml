@@ -74,6 +74,12 @@ importers:
       '@drafter/render-html':
         specifier: workspace:*
         version: link:../../packages/render-html
+      '@drafter/render-pdf':
+        specifier: workspace:*
+        version: link:../../packages/render-pdf
+      '@drafter/render-text':
+        specifier: workspace:*
+        version: link:../../packages/render-text
       '@drafter/templates':
         specifier: workspace:*
         version: link:../../packages/templates

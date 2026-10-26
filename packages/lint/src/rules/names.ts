@@ -1,13 +1,15 @@
-import { characters, type Doc, type DrafterMeta, type Span } from '@drafter/fountain';
+import { characters, type Doc, type DrafterMeta, type Span, setMeta } from '@drafter/fountain';
 import { withinOneEdit } from '../distance';
-import type { LintDiagnostic, Rule } from '../types';
+import type { Fix, LintDiagnostic, Rule } from '../types';
 
 // similar-names (technical design §9): two character names one edit apart, one of them rare, are
 // probably one character typed two ways. The rest of the rule's conditions are its controls
 // against false alarms: five letters in both names (MAX and MAC are too short), one of them cued
 // twice or less, and neither the start of the other (DANNY and DANNYS are a prefix apart). A
 // fourth, beyond the design: names that differ only in their digits (GUARD 1 and GUARD 2) are
-// numbered characters, which are meant, and a typo almost never changes only a digit.
+// numbered characters, which are meant, and a typo almost never changes only a digit. And a
+// fifth: names whose one edit falls inside a short word (MR. SMITH and MRS. SMITH, JOHN JR. and
+// JOHN SR., GUARD A and GUARD B) are different people, and the short word is what tells them apart.
 
 /** The letters a name needs to be compared. A shorter name is one edit from too many others. */
 const MIN_LETTERS = 5;
@@ -30,7 +32,11 @@ const MAX_LENGTH = 32;
  */
 const MAX_SHARING = 8;
 
+/** A word of this many letters or fewer is short: MR, MRS, JR, SR, and a letter such as A or B. */
+const SHORT_WORD = 3;
+
 const LETTER = /\p{L}/u;
+const SPACE = /\s/u;
 
 /** A decimal digit of any script, not only 0 to 9: `\d` would miss the Arabic-Indic ones. */
 const DIGIT = /\p{Nd}/gu;
@@ -131,6 +137,54 @@ function markedDistinct(meta: DrafterMeta | null): Set<string> {
   return marked;
 }
 
+/**
+ * Whether any of the words that overlap `[from, to)` in `points` is short. A word is a run of
+ * code points without whitespace, and its length is counted in letters, so `JR.` has two.
+ */
+function touchesShortWord(points: readonly string[], from: number, to: number): boolean {
+  if (from >= to) return false;
+  let start = 0;
+  while (start < points.length) {
+    if (SPACE.test(points[start] as string)) {
+      start++;
+      continue;
+    }
+    let end = start;
+    let letters = 0;
+    while (end < points.length && !SPACE.test(points[end] as string)) {
+      if (LETTER.test(points[end] as string)) letters++;
+      end++;
+    }
+    if (start < to && end > from && letters <= SHORT_WORD) return true;
+    start = end;
+  }
+  return false;
+}
+
+/**
+ * Whether the one edit between two names falls inside a short word of either. The edit is what
+ * lies between the text the names start with in common and the text they end with in common, and
+ * the longer name always has something there. A space put in or taken out lies in no word, so
+ * `AGENT 47` and `AGENT47` are not spared.
+ */
+function editIsInShortWord(a: string, b: string): boolean {
+  const x = Array.from(a);
+  const y = Array.from(b);
+  let prefix = 0;
+  while (prefix < x.length && prefix < y.length && x[prefix] === y[prefix]) prefix++;
+  let suffix = 0;
+  while (
+    suffix < x.length - prefix &&
+    suffix < y.length - prefix &&
+    x[x.length - 1 - suffix] === y[y.length - 1 - suffix]
+  ) {
+    suffix++;
+  }
+  return (
+    touchesShortWord(x, prefix, x.length - suffix) || touchesShortWord(y, prefix, y.length - suffix)
+  );
+}
+
 /** Whether one name is the start of the other, by code point. */
 function startsTheOther(a: string, b: string): boolean {
   const x = Array.from(a);
@@ -146,6 +200,7 @@ function judge(a: Name, b: Name, distinct: ReadonlySet<string>): Hit | null {
   // Names that are the same once their digits are left out are numbered characters. A
   // difference in anything else is still a typo: the space in AGENT 47 beside AGENT47.
   if (withoutDigits(a.key) === withoutDigits(b.key)) return null;
+  if (editIsInShortWord(a.key, b.key)) return null;
   if (distinct.has(pairKey(a.key, b.key))) return null;
   // The typo is the rarer name. With a tie, it is the one that first appears later.
   const aIsRarer = a.count !== b.count ? a.count < b.count : a.order > b.order;
@@ -187,6 +242,21 @@ function firstCues(doc: Doc, wanted: ReadonlySet<string>): Map<string, Span> {
   return found;
 }
 
+/**
+ * The fix that adds the pair to `meta.distinctNames`, rare name first as the message names them.
+ * The pairs already listed stay, whatever else is there: only a value that isn't a list is
+ * replaced, since there is nothing in it to keep.
+ */
+function markDistinct(doc: Doc, rare: string, other: string): Fix {
+  const listed: unknown = doc.meta?.distinctNames;
+  const distinctNames: unknown[] = Array.isArray(listed) ? [...(listed as unknown[])] : [];
+  distinctNames.push([rare, other]);
+  return {
+    title: 'Mark as distinct',
+    changes: setMeta(doc, { ...doc.meta, distinctNames }),
+  };
+}
+
 export const similarNames: Rule = {
   id: 'similar-names',
   severity: 'info',
@@ -203,6 +273,7 @@ export const similarNames: Rule = {
         // Every name is cued somewhere, and each diagnostic gets a span of its own.
         span: { ...(where.get(rare.key) as Span) },
         message: `"${rare.key}" is one letter from "${other.key}", which has ${other.count} ${other.count === 1 ? 'cue' : 'cues'}. A typo?`,
+        fix: markDistinct(doc, rare.key, other.key),
       }),
     );
   },

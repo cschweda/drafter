@@ -1,11 +1,13 @@
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
 import { say } from './say';
 import { useScript } from './script';
 import { encodeFile, fileNameFor, titleOf } from './text';
+import { inTurn, whenIdle } from './turn';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
 export const saveError = ref('');
@@ -44,32 +46,14 @@ watch(useGuard().readOnly, (on) => {
   if (!on) readOnlyHint.value = '';
 });
 
-let queue: Promise<unknown> = Promise.resolve();
-
-/** One save at a time: a second request made while one is under way waits for it. */
-function inTurn<T>(run: () => Promise<T>): Promise<T> {
-  const result = queue.then(run);
-  queue = result.catch(() => {});
-  return result;
-}
-
 function messageFor(error: unknown): string {
+  if (error instanceof CheckUnsettledError) {
+    return 'Couldn’t check the file for changes because the script kept changing. Nothing was saved. Try saving again.';
+  }
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
   }
   return 'Couldn’t save the file.';
-}
-
-/** Resolves once no switch of scripts is under way. */
-function idle(script: ReturnType<typeof useScript>): Promise<void> {
-  if (!script.busy.value) return Promise.resolve();
-  return new Promise((resolve) => {
-    const stop = watch(script.busy, (on) => {
-      if (on) return;
-      stop();
-      resolve();
-    });
-  });
 }
 
 async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
@@ -77,7 +61,7 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   const script = useScript();
   const editor = useEditor();
   // A switch under way finishes first: the save is of the script that is open when it starts.
-  await idle(script);
+  await whenIdle(script.busy);
   const held = script.project.value;
   const id = held?.id;
   const title = titleOf(editor.doc.value);
@@ -116,6 +100,10 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   };
   if (!target && !(await pick())) return 'cancelled';
 
+  // Never overwrite a file that changed somewhere else: if it did, the check has dealt with it
+  // (loaded it, or asked which version to keep), and the writer saves again knowing what is there.
+  if (!picked && (await useFileCheck().beforeSave()) === 'stop') return 'cancelled';
+
   for (;;) {
     const text = await textToWrite();
     try {
@@ -144,7 +132,11 @@ async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
     saveError.value = '';
     try {
       const result = await run(ask);
-      if (result === 'saved') announceSave();
+      if (result === 'saved') {
+        announceSave();
+        // The file is the one that was just written: a bar about the old one (it was gone) is stale.
+        void useFileCheck().check();
+      }
       return result;
     } catch (error) {
       await say(saveError, messageFor(error));
