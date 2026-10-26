@@ -49,6 +49,10 @@ export interface ScriptSession {
   openSample(kind: SampleKind): Promise<void>;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
   scripts(): Promise<Project[]>;
+  /** Whether `p`'s text differs from what was last saved to its file (or from where it started). */
+  changed(p: Project): Promise<boolean>;
+  /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
+  readonly busy: Readonly<ComputedRef<boolean>>;
   /**
    * Removes script `id` from this browser (never its file). Removing the open script opens the most
    * recent other one, or the screenplay sample. A script another tab has open is not removed:
@@ -273,21 +277,27 @@ function create(): ScriptSession {
   /**
    * The editor can't be typed in while a switch is under way: from the first flush until the new
    * script is shown, the old one is flushed and then left alone, and its lock is let go only
-   * after the new one is shown.
+   * after the new one is shown. Switches are counted, not flagged, so one ending can never make
+   * the editor editable under another.
    */
-  const switching = ref(false);
+  const switches = ref(0);
+  const switching = computed(() => switches.value > 0);
 
   /**
-   * Makes the script `resolve` returns the current one. `removing` is the current script's id when
-   * it is being removed: it goes once the replacement exists, and a failure anywhere leaves it open.
+   * Makes the script `resolve` returns the current one, and says whether it did. A request that
+   * comes while a switch is under way is ignored (a double click on New is one new script, and a
+   * second switch can't load over text typed after the first). `removing` is the current script's
+   * id when it is being removed: it goes once the replacement exists, and a failure anywhere
+   * leaves it open.
    */
-  async function switchTo(resolve: () => Promise<Project>, removing?: string): Promise<void> {
-    switching.value = true;
+  async function switchTo(resolve: () => Promise<Project>, removing?: string): Promise<boolean> {
+    if (switching.value) return false;
+    switches.value++;
     try {
       // A failed flush stops here: the text it couldn't keep must not be replaced.
       await writer?.flush();
       const next = await resolve();
-      if (next.id === project.value?.id) return;
+      if (next.id === project.value?.id) return false;
       const from = await baselineOf(next);
       if (removing) {
         // Nothing is pending (the flush wrote it, and the editor is read-only), so what the writer
@@ -298,13 +308,15 @@ function create(): ScriptSession {
       }
       attach(next, from, false, await guardControl.claim(next.id));
       guardControl.finish();
+      return true;
     } finally {
-      switching.value = false;
+      switches.value--;
     }
   }
 
   async function open(id: string) {
     if (project.value?.id === id) return;
+    // A request made while a switch is under way is ignored (see `switchTo`).
     await switchTo(async () => {
       const next = await getProject(id);
       if (!next) throw new Error(`There is no script ${id}.`);
@@ -314,8 +326,7 @@ function create(): ScriptSession {
 
   async function newScript(kind: SampleKind) {
     const { text: source, cursor } = newScriptText(kind, new Date());
-    await switchTo(() => createProject({ source, baseline: source }));
-    editor.goto(cursor);
+    if (await switchTo(() => createProject({ source, baseline: source }))) editor.goto(cursor);
   }
 
   async function sampleProject(kind: SampleKind): Promise<Project> {
@@ -323,7 +334,14 @@ function create(): ScriptSession {
     return existing ?? createProject({ source: SAMPLE_TEXT[kind], sample: kind });
   }
 
-  const openSample = (kind: SampleKind) => switchTo(() => sampleProject(kind));
+  const openSample = async (kind: SampleKind) => {
+    await switchTo(() => sampleProject(kind));
+  };
+
+  async function changed(p: Project): Promise<boolean> {
+    const from = await baselineOf(p);
+    return from === null || !text(p.source).eq(from);
+  }
 
   async function scripts(): Promise<Project[]> {
     // The title in the list is the text's, so the text is written first.
@@ -339,10 +357,12 @@ function create(): ScriptSession {
     }
     // Another tab has it, and this one only shows it.
     if (guard.readOnly.value) return 'held';
-    await switchTo(async () => {
+    const switched = await switchTo(async () => {
       const others = (await listProjects()).filter((p) => p.id !== id);
       return others.find((p) => !p.sample) ?? (await sampleProject('screenplay'));
     }, id);
+    // Ignored: another switch was under way, and nothing was removed.
+    if (!switched) throw new Error('Another script is being opened.');
     return 'removed';
   }
 
@@ -441,6 +461,8 @@ function create(): ScriptSession {
     newScript,
     openSample,
     scripts,
+    changed,
+    busy: switching,
     remove,
   };
 }

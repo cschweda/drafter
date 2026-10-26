@@ -7,12 +7,14 @@ import { useScript } from '~/storage/script';
 // trigger is the toolbar's Open button, drawn by the toolbar and given through the slot.
 // Plan 4 registers these as commands, with shortcuts, and adds the app menu.
 const script = useScript();
-const { project } = script;
+const { project, busy } = script;
+const idle = computed(() => !!project.value && !busy.value);
 
 const open = ref(false);
 const scripts = ref<Project[]>([]);
 const message = ref('');
 const confirming = ref<Project | null>(null);
+const changedSince = ref(false);
 const root = ref<HTMLElement>();
 const dialog = ref<HTMLDialogElement>();
 const place = reactive({ top: 0, left: 0 });
@@ -76,11 +78,18 @@ const neverSaved = computed(
 let removeTrigger: HTMLElement | null = null;
 let restoreFocus = true;
 
-function ask(p: Project, event: Event) {
+async function ask(p: Project, event: Event) {
   message.value = '';
   // The button that was pressed (Safari doesn't focus a button on a click): focus goes back to it.
   removeTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   restoreFocus = true;
+  // A script with a file loses what was typed since the last save, which the dialog says.
+  changedSince.value = false;
+  try {
+    changedSince.value = await script.changed(p);
+  } catch {
+    changedSince.value = true;
+  }
   confirming.value = p;
 }
 
@@ -161,7 +170,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
         type="button"
         class="item"
         data-first
-        :disabled="!project"
+        :disabled="!idle"
         @click="run(() => script.newScript('screenplay'), false)"
       >
         <UIcon name="i-lucide-file-plus" class="icon" />New screenplay
@@ -169,7 +178,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button
         type="button"
         class="item"
-        :disabled="!project"
+        :disabled="!idle"
         @click="run(() => script.newScript('stage-play'), false)"
       >
         <UIcon name="i-lucide-drama" class="icon" />New stage play
@@ -183,7 +192,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
               type="button"
               class="item grow"
               :aria-current="isCurrent(p) ? 'true' : undefined"
-              :disabled="!project"
+              :disabled="!idle"
               @click="run(() => script.open(p.id))"
             >
               <span :id="`script-${p.id}`" class="title">{{ p.title }}</span>
@@ -209,7 +218,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
           type="button"
           class="item"
           :aria-current="isCurrentSample('screenplay') ? 'true' : undefined"
-          :disabled="!project"
+          :disabled="!idle"
           @click="run(() => script.openSample('screenplay'))"
         >
           Screenplay
@@ -218,7 +227,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
           type="button"
           class="item"
           :aria-current="isCurrentSample('stage-play') ? 'true' : undefined"
-          :disabled="!project"
+          :disabled="!idle"
           @click="run(() => script.openSample('stage-play'))"
         >
           Stage play
@@ -241,6 +250,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
           Drafter forgets this script and its recovery copy. A file you saved it to isn’t touched.
           <template v-if="neverSaved">
             This script has never been saved to a file, so removing it deletes the only copy.
+          </template>
+          <template v-else-if="changedSince">
+            Changes since you last saved it to a file are lost.
           </template>
         </p>
         <div class="buttons">

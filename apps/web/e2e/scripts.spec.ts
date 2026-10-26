@@ -270,6 +270,101 @@ test.describe('new scripts and switching', () => {
     expect(await stored(page)).toHaveLength(1);
   });
 
+  test('ignores a second New while the first is still switching', async ({ page }) => {
+    await start(page);
+    await openMenu(page);
+    // Two clicks in one task, before the page can draw the first one's effect: only the
+    // session's own guard can stop the second.
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll<HTMLButtonElement>('#scripts-menu button')].find(
+        (b) => b.textContent?.includes('New screenplay'),
+      );
+      item?.click();
+      item?.click();
+    });
+    await expect(menu(page)).toBeHidden();
+    await expect(chip(page)).toHaveText('Screenplay');
+    expect((await stored(page)).filter((p) => !p.sample)).toHaveLength(1);
+    // The text typed after it lands in the new script, and stays.
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.insertText('TYPED AFTER');
+    await page.waitForTimeout(300);
+    await expect(editor(page)).toContainText('TYPED AFTER');
+    await expect.poll(async () => (await stored(page)).filter((p) => !p.sample)).toHaveLength(1);
+  });
+
+  test('disables the menu items while a switch is under way', async ({ page }) => {
+    await start(page);
+    await openMenu(page);
+    await menu(page).getByRole('button', { name: 'New stage play' }).dblclick();
+    await expect(menu(page)).toBeHidden();
+    expect((await stored(page)).filter((p) => !p.sample)).toHaveLength(1);
+  });
+
+  test('says that changes since the last save are lost when removing a script with a file', async ({
+    page,
+  }) => {
+    await start(page);
+    // Two scripts that have a file: one changed since it was saved, one not.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('drafter');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const db = open.result;
+            const tx = db.transaction(['projects', 'snapshots'], 'readwrite');
+            const now = Date.now();
+            for (const [id, title, source, saved] of [
+              [
+                'changed',
+                'Changed One',
+                'Title: Changed One\n\nEdited.\n',
+                'Title: Changed One\n\nOriginal.\n',
+              ],
+              ['clean', 'Clean One', 'Title: Clean One\n\nSame.\n', 'Title: Clean One\n\nSame.\n'],
+            ] as const) {
+              tx.objectStore('projects').put({
+                id,
+                title,
+                source,
+                templateId: 'us-screenplay',
+                meta: null,
+                lineBreak: '\n',
+                createdAt: now,
+                updatedAt: now,
+                savedHash: 'x',
+                savedAt: now,
+                fileName: `${title}.fountain`,
+              });
+              tx.objectStore('snapshots').put({
+                id: `saved:${id}`,
+                projectId: id,
+                createdAt: now,
+                source: saved,
+              });
+            }
+            tx.oncomplete = () => {
+              db.close();
+              resolve();
+            };
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await openMenu(page);
+    await row(page, 'Changed One')
+      .getByRole('button', { name: 'Remove from this browser' })
+      .click();
+    await expect(confirm(page)).toContainText('Changes since you last saved it to a file are lost');
+    await expect(confirm(page)).not.toContainText('never been saved');
+    await confirm(page).getByRole('button', { name: 'Cancel' }).click();
+    await row(page, 'Clean One').getByRole('button', { name: 'Remove from this browser' }).click();
+    await expect(confirm(page)).toBeVisible();
+    await expect(confirm(page)).not.toContainText('Changes since you last saved');
+    await expect(confirm(page)).not.toContainText('never been saved');
+  });
+
   test('opens the most recent other script when the open one is removed', async ({ page }) => {
     await start(page);
     await choose(page, 'New screenplay');

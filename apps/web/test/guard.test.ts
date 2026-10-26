@@ -93,3 +93,26 @@ describe('claim', () => {
     expect(useGuard().readOnly.value).toBe(true);
   });
 });
+
+describe('handing a script over', () => {
+  test('lets go of the lock it was asked about, not the one a switch took meanwhile', async () => {
+    const { guardControl, useGuard } = await import('../app/storage/guard');
+    await guardControl.claim('a');
+    guardControl.bind({
+      // The flush takes a while, and a switch to b finishes its claim in the middle of it.
+      async giveUp() {
+        await guardControl.claim('b');
+        return true;
+      },
+      async takeOver() {},
+      taken() {},
+    });
+    const asker = new BroadcastChannel('drafter');
+    asker.postMessage({ type: 'release', id: 'a' });
+    await vi.waitFor(() => expect(locks.held.has(lockOf('a'))).toBe(false));
+    // b is the lock this tab holds now, and it is still editable.
+    expect(locks.held.has(lockOf('b'))).toBe(true);
+    expect(useGuard().readOnly.value).toBe(false);
+    asker.close();
+  });
+});

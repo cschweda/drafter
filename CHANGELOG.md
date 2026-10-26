@@ -212,6 +212,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - Switching scripts takes the new script's lock before letting go of the old one, and the editor can't be typed in during the switch, so another tab can't take the old script while this one can still edit it.
   - A tab that is handing a script over still leaves its unwritten text for a closing page.
   - The read-only bar's text is announced: it sits in a status region that is always in the page, and its two sentences are punctuated.
+- `apps/web`: fixes from the scripts menu's review.
+  - Only one switch of scripts runs at a time: a double click on New screenplay makes one script, and a second switch can no longer load over text typed after the first. The menu's items are disabled while one is under way.
+  - A tab handing a script over lets go of the lock it was asked about, not one a switch took meanwhile.
+  - Removing a script that has a file, with changes since its last save, says those changes are lost.
 
 ### Security
 

@@ -69,14 +69,11 @@ function request(
   });
 }
 
-function drop() {
-  releaseHeld?.();
-  releaseHeld = null;
-  heldId = null;
-}
-
 /** The holder's side of a handover. Read-only first, so nothing is typed after the flush. */
 async function handOver() {
+  // The lock this handover is about: a switch may take another while the flush runs.
+  const id = heldId;
+  const release = releaseHeld;
   handingOver = true;
   readOnly.value = true;
   let written = false;
@@ -85,8 +82,15 @@ async function handOver() {
   } catch {
     // The recovery copy couldn't be written: the text stays here.
   }
-  if (written) drop();
-  else readOnly.value = false;
+  if (written) {
+    release?.();
+    if (heldId === id) {
+      releaseHeld = null;
+      heldId = null;
+    }
+  } else if (heldId === id) {
+    readOnly.value = false;
+  }
   handingOver = false;
 }
 
