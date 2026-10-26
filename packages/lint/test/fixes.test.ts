@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { parse } from '@drafter/fountain';
+import { blockAt, parse } from '@drafter/fountain';
 import { type LintDiagnostic, lint, STRICT_RULES } from '@drafter/lint';
 import { builtins, type Template } from '@drafter/templates';
 import fc from 'fast-check';
@@ -26,18 +26,22 @@ function keepsEndings(before: string, after: string): boolean {
   return now.cr === was.cr && (was.lf > 0 || now.lf === 0) && (was.crlf > 0 || now.crlf === 0);
 }
 
-// Lines that set off the Strict rules in the shapes the parser reads, among lines that get in
-// their way: blank lines, the two-space line that joins a speech, section and page-break markers.
+// Lines that set off the rules in the shapes the parser reads, among lines that get in their
+// way: blank lines, the two-space line that joins a speech, section and page-break markers.
 const plain = [
   'INT. HALL - DAY',
   'INT. HALL - DAY  ',
   'EXT. YARD - NIGHT',
+  'INT. HALL',
   'CUT TO:',
   '.THE HALL',
   '> FADE OUT.',
   'MARGARET',
   'DANNY (V.O.)',
   'MARGARET ^',
+  "MARGARET (CONT'D)",
+  "DANNY (V.O.) (CONT'D)",
+  'BANG!',
   '(quietly,',
   '(quietly,  ',
   '   then louder)',
@@ -101,6 +105,8 @@ const fragments = [
   'INT. A',
   'CUT TO:',
   'MARGARET',
+  "(CONT'D)",
+  'BANG!',
   'Hi.',
   '\ufeff',
   '#',
@@ -114,24 +120,73 @@ const jumble = fc
 
 const numRuns = 1_000;
 
+/**
+ * Applies one fix and compares the problems before and after: the fix's own rule has one fewer,
+ * no other rule's count changes, and no rule that had no problem has one now.
+ */
+function expectSettlesOnlyItsOwn(source: string, before: LintDiagnostic[], d: LintDiagnostic) {
+  if (!d.fix) return;
+  const after = run(applyFix(source, d.fix));
+  for (const id of new Set(before.map((b) => b.ruleId))) {
+    expect(countOf(after, id)).toBe(countOf(before, id) - (id === d.ruleId ? 1 : 0));
+  }
+  expect(after.every((a) => before.some((b) => b.ruleId === a.ruleId))).toBe(true);
+}
+
 describe('fixes', () => {
   // Without notes and boneyard, because a fix that joins lines can change where a note ends
   // (the search for `]]` stops at a blank line, and an empty line inside a boneyard is one).
-  it('settle the problem they are for, and no other', () => {
+  //
+  // Only the Strict rules' fixes: they rewrite spacing, and the parser read the file that way
+  // already, so no block changes kind. The fix for character-without-dialogue merges two blocks
+  // into a cue and its speech, which can change another rule's count: a wrapped parenthetical
+  // in the second block becomes one in a speech and gains a multiline-parenthetical, and the
+  // cue makes its name known to other lines. It has a property of its own below.
+  it('of the Strict rules settle the problem they are for, and no other', () => {
     fc.assert(
       fc.property(scripts(plain), (source) => {
         const before = run(source);
-        for (const d of before) {
-          if (!d.fix) continue;
-          const after = run(applyFix(source, d.fix));
-          for (const id of new Set(before.map((b) => b.ruleId))) {
-            expect(countOf(after, id)).toBe(countOf(before, id) - (id === d.ruleId ? 1 : 0));
-          }
-          expect(after.every((a) => before.some((b) => b.ruleId === a.ruleId))).toBe(true);
+        for (const d of before.filter(isStrict)) expectSettlesOnlyItsOwn(source, before, d);
+      }),
+      { numRuns },
+    );
+  });
+
+  it("that remove a typed (CONT'D) settle that problem, and no other", () => {
+    fc.assert(
+      fc.property(scripts(plain), (source) => {
+        const before = run(source);
+        for (const d of before.filter((b) => b.ruleId === 'manual-contd')) {
+          expectSettlesOnlyItsOwn(source, before, d);
         }
       }),
       { numRuns },
     );
+  });
+
+  it('that remove the blank line after a cue-like line make it a cue', () => {
+    let fixedAny = false;
+    fc.assert(
+      fc.property(scripts(plain), (source) => {
+        for (const d of run(source).filter((b) => b.ruleId === 'character-without-dialogue')) {
+          if (!d.fix) continue;
+          fixedAny = true;
+          const fixed = applyFix(source, d.fix);
+          const block = blockAt(parse(fixed), d.span.from)?.block;
+          expect(block?.kind).toBe('character');
+          expect(block?.span.from).toBe(d.span.from);
+          // It is no longer reported, and the text lost a blank line and nothing else.
+          expect(run(fixed).some((r) => r.ruleId === d.ruleId && r.span.from === d.span.from)).toBe(
+            false,
+          );
+          const [change] = d.fix.changes;
+          expect(d.fix.changes).toHaveLength(1);
+          expect(source.slice(change?.from, change?.to)).toMatch(/^\s*\n$/);
+        }
+      }),
+      { numRuns },
+    );
+    expect(fixedAny).toBe(true);
   });
 
   it('can all be made at once, which leaves no Strict problem', () => {

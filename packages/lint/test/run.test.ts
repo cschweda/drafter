@@ -33,6 +33,28 @@ function fixed(source: string, diagnostic: LintDiagnostic | undefined): string {
 /** A script that produces exactly one diagnostic, with that diagnostic's fix made. */
 const fixedOnce = (source: string) => fixed(source, only(source));
 
+/** Runs `fn` with extra rules at the end of the registry, and takes them out again. */
+function withRules<T>(extra: Rule[], fn: () => T): T {
+  const registry = rules as Rule[];
+  registry.push(...extra);
+  try {
+    return fn();
+  } finally {
+    registry.length -= extra.length;
+  }
+}
+
+/** Runs `fn` with the registry in the opposite order, and puts it back. */
+function withReversedRules<T>(fn: () => T): T {
+  const registry = rules as Rule[];
+  registry.reverse();
+  try {
+    return fn();
+  } finally {
+    registry.reverse();
+  }
+}
+
 describe('lint', () => {
   it('finds nothing in a clean script', () => {
     expect(run("INT. HALL - DAY\n\nShe waits.\n\nMARGARET\nYou said you'd call.\n")).toEqual([]);
@@ -110,6 +132,22 @@ describe('lint', () => {
     ]);
   });
 
+  it('puts the smaller rule id first when two start in the same place', () => {
+    // A heading with no time and a line right below it: both rules point at the heading line.
+    // The registry lists heading-blank-after first, so run the rules in the opposite order to
+    // see that the sort, and not the registry, puts it first.
+    const source = 'INT. HALL\nShe waits.\n';
+    const order = rules.map((r) => r.id);
+    expect(order.indexOf('heading-blank-after')).toBeLessThan(order.indexOf('heading-no-time'));
+
+    expect(ids(run(source))).toEqual(['heading-blank-after', 'heading-no-time']);
+    const found = withReversedRules(() => run(source));
+    expect(found.map((d) => [d.ruleId, d.span.from])).toEqual([
+      ['heading-blank-after', 0],
+      ['heading-no-time', 0],
+    ]);
+  });
+
   it("shares nothing with the document's own diagnostics", () => {
     const doc = parse('INT. HALL - DAY\nShe waits.\n');
     const before = structuredClone(doc.diagnostics);
@@ -120,6 +158,34 @@ describe('lint', () => {
       d.span.to = 99;
     }
     expect(doc.diagnostics).toEqual(before);
+  });
+
+  it("shares nothing with the document's blocks", () => {
+    // A script that sets off each of the structural rules, and so hands out spans and changes.
+    const source =
+      "MARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n";
+    const doc = parse(source);
+    const spans = () =>
+      structuredClone(doc.blocks.map((b) => [b.span, ...b.lines.map((l) => l.span)]));
+    const before = spans();
+    const found = lint(doc, screenplay);
+    expect(new Set(ids(found))).toEqual(
+      new Set([
+        'manual-contd',
+        'character-without-dialogue',
+        'heading-no-time',
+        'transition-not-last',
+      ]),
+    );
+    for (const d of found) {
+      d.span.from = 99;
+      d.span.to = 99;
+      for (const change of d.fix?.changes ?? []) {
+        change.from = 99;
+        change.to = 99;
+      }
+    }
+    expect(spans()).toEqual(before);
   });
 });
 
@@ -313,23 +379,31 @@ describe('multiline-parenthetical', () => {
 
 describe('strict mode', () => {
   const source =
-    'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\n   then louder)\nHi. [[open\n\nThere /* cut';
+    "INT. HALL - DAY\nShe waits.\n\nMARGARET (CONT'D)\n(quietly,\n   then louder)\nHi. [[open\n\nThere /* cut";
   const severities = (options?: LintOptions) =>
     run(source, options).map((d) => [d.ruleId, d.severity]);
 
   it('raises the two Strict rules from info to warning, and leaves the rest as they were', () => {
     expect(severities()).toEqual([
       ['heading-blank-after', 'info'],
+      ['manual-contd', 'info'],
       ['multiline-parenthetical', 'info'],
       ['unclosed-region', 'warning'],
       ['unclosed-region', 'error'],
     ]);
     expect(severities({ strict: true })).toEqual([
       ['heading-blank-after', 'warning'],
+      ['manual-contd', 'info'],
       ['multiline-parenthetical', 'warning'],
       ['unclosed-region', 'warning'],
       ['unclosed-region', 'error'],
     ]);
+  });
+
+  it('raises only the Strict rules in strict mode', () => {
+    // manual-contd is info, and is not a Strict rule: it stays info.
+    const found = run("MARGARET (CONT'D)\nHi.\n", { strict: true });
+    expect(found.map((d) => [d.ruleId, d.severity])).toEqual([['manual-contd', 'info']]);
   });
 
   it('does nothing when strict is off', () => {
@@ -338,36 +412,6 @@ describe('strict mode', () => {
 });
 
 describe('the runner, with rules a test adds', () => {
-  /** Runs `fn` with extra rules at the end of the registry, and takes them out again. */
-  function withRules<T>(extra: Rule[], fn: () => T): T {
-    const registry = rules as Rule[];
-    registry.push(...extra);
-    try {
-      return fn();
-    } finally {
-      registry.length -= extra.length;
-    }
-  }
-  const reporting = (id: string, severity: Severity): Rule => ({
-    id,
-    severity,
-    run: () => [{ ruleId: id, severity, span: { from: 0, to: 1 }, message: id }],
-  });
-
-  it('raises only the Strict rules in strict mode', () => {
-    const found = withRules([reporting('other-info', 'info')], () =>
-      run('Hi.\n', { strict: true }),
-    );
-    expect(found.map((d) => [d.ruleId, d.severity])).toEqual([['other-info', 'info']]);
-  });
-
-  it('puts the smaller rule id first when two start in the same place', () => {
-    const found = withRules([reporting('b-rule', 'info'), reporting('a-rule', 'info')], () =>
-      run('Hi.\n'),
-    );
-    expect(ids(found)).toEqual(['a-rule', 'b-rule']);
-  });
-
   it('does not run a rule that is turned off', () => {
     const boom: Rule = {
       id: 'boom',
@@ -409,6 +453,10 @@ describe('rules', () => {
       'invalid-meta': 'warning',
       'heading-blank-after': 'info',
       'multiline-parenthetical': 'info',
+      'character-without-dialogue': 'warning',
+      'manual-contd': 'info',
+      'heading-no-time': 'warning',
+      'transition-not-last': 'warning',
     };
     expect(declared).toMatchObject(expected);
 
@@ -418,6 +466,7 @@ describe('rules', () => {
       'Hi [[open\n\nThere /* cut',
       'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\n   then louder)\nHi.\n',
       'Margaret waits.\n\n/* drafter\n{ nope }\n*/\n',
+      "MARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);
     for (const d of found) {

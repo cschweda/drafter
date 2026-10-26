@@ -1,11 +1,15 @@
 import type { Doc } from '@drafter/fountain';
 import type { Template } from '@drafter/templates';
+import { manualContd } from './rules/contd';
+import { characterWithoutDialogue } from './rules/cue';
+import { headingNoTime } from './rules/heading';
 import {
   headingBlankAfter,
   invalidMeta,
   multilineParenthetical,
   unclosedRegion,
 } from './rules/parse';
+import { transitionNotLast } from './rules/transition';
 import type { LintDiagnostic, LintOptions, Rule, RuleContext } from './types';
 
 /** Every rule, in the order they run. */
@@ -14,6 +18,10 @@ export const rules: readonly Rule[] = [
   invalidMeta,
   headingBlankAfter,
   multilineParenthetical,
+  characterWithoutDialogue,
+  manualContd,
+  headingNoTime,
+  transitionNotLast,
 ];
 
 /**

@@ -31,7 +31,7 @@ problem.fix;      // { title: 'Insert a blank line', changes: [{ from: 15, to: 1
 
 ## The rules
 
-These rules carry over what the parser reports on its own (technical design §2.10). Each one sets the severity, and the two Strict rules supply the fix.
+The first four carry over what the parser reports on its own (technical design §2.10). Each one sets the severity, and the two Strict rules supply the fix.
 
 | Rule | Severity | Reports | Fix |
 |---|---|---|---|
@@ -39,6 +39,17 @@ These rules carry over what the parser reports on its own (technical design §2.
 | `invalid-meta` | warning | The `/* drafter … */` block at the end of the file isn't a JSON object. | None |
 | `heading-blank-after` | info; warning when `strict` | A scene heading or transition with text right below it, which Drafter reads but the Fountain spec doesn't. | **Insert a blank line** |
 | `multiline-parenthetical` | info; warning when `strict` | A parenthetical wrapped over several lines. | **Join onto one line** |
+
+The other four look at the structure of the script, and each has a control against false alarms.
+
+| Rule | Severity | Reports | Fix |
+|---|---|---|---|
+| `character-without-dialogue` | warning | An upper-case line shaped like a cue (a name, extensions in any case, an optional `^`), alone in its block, then one blank line, then an action block that opens with `(` or is about a character cued elsewhere in the script. The parser reads both as action, and the blank line is the typo. Forced action (`!`) and lines with emphasis are left alone. | **Remove the blank line** |
+| `manual-contd` | info | A cue with a typed `(CONT'D)`, which the layout adds itself. | **Remove (CONT'D)**, with the spaces before it |
+| `heading-no-time` | warning | A scene heading with no time of day. A forced heading (`.MONTAGE`) is how Fountain writes one without, so it is never reported. | None |
+| `transition-not-last` | warning | A transition whose next block isn't a scene heading, a section, or a page break. Notes, boneyard, and synopses in between are skipped, and a transition that ends the script passes. | None |
+
+`stage-play-standard` turns off `heading-no-time` and `transition-not-last` through its `lint.disable`, since a play has no sluglines or transitions.
 
 A rule's `severity` is the highest it reports. `unclosed-region` says `error`, but each diagnostic carries its own: a note is a warning.
 
@@ -48,7 +59,10 @@ A fix is a list of `TextChange`s (`{ from, to, insert }`) in the offsets of the 
 
 - **Line endings are kept.** The blank line after a heading is `\r\n` when the heading's line ends in `\r`, and `\n` otherwise, and goes in front of the `\r`. Joining a parenthetical takes each line break with its `\r`, so a CRLF file stays CRLF.
 - **Joining** turns each line break in the parenthetical into one space, along with the spaces and tabs around it and the next line's indent.
+- **Removing the blank line** deletes its text and its line break: `\n`, or `\r\n` in a CRLF file, when it is empty. Every other line break stays.
+- **Removing `(CONT'D)`** deletes each one on the cue, with the spaces and tabs before it, and nothing else.
 - **No fix inside a note or a boneyard.** If a heading's line ends inside one that runs on to the next line, a blank line there would end the note or leave the text below the heading in place, so the problem is reported without a fix.
+- **No fix that could change the line endings or cut a note.** A `(CONT'D)` with a note inside it, or on a cue that holds a carriage return of its own, and a blank line that holds one, are reported without a fix.
 
 ## License
 
