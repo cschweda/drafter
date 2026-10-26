@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/web`: the status bar's daily-goal progress and the Counts panel's "today" line no longer blink out after each pause in typing. Autosave put a new copy of the script's record in place with the same id, and the goal took that for a different script and read itself back from the table; it now starts again only when the script's id (or sample flag) changes.
+- `apps/web`: a read-only tab (another tab has the script) no longer sets or clears a daily goal, and the Counts panel disables the goal form there and says why.
+- `apps/web`: typewriter scrolling follows macOS's Control-b, f, n, p, a, e, and v cursor moves as it does the arrow keys.
 - `apps/web`: typewriter scrolling no longer jumps to the end of the script on Select All, and no longer scrolls under a finger dragging a selection handle: a change to the selection alone scrolls only when an arrow, Home, End, or Page Up or Down made it, and not once the selection is taller than the pane.
 - `apps/web`: changing another setting (line numbers, spellcheck, text size) no longer rebuilds typewriter scrolling, which took the room above and below the text away for a moment and could lose the place in a long script. Only a setting that changed is applied.
 - `apps/web`: on a phone with the soft keyboard up, typewriter scrolling puts the line in the middle of the part of the pane that can be seen, not of the whole pane, which runs under the keyboard.

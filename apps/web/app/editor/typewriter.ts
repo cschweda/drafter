@@ -1,5 +1,6 @@
 import { Annotation, type Extension, type Transaction } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { isApple } from '../commands/keys';
 
 /**
  * Marks a transaction as the app's own, not the writer's: a template block written, a fix applied,
@@ -38,7 +39,7 @@ export function centersOn(tr: Transaction, navigated = false): boolean {
   );
 }
 
-/** The keys that move the cursor, which are the only way a selection change scrolls. */
+/** The keys that move the cursor on any keyboard: the only way, with these below, that a selection change scrolls. */
 const NAVIGATION_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -49,6 +50,21 @@ const NAVIGATION_KEYS = new Set([
   'PageUp',
   'PageDown',
 ]);
+
+/** macOS's Emacs-style moves, which CodeMirror binds there with Control: back, forward, next line, previous line, start, end, and page down. */
+const MAC_CONTROL_KEYS = new Set(['b', 'f', 'n', 'p', 'a', 'e', 'v']);
+
+/** Whether `event` is a key that moves the cursor (`apple`: a Mac keyboard, where Control-b and the like do too). */
+export function movesCursor(event: KeyboardEvent, apple: boolean = isApple()): boolean {
+  if (NAVIGATION_KEYS.has(event.key)) return true;
+  return (
+    apple &&
+    event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    MAC_CONTROL_KEYS.has(event.key.toLowerCase())
+  );
+}
 
 /**
  * Whether a selection `height` pixels tall is more than a pane `viewport` pixels tall can show.
@@ -121,7 +137,7 @@ export function typewriterScrolling(): Extension {
         private readonly win: Window | null;
         private readonly remeasure = () => this.measure();
         private readonly onKey = (event: KeyboardEvent) => {
-          if (!NAVIGATION_KEYS.has(event.key)) return;
+          if (!movesCursor(event)) return;
           this.navigating = true;
           setTimeout(() => {
             this.navigating = false;

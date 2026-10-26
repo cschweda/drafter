@@ -10,7 +10,7 @@ const emit = defineEmits<{ close: [] }>();
 
 const { kind } = useEditor();
 const { counts, known } = useCounts();
-const { goal, progress, canSet, setGoal } = useGoal();
+const { goal, progress, canSet, locked, setGoal } = useGoal();
 
 const markdown = computed(() => kind.value === 'markdown');
 const root = ref<HTMLElement>();
@@ -130,6 +130,9 @@ function onKeydown(event: KeyboardEvent) {
         This is a sample. Save your edits as a script of your own to set a goal.
       </p>
       <template v-else>
+        <p v-if="locked" class="note">
+          This tab can’t edit the script, so it can’t change the goal either.
+        </p>
         <p v-if="progress" class="today">
           {{ progressLabel(progress) }}<template v-if="cut">. Cuts since the day began: {{ cut }}.</template>
         </p>
@@ -137,6 +140,7 @@ function onKeydown(event: KeyboardEvent) {
           Set a goal, and the status bar shows how far the script has grown today. Cutting counts against it.
         </p>
         <form class="goal-form" @submit.prevent="onSubmit">
+          <fieldset :disabled="locked" class="bare">
           <label for="counts-goal-target">Goal for today</label>
           <div class="fields">
             <input
@@ -158,6 +162,7 @@ function onKeydown(event: KeyboardEvent) {
           </div>
           <p v-if="problem" id="counts-goal-problem" class="problem" role="alert">{{ problem }}</p>
           <p class="sr-only" role="status">{{ said }}</p>
+          </fieldset>
         </form>
       </template>
     </section>
@@ -279,6 +284,12 @@ h3 {
   display: block;
   margin-bottom: 4px;
   color: var(--muted);
+}
+.bare {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 .goal-form label:not(.sr-only) {
   display: block;

@@ -10,6 +10,7 @@ import {
 import { useEditor } from '../editor/session';
 import type { DocumentKind } from '../markdown/kind';
 import { db } from '../storage/db';
+import { useGuard } from '../storage/guard';
 import { useScript } from '../storage/script';
 import { useCounts } from './counts';
 import { DAY_PREFIX, dayKey, goalKey } from './keys';
@@ -45,6 +46,8 @@ export interface GoalDeps {
   sample(): boolean;
   kind(): DocumentKind;
   counts(): KnownCounts;
+  /** This tab can't edit (another tab has the script): it keeps no goal either. */
+  readOnly?(): boolean;
   /** The clock; tests move it. */
   now?(): Date;
 }
@@ -56,6 +59,8 @@ export interface GoalStore {
   progress: Readonly<ComputedRef<Progress | null>>;
   /** A goal can be set: a script of the writer's own is open. */
   canSet: Readonly<ComputedRef<boolean>>;
+  /** The tab is read-only: `setGoal` changes nothing. */
+  locked: Readonly<ComputedRef<boolean>>;
   /**
    * Sets or (with null) clears the goal, and keeps it in this browser. A goal that can't be held
    * (not a whole number of words, a unit a Markdown document doesn't count) or a sample changes nothing.
@@ -163,6 +168,7 @@ export function createGoal(deps: GoalDeps): GoalStore {
     current.date === mine.date;
 
   const canSet = computed(() => deps.project() !== null && !deps.sample());
+  const locked = computed(() => deps.readOnly?.() ?? false);
 
   /** Removes the starting counts of days older than `KEEP_DAYS`, whichever script they were for. */
   async function prune() {
@@ -270,8 +276,10 @@ export function createGoal(deps: GoalDeps): GoalStore {
 
   scope.run(() => {
     // Another script (or a sample) opening starts again from what is stored for it.
+    // Two primitive sources, not one getter returning an array: the array is new every time the getter
+    // runs, so autosave putting a new object in `project` (same id) would restart the goal each time.
     watch(
-      () => [deps.project(), deps.sample()] as const,
+      [() => deps.project(), () => deps.sample()],
       ([project, sample]) => {
         current = { project, sample, date: dateKey(now()) };
         open();
@@ -301,7 +309,7 @@ export function createGoal(deps: GoalDeps): GoalStore {
     // Whatever was asked first (the goal being read) is done before this takes its place.
     await tail;
     const id = tracked();
-    if (id === null) return;
+    if (id === null || locked.value) return;
     if (next !== null && (!isGoal(next) || (deps.kind() === 'markdown' && next.unit !== 'words')))
       return;
     const mine = { ...current };
@@ -331,6 +339,7 @@ export function createGoal(deps: GoalDeps): GoalStore {
     goal: readonly(goal),
     progress,
     canSet,
+    locked,
     setGoal,
     tick,
     settled: async () => {
@@ -350,11 +359,13 @@ let shared: GoalStore | undefined;
 export function useGoal(): GoalStore {
   if (!shared) {
     const { project } = useScript();
+    const guard = useGuard();
     const { kind } = useEditor();
     const counts = useCounts();
     shared = createGoal({
       project: () => project.value?.id ?? null,
       sample: () => !!project.value?.sample,
+      readOnly: () => guard.readOnly.value,
       kind: () => kind.value,
       counts: () => counts.known.value,
     });
