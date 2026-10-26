@@ -345,6 +345,30 @@ test.describe('what the corner keeps from the bars that are gone', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await expect(marker(page)).toContainText("Drafter can't find The Call.fountain");
   });
+
+  test('says a changed file was loaded, as a status', async ({ page, browserName, isMobile }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, 'the File System Access API');
+    await stubPickers(page);
+    await start(page);
+    const v1 = 'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n';
+    await putFile(page, 'The Call.fountain', v1);
+    await nextFileName(page, 'The Call.fountain');
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts' })
+      .getByRole('button', { name: 'Open a file…' })
+      .click();
+    await expect(editor(page)).toContainText('A phone rings.');
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await putFile(page, 'The Call.fountain', `${v1}\nNobody answers.\n`);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(editor(page)).toContainText('Nobody answers.');
+    // The bar that says so is not in the page: the corner does, and a screen reader hears it.
+    await expect(marker(page).getByRole('status').filter({ hasText: 'Updated from' })).toHaveText(
+      'Updated from The Call.fountain.',
+    );
+  });
 });
 
 test.describe('focus mode, keys and layouts', () => {
@@ -360,6 +384,31 @@ test.describe('focus mode, keys and layouts', () => {
     await expect(editor(page)).toBeFocused();
     await page.keyboard.type('X');
     await expect(editor(page)).toContainText('hello Xworld');
+  });
+
+  test('centers the cursor when it enters with typewriter scrolling on', async ({ page }) => {
+    await start(page);
+    await showSource(page);
+    await page.getByRole('button', { name: 'Typewriter', exact: true }).click();
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.press('Delete');
+    for (let i = 1; i <= 80; i++) await page.keyboard.insertText(`Line ${i}\n`);
+    for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowUp');
+    // The pane is taller in focus mode (no toolbar or bars), so the middle is somewhere else.
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const pane = document.querySelector('.cm-scroller')?.getBoundingClientRect();
+          const mark = document.querySelector('.cm-cursor-primary')?.getBoundingClientRect();
+          const line = document.querySelector('.cm-line')?.getBoundingClientRect();
+          if (!pane || !mark || !line) return Number.POSITIVE_INFINITY;
+          return Math.abs(mark.top + mark.height / 2 - (pane.top + pane.height / 2)) - line.height;
+        }),
+      )
+      .toBeLessThanOrEqual(0);
   });
 
   test('the first Esc collapses a selection and the second leaves', async ({ page }) => {

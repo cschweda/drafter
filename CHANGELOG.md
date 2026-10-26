@@ -14,6 +14,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/web`: typewriter scrolling no longer jumps to the end of the script on Select All, and no longer scrolls under a finger dragging a selection handle: a change to the selection alone scrolls only when an arrow, Home, End, or Page Up or Down made it, and not once the selection is taller than the pane.
+- `apps/web`: changing another setting (line numbers, spellcheck, text size) no longer rebuilds typewriter scrolling, which took the room above and below the text away for a moment and could lose the place in a long script. Only a setting that changed is applied.
+- `apps/web`: on a phone with the soft keyboard up, typewriter scrolling puts the line in the middle of the part of the pane that can be seen, not of the whole pane, which runs under the keyboard.
+- `apps/web`: in focus mode, a file changed elsewhere and loaded now says **Updated from …** in the corner marker (and to a screen reader), as the bar it replaces would have. Entering focus mode with typewriter scrolling on puts the cursor's line in the middle at once. A dialog left open without being modal no longer stops Esc from leaving focus mode.
 - `apps/web`: in Safari, widening or narrowing the window while the cursor was in the Source pane (which moves the editor between layouts) put the cursor back at the start of the text, so the next key typed landed there. The cursor now stays where it was.
 - `apps/web`: focus mode now shows what its hidden bars would have: the "changes exist only in memory" warning as an alert, and a missing, unreadable, or locked file as a status, in the corner marker.
 - `apps/web`: the focus mode shortcut does nothing while a dialog is open or an input method is composing, and Esc from a Safari input method no longer leaves focus mode.

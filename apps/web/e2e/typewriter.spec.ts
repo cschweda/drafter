@@ -168,6 +168,37 @@ test.describe('typewriter scrolling', () => {
     await expect(barButton(page)).toHaveAttribute('aria-pressed', 'true');
   });
 
+  test('keeps the place in the script when another setting changes', async ({ page }) => {
+    await turnOn(page);
+    await typeLines(page, 80);
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect
+      .poll(async () => {
+        const at = await offCenter(page, 'cursor');
+        return at !== null && at.off <= at.line;
+      })
+      .toBe(true);
+    const padding = () => editor(page).evaluate((el) => (el as HTMLElement).style.paddingBottom);
+    // The scroll has settled (centering within a line is not the same as being still).
+    await page.waitForTimeout(300);
+    const before = await scroller(page).evaluate((el) => el.scrollTop);
+    const room = await padding();
+    expect(room).not.toBe('');
+
+    // Line numbers, spellcheck, and the text size are other settings; none rebuilds the plugin.
+    await openSettings(page);
+    await settingsDialog(page).getByRole('switch', { name: 'Line numbers' }).check();
+    await settingsDialog(page).getByRole('switch', { name: 'Spellcheck' }).uncheck();
+    await expect(page.locator('.cm-lineNumbers')).toBeVisible();
+    await page.waitForTimeout(200);
+    // Read with the dialog still up: WebKit moves the text a little when focus comes back to
+    // the editor, whatever the settings did.
+    expect(await padding()).toBe(room);
+    expect(Math.abs((await scroller(page).evaluate((el) => el.scrollTop)) - before)).toBeLessThan(
+      3,
+    );
+  });
+
   test('does not fight the writer scrolling by hand', async ({ page, isMobile }) => {
     test.skip(isMobile, 'a wheel is a mouse');
     await turnOn(page);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { fileTrouble, troubleMessage } from '~/storage/check';
+import { fileTrouble, troubleMessage, updatedNotice } from '~/storage/check';
 import { useGuard } from '~/storage/guard';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
@@ -32,6 +32,10 @@ const label = computed(() =>
     <span v-if="fileTrouble" role="status" class="failed">
       {{ troubleMessage(fileTrouble) }} Leave focus mode to deal with it.
     </span>
+    <!-- "Updated from The Call.fountain.": the file bar that says it isn't in this layout. The live
+         region is always there, so that a message set later is announced. -->
+    <span class="sr-only" role="status">{{ updatedNotice }}</span>
+    <span v-if="updatedNotice" aria-hidden="true" class="failed">{{ updatedNotice }}</span>
     <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>

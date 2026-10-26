@@ -18,6 +18,20 @@ export function leavesOnEscape(event: KeyboardEvent): boolean {
   if (event.keyCode === 229) return false;
   if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return false;
   if (event.target instanceof Element && event.target.closest(OWNERS)) return false;
-  // A modal dialog that is open is the page's one question, whatever has focus.
-  return !document.querySelector('dialog[open], [role="dialog"], [role="alertdialog"]');
+  // A modal dialog that is open is the page's one question, whatever has focus. One that is open
+  // without being modal (`<dialog open>`, `show()`) is not.
+  return !modalOpen();
+}
+
+function modalOpen(): boolean {
+  for (const dialog of document.querySelectorAll('dialog[open]')) {
+    try {
+      if (dialog.matches(':modal')) return true;
+    } catch {
+      // A browser that doesn't know `:modal` can't say: it counts as modal, as every dialog did.
+      return true;
+    }
+  }
+  // The palette and other dialogs of the page's own are not native elements.
+  return !!document.querySelector('[role="dialog"], [role="alertdialog"]');
 }

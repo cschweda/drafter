@@ -1,3 +1,4 @@
+import type { Compartment, Extension, StateEffect } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Settings } from '~/settings/settings';
 import {
@@ -17,12 +18,15 @@ import {
  * each one as well as after each change.
  */
 export function applyEditorSettings(view: EditorView, settings: Settings): void {
-  view.dispatch({
-    effects: [
-      spellcheck.reconfigure(spellcheckAttribute(settings.spellcheck)),
-      lineNumbersGutter.reconfigure(lineNumbersExtension(settings.lineNumbers)),
-      typewriter.reconfigure(typewriterExtension(settings.typewriter)),
-    ],
-  });
+  // Only a compartment whose value changed is reconfigured: the others keep what they hold (the
+  // typewriter plugin, in particular, keeps the room it made above and below the text).
+  const effects: StateEffect<unknown>[] = [];
+  const set = (compartment: Compartment, next: Extension) => {
+    if (compartment.get(view.state) !== next) effects.push(compartment.reconfigure(next));
+  };
+  set(spellcheck, spellcheckAttribute(settings.spellcheck));
+  set(lineNumbersGutter, lineNumbersExtension(settings.lineNumbers));
+  set(typewriter, typewriterExtension(settings.typewriter));
+  if (effects.length > 0) view.dispatch({ effects });
   relint();
 }

@@ -17,8 +17,13 @@ export const appChange = Annotation.define<boolean>();
  * (loading, relinting, the palette's Go to line, which scrolls itself), one marked `appChange`,
  * a file's text put in (`input.replace`), and one that changed neither the text nor the selection
  * never count.
+ *
+ * A change to the selection alone counts only when `navigated` says a key that moves the cursor
+ * (an arrow, Home, End, Page Up or Down) made it. Everything else that selects carries the same
+ * `select` user event: Select All, which would jump to the end of the script, and the handles a
+ * finger drags on a touch screen, which scrolling would fight.
  */
-export function centersOn(tr: Transaction): boolean {
+export function centersOn(tr: Transaction, navigated = false): boolean {
   if (!tr.docChanged && !tr.selection) return false;
   if (
     tr.annotation(appChange) ||
@@ -27,9 +32,59 @@ export function centersOn(tr: Transaction): boolean {
   ) {
     return false;
   }
+  if (!tr.docChanged && !navigated) return false;
   return ['input', 'delete', 'undo', 'redo', 'select', 'move'].some((event) =>
     tr.isUserEvent(event),
   );
+}
+
+/** The keys that move the cursor, which are the only way a selection change scrolls. */
+const NAVIGATION_KEYS = new Set([
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+]);
+
+/**
+ * Whether a selection `height` pixels tall is more than a pane `viewport` pixels tall can show.
+ * Centering the end of one only chases it: extending a selection by keys stops scrolling once it
+ * is that big.
+ */
+export function exceedsViewport(height: number, viewport: number): boolean {
+  return height > viewport;
+}
+
+export interface Insets {
+  /** Pixels at the top of the pane that cannot be seen. */
+  top: number;
+  /** Pixels at the bottom of the pane that cannot be seen: under a soft keyboard. */
+  bottom: number;
+}
+
+/**
+ * The parts of the pane the writer can't see, for the middle to be that of what they can. The
+ * pane is as tall as the layout viewport; on a phone the soft keyboard shrinks the *visual*
+ * viewport (`window.visualViewport`) and not the layout one, so the bottom of the pane is under
+ * the keyboard. Both are in the layout viewport's coordinates. Without a visual viewport, or when
+ * it covers the pane, nothing is hidden.
+ */
+export function viewportInsets(
+  pane: { top: number; bottom: number },
+  viewport: { offsetTop: number; height: number } | null | undefined,
+): Insets {
+  if (!viewport) return { top: 0, bottom: 0 };
+  const height = Math.max(0, pane.bottom - pane.top);
+  const top = Math.min(height, Math.max(0, Math.round(viewport.offsetTop - pane.top)));
+  const bottom = Math.min(
+    height - top,
+    Math.max(0, Math.round(pane.bottom - (viewport.offsetTop + viewport.height))),
+  );
+  return { top, bottom };
 }
 
 /**
@@ -49,44 +104,98 @@ export function centersOn(tr: Transaction): boolean {
  * on Android CodeMirror reads typing from the page's mutations, and no `input` event reaches it.)
  */
 export function typewriterScrolling(): Extension {
-  return ViewPlugin.fromClass(
-    class {
-      private half = -1;
-      private gone = false;
+  const insetsOf = (view: EditorView): Insets =>
+    viewportInsets(
+      view.scrollDOM.getBoundingClientRect(),
+      view.dom.ownerDocument.defaultView?.visualViewport,
+    );
+  return [
+    // Scrolls to the middle of what can be seen: a target's margins move where "center" is.
+    EditorView.scrollMargins.of((view) => insetsOf(view)),
+    ViewPlugin.fromClass(
+      class {
+        private room = '';
+        private gone = false;
+        /** A key that moves the cursor is being handled: until the task ends, a selection change is its. */
+        private navigating = false;
+        private readonly win: Window | null;
+        private readonly remeasure = () => this.measure();
+        private readonly onKey = (event: KeyboardEvent) => {
+          if (!NAVIGATION_KEYS.has(event.key)) return;
+          this.navigating = true;
+          setTimeout(() => {
+            this.navigating = false;
+          }, 0);
+        };
 
-      constructor(private readonly view: EditorView) {
-        this.measure();
-      }
+        constructor(private readonly view: EditorView) {
+          this.win = view.dom.ownerDocument.defaultView;
+          // In the capture phase, so the flag is set before the keymap's command dispatches.
+          view.dom.addEventListener('keydown', this.onKey, true);
+          this.win?.visualViewport?.addEventListener('resize', this.remeasure);
+          this.win?.visualViewport?.addEventListener('scroll', this.remeasure);
+          this.measure();
+        }
 
-      update(update: ViewUpdate) {
-        if (update.geometryChanged) this.measure();
-        if (!update.view.hasFocus || !update.transactions.some(centersOn)) return;
-        queueMicrotask(() => {
-          if (this.gone) return;
-          const head = this.view.state.selection.main.head;
-          this.view.dispatch({ effects: EditorView.scrollIntoView(head, { y: 'center' }) });
-        });
-      }
+        update(update: ViewUpdate) {
+          if (update.geometryChanged) this.measure();
+          if (
+            !update.view.hasFocus ||
+            !update.transactions.some((tr) => centersOn(tr, this.navigating))
+          ) {
+            return;
+          }
+          // A selection taller than the pane (Shift-End across a script) is not chased.
+          const { from, to, empty } = update.state.selection.main;
+          if (!empty && !update.docChanged && this.tooTall(from, to)) return;
+          queueMicrotask(() => {
+            if (this.gone) return;
+            const head = this.view.state.selection.main.head;
+            this.view.dispatch({ effects: EditorView.scrollIntoView(head, { y: 'center' }) });
+          });
+        }
 
-      /** Half the pane's height above and below the text, and again when the pane is resized. */
-      private measure() {
-        this.view.requestMeasure({
-          key: this,
-          read: (view) => Math.round(view.scrollDOM.clientHeight / 2),
-          write: (half, view) => {
-            if (half === this.half || this.gone) return;
-            this.half = half;
-            view.contentDOM.style.paddingTop = `${half}px`;
-            view.contentDOM.style.paddingBottom = `${half}px`;
-          },
-        });
-      }
+        private tooTall(from: number, to: number): boolean {
+          const view = this.view;
+          const height = view.lineBlockAt(to).bottom - view.lineBlockAt(from).top;
+          return exceedsViewport(height, view.scrollDOM.clientHeight);
+        }
 
-      destroy() {
-        this.gone = true;
-        this.view.contentDOM.style.removeProperty('padding-top');
-        this.view.contentDOM.style.removeProperty('padding-bottom');
-      }
-    },
-  );
+        /**
+         * Half of what can be seen above and below the text, so the first and last lines can reach the
+         * middle of it; what is hidden (under a soft keyboard) is added on its side. Measured again when
+         * the pane or the visual viewport is resized.
+         */
+        private measure() {
+          this.view.requestMeasure({
+            key: this,
+            read: (view) => {
+              const { top, bottom } = insetsOf(view);
+              const seen = Math.max(0, view.scrollDOM.clientHeight - top - bottom);
+              return {
+                above: top + Math.round(seen / 2),
+                below: bottom + Math.round(seen / 2),
+              };
+            },
+            write: ({ above, below }, view) => {
+              const room = `${above}/${below}`;
+              if (room === this.room || this.gone) return;
+              this.room = room;
+              view.contentDOM.style.paddingTop = `${above}px`;
+              view.contentDOM.style.paddingBottom = `${below}px`;
+            },
+          });
+        }
+
+        destroy() {
+          this.gone = true;
+          this.view.dom.removeEventListener('keydown', this.onKey, true);
+          this.win?.visualViewport?.removeEventListener('resize', this.remeasure);
+          this.win?.visualViewport?.removeEventListener('scroll', this.remeasure);
+          this.view.contentDOM.style.removeProperty('padding-top');
+          this.view.contentDOM.style.removeProperty('padding-bottom');
+        }
+      },
+    ),
+  ];
 }

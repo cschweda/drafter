@@ -7,6 +7,7 @@ import { useEditor } from '~/editor/session';
 import { markdownTitle } from '~/markdown/title';
 import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
+import { useSettings } from '~/settings/settings';
 import { installFileCheck } from '~/storage/check';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
@@ -41,6 +42,7 @@ const { view, doc, kind } = useEditor();
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
+const { settings } = useSettings();
 
 /** The script's title, as its kind reads it. */
 function pageTitle(): string {
@@ -76,7 +78,14 @@ watch(
       view.focus();
       // The editor was moved in the page: see `restoreSelection`.
       restoreSelection(view);
-      view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head) });
+      // With typewriter scrolling on, the line goes to the middle of the pane that is there now.
+      const head = view.state.selection.main.head;
+      view.dispatch({
+        effects: EditorView.scrollIntoView(
+          head,
+          settings.value.typewriter ? { y: 'center' } : undefined,
+        ),
+      });
     } else document.getElementById('focus-button')?.focus();
   },
 );
