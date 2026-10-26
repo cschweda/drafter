@@ -53,6 +53,12 @@ Character rules match exact names, compared without regard to case; templates co
 
 With `extends`, objects merge key by key with the child winning, the child's role rules go before the parent's, and every other array replaces the parent's. Validation runs on the merged result.
 
+## Headings and lint
+
+A role can set `heading`, a level from 2 to 6, so its blocks are headings in the rendered script and a screen reader's heading navigation follows what prints. `us-screenplay` marks `scene_heading` level 2; `stage-play-standard` marks `act_heading` level 2 and `scene_heading_play` level 3. Level 1 is left for the page's own title, character cues aren't headings, and the layout ignores the field.
+
+A template can turn lint rules off by id with `lint.disable`. `stage-play-standard` turns off `heading-no-time` and `transition-not-last`, since a play has no sluglines or transitions. The loader checks only that the ids are strings, because it doesn't know the rules. A child's `lint.disable` replaces its parent's, like any other array, so a template that extends the stage play and sets its own list must repeat these two.
+
 ## License
 
 MIT

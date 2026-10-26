@@ -14,6 +14,7 @@ export type {
   InlineRun,
   Line,
   ParseDiagnostic,
+  Region,
   SceneHeadingSem,
   SectionSem,
   Span,

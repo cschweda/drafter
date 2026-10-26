@@ -16,14 +16,16 @@
       "align": "center",
       "case": "upper",
       "spaceBefore": 2,
-      "keepWithNext": true
+      "keepWithNext": true,
+      "heading": 2
     },
     "scene_heading_play": {
       "indent": 0,
       "width": 60,
       "align": "center",
       "spaceBefore": 1,
-      "keepWithNext": true
+      "keepWithNext": true,
+      "heading": 3
     },
     "character": {
       "indent": 0,
@@ -68,5 +70,6 @@
     "indent": { "character": 8, "parenthetical": 4, "dialogue": 0 }
   },
   "sceneNumbers": { "enabled": false, "left": -10, "right": 61 },
-  "titlePage": { "layout": "centered-feature" }
+  "titlePage": { "layout": "centered-feature" },
+  "lint": { "disable": ["heading-no-time", "transition-not-last"] }
 }

@@ -92,6 +92,28 @@ describe('resolveRole', () => {
   });
 });
 
+describe('built-in templates', () => {
+  /** The heading level of every role that has one. */
+  const headings = (template: Template) =>
+    Object.fromEntries(
+      Object.entries(template.roles).flatMap(([role, style]) =>
+        style.heading === undefined ? [] : [[role, style.heading]],
+      ),
+    );
+
+  it("marks the screenplay's scene headings, and the play's act and scene headings", () => {
+    // Only what prints as a heading: character cues are not headings (technical design §13).
+    expect(headings(screenplay)).toEqual({ scene_heading: 2 });
+    expect(headings(play)).toEqual({ act_heading: 2, scene_heading_play: 3 });
+  });
+
+  it('turns off the heading and transition rules in the stage play', () => {
+    expect(play.lint).toEqual({ disable: ['heading-no-time', 'transition-not-last'] });
+    // A screenplay has sluglines and transitions, so it keeps checking them.
+    expect(screenplay.lint?.disable).toBeUndefined();
+  });
+});
+
 describe('built-in templates on the samples', () => {
   const sample = (name: string) =>
     parse(readFileSync(new URL(`../../../samples/${name}.fountain`, import.meta.url), 'utf8'));

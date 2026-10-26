@@ -34,6 +34,7 @@
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
     "@drafter/render-pdf": "workspace:*",
+    "@drafter/render-text": "workspace:*",
     "@drafter/templates": "workspace:*",
     "commander": "^15.0.0"
   }

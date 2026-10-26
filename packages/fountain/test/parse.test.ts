@@ -8,6 +8,7 @@ import {
   print,
   toJSON,
 } from '@drafter/fountain';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 const style = (r: InlineRun) =>
@@ -23,6 +24,7 @@ describe('document structure', () => {
       trailing: '',
       meta: null,
       diagnostics: [],
+      regions: [],
     });
   });
 
@@ -188,6 +190,59 @@ describe('queries', () => {
   });
 });
 
+describe('regions', () => {
+  it('lists notes and boneyard in source order', () => {
+    expect(parse('A [[n1]] B\n\n/* bone */\n').regions).toEqual([
+      { kind: 'note', span: { from: 2, to: 8 }, closed: true },
+      { kind: 'boneyard', span: { from: 12, to: 22 }, closed: true },
+    ]);
+  });
+
+  it('runs an unclosed boneyard to the end and leaves an unclosed note out', () => {
+    expect(parse('[[open\n\nText /* to the end').regions).toEqual([
+      { kind: 'boneyard', span: { from: 13, to: 26 }, closed: false },
+    ]);
+  });
+
+  it('spans line breaks, and a boneyard spans blank lines too', () => {
+    expect(parse('[[one\ntwo]]\n\n/* x\n\ny */\n').regions).toEqual([
+      { kind: 'note', span: { from: 0, to: 11 }, closed: true },
+      { kind: 'boneyard', span: { from: 13, to: 23 }, closed: true },
+    ]);
+  });
+
+  it('stay in source order, never overlap, and keep their delimiters, for any text', () => {
+    // Mostly the pre-pass's own tokens, so unclosed and touching markers turn up often.
+    const tokens = ['[[', ']]', '/*', '*/', '[', '/', '*', '\n', '\n\n', '  ', ' ', 'a'];
+    const text = fc
+      .array(fc.constantFrom(...tokens), { maxLength: 30, size: 'max' })
+      .map((parts) => parts.join(''));
+    fc.assert(
+      fc.property(text, (source) => {
+        let end = 0;
+        for (const { kind, span, closed } of parse(source).regions) {
+          expect(span.from).toBeGreaterThanOrEqual(end);
+          expect(span.to).toBeGreaterThan(span.from);
+          expect(span.to).toBeLessThanOrEqual(source.length);
+          expect(source.startsWith(kind === 'note' ? '[[' : '/*', span.from)).toBe(true);
+          const closer = kind === 'note' ? ']]' : '*/';
+          if (closed) {
+            // It ends at the first closer after its opener, which is its last two characters.
+            expect(source.indexOf(closer, span.from + 2)).toBe(span.to - 2);
+          } else {
+            // Only a boneyard can be left open: no closer follows, and it runs to the end.
+            expect(kind).toBe('boneyard');
+            expect(source.indexOf(closer, span.from + 2)).toBe(-1);
+            expect(span.to).toBe(source.length);
+          }
+          end = span.to;
+        }
+      }),
+      { numRuns: 1_000 },
+    );
+  });
+});
+
 describe('toJSON', () => {
   it('materializes semantic data and leaves out the source', () => {
     const json = toJSON(parse('Title: The Call\n\nINT. KITCHEN - NIGHT #4#\n'));
@@ -200,6 +255,18 @@ describe('toJSON', () => {
       sem: { number: '4', location: 'KITCHEN', time: 'NIGHT' },
     });
     expect(JSON.parse(JSON.stringify(json))).toEqual(json);
+  });
+
+  it('leaves the regions out, so the format stays as it was', () => {
+    const json = toJSON(parse('A [[n]]\n\n/* b */\n'));
+    expect(Object.keys(json)).toEqual([
+      'v',
+      'titlePage',
+      'blocks',
+      'trailing',
+      'meta',
+      'diagnostics',
+    ]);
   });
 });
 

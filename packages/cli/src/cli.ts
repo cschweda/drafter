@@ -4,12 +4,10 @@ import { extname, resolve } from 'node:path';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
 import { type Layout, paginate, UnsupportedTemplateError } from '@drafter/layout';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
+import { renderText } from '@drafter/render-text';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
 import { Command, CommanderError } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
-import { renderText } from './txt';
-
-export { renderText } from './txt';
 
 /** Where the CLI reads and writes: the process's own streams, or a test's. */
 export interface IO {

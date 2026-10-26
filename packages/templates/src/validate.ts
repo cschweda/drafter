@@ -129,7 +129,11 @@ const ROLE_STYLE_FIELDS = [
   'prefix',
   'suffix',
   'style',
+  'heading',
 ];
+
+/** The heading levels a role may take; level 1 is the page's own title. */
+const HEADING_LEVELS: readonly number[] = [2, 3, 4, 5, 6];
 
 /** Every problem in a template whose inch values are already converted. Empty means valid. */
 export function validate(t: Obj): string[] {
@@ -280,6 +284,7 @@ export function validate(t: Obj): string[] {
           c.boolean(s, 'underline', `${path}.style.underline`, true);
         }
       }
+      c.oneOf(style, 'heading', `${path}.heading`, HEADING_LEVELS, true);
     }
   }
 

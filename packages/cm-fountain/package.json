@@ -1,0 +1,41 @@
+{
+  "name": "@drafter/cm-fountain",
+  "version": "0.0.1",
+  "description": "The editor for Drafter: Fountain in CodeMirror 6, with the parse held in the editor's state and highlighting read from it.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/cm-fountain"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.4",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@drafter/fountain": "workspace:*",
+    "@drafter/lint": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  }
+}
