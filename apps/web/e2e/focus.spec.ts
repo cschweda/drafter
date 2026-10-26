@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { failWrites, nextFileName, stubPickers } from './fs-stub';
+import { failWrites, nextFileName, putFile, stubPickers } from './fs-stub';
 import { showSource } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
@@ -94,9 +94,8 @@ test.describe('focus mode', () => {
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await on(page);
     await page.keyboard.type(' It creaks.');
-    // Typing starts CodeMirror's completion a moment later, and Esc would close that first.
-    await page.waitForTimeout(400);
-    await page.keyboard.press('Escape');
+    // The shortcut leaves whatever CodeMirror's completion is doing; Esc is tried in its own tests.
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await off(page);
     await expect(page.locator('.cm-content')).toContainText('A chair. It creaks.');
     // One editor: its history survived, and one Undo takes back the typing.
@@ -299,5 +298,109 @@ test.describe('focus mode', () => {
     expect(await layout(page).evaluate((el) => getComputedStyle(el).animationName)).not.toBe(
       'none',
     );
+  });
+});
+
+test.describe('what the corner keeps from the bars that are gone', () => {
+  test('says the recovery copy is unavailable, as an alert', async ({ page }) => {
+    await page.addInitScript(() => {
+      indexedDB.open = () => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      };
+    });
+    await start(page);
+    await expect(page.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await expect(page.locator('[data-warning="unavailable"]')).toHaveCount(0);
+    await expect(marker(page).getByRole('alert')).toContainText('only in memory');
+    // Leaving puts the bar back, and the corner's copy goes.
+    await page.keyboard.press('Escape');
+    await off(page);
+    await expect(page.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+  });
+
+  test('says a script’s file is gone', async ({ page, browserName, isMobile }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, 'the File System Access API');
+    await stubPickers(page);
+    await start(page);
+    await putFile(
+      page,
+      'The Call.fountain',
+      'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n',
+    );
+    await nextFileName(page, 'The Call.fountain');
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts' })
+      .getByRole('button', { name: 'Open a file…' })
+      .click();
+    await expect(editor(page)).toContainText('A phone rings.');
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await page.evaluate(async () => {
+      const root = await navigator.storage.getDirectory();
+      await root.removeEntry('The Call.fountain');
+    });
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(marker(page)).toContainText("Drafter can't find The Call.fountain");
+  });
+});
+
+test.describe('focus mode, keys and layouts', () => {
+  test('keeps the cursor where it was when the layout changes', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'a phone has one layout');
+    await page.setViewportSize({ width: 390, height: 800 });
+    await start(page);
+    await setText(page, 'hello world');
+    for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowLeft');
+    // Wider than the phone layout: the editor is parked and mounted again, with focus.
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await expect(page.getByRole('tab', { name: 'Source' }).first()).toBeVisible();
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('X');
+    await expect(editor(page)).toContainText('hello Xworld');
+  });
+
+  test('the first Esc collapses a selection and the second leaves', async ({ page }) => {
+    await start(page);
+    await setText(page, 'A chair.');
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    expect(await page.evaluate(() => getSelection()?.toString())).toBe('r.');
+    await page.keyboard.press('Escape');
+    await on(page);
+    expect(await page.evaluate(() => getSelection()?.toString())).toBe('');
+    await page.keyboard.press('Escape');
+    await off(page);
+  });
+
+  test('showing the Script leaves focus mode', async ({ page }) => {
+    await start(page);
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette(page).locator('input').fill('Show Script');
+    await palette(page)
+      .getByRole('option', { name: /Show Script/ })
+      .click();
+    await off(page);
+    await expect(page.locator('#panel-script')).toBeVisible();
+  });
+
+  test('the shortcut does nothing while a dialog is open', async ({ page }) => {
+    await start(page);
+    await page.keyboard.press('ControlOrMeta+,');
+    const dialog = page.getByRole('dialog', { name: 'Settings' });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await expect(dialog).toBeVisible();
+    await expect(marker(page)).toBeHidden();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
   });
 });

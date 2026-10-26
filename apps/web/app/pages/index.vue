@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { EditorView } from '@codemirror/view';
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installGlobalKeys } from '~/commands/registry';
+import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
 import { markdownTitle } from '~/markdown/title';
 import { startModules } from '~/modules/host';
@@ -69,17 +71,13 @@ let removeFileCheck: (() => void) | undefined;
 watch(
   () => focus.on.value,
   async (on) => {
-    // The editor is moved in the page, and Safari drops the cursor from the page's selection when it
-    // is (CodeMirror still believes it is where it was, so it doesn't write it again). Moving the
-    // selection and back makes it write the selection to the page.
-    const selection = view.state.selection;
     await nextTick();
     if (on || !view.dom.closest('[data-editor-holder]')) {
       view.focus();
-      const elsewhere = selection.main.head === 0 ? view.state.doc.length : 0;
-      view.dispatch({ selection: { anchor: elsewhere } });
-      view.dispatch({ selection, scrollIntoView: true });
-    } else document.querySelector<HTMLElement>('[data-tour="focus"]')?.focus();
+      // The editor was moved in the page: see `restoreSelection`.
+      restoreSelection(view);
+      view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head) });
+    } else document.getElementById('focus-button')?.focus();
   },
 );
 

@@ -112,6 +112,7 @@ const ACTIONS = [
         </button>
         <button
           v-else-if="action.kind === 'focus'"
+          id="focus-button"
           type="button"
           class="act"
           :data-tour="action.tour"

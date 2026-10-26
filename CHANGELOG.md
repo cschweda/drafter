@@ -11,6 +11,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **focus mode**. The toolbar's **Focus** button, **Toggle focus mode** in the palette, and Mod+Shift+Enter hide the toolbar, the tabs, the bars, the status bar, and the other pane, and show the Source alone in a centered column 64 characters wide, with the cursor in it (Markdown documents and phones too). **Esc** leaves, once CodeMirror has nothing of its own to close (completion, the search panel) and when no palette, menu, or dialog is open; so does the same command or key, and the **Leave focus mode** button in the corner, for a phone. The corner marker says **Saved** or **Unsaved changes** (**Read-only** in a tab that can't edit) and carries the alerts the status bar would have shown, such as a failed save; the tab title keeps its dot. It never asks for full screen, and under reduced motion nothing animates.
 - `apps/web`: **typewriter scrolling**, off to begin with. After each change or cursor move you make, the line you are on is scrolled to the middle of the Source pane, and the pane has half its height of room above and below the text so the first and last lines can get there. A **Typewriter** button on the Source pane's bar (`aria-pressed`), **Typewriter scrolling** in Settings, and **Turn on / Turn off typewriter scrolling** in the palette set it, and Drafter remembers the choice. It works with or without focus mode and in Markdown documents. Scrolling with the wheel is never fought, and a click with the mouse doesn't move the text. The scroll is instant, with or without reduced motion.
 
+### Fixed
+
+- `apps/web`: in Safari, widening or narrowing the window while the cursor was in the Source pane (which moves the editor between layouts) put the cursor back at the start of the text, so the next key typed landed there. The cursor now stays where it was.
+- `apps/web`: focus mode now shows what its hidden bars would have: the "changes exist only in memory" warning as an alert, and a missing, unreadable, or locked file as a status, in the corner marker.
+- `apps/web`: the focus mode shortcut does nothing while a dialog is open or an input method is composing, and Esc from a Safari input method no longer leaves focus mode.
+
+
 ## [0.2.0] - 2026-10-26
 
 **The full editor.** Everything around the writing:

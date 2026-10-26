@@ -13,6 +13,9 @@ const OWNERS = 'dialog, [role="dialog"], [role="alertdialog"], [role="menu"], [p
  */
 export function leavesOnEscape(event: KeyboardEvent): boolean {
   if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return false;
+  // Safari ends an input method's composition before it sends the key, so `isComposing` is already
+  // false; the key code 229 still says the key belonged to it.
+  if (event.keyCode === 229) return false;
   if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return false;
   if (event.target instanceof Element && event.target.closest(OWNERS)) return false;
   // A modal dialog that is open is the page's one question, whatever has focus.

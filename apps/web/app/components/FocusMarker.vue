@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { fileTrouble, troubleMessage } from '~/storage/check';
 import { useGuard } from '~/storage/guard';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
@@ -11,7 +12,7 @@ import { kindError, useScript } from '~/storage/script';
 // The `sprint` slot is where a sprint's time left goes (Task 4): it is drawn before the save
 // state, inside this group.
 const emit = defineEmits<{ leave: [] }>();
-const { dirty } = useScript();
+const { dirty, warning } = useScript();
 const { readOnly } = useGuard();
 
 /** "Saved" is the script as the editor has it being the script as last saved (or opened). */
@@ -24,6 +25,13 @@ const label = computed(() =>
   <div class="marker" role="group" aria-label="Focus mode" data-focus-marker>
     <!-- What a screen reader hears when a save lands, as in the status bar. -->
     <span class="sr-only" role="status">{{ saveAnnouncement }}</span>
+    <span v-if="warning === 'unavailable'" role="alert" class="failed">
+      Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
+      memory until you save the script to a file.
+    </span>
+    <span v-if="fileTrouble" role="status" class="failed">
+      {{ troubleMessage(fileTrouble) }} Leave focus mode to deal with it.
+    </span>
     <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>

@@ -293,6 +293,8 @@ export function registerBuiltinCommands(): void {
       keys: 'Mod-Shift-Enter',
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       global: true,
+      // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
+      enabled: () => !document.querySelector('dialog[open]') && !view.composing,
       run: focus.toggle,
     },
     {

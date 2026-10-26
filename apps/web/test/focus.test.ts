@@ -26,6 +26,11 @@ describe('leavesOnEscape', () => {
     expect(seen(content)).toBe(true);
   });
 
+  test('ignores the Escape of an input method on Safari, which reports key code 229', () => {
+    const content = document.body.appendChild(document.createElement('div'));
+    expect(seen(content, { key: 'Escape', keyCode: 229 })).toBe(false);
+  });
+
   test('ignores other keys, and Escape with a modifier', () => {
     const content = document.body.appendChild(document.createElement('div'));
     expect(seen(content, { key: 'Enter' })).toBe(false);

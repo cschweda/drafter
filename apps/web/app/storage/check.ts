@@ -62,6 +62,18 @@ export interface FileTrouble {
 }
 export const fileTrouble = ref<FileTrouble | null>(null);
 
+/** What the bar (and focus mode's corner marker) says of a file trouble. */
+export function troubleMessage(trouble: FileTrouble): string {
+  switch (trouble.kind) {
+    case 'permission':
+      return `This script is saved in ${trouble.fileName}.`;
+    case 'gone':
+      return `Drafter can't find ${trouble.fileName}. It may have been moved or deleted.`;
+    case 'not-text':
+      return `Drafter can't read ${trouble.fileName} as text, so it hasn't been checked for changes.`;
+  }
+}
+
 /** "Updated from The Call.fountain.": a toast, and a live region. Empty after a few seconds. */
 export const updatedNotice = ref('');
 const NOTICE_MS = 8000;
