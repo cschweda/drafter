@@ -12,7 +12,8 @@ Every dependency is listed here with the reason it's needed. A new one gets an e
 | `@drafter/templates` | `@drafter/fountain` | Types only (`Block`, `BlockKind`); nothing from it runs. |
 | `@drafter/layout` | `@drafter/fountain`, `@drafter/templates` | Reads parsed documents and resolves roles. |
 | `@drafter/render-pdf` | `@drafter/layout`, `@drafter/templates`, `pdf-lib`, `@pdf-lib/fontkit` | Writing PDF files, from layouts, at the template's paper size. pdf-lib can only embed the 14 standard PDF fonts without fontkit, and Drafter embeds Courier Prime. General-purpose PDF libraries, not screenwriting tools. Its tests also use `@drafter/fountain`, as a development dependency. |
-| `@drafter/cli` | `@drafter/fountain`, `@drafter/templates`, `@drafter/layout`, `@drafter/render-pdf`, `commander` | The engine packages it drives, and command-line argument parsing; commander is a general-purpose CLI library. |
+| `@drafter/render-text` | `@drafter/layout`, `@drafter/templates` | Writing layouts as fixed-width text, on the template's character grid. Types only (`Layout`, `LayoutLine`, `Template`); nothing from them runs. Its tests also use `@drafter/fountain`, as a development dependency. |
+| `@drafter/cli` | `@drafter/fountain`, `@drafter/templates`, `@drafter/layout`, `@drafter/render-pdf`, `@drafter/render-text`, `commander` | The engine packages it drives, and command-line argument parsing; commander is a general-purpose CLI library. |
 
 ## Development
 

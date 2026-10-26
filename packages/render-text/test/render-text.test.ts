@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { renderText } from '@drafter/cli';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
+import { renderText } from '@drafter/render-text';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
-import { repo } from './helpers';
+
+/** A file in the repository, found from its root: three folders up from this one. */
+const repo = (path: string) => new URL(`../../../${path}`, import.meta.url);
 
 const screenplay = builtins['us-screenplay'] as Template;
 const text = (source: string, template = screenplay) =>

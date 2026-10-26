@@ -72,6 +72,9 @@ importers:
       '@drafter/render-pdf':
         specifier: workspace:*
         version: link:../render-pdf
+      '@drafter/render-text':
+        specifier: workspace:*
+        version: link:../render-text
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -104,6 +107,19 @@ importers:
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
+    devDependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+
+  packages/render-text:
+    dependencies:
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
     devDependencies:
       '@drafter/fountain':
         specifier: workspace:*

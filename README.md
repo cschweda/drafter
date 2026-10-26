@@ -125,6 +125,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/cli` | `drafter build` and `drafter check` | 0 (published in 5) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
+| `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 4 (the rest) |
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis and color edits | 2 |
 | `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
@@ -295,7 +296,7 @@ The browser tests need Playwright's browsers, installed once with `pnpm --filter
 
 `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
 
-Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), and [`cli`](packages/cli/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
+Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-text`](packages/render-text/README.md), and [`cli`](packages/cli/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
 After a build, the CLI runs from the repository root:
 
