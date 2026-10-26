@@ -54,6 +54,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Colors:** design tokens for both themes, with every text color tested for WCAG contrast.
   - **Tests:** the browser tests check the layout, keyboard use, visible focus on every control, and axe in both themes. The toolbar's actions wait for the editor and files in later plans.
 - `@drafter/render-text`: `renderText(layout, template)`, the fixed-width text renderer, moved out of `@drafter/cli` into a package of its own, so the app can export plain text without depending on the command line. The text is unchanged: `drafter build --txt` writes what it always did, and the CLI now imports the renderer, so its entry point exports only `run`.
+- `@drafter/fountain`: `doc.regions`, every note and boneyard in source order as `{ kind, span, closed }`, so the editor can color them from the parse instead of scanning the text again. An unclosed boneyard runs to the end of the source with `closed: false`; an unclosed `[[` stays text and is no region. `toJSON` is unchanged.
 
 ### Changed
 

@@ -1,5 +1,5 @@
 import { parseInline, type Seg } from './inline';
-import { isBlankText, type Region, scanRegions } from './regions';
+import { isBlankText, type RawRegion, scanRegions } from './regions';
 import type {
   Block,
   BlockKind,
@@ -10,6 +10,7 @@ import type {
   InlineRun,
   Line,
   ParseDiagnostic,
+  Region,
   SceneHeadingSem,
   Span,
   TitleField,
@@ -18,7 +19,7 @@ import type {
 
 interface Ctx {
   source: string;
-  regions: Region[];
+  regions: RawRegion[];
 }
 
 /** What the parser knows about one physical line. */
@@ -31,7 +32,7 @@ interface LineInfo {
   kept: Seg[];
   keptText: string;
   /** Kind of the first region the line touches, if any. */
-  regionKind: Region['kind'] | null;
+  regionKind: RawRegion['kind'] | null;
   /** Touches a region and has nothing else: neither ends a block nor prints. */
   transparent: boolean;
   blank: boolean;
@@ -135,19 +136,24 @@ function sceneNumber(text: string): { number: string; length: number } | null {
 }
 
 /** The regions that overlap `span`, found by binary search over sorted regions. */
-function regionsIn(regions: Region[], span: Span): Region[] {
+function regionsIn(regions: RawRegion[], span: Span): RawRegion[] {
   let lo = 0;
   let hi = regions.length;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
-    if ((regions[mid] as Region).to <= span.from) lo = mid + 1;
+    if ((regions[mid] as RawRegion).to <= span.from) lo = mid + 1;
     else hi = mid;
   }
-  const out: Region[] = [];
-  for (let k = lo; k < regions.length && (regions[k] as Region).from < span.to; k++) {
-    out.push(regions[k] as Region);
+  const out: RawRegion[] = [];
+  for (let k = lo; k < regions.length && (regions[k] as RawRegion).from < span.to; k++) {
+    out.push(regions[k] as RawRegion);
   }
   return out;
+}
+
+/** The pre-pass's regions as the public `Region`s: each pair of offsets becomes a `Span`. */
+function toRegions(regions: RawRegion[]): Region[] {
+  return regions.map(({ kind, from, to, closed }) => ({ kind, span: { from, to }, closed }));
 }
 
 export function parse(source: string): Doc {
@@ -353,6 +359,7 @@ export function parse(source: string): Doc {
     trailing: source.slice(prevEnd),
     meta,
     diagnostics,
+    regions: toRegions(regions),
     source,
   };
 }
@@ -374,7 +381,7 @@ function lineLevelKind(line: LineInfo): BlockKind | null {
   return null;
 }
 
-function readLines(source: string, regions: Region[]): LineInfo[] {
+function readLines(source: string, regions: RawRegion[]): LineInfo[] {
   const lines: LineInfo[] = [];
   let r = 0;
   let from = 0;
@@ -386,12 +393,12 @@ function readLines(source: string, regions: Region[]): LineInfo[] {
       from === 0 && source.charCodeAt(0) === 0xfeff ? Math.min(1, contentEnd) : from;
     // A region touches the line if it covers any character, or the line's \n.
     const limit = nl === -1 ? to : to + 1;
-    while (r < regions.length && (regions[r] as Region).to <= from) r++;
+    while (r < regions.length && (regions[r] as RawRegion).to <= from) r++;
     const kept: Seg[] = [];
-    let regionKind: Region['kind'] | null = null;
+    let regionKind: RawRegion['kind'] | null = null;
     let cursor = contentStart;
-    for (let k = r; k < regions.length && (regions[k] as Region).from < limit; k++) {
-      const region = regions[k] as Region;
+    for (let k = r; k < regions.length && (regions[k] as RawRegion).from < limit; k++) {
+      const region = regions[k] as RawRegion;
       if (region.to <= from) continue;
       regionKind ??= region.kind;
       const stop = Math.min(region.from, contentEnd);

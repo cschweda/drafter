@@ -1,6 +1,10 @@
 import type { ParseDiagnostic } from './types';
 
-export interface Region {
+/**
+ * A region as the pre-pass finds it, with the offsets the parser reads in its inner
+ * loops. `Doc.regions` hands these out as the public `Region`, whose offsets are a `span`.
+ */
+export interface RawRegion {
   kind: 'note' | 'boneyard';
   from: number;
   /** Just past the closing delimiter, or the end of the source when unclosed. */
@@ -26,8 +30,11 @@ const OPENER = /\/\*|\[\[/g;
  * A boneyard may span anything; an unclosed one runs to the end of the source.
  * A note must close before the next blank line, or its `[[` stays literal.
  */
-export function scanRegions(source: string): { regions: Region[]; diagnostics: ParseDiagnostic[] } {
-  const regions: Region[] = [];
+export function scanRegions(source: string): {
+  regions: RawRegion[];
+  diagnostics: ParseDiagnostic[];
+} {
+  const regions: RawRegion[] = [];
   const diagnostics: ParseDiagnostic[] = [];
   // A failed search for `]]` proves there is none before the blank line where it
   // stopped, so later `[[` up to that point fail the same way without rescanning.

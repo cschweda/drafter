@@ -134,6 +134,15 @@ export interface ParseDiagnostic {
   portability?: true;
 }
 
+/** A note (`[[…]]`) or a boneyard (`/* … *\/`) in the source. */
+export interface Region {
+  kind: 'note' | 'boneyard';
+  /** From the opening `[[` or `/*` to just past the closing `]]` or `*\/`. */
+  span: Span;
+  /** False for a boneyard with no closing `*\/`: it runs to the end of the source. */
+  closed: boolean;
+}
+
 export interface Doc {
   readonly titlePage: TitlePage | null;
   readonly blocks: readonly Block[];
@@ -141,6 +150,11 @@ export interface Doc {
   readonly trailing: string;
   readonly meta: DrafterMeta | null;
   readonly diagnostics: readonly ParseDiagnostic[];
+  /**
+   * Every note and boneyard, in source order. A `[[` that doesn't close before the next
+   * blank line isn't one: it stays text, and a diagnostic reports it.
+   */
+  readonly regions: readonly Region[];
   readonly source: string;
 }
 

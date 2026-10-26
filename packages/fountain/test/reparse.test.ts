@@ -79,8 +79,11 @@ describe('reparse', () => {
           const changes = materialize(text, specs);
           text = applyInReverse(text, changes);
           doc = reparse(doc, changes);
+          const fresh = parse(text);
           expect(doc.source).toBe(text);
-          expect(toJSON(doc)).toEqual(toJSON(parse(text)));
+          expect(toJSON(doc)).toEqual(toJSON(fresh));
+          // toJSON leaves the regions out, so they need a comparison of their own.
+          expect(doc.regions).toEqual(fresh.regions);
         }
       }),
       { numRuns: 1_000 },

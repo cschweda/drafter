@@ -28,7 +28,7 @@ print(doc) === doc.source; // always true
 | `characters(doc)` | Character names in order of appearance, with cue counts. |
 | `locations(doc)` | Scene-heading locations in order of appearance, with counts. |
 
-A `Doc` holds the title page, the blocks, any `trailing` text after the last block, the parsed `/* drafter … */` metadata block, and diagnostics. Each block keeps its `kind`, its `span` in the source, the `leading` blank lines before it, and its raw `lines`. `block.sem` (semantic data) and `line.inline` (styled text runs) are computed on first read and cached.
+A `Doc` holds the title page, the blocks, any `trailing` text after the last block, the parsed `/* drafter … */` metadata block, diagnostics, and `regions`, its notes and boneyard with their spans. Each block keeps its `kind`, its `span` in the source, the `leading` blank lines before it, and its raw `lines`. `block.sem` (semantic data) and `line.inline` (styled text runs) are computed on first read and cached.
 
 ## How it reads Fountain
 
