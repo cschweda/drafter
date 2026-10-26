@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- The README links [Inform 7](https://ganelson.github.io/inform-website/) wherever it names it, and credits its IDE (its layout and ease of use, not interactive fiction itself) as an inspiration.
 - A screenshot of the editor at the top of the README, in the dark and light themes (`docs/images/`), shown to match the reader's GitHub theme, and a link to drafter.dev.
 - Design documents in `docs/`: the high-level architecture, the technical design, and the Phase 0 kickoff prompt.
 - README covering the vision, principles, architecture, packages, and the phased roadmap.
