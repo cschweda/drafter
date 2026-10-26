@@ -1,6 +1,6 @@
 {
   "name": "@drafter/layout",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pagination for Drafter: lays a parsed Fountain script out on pages, as a template describes.",
   "license": "MIT",
   "type": "module",
