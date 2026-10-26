@@ -5,6 +5,7 @@ import { openSearchPanel } from '@codemirror/search';
 import type { EditorView } from '@codemirror/view';
 import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-fountain';
 import { nextTick } from 'vue';
+import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
@@ -39,6 +40,7 @@ export function registerBuiltinCommands(): void {
   const script = useScript();
   const guard = useGuard();
   const panes = usePanes();
+  const focus = useFocusMode();
   const colorMode = useColorMode();
   const { settings, set } = useSettings();
   const template = useTemplate();
@@ -57,6 +59,8 @@ export function registerBuiltinCommands(): void {
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
   function showTab(tab: TabId) {
+    // Focus mode shows only the Source: any other tab is for the writer to see.
+    if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
       const held = document.activeElement?.closest<HTMLElement>('[data-pane]')?.dataset.pane;
       const from: PaneId | undefined = held === 'left' || held === 'right' ? held : undefined;
@@ -281,6 +285,16 @@ export function registerBuiltinCommands(): void {
       run: () => showTab('script'),
     },
     { id: 'show-problems', title: 'Show Problems', group: 'View', run: () => showTab('problems') },
+    {
+      id: 'focus-mode',
+      title: 'Toggle focus mode',
+      group: 'View',
+      icon: 'i-lucide-scan',
+      keys: 'Mod-Shift-Enter',
+      // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
+      global: true,
+      run: focus.toggle,
+    },
     {
       id: 'switch-theme',
       title: 'Switch theme',

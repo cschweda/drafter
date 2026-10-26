@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: **focus mode**. The toolbar's **Focus** button, **Toggle focus mode** in the palette, and Mod+Shift+Enter hide the toolbar, the tabs, the bars, the status bar, and the other pane, and show the Source alone in a centered column 64 characters wide, with the cursor in it (Markdown documents and phones too). **Esc** leaves, once CodeMirror has nothing of its own to close (completion, the search panel) and when no palette, menu, or dialog is open; so does the same command or key, and the **Leave focus mode** button in the corner, for a phone. The corner marker says **Saved** or **Unsaved changes** (**Read-only** in a tab that can't edit) and carries the alerts the status bar would have shown, such as a failed save; the tab title keeps its dot. It never asks for full screen, and under reduced motion nothing animates.
+
 ## [0.2.0] - 2026-10-26
 
 **The full editor.** Everything around the writing:
