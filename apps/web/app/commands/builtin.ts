@@ -8,6 +8,7 @@ import { nextTick } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
+import { useTemplate } from '~/editor/use-template';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
@@ -38,6 +39,7 @@ export function registerBuiltinCommands(): void {
   const panes = usePanes();
   const colorMode = useColorMode();
   const { settings, set } = useSettings();
+  const template = useTemplate();
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -111,6 +113,19 @@ export function registerBuiltinCommands(): void {
         ...(type.newKeys && { keys: type.newKeys, global: true }),
         enabled: canStart,
         run: quietly(() => script.newScript(type.newKind)),
+      }),
+    ),
+    // Switch the Fountain template (the toolbar's chip is hidden below 1024px, so the palette is how a phone does it). Like
+    // show/hide line numbers, only the ones that apply are listed: not the current one, and none in a read-only tab or
+    // with an unclosed `/*`. Task 6 must also keep them off for a Markdown project, which has no template to switch.
+    ...DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map(
+      (type): Command => ({
+        id: `template-${type.id}`,
+        title: `Template: ${type.name}`,
+        group: 'File',
+        enabled: () => template.canChoose.value && template.id.value !== type.id,
+        // Shows the Source tab and focuses the editor first, so Mod+Z undoes the change.
+        run: onEditor(() => template.choose(type.id)),
       }),
     ),
     {

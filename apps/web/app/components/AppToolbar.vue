@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
+import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES, TEMPLATE_NAMES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { useGuard } from '~/storage/guard';
@@ -9,6 +10,15 @@ import { save } from '~/storage/save';
 const colorMode = useColorMode();
 const { readOnly } = useGuard();
 const template = useTemplate();
+const editor = useEditor();
+// A choice puts focus in the editor, where Mod+Z undoes it; Escape, or leaving the menu, returns it to the chip as usual.
+let chosen = false;
+function onCloseAutoFocus(event: Event) {
+  if (!chosen) return;
+  chosen = false;
+  event.preventDefault();
+  editor.goto(editor.view.state.selection.main.head);
+}
 const templateName = computed(() => TEMPLATE_NAMES[template.id.value]);
 // The chip's menu: one checked item for the template the script is in, in `DOCUMENT_TYPES` order.
 // A tab that only shows the script, or a script with an unclosed `/*`, can't be switched.
@@ -18,7 +28,10 @@ const templateItems = computed(() =>
     type: 'checkbox' as const,
     checked: type.id === template.id.value,
     disabled: !template.canChoose.value,
-    onSelect: () => template.choose(type.id),
+    onSelect: () => {
+      chosen = true;
+      template.choose(type.id);
+    },
   })),
 );
 const paletteKeys = formatKeys('Mod-k', isApple());
@@ -97,7 +110,7 @@ const ACTIONS = [
         </button>
       </template>
     </div>
-    <UDropdownMenu :items="templateItems" :content="{ align: 'start' }">
+    <UDropdownMenu :items="templateItems" :content="{ align: 'start', onCloseAutoFocus }">
       <button
         type="button"
         class="chip template"

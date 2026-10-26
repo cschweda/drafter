@@ -116,18 +116,24 @@ test.describe('the template chip', () => {
     await expect(chipItem(page, 'Stage play')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(chip(page)).toHaveText('Stage play');
-    // Focus goes back to the chip, and Escape closes the menu with nothing changed.
-    await expect(chip(page)).toBeFocused();
+    // Focus goes to the editor, so Mod+Z undoes the change with no click in between.
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(chip(page)).toHaveText('Screenplay');
+    expect((await endText(page)) ?? '').not.toMatch(STAGE_BLOCK);
+    // Escape closes the menu with nothing changed, and focus goes back to the chip.
+    await chip(page).focus();
     await page.keyboard.press('Enter');
     await expect(chipMenu(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(chipMenu(page)).toBeHidden();
     await expect(chip(page)).toBeFocused();
-    await expect(chip(page)).toHaveText('Stage play');
-    expect(await endText(page)).toMatch(STAGE_BLOCK);
+    await expect(chip(page)).toHaveText('Screenplay');
   });
 
-  test('lints again at once: a stage play has no scene-time warnings', async ({ page }) => {
+  test('lints again with the new template: a stage play has no scene-time warnings', async ({
+    page,
+  }) => {
     await start(page);
     await typeAtEnd(page, '\n\nINT. KITCHEN\n\nShe waits.\n');
     await expect(status(page)).toContainText(/[1-9]\d* problems?/);
@@ -187,6 +193,54 @@ test.describe('the list of document types', () => {
     const stage = options.findIndex((t) => t?.startsWith('New stage play'));
     expect(screenplay).toBeGreaterThanOrEqual(0);
     expect(stage).toBeGreaterThan(screenplay);
+  });
+});
+
+// The palette switches template wherever the chip is hidden, so these run on the phones too.
+test.describe('switching template from the palette', () => {
+  const paletteDialog = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
+  const paletteOption = (page: Page, name: string) =>
+    paletteDialog(page).getByRole('option', { name });
+
+  test('switches to a stage play, and Mod+Z restores the screenplay', async ({ page }) => {
+    await page.goto('/');
+    await expect(editor(page)).toBeAttached();
+    await page.keyboard.press('ControlOrMeta+k');
+    await paletteDialog(page).locator('input').fill('Template');
+    // Only the template the script isn't in is offered.
+    await expect(paletteOption(page, 'Template: Stage play')).toBeVisible();
+    await expect(paletteOption(page, 'Template: Screenplay')).toHaveCount(0);
+    await paletteOption(page, 'Template: Stage play').click();
+    await expect(paletteDialog(page)).toBeHidden();
+    await expect(editor(page)).toBeFocused();
+    expect(await endText(page)).toMatch(STAGE_BLOCK);
+    await expect(status(page)).toContainText('Stage play');
+
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(status(page)).toContainText('Screenplay');
+    expect((await endText(page)) ?? '').not.toMatch(STAGE_BLOCK);
+
+    // And back the other way: now Screenplay is not offered.
+    await page.keyboard.press('ControlOrMeta+k');
+    await paletteDialog(page).locator('input').fill('Template');
+    await expect(paletteOption(page, 'Template: Stage play')).toBeVisible();
+  });
+
+  test('is not offered in a tab that only shows the script', async ({
+    page,
+    context,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'two tabs are the same on a phone');
+    await page.goto('/');
+    await expect(editor(page)).toBeAttached();
+    await expect(status(page)).toContainText('Screenplay');
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await other.keyboard.press('ControlOrMeta+k');
+    await paletteDialog(other).locator('input').fill('Template');
+    await expect(paletteOption(other, 'Template: Stage play')).toHaveCount(0);
   });
 });
 
