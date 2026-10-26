@@ -130,6 +130,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Unsaved edits:** until the recovery copy arrives, the browser asks before the page closes while the text differs from what the editor opened with, and the page isn't asked while they match.
   - **Spellcheck:** the browser's own, on.
   - **Packages:** the app builds the Drafter packages from their TypeScript (the `source` export condition), so it never reads a stale `dist/`.
+- `apps/web`: storage for projects, in `app/storage/`, with no screen yet.
+  - **Database:** Dexie over IndexedDB, with technical design §8.1's whole version 1 (`projects`, `snapshots`, `templates`, `handles`, `settings`), so later plans add no migration.
+  - **Projects:** create, read, update, list newest first, and remove, plus the text as last saved to its file. Updating with a new `source` re-derives the title, template, and metadata from it. Removing a project removes its saved text and file handle, never the file.
+  - **Recovery-copy writer:** writes 750 ms after the last change or every 5 s of continuous typing, one write at a time, with `flush` for when the page is hidden.
+  - **Files:** `decodeFile` and `encodeFile` read and write a file's UTF-8 text with its line break and byte-order mark; `titleOf` reads the title page; `fileNameFor` makes a safe name; `hashText` is SHA-256 in hex.
 
 ### Changed
 
