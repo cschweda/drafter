@@ -1,0 +1,181 @@
+import { expect, type Page, test } from '@playwright/test';
+import { nextFileName, stubPickers, textOf } from './fs-stub';
+
+const editor = (page: Page) => page.locator('.cm-content');
+const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
+const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+const revert = (page: Page) => menu(page).getByRole('menuitem', { name: /^Revert to Saved/ });
+const status = (page: Page) => page.locator('[data-tour="status"]');
+const notice = (page: Page) => page.locator('.notice [role="status"]');
+const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+
+const MESSAGE = (file: string) =>
+  `Reverted to the text last saved to ${file}. Undo brings your changes back.`;
+
+async function start(page: Page) {
+  await page.goto('/');
+  await expect(editor(page)).toContainText('The Call');
+}
+
+async function chooseNew(page: Page, name: string) {
+  await openButton(page).click();
+  await scriptsMenu(page).getByRole('button', { name }).click();
+  await expect(scriptsMenu(page)).toBeHidden();
+}
+
+async function openMenu(page: Page) {
+  await mark(page).click();
+  await expect(menu(page)).toBeVisible();
+}
+
+async function typeAtEnd(page: Page, text: string) {
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText(text);
+}
+
+test.describe('Revert to Saved (Chromium)', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'the File System Access API');
+  test.skip(({ isMobile }) => !!isMobile, 'the editor is the same on a phone');
+
+  test.beforeEach(async ({ page }) => {
+    await stubPickers(page);
+  });
+
+  test('reverts to the text last saved, and undo brings the changes back', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'The Call.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    const saved = await textOf(page, 'The Call.fountain');
+
+    await typeAtEnd(page, ' MORE WORDS');
+    await expect(status(page)).toContainText('Unsaved changes');
+
+    await openMenu(page);
+    await expect(revert(page)).not.toHaveAttribute('aria-disabled', 'true');
+    await revert(page).click();
+
+    // The saved text is back, said once in a polite live region and shown as a toast.
+    await expect(editor(page)).not.toContainText('MORE WORDS');
+    await expect(editor(page)).toContainText('FADE IN:');
+    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expect(notice(page)).toHaveText(MESSAGE('The Call.fountain'));
+    await expect(notice(page)).toHaveAttribute('aria-live', 'polite');
+    await expect(page.locator('.notice').filter({ hasText: 'Reverted' })).toBeVisible();
+    // Nothing was written: the file is as it was.
+    expect(await textOf(page, 'The Call.fountain')).toBe(saved);
+
+    // Focus is in the editor, and one undo brings every change back.
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(editor(page)).toContainText('MORE WORDS');
+    await expect(status(page)).toContainText('Unsaved changes');
+    // Redo reverts again.
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await expect(editor(page)).not.toContainText('MORE WORDS');
+  });
+
+  test('is a command in the palette while there are changes to revert', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('ONE');
+    await nextFileName(page, 'Palette.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    const options = () => palette.getByRole('option', { name: /^Revert to Saved/ });
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette.locator('input').fill('Revert');
+    await expect(palette.getByText('Nothing matches')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await typeAtEnd(page, ' TWO');
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette.locator('input').fill('Revert');
+    await expect(options()).toBeVisible();
+    await options().click();
+    await expect(notice(page)).toHaveText(MESSAGE('Palette.fountain'));
+    await expect(editor(page)).not.toContainText('TWO');
+  });
+
+  test('is unavailable when there’s nothing to revert', async ({ page }) => {
+    await start(page);
+    // A sample: no file was ever saved.
+    await openMenu(page);
+    await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+
+    // A new script with typing but no file yet.
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await openMenu(page);
+    await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+
+    // Saved, and not changed since.
+    await nextFileName(page, 'Clean.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await openMenu(page);
+    await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
+    // Choosing a disabled item does nothing.
+    await revert(page).click({ force: true });
+    await expect(notice(page)).toHaveText('');
+    await page.keyboard.press('Escape');
+
+    // Changed, and back again by hand: nothing to revert either.
+    await typeAtEnd(page, 'X');
+    await openMenu(page);
+    await expect(revert(page)).not.toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.press('Backspace');
+    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await openMenu(page);
+    await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('names the .md file for a Markdown document', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New Markdown document');
+    await expect(editor(page)).toContainText('# Untitled');
+    await nextFileName(page, 'notes.md');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, 'More notes');
+    await openMenu(page);
+    await revert(page).click();
+    await expect(notice(page)).toHaveText(MESSAGE('notes.md'));
+    await expect(editor(page)).not.toContainText('More notes');
+  });
+
+  test('is off in a tab that only shows the script', async ({ page, context }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'Shared.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, ' CHANGED');
+    await expect(status(page)).toContainText('Unsaved changes');
+    // The recovery copy is written a moment after typing; the second tab reads it.
+    await page.waitForTimeout(1500);
+
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(editor(other)).toContainText('CHANGED');
+    await openMenu(other);
+    await expect(revert(other)).toHaveAttribute('aria-disabled', 'true');
+    await expect(menu(other).getByRole('menuitem', { name: /^New screenplay/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+});

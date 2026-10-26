@@ -9,6 +9,12 @@ export const SAMPLE_STAGE_PLAY: string = stagePlay;
 
 export type SampleKind = 'screenplay' | 'stage-play';
 
+/** The samples, in the order the menus list them. */
+export const SAMPLES: readonly { kind: SampleKind; name: string }[] = [
+  { kind: 'screenplay', name: 'Screenplay' },
+  { kind: 'stage-play', name: 'Stage play' },
+];
+
 export const SAMPLE_TEXT: Record<SampleKind, string> = {
   screenplay: SAMPLE_SCREENPLAY,
   'stage-play': SAMPLE_STAGE_PLAY,

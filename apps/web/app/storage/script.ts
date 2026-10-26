@@ -54,6 +54,11 @@ export interface ScriptSession {
   warning: Readonly<ComputedRef<'not-persistent' | 'unavailable' | null>>;
   /** Hides the "may be cleared" warning for the rest of the visit. */
   dismissWarning(): void;
+  /**
+   * The text last saved to the script's file, as the session holds it; null for a sample or a
+   * script with no file yet, or when that text is unknown. What Revert to Saved goes back to.
+   */
+  savedText: Readonly<ComputedRef<string | null>>;
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
   /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
@@ -183,6 +188,13 @@ function create(): ScriptSession {
   const dirty = computed(() => {
     editor.doc.value; // the text changed
     return baseline.value === null || !view.state.doc.eq(baseline.value);
+  });
+
+  const lastSaved = computed(() => {
+    const current = project.value;
+    // A new script's baseline is the template it started from, not a file's text.
+    if (!current || current.sample || current.fileName === undefined) return null;
+    return baseline.value?.toString() ?? null;
   });
 
   // ---- The recovery copy -------------------------------------------------------------------
@@ -824,6 +836,7 @@ function create(): ScriptSession {
   return {
     project,
     dirty,
+    savedText: lastSaved,
     recovery,
     ready,
     warning: computed(() => {

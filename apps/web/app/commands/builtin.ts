@@ -6,14 +6,16 @@ import type { EditorView } from '@codemirror/view';
 import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-fountain';
 import { nextTick } from 'vue';
 import { usePanes } from '~/composables/usePanes';
+import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
-import { save, saveAs } from '~/storage/save';
+import { canRevert, revertToSaved, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { openPalette, togglePalette } from './palette';
@@ -169,6 +171,49 @@ export function registerBuiltinCommands(): void {
       keys: 'Mod-Shift-s',
       global: true,
       run: quietly(saveAs),
+    },
+    {
+      id: 'revert-to-saved',
+      title: 'Revert to Saved',
+      group: 'File',
+      // Only while there are changes and a saved file to go back to; it says what it did, and undo reverses it.
+      enabled: canRevert,
+      run: () => {
+        revertToSaved();
+        editor.goto(view.state.selection.main.head);
+      },
+    },
+    // The samples (the Scripts menu lists them too).
+    ...SAMPLES.map(
+      (sample): Command => ({
+        id: `open-sample-${sample.kind}`,
+        title: `Open sample: ${sample.name}`,
+        group: 'File',
+        enabled: idle,
+        run: quietly(() => script.openSample(sample.kind)),
+      }),
+    ),
+    // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
+    // PDF or plain text; a Markdown document as its Markdown file or plain text (a PDF of one is deferred).
+    {
+      id: 'export-pdf',
+      title: 'Export as PDF',
+      group: 'File',
+      enabled: isFountain,
+      run: () => void exportScript('pdf'),
+    },
+    {
+      id: 'export-md',
+      title: 'Export as Markdown file',
+      group: 'File',
+      enabled: isMarkdown,
+      run: () => void exportScript('md'),
+    },
+    {
+      id: 'export-txt',
+      title: 'Export as plain text',
+      group: 'File',
+      run: () => void exportScript('txt'),
     },
     {
       id: 'remove',

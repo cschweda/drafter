@@ -1,9 +1,9 @@
-import { type Ref, ref } from 'vue';
+import { ref } from 'vue';
 import { useEditor } from '../editor/session';
 import { markdownTitle } from '../markdown/title';
 import { renderExport } from './export-client';
 import { useFiles } from './files';
-import { say } from './say';
+import { timedSay } from './say';
 import { useScript } from './script';
 import { fileBaseName, fileNameFor, titleOf } from './text';
 import { whenIdle } from './turn';
@@ -11,8 +11,8 @@ import { whenIdle } from './turn';
 /**
  * Export to PDF or plain text (Phase 1 design §9.7). The text is laid out and drawn in a worker,
  * and saved only through `useFiles()`: where the browser has a save picker it asks where, else
- * the file downloads. Plan 4's commands and app menu call `exportScript`; the toolbar's Export
- * menu does until they exist.
+ * the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
+ * Export menu, the app menu, and the palette run them.
  */
 
 /**
@@ -28,19 +28,8 @@ export const exportError = ref('');
 
 const TOAST_MS = 8000;
 
-/** Sets a toast's text, and empties it after a few seconds. */
-function toast(target: Ref<string>) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  return async (message: string) => {
-    clearTimeout(timer);
-    await say(target, message);
-    timer = setTimeout(() => {
-      target.value = '';
-    }, TOAST_MS);
-  };
-}
-const announceReady = toast(exportNotice);
-const announceError = toast(exportError);
+const announceReady = timedSay(exportNotice, TOAST_MS);
+const announceError = timedSay(exportError, TOAST_MS);
 
 const MIME: Record<ExportKind, string> = {
   pdf: 'application/pdf',

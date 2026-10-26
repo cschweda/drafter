@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands';
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
 import { kindOfFileName } from '../markdown/kind';
@@ -6,7 +7,7 @@ import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
-import { say } from './say';
+import { say, timedSay } from './say';
 import { useScript } from './script';
 import { encodeFile, fileBaseName, fileNameFor, titleOf } from './text';
 import { inTurn, whenIdle } from './turn';
@@ -180,4 +181,66 @@ export function watchSaveError(): () => void {
       saveError.value = '';
     },
   );
+}
+
+// ---- Revert to Saved ---------------------------------------------------------------------------
+
+/**
+ * "Reverted to the text last saved to The Call.fountain. Undo brings your changes back.": a toast,
+ * and a polite live region. Empty after a few seconds.
+ */
+export const revertNotice = ref('');
+const announceRevert = timedSay(revertNotice, 8000);
+
+/**
+ * Whether there is something to go back to: the script has changes, and the text last saved to its
+ * file is known. Not for a sample or a script never saved to a file; not in a tab that only shows
+ * the script or while a switch of scripts is under way (the editor is locked then); and not when
+ * the script's kind is no longer its file's (the saved text is the other kind's).
+ */
+export function canRevert(): boolean {
+  const script = useScript();
+  const editor = useEditor();
+  const file = script.project.value?.fileName;
+  return (
+    script.dirty.value &&
+    script.savedText.value !== null &&
+    file !== undefined &&
+    kindOfFileName(file) === editor.kind.value &&
+    !editor.locked.value &&
+    !useGuard().taking.value &&
+    !script.busy.value
+  );
+}
+
+/**
+ * Puts the text last saved to the script's file back in the editor, as one change: one undo brings
+ * every change since back. Writes nothing. Does nothing when `canRevert` is false.
+ */
+export function revertToSaved(): void {
+  if (!canRevert()) return;
+  const script = useScript();
+  const { view } = useEditor();
+  const target = script.savedText.value as string;
+  const file = script.project.value?.fileName as string;
+  const current = view.state.doc.toString();
+  // Only the part that differs is replaced, so the cursor, the folds, and the scroll stay where they are.
+  let from = 0;
+  const shortest = Math.min(current.length, target.length);
+  while (from < shortest && current.charCodeAt(from) === target.charCodeAt(from)) from++;
+  let end = 0;
+  while (
+    end < shortest - from &&
+    current.charCodeAt(current.length - 1 - end) === target.charCodeAt(target.length - 1 - end)
+  ) {
+    end++;
+  }
+  view.dispatch({
+    changes: { from, to: current.length - end, insert: target.slice(from, target.length - end) },
+    // Its own undo step, not joined to the typing before it.
+    annotations: isolateHistory.of('full'),
+    scrollIntoView: true,
+    userEvent: 'input.replace',
+  });
+  void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);
 }

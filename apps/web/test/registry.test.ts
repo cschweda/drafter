@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   type Command,
   clearCommands,
+  commandById,
   installGlobalKeys,
   registerCommands,
   useCommands,
@@ -19,6 +20,12 @@ describe('the command registry', () => {
     registerCommands([command('a'), command('b')]);
     registerCommands([command('c')]);
     expect(useCommands().value.map((c) => c.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('finds a command by its id', () => {
+    registerCommands([command('a', { title: 'Alpha' }), command('b')]);
+    expect(commandById('a')?.title).toBe('Alpha');
+    expect(commandById('nope')).toBeUndefined();
   });
 
   test('rejects two commands with the same id', () => {

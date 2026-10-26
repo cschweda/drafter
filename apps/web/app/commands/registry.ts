@@ -37,6 +37,11 @@ export function useCommands(): Readonly<Ref<readonly Command[]>> {
   return commands;
 }
 
+/** The command with this id, if one is registered. */
+export function commandById(id: string): Command | undefined {
+  return commands.value.find((c) => c.id === id);
+}
+
 /** Forgets every command. For tests, and for a hot reload that registers them again. */
 export function clearCommands(): void {
   commands.value = [];

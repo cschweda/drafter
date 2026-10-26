@@ -64,12 +64,14 @@ const ACTIONS = [
 <template>
   <header class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <!-- Below 400px the wordmark gives way to the mark, so the toolbar fits a
+    <!-- The mark opens the app menu. Below 400px the wordmark gives way to the mark, so the toolbar fits a
          320px screen (WCAG 1.4.10). -->
-    <picture class="logo">
-      <source media="(max-width: 399.98px)" srcset="/mark.svg">
-      <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
-    </picture>
+    <AppMenu>
+      <picture class="logo">
+        <source media="(max-width: 399.98px)" srcset="/mark.svg">
+        <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
+      </picture>
+    </AppMenu>
     <div class="actions">
       <template v-for="action in ACTIONS" :key="action.kind">
         <ScriptsMenu v-if="action.kind === 'open'" v-slot="{ toggle, expanded, controls }">
@@ -165,6 +167,9 @@ const ACTIONS = [
 }
 .logo {
   flex: none;
+}
+/* The space after the mark is the menu button's, so its focus ring stays close to the logo. */
+.toolbar :deep(.mark) {
   margin-right: 14px;
 }
 .logo img {
@@ -252,7 +257,7 @@ kbd {
   .toolbar {
     padding: 8px 10px;
   }
-  .logo {
+  .toolbar :deep(.mark) {
     margin-right: 6px;
   }
   .logo img {

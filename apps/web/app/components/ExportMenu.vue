@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
-import { type ExportKind, exportError, exportNotice, exportScript } from '~/storage/export';
+import { type ExportKind, exportError, exportNotice } from '~/storage/export';
 
 // A Markdown document exports as its Markdown file or as plain text; a PDF of one is deferred.
 const { kind } = useEditor();
 
 // The toolbar's Export menu (Phase 1 design §9.7): PDF and plain text (a Markdown document's are the Markdown file and plain text). The trigger is the toolbar's
-// Export button, drawn by the toolbar and given through the slot. Plan 4's commands and app menu
-// call `exportScript` too. The toast says when the file is ready, or why it isn't.
+// Export button, drawn by the toolbar and given through the slot. Each item runs the export's
+// command (`commands/builtin.ts`), as the app menu and the palette do. The toast says when the file is ready, or why it isn't.
 const open = ref(false);
 const root = ref<HTMLElement>();
 const place = reactive({ top: 0, left: 0 });
@@ -41,9 +42,8 @@ function toggle(event: Event) {
 
 function choose(kind: ExportKind) {
   // The picker or the download follows the click; the toast reports the result.
-  const done = exportScript(kind);
+  commandById(`export-${kind}`)?.run();
   close(true);
-  return done;
 }
 
 function onKeydown(event: KeyboardEvent) {
