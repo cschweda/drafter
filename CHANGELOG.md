@@ -92,6 +92,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
     - Every character that isn't whitespace, in the generated scripts, the repository's fixtures and samples, and strings made of the characters that mean something, is printed, in a note or boneyard, in a key, or a marker, found by comparing the decorations with the parser's own runs.
     - A view in jsdom shows the classes, follows edits, and decorates what an unfold shows again.
     - Hostile scripts and edits must finish in under a second.
+- `@drafter/cm-fountain`: the Fountain keymap and the input filters, which read their context from the parse in the editor's state. Each command is one transaction, so one undo step, and none indents: they insert the file's own line break, `\r\n` for a CRLF file.
+  - **Enter:** a plain line break, or two at the end of a scene heading or a transition, since a heading is always followed by a blank line. Just before the `)` of a parenthetical, the cursor first moves past it. A selection is replaced by one break, and every cursor gets its own.
+  - **Tab and Shift-Tab:**
+    - Tab on an empty line after a blank one starts a cue, with an `@` and cue mode. On an empty line under a cue or a speech it opens a parenthetical, `(|)`.
+    - Tab on a cue cycles `(V.O.)`, `(O.S.)`, and none, and on action with text it makes the line a cue, upper-cased, as the named command `convertToCharacter`. Shift-Tab on a cue is `convertToAction`: no `@`, and lower case but for the first letter.
+    - Tab does nothing, and so the browser's own Tab moves focus, wherever the table of technical design §3.3 gives it no meaning: a heading, a transition, a line of speech, a note, the title page, a selection, and so on. The editor doesn't trap the keyboard.
+  - **Other keys:** `Mod-Alt-1` to `7` force a line's kind (heading, action, cue, parenthetical, transition, centered text, lyric), replacing the marker or wrapper it has and never changing case. `Mod-Shift-d` toggles `^` on the cue of the speech the cursor is in. `Mod-/` and `Mod-Shift-/` wrap the selection in a note or a boneyard, or insert an empty pair with the cursor inside. The save keys are the app's.
+  - **Input filters:** `fountainInput()` upper-cases what is typed in a cue started with Tab and in a scene heading after its prefix, and nowhere else. `cueMode` is on from the Tab until Enter, until the cursor leaves the line, or until the `@` is deleted. Only typing is changed, as it is typed, over whole code points, surrogate pairs included. Text already in the document, a paste, a completion, and a change the app makes keep their case.
+  - **Tests:**
+    - Every row of the keymap table; the keys pressed in a jsdom view; and a Tab that must pass through, unprevented, wherever it has no meaning.
+    - The edge cases of each command, and a scene typed from the keyboard that the parser reads as the writer meant.
+    - Typing in cues and headings and nowhere else, including surrogate pairs and several cursors, and the line breaks of a CRLF file.
+    - Lines of 200,000 characters, a block of 100,000 lines, a speech of 50,000 lines, and 20,000 cursors, which must be handled in under a second.
 
 ### Changed
 

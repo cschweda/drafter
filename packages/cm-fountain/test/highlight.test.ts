@@ -11,11 +11,9 @@ import { BOM, decorate, found, lineClasses, marked, stateOf } from './helpers';
 
 describe('the package', () => {
   it('exports the parse field and the highlighting', () => {
-    expect(Object.keys(api).sort()).toEqual([
-      'fountainDecorations',
-      'fountainHighlighting',
-      'parsedDoc',
-    ]);
+    expect(Object.keys(api)).toEqual(
+      expect.arrayContaining(['fountainDecorations', 'fountainHighlighting', 'parsedDoc']),
+    );
   });
 });
 
