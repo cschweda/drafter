@@ -359,7 +359,9 @@ describe('similar-names', () => {
 
     it('looks at up to eight names that differ in one place, and leaves a longer series alone', () => {
       const series = (size: number) =>
-        Array.from({ length: size }, (_, i) => cued(`SOLDIER ${i + 1}`)).join('');
+        Array.from({ length: size }, (_, i) => cued(`SOLDIER ${String.fromCharCode(65 + i)}`)).join(
+          '',
+        );
       // Eight names that differ in one place are looked at, and each pair is one letter apart.
       expect(found(series(8))).toHaveLength(28);
       // Nine are a series: nobody typed that many typos of one name.
@@ -371,6 +373,48 @@ describe('similar-names', () => {
       const source = `${cued('MARGARET', 5)}MARGERET\n\nShe waits for MARGERET.\n\nDANNY\nTell MARGERET.\n`;
       expect(found(source)).toEqual([]);
     });
+  });
+
+  describe('numbered characters', () => {
+    // GUARD 1 and GUARD 2 are two characters, and a typo almost never changes only a digit. Each
+    // pair is tried with one name cued once and the other 12 times, in both orders, so that
+    // nothing but the digits stands between the pair and a report. (COP is three letters, and
+    // SOLDIER 9 is two edits from SOLDIER 10, so those two were never reported. The rest were.)
+    it.each([
+      ['GUARD 1', 'GUARD 2'],
+      ['COP 1', 'COP 12'],
+      ['SOLDIER 9', 'SOLDIER 10'],
+      ['GUARD 10', 'GUARD 20'],
+      ['GUARD 12', 'GUARD 2'],
+      ['GUARD 12', 'GUARD 21'],
+      // Digits of other scripts count as digits: Arabic-Indic, and fullwidth.
+      ['GUARD ١', 'GUARD ٢'],
+      ['GUARD １２', 'GUARD ２１'],
+    ])('leaves numbered characters alone: %s and %s', (a, b) => {
+      expect(found(`${cued(a)}${cued(b, 12)}`)).toEqual([]);
+      expect(found(`${cued(a, 12)}${cued(b)}`)).toEqual([]);
+    });
+
+    it('leaves a numbered series alone, however rare each is', () => {
+      // Eight names that differ in one place are looked at, and would be 28 pairs.
+      const series = Array.from({ length: 8 }, (_, i) => cued(`SOLDIER ${i + 1}`)).join('');
+      expect(found(series)).toEqual([]);
+    });
+
+    it.each([
+      // Two letters swapped.
+      ['GUARD 1', 'GAURD 1'],
+      // A space left out: a number is a name's own, but the space before it is not a digit.
+      ['GUARD 1', 'GUARD1'],
+      ['AGENT 47', 'AGENT47'],
+    ])(
+      'still reports a name that differs from a numbered one by more than its digits: %s and %s',
+      (named, typo) => {
+        expect(found(`${cued(named, 12)}${cued(typo)}`).map((d) => d.message)).toEqual([
+          `"${typo}" is one letter from "${named}", which has 12 cues. A typo?`,
+        ]);
+      },
+    );
   });
 
   describe('names are compared in upper case', () => {
@@ -549,70 +593,157 @@ describe('similar-names', () => {
   });
 
   describe('the candidate index', () => {
-    // Names of two letters, five or six long, so that many pairs are one edit apart: at most
-    // eight of them, so that no key is shared by more than eight names.
-    const word = fc
-      .array(fc.constantFrom('A', 'B'), { minLength: 5, maxLength: 6 })
-      .map((letters) => letters.join(''));
-    const casts = fc.array(
-      fc.record({ name: word, forced: fc.boolean(), times: fc.integer({ min: 1, max: 4 }) }),
-      { minLength: 2, maxLength: 8 },
-    );
+    type Cast = Array<{ name: string; forced: boolean; times: number }>;
 
     const startsTheOther = (a: string, b: string) => {
       const [short, long] = a.length <= b.length ? [a, b] : [b, a];
       return long.startsWith(short);
     };
+    const withoutDigits = (name: string) => name.replace(/\p{Nd}/gu, '');
+
+    /**
+     * The script for a cast, and what comparing every name with every other says about it, by the
+     * whole table of the distance: the findings in order, and how many pairs one edit apart each
+     * condition spared.
+     */
+    function compared(cast: Cast) {
+      // The script, and for each name in upper case where it first appears and how often.
+      let source = '';
+      const names = new Map<string, { at: number; count: number; order: number }>();
+      for (const { name, forced, times } of cast) {
+        const known = names.get(name);
+        if (known) known.count += times;
+        else names.set(name, { at: source.length, count: times, order: names.size });
+        source += cued(forced ? `@${name.toLowerCase()}` : name, times);
+      }
+
+      const spared = { prefix: 0, digits: 0, common: 0 };
+      const findings: Array<{ order: [number, number]; at: number; message: string }> = [];
+      const list = [...names];
+      for (const [i, [keyA, a]] of list.entries()) {
+        for (const [keyB, b] of list.slice(i + 1)) {
+          if (distance(keyA, keyB) > 1) continue;
+          // One edit apart. One starting the other, differing in digits alone, or both being
+          // cued often, spares the pair.
+          const prefix = startsTheOther(keyA, keyB);
+          const digits = withoutDigits(keyA) === withoutDigits(keyB);
+          const common = Math.min(a.count, b.count) > 2;
+          if (prefix) spared.prefix++;
+          else if (digits) spared.digits++;
+          else if (common) spared.common++;
+          if (prefix || digits || common) continue;
+          const rare =
+            a.count === b.count ? (a.order > b.order ? a : b) : a.count < b.count ? a : b;
+          const [rareKey, other, otherKey] = rare === a ? [keyA, b, keyB] : [keyB, a, keyA];
+          findings.push({
+            order: [rare.order, other.order],
+            at: rare.at,
+            message: `"${rareKey}" is one letter from "${otherKey}", which has ${other.count} ${other.count === 1 ? 'cue' : 'cues'}. A typo?`,
+          });
+        }
+      }
+      findings.sort((x, y) => x.order[0] - y.order[0] || x.order[1] - y.order[1]);
+      return { source, findings: findings.map(({ at, message }) => ({ at, message })), spared };
+    }
+
+    /** What the rule reports for a script, in the shape `compared` gives its findings. */
+    const reported = (source: string) =>
+      found(source).map((d) => ({ at: d.span.from, message: d.message }));
+
+    // Casts of two to eight names of five or six letters, from two: at most eight names, so that
+    // no key is shared by more than eight, and many pairs one edit apart.
+    const lettered = fc.array(
+      fc.record({
+        name: fc
+          .array(fc.constantFrom('A', 'B'), { minLength: 5, maxLength: 6 })
+          .map((letters) => letters.join('')),
+        forced: fc.boolean(),
+        times: fc.integer({ min: 1, max: 4 }),
+      }),
+      { minLength: 2, maxLength: 8 },
+    );
 
     it('finds exactly the pairs that comparing every name with every other finds', () => {
-      let reported = 0;
-      let tooCommon = 0;
-      let aPrefix = 0;
+      let findings = 0;
+      let prefix = 0;
+      let common = 0;
       fc.assert(
-        fc.property(casts, (cast) => {
-          // The script, and for each name in upper case where it first appears and how often.
-          let source = '';
-          const names = new Map<string, { at: number; count: number; order: number }>();
-          for (const { name, forced, times } of cast) {
-            const known = names.get(name);
-            if (known) known.count += times;
-            else names.set(name, { at: source.length, count: times, order: names.size });
-            source += cued(forced ? `@${name.toLowerCase()}` : name, times);
-          }
-
-          // Every pair, by the table of the distance.
-          const expected: Array<{ order: [number, number]; at: number; message: string }> = [];
-          const list = [...names];
-          for (const [i, [keyA, a]] of list.entries()) {
-            for (const [keyB, b] of list.slice(i + 1)) {
-              if (distance(keyA, keyB) > 1) continue;
-              if (startsTheOther(keyA, keyB)) aPrefix++;
-              else if (Math.min(a.count, b.count) > 2) tooCommon++;
-              if (startsTheOther(keyA, keyB) || Math.min(a.count, b.count) > 2) continue;
-              const rare =
-                a.count === b.count ? (a.order > b.order ? a : b) : a.count < b.count ? a : b;
-              const [rareKey, other, otherKey] = rare === a ? [keyA, b, keyB] : [keyB, a, keyA];
-              expected.push({
-                order: [rare.order, other.order],
-                at: rare.at,
-                message: `"${rareKey}" is one letter from "${otherKey}", which has ${other.count} ${other.count === 1 ? 'cue' : 'cues'}. A typo?`,
-              });
-            }
-          }
-          expected.sort((x, y) => x.order[0] - y.order[0] || x.order[1] - y.order[1]);
-          reported += expected.length;
-
-          expect(
-            found(source).map((d) => ({ at: d.span.from, message: d.message })),
-            JSON.stringify(source),
-          ).toEqual(expected.map(({ at, message }) => ({ at, message })));
+        fc.property(lettered, (cast) => {
+          const expected = compared(cast);
+          expect(reported(expected.source), JSON.stringify(expected.source)).toEqual(
+            expected.findings,
+          );
+          findings += expected.findings.length;
+          prefix += expected.spared.prefix;
+          common += expected.spared.common;
         }),
         { numRuns: 1000 },
       );
-      // The generator reaches pairs that are reported, and pairs that the counts or a prefix spare.
-      expect(reported).toBeGreaterThan(300);
-      expect(tooCommon).toBeGreaterThan(30);
-      expect(aPrefix).toBeGreaterThan(30);
+      // The generator reaches pairs that are reported, and pairs that a prefix or the counts spare.
+      expect(findings).toBeGreaterThan(300);
+      expect(prefix).toBeGreaterThan(30);
+      expect(common).toBeGreaterThan(30);
+    });
+
+    // Casts of two to eight names that are all one word of six or seven letters, from two, with
+    // at most one letter changed, added, left out, or swapped, and up to two digits put in
+    // anywhere. So some pairs are one edit apart in their letters, and some in their digits alone.
+    const numbered = fc
+      .record({
+        word: fc.array(fc.constantFrom('A', 'B'), { minLength: 6, maxLength: 7 }),
+        names: fc.array(
+          fc.record({
+            edit: fc.constantFrom('none', 'none', 'change', 'add', 'leave out', 'swap'),
+            at: fc.nat(),
+            letter: fc.constantFrom('A', 'B'),
+            digits: fc.array(fc.record({ at: fc.nat(), digit: fc.constantFrom('1', '2') }), {
+              maxLength: 2,
+            }),
+            forced: fc.boolean(),
+            times: fc.integer({ min: 1, max: 4 }),
+          }),
+          { minLength: 2, maxLength: 8 },
+        ),
+      })
+      .map(({ word, names }) =>
+        names.map(({ edit, at, letter, digits, forced, times }): Cast[number] => {
+          const chars: string[] = [...word];
+          if (edit === 'change') chars[at % chars.length] = letter;
+          else if (edit === 'add') chars.splice(at % (chars.length + 1), 0, letter);
+          else if (edit === 'leave out') chars.splice(at % chars.length, 1);
+          else if (edit === 'swap') {
+            const i = at % (chars.length - 1);
+            chars[i] = word[i + 1] as string;
+            chars[i + 1] = word[i] as string;
+          }
+          for (const put of digits) chars.splice(put.at % (chars.length + 1), 0, put.digit);
+          return { name: chars.join(''), forced, times };
+        }),
+      );
+
+    it('finds exactly the same among names with digits in them', () => {
+      let findings = 0;
+      let prefix = 0;
+      let digits = 0;
+      let common = 0;
+      fc.assert(
+        fc.property(numbered, (cast) => {
+          const expected = compared(cast);
+          expect(reported(expected.source), JSON.stringify(expected.source)).toEqual(
+            expected.findings,
+          );
+          findings += expected.findings.length;
+          prefix += expected.spared.prefix;
+          digits += expected.spared.digits;
+          common += expected.spared.common;
+        }),
+        { numRuns: 1000 },
+      );
+      // The generator reaches pairs that are reported, and pairs that each condition spares.
+      expect(findings).toBeGreaterThan(200);
+      expect(prefix).toBeGreaterThan(30);
+      expect(digits).toBeGreaterThan(250);
+      expect(common).toBeGreaterThan(30);
     });
   });
 });

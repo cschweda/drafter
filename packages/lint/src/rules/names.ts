@@ -5,7 +5,9 @@ import type { LintDiagnostic, Rule } from '../types';
 // similar-names (technical design §9): two character names one edit apart, one of them rare, are
 // probably one character typed two ways. The rest of the rule's conditions are its controls
 // against false alarms: five letters in both names (MAX and MAC are too short), one of them cued
-// twice or less, and neither the start of the other (DANNY and DANNYS are a prefix apart).
+// twice or less, and neither the start of the other (DANNY and DANNYS are a prefix apart). A
+// fourth, beyond the design: names that differ only in their digits (GUARD 1 and GUARD 2) are
+// numbered characters, which are meant, and a typo almost never changes only a digit.
 
 /** The letters a name needs to be compared. A shorter name is one edit from too many others. */
 const MIN_LETTERS = 5;
@@ -22,14 +24,19 @@ const RARE = 2;
 const MAX_LENGTH = 32;
 
 /**
- * The most names that may share one key. Names that differ in one place only (SOLDIER 1,
- * SOLDIER 2, and so on up to SOLDIER 9) are a series the writer meant, not typos of one name,
- * and with no limit a file of twenty thousand of them would have two hundred million pairs to
- * report.
+ * The most names that may share one key. Names that differ in one place only (SOLDIER A,
+ * SOLDIER B, and so on up to SOLDIER I) are a series the writer meant, not typos of one name, and
+ * with no limit a file of twenty thousand of them would have two hundred million pairs to report.
  */
 const MAX_SHARING = 8;
 
 const LETTER = /\p{L}/u;
+
+/** A decimal digit of any script, not only 0 to 9: `\d` would miss the Arabic-Indic ones. */
+const DIGIT = /\p{Nd}/gu;
+
+/** A name with its digits left out: GUARD 1 and GUARD 22 are both "GUARD ". */
+const withoutDigits = (key: string) => key.replace(DIGIT, '');
 
 /** A name as the layout compares names, and as this rule does: ignoring case. */
 const nameKey = (name: string) => name.trim().toUpperCase();
@@ -136,6 +143,9 @@ function startsTheOther(a: string, b: string): boolean {
 function judge(a: Name, b: Name, distinct: ReadonlySet<string>): Hit | null {
   if (Math.min(a.count, b.count) > RARE) return null;
   if (!withinOneEdit(a.key, b.key) || startsTheOther(a.key, b.key)) return null;
+  // Names that are the same once their digits are left out are numbered characters. A
+  // difference in anything else is still a typo: the space in AGENT 47 beside AGENT47.
+  if (withoutDigits(a.key) === withoutDigits(b.key)) return null;
   if (distinct.has(pairKey(a.key, b.key))) return null;
   // The typo is the rarer name. With a tie, it is the one that first appears later.
   const aIsRarer = a.count !== b.count ? a.count < b.count : a.order > b.order;

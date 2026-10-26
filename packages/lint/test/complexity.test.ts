@@ -164,7 +164,12 @@ const cases: Array<[string, () => string, number]> = [
     () => `NARRATOR${'('.repeat(200_000)}\n\n(quietly)\nHi.\n`,
     0,
   ],
-  // The three below are about similar-names: each name is a cue, with a line of speech.
+  // The four below are about similar-names: each name is a cue, with a line of speech.
+  [
+    'twenty thousand numbered characters, GUARD 1 to GUARD 20000',
+    () => cues(Array.from({ length: 20_000 }, (_, i) => `GUARD ${i + 1}`)),
+    0,
+  ],
   [
     'two cues of two hundred thousand letters each, one letter apart',
     () => `${'A'.repeat(200_000)}\nHi.\n\n${'A'.repeat(199_999)}B\nHi.\n`,
