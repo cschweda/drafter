@@ -1,5 +1,4 @@
 import { ref, watch } from 'vue';
-import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
 import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
@@ -153,34 +152,15 @@ export const save = (): Promise<'saved' | 'cancelled'> => attempt(false);
 export const saveAs = (): Promise<'saved' | 'cancelled'> => attempt(true);
 
 /**
- * Mod-s and Mod-Shift-s from anywhere on the page, so the browser's own Save Page never opens. A
- * capture listener on the window sees the keys before anything in the page does; the editor's
- * keymap has the same two as a second way in. Returns the function that removes it. Plan 4's
- * command registry takes the keys over and lists them.
+ * Clears what went wrong with one script's save when another script is opened: it isn't news
+ * about the next one. Returns the function that stops it. The keys for Save and Save As belong to
+ * the command registry (`commands/registry.ts`), which binds them on the whole page.
  */
-export function installSaveKeys(): () => void {
-  const quietly = (action: () => Promise<unknown>) => () => void action().catch(() => {});
-  fileKeys.save = quietly(save);
-  fileKeys.saveAs = quietly(saveAs);
-  const onKeydown = (event: KeyboardEvent) => {
-    if (event.key.toLowerCase() !== 's' || event.altKey) return;
-    if (!(event.metaKey || event.ctrlKey)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.repeat) return;
-    if (event.shiftKey) fileKeys.saveAs();
-    else fileKeys.save();
-  };
-  window.addEventListener('keydown', onKeydown, true);
-  // What went wrong with one script's save isn't news about the next one.
-  const stop = watch(
+export function watchSaveError(): () => void {
+  return watch(
     () => useScript().project.value?.id,
     () => {
       saveError.value = '';
     },
   );
-  return () => {
-    window.removeEventListener('keydown', onKeydown, true);
-    stop();
-  };
 }

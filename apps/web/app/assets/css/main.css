@@ -2,6 +2,11 @@
 @import "@nuxt/ui";
 @import "./tokens.css";
 
+:root {
+  /* The text size setting (settings/apply.ts) scales the Source pane and the Script pane by this. */
+  --text-scale: 1;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

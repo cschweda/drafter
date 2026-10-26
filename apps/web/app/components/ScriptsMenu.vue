@@ -8,7 +8,7 @@ import { useScript } from '~/storage/script';
 
 // The Open menu (Phase 1 design §9.3): new scripts, this browser's scripts, and the samples. The
 // trigger is the toolbar's Open button, drawn by the toolbar and given through the slot.
-// Plan 4 registers these as commands, with shortcuts, and adds the app menu.
+// The same actions are commands too (`commands/builtin.ts`), with their keys, in the palette.
 const script = useScript();
 const { project, busy } = script;
 const { readOnly, taking } = useGuard();

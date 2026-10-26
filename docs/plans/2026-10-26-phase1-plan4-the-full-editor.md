@@ -35,6 +35,7 @@ Read it with technical design §8.6 and §9, and with §6.2 for `render-pdf`. Th
 - Everything in Plan 3's Global Constraints, except the branch and the dependencies. That includes the one seam for files: the changed-elsewhere check (Task 10) and export (Task 11) read and write only through `useFiles()`.
   - **Branch:** `phase-1-full-editor`, from `main` after Plan 3 merges. It merges to `main` when everything is green.
   - **New dependencies:** `@drafter/render-pdf` and `@drafter/render-text` (Task 11), and `@codemirror/lang-markdown`, `micromark`, and `mdast-util-from-markdown` (Task 6), and nothing else.
+- **Accessibility checking waits for the final stage** (decided 2026-10-26): tasks add no axe checks, and the existing ones run only with `A11Y=1`. Functional keyboard tests stay. This overrides Plan 3's accessibility constraint for this plan.
 - **Modules ship off by default.** Task 7 builds the module host, the local `modules/` folder, and a test fixture; Task 8 adds three sample modules that need no network. The content security policy stays `connect-src 'self'`.
 
 ## Review Focus

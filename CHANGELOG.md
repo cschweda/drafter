@@ -8,11 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `apps/web`: the command palette. Mod+K (or the toolbar's search field) opens it from anywhere, the editor included. It lists the scenes by their heading text with their source lines, "Go to line N" when you type a number, and every command that applies, with its keys. Esc closes it and focus goes back where it was.
+- `apps/web`: a command registry (`registerCommands`, `useCommands`, `formatKeys`). File, Edit, View, and Go commands, among them New screenplay (Mod+Alt+N), New stage play, Open (Mod+O), Save, Save As, Remove from this browser, Next and Previous problem (F8, Shift+F8), Show Source, Show Script, Show Problems, Switch theme, Fold all, Unfold all, Undo, Redo, Find, and the Fountain commands (make a scene heading through a lyric, dual dialogue, wrap in a note, cut to the boneyard).
+- `apps/web`: Shift+F8 goes to the previous problem, and Mod+Shift+Z redoes on every platform.
+- `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
+- `apps/web`: settings, kept in this browser (IndexedDB) and set from a Settings dialog (File > Settings…, Mod+,). They are match system appearance, text size (90% to 150%, scaling the Source pane and, at 100%, the Script pane), spellcheck, Strict Fountain (its rules become warnings at once), and line numbers.
+- `apps/web`: line numbers in the Source pane, off to begin with, in the leftmost gutter. A "Line numbers" button on the pane's bar, the Show and Hide line numbers commands, and the dialog toggle them, and Drafter remembers the choice.
 - `@drafter/fountain`: `setMeta(doc, meta)`, the text changes that write the `/* drafter … */` metadata block, replacing the existing one or appending one, with the script's own line break and every `/` in the JSON escaped so no value can close the block.
 - `@drafter/lint`: `similar-names` offers **Mark as distinct**, which adds the pair to `meta.distinctNames`, and no longer reports names whose one edit falls inside a word of three letters or fewer (`MR. SMITH` and `MRS. SMITH`, `JOHN JR.` and `JOHN SR.`, `GUARD A` and `GUARD B`).
-- `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
 - `apps/web`: a file changed somewhere else, such as by Dropbox on another computer, is noticed when a script opens, when the window regains focus, and before Save writes. If only the file changed, its text replaces the editor's as one undoable change ("Updated from The Call.fountain."). If both changed, a dialog asks which to keep working on, **Open the file** or **Keep this browser's version**, and the other is kept as a new script. Save never overwrites a changed file. A script whose file Drafter may not read yet opens read-only under a bar with **Check for changes**, and one whose file is gone offers **Save As** or **Edit this browser's copy**.
 - `apps/web`: **Export** in the toolbar opens a menu with **PDF** and **Plain text (.txt)**. The script is laid out and drawn in a worker, with Courier Prime fetched once from the app's own origin, and saved where the writer chooses (Chromium's save picker, suggesting the title as the file name), or downloaded in other browsers. The plain text is what `drafter build --txt` writes. A toast says when the file is ready, or why it isn't. An empty script says "Nothing to export yet." and writes no file. An export waits for a script switch in progress, so the name and the pages are one script's, and one of the other kind asked for meanwhile waits its turn. The command palette and app menu will call the same `exportScript` when they arrive.
+
+### Changed
+
+- `apps/web`: Save, Save As, Open, New screenplay, and the palette have their keys through the command registry, on the whole page, one handler for each key. Mod+S and Mod+Shift+S no longer have a second binding in the editor's keymap.
 
 ### Fixed
 

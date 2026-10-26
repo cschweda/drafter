@@ -11,7 +11,8 @@
     "e2e": "rm -rf .output && NETLIFY=true pnpm build && playwright test",
     "test": "vitest run",
     "typecheck": "nuxt typecheck",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "e2e:a11y": "rm -rf .output && NETLIFY=true pnpm build && A11Y=1 playwright test --grep \"accessibility violations\""
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

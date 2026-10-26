@@ -1,10 +1,10 @@
 import { completionKeymap } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands';
 import { foldGutter, foldKeymap } from '@codemirror/language';
-import { lintKeymap } from '@codemirror/lint';
+import { lintKeymap, previousDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import { drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view';
+import { drawSelection, EditorView, keymap, lineNumbers, ViewPlugin } from '@codemirror/view';
 import { type CursorElement, fountain, relint as relintView } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
 import { theme } from './theme';
@@ -36,16 +36,6 @@ export function readOnlyExtension(on: boolean): Extension {
   return [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
 }
 
-/**
- * What Mod-s and Mod-Shift-s do. `storage/save.ts` fills them in (it can't be imported here:
- * it reaches the editor session, which reaches this file), and the window's own listener in the
- * capture phase usually gets there first. Plan 4's command registry takes over both.
- */
-export const fileKeys: { save: () => void; saveAs: () => void } = {
-  save: () => {},
-  saveAs: () => {},
-};
-
 let active: EditorView | undefined;
 
 /**
@@ -66,17 +56,28 @@ export function relint(): void {
   if (active) relintView(active);
 }
 
+/** `lineNumbersGutter.reconfigure(lineNumbersExtension(on))` shows or hides the numbers. */
+export function lineNumbersExtension(on: boolean): Extension {
+  return on ? lineNumbers() : [];
+}
+
 export interface EditorHooks {
   template: () => Template;
+  /** Read at each lint; the Strict Fountain setting is in it. */
+  lintOptions?: () => { strict?: boolean };
   onCursorElement: (element: CursorElement | null) => void;
 }
 
 /** Everything the one editor is made of, around `fountain()` (technical design §3). */
-export function editorExtensions({ template, onCursorElement }: EditorHooks): Extension {
+export function editorExtensions({
+  template,
+  lintOptions,
+  onCursorElement,
+}: EditorHooks): Extension {
   return [
     remember,
     lineNumbersGutter.of([]),
-    fountain({ template, onCursorElement }),
+    fountain({ template, lintOptions, onCursorElement }),
     history(),
     drawSelection(),
     foldGutter(),
@@ -88,23 +89,11 @@ export function editorExtensions({ template, onCursorElement }: EditorHooks): Ex
     EditorView.domEventHandlers({
       drop: (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files'),
     }),
+    // Save, Save As, Open, and New are the page's: the command registry binds their keys on the
+    // window, before the editor sees them. These two commands' keys are the editor's own.
     keymap.of([
-      {
-        key: 'Mod-s',
-        run: () => {
-          fileKeys.save();
-          return true;
-        },
-        preventDefault: true,
-      },
-      {
-        key: 'Mod-Shift-s',
-        run: () => {
-          fileKeys.saveAs();
-          return true;
-        },
-        preventDefault: true,
-      },
+      { key: 'Shift-F8', run: previousDiagnostic },
+      { key: 'Mod-Shift-z', run: redo, preventDefault: true },
     ]),
     // Below fountain()'s own keys, which sit at Prec.high.
     keymap.of([
