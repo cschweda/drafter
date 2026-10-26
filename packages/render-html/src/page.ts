@@ -273,3 +273,106 @@ export function buildPage(
   drawFurniture(doc, el, page, template);
   return el;
 }
+
+/**
+ * How far an edit moved a page in the source: every offset by `offset`, every
+ * block number by `block`.
+ */
+export interface Shift {
+  offset: number;
+  block: number;
+}
+
+/**
+ * Whether `next` is `old` moved in the source, and by how much. That is what
+ * every page after an edit that changes the script's length is: the same lines
+ * and text, with every `span`, of lines, runs, and right parts, moved by one
+ * common offset, and every block number of 0 or more moved by one common
+ * amount. A synthetic line has no block (-1) and keeps none. Any other
+ * difference gives null, at the first one found, and so does a move that is
+ * not the same everywhere: an edit inside a note moves the text after it and
+ * not the text before, and the cue repeated as (CONT'D) at the top of a page
+ * stands where the cue did on an earlier page, which may be before the edit.
+ *
+ * Every field the layout emits is compared, one way or the other, since the
+ * DOM is built from all of them; a test changes each field in turn and
+ * expects to be told.
+ */
+export function shiftOf(old: Page, next: Page): Shift | null {
+  let offset: number | undefined;
+  let block: number | undefined;
+
+  const sameSpan = (a: LayoutLine['span'], b: LayoutLine['span']) => {
+    const by = b.from - a.from;
+    if (b.to - a.to !== by) return false;
+    offset ??= by;
+    return by === offset;
+  };
+  const sameBlock = (a: number, b: number) => {
+    if (a < 0) return b === a;
+    if (b < 0) return false;
+    block ??= b - a;
+    return b - a === block;
+  };
+  const sameRun = (a: LayoutRun, b: LayoutRun) =>
+    a.text === b.text &&
+    a.bold === b.bold &&
+    a.italic === b.italic &&
+    a.underline === b.underline &&
+    a.synthetic === b.synthetic &&
+    sameSpan(a.span, b.span);
+  const sameLine = (a: LayoutLine, b: LayoutLine): boolean => {
+    if (a.col !== b.col || a.role !== b.role || a.synthetic !== b.synthetic) return false;
+    if (!sameSpan(a.span, b.span) || !sameBlock(a.blockIndex, b.blockIndex)) return false;
+    if (a.runs.length !== b.runs.length) return false;
+    for (let i = 0; i < a.runs.length; i++) {
+      if (!sameRun(a.runs[i] as LayoutRun, b.runs[i] as LayoutRun)) return false;
+    }
+    return a.right && b.right ? sameLine(a.right, b.right) : !a.right && !b.right;
+  };
+
+  if (old.number !== next.number || old.header !== next.header || old.footer !== next.footer) {
+    return null;
+  }
+  const a = old.pageNumber;
+  const b = next.pageNumber;
+  if (a || b) {
+    if (!a || !b || a.text !== b.text || a.line !== b.line || a.col !== b.col) return null;
+  }
+  for (const side of ['sceneNumbersLeft', 'sceneNumbersRight'] as const) {
+    const was = old[side];
+    const now = next[side];
+    if (was.length !== now.length) return null;
+    for (let i = 0; i < was.length; i++) {
+      const x = was[i] as (typeof was)[number];
+      const y = now[i] as (typeof now)[number];
+      if (x.line !== y.line || x.text !== y.text) return null;
+    }
+  }
+  if (old.lines.length !== next.lines.length) return null;
+  for (let i = 0; i < old.lines.length; i++) {
+    if (!sameLine(old.lines[i] as LayoutLine, next.lines[i] as LayoutLine)) return null;
+  }
+  return { offset: offset ?? 0, block: block ?? 0 };
+}
+
+/**
+ * Moves a page built by `buildPage` as `shiftOf` says its source moved. An
+ * offset is in the DOM in `data-from` and `data-to` on each line, and a block
+ * number in `data-block` on each block, and nowhere else: nothing selects on
+ * them, and the order the lines are read in and the groups they are put in only
+ * compare block numbers with each other.
+ */
+export function shiftPage(el: HTMLElement, { offset, block }: Shift): void {
+  if (offset !== 0) {
+    for (const line of el.querySelectorAll('.drafter-line[data-from]')) {
+      line.setAttribute('data-from', String(Number(line.getAttribute('data-from')) + offset));
+      line.setAttribute('data-to', String(Number(line.getAttribute('data-to')) + offset));
+    }
+  }
+  if (block !== 0) {
+    for (const part of el.querySelectorAll('.drafter-block[data-block]')) {
+      part.setAttribute('data-block', String(Number(part.getAttribute('data-block')) + block));
+    }
+  }
+}

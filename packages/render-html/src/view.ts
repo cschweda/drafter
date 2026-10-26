@@ -1,6 +1,6 @@
-import type { Layout } from '@drafter/layout';
+import type { Layout, Page } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
-import { buildPage } from './page';
+import { buildPage, type Shift, shiftOf, shiftPage } from './page';
 import { speechRoles } from './roles';
 
 /**
@@ -55,10 +55,11 @@ const SCROLL_KEYS = new Set([
   ' ',
 ]);
 
-/** A page on the screen, with the JSON it was drawn from. */
+/** A page on the screen, with what it was drawn from. */
 interface Drawn {
   number: number;
   json: string;
+  page: Page;
   el: HTMLElement;
 }
 
@@ -132,22 +133,33 @@ export function createScriptView(
     // Build the pages that changed first, detached from the document. If a build fails, the view
     // is as it was. And the new copy of a page, whose cue ids are the old copy's, is never in the
     // document beside it: the swap below takes the old one out as it puts the new one in.
+    // A page that only moved in the source, as every page after an edit that changes the script's
+    // length has, is not built again: it keeps its element, and its offsets are moved in place.
+    const moves: Array<[HTMLElement, Shift]> = [];
     const next = layout.pages.map((page, i): Drawn => {
       const json = JSON.stringify(page);
       const old = drawn[i];
-      if (old && sameTemplate && old.json === json) return old;
-      return { number: page.number, json, el: buildPage(doc, page, template, roles) };
+      if (old && sameTemplate) {
+        if (old.json === json) return old;
+        const shift = shiftOf(old.page, page);
+        if (shift) {
+          moves.push([old.el, shift]);
+          return { number: page.number, json, page, el: old.el };
+        }
+      }
+      return { number: page.number, json, page, el: buildPage(doc, page, template, roles) };
     });
 
     // Then swap them in, each in its page's place. The pages that didn't change are not touched,
     // so a reader's selection in one of them stays. All of this happens in one task.
     for (const [i, page] of next.entries()) {
       const old = drawn[i];
-      if (page === old) continue;
+      if (page.el === old?.el) continue;
       if (old) old.el.replaceWith(page.el);
       else element.append(page.el);
     }
     for (const gone of drawn.slice(next.length)) gone.el.remove();
+    for (const [el, shift] of moves) shiftPage(el, shift);
 
     drawn = next;
     drawnTemplate = templateJson;

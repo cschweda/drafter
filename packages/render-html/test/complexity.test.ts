@@ -95,9 +95,9 @@ describe('hostile pages', () => {
 // The view's update runs after every edit: it compares each page with the last one drawn, and
 // builds the pages that changed. These layouts have more pages, or a taller page, than any script
 // does, and every step must still finish inside a second.
-/** A layout of `count` pages with one line each, `word` on every one. */
-const layoutOfPages = (count: number, word: string): Layout => ({
-  pages: rows(count, (i) => page([line('action', i, word)], i + 1)),
+/** A layout of `count` pages with one line each, `word` on every one, `moved` places further on in the source. */
+const layoutOfPages = (count: number, word: string, moved = 0): Layout => ({
+  pages: rows(count, (i) => page([line('action', i + moved, word)], i + 1)),
   index: rows(count, (i) => ({ page: i + 1, line: 0 })),
   diagnostics: [],
 });
@@ -140,6 +140,28 @@ describe('hostile layouts', () => {
       ]),
     60_000,
   );
+
+  it('patches ten thousand pages that only moved in under a second', async () => {
+    // Each page's line is a block of its own at its own offset, and one character typed at the
+    // top moves every one of them by one: the case a long script is in after each keystroke.
+    const view = createScriptView(document.createElement('div'));
+    await view.update(layoutOfPages(10_000, 'Talk.'), screenplay);
+    const before = [...view.element.querySelectorAll('.drafter-page')];
+
+    const start = performance.now();
+    await view.update(layoutOfPages(10_000, 'Talk.', 1), screenplay);
+    expect(performance.now() - start).toBeLessThan(1000);
+
+    const after = [...view.element.querySelectorAll('.drafter-page')];
+    expect(after).toHaveLength(10_000);
+    // Patched, not built again, and the offsets and blocks are the moved ones.
+    expect(after.every((el, i) => el === before[i])).toBe(true);
+    for (const i of [0, 4_999, 9_999]) {
+      const el = after[i] as HTMLElement;
+      expect(el.querySelector<HTMLElement>('.drafter-line')?.dataset.from).toBe(String(i + 1));
+      expect(el.querySelector<HTMLElement>('.drafter-block')?.dataset.block).toBe(String(i + 1));
+    }
+  }, 60_000);
 
   // jsdom takes as long to replace one child as the parent has children (a browser takes the same
   // time however many there are), so replacing every page of a big layout is quadratic here and

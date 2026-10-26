@@ -1,5 +1,5 @@
 import { blockAt, parse } from '@drafter/fountain';
-import { type Layout, type LayoutLine, paginate } from '@drafter/layout';
+import { type Layout, type LayoutLine, type PaginateOptions, paginate } from '@drafter/layout';
 import * as api from '@drafter/render-html';
 import {
   createScriptView,
@@ -9,11 +9,15 @@ import {
 } from '@drafter/render-html';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { featureScript } from './scripts';
 
 const screenplay = builtins['us-screenplay'] as Template;
 
-const layoutOf = (source: string, template: Template = screenplay): Layout =>
-  paginate(parse(source), template);
+const layoutOf = (
+  source: string,
+  template: Template = screenplay,
+  options?: PaginateOptions,
+): Layout => paginate(parse(source), template, options);
 
 /** Three pages, one line of action on each. */
 const THREE = 'INT. HALL - DAY\n\nOne.\n\n===\n\nTwo.\n\n===\n\nThree.\n';
@@ -327,6 +331,196 @@ describe('update', () => {
     expect(one).toBeGreaterThan(0);
     expect(await walks(THREE)).toBe(one);
   });
+});
+
+describe('an edit that changes the length of the script', () => {
+  // The offsets in a page's lines move with it, but the page is what it was.
+  it("keeps a page's element when an edit before it only shifts its offsets", async () => {
+    const { view } = mount();
+    await view.update(layoutOf(THREE), screenplay);
+    const before = pagesIn(view);
+
+    const edited = THREE.replace('One.', 'One and more.');
+    await view.update(layoutOf(edited), screenplay);
+    const after = pagesIn(view);
+
+    expect(after).toHaveLength(3);
+    expect(after[0]).not.toBe(before[0]); // the page that was edited is built again
+    expect(after[1]).toBe(before[1]);
+    expect(after[2]).toBe(before[2]);
+    for (const text of ['Two.', 'Three.']) {
+      const line = lineWith(view, text);
+      expect(line.dataset.from, text).toBe(String(edited.indexOf(text)));
+      expect(line.dataset.to, text).toBe(String(edited.indexOf(text) + text.length));
+    }
+  });
+
+  it('moves the block numbers of a page that an edit before it added a block to', async () => {
+    const { view } = mount();
+    await view.update(layoutOf(THREE), screenplay);
+    const before = pagesIn(view);
+
+    const edited = THREE.replace('One.', 'One.\n\nPlus.');
+    await view.update(layoutOf(edited), screenplay);
+    const after = pagesIn(view);
+
+    expect(after[1]).toBe(before[1]);
+    expect(after[2]).toBe(before[2]);
+    for (const text of ['Two.', 'Three.']) {
+      const block = lineWith(view, text).closest<HTMLElement>('.drafter-block');
+      expect(block?.dataset.block, text).toBe(String(blockOf(edited, text)));
+    }
+  });
+
+  it('reveals a line on a page that an edit only shifted', async () => {
+    const { view } = mount();
+    await view.update(layoutOf(THREE), screenplay);
+    const edited = THREE.replace('One.', 'One.\n\nPlus.');
+    await view.update(layoutOf(edited), screenplay);
+    view.reveal(blockOf(edited, 'Three.'));
+    expect(scrolled()).toHaveLength(1);
+    expect(scrolled()[0]).toBe(lineWith(view, 'Three.'));
+  });
+
+  it('rebuilds only the page when an edit inside a note moves some of its offsets', async () => {
+    const script = (note: string) =>
+      `INT. HALL - DAY\n\nOne.\n\n===\n\nBefore the note [[${note}]] and after it.\n\n===\n\nThree.\n`;
+    const { view } = mount();
+    await view.update(layoutOf(script('a note')), screenplay);
+    const before = pagesIn(view);
+
+    // The text before the note stays where it was and the text after it moves, so the page is
+    // not a shifted page. The page after it, which only moves, is.
+    const edited = script('a much longer note');
+    await view.update(layoutOf(edited), screenplay);
+    const after = pagesIn(view);
+
+    expect(after[0]).toBe(before[0]);
+    expect(after[1]).not.toBe(before[1]);
+    expect(after[2]).toBe(before[2]);
+    const three = lineWith(view, 'Three.');
+    expect(three.dataset.from).toBe(String(edited.indexOf('Three.')));
+
+    const fresh = mount().view;
+    await fresh.update(layoutOf(edited), screenplay);
+    expect(view.element.innerHTML).toBe(fresh.element.innerHTML);
+  });
+
+  // The pages of one script, as a view that was edited has them and as a new view draws them.
+  async function sameAsFresh(view: ScriptView, layout: Layout, label: string) {
+    const fresh = mount().view;
+    await fresh.update(layout, screenplay);
+    const drawn = pagesIn(view);
+    const expected = pagesIn(fresh);
+    expect(drawn.length, label).toBe(expected.length);
+    for (const [i, page] of drawn.entries()) {
+      expect(page.outerHTML, `${label}, page ${i}`).toBe((expected[i] as HTMLElement).outerHTML);
+    }
+    expect(view.element.innerHTML, label).toBe(fresh.element.innerHTML);
+  }
+
+  const sceneLayout = (source: string) => layoutOf(source, screenplay, { sceneNumbers: true });
+  const edits: Array<[string, (source: string, scene: number, nl: string) => string]> = [
+    ['a character inserted', (s, i) => s.replace(`Scene ${i} begins`, `Scene ${i} begins,`)],
+    [
+      'a line break inserted, which makes a block of the paragraph',
+      (s, i, nl) =>
+        s.replace(
+          `Scene ${i} begins in a quiet room.${nl}Light`,
+          `Scene ${i} begins in a quiet room.${nl}${nl}Light`,
+        ),
+    ],
+    [
+      'a word deleted',
+      (s, i) => s.replace(`Scene ${i} begins in a quiet room.`, `Scene ${i} begins in a room.`),
+    ],
+  ];
+
+  it.each([
+    ['LF, a page to a scene', '\n', true, 20],
+    ['CRLF, a page to a scene', '\r\n', true, 20],
+    ['LF, pages that flow', '\n', false, 40],
+    ['CRLF, pages that flow', '\r\n', false, 40],
+  ] as const)(
+    'draws what a new view draws: %s',
+    async (_label, nl, paged, scenes) => {
+      const original = featureScript({ nl, scenes, paged });
+      const originalLayout = sceneLayout(original);
+      const places = [
+        ['the start', 0],
+        ['the middle', scenes / 2],
+        ['the end', scenes - 1],
+      ] as const;
+      for (const [what, edit] of edits) {
+        for (const [where, scene] of places) {
+          const label = `${what} at ${where}`;
+          const edited = edit(original, scene, nl);
+          expect(edited, label).not.toBe(original);
+
+          const editedLayout = sceneLayout(edited);
+          const { view } = mount();
+          await view.update(originalLayout, screenplay);
+          const before = pagesIn(view);
+          await view.update(editedLayout, screenplay);
+          await sameAsFresh(view, editedLayout, label);
+
+          if (paged) {
+            // Each scene stands on pages of its own, so only the edited one is built again.
+            const after = pagesIn(view);
+            const rebuilt = after.flatMap((page, i) => (page === before[i] ? [] : [i]));
+            const editedPage = after.findIndex((page) =>
+              page.textContent?.includes(`Scene ${scene} begins`),
+            );
+            expect(rebuilt, label).toEqual([editedPage]);
+          }
+        }
+      }
+    },
+    60_000,
+  );
+
+  it('rebuilds the page that carries on a speech cut by the edit, and keeps the ones after it', async () => {
+    const original = featureScript({ scenes: 12, paged: true });
+    // The speech is too long for a page. Its cue is above the edit, and the cue the next page
+    // repeats as (CONT'D) takes that cue's place in the source, which did not move.
+    const edited = original.replace('Line 2 of the long speech.', 'Line 2, of the long speech.');
+    const { view } = mount();
+    await view.update(sceneLayout(original), screenplay);
+    const before = pagesIn(view);
+    await view.update(sceneLayout(edited), screenplay);
+    const after = pagesIn(view);
+
+    const first = after.findIndex((page) => page.textContent?.includes('Line 2, of the long'));
+    expect(after[first + 1]?.textContent).toContain("(CONT'D)");
+    expect(after.flatMap((page, i) => (page === before[i] ? [] : [i]))).toEqual([first, first + 1]);
+    await sameAsFresh(view, sceneLayout(edited), 'the continued speech');
+  });
+
+  it('stays what a new view is through a run of keystrokes', async () => {
+    const original = featureScript({ scenes: 12, paged: true });
+    const { view } = mount();
+    let source = original;
+    await view.update(sceneLayout(source), screenplay);
+    const first = pagesIn(view);
+
+    // Type at the top of the first scene, back up over some of it, and break the paragraph.
+    const at = source.indexOf('Scene 0 begins');
+    const steps: Array<(s: string) => string> = [
+      ...[...'Hello, '].map(
+        (char, k) => (s: string) => s.slice(0, at + k) + char + s.slice(at + k),
+      ),
+      ...[2, 1, 0].map((k) => (s: string) => s.slice(0, at + k) + s.slice(at + k + 1)),
+      (s) => s.replace('quiet room.\nLight', 'quiet room.\n\nLight'),
+    ];
+    for (const [k, step] of steps.entries()) {
+      source = step(source);
+      await view.update(sceneLayout(source), screenplay);
+      await sameAsFresh(view, sceneLayout(source), `keystroke ${k}`);
+    }
+    // Every page but the edited one is the page it was: nothing but its offsets moved.
+    const last = pagesIn(view);
+    expect(last.map((page, i) => page === first[i])).toEqual(first.map((_, i) => i !== 1));
+  }, 60_000);
 });
 
 describe('clicks', () => {
