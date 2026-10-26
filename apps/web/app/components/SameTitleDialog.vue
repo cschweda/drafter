@@ -25,6 +25,8 @@ function choose(choice: 'replace' | 'beside' | 'cancel') {
 
 // Escape closes the dialog without a button.
 function onClose() {
+  // A close that comes after another question opened the dialog again is the old one's.
+  if (dialog.value?.open) return;
   if (!answered) sameTitleQuestion.value?.answer('cancel');
 }
 </script>

@@ -102,6 +102,8 @@ async function ask(p: Project, event: Event) {
 }
 
 function onDialogClose() {
+  // A close that comes after the dialog was opened again is the old close: it changes nothing.
+  if (dialog.value?.open) return;
   confirming.value = null;
   if (restoreFocus && open.value) removeTrigger?.focus();
 }

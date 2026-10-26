@@ -21,11 +21,18 @@ const entry = (name: string) => (name === 'cli' ? 'cli' : 'index');
 // imports such as `@drafter/render-pdf/fonts/…` to the package's own exports.
 export default defineConfig({
   resolve: {
-    alias: packages.map((name) => ({
-      find: new RegExp(`^@drafter/${name}$`),
-      replacement: fileURLToPath(
-        new URL(`./packages/${name}/src/${entry(name)}.ts`, import.meta.url),
-      ),
-    })),
+    alias: [
+      // `modules/` is outside any package, so the `vue` its modules import resolves from the app.
+      {
+        find: /^vue$/,
+        replacement: fileURLToPath(new URL('./apps/web/node_modules/vue', import.meta.url)),
+      },
+      ...packages.map((name) => ({
+        find: new RegExp(`^@drafter/${name}$`),
+        replacement: fileURLToPath(
+          new URL(`./packages/${name}/src/${entry(name)}.ts`, import.meta.url),
+        ),
+      })),
+    ],
   },
 });

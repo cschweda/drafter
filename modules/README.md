@@ -7,6 +7,25 @@ turns it on in **Settings → Modules**.
 
 This folder holds the modules. Drafter finds every folder here at build time.
 
+## The sample modules
+
+Three small modules ship in this folder. None needs the network, all are off until turned on in
+Settings → Modules, and they are in the production build like any module here. Each is written only
+against `ModuleContext`, so each is an example to copy from.
+
+| Module | Button | Tab | Command |
+| --- | --- | --- | --- |
+| [Scene list](scene-list/README.md) | Scenes: shows its tab | Every scene heading, numbered, with its page and its length in eighths of a page; choosing one goes to it | none |
+| [Cast](cast/README.md) | Cast: shows its tab | Every character, with their speeches and the scene they first appear in; choosing one goes to their first cue | Cast: copy the list |
+| [Notes](notes/README.md) | Notes: lists the script's notes in the Problems pane | none | Notes: remove all notes (one undoable change, after asking) |
+
+In a Markdown document, which has no Fountain and no pages, Scene list and Cast say **Not available
+for Markdown documents.** and Notes does nothing (`[[…]]` in Markdown is usually a link).
+
+Each has an `index.test.ts` that runs it against a fake `ModuleContext` built from the sample
+screenplay. `fake-context.ts` and `render.ts` beside this file are the test helpers (they are not
+modules: only `modules/<id>/index.ts` is). `pnpm test` runs them in the `modules` project.
+
 ## Installing a module in your own copy
 
 1. Put the module's folder in this one: `modules/<id>/`, with an `index.ts` inside.
@@ -65,13 +84,18 @@ All are optional except the first five fields.
 | `settings` | A Vue component shown in the module's section of Settings → Modules while it is on (where a key would be entered). It is given `context` as a prop. |
 
 A Vue component can be a `.vue` file in the module's folder, or a plain object with a `setup()` that
-returns a render function (`h` from `vue`).
+returns a render function (`h` from `vue`). The samples use the second, which a test can draw without
+a browser. Tailwind reads this folder, so a component can use its classes; the app's colors are CSS
+variables (`var(--text)`, `var(--muted)`, `var(--line)`, `var(--chrome-2)`) that follow the theme.
 
 ### The context
 
 Every part is handed a `ModuleContext`:
 
-- Reading: `source()`, `doc()` (the Fountain parse), `layout()` (the pages, or `null`), `template()`,
+- Reading: `source()`, `doc()` (the Fountain parse), `layout()` (the pages, or `null`; it is made
+  in a worker and can lag `doc()` for a moment after an edit, so a module that pairs
+  `layout().index` with `doc().blocks` checks they are the same length), `layoutFailed()` (the
+  pages couldn't be made), `template()`,
   `title()`, `kind()` (`'fountain'` or `'markdown'`), and `cursor()`. These read the editor's live
   state, so a component that calls them while it draws is drawn again when the script changes. In a
   Markdown document `doc()` has no blocks and `layout()` is `null`: Markdown has no Fountain and no
@@ -86,7 +110,13 @@ Every part is handed a `ModuleContext`:
   does nothing once another script has been opened or the module turned off since the run began. An
   item may carry a `fix`. Positions follow the text through edits; an item is dropped when an edit replaces all of its
   text, loses its fix when an edit touches it, and all of them go when another script opens.
-- Going: `goto(offset)`.
+- Asking: `confirm(message, { confirmLabel?, cancelLabel? })` asks a yes-or-no question in Drafter's
+  own modal dialog, headed with the module's name. Cancel has focus first and Escape is No. It
+  resolves `true` only for a Yes, and `false` if another script has been opened or the module turned
+  off, even while the question is open. Ask in response to the writer's action, and say how many
+  things it touches.
+- Going: `goto(offset)` moves the cursor and shows the Source pane. `openTab()` shows the module's
+  own tab and moves focus into it (in the pane that isn't showing Source on a wide screen).
 - Remembering: `storage.get`, `set`, and `remove`, this module's own rows in the browser's settings
   table (`module:<id>:<key>`). They never reach the script file. The prefix keeps one module's rows
   apart from another's; it is not a security boundary. Anything you store, a key included, is saved

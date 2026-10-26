@@ -1,13 +1,16 @@
 import { type Doc, parse } from '@drafter/fountain';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
+import { usePanes } from '~/composables/usePanes';
 import { applyTextChanges } from '../editor/apply-changes';
 import { useLayout } from '../editor/layout';
 import { useEditor } from '../editor/session';
 import { markdownTitle } from '../markdown/title';
 import { useScript } from '../storage/script';
 import { fileBaseName, titleOf } from '../storage/text';
+import { revealTab, WIDE_QUERY } from '../utils/panes';
+import { askModule, dropQuestion } from './confirm';
 import { setModuleProblems } from './problems';
-import { announceNotice, useModules } from './registry';
+import { announceNotice, moduleTabId, useModules } from './registry';
 import { runScope } from './scope';
 import { moduleStorage } from './storage';
 import type { ModuleContext, ScriptModule } from './types';
@@ -24,15 +27,21 @@ const generation = ref(0);
 /** Bumped when a module is turned off: the contexts it was given stop working for good. */
 const epochs = new Map<string, number>();
 const contexts = new Map<string, ModuleContext>();
+/** The first layout request that was made for the script now open. */
+let layoutFloor = 0;
 
 /** Another script was opened. */
 export function scriptChanged(): void {
+  dropQuestion();
+  // The layout on hand is the old script's: only one asked for after this belongs to the new one.
+  layoutFloor = useLayout().requestedSeq() + 1;
   generation.value++;
   contexts.clear();
 }
 
 /** The module was turned off. */
 export function moduleTurnedOff(id: string): void {
+  dropQuestion(id);
   epochs.set(id, (epochs.get(id) ?? 0) + 1);
   contexts.delete(id);
 }
@@ -78,7 +87,13 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
       return emptyDoc;
     },
     layout() {
-      return markdown() ? null : useLayout().layout.value;
+      if (markdown()) return null;
+      const session = useLayout();
+      // The old script's layout is not offered for the new one, while its own is on its way.
+      return session.shownSeq.value >= layoutFloor ? session.layout.value : null;
+    },
+    layoutFailed() {
+      return !markdown() && useLayout().failed.value;
     },
     template() {
       return editor.template.value;
@@ -112,6 +127,27 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
     },
     goto(offset) {
       if (scope.live()) editor.goto(offset);
+    },
+    async confirm(message, options) {
+      if (!scope.live()) return false;
+      const yes = await askModule(module.id, module.name, String(message), options);
+      // Still the script and the switch it was asked in.
+      return yes && scope.live();
+    },
+    openTab() {
+      if (!module.tab || !scope.live()) return;
+      const tab = moduleTabId(module.id, module.tab.id);
+      const panes = usePanes();
+      if (window.matchMedia(WIDE_QUERY).matches) {
+        // The Source pane stays: the tab takes the other one, unless Source is in neither.
+        const { left, right } = panes.tabs.value;
+        const source = left === 'source' ? 'left' : right === 'source' ? 'right' : undefined;
+        panes.tabs.value = revealTab(panes.tabs.value, tab, source);
+      } else {
+        panes.phoneTab.value = tab;
+      }
+      // The panel may have only just been drawn: focus it once it is.
+      void nextTick().then(() => document.getElementById(`panel-${tab}`)?.focus());
     },
     storage: moduleStorage(module.id),
     notify(message) {

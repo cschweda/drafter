@@ -52,8 +52,15 @@ export interface ModuleContext {
   source(): string;
   /** The Fountain parse. A Markdown document has no Fountain: this is an empty `Doc`. */
   doc(): Doc;
-  /** The pages, or null before the first layout and for a Markdown document, which has none. */
+  /**
+   * The pages, or null before the first layout and for a Markdown document, which has none. It is
+   * made in a worker, so it can lag `doc()` by a moment after an edit: a module that pairs
+   * `layout().index` with `doc().blocks` should check that they are the same length. (When another
+   * script is opened the old script's layout is not offered: this is null until the new one's comes.)
+   */
   layout(): Layout | null;
+  /** True when the pages couldn't be made (the layout worker failed) and none has come since. */
+  layoutFailed(): boolean;
   template(): Template;
   title(): string;
   /** What the script is: Fountain, or plain Markdown. */
@@ -74,6 +81,24 @@ export interface ModuleContext {
    */
   setProblems(items: readonly ModuleProblem[]): boolean;
   goto(offset: number): void;
+  /**
+   * Asks the writer a yes-or-no question in Drafter's own modal dialog, headed with the module's
+   * name: Cancel (or `cancelLabel`) has focus first, and Escape is No. Resolves true only for a Yes.
+   * It resolves false at once if the script has been replaced or the module turned off, and also
+   * when that happens while the question is open. Ask only in response to the writer's action
+   * (a button or a command), and say what will happen and how many things it touches.
+   */
+  confirm(
+    message: string,
+    options?: { confirmLabel?: string; cancelLabel?: string },
+  ): Promise<boolean>;
+  /**
+   * Shows this module's tab (the one `tab` describes) and moves focus into it, so call it in
+   * response to the writer's action (a button or a command), not on your own: in the pane that
+   * isn't showing Source on a wide screen, in place of the current tab on a phone. Does nothing
+   * for a module with no tab, or once another script has been opened or the module turned off.
+   */
+  openTab(): void;
   /**
    * This module's own storage in the settings table (`module:<id>:<key>`), kept in this browser
    * and never written to the script.

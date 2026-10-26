@@ -8,6 +8,7 @@
     "paths": {
       "~/*": ["../apps/web/app/*"],
       "#samples/*": ["../samples/*"],
+      "@drafter/*": ["../packages/*/src/index.ts"],
       "*": ["../apps/web/node_modules/*"]
     }
   },
