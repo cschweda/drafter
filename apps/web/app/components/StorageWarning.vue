@@ -15,7 +15,8 @@ const { warning, dismissWarning } = useScript();
       <div v-if="warning === 'not-persistent'" class="warning" data-warning="not-persistent">
         <p>
           This browser may clear your recovery copy. Save the script to a file to keep it safe, or
-          install Drafter as an app.
+          install Drafter as an app: in Safari, choose File → Add to Dock on a Mac, or Share → Add to
+          Home Screen on an iPhone or iPad.
         </p>
         <button type="button" class="dismiss" @click="dismissWarning">Dismiss</button>
       </div>

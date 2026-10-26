@@ -18,8 +18,13 @@ const columns = computed(() => layoutTemplate.value?.page.width ?? 85);
 const GUTTER = 16;
 /** `render-html` waits for the font with no limit: a load that never settles mustn't leave the pane blank. */
 const FONT_WAIT_MS = 3000;
+/** How long after the first draw a change of scale from a resize still keeps the cursor's line in view. */
+const SETTLE_MS = 1000;
 
 let view: ScriptView | undefined;
+/** True from the first draw until the font has had a moment to settle the scale (see `applyZoom`). */
+let settling = true;
+let settled: ReturnType<typeof setTimeout> | undefined;
 let observer: ResizeObserver | undefined;
 
 function fontsReady(): Promise<unknown> {
@@ -31,13 +36,20 @@ function fontsReady(): Promise<unknown> {
  * Fit width scales with CSS `zoom` so a page fills the pane, whatever the text size; 100% is real
  * size times the text size setting. Zoom doesn't change the layout, so the pages never change.
  */
-function applyZoom() {
+function applyZoom(reveal = true) {
   if (!view || !host.value || !probe.value) return;
   const natural = probe.value.getBoundingClientRect().width;
   const room = host.value.clientWidth - 2 * GUTTER;
   const fit = zoom.value === 'fit';
   const scale = fit ? (natural > 0 && room > 0 ? room / natural : 1) : settings.value.textSize;
-  view.element.style.zoom = scale === 1 ? '' : String(scale);
+  const zoomed = scale === 1 ? '' : String(scale);
+  if (view.element.style.zoom === zoomed) return;
+  view.element.style.zoom = zoomed;
+  // Zoom moves every line, so the one the cursor is on may have left the pane (the first visit
+  // is drawn before the font settles the scale). `reveal` leaves a reader who has scrolled alone.
+  // A resize (the observer) doesn't bring it back, so a pane being dragged wider doesn't yank a
+  // reader's place: only the zoom buttons and text size, the first draw, and the settling after it.
+  if (reveal) view.reveal(cursorBlock.value);
 }
 
 async function draw() {
@@ -49,6 +61,7 @@ async function draw() {
   if (view !== current) return;
   applyZoom();
   current.reveal(cursorBlock.value);
+  if (settled === undefined) settled = setTimeout(() => (settling = false), SETTLE_MS);
 }
 
 onMounted(() => {
@@ -59,20 +72,21 @@ onMounted(() => {
   });
   // The probe is as wide as a page, outside the zoomed region: its width follows the font loading,
   // the template, and the pane, and so does the scale.
-  observer = new ResizeObserver(applyZoom);
+  observer = new ResizeObserver(() => applyZoom(settling));
   observer.observe(host.value);
   if (probe.value) observer.observe(probe.value);
   void draw();
 });
 
 onBeforeUnmount(() => {
+  clearTimeout(settled);
   observer?.disconnect();
   view?.destroy();
   view = undefined;
 });
 
 watch([layout, layoutTemplate], draw);
-watch([zoom, () => settings.value.textSize], applyZoom);
+watch([zoom, () => settings.value.textSize], () => applyZoom());
 watch(cursorBlock, (block) => {
   // The title page is block -1, which no layout line belongs to: it is the top.
   if (block < 0) host.value?.scrollTo({ top: 0 });

@@ -1,0 +1,33 @@
+/* The guided tour (nuxt-guided-tour; app/components/AppTour.vue). The module's own CSS does the
+   highlight and the cards; this adds what Drafter needs on top. */
+
+/* The highlight is the brand's goldenrod. The module sets it in an inline <style> (the `guidedTour` options
+   in nuxt.config.ts), but its own stylesheet has green defaults on `:root` and is read after that
+   style, so they win; doubling `:root` makes these the ones that do. */
+:root:root {
+  --tour-highlight: #e5b04a;
+  --tour-highlight-bright: #f2cb7a;
+}
+
+/* A step's text must fit its card without scrolling: the module's body is a fixed height. */
+:root {
+  --tour-popover-body-height: 10rem;
+}
+
+/* The intro card's examples: a speech has two lines, so the line break in it shows. The extra
+   classes beat the module's scoped rule. */
+.intro-dialog .intro-example .intro-example-syntax {
+  white-space: pre-wrap;
+}
+
+/* Reduced motion: nothing pulses. The module turns its highlight's pulse off, but a target with
+   hidden overflow (a pane) gets a second pulse, on the element itself, that its reduced-motion rule
+   comes too early in the file to reach. These beat every one of its rules by specificity. */
+@media (prefers-reduced-motion: reduce) {
+  :root:root [data-tour-active="true"],
+  :root:root [data-tour-active="true"]::before,
+  :root:root [data-tour-overflow="true"][data-tour-active="true"],
+  :root:root [data-tour-overflow="true"][data-tour-active="true"]::before {
+    animation: none;
+  }
+}

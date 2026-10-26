@@ -10,6 +10,8 @@ const SWITCHES = {
   spellcheck: 'Spellcheck',
   strict: 'Strict Fountain',
   lineNumbers: 'Line numbers',
+  typewriter: 'Typewriter scrolling',
+  sprintSound: 'Sprint sound',
 } as const;
 const toggle = (page: Page, name: keyof typeof SWITCHES) =>
   dialog(page).getByRole('switch', { name: SWITCHES[name] });
@@ -233,9 +235,11 @@ test("turns the browser's spellcheck off in the Source pane", async ({ page }) =
 test.describe('the text size', () => {
   test('scales the Source pane', async ({ page }) => {
     const fontSize = () => editor(page).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    // A short line that never wraps: the first line drawn is whichever the first visit's scroll leaves
+    // at the top, which can be a long paragraph whose height depends on the pane.
     const lineHeight = () =>
       page
-        .locator('.cm-line')
+        .locator('.cm-line', { hasText: 'INT. KITCHEN - NIGHT' })
         .first()
         .evaluate((el) => el.getBoundingClientRect().height);
     const base = await fontSize();
@@ -370,8 +374,11 @@ test.describe('line numbers', () => {
     await expect(barButton(page)).toHaveAttribute('aria-pressed', 'true');
     // The leftmost gutter numbers the lines from 1, and line 17 reads 17.
     await expect(page.locator('.cm-gutters .cm-gutter').first()).toHaveClass(/\bcm-lineNumbers\b/);
-    await expect(numbers(page).getByText('1', { exact: true })).toBeVisible();
     await expect(numbers(page).getByText('17', { exact: true })).toBeVisible();
+    // Line 1 is above the first visit's scroll: go to the top to see it.
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect(numbers(page).getByText('1', { exact: true })).toBeVisible();
     await expect.poll(async () => (await stored(page)).lineNumbers).toBe(true);
 
     await page.reload();

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 @import "./tokens.css";
+@import "./tour.css";
 
 /* The modules folder is outside the app, so Tailwind reads it for the classes its modules use. */
 @source "../../../../../modules";

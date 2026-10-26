@@ -11,6 +11,10 @@ export interface Settings {
   strict: boolean;
   /** Source line numbers in the leftmost gutter, so a line can be referred to; off by default (decided 2026-10-26). */
   lineNumbers: boolean;
+  /** Typewriter scrolling: the cursor's line stays at the middle of the Source pane; off by default (§7.2). */
+  typewriter: boolean;
+  /** A short tone when a sprint ends; off by default, so Drafter makes no sound unless asked (§7.3). */
+  sprintSound: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -19,6 +23,8 @@ export const DEFAULT_SETTINGS: Settings = {
   spellcheck: true,
   strict: false,
   lineNumbers: false,
+  typewriter: false,
+  sprintSound: false,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { fileTrouble, updatedNotice, useFileCheck } from '~/storage/check';
+import { fileTrouble, troubleMessage, updatedNotice, useFileCheck } from '~/storage/check';
 import { saveAs } from '~/storage/save';
 
 // §9.6: the bar under the toolbar when a script's file can't be checked, and the toast that says
@@ -23,15 +23,7 @@ async function saveElsewhere() {
 <template>
   <div data-file-bar :class="{ bar: trouble || updatedNotice }">
     <span role="status" class="message">
-      <template v-if="trouble?.kind === 'permission'">
-        This script is saved in {{ trouble.fileName }}.
-      </template>
-      <template v-else-if="trouble?.kind === 'gone'">
-        Drafter can't find {{ trouble.fileName }}. It may have been moved or deleted.
-      </template>
-      <template v-else-if="trouble?.kind === 'not-text'">
-        Drafter can't read {{ trouble.fileName }} as text, so it hasn't been checked for changes.
-      </template>
+      <template v-if="trouble">{{ troubleMessage(trouble) }}</template>
     </span>
     <button
       v-if="trouble?.kind === 'permission'"

@@ -5,6 +5,7 @@ import { openSearchPanel } from '@codemirror/search';
 import type { EditorView } from '@codemirror/view';
 import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-fountain';
 import { nextTick } from 'vue';
+import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
@@ -12,11 +13,13 @@ import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { requestTour } from '~/tour/state';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
@@ -39,9 +42,12 @@ export function registerBuiltinCommands(): void {
   const script = useScript();
   const guard = useGuard();
   const panes = usePanes();
+  const focus = useFocusMode();
   const colorMode = useColorMode();
   const { settings, set } = useSettings();
   const template = useTemplate();
+  const sprint = useSprint();
+  const sprintOn = () => sprint.state.value.status !== 'idle';
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -57,6 +63,8 @@ export function registerBuiltinCommands(): void {
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
   function showTab(tab: TabId) {
+    // Focus mode shows only the Source: any other tab is for the writer to see.
+    if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
       const held = document.activeElement?.closest<HTMLElement>('[data-pane]')?.dataset.pane;
       const from: PaneId | undefined = held === 'left' || held === 'right' ? held : undefined;
@@ -194,6 +202,25 @@ export function registerBuiltinCommands(): void {
         run: quietly(() => script.openSample(sample.kind)),
       }),
     ),
+    // Back to the sample's own text, as one change Undo reverses; only while a sample is open and editable. The Help
+    // section of the app menu lists it too.
+    {
+      id: 'reset-sample',
+      title: 'Reset sample',
+      group: 'File',
+      enabled: () => script.canResetSample.value,
+      run: () => {
+        if (script.resetSample()) editor.goto(view.state.selection.main.head);
+      },
+    },
+    // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
+    // section of the app menu lists it too. It waits for any dialog or the palette to close.
+    {
+      id: 'take-the-tour',
+      title: 'Take the tour',
+      group: 'Help',
+      run: requestTour,
+    },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF or plain text; a Markdown document as its Markdown file or plain text (a PDF of one is deferred).
     {
@@ -282,6 +309,67 @@ export function registerBuiltinCommands(): void {
     },
     { id: 'show-problems', title: 'Show Problems', group: 'View', run: () => showTab('problems') },
     {
+      id: 'focus-mode',
+      title: 'Toggle focus mode',
+      group: 'View',
+      icon: 'i-lucide-scan',
+      keys: 'Mod-Shift-Enter',
+      // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
+      global: true,
+      // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
+      enabled: () => !document.querySelector('dialog[open]') && !view.composing,
+      run: focus.toggle,
+    },
+    // Sprints (Phase 1 design §7.3): the three lengths here; any length from the Counts panel.
+    ...SPRINT_MINUTES.map(
+      (minutes): Command => ({
+        id: `sprint-${minutes}`,
+        title: `Start a ${minutes}-minute sprint`,
+        group: 'View',
+        enabled: () => !sprintOn(),
+        run: () => sprint.start(minutes),
+      }),
+    ),
+    {
+      id: 'sprint-pause',
+      title: 'Pause sprint',
+      group: 'View',
+      enabled: () => sprint.state.value.status === 'running',
+      run: sprint.pause,
+    },
+    {
+      id: 'sprint-resume',
+      title: 'Resume sprint',
+      group: 'View',
+      enabled: () => sprint.state.value.status === 'paused',
+      run: sprint.resume,
+    },
+    {
+      id: 'sprint-stop',
+      title: 'Stop sprint',
+      group: 'View',
+      enabled: sprintOn,
+      run: sprint.stop,
+    },
+    {
+      id: 'sprint-hide',
+      title: 'Hide sprint countdown',
+      group: 'View',
+      enabled: () => sprintOn() && !sprint.hidden.value,
+      run: () => {
+        sprint.hidden.value = true;
+      },
+    },
+    {
+      id: 'sprint-show',
+      title: 'Show sprint countdown',
+      group: 'View',
+      enabled: () => sprintOn() && sprint.hidden.value,
+      run: () => {
+        sprint.hidden.value = false;
+      },
+    },
+    {
       id: 'switch-theme',
       title: 'Switch theme',
       group: 'View',
@@ -302,6 +390,20 @@ export function registerBuiltinCommands(): void {
       group: 'View',
       enabled: () => settings.value.lineNumbers,
       run: () => void set('lineNumbers', false),
+    },
+    {
+      id: 'turn-on-typewriter',
+      title: 'Turn on typewriter scrolling',
+      group: 'View',
+      enabled: () => !settings.value.typewriter,
+      run: () => void set('typewriter', true),
+    },
+    {
+      id: 'turn-off-typewriter',
+      title: 'Turn off typewriter scrolling',
+      group: 'View',
+      enabled: () => settings.value.typewriter,
+      run: () => void set('typewriter', false),
     },
     {
       id: 'fold-all',

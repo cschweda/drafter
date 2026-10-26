@@ -1,6 +1,7 @@
 import { isolateHistory } from '@codemirror/commands';
 import type { EditorView } from '@codemirror/view';
 import type { TextChange } from '@drafter/fountain';
+import { appChange } from './typewriter';
 
 /**
  * Applies `changes`, all positioned in the text as it is now, as one transaction: one undo step of
@@ -20,7 +21,7 @@ export function applyTextChanges(view: EditorView, changes: readonly TextChange[
       insert: String(c.insert).replace(/\r?\n/g, view.state.lineBreak),
     })),
     userEvent: 'input',
-    annotations: isolateHistory.of('full'),
+    annotations: [isolateHistory.of('full'), appChange.of(true)],
   });
   return true;
 }

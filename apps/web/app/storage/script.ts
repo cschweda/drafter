@@ -1,5 +1,6 @@
 import { isolateHistory } from '@codemirror/commands';
-import { Text } from '@codemirror/state';
+import { Text, Transaction } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import {
   type ComputedRef,
   computed,
@@ -10,6 +11,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
+import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
 import type { NewKind } from '../editor/template';
@@ -19,6 +21,7 @@ import type { FileRef } from './files';
 import { guardControl, useGuard } from './guard';
 import { hashText } from './hash';
 import { checkRecovery, type RecoveryState, requestPersistence } from './health';
+import { leaveAllowed } from './leaving';
 import { newScriptText } from './new-script';
 import {
   createProject,
@@ -41,6 +44,29 @@ import { createWriter, type Writer } from './writer';
 
 export type { RecoveryState } from './health';
 
+const firstVisit = ref(false);
+
+/**
+ * Whether this visit is a first one: the browser had no projects (scripts or samples) when the
+ * page opened, so a first project was made for it (the screenplay sample, or a script of its own
+ * when the writer typed before it was ready). The welcome dialog (`AppTour.vue`) reads this, and
+ * only a first visit gets it.
+ *
+ * Contract:
+ * - It is reactive (a watcher or computed that reads it is run again when the answer arrives).
+ * - It is false until the first project is open, which is when `ready` turns true; a caller that
+ *   needs the answer waits for `useScript().ready`. It is also false if the database can't be
+ *   listed or written (`listProjects` or `createProject` rejects), since nothing then says the
+ *   browser is a new one, and no project is made. It is set only after the first project exists.
+ * - It is true when the writer typed before the session was ready: that is still the browser's
+ *   first visit, and what they typed is kept as their own script (not the sample).
+ * - It does not change for the rest of the visit: opening or making a script doesn't end the
+ *   first visit. A reload is a returning visit, because the first one stored the sample.
+ */
+export function isFirstVisit(): boolean {
+  return firstVisit.value;
+}
+
 /** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
 export const kindError = ref('');
 
@@ -60,6 +86,8 @@ export interface ScriptSession {
    * script with no file yet, or when that text is unknown. What Revert to Saved goes back to.
    */
   savedText: Readonly<ComputedRef<string | null>>;
+  /** Writes the recovery copy's pending text now. A failure is swallowed: the recovery warning says so. */
+  flush(): Promise<void>;
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
   /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
@@ -74,6 +102,15 @@ export interface ScriptSession {
   setKind(kind: DocumentKind): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
+  /** A sample is open and the editor can change it: Reset sample would do something. */
+  canResetSample: Readonly<ComputedRef<boolean>>;
+  /**
+   * Puts the open sample's original text back, as one undoable change: one Undo brings back
+   * everything it replaced, and typing afterward isn't joined to it. The cursor goes to the
+   * first scene heading. Returns false, changing nothing, unless `canResetSample` and the text
+   * differs from the sample's (a text that is already the sample's has nothing to reset).
+   */
+  resetSample(): boolean;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
   scripts(): Promise<Project[]>;
   /**
@@ -345,6 +382,25 @@ function create(): ScriptSession {
     }
   }
 
+  /**
+   * Puts the cursor at the start of `source`'s first scene heading and scrolls so that line is
+   * near the top of the Source pane. Not an undo step, and not an edit: the text is untouched.
+   * (The Script pane follows the cursor, so it shows the same place.) It happens after several
+   * awaits, so it applies only to an untouched sample: the text is still `source` and the cursor
+   * is still the empty one at 0. A writer who has typed, clicked, or jumped meanwhile (or a
+   * `drafter:goto`) is not moved.
+   */
+  function cursorAtFirstScene(source: string) {
+    const now = view.state.selection.main;
+    if (view.state.doc.toString() !== source || !now.empty || now.head !== 0) return;
+    const at = Math.min(firstSceneStart(source), view.state.doc.length);
+    view.dispatch({
+      selection: { anchor: at },
+      effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
+      annotations: Transaction.addToHistory.of(false),
+    });
+  }
+
   /** Opens the most recent script, or the sample's on a first visit. */
   async function begin() {
     try {
@@ -361,6 +417,8 @@ function create(): ScriptSession {
         await guardControl.claim(created.id);
         attach(created, text(''), true, true);
         guardControl.finish();
+        // The first project exists (it is the writer's own, from what they typed): a first visit.
+        firstVisit.value = first;
       } else if (newest) {
         attach(newest, from, false, await guardControl.claim(newest.id));
         guardControl.finish();
@@ -370,6 +428,9 @@ function create(): ScriptSession {
         await guardControl.claim(created.id);
         attach(created, text(SAMPLE_SCREENPLAY), true, true);
         guardControl.finish();
+        firstVisit.value = true;
+        // A first visit starts where the story does, not on the title page's metadata.
+        cursorAtFirstScene(SAMPLE_SCREENPLAY);
       }
       failing = false;
       clearTimeout(retry);
@@ -417,10 +478,11 @@ function create(): ScriptSession {
    * `removing` is the current script's id when it is being removed: it goes once the replacement
    * exists, and a failure anywhere leaves it open. `keep` shows the new script with the editor's
    * own state, undo history and cursor included, for a script made from the text already there.
+   * `shown` runs in the same step as the swap (a new script shows its editor and places its cursor).
    */
   async function switchTo(
     resolve: () => Promise<Project>,
-    options: { removing?: string; keep?: boolean; wait?: boolean } = {},
+    options: { removing?: string; keep?: boolean; wait?: boolean; shown?: () => void } = {},
   ): Promise<boolean> {
     while (switching.value) {
       if (!options.wait) return false;
@@ -461,6 +523,10 @@ function create(): ScriptSession {
           writable,
         );
         guardControl.finish();
+        // In the same step as the swap, so the page changes once: a phone that showed another tab
+        // would otherwise show the new script with that tab for a moment, and a tap on the Source
+        // tab in that moment would take the focus the script then put in the editor.
+        options.shown?.();
         return true;
       } finally {
         switches.value--;
@@ -485,9 +551,9 @@ function create(): ScriptSession {
     if (guard.readOnly.value) throw new Error('This tab is read-only.');
     const { text: source, cursor } = newScriptText(kind, new Date());
     const made: DocumentKind = kind === 'markdown' ? 'markdown' : 'fountain';
-    if (await switchTo(() => createProject({ source, baseline: source, kind: made }))) {
-      editor.goto(cursor);
-    }
+    await switchTo(() => createProject({ source, baseline: source, kind: made }), {
+      shown: () => editor.goto(cursor),
+    });
   }
 
   async function setKind(kind: DocumentKind) {
@@ -529,6 +595,28 @@ function create(): ScriptSession {
   const openSample = async (kind: SampleKind) => {
     await switchTo(() => sampleProject(kind));
   };
+
+  const canResetSample = computed(
+    () => !!project.value?.sample && !guard.readOnly.value && !switching.value && !fileLocked.value,
+  );
+
+  function resetSample(): boolean {
+    const kind = project.value?.sample;
+    if (!kind || !canResetSample.value) return false;
+    const original = SAMPLE_TEXT[kind];
+    if (view.state.doc.toString() === original) return false;
+    // One transaction for the whole text, so one undo brings the edits back; an undo step of its
+    // own, so typing just after it isn't joined to it (as `replaceWith` does).
+    const at = firstSceneStart(original);
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: original },
+      selection: { anchor: at },
+      effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
+      userEvent: 'input.replace',
+      annotations: isolateHistory.of('full'),
+    });
+    return true;
+  }
 
   // ---- Saving to a file --------------------------------------------------------------------
 
@@ -818,6 +906,7 @@ function create(): ScriptSession {
     return dirty.value && (kept || recovery.value === 'unavailable');
   });
   const ask = (event: BeforeUnloadEvent) => {
+    if (leaveAllowed()) return;
     event.preventDefault();
     // Older browsers show their dialog only when this is set.
     event.returnValue = '';
@@ -855,6 +944,8 @@ function create(): ScriptSession {
     newScript,
     setKind,
     openSample,
+    canResetSample,
+    resetSample,
     scripts,
     saved,
     openedFile,
@@ -862,6 +953,9 @@ function create(): ScriptSession {
     changed,
     busy: switching,
     fileLocked,
+    flush: async () => {
+      await writer?.flush().catch(() => {});
+    },
     addScript,
     unbindFile,
     remove,

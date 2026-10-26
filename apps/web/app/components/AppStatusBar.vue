@@ -6,6 +6,7 @@ import { useEditor } from '~/editor/session';
 import { templateIdOf, typeNameOf } from '~/editor/template';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { progressLabel, useGoal } from '~/stats/goal';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
 import { kindError, type RecoveryState, useScript } from '~/storage/script';
@@ -15,6 +16,7 @@ const { words } = useMarkdown();
 const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
 const { count } = useProblems();
+const { progress } = useGoal();
 const templateName = computed(() => typeNameOf(kind.value, templateIdOf(doc.value)));
 
 // "Saved 4 min ago" is worked out from this, which moves every 30 seconds (and when a save lands).
@@ -71,6 +73,31 @@ const RECOVERY: Record<RecoveryState, { label: string; why: string }> = {
 const open = ref(false);
 const explanation = computed(() => RECOVERY[recovery.value].why);
 
+// The counts panel opens from the page item, and Esc or a click elsewhere closes it.
+const countsOpen = ref(false);
+const countsWrap = ref<HTMLElement>();
+const countsButton = ref<HTMLButtonElement>();
+const countsLabel = computed(() =>
+  kind.value === 'markdown' ? wordsLabel(words.value) : pageLabel(page.value) || 'Counts',
+);
+
+function closeCounts(refocus = true) {
+  if (!countsOpen.value) return;
+  countsOpen.value = false;
+  if (refocus) countsButton.value?.focus();
+}
+
+function onPointerDown(event: PointerEvent) {
+  if (countsOpen.value && !countsWrap.value?.contains(event.target as Node)) closeCounts(false);
+}
+// Tabbing out of the panel closes it. A click elsewhere is `onPointerDown`'s: a button may not take focus on click.
+function onFocusOut(event: FocusEvent) {
+  const to = event.relatedTarget as Node | null;
+  if (to && !countsWrap.value?.contains(to)) closeCounts(false);
+}
+onMounted(() => document.addEventListener('pointerdown', onPointerDown));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown));
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && open.value) {
     event.stopPropagation();
@@ -87,12 +114,26 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
-    <!-- A Markdown document has words, no pages, and no checks. -->
-    <span v-if="kind === 'markdown'">{{ wordsLabel(words) }}</span>
-    <template v-else>
-      <span v-if="page">{{ pageLabel(page) }}</span>
-      <span>{{ problemsLabel(count) }}</span>
-    </template>
+    <!-- The page item opens the counts. A Markdown document has words, no pages, and no checks. -->
+    <span ref="countsWrap" class="counts-wrap" @focusout="onFocusOut">
+      <button
+        ref="countsButton"
+        type="button"
+        class="counts-button"
+        title="Counts and daily goal"
+        aria-haspopup="dialog"
+        :aria-expanded="countsOpen ? 'true' : 'false'"
+        aria-controls="counts-panel"
+        @click="countsOpen ? closeCounts(false) : (countsOpen = true)"
+      >
+        {{ countsLabel }}
+      </button>
+      <CountsPanel v-if="countsOpen" id="counts-panel" @close="closeCounts()" />
+    </span>
+    <span v-if="progress">{{ progressLabel(progress) }}</span>
+    <!-- A sprint's time left (not a live region: only its end is announced). -->
+    <SprintTimer />
+    <span v-if="kind !== 'markdown'">{{ problemsLabel(count) }}</span>
     <span class="spacer" />
     <template v-if="ready">
       <button
@@ -140,6 +181,17 @@ function onKeydown(event: KeyboardEvent) {
   text-underline-offset: 3px;
   cursor: pointer;
 }
+.counts-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.counts-button:focus-visible,
 .recovery:focus-visible {
   outline: 2px solid var(--heading);
   outline-offset: 2px;

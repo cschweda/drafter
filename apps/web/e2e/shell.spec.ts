@@ -32,14 +32,17 @@ test.describe('on a desktop', () => {
 
   test('leaves room between the logo and the toolbar buttons', async ({ page }) => {
     const logo = await page.getByRole('img', { name: 'Drafter' }).boundingBox();
-    const open = await page.getByRole('button', { name: 'Open' }).boundingBox();
+    const open = await page.getByRole('button', { name: 'Open', exact: true }).boundingBox();
     if (!logo || !open) throw new Error('the logo or the Open button is missing');
     expect(open.x - (logo.x + logo.width)).toBeGreaterThanOrEqual(24);
   });
 
   test('keeps the action icons smaller than the logo', async ({ page }) => {
     const logo = await page.getByRole('img', { name: 'Drafter' }).boundingBox();
-    const circle = await page.getByRole('button', { name: 'Open' }).locator('.round').boundingBox();
+    const circle = await page
+      .getByRole('button', { name: 'Open', exact: true })
+      .locator('.round')
+      .boundingBox();
     if (!logo || !circle) throw new Error('the logo or the Open icon is missing');
     expect(circle.height).toBeLessThan(logo.height);
     expect(circle.height).toBeGreaterThanOrEqual(24); // WCAG 2.5.8's minimum target
@@ -223,7 +226,9 @@ test.describe('on a phone', () => {
       if (!box) throw new Error('a toolbar button is missing');
       return `${Math.round(box.width)}x${Math.round(box.height)}`;
     };
-    const circle = await size(banner.getByRole('button', { name: 'Open' }).locator('.round'));
+    const circle = await size(
+      banner.getByRole('button', { name: 'Open', exact: true }).locator('.round'),
+    );
     expect(await size(banner.getByRole('button', { name: 'Go to scene or command' }))).toBe(circle);
     expect(await size(banner.getByRole('button', { name: /^Switch to (light|dark) theme$/ }))).toBe(
       circle,

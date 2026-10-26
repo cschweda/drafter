@@ -8,6 +8,7 @@ import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 
 const colorMode = useColorMode();
+const focus = useFocusMode();
 const { readOnly } = useGuard();
 const template = useTemplate();
 const editor = useEditor();
@@ -51,8 +52,7 @@ function toggleTheme() {
   colorMode.preference = dark.value ? 'light' : 'dark';
 }
 
-// Open is the scripts menu, Save saves, and Export is the export menu. The others wait for Plan 4: until then they show, but
-// say they're unavailable.
+// Open is the scripts menu, Save saves, Export is the export menu, and Focus is focus mode.
 const ACTIONS = [
   { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
   { label: 'Save', icon: 'i-lucide-save', kind: 'save', tour: 'save' },
@@ -106,6 +106,17 @@ const ACTIONS = [
           :aria-disabled="readOnly ? 'true' : undefined"
           :data-tour="action.tour"
           @click="save().catch(() => {})"
+        >
+          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+          <span class="label">{{ action.label }}</span>
+        </button>
+        <button
+          v-else-if="action.kind === 'focus'"
+          id="focus-button"
+          type="button"
+          class="act"
+          :data-tour="action.tour"
+          @click="focus.toggle"
         >
           <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
           <span class="label">{{ action.label }}</span>

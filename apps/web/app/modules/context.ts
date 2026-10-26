@@ -1,5 +1,6 @@
 import { type Doc, parse } from '@drafter/fountain';
 import { nextTick, ref } from 'vue';
+import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { applyTextChanges } from '../editor/apply-changes';
 import { useLayout } from '../editor/layout';
@@ -153,6 +154,8 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
       if (!module.tab || !scope.live()) return;
       const tab = moduleTabId(module.id, module.tab.id);
       const panes = usePanes();
+      // Focus mode shows only the Source, so the tab can't be seen from it.
+      useFocusMode().leave();
       if (window.matchMedia(WIDE_QUERY).matches) {
         // The Source pane stays: the tab takes the other one, unless Source is in neither.
         const { left, right } = panes.tabs.value;

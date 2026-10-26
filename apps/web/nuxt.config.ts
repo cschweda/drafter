@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
+import { TOUR_ICONS } from './scripts/tour-icons.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 /** The workspace packages, at the repository root. */
@@ -15,7 +16,61 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
   // The sample scripts live at the repository root, in samples/.
   alias: { '#samples': fileURLToPath(new URL('../../samples', import.meta.url)) },
-  modules: ['@nuxt/ui'],
+  modules: ['@nuxt/ui', 'nuxt-guided-tour', '@vite-pwa/nuxt'],
+  // The guided tour (app/tour/tour.config.ts). The highlight is the brand's goldenrod. The module's inline
+  // `<style>` for it is fixed text at build time, which `style-src 'unsafe-inline'` allows (Plan 1).
+  guidedTour: { highlightColor: '#E5B04A', highlightColorBright: '#F2CB7A' },
+  // Offline use and updates (Phase 1 design §11; docs/DECISIONS.md, `apps/web`). The worker
+  // precaches the app's own files and nothing else: no runtime caching, so nothing is fetched or
+  // stored on the writer's behalf after the first visit. A new version waits ('prompt') until the
+  // writer chooses Reload (components/UpdatePrompt.vue); the module's own client plugin is off,
+  // and plugins/service-worker.client.ts registers the worker instead.
+  pwa: {
+    registerType: 'prompt',
+    client: { registerPlugin: false, installPrompt: false, periodicSyncForUpdates: 0 },
+    devOptions: { enabled: false },
+    manifest: {
+      name: 'Drafter',
+      short_name: 'Drafter',
+      description: SITE_DESCRIPTION,
+      lang: 'en',
+      id: '/',
+      start_url: '/',
+      scope: '/',
+      display: 'standalone',
+      background_color: '#0F1013',
+      theme_color: '#0F1013',
+      icons: [
+        { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    },
+    workbox: {
+      // Every file the app needs, by extension: the shell (HTML), scripts and styles (the lazy and
+      // worker chunks are in `_nuxt/` with the rest), Inter Tight and Courier Prime, the icons,
+      // (the manifest is added by the plugin itself, once). A page added under /docs/ later (Task 8) is matched by `**/*.html`.
+      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico}'],
+      // Not part of the app: the social-sharing image, and the hosting fallbacks (200.html is the
+      // shell again; 404.html is for a link that matches nothing).
+      globIgnores: ['og-image.png', '200.html', '404.html'],
+      // A navigation the worker has no page for gets the app's shell, so a reload works offline at
+      // any address the app is used at. Not for a path that names a file (`/og-image.png`,
+      // `/fonts/courier-prime/OFL.txt`, `/404.html`): those are files, not the app. The
+      // documentation pages are their own pages (`/docs/...`, precached by `**/*.html`), not the app.
+      navigateFallback: '/',
+      navigateFallbackDenylist: [/\/[^/?]+\.[^/]+$/, /^\/docs(\/|$)/],
+      runtimeCaching: [],
+      cleanupOutdatedCaches: true,
+      // The first visit's page is controlled by the worker once it is active, so its lazy chunks
+      // (the Markdown mode) come from the cache. A later update waits for the writer ('prompt').
+      clientsClaim: true,
+      skipWaiting: false,
+    },
+  },
+  // The module's components use `ref`, `computed`, and the like without importing them, as Nuxt's
+  // auto-imports allow in an app's own files; Nuxt leaves `node_modules` out of that unless told.
+  imports: { transform: { include: [/nuxt-guided-tour/] } },
   css: ['~/assets/css/main.css'],
   // Fonts are self-hosted (main.css), and icons are bundled into the build:
   // nothing is fetched from another site at runtime.
@@ -28,7 +83,8 @@ export default defineNuxtConfig({
     provider: 'none',
     clientBundle: {
       scan: { globInclude: ['**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml,ts}'] },
-      icons: moduleIcons,
+      // The modules' icons, and the tour's Heroicons (scripts/tour-icons.mjs).
+      icons: [...moduleIcons, ...TOUR_ICONS],
     },
   },
   // The Drafter packages resolve to their TypeScript, so the build compiles it and never reads a
@@ -93,6 +149,7 @@ export default defineNuxtConfig({
         { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
         { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
     },
   },
