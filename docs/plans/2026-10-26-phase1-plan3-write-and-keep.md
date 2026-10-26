@@ -55,6 +55,7 @@ The [technical design](../drafter-technical-design.md) sections that apply:
 - **No path loses typed text** (Phase 1 design §1, item 4). Every flow that replaces the editor's text either is one undoable change or first keeps the replaced text as a separate script.
 - Script text reaches the DOM only through CodeMirror, `render-html` (`textContent`), or Vue's text interpolation. Never `v-html` or `innerHTML`.
 - Feature-detect `showOpenFilePicker` and Web Locks; never sniff the browser.
+- **One seam for files** (decided 2026-10-26, so a desktop build can come later): only `app/storage/files.ts` touches the File System Access API, file inputs, drops, or downloads. Everything else reads and writes files through its `FileAccess` interface.
 - **Line breaks and BOMs:**
   - Read files as bytes and decode them with `new TextDecoder('utf-8', { ignoreBOM: true })`, so a byte-order mark survives.
   - The editor holds `\n`; the project remembers the file's line break (`\r\n` when its first line break is one, else `\n`), and writing the file restores it.
@@ -471,21 +472,39 @@ Plan 4 registers these as commands, with shortcuts, and adds the app menu behind
 ### Task 7: Save and Save As
 
 **Files:**
-- Create: `apps/web/app/storage/files.ts` (pickers, handles, downloads), `apps/web/app/storage/save.ts`, `apps/web/e2e/fs-stub.ts` (test helper), `apps/web/e2e/save.spec.ts`
+- Create: `apps/web/app/storage/files.ts` (the `FileAccess` interface and its browser version), `apps/web/app/storage/save.ts`, `apps/web/test/files.test.ts`, `apps/web/e2e/fs-stub.ts` (test helper), `apps/web/e2e/save.spec.ts`
 - Modify: `AppToolbar.vue` (**Save** works), `AppStatusBar.vue`, `ScriptsMenu.vue` (**Save As…**), `index.vue` (the tab title, and a `keydown` listener in the capture phase for the keys)
 
 **Interfaces (Produces):**
 ```ts
-export const canSaveInPlace: boolean; // 'showSaveFilePicker' in window
+// app/storage/files.ts: the only module that touches files
+/** A file the writer chose. It must be structured-cloneable, so it can be kept in the `handles` table: the browser version holds a FileSystemFileHandle, and a desktop version would hold a path. */
+export interface FileRef { readonly name: string }
+export interface PickedFile { ref: FileRef | null; name: string; bytes: Uint8Array; lastModified: number }
+export class FileGoneError extends Error {}  // moved, deleted, or its drive is gone
+export interface FileAccess {
+  /** Save writes back to the file it came from (Chromium's API; a desktop version: always). */
+  readonly canSaveInPlace: boolean;
+  pickToOpen(): Promise<PickedFile | null>;                  // null: cancelled
+  fromDrop(item: DataTransferItem): Promise<PickedFile | null>;
+  pickToSave(suggestedName: string, kind: 'fountain' | 'pdf' | 'txt'): Promise<FileRef | null>;
+  read(ref: FileRef): Promise<{ bytes: Uint8Array; lastModified: number }>; // throws FileGoneError
+  write(ref: FileRef, data: string | Uint8Array): Promise<void>;           // asks for permission if needed
+  permission(ref: FileRef, ask: boolean): Promise<'granted' | 'prompt' | 'denied'>;
+  sameFile(a: FileRef, b: FileRef): Promise<boolean>;
+  /** The fallback where !canSaveInPlace. */
+  download(name: string, data: string | Uint8Array, type: string): void;
+}
+export const browserFiles: FileAccess;
+/** The FileAccess in use: browserFiles, or a test's or a desktop build's own. */
+export function useFiles(): FileAccess;
+export function setFiles(files: FileAccess): void;
+// app/storage/save.ts
 export function save(): Promise<'saved' | 'cancelled'>;   // Mod-s
 export function saveAs(): Promise<'saved' | 'cancelled'>; // Mod-Shift-s
-/** Writes `text` to a handle, asking for permission if needed. */
-export function writeHandle(handle: FileSystemFileHandle, text: string): Promise<void>;
-/** Downloads `data` as `name`. */
-export function download(name: string, data: string | Uint8Array, type: string): void;
 ```
 
-- **Save** on a script bound to a file handle writes through it. A sample, a script without a file, or **Save As** asks where with `showSaveFilePicker`: the suggested name is `fileNameFor(title, '.fountain')`, and the type is `text/plain` with `.fountain`.
+- **Save** on a script bound to a file writes through `useFiles().write`. A sample, a script without a file, or **Save As** asks where with `pickToSave` (the browser version: `showSaveFilePicker`): the suggested name is `fileNameFor(title, '.fountain')`, and the type is `text/plain` with `.fountain`.
 - Without the API, **Save** and **Save As** download the whole script under the same name.
 - **After a save:**
   - `savedHash`, `savedAt`, and `fileName` are set, and the saved snapshot is updated.
@@ -497,7 +516,8 @@ export function download(name: string, data: string | Uint8Array, type: string):
 
 `e2e/fs-stub.ts` is an init script for Chromium. It replaces `showSaveFilePicker` and `showOpenFilePicker` with versions that return handles from the origin-private file system (`navigator.storage.getDirectory()`), named by `window.__nextFileName`. The tests then read the file back from that system. Tests of the download path delete the pickers instead, and wait for Playwright's `download` event.
 
-- [ ] **Step 1: Write the failing tests** (`e2e/save.spec.ts`).
+- [ ] **Step 1: Write the failing tests** (`test/files.test.ts` and `e2e/save.spec.ts`).
+  - `test/files.test.ts`: `saves and reopens a script through any FileAccess`. An in-memory `FileAccess` passed to `setFiles` takes a save, a Save As, and a read, with no browser file API touched. This proves the seam a desktop build will use.
   - Chromium, with the stub:
     - `saves a new script to a file and then saves in place`
     - `saves as a new file`
@@ -523,7 +543,8 @@ export function download(name: string, data: string | Uint8Array, type: string):
 **Interfaces (Produces):**
 ```ts
 /** Opens a file as a project: from the picker (keeping its handle where the API exists), from an <input type=file>, or from a drop. */
-export function openFile(source: { handle: FileSystemFileHandle } | { file: File }): Promise<void>;
+/** Opens a picked file (from `useFiles().pickToOpen`, `fromDrop`, or a file input) as a project. */
+export function openFile(file: PickedFile): Promise<void>;
 export function pickAndOpen(): Promise<void>;
 ```
 

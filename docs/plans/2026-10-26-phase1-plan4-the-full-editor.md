@@ -32,7 +32,7 @@ Read it with technical design §8.6 and §9, and with §6.2 for `render-pdf`. Th
 
 ## Global Constraints
 
-- Everything in Plan 3's Global Constraints, except the branch and the dependencies.
+- Everything in Plan 3's Global Constraints, except the branch and the dependencies. That includes the one seam for files: the changed-elsewhere check (Task 9) and export (Task 10) read and write only through `useFiles()`.
   - **Branch:** `phase-1-full-editor`, from `main` after Plan 3 merges. It merges to `main` when everything is green.
   - **New dependencies:** `@drafter/render-pdf` and `@drafter/render-text` (Task 10), and nothing else.
 - **Modules ship off by default.** Task 6 builds the module host, the local `modules/` folder, and a test fixture; Task 7 adds three sample modules that need no network. The content security policy stays `connect-src 'self'`.
