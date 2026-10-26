@@ -2,6 +2,9 @@
 @import "@nuxt/ui";
 @import "./tokens.css";
 
+/* The modules folder is outside the app, so Tailwind reads it for the classes its modules use. */
+@source "../../../../../modules";
+
 :root {
   /* The text size setting (settings/apply.ts) scales the Source pane and the Script pane by this. */
   --text-scale: 1;

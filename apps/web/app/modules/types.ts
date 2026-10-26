@@ -75,6 +75,12 @@ export interface ModuleContext {
   setProblems(items: readonly ModuleProblem[]): boolean;
   goto(offset: number): void;
   /**
+   * Shows this module's tab (the one `tab` describes) and moves focus into it: in the pane that
+   * isn't showing Source on a wide screen, in place of the current tab on a phone. Does nothing
+   * for a module with no tab, or once another script has been opened or the module turned off.
+   */
+  openTab(): void;
+  /**
    * This module's own storage in the settings table (`module:<id>:<key>`), kept in this browser
    * and never written to the script.
    */
