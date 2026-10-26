@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
+
 ## [0.1.0] - 2026-10-26
 
 **Write and keep your work at drafter.dev.** The first version you can write a script in:
