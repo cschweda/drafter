@@ -59,11 +59,28 @@ const cases: Array<[string, () => string, number]> = [
     () => `MARGARET\n(aside${' '.repeat(200_000)}\n${' '.repeat(200_000)}end)\nBye.\n`,
     1,
   ],
-  ["fifty thousand typed (CONT'D)s", () => "MARGARET (CONT'D)\nHi.\n\n".repeat(50_000), 50_000],
+  // The first of the fifty thousand speeches has no one before it, so the layout adds nothing.
+  ["fifty thousand typed (CONT'D)s", () => "MARGARET (CONT'D)\nHi.\n\n".repeat(50_000), 49_999],
   [
     "a cue with two hundred thousand spaces on each side of its (CONT'D)",
-    () => `MARGARET${' '.repeat(200_000)}(CONT'D)${' '.repeat(200_000)}\nHi.\n`,
+    () =>
+      `MARGARET\nHi.\n\nShe sits.\n\nMARGARET${' '.repeat(200_000)}(CONT'D)${' '.repeat(200_000)}\nHi.\n`,
     1,
+  ],
+  [
+    "fifty thousand scenes, each with a typed (CONT'D) after a page break",
+    () => "INT. HALL - DAY\n\nMARGARET\nHi.\n\n===\n\nMARGARET (CONT'D)\nHi.\n\n".repeat(50_000),
+    50_000,
+  ],
+  [
+    "a typed (CONT'D) after a speech of a hundred thousand parentheticals",
+    () => `MARGARET\n${'(softly)\n'.repeat(100_000)}Hi.\n\nShe sits.\n\nMARGARET (CONT'D)\nHi.\n`,
+    1,
+  ],
+  [
+    "twenty-five thousand pairs of dual dialogue, each with a typed (CONT'D)",
+    () => "MARGARET\nHi.\n\nDANNY (CONT'D) ^\nYo.\n\nMARGARET (CONT'D) ^\nHi.\n\n".repeat(25_000),
+    0,
   ],
   ['fifty thousand headings with no time', () => 'INT. HALL\n\n'.repeat(50_000), 50_000],
   ['fifty thousand transitions in a row', () => 'CUT TO:\n\n'.repeat(50_000), 49_999],

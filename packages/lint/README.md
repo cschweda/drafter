@@ -45,9 +45,9 @@ The other four look at the structure of the script, and each has a control again
 | Rule | Severity | Reports | Fix |
 |---|---|---|---|
 | `character-without-dialogue` | warning | An upper-case line shaped like a cue (a name, extensions in any case, an optional `^`), alone in its block, then one blank line, then an action block that opens with `(` or is about a character cued elsewhere in the script. The parser reads both as action, and the blank line is the typo. Forced action (`!`) and lines with emphasis are left alone. | **Remove the blank line** |
-| `manual-contd` | info | A cue with a typed `(CONT'D)`, which the layout adds itself. | **Remove (CONT'D)**, with the spaces before it |
+| `manual-contd` | info | A cue with a typed `(CONT'D)` where the layout would add one itself: the template continues speeches after action and the same speaker spoke earlier in the scene. Not on the first speech in a scene, after someone else's, on dual dialogue, or in the stage play. | **Remove (CONT'D)**, with the spaces before it |
 | `heading-no-time` | warning | A scene heading with no time of day. A forced heading (`.MONTAGE`) is how Fountain writes one without, so it is never reported. | None |
-| `transition-not-last` | warning | A transition whose next block isn't a scene heading, a section, or a page break. Notes, boneyard, and synopses in between are skipped, and a transition that ends the script passes. | None |
+| `transition-not-last` | warning | A transition whose next block isn't a scene heading, a section, or a page break. Notes, boneyard, synopses, and centered text in between are skipped, so a transition before `> THE END <` passes, and a transition that ends the script passes. | None |
 
 `stage-play-standard` turns off `heading-no-time` and `transition-not-last` through its `lint.disable`, since a play has no sluglines or transitions.
 

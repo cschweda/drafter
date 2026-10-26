@@ -163,7 +163,7 @@ describe('lint', () => {
   it("shares nothing with the document's blocks", () => {
     // A script that sets off each of the structural rules, and so hands out spans and changes.
     const source =
-      "MARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n";
+      "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n";
     const doc = parse(source);
     const spans = () =>
       structuredClone(doc.blocks.map((b) => [b.span, ...b.lines.map((l) => l.span)]));
@@ -379,7 +379,7 @@ describe('multiline-parenthetical', () => {
 
 describe('strict mode', () => {
   const source =
-    "INT. HALL - DAY\nShe waits.\n\nMARGARET (CONT'D)\n(quietly,\n   then louder)\nHi. [[open\n\nThere /* cut";
+    "INT. HALL - DAY\nShe waits.\n\nMARGARET\nHi.\n\nShe sits.\n\nMARGARET (CONT'D)\n(quietly,\n   then louder)\nHi. [[open\n\nThere /* cut";
   const severities = (options?: LintOptions) =>
     run(source, options).map((d) => [d.ruleId, d.severity]);
 
@@ -402,7 +402,7 @@ describe('strict mode', () => {
 
   it('raises only the Strict rules in strict mode', () => {
     // manual-contd is info, and is not a Strict rule: it stays info.
-    const found = run("MARGARET (CONT'D)\nHi.\n", { strict: true });
+    const found = run("MARGARET\nHi.\n\nShe sits.\n\nMARGARET (CONT'D)\nHi.\n", { strict: true });
     expect(found.map((d) => [d.ruleId, d.severity])).toEqual([['manual-contd', 'info']]);
   });
 
@@ -466,7 +466,7 @@ describe('rules', () => {
       'Hi [[open\n\nThere /* cut',
       'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\n   then louder)\nHi.\n',
       'Margaret waits.\n\n/* drafter\n{ nope }\n*/\n',
-      "MARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
+      "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);
     for (const d of found) {

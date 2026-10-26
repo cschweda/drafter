@@ -83,6 +83,37 @@ const scripts = (pool: readonly string[]) =>
     )
     .map(([lines, final, lineBreak]) => lines.join(lineBreak) + (final ? lineBreak : ''));
 
+// Speeches by two people, some with a (CONT'D) typed on the cue, between a few other things.
+// Most of the typed ones come after the same speaker's speech, which is where the layout adds
+// one, so the rule reports them. A speech is several lines that break as the script does.
+const speeches = fc
+  .tuple(
+    fc.array(
+      fc.constantFrom(
+        'MARGARET\nHi.',
+        "MARGARET (CONT'D)\nHi.",
+        'MARGARET (V.O.)\nHi.',
+        "MARGARET (V.O.) (CONT'D)\nHi.\n(softly)\nHi.",
+        'DANNY\nYo.',
+        "DANNY (CONT'D)\nYo.",
+        'DANNY ^\nYo.',
+        "DANNY (CONT'D) ^\nYo.",
+        'She sits.',
+        'INT. HALL - DAY',
+        '===',
+        '[[a note]]',
+      ),
+      { minLength: 2, maxLength: 12 },
+    ),
+    fc.boolean(),
+    fc.constantFrom('\n', '\r\n'),
+  )
+  .map(
+    ([paragraphs, final, lineBreak]) =>
+      paragraphs.map((p) => p.replaceAll('\n', lineBreak)).join(lineBreak + lineBreak) +
+      (final ? lineBreak : ''),
+  );
+
 // Text built from fragments, not whole lines, so brackets, markers, a lone `\r`, and a
 // byte-order mark land anywhere, line breaks included.
 const fragments = [
@@ -153,15 +184,19 @@ describe('fixes', () => {
   });
 
   it("that remove a typed (CONT'D) settle that problem, and no other", () => {
+    let fixedAny = 0;
     fc.assert(
-      fc.property(scripts(plain), (source) => {
+      fc.property(speeches, (source) => {
         const before = run(source);
         for (const d of before.filter((b) => b.ruleId === 'manual-contd')) {
+          fixedAny++;
           expectSettlesOnlyItsOwn(source, before, d);
         }
       }),
       { numRuns },
     );
+    // Only a cue the layout would continue is reported, so the generator has to reach some.
+    expect(fixedAny).toBeGreaterThan(100);
   });
 
   it('that remove the blank line after a cue-like line make it a cue', () => {
@@ -209,6 +244,7 @@ describe('fixes', () => {
 
 for (const [label, generator] of [
   ['scripts made of lines', scripts(withRegions)],
+  ["speeches with a typed CONT'D", speeches],
   ['text made of fragments', jumble],
 ] as const) {
   describe(`for ${label}`, () => {

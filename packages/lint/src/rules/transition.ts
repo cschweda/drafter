@@ -6,8 +6,12 @@ import type { LintDiagnostic, Rule } from '../types';
 
 type Transition = Extract<Block, { kind: 'transition' }>;
 
-/** Blocks that print nothing. A transition's next block is the first one that isn't of these. */
-const SKIPPED: ReadonlySet<BlockKind> = new Set(['note', 'boneyard', 'synopsis']);
+/**
+ * Blocks to look past. Notes, boneyard, and synopses print nothing. Centered text is a title
+ * card or `THE END`, and a transition followed by `> THE END <` (`>FADE OUT.`, say) is how many
+ * screenplays end. A transition's next block is the first one that isn't of these.
+ */
+const SKIPPED: ReadonlySet<BlockKind> = new Set(['note', 'boneyard', 'synopsis', 'centered']);
 
 /** What a transition may go on to. */
 const LEADS_INTO: ReadonlySet<BlockKind> = new Set(['scene_heading', 'section', 'page_break']);

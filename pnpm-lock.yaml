@@ -101,6 +101,10 @@ importers:
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
+    devDependencies:
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
 
   packages/render-pdf:
     dependencies:
