@@ -1,8 +1,15 @@
 import { fileURLToPath } from 'node:url';
+import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 /** The workspace packages, at the repository root. */
 const PACKAGES = fileURLToPath(new URL('../../packages', import.meta.url));
+/** The script modules, at the repository root: a folder each, with an `index.ts` (modules/README.md). */
+const MODULES = fileURLToPath(new URL('../../modules', import.meta.url));
+// The icons the modules name: the icon bundle is built from the app's own files, and the modules
+// are outside them. (A build has no network to fetch an icon from, and the CSP forbids it.)
+const TEST_MODULES = process.env.DRAFTER_TEST_MODULES === '1';
+const moduleIcons = await moduleIconNames(MODULES);
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
@@ -14,12 +21,34 @@ export default defineNuxtConfig({
   // nothing is fetched from another site at runtime.
   ui: { fonts: false },
   colorMode: { preference: 'dark', fallback: 'dark' },
-  icon: { provider: 'none', clientBundle: { scan: true } },
+  // The scan reads `.vue`, `.md`, and the like by default, and not `.ts`: an icon named only in a
+  // `.ts` file (the document types' `newIcon`s in `editor/template.ts`) was left out of the bundle,
+  // and drew nothing. `scripts/check-build.mjs` checks the bundle after a build.
+  icon: {
+    provider: 'none',
+    clientBundle: {
+      scan: { globInclude: ['**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml,ts}'] },
+      icons: moduleIcons,
+    },
+  },
   // The Drafter packages resolve to their TypeScript, so the build compiles it and never reads a
   // stale `dist/`. This is an alias for those packages alone: a global `source` export condition
   // would reach every dependency, and some (`@internationalized/date`, from Nuxt UI) list it first.
   // A subpath such as `@drafter/render-html/style.css` isn't matched, and resolves as usual.
   vite: {
+    // `DRAFTER_TEST_MODULES=1` (set by `pnpm e2e`) puts the test module in the build. Without it the
+    // constant is false, the module is dead code, and no production bundle has it.
+    define: { __DRAFTER_TEST_MODULES__: JSON.stringify(TEST_MODULES) },
+    plugins: [
+      {
+        // Two modules with one id are a build error, naming both folders. (A module that builds
+        // its id some other way is caught when the app starts instead.)
+        name: 'drafter-modules',
+        async buildStart() {
+          await findDuplicateIds(await moduleFolders(MODULES), MODULES);
+        },
+      },
+    ],
     resolve: {
       alias: [
         {

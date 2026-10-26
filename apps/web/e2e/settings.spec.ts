@@ -143,10 +143,12 @@ test.describe('the dialog', () => {
     const inside = () => dialog(page).evaluate((d) => d.contains(document.activeElement));
     expect(await inside()).toBe(true);
     await expect(textSize(page)).toBeFocused();
-    // The dialog has six controls, and Tab goes through them without leaving it. (WebKit's Tab
-    // skips buttons and checkboxes unless the system asks otherwise.)
+    // Tab goes through the dialog's controls (the text size, the switches, a switch for each module,
+    // Done) without leaving it. (WebKit's Tab skips buttons and checkboxes unless the system asks
+    // otherwise.)
     if (browserName !== 'webkit') {
-      for (let i = 0; i < 5; i++) {
+      const controls = await dialog(page).locator('select, input[type="checkbox"], button').count();
+      for (let i = 1; i < controls; i++) {
         await page.keyboard.press('Tab');
         expect(await inside()).toBe(true);
       }
@@ -159,6 +161,20 @@ test.describe('the dialog', () => {
     await page.keyboard.press('Escape');
     await expect(dialog(page)).toBeHidden();
     await expect(editor(page)).toBeFocused();
+  });
+
+  test('opens in the middle of the window', async ({ page }) => {
+    await openSettings(page);
+    const box = await dialog(page).boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    if (!box || !viewport) return;
+    // Within a pixel of the middle, across and down (a dialog taller than the window is as tall as it may be, centered).
+    expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y + box.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
   });
 
   test('fits a phone', async ({ page, isMobile }) => {

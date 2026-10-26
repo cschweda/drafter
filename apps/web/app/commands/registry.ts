@@ -6,10 +6,13 @@ export type CommandGroup = 'File' | 'Edit' | 'View' | 'Go' | 'Help';
 export interface Command {
   id: string;
   title: string;
-  group: CommandGroup;
+  /** One of the five groups, or (for a script module's command) the module's name. */
+  group: CommandGroup | string;
+  /** An `i-lucide-*` name the palette draws instead of its group's icon. */
+  icon?: string;
   /** In CodeMirror's notation, such as `Mod-k` or `Mod-Alt-1`; the palette and the shortcuts page format it. */
   keys?: string;
-  run(): void;
+  run(): void | Promise<void>;
   /** Commands that don't apply yet are hidden from the palette. */
   enabled?(): boolean;
   /**
@@ -30,6 +33,12 @@ export function registerCommands(list: readonly Command[]): void {
     taken.add(id);
   }
   commands.value = [...commands.value, ...list];
+}
+
+/** Takes commands away by id (a module turned off); an id that isn't registered is ignored. */
+export function unregisterCommands(ids: readonly string[]): void {
+  const gone = new Set(ids);
+  commands.value = commands.value.filter((c) => !gone.has(c.id));
 }
 
 /** Every registered command, in the order they were registered. */

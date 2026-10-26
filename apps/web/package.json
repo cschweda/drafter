@@ -6,13 +6,13 @@
   "license": "MIT",
   "scripts": {
     "dev": "node scripts/sync-assets.mjs && nuxt dev",
-    "build": "node scripts/sync-assets.mjs && nuxt generate && node scripts/csp.mjs .output/public",
+    "build": "node scripts/sync-assets.mjs && nuxt generate && node scripts/csp.mjs .output/public && node scripts/check-build.mjs .output/public",
     "preview": "node scripts/serve.mjs .output/public 4173",
-    "e2e": "rm -rf .output && NETLIFY=true pnpm build && playwright test",
+    "e2e": "rm -rf .output && DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm build && playwright test",
     "test": "vitest run",
-    "typecheck": "nuxt typecheck",
+    "typecheck": "nuxt typecheck && vue-tsc --noEmit -p ../../modules/tsconfig.json",
     "postinstall": "nuxt prepare",
-    "e2e:a11y": "rm -rf .output && NETLIFY=true pnpm build && A11Y=1 playwright test --grep \"accessibility violations\""
+    "e2e:a11y": "rm -rf .output && DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm build && A11Y=1 playwright test --grep \"accessibility violations\""
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

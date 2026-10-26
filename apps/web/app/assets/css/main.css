@@ -12,6 +12,12 @@ body {
   color: var(--text);
 }
 
+/* Tailwind's reset gives every element `margin: 0`, which takes from a modal <dialog> the automatic
+   margin that centers it in the window. */
+dialog:modal {
+  margin: auto;
+}
+
 /* One focus ring for every control, in the brand's goldenrod. */
 :focus-visible {
   outline: 2px solid var(--heading);

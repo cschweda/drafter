@@ -6,6 +6,7 @@ import {
   commandById,
   installGlobalKeys,
   registerCommands,
+  unregisterCommands,
   useCommands,
 } from '../app/commands/registry';
 
@@ -34,6 +35,18 @@ describe('the command registry', () => {
     expect(() => registerCommands([command('x'), command('x')])).toThrow(/x/);
     // A rejected list adds none of its commands.
     expect(useCommands().value.map((c) => c.id)).toEqual(['a']);
+  });
+
+  test('takes commands away by id, so a module can leave and come back', () => {
+    registerCommands([command('a'), command('b'), command('c')]);
+    unregisterCommands(['b', 'nothing']);
+    expect(useCommands().value.map((c) => c.id)).toEqual(['a', 'c']);
+    registerCommands([command('b', { group: 'Fixture' })]);
+    expect(useCommands().value.map((c) => [c.id, c.group])).toEqual([
+      ['a', 'File'],
+      ['c', 'File'],
+      ['b', 'Fixture'],
+    ]);
   });
 });
 
