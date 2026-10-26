@@ -11,7 +11,7 @@ const OTHER = 'Title: The Crossing\n\nINT. HALL - DAY\n\nHi.\n';
 const shown = vi.hoisted(() => ({
   text: '',
   kind: 'fountain' as 'fountain' | 'markdown',
-  project: null as null | { fileName?: string },
+  project: null as null | { fileName?: string; lineBreak?: '\n' | '\r\n'; bom?: boolean },
 }));
 const switching = vi.hoisted(() => ({ busy: undefined as undefined | { value: boolean } }));
 vi.mock('../app/editor/session', async () => {
@@ -130,6 +130,19 @@ describe('exporting', () => {
     ]);
     expect(t.written.map((w) => w.data)).toEqual([shown.text, shown.text]);
     expect(render).not.toHaveBeenCalled();
+  });
+
+  test('writes a Markdown document with its file’s line breaks and byte order mark, as Save does', async () => {
+    for (const inPlace of [true, false]) {
+      const t = await load({ inPlace });
+      shown.text = '# The Treatment\n\nWords.\n';
+      shown.kind = 'markdown';
+      shown.project = { fileName: 'The Treatment.md', lineBreak: '\r\n', bom: true };
+      expect(await t.exportScript('md')).toBe('saved');
+      expect(await t.exportScript('txt')).toBe('saved');
+      const bytes = '\uFEFF# The Treatment\r\n\r\nWords.\r\n';
+      expect(t.written.map((w) => w.data)).toEqual([bytes, bytes]);
+    }
   });
 
   test('calls a Markdown document with no heading after its file', async () => {

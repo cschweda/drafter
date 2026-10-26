@@ -5,7 +5,7 @@ import { renderExport } from './export-client';
 import { useFiles } from './files';
 import { timedSay } from './say';
 import { useScript } from './script';
-import { fileBaseName, fileNameFor, titleOf } from './text';
+import { encodeFile, fileBaseName, fileNameFor, titleOf } from './text';
 import { whenIdle } from './turn';
 
 /**
@@ -77,9 +77,14 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
       target = await files.pickToSave(name, kind === 'md' ? 'markdown' : kind);
       if (!target) return 'cancelled';
     }
-    // A Markdown document is already text: both of its exports are the text as it stands.
+    // A Markdown document is already text: both of its exports are the text as it stands, written
+    // as Save writes it (the file's line breaks, and its byte order mark if it had one).
     const data = markdown
-      ? source
+      ? encodeFile(
+          source,
+          script.project.value?.lineBreak ?? '\n',
+          script.project.value?.bom ?? false,
+        )
       : await renderExport({ kind: kind as 'pdf' | 'txt', source, template });
     if (target) await files.write(target, data);
     else files.download(name, data, MIME[kind]);
