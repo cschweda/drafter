@@ -131,7 +131,8 @@ function onKeydown(event: KeyboardEvent) {
       <CountsPanel v-if="countsOpen" id="counts-panel" @close="closeCounts()" />
     </span>
     <span v-if="progress">{{ progressLabel(progress) }}</span>
-    <!-- Task 4 puts the sprint's time left here. -->
+    <!-- A sprint's time left (not a live region: only its end is announced). -->
+    <SprintTimer />
     <span v-if="kind !== 'markdown'">{{ problemsLabel(count) }}</span>
     <span class="spacer" />
     <template v-if="ready">

@@ -13,6 +13,7 @@ import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
@@ -44,6 +45,8 @@ export function registerBuiltinCommands(): void {
   const colorMode = useColorMode();
   const { settings, set } = useSettings();
   const template = useTemplate();
+  const sprint = useSprint();
+  const sprintOn = () => sprint.state.value.status !== 'idle';
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -296,6 +299,55 @@ export function registerBuiltinCommands(): void {
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
       enabled: () => !document.querySelector('dialog[open]') && !view.composing,
       run: focus.toggle,
+    },
+    // Sprints (Phase 1 design §7.3): the three lengths here; any length from the Counts panel.
+    ...SPRINT_MINUTES.map(
+      (minutes): Command => ({
+        id: `sprint-${minutes}`,
+        title: `Start a ${minutes}-minute sprint`,
+        group: 'View',
+        enabled: () => !sprintOn(),
+        run: () => sprint.start(minutes),
+      }),
+    ),
+    {
+      id: 'sprint-pause',
+      title: 'Pause sprint',
+      group: 'View',
+      enabled: () => sprint.state.value.status === 'running',
+      run: sprint.pause,
+    },
+    {
+      id: 'sprint-resume',
+      title: 'Resume sprint',
+      group: 'View',
+      enabled: () => sprint.state.value.status === 'paused',
+      run: sprint.resume,
+    },
+    {
+      id: 'sprint-stop',
+      title: 'Stop sprint',
+      group: 'View',
+      enabled: sprintOn,
+      run: sprint.stop,
+    },
+    {
+      id: 'sprint-hide',
+      title: 'Hide sprint countdown',
+      group: 'View',
+      enabled: () => sprintOn() && !sprint.hidden.value,
+      run: () => {
+        sprint.hidden.value = true;
+      },
+    },
+    {
+      id: 'sprint-show',
+      title: 'Show sprint countdown',
+      group: 'View',
+      enabled: () => sprintOn() && sprint.hidden.value,
+      run: () => {
+        sprint.hidden.value = false;
+      },
     },
     {
       id: 'switch-theme',

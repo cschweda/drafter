@@ -52,6 +52,11 @@ const SWITCHES: Array<{ key: Exclude<keyof Settings, 'textSize'>; label: string;
     label: 'Typewriter scrolling',
     why: 'Keep the line you are writing at the middle of the Source pane.',
   },
+  {
+    key: 'sprintSound',
+    label: 'Sprint sound',
+    why: 'Play a short tone when a sprint ends. Drafter makes no sound unless you turn this on.',
+  },
 ];
 
 const percent = (size: number) => `${Math.round(size * 100)}%`;

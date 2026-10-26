@@ -11,6 +11,7 @@ const SWITCHES = {
   strict: 'Strict Fountain',
   lineNumbers: 'Line numbers',
   typewriter: 'Typewriter scrolling',
+  sprintSound: 'Sprint sound',
 } as const;
 const toggle = (page: Page, name: keyof typeof SWITCHES) =>
   dialog(page).getByRole('switch', { name: SWITCHES[name] });
