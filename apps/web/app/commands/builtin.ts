@@ -318,6 +318,20 @@ export function registerBuiltinCommands(): void {
       run: () => void set('lineNumbers', false),
     },
     {
+      id: 'turn-on-typewriter',
+      title: 'Turn on typewriter scrolling',
+      group: 'View',
+      enabled: () => !settings.value.typewriter,
+      run: () => void set('typewriter', true),
+    },
+    {
+      id: 'turn-off-typewriter',
+      title: 'Turn off typewriter scrolling',
+      group: 'View',
+      enabled: () => settings.value.typewriter,
+      run: () => void set('typewriter', false),
+    },
+    {
       id: 'fold-all',
       title: 'Fold all',
       group: 'View',

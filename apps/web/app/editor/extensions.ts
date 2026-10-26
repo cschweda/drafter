@@ -14,6 +14,7 @@ import {
 import type { Template } from '@drafter/templates';
 import type { DocumentKind } from '../markdown/kind';
 import { theme } from './theme';
+import { typewriterScrolling } from './typewriter';
 
 /**
  * The browser's spellcheck in the Source pane (Phase 1 design §5.3): on to start with, and a
@@ -31,6 +32,16 @@ export function spellcheckAttribute(on: boolean): Extension {
  * comes before every other gutter, so the numbers sit at the far left of the source.
  */
 export const lineNumbersGutter = new Compartment();
+
+/**
+ * Typewriter scrolling (`typewriter.ts`), which the setting turns on. It starts empty;
+ * `typewriter.reconfigure(typewriterExtension(on))` switches it.
+ */
+export const typewriter = new Compartment();
+
+export function typewriterExtension(on: boolean): Extension {
+  return on ? typewriterScrolling() : [];
+}
 
 /**
  * Read-only, for a script that another tab is editing. `readOnlyExtension(true)` stops the keymap's
@@ -116,6 +127,7 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
   return [
     remember,
     lineNumbersGutter.of([]),
+    typewriter.of([]),
     parsedDoc,
     language.of(languageExtension(hooks, kind)),
     history(),
