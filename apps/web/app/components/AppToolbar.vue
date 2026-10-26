@@ -14,7 +14,7 @@ function toggleTheme() {
   colorMode.preference = dark.value ? 'light' : 'dark';
 }
 
-// Open is the scripts menu and Save saves. The others wait for Plan 4: until then they show, but
+// Open is the scripts menu, Save saves, and Export is the export menu. The others wait for Plan 4: until then they show, but
 // say they're unavailable.
 const ACTIONS = [
   { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
@@ -47,6 +47,19 @@ const ACTIONS = [
             <span class="label">{{ action.label }}</span>
           </button>
         </ScriptsMenu>
+        <ExportMenu v-else-if="action.kind === 'export'" v-slot="{ toggle, expanded, controls }">
+          <button
+            type="button"
+            class="act"
+            :aria-expanded="expanded ? 'true' : 'false'"
+            :aria-controls="expanded ? controls : undefined"
+            :data-tour="action.tour"
+            @click="toggle"
+          >
+            <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+            <span class="label">{{ action.label }}</span>
+          </button>
+        </ExportMenu>
         <button
           v-else-if="action.kind === 'save'"
           type="button"
