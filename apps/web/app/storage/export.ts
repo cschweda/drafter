@@ -5,7 +5,7 @@ import { renderExport } from './export-client';
 import { useFiles } from './files';
 import { say } from './say';
 import { useScript } from './script';
-import { fileNameFor, titleOf } from './text';
+import { fileBaseName, fileNameFor, titleOf } from './text';
 import { whenIdle } from './turn';
 
 /**
@@ -59,7 +59,11 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   const source = editor.view.state.doc.toString();
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
-  const title = markdown ? (markdownTitle(source) ?? 'Untitled') : titleOf(editor.doc.value);
+  // A document with no title is called after its file, as the project's own title is.
+  const fallback = fileBaseName(script.project.value?.fileName);
+  const title = markdown
+    ? (markdownTitle(source) ?? fallback)
+    : titleOf(editor.doc.value, fallback);
   const name = fileNameFor(title, EXTENSION[kind]);
   exportNotice.value = '';
   exportError.value = '';

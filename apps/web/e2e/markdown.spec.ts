@@ -260,6 +260,66 @@ test.describe('a Markdown document', () => {
   });
 });
 
+// Markdown's editor mode (a Lezer grammar and its HTML, CSS, and JavaScript neighbors) and its
+// parser are big, and a Fountain-only visitor never needs them: they are lazy chunks.
+const MODE_MARKER = ['ATXHeading', 'KeyframeList'];
+const PARSER_MARKER = ['codeFenced', 'htmlFlow'];
+
+test.describe('the Markdown code is loaded only when needed', () => {
+  test('is not in the page a Fountain script loads, and arrives with the first Markdown document', async ({
+    page,
+  }) => {
+    const seen = { mode: [] as string[], parser: [] as string[] };
+    page.on('response', async (response) => {
+      if (!/\.js(\?|$)/.test(response.url())) return;
+      const body = await response.text().catch(() => '');
+      if (MODE_MARKER.some((m) => body.includes(m))) seen.mode.push(response.url());
+      if (PARSER_MARKER.some((m) => body.includes(m))) seen.parser.push(response.url());
+    });
+    await start(page);
+    await page.waitForLoadState('networkidle');
+    expect(seen).toEqual({ mode: [], parser: [] });
+
+    await newMarkdown(page);
+    await expect(page.locator('.cm-md-heading')).toContainText('# Untitled');
+    await showTab(page, 'Preview');
+    await expect(preview(page).getByRole('heading', { name: 'Untitled' })).toBeVisible();
+    expect(seen.mode.length).toBeGreaterThan(0);
+    expect(seen.parser.length).toBeGreaterThan(0);
+  });
+
+  test('never puts the Markdown mode on a Fountain script that was Markdown a moment ago', async ({
+    page,
+  }) => {
+    // The chunk with the mode is held back until the document is Fountain again.
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+      setTimeout(resolve, 15_000);
+    });
+    await page.route('**/*.js', async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      if (MODE_MARKER.some((m) => body.includes(m))) await gate;
+      await route.fulfill({ response, body });
+    });
+    await start(page);
+    await newMarkdown(page);
+    await command(page, 'Template: Screenplay');
+    await expect(status(page)).toContainText('Screenplay');
+    release();
+    // Give the chunk time to arrive and be (wrongly) applied.
+    await page.waitForTimeout(1000);
+    await expect(editor(page)).not.toHaveAttribute('data-language', 'markdown');
+    await expect(page.locator('.cm-md-heading')).toHaveCount(0);
+    // Fountain's own mode is the one on the editor: its keys work.
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.press('Tab');
+    await expect(editor(page)).toContainText('@');
+  });
+});
+
 test.describe('Markdown files without a file picker', () => {
   test('opens a .md file from a file input as Markdown, and downloads a new one as .md', async ({
     page,

@@ -33,11 +33,15 @@ import {
   updateProject,
   writeSource,
 } from './projects';
+import { say } from './say';
 import type { LineBreak } from './text';
 import { allStashes, clearStash, readStash, stash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
 export type { RecoveryState } from './health';
+
+/** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
+export const kindError = ref('');
 
 export interface ScriptSession {
   project: Readonly<ShallowRef<Project | null>>;
@@ -480,12 +484,28 @@ function create(): ScriptSession {
     if (guard.readOnly.value || switching.value || writer === undefined) return;
     if (kindOf(current) === kind) return;
     const id = current.id;
+    kindError.value = '';
     // The editor first, so the text is never shown in the wrong mode longer than this call.
     editor.setKind(kind);
-    await patch(id, {
-      kind,
-      ...derive(view.state.doc.toString(), current.fileName, kind),
-    });
+    try {
+      await patch(id, {
+        kind,
+        ...derive(view.state.doc.toString(), current.fileName, kind),
+      });
+    } catch {
+      // The kind could not be stored: the editor goes back to the one that is, so the two agree.
+      editor.setKind(kindOf(current));
+      if (project.value?.id === id) {
+        project.value = {
+          ...project.value,
+          kind: current.kind,
+          title: current.title,
+          templateId: current.templateId,
+          meta: current.meta,
+        };
+      }
+      await say(kindError, 'Couldn’t change the document type. Nothing was changed.');
+    }
   }
 
   async function sampleProject(kind: SampleKind): Promise<Project> {

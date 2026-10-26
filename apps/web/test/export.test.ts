@@ -8,7 +8,11 @@ const OTHER = 'Title: The Crossing\n\nINT. HALL - DAY\n\nHi.\n';
 
 // The editor shows `shown.text`; a test changes it to be another script's. A script switch in
 // flight is `busy`.
-const shown = vi.hoisted(() => ({ text: '', kind: 'fountain' as 'fountain' | 'markdown' }));
+const shown = vi.hoisted(() => ({
+  text: '',
+  kind: 'fountain' as 'fountain' | 'markdown',
+  project: null as null | { fileName?: string },
+}));
 const switching = vi.hoisted(() => ({ busy: undefined as undefined | { value: boolean } }));
 vi.mock('../app/editor/session', async () => {
   const { parse } = await import('@drafter/fountain');
@@ -31,7 +35,7 @@ vi.mock('../app/storage/script', async () => {
   const { ref } = await import('vue');
   const busy = ref(false);
   switching.busy = busy;
-  return { useScript: () => ({ busy }) };
+  return { useScript: () => ({ busy, project: { value: shown.project } }) };
 });
 
 const render = vi.fn();
@@ -70,6 +74,7 @@ async function load(options: { inPlace: boolean }) {
   vi.resetModules();
   shown.text = TEXT;
   shown.kind = 'fountain';
+  shown.project = null;
   render.mockReset();
   render.mockImplementation(async () => {
     return 'text';
@@ -125,6 +130,15 @@ describe('exporting', () => {
     ]);
     expect(t.written.map((w) => w.data)).toEqual([shown.text, shown.text]);
     expect(render).not.toHaveBeenCalled();
+  });
+
+  test('calls a Markdown document with no heading after its file', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = 'Just words.\n';
+    shown.kind = 'markdown';
+    shown.project = { fileName: 'notes.md' };
+    expect(await t.exportScript('md')).toBe('saved');
+    expect(t.log[0]).toBe('pick notes.md markdown');
   });
 
   test('says a PDF of a Markdown document isn’t available, before any picker', async () => {

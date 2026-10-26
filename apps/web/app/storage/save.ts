@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import { kindOfFileName } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
@@ -7,7 +8,7 @@ import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
 import { say } from './say';
 import { useScript } from './script';
-import { encodeFile, fileNameFor, titleOf } from './text';
+import { encodeFile, fileBaseName, fileNameFor, titleOf } from './text';
 import { inTurn, whenIdle } from './turn';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
@@ -65,12 +66,21 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   await whenIdle(script.busy);
   const held = script.project.value;
   const id = held?.id;
-  // A Markdown document is called by its first heading and saved as `.md`.
+  // A Markdown document is called by its first heading and saved as `.md`; one with no title is
+  // called after its file, as the project's own title is.
   const markdown = editor.kind.value === 'markdown';
+  const fallback = fileBaseName(held?.fileName);
   const title = markdown
-    ? (markdownTitle(editor.view.state.doc.toString()) ?? 'Untitled')
-    : titleOf(editor.doc.value);
-  const name = held?.fileName ?? fileNameFor(title, markdown ? '.md' : '.fountain');
+    ? (markdownTitle(editor.view.state.doc.toString()) ?? fallback)
+    : titleOf(editor.doc.value, fallback);
+  // A script whose kind changed since its file was made is no longer that file's: the file is a
+  // .fountain and the text is Markdown, or the reverse. Saving would put one kind's text in the
+  // other's file, so Save acts as Save As, suggesting the new kind's extension, and the file it
+  // makes replaces the binding. The kind change itself unbinds nothing.
+  const bound = !!held?.fileName && kindOfFileName(held.fileName) === editor.kind.value;
+  const name = bound
+    ? (held?.fileName as string)
+    : fileNameFor(title, markdown ? '.md' : '.fountain');
   const lineBreak = held?.lineBreak ?? '\n';
   const bom = held?.bom ?? false;
   // The text is read as late as it can be, so what is written is what the editor shows.
@@ -96,7 +106,9 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
 
   // Save writes to the file the script is bound to; a sample, or a script with no file, asks.
   let target: FileRef | undefined;
-  if (!ask && held && !held.sample && held.fsHandleId) target = await getHandle(held.fsHandleId);
+  if (!ask && held && !held.sample && held.fsHandleId && bound) {
+    target = await getHandle(held.fsHandleId);
+  }
   let picked = false;
   const pick = async () => {
     target = (await files.pickToSave(name, markdown ? 'markdown' : 'fountain')) ?? undefined;

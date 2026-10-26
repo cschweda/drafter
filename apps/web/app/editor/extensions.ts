@@ -12,7 +12,6 @@ import {
   relint as relintView,
 } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
-import { markdownMode } from '../markdown/editor';
 import type { DocumentKind } from '../markdown/kind';
 import { theme } from './theme';
 
@@ -82,14 +81,29 @@ export interface EditorHooks {
   onCursorElement: (element: CursorElement | null) => void;
 }
 
+let markdownModule: typeof import('../markdown/editor') | undefined;
+
+/**
+ * Loads Markdown's editor mode (a Lezer grammar and the HTML, CSS, and JavaScript grammars it
+ * nests) the first time a document needs it: a Fountain-only visitor never downloads it. Until it
+ * has arrived, a Markdown document's language is empty (plain text), and the session
+ * reconfigures the language when this resolves.
+ */
+export function loadMarkdownMode(): Promise<void> {
+  return import('../markdown/editor').then((module) => {
+    markdownModule = module;
+  });
+}
+
+export const markdownModeLoaded = (): boolean => markdownModule !== undefined;
+
 /** The language extension for a kind of document: `language.reconfigure(languageExtension(…))` switches it. */
 export function languageExtension(
   { template, lintOptions, onCursorElement }: EditorHooks,
   kind: DocumentKind,
 ): Extension {
-  return kind === 'markdown'
-    ? markdownMode()
-    : fountain({ template, lintOptions, onCursorElement });
+  if (kind === 'markdown') return markdownModule ? markdownModule.markdownMode() : [];
+  return fountain({ template, lintOptions, onCursorElement });
 }
 
 /**

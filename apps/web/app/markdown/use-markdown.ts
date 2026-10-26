@@ -10,7 +10,6 @@ import {
 } from 'vue';
 import { useEditor } from '../editor/session';
 import { createMarkdownClient, type MarkdownClient } from './client';
-import { parseMarkdown } from './parse';
 import { PREVIEW_DELAY_MS, previewDelay } from './preview';
 import type { MdNode } from './render';
 import { countWords } from './words';
@@ -27,10 +26,16 @@ export interface MarkdownSession {
 let session: MarkdownSession | undefined;
 
 function create(): MarkdownSession {
-  const { view, doc, kind } = useEditor();
+  const { view, doc, kind, loaded } = useEditor();
   const tree = shallowRef<MdNode | null>(null);
   const counted = ref(0);
   const updating = ref(false);
+  /** Another script was loaded since the tree was made: its preview is not this one's. */
+  let treeFor = loaded.value;
+  /** Counts refreshes, so a parser that arrives late can tell the text has moved on. */
+  let generation = 0;
+  /** The CommonMark parser (`mdast-util-from-markdown`), downloaded when a document first needs it. */
+  let parser: typeof import('./parse') | undefined;
   /** The request whose reply is wanted: a reply to any other is for text that has been typed over. */
   let wanted: number | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -67,14 +72,42 @@ function create(): MarkdownSession {
 
   function showNow() {
     wanted = null;
-    updating.value = false;
-    const next = parseMarkdown(view.state.doc.toString());
-    tree.value = next;
-    counted.value = countWords(next);
+    const mine = generation;
+    const draw = (parse: (source: string) => MdNode) => {
+      const next = parse(view.state.doc.toString());
+      tree.value = next;
+      counted.value = countWords(next);
+      updating.value = false;
+    };
+    if (parser) {
+      draw(parser.parseMarkdown);
+      return;
+    }
+    // The parser arrives with the first Markdown document; the pane says so meanwhile.
+    updating.value = true;
+    import('./parse').then(
+      (module) => {
+        parser = module;
+        if (mine === generation) draw(module.parseMarkdown);
+      },
+      (error) => {
+        console.error(
+          `Markdown parser failed to load: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        if (mine === generation) updating.value = false;
+      },
+    );
   }
 
   function refresh() {
     clearTimeout(timer);
+    generation++;
+    if (loaded.value !== treeFor) {
+      // A script was loaded: the last one's preview and words go now, not when the new ones arrive.
+      treeFor = loaded.value;
+      tree.value = null;
+      counted.value = 0;
+    }
     if (kind.value !== 'markdown') {
       wanted = null;
       updating.value = false;
@@ -101,7 +134,7 @@ function create(): MarkdownSession {
   // The session lives for the visit, so its watcher belongs to no component. `doc` changes with
   // every edit and every load, whatever the kind.
   effectScope(true).run(() => {
-    watch([doc, kind], refresh, { immediate: true });
+    watch([doc, kind, loaded], refresh, { immediate: true });
   });
 
   return { tree, words: computed(() => counted.value), updating };

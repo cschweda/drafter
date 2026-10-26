@@ -44,6 +44,9 @@ vi.mock('../app/editor/session', async () => {
       doc.value = parse(text);
       for (const l of listeners) l(state);
     },
+    setKind(next: 'fountain' | 'markdown') {
+      session.kind.value = next;
+    },
     setReadOnly() {},
     /** For the tests: the first state again, and no listeners left from an earlier session. */
     reset() {

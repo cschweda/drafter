@@ -1,5 +1,5 @@
 /** A text this long (in characters) is parsed after a pause in typing, not at each key. */
-export const IMMEDIATE_LIMIT = 20_000;
+export const IMMEDIATE_LIMIT = 10_000;
 /** How long the pause is. */
 export const PREVIEW_DELAY_MS = 250;
 

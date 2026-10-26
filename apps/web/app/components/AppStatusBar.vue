@@ -8,7 +8,7 @@ import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
-import { type RecoveryState, useScript } from '~/storage/script';
+import { kindError, type RecoveryState, useScript } from '~/storage/script';
 
 const { doc, kind } = useEditor();
 const { words } = useMarkdown();
@@ -86,6 +86,7 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
+    <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
     <!-- A Markdown document has words, no pages, and no checks. -->
     <span v-if="kind === 'markdown'">{{ wordsLabel(words) }}</span>
     <template v-else>

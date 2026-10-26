@@ -14,6 +14,8 @@ import {
   editorExtensions,
   language,
   languageExtension,
+  loadMarkdownMode,
+  markdownModeLoaded,
   readOnly,
   readOnlyExtension,
   relint,
@@ -31,6 +33,8 @@ export interface EditorSession {
   readonly template: Readonly<ShallowRef<Template>>;
   /** What the document is: Fountain, or plain Markdown (no pages, elements, or checks). */
   readonly kind: Readonly<ShallowRef<DocumentKind>>;
+  /** Counts the scripts loaded into the editor (`load`), so a reader of the text can tell a switch of script from an edit. */
+  readonly loaded: Readonly<ShallowRef<number>>;
   /**
    * Gives the one editor a fresh state with `text` (an opened script) of `kind`: its own undo
    * history, its cursor at the start, and the same extensions. Nothing is kept of the text it
@@ -70,6 +74,9 @@ function create(): EditorSession {
   const panes = usePanes();
   const locked = shallowRef(false);
   const kind = shallowRef<DocumentKind>('fountain');
+  const loaded = shallowRef(0);
+  /** Changes with every load and change of kind: a Markdown mode that arrives late checks it is still wanted. */
+  let languageEpoch = 0;
   const listeners = new Set<(state: EditorState) => void>();
   const updateListeners = new Set<(state: EditorState) => void>();
 
@@ -114,17 +121,38 @@ function create(): EditorSession {
   // onCursorElement doesn't report the element the cursor starts in.
   cursor.value = cursorElement(view.state);
 
-  function load(text: string, loaded: DocumentKind = 'fountain') {
-    kind.value = loaded;
+  /** Puts Markdown's mode in once it has been downloaded, unless the editor has moved on since. */
+  function ensureMarkdownMode() {
+    if (markdownModeLoaded()) return;
+    const epoch = languageEpoch;
+    loadMarkdownMode().then(
+      () => {
+        if (epoch !== languageEpoch || kind.value !== 'markdown') return;
+        view.dispatch({ effects: language.reconfigure(languageExtension(hooks, 'markdown')) });
+      },
+      (error) => {
+        // The document is plain text until a reload; nothing is lost.
+        console.error(
+          `Markdown mode failed to load: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      },
+    );
+  }
+
+  function load(text: string, next: DocumentKind = 'fountain') {
+    languageEpoch++;
+    loaded.value++;
+    kind.value = next;
     // `setState` tells no update listener, so the session catches up by hand.
-    view.setState(EditorState.create({ doc: text, extensions: extensionsFor(loaded) }));
+    view.setState(EditorState.create({ doc: text, extensions: extensionsFor(next) }));
+    if (next === 'markdown') ensureMarkdownMode();
     // The compartments start from their first values again, so read-only is put back, and so
     // are the settings that live in them (spellcheck, line numbers) and Strict Fountain's lint.
     if (locked.value) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
     applyEditorSettings(view, settings.value);
     follow(view.state);
     // There are no elements in a Markdown document.
-    cursor.value = loaded === 'fountain' ? cursorElement(view.state) : null;
+    cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
     // The new text starts at the top, whatever the old one's scroller was showing.
     view.dispatch({ effects: EditorView.scrollIntoView(0) });
     for (const l of listeners) l(view.state);
@@ -133,12 +161,14 @@ function create(): EditorSession {
 
   function setKind(next: DocumentKind) {
     if (next === kind.value) return;
+    languageEpoch++;
     kind.value = next;
     view.dispatch({ effects: language.reconfigure(languageExtension(hooks, next)) });
     cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
     // Fountain's lint starts again for the text it now lints (the reconfigure starts it, too, but
     // after its delay). Not in this update: a listener may not dispatch.
     if (next === 'fountain') queueMicrotask(relint);
+    else ensureMarkdownMode();
   }
 
   function setReadOnly(on: boolean) {
@@ -186,6 +216,7 @@ function create(): EditorSession {
     template,
     locked,
     kind,
+    loaded,
     load,
     setKind,
     setReadOnly,
