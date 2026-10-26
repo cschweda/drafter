@@ -445,14 +445,19 @@ class Filler {
 
   /**
    * Whether an item can start in `room` lines: a block with `keepWithNextLines`
-   * of its lines (all of them if it keeps together), a dual pair whole, and a
-   * speech whole or split by its own rules.
+   * of its lines after any blank lines it opens with (all of them if it keeps
+   * together), a dual pair whole, and a speech whole or split by its own rules.
    */
   #canStart(item: Printed, room: number, space: number): boolean {
     if (item.type === 'block') {
+      // Opening two-space lines print nothing, so a heading can't be kept with them alone.
+      const lead = Math.max(
+        0,
+        item.lines.findIndex((line) => !isBlank(line)),
+      );
       const lines = item.keepTogether
         ? item.lines.length
-        : Math.min(item.lines.length, this.template.keepWithNextLines);
+        : Math.min(item.lines.length, lead + this.template.keepWithNextLines);
       return space + lines <= room;
     }
     if (item.type === 'dual') return space + item.rows.length <= room;
