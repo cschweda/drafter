@@ -37,6 +37,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/web`: pressing Mod+, straight after Escape or Done closed Settings did nothing in Chromium: the dialog's open state stayed true until the browser's late close event, so the reopen was ignored. Escape now goes through the dialog's own state, and a late close of an earlier showing is ignored.
 - `apps/web`: modal dialogs (Settings, Remove, the changed-file and same-title dialogs, the module consent dialog) opened at the top left of the window, because Tailwind's reset removed the automatic margin that centers a `<dialog>`; they open in the middle again.
 - `apps/web`: icons named only in `.ts` files, such as the New screenplay, New stage play, and New Markdown document items in the Scripts menu, were left out of the icon bundle and drew nothing; the scan now reads `.ts` files, and the build fails if an icon the app names is missing from the bundle.
 - `apps/web`: the check for a changed file no longer runs each time the recovery copy is written, so its question can't open mid-sentence and take a keystroke; it runs when a script opens or changes file, when the window regains focus, and when Save or Save As finishes. The copy kept when both versions changed has the text as it is when the writer answers (the question asks again if keystrokes came in while it opened), and keeps the file's line break. A Save that can't settle the check because the script keeps changing says so. A tab that only shows a script no longer keeps a stale file bar.
