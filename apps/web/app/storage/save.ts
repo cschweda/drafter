@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue';
 import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
-import { useFileCheck } from './check';
+import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
@@ -48,6 +48,9 @@ watch(useGuard().readOnly, (on) => {
 });
 
 function messageFor(error: unknown): string {
+  if (error instanceof CheckUnsettledError) {
+    return 'Couldn’t check the file for changes because the script kept changing. Nothing was saved. Try saving again.';
+  }
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
   }
@@ -142,7 +145,11 @@ async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
     saveError.value = '';
     try {
       const result = await run(ask);
-      if (result === 'saved') announceSave();
+      if (result === 'saved') {
+        announceSave();
+        // The file is the one that was just written: a bar about the old one (it was gone) is stale.
+        void useFileCheck().check();
+      }
       return result;
     } catch (error) {
       await say(saveError, messageFor(error));

@@ -98,6 +98,14 @@ function askWhichToKeep(title: string, fileName: string): Promise<BothChangedCho
 /** `stop`: the file changed (or can't be read), so a save must not go on. */
 type Outcome = 'clear' | 'stop';
 
+/** Save's check could not settle, because the text kept changing while the file was read. */
+export class CheckUnsettledError extends Error {
+  constructor() {
+    super('The script kept changing while Drafter checked its file.');
+    this.name = 'CheckUnsettledError';
+  }
+}
+
 /** How many times the check starts again because the text or the script changed while it read. */
 const ATTEMPTS = 3;
 
@@ -131,7 +139,10 @@ async function doCheck(ask: boolean, forSave: boolean): Promise<Outcome> {
 
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     // Another tab edits it, and checks it: this one only shows it.
-    if (guard.readOnly.value) return 'clear';
+    if (guard.readOnly.value) {
+      settle(null);
+      return 'clear';
+    }
     const p = script.project.value;
     if (!p || p.sample || !p.fsHandleId) {
       settle(null);
@@ -213,8 +224,11 @@ async function doCheck(ask: boolean, forSave: boolean): Promise<Outcome> {
       return 'stop';
     }
 
-    return bothChanged(script, id, name, browserText, opened);
+    const result = await bothChanged(script, id, name, browserText, opened, text);
+    if (result !== 'again') return result;
   }
+  // The text or the script kept changing: nothing was compared, and nothing may be written.
+  if (forSave) throw new CheckUnsettledError();
   return 'stop';
 }
 
@@ -225,7 +239,8 @@ async function bothChanged(
   name: string,
   browserText: string,
   opened: OpenedFile,
-): Promise<Outcome> {
+  currentText: () => string,
+): Promise<Outcome | 'again'> {
   const title = titleOf(parse(browserText), fileBaseName(script.project.value?.fileName ?? name));
   const choice = await askWhichToKeep(title, name);
   // Dismissed: nothing changes, and the next check asks again.
@@ -234,15 +249,23 @@ async function bothChanged(
   if (script.project.value?.id !== id || script.busy.value) return 'stop';
 
   if (choice === 'file') {
+    // Keystrokes that were already on their way when the dialog opened are in the editor now, and
+    // would be replaced: the copy must have them, so the question is asked about the text as it is.
+    if (currentText() !== browserText) return 'again';
     // The browser's text is kept first: if that fails, nothing is replaced.
-    await script.addScript(retitle(browserText, `${title} (this browser's copy)`));
+    await script.addScript(retitle(browserText, `${title} (this browser's copy)`), {
+      lineBreak: script.project.value?.lineBreak ?? opened.lineBreak,
+    });
     if ((await script.replaceWith(id, opened)) === 'replaced') {
       await announce(
         `Updated from ${name}. Your version is kept as “${title} (this browser's copy)”.`,
       );
     }
   } else {
-    await script.addScript(retitle(opened.text, `${title} (from the file)`));
+    await script.addScript(retitle(opened.text, `${title} (from the file)`), {
+      lineBreak: opened.lineBreak,
+      bom: opened.bom,
+    });
     // The file's version is now the one that has been seen: saving writes this browser's text.
     await script.saved(opened);
     await announce(
@@ -316,14 +339,15 @@ export function installFileCheck(): () => void {
   };
   window.addEventListener('focus', run);
   document.addEventListener('visibilitychange', onVisible);
+  // Primitives only: the recovery copy's writes replace the project's record while the writer
+  // types, and a check then would open its question mid-sentence.
   const stop = watch(
-    () =>
-      [
-        script.ready.value,
-        script.project.value?.id,
-        script.project.value?.fsHandleId,
-        guard.readOnly.value,
-      ] as const,
+    [
+      () => script.ready.value,
+      () => script.project.value?.id,
+      () => script.project.value?.fsHandleId,
+      () => guard.readOnly.value,
+    ],
     run,
     { immediate: true },
   );

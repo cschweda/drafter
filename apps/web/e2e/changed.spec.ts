@@ -19,6 +19,7 @@ const bar = (page: Page) => page.locator('[data-file-bar]');
 
 interface Row {
   id: string;
+  lineBreak?: string;
   title: string;
   source: string;
   sample?: string;
@@ -58,6 +59,21 @@ function stored(page: Page): Promise<Row[]> {
 const mine = async (page: Page) => (await stored(page)).filter((p) => !p.sample);
 const byTitle = async (page: Page, title: string) =>
   (await mine(page)).find((p) => p.title === title);
+
+/** CodeMirror keeps its view on the content element's tile, which a test can reach to type as a keystroke already on its way would. */
+interface EditorTile {
+  root?: { view?: EditorViewLike };
+  view?: EditorViewLike;
+}
+interface EditorViewLike {
+  dispatch(spec: unknown): void;
+  state: { doc: { length: number } };
+}
+const INSERT_AT_END = `(text) => {
+  const tile = document.querySelector('.cm-content').cmTile;
+  const view = (tile.root && tile.root.view) || tile.view;
+  view.dispatch({ changes: { from: view.state.doc.length, insert: text } });
+}`;
 
 const NAME = 'The Call.fountain';
 const V1 = 'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n';
@@ -219,6 +235,80 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await expect(status(page)).toContainText('Saved just now');
     expect(await textOf(page, NAME)).toContain('Mine.');
     expect(await textOf(page, NAME)).not.toContain('Nobody answers.');
+  });
+
+  test("doesn't check while typing", async ({ page }) => {
+    await start(page);
+    await openTheCall(page);
+    await typeAtEnd(page, 'Mine.');
+    // The file changes, and no window event says so.
+    await putFile(page, NAME, V2);
+    await page.keyboard.insertText(' And more.');
+    // The recovery copy is written (it reassigns the script's record), and still nothing is asked.
+    await expect.poll(async () => (await byTitle(page, 'The Call'))?.source).toContain('And more.');
+    await page.waitForTimeout(600);
+    await expect(dialog(page)).toBeHidden();
+    await expect(editor(page)).toBeFocused();
+    // The next time the window is focused, it is.
+    await focusWindow(page);
+    await expect(dialog(page)).toBeVisible();
+  });
+
+  test('asks again when the text changed while the question was open', async ({ page }) => {
+    await start(page);
+    await openTheCall(page);
+    await typeAtEnd(page, 'Mine.');
+    await changeFile(page, V2);
+    await expect(dialog(page)).toBeVisible();
+    // A keystroke that was already on its way when the dialog opened.
+    await page.evaluate(`(${INSERT_AT_END})(' Late.')`);
+    await dialog(page).getByRole('button', { name: 'Open the file' }).click();
+    // Nothing was replaced; the question comes back, about the text as it is now.
+    await expect(dialog(page)).toBeVisible();
+    await expect(editor(page)).toContainText('Late.');
+    expect((await mine(page)).length).toBe(1);
+    await dialog(page).getByRole('button', { name: 'Open the file' }).click();
+    await expect(dialog(page)).toBeHidden();
+    await expect(editor(page)).toContainText('Nobody answers.');
+    await expect
+      .poll(async () => (await byTitle(page, "The Call (this browser's copy)"))?.source)
+      .toContain('Mine. Late.');
+  });
+
+  test("keeps the file's line breaks in the copies", async ({ page }) => {
+    await start(page);
+    await putFile(page, NAME, V1.replaceAll('\n', '\r\n'));
+    await nextFileName(page, NAME);
+    await openButton(page).click();
+    await menu(page).getByRole('button', { name: 'Open a file…' }).click();
+    await expect(editor(page)).toContainText('A phone rings.');
+    await typeAtEnd(page, 'Mine.');
+    await changeFile(page, V2.replaceAll('\n', '\r\n'));
+    await expect(dialog(page)).toBeVisible();
+    await dialog(page).getByRole('button', { name: 'Open the file' }).click();
+    await expect
+      .poll(async () => (await byTitle(page, "The Call (this browser's copy)"))?.lineBreak)
+      .toBe('\r\n');
+  });
+
+  test('says when it could not check the file because the text kept changing', async ({ page }) => {
+    await start(page);
+    await openTheCall(page);
+    await typeAtEnd(page, 'Mine.');
+    // A keystroke lands while the check hashes the two texts, every time, so it can never settle.
+    await page.evaluate(() => {
+      const digest = crypto.subtle.digest.bind(crypto.subtle);
+      crypto.subtle.digest = async (...args: Parameters<typeof digest>) => {
+        const tile = (document.querySelector('.cm-content') as unknown as { cmTile: EditorTile })
+          .cmTile;
+        const view = tile.root?.view ?? tile.view;
+        view?.dispatch({ changes: { from: view.state.doc.length, insert: '.' } });
+        return digest(...args);
+      };
+    });
+    await saveButton(page).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'kept changing' })).toBeVisible();
+    await expect(dialog(page)).toBeHidden();
   });
 
   test('leaves everything as it is when the question is dismissed', async ({ page }) => {

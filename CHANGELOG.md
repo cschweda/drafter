@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/web`: the check for a changed file no longer runs each time the recovery copy is written, so its question can't open mid-sentence and take a keystroke; it runs when a script opens or changes file, when the window regains focus, and when Save or Save As finishes. The copy kept when both versions changed has the text as it is when the writer answers (the question asks again if keystrokes came in while it opened), and keeps the file's line break. A Save that can't settle the check because the script keeps changing says so. A tab that only shows a script no longer keeps a stale file bar.
 - `@drafter/fountain`: `setMeta` writes nothing when the script has an unclosed `/*`, which the metadata block would have closed, losing the template choice and the unclosed-boneyard error.
 
 ## [0.1.0] - 2026-10-26

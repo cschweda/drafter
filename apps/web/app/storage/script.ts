@@ -95,7 +95,7 @@ export interface ScriptSession {
    * Keeps `source` as a script of its own, without opening it: the version a changed file or this
    * browser's text had when the writer chose the other (Phase 1 design §9.6).
    */
-  addScript(source: string): Promise<Project>;
+  addScript(source: string, format?: { lineBreak?: LineBreak; bom?: boolean }): Promise<Project>;
   /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
   unbindFile(id: string): Promise<void>;
   /**
@@ -646,8 +646,15 @@ function create(): ScriptSession {
     return 'replaced';
   }
 
-  async function addScript(source: string): Promise<Project> {
-    return createProject({ source });
+  async function addScript(
+    source: string,
+    format: { lineBreak?: LineBreak; bom?: boolean } = {},
+  ): Promise<Project> {
+    return createProject({
+      source,
+      ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
+      ...(format.bom === undefined ? {} : { bom: format.bom }),
+    });
   }
 
   async function unbindFile(id: string): Promise<void> {
