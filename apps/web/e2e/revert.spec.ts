@@ -1,5 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
-import { nextFileName, removePickers, stubPickers, textOf } from './fs-stub';
+import {
+  countFileAccess,
+  fileAccess,
+  nextFileName,
+  removePickers,
+  stubPickers,
+  textOf,
+} from './fs-stub';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
@@ -160,30 +167,43 @@ test.describe('Revert to Saved (Chromium)', () => {
   test('leaves the changed-file check quiet: no question, no "Updated from" toast', async ({
     page,
   }) => {
+    await countFileAccess(page);
     await start(page);
     await chooseNew(page, 'New screenplay');
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'Quiet.fountain');
     await page.keyboard.press('ControlOrMeta+s');
     await expect(status(page)).toContainText('Saved just now');
+    const saved = await textOf(page, 'Quiet.fountain');
     await typeAtEnd(page, ' MORE');
     await openMenu(page);
     await revert(page).click();
     await expect(editor(page)).not.toContainText('MORE');
 
-    // The window regains focus: the file is as it was saved, and so is the text.
+    // The window regains focus: the check reads the file, which is as it was saved, as the text is.
+    const afterRevert = await fileAccess(page);
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await page.waitForTimeout(600);
+    await expect
+      .poll(async () => (await fileAccess(page)).reads)
+      .toBeGreaterThan(afterRevert.reads);
+    // Give a verdict that replaces the text or asks a question time to show.
+    await page.waitForTimeout(400);
     await expect(dialog(page)).toBeHidden();
     await expect(bar(page)).not.toContainText('Updated');
     await expect(editor(page)).not.toContainText('MORE');
 
-    // Save's own check is quiet too, and writes the same text.
-    const saved = await textOf(page, 'Quiet.fountain');
+    // Save's own check (a read) runs and the save lands (a write), both quietly. The status bar
+    // reads "Saved" already, so it is the counts that say the save happened.
+    const beforeSave = await fileAccess(page);
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expect
+      .poll(async () => (await fileAccess(page)).writes)
+      .toBeGreaterThan(beforeSave.writes);
+    expect((await fileAccess(page)).reads).toBeGreaterThan(beforeSave.reads);
+    await page.waitForTimeout(400);
     await expect(dialog(page)).toBeHidden();
     await expect(bar(page)).not.toContainText('Updated');
+    await expect(editor(page)).not.toContainText('MORE');
     expect(await textOf(page, 'Quiet.fountain')).toBe(saved);
   });
 
