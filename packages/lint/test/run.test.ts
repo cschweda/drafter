@@ -457,6 +457,7 @@ describe('rules', () => {
       'manual-contd': 'info',
       'heading-no-time': 'warning',
       'transition-not-last': 'warning',
+      'similar-names': 'info',
     };
     expect(declared).toMatchObject(expected);
 
@@ -467,6 +468,7 @@ describe('rules', () => {
       'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\n   then louder)\nHi.\n',
       'Margaret waits.\n\n/* drafter\n{ nope }\n*/\n',
       "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
+      'MARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGERET\nHi.\n',
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);
     for (const d of found) {

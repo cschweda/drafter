@@ -22,6 +22,7 @@ problem.fix;      // { title: 'Insert a blank line', changes: [{ from: 15, to: 1
 | `lint(doc, template, options?)` | Every enabled rule's diagnostics, sorted by `span.from`, then `ruleId`. It lints the whole script on every call. |
 | `rules` | Every rule, in the order they run. |
 | `STRICT_RULES` | The ids of the Strict Fountain rules: `heading-blank-after` and `multiline-parenthetical`. |
+| `withinOneEdit(a, b)` | Whether two strings are at most one edit apart: the same, or one letter changed, added, or left out, or two letters side by side swapped (the restricted Damerau-Levenshtein distance is 1 or less). It counts code points, so an emoji is one letter. `similar-names` uses it. |
 | `LintDiagnostic`, `Fix`, `LintOptions`, `Rule`, `RuleContext`, `Severity` | The types. |
 
 **Options.**
@@ -40,7 +41,7 @@ The first four carry over what the parser reports on its own (technical design ย
 | `heading-blank-after` | info; warning when `strict` | A scene heading or transition with text right below it, which Drafter reads but the Fountain spec doesn't. | **Insert a blank line** |
 | `multiline-parenthetical` | info; warning when `strict` | A parenthetical wrapped over several lines. | **Join onto one line** |
 
-The other four look at the structure of the script, and each has a control against false alarms.
+The other five look at the structure of the script, and each has a control against false alarms.
 
 | Rule | Severity | Reports | Fix |
 |---|---|---|---|
@@ -48,8 +49,21 @@ The other four look at the structure of the script, and each has a control again
 | `manual-contd` | info | A cue with a typed `(CONT'D)` where the layout would add one itself: the template continues speeches after action and the same speaker spoke earlier in the scene. Not on the first speech in a scene, after someone else's, on dual dialogue, or in the stage play. | **Remove (CONT'D)**, with the spaces before it |
 | `heading-no-time` | warning | A scene heading with no time of day. A forced heading (`.MONTAGE`) is how Fountain writes one without, so it is never reported. | None |
 | `transition-not-last` | warning | A transition whose next block isn't a scene heading, a section, or a page break. Notes, boneyard, synopses, and centered text in between are skipped, so a transition before `> THE END <` passes, and a transition that ends the script passes. | None |
+| `similar-names` | info | Two character names one edit apart (`MARGERET` beside `MARGARET`: a letter changed, added, or left out, or two side by side swapped), probably one character typed two ways. Both names need at least five letters, one is cued twice or less, and neither is the start of the other, so `MAX` and `MAC` and `DANNY` and `DANNYS` are left alone. Names that differ only in case (`@McCLANE`, `MCCLANE`) are one name. One diagnostic for each pair, at the first cue of the rarer name, or of the one that appears later when they tie. | None |
 
 `stage-play-standard` turns off `heading-no-time` and `transition-not-last` through its `lint.disable`, since a play has no sluglines or transitions.
+
+**Names marked as distinct.** A pair of names that really are two characters can be listed in the script's metadata block (technical design ยง8.6), and `similar-names` then never reports it, in either order and in any case:
+
+```
+/* drafter
+{ "v": 1, "distinctNames": [["MARGARET", "MARGERET"]] }
+*/
+```
+
+The rule reads `distinctNames` with care. A value that isn't a list is ignored, and so is any item in the list that isn't a list of two strings. The message reads `"MARGERET" is one letter from "MARGARET", which has 12 cues. A typo?`, and there is no fix.
+
+**Limits.** To find the pairs without comparing every name with every other, the rule enters each name in an index under its own letters and under its letters with any one code point left out, and compares only names that share a key. Two limits keep a hostile file from making that slow or the report long: a name of more than 32 code points isn't compared, and neither is a group of more than eight names that differ in one place (`SOLDIER 1` to `SOLDIER 9` are a series, not typos of one name). The five letters are letters, not characters, so `COP 1` and `COP 2` are never compared.
 
 A rule's `severity` is the highest it reports. `unclosed-region` says `error`, but each diagnostic carries its own: a note is a warning.
 

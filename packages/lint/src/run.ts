@@ -3,6 +3,7 @@ import type { Template } from '@drafter/templates';
 import { manualContd } from './rules/contd';
 import { characterWithoutDialogue } from './rules/cue';
 import { headingNoTime } from './rules/heading';
+import { similarNames } from './rules/names';
 import {
   headingBlankAfter,
   invalidMeta,
@@ -22,6 +23,7 @@ export const rules: readonly Rule[] = [
   manualContd,
   headingNoTime,
   transitionNotLast,
+  similarNames,
 ];
 
 /**

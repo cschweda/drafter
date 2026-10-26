@@ -21,6 +21,54 @@ function parsed(source: string) {
 /** Twenty thousand different names, each cued once with a line of speech. */
 const cast = Array.from({ length: 20_000 }, (_, i) => `NAME${i}`);
 
+/** Each name cued once, with a line of speech. */
+const cues = (names: Iterable<string>) => [...names].map((name) => `${name}\nHi.\n\n`).join('');
+
+/** Numbers from a fixed seed, so the "random" names are the same on every run. */
+function seeded(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+}
+
+/** `count` different names of `length` letters from `alphabet`. */
+function randomNames(count: number, length: number, alphabet: string, seed: number): Set<string> {
+  const next = seeded(seed);
+  const names = new Set<string>();
+  while (names.size < count) {
+    let name = '';
+    for (let i = 0; i < length; i++) name += alphabet.charAt(Math.floor(next() * alphabet.length));
+    names.add(name);
+  }
+  return names;
+}
+
+/**
+ * How many pairs of these names, which are all as long as each other, are one edit apart: they
+ * differ in one letter of `alphabet`, or in two letters side by side that have changed places.
+ * Found by making every such change to each name and looking it up, which is not how the rule
+ * does it.
+ */
+function pairsOneEditApart(names: ReadonlySet<string>, alphabet: string): number {
+  let pairs = 0;
+  for (const name of names) {
+    for (let i = 0; i < name.length; i++) {
+      for (const letter of alphabet) {
+        const other = name.slice(0, i) + letter + name.slice(i + 1);
+        // Counting a pair from its smaller name leaves out the name itself and counts each once.
+        if (other > name && names.has(other)) pairs++;
+      }
+      if (i + 1 < name.length) {
+        const swapped = name.slice(0, i) + name.charAt(i + 1) + name.charAt(i) + name.slice(i + 2);
+        if (swapped > name && names.has(swapped)) pairs++;
+      }
+    }
+  }
+  return pairs;
+}
+
 /** A label, the script, and how many problems the linter must find in it. */
 const cases: Array<[string, () => string, number]> = [
   ['tens of thousands of unclosed notes in one paragraph', () => '[[ '.repeat(60_000), 60_000],
@@ -116,6 +164,24 @@ const cases: Array<[string, () => string, number]> = [
     () => `NARRATOR${'('.repeat(200_000)}\n\n(quietly)\nHi.\n`,
     0,
   ],
+  // The three below are about similar-names: each name is a cue, with a line of speech.
+  [
+    'two cues of two hundred thousand letters each, one letter apart',
+    () => `${'A'.repeat(200_000)}\nHi.\n\n${'A'.repeat(199_999)}B\nHi.\n`,
+    0,
+  ],
+  [
+    'twenty thousand names that differ in one letter, all of them one series',
+    () =>
+      cues(Array.from({ length: 20_000 }, (_, i) => `ABCDE${String.fromCodePoint(0x4e00 + i)}`)),
+    0,
+  ],
+  // The longest names that are compared: each takes thirty-three keys of thirty-one letters.
+  [
+    'twenty thousand different names of thirty-two letters',
+    () => cues(randomNames(20_000, 32, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 32)),
+    0,
+  ],
 ];
 
 describe('hostile input', () => {
@@ -147,5 +213,22 @@ describe('hostile input', () => {
     // Every transition but the last, which ends the script.
     expect(count('transition-not-last')).toBe(10_999);
     expect(found).toHaveLength(20_999);
+  }, 120_000);
+
+  it('checks 20,000 names in under a second', () => {
+    // Twenty thousand different six-letter names, each cued once. They come from twelve letters,
+    // so that thousands of them are one edit from another name.
+    const alphabet = 'ABCDEFGHIJKL';
+    const names = randomNames(20_000, 6, alphabet, 2026);
+    const doc = parsed(cues(names));
+    const start = performance.now();
+    const found = lint(doc, screenplay);
+    expect(performance.now() - start).toBeLessThan(1000);
+
+    // One diagnostic for each pair, found another way: a rule that found nothing would be fast too.
+    const pairs = pairsOneEditApart(names, alphabet);
+    expect(pairs).toBeGreaterThan(1000);
+    expect(found.every((d) => d.ruleId === 'similar-names')).toBe(true);
+    expect(found).toHaveLength(pairs);
   }, 120_000);
 });
