@@ -205,12 +205,57 @@ test.describe('the recovery copy', () => {
         'Recovery copy: may be cleared',
       );
       await expect(warning(page)).toBeVisible();
-      await expect(warning(page)).toHaveAttribute('role', 'status');
+      await expect(page.locator('[role="status"] [data-warning]')).toBeVisible();
       await expect(warning(page)).toContainText('may clear');
       await warning(page).getByRole('button', { name: 'Dismiss' }).click();
       await expect(warning(page)).toHaveCount(0);
       // The status bar still says so.
       await expect(status(page)).toContainText('Recovery copy: may be cleared');
+    });
+
+    test('keeps its live regions in the page, and puts each warning in the right one', async ({
+      page,
+    }) => {
+      await stubPersistence(page, false);
+      // The regions have to be in the page before a warning is put in one, or it is not announced.
+      await page.addInitScript(() => {
+        const seen = window as unknown as { regionBeforeWarning: boolean };
+        seen.regionBeforeWarning = false;
+        new MutationObserver(() => {
+          if (
+            document.querySelector('[data-warning-region]') &&
+            !document.querySelector('[data-warning]')
+          ) {
+            seen.regionBeforeWarning = true;
+          }
+        }).observe(document, { childList: true, subtree: true });
+      });
+      await page.goto('/');
+      const polite = page.locator('[role="status"][data-warning-region]');
+      const urgent = page.locator('[role="alert"][data-warning-region]');
+      await expect(polite.locator('[data-warning="not-persistent"]')).toBeVisible();
+      await expect(urgent).toHaveCount(1);
+      await expect(urgent.locator('[data-warning]')).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () => (window as unknown as { regionBeforeWarning: boolean }).regionBeforeWarning,
+        ),
+      ).toBe(true);
+      // Dismissed, the region stays and only its text goes.
+      await warning(page).getByRole('button', { name: 'Dismiss' }).click();
+      await expect(polite).toHaveCount(1);
+      await expect(polite.locator('[data-warning]')).toHaveCount(0);
+    });
+
+    test('puts “unavailable” in an alert region that was already there', async ({ page }) => {
+      await breakIndexedDb(page);
+      await page.goto('/');
+      const urgent = page.locator('[role="alert"][data-warning-region]');
+      await expect(urgent.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+      await expect(page.locator('[role="status"][data-warning-region]')).toHaveCount(1);
+      await expect(page.locator('[role="status"][data-warning-region] [data-warning]')).toHaveCount(
+        0,
+      );
     });
 
     test('dismisses the warning from the keyboard', async ({ page }) => {
@@ -261,7 +306,7 @@ test.describe('the recovery copy', () => {
       );
       await expect(warning(page)).toBeVisible();
       // It matters most, so it is announced at once.
-      await expect(warning(page)).toHaveAttribute('role', 'alert');
+      await expect(page.locator('[role="alert"] [data-warning]')).toBeVisible();
       await expect(warning(page)).toContainText('only in memory');
       await typeAtEnd(page, '\n\nStill typing.');
       await expect(editor(page)).toContainText('Still typing.');
@@ -566,6 +611,55 @@ test.describe('the text a closing page left behind', () => {
       .toEqual(['First, left behind.', 'Other, left behind.']);
     expect(await stashLeft(page, first.id)).toBeNull();
     expect(await stashLeft(page, other.id)).toBeNull();
+  });
+
+  test('is applied when the same tab switches to that script, and stays after a reload', async ({
+    page,
+  }) => {
+    await start(page);
+    const now = Date.now();
+    const seeded = 'INT. OTHER ROOM - DAY\n\nThe stored words.\n';
+    await seed(page, seeded, now);
+    const other = (await stored(page)).find((r) => r.source === seeded) as Row;
+    // What a tab closing on that script leaves: newer than the stored copy, which is old.
+    await leaveStash(page, other.id, `${seeded}LAST WORDS`, now + 5000);
+
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    const menu = page.getByRole('group', { name: 'Scripts' });
+    await menu.locator('li', { hasText: 'Seeded' }).getByRole('button').first().click();
+    await expect(editor(page)).toContainText('The stored words.');
+    await expect(editor(page)).toContainText('LAST WORDS');
+    await expect
+      .poll(async () => (await stored(page)).find((r) => r.id === other.id)?.source)
+      .toContain('LAST WORDS');
+    expect(await stashLeft(page, other.id)).toBeNull();
+
+    // Typing on top of it, and a reload, keep all of it.
+    await typeAtEnd(page, '!');
+    await expect
+      .poll(async () => (await stored(page)).find((r) => r.id === other.id)?.source)
+      .toContain('LAST WORDS!');
+    await page.reload();
+    await expect(editor(page)).toContainText('LAST WORDS!');
+  });
+
+  test('is left alone when the same tab switches to a script the stored copy is newer than', async ({
+    page,
+  }) => {
+    await start(page);
+    const now = Date.now();
+    const seeded = 'INT. OTHER ROOM - DAY\n\nThe stored words.\n';
+    await seed(page, seeded, now);
+    const other = (await stored(page)).find((r) => r.source === seeded) as Row;
+    await leaveStash(page, other.id, 'A stale stash.', now - 5000);
+
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    const menu = page.getByRole('group', { name: 'Scripts' });
+    await menu.locator('li', { hasText: 'Seeded' }).getByRole('button').first().click();
+    await expect(editor(page)).toContainText('The stored words.');
+    await expect(editor(page)).not.toContainText('A stale stash.');
+    expect(await stashLeft(page, other.id)).toBeNull();
+    expect((await stored(page)).find((r) => r.id === other.id)?.source).toBe(seeded);
   });
 
   test('is cleared when its script is gone', async ({ page }) => {

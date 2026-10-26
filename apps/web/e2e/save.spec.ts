@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import {
+  alertsHeard,
   bytesOf,
   cancelNextPick,
   failWrites,
@@ -10,6 +11,7 @@ import {
   removePickers,
   stubPickers,
   textOf,
+  watchAlerts,
 } from './fs-stub';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -252,6 +254,20 @@ test.describe('saving to a file (Chromium)', () => {
     expect((await mine(page))?.savedHash).toBeUndefined();
     await expect(editor(page)).toContainText('KEEP');
     expect(await violations(page)).toEqual([]);
+  });
+
+  test('announces a failed save again when it fails the same way twice', async ({ page }) => {
+    await watchAlerts(page);
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('KEEP');
+    await failWrites(page);
+    const heard = async () =>
+      (await alertsHeard(page)).filter((text) => text.includes('Drafter isn’t allowed'));
+    await saveButton(page).click();
+    await expect.poll(heard).toHaveLength(1);
+    await saveButton(page).click();
+    await expect.poll(heard).toHaveLength(2);
   });
 
   test('can’t save from a read-only tab', async ({ context }) => {

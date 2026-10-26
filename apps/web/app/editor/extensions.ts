@@ -82,6 +82,12 @@ export function editorExtensions({ template, onCursorElement }: EditorHooks): Ex
     foldGutter(),
     search(),
     EditorView.lineWrapping,
+    // A dropped file is the page's to open (`DropZone.vue`), not CodeMirror's to paste in: its own
+    // drop handler reads a file's text into the script at the pointer. Returning true stops that
+    // handler (and its default), and the event goes on to the window. Dragged text still drops in.
+    EditorView.domEventHandlers({
+      drop: (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files'),
+    }),
     keymap.of([
       {
         key: 'Mod-s',

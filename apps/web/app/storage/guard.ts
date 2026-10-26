@@ -15,14 +15,16 @@ export interface Guard {
   editHere(): Promise<void>;
   /** The last `editHere` didn't get the script: the other tab didn't let go in time, or the copy couldn't be loaded. */
   failed: Readonly<Ref<boolean>>;
+  /** `editHere` is waiting for the other tab: switching scripts waits too, so the lock is for the script shown. */
+  taking: Readonly<Ref<boolean>>;
 }
 
 /** What the script session does at a handover. */
 export interface GuardHooks {
   /** The holder: writes the recovery copy. Resolves false if it can't, so the holder keeps the script. */
   giveUp(): Promise<boolean>;
-  /** The taker, holding the lock: loads the script afresh from storage into the editor. */
-  takeOver(): Promise<void>;
+  /** The taker, holding the lock of script `id`: loads that script afresh from storage into the editor. */
+  takeOver(id: string): Promise<void>;
   /** The taker, once the editor is editable again. */
   taken(): void;
 }
@@ -43,7 +45,7 @@ let releaseHeld: (() => void) | null = null;
 /** The lock a `claim` replaced, let go by `finish`. */
 let stale: (() => void) | null = null;
 let handingOver = false;
-let taking = false;
+const taking = ref(false);
 
 function supported(): boolean {
   return (
@@ -160,8 +162,8 @@ export const guardControl = {
 
 async function editHere(): Promise<void> {
   const id = currentId;
-  if (!id || !supported() || !readOnly.value || taking) return;
-  taking = true;
+  if (!id || !supported() || !readOnly.value || taking.value) return;
+  taking.value = true;
   failed.value = false;
   try {
     listen();
@@ -174,8 +176,13 @@ async function editHere(): Promise<void> {
       failed.value = true;
       return;
     }
+    // Another script was shown while the lock was awaited: the lock is of no use to it.
+    if (currentId !== id) {
+      release();
+      return;
+    }
     try {
-      await hooks?.takeOver();
+      await hooks?.takeOver(id);
     } catch {
       release();
       failed.value = true;
@@ -186,10 +193,10 @@ async function editHere(): Promise<void> {
     readOnly.value = false;
     hooks?.taken();
   } finally {
-    taking = false;
+    taking.value = false;
   }
 }
 
 export function useGuard(): Guard {
-  return { readOnly, editHere, failed };
+  return { readOnly, editHere, failed, taking };
 }

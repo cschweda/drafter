@@ -5,6 +5,7 @@ import { type PickedFile, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';
+import { say } from './say';
 import { useScript } from './script';
 import { decodeFile, fileBaseName, NotUtf8Error, titleOf } from './text';
 
@@ -92,12 +93,12 @@ export async function openFile(file: PickedFile): Promise<void> {
   try {
     // A tab that only shows a script may show old text, and opening replaces what it shows.
     if (useGuard().readOnly.value) {
-      readOnlyHint.value = READ_ONLY_HINT;
+      await say(readOnlyHint, READ_ONLY_HINT);
       return;
     }
     const problem = problemWith(file.bytes);
     if (problem) {
-      openError.value = problem;
+      await say(openError, problem);
       return;
     }
     let decoded: ReturnType<typeof decodeFile>;
@@ -105,7 +106,7 @@ export async function openFile(file: PickedFile): Promise<void> {
       decoded = decodeFile(file.bytes, { strict: true });
     } catch (error) {
       if (!(error instanceof NotUtf8Error)) throw error;
-      openError.value = MESSAGES.notUtf8;
+      await say(openError, MESSAGES.notUtf8);
       return;
     }
     await ready();
@@ -117,7 +118,7 @@ export async function openFile(file: PickedFile): Promise<void> {
     if (already) {
       await script.open(already.id);
       if (script.project.value?.id === already.id) useEditor().view.focus();
-      else openError.value = MESSAGES.busy;
+      else await say(openError, MESSAGES.busy);
       return;
     }
 
@@ -137,15 +138,15 @@ export async function openFile(file: PickedFile): Promise<void> {
 
     if (replacing) {
       const result = await script.replaceWith(replacing, opened);
-      if (result === 'held') openError.value = MESSAGES.held;
-      else if (result === 'busy') openError.value = MESSAGES.busy;
+      if (result === 'held') await say(openError, MESSAGES.held);
+      else if (result === 'busy') await say(openError, MESSAGES.busy);
     } else if (!(await script.openedFile(opened))) {
-      openError.value = MESSAGES.busy;
+      await say(openError, MESSAGES.busy);
       return;
     }
     if (!openError.value) useEditor().view.focus();
   } catch {
-    openError.value = MESSAGES.failed;
+    await say(openError, MESSAGES.failed);
   }
 }
 
@@ -153,14 +154,14 @@ export async function openFile(file: PickedFile): Promise<void> {
 export async function pickAndOpen(): Promise<void> {
   // Ask before the picker: a read-only tab opens nothing, so don't make the writer choose a file for it.
   if (useGuard().readOnly.value) {
-    readOnlyHint.value = READ_ONLY_HINT;
+    await say(readOnlyHint, READ_ONLY_HINT);
     return;
   }
   let file: PickedFile | null;
   try {
     file = await useFiles().pickToOpen();
   } catch {
-    openError.value = MESSAGES.failed;
+    await say(openError, MESSAGES.failed);
     return;
   }
   if (file) await openFile(file);

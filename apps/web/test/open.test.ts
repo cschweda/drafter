@@ -384,3 +384,71 @@ describe('a file with the same title as a script in the browser', () => {
     expect(t.script.project.value?.sample).toBeUndefined();
   });
 });
+
+describe('a save that finishes after another script was opened', () => {
+  test('writes the script the save started on, not the one open now', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Door.fountain', SCRIPT));
+    t.type('MORE\n');
+    const started = t.script.project.value?.id ?? '';
+    // The picker stays open until the test chooses a file.
+    let choose: () => void = () => {};
+    let asked = false;
+    t.access.pickToSave = () =>
+      new Promise((resolve) => {
+        asked = true;
+        choose = () => resolve({ id: 9, name: 'Door.fountain' } as MemoryRef);
+      });
+    const saving = t.save();
+    await vi.waitFor(() => expect(asked).toBe(true));
+
+    // Another script is opened while the picker is up.
+    await t.script.openSample('stage-play');
+    expect(t.script.project.value?.sample).toBe('stage-play');
+    const other = t.shown();
+    choose();
+    expect(await saving).toBe('saved');
+
+    // The file has the first script's text, and the first script has the record of it.
+    expect(t.writes).toHaveLength(1);
+    const data = t.writes[0]?.data ?? '';
+    expect(typeof data === 'string' ? data : new TextDecoder().decode(data)).toBe(
+      `${SCRIPT}MORE\n`,
+    );
+    const row = await t.projects.getProject(started);
+    expect(row?.savedHash).toBe(await t.hashText(`${SCRIPT}MORE\n`));
+    // The script that is open was not touched.
+    expect(t.script.project.value?.sample).toBe('stage-play');
+    expect(t.shown()).toBe(other);
+    expect(t.script.dirty.value).toBe(false);
+  });
+
+  test('a sample saved while another switch finishes first becomes a script without being opened', async () => {
+    const t = await fresh();
+    const sample = t.script.project.value;
+    expect(sample?.sample).toBe('screenplay');
+    const text = 'Title: Saved Meanwhile\n\nINT. ROOM - DAY\n\nWords.\n';
+
+    // A switch is under way when the save is recorded: the record waits its turn.
+    const switching = t.script.openSample('stage-play');
+    const saving = t.script.saved({
+      text,
+      fileName: 'Saved.fountain',
+      ref: null,
+      ...(sample ? { id: sample.id } : {}),
+    });
+    await Promise.all([switching, saving]);
+
+    // The stage play sample is what is open, and what the editor holds.
+    expect(t.script.project.value?.sample).toBe('stage-play');
+    expect(t.shown()).toContain('The Crossing');
+    expect(t.script.project.value?.source).toBe(t.shown());
+    // The saved text is a script of its own, kept but not opened.
+    const made = (await t.mine()).filter((p) => p.fileName === 'Saved.fountain');
+    expect(made).toHaveLength(1);
+    expect(made[0]?.source).toBe(text);
+    expect(made[0]?.savedHash).toBe(await t.hashText(text));
+    // And nothing was written over the stage play.
+    expect((await t.projects.getProject(t.script.project.value?.id ?? ''))?.source).toBe(t.shown());
+  });
+});

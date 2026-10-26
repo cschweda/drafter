@@ -156,29 +156,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Its state:** the status bar reads "Recovery copy: kept in this browser", "may be cleared", or "unavailable", each a button that explains itself. "May be cleared" also shows a warning that can be dismissed for the visit. "Unavailable" (IndexedDB won't open, or a write fails) shows one that stays until a write succeeds, and Drafter tries again on the next change and every 30 seconds. With no IndexedDB the editor runs on the sample in memory, and text typed meanwhile becomes a script when storage comes back.
   - **The status bar's first item** reads "Sample · your edits stay in this browser", or "Not saved to a file yet"; the Source pane's bar shows the script's title.
   - **Leaving:** the interim leave warning is gone. A script that isn't a sample asks before the page closes while it has unsaved changes; a sample never asks, unless nothing can keep its edits.
-  - **Projects** gain `bom`, whether the file began with a byte-order mark, for Task 8 to set (no new database version).
+  - **Projects** gain `bom`, whether the file began with a byte-order mark, for Save and Open a file to set (no new database version).
   - **Linting again:** `relint()` calls `@drafter/cm-fountain`'s `relint(view)`.
+  - **Warnings:** the "may clear your recovery copy" banner doesn't flash on every launch before the storage has been checked. Both warnings sit in live regions that are always in the page, with only their contents changing: "may be cleared" in a status region, and "unavailable", which matters most, in a separate alert region, so it is announced at once.
+  - **Per script:** the text a closing page leaves behind is kept per script (`drafter:unwritten:<id>`), so two tabs on two scripts can't overwrite each other's. A launch writes each one that is newer than its script's stored copy and clears the rest, and so does switching to a script from the menu: a tab that closed right after typing leaves its newest text in the stash, and the next tab to open that script shows it and writes it.
+  - **Writes:** a write for a script that is no longer open fails, so the writer keeps the text, instead of reporting success. It keeps what else is recorded on the stored project (`writeSource` merges into a fresh read), so a save recorded from another tab isn't undone by the next write.
 - `apps/web`: a script opens in one tab at a time.
   - **Holding:** opening a script takes the Web Lock `drafter:project:<id>` and keeps it until the script closes or the tab goes. A second tab finds it taken and opens the script read-only (no typing, no recovery writes, no stash, no leave warning), under a bar that reads "This script is open for editing in another tab".
   - **Edit here instead:** asks the other tab over the `drafter` channel. It writes its recovery copy, turns read-only, and lets go; the asking tab then reloads the script from IndexedDB and applies a leftover stash only if the stash is newer. If the other tab can't write, it keeps the script and the bar says it didn't let go.
   - **No Web Locks, or no `BroadcastChannel`:** no guard; every tab edits, as before.
+  - **Switching:** switching scripts takes the new script's lock before letting go of the old one, and the editor can't be typed in during the switch, so another tab can't take the old script while this one can still edit it. A tab handing a script over lets go of the lock it was asked about, not one a switch took meanwhile, and still leaves its unwritten text for a closing page.
+  - **Edit here instead is for the script shown when it was pressed:** if another script was opened while the tab waited for the lock, the lock is let go and nothing is taken over; the scripts menu doesn't switch while the handover waits.
+  - **The bar is announced:** its text sits in a status region that is always in the page, and its two sentences are punctuated.
+  - **Read-only editor:** a lint quick fix no longer changes the text of a read-only editor (`@drafter/cm-fountain`).
 - `apps/web`: new scripts, and switching between this browser's scripts and the samples, from the toolbar's **Open** menu.
   - **The menu:** **New screenplay**, **New stage play**, this browser's scripts (most recent first, the open one marked), and **Samples**: Screenplay and Stage play. It works from the keyboard (Enter or Space opens it, Escape closes it and returns to **Open**) and closes when focus or a click leaves it.
   - **A new script** is a title page to fill in (title, credit, author, and today's date), with the cursor ready to type below it. A stage play also carries the metadata block that names its template. It has its own undo history, like every script you switch to.
   - **Untouched new scripts don't count as changed:** a new script remembers the text it started from, so leaving it before you type asks nothing, and typing it back to the template ends the changes.
   - **Samples** open as scripts of their own that stay in this browser with your edits to them. Switching keeps the script you leave first; if it can't be kept, nothing is switched.
-  - **Remove from this browser** asks first and says the file isn't touched (and when the script has never been saved to a file, that removing it deletes the only copy). Removing the open script opens the most recent other one, or the screenplay sample. A script another tab has open is never removed, and the menu says so.
+  - **Remove from this browser** asks first and says the file isn't touched (and when the script has never been saved to a file, that removing it deletes the only copy; when it has a file but changes since its last save, that those changes are lost). Removing the open script opens the most recent other one, or the screenplay sample. A script another tab has open is never removed, and the menu says so.
   - **Another tab:** switching to a script another tab holds opens it read-only, and the script you left is let go.
+  - **One switch at a time:** a double click on New screenplay makes one script, and a second switch can't load over text typed after the first. The menu's items are disabled while one is under way.
 - `apps/web`: Save and Save As. **Save** (toolbar, `Mod+S`) writes the script to its file: in place on Chromium, remembered across reloads, and by download in browsers without the File System Access API. **Save As…** (Open menu, `Mod+Shift+S`) asks where. A sample saved this way becomes a script of the writer's own and the sample is left as it was. The status bar reads "Saved just now", "Saved N min ago", "Saved at 3:42 PM", or "Unsaved changes", and the tab title starts with a bullet while there are changes. Files keep their line breaks and byte-order mark. All file access goes through one `FileAccess` interface (`storage/files.ts`) that a desktop build can replace.
-- Open a file: Open ▸ **Open a file…** (the browser's file picker where it has one, else a file input), or drop a `.fountain` or `.txt` file anywhere on the window, and it opens as a script of its own, clean, with its line breaks and byte-order mark kept for the next save. On Chromium it keeps the file, so Save writes it back in place.
+  - **Tied to its script:** a save is recorded against the script it started on. If the writer switched scripts while the file was being picked or written, the file still gets that script's own text (read from storage, not from the editor, which shows the other one), and the record of the file's name, handle, and saved text goes to that script, not the open one. A sample saved while another switch finishes first becomes a script of its own without being opened, and Save waits for a switch that is under way.
+  - **Announced:** every save is announced to a screen reader, not only the first; opening a saved script or reloading the page announces nothing.
+  - **Refused writes:** a refused write no longer hides its real error behind a failed close, the message points to Save As, and it goes away when the script changes.
+- `apps/web`: open a file. Open ▸ **Open a file…** (the browser's file picker where it has one, else a file input), or drop a `.fountain` or `.txt` file anywhere on the window, and it opens as a script of its own, clean, with its line breaks and byte-order mark kept for the next save. On Chromium it keeps the file, so Save writes it back in place.
   - A file that is already open (the same file on disk) opens its script instead of a copy.
   - Where saving downloads, a file whose title matches a script in the browser asks first: **Replace that script** (one undoable change), **Open beside it**, or **Cancel**.
   - Files that aren't scripts are refused with a message and nothing changes: over 5 MB, a NUL byte in the first 8 KB, or text that isn't UTF-8 (opening it would replace its characters on the next save).
   - A script with no title page Title is called after its file.
+  - **Dropped on the editor:** a file dropped on the script's text opens as its own script and is not also pasted into the one that was open (CodeMirror's own drop handler is turned off for files; text dragged into the editor still drops in as before). A refused file dropped there inserts nothing.
+  - **Refusals are announced again:** the same message twice in a row is heard twice (it is cleared, drawn empty, and then set), as is the read-only tab's "Choose “Edit here instead” first" and a failed save.
 
 ### Changed
 
-- In a tab that only shows a script open in another tab, Save, Save As, Open a file, and New are turned off, and say to choose "Edit here instead" first. That tab may show old text. (Save used to be allowed there.)
+- In a tab that only shows a script open in another tab, Save, Save As, Open a file, and New are turned off, and say to choose "Edit here instead" first. That tab may show old text.
 - Revised the design documents to v0.2 after a pre-implementation review:
   - The parser reads two common mistakes leniently: a heading or transition with no blank line after it, and a parenthetical wrapped across lines. Each is flagged for a Strict Fountain lint rule that rewrites the source into spec form.
   - Notes end at the first blank line, per the spec, and an unclosed `[[` stays literal text.
@@ -206,27 +219,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - screen-reader testing starts in Phase 2
 
   Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
-
-### Fixed
-
-- A save is recorded against the script it started on. If the writer switched scripts while the file was being picked or written, the other script used to be given the file's name, handle, and saved text; now the record goes to the script that was saved, and Save waits for a switch that is under way.
-- Every save is announced to a screen reader, not only the first, and opening a saved script or reloading the page announces nothing.
-- A refused write no longer hides its real error behind a failed close, the message points to Save As, and it goes away when the script changes.
-- `apps/web`: fixes from the recovery copy's review.
-  - The "may clear your recovery copy" banner no longer flashes on every launch before the storage has been checked.
-  - The "unavailable" warning is announced at once (`role="alert"`); "may be cleared" stays a status.
-  - The text a closing page leaves behind is kept per script (`drafter:unwritten:<id>`), so two tabs on two scripts can't overwrite each other's; a launch writes each one that is newer than its script's stored copy and clears the rest.
-  - A write for a script that is no longer open now fails, so the writer keeps the text, instead of reporting success.
-- `apps/web`: fixes from the two-tab guard's review.
-  - A lint quick fix no longer changes the text of a read-only editor (`@drafter/cm-fountain`).
-  - Switching scripts takes the new script's lock before letting go of the old one, and the editor can't be typed in during the switch, so another tab can't take the old script while this one can still edit it.
-  - A tab that is handing a script over still leaves its unwritten text for a closing page.
-  - The read-only bar's text is announced: it sits in a status region that is always in the page, and its two sentences are punctuated.
-- `apps/web`: fixes from the scripts menu's review.
-  - Only one switch of scripts runs at a time: a double click on New screenplay makes one script, and a second switch can no longer load over text typed after the first. The menu's items are disabled while one is under way.
-  - A tab handing a script over lets go of the lock it was asked about, not one a switch took meanwhile.
-  - Removing a script that has a file, with changes since its last save, says those changes are lost.
-- `apps/web`: the recovery copy's write keeps what else is recorded on the stored project (`writeSource` merges into a fresh read), so a save recorded from another tab isn't undone by the next write.
 
 ### Security
 

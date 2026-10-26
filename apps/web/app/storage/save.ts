@@ -3,7 +3,8 @@ import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
-import { getHandle } from './projects';
+import { getHandle, getProject } from './projects';
+import { say } from './say';
 import { useScript } from './script';
 import { encodeFile, fileNameFor, titleOf } from './text';
 
@@ -86,6 +87,17 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   const bom = held?.bom ?? false;
   // The text is read as late as it can be, so what is written is what the editor shows.
   const shown = () => editor.view.state.doc.toString();
+  const started = shown();
+  /**
+   * What to write: the editor's text while the script the save started on is the one open. If
+   * another was opened meanwhile (while the picker was up), the editor shows that one, so the
+   * starting script's own text is read from storage (opening the other flushed it there), or, if
+   * it is gone, is what the save started with.
+   */
+  const textToWrite = async () => {
+    if (!id || script.project.value?.id === id) return shown();
+    return (await getProject(id))?.source ?? started;
+  };
 
   if (!files.canSaveInPlace) {
     const text = shown();
@@ -106,7 +118,7 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   if (!target && !(await pick())) return 'cancelled';
 
   for (;;) {
-    const text = shown();
+    const text = await textToWrite();
     try {
       await files.write(target as FileRef, encodeFile(text, lineBreak, bom));
       await script.saved({
@@ -126,7 +138,7 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
 
 async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
   if (useGuard().readOnly.value) {
-    readOnlyHint.value = READ_ONLY_HINT;
+    await say(readOnlyHint, READ_ONLY_HINT);
     return 'cancelled';
   }
   return inTurn(async () => {
@@ -136,7 +148,7 @@ async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
       if (result === 'saved') announceSave();
       return result;
     } catch (error) {
-      saveError.value = messageFor(error);
+      await say(saveError, messageFor(error));
       throw error;
     }
   });

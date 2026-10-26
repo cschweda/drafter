@@ -5,21 +5,29 @@ const { warning, dismissWarning } = useScript();
 </script>
 
 <template>
-  <div
-    v-if="warning"
-    :role="warning === 'unavailable' ? 'alert' : 'status'"
-    class="warning" :data-warning="warning">
-    <p v-if="warning === 'unavailable'">
-      Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
-      memory until you save the script to a file.
-    </p>
-    <p v-else>
-      This browser may clear your recovery copy. Save the script to a file to keep it safe, or
-      install Drafter as an app.
-    </p>
-    <button v-if="warning === 'not-persistent'" type="button" class="dismiss" @click="dismissWarning">
-      Dismiss
-    </button>
+  <div>
+    <!--
+      Both live regions stay in the page and only their contents change, so a screen reader hears
+      what is put in them. Two regions, not one whose role changes: a region that turns into an
+      alert is not announced. "Unavailable" matters most, so it goes in the alert.
+    -->
+    <div role="status" data-warning-region="status">
+      <div v-if="warning === 'not-persistent'" class="warning" data-warning="not-persistent">
+        <p>
+          This browser may clear your recovery copy. Save the script to a file to keep it safe, or
+          install Drafter as an app.
+        </p>
+        <button type="button" class="dismiss" @click="dismissWarning">Dismiss</button>
+      </div>
+    </div>
+    <div role="alert" data-warning-region="alert">
+      <div v-if="warning === 'unavailable'" class="warning" data-warning="unavailable">
+        <p>
+          Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
+          memory until you save the script to a file.
+        </p>
+      </div>
+    </div>
   </div>
 </template>
 

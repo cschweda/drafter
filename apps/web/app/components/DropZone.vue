@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useFiles } from '~/storage/files';
 import { openError, openFile } from '~/storage/open';
+import { say } from '~/storage/say';
 
 // A file dropped anywhere on the window opens as a script (Phase 1 design §9.3). While one is
 // dragged over, the zone says so. Text dragged inside the page isn't a file and is left alone.
@@ -47,11 +48,9 @@ function onDrop(event: DragEvent) {
     .fromDrop(item)
     .then((file) => {
       if (file) return openFile(file);
-      openError.value = 'That isn’t a file Drafter can open. Drop a .fountain or .txt file.';
+      return say(openError, 'That isn’t a file Drafter can open. Drop a .fountain or .txt file.');
     })
-    .catch(() => {
-      openError.value = 'Couldn’t open the file. Your current script is unchanged.';
-    });
+    .catch(() => say(openError, 'Couldn’t open the file. Your current script is unchanged.'));
 }
 
 onMounted(() => {

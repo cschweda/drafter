@@ -11,10 +11,11 @@ import { useScript } from '~/storage/script';
 // Plan 4 registers these as commands, with shortcuts, and adds the app menu.
 const script = useScript();
 const { project, busy } = script;
-const idle = computed(() => !!project.value && !busy.value);
+const { readOnly, taking } = useGuard();
+// Not while "Edit here instead" waits for the other tab: the lock it gets is for the script shown.
+const idle = computed(() => !!project.value && !busy.value && !taking.value);
 // A tab that only shows a script another tab is editing may show old text: it starts, saves, and
 // opens nothing until the writer chooses "Edit here instead". Switching to a script stays possible.
-const { readOnly } = useGuard();
 const canStart = computed(() => idle.value && !readOnly.value);
 
 const open = ref(false);

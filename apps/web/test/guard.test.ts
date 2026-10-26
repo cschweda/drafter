@@ -4,18 +4,29 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 function fakeLocks() {
   const held = new Set<string>();
   const gates = new Map<string, Promise<void>>();
+  const waiting = new Map<string, Array<() => void>>();
   return {
     held,
     gates,
+    /** Requests without `ifAvailable` wait for the lock (off, they throw: the tests don't expect to). */
+    waits: false,
+    /** Another tab lets go of `name`. */
+    free(name: string) {
+      held.delete(name);
+      for (const wake of waiting.get(name)?.splice(0) ?? []) wake();
+    },
     async request(
       name: string,
       options: { ifAvailable?: boolean },
       callback: (lock: object | null) => Promise<unknown> | undefined,
     ) {
       await gates.get(name);
-      if (held.has(name)) {
+      while (held.has(name)) {
         if (options.ifAvailable) return callback(null);
-        throw new Error('the tests never wait for a lock');
+        if (!this.waits) throw new Error('the tests never wait for a lock');
+        await new Promise<void>((wake) => {
+          waiting.set(name, [...(waiting.get(name) ?? []), wake]);
+        });
       }
       held.add(name);
       try {
@@ -114,5 +125,49 @@ describe('handing a script over', () => {
     expect(locks.held.has(lockOf('b'))).toBe(true);
     expect(useGuard().readOnly.value).toBe(false);
     asker.close();
+  });
+});
+
+describe('taking a script over', () => {
+  test('is for the script that was shown when it was asked, not one shown while it waited', async () => {
+    const { guardControl, useGuard } = await import('../app/storage/guard');
+    locks.waits = true;
+    locks.held.add(lockOf('a'));
+    expect(await guardControl.claim('a')).toBe(false);
+    const takeOver = vi.fn(async () => {});
+    guardControl.bind({ giveUp: async () => true, takeOver, taken() {} });
+
+    const guard = useGuard();
+    const taking = guard.editHere();
+    await vi.waitFor(() => expect(guard.taking.value).toBe(true));
+    // The writer shows another script while the other tab is still deciding.
+    expect(await guardControl.claim('b')).toBe(true);
+    guardControl.finish();
+    locks.free(lockOf('a'));
+    await taking;
+
+    expect(takeOver).not.toHaveBeenCalled();
+    // The lock it was granted for a is let go, and b's is kept.
+    await vi.waitFor(() => expect(locks.held.has(lockOf('a'))).toBe(false));
+    expect(locks.held.has(lockOf('b'))).toBe(true);
+    expect(guard.readOnly.value).toBe(false);
+    expect(guard.taking.value).toBe(false);
+  });
+
+  test('hands the script it was asked for to takeOver', async () => {
+    const { guardControl, useGuard } = await import('../app/storage/guard');
+    locks.waits = true;
+    locks.held.add(lockOf('a'));
+    await guardControl.claim('a');
+    const takeOver = vi.fn(async () => {});
+    const taken = vi.fn();
+    guardControl.bind({ giveUp: async () => true, takeOver, taken });
+    const taking = useGuard().editHere();
+    await vi.waitFor(() => expect(useGuard().taking.value).toBe(true));
+    locks.free(lockOf('a'));
+    await taking;
+    expect(takeOver).toHaveBeenCalledWith('a');
+    expect(taken).toHaveBeenCalled();
+    expect(useGuard().readOnly.value).toBe(false);
   });
 });

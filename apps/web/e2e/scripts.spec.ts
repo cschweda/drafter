@@ -528,7 +528,9 @@ test.describe('scripts and another tab', () => {
       .getByRole('button', { name: 'Remove from this browser' })
       .click();
     await confirm(b).getByRole('button', { name: 'Remove', exact: true }).click();
-    await expect(b.getByRole('alert')).toContainText('open for editing in another tab');
+    await expect(
+      b.getByRole('alert').filter({ hasText: 'open for editing in another tab' }),
+    ).toBeVisible();
     expect(await stored(b)).toHaveLength(2);
 
     // From the sample, as a script that is not open here.
@@ -538,7 +540,9 @@ test.describe('scripts and another tab', () => {
       .getByRole('button', { name: 'Remove from this browser' })
       .click();
     await confirm(b).getByRole('button', { name: 'Remove', exact: true }).click();
-    await expect(b.getByRole('alert')).toContainText('open for editing in another tab');
+    await expect(
+      b.getByRole('alert').filter({ hasText: 'open for editing in another tab' }),
+    ).toBeVisible();
     expect(await stored(b)).toHaveLength(2);
     await expect(row(b, 'Untitled Screenplay')).toBeVisible();
     expect(await isEditable(a)).toBe(true);

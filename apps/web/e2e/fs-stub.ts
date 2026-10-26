@@ -95,6 +95,18 @@ export function bytesOf(page: Page, name: string): Promise<number[] | null> {
   }, name);
 }
 
+/** When a file was last written (`lastModified`, in ms), or null if there is no such file. */
+export function modifiedOf(page: Page, name: string): Promise<number | null> {
+  return page.evaluate(async (n) => {
+    const root = await navigator.storage.getDirectory();
+    try {
+      return (await (await root.getFileHandle(n)).getFile()).lastModified;
+    } catch {
+      return null;
+    }
+  }, name);
+}
+
 /** A file's text (UTF-8), or null if there is no such file. */
 export async function textOf(page: Page, name: string): Promise<string | null> {
   const bytes = await bytesOf(page, name);
@@ -115,4 +127,32 @@ export function putFile(page: Page, name: string, content: string | number[]): P
     },
     { n: name, b: bytes },
   );
+}
+
+/**
+ * Records the text of every `role="alert"` element as it is added to the page, from the first
+ * node on: a screen reader announces an alert when it appears, so a message that is shown again
+ * has to appear again. Call it before `goto`; `alertsHeard` reads what was recorded.
+ */
+export async function watchAlerts(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __alerts: string[] };
+    w.__alerts = [];
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of Array.from(record.addedNodes)) {
+          if (!(node instanceof Element)) continue;
+          for (const el of [node, ...Array.from(node.querySelectorAll('[role="alert"]'))]) {
+            if (el.getAttribute('role') === 'alert' && el.textContent)
+              w.__alerts.push(el.textContent);
+          }
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+}
+
+/** The alerts `watchAlerts` has seen added, in order. */
+export function alertsHeard(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { __alerts: string[] }).__alerts);
 }

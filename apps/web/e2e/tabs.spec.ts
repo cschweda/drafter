@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { alertsHeard, watchAlerts } from './fs-stub';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -189,6 +190,121 @@ test.describe('one tab at a time', () => {
     await expect(bar(b)).toHaveCount(0);
     await expect(editor(b)).toContainText('Newer than the copy.');
     await expect.poll(async () => (await stored(b))[0]?.source).toContain('Newer than the copy.');
+  });
+
+  test('applies the text a closed tab left behind when another tab switches to that script', async ({
+    context,
+  }) => {
+    const menuOf = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+    const openMenu = async (page: Page) => {
+      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await expect(menuOf(page)).toBeVisible();
+    };
+    const a = await openTab(context);
+    await openMenu(a);
+    await menuOf(a).getByRole('button', { name: 'New screenplay' }).click();
+    await expect(menuOf(a)).toBeHidden();
+    await editor(a).click();
+    await a.keyboard.insertText('\nINT. ROOM - DAY\n\nFirst words.');
+    await expect
+      .poll(async () => (await stored(a)).some((p) => p.source.includes('First words.')))
+      .toBe(true);
+    const x = (await stored(a)).find((p) => p.source.includes('First words.')) as Row;
+
+    // B finds the script held by A, so it shows it read-only, and moves to the sample.
+    const b = await context.newPage();
+    await b.goto('/');
+    await expect(bar(b)).toBeVisible();
+    await openMenu(b);
+    await menuOf(b).getByRole('button', { name: 'Screenplay', exact: true }).click();
+    await expect(menuOf(b)).toBeHidden();
+    await expect(bar(b)).toHaveCount(0);
+
+    // A types and closes at once: the newest text is in the stash, and the database is behind it.
+    await a.bringToFront();
+    await editor(a).press('End');
+    await a.keyboard.insertText(' LAST WORDS');
+    await a.close({ runBeforeUnload: false });
+    expect(await b.evaluate((key) => localStorage.getItem(key), stashKey(x.id))).toContain(
+      'LAST WORDS',
+    );
+
+    await openMenu(b);
+    await menuOf(b)
+      .locator('li', { hasText: 'Untitled Screenplay' })
+      .getByRole('button')
+      .first()
+      .click();
+    await expect(editor(b)).toContainText('First words.');
+    await expect(editor(b)).toContainText('LAST WORDS');
+    await expect
+      .poll(async () => (await stored(b)).find((p) => p.id === x.id)?.source)
+      .toContain('LAST WORDS');
+    expect(await b.evaluate((key) => localStorage.getItem(key), stashKey(x.id))).toBeNull();
+    expect(await isEditable(b)).toBe(true);
+  });
+
+  test('keeps the scripts menu from switching while the handover waits', async ({ context }) => {
+    const a = await openTab(context);
+    const b = await openTab(context);
+    const [row] = await stored(a);
+    // A transaction that keeps the projects store busy: A's flush, and so the handover, waits.
+    await a.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const open = indexedDB.open('drafter');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('projects', 'readwrite');
+            const spin = () => {
+              if ((window as unknown as { __hold?: boolean }).__hold === false) return;
+              tx.objectStore('projects').count().onsuccess = spin;
+            };
+            (window as unknown as { __hold?: boolean }).__hold = true;
+            spin();
+            resolve();
+          };
+        }),
+    );
+    await typeAtStart(a, 'Typed during the handover.\n');
+    await editHere(b).click();
+    await expect(bar(a)).toBeVisible();
+
+    // B is still waiting for A: choosing another script now would take the lock for the wrong one.
+    await b.getByRole('button', { name: 'Open', exact: true }).click();
+    const menu = b.getByRole('group', { name: 'Scripts' });
+    await expect(menu).toBeVisible();
+    for (const name of ['Screenplay', 'Stage play']) {
+      await expect(menu.getByRole('button', { name, exact: true })).toBeDisabled();
+    }
+
+    await a.evaluate(() => {
+      (window as unknown as { __hold?: boolean }).__hold = false;
+    });
+    await expect(bar(b)).toHaveCount(0);
+    // B edits the script it asked for, with A's last words.
+    await expect(editor(b)).toContainText('Typed during the handover.');
+    expect((await stored(b)).find((p) => p.id === row.id)?.source).toContain(
+      'Typed during the handover.',
+    );
+    // And the menu works again.
+    if (!(await menu.isVisible())) {
+      await b.getByRole('button', { name: 'Open', exact: true }).click();
+    }
+    await expect(menu.getByRole('button', { name: 'Stage play', exact: true })).toBeEnabled();
+  });
+
+  test('announces the read-only hint again when Save is tried twice', async ({ context }) => {
+    await openTab(context);
+    const b = await context.newPage();
+    await watchAlerts(b);
+    await b.goto('/');
+    await expect(bar(b)).toBeVisible();
+    const heard = async () =>
+      (await alertsHeard(b)).filter((text) => text.includes('Edit here instead'));
+    await b.keyboard.press('ControlOrMeta+s');
+    await expect.poll(heard).toHaveLength(1);
+    await b.keyboard.press('ControlOrMeta+s');
+    await expect.poll(heard).toHaveLength(2);
   });
 
   test('hands over from the keyboard', async ({ context }) => {

@@ -1,6 +1,16 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { bytesOf, files, nextFileName, putFile, removePickers, stubPickers } from './fs-stub';
+import {
+  alertsHeard,
+  bytesOf,
+  files,
+  modifiedOf,
+  nextFileName,
+  putFile,
+  removePickers,
+  stubPickers,
+  watchAlerts,
+} from './fs-stub';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -24,6 +34,7 @@ interface Row {
   sample?: string;
   fileName?: string;
   savedHash?: string;
+  savedAt?: number;
   lineBreak?: string;
   bom?: boolean;
   fsHandleId?: string;
@@ -118,6 +129,31 @@ async function dragFile(page: Page, name: string, content: string | number[], le
   );
 }
 
+/** A file dropped on the editor's own text, where CodeMirror's drop handler is, and then let go. */
+async function dropOnEditor(page: Page, name: string, content: string | number[]) {
+  const bytes = typeof content === 'string' ? bytesOfText(content) : content;
+  const box = await editor(page).boundingBox();
+  await page.evaluate(
+    ({ n, b, x, y }) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([new Uint8Array(b)], n, { type: 'text/plain' }));
+      const target = document.querySelector('.cm-content') as Element;
+      for (const type of ['dragenter', 'dragover', 'drop']) {
+        target.dispatchEvent(
+          new DragEvent(type, {
+            dataTransfer: dt,
+            bubbles: true,
+            cancelable: true,
+            clientX: x,
+            clientY: y,
+          }),
+        );
+      }
+    },
+    { n: name, b: bytes, x: (box?.x ?? 0) + 40, y: (box?.y ?? 0) + 40 },
+  );
+}
+
 test.describe('opening a file (Chromium, with the picker)', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'the File System Access API');
   test.skip(({ isMobile }) => !!isMobile, 'the editor is the same on a phone');
@@ -159,9 +195,22 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     await expect(status(page)).toContainText('Unsaved changes');
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).not.toContainText('MORE');
-    // A file nobody changed is not changed, so the save writes it again as it was.
+    // A file nobody changed is not changed, so the save writes it again as it was. That a save
+    // happened is proved by the file's modified time moving and the script's record of it, not by
+    // the bytes, which were the same before.
+    const modified = (await modifiedOf(page, 'Crlf.fountain')) ?? 0;
+    const savedAt = (await mine(page)).find((p) => p.fileName === 'Crlf.fountain')?.savedAt ?? 0;
+    await page.waitForTimeout(50);
     await page.keyboard.press('ControlOrMeta+s');
     await expect(status(page)).toContainText('Saved just now');
+    await expect
+      .poll(async () => (await modifiedOf(page, 'Crlf.fountain')) ?? 0)
+      .toBeGreaterThan(modified);
+    await expect
+      .poll(
+        async () => (await mine(page)).find((p) => p.fileName === 'Crlf.fountain')?.savedAt ?? 0,
+      )
+      .toBeGreaterThan(savedAt);
     expect(await bytesOf(page, 'Crlf.fountain')).toEqual(original);
 
     // And an edit that stays is written with the file's line breaks.
@@ -293,6 +342,75 @@ test.describe('opening a file where there is no picker', () => {
     expect(row?.fileName).toBe('Dropped.txt');
   });
 
+  test('a file dropped on the editor opens as its own script and is not pasted into the open one', async ({
+    page,
+  }) => {
+    await start(page);
+    const open = (await stored(page)).find((p) => p.sample);
+    expect(open).toBeTruthy();
+    const shown = await editor(page).textContent();
+
+    await dropOnEditor(page, 'Dropped.fountain', `${SCRIPT}DROPPEDFILEMARKER\n`);
+    await expect(editor(page)).toContainText('DROPPEDFILEMARKER');
+    await expect.poll(async () => (await mine(page)).length).toBe(1);
+    // CodeMirror reads a dropped file asynchronously: give a late paste time to land.
+    await page.waitForTimeout(1000);
+
+    const rows = await stored(page);
+    // The script that was open still holds exactly what it did.
+    expect(rows.find((p) => p.id === open?.id)?.source).toBe(open?.source);
+    expect(rows.find((p) => p.id === open?.id)?.source).not.toContain('DROPPEDFILEMARKER');
+    // The file is its own script, once over.
+    const created = rows.filter((p) => !p.sample);
+    expect(created.map((p) => p.fileName)).toEqual(['Dropped.fountain']);
+    expect(created[0]?.source).toBe(`${SCRIPT}DROPPEDFILEMARKER\n`);
+    expect(await editor(page).textContent()).not.toBe(shown);
+    await expect(editor(page)).toContainText('A door opens.');
+    expect((await editor(page).textContent())?.split('DROPPEDFILEMARKER').length).toBe(2);
+    // Unsaved changes would mean text was inserted after the file opened.
+    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+  });
+
+  test('a refused file dropped on the editor inserts nothing', async ({ page }) => {
+    await start(page);
+    const before = await stored(page);
+    const shown = await editor(page).textContent();
+
+    await dropOnEditor(page, 'Cafe.txt', [0x63, 0x61, 0x66, 0xe9, 0x0a]);
+    await expect(alert(page)).toContainText('isn’t UTF-8 text');
+    await page.waitForTimeout(1000);
+    expect(await editor(page).textContent()).toBe(shown);
+    const after = await stored(page);
+    expect(after.map((p) => [p.id, p.source])).toEqual(before.map((p) => [p.id, p.source]));
+  });
+
+  test('text dragged onto the editor is still dropped in', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'the editor is not on screen on a phone to drop on');
+    await start(page);
+    await editor(page).click();
+    const box = await editor(page).boundingBox();
+    await page.evaluate(
+      ({ x, y }) => {
+        const dt = new DataTransfer();
+        dt.setData('text/plain', 'DRAGGEDWORDS');
+        const target = document.querySelector('.cm-content') as Element;
+        for (const type of ['dragenter', 'dragover', 'drop']) {
+          target.dispatchEvent(
+            new DragEvent(type, {
+              dataTransfer: dt,
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+            }),
+          );
+        }
+      },
+      { x: (box?.x ?? 0) + 40, y: (box?.y ?? 0) + 40 },
+    );
+    await expect(editor(page)).toContainText('DRAGGEDWORDS');
+  });
+
   test('leaves text dragged inside the page alone', async ({ page }) => {
     await start(page);
     await page.evaluate(() => {
@@ -373,6 +491,20 @@ test.describe('opening a file where there is no picker', () => {
     await chooseWithInput(page, 'Door.fountain', SCRIPT);
     await expect(editor(page)).toContainText('A door opens.');
     await expect(alert(page)).toHaveCount(0);
+  });
+
+  test('announces a refusal again when the same file is refused twice', async ({ page }) => {
+    await watchAlerts(page);
+    await start(page);
+    const heard = async () =>
+      (await alertsHeard(page)).filter((text) => text.includes('isn’t UTF-8'));
+    await chooseWithInput(page, 'Cafe.txt', [0x63, 0x61, 0x66, 0xe9, 0x0a]);
+    await expect(alert(page)).toContainText('isn’t UTF-8 text');
+    await expect.poll(heard).toHaveLength(1);
+    // The same message again is a new alert, or a screen reader says nothing the second time.
+    await chooseWithInput(page, 'Cafe.txt', [0x63, 0x61, 0x66, 0xe9, 0x0a]);
+    await expect.poll(heard).toHaveLength(2);
+    await expect(alert(page)).toContainText('isn’t UTF-8 text');
   });
 
   for (const theme of ['dark', 'light'] as const) {

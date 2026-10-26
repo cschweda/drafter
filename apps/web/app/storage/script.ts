@@ -124,6 +124,9 @@ async function baselineOf(project: Project): Promise<Text | null> {
   return text(project.sample ? SAMPLE_TEXT[project.sample] : '');
 }
 
+/** A save found, when its turn came, that the script it started on is no longer the open one. */
+class MovedOn extends Error {}
+
 let session: ScriptSession | undefined;
 
 function create(): ScriptSession {
@@ -334,6 +337,20 @@ function create(): ScriptSession {
   }
 
   /**
+   * `p` with the text a closed page left in the stash, when that is newer than the stored copy
+   * and differs from it (it is written, so the stored copy has it); the stash goes either way. Only
+   * for a script this tab holds the lock of. If the write fails it throws, and the stash stays.
+   */
+  async function withStash(p: Project): Promise<Project> {
+    const left = readStash(p.id);
+    if (!left) return p;
+    const current =
+      left.source !== p.source && left.at > p.updatedAt ? await writeSource(p, left.source) : p;
+    clearStash(p.id);
+    return current;
+  }
+
+  /**
    * The editor can't be typed in while a switch is under way: from the first flush until the new
    * script is shown, the old one is flushed and then left alone, and its lock is let go only
    * after the new one is shown. Switches are counted, not flagged, so one ending can never make
@@ -375,7 +392,25 @@ function create(): ScriptSession {
           writer?.discard();
           clearStash(options.removing);
         }
-        attach(next, from, options.keep ?? false, await guardControl.claim(next.id));
+        const writable = await guardControl.claim(next.id);
+        // A tab that closed on this script right after typing left its newest text in the stash.
+        // This tab holds the lock now, so the stash is its to apply (a tab that only shows the
+        // script leaves it for the holder).
+        let shown = next;
+        if (writable) {
+          try {
+            shown = await withStash(next);
+          } catch {
+            // The database won't take the write: the stash stays for the next launch, and the
+            // stored copy is shown.
+          }
+        }
+        attach(
+          shown,
+          shown === next ? from : await baselineOf(shown),
+          options.keep ?? false,
+          writable,
+        );
         guardControl.finish();
         return true;
       } finally {
@@ -467,8 +502,16 @@ function create(): ScriptSession {
       if (current.sample) {
         const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
         // The sample stays as it was; a script of the writer's own takes the text.
+        let moved = false;
         await switchTo(
           async () => {
+            // Another switch ran first (this one waited its turn), and a different script is
+            // open now: showing the new one with "the editor's own state" would put that other
+            // script's text in it. The record is made without opening it.
+            if (project.value?.id !== current.id) {
+              moved = true;
+              throw new MovedOn();
+            }
             const created = await createProject({
               source: savedText,
               fileName,
@@ -481,7 +524,13 @@ function create(): ScriptSession {
             return created;
           },
           { keep: true, wait: true },
-        );
+        ).catch((error) => {
+          if (!(error instanceof MovedOn)) throw error;
+        });
+        if (moved) {
+          if (handleId) await db.handles.delete(handleId).catch(() => {});
+          await savedElsewhere(current.id, savedText, fileName, ref);
+        }
         return;
       }
       const fsHandleId = ref
@@ -633,17 +682,10 @@ function create(): ScriptSession {
       }
     },
     /** The other tab's last text is in IndexedDB now; a stash only counts if it is newer than that. */
-    async takeOver() {
-      const id = project.value?.id;
-      let next = id ? await getProject(id) : undefined;
+    async takeOver(id) {
+      let next = await getProject(id);
       if (!next) throw new Error('The script is gone.');
-      const left = readStash(next.id);
-      if (left) {
-        if (left.source !== next.source && left.at > next.updatedAt) {
-          next = await writeSource(next, left.source);
-        }
-        clearStash(next.id);
-      }
+      next = await withStash(next);
       attach(next, await baselineOf(next), false, true);
     },
     taken() {
