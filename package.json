@@ -18,8 +18,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
+    "@types/jsdom": "^28.0.3",
     "@types/node": "^22.20.5",
     "fast-check": "^4.10.2",
+    "jsdom": "^29.1.1",
     "pdfjs-dist": "^6.4.299",
     "tsdown": "^0.23.2",
     "typescript": "^5.9.3",

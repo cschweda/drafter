@@ -1,7 +1,16 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-const packages = ['fountain', 'templates', 'layout', 'render-pdf', 'render-text', 'lint', 'cli'];
+const packages = [
+  'fountain',
+  'templates',
+  'layout',
+  'render-pdf',
+  'render-text',
+  'render-html',
+  'lint',
+  'cli',
+];
 // Each package's importable entry. The CLI's index.ts is the `drafter` binary,
 // which runs on import, so its library entry is cli.ts.
 const entry = (name: string) => (name === 'cli' ? 'cli' : 'index');

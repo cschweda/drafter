@@ -13,6 +13,7 @@ Every dependency is listed here with the reason it's needed. A new one gets an e
 | `@drafter/layout` | `@drafter/fountain`, `@drafter/templates` | Reads parsed documents and resolves roles. |
 | `@drafter/render-pdf` | `@drafter/layout`, `@drafter/templates`, `pdf-lib`, `@pdf-lib/fontkit` | Writing PDF files, from layouts, at the template's paper size. pdf-lib can only embed the 14 standard PDF fonts without fontkit, and Drafter embeds Courier Prime. General-purpose PDF libraries, not screenwriting tools. Its tests also use `@drafter/fountain`, as a development dependency. |
 | `@drafter/render-text` | `@drafter/layout`, `@drafter/templates` | Writing layouts as fixed-width text, on the template's character grid. Types only (`Layout`, `LayoutLine`, `Template`); nothing from them runs. Its tests also use `@drafter/fountain`, as a development dependency. |
+| `@drafter/render-html` | `@drafter/layout`, `@drafter/templates` | Drawing laid-out pages as accessible DOM for the Script pane. Its API is written in their types (`Layout`, `Page`, `LayoutLine`, `Template`), and the role rules it reads to find speeches are the template's own; nothing from either runs. Its tests also use `@drafter/fountain`, as a development dependency. |
 | `@drafter/lint` | `@drafter/fountain`, `@drafter/templates` | Reads parsed documents and the parse diagnostics they carry, and a template's `lint` settings. Its API is written in their types (`Doc`, `Span`, `TextChange`, `Template`), so both are dependencies rather than development dependencies. `manual-contd` also calls `resolveRole` from the templates, to decide which blocks print as the layout does. Its tests also use `@drafter/layout`, as a development dependency: they lay generated scripts out with `paginate` and check that `manual-contd` reports exactly the cues the layout adds a `(CONT'D)` to. |
 | `@drafter/cli` | `@drafter/fountain`, `@drafter/templates`, `@drafter/layout`, `@drafter/render-pdf`, `@drafter/render-text`, `commander` | The engine packages it drives, and command-line argument parsing; commander is a general-purpose CLI library. |
 
@@ -28,6 +29,8 @@ All of these are general-purpose tools, declared once at the repository root.
 | `fast-check` | Property tests: generated scripts and arbitrary strings. |
 | `@biomejs/biome` | Formatting and linting. |
 | `pdfjs-dist` | Reading text and positions back out of generated PDFs in tests. Mozilla's general-purpose PDF reader. |
+| `jsdom` | A DOM for tests that build and inspect elements without a browser: Vitest's `jsdom` environment runs `@drafter/render-html`'s tests in it. A general-purpose implementation of the web standards. |
+| `@types/jsdom` | Its type declarations. |
 
 ## The app (`apps/web`)
 

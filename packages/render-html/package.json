@@ -1,0 +1,42 @@
+{
+  "name": "@drafter/render-html",
+  "version": "0.0.1",
+  "description": "The Script pane's renderer for Drafter: draws laid-out pages as accessible, absolutely positioned DOM.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/render-html"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./style.css": "./style.css"
+  },
+  "files": [
+    "dist",
+    "style.css"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/layout": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/fountain": "workspace:*"
+  }
+}
