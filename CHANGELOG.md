@@ -35,6 +35,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - phones, one pane at a time
 - The first of five Phase 1 implementation plans, `docs/plans/2026-10-25-phase1-plan1-shell-and-deploy.md`: the app shell, Netlify configuration, and the content security policy.
 - The second Phase 1 plan, `docs/plans/2026-10-25-phase1-plan2-editor-packages.md`: the text renderer moved out of the CLI, the linter, the Script pane's HTML renderer, and the CodeMirror integration.
+- The remaining Phase 1 plans, re-split so writing comes first:
+  - `docs/plans/2026-10-26-phase1-plan3-write-and-keep.md`: the editor and its pages in the app, the recovery copy in the browser, one tab at a time, new scripts, and Save and Open.
+  - `docs/plans/2026-10-26-phase1-plan4-the-full-editor.md`: the command palette, settings and line numbers, the Problems pane, the template switcher, script modules with three samples, the app menu and Revert to Saved, the changed-elsewhere check, and export.
+  - `docs/plans/2026-10-25-phase1-plan5-writing-aids-first-visit-launch.md`: focus mode, typewriter scrolling, counts, goals, sprints, the first visit and its tour, offline use, the help pages, and the accessibility suite.
 - `apps/web`, the Nuxt app for drafter.dev (Nuxt 4 with Nuxt UI 4), generated as static files.
   - **Page shell:** `/` is prerendered with Drafter's title, description, and share image. Its loading screen carries the description, for search engines and for readers without JavaScript.
   - **Defaults:** dark by default, with fonts and icons served from drafter.dev itself.
