@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: a first visit (a browser with no scripts) opens the screenplay sample with the cursor on its first scene heading, scrolled so that line is near the top of the Source pane; the Script pane shows the same place. `isFirstVisit()` (`storage/script.ts`) says whether the visit is a first one, for the welcome dialog to come.
+- `apps/web`: the sample bar, a "Sample" region above the Source pane while a sample is open: "This is a sample. Start your own:" with **New screenplay**, **New stage play**, **New Markdown document**, and **Open a file…**.
+- `apps/web`: **Reset sample**, in the palette and in a new Help section of the app menu, puts the open sample's own text back as one change; one Undo brings the edits back. It is off unless a sample is open and editable.
+
 ## [0.2.0] - 2026-10-26
 
 **The full editor.** Everything around the writing:

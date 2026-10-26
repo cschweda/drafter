@@ -13,8 +13,8 @@ import { useScript } from '~/storage/script';
 // The app menu (Phase 1 design §9.1): the Drafter mark opens it. Every item runs its registered
 // command (`commands/builtin.ts`), so this menu, the palette, and the keys never disagree; an item
 // whose command is off shows disabled. The recent scripts are the one list that isn't commands:
-// they open a script by id, as the Scripts menu does. Help (Keyboard shortcuts, Take the tour)
-// arrives in Plan 5.
+// they open a script by id, as the Scripts menu does. The Help section is the last group and is
+// built from commands too (`helpItems`): Plan 5's Take the tour and the help pages are added there.
 const commands = useCommands();
 const script = useScript();
 const editor = useEditor();
@@ -84,6 +84,13 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-txt': 'i-lucide-file-type',
 };
 
+// Help: the group at the end of the menu. Reset sample is first (off unless a sample is open); the
+// tour and the help pages join it as their commands arrive.
+const helpItems = computed<DropdownMenuItem[]>(() => [
+  { type: 'label', label: 'Help' },
+  ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
+]);
+
 const items = computed<DropdownMenuItem[][]>(() => [
   [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
@@ -101,6 +108,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
   ],
   exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
   entry('settings', 'i-lucide-settings'),
+  helpItems.value,
 ]);
 
 async function onOpen(open: boolean) {

@@ -37,7 +37,12 @@ function applyZoom() {
   const room = host.value.clientWidth - 2 * GUTTER;
   const fit = zoom.value === 'fit';
   const scale = fit ? (natural > 0 && room > 0 ? room / natural : 1) : settings.value.textSize;
-  view.element.style.zoom = scale === 1 ? '' : String(scale);
+  const zoomed = scale === 1 ? '' : String(scale);
+  if (view.element.style.zoom === zoomed) return;
+  view.element.style.zoom = zoomed;
+  // Zoom moves every line, so the one the cursor is on may have left the pane (the first visit
+  // is drawn before the font settles the scale). `reveal` leaves a reader who has scrolled alone.
+  view.reveal(cursorBlock.value);
 }
 
 async function draw() {

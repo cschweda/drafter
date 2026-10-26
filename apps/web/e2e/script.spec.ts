@@ -86,8 +86,9 @@ test.describe('the Script pane on a desktop', () => {
   });
 
   test('shows the current page in the slim bar and the status bar', async ({ page }) => {
-    await expect(slim(page).filter({ hasText: 'Title page' })).toBeVisible();
-    await expect(status(page)).toContainText('Title page');
+    // A first visit starts on the first scene heading, which is on page 1 (not the title page).
+    await expect(slim(page).filter({ hasText: 'Page 1 of 2' })).toBeVisible();
+    await expect(status(page)).toContainText('Page 1 of 2');
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+End');
     await expect(slim(page).filter({ hasText: 'Page 2 of 2' })).toBeVisible();
@@ -294,8 +295,9 @@ test.describe('the Script pane on a phone', () => {
     const viewport = page.viewportSize()?.width ?? 0;
     expect(width).toBeLessThanOrEqual(viewport);
     expect(width).toBeGreaterThan(viewport * 0.8);
-    await expect(slim(page)).toContainText('Title page');
-    await expect(status(page)).toContainText('Title page');
+    // The first scene heading is on page 1; the cursor starts there.
+    await expect(slim(page)).toContainText('Page 1 of 2');
+    await expect(status(page)).toContainText('Page 1 of 2');
   });
 
   test('jumps to the Source tab when a line is clicked', async ({ page }) => {

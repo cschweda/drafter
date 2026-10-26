@@ -1,5 +1,6 @@
 import { isolateHistory } from '@codemirror/commands';
-import { Text } from '@codemirror/state';
+import { Text, Transaction } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import {
   type ComputedRef,
   computed,
@@ -10,6 +11,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
+import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
 import type { NewKind } from '../editor/template';
@@ -40,6 +42,25 @@ import { allStashes, clearStash, readStash, stash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
 export type { RecoveryState } from './health';
+
+const firstVisit = ref(false);
+
+/**
+ * Whether this visit is a first one: the browser had no projects (scripts or samples) when the
+ * page opened, so the screenplay sample was opened for it. The welcome dialog (Plan 5, Task 6)
+ * reads this, and only a first visit gets it.
+ *
+ * Contract:
+ * - It is reactive (a watcher or computed that reads it is run again when the answer arrives).
+ * - It is false until the first project is open, which is when `ready` turns true; a caller that
+ *   needs the answer waits for `useScript().ready`. It is also false if the database can't be
+ *   opened, since nothing says the browser is a new one.
+ * - It does not change for the rest of the visit: opening or making a script doesn't end the
+ *   first visit. A reload is a returning visit, because the first one stored the sample.
+ */
+export function isFirstVisit(): boolean {
+  return firstVisit.value;
+}
 
 /** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
 export const kindError = ref('');
@@ -74,6 +95,14 @@ export interface ScriptSession {
   setKind(kind: DocumentKind): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
+  /** A sample is open and the editor can change it: Reset sample would do something. */
+  canResetSample: Readonly<ComputedRef<boolean>>;
+  /**
+   * Puts the open sample's original text back, as one undoable change: one Undo brings back
+   * everything it replaced, and typing afterward isn't joined to it. The cursor goes to the
+   * first scene heading. Returns false, changing nothing, unless `canResetSample`.
+   */
+  resetSample(): boolean;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
   scripts(): Promise<Project[]>;
   /**
@@ -345,12 +374,27 @@ function create(): ScriptSession {
     }
   }
 
+  /**
+   * Puts the cursor at the start of `source`'s first scene heading and scrolls so that line is
+   * near the top of the Source pane. Not an undo step, and not an edit: the text is untouched.
+   * (The Script pane follows the cursor, so it shows the same place.)
+   */
+  function cursorAtFirstScene(source: string) {
+    const at = Math.min(firstSceneStart(source), view.state.doc.length);
+    view.dispatch({
+      selection: { anchor: at },
+      effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
+      annotations: Transaction.addToHistory.of(false),
+    });
+  }
+
   /** Opens the most recent script, or the sample's on a first visit. */
   async function begin() {
     try {
       const projects = await listProjects();
       await restoreUnwritten(projects);
       const first = projects.length === 0;
+      firstVisit.value = first;
       const newest = projects[0];
       const from = newest ? await baselineOf(newest) : null;
       // Anything typed since the page opened is kept, as a script of its own: nothing replaces it.
@@ -370,6 +414,8 @@ function create(): ScriptSession {
         await guardControl.claim(created.id);
         attach(created, text(SAMPLE_SCREENPLAY), true, true);
         guardControl.finish();
+        // A first visit starts where the story does, not on the title page's metadata.
+        cursorAtFirstScene(SAMPLE_SCREENPLAY);
       }
       failing = false;
       clearTimeout(retry);
@@ -529,6 +575,28 @@ function create(): ScriptSession {
   const openSample = async (kind: SampleKind) => {
     await switchTo(() => sampleProject(kind));
   };
+
+  const canResetSample = computed(
+    () => !!project.value?.sample && !guard.readOnly.value && !switching.value && !fileLocked.value,
+  );
+
+  function resetSample(): boolean {
+    const kind = project.value?.sample;
+    if (!kind || !canResetSample.value) return false;
+    const original = SAMPLE_TEXT[kind];
+    if (view.state.doc.toString() === original) return true;
+    // One transaction for the whole text, so one undo brings the edits back; an undo step of its
+    // own, so typing just after it isn't joined to it (as `replaceWith` does).
+    const at = firstSceneStart(original);
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: original },
+      selection: { anchor: at },
+      effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
+      userEvent: 'input.replace',
+      annotations: isolateHistory.of('full'),
+    });
+    return true;
+  }
 
   // ---- Saving to a file --------------------------------------------------------------------
 
@@ -855,6 +923,8 @@ function create(): ScriptSession {
     newScript,
     setKind,
     openSample,
+    canResetSample,
+    resetSample,
     scripts,
     saved,
     openedFile,

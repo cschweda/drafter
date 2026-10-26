@@ -194,6 +194,17 @@ export function registerBuiltinCommands(): void {
         run: quietly(() => script.openSample(sample.kind)),
       }),
     ),
+    // Back to the sample's own text, as one change Undo reverses; only while a sample is open and editable. The Help
+    // section of the app menu lists it too.
+    {
+      id: 'reset-sample',
+      title: 'Reset sample',
+      group: 'File',
+      enabled: () => script.canResetSample.value,
+      run: () => {
+        if (script.resetSample()) editor.goto(view.state.selection.main.head);
+      },
+    },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF or plain text; a Markdown document as its Markdown file or plain text (a PDF of one is deferred).
     {

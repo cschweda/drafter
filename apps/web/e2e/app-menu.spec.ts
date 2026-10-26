@@ -85,6 +85,9 @@ test.describe('the app menu', () => {
     await page.keyboard.press('ArrowDown');
     await expect(menu(page)).toBeVisible();
     await page.keyboard.press('End');
+    // The last item is Help's Reset sample (a sample is open); the one above it is Settings….
+    await expect(item(page, /^Reset sample/)).toBeFocused();
+    await page.keyboard.press('ArrowUp');
     await expect(item(page, /^Settings…/)).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();

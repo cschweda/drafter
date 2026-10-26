@@ -36,15 +36,21 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="source">
+    <SampleBar />
     <div ref="host" class="host" />
     <ElementAnnouncer />
   </div>
 </template>
 
 <style scoped>
-.source,
-.host {
+.source {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
+}
+.host {
+  flex: 1 1 0;
   min-height: 0;
 }
 </style>
