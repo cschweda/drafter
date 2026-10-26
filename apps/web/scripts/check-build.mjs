@@ -82,10 +82,10 @@ export async function iconsNamedInTs(appDir) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const siteDir = process.argv[2] ?? '.output/public';
+  const appDir = fileURLToPath(new URL('../app', import.meta.url));
   const { problems } = await checkBuild(siteDir, {
     fixture: process.env.DRAFTER_TEST_MODULES === '1',
-    // Icons named in `.ts` files are checked too once the scan reads them (see nuxt.config.ts).
-    icons: [],
+    icons: await iconsNamedInTs(appDir),
   });
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);

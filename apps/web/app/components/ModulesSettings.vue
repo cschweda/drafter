@@ -188,8 +188,6 @@ h3 {
 }
 .confirm {
   box-sizing: border-box;
-  /* Tailwind's reset takes the dialog's automatic margin, which centers it. */
-  margin: auto;
   width: min(26rem, calc(100vw - 32px));
   padding: 16px;
   border: 1px solid var(--line);

@@ -163,6 +163,20 @@ test.describe('the dialog', () => {
     await expect(editor(page)).toBeFocused();
   });
 
+  test('opens in the middle of the window', async ({ page }) => {
+    await openSettings(page);
+    const box = await dialog(page).boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    if (!box || !viewport) return;
+    // Within a pixel of the middle, across and down (a dialog taller than the window is as tall as it may be, centered).
+    expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y + box.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+  });
+
   test('fits a phone', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'a phone only');
     await openSettings(page);
