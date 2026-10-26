@@ -1,6 +1,7 @@
 import type { ChangeSet } from '@codemirror/state';
 import type { TextChange } from '@drafter/fountain';
 import { shallowRef } from 'vue';
+import { checkedChanges } from '../editor/apply-changes';
 import type { ModuleProblem } from './types';
 
 /** A module's problem as the host keeps it: the module's own positions, mapped through every edit. */
@@ -20,16 +21,44 @@ export const moduleProblems = shallowRef<readonly StoredModuleProblem[]>([]);
 const whole = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 
 /**
+ * A copy of a module's fix, its changes in order, if it fits the text (`length` characters) as
+ * `applyTextChanges` would take it; else undefined. A fix that doesn't fit would throw when it is
+ * mapped through the next edit, inside the editor's update.
+ */
+function fixOf(fix: unknown, length: number): StoredModuleProblem['fix'] {
+  if (typeof fix !== 'object' || fix === null) return undefined;
+  const { title, changes } = fix as { title?: unknown; changes?: unknown };
+  if (typeof title !== 'string' || title === '' || !Array.isArray(changes)) return undefined;
+  const copies: TextChange[] = [];
+  for (const change of changes as unknown[]) {
+    if (typeof change !== 'object' || change === null) return undefined;
+    const { from, to, insert } = change as Record<string, unknown>;
+    if (typeof from !== 'number' || typeof to !== 'number' || typeof insert !== 'string') {
+      return undefined;
+    }
+    copies.push({ from, to, insert });
+  }
+  try {
+    return { title, changes: checkedChanges(copies, length) };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Replaces `moduleId`'s items with `items`. Positions are kept inside the text (`length`
  * characters) and in order; an item that is no object, has no message, or has a position that is
- * no number is left out, and an unknown severity reads as info. The module's items keep their
- * place among the others.
+ * no number is left out, and an unknown severity reads as info. A fix whose changes don't fit the
+ * text (`applyTextChanges`'s rules) is dropped, and its problem kept. With `fixes: false` (the run
+ * that found them has seen the text change since) every fix is dropped. The module's items keep
+ * their place among the others.
  */
 export function setModuleProblems(
   moduleId: string,
   moduleName: string,
   items: readonly ModuleProblem[],
   length: number,
+  options: { fixes?: boolean } = {},
 ): void {
   const clamp = (n: number) => Math.min(length, Math.max(0, Math.trunc(n)));
   const mine: StoredModuleProblem[] = [];
@@ -39,13 +68,7 @@ export function setModuleProblems(
     if (!whole(item.from) || !whole(item.to)) continue;
     const a = clamp(item.from);
     const b = clamp(item.to);
-    const fix =
-      item.fix &&
-      typeof item.fix.title === 'string' &&
-      item.fix.title !== '' &&
-      Array.isArray(item.fix.changes)
-        ? { title: item.fix.title, changes: item.fix.changes.map((c) => ({ ...c })) }
-        : undefined;
+    const fix = options.fixes === false ? undefined : fixOf(item.fix, length);
     mine.push({
       moduleId,
       moduleName,

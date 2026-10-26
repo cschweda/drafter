@@ -108,8 +108,11 @@ Every part is handed a `ModuleContext`:
 - Reporting: `setProblems(items)` replaces this module's items in the Problems pane. They are
   labelled with the module's name and don't count toward the problem total. It returns `false` and
   does nothing once another script has been opened or the module turned off since the run began. An
-  item may carry a `fix`. Positions follow the text through edits; an item is dropped when an edit replaces all of its
-  text, loses its fix when an edit touches it, and all of them go when another script opens.
+  item may carry a `fix`, whose changes follow `applyChanges`'s rules; a fix that breaks them
+  (a position outside the text, backwards, or overlapping another) is dropped and its item kept,
+  and a run's fixes are all dropped once the text has been edited since the run began. Positions
+  follow the text through edits; an item is dropped when an edit replaces all of its text, loses
+  its fix when an edit touches it, and all of them go when another script opens.
 - Asking: `confirm(message, { confirmLabel?, cancelLabel? })` asks a yes-or-no question in Drafter's
   own modal dialog, headed with the module's name. Cancel has focus first and Escape is No. It
   resolves `true` only for a Yes, and `false` if another script has been opened or the module turned

@@ -463,6 +463,62 @@ describe("a module's problems", () => {
     expect(moduleProblems.value.map((p) => p.message)).toEqual(['shout']);
   });
 
+  test('keeps a problem but drops a fix that does not fit the text', () => {
+    const fix = (changes: unknown) => ({ title: 'Fix', changes: changes as never });
+    const problem = (message: string, changes: unknown) => ({
+      message,
+      from: 0,
+      to: 2,
+      severity: 'info' as const,
+      fix: fix(changes),
+    });
+    setModuleProblems(
+      'alpha',
+      'Alpha',
+      [
+        problem('past the end', [{ from: 5, to: 99, insert: '' }]),
+        problem('negative', [{ from: -1, to: 2, insert: '' }]),
+        problem('backwards', [{ from: 4, to: 2, insert: '' }]),
+        problem('not whole', [{ from: 1.5, to: 2, insert: '' }]),
+        problem('not a number', [{ from: '1', to: 2, insert: '' }]),
+        problem('no text', [{ from: 1, to: 2, insert: 7 }]),
+        problem('overlapping', [
+          { from: 0, to: 3, insert: 'x' },
+          { from: 2, to: 4, insert: 'y' },
+        ]),
+        problem('not a change', [null]),
+        problem('good, out of order', [
+          { from: 6, to: 8, insert: 'b' },
+          { from: 0, to: 2, insert: 'a' },
+        ]),
+      ],
+      10,
+    );
+    expect(moduleProblems.value.map((p) => [p.message, p.fix?.changes])).toEqual([
+      ['past the end', undefined],
+      ['negative', undefined],
+      ['backwards', undefined],
+      ['not whole', undefined],
+      ['not a number', undefined],
+      ['no text', undefined],
+      ['overlapping', undefined],
+      ['not a change', undefined],
+      [
+        'good, out of order',
+        [
+          { from: 0, to: 2, insert: 'a' },
+          { from: 6, to: 8, insert: 'b' },
+        ],
+      ],
+    ]);
+    // So an edit after it maps every fix that is left, and none throws.
+    expect(() => mapModuleProblems(ChangeSet.of({ from: 10, insert: '!' }, 10))).not.toThrow();
+    expect(moduleProblems.value.at(-1)?.fix?.changes).toEqual([
+      { from: 0, to: 2, insert: 'a' },
+      { from: 6, to: 8, insert: 'b' },
+    ]);
+  });
+
   test('leaves the list alone when there is nothing to move', () => {
     const before = moduleProblems.value;
     mapModuleProblems(ChangeSet.of({ from: 0, insert: 'x' }, 5));

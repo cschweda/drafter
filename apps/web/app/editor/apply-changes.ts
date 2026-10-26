@@ -11,7 +11,26 @@ import type { TextChange } from '@drafter/fountain';
  */
 export function applyTextChanges(view: EditorView, changes: readonly TextChange[]): boolean {
   if (view.state.readOnly) return false;
-  const length = view.state.doc.length;
+  const sorted = checkedChanges(changes, view.state.doc.length);
+  if (sorted.length === 0) return true;
+  view.dispatch({
+    changes: sorted.map((c) => ({
+      from: c.from,
+      to: c.to,
+      insert: String(c.insert).replace(/\r?\n/g, view.state.lineBreak),
+    })),
+    userEvent: 'input',
+    annotations: isolateHistory.of('full'),
+  });
+  return true;
+}
+
+/**
+ * `changes` in order, once each is known to fit a text of `length` characters: whole positions
+ * inside it, none backwards, none overlapping another (two may touch). Throws a RangeError that
+ * says which does not.
+ */
+export function checkedChanges(changes: readonly TextChange[], length: number): TextChange[] {
   const sorted = [...changes].sort((a, b) => a.from - b.from || a.to - b.to);
   for (const [i, change] of sorted.entries()) {
     const { from, to } = change;
@@ -24,15 +43,5 @@ export function applyTextChanges(view: EditorView, changes: readonly TextChange[
       throw new RangeError(`The changes at ${from}–${to} and ${next.from}–${next.to} overlap.`);
     }
   }
-  if (sorted.length === 0) return true;
-  view.dispatch({
-    changes: sorted.map((c) => ({
-      from: c.from,
-      to: c.to,
-      insert: String(c.insert).replace(/\r?\n/g, view.state.lineBreak),
-    })),
-    userEvent: 'input',
-    annotations: isolateHistory.of('full'),
-  });
-  return true;
+  return sorted;
 }

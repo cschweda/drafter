@@ -77,7 +77,9 @@ export interface ModuleContext {
   /**
    * Replaces this module's items in the Problems pane, labeled with the module's name; they don't
    * count toward the problem total. Returns false, doing nothing, once another script has been
-   * opened or the module turned off since the run began.
+   * opened or the module turned off since the run began. A fix whose changes don't fit the text
+   * (positions outside it, backwards, or overlapping) is dropped and its item kept; in a run, every
+   * fix is dropped once the text has been edited since the run began.
    */
   setProblems(items: readonly ModuleProblem[]): boolean;
   goto(offset: number): void;

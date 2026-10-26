@@ -73,6 +73,21 @@ export interface EditorSession {
 
 let session: EditorSession | undefined;
 
+/**
+ * Calls each listener with `value`. One that throws is reported and the rest are still called: the
+ * recovery copy is written by one of them, and a failure elsewhere (a module's problem that can't
+ * be mapped, say) must never stop it, keystroke after keystroke.
+ */
+function tell<T>(listeners: Iterable<(value: T) => void>, value: T): void {
+  for (const listener of listeners) {
+    try {
+      listener(value);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
 function create(): EditorSession {
   const doc = shallowRef<Doc>(parse(SAMPLE_SCREENPLAY));
   const cursor = shallowRef<CursorElement | null>(null);
@@ -114,10 +129,10 @@ function create(): EditorSession {
     editorExtensions(hooks, of),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) follow(update.state);
-      if (update.docChanged) for (const l of changeListeners) l(update.changes);
-      if (update.docChanged || update.selectionSet) for (const l of listeners) l(update.state);
+      if (update.docChanged) tell(changeListeners, update.changes);
+      if (update.docChanged || update.selectionSet) tell(listeners, update.state);
       if (update.docChanged || update.transactions.some((tr) => tr.effects.length > 0)) {
-        for (const l of updateListeners) l(update.state);
+        tell(updateListeners, update.state);
       }
     }),
   ];
@@ -163,9 +178,9 @@ function create(): EditorSession {
     cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
     // The new text starts at the top, whatever the old one's scroller was showing.
     view.dispatch({ effects: EditorView.scrollIntoView(0) });
-    for (const l of changeListeners) l(null);
-    for (const l of listeners) l(view.state);
-    for (const l of updateListeners) l(view.state);
+    tell(changeListeners, null);
+    tell(listeners, view.state);
+    tell(updateListeners, view.state);
   }
 
   function setKind(next: DocumentKind) {

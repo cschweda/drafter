@@ -57,7 +57,8 @@ export function moduleTurnedOff(id: string): void {
  * `applyChanges` and `setProblems` do nothing, and return false, once another script has been
  * opened or the module has been turned off. With `checkText` (a run) `applyChanges` also refuses
  * once the text has been edited by anyone but this context since it started, so a run that waited
- * (for a network answer, say) doesn't change text it never saw.
+ * (for a network answer, say) doesn't change text it never saw; its `setProblems` then keeps the
+ * problems but drops their fixes, which were written for that text.
  */
 function createContext(module: ScriptModule, checkText: boolean): ModuleContext {
   const editor = useEditor();
@@ -122,7 +123,11 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
     },
     setProblems(items) {
       if (!scope.live()) return false;
-      setModuleProblems(module.id, module.name, items, view.state.doc.length);
+      // A run's fixes are for the text it saw: once that has changed, the problems are still worth
+      // reporting, but their fixes would land in the wrong place.
+      setModuleProblems(module.id, module.name, items, view.state.doc.length, {
+        fixes: scope.mayChange(),
+      });
       return true;
     },
     goto(offset) {
