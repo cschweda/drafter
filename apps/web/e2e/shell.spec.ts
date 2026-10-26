@@ -30,6 +30,13 @@ test.describe('on a desktop', () => {
     await expect(page.getByRole('tabpanel', { name: 'Source' })).toContainText('Title: The Call');
   });
 
+  test('leaves room between the logo and the toolbar buttons', async ({ page }) => {
+    const logo = await page.getByRole('img', { name: 'Drafter' }).boundingBox();
+    const open = await page.getByRole('button', { name: 'Open' }).boundingBox();
+    if (!logo || !open) throw new Error('the logo or the Open button is missing');
+    expect(open.x - (logo.x + logo.width)).toBeGreaterThanOrEqual(24);
+  });
+
   test('swaps panes when a tab open in the other pane is chosen', async ({ page }) => {
     await page
       .getByRole('tablist', { name: 'Right pane' })

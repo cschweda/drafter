@@ -70,6 +70,7 @@ const ACTIONS = [
 }
 .logo {
   flex: none;
+  margin-right: 14px;
 }
 .logo img {
   display: block;
@@ -155,6 +156,9 @@ kbd {
   }
   .toolbar {
     padding: 8px 10px;
+  }
+  .logo {
+    margin-right: 6px;
   }
   .logo img {
     height: 22px;
