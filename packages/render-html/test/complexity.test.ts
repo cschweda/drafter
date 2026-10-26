@@ -31,6 +31,15 @@ const page = (lines: LayoutLine[], number = 1): Page => ({
 const rows = <T>(count: number, make: (i: number) => T): T[] =>
   Array.from({ length: count }, (_, i) => make(i));
 
+/** A line of a title page: no block, and a span of its own, so its place in the source says where it reads. */
+function titleLine(at: number, text: string, right?: LayoutLine): LayoutLine {
+  return {
+    ...line('contact', -1, text, right),
+    span: { from: at, to: at + 1 },
+    synthetic: 'title',
+  };
+}
+
 const cases: Array<[string, () => Page]> = [
   [
     'a cue that runs to twenty thousand lines',
@@ -56,6 +65,15 @@ const cases: Array<[string, () => Page]> = [
   [
     'ten thousand blocks of one line each',
     () => page(rows(10_000, (i) => line('action', i, 'Talk.'))),
+  ],
+  [
+    'a title page of ten thousand rows, two parts to a row, in reverse source order',
+    () =>
+      page(
+        rows(10_000, (i) =>
+          titleLine(20_000 - 2 * i, 'Left.', titleLine(20_000 - 2 * i - 1, 'Right.')),
+        ),
+      ),
   ],
   [
     'a line of two million characters, controls among them',

@@ -38,14 +38,39 @@ function place(el: HTMLElement, row: number, col: number) {
 }
 
 /**
+ * A title page's lines in the order of their fields in the source, each field's
+ * lines together. The layout puts the contact block bottom left and the draft
+ * date bottom right, level with the contact block's last line, so the date
+ * shares rows with the contact block, as the right part of a row, or as the
+ * row's only line when it is the longer. Every line of a title page is from no
+ * block, so there is nothing to tell the two columns apart as dual dialogue's
+ * are, and reading by rows would weave a wrapped date into the contact block.
+ * A field's lines have rising spans and no two fields' spans meet, so sorting
+ * by where a line starts in the source keeps each field whole.
+ */
+function titleOrder(lines: readonly LayoutLine[]): Part[] {
+  const order: Part[] = [];
+  lines.forEach((line, row) => {
+    if (!isBlank(line)) order.push({ line, row });
+    if (line.right && !isBlank(line.right)) order.push({ line: line.right, row });
+  });
+  // A sort is stable, so lines that share a span (a field with no source text) keep their places.
+  return order.sort((a, b) => a.line.span.from - b.line.span.from);
+}
+
+/**
  * The page's lines in the order they should be read. That is the order they
  * stand in, except that the right part of a row goes after the left lines of
  * the run it belongs to, so the left speech of dual dialogue reads before the
  * right one. A run goes on while the next line is from a block before the
  * right part's, which is how the longer left column's last lines, standing
- * alone on their rows, stay with the rest of it.
+ * alone on their rows, stay with the rest of it. A title page is read by
+ * field instead (`titleOrder`).
  */
 function readingOrder(lines: readonly LayoutLine[]): Part[] {
+  if (lines.some((line) => line.synthetic === 'title' || line.right?.synthetic === 'title')) {
+    return titleOrder(lines);
+  }
   const order: Part[] = [];
   let right: Part[] = [];
   // The first block of the right column, which the left column's blocks come before.
