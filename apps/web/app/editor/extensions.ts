@@ -1,11 +1,11 @@
 import { completionKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { foldGutter, foldKeymap } from '@codemirror/language';
-import { forceLinting, lintKeymap } from '@codemirror/lint';
+import { lintKeymap } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { Compartment, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view';
-import { type CursorElement, fountain } from '@drafter/cm-fountain';
+import { type CursorElement, fountain, relint as relintView } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
 import { theme } from './theme';
 
@@ -28,22 +28,22 @@ export const lineNumbersGutter = new Compartment();
 
 let active: EditorView | undefined;
 
-/** Remembers the view the extensions are in, for `relint`. */
+/**
+ * Remembers the view the extensions are in, for `relint`. The one editor lives for the visit, and
+ * `setState` (a project opened) makes this plugin again on the same view, so it never lets go.
+ */
 const remember = ViewPlugin.define((view) => {
   active = view;
-  return {
-    destroy() {
-      if (active === view) active = undefined;
-    },
-  };
+  return {};
 });
 
 /**
- * Lints again now. `fountain()` reads the template and the lint options on each run, so the
- * settings and a template change call this to have the new ones read.
+ * Lints again now, through cm-fountain's `relint` (a bare `forceLinting` doesn't re-run its
+ * source). `fountain()` reads the template and the lint options on each run, so the settings and a
+ * template change call this to have the new ones read.
  */
 export function relint(): void {
-  if (active) forceLinting(active);
+  if (active) relintView(active);
 }
 
 export interface EditorHooks {

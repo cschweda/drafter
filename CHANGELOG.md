@@ -150,6 +150,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **A failed layout shows:** when the layout worker can't be made or fails before any page is drawn, the pane says "Couldn't lay out the pages." and the editor goes on.
   - **The pressed Fit width / 100% button** has a 1px line in the heading color under it, like the selected tab.
   - **The 120-page test** now proves the pages kept up with the typing, and that its long-task observer works.
+- `apps/web`: the current script and its recovery copy, kept in the browser as you type.
+  - **Opening:** the app opens the most recently updated script, or saves the screenplay sample as a script on a first visit. Opening a script gives the one editor a fresh state with its own undo history.
+  - **Writing:** every change schedules the recovery-copy writer (750 ms after the last change, or every 5 s of continuous typing). The pending text is written when the page is hidden or closing, and `localStorage` holds it for a moment as well, since a closing page can start an IndexedDB write but not finish it; the next launch writes what was left.
+  - **Its state:** the status bar reads "Recovery copy: kept in this browser", "may be cleared", or "unavailable", each a button that explains itself. "May be cleared" also shows a warning that can be dismissed for the visit. "Unavailable" (IndexedDB won't open, or a write fails) shows one that stays until a write succeeds, and Drafter tries again on the next change and every 30 seconds. With no IndexedDB the editor runs on the sample in memory, and text typed meanwhile becomes a script when storage comes back.
+  - **The status bar's first item** reads "Sample · your edits stay in this browser", or "Not saved to a file yet"; the Source pane's bar shows the script's title.
+  - **Leaving:** the interim leave warning is gone. A script that isn't a sample asks before the page closes while it has unsaved changes; a sample never asks, unless nothing can keep its edits.
+  - **Projects** gain `bom`, whether the file began with a byte-order mark, for Task 8 to set (no new database version).
+  - **Linting again:** `relint()` calls `@drafter/cm-fountain`'s `relint(view)`.
 
 ### Changed
 

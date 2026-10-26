@@ -123,6 +123,20 @@ describe('projects', () => {
     await removeProject(p.id);
   });
 
+  test('keeps the file’s byte-order mark, with no index and no new version', async () => {
+    const withBom = await createProject({ source: 'Title: One\n', bom: true });
+    const without = await createProject({ source: 'Title: Two\n' });
+    expect((await getProject(withBom.id))?.bom).toBe(true);
+    expect((await getProject(without.id))?.bom).toBeUndefined();
+    // An update that doesn't mention it leaves it, and one that does changes it.
+    await updateProject(withBom.id, { source: 'Title: One!\n' });
+    expect((await getProject(withBom.id))?.bom).toBe(true);
+    await updateProject(withBom.id, { bom: false });
+    expect((await getProject(withBom.id))?.bom).toBe(false);
+    expect(db.verno).toBe(1);
+    expect(db.table('projects').schema.idxByName.bom).toBeUndefined();
+  });
+
   test('has the whole version-1 schema', () => {
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'handles',

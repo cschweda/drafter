@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
+import { useScript } from '~/storage/script';
 import { TABS, type TabId } from '~/utils/panes';
 
 const props = defineProps<{
@@ -15,10 +16,11 @@ const props = defineProps<{
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
 // Until the Problems list arrives (Plan 3), its panel holds a placeholder: a line of text.
-const SLIM: Record<Exclude<TabId, 'script'>, string> = {
-  source: 'screenplay.fountain',
+const { project } = useScript();
+const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
+  source: project.value?.fileName ?? project.value?.title ?? '',
   problems: 'No problems',
-};
+}));
 
 const { page, updating } = useLayout();
 const zoom = useScriptZoom();

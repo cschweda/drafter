@@ -1,5 +1,4 @@
-import { StateEffect } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import type { EditorState } from '@codemirror/state';
 import { parsedDoc } from '@drafter/cm-fountain';
 import type { Layout } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
@@ -39,7 +38,7 @@ export interface LayoutSession {
 let session: LayoutSession | undefined;
 
 function create(): LayoutSession {
-  const { view, doc, template } = useEditor();
+  const { view, doc, template, onState } = useEditor();
   const layout = shallowRef<Layout | null>(null);
   const layoutTemplate = shallowRef<Template | null>(null);
   const updating = ref(false);
@@ -92,18 +91,12 @@ function create(): LayoutSession {
   });
 
   // The block holding the cursor, or before it on a blank line (the editor's element is null there).
-  const track = (state: EditorView['state']) => {
+  const track = (state: EditorState) => {
     const block = blockIndexAt(state.field(parsedDoc), state.selection.main.head);
     if (block !== cursorBlock.value) cursorBlock.value = block;
   };
   track(view.state);
-  view.dispatch({
-    effects: StateEffect.appendConfig.of(
-      EditorView.updateListener.of((update) => {
-        if (update.selectionSet || update.docChanged) track(update.state);
-      }),
-    ),
-  });
+  onState(track);
 
   return {
     layout,

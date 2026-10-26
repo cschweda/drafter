@@ -133,64 +133,6 @@ test.describe('on a desktop', () => {
     await expect(page.locator('.announcer')).toHaveText('');
   });
 
-  test.describe('leaving the page', () => {
-    // Closing runs the page's beforeunload handlers. A page that registers
-    // one raises a dialog, and stays open; one that doesn't closes.
-    async function leave(page: Page): Promise<'dialog' | 'closed'> {
-      const outcome = new Promise<'dialog' | 'closed'>((resolve) => {
-        page.once('dialog', (dialog) => {
-          expect(dialog.type()).toBe('beforeunload');
-          void dialog.dismiss();
-          resolve('dialog');
-        });
-        page.once('close', () => resolve('closed'));
-      });
-      await page.close({ runBeforeUnload: true });
-      return outcome;
-    }
-
-    // Whether the page has a beforeunload handler that asks: it cancels the
-    // event. Each browser's own closing is too different to rely on for the
-    // quiet cases (WebKit doesn't close at all), so this reads it directly.
-    const asks = (page: Page) =>
-      page.evaluate(() => {
-        const event = new Event('beforeunload', { cancelable: true });
-        window.dispatchEvent(event);
-        return event.defaultPrevented;
-      });
-
-    test('asks before leaving with edits', async ({ page }) => {
-      await page.locator('.cm-content').click();
-      await page.keyboard.press('ControlOrMeta+End');
-      await page.keyboard.type('Unsaved.');
-      await expect(page.locator('.cm-content')).toContainText('Unsaved.');
-      expect(await asks(page)).toBe(true);
-      expect(await leave(page)).toBe('dialog');
-    });
-
-    test('does not ask when nothing has changed', async ({ page }) => {
-      await page.locator('.cm-content').click();
-      expect(await asks(page)).toBe(false);
-    });
-
-    test('closes without a dialog when nothing has changed', async ({ page, browserName }) => {
-      test.skip(browserName === 'webkit', 'WebKit leaves the page open when it is closed this way');
-      await page.locator('.cm-content').click();
-      expect(await leave(page)).toBe('closed');
-    });
-
-    test('does not ask once the text is back to what it opened with', async ({ page }) => {
-      await page.locator('.cm-content').click();
-      await page.keyboard.press('ControlOrMeta+End');
-      await page.keyboard.type('Unsaved.');
-      await expect(page.locator('.cm-content')).toContainText('Unsaved.');
-      expect(await asks(page)).toBe(true);
-      await page.keyboard.press('ControlOrMeta+z');
-      await expect(page.locator('.cm-content')).not.toContainText('Unsaved.');
-      expect(await asks(page)).toBe(false);
-    });
-  });
-
   test('shows a ring around the editor when it has focus', async ({ page }) => {
     await page.locator('.cm-content').click();
     const ring = await page.locator('.cm-editor').evaluate((el) => {

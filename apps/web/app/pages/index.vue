@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
+import { useScript } from '~/storage/script';
 import { otherPane, type PaneId } from '~/utils/panes';
 
 const { tabs, phoneTab, split, choose, resize } = usePanes();
@@ -18,6 +19,8 @@ function onKeydown(event: KeyboardEvent) {
 // The editor is parked here whenever the Source tab isn't showing.
 const { view } = useEditor();
 const holder = ref<HTMLElement>();
+// Opens the current script, and starts keeping its recovery copy.
+useScript();
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
@@ -28,7 +31,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
 <template>
   <div class="shell" :style="{ '--split': split }">
-    <AppToolbar />
+    <div class="top">
+      <AppToolbar />
+      <StorageWarning />
+    </div>
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane

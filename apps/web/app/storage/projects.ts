@@ -18,6 +18,8 @@ export interface Project {
   updatedAt: number;
   savedHash?: string;
   savedAt?: number;
+  /** The file began with a byte-order mark, which writing it restores; absent on a script that came from no file. Unindexed, so it needed no new version. */
+  bom?: boolean;
   /** The file's name, for the Source pane's slim bar. */
   fileName?: string;
   fsHandleId?: string;
@@ -76,6 +78,19 @@ export async function updateProject(
     };
     await db.projects.put(next);
   });
+}
+
+/**
+ * The recovery copy's write: `current` with a new `source` (and what derives from it) in one
+ * request, with no read first. A page that is closing has time to start a request, not to wait
+ * for a read's answer before it makes the next, so `updateProject`'s read-then-write can be lost
+ * there. The caller holds `current`; a change made to the stored project by anything else since
+ * is overwritten.
+ */
+export async function writeSource(current: Project, source: string): Promise<Project> {
+  const next: Project = { ...current, ...derive(source), source, updatedAt: Date.now() };
+  await db.projects.put(next);
+  return next;
 }
 
 /** Also deletes its snapshot and its file handle; never touches the file. */
