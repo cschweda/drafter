@@ -113,6 +113,33 @@ test.describe('sample modules', () => {
     await expect.poll(() => textOf(page)).toContain('>EXT. YARD - NIGHT');
   });
 
+  test('goes to a scene from a tab that stayed open while another script was opened', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone shows one tab at a time, so the tab is drawn again anyway');
+    await openScript(page);
+    await turnOn(page, 'Scene list');
+    await button(page, 'Scenes').click();
+    const panel = modulePanel(page, 'Scenes');
+    await expect(panel.getByRole('button')).toHaveCount(2);
+
+    // A new script opens in the Source pane, and the Scenes tab stays in the other.
+    await page.keyboard.press('ControlOrMeta+Alt+n');
+    await expect(editor(page)).toContainText('Untitled Screenplay');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.insertText('INT. ATTIC - DAY\n\nDust.\n\nEXT. ROOF - NIGHT\n\nWind.');
+    const rows = panel.getByRole('button');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1)).toContainText('EXT. ROOF - NIGHT');
+
+    // Its rows go to the new script's scenes.
+    await rows.nth(1).click();
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.insertText('>');
+    await expect.poll(() => textOf(page)).toContain('>EXT. ROOF - NIGHT');
+  });
+
   test('turns on each sample module and uses it: Cast', async ({ page }) => {
     await openScript(page);
     await turnOn(page, 'Cast');

@@ -5,6 +5,7 @@ import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
@@ -159,9 +160,11 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
+      <!-- Keyed by the script as well: a tab keeps the context it is drawn with, so another
+           script draws it afresh with that script's context. -->
       <ModuleBoundary
         v-else-if="moduleTab"
-        :key="moduleTab.id"
+        :key="`${moduleTab.id}:${contextGeneration()}`"
         :name="moduleTab.module.name"
         what="tab"
       >

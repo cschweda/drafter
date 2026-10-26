@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { contextFor } from '~/modules/context';
+import { contextFor, contextGeneration } from '~/modules/context';
 import { consentMessage, networkNotice, useModules } from '~/modules/registry';
 import type { ScriptModule } from '~/modules/types';
 
@@ -80,7 +80,13 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
           @change="toggle(module, $event)"
         >
       </div>
-      <ModuleBoundary v-if="module.settings && isOn(module)" :name="module.name" what="settings">
+      <!-- Drawn afresh when another script opens, with that script's context (see AppPane). -->
+      <ModuleBoundary
+        v-if="module.settings && isOn(module)"
+        :key="contextGeneration()"
+        :name="module.name"
+        what="settings"
+      >
         <component :is="module.settings" :context="contextFor(module)" />
       </ModuleBoundary>
     </div>

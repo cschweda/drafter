@@ -30,6 +30,16 @@ const contexts = new Map<string, ModuleContext>();
 /** The first layout request that was made for the script now open. */
 let layoutFloor = 0;
 
+/**
+ * Which script the contexts from `contextFor` are for: it changes when another script opens. A
+ * module's tab or settings may keep the context it was first given (a component's `setup` runs
+ * once), so the host keys them by this and draws them afresh, with the new context, after a switch.
+ * Reactive: what reads it while drawing is drawn again.
+ */
+export function contextGeneration(): number {
+  return generation.value;
+}
+
 /** Another script was opened. */
 export function scriptChanged(): void {
   dropQuestion();
