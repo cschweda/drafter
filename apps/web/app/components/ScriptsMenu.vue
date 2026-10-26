@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TEMPLATE_NAMES } from '~/editor/template';
 import type { Project } from '~/storage/projects';
+import { saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
 // The Open menu (Phase 1 design §9.3): new scripts, this browser's scripts, and the samples. The
@@ -182,6 +183,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
         @click="run(() => script.newScript('stage-play'), false)"
       >
         <UIcon name="i-lucide-drama" class="icon" />New stage play
+      </button>
+      <button type="button" class="item" :disabled="busy" @click="run(() => saveAs())">
+        <UIcon name="i-lucide-save-all" class="icon" />Save As…
       </button>
 
       <div role="group" aria-labelledby="scripts-yours">

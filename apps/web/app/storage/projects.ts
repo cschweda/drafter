@@ -1,6 +1,7 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import { db } from './db';
+import type { FileRef } from './files';
 import { titleOf } from './text';
 
 export interface Project {
@@ -87,16 +88,24 @@ export async function updateProject(
 }
 
 /**
- * The recovery copy's write: `current` with a new `source` (and what derives from it) in one
- * request, with no read first. A page that is closing has time to start a request, not to wait
- * for a read's answer before it makes the next, so `updateProject`'s read-then-write can be lost
- * there. The caller holds `current`; a change made to the stored project by anything else since
- * is overwritten.
+ * The recovery copy's write: the stored project with a new `source` (and what derives from it,
+ * and `updatedAt`), in one transaction. Nothing else is taken from `current`, so a change another
+ * tab made to the stored project meanwhile (a save recorded from a read-only tab) is kept; it is
+ * the stored project's own fields that the result carries, and `current` stands in only for a
+ * project that has gone from the database.
  */
 export async function writeSource(current: Project, source: string): Promise<Project> {
-  const next: Project = { ...current, ...derive(source), source, updatedAt: Date.now() };
-  await db.projects.put(next);
-  return next;
+  return db.transaction('rw', db.projects, async () => {
+    const stored = await db.projects.get(current.id);
+    const next: Project = {
+      ...(stored ?? current),
+      ...derive(source),
+      source,
+      updatedAt: Date.now(),
+    };
+    await db.projects.put(next);
+    return next;
+  });
 }
 
 /** Also deletes its snapshot and its file handle; never touches the file. */
@@ -125,4 +134,14 @@ export async function setSavedText(id: string, source: string): Promise<void> {
     source,
     label: 'Saved',
   });
+}
+
+/** Keeps `ref` under `id` (the project's `fsHandleId`) and returns the id. */
+export async function putHandle(id: string, ref: FileRef): Promise<string> {
+  await db.handles.put({ id, ref });
+  return id;
+}
+
+export async function getHandle(id: string): Promise<FileRef | undefined> {
+  return (await db.handles.get(id))?.ref;
 }

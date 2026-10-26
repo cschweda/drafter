@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+import { save } from '~/storage/save';
 
 const colorMode = useColorMode();
 const { doc } = useEditor();
@@ -11,7 +12,7 @@ function toggleTheme() {
   colorMode.preference = dark.value ? 'light' : 'dark';
 }
 
-// Open is the scripts menu. The others wait for files (Plans 3 and 4): until then they show, but
+// Open is the scripts menu and Save saves. The others wait for Plan 4: until then they show, but
 // say they're unavailable.
 const ACTIONS = [
   { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
@@ -44,6 +45,16 @@ const ACTIONS = [
             <span class="label">{{ action.label }}</span>
           </button>
         </ScriptsMenu>
+        <button
+          v-else-if="action.kind === 'save'"
+          type="button"
+          class="act"
+          :data-tour="action.tour"
+          @click="save().catch(() => {})"
+        >
+          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+          <span class="label">{{ action.label }}</span>
+        </button>
         <button
           v-else
           type="button"

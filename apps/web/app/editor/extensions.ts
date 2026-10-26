@@ -36,6 +36,16 @@ export function readOnlyExtension(on: boolean): Extension {
   return [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
 }
 
+/**
+ * What Mod-s and Mod-Shift-s do. `storage/save.ts` fills them in (it can't be imported here:
+ * it reaches the editor session, which reaches this file), and the window's own listener in the
+ * capture phase usually gets there first. Plan 4's command registry takes over both.
+ */
+export const fileKeys: { save: () => void; saveAs: () => void } = {
+  save: () => {},
+  saveAs: () => {},
+};
+
 let active: EditorView | undefined;
 
 /**
@@ -72,6 +82,24 @@ export function editorExtensions({ template, onCursorElement }: EditorHooks): Ex
     foldGutter(),
     search(),
     EditorView.lineWrapping,
+    keymap.of([
+      {
+        key: 'Mod-s',
+        run: () => {
+          fileKeys.save();
+          return true;
+        },
+        preventDefault: true,
+      },
+      {
+        key: 'Mod-Shift-s',
+        run: () => {
+          fileKeys.saveAs();
+          return true;
+        },
+        preventDefault: true,
+      },
+    ]),
     // Below fountain()'s own keys, which sit at Prec.high.
     keymap.of([
       ...searchKeymap,

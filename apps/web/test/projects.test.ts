@@ -9,6 +9,7 @@ import {
   removeProject,
   setSavedText,
   updateProject,
+  writeSource,
 } from '../app/storage/projects';
 
 beforeEach(async () => {
@@ -164,5 +165,27 @@ describe('projects', () => {
       'createdAt',
       'projectId',
     ]);
+  });
+
+  test('writes the recovery copy over the stored project, keeping what else was recorded', async () => {
+    const held = await createProject({ source: 'Title: A\n\nOne.\n' });
+    // Another tab recorded a save while this one held the project as it was.
+    await updateProject(held.id, { savedHash: 'abc', savedAt: 5, fileName: 'a.fountain' });
+    vi.setSystemTime(2_000);
+    const written = await writeSource(held, 'Title: B\n\nTwo.\n');
+    expect(written.title).toBe('B');
+    expect(written.updatedAt).toBe(2_000);
+    const stored = await getProject(held.id);
+    expect(stored).toEqual(written);
+    expect(stored?.source).toBe('Title: B\n\nTwo.\n');
+    expect(stored?.savedHash).toBe('abc');
+    expect(stored?.fileName).toBe('a.fountain');
+  });
+
+  test('writes the recovery copy of a project that has gone from the database', async () => {
+    const held = await createProject({ source: 'Title: A\n' });
+    await removeProject(held.id);
+    await writeSource(held, 'Title: A\n\nAgain.\n');
+    expect((await getProject(held.id))?.source).toBe('Title: A\n\nAgain.\n');
   });
 });

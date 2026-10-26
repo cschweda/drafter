@@ -415,7 +415,8 @@ test.describe('new scripts and switching', () => {
     await page.keyboard.insertText('Y');
     await page.reload();
     await expect(editor(page)).toContainText('Y');
-    expect(await asks(page)).toBe(true);
+    // The handler is registered once the script is open, a moment after the text shows.
+    await expect.poll(() => asks(page)).toBe(true);
   });
 
   test('works from the keyboard', async ({ page }) => {

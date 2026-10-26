@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
+import { installSaveKeys } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { titleOf } from '~/storage/text';
 import { otherPane, type PaneId } from '~/utils/panes';
 
 const { tabs, phoneTab, split, choose, resize } = usePanes();
@@ -17,16 +19,25 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 // The editor is parked here whenever the Source tab isn't showing.
-const { view } = useEditor();
+const { view, doc } = useEditor();
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
-useScript();
+const { dirty } = useScript();
+
+// The tab says which script this is, and whether it has changes that aren't in its file.
+useHead({ title: computed(() => `${dirty.value ? '• ' : ''}${titleOf(doc.value)} — Drafter`) });
+
+let removeSaveKeys: (() => void) | undefined;
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
+  removeSaveKeys = installSaveKeys();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown);
+  removeSaveKeys?.();
+});
 </script>
 
 <template>

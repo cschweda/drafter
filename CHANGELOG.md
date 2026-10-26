@@ -169,6 +169,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Samples** open as scripts of their own that stay in this browser with your edits to them. Switching keeps the script you leave first; if it can't be kept, nothing is switched.
   - **Remove from this browser** asks first and says the file isn't touched (and when the script has never been saved to a file, that removing it deletes the only copy). Removing the open script opens the most recent other one, or the screenplay sample. A script another tab has open is never removed, and the menu says so.
   - **Another tab:** switching to a script another tab holds opens it read-only, and the script you left is let go.
+- `apps/web`: Save and Save As. **Save** (toolbar, `Mod+S`) writes the script to its file: in place on Chromium, remembered across reloads, and by download in browsers without the File System Access API. **Save As…** (Open menu, `Mod+Shift+S`) asks where. A sample saved this way becomes a script of the writer's own and the sample is left as it was. The status bar reads "Saved just now", "Saved N min ago", "Saved at 3:42 PM", or "Unsaved changes", and the tab title starts with a bullet while there are changes. Files keep their line breaks and byte-order mark. All file access goes through one `FileAccess` interface (`storage/files.ts`) that a desktop build can replace.
 
 ### Changed
 
@@ -216,6 +217,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - Only one switch of scripts runs at a time: a double click on New screenplay makes one script, and a second switch can no longer load over text typed after the first. The menu's items are disabled while one is under way.
   - A tab handing a script over lets go of the lock it was asked about, not one a switch took meanwhile.
   - Removing a script that has a file, with changes since its last save, says those changes are lost.
+- `apps/web`: the recovery copy's write keeps what else is recorded on the stored project (`writeSource` merges into a fresh read), so a save recorded from another tab isn't undone by the next write.
 
 ### Security
 

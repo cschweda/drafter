@@ -3,6 +3,7 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { useEditor } from '~/editor/session';
 import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+import { saveError } from '~/storage/save';
 import { type RecoveryState, useScript } from '~/storage/script';
 
 const { doc } = useEditor();
@@ -10,9 +11,40 @@ const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
 const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
 
-// Task 7 adds what a saved script says here.
+// "Saved 4 min ago" is worked out from this, which moves every 30 seconds (and when a save lands).
+const now = ref(Date.now());
+let tick: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  tick = setInterval(() => {
+    now.value = Date.now();
+  }, 30_000);
+});
+onBeforeUnmount(() => clearInterval(tick));
+// What a screen reader hears when a save lands; the visible text keeps counting minutes.
+const announcement = ref('');
+watch(
+  () => project.value?.savedAt,
+  (at, before) => {
+    now.value = Date.now();
+    announcement.value = at !== undefined && at !== before ? 'Saved' : '';
+  },
+);
+
+function savedAgo(savedAt: number): string {
+  const minutes = Math.floor((now.value - savedAt) / 60_000);
+  if (minutes < 1) return 'Saved just now';
+  if (minutes < 60) return `Saved ${minutes} min ago`;
+  const time = new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return `Saved at ${time}`;
+}
+
 const file = computed(() => {
-  const sample = project.value ? !!project.value.sample : !dirty.value;
+  const current = project.value;
+  // A script that has been saved to a file says how long ago, or that it has changed since.
+  if (current?.savedAt !== undefined) {
+    return dirty.value ? 'Unsaved changes' : savedAgo(current.savedAt);
+  }
+  const sample = current ? !!current.sample : !dirty.value;
   return sample ? 'Sample · your edits stay in this browser' : 'Not saved to a file yet';
 });
 
@@ -45,6 +77,8 @@ function onKeydown(event: KeyboardEvent) {
 <template>
   <footer class="status" data-tour="status" @keydown="onKeydown">
     <span>{{ file }}</span>
+    <span class="sr-only" role="status">{{ announcement }}</span>
+    <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
     <span v-if="page">{{ pageLabel(page) }}</span>
     <span class="spacer" />
     <template v-if="ready">
@@ -77,6 +111,11 @@ function onKeydown(event: KeyboardEvent) {
 }
 .spacer {
   flex: 1;
+}
+.failed {
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--heading);
+  padding-left: 8px;
 }
 .recovery {
   padding: 0;

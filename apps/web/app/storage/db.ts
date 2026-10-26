@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { FileRef } from './files';
 import type { Project } from './projects';
 
 /** A saved copy of a script's text (technical design §8.4). */
@@ -16,10 +17,10 @@ export interface UserTemplate {
   [key: string]: unknown;
 }
 
-/** A file handle kept for a project, on Chromium only. */
+/** The file a project was saved to or opened from, as the `FileAccess` in use made it (a handle, on Chromium). */
 export interface HandleRow {
   id: string;
-  handle: FileSystemFileHandle;
+  ref: FileRef;
 }
 
 export interface SettingRow {

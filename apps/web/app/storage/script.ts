@@ -12,6 +12,7 @@ import {
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
 import { db } from './db';
+import type { FileRef } from './files';
 import { guardControl, useGuard } from './guard';
 import { hashText } from './hash';
 import { checkRecovery, type RecoveryState, requestPersistence } from './health';
@@ -22,7 +23,10 @@ import {
   getSavedText,
   listProjects,
   type Project,
+  putHandle,
   removeProject,
+  setSavedText,
+  updateProject,
   writeSource,
 } from './projects';
 import { allStashes, clearStash, readStash, stash } from './unwritten';
@@ -49,6 +53,14 @@ export interface ScriptSession {
   openSample(kind: SampleKind): Promise<void>;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
   scripts(): Promise<Project[]>;
+  /**
+   * The editor's `text` was just written to a file called `fileName` (`ref`: where, unless it was
+   * downloaded). Records it: the saved text and hash, the time, and the file, in the database and
+   * in the copy the session holds, and the text becomes what "changed" is measured from. A sample
+   * becomes a new script of the writer's own, which the editor then shows (the sample is left as
+   * it was). Failing to record it is not failing to save: the file has the text.
+   */
+  saved(info: { text: string; fileName: string; ref: FileRef | null }): Promise<void>;
   /** Whether `p`'s text differs from what was last saved to its file (or from where it started). */
   changed(p: Project): Promise<boolean>;
   /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
@@ -142,20 +154,37 @@ function create(): ScriptSession {
     if (failing) armRetry();
   }
 
+  /**
+   * Changes to the stored project go one at a time, each starting from the copy the session holds
+   * when it runs: a recovery write and a save's bookkeeping can't overwrite each other.
+   */
+  let exclusiveTail: Promise<unknown> = Promise.resolve();
+  function exclusive<T>(run: () => Promise<T>): Promise<T> {
+    const result = exclusiveTail.then(run);
+    exclusiveTail = result.catch(() => {});
+    return result;
+  }
+
   /** Writes `source` as the recovery copy of project `id`; a failure is the "unavailable" state. */
   async function persist(id: string, source: string) {
-    const current = project.value;
-    // The script was switched away from: `open` flushed it first, so nothing is lost here.
-    // Not a success: the text was not written, and the writer must keep it.
-    if (!current || current.id !== id) throw new Error(`There is no script ${id} to write to.`);
+    let gone = false;
     try {
-      const next = await writeSource(current, source);
-      // The title is a cache of the text.
-      if (project.value?.id === id) project.value = next;
+      await exclusive(async () => {
+        const current = project.value;
+        if (!current || current.id !== id) {
+          gone = true;
+          return;
+        }
+        // The title is a cache of the text.
+        project.value = await writeSource(current, source);
+      });
     } catch (error) {
       fail();
       throw error;
     }
+    // The script was switched away from: `open` flushed it first, so nothing is lost here.
+    // Not a success: the text was not written, and the writer must keep it.
+    if (gone) throw new Error(`There is no script ${id} to write to.`);
     // What a closing page left behind is written, unless newer text has been typed since.
     if (view.state.doc.toString() === source) clearStash(id);
     if (failing) {
@@ -283,35 +312,48 @@ function create(): ScriptSession {
   const switches = ref(0);
   const switching = computed(() => switches.value > 0);
 
+  let running: Promise<unknown> = Promise.resolve();
+
   /**
    * Makes the script `resolve` returns the current one, and says whether it did. A request that
    * comes while a switch is under way is ignored (a double click on New is one new script, and a
-   * second switch can't load over text typed after the first). `removing` is the current script's
-   * id when it is being removed: it goes once the replacement exists, and a failure anywhere
-   * leaves it open.
+   * second switch can't load over text typed after the first), unless it `wait`s its turn.
+   * `removing` is the current script's id when it is being removed: it goes once the replacement
+   * exists, and a failure anywhere leaves it open. `keep` shows the new script with the editor's
+   * own state, undo history and cursor included, for a script made from the text already there.
    */
-  async function switchTo(resolve: () => Promise<Project>, removing?: string): Promise<boolean> {
-    if (switching.value) return false;
-    switches.value++;
-    try {
-      // A failed flush stops here: the text it couldn't keep must not be replaced.
-      await writer?.flush();
-      const next = await resolve();
-      if (next.id === project.value?.id) return false;
-      const from = await baselineOf(next);
-      if (removing) {
-        // Nothing is pending (the flush wrote it, and the editor is read-only), so what the writer
-        // would write next can't bring the script back.
-        await removeProject(removing);
-        writer?.discard();
-        clearStash(removing);
-      }
-      attach(next, from, false, await guardControl.claim(next.id));
-      guardControl.finish();
-      return true;
-    } finally {
-      switches.value--;
+  async function switchTo(
+    resolve: () => Promise<Project>,
+    options: { removing?: string; keep?: boolean; wait?: boolean } = {},
+  ): Promise<boolean> {
+    while (switching.value) {
+      if (!options.wait) return false;
+      await running;
     }
+    const run = (async () => {
+      switches.value++;
+      try {
+        // A failed flush stops here: the text it couldn't keep must not be replaced.
+        await writer?.flush();
+        const next = await resolve();
+        if (next.id === project.value?.id) return false;
+        const from = await baselineOf(next);
+        if (options.removing) {
+          // Nothing is pending (the flush wrote it, and the editor is read-only), so what the writer
+          // would write next can't bring the script back.
+          await removeProject(options.removing);
+          writer?.discard();
+          clearStash(options.removing);
+        }
+        attach(next, from, options.keep ?? false, await guardControl.claim(next.id));
+        guardControl.finish();
+        return true;
+      } finally {
+        switches.value--;
+      }
+    })();
+    running = run.catch(() => {});
+    return run;
   }
 
   async function open(id: string) {
@@ -338,6 +380,78 @@ function create(): ScriptSession {
     await switchTo(() => sampleProject(kind));
   };
 
+  // ---- Saving to a file --------------------------------------------------------------------
+
+  /** Changes the open script's stored fields and the copy held here together. */
+  function patch(id: string, fields: Partial<Project>): Promise<void> {
+    return exclusive(async () => {
+      const held = project.value;
+      if (held?.id === id && writer && !guard.readOnly.value) {
+        // This tab writes the script, and the copy it holds is the stored one.
+        const next: Project = { ...held, ...fields, updatedAt: Date.now() };
+        project.value = next;
+        await db.projects.put(next);
+      } else {
+        // Not this tab's to overwrite: change those fields in the stored copy only.
+        await updateProject(id, fields);
+        if (held?.id === id) project.value = { ...held, ...fields };
+      }
+    });
+  }
+
+  async function saved({
+    text: savedText,
+    fileName,
+    ref,
+  }: {
+    text: string;
+    fileName: string;
+    ref: FileRef | null;
+  }) {
+    // The file has this text, whatever happens to the record of it.
+    baseline.value = text(savedText);
+    const current = project.value;
+    // No script is kept in this browser (the database is down): the file is all there is.
+    if (!current) return;
+    try {
+      // The text that was written is kept as the recovery copy too, before the record points at it.
+      await writer?.flush().catch(() => {});
+      const hash = await hashText(savedText);
+      const savedAt = Date.now();
+      if (current.sample) {
+        const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
+        // The sample stays as it was; a script of the writer's own takes the text.
+        await switchTo(
+          async () => {
+            const created = await createProject({
+              source: savedText,
+              fileName,
+              savedHash: hash,
+              savedAt,
+              ...(handleId ? { fsHandleId: handleId } : {}),
+            });
+            await setSavedText(created.id, savedText);
+            return created;
+          },
+          { keep: true, wait: true },
+        );
+        return;
+      }
+      const fsHandleId = ref
+        ? await putHandle(current.fsHandleId ?? crypto.randomUUID(), ref)
+        : current.fsHandleId;
+      await setSavedText(current.id, savedText);
+      await patch(current.id, {
+        savedHash: hash,
+        savedAt,
+        fileName,
+        ...(fsHandleId ? { fsHandleId } : {}),
+      });
+    } catch {
+      // The file was written; the recovery copy's state says if the database is the problem.
+    }
+  }
+
   async function changed(p: Project): Promise<boolean> {
     const from = await baselineOf(p);
     return from === null || !text(p.source).eq(from);
@@ -357,10 +471,13 @@ function create(): ScriptSession {
     }
     // Another tab has it, and this one only shows it.
     if (guard.readOnly.value) return 'held';
-    const switched = await switchTo(async () => {
-      const others = (await listProjects()).filter((p) => p.id !== id);
-      return others.find((p) => !p.sample) ?? (await sampleProject('screenplay'));
-    }, id);
+    const switched = await switchTo(
+      async () => {
+        const others = (await listProjects()).filter((p) => p.id !== id);
+        return others.find((p) => !p.sample) ?? (await sampleProject('screenplay'));
+      },
+      { removing: id },
+    );
     // Ignored: another switch was under way, and nothing was removed.
     if (!switched) throw new Error('Another script is being opened.');
     return 'removed';
@@ -461,6 +578,7 @@ function create(): ScriptSession {
     newScript,
     openSample,
     scripts,
+    saved,
     changed,
     busy: switching,
     remove,
