@@ -478,10 +478,11 @@ function create(): ScriptSession {
    * `removing` is the current script's id when it is being removed: it goes once the replacement
    * exists, and a failure anywhere leaves it open. `keep` shows the new script with the editor's
    * own state, undo history and cursor included, for a script made from the text already there.
+   * `shown` runs in the same step as the swap (a new script shows its editor and places its cursor).
    */
   async function switchTo(
     resolve: () => Promise<Project>,
-    options: { removing?: string; keep?: boolean; wait?: boolean } = {},
+    options: { removing?: string; keep?: boolean; wait?: boolean; shown?: () => void } = {},
   ): Promise<boolean> {
     while (switching.value) {
       if (!options.wait) return false;
@@ -522,6 +523,10 @@ function create(): ScriptSession {
           writable,
         );
         guardControl.finish();
+        // In the same step as the swap, so the page changes once: a phone that showed another tab
+        // would otherwise show the new script with that tab for a moment, and a tap on the Source
+        // tab in that moment would take the focus the script then put in the editor.
+        options.shown?.();
         return true;
       } finally {
         switches.value--;
@@ -546,9 +551,9 @@ function create(): ScriptSession {
     if (guard.readOnly.value) throw new Error('This tab is read-only.');
     const { text: source, cursor } = newScriptText(kind, new Date());
     const made: DocumentKind = kind === 'markdown' ? 'markdown' : 'fountain';
-    if (await switchTo(() => createProject({ source, baseline: source, kind: made }))) {
-      editor.goto(cursor);
-    }
+    await switchTo(() => createProject({ source, baseline: source, kind: made }), {
+      shown: () => editor.goto(cursor),
+    });
   }
 
   async function setKind(kind: DocumentKind) {

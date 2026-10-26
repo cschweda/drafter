@@ -144,9 +144,13 @@ test.describe('a first visit', () => {
       await expect(items).toHaveText(['New stage play', 'New Markdown document', 'Open a file…']);
       await items.first().click();
     }
+    // The new script first: while the menu closes, the page behind it is hidden from the
+    // accessibility tree (the bar is "gone" to a role query though it is still there), so the bar
+    // alone doesn't say the new script has come, and a tap on the Source tab then would take focus
+    // from the editor.
+    await expect.poll(() => text(page)).toContain('Title: Untitled Play');
     await expect(bar(page)).toHaveCount(0);
     await showSource(page);
-    await expect.poll(() => text(page)).toContain('Title: Untitled Play');
     await expect(editor(page)).toBeFocused();
     // The sample stays where it was, and the new play is a script of the writer's own.
     expect((await stored(page)).filter((p) => !p.sample)).toHaveLength(1);
@@ -171,6 +175,64 @@ test.describe('a first visit', () => {
     });
     await expect.poll(() => text(page)).toContain('A door opens.');
     await expect(bar(page)).toHaveCount(0);
+  });
+
+  test('shows a new script’s editor in the same step that replaces the sample', async ({
+    page,
+  }) => {
+    // The bar going away and the editor appearing are one change to the page. Between two changes
+    // a quick tap on the Source tab lands in the gap, and the tab then keeps the focus that the
+    // new script put in the editor (a phone shows one tab at a time).
+    await removePickers(page);
+    await start(page);
+    await expect(bar(page)).toBeVisible();
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { __states: string[] }).__states = seen;
+      new MutationObserver(() => {
+        const barShown = !!document.querySelector('section[aria-label="Sample"]');
+        const editorShown = !document.querySelector('.cm-content')?.closest('[data-editor-holder]');
+        if (!barShown && !editorShown)
+          seen.push('the sample is gone and the editor is not showing');
+      }).observe(document, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+      });
+    });
+    if (wide(page)) await barButtons(page).nth(1).click();
+    else {
+      await barButtons(page).last().click();
+      await page.getByRole('menuitem', { name: 'New stage play' }).click();
+    }
+    await expect(bar(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
+    expect(
+      await page.evaluate(() => (window as unknown as { __states: string[] }).__states),
+    ).toEqual([]);
+  });
+
+  test('leaves the cursor in the editor after New from the app menu and the Scripts menu', async ({
+    page,
+  }) => {
+    await removePickers(page);
+    await start(page);
+    // The app menu, then the toolbar's Open menu: on a phone each is chosen with another tab
+    // showing, and the editor takes the focus when the new script appears.
+    await mark(page).click();
+    await menu(page)
+      .getByRole('menuitem', { name: /^New stage play/ })
+      .click();
+    await expect.poll(() => text(page)).toContain('Title: Untitled Play');
+    await expect(editor(page)).toBeFocused();
+    if (!wide(page)) await page.getByRole('tab', { name: 'Script' }).first().click();
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts' })
+      .getByRole('button', { name: 'New screenplay' })
+      .click();
+    await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
+    await expect(editor(page)).toBeFocused();
   });
 
   test('shows the sample bar on every tab', async ({ page }) => {

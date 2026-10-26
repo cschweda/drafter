@@ -27,6 +27,7 @@ const wide = useWideScreen();
 const { tabs, phoneTab, choose } = usePanes();
 const commands = useCommands();
 const { ready } = useScript();
+const focus = useFocusMode();
 const apple = isApple();
 
 const steps = reactive<TourStep[]>(buildSteps(wide.value));
@@ -70,6 +71,14 @@ async function offer(first: boolean) {
   const clear = await whenClear(() => unmounted);
   offering = false;
   if (!clear || tourShowing.value) return;
+  // Focus mode has no toolbar or status bar, which most of the steps point at: it ends here, and
+  // the page settles (focus goes to the editor or the Focus button) before the tour takes focus.
+  if (focus.on.value) {
+    focus.leave();
+    await nextTick();
+    await nextTick();
+    if (tourShowing.value) return;
+  }
   stage.value = first ? 'welcome' : 'intro';
 }
 

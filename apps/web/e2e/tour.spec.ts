@@ -64,7 +64,9 @@ test.describe('the welcome and the tour', () => {
   test('welcomes a first visit and takes the tour with the keyboard', async ({ page }) => {
     await visit(page);
     await expect(
-      welcome(page).getByRole('button', { name: "No thanks, I'll look around." }),
+      welcome(page).getByRole('button', {
+        name: "No thanks, I'll look around.",
+      }),
     ).toBeVisible();
     await startTour(page);
 
@@ -167,6 +169,68 @@ test.describe('the welcome and the tour', () => {
     await expect(intro(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(intro(page)).toBeHidden();
+  });
+
+  test('leaves focus mode for the tour, and the tour lights its targets', async ({ page }) => {
+    await skipWelcome(page);
+    // Focus mode has no toolbar or status bar, which most of the steps point at.
+    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+k');
+    await expect(palette(page)).toBeVisible();
+    await page.keyboard.type('Take the tour');
+    await page.keyboard.press('Enter');
+    await expect(palette(page)).toBeHidden();
+    await expect(intro(page)).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Focus mode' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Focus', exact: true })).toBeVisible();
+
+    await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
+    const steps = plan(wide(page));
+    for (const [index, [title, target]] of steps.entries()) {
+      await expect(step(page)).toContainText(`${index + 1} / 10`);
+      await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
+      await expect(lit(page)).toHaveAttribute('data-tour', target);
+      await expect(lit(page)).toBeVisible();
+      await step(page)
+        .getByRole('button', {
+          name: index === steps.length - 1 ? 'Finish' : 'Next',
+        })
+        .click();
+    }
+    await expect(step(page)).toBeHidden();
+  });
+
+  test('Escape in a step closes only the tour, and not focus mode', async ({ page }) => {
+    await skipWelcome(page);
+    await takeTourFromHelp(page);
+    await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
+    await expect(step(page)).toBeVisible();
+    // The tour's backdrop covers the page, and the app's keys are held, so the writer can't turn
+    // focus mode on from a step. Something else could (a second tab's setting, a future command):
+    // the app's own state is set here, and Escape must still be the tour's alone.
+    await page.evaluate(() => {
+      const root = document.querySelector('#__nuxt') as unknown as {
+        __vue_app__: {
+          config: {
+            globalProperties: {
+              $nuxt: { payload: { state: Record<string, unknown> } };
+            };
+          };
+        };
+      };
+      root.__vue_app__.config.globalProperties.$nuxt.payload.state['$sfocus-mode'] = true;
+    });
+    await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(step(page)).toBeHidden();
+    // That one Escape ended the tour; focus mode is still on (it would have been left, too, if the
+    // tour's dialog had been gone by the time the page's own Escape listener looked).
+    await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
   });
 
   test('holds the app’s own keys while the tour is up', async ({ page }) => {
