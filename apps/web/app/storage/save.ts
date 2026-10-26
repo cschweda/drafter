@@ -1,12 +1,14 @@
 import { ref, watch } from 'vue';
 import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
+import { useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
 import { say } from './say';
 import { useScript } from './script';
 import { encodeFile, fileNameFor, titleOf } from './text';
+import { inTurn } from './turn';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
 export const saveError = ref('');
@@ -44,15 +46,6 @@ export const readOnlyHint = ref('');
 watch(useGuard().readOnly, (on) => {
   if (!on) readOnlyHint.value = '';
 });
-
-let queue: Promise<unknown> = Promise.resolve();
-
-/** One save at a time: a second request made while one is under way waits for it. */
-function inTurn<T>(run: () => Promise<T>): Promise<T> {
-  const result = queue.then(run);
-  queue = result.catch(() => {});
-  return result;
-}
 
 function messageFor(error: unknown): string {
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
@@ -116,6 +109,10 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
     return target !== undefined;
   };
   if (!target && !(await pick())) return 'cancelled';
+
+  // Never overwrite a file that changed somewhere else: if it did, the check has dealt with it
+  // (loaded it, or asked which version to keep), and the writer saves again knowing what is there.
+  if (!picked && (await useFileCheck().beforeSave()) === 'stop') return 'cancelled';
 
   for (;;) {
     const text = await textToWrite();

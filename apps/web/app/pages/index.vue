@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
+import { installFileCheck } from '~/storage/check';
 import { installSaveKeys } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
@@ -33,15 +34,18 @@ useHead({
 });
 
 let removeSaveKeys: (() => void) | undefined;
+let removeFileCheck: (() => void) | undefined;
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
   removeSaveKeys = installSaveKeys();
+  removeFileCheck = installFileCheck();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   removeSaveKeys?.();
+  removeFileCheck?.();
 });
 </script>
 
@@ -50,10 +54,12 @@ onBeforeUnmount(() => {
     <div class="top">
       <AppToolbar />
       <ReadOnlyBar />
+      <FileBar />
       <StorageWarning />
     </div>
     <DropZone />
     <SameTitleDialog />
+    <BothChangedDialog />
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane
