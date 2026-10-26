@@ -193,6 +193,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
 
+### Fixed
+
+- `apps/web`: fixes from the recovery copy's review.
+  - The "may clear your recovery copy" banner no longer flashes on every launch before the storage has been checked.
+  - The "unavailable" warning is announced at once (`role="alert"`); "may be cleared" stays a status.
+  - The text a closing page leaves behind is kept per script (`drafter:unwritten:<id>`), so two tabs on two scripts can't overwrite each other's; a launch writes each one that is newer than its script's stored copy and clears the rest.
+  - A write for a script that is no longer open now fails, so the writer keeps the text, instead of reporting success.
+
 ### Security
 
 - `@drafter/fountain` now parses hostile input in linear time. Before this fix, a single 4 KB line could stall the parser for seconds through backtracking regular expressions (cue lines, title-page keys, scene numbers), and long paragraphs of unclosed `[[`, deeply nested emphasis, or thousands of note blocks slowed it quadratically. Emphasis nested past 32,767 levels also lost its styling.

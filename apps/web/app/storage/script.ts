@@ -23,7 +23,7 @@ import {
   type Project,
   writeSource,
 } from './projects';
-import { clearStash, readStash, stash } from './unwritten';
+import { allStashes, clearStash, readStash, stash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
 export type { RecoveryState } from './health';
@@ -126,7 +126,8 @@ function create(): ScriptSession {
   async function persist(id: string, source: string) {
     const current = project.value;
     // The script was switched away from: `open` flushed it first, so nothing is lost here.
-    if (!current || current.id !== id) return;
+    // Not a success: the text was not written, and the writer must keep it.
+    if (!current || current.id !== id) throw new Error(`There is no script ${id} to write to.`);
     try {
       const next = await writeSource(current, source);
       // The title is a cache of the text.
@@ -136,7 +137,7 @@ function create(): ScriptSession {
       throw error;
     }
     // What a closing page left behind is written, unless newer text has been typed since.
-    if (view.state.doc.toString() === source) clearStash();
+    if (view.state.doc.toString() === source) clearStash(id);
     if (failing) {
       failing = false;
       clearTimeout(retry);
@@ -189,23 +190,26 @@ function create(): ScriptSession {
     });
   }
 
-  /** Writes the text a closing page left in the stash, if the script is still there and the write didn't land. */
+  /**
+   * Writes the text closing pages left in the stash, for each script that is still there and whose
+   * stored copy is older. A stash for a script that is gone, or older than its copy, is cleared.
+   */
   async function restoreUnwritten(projects: Project[]) {
-    const left = readStash();
-    if (!left) return;
-    const index = projects.findIndex((p) => p.id === left.id);
-    const found = projects[index];
-    if (found && found.source !== left.source && left.at >= found.updatedAt) {
-      let written: Project | undefined;
-      await guardControl.whileFree(found.id, async () => {
-        written = await writeSource(found, left.source);
-      });
-      // Another tab has the script open: the stash is that tab's, and it clears it.
-      if (!written) return;
-      projects.splice(index, 1);
-      projects.unshift(written);
+    for (const left of allStashes()) {
+      const index = projects.findIndex((p) => p.id === left.id);
+      const found = projects[index];
+      if (found && found.source !== left.source && left.at >= found.updatedAt) {
+        let written: Project | undefined;
+        await guardControl.whileFree(found.id, async () => {
+          written = await writeSource(found, left.source);
+        });
+        // Another tab has the script open: the stash is that tab's, and it clears it.
+        if (!written) continue;
+        projects.splice(index, 1);
+        projects.unshift(written);
+      }
+      clearStash(left.id);
     }
-    clearStash();
   }
 
   /** Opens the most recent script, or the sample's on a first visit. */
@@ -275,12 +279,12 @@ function create(): ScriptSession {
       const id = project.value?.id;
       let next = id ? await getProject(id) : undefined;
       if (!next) throw new Error('The script is gone.');
-      const left = readStash();
-      if (left?.id === next.id) {
+      const left = readStash(next.id);
+      if (left) {
         if (left.source !== next.source && left.at > next.updatedAt) {
           next = await writeSource(next, left.source);
         }
-        clearStash();
+        clearStash(next.id);
       }
       attach(next, await baselineOf(next), false, true);
     },
@@ -334,6 +338,8 @@ function create(): ScriptSession {
     recovery,
     ready,
     warning: computed(() => {
+      // Until the first check has answered, `recovery` is only a guess.
+      if (!ready.value) return null;
       if (recovery.value === 'unavailable') return 'unavailable';
       return recovery.value === 'not-persistent' && !dismissed.value ? 'not-persistent' : null;
     }),

@@ -5,7 +5,10 @@ const { warning, dismissWarning } = useScript();
 </script>
 
 <template>
-  <div v-if="warning" role="status" class="warning" :data-warning="warning">
+  <div
+    v-if="warning"
+    :role="warning === 'unavailable' ? 'alert' : 'status'"
+    class="warning" :data-warning="warning">
     <p v-if="warning === 'unavailable'">
       Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
       memory until you save the script to a file.

@@ -67,12 +67,16 @@ const isEditable = (page: Page) =>
     .getAttribute('contenteditable')
     .then((value) => value === 'true');
 
-const STASH = 'drafter:unwritten';
+const stashKey = (id: string) => `drafter:unwritten:${id}`;
+const stashes = (page: Page) =>
+  page.evaluate(() =>
+    Object.keys(localStorage).filter((key) => key.startsWith('drafter:unwritten')),
+  );
 
 function setStash(page: Page, id: string, source: string, at: number) {
   return page.evaluate(
     ([key, value]) => localStorage.setItem(key as string, value as string),
-    [STASH, JSON.stringify({ id, source, at })],
+    [stashKey(id), JSON.stringify({ id, source, at })],
   );
 }
 
@@ -139,7 +143,7 @@ test.describe('one tab at a time', () => {
     });
     await b.waitForTimeout(1500);
     expect(await stored(b)).toEqual(before);
-    expect(await b.evaluate((key) => localStorage.getItem(key), STASH)).toBeNull();
+    expect(await stashes(b)).toEqual([]);
   });
 
   test('leaves a stash alone while the other tab holds the script', async ({ context }) => {
@@ -148,7 +152,7 @@ test.describe('one tab at a time', () => {
     await expect.poll(async () => (await stored(a))[0]?.source).toContain('Kept by A.');
     const [row] = await stored(a);
     const stash = JSON.stringify({ id: row.id, source: 'A stash from A.', at: Date.now() + 5000 });
-    await a.evaluate(([key, value]) => localStorage.setItem(key, value), [STASH, stash]);
+    await a.evaluate(([key, value]) => localStorage.setItem(key, value), [stashKey(row.id), stash]);
 
     const b = await openTab(context);
     await expect(bar(b)).toBeVisible();
@@ -156,7 +160,7 @@ test.describe('one tab at a time', () => {
     await expect(editor(b)).not.toContainText('A stash from A.');
     expect((await stored(b))[0].source).toContain('Kept by A.');
     // It is A's to clear.
-    expect(await b.evaluate((key) => localStorage.getItem(key), STASH)).toBe(stash);
+    expect(await b.evaluate((key) => localStorage.getItem(key), stashKey(row.id))).toBe(stash);
   });
 
   test('does not let an older stash overwrite the handed-over text', async ({ context }) => {
@@ -172,7 +176,7 @@ test.describe('one tab at a time', () => {
     await expect(editor(b)).toContainText('The newest text.');
     await expect(editor(b)).not.toContainText('An older stash.');
     expect((await stored(b))[0].source).toContain('The newest text.');
-    expect(await b.evaluate((key) => localStorage.getItem(key), STASH)).toBeNull();
+    expect(await stashes(b)).toEqual([]);
   });
 
   test('applies a newer stash when it takes over', async ({ context }) => {

@@ -10,7 +10,7 @@ async function violations(page: Page) {
 
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const editor = (page: Page) => page.locator('.cm-content');
-const warning = (page: Page) => page.getByRole('status').filter({ hasText: 'recovery copy' });
+const warning = (page: Page) => page.locator('[data-warning]');
 
 /** Makes `navigator.storage.persisted` and `persist` answer `granted`. */
 async function stubPersistence(page: Page, granted: boolean) {
@@ -178,11 +178,22 @@ test.describe('the recovery copy', () => {
   test.describe('its state in the status bar', () => {
     test('says the recovery copy is kept when storage is persistent', async ({ page }) => {
       await stubPersistence(page, true);
+      // A warning that appears for an instant is announced too, so watch from the first node.
+      await page.addInitScript(() => {
+        const seen = window as unknown as { sawWarning: boolean };
+        seen.sawWarning = false;
+        new MutationObserver(() => {
+          if (document.querySelector('[data-warning]')) seen.sawWarning = true;
+        }).observe(document, { childList: true, subtree: true });
+      });
       await page.goto('/');
       await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveText(
         'Recovery copy: kept in this browser',
       );
       await expect(warning(page)).toHaveCount(0);
+      expect(
+        await page.evaluate(() => (window as unknown as { sawWarning: boolean }).sawWarning),
+      ).toBe(false);
     });
 
     test('warns that the recovery copy may be cleared, and the warning can be dismissed', async ({
@@ -194,6 +205,7 @@ test.describe('the recovery copy', () => {
         'Recovery copy: may be cleared',
       );
       await expect(warning(page)).toBeVisible();
+      await expect(warning(page)).toHaveAttribute('role', 'status');
       await expect(warning(page)).toContainText('may clear');
       await warning(page).getByRole('button', { name: 'Dismiss' }).click();
       await expect(warning(page)).toHaveCount(0);
@@ -248,6 +260,8 @@ test.describe('the recovery copy', () => {
         'Recovery copy: unavailable',
       );
       await expect(warning(page)).toBeVisible();
+      // It matters most, so it is announced at once.
+      await expect(warning(page)).toHaveAttribute('role', 'alert');
       await expect(warning(page)).toContainText('only in memory');
       await typeAtEnd(page, '\n\nStill typing.');
       await expect(editor(page)).toContainText('Still typing.');
@@ -481,5 +495,122 @@ test.describe('the storage warnings', () => {
       .getByRole('button', { name: /Recovery copy/ })
       .click();
     expect(await violations(page)).toEqual([]);
+  });
+});
+
+const stashKey = (id: string) => `drafter:unwritten:${id}`;
+
+function leaveStash(page: Page, id: string, source: string, at: number) {
+  return page.evaluate(
+    ([key, value]) => localStorage.setItem(key, value),
+    [stashKey(id), JSON.stringify({ id, source, at })],
+  );
+}
+
+const stashLeft = (page: Page, id: string) =>
+  page.evaluate((key) => localStorage.getItem(key), stashKey(id));
+
+test.describe('the text a closing page left behind', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'the launch is the same on a phone');
+
+  test('is written when it is newer than the stored copy', async ({ page }) => {
+    await start(page);
+    const [row] = await stored(page);
+    await leaveStash(page, row.id, 'INT. LEFT - DAY\n\nFrom the stash.\n', Date.now() + 1000);
+    await page.reload();
+    await expect(editor(page)).toContainText('From the stash.');
+    await expect.poll(async () => (await stored(page))[0]?.source).toContain('From the stash.');
+    expect(await stashLeft(page, row.id)).toBeNull();
+  });
+
+  test('is ignored when the stored copy is newer', async ({ page }) => {
+    await start(page);
+    const [row] = await stored(page);
+    await leaveStash(page, row.id, 'From a stale stash.', row.updatedAt - 1000);
+    await page.reload();
+    await expect(editor(page)).toContainText('Title: The Call');
+    await expect(editor(page)).not.toContainText('From a stale stash.');
+    expect((await stored(page))[0].source).toBe(row.source);
+    // It is no use to anyone now.
+    expect(await stashLeft(page, row.id)).toBeNull();
+  });
+
+  test('is not written to another script', async ({ page }) => {
+    await start(page);
+    const [first] = await stored(page);
+    const now = Date.now();
+    await seed(page, 'INT. OTHER ROOM - DAY\n\nThe other script.\n', now + 5000);
+    const [, other] = (await stored(page)).sort((a, b) => a.updatedAt - b.updatedAt);
+    await leaveStash(page, first.id, 'INT. FIRST - DAY\n\nFirst script only.\n', now + 9000);
+    await page.reload();
+    await expect(editor(page)).toContainText('First script only.');
+    const rows = await stored(page);
+    expect(rows.find((r) => r.id === other.id)?.source).toBe(
+      'INT. OTHER ROOM - DAY\n\nThe other script.\n',
+    );
+    expect(rows.find((r) => r.id === first.id)?.source).toContain('First script only.');
+    expect(rows.find((r) => r.id === other.id)?.source).not.toContain('First script only.');
+  });
+
+  test('keeps one stash for each script', async ({ page }) => {
+    await start(page);
+    const [first] = await stored(page);
+    const now = Date.now();
+    await seed(page, 'INT. OTHER ROOM - DAY\n\nThe other script.\n', now + 5000);
+    const other = (await stored(page)).find((r) => r.id !== first.id) as Row;
+    await leaveStash(page, first.id, 'First, left behind.', now + 9000);
+    await leaveStash(page, other.id, 'Other, left behind.', now + 9000);
+    await page.reload();
+    await expect
+      .poll(async () => (await stored(page)).map((r) => r.source).sort())
+      .toEqual(['First, left behind.', 'Other, left behind.']);
+    expect(await stashLeft(page, first.id)).toBeNull();
+    expect(await stashLeft(page, other.id)).toBeNull();
+  });
+
+  test('is cleared when its script is gone', async ({ page }) => {
+    await start(page);
+    const before = await stored(page);
+    await leaveStash(page, 'a-script-that-was-deleted', 'Nobody wants this.', Date.now() + 1000);
+    await page.reload();
+    await expect(editor(page)).toContainText('Title: The Call');
+    expect(await stashLeft(page, 'a-script-that-was-deleted')).toBeNull();
+    expect(await stored(page)).toEqual(before);
+  });
+
+  test('keeps text typed before the database answers', async ({ page }) => {
+    // A first visit whose IndexedDB takes a while to open.
+    await page.addInitScript(() => {
+      const open = indexedDB.open.bind(indexedDB);
+      indexedDB.open = (...args: Parameters<typeof open>) => {
+        const request = open(...args);
+        return new Proxy(request, {
+          set(target, property, value) {
+            if (property === 'onsuccess') {
+              target.onsuccess = (event) => {
+                setTimeout(() => value.call(target, event), 1500);
+              };
+              return true;
+            }
+            Reflect.set(target, property, value);
+            return true;
+          },
+          get(target, property) {
+            const value = Reflect.get(target, property);
+            return typeof value === 'function' ? value.bind(target) : value;
+          },
+        });
+      };
+    });
+    await page.goto('/');
+    await expect(editor(page)).toContainText('Title: The Call');
+    await typeAtEnd(page, '\n\nTyped while it opened.');
+    await expect
+      .poll(async () => (await stored(page)).length, { timeout: 15000 })
+      .toBeGreaterThan(0);
+    await expect
+      .poll(async () => (await stored(page)).map((r) => r.source).join('|'), { timeout: 15000 })
+      .toContain('Typed while it opened.');
+    await expect(editor(page)).toContainText('Typed while it opened.');
   });
 });
