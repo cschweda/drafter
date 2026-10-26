@@ -18,6 +18,11 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}`,
     trace: 'retain-on-failure',
+    // The build has a service worker (Phase 1 design §11). Most tests are about something else and
+    // would only share a page with a worker that is installing, precaching 3.5 MB, and answering
+    // from its cache, so contexts block it; e2e/offline.spec.ts allows it for its own tests, and
+    // `E2E_SERVICE_WORKERS=allow` allows it everywhere (security.spec.ts is run that way too).
+    serviceWorkers: process.env.E2E_SERVICE_WORKERS === 'allow' ? 'allow' : 'block',
     // Every test begins as a first visit, which the guided tour would greet with a dialog over the
     // page. The tour's "seen" key (nuxt-guided-tour: `drafter-tour-v1`, see app/tour/tour.config.ts)
     // is set in advance; e2e/tour.spec.ts starts with an empty storage instead.

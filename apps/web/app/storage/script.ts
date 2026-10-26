@@ -66,6 +66,22 @@ export function isFirstVisit(): boolean {
   return firstVisit.value;
 }
 
+let leaveAllowed = false;
+let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * The writer has been asked, by Drafter, whether to leave with changes that aren't in a file, and
+ * said yes (reloading for a new version): the browser's own "leave this page?" question would only
+ * repeat it. Lasts a few seconds, so a reload that doesn't happen leaves the protection on.
+ */
+export function allowLeaving(): void {
+  leaveAllowed = true;
+  clearTimeout(leaveTimer);
+  leaveTimer = setTimeout(() => {
+    leaveAllowed = false;
+  }, 5000);
+}
+
 /** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
 export const kindError = ref('');
 
@@ -898,6 +914,7 @@ function create(): ScriptSession {
     return dirty.value && (kept || recovery.value === 'unavailable');
   });
   const ask = (event: BeforeUnloadEvent) => {
+    if (leaveAllowed) return;
     event.preventDefault();
     // Older browsers show their dialog only when this is set.
     event.returnValue = '';

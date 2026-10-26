@@ -59,6 +59,10 @@ describe('headersFile', () => {
         '  Cache-Control: public, max-age=31536000, immutable',
         '/fonts/*',
         '  Cache-Control: public, max-age=604800',
+        '/sw.js',
+        '  Cache-Control: no-cache',
+        '/manifest.webmanifest',
+        '  Cache-Control: no-cache',
         '',
       ].join('\n'),
     );
@@ -79,3 +83,30 @@ describe('writeHeaders', () => {
     expect(await readFile(join(root, '_headers'), 'utf8')).toBe(headersFile(hashes));
   });
 });
+
+describe('the service worker and the manifest', () => {
+  test('are always checked with the server: no long caching of sw.js', () => {
+    const rules = parseRules(headersFile(["'sha256-a'"]));
+    expect(rules['/sw.js']).toEqual(['Cache-Control: no-cache']);
+    expect(rules['/manifest.webmanifest']).toEqual(['Cache-Control: no-cache']);
+  });
+
+  test('still send the policy: the /* rule covers them', () => {
+    const rules = parseRules(headersFile(["'sha256-a'"]));
+    expect(rules['/*']?.[0]).toMatch(/^Content-Security-Policy: /);
+  });
+});
+
+/** The _headers file as { path: ['Name: value', ...] }. */
+function parseRules(text: string): Record<string, string[]> {
+  const rules: Record<string, string[]> = {};
+  let current = '';
+  for (const line of text.split('\n')) {
+    if (line === '') continue;
+    if (!line.startsWith(' ')) {
+      current = line;
+      rules[current] = [];
+    } else rules[current]?.push(line.trim());
+  }
+  return rules;
+}

@@ -1,10 +1,13 @@
 // Checks the generated site after a build, so a mistake in the build fails it rather than shipping:
 // - the test module (the fixture) is in a build made with DRAFTER_TEST_MODULES=1 and in no other;
 // - every icon the app's own `.ts` files name is in the icon bundle (the bundle is made from a
-//   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so).
+//   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so);
+// - the service worker precaches every script, style, worker, font, and icon the build made (so the
+//   app, a Markdown document, and a PDF export all work offline), caches nothing else, and has no
+//   runtime caching (Phase 1 design §11).
 // Run as `node scripts/check-build.mjs .output/public`.
 import { readdir, readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TOUR_ICONS } from './tour-icons.mjs';
 
@@ -18,6 +21,51 @@ export const FIXTURE_MARKERS = ['Count scenes', 'Fixture: add a note'];
  */
 export function iconNamesIn(source) {
   return [...source.matchAll(/\bi-lucide-([a-z0-9-]+)/g)].map((match) => match[1]);
+}
+
+/** Files in the site the service worker leaves out: the social image, and the hosting fallbacks. */
+export const NOT_PRECACHED = ['og-image.png', '200.html', '404.html'];
+
+/** What the worker caches by extension: the files the app runs on. */
+const PRECACHED = /\.(?:js|css|woff2|ttf|png|svg|ico|webmanifest)$/;
+
+/**
+ * What is wrong with the service worker's precache, if anything.
+ * @param {string} siteDir
+ * @returns {Promise<string[]>}
+ */
+async function precacheProblems(siteDir) {
+  let worker;
+  try {
+    worker = await readFile(join(siteDir, 'sw.js'), 'utf8');
+  } catch {
+    return ['The build has no sw.js, so the app would not work offline.'];
+  }
+  const problems = [];
+  const cached = new Set([...worker.matchAll(/\burl:"([^"]+)"/g)].map((match) => match[1]));
+  const files = (await filesUnder(siteDir, PRECACHED))
+    .map((path) => relative(siteDir, path).split(sep).join('/'))
+    .filter((name) => name !== 'sw.js' && !/^workbox-[^/]*\.js$/.test(name));
+  for (const name of files) {
+    if (NOT_PRECACHED.includes(name)) {
+      if (cached.has(name))
+        problems.push(`The service worker caches ${name}, which the app does not need.`);
+    } else if (!cached.has(name)) {
+      problems.push(`The service worker does not cache ${name}, so it would be missing offline.`);
+    }
+  }
+  if (!cached.has('/')) problems.push('The service worker does not cache the app’s shell (/).');
+  for (const name of NOT_PRECACHED) {
+    if (!files.includes(name) && cached.has(name)) {
+      problems.push(`The service worker caches ${name}, which the app does not need.`);
+    }
+  }
+  if (/\.(?:CacheFirst|StaleWhileRevalidate|NetworkFirst|CacheOnly)\b/.test(worker)) {
+    problems.push(
+      'The service worker has runtime caching: it should cache only what it precaches.',
+    );
+  }
+  return problems;
 }
 
 /**
@@ -37,7 +85,7 @@ async function filesUnder(dir, pattern) {
 
 /**
  * @param {string} siteDir the generated site (`.output/public`)
- * @param {{ fixture: boolean, icons: string[], heroicons?: string[] }} expected whether the build is a
+ * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean }} expected whether the build is a
  *   test build, the icon names (without `i-lucide-`) its bundle must have, and the Heroicons
  *   (without `heroicons:`) the guided tour draws, which the bundle must have in its Heroicons set
  * @returns {Promise<{ problems: string[] }>}
@@ -76,6 +124,8 @@ export async function checkBuild(siteDir, expected) {
       problems.push(`The icon bundle has no Heroicons “${name}”, which the guided tour draws.`);
     }
   }
+
+  if (expected.precache) problems.push(...(await precacheProblems(siteDir)));
   return { problems };
 }
 
@@ -99,6 +149,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     fixture: process.env.DRAFTER_TEST_MODULES === '1',
     icons: await iconsNamedInTs(appDir),
     heroicons: TOUR_ICONS.map((name) => name.replace(/^heroicons:/, '')),
+    precache: true,
   });
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);
