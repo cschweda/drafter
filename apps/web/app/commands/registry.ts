@@ -15,6 +15,8 @@ export interface Command {
   run(): void | Promise<void>;
   /** Commands that don't apply yet are hidden from the palette. */
   enabled?(): boolean;
+  /** Why the command is off, when that isn't obvious. Menus that list a disabled command show it; the palette hides the command. */
+  why?(): string | undefined;
   /**
    * The registry binds `keys` on the whole page (File commands, the palette), in the capture
    * phase, so the browser's own action never happens. Without it the keys belong to the editor's

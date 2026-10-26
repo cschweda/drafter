@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { nextFileName, stubPickers, textOf } from './fs-stub';
+import { nextFileName, removePickers, stubPickers, textOf } from './fs-stub';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
@@ -8,6 +8,8 @@ const revert = (page: Page) => menu(page).getByRole('menuitem', { name: /^Revert
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const notice = (page: Page) => page.locator('.notice [role="status"]');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const dialog = (page: Page) => page.getByRole('dialog');
+const bar = (page: Page) => page.locator('[data-file-bar]');
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
 
 const MESSAGE = (file: string) =>
@@ -155,6 +157,95 @@ test.describe('Revert to Saved (Chromium)', () => {
     await expect(editor(page)).not.toContainText('More notes');
   });
 
+  test('leaves the changed-file check quiet: no question, no "Updated from" toast', async ({
+    page,
+  }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'Quiet.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, ' MORE');
+    await openMenu(page);
+    await revert(page).click();
+    await expect(editor(page)).not.toContainText('MORE');
+
+    // The window regains focus: the file is as it was saved, and so is the text.
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.waitForTimeout(600);
+    await expect(dialog(page)).toBeHidden();
+    await expect(bar(page)).not.toContainText('Updated');
+    await expect(editor(page)).not.toContainText('MORE');
+
+    // Save's own check is quiet too, and writes the same text.
+    const saved = await textOf(page, 'Quiet.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await expect(dialog(page)).toBeHidden();
+    await expect(bar(page)).not.toContainText('Updated');
+    expect(await textOf(page, 'Quiet.fountain')).toBe(saved);
+  });
+
+  test('comes back clean, with the saved text, after a reload', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'Again.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, ' MORE');
+    await openMenu(page);
+    await revert(page).click();
+    await expect(editor(page)).not.toContainText('MORE');
+
+    await page.reload();
+    await expect(editor(page)).toContainText('FADE IN:');
+    await expect(editor(page)).not.toContainText('MORE');
+    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expect(status(page)).not.toContainText('Unsaved changes');
+    await expect(dialog(page)).toBeHidden();
+    // Nothing is left to revert.
+    await openMenu(page);
+    await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('is off, and says why, after the document type changed', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'Kind.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, ' MORE');
+
+    // Make it a Markdown document (the text is kept).
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette.locator('input').fill('Document: Markdown');
+    await palette.getByRole('option', { name: /^Document: Markdown/ }).click();
+    await page
+      .getByRole('dialog', { name: 'Make this a Markdown document?' })
+      .getByRole('button', { name: 'Make it Markdown' })
+      .click();
+    await expect(page.locator('.chip.template')).toHaveText('Markdown (plain text)');
+
+    await openMenu(page);
+    await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
+    // The reason is on the item, so it is read with it.
+    await expect(revert(page)).toContainText('The saved file is a different type of document');
+    await expect(revert(page)).toHaveAccessibleName(/different type of document/);
+    await page.keyboard.press('Escape');
+
+    // The palette hides the command; the text is untouched.
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette.locator('input').fill('Revert');
+    await expect(palette.getByText('Nothing matches')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(editor(page)).toContainText('MORE');
+    await expect(notice(page)).toHaveText('');
+  });
+
   test('is off in a tab that only shows the script', async ({ page, context }) => {
     await start(page);
     await chooseNew(page, 'New screenplay');
@@ -177,5 +268,31 @@ test.describe('Revert to Saved (Chromium)', () => {
       'aria-disabled',
       'true',
     );
+  });
+});
+
+test.describe('Revert to Saved where Save downloads', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'the editor is the same on a phone');
+
+  test('restores the downloaded text', async ({ page }) => {
+    await removePickers(page);
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    const download = page.waitForEvent('download');
+    await page.keyboard.press('ControlOrMeta+s');
+    const file = await download;
+    await expect(status(page)).toContainText('Saved just now');
+
+    await typeAtEnd(page, ' MORE');
+    await expect(status(page)).toContainText('Unsaved changes');
+    await openMenu(page);
+    await revert(page).click();
+    await expect(editor(page)).not.toContainText('MORE');
+    await expect(editor(page)).toContainText('FADE IN:');
+    await expect(notice(page)).toHaveText(MESSAGE(file.suggestedFilename()));
+    await expect(status(page)).not.toContainText('Unsaved changes');
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(editor(page)).toContainText('MORE');
   });
 });

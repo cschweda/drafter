@@ -200,17 +200,33 @@ const announceRevert = timedSay(revertNotice, 8000);
  */
 export function canRevert(): boolean {
   const script = useScript();
-  const editor = useEditor();
-  const file = script.project.value?.fileName;
   return (
     script.dirty.value &&
     script.savedText.value !== null &&
-    file !== undefined &&
-    kindOfFileName(file) === editor.kind.value &&
-    !editor.locked.value &&
+    fitsFile() &&
+    !useEditor().locked.value &&
     !useGuard().taking.value &&
     !script.busy.value
   );
+}
+
+/** The script is Fountain or Markdown as its file's name says. */
+function fitsFile(): boolean {
+  const file = useScript().project.value?.fileName;
+  return file !== undefined && kindOfFileName(file) === useEditor().kind.value;
+}
+
+/**
+ * Why Revert to Saved is off when it isn't obvious: the script has changes and a saved file, but
+ * its type was changed since (the file is a .fountain and the text is Markdown, or the reverse),
+ * so the saved text is the other type's. Undefined otherwise. The app menu shows it beside the
+ * disabled item.
+ */
+export function revertWhy(): string | undefined {
+  const script = useScript();
+  if (!script.dirty.value || script.savedText.value === null) return undefined;
+  if (script.project.value?.fileName === undefined || fitsFile()) return undefined;
+  return 'The saved file is a different type of document';
 }
 
 /**
@@ -239,7 +255,6 @@ export function revertToSaved(): void {
     changes: { from, to: current.length - end, insert: target.slice(from, target.length - end) },
     // Its own undo step, not joined to the typing before it.
     annotations: isolateHistory.of('full'),
-    scrollIntoView: true,
     userEvent: 'input.replace',
   });
   void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);

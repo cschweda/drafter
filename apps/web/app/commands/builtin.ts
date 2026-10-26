@@ -15,7 +15,7 @@ import { useSettings } from '~/settings/settings';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
-import { canRevert, revertToSaved, save, saveAs } from '~/storage/save';
+import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { openPalette, togglePalette } from './palette';
@@ -178,6 +178,7 @@ export function registerBuiltinCommands(): void {
       group: 'File',
       // Only while there are changes and a saved file to go back to; it says what it did, and undo reverses it.
       enabled: canRevert,
+      why: revertWhy,
       run: () => {
         revertToSaved();
         editor.goto(view.state.selection.main.head);

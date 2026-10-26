@@ -32,12 +32,15 @@ const recent = ref<Project[]>([]);
 function entry(id: string, icon: string, shows = false): DropdownMenuItem[] {
   const command: Command | undefined = commands.value.find((c) => c.id === id);
   if (!command) return [];
+  const off = command.enabled ? !command.enabled() : false;
+  const why = off ? command.why?.() : undefined;
   return [
     {
       label: command.title,
       icon,
+      ...(why && { description: why }),
       ...(command.keys && { kbds: [formatKeys(command.keys, apple)] }),
-      disabled: command.enabled ? !command.enabled() : false,
+      disabled: off,
       onSelect: () => {
         choose(shows);
         command.run();
