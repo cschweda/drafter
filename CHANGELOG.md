@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `@drafter/fountain`: `setMeta(doc, meta)`, the text changes that write the `/* drafter … */` metadata block, replacing the existing one or appending one, with the script's own line break and every `/` in the JSON escaped so no value can close the block.
+- `@drafter/lint`: `similar-names` offers **Mark as distinct**, which adds the pair to `meta.distinctNames`, and no longer reports names whose one edit falls inside a word of three letters or fewer (`MR. SMITH` and `MRS. SMITH`, `JOHN JR.` and `JOHN SR.`, `GUARD A` and `GUARD B`).
 - `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
 
 ## [0.1.0] - 2026-10-26
