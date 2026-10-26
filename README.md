@@ -7,7 +7,12 @@
 > [!NOTE]
 > **Status: Phase 0, the engine, is complete.** The Fountain parser, the template loader, the pagination engine, the PDF renderer, and the `drafter` command line are built and tested, and `pnpm drafter build script.fountain` turns a script into a paginated PDF. The app is Phase 1, next. See the [roadmap](#roadmap).
 
-drafter.dev (planned) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
+  <img src="docs/images/drafter-ide-dark.png" alt="Drafter's editor: the Fountain source of a short screenplay on the left, with scene headings, notes, and markers colored, and the same scene laid out as a printed page on the right.">
+</picture>
+
+[drafter.dev](https://drafter.dev) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
 ## Contents
 
