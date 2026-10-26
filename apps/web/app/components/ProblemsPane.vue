@@ -11,31 +11,45 @@ const SEVERITY = { error: 'Error', warning: 'Warning', info: 'Info' } as const;
 const root = ref<HTMLElement>();
 
 // A fix takes its problem out of the list a moment later, and the button that was pressed goes
-// with it. Focus then goes to the problem that took its place, or to the panel if none is left.
-let focusAfter: { index: number; timer: ReturnType<typeof setTimeout> } | undefined;
+// with it. Focus then goes to the problem that took its place, or to the panel if none is left,
+// but only if it was in the pane (on the button, or dropped to the page when the button went).
+// A fix that did nothing leaves the list as it is, and focus that has gone elsewhere since (the
+// writer clicked into the editor) is not taken back: it stays armed only until focus moves off
+// the button.
+let focusAfter: { index: number; button: Element | null } | undefined;
 
-function fix(problem: Problem, index: number) {
+function disarm() {
+  focusAfter = undefined;
+  document.removeEventListener('focusin', onFocusIn);
+}
+
+function onFocusIn(event: FocusEvent) {
+  if (focusAfter && event.target !== focusAfter.button) disarm();
+}
+
+function fix(problem: Problem, index: number, event: Event) {
   if (locked.value || !problem.fix) return;
-  if (focusAfter) clearTimeout(focusAfter.timer);
-  // If the list doesn't change (a stale fix did nothing), focus stays where it is.
-  focusAfter = { index, timer: setTimeout(() => (focusAfter = undefined), 1000) };
+  disarm();
+  focusAfter = { index, button: event.currentTarget as Element | null };
+  document.addEventListener('focusin', onFocusIn);
   problem.fix.apply();
 }
 
 watch(problems, async () => {
   if (!focusAfter) return;
-  const { index, timer } = focusAfter;
-  clearTimeout(timer);
-  focusAfter = undefined;
+  const { index } = focusAfter;
   await nextTick();
+  if (!focusAfter) return;
+  disarm();
+  const active = document.activeElement;
+  const inPane = !active || active === document.body || !!root.value?.contains(active);
+  if (!inPane) return;
   const jumps = root.value?.querySelectorAll<HTMLElement>('.jump');
   const target = jumps?.[Math.min(index, jumps.length - 1)];
   (target ?? root.value?.closest<HTMLElement>('[role="tabpanel"]'))?.focus();
 });
 
-onBeforeUnmount(() => {
-  if (focusAfter) clearTimeout(focusAfter.timer);
-});
+onBeforeUnmount(disarm);
 </script>
 
 <template>
@@ -62,7 +76,7 @@ onBeforeUnmount(() => {
           type="button"
           class="fix"
           :aria-disabled="locked ? 'true' : undefined"
-          @click="fix(problem, index)"
+          @click="fix(problem, index, $event)"
         >
           {{ problem.fix.title }}
         </button>

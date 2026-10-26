@@ -298,6 +298,34 @@ test.describe('while typing', () => {
   });
 });
 
+test.describe('after a fix that did nothing', () => {
+  test.skip(
+    ({ isMobile }) => !!isMobile,
+    'the text can be typed in only while the Source tab shows',
+  );
+
+  test('leaves focus in the editor when the writer goes on typing', async ({ page }) => {
+    await setText(page, CONTD);
+    await showProblems(page);
+    await expect(list(page).getByRole('button', { name: "Remove (CONT'D)" })).toBeVisible({
+      timeout: 1000,
+    });
+    // The text changes after the last problem, so the list stays as it is, and the fix (found
+    // in the old text) does nothing.
+    await editThenPress(page, { find: 'Hi again.', replace: 'Hi again!' }, "Remove (CONT'D)");
+    expect(await text(page)).toBe("MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi again!\n");
+
+    // Then the writer types above the problem, which moves it to another line.
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.insertText('Above.\n\n');
+    await expect(problemButton(page, /Info: .* Line 6$/)).toBeVisible({ timeout: 1000 });
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.insertText('Still here.');
+    expect(await text(page)).toContain('Still here.');
+  });
+});
+
 test.describe('in a read-only tab', () => {
   test.skip(({ isMobile }) => !!isMobile, 'two tabs are the same on a phone');
 

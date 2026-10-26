@@ -52,8 +52,7 @@ function create(): EditorSession {
   const cursor = shallowRef<CursorElement | null>(null);
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
-  let locked = false;
-  const lockedRef = shallowRef(false);
+  const locked = shallowRef(false);
   const listeners = new Set<(state: EditorState) => void>();
   const updateListeners = new Set<(state: EditorState) => void>();
 
@@ -96,7 +95,7 @@ function create(): EditorSession {
     view.setState(EditorState.create({ doc: text, extensions }));
     // The compartments start from their first values again, so read-only is put back, and so
     // are the settings that live in them (spellcheck, line numbers) and Strict Fountain's lint.
-    if (locked) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
+    if (locked.value) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
     applyEditorSettings(view, settings.value);
     follow(view.state);
     cursor.value = cursorElement(view.state);
@@ -107,9 +106,8 @@ function create(): EditorSession {
   }
 
   function setReadOnly(on: boolean) {
-    if (on === locked) return;
-    locked = on;
-    lockedRef.value = on;
+    if (on === locked.value) return;
+    locked.value = on;
     view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on)) });
   }
 
@@ -150,7 +148,7 @@ function create(): EditorSession {
     doc,
     cursor,
     template,
-    locked: lockedRef,
+    locked,
     load,
     setReadOnly,
     onState,
