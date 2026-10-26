@@ -9,6 +9,7 @@ const packages = [
   'render-text',
   'render-html',
   'lint',
+  'cm-fountain',
   'cli',
 ];
 // Each package's importable entry. The CLI's index.ts is the `drafter` binary,
