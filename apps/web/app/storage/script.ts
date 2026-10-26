@@ -21,6 +21,7 @@ import type { FileRef } from './files';
 import { guardControl, useGuard } from './guard';
 import { hashText } from './hash';
 import { checkRecovery, type RecoveryState, requestPersistence } from './health';
+import { leaveAllowed } from './leaving';
 import { newScriptText } from './new-script';
 import {
   createProject,
@@ -66,22 +67,6 @@ export function isFirstVisit(): boolean {
   return firstVisit.value;
 }
 
-let leaveAllowed = false;
-let leaveTimer: ReturnType<typeof setTimeout> | undefined;
-
-/**
- * The writer has been asked, by Drafter, whether to leave with changes that aren't in a file, and
- * said yes (reloading for a new version): the browser's own "leave this page?" question would only
- * repeat it. Lasts a few seconds, so a reload that doesn't happen leaves the protection on.
- */
-export function allowLeaving(): void {
-  leaveAllowed = true;
-  clearTimeout(leaveTimer);
-  leaveTimer = setTimeout(() => {
-    leaveAllowed = false;
-  }, 5000);
-}
-
 /** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
 export const kindError = ref('');
 
@@ -101,6 +86,8 @@ export interface ScriptSession {
    * script with no file yet, or when that text is unknown. What Revert to Saved goes back to.
    */
   savedText: Readonly<ComputedRef<string | null>>;
+  /** Writes the recovery copy's pending text now. A failure is swallowed: the recovery warning says so. */
+  flush(): Promise<void>;
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
   /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
@@ -914,7 +901,7 @@ function create(): ScriptSession {
     return dirty.value && (kept || recovery.value === 'unavailable');
   });
   const ask = (event: BeforeUnloadEvent) => {
-    if (leaveAllowed) return;
+    if (leaveAllowed()) return;
     event.preventDefault();
     // Older browsers show their dialog only when this is set.
     event.returnValue = '';
@@ -961,6 +948,9 @@ function create(): ScriptSession {
     changed,
     busy: switching,
     fileLocked,
+    flush: async () => {
+      await writer?.flush().catch(() => {});
+    },
     addScript,
     unbindFile,
     remove,

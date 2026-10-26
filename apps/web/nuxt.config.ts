@@ -49,15 +49,17 @@ export default defineNuxtConfig({
     workbox: {
       // Every file the app needs, by extension: the shell (HTML), scripts and styles (the lazy and
       // worker chunks are in `_nuxt/` with the rest), Inter Tight and Courier Prime, the icons,
-      // and the manifest. A page added under /docs/ later (Task 8) is matched by `**/*.html`.
-      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico,webmanifest}'],
+      // (the manifest is added by the plugin itself, once). A page added under /docs/ later (Task 8) is matched by `**/*.html`.
+      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico}'],
       // Not part of the app: the social-sharing image, and the hosting fallbacks (200.html is the
       // shell again; 404.html is for a link that matches nothing).
       globIgnores: ['og-image.png', '200.html', '404.html'],
       // A navigation the worker has no page for gets the app's shell, so a reload works offline at
-      // any address the app is used at. The documentation pages are their own pages, not the app.
+      // any address the app is used at. Not for a path that names a file (`/og-image.png`,
+      // `/fonts/courier-prime/OFL.txt`, `/404.html`): those are files, not the app. The
+      // documentation pages are their own pages (`/docs/...`, precached by `**/*.html`), not the app.
       navigateFallback: '/',
-      navigateFallbackDenylist: [/^\/docs(\/|$)/],
+      navigateFallbackDenylist: [/\/[^/?]+\.[^/]+$/, /^\/docs(\/|$)/],
       runtimeCaching: [],
       cleanupOutdatedCaches: true,
       // The first visit's page is controlled by the worker once it is active, so its lazy chunks

@@ -15,19 +15,34 @@ export function unsavedMessage(recovery: 'ok' | 'not-persistent' | 'unavailable'
     : UNSAVED_MESSAGE;
 }
 
+export const DOWNLOADING_MESSAGE = 'Your script is downloading. Reload when it has finished.';
+
+/** The button that reloads with changes unsaved: with no recovery copy, it says what it costs. */
+export function reloadAnywayLabel(recovery: string): string {
+  return recovery === 'unavailable' ? 'Reload and lose them' : 'Reload anyway';
+}
+
 export interface UpdateDeps {
   /** Whether the open script has changes that aren't in its file. */
   unsaved(): boolean;
   /** Saves the open script (the Save command). Rejects when the save fails. */
   save(): Promise<'saved' | 'cancelled'>;
-  /** Lets the new version take over and reloads. */
-  apply(): Promise<void> | void;
-  /** Stops the browser's own "leave this page?" question for the reload the writer just chose. */
-  allowLeaving(): void;
+  /** Whether the save that just finished was a download (a browser that can't write the file itself). */
+  savedByDownload(): boolean;
+  /** Writes the recovery copy's pending text now. Never rejects. */
+  flush(): Promise<void>;
+  /**
+   * Lets the new version take over and reloads. `anyway`: the writer chose to leave with changes
+   * that aren't in a file, so the browser's own "leave this page?" question is not asked too.
+   */
+  apply(options?: { anyway?: boolean }): Promise<void> | void;
 }
 
-/** `toast`: the offer, with Reload. `confirm`: the question that comes first when changes are unsaved. */
-export type UpdateStage = 'toast' | 'confirm';
+/**
+ * `toast`: the offer, with Reload. `confirm`: the question that comes first when changes are
+ * unsaved. `downloading`: Save first was a download, which has to finish before the page goes.
+ */
+export type UpdateStage = 'toast' | 'confirm' | 'downloading';
 
 export function createUpdateFlow(deps: UpdateDeps) {
   const stage = ref<UpdateStage>('toast');
@@ -47,7 +62,12 @@ export function createUpdateFlow(deps: UpdateDeps) {
     if (stage.value !== 'confirm' || saving.value) return;
     saving.value = true;
     try {
-      if ((await deps.save()) === 'saved') await deps.apply();
+      if ((await deps.save()) === 'saved') {
+        // A download starts and `save` is done at once; a reload within moments would lose its
+        // blob (and a browser's "allow downloads?" question). The writer reloads when it's there.
+        if (deps.savedByDownload()) stage.value = 'downloading';
+        else await deps.apply();
+      }
     } catch {
       // The save says what went wrong in the status bar; the question stays.
     } finally {
@@ -57,8 +77,8 @@ export function createUpdateFlow(deps: UpdateDeps) {
 
   async function reloadAnyway(): Promise<void> {
     if (stage.value !== 'confirm') return;
-    deps.allowLeaving();
-    await deps.apply();
+    await deps.flush();
+    await deps.apply({ anyway: true });
   }
 
   function cancel(): void {

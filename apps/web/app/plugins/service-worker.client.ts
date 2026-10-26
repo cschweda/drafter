@@ -1,5 +1,12 @@
 import { registerSW } from 'virtual:pwa-register';
-import { needRefresh, replaced, setUpdater } from '~/update/state';
+import { allowLeaving } from '~/storage/leaving';
+import {
+  createControllerWatch,
+  leavingRequested,
+  needRefresh,
+  replaced,
+  setUpdater,
+} from '~/update/state';
 
 // Registers the service worker (`@vite-pwa/nuxt` writes it at build time: nuxt.config.ts `pwa`) and
 // tells the page when a newer version is waiting. The module's own client plugin is off
@@ -9,24 +16,19 @@ export default defineNuxtPlugin(() => {
   // There is no worker in `nuxt dev`, and a registration there would only fail.
   if (import.meta.dev || !('serviceWorker' in navigator)) return;
 
-  /** This tab asked for the new version to take over, so this tab reloads when it has. */
-  let applying = false;
-  /**
-   * Whether a worker has controlled this page yet. On a first visit the worker takes over a moment
-   * after it installs (`clientsClaim`): that first change of controller is not an update.
-   */
-  let controlled = navigator.serviceWorker.controller !== null;
+  /** The reload the writer chose. If it was "Reload anyway", the browser's own question is skipped, from now. */
+  const reload = () => {
+    if (leavingRequested()) allowLeaving();
+    window.location.reload();
+  };
 
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!controlled) {
-      controlled = true;
-      return;
-    }
-    // A new version has taken over. If this tab didn't ask, the writer didn't choose a reload
-    // here: the offer stays, and Reload then needs only to reload.
-    if (applying) window.location.reload();
-    else replaced.value = true;
+  // On a first visit the worker takes over a moment after it installs (`clientsClaim`): that first
+  // change of controller is not an update (state.ts says how the rest are told apart).
+  const watch = createControllerWatch({
+    controlled: navigator.serviceWorker.controller !== null,
+    reload,
   });
+  navigator.serviceWorker.addEventListener('controllerchange', () => watch.onChange());
 
   const skipWaiting = registerSW({
     immediate: true,
@@ -41,10 +43,10 @@ export default defineNuxtPlugin(() => {
 
   setUpdater(async () => {
     if (replaced.value) {
-      window.location.reload();
+      reload();
       return;
     }
-    applying = true;
+    watch.apply();
     await skipWaiting(true);
   });
 });

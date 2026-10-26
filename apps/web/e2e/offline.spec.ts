@@ -100,6 +100,29 @@ async function expectAtEnd(page: Page, text: string) {
   await expect(editor(page)).toContainText(text);
 }
 
+/** The text of every script in this browser's recovery copy. */
+function storedSources(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () =>
+      new Promise<string[]>((resolve) => {
+        const open = indexedDB.open('drafter');
+        open.onerror = () => resolve([]);
+        open.onsuccess = () => {
+          const db = open.result;
+          const request = db.transaction('projects').objectStore('projects').getAll();
+          request.onsuccess = () => {
+            db.close();
+            resolve((request.result as { source: string }[]).map((p) => p.source));
+          };
+          request.onerror = () => {
+            db.close();
+            resolve([]);
+          };
+        };
+      }),
+  );
+}
+
 test.describe('offline', () => {
   test('works offline after the first visit', async ({ page, context }) => {
     await start(page);
@@ -146,6 +169,19 @@ test.describe('offline', () => {
     const download = page.waitForEvent('download');
     await page.getByRole('group', { name: 'Export' }).getByRole('button', { name: 'PDF' }).click();
     expect((await download).suggestedFilename()).toBe('The Call.pdf');
+  });
+
+  test('does not answer a request for a file with the app', async ({ page, context }) => {
+    await start(page);
+    await context.setOffline(true);
+    // A file that isn't cached is a network error offline, not the app's shell in its place.
+    for (const path of ['/og-image.png', '/fonts/courier-prime/OFL.txt', '/404.html']) {
+      await page.goto(path).catch(() => null);
+      await expect(editor(page)).toHaveCount(0);
+    }
+    // And the app itself still opens.
+    await page.goto('/');
+    await expect(editor(page)).toContainText('The Call');
   });
 
   test('caches nothing but the app’s own files', async ({ page }) => {
@@ -348,6 +384,96 @@ test.describe('a new version', () => {
     await page.keyboard.press('Enter');
     await reloaded(page);
     await expectAtEnd(page, 'Typed, then keys only.');
+  });
+
+  test('Save first where Save is a download waits for the download, and keeps Reload', async ({
+    page,
+  }) => {
+    await removePickers(page);
+    await start(page);
+    await typeAtEnd(page, '\n\nDownloaded, then reloaded.');
+    await mark(page);
+    await deployNewVersion(page);
+    await reload(page).click();
+    const download = page.waitForEvent('download');
+    await saveFirst(page).click();
+    expect((await download).suggestedFilename()).toBe('The Call.fountain');
+    // Not reloaded: the download has to finish first. The question is replaced by a message.
+    await expect(update(page)).toContainText(
+      'Your script is downloading. Reload when it has finished.',
+    );
+    await expect(update(page)).not.toContainText(UNSAVED);
+    await expect(reload(page)).toBeFocused();
+    await expect(later(page)).toBeVisible();
+    await notReloaded(page);
+    // Reload now has nothing to ask about.
+    await reload(page).click();
+    await reloaded(page);
+    await expectAtEnd(page, 'Downloaded, then reloaded.');
+  });
+
+  test('in two tabs: one reloads, the other keeps its text and its offer until its own Reload', async ({
+    page,
+    context,
+  }) => {
+    await start(page);
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect(editor(other)).toContainText('The Call');
+    await controlled(other);
+    // Two tabs can't both edit one script: the second takes it over from the first.
+    await other.getByRole('button', { name: 'Edit here instead' }).click();
+    await typeAtEnd(other, '\n\nTyped in the second tab.');
+    await mark(page);
+    await mark(other);
+    await deployNewVersion(page);
+    // Both tabs are offered it.
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
+    await expect(update(other)).toContainText('A new version of Drafter is ready');
+    // The first tab's writer reloads. The second tab was not asked, and does not reload.
+    await reload(page).click();
+    await reloaded(page);
+    await notReloaded(other);
+    await expect(update(other)).toContainText('A new version of Drafter is ready');
+    await expectAtEnd(other, 'Typed in the second tab.');
+    // Its own Reload still reloads it, after the question about its changes.
+    await reload(other).click();
+    await expect(update(other)).toContainText(UNSAVED);
+    await reloadAnyway(other).click();
+    await reloaded(other);
+    // The text is in the recovery copy.
+    await expect
+      .poll(() =>
+        storedSources(other).then((sources) =>
+          sources.some((t) => t.includes('Typed in the second tab.')),
+        ),
+      )
+      .toBe(true);
+  });
+
+  test('Reload reloads a tab that was loaded without the worker (a hard reload)', async ({
+    page,
+    context,
+  }) => {
+    // Another tab still has the old worker, so the new one waits.
+    await start(page);
+    await deployNewVersion(page);
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
+    // This tab is a hard reload: loaded with no controlling worker, while one is waiting.
+    const hard = await context.newPage();
+    const cdp = await context.newCDPSession(hard);
+    await cdp.send('Network.enable');
+    await cdp.send('Network.setBypassServiceWorker', { bypass: true });
+    await hard.goto('/');
+    await expect(editor(hard)).toContainText('The Call');
+    expect(await hard.evaluate(() => navigator.serviceWorker.controller === null)).toBe(true);
+    await mark(hard);
+    await expect(update(hard)).toContainText('A new version of Drafter is ready');
+    await reload(hard).click();
+    await reloaded(hard);
+    await expect(editor(hard)).toContainText('The Call');
+    // The first tab was not asked: it keeps its offer.
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
   });
 
   test('waits for the welcome dialog rather than stacking on it', async ({ browser }) => {

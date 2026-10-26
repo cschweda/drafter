@@ -128,6 +128,12 @@ describe('checking the service worker’s precache', () => {
     expect(await check(await worker(FILES, [...ALL, 'og-image.png']))).toMatch(/og-image\.png/);
   });
 
+  test('finds a file listed twice', async () => {
+    expect(await check(await worker(FILES, [...ALL, '_nuxt/a.js']))).toMatch(
+      /_nuxt\/a\.js more than once/,
+    );
+  });
+
   test('finds runtime caching, and a missing worker', async () => {
     expect(await check(await worker(FILES, ALL, 'e.registerRoute(/x/,new e.CacheFirst);'))).toMatch(
       /runtime caching/,

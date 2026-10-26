@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { useFiles } from '~/storage/files';
 import { save } from '~/storage/save';
-import { allowLeaving, useScript } from '~/storage/script';
+import { useScript } from '~/storage/script';
 import { modalOpen, tourShowing } from '~/tour/state';
-import { createUpdateFlow, UPDATE_READY, unsavedMessage } from '~/update/flow';
+import {
+  createUpdateFlow,
+  DOWNLOADING_MESSAGE,
+  reloadAnywayLabel,
+  UPDATE_READY,
+  unsavedMessage,
+} from '~/update/flow';
 import { applyUpdate, needRefresh } from '~/update/state';
 
 // "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload, shown when the
@@ -10,13 +17,15 @@ import { applyUpdate, needRefresh } from '~/update/state';
 // in a file, Reload asks first (Save first, Reload anyway, Cancel); those changes are in the
 // recovery copy either way. It isn't a modal, so the page stays usable behind it, and it waits
 // for the welcome dialog, the tour, and any other dialog to close rather than stacking on them.
-const { dirty, recovery } = useScript();
+const { dirty, recovery, flush } = useScript();
 
 const flow = createUpdateFlow({
   unsaved: () => dirty.value,
   save,
+  // Where the browser can't write the file itself, Save is a download.
+  savedByDownload: () => !useFiles().canSaveInPlace,
+  flush,
   apply: applyUpdate,
-  allowLeaving,
 });
 
 /** "Later": hidden until the page is loaded again. The app works as it is. */
@@ -71,8 +80,8 @@ function onKeydown(event: KeyboardEvent) {
         data-update
         @keydown="onKeydown"
       >
-        <template v-if="flow.stage.value === 'toast'">
-          <p>{{ UPDATE_READY }}</p>
+        <template v-if="flow.stage.value === 'toast' || flow.stage.value === 'downloading'">
+          <p>{{ flow.stage.value === 'downloading' ? DOWNLOADING_MESSAGE : UPDATE_READY }}</p>
           <div class="actions">
             <button ref="reloadButton" type="button" class="action" @click="flow.reload()">
               Reload
@@ -98,7 +107,7 @@ function onKeydown(event: KeyboardEvent) {
               :disabled="flow.saving.value"
               @click="flow.reloadAnyway()"
             >
-              Reload anyway
+              {{ reloadAnywayLabel(recovery) }}
             </button>
             <button
               type="button"

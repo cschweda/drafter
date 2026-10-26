@@ -42,7 +42,13 @@ async function precacheProblems(siteDir) {
     return ['The build has no sw.js, so the app would not work offline.'];
   }
   const problems = [];
-  const cached = new Set([...worker.matchAll(/\burl:"([^"]+)"/g)].map((match) => match[1]));
+  const listed = [...worker.matchAll(/\burl:"([^"]+)"/g)].map((match) => match[1]);
+  const cached = new Set(listed);
+  for (const name of cached) {
+    if (listed.filter((url) => url === name).length > 1) {
+      problems.push(`The service worker lists ${name} more than once.`);
+    }
+  }
   const files = (await filesUnder(siteDir, PRECACHED))
     .map((path) => relative(siteDir, path).split(sep).join('/'))
     .filter((name) => name !== 'sw.js' && !/^workbox-[^/]*\.js$/.test(name));
