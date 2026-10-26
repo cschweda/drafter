@@ -18,6 +18,7 @@ describe('settings', () => {
       spellcheck: true,
       strict: false,
       lineNumbers: false,
+      typewriter: false,
     });
   });
 

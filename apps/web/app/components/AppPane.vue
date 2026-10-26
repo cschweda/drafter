@@ -142,6 +142,14 @@ function onKeydown(event: KeyboardEvent, index: number) {
             >
               Line numbers
             </button>
+            <button
+              type="button"
+              class="zoom-button"
+              :aria-pressed="settings.typewriter ? 'true' : 'false'"
+              @click="set('typewriter', !settings.typewriter)"
+            >
+              Typewriter
+            </button>
           </div>
         </template>
         <template v-else-if="props.selected === 'problems' && canFixAll">

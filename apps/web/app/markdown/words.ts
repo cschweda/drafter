@@ -1,5 +1,19 @@
 import type { MdNode } from './render';
 
+const SPACE = /\s/;
+
+/** The words in a text: runs of characters between spaces. Markdown documents and scripts both count this way. */
+export function wordsIn(text: string): number {
+  let count = 0;
+  let inWord = false;
+  for (let i = 0; i < text.length; i++) {
+    const space = SPACE.test(text[i] as string);
+    if (!space && !inWord) count++;
+    inWord = !space;
+  }
+  return count;
+}
+
 const INLINE = new Set([
   'text',
   'emphasis',
@@ -29,5 +43,5 @@ export function countWords(tree: MdNode): number {
     if (!INLINE.has(node.type)) text += ' ';
   };
   visit(tree);
-  return text.split(/\s+/).filter(Boolean).length;
+  return wordsIn(text);
 }

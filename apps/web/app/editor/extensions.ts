@@ -14,6 +14,7 @@ import {
 import type { Template } from '@drafter/templates';
 import type { DocumentKind } from '../markdown/kind';
 import { theme } from './theme';
+import { typewriterScrolling } from './typewriter';
 
 /**
  * The browser's spellcheck in the Source pane (Phase 1 design §5.3): on to start with, and a
@@ -21,9 +22,15 @@ import { theme } from './theme';
  */
 export const spellcheck = new Compartment();
 
-/** `spellcheck.reconfigure(spellcheckAttribute(on))` switches it. */
+const SPELLCHECK_ON = EditorView.contentAttributes.of({ spellcheck: 'true' });
+const SPELLCHECK_OFF = EditorView.contentAttributes.of({ spellcheck: 'false' });
+
+/**
+ * `spellcheck.reconfigure(spellcheckAttribute(on))` switches it. The same extension comes back
+ * for the same answer, so `applyEditorSettings` can tell that nothing changed.
+ */
 export function spellcheckAttribute(on: boolean): Extension {
-  return EditorView.contentAttributes.of({ spellcheck: on ? 'true' : 'false' });
+  return on ? SPELLCHECK_ON : SPELLCHECK_OFF;
 }
 
 /**
@@ -31,6 +38,24 @@ export function spellcheckAttribute(on: boolean): Extension {
  * comes before every other gutter, so the numbers sit at the far left of the source.
  */
 export const lineNumbersGutter = new Compartment();
+
+/**
+ * Typewriter scrolling (`typewriter.ts`), which the setting turns on. It starts empty;
+ * `typewriter.reconfigure(typewriterExtension(on))` switches it.
+ */
+export const typewriter = new Compartment();
+
+/**
+ * Made once, so that changing another setting reconfigures the compartment with the plugin it
+ * already holds: rebuilding it would take the room above and below the text away for a moment,
+ * and a long script's scroll position with it.
+ */
+const TYPEWRITER = typewriterScrolling();
+const NOTHING: Extension = [];
+
+export function typewriterExtension(on: boolean): Extension {
+  return on ? TYPEWRITER : NOTHING;
+}
 
 /**
  * Read-only, for a script that another tab is editing. `readOnlyExtension(true)` stops the keymap's
@@ -69,9 +94,11 @@ export function relint(): void {
   if (active) relintView(active);
 }
 
+const LINE_NUMBERS = lineNumbers();
+
 /** `lineNumbersGutter.reconfigure(lineNumbersExtension(on))` shows or hides the numbers. */
 export function lineNumbersExtension(on: boolean): Extension {
-  return on ? lineNumbers() : [];
+  return on ? LINE_NUMBERS : NOTHING;
 }
 
 export interface EditorHooks {
@@ -115,7 +142,8 @@ export function languageExtension(
 export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fountain'): Extension {
   return [
     remember,
-    lineNumbersGutter.of([]),
+    lineNumbersGutter.of(lineNumbersExtension(false)),
+    typewriter.of(typewriterExtension(false)),
     parsedDoc,
     language.of(languageExtension(hooks, kind)),
     history(),

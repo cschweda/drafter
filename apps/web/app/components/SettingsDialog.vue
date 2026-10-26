@@ -47,6 +47,11 @@ const SWITCHES: Array<{ key: Exclude<keyof Settings, 'textSize'>; label: string;
     label: 'Line numbers',
     why: 'Number the lines in the Source pane, so you can refer to one.',
   },
+  {
+    key: 'typewriter',
+    label: 'Typewriter scrolling',
+    why: 'Keep the line you are writing at the middle of the Source pane.',
+  },
 ];
 
 const percent = (size: number) => `${Math.round(size * 100)}%`;

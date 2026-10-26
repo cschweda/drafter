@@ -5,6 +5,7 @@ import { openSearchPanel } from '@codemirror/search';
 import type { EditorView } from '@codemirror/view';
 import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-fountain';
 import { nextTick } from 'vue';
+import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
@@ -40,6 +41,7 @@ export function registerBuiltinCommands(): void {
   const script = useScript();
   const guard = useGuard();
   const panes = usePanes();
+  const focus = useFocusMode();
   const colorMode = useColorMode();
   const { settings, set } = useSettings();
   const template = useTemplate();
@@ -58,6 +60,8 @@ export function registerBuiltinCommands(): void {
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
   function showTab(tab: TabId) {
+    // Focus mode shows only the Source: any other tab is for the writer to see.
+    if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
       const held = document.activeElement?.closest<HTMLElement>('[data-pane]')?.dataset.pane;
       const from: PaneId | undefined = held === 'left' || held === 'right' ? held : undefined;
@@ -302,6 +306,18 @@ export function registerBuiltinCommands(): void {
     },
     { id: 'show-problems', title: 'Show Problems', group: 'View', run: () => showTab('problems') },
     {
+      id: 'focus-mode',
+      title: 'Toggle focus mode',
+      group: 'View',
+      icon: 'i-lucide-scan',
+      keys: 'Mod-Shift-Enter',
+      // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
+      global: true,
+      // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
+      enabled: () => !document.querySelector('dialog[open]') && !view.composing,
+      run: focus.toggle,
+    },
+    {
       id: 'switch-theme',
       title: 'Switch theme',
       group: 'View',
@@ -322,6 +338,20 @@ export function registerBuiltinCommands(): void {
       group: 'View',
       enabled: () => settings.value.lineNumbers,
       run: () => void set('lineNumbers', false),
+    },
+    {
+      id: 'turn-on-typewriter',
+      title: 'Turn on typewriter scrolling',
+      group: 'View',
+      enabled: () => !settings.value.typewriter,
+      run: () => void set('typewriter', true),
+    },
+    {
+      id: 'turn-off-typewriter',
+      title: 'Turn off typewriter scrolling',
+      group: 'View',
+      enabled: () => settings.value.typewriter,
+      run: () => void set('typewriter', false),
     },
     {
       id: 'fold-all',

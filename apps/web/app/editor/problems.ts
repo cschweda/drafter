@@ -11,6 +11,7 @@ import { useSettings } from '../settings/settings';
 import { applyTextChanges } from './apply-changes';
 import { relint } from './extensions';
 import { useEditor } from './session';
+import { appChange } from './typewriter';
 
 export interface Problem {
   /**
@@ -227,7 +228,11 @@ export function useProblems(): {
     }));
     if (changes.length === 0) return;
     // One undo step of its own, never joined to typing before or after it.
-    view.dispatch({ changes, userEvent: 'input', annotations: isolateHistory.of('full') });
+    view.dispatch({
+      changes,
+      userEvent: 'input',
+      annotations: [isolateHistory.of('full'), appChange.of(true)],
+    });
     relint();
   }
 

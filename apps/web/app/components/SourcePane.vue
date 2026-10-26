@@ -7,6 +7,7 @@ let parked: { scroll: StateEffect<unknown>; focused: boolean } | undefined;
 </script>
 
 <script setup lang="ts">
+import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
 
 // The one editor lives in module state (editor/session.ts), so it keeps its
@@ -24,7 +25,10 @@ onMounted(() => {
     const { scroll, focused } = parked;
     parked = undefined;
     view.dispatch({ effects: scroll });
-    if (focused) view.focus();
+    if (focused) {
+      view.focus();
+      restoreSelection(view);
+    }
   }
 });
 

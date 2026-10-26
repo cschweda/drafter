@@ -9,7 +9,7 @@ import { useSettings } from './settings';
  * settings table has been read, so the first paint is not undone by the defaults. Call it from
  * the page's setup; it returns the function that stops it.
  *
- * - Spellcheck, line numbers, and Strict Fountain's lint go to the editor (`applyEditorSettings`;
+ * - Spellcheck, line numbers, typewriter scrolling, and Strict Fountain's lint go to the editor (`applyEditorSettings`;
  *   `load` does the same for a script that is opened).
  * - The text size is `--text-scale` on the root, which the Source pane's theme and the Script
  *   pane's 100% zoom multiply by.
@@ -29,7 +29,12 @@ export function applySettings(): () => void {
 
     stops.push(
       watch(
-        () => [settings.value.spellcheck, settings.value.lineNumbers, settings.value.strict],
+        () => [
+          settings.value.spellcheck,
+          settings.value.lineNumbers,
+          settings.value.strict,
+          settings.value.typewriter,
+        ],
         () => applyEditorSettings(view, settings.value),
         { immediate: true },
       ),

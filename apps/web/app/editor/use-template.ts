@@ -6,6 +6,7 @@ import { useScript } from '../storage/script';
 import { askToUseMarkdown } from './markdown-question';
 import { useEditor } from './session';
 import { type DocumentType, isBuiltIn, type TemplateId, templateIdOf } from './template';
+import { appChange } from './typewriter';
 
 // The switcher is apart from `template.ts` because that file is plain data and functions, which
 // storage and the tests import without the editor; this one needs the session.
@@ -65,7 +66,11 @@ export function useTemplate(): TemplateChoice {
       insert: change.insert.replace(/\r?\n/g, view.state.lineBreak),
     }));
     if (changes.length === 0) return;
-    view.dispatch({ changes, userEvent: 'input', annotations: isolateHistory.of('full') });
+    view.dispatch({
+      changes,
+      userEvent: 'input',
+      annotations: [isolateHistory.of('full'), appChange.of(true)],
+    });
   }
 
   function canChooseType(type: DocumentType): boolean {
