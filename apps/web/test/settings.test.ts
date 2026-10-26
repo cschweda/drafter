@@ -110,9 +110,9 @@ describe('settings', () => {
     }
   });
 
-  test('keeps the defaults when the rows read are not rows', async () => {
+  test('keeps the defaults when what was read is not a list of rows', async () => {
     // A merge that throws must not reject `ready`: the page waits on it to apply anything.
-    const toArray = vi.spyOn(db.settings, 'toArray').mockResolvedValue([null] as never);
+    const toArray = vi.spyOn(db.settings, 'toArray').mockResolvedValue(42 as never);
     try {
       const store = createSettings();
       await expect(store.ready).resolves.toBeUndefined();
@@ -134,6 +134,20 @@ describe('settings', () => {
       const failed = createSettings();
       await failed.ready;
       expect(failed.read.value).toBe(false);
+    } finally {
+      toArray.mockRestore();
+    }
+  });
+
+  test('skips a damaged row and keeps the others', async () => {
+    const toArray = vi
+      .spyOn(db.settings, 'toArray')
+      .mockResolvedValue([null, { key: 'strict', value: true }, 7] as never);
+    try {
+      const store = createSettings();
+      await store.ready;
+      expect(store.settings.value).toEqual({ ...DEFAULT_SETTINGS, strict: true });
+      expect(store.read.value).toBe(true);
     } finally {
       toArray.mockRestore();
     }

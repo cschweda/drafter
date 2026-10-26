@@ -78,7 +78,17 @@ async function editThenPress(
   );
 }
 
+/** Turns Strict Fountain on in the Settings dialog. */
+async function enableStrict(page: Page) {
+  await page.keyboard.press('ControlOrMeta+,');
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByRole('switch', { name: 'Strict Fountain' }).check();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toBeHidden();
+}
+
 const CONTD = "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi again.\n";
+const TWO_CONTD = "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nMARGARET (CONT'D)\nHi.\n";
 const STRICT = 'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\nthen louder)\nHi.\n';
 
 test.beforeEach(async ({ page }) => {
@@ -114,6 +124,8 @@ test('applies a fix', async ({ page }) => {
   await expect(fix).toBeVisible({ timeout: 1000 });
   await fix.click();
   await expect.poll(() => text(page)).toBe('MARGARET\nHi.\n\nMARGARET\nHi again.\n');
+  // The fixed problem doesn't linger for the lint's 300 ms.
+  await expect(fix).toBeHidden({ timeout: 250 });
   await showSource(page);
   await editor(page).click();
   await page.keyboard.press('ControlOrMeta+Z');
@@ -169,11 +181,7 @@ test('fixes everything at once in Strict Fountain', async ({ page }) => {
   await expect(problemButton(page, /Info: .* Line 1$/)).toBeVisible({ timeout: 1000 });
   await expect(page.getByRole('button', { name: 'Fix all' })).toBeHidden();
 
-  await page.keyboard.press('ControlOrMeta+,');
-  const dialog = page.getByRole('dialog', { name: 'Settings' });
-  await dialog.getByRole('switch', { name: 'Strict Fountain' }).check();
-  await dialog.getByRole('button', { name: 'Done' }).click();
-  await expect(dialog).toBeHidden();
+  await enableStrict(page);
 
   await showProblems(page);
   await expect(problemButton(page, /^Warning: .* Line 1$/)).toBeVisible({ timeout: 1000 });
@@ -206,4 +214,137 @@ test('jumps to a problem and applies its fix from the keyboard', async ({ page }
   await fix.focus();
   await page.keyboard.press('Space');
   await expect.poll(() => text(page)).toBe('MARGARET\nHi.\n\nMARGARET\nHi again.\n');
+  // Nothing is left, so focus stays in the list's panel and not on the page.
+  await expect(list(page)).toBeFocused();
+});
+
+test('moves focus to the next problem after a fix', async ({ page }) => {
+  await setText(page, TWO_CONTD);
+  await showProblems(page);
+  const fixes = list(page).getByRole('button', { name: "Remove (CONT'D)" });
+  await expect(fixes).toHaveCount(2, { timeout: 1000 });
+  await fixes.first().focus();
+  await page.keyboard.press('Space');
+  await expect(fixes).toHaveCount(1);
+  await expect(problemButton(page, /Info: .* Line 7$/)).toBeFocused();
+});
+
+test('moves focus to the panel after Fix all', async ({ page }) => {
+  await setText(page, STRICT);
+  await enableStrict(page);
+  await showProblems(page);
+  const fixAll = page.getByRole('button', { name: 'Fix all' });
+  await expect(fixAll).toBeVisible({ timeout: 1000 });
+  await fixAll.focus();
+  await page.keyboard.press('Enter');
+  await expect(fixAll).toBeHidden();
+  await expect(list(page)).toBeFocused();
+});
+
+test.describe('while typing', () => {
+  test.skip(
+    ({ isMobile }) => !!isMobile,
+    'the text can be typed in only while the Source tab shows',
+  );
+
+  test('keeps the list items, and focus in them, when text above them changes', async ({
+    page,
+  }) => {
+    await setText(page, 'INT. HALL\n\nShe waits.\n\nINT. YARD\n\nHe waits.');
+    await showProblems(page);
+    const second = problemButton(page, /INT\. YARD/);
+    await expect(second).toContainText('Line 5', { timeout: 1000 });
+    await second.focus();
+    // The page's own mark on the element: a new element would not have it.
+    await second.evaluate((el) => el.closest('li')?.setAttribute('data-mark', 'kept'));
+
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.insertText('Above.\n\n');
+    await expect(second).toContainText('Line 7', { timeout: 1000 });
+    await expect(list(page).locator('li[data-mark="kept"]')).toHaveCount(1);
+
+    // Same element, so focus there is not lost to a remount.
+    await second.focus();
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.insertText('More.\n\n');
+    await expect(second).toContainText('Line 9', { timeout: 1000 });
+    await expect(list(page).locator('li[data-mark="kept"]')).toHaveCount(1);
+  });
+
+  test('keeps focus on a problem while text above it changes', async ({ page }) => {
+    await setText(page, 'INT. HALL\n\nShe waits.\n\nINT. YARD\n\nHe waits.');
+    await showProblems(page);
+    const second = problemButton(page, /INT\. YARD/);
+    await expect(second).toContainText('Line 5', { timeout: 1000 });
+    await second.focus();
+    // An edit made without moving focus out of the list: one dispatched in the page.
+    await page.evaluate(() => {
+      const content = document.querySelector('.cm-content') as HTMLElement;
+      const keep = document.activeElement as HTMLElement;
+      content.focus();
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.setStart(content.querySelector('.cm-line') as Node, 0);
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.execCommand('insertText', false, 'Above.\n\n');
+      keep.focus();
+    });
+    await expect(second).toContainText('Line 7', { timeout: 1000 });
+    await expect(second).toBeFocused();
+  });
+});
+
+test.describe('in a read-only tab', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'two tabs are the same on a phone');
+
+  test('offers no fix, and no Fix all', async ({ page, context }) => {
+    await setText(page, STRICT);
+    await enableStrict(page);
+    // Wait for the text and the setting to be in the database the second tab reads.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            new Promise<boolean>((resolve) => {
+              const open = indexedDB.open('drafter');
+              open.onsuccess = () => {
+                const db = open.result;
+                const done = (ok: boolean) => {
+                  db.close();
+                  resolve(ok);
+                };
+                const projects = db.transaction('projects').objectStore('projects').getAll();
+                projects.onsuccess = () =>
+                  done(
+                    (projects.result as Array<{ source: string }>).some((p) =>
+                      p.source.includes('then louder'),
+                    ),
+                  );
+                projects.onerror = () => done(false);
+              };
+              open.onerror = () => resolve(false);
+            }),
+        ),
+      )
+      .toBe(true);
+
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(other.locator('.cm-content')).toContainText('then louder');
+    await problemsTab(other).click();
+    const panel = other.getByRole('tabpanel', { name: /^Problems/ });
+    const warning = panel.getByRole('button', { name: /^Warning: .* Line 5$/ });
+    await expect(warning).toBeVisible({ timeout: 2000 });
+    await expect(other.getByRole('button', { name: 'Fix all' })).toBeHidden();
+    const fix = panel.getByRole('button', { name: 'Join onto one line' });
+    await expect(fix).toHaveAttribute('aria-disabled', 'true');
+    // Pressed anyway (Playwright won't click a disabled button): nothing happens.
+    await fix.click({ force: true });
+    expect(await text(other)).toBe(STRICT);
+  });
 });

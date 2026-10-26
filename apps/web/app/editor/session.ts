@@ -26,6 +26,8 @@ export interface EditorSession {
    * caller keeps that first.
    */
   load(text: string): void;
+  /** Whether editing is off: another tab has the script, or a switch to another script is under way. */
+  readonly locked: Readonly<ShallowRef<boolean>>;
   /** Turns editing off (or on): the script is open for editing in another tab. `load` keeps it. */
   setReadOnly(on: boolean): void;
   /**
@@ -51,6 +53,7 @@ function create(): EditorSession {
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
   let locked = false;
+  const lockedRef = shallowRef(false);
   const listeners = new Set<(state: EditorState) => void>();
   const updateListeners = new Set<(state: EditorState) => void>();
 
@@ -106,6 +109,7 @@ function create(): EditorSession {
   function setReadOnly(on: boolean) {
     if (on === locked) return;
     locked = on;
+    lockedRef.value = on;
     view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on)) });
   }
 
@@ -141,7 +145,18 @@ function create(): EditorSession {
     });
   }
 
-  return { view, doc, cursor, template, load, setReadOnly, onState, onUpdate, goto };
+  return {
+    view,
+    doc,
+    cursor,
+    template,
+    locked: lockedRef,
+    load,
+    setReadOnly,
+    onState,
+    onUpdate,
+    goto,
+  };
 }
 
 /** The editor, created on first use in the browser and kept for the visit. */

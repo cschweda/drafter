@@ -19,6 +19,11 @@ const emit = defineEmits<{ choose: [tab: TabId] }>();
 
 const { project } = useScript();
 const { problems, count, canFixAll, fixAll } = useProblems();
+// The button goes when nothing is left to fix, and focus with it: it goes to the panel.
+function onFixAll() {
+  fixAll();
+  document.getElementById('panel-problems')?.focus();
+}
 const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
 const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
@@ -114,7 +119,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
         </template>
         <template v-else-if="props.selected === 'problems' && canFixAll">
           <span class="spacer" />
-          <button type="button" class="fix-all" @click="fixAll()">Fix all</button>
+          <button type="button" class="fix-all" @click="onFixAll">Fix all</button>
         </template>
       </template>
     </div>

@@ -62,7 +62,10 @@ export function createSettings(): SettingsStore {
     try {
       const rows = await db.settings.toArray();
       const next: Record<string, unknown> = { ...state.value };
-      for (const { key, value } of rows) {
+      for (const row of rows) {
+        // One damaged row doesn't cost the others.
+        if (typeof row !== 'object' || row === null) continue;
+        const { key, value } = row;
         if (isKey(key) && !changed.has(key) && isValid(key, value)) next[key] = value;
       }
       state.value = next as unknown as Settings;

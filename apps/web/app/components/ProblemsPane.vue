@@ -1,37 +1,74 @@
 <script setup lang="ts">
-import { useProblems } from '~/editor/problems';
+import { type Problem, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 
 // What the Source pane's gutter marks, as a list the writer can read, jump from, and fix from.
-const { problems } = useProblems();
+const { problems, locked } = useProblems();
 const { goto } = useEditor();
 
 const SEVERITY = { error: 'Error', warning: 'Warning', info: 'Info' } as const;
+
+const root = ref<HTMLElement>();
+
+// A fix takes its problem out of the list a moment later, and the button that was pressed goes
+// with it. Focus then goes to the problem that took its place, or to the panel if none is left.
+let focusAfter: { index: number; timer: ReturnType<typeof setTimeout> } | undefined;
+
+function fix(problem: Problem, index: number) {
+  if (locked.value || !problem.fix) return;
+  if (focusAfter) clearTimeout(focusAfter.timer);
+  // If the list doesn't change (a stale fix did nothing), focus stays where it is.
+  focusAfter = { index, timer: setTimeout(() => (focusAfter = undefined), 1000) };
+  problem.fix.apply();
+}
+
+watch(problems, async () => {
+  if (!focusAfter) return;
+  const { index, timer } = focusAfter;
+  clearTimeout(timer);
+  focusAfter = undefined;
+  await nextTick();
+  const jumps = root.value?.querySelectorAll<HTMLElement>('.jump');
+  const target = jumps?.[Math.min(index, jumps.length - 1)];
+  (target ?? root.value?.closest<HTMLElement>('[role="tabpanel"]'))?.focus();
+});
+
+onBeforeUnmount(() => {
+  if (focusAfter) clearTimeout(focusAfter.timer);
+});
 </script>
 
 <template>
-  <p v-if="problems.length === 0" class="empty">No problems found.</p>
-  <ul v-else class="problems">
-    <li
-      v-for="problem in problems"
-      :key="`${problem.ruleId}:${problem.from}:${problem.to}`"
-      class="problem"
-      :data-severity="problem.severity"
-    >
-      <button
-        type="button"
-        class="jump"
-        @click="goto(problem.from, { select: { from: problem.from, to: problem.to } })"
+  <div ref="root">
+    <p v-if="problems.length === 0" class="empty">No problems found.</p>
+    <ul v-else class="problems">
+      <li
+        v-for="(problem, index) in problems"
+        :key="problem.key"
+        class="problem"
+        :data-severity="problem.severity"
       >
-        <span class="severity">{{ SEVERITY[problem.severity] }}:</span>
-        <span class="message">{{ problem.message }}</span>
-        <span class="line">Line {{ problem.line }}</span>
-      </button>
-      <button v-if="problem.fix" type="button" class="fix" @click="problem.fix.apply()">
-        {{ problem.fix.title }}
-      </button>
-    </li>
-  </ul>
+        <button
+          type="button"
+          class="jump"
+          @click="goto(problem.from, { select: { from: problem.from, to: problem.to } })"
+        >
+          <span class="severity">{{ SEVERITY[problem.severity] }}:</span>
+          <span class="message">{{ problem.message }}</span>
+          <span class="line">Line {{ problem.line }}</span>
+        </button>
+        <button
+          v-if="problem.fix"
+          type="button"
+          class="fix"
+          :aria-disabled="locked ? 'true' : undefined"
+          @click="fix(problem, index)"
+        >
+          {{ problem.fix.title }}
+        </button>
+      </li>
+    </ul>
+  </div>
 </template>
 
 <style scoped>
@@ -107,5 +144,12 @@ const SEVERITY = { error: 'Error', warning: 'Warning', info: 'Info' } as const;
 }
 .fix:hover {
   border-color: var(--heading);
+}
+.fix[aria-disabled='true'] {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.fix[aria-disabled='true']:hover {
+  border-color: var(--line);
 }
 </style>

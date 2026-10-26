@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import { mergeFixes } from '../app/editor/problems';
+import { describe, expect, test, vi } from 'vitest';
+import { mergeFixes, occurrenceKeys, oncePerFrame } from '../app/editor/problems';
 
 const change = (from: number, to: number, insert = '') => ({ from, to, insert });
 
@@ -40,5 +40,41 @@ describe('mergeFixes', () => {
   test('is empty for no fixes', () => {
     expect(mergeFixes([])).toEqual([]);
     expect(mergeFixes([{ changes: [] }])).toEqual([]);
+  });
+});
+
+describe('occurrenceKeys', () => {
+  test('names a problem by its rule and how many of the rule came before it', () => {
+    expect(occurrenceKeys(['a', 'b', 'a', 'a', 'b'])).toEqual(['a:0', 'b:0', 'a:1', 'a:2', 'b:1']);
+  });
+
+  test('gives two problems of one rule at one place two keys, and keeps a key when text moves', () => {
+    const keys = occurrenceKeys(['heading-no-time', 'heading-no-time']);
+    expect(new Set(keys).size).toBe(2);
+    // Positions aren't part of a key, so an edit above doesn't make a new one.
+    expect(occurrenceKeys(['heading-no-time', 'heading-no-time'])).toEqual(keys);
+  });
+});
+
+describe('oncePerFrame', () => {
+  test('runs a burst of calls once, with the last arguments, on the next frame', () => {
+    let frame: (() => void) | undefined;
+    const schedule = vi.fn((run: () => void) => {
+      frame = run;
+    });
+    const seen: number[] = [];
+    const read = oncePerFrame((n: number) => seen.push(n), schedule);
+    read(1);
+    read(2);
+    read(3);
+    expect(seen).toEqual([]);
+    expect(schedule).toHaveBeenCalledTimes(1);
+    frame?.();
+    expect(seen).toEqual([3]);
+    // The next burst gets a frame of its own.
+    read(4);
+    expect(schedule).toHaveBeenCalledTimes(2);
+    frame?.();
+    expect(seen).toEqual([3, 4]);
   });
 });

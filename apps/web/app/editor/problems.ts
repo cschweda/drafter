@@ -5,9 +5,15 @@ import type { TextChange } from '@drafter/fountain';
 import { lint, STRICT_RULES } from '@drafter/lint';
 import { type ComputedRef, computed, type ShallowRef, shallowRef } from 'vue';
 import { useSettings } from '../settings/settings';
+import { relint } from './extensions';
 import { useEditor } from './session';
 
 export interface Problem {
+  /**
+   * Names the problem across edits, for keying a list: its rule, and how many of that rule's
+   * problems come before it. A position would change with every edit above it.
+   */
+  key: string;
   ruleId: string;
   severity: 'error' | 'warning' | 'info';
   message: string;
@@ -17,6 +23,38 @@ export interface Problem {
   /** 1-based source line. */
   line: number;
   fix?: { title: string; apply(): void };
+}
+
+/** `rule:n` for each rule id, n counting that rule's earlier problems in the list. */
+export function occurrenceKeys(ruleIds: readonly string[]): string[] {
+  const seen = new Map<string, number>();
+  return ruleIds.map((id) => {
+    const n = seen.get(id) ?? 0;
+    seen.set(id, n + 1);
+    return `${id}:${n}`;
+  });
+}
+
+/**
+ * `fn` as a function that runs it once on the next frame, with the arguments of the last call,
+ * however many calls come first. `schedule` is the frame (animation frame, by default).
+ */
+export function oncePerFrame<A extends unknown[]>(
+  fn: (...args: A) => void,
+  schedule: (run: () => void) => unknown = (run) =>
+    typeof requestAnimationFrame === 'function' ? requestAnimationFrame(run) : setTimeout(run, 16),
+): (...args: A) => void {
+  let latest: A | undefined;
+  return (...args) => {
+    const waiting = latest !== undefined;
+    latest = args;
+    if (waiting) return;
+    schedule(() => {
+      const last = latest as A;
+      latest = undefined;
+      fn(...last);
+    });
+  };
 }
 
 /**
@@ -53,6 +91,7 @@ const same = (a: readonly Problem[], b: readonly Problem[]) =>
       p.from === q.from &&
       p.to === q.to &&
       p.line === q.line &&
+      p.key === q.key &&
       p.fix?.title === q.fix?.title
     );
   });
@@ -60,10 +99,10 @@ const same = (a: readonly Problem[], b: readonly Problem[]) =>
 /** Reads the lint state of the one editor into the list, after every update. */
 function start() {
   started = true;
-  const { view, onUpdate } = useEditor();
+  const { view, onUpdate, locked } = useEditor();
 
   function read(state: EditorState) {
-    const found: Problem[] = [];
+    const found: Omit<Problem, 'key'>[] = [];
     forEachDiagnostic(state, (diagnostic, from, to) => {
       const action = diagnostic.actions?.[0];
       found.push({
@@ -74,15 +113,29 @@ function start() {
         to,
         line: state.doc.lineAt(from).number,
         // The diagnostic's own action, which carries cm-fountain's guard against stale text.
-        ...(action && { fix: { title: action.name, apply: () => action.apply(view, from, to) } }),
+        ...(action && {
+          fix: {
+            title: action.name,
+            apply: () => {
+              if (locked.value) return;
+              action.apply(view, from, to);
+              // Lint now, so the fixed problem doesn't wait out the delay in the list.
+              relint();
+            },
+          },
+        }),
       });
     });
     found.sort((a, b) => a.from - b.from || a.to - b.to);
-    if (!same(problems.value, found)) problems.value = found;
+    const keys = occurrenceKeys(found.map((p) => p.ruleId));
+    const keyed = found.map((p, i) => ({ ...p, key: keys[i] as string }));
+    if (!same(problems.value, keyed)) problems.value = keyed;
   }
 
   read(view.state);
-  onUpdate(read);
+  // Typing makes an update per keystroke; the list is read once a frame, from the state then.
+  const readSoon = oncePerFrame(() => read(view.state));
+  onUpdate(readSoon);
 }
 
 /** The problems in the editor, as its gutter shows them (technical design §9). */
@@ -90,19 +143,23 @@ export function useProblems(): {
   problems: Readonly<ShallowRef<readonly Problem[]>>;
   /** Errors and warnings; info isn't counted (it's advice, not a fault). */
   count: Readonly<ComputedRef<number>>;
-  /** Whether Strict Fountain is on and a Strict problem has a fix to apply. */
+  /** Whether editing is off (another tab has the script, or a switch is under way): no fix applies. */
+  locked: Readonly<ShallowRef<boolean>>;
+  /** Whether Strict Fountain is on, the editor can be changed, and a Strict problem has a fix. */
   canFixAll: Readonly<ComputedRef<boolean>>;
   /** Strict Fountain only: applies every Strict rule's fix in one undoable change. */
   fixAll(): void;
 } {
   if (!started) start();
   const { settings } = useSettings();
-  const { view, template } = useEditor();
+  const { view, template, locked } = useEditor();
 
   const count = computed(() => problems.value.filter((p) => p.severity !== 'info').length);
   const canFixAll = computed(
     () =>
-      settings.value.strict && problems.value.some((p) => STRICT_RULES.includes(p.ruleId) && p.fix),
+      settings.value.strict &&
+      !locked.value &&
+      problems.value.some((p) => STRICT_RULES.includes(p.ruleId) && p.fix),
   );
 
   function fixAll() {
@@ -115,8 +172,10 @@ export function useProblems(): {
       ...change,
       insert: change.insert.replace(/\r?\n/g, view.state.lineBreak),
     }));
-    if (changes.length > 0) view.dispatch({ changes, userEvent: 'input' });
+    if (changes.length === 0) return;
+    view.dispatch({ changes, userEvent: 'input' });
+    relint();
   }
 
-  return { problems, count, canFixAll, fixAll };
+  return { problems, count, locked, canFixAll, fixAll };
 }
