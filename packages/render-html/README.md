@@ -3,24 +3,36 @@
 The Script pane's renderer for [Drafter](https://github.com/cschweda/drafter): draws the pages `@drafter/layout` produces as accessible DOM, one absolutely positioned element for each line that prints, so the screen follows the same character grid as the PDF and the text export. It is framework-free and touches the DOM, so it runs in a browser, and in jsdom for tests, but not in a worker.
 
 ```ts
-import { createScriptView } from '@drafter/render-html';
+import { createScriptView, GOTO_EVENT } from '@drafter/render-html';
 import '@drafter/render-html/style.css';
 
-const view = createScriptView(container);
-view.element; // <section class="drafter-script" aria-label="Script">, the last child of container
+const view = createScriptView(container, {
+  fontsReady: document.fonts.load('12pt "Courier Prime"'),
+});
+view.element.addEventListener(GOTO_EVENT, (event) => select(event.detail.offset));
+
+await view.update(layout, template); // after each layout
+view.reveal(blockIndex); // when the editor's cursor moves
+view.destroy();
 ```
 
 ## API
 
 | Export | What it does |
 |---|---|
-| `createScriptView(container, options?)` | Appends the Script region, `<section class="drafter-script" aria-label="Script">`, to `container` and returns a `ScriptView`. `options` takes `fontsReady`, a promise that resolves when Courier Prime is ready, and `now`, a clock for the view's timing. |
-| `ScriptView` | `element`, the region; `update(layout, template)`, which draws a layout into it; `reveal(blockIndex)`, which scrolls to where a block starts; and `destroy()`, which removes the region. |
+| `createScriptView(container, options?)` | Appends the Script region, `<section class="drafter-script" aria-label="Script">`, to `container` and returns a `ScriptView`. `options` takes `fontsReady`, a promise that resolves when Courier Prime is ready, and `now`, the clock for the scroll guard, in milliseconds (`performance.now()` by default). |
+| `ScriptView` | `element`, the region; `update(layout, template)`, which draws a layout into it; `reveal(blockIndex)`, which scrolls to where a block starts; and `destroy()`, which removes the region and its listeners. |
 | `GOTO_EVENT` | `'drafter:goto'`, the name of the `CustomEvent<{ offset: number }>` that a click on a line of the script dispatches from the region, bubbling, with the line's source offset for the editor to select. |
 | `speechRoles(template)` | `{ cue, speech }`, two sets of role names read from the template's role map: the roles that open a speech, and the roles that carry it on. |
 | `@drafter/render-html/style.css` | The stylesheet, described below. |
 
-In this version `createScriptView` is a shell: it adds and removes the region, and `update` and `reveal` do nothing yet and nothing dispatches `GOTO_EVENT`.
+## The view
+
+- **`update(layout, template)`** draws a layout. The first call waits for `fontsReady`, so that `1ch` is the loaded font's; if the promise rejects, the pages are drawn anyway, in the browser's own monospace font. After that, `update` draws before it returns. It draws by page: each page is compared, as JSON, with the page drawn at its position last time, and the template with the last template. A page that is unchanged keeps its element, and with it any text the reader has selected; a changed page is built apart from the document and takes the old one's place; and pages that are gone are removed, so a script with no pages clears the view. A different template draws every page again, since the DOM comes from the template as well as from the page, and a new copy of an equal template changes nothing. Source offsets are part of a page's JSON, so an edit that changes the script's length draws every page after it again, and one that keeps the length draws only the pages it touched. When calls overlap, the newest wins: a call still waiting for the fonts when a newer one arrives draws nothing.
+- **A click** on a line, or on text in it, dispatches `GOTO_EVENT` from the region, with the line's `data-from` as `detail.offset`. A wrapped line reports where it starts in the source. The paper and the furniture report nothing.
+- **`reveal(blockIndex)`** calls `scrollIntoView({ block: 'nearest' })` on the first line at or after where `layout.index[blockIndex]` says the block starts, choosing the line by its `--row` and the page by its `data-page`, not by their places in the DOM, which follows reading order. It reads the layout last drawn. It does nothing for a block index that layout doesn't have, or in the two seconds after the reader scrolls the container. The reader scrolls by a turn of the wheel, a touch or a drag, or one of the keys PageUp, PageDown, Home, End, the arrows, and Space, on the container or in it; each one starts the two seconds over. The view's own scrolling doesn't count, and neither does the `scroll` event, which can't tell the two apart, so dragging a scrollbar isn't noticed.
+- **`destroy()`** removes the region and every listener. After it, `update` and `reveal` do nothing.
+- **In jsdom,** which has no layout and no `scrollIntoView`, a test that calls `reveal` has to define `Element.prototype.scrollIntoView`; the package's own tests record its calls.
 
 ## What it draws
 
