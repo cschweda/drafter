@@ -300,7 +300,14 @@ test.describe('sample modules', () => {
     // The new document brings the Source pane forward and focuses its editor; the tabs wait for it.
     await expect(editor(page)).toBeFocused();
     for (const name of ['Scenes', 'Cast']) {
-      await moduleTab(page, name).first().click();
+      // On the emulated phone WebKit a tap on a tab is now and then ignored (about 1 in 10, under
+      // investigation; see the Plan 4 deferred list), so tap again until the tab is chosen.
+      await expect(async () => {
+        await moduleTab(page, name).first().click();
+        await expect(moduleTab(page, name).first()).toHaveAttribute('aria-selected', 'true', {
+          timeout: 1000,
+        });
+      }).toPass();
       await expect(modulePanel(page, name)).toHaveText('Not available for Markdown documents.');
     }
 
