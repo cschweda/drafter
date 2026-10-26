@@ -34,7 +34,7 @@
 
 ## The idea
 
-Drafter does for screenwriting what the Inform 7 IDE does for interactive fiction. You work in a plain-text **source** on the left and see the **compiled** result, a paginated script, on the right. Everything Drafter knows about the script is derived from the source. There is no hidden document model, no proprietary file format, no account, and no server.
+Drafter does for screenwriting what the [Inform 7](https://ganelson.github.io/inform-website/) IDE does for interactive fiction. You work in a plain-text **source** on the left and see the **compiled** result, a paginated script, on the right. Everything Drafter knows about the script is derived from the source. There is no hidden document model, no proprietary file format, no account, and no server.
 
 ```
 ┌──────────────────────────────┬──────────────────────────────────┐
@@ -190,7 +190,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 **Builds**
 
-- The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs, laid out like the Inform 7 IDE: two facing panes that can each show any tab, a toolbar of round buttons, and a status bar. Dark by default, with a light theme.
+- The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs, laid out like the [Inform 7](https://ganelson.github.io/inform-website/) IDE: two facing panes that can each show any tab, a toolbar of round buttons, and a status bar. Dark by default, with a light theme.
 - A first visit that opens on a sample screenplay, with a welcome dialog, an optional two-minute guided tour, and New screenplay, New stage play, and Open a file one click away.
 - The CodeMirror 6 source pane: highlighting driven by the one parser, Tab and Enter conveniences that insert plain Fountain, autocomplete for characters, locations, transitions, and sections, and folding by scene and section.
 - Focus mode, which leaves only the page you're writing on, and typewriter scrolling, which keeps the line you're typing in the middle of the screen.
@@ -389,7 +389,7 @@ The architecture and technical design are drafts (v0.2) and will change as each 
 ## Acknowledgments
 
 - [Fountain](https://fountain.io), the plain-text screenplay format created by John August and Stu Maschwitz, with many contributors.
-- The Inform 7 IDE, whose source-and-compiled-story layout inspired the two-pane design.
+- The [Inform 7](https://ganelson.github.io/inform-website/) IDE, Graham Nelson's environment for writing interactive fiction. Drafter borrows none of the interactive fiction itself (the parser games in the line of Zork and Enchanter). What it takes as inspiration is the IDE: two facing panes, with plain source on one side and the result on the other, tabs that either pane can show, and how easy that makes it to write, see the outcome, and go straight back to the line that produced it.
 - [Courier Prime](https://fonts.google.com/specimen/Courier+Prime), the screenplay typeface Drafter targets, released under the SIL Open Font License.
 - [Inter Tight](https://fonts.google.com/specimen/Inter+Tight), the typeface of Drafter's wordmark and interface, also under the SIL Open Font License.
 

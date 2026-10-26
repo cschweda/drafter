@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- The README links [Inform 7](https://ganelson.github.io/inform-website/) wherever it names it, and credits its IDE (its layout and ease of use, not interactive fiction itself) as an inspiration.
 - A screenshot of the editor at the top of the README, in the dark and light themes (`docs/images/`), shown to match the reader's GitHub theme, and a link to drafter.dev.
 - Design documents in `docs/`: the high-level architecture, the technical design, and the Phase 0 kickoff prompt.
 - README covering the vision, principles, architecture, packages, and the phased roadmap.
@@ -219,6 +220,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - screen-reader testing starts in Phase 2
 
   Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
+
+### Fixed
+
+- `@drafter/layout` no longer leaves a scene heading or other keep-with-next line alone at the foot of a page when the next block opens with two-space lines. Those lines print blank, but they counted toward the two lines a heading is kept with, so the heading stayed on the page while the block's first words went to the next one. The layout property test found it, rarely (seed `-1435711900`).
 
 ### Security
 
