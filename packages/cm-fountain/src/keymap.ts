@@ -8,16 +8,9 @@ import {
   type TransactionSpec,
 } from '@codemirror/state';
 import type { KeyBinding } from '@codemirror/view';
-import {
-  type Block,
-  blockAt,
-  type CharacterSem,
-  type Doc,
-  parse,
-  type Region,
-} from '@drafter/fountain';
+import { type Block, blockAt, type CharacterSem, type Doc, parse } from '@drafter/fountain';
 import { startCue } from './input';
-import { parsedDoc } from './state';
+import { insideRegion, parsedDoc } from './state';
 
 // The keymap is a layer of conveniences over plain text editing (technical design §3.3). Every
 // command is an ordinary transaction, so it is one undo step, and each reads its context from the
@@ -58,23 +51,10 @@ function command(spec: (state: EditorState) => TransactionSpec | null): StateCom
   };
 }
 
-const indentOf = (text: string) => text.length - text.trimStart().length;
+/** The byte-order mark, which `trim` counts as space and the editor does not. */
+const BOM = '\uFEFF';
 
-/** Whether `pos` is between the delimiters of a note or a boneyard. */
-function insideRegion(doc: Doc, pos: number): boolean {
-  const { regions } = doc;
-  // The first region that ends at `pos` or after it: the only one that can hold it.
-  let low = 0;
-  let high = regions.length;
-  while (low < high) {
-    const middle = (low + high) >> 1;
-    if ((regions[middle] as Region).span.to < pos) low = middle + 1;
-    else high = middle;
-  }
-  const region = regions[low];
-  // An unclosed boneyard runs to the end of the text, which is still inside it.
-  return !!region && region.span.from < pos && (pos < region.span.to || !region.closed);
-}
+const indentOf = (text: string) => text.length - text.trimStart().length;
 
 /**
  * The index of the cue of the dialogue group that holds block `index`, or -1 when it holds none.
@@ -362,15 +342,19 @@ export function forceKind(kind: ForcedKind): StateCommand {
   return command((state) => {
     const { head } = state.selection.main;
     const line = state.doc.lineAt(head);
-    const { start, body } = unmarked(line.text);
+    // A byte-order mark at the start of the file is no part of the line's text, and stays.
+    const bom = line.text.startsWith(BOM) ? 1 : 0;
+    const text = line.text.slice(bom);
+    const from = line.from + bom;
+    const { start, body } = unmarked(text);
     const [open, close] = MARKERS[kind];
     const insert = open + body + close;
-    if (insert === line.text) return {};
+    if (insert === text) return {};
     // The cursor keeps its place in the text; from a marker or spaces it goes to the text's start.
-    const offset = Math.min(Math.max(head - line.from - start, 0), body.length);
+    const offset = Math.min(Math.max(head - from - start, 0), body.length);
     return {
-      changes: { from: line.from, to: line.to, insert },
-      selection: { anchor: line.from + open.length + offset },
+      changes: { from, to: line.to, insert },
+      selection: { anchor: from + open.length + offset },
     };
   });
 }

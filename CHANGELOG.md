@@ -151,6 +151,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
 
+### Fixed
+
+- `@drafter/cm-fountain`: the editor no longer upper-cases a note or boneyard typed on a scene heading or a cue line (`INT. HALL - DAY [[check the location` stays as typed), and forcing the kind of a file's first line keeps its byte-order mark.
+
 ### Security
 
 - `@drafter/fountain` now parses hostile input in linear time. Before this fix, a single 4 KB line could stall the parser for seconds through backtracking regular expressions (cue lines, title-page keys, scene numbers), and long paragraphs of unclosed `[[`, deeply nested emphasis, or thousands of note blocks slowed it quadratically. Emphasis nested past 32,767 levels also lost its styling.

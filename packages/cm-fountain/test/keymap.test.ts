@@ -22,7 +22,7 @@ import {
   wrapInNote,
 } from '@drafter/cm-fountain';
 import { afterEach, describe, expect, it } from 'vitest';
-import { apply, editor, press, render, run, type } from './helpers';
+import { apply, BOM, editor, press, render, run, type } from './helpers';
 
 type Kind = Parameters<typeof forceKind>[0];
 
@@ -314,6 +314,21 @@ describe('forceKind', () => {
     });
   }
 
+  it("keeps a BOM when forcing the first line's kind", () => {
+    const first = (before: string, kind: Kind) => apply(editor(before), forceKind(kind)).sliceDoc();
+    expect(first(`${BOM}She waits.|`, 'character')).toBe(`${BOM}@She waits.`);
+    expect(first(`${BOM}!She waits.|`, 'scene_heading')).toBe(`${BOM}.She waits.`);
+    expect(first(`${BOM}(quietly)|`, 'action')).toBe(`${BOM}!quietly`);
+    expect(first(`${BOM}|`, 'parenthetical')).toBe(`${BOM}()`);
+    expect(first(`${BOM}  She waits.|`, 'centered')).toBe(`${BOM}>She waits.<`);
+    // The same kind again changes nothing, and the cursor stays in the text.
+    const same = apply(editor(`${BOM}!She wa|its.`), forceKind('action'));
+    expect(same.sliceDoc()).toBe(`${BOM}!She waits.`);
+    const moved = apply(editor(`${BOM}She wa|its.`), forceKind('character'));
+    expect(moved.sliceDoc()).toBe(`${BOM}@She waits.`);
+    expect(moved.selection.main.head).toBe(`${BOM}@She wa`.length);
+  });
+
   it('takes the key even when the line already has the kind', () => {
     expect(run(editor('!She waits.|'), forceKind('action')).handled).toBe(true);
   });
@@ -506,6 +521,29 @@ describe('the input filters', () => {
     expect(press(editor('she waits.|'), forceKind('character'))[0]).toBe('@she waits.');
   });
 
+  it('leaves a note typed on a heading or cue line as typed', () => {
+    // A note after the heading is not part of it, and neither is a boneyard. While the `[[` is
+    // open the parse has no note yet, so the text before the cursor says where it is.
+    expect(type(editor('INT. HALL - DAY |'), '[[check the location').sliceDoc()).toBe(
+      'INT. HALL - DAY [[check the location',
+    );
+    expect(type(editor('INT. HALL - DAY |'), '/* old idea').sliceDoc()).toBe(
+      'INT. HALL - DAY /* old idea',
+    );
+    // The heading is upper-cased up to the note and again after it closes.
+    expect(type(editor('INT. |'), 'hall [[check it]] now').sliceDoc()).toBe(
+      'INT. HALL [[check it]] NOW',
+    );
+    expect(type(editor('INT. |'), 'hall /* not */ now').sliceDoc()).toBe('INT. HALL /* not */ NOW');
+    // The same in a cue started with Tab.
+    const cue = apply(editor('x\n\n|'), fountainTab);
+    expect(type(cue, 'margaret [[ask her').sliceDoc()).toBe('x\n\n@MARGARET [[ask her');
+    expect(type(cue, 'margaret [[ask]] her').sliceDoc()).toBe('x\n\n@MARGARET [[ask]] HER');
+    // Typing inside a note that is already closed.
+    expect(type(editor('INT. HALL [[a |b]]'), 'cd').sliceDoc()).toBe('INT. HALL [[a cdb]]');
+    expect(type(editor('INT. HALL /* a |b */'), 'cd').sliceDoc()).toBe('INT. HALL /* a cdb */');
+  });
+
   it('upper-cases only the first line of what is typed', () => {
     const cue = apply(editor('x\n\n|'), fountainTab);
     expect(type(cue, 'ab\ncd', { by: 'whole' }).sliceDoc()).toBe('x\n\n@AB\ncd');
@@ -617,6 +655,49 @@ describe('every command', () => {
     // In the middle of an indented line the new line starts where the cursor was.
     expect(render(apply(editor('    She |waits.'), fountainEnter))).toBe('    She \n|waits.');
   });
+});
+
+describe('every command in an empty document', () => {
+  const commands: Array<[name: string, command: StateCommand, text: string | null]> = [
+    ['Enter', fountainEnter, '\n'],
+    ['Tab', fountainTab, '@'],
+    ['Shift-Tab', fountainShiftTab, null],
+    ['convertToCharacter', convertToCharacter, null],
+    ['convertToAction', convertToAction, null],
+    ['toggleDual', toggleDual, null],
+    ['wrapInNote', wrapInNote, '[[]]'],
+    ['wrapInBoneyard', wrapInBoneyard, '/**/'],
+    ...(
+      [
+        'scene_heading',
+        'action',
+        'character',
+        'parenthetical',
+        'transition',
+        'centered',
+        'lyric',
+      ] as const
+    ).map((kind): [string, StateCommand, string | null] => [
+      `forceKind(${kind})`,
+      forceKind(kind),
+      {
+        scene_heading: '.',
+        action: '!',
+        character: '@',
+        parenthetical: '()',
+        transition: '>',
+        centered: '><',
+        lyric: '~',
+      }[kind],
+    ]),
+  ];
+  for (const [name, command, text] of commands) {
+    it(`${name} does not fail, and ${text === null ? 'leaves the key alone' : 'changes the text'}`, () => {
+      const pressed = run(editor(''), command);
+      expect(pressed.handled).toBe(text !== null);
+      expect(pressed.state.sliceDoc()).toBe(text ?? '');
+    });
+  }
 });
 
 describe('a scene from the keyboard', () => {

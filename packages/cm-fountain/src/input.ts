@@ -7,7 +7,7 @@ import {
   StateField,
 } from '@codemirror/state';
 import { blockAt } from '@drafter/fountain';
-import { parsedDoc } from './state';
+import { insideRegion, parsedDoc } from './state';
 
 // Auto-uppercasing (technical design §3.3) is the one place the editor changes the case of what
 // the writer types. It applies only in a cue started with Tab and in a scene heading, to text as
@@ -64,6 +64,21 @@ function inHeading(state: EditorState, line: Line, pos: number): boolean {
   );
 }
 
+/**
+ * Whether text typed at `pos` is in a note or a boneyard, which is the writer's own and is left as
+ * typed. The parse knows the ones that are closed, and also a boneyard that runs to the end. A
+ * `[[` or `/*` typed on the line and not yet closed is in no region, so the line before the
+ * cursor is read for the last opener that has no closer after it.
+ */
+function inNote(state: EditorState, line: Line, pos: number): boolean {
+  if (insideRegion(state.field(parsedDoc), pos)) return true;
+  const before = state.sliceDoc(line.from, pos);
+  return (
+    before.lastIndexOf('[[') > before.lastIndexOf(']]') ||
+    before.lastIndexOf('/*') > before.lastIndexOf('*/')
+  );
+}
+
 const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
 const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
 
@@ -88,6 +103,7 @@ const upperCaseTyping = EditorState.transactionFilter.of((tr) => {
   tr.changes.iterChanges((fromA, _toA, fromB, _toB, inserted) => {
     const line = state.doc.lineAt(fromA);
     if (line.from !== cue?.from && !inHeading(state, line, fromA)) return;
+    if (inNote(state, line, fromA)) return;
     let from = fromB;
     let text = inserted.line(1).text;
     let to = from + text.length;
