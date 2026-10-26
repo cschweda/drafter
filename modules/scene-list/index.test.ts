@@ -67,6 +67,21 @@ describe('Scene list', () => {
     expect(view.buttons).toEqual([]);
   });
 
+  test('waits for the layout to match the text rather than pair a scene with the wrong page', () => {
+    // A scene was added; the layout still has the script before it.
+    const ctx = fakeContext({ source: 'INT. A - DAY\n\nOne.\n\nINT. B - DAY\n\nTwo.\n' });
+    ctx.layoutOf = 'INT. A - DAY\n\nOne.\n';
+    expect(draw(tab(), ctx).text).toBe('Laying out…');
+    // The layout catches up.
+    ctx.layoutOf = undefined;
+    expect(draw(tab(), ctx).buttons).toHaveLength(2);
+  });
+
+  test('says the pages could not be made when the layout failed', () => {
+    const view = draw(tab(), fakeContext({ layout: 'failed' }));
+    expect(view.text).toBe('The pages couldn’t be made, so scenes can’t be placed on them.');
+  });
+
   test('says so for a script with no scenes', () => {
     const view = draw(tab(), fakeContext({ source: 'Just action.\n' }));
     expect(view.text).toBe('No scene headings yet.');

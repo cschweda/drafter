@@ -47,14 +47,24 @@ export function removalChanges(source: string, notes: readonly Span[]): TextChan
     return found < 0 ? source.length : found;
   };
 
-  // Notes with nothing but spaces between them (two on one line, or on neighbouring lines, with
-  // no blank line between) go together.
+  // Notes with nothing but spaces between them go together when they are on one line. Across a
+  // line break they go together only if they fill their lines (so no text is joined to a line
+  // that wasn't its neighbour); otherwise each is dealt with on its own line.
+  const fillsLines = (first: Span, last: Span) =>
+    source.slice(lineStart(first.from), first.from).trim() === '' &&
+    source.slice(last.to, lineEnd(last.to)).trim() === '';
   const groups: Span[][] = [];
   for (const note of notes) {
     const group = groups.at(-1);
     const last = group?.at(-1);
     const between = last ? source.slice(last.to, note.from) : '';
-    if (group && between.trim() === '' && !/\n[ \t]*\n/.test(between)) group.push(note);
+    const joins =
+      group &&
+      last &&
+      between.trim() === '' &&
+      !/\n[ \t]*\n/.test(between) &&
+      (!between.includes('\n') || fillsLines(group[0] as Span, note));
+    if (joins) group.push(note);
     else groups.push([note]);
   }
 
@@ -139,7 +149,7 @@ const notes: ScriptModule = {
       title: 'Notes: remove all notes',
       group: 'Edit',
       enabled: () => ctx.kind() === 'fountain',
-      run() {
+      async run() {
         if (ctx.kind() === 'markdown') {
           ctx.notify('Not available for Markdown documents.');
           return;
@@ -149,9 +159,10 @@ const notes: ScriptModule = {
           ctx.notify('There are no notes to remove.');
           return;
         }
-        const sure =
-          typeof confirm === 'function' &&
-          confirm(`Remove ${notes_(found.length)} from this script? You can undo it with Undo.`);
+        const sure = await ctx.confirm(
+          `Remove ${notes_(found.length)} from this script? You can undo it with Undo.`,
+          { confirmLabel: 'Remove notes' },
+        );
         if (!sure) return;
         // One call, so one step of undo.
         if (!ctx.applyChanges(removalChanges(ctx.source(), found))) {

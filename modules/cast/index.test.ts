@@ -68,6 +68,15 @@ describe('Cast', () => {
     ]);
   });
 
+  test('leaves an extension on the cue line out of the name', () => {
+    const source = 'INT. A - DAY\n\nANN (V.O.)\nHi.\n\nANN\nHello.\n\nBOB (O.S.)\nYo.\n';
+    const view = draw(tab(), fakeContext({ source }));
+    expect(view.buttons.map((b) => b.text)).toEqual([
+      'ANN 2 speeches · first in scene 1, INT. A - DAY',
+      'BOB 1 speech · first in scene 1, INT. A - DAY',
+    ]);
+  });
+
   test('names a first appearance before any scene heading', () => {
     const source = 'CARL\nHello.\n\nINT. A - DAY\n\nCARL\nAgain.\n';
     const view = draw(tab(), fakeContext({ source }));

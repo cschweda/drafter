@@ -44,6 +44,8 @@ function answer(yes: boolean) {
 
 // Escape closes the dialog without a button: that is No.
 function onClose() {
+  // A close that comes after the dialog was opened again is the old close: it changes nothing.
+  if (dialog.value?.open) return;
   if (asking.value) answer(false);
 }
 

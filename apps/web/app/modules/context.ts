@@ -8,6 +8,7 @@ import { markdownTitle } from '../markdown/title';
 import { useScript } from '../storage/script';
 import { fileBaseName, titleOf } from '../storage/text';
 import { revealTab, WIDE_QUERY } from '../utils/panes';
+import { askModule, dropQuestion } from './confirm';
 import { setModuleProblems } from './problems';
 import { announceNotice, moduleTabId, useModules } from './registry';
 import { runScope } from './scope';
@@ -26,15 +27,21 @@ const generation = ref(0);
 /** Bumped when a module is turned off: the contexts it was given stop working for good. */
 const epochs = new Map<string, number>();
 const contexts = new Map<string, ModuleContext>();
+/** The first layout request that was made for the script now open. */
+let layoutFloor = 0;
 
 /** Another script was opened. */
 export function scriptChanged(): void {
+  dropQuestion();
+  // The layout on hand is the old script's: only one asked for after this belongs to the new one.
+  layoutFloor = useLayout().requestedSeq() + 1;
   generation.value++;
   contexts.clear();
 }
 
 /** The module was turned off. */
 export function moduleTurnedOff(id: string): void {
+  dropQuestion(id);
   epochs.set(id, (epochs.get(id) ?? 0) + 1);
   contexts.delete(id);
 }
@@ -80,7 +87,13 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
       return emptyDoc;
     },
     layout() {
-      return markdown() ? null : useLayout().layout.value;
+      if (markdown()) return null;
+      const session = useLayout();
+      // The old script's layout is not offered for the new one, while its own is on its way.
+      return session.shownSeq.value >= layoutFloor ? session.layout.value : null;
+    },
+    layoutFailed() {
+      return !markdown() && useLayout().failed.value;
     },
     template() {
       return editor.template.value;
@@ -114,6 +127,12 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
     },
     goto(offset) {
       if (scope.live()) editor.goto(offset);
+    },
+    async confirm(message, options) {
+      if (!scope.live()) return false;
+      const yes = await askModule(module.id, module.name, String(message), options);
+      // Still the script and the switch it was asked in.
+      return yes && scope.live();
     },
     openTab() {
       if (!module.tab || !scope.live()) return;

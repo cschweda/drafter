@@ -29,11 +29,13 @@ watch(removing, async (p) => {
 });
 
 function cancel() {
+  removing.value = null;
   dialog.value?.close();
 }
 
+// A close that comes after the dialog was opened again is the old close: it changes nothing.
 function onClose() {
-  removing.value = null;
+  if (!dialog.value?.open) removing.value = null;
 }
 
 async function confirm() {
@@ -63,6 +65,7 @@ async function confirm() {
     ref="dialog"
     class="confirm"
     aria-labelledby="remove-open-title"
+    @cancel.prevent="cancel"
     aria-describedby="remove-open-why"
     @close="onClose"
   >

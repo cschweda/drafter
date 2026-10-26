@@ -92,7 +92,10 @@ variables (`var(--text)`, `var(--muted)`, `var(--line)`, `var(--chrome-2)`) that
 
 Every part is handed a `ModuleContext`:
 
-- Reading: `source()`, `doc()` (the Fountain parse), `layout()` (the pages, or `null`), `template()`,
+- Reading: `source()`, `doc()` (the Fountain parse), `layout()` (the pages, or `null`; it is made
+  in a worker and can lag `doc()` for a moment after an edit, so a module that pairs
+  `layout().index` with `doc().blocks` checks they are the same length), `layoutFailed()` (the
+  pages couldn't be made), `template()`,
   `title()`, `kind()` (`'fountain'` or `'markdown'`), and `cursor()`. These read the editor's live
   state, so a component that calls them while it draws is drawn again when the script changes. In a
   Markdown document `doc()` has no blocks and `layout()` is `null`: Markdown has no Fountain and no
@@ -107,6 +110,11 @@ Every part is handed a `ModuleContext`:
   does nothing once another script has been opened or the module turned off since the run began. An
   item may carry a `fix`. Positions follow the text through edits; an item is dropped when an edit replaces all of its
   text, loses its fix when an edit touches it, and all of them go when another script opens.
+- Asking: `confirm(message, { confirmLabel?, cancelLabel? })` asks a yes-or-no question in Drafter's
+  own modal dialog, headed with the module's name. Cancel has focus first and Escape is No. It
+  resolves `true` only for a Yes, and `false` if another script has been opened or the module turned
+  off, even while the question is open. Ask in response to the writer's action, and say how many
+  things it touches.
 - Going: `goto(offset)` moves the cursor and shows the Source pane. `openTab()` shows the module's
   own tab and moves focus into it (in the pane that isn't showing Source on a wide screen).
 - Remembering: `storage.get`, `set`, and `remove`, this module's own rows in the browser's settings

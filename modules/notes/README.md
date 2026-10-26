@@ -8,7 +8,8 @@ command that removes them all.
   Source. Running it again refreshes the list. The items follow the text as it is edited, and are
   not counted as problems.
 - **Tab:** none; the Problems pane is where it reports.
-- **Command:** "Notes: remove all notes" asks first, saying how many ("Remove 10 notes from this
+- **Command:** "Notes: remove all notes" asks first with `ctx.confirm` (Drafter's own dialog, headed
+  "Notes", Cancel focused, buttons Cancel and Remove notes), saying how many ("Remove 10 notes from this
   script? You can undo it with Undo."), then removes every note in one `applyChanges` call, so one
   Undo brings them all back. If the call returns `false` (the script changed, or can't be edited
   right now) it says nothing was removed.

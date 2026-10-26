@@ -15,8 +15,15 @@ watch(settingsOpen, async (open) => {
   else if (!open && el.open) el.close();
 });
 
-function onClose() {
+// Escape goes through `settingsOpen`, so the state is false at once (a Mod+, pressed straight after
+// it opens the dialog again), instead of staying true until the close event.
+function onCancel() {
   settingsOpen.value = false;
+}
+
+// A close event that comes after the dialog was opened again is the old close: it changes nothing.
+function onClose() {
+  if (!dialog.value?.open) settingsOpen.value = false;
 }
 
 const SWITCHES: Array<{ key: Exclude<keyof Settings, 'textSize'>; label: string; why: string }> = [
@@ -50,7 +57,11 @@ function onSize(event: Event) {
 </script>
 
 <template>
-  <dialog ref="dialog" class="settings" aria-labelledby="settings-title" @close="onClose">
+  <dialog ref="dialog" class="settings"
+    aria-labelledby="settings-title"
+    @cancel.prevent="onCancel"
+    @close="onClose"
+  >
     <h2 id="settings-title">Settings</h2>
     <div class="row">
       <div class="text">

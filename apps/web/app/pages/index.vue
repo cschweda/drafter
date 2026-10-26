@@ -86,6 +86,7 @@ onBeforeUnmount(() => {
     <MarkdownDialog />
     <BothChangedDialog />
     <RemoveDialog />
+    <ModuleConfirmDialog />
     <CommandPalette />
     <SettingsDialog />
     <main class="panes" :class="{ wide }">

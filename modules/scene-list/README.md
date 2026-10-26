@@ -22,8 +22,12 @@ one. `1 1/8 pages` is a page and an eighth.
 - Before the first layout (`layout()` is `null`) the tab says **Laying out…**.
 - A script with no scene headings says **No scene headings yet.**
 - A Markdown document has no scenes or pages: **Not available for Markdown documents.**
-- While the layout catches up with typing, a scene the layout hasn't reached yet is listed without a
-  page or length.
+- The layout is made in a worker and can lag an edit. While it has a different number of blocks than
+  the script (a scene was just added or removed) the tab says **Laying out…**, rather than put a scene
+  on another scene's page. When another script is opened the host doesn't offer the old script's
+  layout, so the same wait applies.
+- If the layout worker fails (`layoutFailed()`) and no layout has come, the tab says the pages
+  couldn't be made.
 
 ## Files
 

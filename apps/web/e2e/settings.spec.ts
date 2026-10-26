@@ -447,3 +447,37 @@ test('keeps settings after switching scripts', async ({ page, isMobile }) => {
   await setText(page, 'INT. HALL - DAY\nShe waits.\n');
   await expect(page.locator('.cm-lint-marker-warning').first()).toBeVisible();
 });
+
+test.describe('reopening at once', () => {
+  // The dialog's open state is mirrored in `settingsOpen`; a reopen pressed right after a close
+  // must neither be ignored (Escape) nor be undone by the close that is still on its way (Done).
+  test('opens again when Mod+, follows Escape at once', async ({ page }) => {
+    await start(page);
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('ControlOrMeta+,');
+      await expect(dialog(page)).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('ControlOrMeta+,');
+      await expect(dialog(page)).toBeVisible();
+      // And it stays: no late close takes it away.
+      await page.waitForTimeout(150);
+      await expect(dialog(page)).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(dialog(page)).toBeHidden();
+    }
+  });
+
+  test('stays open when Mod+, follows Done at once', async ({ page }) => {
+    await start(page);
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('ControlOrMeta+,');
+      await expect(dialog(page)).toBeVisible();
+      await dialog(page).getByRole('button', { name: 'Done' }).click();
+      await page.keyboard.press('ControlOrMeta+,');
+      await page.waitForTimeout(150);
+      await expect(dialog(page)).toBeVisible();
+      await dialog(page).getByRole('button', { name: 'Done' }).click();
+      await expect(dialog(page)).toBeHidden();
+    }
+  });
+});

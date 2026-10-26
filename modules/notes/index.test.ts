@@ -1,5 +1,5 @@
 import { parse } from '@drafter/fountain';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { fakeContext, SAMPLE } from '../fake-context';
 import notes from './index';
 
@@ -9,8 +9,6 @@ const removeAll = (ctx: ReturnType<typeof fakeContext>) => {
   return command;
 };
 const lineOf = (text: string, offset: number) => text.slice(0, offset).split('\n').length;
-
-afterEach(() => vi.unstubAllGlobals());
 
 describe('Notes', () => {
   test('is a button and one command, with no tab, and asks for nothing', () => {
@@ -72,14 +70,14 @@ describe('Notes', () => {
   });
 
   test('asks first, saying how many, and removes all notes as one change', async () => {
-    const confirm = vi.fn((_message: string) => true);
-    vi.stubGlobal('confirm', confirm);
     const ctx = fakeContext();
     await removeAll(ctx).run();
-    expect(confirm).toHaveBeenCalledTimes(1);
-    expect(confirm.mock.calls[0]?.[0]).toBe(
-      'Remove 10 notes from this script? You can undo it with Undo.',
-    );
+    expect(ctx.calls.confirms).toEqual([
+      {
+        message: 'Remove 10 notes from this script? You can undo it with Undo.',
+        options: { confirmLabel: 'Remove notes' },
+      },
+    ]);
     // One call to applyChanges, so one step of undo.
     expect(ctx.calls.changes).toHaveLength(1);
     expect(ctx.text).not.toContain('[[');
@@ -90,7 +88,6 @@ describe('Notes', () => {
   });
 
   test('leaves the rest of the script as it was, with no new blank lines', async () => {
-    vi.stubGlobal('confirm', () => true);
     const ctx = fakeContext();
     await removeAll(ctx).run();
     const before = parse(SAMPLE).blocks.filter((b) => b.kind !== 'note');
@@ -118,46 +115,41 @@ describe('Notes', () => {
       'x [[a]]\n\n[[b]] y\n',
       'x\n\ny\n',
     ],
+    ['text on both sides of two notes on neighbouring lines', 'A [[a]]\n[[b]] B\n', 'A\nB\n'],
     ['a note across two lines', 'A\n\n[[one\ntwo]]\n\nB\n', 'A\n\nB\n'],
   ])('removes %s', async (_name, source, expected) => {
-    vi.stubGlobal('confirm', () => true);
     const ctx = fakeContext({ source });
     await removeAll(ctx).run();
     expect(ctx.text).toBe(expected);
   });
 
   test('says 1 note, in the singular', async () => {
-    const confirm = vi.fn((_message: string) => true);
-    vi.stubGlobal('confirm', confirm);
     const ctx = fakeContext({ source: 'A\n\n[[n]]\n' });
     await removeAll(ctx).run();
-    expect(confirm.mock.calls[0]?.[0]).toBe(
+    expect(ctx.calls.confirms[0]?.message).toBe(
       'Remove 1 note from this script? You can undo it with Undo.',
     );
     expect(ctx.calls.notices).toEqual(['Removed 1 note. Undo brings it back.']);
   });
 
   test('changes nothing when the writer says no', async () => {
-    vi.stubGlobal('confirm', () => false);
-    const ctx = fakeContext();
+    const ctx = fakeContext({ confirm: false });
     await removeAll(ctx).run();
+    expect(ctx.calls.confirms).toHaveLength(1);
     expect(ctx.calls.changes).toEqual([]);
     expect(ctx.text).toBe(SAMPLE);
     expect(ctx.calls.notices).toEqual([]);
   });
 
-  test('says so, and changes nothing, when there are no notes to remove', async () => {
-    const confirm = vi.fn((_message: string) => true);
-    vi.stubGlobal('confirm', confirm);
+  test('says so, and asks nothing, when there are no notes to remove', async () => {
     const ctx = fakeContext({ source: 'A\n' });
     await removeAll(ctx).run();
-    expect(confirm).not.toHaveBeenCalled();
+    expect(ctx.calls.confirms).toEqual([]);
     expect(ctx.calls.changes).toEqual([]);
     expect(ctx.calls.notices).toEqual(['There are no notes to remove.']);
   });
 
   test('says so when the run is stale and nothing could be removed', async () => {
-    vi.stubGlobal('confirm', () => true);
     const ctx = fakeContext({ stale: true });
     await removeAll(ctx).run();
     expect(ctx.text).toBe(SAMPLE);

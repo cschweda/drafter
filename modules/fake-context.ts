@@ -21,7 +21,9 @@ export interface FakeOptions {
   kind?: 'fountain' | 'markdown';
   cursor?: number;
   /** `pending`: the first layout hasn't arrived, so `layout()` is null. */
-  layout?: 'ready' | 'pending';
+  layout?: 'ready' | 'pending' | 'failed';
+  /** What `confirm` answers; true when left out. */
+  confirm?: boolean;
   /** The editor refuses changes (the run is stale, or the script is read-only). */
   stale?: boolean;
 }
@@ -31,10 +33,16 @@ export interface FakeContext extends ModuleContext {
   text: string;
   stale: boolean;
   layoutReady: boolean;
+  layoutIsFailed: boolean;
+  /** Set to lay the pages out from this text, not the script's (a layout that lags an edit). */
+  layoutOf?: string;
+  confirmAnswer: boolean;
   readonly calls: {
     goto: number[];
     /** How many times the module asked for its tab to be shown. */
     openedTab: number;
+    /** The questions asked, with the options given. */
+    confirms: Array<{ message: string; options?: { confirmLabel?: string; cancelLabel?: string } }>;
     notices: string[];
     problems: ModuleProblem[][];
     changes: TextChange[][];
@@ -62,7 +70,9 @@ export function fakeContext(options: FakeOptions = {}): FakeContext {
     text: options.source ?? SAMPLE,
     stale: options.stale ?? false,
     layoutReady: (options.layout ?? 'ready') === 'ready',
-    calls: { goto: [], openedTab: 0, notices: [], problems: [], changes: [] },
+    layoutIsFailed: options.layout === 'failed',
+    confirmAnswer: options.confirm ?? true,
+    calls: { goto: [], openedTab: 0, confirms: [], notices: [], problems: [], changes: [] },
     source: () => context.text,
     doc() {
       if (kind === 'markdown') return EMPTY;
@@ -72,8 +82,14 @@ export function fakeContext(options: FakeOptions = {}): FakeContext {
     layout() {
       if (kind === 'markdown' || !context.layoutReady) return null;
       fresh();
+      if (context.layoutOf !== undefined) return paginate(parse(context.layoutOf), template);
       laidOut ??= paginate(parsed, template);
       return laidOut;
+    },
+    layoutFailed: () => context.layoutIsFailed,
+    async confirm(message, confirmOptions) {
+      context.calls.confirms.push({ message, options: confirmOptions });
+      return context.confirmAnswer;
     },
     template: () => template,
     title: () => 'The Call',

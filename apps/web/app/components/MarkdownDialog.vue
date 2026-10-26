@@ -25,6 +25,8 @@ function choose(ok: boolean) {
 
 // Escape closes the dialog without a button.
 function onClose() {
+  // A close that comes after another question opened the dialog again is the old one's.
+  if (dialog.value?.open) return;
   if (!answered) markdownQuestion.value?.answer(false);
 }
 </script>

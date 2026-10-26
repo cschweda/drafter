@@ -43,19 +43,29 @@ const sceneSwitch = (page: Page, name: string) =>
 const button = (page: Page, name: string) =>
   page.locator('header.toolbar').getByRole('button', { name, exact: true });
 const toast = (page: Page) => page.locator('.module-toast');
+/** The question Notes asks before it removes anything: Drafter's own dialog, headed with its name. */
+const question = (page: Page) => page.getByRole('dialog', { name: 'Notes', exact: true });
 
 /** Turns one sample on in Settings: no question, since none asks for the network. */
 async function turnOn(page: Page, name: string) {
-  // Settings sometimes ignores a Mod+, pressed just after it closed (seen once in thirty on the
-  // emulated Pixel 7), so a second press is tried.
-  await expect(async () => {
-    await page.keyboard.press('ControlOrMeta+,');
-    await expect(settingsDialog(page)).toBeVisible({ timeout: 1500 });
-  }).toPass();
+  await openSettings(page);
   await sceneSwitch(page, name).click();
   await expect(sceneSwitch(page, name)).toBeChecked();
   await closeSettings(page);
   await expect(button(page, name === 'Scene list' ? 'Scenes' : name)).toBeVisible();
+}
+
+/**
+ * Runs "Notes: remove all notes" from the palette and waits for its question. On Firefox the palette
+ * sometimes ignores Enter when it is opened again and again (the same happens with its Settings
+ * command, with no module involved), so a command that didn't open anything is run once more.
+ */
+async function askToRemoveNotes(page: Page) {
+  await expect(async () => {
+    if (await palette(page).isVisible()) await page.keyboard.press('Escape');
+    await runCommand(page, 'Notes: remove all notes').catch(() => {});
+    await expect(question(page)).toBeVisible({ timeout: 2000 });
+  }).toPass();
 }
 
 /** The tab a module adds, in whichever pane shows it. */
@@ -172,17 +182,25 @@ test.describe('sample modules', () => {
     await turnOn(page, 'Notes');
     await button(page, 'Notes').click();
 
-    // Cancel changes nothing.
-    page.once('dialog', (dialog) => {
-      expect(dialog.message()).toBe('Remove 2 notes from this script? You can undo it with Undo.');
-      void dialog.dismiss();
-    });
-    await runCommand(page, 'Notes: remove all notes');
+    // The question says how many, and Cancel (focused first) changes nothing.
+    await askToRemoveNotes(page);
+    await expect(question(page)).toContainText(
+      'Remove 2 notes from this script? You can undo it with Undo.',
+    );
+    await expect(question(page).getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await question(page).getByRole('button', { name: 'Cancel' }).click();
+    await expect(question(page)).toBeHidden();
     await expect.poll(() => textOf(page)).toBe(SCRIPT);
 
-    // OK removes both, tidily, in one change.
-    page.once('dialog', (dialog) => void dialog.accept());
-    await runCommand(page, 'Notes: remove all notes');
+    // So does Escape.
+    await askToRemoveNotes(page);
+    await page.keyboard.press('Escape');
+    await expect(question(page)).toBeHidden();
+    await expect.poll(() => textOf(page)).toBe(SCRIPT);
+
+    // Remove notes removes both, tidily, in one change.
+    await askToRemoveNotes(page);
+    await question(page).getByRole('button', { name: 'Remove notes' }).click();
     const expected = SCRIPT.replace(' [[check the rain]]', '').replace('[[cut this]]\n\n', '');
     await expect.poll(() => textOf(page)).toBe(expected);
     await expect(toast(page)).toContainText('Removed 2 notes.');
@@ -236,8 +254,12 @@ test.describe('sample modules', () => {
     // A command from the palette, with Notes, from the keyboard alone.
     await turnOn(page, 'Notes');
     await showSource(page);
-    page.once('dialog', (dialog) => void dialog.accept());
     await runCommand(page, 'Notes: remove all notes');
+    await expect(question(page)).toBeVisible();
+    await expect(question(page).getByRole('button', { name: 'Cancel' })).toBeFocused();
+    // (WebKit's Tab skips buttons, so the next button is focused directly.)
+    await question(page).getByRole('button', { name: 'Remove notes' }).focus();
+    await page.keyboard.press('Enter');
     await expect.poll(() => textOf(page)).not.toContain('[[');
   });
 
@@ -248,15 +270,11 @@ test.describe('sample modules', () => {
     await runCommand(page, 'New Markdown document');
     await expect(page.getByRole('tab', { name: 'Preview' }).first()).toBeVisible();
 
-    // Opening a document brings the Source pane forward a moment after its tabs change, so a click
-    // that lands in between is tried again.
+    // The new document brings the Source pane forward and focuses its editor; the tabs wait for it.
+    await expect(editor(page)).toBeFocused();
     for (const name of ['Scenes', 'Cast']) {
-      await expect(async () => {
-        await moduleTab(page, name).first().click();
-        await expect(modulePanel(page, name)).toHaveText('Not available for Markdown documents.', {
-          timeout: 1000,
-        });
-      }).toPass();
+      await moduleTab(page, name).first().click();
+      await expect(modulePanel(page, name)).toHaveText('Not available for Markdown documents.');
     }
 
     // The copy command is left out of the palette there.
@@ -270,6 +288,7 @@ test.describe('sample modules', () => {
     await start(page);
     await turnOn(page, 'Notes');
     await runCommand(page, 'New Markdown document');
+    await expect(editor(page)).toBeFocused();
     await button(page, 'Notes').click();
     await expect(toast(page)).toContainText('Not available for Markdown documents.');
     await showProblems(page);
