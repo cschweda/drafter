@@ -41,6 +41,8 @@ export interface SettingsStore {
   set<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void>;
   /** Settles when the table has been read, whether or not it could be. */
   ready: Promise<void>;
+  /** True once the table was read; false before, and for good when it couldn't be. */
+  read: Readonly<Ref<boolean>>;
 }
 
 /**
@@ -54,19 +56,20 @@ export function createSettings(): SettingsStore {
   const state = shallowRef<Settings>({ ...DEFAULT_SETTINGS });
   /** What `set` has changed, which a slow read must not overwrite. */
   const changed = new Set<keyof Settings>();
+  const read = shallowRef(false);
 
   const ready = (async () => {
-    let rows: Array<{ key: string; value: unknown }>;
     try {
-      rows = await db.settings.toArray();
+      const rows = await db.settings.toArray();
+      const next: Record<string, unknown> = { ...state.value };
+      for (const { key, value } of rows) {
+        if (isKey(key) && !changed.has(key) && isValid(key, value)) next[key] = value;
+      }
+      state.value = next as unknown as Settings;
+      read.value = true;
     } catch {
-      return;
+      // The defaults stand, and `read` stays false.
     }
-    const next: Record<string, unknown> = { ...state.value };
-    for (const { key, value } of rows) {
-      if (isKey(key) && !changed.has(key) && isValid(key, value)) next[key] = value;
-    }
-    state.value = next as unknown as Settings;
   })();
 
   async function set<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {
@@ -80,7 +83,7 @@ export function createSettings(): SettingsStore {
     }
   }
 
-  return { settings: readonly(state), set, ready };
+  return { settings: readonly(state), set, ready, read: readonly(read) };
 }
 
 let shared: SettingsStore | undefined;

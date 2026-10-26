@@ -1,6 +1,7 @@
 import { watch } from 'vue';
 import { applyEditorSettings } from '~/editor/apply-settings';
 import { useEditor } from '~/editor/session';
+import { appearanceStep } from './appearance';
 import { useSettings } from './settings';
 
 /**
@@ -17,7 +18,7 @@ import { useSettings } from './settings';
  *   first paint has no flash. Choosing a theme by hand while it is on turns it off.
  */
 export function applySettings(): () => void {
-  const { settings, set, ready } = useSettings();
+  const { settings, set, ready, read } = useSettings();
   const { view } = useEditor();
   const colorMode = useColorMode();
   const stops: Array<() => void> = [];
@@ -45,17 +46,23 @@ export function applySettings(): () => void {
 
     // The theme that was chosen last by hand, for when following the system stops.
     let chosen: 'light' | 'dark' | undefined;
+    let initial = true;
     stops.push(
       watch(
         () => settings.value.matchSystem,
         (on) => {
-          if (on) {
-            if (colorMode.preference !== 'system')
-              chosen = colorMode.preference as 'light' | 'dark';
-            colorMode.preference = 'system';
-          } else if (colorMode.preference === 'system') {
-            colorMode.preference = chosen ?? (colorMode.value === 'light' ? 'light' : 'dark');
-          }
+          const step = appearanceStep({
+            on,
+            preference: colorMode.preference,
+            current: colorMode.value === 'light' ? 'light' : 'dark',
+            chosen,
+            initial,
+            read: read.value,
+          });
+          initial = false;
+          if (!step) return;
+          if (step.chosen) chosen = step.chosen;
+          colorMode.preference = step.preference;
         },
         { immediate: true },
       ),

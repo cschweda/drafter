@@ -20,6 +20,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `apps/web`: Save, Save As, Open, New screenplay, and the palette have their keys through the command registry, on the whole page, one handler for each key. Mod+S and Mod+Shift+S no longer have a second binding in the editor's keymap.
 
+### Fixed
+
+- `apps/web`: settings keep working when the settings table can't be read or holds a damaged row (the defaults apply, and the page no longer waits forever on them). With "Match system appearance" on, an unreadable table no longer ends it by rewriting the theme to light or dark.
+
 ## [0.1.0] - 2026-10-26
 
 **Write and keep your work at drafter.dev.** The first version you can write a script in:
