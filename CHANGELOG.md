@@ -105,6 +105,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
     - The edge cases of each command, and a scene typed from the keyboard that the parser reads as the writer meant.
     - Typing in cues and headings and nowhere else, including surrogate pairs and several cursors, and the line breaks of a CRLF file.
     - Lines of 200,000 characters, a block of 100,000 lines, a speech of 50,000 lines, and 20,000 cursors, which must be handled in under a second.
+- `@drafter/cm-fountain`: autocomplete, with names, places, and titles read from the parse in the editor's state. `fountainCompletionSource` is a CodeMirror completion source, and `fountainCompletion()` is `autocompletion` with it as its only source, bringing `parsedDoc` with it.
+  - **Character names:** on a cue line, which is a line under a blank one that starts with `@` or has two letters and none in lower case. The name whose last cue before the cursor is nearest comes first, then the names with the most cues. After a name and a space, or from an open `(`, it offers `(V.O.)`, `(O.S.)`, and the extensions the script uses, each on its own. A name that needs an `@` to be a cue, such as `McCLANE`, is offered only after one.
+  - **Places and times:** after a scene heading's prefix and a space, the script's locations, the most used first. After ` - `, its times of day, then `DAY`, `NIGHT`, `CONTINUOUS`, `LATER`, and `MOMENTS LATER`.
+  - **Transitions and sections:** on a line that starts with `>`, the script's transitions, then `CUT TO:`, `DISSOLVE TO:`, `SMASH CUT TO:`, and `FADE OUT.`. After `#`, its section titles.
+  - **Where:** the parser reads a cue that is still being typed as action, so where the cursor is comes from the text of its line, by the parser's own rules, and what to offer comes from the parse.
+  - **When:** the list opens when asked (Ctrl+Space), or once two characters of what is being completed are typed.
+  - **Enter:** a name typed in full is not offered, so Enter goes on to the speech and does not accept a list that would change nothing. With nothing else to offer, no list opens. Case is ignored, and every list works this way. Names are matched from their start, so `OC` doesn't offer `DOCTOR`.
+  - **Tests:** what each place offers, and in what order; where a cue line can and can't be; the full name that leaves Enter alone, in the source and in a view with CodeMirror's own completion; and hostile scripts (a hundred thousand different names, places, times, transitions, sections, and extensions, and lines of a million characters) that must be answered in under a second.
 
 ### Changed
 
