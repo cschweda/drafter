@@ -177,6 +177,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
   Proof mode, with reader notes kept as Fountain notes and shown like Word comments, joins Phase 4.
 
+### Fixed
+
+- `@drafter/layout` no longer leaves a scene heading or other keep-with-next line alone at the foot of a page when the next block opens with two-space lines. Those lines print blank, but they counted toward the two lines a heading is kept with, so the heading stayed on the page while the block's first words went to the next one. The layout property test found it, rarely (seed `-1435711900`).
+
 ### Security
 
 - `@drafter/fountain` now parses hostile input in linear time. Before this fix, a single 4 KB line could stall the parser for seconds through backtracking regular expressions (cue lines, title-page keys, scene numbers), and long paragraphs of unclosed `[[`, deeply nested emphasis, or thousands of note blocks slowed it quadratically. Emphasis nested past 32,767 levels also lost its styling.

@@ -144,6 +144,13 @@ describe('page filling', () => {
     });
   });
 
+  it("doesn't keep a heading with only the blank lines that open the next block", () => {
+    // Page 1 has room for the heading and the two two-space lines, but not "The door opens."
+    const layout = lay(`${filler(48)}\n\nINT. KITCHEN - DAY\n\n  \n  \nThe door opens.`);
+    expect(layout.index[1]).toEqual({ page: 2, line: 0 });
+    expect(texts(layout, 2, 5)).toEqual(['INT. KITCHEN - DAY', '', '', '', 'The door opens.']);
+  });
+
   it('maps an omitted block to the next printed line', () => {
     const layout = lay('Action one.\n\n[[A note.]]\n\nAction two.');
     expect(layout.index).toEqual([
