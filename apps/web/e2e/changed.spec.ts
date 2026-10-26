@@ -67,7 +67,7 @@ interface EditorTile {
 }
 interface EditorViewLike {
   dispatch(spec: unknown): void;
-  state: { doc: { length: number } };
+  state: { doc: { length: number; toString(): string } };
 }
 const INSERT_AT_END = `(text) => {
   const tile = document.querySelector('.cm-content').cmTile;
@@ -168,6 +168,39 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await expect(status(page)).toContainText('Unsaved changes');
     // The file itself was not touched by any of it.
     expect(await textOf(page, NAME)).toBe(V2);
+  });
+
+  test('keeps the loaded file an undo step of its own, apart from typing just after it', async ({
+    page,
+  }) => {
+    await start(page);
+    await openTheCall(page);
+
+    await changeFile(page, V2);
+    // A key typed the moment the file's text arrives: typing that close is joined to the change
+    // before it unless that change stands alone.
+    await page.evaluate(`(async () => {
+      const tile = document.querySelector('.cm-content').cmTile;
+      const view = (tile.root && tile.root.view) || tile.view;
+      while (!view.state.doc.toString().includes('Nobody answers.')) {
+        await new Promise((resolve) => setTimeout(resolve, 2));
+      }
+      view.dispatch({ changes: { from: 0, insert: 'Z' }, userEvent: 'input.type' });
+    })()`);
+    const shown = () =>
+      page.evaluate(() => {
+        const tile = (document.querySelector('.cm-content') as unknown as { cmTile: EditorTile })
+          .cmTile;
+        return (tile.root?.view ?? tile.view)?.state.doc.toString();
+      });
+    expect(await shown()).toBe(`Z${V2}`);
+
+    // One undo takes back the typing only; the next, the file's text.
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(shown).toBe(V2);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(shown).toBe(V1);
   });
 
   test('keeps working on the browser version when only it changed', async ({ page }) => {

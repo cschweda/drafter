@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
 import type { EditorState } from '@codemirror/state';
 import { parsedDoc } from '@drafter/cm-fountain';
@@ -225,7 +226,8 @@ export function useProblems(): {
       insert: change.insert.replace(/\r?\n/g, view.state.lineBreak),
     }));
     if (changes.length === 0) return;
-    view.dispatch({ changes, userEvent: 'input' });
+    // One undo step of its own, never joined to typing before or after it.
+    view.dispatch({ changes, userEvent: 'input', annotations: isolateHistory.of('full') });
     relint();
   }
 

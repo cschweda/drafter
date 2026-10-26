@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands';
 import { Text } from '@codemirror/state';
 import {
   type ComputedRef,
@@ -703,12 +704,14 @@ function create(): ScriptSession {
     await open(id);
     if (project.value?.id !== id) return 'busy';
     if (guard.readOnly.value || !writer) return 'held';
-    // One transaction for the whole text, so one undo brings the old text back.
+    // One transaction for the whole text, so one undo brings the old text back; an undo step of
+    // its own, so typing just after it isn't joined to it.
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: file.text },
       selection: { anchor: 0 },
       scrollIntoView: true,
       userEvent: 'input.replace',
+      annotations: isolateHistory.of('full'),
     });
     await saved(file);
     return 'replaced';

@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
+import { undo } from '@codemirror/commands';
+import type { ChangeSet } from '@codemirror/state';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { useProblems } from '../app/editor/problems';
 import { useEditor } from '../app/editor/session';
+import { useSettings } from '../app/settings/settings';
 
 // The editor session itself, with the real editor and its extensions (undo history included).
 // Only the panes, which are Nuxt state, are stood in for.
@@ -55,5 +59,40 @@ describe("the editor session's listeners", () => {
     // (Its settings and scroll are effects, which `onUpdate` hears of too.)
     expect(heard.filter((h) => h !== 'update')).toEqual(['change', 'state']);
     expect(heard).toContain('update');
+  });
+});
+
+describe('Fix all', () => {
+  const STRICT = 'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\nthen louder)\nHi.\n';
+  const FIXED = 'INT. HALL - DAY\n\nShe waits.\n\nMARGARET\n(quietly, then louder)\nHi.\n';
+
+  test('is an undo step of its own, never joined to the typing right after it', async () => {
+    await useSettings().set('strict', true);
+    const editor = useEditor();
+    editor.load(STRICT);
+    const { fixAll } = useProblems();
+    let fixed: ChangeSet | undefined;
+    forget.push(
+      editor.onChange((changes) => {
+        if (changes && !fixed) fixed = changes;
+      }),
+    );
+
+    fixAll();
+    expect(editor.view.state.doc.toString()).toBe(FIXED);
+    // A key typed at once, touching the text the fix wrote (the space that joined the lines).
+    let at = -1;
+    fixed?.iterChanges((_fromA, _toA, _fromB, toB) => {
+      at = toB;
+    });
+    expect(FIXED.slice(at - 1, at)).toBe(' ');
+    editor.view.dispatch({ changes: { from: at, insert: 'z' }, userEvent: 'input.type' });
+    expect(editor.view.state.doc.toString()).toBe(`${FIXED.slice(0, at)}z${FIXED.slice(at)}`);
+
+    // One undo takes back the typing only; the next, the fix.
+    undo(editor.view);
+    expect(editor.view.state.doc.toString()).toBe(FIXED);
+    undo(editor.view);
+    expect(editor.view.state.doc.toString()).toBe(STRICT);
   });
 });
