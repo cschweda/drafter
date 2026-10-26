@@ -6,7 +6,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { nextTick, type ShallowRef, shallowRef } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
-import { editorExtensions } from './extensions';
+import { editorExtensions, readOnly, readOnlyExtension } from './extensions';
 import { SAMPLE_SCREENPLAY } from './samples';
 import { templateIdOf } from './template';
 
@@ -24,6 +24,8 @@ export interface EditorSession {
    * caller keeps that first.
    */
   load(text: string): void;
+  /** Turns editing off (or on): the script is open for editing in another tab. `load` keeps it. */
+  setReadOnly(on: boolean): void;
   /**
    * Calls `listener` after every change to the text or the selection, and after `load`, with the
    * state the editor now has. Update listeners in the state itself are lost when `load` replaces
@@ -41,6 +43,7 @@ function create(): EditorSession {
   const cursor = shallowRef<CursorElement | null>(null);
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
+  let locked = false;
   const listeners = new Set<(state: EditorState) => void>();
 
   /** Brings what the session shows up to date with `state`. */
@@ -74,11 +77,19 @@ function create(): EditorSession {
   function load(text: string) {
     // `setState` tells no update listener, so the session catches up by hand.
     view.setState(EditorState.create({ doc: text, extensions }));
+    // The compartments start from their first values again, so read-only is put back.
+    if (locked) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
     follow(view.state);
     cursor.value = cursorElement(view.state);
     // The new text starts at the top, whatever the old one's scroller was showing.
     view.dispatch({ effects: EditorView.scrollIntoView(0) });
     for (const l of listeners) l(view.state);
+  }
+
+  function setReadOnly(on: boolean) {
+    if (on === locked) return;
+    locked = on;
+    view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on)) });
   }
 
   function onState(listener: (state: EditorState) => void) {
@@ -108,7 +119,7 @@ function create(): EditorSession {
     });
   }
 
-  return { view, doc, cursor, template, load, onState, goto };
+  return { view, doc, cursor, template, load, setReadOnly, onState, goto };
 }
 
 /** The editor, created on first use in the browser and kept for the visit. */

@@ -158,6 +158,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Leaving:** the interim leave warning is gone. A script that isn't a sample asks before the page closes while it has unsaved changes; a sample never asks, unless nothing can keep its edits.
   - **Projects** gain `bom`, whether the file began with a byte-order mark, for Task 8 to set (no new database version).
   - **Linting again:** `relint()` calls `@drafter/cm-fountain`'s `relint(view)`.
+- `apps/web`: a script opens in one tab at a time.
+  - **Holding:** opening a script takes the Web Lock `drafter:project:<id>` and keeps it until the script closes or the tab goes. A second tab finds it taken and opens the script read-only (no typing, no recovery writes, no stash, no leave warning), under a bar that reads "This script is open for editing in another tab".
+  - **Edit here instead:** asks the other tab over the `drafter` channel. It writes its recovery copy, turns read-only, and lets go; the asking tab then reloads the script from IndexedDB and applies a leftover stash only if the stash is newer. If the other tab can't write, it keeps the script and the bar says it didn't let go.
+  - **No Web Locks, or no `BroadcastChannel`:** no guard; every tab edits, as before.
 
 ### Changed
 

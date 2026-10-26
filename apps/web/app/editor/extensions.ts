@@ -3,7 +3,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { foldGutter, foldKeymap } from '@codemirror/language';
 import { lintKeymap } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
-import { Compartment, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view';
 import { type CursorElement, fountain, relint as relintView } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
@@ -25,6 +25,16 @@ export function spellcheckAttribute(on: boolean): Extension {
  * comes before every other gutter, so the numbers sit at the far left of the source.
  */
 export const lineNumbersGutter = new Compartment();
+
+/**
+ * Read-only, for a script that another tab is editing. `readOnlyExtension(true)` stops the keymap's
+ * commands and the text's `contenteditable`, so nothing can be typed, pasted, or dropped in.
+ */
+export const readOnly = new Compartment();
+
+export function readOnlyExtension(on: boolean): Extension {
+  return [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
+}
 
 let active: EditorView | undefined;
 
@@ -75,6 +85,7 @@ export function editorExtensions({ template, onCursorElement }: EditorHooks): Ex
     // content of the scroller (`scrollable-region-focusable`); the text is a tab stop anyway.
     EditorView.contentAttributes.of({ 'aria-label': 'Source', tabindex: '0' }),
     spellcheck.of(spellcheckAttribute(true)),
+    readOnly.of(readOnlyExtension(false)),
     theme,
   ];
 }

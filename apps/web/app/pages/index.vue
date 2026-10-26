@@ -33,6 +33,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   <div class="shell" :style="{ '--split': split }">
     <div class="top">
       <AppToolbar />
+      <ReadOnlyBar />
       <StorageWarning />
     </div>
     <main class="panes" :class="{ wide }">

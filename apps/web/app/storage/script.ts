@@ -12,6 +12,7 @@ import {
 import { SAMPLE_SCREENPLAY } from '../editor/samples';
 import { useEditor } from '../editor/session';
 import { db } from './db';
+import { guardControl, useGuard } from './guard';
 import { hashText } from './hash';
 import { checkRecovery, type RecoveryState, requestPersistence } from './health';
 import {
@@ -77,6 +78,8 @@ function create(): ScriptSession {
   let loading = false;
   let failing = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
+
+  const guard = useGuard();
 
   const dirty = computed(() => {
     editor.doc.value; // the text changed
@@ -144,14 +147,19 @@ function create(): ScriptSession {
 
   /** For a page being hidden or closed: keep the pending text where a closing page can, and write it. */
   const flushQuietly = () => {
+    // Another tab keeps this script; nothing here is its to write.
+    if (guard.readOnly.value) return;
     if (writer?.pending && project.value) stash(project.value.id, view.state.doc.toString());
     void writer?.flush().catch(() => {});
   };
 
   // ---- Opening scripts ---------------------------------------------------------------------
 
-  /** Makes `next` the current script. Puts its text in the editor when `fromEditor` is false. */
-  function attach(next: Project, from: Text | null, fromEditor: boolean) {
+  /**
+   * Makes `next` the current script. Puts its text in the editor when `fromEditor` is false. A
+   * script this tab may not edit (`writable` false: another tab holds it) gets no writer.
+   */
+  function attach(next: Project, from: Text | null, fromEditor: boolean, writable: boolean) {
     if (!fromEditor) {
       loading = true;
       try {
@@ -164,9 +172,9 @@ function create(): ScriptSession {
     baseline.value = from;
     project.value = next;
     const id = next.id;
-    writer = createWriter((source) => persist(id, source));
+    writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
-    if (fromEditor && view.state.doc.toString() !== next.source) {
+    if (writer && fromEditor && view.state.doc.toString() !== next.source) {
       writer.schedule(view.state.doc.toString());
     }
   }
@@ -188,8 +196,14 @@ function create(): ScriptSession {
     const index = projects.findIndex((p) => p.id === left.id);
     const found = projects[index];
     if (found && found.source !== left.source && left.at >= found.updatedAt) {
+      let written: Project | undefined;
+      await guardControl.whileFree(found.id, async () => {
+        written = await writeSource(found, left.source);
+      });
+      // Another tab has the script open: the stash is that tab's, and it clears it.
+      if (!written) return;
       projects.splice(index, 1);
-      projects.unshift(await writeSource(found, left.source));
+      projects.unshift(written);
     }
     clearStash();
   }
@@ -206,16 +220,16 @@ function create(): ScriptSession {
       const typed = view.state.doc.toString();
       if (typed !== SAMPLE_SCREENPLAY) {
         if (first) askBrowserToKeep();
-        attach(await createProject({ source: typed }), text(''), true);
+        const created = await createProject({ source: typed });
+        await guardControl.claim(created.id);
+        attach(created, text(''), true, true);
       } else if (newest) {
-        attach(newest, from, false);
+        attach(newest, from, false, await guardControl.claim(newest.id));
       } else {
         askBrowserToKeep();
-        attach(
-          await createProject({ source: SAMPLE_SCREENPLAY, sample: 'screenplay' }),
-          text(SAMPLE_SCREENPLAY),
-          true,
-        );
+        const created = await createProject({ source: SAMPLE_SCREENPLAY, sample: 'screenplay' });
+        await guardControl.claim(created.id);
+        attach(created, text(SAMPLE_SCREENPLAY), true, true);
       }
       failing = false;
       clearTimeout(retry);
@@ -238,13 +252,48 @@ function create(): ScriptSession {
     if (!next) throw new Error(`There is no script ${id}.`);
     const from = await baselineOf(next);
     await writer?.flush();
-    attach(next, from, false);
+    attach(next, from, false, await guardControl.claim(next.id));
   }
+
+  // ---- Two tabs ------------------------------------------------------------------------------
+
+  // The editor follows the guard: read-only while another tab holds the script.
+  effectScope(true).run(() => {
+    watch(guard.readOnly, (on) => editor.setReadOnly(on), { immediate: true, flush: 'sync' });
+  });
+  guardControl.bind({
+    async giveUp() {
+      try {
+        await writer?.flush();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    /** The other tab's last text is in IndexedDB now; a stash only counts if it is newer than that. */
+    async takeOver() {
+      const id = project.value?.id;
+      let next = id ? await getProject(id) : undefined;
+      if (!next) throw new Error('The script is gone.');
+      const left = readStash();
+      if (left?.id === next.id) {
+        if (left.source !== next.source && left.at > next.updatedAt) {
+          next = await writeSource(next, left.source);
+        }
+        clearStash();
+      }
+      attach(next, await baselineOf(next), false, true);
+    },
+    taken() {
+      view.focus();
+    },
+  });
 
   // ---- Wiring ------------------------------------------------------------------------------
 
   editor.onState((state) => {
     if (loading || state.doc === lastDoc) return;
+    if (guard.readOnly.value) return;
     lastDoc = state.doc;
     writer?.schedule(state.doc.toString());
   });
@@ -256,6 +305,8 @@ function create(): ScriptSession {
   // Leaving (technical design §8.2): a handler only while there is something to lose.
   const asking = computed(() => {
     const kept = project.value ? !project.value.sample : false;
+    // A read-only tab holds nothing the other tab doesn't.
+    if (guard.readOnly.value) return false;
     return dirty.value && (kept || recovery.value === 'unavailable');
   });
   const ask = (event: BeforeUnloadEvent) => {
