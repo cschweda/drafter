@@ -15,7 +15,8 @@
       "width": 60,
       "case": "upper",
       "spaceBefore": 2,
-      "keepWithNext": true
+      "keepWithNext": true,
+      "heading": 2
     },
     "action": { "indent": 0, "width": 60, "spaceBefore": 1 },
     "character": {

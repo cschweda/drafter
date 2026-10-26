@@ -56,6 +56,28 @@ describe('loadTemplate', () => {
     ).toEqual([expect.stringMatching(/roles\.transition.*70.*60-character/)]);
   });
 
+  it('accepts heading levels 2 to 6 and rejects others', () => {
+    const withHeading = (level: unknown) => variant((t) => (t.roles.scene_heading.heading = level));
+    for (const level of [2, 3, 4, 5, 6]) {
+      expect(loadTemplate(withHeading(level)).roles.scene_heading?.heading).toBe(level);
+    }
+
+    const problemsWith = (level: unknown) => problemsOf(() => loadTemplate(withHeading(level)));
+    expect(problemsWith(1)).toEqual([
+      expect.stringMatching(/roles\.scene_heading\.heading.*2, 3, 4, 5, 6.*got 1\b/),
+    ]);
+    expect(problemsWith(7)).toEqual([
+      expect.stringMatching(/roles\.scene_heading\.heading.*2, 3, 4, 5, 6.*got 7\b/),
+    ]);
+    expect(problemsWith(2.5)).toEqual([
+      expect.stringMatching(/roles\.scene_heading\.heading.*2, 3, 4, 5, 6.*got 2\.5/),
+    ]);
+    // A quoted number is a mistake to report, not a level to coerce.
+    expect(problemsWith('3')).toEqual([
+      expect.stringMatching(/roles\.scene_heading\.heading.*2, 3, 4, 5, 6.*got "3"/),
+    ]);
+  });
+
   it('rejects a page grid larger than its paper', () => {
     expect(problemsOf(() => loadTemplate(variant((t) => (t.page.paper = 'a4'))))).toEqual([
       expect.stringMatching(/page\.width 85.*a4.*82/),

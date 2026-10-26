@@ -23,6 +23,12 @@ export interface RoleStyle {
   prefix?: string;
   suffix?: string;
   style?: { bold?: boolean; italic?: boolean; underline?: boolean };
+  /**
+   * The heading level, 2 to 6, that this role's blocks take in the rendered
+   * script, so heading navigation follows what prints. Level 1 is left for the
+   * page's own title. The layout ignores it.
+   */
+  heading?: number;
 }
 
 /**
