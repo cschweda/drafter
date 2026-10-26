@@ -1,13 +1,13 @@
-import { parse } from '@drafter/fountain';
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import { kindOfFileName } from '../markdown/kind';
 import { type PickedFile, useFiles } from './files';
 import { useGuard } from './guard';
-import { getHandle, listProjects } from './projects';
+import { getHandle, kindOf, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';
 import { say } from './say';
 import { useScript } from './script';
-import { decodeFile, fileBaseName, NotUtf8Error, titleOf } from './text';
+import { decodeFile, fileBaseName, NotUtf8Error, titleFor } from './text';
 
 /** Bigger than this isn't a script (a feature film is well under 1 MB). */
 export const MAX_BYTES = 5 * 1024 * 1024;
@@ -111,7 +111,8 @@ export async function openFile(file: PickedFile): Promise<void> {
     }
     await ready();
     const script = useScript();
-    const opened = { ...decoded, fileName: file.name, ref: file.ref };
+    const kind = kindOfFileName(file.name);
+    const opened = { ...decoded, fileName: file.name, ref: file.ref, kind };
 
     // The same file on disk is the same script.
     const already = await openedAlready(file);
@@ -125,9 +126,10 @@ export async function openFile(file: PickedFile): Promise<void> {
     // Where saving downloads, nothing says two files are one script but their titles (§9.6).
     let replacing: string | undefined;
     if (!useFiles().canSaveInPlace) {
-      const title = titleOf(parse(decoded.text), fileBaseName(file.name));
+      const title = titleFor(kind, decoded.text, fileBaseName(file.name));
+      // A Markdown file is never the twin of a screenplay with the same title, nor the reverse.
       const twin = (await listProjects()).find(
-        (p) => !p.sample && nameKey(p.title) === nameKey(title),
+        (p) => !p.sample && kindOf(p) === kind && nameKey(p.title) === nameKey(title),
       );
       if (twin) {
         const choice = await ask(title);

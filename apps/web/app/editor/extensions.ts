@@ -1,12 +1,18 @@
 import { completionKeymap } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands';
 import { foldGutter, foldKeymap } from '@codemirror/language';
-import { lintKeymap } from '@codemirror/lint';
+import { lintKeymap, previousDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import { drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view';
-import { type CursorElement, fountain, relint as relintView } from '@drafter/cm-fountain';
+import { drawSelection, EditorView, keymap, lineNumbers, ViewPlugin } from '@codemirror/view';
+import {
+  type CursorElement,
+  fountain,
+  parsedDoc,
+  relint as relintView,
+} from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
+import type { DocumentKind } from '../markdown/kind';
 import { theme } from './theme';
 
 /**
@@ -37,14 +43,11 @@ export function readOnlyExtension(on: boolean): Extension {
 }
 
 /**
- * What Mod-s and Mod-Shift-s do. `storage/save.ts` fills them in (it can't be imported here:
- * it reaches the editor session, which reaches this file), and the window's own listener in the
- * capture phase usually gets there first. Plan 4's command registry takes over both.
+ * What the Source pane knows about the kind of document: `fountain()` for a screenplay or a stage
+ * play, `markdownMode()` for a Markdown one. In Markdown, Fountain's keys, completion, folding,
+ * highlighting, and lint are all off, because they are all in `fountain()`.
  */
-export const fileKeys: { save: () => void; saveAs: () => void } = {
-  save: () => {},
-  saveAs: () => {},
-};
+export const language = new Compartment();
 
 let active: EditorView | undefined;
 
@@ -66,17 +69,55 @@ export function relint(): void {
   if (active) relintView(active);
 }
 
+/** `lineNumbersGutter.reconfigure(lineNumbersExtension(on))` shows or hides the numbers. */
+export function lineNumbersExtension(on: boolean): Extension {
+  return on ? lineNumbers() : [];
+}
+
 export interface EditorHooks {
   template: () => Template;
+  /** Read at each lint; the Strict Fountain setting is in it. */
+  lintOptions?: () => { strict?: boolean };
   onCursorElement: (element: CursorElement | null) => void;
 }
 
-/** Everything the one editor is made of, around `fountain()` (technical design §3). */
-export function editorExtensions({ template, onCursorElement }: EditorHooks): Extension {
+let markdownModule: typeof import('../markdown/editor') | undefined;
+
+/**
+ * Loads Markdown's editor mode (a Lezer grammar and the HTML, CSS, and JavaScript grammars it
+ * nests) the first time a document needs it: a Fountain-only visitor never downloads it. Until it
+ * has arrived, a Markdown document's language is empty (plain text), and the session
+ * reconfigures the language when this resolves.
+ */
+export function loadMarkdownMode(): Promise<void> {
+  return import('../markdown/editor').then((module) => {
+    markdownModule = module;
+  });
+}
+
+export const markdownModeLoaded = (): boolean => markdownModule !== undefined;
+
+/** The language extension for a kind of document: `language.reconfigure(languageExtension(…))` switches it. */
+export function languageExtension(
+  { template, lintOptions, onCursorElement }: EditorHooks,
+  kind: DocumentKind,
+): Extension {
+  if (kind === 'markdown') return markdownModule ? markdownModule.markdownMode() : [];
+  return fountain({ template, lintOptions, onCursorElement });
+}
+
+/**
+ * Everything the one editor is made of, around `fountain()` (technical design §3) or, for a
+ * Markdown document, `markdownMode()`. The parse of the text as Fountain (`parsedDoc`) is kept in
+ * both: the session and the layout read it, and it is cheap, so a switch of kind is one
+ * reconfigure of the language and nothing else.
+ */
+export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fountain'): Extension {
   return [
     remember,
     lineNumbersGutter.of([]),
-    fountain({ template, onCursorElement }),
+    parsedDoc,
+    language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),
     foldGutter(),
@@ -88,23 +129,11 @@ export function editorExtensions({ template, onCursorElement }: EditorHooks): Ex
     EditorView.domEventHandlers({
       drop: (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files'),
     }),
+    // Save, Save As, Open, and New are the page's: the command registry binds their keys on the
+    // window, before the editor sees them. These two commands' keys are the editor's own.
     keymap.of([
-      {
-        key: 'Mod-s',
-        run: () => {
-          fileKeys.save();
-          return true;
-        },
-        preventDefault: true,
-      },
-      {
-        key: 'Mod-Shift-s',
-        run: () => {
-          fileKeys.saveAs();
-          return true;
-        },
-        preventDefault: true,
-      },
+      { key: 'Shift-F8', run: previousDiagnostic },
+      { key: 'Mod-Shift-z', run: redo, preventDefault: true },
     ]),
     // Below fountain()'s own keys, which sit at Prec.high.
     keymap.of([

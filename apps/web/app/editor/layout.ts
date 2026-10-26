@@ -20,6 +20,10 @@ export interface LayoutSession {
   layout: Readonly<ShallowRef<Layout | null>>;
   /** The template `layout` was made with, which may lag the editor's by a moment. */
   layoutTemplate: Readonly<ShallowRef<Template | null>>;
+  /** The number of the request `layout` answers; 0 before the first layout. */
+  shownSeq: Readonly<ShallowRef<number>>;
+  /** The number of the newest request made so far. */
+  requestedSeq(): number;
   /** True while the newest request hasn't come back. */
   updating: Readonly<Ref<boolean>>;
   /** The worker couldn't be made or has failed, and no layout has come since. */
@@ -38,9 +42,10 @@ export interface LayoutSession {
 let session: LayoutSession | undefined;
 
 function create(): LayoutSession {
-  const { view, doc, template, onState } = useEditor();
+  const { view, doc, template, kind, onState } = useEditor();
   const layout = shallowRef<Layout | null>(null);
   const layoutTemplate = shallowRef<Template | null>(null);
+  const shownSeq = shallowRef(0);
   const updating = ref(false);
   const failed = ref(false);
   const cursorBlock = shallowRef(-1);
@@ -57,6 +62,7 @@ function create(): LayoutSession {
         (next, seq) => {
           layout.value = next;
           layoutTemplate.value = templates.get(seq) ?? null;
+          shownSeq.value = seq;
           failed.value = false;
           for (const key of templates.keys()) if (key <= seq) templates.delete(key);
           if (seq >= newest) updating.value = false;
@@ -79,9 +85,10 @@ function create(): LayoutSession {
   // The session lives for the visit, so its watchers belong to no component.
   effectScope(true).run(() => {
     watch(
-      [doc, template],
+      [doc, template, kind],
       () => {
-        if (!client) return;
+        // A Markdown document has no pages: the worker is left alone until it is Fountain again.
+        if (!client || kind.value === 'markdown') return;
         newest = client.request(view.state.doc.toString(), template.value);
         templates.set(newest, template.value);
         updating.value = true;
@@ -101,6 +108,8 @@ function create(): LayoutSession {
   return {
     layout,
     layoutTemplate,
+    shownSeq,
+    requestedSeq: () => newest,
     updating,
     failed,
     cursorBlock,

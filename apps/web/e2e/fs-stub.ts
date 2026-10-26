@@ -156,3 +156,35 @@ export async function watchAlerts(page: Page): Promise<void> {
 export function alertsHeard(page: Page): Promise<string[]> {
   return page.evaluate(() => (window as unknown as { __alerts: string[] }).__alerts);
 }
+
+/**
+ * Counts how often the app reads (`getFile`) and writes (`createWritable`) a file in the stand-in
+ * file system, so a test can wait for a check or a save to have really run. Call it before
+ * `goto`; `fileAccess` reads the counts (a test's own reads of a file count too).
+ */
+export async function countFileAccess(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __reads: number; __writes: number };
+    w.__reads = 0;
+    w.__writes = 0;
+    const proto = FileSystemFileHandle.prototype;
+    const getFile = proto.getFile;
+    proto.getFile = function (this: FileSystemFileHandle) {
+      w.__reads++;
+      return getFile.call(this);
+    };
+    const createWritable = proto.createWritable;
+    proto.createWritable = function (this: FileSystemFileHandle, ...args) {
+      w.__writes++;
+      return createWritable.apply(this, args);
+    };
+  });
+}
+
+/** The counts `countFileAccess` keeps. */
+export function fileAccess(page: Page): Promise<{ reads: number; writes: number }> {
+  return page.evaluate(() => {
+    const w = window as unknown as { __reads: number; __writes: number };
+    return { reads: w.__reads, writes: w.__writes };
+  });
+}

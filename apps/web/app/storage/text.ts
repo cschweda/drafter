@@ -1,4 +1,6 @@
-import type { Doc } from '@drafter/fountain';
+import { type Doc, parse } from '@drafter/fountain';
+import type { DocumentKind } from '../markdown/kind';
+import { markdownTitle } from '../markdown/title';
 
 export type LineBreak = '\n' | '\r\n';
 
@@ -66,6 +68,13 @@ export function titleOf(doc: Doc, fallback = 'Untitled'): string {
   return text || fallback;
 }
 
+/** The title of `source` as a `kind` document reads it: a title page's Title, or a Markdown document's first heading. */
+export function titleFor(kind: DocumentKind, source: string, fallback = 'Untitled'): string {
+  return kind === 'markdown'
+    ? (markdownTitle(source) ?? fallback)
+    : titleOf(parse(source), fallback);
+}
+
 /** A file's name without its extension: the title of a script that has none. */
 export function fileBaseName(name: string | undefined): string {
   if (!name) return 'Untitled';
@@ -83,7 +92,10 @@ const MAX_NAME = 120;
  * without leading or trailing dots and spaces, at most 120 characters, plus the
  * extension. A title with nothing left is "Untitled".
  */
-export function fileNameFor(title: string, extension: '.fountain' | '.pdf' | '.txt'): string {
+export function fileNameFor(
+  title: string,
+  extension: '.fountain' | '.md' | '.pdf' | '.txt',
+): string {
   const cleaned = title.replace(UNSAFE, '').replace(/\s+/g, ' ').trim();
   // Cut by code point, so an emoji is never split.
   const cut = Array.from(cleaned).slice(0, MAX_NAME).join('');

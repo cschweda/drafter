@@ -1,12 +1,16 @@
+import { isolateHistory } from '@codemirror/commands';
 import { ref, watch } from 'vue';
-import { fileKeys } from '../editor/extensions';
 import { useEditor } from '../editor/session';
+import { kindOfFileName } from '../markdown/kind';
+import { markdownTitle } from '../markdown/title';
+import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
-import { say } from './say';
+import { say, timedSay } from './say';
 import { useScript } from './script';
-import { encodeFile, fileNameFor, titleOf } from './text';
+import { encodeFile, fileBaseName, fileNameFor, titleOf } from './text';
+import { inTurn, whenIdle } from './turn';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
 export const saveError = ref('');
@@ -45,32 +49,14 @@ watch(useGuard().readOnly, (on) => {
   if (!on) readOnlyHint.value = '';
 });
 
-let queue: Promise<unknown> = Promise.resolve();
-
-/** One save at a time: a second request made while one is under way waits for it. */
-function inTurn<T>(run: () => Promise<T>): Promise<T> {
-  const result = queue.then(run);
-  queue = result.catch(() => {});
-  return result;
-}
-
 function messageFor(error: unknown): string {
+  if (error instanceof CheckUnsettledError) {
+    return 'Couldn’t check the file for changes because the script kept changing. Nothing was saved. Try saving again.';
+  }
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
   }
   return 'Couldn’t save the file.';
-}
-
-/** Resolves once no switch of scripts is under way. */
-function idle(script: ReturnType<typeof useScript>): Promise<void> {
-  if (!script.busy.value) return Promise.resolve();
-  return new Promise((resolve) => {
-    const stop = watch(script.busy, (on) => {
-      if (on) return;
-      stop();
-      resolve();
-    });
-  });
 }
 
 async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
@@ -78,11 +64,24 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   const script = useScript();
   const editor = useEditor();
   // A switch under way finishes first: the save is of the script that is open when it starts.
-  await idle(script);
+  await whenIdle(script.busy);
   const held = script.project.value;
   const id = held?.id;
-  const title = titleOf(editor.doc.value);
-  const name = held?.fileName ?? fileNameFor(title, '.fountain');
+  // A Markdown document is called by its first heading and saved as `.md`; one with no title is
+  // called after its file, as the project's own title is.
+  const markdown = editor.kind.value === 'markdown';
+  const fallback = fileBaseName(held?.fileName);
+  const title = markdown
+    ? (markdownTitle(editor.view.state.doc.toString()) ?? fallback)
+    : titleOf(editor.doc.value, fallback);
+  // A script whose kind changed since its file was made is no longer that file's: the file is a
+  // .fountain and the text is Markdown, or the reverse. Saving would put one kind's text in the
+  // other's file, so Save acts as Save As, suggesting the new kind's extension, and the file it
+  // makes replaces the binding. The kind change itself unbinds nothing.
+  const bound = !!held?.fileName && kindOfFileName(held.fileName) === editor.kind.value;
+  const name = bound
+    ? (held?.fileName as string)
+    : fileNameFor(title, markdown ? '.md' : '.fountain');
   const lineBreak = held?.lineBreak ?? '\n';
   const bom = held?.bom ?? false;
   // The text is read as late as it can be, so what is written is what the editor shows.
@@ -108,14 +107,20 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
 
   // Save writes to the file the script is bound to; a sample, or a script with no file, asks.
   let target: FileRef | undefined;
-  if (!ask && held && !held.sample && held.fsHandleId) target = await getHandle(held.fsHandleId);
+  if (!ask && held && !held.sample && held.fsHandleId && bound) {
+    target = await getHandle(held.fsHandleId);
+  }
   let picked = false;
   const pick = async () => {
-    target = (await files.pickToSave(name, 'fountain')) ?? undefined;
+    target = (await files.pickToSave(name, markdown ? 'markdown' : 'fountain')) ?? undefined;
     picked = true;
     return target !== undefined;
   };
   if (!target && !(await pick())) return 'cancelled';
+
+  // Never overwrite a file that changed somewhere else: if it did, the check has dealt with it
+  // (loaded it, or asked which version to keep), and the writer saves again knowing what is there.
+  if (!picked && (await useFileCheck().beforeSave()) === 'stop') return 'cancelled';
 
   for (;;) {
     const text = await textToWrite();
@@ -145,7 +150,11 @@ async function attempt(ask: boolean): Promise<'saved' | 'cancelled'> {
     saveError.value = '';
     try {
       const result = await run(ask);
-      if (result === 'saved') announceSave();
+      if (result === 'saved') {
+        announceSave();
+        // The file is the one that was just written: a bar about the old one (it was gone) is stale.
+        void useFileCheck().check();
+      }
       return result;
     } catch (error) {
       await say(saveError, messageFor(error));
@@ -161,34 +170,92 @@ export const save = (): Promise<'saved' | 'cancelled'> => attempt(false);
 export const saveAs = (): Promise<'saved' | 'cancelled'> => attempt(true);
 
 /**
- * Mod-s and Mod-Shift-s from anywhere on the page, so the browser's own Save Page never opens. A
- * capture listener on the window sees the keys before anything in the page does; the editor's
- * keymap has the same two as a second way in. Returns the function that removes it. Plan 4's
- * command registry takes the keys over and lists them.
+ * Clears what went wrong with one script's save when another script is opened: it isn't news
+ * about the next one. Returns the function that stops it. The keys for Save and Save As belong to
+ * the command registry (`commands/registry.ts`), which binds them on the whole page.
  */
-export function installSaveKeys(): () => void {
-  const quietly = (action: () => Promise<unknown>) => () => void action().catch(() => {});
-  fileKeys.save = quietly(save);
-  fileKeys.saveAs = quietly(saveAs);
-  const onKeydown = (event: KeyboardEvent) => {
-    if (event.key.toLowerCase() !== 's' || event.altKey) return;
-    if (!(event.metaKey || event.ctrlKey)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.repeat) return;
-    if (event.shiftKey) fileKeys.saveAs();
-    else fileKeys.save();
-  };
-  window.addEventListener('keydown', onKeydown, true);
-  // What went wrong with one script's save isn't news about the next one.
-  const stop = watch(
+export function watchSaveError(): () => void {
+  return watch(
     () => useScript().project.value?.id,
     () => {
       saveError.value = '';
     },
   );
-  return () => {
-    window.removeEventListener('keydown', onKeydown, true);
-    stop();
-  };
+}
+
+// ---- Revert to Saved ---------------------------------------------------------------------------
+
+/**
+ * "Reverted to the text last saved to The Call.fountain. Undo brings your changes back.": a toast,
+ * and a polite live region. Empty after a few seconds.
+ */
+export const revertNotice = ref('');
+const announceRevert = timedSay(revertNotice, 8000);
+
+/**
+ * Whether there is something to go back to: the script has changes, and the text last saved to its
+ * file is known. Not for a sample or a script never saved to a file; not in a tab that only shows
+ * the script or while a switch of scripts is under way (the editor is locked then); and not when
+ * the script's kind is no longer its file's (the saved text is the other kind's).
+ */
+export function canRevert(): boolean {
+  const script = useScript();
+  return (
+    script.dirty.value &&
+    script.savedText.value !== null &&
+    fitsFile() &&
+    !useEditor().locked.value &&
+    !useGuard().taking.value &&
+    !script.busy.value
+  );
+}
+
+/** The script is Fountain or Markdown as its file's name says. */
+function fitsFile(): boolean {
+  const file = useScript().project.value?.fileName;
+  return file !== undefined && kindOfFileName(file) === useEditor().kind.value;
+}
+
+/**
+ * Why Revert to Saved is off when it isn't obvious: the script has changes and a saved file, but
+ * its type was changed since (the file is a .fountain and the text is Markdown, or the reverse),
+ * so the saved text is the other type's. Undefined otherwise. The app menu shows it beside the
+ * disabled item.
+ */
+export function revertWhy(): string | undefined {
+  const script = useScript();
+  if (!script.dirty.value || script.savedText.value === null) return undefined;
+  if (script.project.value?.fileName === undefined || fitsFile()) return undefined;
+  return 'The saved file is a different type of document';
+}
+
+/**
+ * Puts the text last saved to the script's file back in the editor, as one change: one undo brings
+ * every change since back. Writes nothing. Does nothing when `canRevert` is false.
+ */
+export function revertToSaved(): void {
+  if (!canRevert()) return;
+  const script = useScript();
+  const { view } = useEditor();
+  const target = script.savedText.value as string;
+  const file = script.project.value?.fileName as string;
+  const current = view.state.doc.toString();
+  // Only the part that differs is replaced, so the cursor, the folds, and the scroll stay where they are.
+  let from = 0;
+  const shortest = Math.min(current.length, target.length);
+  while (from < shortest && current.charCodeAt(from) === target.charCodeAt(from)) from++;
+  let end = 0;
+  while (
+    end < shortest - from &&
+    current.charCodeAt(current.length - 1 - end) === target.charCodeAt(target.length - 1 - end)
+  ) {
+    end++;
+  }
+  view.dispatch({
+    changes: { from, to: current.length - end, insert: target.slice(from, target.length - end) },
+    // Its own undo step, not joined to the typing before it.
+    annotations: isolateHistory.of('full'),
+    userEvent: 'input.replace',
+  });
+  void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);
 }

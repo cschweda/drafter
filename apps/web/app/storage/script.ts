@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands';
 import { Text } from '@codemirror/state';
 import {
   type ComputedRef,
@@ -11,6 +12,8 @@ import {
 } from 'vue';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
+import type { NewKind } from '../editor/template';
+import type { DocumentKind } from '../markdown/kind';
 import { db } from './db';
 import type { FileRef } from './files';
 import { guardControl, useGuard } from './guard';
@@ -19,8 +22,10 @@ import { checkRecovery, type RecoveryState, requestPersistence } from './health'
 import { newScriptText } from './new-script';
 import {
   createProject,
+  derive,
   getProject,
   getSavedText,
+  kindOf,
   listProjects,
   type Project,
   putHandle,
@@ -29,11 +34,15 @@ import {
   updateProject,
   writeSource,
 } from './projects';
+import { say } from './say';
 import type { LineBreak } from './text';
 import { allStashes, clearStash, readStash, stash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
 export type { RecoveryState } from './health';
+
+/** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
+export const kindError = ref('');
 
 export interface ScriptSession {
   project: Readonly<ShallowRef<Project | null>>;
@@ -46,10 +55,23 @@ export interface ScriptSession {
   warning: Readonly<ComputedRef<'not-persistent' | 'unavailable' | null>>;
   /** Hides the "may be cleared" warning for the rest of the visit. */
   dismissWarning(): void;
+  /**
+   * The text last saved to the script's file, as the session holds it; null for a sample or a
+   * script with no file yet, or when that text is unknown. What Revert to Saved goes back to.
+   */
+  savedText: Readonly<ComputedRef<string | null>>;
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
   /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
-  newScript(kind: SampleKind): Promise<void>;
+  newScript(kind: NewKind): Promise<void>;
+  /**
+   * Makes the open script a `kind` document: Markdown, or Fountain again. The text and its undo
+   * history stay; the editor's language and the project's `kind` change, and the title is read
+   * again the way that kind reads it. Not an edit, so undo does not reverse it. Does nothing in a
+   * tab that only shows the script, while a switch is under way, for a sample, or when it is that
+   * kind already.
+   */
+  setKind(kind: DocumentKind): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
   /** This browser's scripts, most recently updated first. Samples are not among them. */
@@ -87,6 +109,21 @@ export interface ScriptSession {
   /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
   readonly busy: Readonly<ComputedRef<boolean>>;
   /**
+   * The editor is read-only until the script's file can be checked (the browser has not given
+   * Drafter permission to read it). Whoever sets it clears it; showing another script clears it.
+   */
+  readonly fileLocked: Ref<boolean>;
+  /**
+   * Keeps `source` as a script of its own, without opening it: the version a changed file or this
+   * browser's text had when the writer chose the other (Phase 1 design §9.6).
+   */
+  addScript(
+    source: string,
+    format?: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind },
+  ): Promise<Project>;
+  /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
+  unbindFile(id: string): Promise<void>;
+  /**
    * Removes script `id` from this browser (never its file). Removing the open script opens the most
    * recent other one, or the screenplay sample. A script another tab has open is not removed:
    * the answer is `'held'`.
@@ -101,6 +138,8 @@ export interface OpenedFile {
   bom: boolean;
   fileName: string;
   ref: FileRef | null;
+  /** What the file is: by its name when it is opened, the script's own when it is read again. */
+  kind?: DocumentKind;
 }
 
 /** How long a failing recovery copy waits before it tries again on its own. */
@@ -136,6 +175,7 @@ function create(): ScriptSession {
   const recovery = ref<RecoveryState>('not-persistent');
   const ready = ref(false);
   const dismissed = ref(false);
+  const fileLocked = ref(false);
   // Before a project is open the editor holds the sample, in memory.
   const baseline = shallowRef<Text | null>(text(SAMPLE_SCREENPLAY));
   let writer: Writer | undefined;
@@ -149,6 +189,13 @@ function create(): ScriptSession {
   const dirty = computed(() => {
     editor.doc.value; // the text changed
     return baseline.value === null || !view.state.doc.eq(baseline.value);
+  });
+
+  const lastSaved = computed(() => {
+    const current = project.value;
+    // A new script's baseline is the template it started from, not a file's text.
+    if (!current || current.sample || current.fileName === undefined) return null;
+    return baseline.value?.toString() ?? null;
   });
 
   // ---- The recovery copy -------------------------------------------------------------------
@@ -248,7 +295,7 @@ function create(): ScriptSession {
     if (!fromEditor) {
       loading = true;
       try {
-        editor.load(next.source);
+        editor.load(next.source, kindOf(next));
       } finally {
         loading = false;
       }
@@ -256,6 +303,8 @@ function create(): ScriptSession {
     lastDoc = view.state.doc;
     baseline.value = from;
     project.value = next;
+    // The new script's file has not been checked yet.
+    fileLocked.value = false;
     const id = next.id;
     writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
@@ -431,11 +480,45 @@ function create(): ScriptSession {
     });
   }
 
-  async function newScript(kind: SampleKind) {
+  async function newScript(kind: NewKind) {
     // A tab that only shows a script may show old text; it starts nothing (Phase 1 design §9.3).
     if (guard.readOnly.value) throw new Error('This tab is read-only.');
     const { text: source, cursor } = newScriptText(kind, new Date());
-    if (await switchTo(() => createProject({ source, baseline: source }))) editor.goto(cursor);
+    const made: DocumentKind = kind === 'markdown' ? 'markdown' : 'fountain';
+    if (await switchTo(() => createProject({ source, baseline: source, kind: made }))) {
+      editor.goto(cursor);
+    }
+  }
+
+  async function setKind(kind: DocumentKind) {
+    const current = project.value;
+    // A sample is the example it is: it stays a screenplay or a stage play.
+    if (!current || current.sample) return;
+    if (guard.readOnly.value || switching.value || writer === undefined) return;
+    if (kindOf(current) === kind) return;
+    const id = current.id;
+    kindError.value = '';
+    // The editor first, so the text is never shown in the wrong mode longer than this call.
+    editor.setKind(kind);
+    try {
+      await patch(id, {
+        kind,
+        ...derive(view.state.doc.toString(), current.fileName, kind),
+      });
+    } catch {
+      // The kind could not be stored: the editor goes back to the one that is, so the two agree.
+      editor.setKind(kindOf(current));
+      if (project.value?.id === id) {
+        project.value = {
+          ...project.value,
+          kind: current.kind,
+          title: current.title,
+          templateId: current.templateId,
+          meta: current.meta,
+        };
+      }
+      await say(kindError, 'Couldn’t change the document type. Nothing was changed.');
+    }
   }
 
   async function sampleProject(kind: SampleKind): Promise<Project> {
@@ -600,6 +683,7 @@ function create(): ScriptSession {
         const created = await createProject({
           source: file.text,
           baseline: file.text,
+          kind: file.kind ?? 'fountain',
           lineBreak: file.lineBreak,
           bom: file.bom,
           fileName: file.fileName,
@@ -620,15 +704,35 @@ function create(): ScriptSession {
     await open(id);
     if (project.value?.id !== id) return 'busy';
     if (guard.readOnly.value || !writer) return 'held';
-    // One transaction for the whole text, so one undo brings the old text back.
+    // One transaction for the whole text, so one undo brings the old text back; an undo step of
+    // its own, so typing just after it isn't joined to it.
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: file.text },
       selection: { anchor: 0 },
       scrollIntoView: true,
       userEvent: 'input.replace',
+      annotations: isolateHistory.of('full'),
     });
     await saved(file);
     return 'replaced';
+  }
+
+  async function addScript(
+    source: string,
+    format: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind } = {},
+  ): Promise<Project> {
+    return createProject({
+      source,
+      ...(format.kind === undefined ? {} : { kind: format.kind }),
+      ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
+      ...(format.bom === undefined ? {} : { bom: format.bom }),
+    });
+  }
+
+  async function unbindFile(id: string): Promise<void> {
+    const handleId = (await getProject(id))?.fsHandleId;
+    await patch(id, { fsHandleId: undefined });
+    if (handleId) await db.handles.delete(handleId);
   }
 
   async function changed(p: Project): Promise<boolean> {
@@ -667,7 +771,7 @@ function create(): ScriptSession {
   // The editor follows the guard: read-only while another tab holds the script.
   effectScope(true).run(() => {
     watch(
-      () => guard.readOnly.value || switching.value,
+      () => guard.readOnly.value || switching.value || fileLocked.value,
       (on) => editor.setReadOnly(on),
       { immediate: true, flush: 'sync' },
     );
@@ -735,6 +839,7 @@ function create(): ScriptSession {
   return {
     project,
     dirty,
+    savedText: lastSaved,
     recovery,
     ready,
     warning: computed(() => {
@@ -748,6 +853,7 @@ function create(): ScriptSession {
     },
     open,
     newScript,
+    setKind,
     openSample,
     scripts,
     saved,
@@ -755,6 +861,9 @@ function create(): ScriptSession {
     replaceWith,
     changed,
     busy: switching,
+    fileLocked,
+    addScript,
+    unbindFile,
     remove,
   };
 }

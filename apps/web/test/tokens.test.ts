@@ -45,6 +45,8 @@ const TEXT_PAIRS: Array<[string, string, number]> = [
   ['--muted', '--bg', 4.5],
   ['--muted', '--chrome', 4.5],
   ['--muted', '--chrome-2', 4.5],
+  // The command palette's highlighted row.
+  ['--muted', '--tab-on', 4.5],
   ['--faint', '--bg', 4.5],
   ['--faint', '--chrome', 4.5],
   ['--gutter', '--bg', 4.5],

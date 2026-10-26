@@ -1,3 +1,5 @@
+import { NEW_MARKDOWN } from '../markdown/kind';
+
 const MONTHS = [
   'January',
   'February',
@@ -19,13 +21,14 @@ const STAGE_PLAY_META = '/* drafter\n{"v":1,"template":"stage-play-standard"}\n*
 /**
  * A new script's text: a title page to fill in, then a blank line, and for a stage play the
  * metadata block naming its template. The date is the local calendar's, written out so it reads
- * the same in every locale. `cursor` is where typing starts: the end of a screenplay, and the
+ * the same in every locale. A Markdown document is a title heading and a blank line. `cursor` is where typing starts: the end of a screenplay, and the
  * blank line before a stage play's metadata block.
  */
 export function newScriptText(
-  kind: 'screenplay' | 'stage-play',
+  kind: 'screenplay' | 'stage-play' | 'markdown',
   today: Date,
 ): { text: string; cursor: number } {
+  if (kind === 'markdown') return { text: NEW_MARKDOWN, cursor: NEW_MARKDOWN.length };
   const title = kind === 'screenplay' ? 'Untitled Screenplay' : 'Untitled Play';
   const date = `${MONTHS[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
   const titlePage = `Title: ${title}\nCredit: Written by\nAuthor: Your Name\nDraft date: ${date}\n\n`;

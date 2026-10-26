@@ -2,9 +2,23 @@
 @import "@nuxt/ui";
 @import "./tokens.css";
 
+/* The modules folder is outside the app, so Tailwind reads it for the classes its modules use. */
+@source "../../../../../modules";
+
+:root {
+  /* The text size setting (settings/apply.ts) scales the Source pane and the Script pane by this. */
+  --text-scale: 1;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
+}
+
+/* Tailwind's reset gives every element `margin: 0`, which takes from a modal <dialog> the automatic
+   margin that centers it in the window. */
+dialog:modal {
+  margin: auto;
 }
 
 /* One focus ring for every control, in the brand's goldenrod. */

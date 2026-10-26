@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
+import { problemsLabel, useProblems } from '~/editor/problems';
+import { useEditor } from '~/editor/session';
+import { wordsLabel } from '~/markdown/preview';
+import { useMarkdown } from '~/markdown/use-markdown';
+import { contextGeneration } from '~/modules/context';
+import { useModuleTabs } from '~/modules/host';
+import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import { TABS, type TabId } from '~/utils/panes';
 
@@ -15,12 +22,39 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
-// Until the Problems list arrives (Plan 3), its panel holds a placeholder: a line of text.
 const { project } = useScript();
-const SLIM = computed<Record<Exclude<TabId, 'script'>, string>>(() => ({
+const { kind } = useEditor();
+const { words, updating: previewing } = useMarkdown();
+const markdown = computed(() => kind.value === 'markdown');
+/** The Script tab is the Preview in a Markdown document. */
+const labelOf = (tab: { id: string; label: string }) =>
+  tab.id === 'script' && markdown.value ? 'Preview' : tab.label;
+const { problems, count, canFixAll, fixAll } = useProblems();
+// The button goes when nothing is left to fix, and focus with it: it goes to the panel.
+function onFixAll() {
+  fixAll();
+  document.getElementById('panel-problems')?.focus();
+}
+const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
+// The core three tabs, then the tabs of the modules that are on.
+const moduleTabs = useModuleTabs();
+const allTabs = computed<Array<{ id: TabId; label: string }>>(() => [
+  ...TABS,
+  ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
+]);
+const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
+const SLIM = computed<Record<'source' | 'problems', string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
-  problems: 'No problems',
+  // Advice (info) isn't counted as a problem, so it's named apart.
+  // The pane itself says there are no checks for a Markdown document.
+  problems: markdown.value
+    ? ''
+    : problemsLabel(count.value) +
+      (suggestions.value > 0
+        ? ` · ${suggestions.value} ${suggestions.value === 1 ? 'suggestion' : 'suggestions'}`
+        : ''),
 }));
+const { settings, set } = useSettings();
 
 const { page, updating } = useLayout();
 const zoom = useScriptZoom();
@@ -34,7 +68,7 @@ const tabButtons = ref<HTMLButtonElement[]>([]);
 // Manual activation: arrow keys move focus along the tabs, and Enter or Space
 // chooses one, so arrowing past a tab open in the other pane never swaps them.
 function onKeydown(event: KeyboardEvent, index: number) {
-  const last = TABS.length - 1;
+  const last = allTabs.value.length - 1;
   const moves: Record<string, number> = {
     ArrowRight: index === last ? 0 : index + 1,
     ArrowLeft: index === 0 ? last : index - 1,
@@ -52,7 +86,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
   <section class="pane" :data-pane="props.pane">
     <div role="tablist" :aria-label="props.label" class="tabs">
       <button
-        v-for="(tab, index) in TABS"
+        v-for="(tab, index) in allTabs"
         :id="`tab-${props.pane}-${tab.id}`"
         :key="tab.id"
         ref="tabButtons"
@@ -66,11 +100,16 @@ function onKeydown(event: KeyboardEvent, index: number) {
         @click="emit('choose', tab.id)"
         @keydown="onKeydown($event, index)"
       >
-        {{ tab.label }}
+        {{ labelOf(tab) }}
+        <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
       </button>
     </div>
     <div class="slim">
-      <template v-if="props.selected === 'script'">
+      <template v-if="props.selected === 'script' && markdown">
+        <span class="page">{{ wordsLabel(words) }}</span>
+        <span v-if="previewing" class="updating">Updating…</span>
+      </template>
+      <template v-else-if="props.selected === 'script'">
         <span class="page">{{ pageLabel(page) }}</span>
         <span v-if="updating" class="updating">Updating…</span>
         <span class="spacer" />
@@ -87,7 +126,29 @@ function onKeydown(event: KeyboardEvent, index: number) {
           </button>
         </div>
       </template>
-      <template v-else>{{ SLIM[props.selected] }}</template>
+      <template v-else-if="moduleTab">
+        {{ moduleTab.module.name }}
+      </template>
+      <template v-else>
+        {{ SLIM[props.selected as 'source' | 'problems'] }}
+        <template v-if="props.selected === 'source'">
+          <span class="spacer" />
+          <div role="group" aria-label="Source view" class="zoom">
+            <button
+              type="button"
+              class="zoom-button"
+              :aria-pressed="settings.lineNumbers ? 'true' : 'false'"
+              @click="set('lineNumbers', !settings.lineNumbers)"
+            >
+              Line numbers
+            </button>
+          </div>
+        </template>
+        <template v-else-if="props.selected === 'problems' && canFixAll">
+          <span class="spacer" />
+          <button type="button" class="fix-all" @click="onFixAll">Fix all</button>
+        </template>
+      </template>
     </div>
     <div
       :id="`panel-${props.selected}`"
@@ -99,8 +160,19 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
+      <!-- Keyed by the script as well: a tab keeps the context it is drawn with, so another
+           script draws it afresh with that script's context. -->
+      <ModuleBoundary
+        v-else-if="moduleTab"
+        :key="`${moduleTab.id}:${contextGeneration()}`"
+        :name="moduleTab.module.name"
+        what="tab"
+      >
+        <component :is="moduleTab.module.tab?.component" :context="moduleTab.context" />
+      </ModuleBoundary>
+      <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
-      <p v-else class="placeholder">No problems found.</p>
+      <ProblemsPane v-else />
     </div>
   </section>
 </template>
@@ -194,9 +266,31 @@ function onKeydown(event: KeyboardEvent, index: number) {
 .panel.editing {
   overflow: hidden;
 }
-.placeholder {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
+.badge {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: var(--chrome-2);
+  color: var(--text);
+  font-size: 11px;
+}
+.tab.on .badge {
+  background: var(--chrome);
+}
+.fix-all {
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--heading);
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (forced-colors: active) {
+  .badge {
+    border: 1px solid CanvasText;
+  }
 }
 </style>

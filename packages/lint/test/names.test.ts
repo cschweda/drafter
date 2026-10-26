@@ -7,9 +7,22 @@ import { describe, expect, it } from 'vitest';
 
 const screenplay = builtins['us-screenplay'] as Template;
 
-/** What the rule says about a script. Other rules' diagnostics are not looked at. */
-const found = (source: string): LintDiagnostic[] =>
+/** What the rule says about a script, fixes and all. Other rules' diagnostics are not looked at. */
+const foundWithFixes = (source: string): LintDiagnostic[] =>
   lint(parse(source), screenplay).filter((d) => d.ruleId === 'similar-names');
+
+/** The same without the fixes, which have tests of their own. */
+const found = (source: string): LintDiagnostic[] =>
+  foundWithFixes(source).map(({ fix: _fix, ...rest }) => rest);
+
+/** The text changes applied from last to first, as the editor applies a fix. */
+function applyFix(source: string, fix: NonNullable<LintDiagnostic['fix']>): string {
+  let text = source;
+  for (const { from, to, insert } of [...fix.changes].reverse()) {
+    text = text.slice(0, from) + insert + text.slice(to);
+  }
+  return text;
+}
 
 /** A name cued `times` times, each cue with a line of speech. */
 const cued = (name: string, times = 1) => `${name}\nHi.\n\n`.repeat(times);
@@ -164,7 +177,6 @@ describe('similar-names', () => {
         message: '"MARGERET" is one letter from "MARGARET", which has 12 cues. A typo?',
       },
     ]);
-    expect(found(source)[0]?.fix).toBeUndefined();
   });
 
   it('points at the first cue of the rare name, and counts all of them', () => {
@@ -358,8 +370,9 @@ describe('similar-names', () => {
     });
 
     it('looks at up to eight names that differ in one place, and leaves a longer series alone', () => {
+      // The differing letter is in the middle of a long word, so the short-word rule is not in play.
       const series = (size: number) =>
-        Array.from({ length: size }, (_, i) => cued(`SOLDIER ${String.fromCharCode(65 + i)}`)).join(
+        Array.from({ length: size }, (_, i) => cued(`SOLDIE${String.fromCharCode(65 + i)}S`)).join(
           '',
         );
       // Eight names that differ in one place are looked at, and each pair is one letter apart.
@@ -494,6 +507,126 @@ describe('similar-names', () => {
           message: '"MCLANE" is one letter from "MCCLANE", which has 5 cues. A typo?',
         },
       ]);
+    });
+  });
+
+  describe('names that differ inside a short word', () => {
+    it.each([
+      ['MR. SMITH', 'MRS. SMITH'],
+      ['JOHN JR.', 'JOHN SR.'],
+      ['GUARD A', 'GUARD B'],
+      ['DR SMITH', 'MR SMITH'],
+    ])('leaves %s and %s alone', (a, b) => {
+      expect(found(`${cued(a, 12)}${cued(b)}`)).toEqual([]);
+      expect(found(`${cued(a)}${cued(b, 12)}`)).toEqual([]);
+    });
+
+    it.each([
+      ['MARIO', 'MARIA'],
+      ['OFFICER DAVID', 'OFFICER DAVIS'],
+      ['MRS. SMITH', 'MRS. SMYTH'],
+      ['OLD JOHN', 'OLD JOHM'],
+    ])('still reports %s and %s', (a, b) => {
+      expect(found(`${cued(a, 12)}${cued(b)}`)).toHaveLength(1);
+    });
+
+    it('wants the edit to fall inside the short word, not beside it', () => {
+      // The space between the words is not a letter of either.
+      expect(found(`${cued('AGENT 47', 12)}${cued('AGENT47')}`)).toHaveLength(1);
+      expect(found(`${cued('MARGARET SMITH', 12)}${cued('MARGARET SMIT H')}`)).toHaveLength(1);
+    });
+
+    it('counts a word of three letters as short, and four as long', () => {
+      expect(found(`${cued('JOHNNY MRS', 12)}${cued('JOHNNY MRX')}`)).toEqual([]);
+      expect(found(`${cued('JOHNNY MRSS', 12)}${cued('JOHNNY MRSX')}`)).toHaveLength(1);
+    });
+
+    it('counts letters, so punctuation does not make a short word long', () => {
+      expect(found(`${cued('JOHN JR.', 12)}${cued('JOHN SR.')}`)).toEqual([]);
+      expect(found(`${cued('JOHN J.R.', 12)}${cued('JOHN S.R.')}`)).toEqual([]);
+    });
+
+    it('applies the digit rule as well', () => {
+      expect(found(`${cued('GUARD 1', 12)}${cued('GUARD 2')}`)).toEqual([]);
+    });
+  });
+
+  describe('the fix', () => {
+    const script = `${cued('MARGARET', 5)}${cued('MARGERET')}`;
+
+    it('offers to mark two similar names as distinct', () => {
+      const [d, ...rest] = foundWithFixes(script);
+      expect(rest).toEqual([]);
+      expect(d?.fix?.title).toBe('Mark as distinct');
+      const fixed = applyFix(script, d?.fix as NonNullable<typeof d.fix>);
+      // The pair is in upper case, the rare name first as the message names them.
+      expect(parse(fixed).meta).toEqual({ v: 1, distinctNames: [['MARGERET', 'MARGARET']] });
+      // The script before the block is untouched, and the rule has nothing to say.
+      expect(fixed.startsWith(script)).toBe(true);
+      expect(found(fixed)).toEqual([]);
+    });
+
+    it('writes the pair in upper case, whatever the cues were', () => {
+      const source = `${cued('@Margaret', 5)}${cued('@Margeret')}`;
+      const [d] = foundWithFixes(source);
+      const fixed = applyFix(source, d?.fix as NonNullable<typeof d.fix>);
+      expect(parse(fixed).meta?.distinctNames).toEqual([['MARGERET', 'MARGARET']]);
+      expect(found(fixed)).toEqual([]);
+    });
+
+    it('joins the pairs already marked, and keeps the rest of the metadata', () => {
+      const source = withMeta(script, {
+        template: 'stage-play-standard',
+        distinctNames: [['DANNY', 'DANNI']],
+        other: { kept: 'a/b' },
+      });
+      const [d] = foundWithFixes(source);
+      const fixed = applyFix(source, d?.fix as NonNullable<typeof d.fix>);
+      expect(parse(fixed).meta).toEqual({
+        v: 1,
+        template: 'stage-play-standard',
+        distinctNames: [
+          ['DANNY', 'DANNI'],
+          ['MARGERET', 'MARGARET'],
+        ],
+        other: { kept: 'a/b' },
+      });
+      expect(found(fixed)).toEqual([]);
+    });
+
+    it('marks the pairs one at a time, each leaving the others reported', () => {
+      const three = `${cued('MARGARET', 5)}${cued('MARGERET')}${cued('MARGIRET')}`;
+      let source = three;
+      for (let remaining = 3; remaining > 0; remaining--) {
+        const all = foundWithFixes(source);
+        expect(all).toHaveLength(remaining);
+        source = applyFix(source, all[0]?.fix as NonNullable<(typeof all)[0]['fix']>);
+      }
+      expect(found(source)).toEqual([]);
+      expect(parse(source).meta?.distinctNames).toHaveLength(3);
+    });
+
+    it('replaces a distinctNames that is not a list', () => {
+      const source = withMeta(script, { distinctNames: 'nope' });
+      const [d] = foundWithFixes(source);
+      const fixed = applyFix(source, d?.fix as NonNullable<typeof d.fix>);
+      expect(found(fixed)).toEqual([]);
+    });
+
+    it('writes the block with the file\u2019s own line breaks', () => {
+      const source = script.replaceAll('\n', '\r\n');
+      const [d] = foundWithFixes(source);
+      const fixed = applyFix(source, d?.fix as NonNullable<typeof d.fix>);
+      expect(fixed.replaceAll('\r\n', '')).not.toMatch(/[\r\n]/);
+      expect(found(fixed)).toEqual([]);
+    });
+
+    it('does not change the document it was made from', () => {
+      const doc = parse(script);
+      const before = doc.source;
+      lint(doc, screenplay);
+      expect(doc.source).toBe(before);
+      expect(doc.meta).toBeNull();
     });
   });
 

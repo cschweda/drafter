@@ -2,9 +2,50 @@
 
 All notable changes to Drafter are recorded here, and every push updates this file. Add entries under **[Unreleased]**, grouped as Added, Changed, Deprecated, Removed, Fixed, or Security. The pre-push hook in `.githooks/` rejects a push when none of its commits touch this file.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and packages follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Nothing has been released yet. When a release is cut, its entries move from [Unreleased] into a new section headed with the version and date.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and packages follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). When a release is cut, its entries move from [Unreleased] into a new section headed with the version and date, with a short summary above them.
 
 ## [Unreleased]
+
+## [0.2.0] - 2026-10-26
+
+**The full editor.** Everything around the writing:
+- **The command palette** (Mod+K): every command, every scene, and Go to line, with one set of keys shared by the palette, the menus, and the keyboard.
+- **The app menu** on the Drafter mark, and **Revert to Saved**, which one Undo takes back.
+- **Settings**, kept in your browser: text size, spellcheck, Strict Fountain, match system appearance, and line numbers (off to begin with).
+- **The Problems pane:** every problem with its line, a fix where there is one, and **Fix all** in Strict Fountain.
+- **Templates and documents:** Screenplay, Stage play, and **plain Markdown documents** with a live preview, chosen from the toolbar or the palette.
+- **Export** to PDF and plain text (a Markdown document exports its `.md` file and plain text).
+- **A file changed elsewhere** (by Dropbox on another computer, say) is noticed, and both versions are kept when both changed.
+- **Script modules:** optional features you turn on in Settings → Modules, with three samples: Scene list, Cast, and Notes. In your own copy of Drafter, a module dropped into the `modules/` folder appears after a restart.
+
+### Added
+
+- `apps/web`: the command palette. Mod+K (or the toolbar's search field) opens it from anywhere, the editor included. It lists the scenes by their heading text with their source lines, "Go to line N" when you type a number, and every command that applies, with its keys. Esc closes it and focus goes back where it was.
+- `apps/web`: a command registry (`registerCommands`, `useCommands`, `formatKeys`). File, Edit, View, and Go commands, among them New screenplay (Mod+Alt+N), New stage play, Open (Mod+O), Save, Save As, Remove from this browser, Next and Previous problem (F8, Shift+F8), Show Source, Show Script, Show Problems, Switch theme, Fold all, Unfold all, Undo, Redo, Find, and the Fountain commands (make a scene heading through a lyric, dual dialogue, wrap in a note, cut to the boneyard). A command that is off can say why, and the app menu shows the reason beside it.
+- `apps/web`: Shift+F8 goes to the previous problem, and Mod+Shift+Z redoes on every platform.
+- `apps/web`: settings, kept in this browser (IndexedDB) and set from a Settings dialog (File > Settings…, Mod+,): match system appearance, text size (90% to 150%, scaling the Source pane and, at 100%, the Script pane), spellcheck, Strict Fountain (its rules become warnings at once), and line numbers. If the browser can't store them, the defaults apply and writing carries on.
+- `apps/web`: line numbers in the Source pane, off to begin with, in the leftmost gutter. A "Line numbers" button on the pane's bar, the Show and Hide line numbers commands, and the dialog toggle them, and Drafter remembers the choice.
+- `@drafter/fountain`: `setMeta(doc, meta)`, the text changes that write the `/* drafter … */` metadata block, replacing the existing one or appending one, with the script's own line break and every `/` in the JSON escaped so no value can close the block. It writes nothing while a `/*` is unclosed.
+- `@drafter/lint`: `similar-names` offers **Mark as distinct**, which adds the pair to `meta.distinctNames`, and no longer reports names whose one edit falls inside a word of three letters or fewer (`MR. SMITH` and `MRS. SMITH`, `JOHN JR.` and `JOHN SR.`, `GUARD A` and `GUARD B`).
+- `apps/web`: a file changed somewhere else, such as by Dropbox on another computer, is noticed when a script opens, when the window regains focus, and before Save writes, never mid-sentence. If only the file changed, its text replaces the editor's as one undoable change ("Updated from The Call.fountain."). If both changed, a dialog asks which to keep working on, **Open the file** or **Keep this browser's version**, and the other is kept as a new script, with the text as it is when you answer. Save never overwrites a changed file. A script whose file Drafter may not read yet opens read-only under a bar with **Check for changes** (choose "Allow on every visit" when Chrome offers it, and the check is automatic), and one whose file is gone offers **Save As** or **Edit this browser's copy**.
+- `apps/web`: **Export**, from the toolbar, the app menu, and the palette: **PDF** and **Plain text (.txt)** for a script, the **Markdown file** and plain text for a Markdown document. The pages are laid out and drawn in a worker, with Courier Prime fetched once from the app's own origin, and saved where you choose (Chromium's save picker, suggesting the title as the file name), or downloaded in other browsers. The plain text is what `drafter build --txt` writes. A toast says when the file is ready, or why it isn't; an empty script says "Nothing to export yet." An export waits for a script switch in progress, so the name and the pages are one script's.
+- `apps/web`: the Problems tab lists what the Source gutter marks, each with its severity, message, and line. Choosing one selects its text in the Source pane, and a problem with a fix has a button for it (a fix only applies to the text it was found in). The tab shows a count of errors and warnings, the status bar reads "No problems", "1 problem", or "N problems", and with Strict Fountain on a **Fix all** button applies every Strict fix in one undoable change. The list keeps its place and your focus while you type, and a read-only tab offers no fixes.
+- `apps/web`: the template chip in the toolbar is a menu. **Screenplay** and **Stage play** are checked items; choosing one writes `template` into the script's `/* drafter … */` block as one undoable change, and the pages and the lint rules (a stage play has no scene-time or last-transition warnings) follow at once. The palette has **Template: Screenplay** and **Template: Stage play**, which is how a phone, where the chip is hidden, switches.
+- `apps/web`: plain Markdown documents. **New Markdown document** (Scripts menu, app menu, and palette, after New screenplay and New stage play) starts with `# Untitled`. The Source pane uses CodeMirror's Markdown mode (Fountain's keys, completion, folding, and lint are off), the Script tab becomes a **Preview** drawn from a CommonMark parse with no HTML strings (raw HTML shows as text), the status bar counts words, and the Problems pane says "No checks for Markdown documents." `.md` and `.markdown` files open as Markdown and save as `.md`. The template chip lists **Markdown (plain text)** last: choosing it for a script asks first, and choosing Screenplay or Stage play turns Fountain back on, keeping the text. After a change of type, the next Save asks where to save, suggesting the right extension. The Markdown mode and parser download only when a Markdown document is first used. `@codemirror/lang-markdown` and `mdast-util-from-markdown` are new dependencies, listed in `docs/DEPENDENCIES.md`.
+- `apps/web`: the app menu. The Drafter mark in the toolbar is now a button ("Drafter menu") that opens New screenplay, New stage play, New Markdown document, Open…, the recent scripts, the samples, Save, Save As…, Revert to Saved, Export, and Settings…, each with its keys. Every item runs its registered command, so the menu, the palette, and the keys agree.
+- `apps/web`: **Revert to Saved** (File, the app menu, and the palette) puts the text last saved to the script's file back as one change, so one Undo brings your changes back, and says "Reverted to the text last saved to The Call.fountain. Undo brings your changes back." It is available only while the script has changes and a saved file of the same type to go back to.
+- `apps/web`: script modules, optional features compiled into Drafter. A module is a folder in the new `modules/` folder at the repository root (`modules/README.md` explains how to write one and how to install one in your own copy); its `index.ts` default-exports a `ScriptModule`. **Settings → Modules** lists each module with an on/off switch (off to begin with, remembered), and a module that would send your script to another site asks first, in plain words, and again if it later asks for more. A module that's on adds a toolbar button, a tab beside Source, Script, and Problems, palette commands under its name, and a section in Settings. It reads the script through `ModuleContext` and changes it as one undoable step; a run that outlives its script or the text it began with can't change anything, and a module that throws shows a message and breaks nothing. `modules/` is typechecked with the app, and the content security policy is unchanged (`connect-src 'self'`).
+- `modules/`: three sample modules, written only against `ModuleContext` so they double as examples, off until turned on, needing no network. **Scene list** lists every scene, numbered, with its page and its length in eighths of a page. **Cast** lists every character with their speeches and the scene of their first appearance, and can copy the list. **Notes** lists each `[[note]]` in the Problems pane with its line, and can remove them all as one undoable change after asking how many. Their tests run in a new `modules` Vitest project.
+- `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once. Accessibility checks in the browser tests run with `A11Y=1` (`pnpm e2e:a11y`) until the final accessibility pass.
+
+### Changed
+
+- `apps/web`: Save, Save As, Open, New screenplay, and the palette have their keys through the command registry, on the whole page, one handler for each key. Mod+S and Mod+Shift+S no longer have a second binding in the editor's keymap.
+- `apps/web`: the Scripts menu's New items, the app menu, the template chip, and the palette are made from one list of document types, in one order: Screenplay, Stage play, then Markdown.
+
+### Fixed
+
+- `apps/web`: the remove and same-title dialogs opened at the top left of the window, because Tailwind's reset removed the automatic margin that centers a `<dialog>`; every dialog opens in the middle again.
 
 ## [0.1.0] - 2026-10-26
 
@@ -244,5 +285,6 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/cschweda/drafter/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cschweda/drafter/releases/tag/v0.1.0

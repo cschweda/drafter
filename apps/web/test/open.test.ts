@@ -37,10 +37,15 @@ vi.mock('../app/editor/session', async () => {
   const session = {
     view,
     doc,
-    load(text: string) {
+    kind: shallowRef<'fountain' | 'markdown'>('fountain'),
+    load(text: string, kind: 'fountain' | 'markdown' = 'fountain') {
+      session.kind.value = kind;
       state = EditorState.create({ doc: text });
       doc.value = parse(text);
       for (const l of listeners) l(state);
+    },
+    setKind(next: 'fountain' | 'markdown') {
+      session.kind.value = next;
     },
     setReadOnly() {},
     /** For the tests: the first state again, and no listeners left from an earlier session. */
@@ -166,6 +171,26 @@ describe('opening a file', () => {
 
     t.type('MORE\n');
     expect(t.script.dirty.value).toBe(true);
+  });
+
+  test('opens a .md file as Markdown, titled by its first heading, and keeps it Markdown', async () => {
+    const t = await fresh();
+    const notes = '# The Treatment\n\nAct one: a *door* opens.\n';
+    await t.openFile(t.picked('notes.md', notes, 9));
+    expect(t.shown()).toBe(notes);
+    expect(t.editor.kind.value).toBe('markdown');
+    const row = t.script.project.value;
+    expect(row).toMatchObject({ kind: 'markdown', title: 'The Treatment', fileName: 'notes.md' });
+    expect(t.script.dirty.value).toBe(false);
+    // Save writes the same file, byte for byte.
+    expect(await t.save()).toBe('saved');
+    expect(t.stored.get(9)).toEqual(new TextEncoder().encode(notes));
+    // .markdown too, and a .fountain after it is Fountain again.
+    await t.openFile(t.picked('more.markdown', '## Heading\n'));
+    expect(t.script.project.value?.kind).toBe('markdown');
+    await t.openFile(t.picked('The Door.fountain', SCRIPT));
+    expect(t.script.project.value?.kind).toBe('fountain');
+    expect(t.editor.kind.value).toBe('fountain');
   });
 
   test('saves it back byte for byte, and keeps the file on Save', async () => {

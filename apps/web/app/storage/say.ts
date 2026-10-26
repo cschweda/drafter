@@ -12,3 +12,18 @@ export async function say(target: Ref<string>, message: string): Promise<void> {
   await nextTick();
   target.value = message;
 }
+
+/**
+ * Like `say`, for a toast: the message is set the same way, and empties after `ms`. Returns the
+ * function that sets it; a newer message restarts the wait.
+ */
+export function timedSay(target: Ref<string>, ms: number): (message: string) => Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return async (message) => {
+    clearTimeout(timer);
+    await say(target, message);
+    timer = setTimeout(() => {
+      target.value = '';
+    }, ms);
+  };
+}

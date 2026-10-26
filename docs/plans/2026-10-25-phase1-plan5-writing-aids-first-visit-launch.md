@@ -36,6 +36,8 @@ Read it with the [technical design](../drafter-technical-design.md) §13 and §1
 
 ## Global Constraints
 
+- **Accessibility checking waits for the final stage** (decided 2026-10-26): tasks here add no axe checks, and Task 9's accessibility suite moves after Plan 6, the desktop app, as the project's last step. The guided tour (Task 6) stays: it's a feature. Functional keyboard tests stay.
+
 - Everything in Plan 3's Global Constraints, except the branch and the dependencies.
   - **This plan's branch is `phase-1-launch`,** from `main` after Plan 4 merges. It merges to `main` when everything is green.
   - **New dependencies:** `nuxt-guided-tour`, `@vueuse/core` (its peer), `@iconify-json/heroicons` (its icons, bundled), and `@vite-pwa/nuxt`. Each gets its row before it's installed.

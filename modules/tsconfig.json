@@ -1,0 +1,17 @@
+{
+  // Typechecks the modules in this folder against the app's types (`pnpm --filter @drafter/web
+  // typecheck` runs it after `nuxt typecheck`). The app's own tsconfig is left alone: Playwright
+  // reads it too, and a catch-all path there would send the test runner's own import elsewhere.
+  "extends": "../apps/web/.nuxt/tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "~/*": ["../apps/web/app/*"],
+      "#samples/*": ["../samples/*"],
+      "@drafter/*": ["../packages/*/src/index.ts"],
+      "*": ["../apps/web/node_modules/*"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.vue"],
+  "exclude": ["./node_modules"]
+}

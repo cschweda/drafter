@@ -38,10 +38,15 @@ vi.mock('../app/editor/session', async () => {
   const session = {
     view,
     doc,
-    load(text: string) {
+    kind: shallowRef<'fountain' | 'markdown'>('fountain'),
+    load(text: string, kind: 'fountain' | 'markdown' = 'fountain') {
+      session.kind.value = kind;
       state = EditorState.create({ doc: text });
       doc.value = parse(text);
       for (const l of listeners) l(state);
+    },
+    setKind(next: 'fountain' | 'markdown') {
+      session.kind.value = next;
     },
     setReadOnly() {},
     /** For the tests: the first state again, and no listeners left from an earlier session. */
@@ -383,6 +388,74 @@ describe('saving through a FileAccess', () => {
     await t.save();
     expect(t.log.downloads[1]?.name).toBe('Untitled Screenplay.fountain');
     expect(parse(String(t.log.downloads[1]?.data)).titlePage).toBeTruthy();
+  });
+
+  test('suggests .md for a Markdown document, and asks the picker for Markdown', async () => {
+    const t = await fresh({ inPlace: false });
+    await t.script.newScript('markdown');
+    expect(t.shown()).toBe('# Untitled\n\n');
+    t.type('# The Treatment\n');
+    expect(await t.save()).toBe('saved');
+    expect(t.log.downloads[0]?.name).toBe('Untitled.md');
+    expect(t.script.project.value?.fileName).toBe('Untitled.md');
+  });
+
+  test('saves a changed kind as a new file, and leaves the old file as it was', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    t.type('A\n');
+    t.control.answers.push('story.fountain');
+    expect(await t.save()).toBe('saved');
+    const old = [...t.files.values()][0]?.bytes;
+
+    await t.script.setKind('markdown');
+    expect(t.editor.kind.value).toBe('markdown');
+    // Save is Save As now: it asks, and suggests the new kind's extension, named after the file.
+    expect(await t.save()).toBe('saved');
+    expect(t.log.picks).toHaveLength(2);
+    expect(t.log.picks[1]).toEqual({ name: 'story.md', kind: 'markdown' });
+    expect([...t.files.values()].map((f) => f.name)).toEqual(['story.fountain', 'story.md']);
+    expect([...t.files.values()][0]?.bytes).toBe(old);
+    expect(t.script.project.value?.fileName).toBe('story.md');
+    // The new file is the binding: the next Save writes it without asking.
+    t.type('# Notes\n');
+    expect(await t.save()).toBe('saved');
+    expect(t.log.picks).toHaveLength(2);
+    expect(t.log.writes.at(-1)?.ref.id).toBe(2);
+
+    // And the other way round: a Fountain script back from Markdown asks for a .fountain name.
+    await t.script.setKind('fountain');
+    expect(await t.save()).toBe('saved');
+    expect(t.log.picks[2]).toEqual({ name: 'Untitled Screenplay.fountain', kind: 'fountain' });
+  });
+
+  test('downloads a changed kind under the new extension', async () => {
+    const t = await fresh({ inPlace: false });
+    await t.script.newScript('screenplay');
+    t.type('A\n');
+    await t.save();
+    expect(t.log.downloads[0]?.name).toBe('Untitled Screenplay.fountain');
+    await t.script.setKind('markdown');
+    t.type('# Notes\n');
+    await t.save();
+    expect(t.log.downloads[1]?.name).toBe('Notes.md');
+    expect(t.script.project.value?.fileName).toBe('Notes.md');
+  });
+
+  test('puts the editor back, and says so, when the new kind cannot be stored', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    const { kindError } = await import('../app/storage/script');
+    vi.spyOn(t.db.projects, 'put').mockRejectedValueOnce(new Error('full'));
+    await t.script.setKind('markdown');
+    expect(t.editor.kind.value).toBe('fountain');
+    expect(t.script.project.value?.kind).toBe('fountain');
+    expect(kindError.value).toMatch(/Couldn’t change/);
+    // Trying again, with the storage working, works and clears the message.
+    await t.script.setKind('markdown');
+    expect(t.editor.kind.value).toBe('markdown');
+    expect(t.script.project.value?.kind).toBe('markdown');
+    expect(kindError.value).toBe('');
   });
 
   test('saves two requests made together one after the other', async () => {

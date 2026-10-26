@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import { registerBuiltinCommands } from '~/commands/builtin';
+import { installGlobalKeys } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
-import { installSaveKeys } from '~/storage/save';
+import { markdownTitle } from '~/markdown/title';
+import { startModules } from '~/modules/host';
+import { applySettings } from '~/settings/apply';
+import { installFileCheck } from '~/storage/check';
+import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
 import { otherPane, type PaneId } from '~/utils/panes';
@@ -19,29 +25,51 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 // The editor is parked here whenever the Source tab isn't showing.
-const { view, doc } = useEditor();
+const { view, doc, kind } = useEditor();
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
 
+/** The script's title, as its kind reads it. */
+function pageTitle(): string {
+  const fallback = fileBaseName(project.value?.fileName);
+  // The text changed: the Fountain parse is the signal, and the Markdown title is read from the text.
+  doc.value;
+  return kind.value === 'markdown'
+    ? (markdownTitle(view.state.doc.toString()) ?? fallback)
+    : titleOf(doc.value, fallback);
+}
+
 // The tab says which script this is, and whether it has changes that aren't in its file.
 useHead({
-  title: computed(
-    () =>
-      `${dirty.value ? '• ' : ''}${titleOf(doc.value, fileBaseName(project.value?.fileName))} — Drafter`,
-  ),
+  title: computed(() => `${dirty.value ? '• ' : ''}${pageTitle()} — Drafter`),
 });
 
-let removeSaveKeys: (() => void) | undefined;
+// The commands and their keys. The registry binds the keys that belong to the app (Save, Open,
+// New, the palette) on the window; the editor's keymap has the rest.
+registerBuiltinCommands();
+let removeKeys: (() => void) | undefined;
+let stopWatchingSave: (() => void) | undefined;
+let stopSettings: (() => void) | undefined;
+let stopModules: (() => void) | undefined;
+let removeFileCheck: (() => void) | undefined;
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
-  removeSaveKeys = installSaveKeys();
+  removeKeys = installGlobalKeys();
+  stopWatchingSave = watchSaveError();
+  stopSettings = applySettings();
+  stopModules = startModules();
+  removeFileCheck = installFileCheck();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
-  removeSaveKeys?.();
+  removeKeys?.();
+  stopWatchingSave?.();
+  stopSettings?.();
+  stopModules?.();
+  removeFileCheck?.();
 });
 </script>
 
@@ -50,10 +78,17 @@ onBeforeUnmount(() => {
     <div class="top">
       <AppToolbar />
       <ReadOnlyBar />
+      <FileBar />
       <StorageWarning />
     </div>
     <DropZone />
     <SameTitleDialog />
+    <MarkdownDialog />
+    <BothChangedDialog />
+    <RemoveDialog />
+    <ModuleConfirmDialog />
+    <CommandPalette />
+    <SettingsDialog />
     <main class="panes" :class="{ wide }">
       <template v-if="wide">
         <AppPane

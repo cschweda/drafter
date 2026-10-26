@@ -1,20 +1,57 @@
 <script setup lang="ts">
+import { formatKeys, isApple } from '~/commands/keys';
+import { openPalette } from '~/commands/palette';
 import { useEditor } from '~/editor/session';
-import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
+import { useTemplate } from '~/editor/use-template';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 
 const colorMode = useColorMode();
 const { readOnly } = useGuard();
-const { doc } = useEditor();
-const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
+const template = useTemplate();
+const editor = useEditor();
+// A choice puts focus in the editor, where Mod+Z undoes it; Escape, or leaving the menu, returns it to the chip as usual.
+let chosen = false;
+function onCloseAutoFocus(event: Event) {
+  if (!chosen) return;
+  chosen = false;
+  event.preventDefault();
+  editor.goto(editor.view.state.selection.main.head);
+}
+const templateName = computed(() => typeNameOf(template.kind.value, template.id.value));
+// A Markdown document has no template: its chip names the document, and the label says so.
+const chipLabel = computed(() =>
+  template.kind.value === 'markdown'
+    ? `Document: ${templateName.value}`
+    : `Template: ${templateName.value}`,
+);
+// The chip's menu: one checked item for the template (or the Markdown document) the script is, in
+// `DOCUMENT_TYPES` order. A tab that only shows the script, or a script with an unclosed `/*`, can't
+// be switched to a template; Markdown asks first.
+const templateItems = computed(() =>
+  DOCUMENT_TYPES.map((type) => ({
+    label: type.name,
+    type: 'checkbox' as const,
+    checked:
+      type.kind === 'markdown'
+        ? template.kind.value === 'markdown'
+        : template.kind.value === 'fountain' && type.id === template.id.value,
+    disabled: !template.canChooseType(type),
+    onSelect: () => {
+      chosen = true;
+      void template.chooseType(type);
+    },
+  })),
+);
+const paletteKeys = formatKeys('Mod-k', isApple());
 const dark = computed(() => colorMode.value !== 'light');
 
 function toggleTheme() {
   colorMode.preference = dark.value ? 'light' : 'dark';
 }
 
-// Open is the scripts menu and Save saves. The others wait for Plan 4: until then they show, but
+// Open is the scripts menu, Save saves, and Export is the export menu. The others wait for Plan 4: until then they show, but
 // say they're unavailable.
 const ACTIONS = [
   { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
@@ -27,12 +64,14 @@ const ACTIONS = [
 <template>
   <header class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <!-- Below 400px the wordmark gives way to the mark, so the toolbar fits a
+    <!-- The mark opens the app menu. Below 400px the wordmark gives way to the mark, so the toolbar fits a
          320px screen (WCAG 1.4.10). -->
-    <picture class="logo">
-      <source media="(max-width: 399.98px)" srcset="/mark.svg">
-      <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
-    </picture>
+    <AppMenu>
+      <picture class="logo">
+        <source media="(max-width: 399.98px)" srcset="/mark.svg">
+        <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
+      </picture>
+    </AppMenu>
     <div class="actions">
       <template v-for="action in ACTIONS" :key="action.kind">
         <ScriptsMenu v-if="action.kind === 'open'" v-slot="{ toggle, expanded, controls }">
@@ -47,6 +86,19 @@ const ACTIONS = [
             <span class="label">{{ action.label }}</span>
           </button>
         </ScriptsMenu>
+        <ExportMenu v-else-if="action.kind === 'export'" v-slot="{ toggle, expanded, controls }">
+          <button
+            type="button"
+            class="act"
+            :aria-expanded="expanded ? 'true' : 'false'"
+            :aria-controls="expanded ? controls : undefined"
+            :data-tour="action.tour"
+            @click="toggle"
+          >
+            <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+            <span class="label">{{ action.label }}</span>
+          </button>
+        </ExportMenu>
         <button
           v-else-if="action.kind === 'save'"
           type="button"
@@ -69,15 +121,29 @@ const ACTIONS = [
           <span class="label">{{ action.label }}</span>
         </button>
       </template>
+      <ModuleButtons />
     </div>
-    <button type="button" class="chip template" aria-disabled="true" data-tour="template">
-      {{ templateName }}
-    </button>
+    <UDropdownMenu :items="templateItems" :content="{ align: 'start', onCloseAutoFocus }">
+      <button
+        type="button"
+        class="chip template"
+        :aria-label="chipLabel"
+        data-tour="template"
+      >
+        {{ templateName }}
+      </button>
+    </UDropdownMenu>
     <span class="spacer" />
-    <button type="button" class="chip" aria-disabled="true" data-tour="palette">
+    <button
+      type="button"
+      class="chip"
+      data-tour="palette"
+      aria-haspopup="dialog"
+      @click="openPalette('all', $event.currentTarget as HTMLElement)"
+    >
       <UIcon name="i-lucide-search" class="icon" />
       <span class="label">Go to scene or command</span>
-      <kbd>⌘K</kbd>
+      <kbd>{{ paletteKeys }}</kbd>
     </button>
     <button
       type="button"
@@ -102,6 +168,9 @@ const ACTIONS = [
 }
 .logo {
   flex: none;
+}
+/* The space after the mark is the menu button's, so its focus ring stays close to the logo. */
+.toolbar :deep(.mark) {
   margin-right: 14px;
 }
 .logo img {
@@ -189,7 +258,7 @@ kbd {
   .toolbar {
     padding: 8px 10px;
   }
-  .logo {
+  .toolbar :deep(.mark) {
     margin-right: 6px;
   }
   .logo img {

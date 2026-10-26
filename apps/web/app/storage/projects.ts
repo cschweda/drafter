@@ -1,5 +1,7 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
 import { type TemplateId, templateIdOf } from '../editor/template';
+import type { DocumentKind } from '../markdown/kind';
+import { markdownTitle } from '../markdown/title';
 import { db } from './db';
 import type { FileRef } from './files';
 import { fileBaseName, titleOf } from './text';
@@ -7,6 +9,11 @@ import { fileBaseName, titleOf } from './text';
 export interface Project {
   id: string; // crypto.randomUUID()
   title: string;
+  /**
+   * Fountain (a screenplay or a stage play) or Markdown. Unindexed, so it needed no new version:
+   * a project saved before it existed has none, and is Fountain (`kindOf`).
+   */
+  kind?: DocumentKind;
   templateId: TemplateId;
   /** The recovery copy, with `\n` line breaks. */
   source: string;
@@ -32,8 +39,28 @@ export interface Project {
   fsHandleId?: string;
 }
 
-/** `title`, `templateId`, and `meta` are caches of `source`; when they disagree, `source` wins (technical design §8.1). */
-function derive(source: string, fileName?: string): Pick<Project, 'title' | 'templateId' | 'meta'> {
+/** The kind a project is: Fountain unless it says it is Markdown. */
+export function kindOf(project: Pick<Project, 'kind'>): DocumentKind {
+  return project.kind === 'markdown' ? 'markdown' : 'fountain';
+}
+
+/**
+ * `title`, `templateId`, and `meta` are caches of `source`; when they disagree, `source` wins
+ * (technical design §8.1). A Markdown document has no title page and no metadata block: its title
+ * is its first heading, and it has the default template.
+ */
+export function derive(
+  source: string,
+  fileName?: string,
+  kind: DocumentKind = 'fountain',
+): Pick<Project, 'title' | 'templateId' | 'meta'> {
+  if (kind === 'markdown') {
+    return {
+      title: markdownTitle(source) ?? fileBaseName(fileName),
+      templateId: 'us-screenplay',
+      meta: null,
+    };
+  }
   const doc = parse(source);
   // A script with no title is called after its file, when it has one.
   return {
@@ -49,8 +76,9 @@ export async function createProject(
   const now = Date.now();
   const project: Project = {
     lineBreak: '\n',
+    kind: 'fountain',
     ...init,
-    ...derive(init.source, init.fileName),
+    ...derive(init.source, init.fileName, init.kind),
     id: crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
@@ -86,7 +114,11 @@ export async function updateProject(
       ...patch,
       ...(patch.source === undefined
         ? {}
-        : derive(patch.source, patch.fileName ?? current.fileName)),
+        : derive(
+            patch.source,
+            patch.fileName ?? current.fileName,
+            kindOf({ ...current, ...patch }),
+          )),
       id,
       createdAt: current.createdAt,
     };
@@ -107,7 +139,7 @@ export async function writeSource(current: Project, source: string): Promise<Pro
     const base = stored ?? current;
     const next: Project = {
       ...base,
-      ...derive(source, base.fileName),
+      ...derive(source, base.fileName, kindOf(base)),
       source,
       updatedAt: Date.now(),
     };

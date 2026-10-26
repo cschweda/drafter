@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { TEMPLATE_NAMES } from '~/editor/template';
+import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
-import type { Project } from '~/storage/projects';
+import { kindOf, type Project } from '~/storage/projects';
 import { READ_ONLY_HINT, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
 // The Open menu (Phase 1 design §9.3): new scripts, this browser's scripts, and the samples. The
 // trigger is the toolbar's Open button, drawn by the toolbar and given through the slot.
-// Plan 4 registers these as commands, with shortcuts, and adds the app menu.
+// The same actions are commands too (`commands/builtin.ts`), with their keys, in the palette.
 const script = useScript();
 const { project, busy } = script;
 const { readOnly, taking } = useGuard();
@@ -102,6 +102,8 @@ async function ask(p: Project, event: Event) {
 }
 
 function onDialogClose() {
+  // A close that comes after the dialog was opened again is the old close: it changes nothing.
+  if (dialog.value?.open) return;
   confirming.value = null;
   if (restoreFocus && open.value) removeTrigger?.focus();
 }
@@ -174,22 +176,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       class="panel"
       :style="{ top: `${place.top}px`, left: `${place.left}px` }"
     >
+      <!-- One New item for each document type, in the chip's order (`DOCUMENT_TYPES`). -->
       <button
+        v-for="(type, i) in DOCUMENT_TYPES"
+        :key="type.id"
         type="button"
         class="item"
-        data-first
+        :data-first="i === 0 || undefined"
         :disabled="!canStart"
-        @click="run(() => script.newScript('screenplay'), false)"
+        @click="run(() => script.newScript(type.newKind), false)"
       >
-        <UIcon name="i-lucide-file-plus" class="icon" />New screenplay
-      </button>
-      <button
-        type="button"
-        class="item"
-        :disabled="!canStart"
-        @click="run(() => script.newScript('stage-play'), false)"
-      >
-        <UIcon name="i-lucide-drama" class="icon" />New stage play
+        <UIcon :name="type.newIcon" class="icon" />{{ type.newTitle }}
       </button>
       <button
         type="button"
@@ -216,7 +213,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
               @click="run(() => script.open(p.id))"
             >
               <span :id="`script-${p.id}`" class="title">{{ p.title }}</span>
-              <span class="meta">{{ TEMPLATE_NAMES[p.templateId] }}</span>
+              <span class="meta">{{ typeNameOf(kindOf(p), p.templateId) }}</span>
             </button>
             <button
               type="button"

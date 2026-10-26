@@ -223,13 +223,23 @@ test.describe('one tab at a time', () => {
     // A types and closes at once. The newest text is usually only in the stash, with the
     // database behind it; if the timed write happened to commit first, it's in the database
     // and the stash was cleared. Either way it must not be lost.
+    //
+    // A real closing page runs `pagehide`, which is what leaves the stash. Playwright's `close`
+    // does not promise that: WebKit sometimes drops the page without running it (about 1 run in
+    // 20 here), and otherwise runs it just after `close` resolves. So leave the page first, which
+    // runs `pagehide` and waits for it, then close the empty tab.
     await a.bringToFront();
     await editor(a).press('End');
     await a.keyboard.insertText(' LAST WORDS');
+    await a.goto('about:blank');
     await a.close({ runBeforeUnload: false });
-    const stash = await b.evaluate((key) => localStorage.getItem(key), stashKey(x.id));
-    const saved = (await stored(b)).find((p) => p.id === x.id)?.source ?? '';
-    expect(`${stash ?? ''}${saved}`).toContain('LAST WORDS');
+    await expect
+      .poll(async () => {
+        const stash = await b.evaluate((key) => localStorage.getItem(key), stashKey(x.id));
+        const saved = (await stored(b)).find((p) => p.id === x.id)?.source ?? '';
+        return `${stash ?? ''}${saved}`.includes('LAST WORDS');
+      })
+      .toBe(true);
 
     await openMenu(b);
     await menuOf(b)

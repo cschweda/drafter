@@ -1,4 +1,5 @@
 export { toJSON } from './json';
+export { setMeta } from './meta';
 export { parse } from './parse';
 export { print } from './print';
 export { blockAt, characters, locations } from './query';

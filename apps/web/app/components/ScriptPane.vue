@@ -3,10 +3,12 @@ import { createScriptView, GOTO_EVENT, type ScriptView } from '@drafter/render-h
 import '@drafter/render-html/style.css';
 import { useLayout } from '~/editor/layout';
 import { useEditor } from '~/editor/session';
+import { useSettings } from '~/settings/settings';
 
 const { goto } = useEditor();
 const { layout, layoutTemplate, cursorBlock, failed } = useLayout();
 const zoom = useScriptZoom();
+const { settings } = useSettings();
 
 const host = ref<HTMLElement>();
 const probe = ref<HTMLElement>();
@@ -25,12 +27,16 @@ function fontsReady(): Promise<unknown> {
   return Promise.race([document.fonts.load('12pt "Courier Prime"').catch(() => undefined), wait]);
 }
 
-/** Fit width scales with CSS `zoom` so a page fills the pane; 100% is real size. */
+/**
+ * Fit width scales with CSS `zoom` so a page fills the pane, whatever the text size; 100% is real
+ * size times the text size setting. Zoom doesn't change the layout, so the pages never change.
+ */
 function applyZoom() {
   if (!view || !host.value || !probe.value) return;
   const natural = probe.value.getBoundingClientRect().width;
   const room = host.value.clientWidth - 2 * GUTTER;
-  const scale = zoom.value === 'fit' && natural > 0 && room > 0 ? room / natural : 1;
+  const fit = zoom.value === 'fit';
+  const scale = fit ? (natural > 0 && room > 0 ? room / natural : 1) : settings.value.textSize;
   view.element.style.zoom = scale === 1 ? '' : String(scale);
 }
 
@@ -66,7 +72,7 @@ onBeforeUnmount(() => {
 });
 
 watch([layout, layoutTemplate], draw);
-watch(zoom, applyZoom);
+watch([zoom, () => settings.value.textSize], applyZoom);
 watch(cursorBlock, (block) => {
   // The title page is block -1, which no layout line belongs to: it is the top.
   if (block < 0) host.value?.scrollTo({ top: 0 });
