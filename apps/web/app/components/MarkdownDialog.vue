@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { markdownQuestion } from '~/editor/markdown-question';
+import { useEditor } from '~/editor/session';
 
 // Making a Fountain script a Markdown document asks first. Escape is Cancel. Focus starts on
 // Cancel, and goes back to what had it (the chip, or the editor after a palette command).
@@ -16,6 +17,13 @@ watch(
   },
   { flush: 'post' },
 );
+
+// The question is about the script that was open: another one opening (a key works under the
+// dialog) answers it No. `chooseType` also checks, for a switch that keeps the editor's text.
+const { loaded } = useEditor();
+watch(loaded, () => {
+  if (markdownQuestion.value) choose(false);
+});
 
 function choose(ok: boolean) {
   answered = true;

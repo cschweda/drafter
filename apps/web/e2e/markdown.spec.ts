@@ -518,6 +518,24 @@ test.describe('switching between Markdown and Fountain', () => {
     await expect(chip(page)).toHaveText('Markdown (plain text)');
   });
 
+  test('drops the question when another script opens while it is asked', async ({ page }) => {
+    await start(page);
+    await openButton(page).click();
+    await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
+    await expect(editor(page)).toContainText('Untitled Screenplay');
+    await expect.poll(async () => (await stored(page)).filter((p) => !p.sample).length).toBe(1);
+    await command(page, 'Document: Markdown (plain text)');
+    await expect(question(page)).toBeVisible();
+
+    // The app's keys still work under the question: one opens another script.
+    await page.keyboard.press('ControlOrMeta+Alt+n');
+    await expect.poll(async () => (await stored(page)).filter((p) => !p.sample).length).toBe(2);
+    // The question was about the script that was open: it goes, and nothing became Markdown.
+    await expect(question(page)).toBeHidden();
+    await expect(tabs(page, 'Script').first()).toBeVisible();
+    expect((await stored(page)).filter((p) => p.kind === 'markdown')).toEqual([]);
+  });
+
   test('is not offered for a sample, which stays a screenplay', async ({ page, isMobile }) => {
     await start(page);
     if (!isMobile) {

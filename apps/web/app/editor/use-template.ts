@@ -80,7 +80,11 @@ export function useTemplate(): TemplateChoice {
     if (!canChooseType(type)) return;
     if (type.kind === 'markdown') {
       if (kind.value === 'markdown') return;
+      // The app's keys still work under the question, so another script may be open by the time
+      // it is answered: the answer is about the one it was asked about, or nothing changes.
+      const asked = script.project.value?.id;
       if (!(await askToUseMarkdown()) || !canChooseType(type)) return;
+      if (script.project.value?.id !== asked) return;
       await script.setKind('markdown');
       return;
     }
