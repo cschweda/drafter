@@ -200,4 +200,15 @@ describe('setMeta', () => {
       { numRuns: 500 },
     );
   });
+
+  it('writes nothing after an unclosed boneyard', () => {
+    // The appended block's closing delimiter would close the writer's own opener.
+    const source = 'She waits.\n\n/* oops\n\nMore.\n';
+    expect(setMeta(parse(source), { template: 'stage-play-standard' })).toEqual([]);
+    // Calling again, with the text unchanged, still writes nothing.
+    expect(setMeta(parse(source), { template: 'stage-play-standard' })).toEqual([]);
+    expect(written(source, { template: 'stage-play-standard' })).toBe(source);
+    // The error that tells the writer to close it is still reported.
+    expect(parse(source).diagnostics.map((d) => d.code)).toContain('unclosed-boneyard');
+  });
 });

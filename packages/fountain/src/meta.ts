@@ -41,10 +41,16 @@ function existingBlock(doc: Doc): { from: number; to: number } | null {
  * replace the existing block, or append one after a blank line. The JSON is on one line, with
  * every `/` in it written `\/`. `v` defaults to 1. An unchanged block gives [].
  *
+ * A script with an unclosed `/*` gets no changes: the block's own `*\/` would close the writer's
+ * opener, so the template choice would not be read back and the `unclosed-boneyard` error that
+ * tells the writer to close it would go, with the rest of the script still hidden. The writer
+ * closes the `/*` first.
+ *
  * The block is written with the script's own line break. A block that can't be read as JSON is
  * kept as the writer left it, and a good one is added after it.
  */
 export function setMeta(doc: Doc, meta: DrafterMeta): TextChange[] {
+  if (doc.regions.some((r) => !r.closed)) return [];
   const { source } = doc;
   const json = jsonOf(meta);
   const nl = lineBreakOf(source);

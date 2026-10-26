@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/lint`: `similar-names` offers **Mark as distinct**, which adds the pair to `meta.distinctNames`, and no longer reports names whose one edit falls inside a word of three letters or fewer (`MR. SMITH` and `MRS. SMITH`, `JOHN JR.` and `JOHN SR.`, `GUARD A` and `GUARD B`).
 - `apps/web`: the browser tests' server port can be set with `E2E_PORT`, so two working copies can run their suites at once.
 
+### Fixed
+
+- `@drafter/fountain`: `setMeta` writes nothing when the script has an unclosed `/*`, which the metadata block would have closed, losing the template choice and the unclosed-boneyard error.
+
 ## [0.1.0] - 2026-10-26
 
 **Write and keep your work at drafter.dev.** The first version you can write a script in:
