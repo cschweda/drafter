@@ -7,6 +7,7 @@ import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-f
 import { nextTick } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { useEditor } from '~/editor/session';
+import { DOCUMENT_TYPES } from '~/editor/template';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
@@ -101,22 +102,17 @@ export function registerBuiltinCommands(): void {
     },
 
     // File
-    {
-      id: 'new-screenplay',
-      title: 'New screenplay',
-      group: 'File',
-      keys: 'Mod-Alt-n',
-      global: true,
-      enabled: canStart,
-      run: quietly(() => script.newScript('screenplay')),
-    },
-    {
-      id: 'new-stage-play',
-      title: 'New stage play',
-      group: 'File',
-      enabled: canStart,
-      run: quietly(() => script.newScript('stage-play')),
-    },
+    // One New command for each document type, in `DOCUMENT_TYPES` order (the chip and the Scripts menu read the same list).
+    ...DOCUMENT_TYPES.map(
+      (type): Command => ({
+        id: `new-${type.newKind}`,
+        title: type.newTitle,
+        group: 'File',
+        ...(type.newKeys && { keys: type.newKeys, global: true }),
+        enabled: canStart,
+        run: quietly(() => script.newScript(type.newKind)),
+      }),
+    ),
     {
       id: 'open',
       title: 'Open…',

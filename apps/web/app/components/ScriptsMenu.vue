@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TEMPLATE_NAMES } from '~/editor/template';
+import { DOCUMENT_TYPES, TEMPLATE_NAMES } from '~/editor/template';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
 import type { Project } from '~/storage/projects';
@@ -174,22 +174,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       class="panel"
       :style="{ top: `${place.top}px`, left: `${place.left}px` }"
     >
+      <!-- One New item for each document type, in the chip's order (`DOCUMENT_TYPES`). -->
       <button
+        v-for="(type, i) in DOCUMENT_TYPES"
+        :key="type.id"
         type="button"
         class="item"
-        data-first
+        :data-first="i === 0 || undefined"
         :disabled="!canStart"
-        @click="run(() => script.newScript('screenplay'), false)"
+        @click="run(() => script.newScript(type.newKind), false)"
       >
-        <UIcon name="i-lucide-file-plus" class="icon" />New screenplay
-      </button>
-      <button
-        type="button"
-        class="item"
-        :disabled="!canStart"
-        @click="run(() => script.newScript('stage-play'), false)"
-      >
-        <UIcon name="i-lucide-drama" class="icon" />New stage play
+        <UIcon :name="type.newIcon" class="icon" />{{ type.newTitle }}
       </button>
       <button
         type="button"

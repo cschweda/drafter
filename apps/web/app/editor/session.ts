@@ -8,7 +8,7 @@ import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
 import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
 import { applyEditorSettings } from './apply-settings';
-import { editorExtensions, readOnly, readOnlyExtension } from './extensions';
+import { editorExtensions, readOnly, readOnlyExtension, relint } from './extensions';
 import { SAMPLE_SCREENPLAY } from './samples';
 import { templateIdOf } from './template';
 
@@ -18,7 +18,7 @@ export interface EditorSession {
   /** `parsedDoc` after every change. */
   readonly doc: Readonly<ShallowRef<Doc>>;
   readonly cursor: Readonly<ShallowRef<CursorElement | null>>;
-  /** The built-in that `templateIdOf(doc)` names (technical design §8.6); Plan 4 adds the switcher that writes it. */
+  /** The built-in that `templateIdOf(doc)` names (technical design §8.6); the toolbar's chip writes it (`useTemplate`). */
   readonly template: Readonly<ShallowRef<Template>>;
   /**
    * Gives the one editor a fresh state with `text` (an opened script): its own undo history, its
@@ -60,7 +60,12 @@ function create(): EditorSession {
   function follow(state: EditorState) {
     doc.value = state.field(parsedDoc);
     const next = builtins[templateIdOf(doc.value)] as Template;
-    if (next !== template.value) template.value = next;
+    if (next !== template.value) {
+      template.value = next;
+      // The rules the template turns off are linted again now, not after the next edit. Not in
+      // this update: a listener may not dispatch.
+      queueMicrotask(relint);
+    }
   }
 
   const { settings } = useSettings();

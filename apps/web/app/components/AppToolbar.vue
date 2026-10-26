@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
-import { useEditor } from '~/editor/session';
-import { TEMPLATE_NAMES, templateIdOf } from '~/editor/template';
+import { DOCUMENT_TYPES, TEMPLATE_NAMES } from '~/editor/template';
+import { useTemplate } from '~/editor/use-template';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 
 const colorMode = useColorMode();
 const { readOnly } = useGuard();
-const { doc } = useEditor();
-const templateName = computed(() => TEMPLATE_NAMES[templateIdOf(doc.value)]);
+const template = useTemplate();
+const templateName = computed(() => TEMPLATE_NAMES[template.id.value]);
+// The chip's menu: one checked item for the template the script is in, in `DOCUMENT_TYPES` order.
+// A tab that only shows the script, or a script with an unclosed `/*`, can't be switched.
+const templateItems = computed(() =>
+  DOCUMENT_TYPES.map((type) => ({
+    label: type.name,
+    type: 'checkbox' as const,
+    checked: type.id === template.id.value,
+    disabled: !template.canChoose.value,
+    onSelect: () => template.choose(type.id),
+  })),
+);
 const paletteKeys = formatKeys('Mod-k', isApple());
 const dark = computed(() => colorMode.value !== 'light');
 
@@ -86,9 +97,16 @@ const ACTIONS = [
         </button>
       </template>
     </div>
-    <button type="button" class="chip template" aria-disabled="true" data-tour="template">
-      {{ templateName }}
-    </button>
+    <UDropdownMenu :items="templateItems" :content="{ align: 'start' }">
+      <button
+        type="button"
+        class="chip template"
+        :aria-label="`Template: ${templateName}`"
+        data-tour="template"
+      >
+        {{ templateName }}
+      </button>
+    </UDropdownMenu>
     <span class="spacer" />
     <button
       type="button"
