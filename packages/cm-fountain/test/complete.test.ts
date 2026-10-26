@@ -109,6 +109,43 @@ describe('character names', () => {
     expect(ask(script('@MA|'))).toEqual({ labels: ['MARGARET'], replaces: 'MA' });
   });
 
+  it('leaves a typed name alone when a longer name starts with it', () => {
+    const cast = text('DAN', 'Hi.', '', 'DANNY', 'Hi.', '', 'DAN|');
+    // Enter would take DANNY and lengthen the name the writer typed in full, so no list opens.
+    expect(ask(cast)).toBeNull();
+    expect(ask(cast, true)).toBeNull();
+    expect(ask(text('DAN', 'Hi.', '', 'DANNY', 'Hi.', '', '@dan|'))).toBeNull();
+    // One more letter reaches the longer name.
+    expect(ask(text('DAN', 'Hi.', '', 'DANNY', 'Hi.', '', 'DANN|'))).toEqual({
+      labels: ['DANNY'],
+      replaces: 'DANN',
+    });
+    // The line being typed is no label for itself, though the parser may read it as a cue.
+    expect(ask(text('DANNY', 'Hi.', '', 'DAN|', 'Hello.'))).toEqual({
+      labels: ['DANNY'],
+      replaces: 'DAN',
+    });
+    expect(ask(text('# ACT ONE', '', '# ACT|'))).toEqual({ labels: ['ACT ONE'], replaces: 'ACT' });
+    // The same goes for every list.
+    const places = text(
+      'INT. HALL - DAY',
+      '',
+      'INT. HALL - DAYS',
+      '',
+      '# ACT ONE',
+      '',
+      '# ACT ONE B',
+      '',
+      'CUT TO:',
+      '',
+      'CUT TO: B',
+      '',
+    );
+    expect(ask(`${places}\nINT. HALL - DAY|`)).toBeNull();
+    expect(ask(`${places}\n# ACT ONE|`)).toBeNull();
+    expect(ask(`${places}\n>CUT TO:|`)).toBeNull();
+  });
+
   it('drops a name the cue already spells out, so Enter starts the speech', () => {
     const script = (cue: string) => text('MARGARET', 'Hello.', '', cue);
     // Part of a name still offers it...
@@ -120,9 +157,9 @@ describe('character names', () => {
     expect(ask(script('MARGARET|'), true)).toBeNull();
     // The case doesn't matter: Enter would only change the writer's capitals.
     expect(ask(script('@Margaret|'))).toBeNull();
-    // A name that goes on from the typed text is still offered, but not the typed text itself.
+    // Nor is a longer name that goes on from it, which Enter would reach by lengthening the name.
     const longer = text('MARGARET', 'Hello.', '', 'MARGARET ANN', 'Hi.', '', 'MARGARET|');
-    expect(ask(longer)).toEqual({ labels: ['MARGARET ANN'], replaces: 'MARGARET' });
+    expect(ask(longer)).toBeNull();
     // The cue is a cue to the parser once a speech follows it, and still isn't offered to itself.
     expect(ask(text('MARGARET', 'Hello.', '', 'MARGARET|', 'Again.'))).toBeNull();
     // The same goes for every list.

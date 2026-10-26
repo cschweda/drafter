@@ -1,5 +1,5 @@
 import { type Action, type Diagnostic, forceLinting, linter, lintGutter } from '@codemirror/lint';
-import type { Extension } from '@codemirror/state';
+import { type Extension, StateEffect } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Doc } from '@drafter/fountain';
 import { type Fix, type LintDiagnostic, type LintOptions, lint } from '@drafter/lint';
@@ -8,6 +8,9 @@ import { parsedDoc } from './state';
 
 // Lint in the editor (technical design §9): the rules run on the parse in the state a moment
 // after typing stops, and the diagnostics go to CodeMirror's gutter and tooltips.
+
+/** Marks a transaction as asking for a new lint; see `relint`. */
+const relintEffect = StateEffect.define<null>();
 
 /**
  * The action for a fix: it dispatches the fix's changes as one transaction. The changes are in
@@ -24,7 +27,13 @@ function actionFor(fix: Fix, linted?: Doc): Action {
         forceLinting(view);
         return;
       }
-      view.dispatch({ changes: fix.changes, userEvent: 'input' });
+      // The parse reads every line break as `\n`, but the editor's own break may be `\r\n`, and
+      // CodeMirror splits a line only at its own.
+      const changes = fix.changes.map((change) => ({
+        ...change,
+        insert: change.insert.replace(/\r?\n/g, view.state.lineBreak),
+      }));
+      view.dispatch({ changes, userEvent: 'input' });
     },
   };
 }
@@ -52,7 +61,8 @@ export function toCodeMirror(diagnostics: readonly LintDiagnostic[]): Diagnostic
 /**
  * `@codemirror/lint`'s linter, with a delay of 300 ms, and its gutter, running `lint` on
  * `parsedDoc`. `template` and `options` are read at each lint, so the app can change either
- * (the Strict Fountain setting, a new template) and call `forceLinting`.
+ * (the Strict Fountain setting, a new template) and call `relint(view)`. `forceLinting` is not
+ * enough: it runs only a lint that is already due, and a change to the options is no edit.
  *
  * A fix applies only if the text is as it was when it was linted. Lint is the one place a fix is
  * made; CodeMirror keeps a diagnostic's range in step with edits made in the delay, so the
@@ -70,8 +80,23 @@ export function fountainLint(config: {
         const doc = view.state.field(parsedDoc);
         return convert(lint(doc, config.template(), config.options?.()), doc);
       },
-      { delay: 300 },
+      {
+        delay: 300,
+        needsRefresh: (update) =>
+          update.transactions.some((tr) => tr.effects.some((effect) => effect.is(relintEffect))),
+      },
     ),
     lintGutter(),
   ];
+}
+
+/**
+ * Lints now, with nothing in the text having changed. Call it after the template or the options
+ * that `fountainLint` reads change. `forceLinting` alone would do nothing: it runs only a lint
+ * that is already pending, and one is pending only after an edit, a reconfigure, or a refresh,
+ * which this asks for.
+ */
+export function relint(view: EditorView): void {
+  view.dispatch({ effects: relintEffect.of(null) });
+  forceLinting(view);
 }
