@@ -93,6 +93,15 @@ importers:
         specifier: workspace:*
         version: link:../templates
 
+  packages/lint:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+
   packages/render-pdf:
     dependencies:
       '@drafter/layout':

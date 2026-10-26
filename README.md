@@ -296,7 +296,7 @@ The browser tests need Playwright's browsers, installed once with `pnpm --filter
 
 `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
 
-Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-text`](packages/render-text/README.md), and [`cli`](packages/cli/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
+Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), and [`cli`](packages/cli/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
 After a build, the CLI runs from the repository root:
 
