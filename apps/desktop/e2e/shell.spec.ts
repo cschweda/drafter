@@ -155,7 +155,8 @@ test('runs the renderer sandboxed', async ({ desktop }) => {
   // Nothing turned Chromium's sandbox off.
   expect(
     await app.evaluate(({ app }) => ({
-      noSandbox: app.commandLine.hasSwitch('no-sandbox'),
+      // `enableSandbox` hides --no-sandbox from app.commandLine, so look at the raw argv too.
+      noSandbox: app.commandLine.hasSwitch('no-sandbox') || process.argv.includes('--no-sandbox'),
       env: process.env.ELECTRON_DISABLE_SANDBOX ?? null,
     })),
   ).toEqual({ noSandbox: false, env: null });

@@ -138,6 +138,9 @@ const TOUR_SEEN = 'drafter-tour-v1';
 async function launchApp(profile: Profile, options: LaunchOptions): Promise<Launched> {
   const app = await _electron.launch({
     executablePath: ELECTRON,
+    // On Linux Playwright adds `--no-sandbox` unless told not to; the app must run with the sandbox
+    // it ships with (and the sandbox test checks for it).
+    chromiumSandbox: true,
     args: [DESKTOP_DIR, ...(options.args ?? [])],
     env: {
       ...(process.env as Record<string, string>),

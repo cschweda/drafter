@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { app, type BrowserWindow, dialog, ipcMain, protocol } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { appHandler, cspFromHeaders, SCHEME } from './protocol';
+import { sandboxRefusal } from './sandbox';
 import { createMainWindow, fromApp, guard } from './window';
 
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
@@ -12,6 +13,17 @@ import { createMainWindow, fromApp, guard } from './window';
 if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {
   app.setPath('userData', process.env.DRAFTER_USER_DATA);
 }
+
+// A packaged app whose sandbox was turned off (an AppImage launcher does it on a system that blocks
+// user namespaces) says so and stops, instead of running with it off in silence (src/sandbox.ts).
+// Looked at before `enableSandbox`, which hides `--no-sandbox` from `app.commandLine` without
+// turning it off: the switch still reaches Chromium's child processes.
+const refusal = sandboxRefusal({
+  packaged: app.isPackaged,
+  hasSwitch: (name) => app.commandLine.hasSwitch(name),
+  argv: process.argv,
+  env: process.env,
+});
 
 // Every renderer sandboxed, whatever a window's options say.
 app.enableSandbox();
@@ -86,5 +98,20 @@ function start() {
   });
 }
 
-if (app.requestSingleInstanceLock()) start();
+if (refusal) {
+  console.error(refusal);
+  // Asynchronous, so the process stays responsive (and a test can end it); it exits when closed.
+  void app
+    .whenReady()
+    .then(() =>
+      dialog.showMessageBox({
+        type: 'error',
+        title: 'Drafter',
+        message: 'Drafter can’t start safely',
+        detail: refusal,
+        buttons: ['Quit'],
+      }),
+    )
+    .then(() => app.exit(1));
+} else if (app.requestSingleInstanceLock()) start();
 else app.quit();
