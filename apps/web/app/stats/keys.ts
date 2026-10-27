@@ -29,5 +29,5 @@ export const statsDayKey = (projectId: string, date: string) =>
 /** The range of keys holding a script's writing days. */
 export const statsDaysOf = (projectId: string): [string, string] => [
   `${STATS_DAY_PREFIX}${projectId}:`,
-  `${STATS_DAY_PREFIX}${projectId}:￿`,
+  `${STATS_DAY_PREFIX}${projectId}:\uffff`,
 ];
