@@ -17,7 +17,7 @@
 - **The web app keeps working exactly as before in browsers:** `pnpm e2e` (apps/web) stays green and unchanged in behaviour; desktop-only code runs only when `window.drafterDesktop` exists (checked in one place, `apps/web/app/desktop.ts`) or under `DRAFTER_DESKTOP=1` at build time.
 - **Security:** the window has `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, `webSecurity: true`; it never loads a remote URL; navigation and `window.open` to anything but `app://drafter/` are refused (help pages open in a second app window from local files; links to https open in the system browser via `shell.openExternal` only for `https:` URLs). The CSP from `_headers` is sent as a response header on `app://`, unchanged (`connect-src 'self'`).
 - **Network:** the desktop app makes one request on its own, the update check (Task 6), and only when the **Check for updates** setting is on (on by default).
-- **Names:** the product is "Drafter", the app id `dev.drafter.app`, the Linux binary `drafter-desktop` (the CLI already owns `drafter`), the desktop entry `drafter.desktop`.
+- **Names:** the product is "Drafter", the app id `dev.drafter.app`, the Linux binary `drafterdev` (after drafter.dev; the CLI already owns `drafter`), the desktop entry `drafter.desktop`.
 - **No axe tests** (accessibility checks wait for the final stage, as in Plans 4 and 5); every new control works from the keyboard, with a test.
 - Every task: a CHANGELOG entry under `[Unreleased]`, choices in `docs/DECISIONS.md` (a new `## apps/desktop` section), conventional commits with no AI co-author trailer and no session link, and `pnpm test`, `pnpm check`, `pnpm -r typecheck`, `pnpm --filter @drafter/desktop e2e` (from Task 1) green before committing; `apps/web` e2e green whenever a task touches `apps/web`.
 - `E2E_PORT` and lane rules as in Plan 5 if two lanes run.
@@ -195,7 +195,7 @@ export function accelerator(key: string): string;
 - Create: `apps/desktop/electron-builder.config.cjs`, `apps/desktop/build/` (icons from `brand/`, `drafter.desktop` metadata, the AppArmor profile and `.deb` after-install script if Task 1 found them needed), `.github/workflows/desktop.yml`, `apps/desktop/e2e/packaged.spec.ts`
 - Modify: `apps/desktop/package.json` (`dist` script), root `package.json`
 
-- AppImage and `.deb` for x64 (arm64 too if the runner supports it without cross-compiling problems; otherwise record it as later). File associations: `.fountain` (`text/x-fountain`), `.md`/`.markdown` (`text/markdown`), category `Office;TextEditor;`, binary `drafter-desktop`.
+- AppImage and `.deb` for x64 (arm64 too if the runner supports it without cross-compiling problems; otherwise record it as later). File associations: `.fountain` (`text/x-fountain`), `.md`/`.markdown` (`text/markdown`), category `Office;TextEditor;`, binary `drafterdev`.
 - `.github/workflows/desktop.yml`: on `push` to `phase-1-desktop` and `main` (build + desktop e2e under xvfb), and on tags `v*` (build, desktop e2e against the **packaged** app, then publish the AppImage, `.deb`, and `latest-linux.yml` to the tag's GitHub Release with `GITHUB_TOKEN`). Never on pull requests from forks with secrets.
 - `packaged.spec.ts` (tag runs and a manual dispatch): the packaged AppImage launches, shows the editor, opens a file from argv, and runs sandboxed.
 

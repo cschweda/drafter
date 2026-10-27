@@ -33,7 +33,7 @@ A desktop `FileAccess` (`apps/web/app/storage/files.ts` is the only seam) replac
 - `canSaveInPlace` is always true. `pickToOpen` and `pickToSave` are the OS's own dialogs; `read` and `write` go through the shell to the file system. A `FileRef` is the file's absolute path, which the projects table already stores structured-cloned.
 - `permission` is always `granted`, so the "Check for changes" bar never appears; the changed-elsewhere check (§9.6 of the Phase 1 design) runs on open, on focus, and before Save, as on the web, reading the file's bytes and modification time. **Call:** also watch the open file (`fs.watch`) so a sync from another computer is noticed while the window is in front.
 - Writes are atomic (write a temporary file beside it, then rename), keeping the file's line breaks and byte-order mark as today.
-- **Opening from the OS:** double-clicking a `.fountain`, `.md`, or `.markdown` file, dropping one on the window or the dock icon, or `drafter script.fountain` on the command line opens it, through the same path as Open.
+- **Opening from the OS:** double-clicking a `.fountain`, `.md`, or `.markdown` file, dropping one on the window or the dock icon, or `drafterdev script.fountain` on the command line opens it (the command is `drafterdev`, after drafter.dev, since the command-line tool already owns `drafter`), through the same path as Open.
 - **One window** (Call): the two-tab guard already handles a second window as read-only; Phase 1 keeps one window per app and focuses it when a file is opened again.
 
 ## 4. Menus and keys
