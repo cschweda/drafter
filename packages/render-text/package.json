@@ -1,6 +1,6 @@
 {
   "name": "@drafter/render-text",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Plain-text output for Drafter: writes laid-out pages as fixed-width text.",
   "license": "MIT",
   "type": "module",

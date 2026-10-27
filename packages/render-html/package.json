@@ -1,6 +1,6 @@
 {
   "name": "@drafter/render-html",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "The Script pane's renderer for Drafter: draws laid-out pages as accessible, absolutely positioned DOM.",
   "license": "MIT",
   "type": "module",

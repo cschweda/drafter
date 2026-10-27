@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-27
+
+**The element bar and writing stats.**
+- **The element bar**, across the top of the Source pane, writes Fountain for you and teaches it as it goes: Scene, Action, Character, Dialogue, Parenthetical, Transition, and More, each showing its mark. "You're in: Dialogue" names the line you're on and says why, a stage play gets Act, Scene, and Stage direction, and a Markdown document gets its own set. Ctrl+Alt+1 to 7 do what the buttons do.
+- **A Fountain cheat sheet** in Help: every element, its mark, its rule, and an example, for screenplays and stage plays.
+- **Words and time today** in the status bar, counting only the time you're actually writing.
+- **A Stats window**: today, the script as a whole (pages, scenes, words, running time, a character table, interior/exterior and day/night), total writing time, and the last 30 days as a chart with your streak.
+
 ### Added
 
 - `apps/web`: **the element bar**, a slim row of buttons across the top of the Source pane that writes Fountain's marks for you, so you can write a correct script before you know them. It says which element you're in ("You're in: Dialogue"), and why when you hover or focus it; click it to read about that element. The buttons are **Scene**, **Action**, **Character**, **Dialogue**, **Parenthetical**, and **Transition**, then **More** (centered text, lyric, dual dialogue, note, boneyard, section, synopsis, page break, bold, italic, underline), the cheat sheet (**?**), and **⋯** to hide it. Each button shows its mark, its tooltip says the element's rule, its mark, and its key, and the button for the line you're on is shown pressed (a name you've just written, with no dialogue yet, counts as Character). Where a button can't do anything, the bar says why instead of doing nothing. A click writes natural Fountain where it can, with a forcing mark only where the line needs one (`MARGARET`, not `@MARGARET`; `INT. KITCHEN` for "kitchen"), as one change Undo reverses, and puts you back in the text where you'd type next; an empty line gets `INT. ` or a new character name with the list of locations or names open. A Markdown document gets its own bar: Heading, Bold, Italic, List, Numbered, Quote, Link, and Code. On a stage play it follows the template: **Act** (`#`), **Scene** (`##`), and **Stage direction** take the place of Scene, Action, and Transition, and "You're in" names acts, scenes, and stage directions. On a phone it's one row that scrolls sideways. It's on by default; **Settings → Element bar**, **⋯ → Hide the element bar**, and the palette turn it off and on, and it is hidden in focus mode and in a tab that only shows the script.
@@ -433,7 +441,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/cschweda/drafter/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/cschweda/drafter/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/cschweda/drafter/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/cschweda/drafter/compare/v0.3.0...v0.3.1
