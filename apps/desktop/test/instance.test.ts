@@ -1,6 +1,11 @@
 // instance.ts: the single-instance lock around an update's restart, without Electron.
 import { describe, expect, test, vi } from 'vitest';
-import { onSecondInstance, RESTART_LOCK_WAIT_MS, takeInstanceLock } from '../src/instance';
+import {
+  heldLaunches,
+  onSecondInstance,
+  RESTART_LOCK_WAIT_MS,
+  takeInstanceLock,
+} from '../src/instance';
 
 /** A clock that `wait` moves forward, so the retries run at once. */
 function clock() {
@@ -89,5 +94,29 @@ describe('onSecondInstance', () => {
     handler({}, ['/tmp/.mount_x/drafterdev'], '/home/a');
     expect(bringForward).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+describe('heldLaunches', () => {
+  test('keeps second launches that come before the app has started, and hands them on in order', () => {
+    const held = heldLaunches();
+    held.listener({}, ['drafterdev', 'A.fountain'], '/home/a');
+    held.listener({}, ['drafterdev', 'B.fountain'], '/home/b');
+    const handler = vi.fn();
+    held.deliver(handler);
+    expect(handler.mock.calls).toEqual([
+      [{}, ['drafterdev', 'A.fountain'], '/home/a'],
+      [{}, ['drafterdev', 'B.fountain'], '/home/b'],
+    ]);
+  });
+
+  test('once delivered, later launches go straight through, and none twice', () => {
+    const held = heldLaunches();
+    held.listener({}, ['drafterdev', 'A.fountain'], '/a');
+    const handler = vi.fn();
+    held.deliver(handler);
+    held.listener({}, ['drafterdev', 'C.fountain'], '/c');
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenLastCalledWith({}, ['drafterdev', 'C.fountain'], '/c');
   });
 });

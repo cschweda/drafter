@@ -17,7 +17,7 @@ import { type Closing, setUpClosing } from './close';
 import { contextMenuTemplate } from './context-menu';
 import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
-import { onSecondInstance, takeInstanceLock } from './instance';
+import { heldLaunches, onSecondInstance, takeInstanceLock } from './instance';
 import { setUpMenu } from './menu-main';
 import { refuseNetwork } from './network';
 import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './open-files';
@@ -255,9 +255,9 @@ function start() {
 
   // A second launch brings the editor's window forward, or opens it again if it was closed while
   // another window (a help page) kept the app running, and opens the files it names there. Not
-  // while quitting: that is an update's new Drafter asking for the lock (instance.ts).
-  app.on(
-    'second-instance',
+  // while quitting: that is an update's new Drafter asking for the lock (instance.ts). Launches
+  // that came while the sandbox question was open were held, and are handled now.
+  launches.deliver(
     onSecondInstance({
       quitting: () => closing?.quitting() ?? false,
       bringForward,
@@ -363,6 +363,8 @@ function start() {
 }
 
 // One Drafter at a time; one just started by an update's Restart waits for the old one to go.
+// Second launches are held from the moment the lock is ours until the app has started.
+const launches = heldLaunches();
 takeInstanceLock(
   {
     request: () => app.requestSingleInstanceLock(),
@@ -370,5 +372,11 @@ takeInstanceLock(
     wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: () => Date.now(),
   },
-  { got: () => askAboutSandbox(sandboxQuestion, start), lost: () => app.quit() },
+  {
+    got: () => {
+      app.on('second-instance', launches.listener);
+      askAboutSandbox(sandboxQuestion, start);
+    },
+    lost: () => app.quit(),
+  },
 );

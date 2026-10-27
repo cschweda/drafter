@@ -66,3 +66,25 @@ export function onSecondInstance(deps: SecondInstanceDeps) {
     deps.open(argv.slice(1), workingDirectory);
   };
 }
+
+type SecondInstanceListener = (event: unknown, argv: string[], workingDirectory: string) => void;
+
+/**
+ * Second launches that arrive before the app has started (while the sandbox question is open):
+ * `listener` goes on `second-instance` as soon as the lock is held and keeps them; `deliver`, once
+ * the app is up, hands them to the real handler in order and passes every later one straight on.
+ */
+export function heldLaunches() {
+  const waiting: Parameters<SecondInstanceListener>[] = [];
+  let handler: SecondInstanceListener | null = null;
+  return {
+    listener: ((event, argv, workingDirectory) => {
+      if (handler) handler(event, argv, workingDirectory);
+      else waiting.push([event, argv, workingDirectory]);
+    }) as SecondInstanceListener,
+    deliver(to: SecondInstanceListener) {
+      handler = to;
+      for (const launch of waiting.splice(0)) to(...launch);
+    },
+  };
+}
