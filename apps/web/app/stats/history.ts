@@ -100,9 +100,13 @@ export function duration(ms: number): string {
 /** The status bar's "38 min today". */
 export const timeTodayLabel = (ms: number): string => `${duration(ms)} today`;
 
-/** "+420 words today", "−35 words today" (a true minus sign), "0 words today". */
+/** "+1,234", "−35" (a true minus sign), "0", "+0.3": a change, with its sign. */
+export function signed(n: number): string {
+  const sign = n > 0 ? '+' : n < 0 ? '−' : '';
+  return `${sign}${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 1 })}`;
+}
+
+/** "+420 words today", "−35 words today", "0 words today". */
 export function wordsTodayLabel(words: number): string {
-  const sign = words > 0 ? '+' : words < 0 ? '−' : '';
-  const size = Math.abs(words);
-  return `${sign}${size.toLocaleString('en-US')} word${size === 1 ? '' : 's'} today`;
+  return `${signed(words)} word${Math.abs(words) === 1 ? '' : 's'} today`;
 }

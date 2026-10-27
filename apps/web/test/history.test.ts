@@ -4,6 +4,7 @@ import {
   lastDays,
   type StatsDay,
   scriptTotals,
+  signed,
   timeTodayLabel,
   wordsTodayLabel,
 } from '../app/stats/history';
@@ -103,5 +104,13 @@ describe('the labels', () => {
     expect(wordsTodayLabel(12345)).toBe('+12,345 words today');
     expect(wordsTodayLabel(-35)).toBe('−35 words today');
     expect(wordsTodayLabel(0)).toBe('0 words today');
+  });
+
+  test('sign a change, words in whole numbers and pages in tenths', () => {
+    expect(signed(1234)).toBe('+1,234');
+    expect(signed(-35)).toBe('−35');
+    expect(signed(0)).toBe('0');
+    expect(signed(0.3)).toBe('+0.3');
+    expect(signed(-1.5)).toBe('−1.5');
   });
 });
