@@ -25,6 +25,10 @@ app.setName('Drafter');
 
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
 // installed Drafter's profile can't be moved by an environment variable.
+// Electron has already fixed Chromium's dictionary folder (`<userData>/Dictionaries`) from the
+// default profile by the time this runs, so a moved profile's spellcheck dictionary is also seeded
+// there (spellcheck.ts); the test's HOME keeps it apart from a real profile.
+const DEFAULT_USER_DATA = app.getPath('userData');
 if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {
   app.setPath('userData', process.env.DRAFTER_USER_DATA);
 }
@@ -287,6 +291,8 @@ function start() {
         platform: process.platform,
         dictionaries: DICTIONARIES,
         userData: app.getPath('userData'),
+        alsoUserData:
+          DEFAULT_USER_DATA !== app.getPath('userData') ? [DEFAULT_USER_DATA] : undefined,
       });
     } catch {
       ses.setSpellCheckerEnabled(false);

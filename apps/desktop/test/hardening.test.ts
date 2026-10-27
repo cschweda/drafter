@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 // What the session allows the page (permissions, the network) and the spellchecker's dictionary,
 // against a stand-in session: the handlers are what Electron would call.
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -183,6 +184,24 @@ describe('the spellchecker’s dictionary', () => {
     await writeFile(join(userData, 'Dictionaries', 'en-US-10-2.bdic'), 'BD');
     seedDictionaries(bundled, userData);
     expect(await readFile(join(userData, 'Dictionaries', 'en-US-10-2.bdic'), 'utf8')).toBe('BDIC');
+  });
+
+  test('also seeds a profile Electron chose before the app moved it', async () => {
+    const bundled = join(dir, 'dictionaries');
+    await mkdir(bundled);
+    await writeFile(join(bundled, 'en-US-10-2.bdic'), 'BDIC');
+    const { session } = fakeSession();
+    const moved = join(dir, 'moved');
+    const original = join(dir, 'original');
+    setUpSpellcheck(session, {
+      platform: 'linux',
+      dictionaries: bundled,
+      userData: moved,
+      alsoUserData: [original],
+    });
+    for (const profile of [moved, original]) {
+      expect(existsSync(join(profile, 'Dictionaries', 'en-US-10-2.bdic')), profile).toBe(true);
+    }
   });
 
   test('is the bundled one on Linux, never downloaded', async () => {

@@ -39,10 +39,17 @@ export type Spellcheck = 'system' | 'bundled' | 'off';
 /** Sets the session's spellchecker up. Call on `ready`, before the first window. */
 export function setUpSpellcheck(
   session: Session,
-  options: { platform: NodeJS.Platform; dictionaries: string; userData: string },
+  options: {
+    platform: NodeJS.Platform;
+    dictionaries: string;
+    userData: string;
+    /** Other profile folders to seed as well (a profile moved after Electron chose its folder). */
+    alsoUserData?: string[];
+  },
 ): Spellcheck {
   if (options.platform === 'darwin') return 'system';
   session.setSpellCheckerDictionaryDownloadURL(`${pathToFileURL(options.dictionaries).href}/`);
+  for (const other of options.alsoUserData ?? []) seedDictionaries(options.dictionaries, other);
   if (seedDictionaries(options.dictionaries, options.userData).length === 0) {
     session.setSpellCheckerEnabled(false);
     return 'off';
