@@ -476,9 +476,9 @@ Most of Drafter's code was written by an AI coding assistant working under these
 
 **Releasing.** In this order, and never by hand before the tag:
 
-1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, commit, and push `main`.
-2. Push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must match `apps/desktop/package.json`'s version, or the workflow stops.
-3. Let `.github/workflows/desktop.yml` make the release: after every check passes, its `publish` job creates the GitHub Release as a draft, uploads the AppImage, the `.deb`, and `latest-linux.yml`, checks them, and only then publishes it.
+1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, and commit. Don't push `main` yet: pushing it deploys drafter.dev, whose Saving page links to the latest release.
+2. Push the tag first: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must match `apps/desktop/package.json`'s version, or the workflow stops.
+3. Let `.github/workflows/desktop.yml` make the release: after every check passes, its `publish` job creates the GitHub Release as a draft, uploads the AppImage, the `.deb`, and `latest-linux.yml`, checks them, and only then publishes it. Once it is published, push `main`, so the site's download link never points at a release without packages.
 4. Then edit the release's notes on GitHub (the workflow writes a one-line placeholder).
 
 Don't create the release on GitHub (or with `gh release create`) before the workflow does: the workflow never uploads to a release that is already published, so a hand-made release would be left with no packages and no update feed, and the desktop apps would find no update.
