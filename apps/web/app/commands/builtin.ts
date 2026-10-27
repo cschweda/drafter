@@ -176,13 +176,13 @@ export function registerBuiltinCommands(): void {
     // section of the app menu lists it too. It waits for any dialog or the palette to close.
     'take-the-tour': { run: requestTour },
     // The help pages (§4.5), prerendered. Each opens in a new tab, so the writer's script and what is typed stay
-    // as they are (a command runs from a click or a key, which lets a page open one). The page's own link back
-    // to Drafter is a plain link, so there it opens a second editor, which the two-tab guard makes read-only for
-    // the script that is open here.
+    // as they are (a command runs from a click or a key, which lets a page open one). The tab keeps this one as
+    // its opener (same-origin, so nothing is exposed), and its Back to Drafter closes it and comes back here,
+    // rather than open a second editor, which the two-tab guard would make read-only (`layouts/docs.vue`).
     ...Object.fromEntries(
       HELP_PAGES.map((page): [string, Behavior] => [
         page.id,
-        { run: () => void window.open(helpHref(page), '_blank', 'noopener') },
+        { run: () => void window.open(helpHref(page), '_blank') },
       ]),
     ),
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a

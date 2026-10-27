@@ -1,37 +1,24 @@
 <script setup lang="ts">
-import { useFiles } from '~/storage/files';
-import { save } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { modalOpen, tourShowing } from '~/tour/state';
 import {
-  createUpdateFlow,
   DOWNLOADING_MESSAGE,
   reloadAnywayLabel,
   UPDATE_READY,
   unsavedMessage,
 } from '~/update/flow';
-import { applyUpdate, needRefresh } from '~/update/state';
+import { clear, later, useUpdateFlow } from '~/update/prompt';
+import { needRefresh } from '~/update/state';
 
 // "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload, shown when the
 // service worker has a newer version waiting. It never reloads by itself. With changes that aren't
 // in a file, Reload asks first (Save first, Reload anyway, Cancel); those changes are in the
 // recovery copy either way. It isn't a modal, so the page stays usable behind it, and it waits
 // for the welcome dialog, the tour, and any other dialog to close rather than stacking on them.
-const { dirty, recovery, flush } = useScript();
-
-const flow = createUpdateFlow({
-  unsaved: () => dirty.value,
-  save,
-  // Where the browser can't write the file itself, Save is a download.
-  savedByDownload: () => !useFiles().canSaveInPlace,
-  flush,
-  apply: applyUpdate,
-});
-
-/** "Later": hidden until the page is loaded again. The app works as it is. */
-const later = ref(false);
-/** Nothing else is modal, and the tour isn't up: the toast may appear. Once it has, it stays. */
-const clear = ref(false);
+// What it has been told (Later, the stage) is `update/prompt.ts`'s, so focus mode, which takes
+// this away with the toolbar, gives it back as it was.
+const { recovery } = useScript();
+const flow = useUpdateFlow();
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 function look() {
@@ -45,6 +32,10 @@ function look() {
 }
 watch(needRefresh, look, { immediate: true });
 onBeforeUnmount(() => clearTimeout(timer));
+
+function putOff() {
+  later.value = true;
+}
 
 const shown = computed(() => needRefresh.value && clear.value && !later.value);
 
@@ -86,7 +77,7 @@ function onKeydown(event: KeyboardEvent) {
             <button ref="reloadButton" type="button" class="action" @click="flow.reload()">
               Reload
             </button>
-            <button type="button" class="action quiet" @click="later = true">Later</button>
+            <button type="button" class="action quiet" @click="putOff">Later</button>
           </div>
         </template>
         <template v-else>

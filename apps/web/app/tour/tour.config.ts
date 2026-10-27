@@ -93,7 +93,7 @@ export function buildSteps(wide: boolean): TourStep[] {
       target: target('save'),
       title: 'Save',
       content:
-        'Saves a .fountain file. On Chrome and Edge it saves straight back to the file, so a script in a Dropbox or Google Drive folder syncs. Other browsers download a copy.',
+        'Saves a .fountain file. In Chrome and Edge on a computer it saves straight back to the file, so a script in a Dropbox or Google Drive folder syncs. Other browsers, and phones, download a copy.',
     },
     {
       id: 'status',
@@ -112,7 +112,8 @@ export function buildSteps(wide: boolean): TourStep[] {
       id: 'focus',
       target: target('focus'),
       title: 'Focus',
-      content: 'Focus mode and typewriter scrolling, for when you only want the page.',
+      content:
+        'Focus mode, for when you only want the page. Typewriter scrolling, which keeps your line in the middle, is the Typewriter button on the Source pane’s bar.',
     },
     {
       id: 'palette',

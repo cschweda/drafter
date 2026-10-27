@@ -135,13 +135,11 @@ export interface SprintReport {
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
-/** What the end says: "Sprint done: 312 words (1.2 pages)." */
-export function sprintMessage(report: SprintReport): string {
-  if (report.words === null) {
-    return 'Sprint done. The script changed while it ran, so there is no count.';
-  }
+/** What a sprint added: "312 words (1.2 pages)", "no words added", "45 words cut (0.3 pages)"; null without a count. */
+function sprintResult(report: SprintReport): string | null {
+  if (report.words === null) return null;
   const { words } = report;
-  if (words === 0) return 'Sprint done: no words added.';
+  if (words === 0) return 'no words added';
   const count = Math.abs(words);
   const noun = `${count.toLocaleString('en-US')} ${plural(count, 'word', 'words')}`;
   const pages =
@@ -151,7 +149,27 @@ export function sprintMessage(report: SprintReport): string {
   const inPages = showPages
     ? ` (${Math.abs(pages)} ${plural(Math.abs(pages), 'page', 'pages')})`
     : '';
-  return words > 0 ? `Sprint done: ${noun}${inPages}.` : `Sprint done: ${noun} cut${inPages}.`;
+  return words > 0 ? `${noun}${inPages}` : `${noun} cut${inPages}`;
+}
+
+/** What the end says: "Sprint done: 312 words (1.2 pages)." */
+export function sprintMessage(report: SprintReport): string {
+  const result = sprintResult(report);
+  if (result === null) return 'Sprint done. The script changed while it ran, so there is no count.';
+  return `Sprint done: ${result}.`;
+}
+
+/**
+ * What the Counts panel keeps of the last sprint: "Last sprint: 312 words (1.2 pages), ended
+ * 3:42 PM." The time is written the reader's way, as the status bar's "Saved at" is.
+ */
+export function lastSprintLabel(report: SprintReport, ended: Date): string {
+  const at = ended.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const result = sprintResult(report);
+  if (result === null) {
+    return `Last sprint: no count, since the script changed while it ran. It ended ${at}.`;
+  }
+  return `Last sprint: ${result}, ended ${at}.`;
 }
 
 // ---- The tone ------------------------------------------------------------------------------
@@ -246,6 +264,12 @@ export function createTone(): { prepare(): void; play(): void; cancel(): void } 
 export const sprintNotice = ref('');
 const announceEnd = timedSay(sprintNotice, 8000);
 
+/**
+ * The last sprint that ran its time, for the Counts panel, which says it after the toast has gone:
+ * kept until the next sprint starts, and for the visit only.
+ */
+export const lastSprint = shallowRef<{ report: SprintReport; ended: Date } | null>(null);
+
 export interface SprintSession {
   state: Readonly<Ref<SprintState>>;
   /** The countdown is hidden (WCAG 2.2.2); the sprint runs on. */
@@ -306,13 +330,16 @@ function create(): SprintSession {
     });
   }
 
-  async function report(from: Basis) {
+  async function report(from: Basis, ended: Date) {
     await settled();
     const now = basis();
     const same = now.id === from.id && now.kind === from.kind;
     const words = same && now.words !== null && from.words !== null ? now.words - from.words : null;
     const pages = same && now.pages !== null && from.pages !== null ? now.pages - from.pages : null;
-    await announceEnd(sprintMessage({ markdown: now.kind === 'markdown', words, pages }));
+    const result: SprintReport = { markdown: now.kind === 'markdown', words, pages };
+    // A sprint started while this one's count was being waited for has the panel to itself.
+    if (began === null) lastSprint.value = { report: result, ended };
+    await announceEnd(sprintMessage(result));
   }
 
   const sprint = createSprint({ now: () => Date.now() }, () => {
@@ -322,7 +349,7 @@ function create(): SprintSession {
     // The sound is the writer's choice, and only for a sprint that ran its time.
     if (settings.value.sprintSound) tone.play();
     else tone.cancel();
-    if (from) void report(from);
+    if (from) void report(from, new Date());
   });
 
   /** Looks at the clock and updates `state`, but only when what is shown changed: the second, or the status. */
@@ -360,6 +387,7 @@ function create(): SprintSession {
     start(minutes) {
       if (state.value.status !== 'idle' || !isMinutes(minutes)) return;
       hidden.value = false;
+      lastSprint.value = null;
       began = basis();
       // The click that starts a sprint is the gesture a browser wants before it will play a sound.
       if (settings.value.sprintSound) tone.prepare();

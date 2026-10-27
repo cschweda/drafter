@@ -4,6 +4,7 @@ import {
   createSprint,
   createTone,
   isMinutes,
+  lastSprintLabel,
   parseMinutes,
   SPRINT_MINUTES,
   sprintMessage,
@@ -383,5 +384,32 @@ describe('the end tone', () => {
       }),
     );
     expect(() => createTone().play()).not.toThrow();
+  });
+});
+
+describe('the last sprint, in the Counts panel', () => {
+  // The time is the reader's own way of writing it, as the status bar's "Saved at" is.
+  const ended = new Date(2026, 9, 26, 15, 42);
+  const at = ended.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  test('says what it added, and when it ended', () => {
+    expect(lastSprintLabel({ markdown: false, words: 312, pages: 1.2 }, ended)).toBe(
+      `Last sprint: 312 words (1.2 pages), ended ${at}.`,
+    );
+    expect(lastSprintLabel({ markdown: true, words: 1, pages: null }, ended)).toBe(
+      `Last sprint: 1 word, ended ${at}.`,
+    );
+  });
+
+  test('says nothing added, a cut, and no count as the end did', () => {
+    expect(lastSprintLabel({ markdown: false, words: 0, pages: 0 }, ended)).toBe(
+      `Last sprint: no words added, ended ${at}.`,
+    );
+    expect(lastSprintLabel({ markdown: false, words: -45, pages: -0.3 }, ended)).toBe(
+      `Last sprint: 45 words cut (0.3 pages), ended ${at}.`,
+    );
+    expect(lastSprintLabel({ markdown: false, words: null, pages: null }, ended)).toBe(
+      `Last sprint: no count, since the script changed while it ran. It ended ${at}.`,
+    );
   });
 });

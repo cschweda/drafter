@@ -66,6 +66,39 @@ describe('countScript', () => {
     expect(wordsIn('')).toBe(0);
   });
 
+  test('takes as a space exactly what /\\s/ does', () => {
+    // A reference count with the regular expression, character by character, as it was.
+    const byRegExp = (text: string) => {
+      let count = 0;
+      let inWord = false;
+      for (const ch of text.split('')) {
+        const space = /\s/.test(ch);
+        if (!space && !inWord) count++;
+        inWord = !space;
+      }
+      return count;
+    };
+    // Every UTF-16 code unit, between two letters: one word if it is a space to /\s/, else two.
+    for (let code = 0; code <= 0xffff; code++) {
+      const ch = String.fromCharCode(code);
+      expect(wordsIn(`a${ch}b`), `U+${code.toString(16).padStart(4, '0')}`).toBe(
+        /\s/.test(ch) ? 2 : 1,
+      );
+    }
+    const corpus = [
+      'no break space',
+      'tab\there\tand\t\tthere',
+      'CRLF\r\nline\r\nbreaks\r\n',
+      '表意　空白　space',
+      '﻿BOM at the start',
+      'em space, thin space, hair space, zero​width (not a space)',
+      'line and paragraph separators, narrow no-break, math space',
+      'surrogates 😀 count 😀😀 as letters',
+      sample,
+    ];
+    for (const text of corpus) expect(wordsIn(text), text.slice(0, 20)).toBe(byRegExp(text));
+  });
+
   test('has no pages without a layout, and leaves a lone title page out', () => {
     const doc = parse('Title: Only\n');
     expect(countScript(doc, null)).toEqual({ pages: 0, scenes: 0, words: 1, minutes: 0 });

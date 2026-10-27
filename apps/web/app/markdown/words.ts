@@ -1,13 +1,34 @@
 import type { MdNode } from './render';
 
-const SPACE = /\s/;
+/**
+ * Whether a UTF-16 code unit is one that `/\s/` matches: the ASCII spaces (tab, line feed,
+ * vertical tab, form feed, carriage return, space), the no-break space, the ogham space, the
+ * spaces U+2000 to U+200A, the line and paragraph separators, the narrow no-break space, the
+ * medium mathematical space, the ideographic space, and the byte-order mark. A comparison per
+ * character, where a regular expression per character cost more than the reparse on a long script.
+ */
+function isSpace(code: number): boolean {
+  if (code <= 0x20) return code === 0x20 || (code >= 0x09 && code <= 0x0d);
+  if (code < 0xa0) return false;
+  return (
+    code === 0xa0 ||
+    code === 0x1680 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x205f ||
+    code === 0x3000 ||
+    code === 0xfeff
+  );
+}
 
 /** The words in a text: runs of characters between spaces. Markdown documents and scripts both count this way. */
 export function wordsIn(text: string): number {
   let count = 0;
   let inWord = false;
   for (let i = 0; i < text.length; i++) {
-    const space = SPACE.test(text[i] as string);
+    const space = isSpace(text.charCodeAt(i));
     if (!space && !inWord) count++;
     inWord = !space;
   }
