@@ -160,6 +160,16 @@ jobs:
       - name: Allow unprivileged user namespaces, for the unpackaged shell's tests
         if: ${{ !cancelled() }}
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: (diagnostic) where Chromium looks for the spellcheck dictionary
+        if: ${{ !cancelled() }}
+        run: |
+          sudo apt-get install -y -q strace
+          home="$RUNNER_TEMP/strace-home"; mkdir -p "$home/.config"
+          HOME="$home" XDG_CONFIG_HOME="$home/.config" timeout 30 xvfb-run -a -s "$XVFB_SCREEN" \
+            strace -f -e trace=openat,newfstatat,statx,access,readlink,mkdir \
+            -o "$RUNNER_TEMP/strace.txt" apps/desktop/release/linux-unpacked/drafterdev || true
+          grep -iE 'bdic|Dictionaries|hunspell' "$RUNNER_TEMP/strace.txt" | sort -u -k2 | head -80 || true
+          find "$home" -iname '*dictionar*' -o -iname '*.bdic' | head
       - name: Packaged AppImage, with user namespaces allowed (sandboxed, end to end)
         if: ${{ !cancelled() }}
         run: |
