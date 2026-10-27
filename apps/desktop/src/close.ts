@@ -103,6 +103,11 @@ export interface Closing {
    * it never starts, taking the approval back leaves closing and quitting asking as before.
    */
   allowQuit(): () => void;
+  /**
+   * True once the app is on its way out (a quit that was agreed to or approved has begun, the last
+   * window has gone, or the session is ending): a second launch must not bring a window back then.
+   */
+  quitting(): boolean;
 }
 
 /**
@@ -299,5 +304,6 @@ export function setUpClosing(editor: () => BrowserWindow | null): Closing {
         quitApproved = false;
       };
     },
+    quitting: () => leaving,
   };
 }

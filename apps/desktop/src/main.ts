@@ -7,6 +7,7 @@ import { CHANNELS, type RendererReport } from './channels';
 import { type Closing, setUpClosing } from './close';
 import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
+import { onSecondInstance, takeInstanceLock } from './instance';
 import { setUpMenu } from './menu-main';
 import { refuseNetwork } from './network';
 import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './open-files';
@@ -228,11 +229,16 @@ function start() {
   };
 
   // A second launch brings the editor's window forward, or opens it again if it was closed while
-  // another window (a help page) kept the app running, and opens the files it names there.
-  app.on('second-instance', (_event, argv, workingDirectory) => {
-    bringForward();
-    openFromSystem(argv.slice(1), workingDirectory);
-  });
+  // another window (a help page) kept the app running, and opens the files it names there. Not
+  // while quitting: that is an update's new Drafter asking for the lock (instance.ts).
+  app.on(
+    'second-instance',
+    onSecondInstance({
+      quitting: () => closing?.quitting() ?? false,
+      bringForward,
+      open: openFromSystem,
+    }),
+  );
 
   app.on('web-contents-created', (_event, contents) => {
     if (contents.getType() === 'window') guard(contents, PRELOAD);
@@ -331,5 +337,13 @@ function start() {
   });
 }
 
-if (app.requestSingleInstanceLock()) askAboutSandbox(sandboxQuestion, start);
-else app.quit();
+// One Drafter at a time; one just started by an update's Restart waits for the old one to go.
+takeInstanceLock(
+  {
+    request: () => app.requestSingleInstanceLock(),
+    env: process.env,
+    wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    now: () => Date.now(),
+  },
+  { got: () => askAboutSandbox(sandboxQuestion, start), lost: () => app.quit() },
+);
