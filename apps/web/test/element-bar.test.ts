@@ -66,9 +66,9 @@ describe('the element bar', () => {
     const character = FOUNTAIN_BUTTONS.find((b) => b.label === 'Character');
     if (!character) throw new Error('no Character button');
     expect(tipFor(character, false)).toBe(
-      'A name in capitals on its own line, after a blank line, with dialogue under it. Drafter adds @ only when capitals alone won’t do; Ctrl+Alt+3 always adds it.',
+      'A name in capitals on its own line, after a blank line, with dialogue under it. Drafter adds @ only when capitals alone won’t do. Shortcut: Ctrl+Alt+3.',
     );
-    expect(tipFor(character, true)).toContain('⌘⌥3 always adds it');
+    expect(tipFor(character, true)).toContain('Shortcut: ⌘⌥3.');
     for (const button of all) expect(tipFor(button, false), button.label).not.toContain('{key}');
   });
 
@@ -79,6 +79,14 @@ describe('the element bar', () => {
     }
   });
 
+  test('puts Mod-Alt-1 to 7 on the element commands, and no key on the forcing ones', () => {
+    const keyOf = (id: string) => COMMAND_DATA.find((c) => c.id === id)?.keys;
+    expect(keyOf('element-scene-heading')).toBe('Mod-Alt-1');
+    expect(keyOf('element-character')).toBe('Mod-Alt-3');
+    expect(keyOf('element-lyric')).toBe('Mod-Alt-7');
+    expect(keyOf('make-character')).toBeUndefined();
+  });
+
   test('says why a line is its element, a forcing mark first', () => {
     expect(reasonFor('character', false)).toBe(
       'a name in capitals after a blank line, with dialogue under it',
@@ -86,6 +94,13 @@ describe('the element bar', () => {
     expect(reasonFor('character', true)).toBe('forced by the @ at its start');
     expect(reasonFor('dialogue', true)).toBe('the lines just under a character name');
     expect(reasonFor(null, false)).toBe('a blank line, which separates one element from the next');
+    // A name with no speech yet, and the empty line under a name.
+    expect(reasonFor('character', false, 'name')).toBe(
+      'a name in capitals after a blank line: its dialogue goes on the line under it',
+    );
+    expect(reasonFor(null, false, 'speech')).toBe(
+      'the line under a character name: what you type here is their dialogue',
+    );
   });
 
   test('names where the cursor is', () => {

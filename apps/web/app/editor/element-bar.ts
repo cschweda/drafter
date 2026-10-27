@@ -17,13 +17,8 @@ export interface BarButton {
   command: string;
   /** The element it makes: the button is shown pressed while the cursor's line is one. */
   kind?: Kind;
-  /** One sentence: the element's rule, its mark, and its key, which `{key}` stands for. */
+  /** One sentence: the element's rule and its mark. `tipFor` adds the command's key. */
   tip: string;
-  /**
-   * The command whose key `{key}` names, when it isn't `command`: the element commands have no
-   * keys, and the tooltip names the key that forces the element (`forceKind`, Mod-Alt-1…7).
-   */
-  keyOf?: string;
 }
 
 /** The buttons on the bar for a Fountain script, in order. */
@@ -32,25 +27,22 @@ export const FOUNTAIN_BUTTONS: readonly BarButton[] = [
     label: 'Scene',
     mark: 'INT.',
     command: 'element-scene-heading',
-    keyOf: 'make-scene-heading',
     kind: 'scene_heading',
-    tip: 'A scene heading says where and when: a line starting INT., EXT., EST., INT./EXT. or I/E, with a blank line before and after it. One that names no place starts with a dot instead; {key} always adds the dot.',
+    tip: 'A scene heading says where and when: a line starting INT., EXT., EST., INT./EXT. or I/E, with a blank line before and after it. One that names no place starts with a dot instead.',
   },
   {
     label: 'Action',
     mark: '!',
     command: 'element-action',
-    keyOf: 'make-action',
     kind: 'action',
-    tip: 'Action is what we see and hear: any paragraph that isn’t another element. Drafter adds ! only when the line would read as something else; {key} always adds it.',
+    tip: 'Action is what we see and hear: any paragraph that isn’t another element. Drafter adds ! only when the line would read as something else.',
   },
   {
     label: 'Character',
     mark: '@',
     command: 'element-character',
-    keyOf: 'make-character',
     kind: 'character',
-    tip: 'A name in capitals on its own line, after a blank line, with dialogue under it. Drafter adds @ only when capitals alone won’t do; {key} always adds it.',
+    tip: 'A name in capitals on its own line, after a blank line, with dialogue under it. Drafter adds @ only when capitals alone won’t do.',
   },
   {
     label: 'Dialogue',
@@ -63,17 +55,15 @@ export const FOUNTAIN_BUTTONS: readonly BarButton[] = [
     label: 'Parenthetical',
     mark: '( )',
     command: 'element-parenthetical',
-    keyOf: 'make-parenthetical',
     kind: 'parenthetical',
-    tip: 'A short direction in parentheses, on its own line under a character name or in their dialogue. {key} wraps the line in ( ).',
+    tip: 'A short direction in parentheses, on its own line under a character name or in their dialogue.',
   },
   {
     label: 'Transition',
     mark: '>',
     command: 'element-transition',
-    keyOf: 'make-transition',
     kind: 'transition',
-    tip: 'A transition, such as CUT TO:, in capitals with a blank line before and after it. One that ends in TO: needs no mark, and any other starts with >; {key} always adds it.',
+    tip: 'A transition, such as CUT TO:, in capitals with a blank line before and after it. One that ends in TO: needs no mark, and any other starts with >.',
   },
 ];
 
@@ -83,37 +73,35 @@ export const FOUNTAIN_MORE: readonly BarButton[] = [
     label: 'Centered',
     mark: '> <',
     command: 'element-centered',
-    keyOf: 'make-centered',
     kind: 'centered',
-    tip: 'Text between > and < is centered on the page, such as THE END. {key} does the same.',
+    tip: 'Text between > and < is centered on the page, such as THE END.',
   },
   {
     label: 'Lyric',
     mark: '~',
     command: 'element-lyric',
-    keyOf: 'make-lyric',
     kind: 'lyric',
-    tip: 'A line starting with ~ is a lyric, printed in italics, on its own or in dialogue. {key} does the same.',
+    tip: 'A line starting with ~ is a lyric, printed in italics, on its own or in dialogue.',
   },
   {
     label: 'Dual dialogue',
     mark: '^',
     command: 'dual-dialogue',
-    tip: 'A ^ after the second of two names puts the two speeches side by side. Use it in the second speech; {key} adds or removes it.',
+    tip: 'A ^ after the second of two names puts the two speeches side by side. Use it in the second speech; press again to take it off.',
   },
   {
     label: 'Note',
     mark: '[[ ]]',
     command: 'wrap-in-note',
     kind: 'note',
-    tip: 'Text between [[ and ]] is a note to yourself, and never prints. {key} wraps the selection in one.',
+    tip: 'Text between [[ and ]] is a note to yourself, and never prints. It wraps the selection.',
   },
   {
     label: 'Boneyard',
     mark: '/* */',
     command: 'cut-to-boneyard',
     kind: 'boneyard',
-    tip: 'Text between /* and */ is cut but kept: it never prints, and you can bring it back. {key} wraps the selection in one.',
+    tip: 'Text between /* and */ is cut but kept: it never prints, and you can bring it back. It wraps the selection.',
   },
   {
     label: 'Section',
@@ -208,18 +196,11 @@ export const MARKDOWN_BUTTONS: readonly BarButton[] = [
   },
 ];
 
-/** The tooltip, and the button's description: its sentence, with the keys for this keyboard. */
+/** The tooltip, and the button's description: its sentence, and its key for this keyboard. */
 export function tipFor(button: BarButton, apple: boolean): string {
-  if (!button.tip.includes('{key}')) return button.tip;
-  const id = button.keyOf ?? button.command;
-  const keys = COMMAND_DATA.find((c) => c.id === id)?.keys;
-  if (!keys) throw new Error(`The command “${id}” has no key for the element bar to name.`);
-  return button.tip.replace('{key}', formatKeys(keys, apple));
+  const keys = COMMAND_DATA.find((c) => c.id === button.command)?.keys;
+  return keys ? `${button.tip} Shortcut: ${formatKeys(keys, apple)}.` : button.tip;
 }
-
-/** What the Parenthetical button says when it doesn't apply. */
-export const PARENTHETICAL_WHY =
-  'A parenthetical goes under a character name or in their dialogue. Put the cursor there first.';
 
 /**
  * Why a line is the element it is: `plain` for one the parser recognized by its shape, and
@@ -254,8 +235,17 @@ export const ELEMENT_REASONS: Record<Kind, { plain: string; forced?: string }> =
   title_page: { plain: 'the Key: value lines at the very top of the script' },
 };
 
-/** Why the cursor's line is what it is; null is a blank line. */
-export function reasonFor(kind: Kind | null, forced: boolean): string {
+/**
+ * Why the cursor's line is what it is; null is a blank line. `context` is what the parse alone
+ * can't say: a name with no speech under it yet (`name`), or the empty line under one (`speech`).
+ */
+export function reasonFor(kind: Kind | null, forced: boolean, context?: 'name' | 'speech'): string {
+  if (context === 'name') {
+    return 'a name in capitals after a blank line: its dialogue goes on the line under it';
+  }
+  if (context === 'speech') {
+    return 'the line under a character name: what you type here is their dialogue';
+  }
   if (!kind) return 'a blank line, which separates one element from the next';
   const reason = ELEMENT_REASONS[kind];
   return (forced && reason.forced) || reason.plain;

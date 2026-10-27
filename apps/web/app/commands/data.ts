@@ -43,17 +43,18 @@ export const helpHref = (page: Pick<HelpPage, 'path'>): string => `${page.path}/
 export const helpCommandTitle = (page: Pick<HelpPage, 'title'>): string =>
   `Open the page: ${page.title}`;
 
-const fountain = (id: string, title: string, keys: string): CommandData => ({
+const fountain = (id: string, title: string, keys?: string): CommandData => ({
   id,
   title,
   group: 'Edit',
-  keys,
+  ...(keys && { keys }),
 });
 
-const element = (id: string, name: string): CommandData => ({
+const element = (id: string, name: string, keys?: string): CommandData => ({
   id: `element-${id}`,
   title: `Element: ${name}`,
   group: 'Edit',
+  ...(keys && { keys }),
 });
 
 /** The Markdown buttons' actions (`markdown/commands.ts`), and what the palette calls each. */
@@ -169,16 +170,16 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
 
   // Edit, the element bar's commands (docs/drafter-element-bar-design.md §4): natural Fountain,
-  // with a forcing mark only where a line needs one. Dual dialogue, the note, and the boneyard are
-  // the commands below.
-  element('scene-heading', 'Scene heading'),
-  element('action', 'Action'),
-  element('character', 'Character'),
+  // with a forcing mark only where a line needs one, on Mod-Alt-1…7 (decided 2026-10-27). Dual
+  // dialogue, the note, and the boneyard are the commands below.
+  element('scene-heading', 'Scene heading', 'Mod-Alt-1'),
+  element('action', 'Action', 'Mod-Alt-2'),
+  element('character', 'Character', 'Mod-Alt-3'),
   element('dialogue', 'Dialogue'),
-  element('parenthetical', 'Parenthetical'),
-  element('transition', 'Transition'),
-  element('centered', 'Centered text'),
-  element('lyric', 'Lyric'),
+  element('parenthetical', 'Parenthetical', 'Mod-Alt-4'),
+  element('transition', 'Transition', 'Mod-Alt-5'),
+  element('centered', 'Centered text', 'Mod-Alt-6'),
+  element('lyric', 'Lyric', 'Mod-Alt-7'),
   element('section', 'Section'),
   element('synopsis', 'Synopsis'),
   element('page-break', 'Page break'),
@@ -187,14 +188,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'emphasis-underline', title: 'Emphasis: Underline', group: 'Edit' },
 
   // Edit, the Fountain commands (technical design §3.3). Each forces a kind with its mark, whatever
-  // the line reads as without one (the element commands above add a mark only where it's needed).
-  fountain('make-scene-heading', 'Force scene heading (.)', 'Mod-Alt-1'),
-  fountain('make-action', 'Force action (!)', 'Mod-Alt-2'),
-  fountain('make-character', 'Force character (@)', 'Mod-Alt-3'),
-  fountain('make-parenthetical', 'Force parenthetical ( )', 'Mod-Alt-4'),
-  fountain('make-transition', 'Force transition (>)', 'Mod-Alt-5'),
-  fountain('make-centered', 'Force centered text (> <)', 'Mod-Alt-6'),
-  fountain('make-lyric', 'Force lyric (~)', 'Mod-Alt-7'),
+  // the line reads as without one, and has no key: the keys are the element commands' above.
+  fountain('make-scene-heading', 'Force scene heading (.)'),
+  fountain('make-action', 'Force action (!)'),
+  fountain('make-character', 'Force character (@)'),
+  fountain('make-parenthetical', 'Force parenthetical ( )'),
+  fountain('make-transition', 'Force transition (>)'),
+  fountain('make-centered', 'Force centered text (> <)'),
+  fountain('make-lyric', 'Force lyric (~)'),
   fountain('dual-dialogue', 'Dual dialogue', 'Mod-Shift-d'),
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
