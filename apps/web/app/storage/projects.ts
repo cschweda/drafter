@@ -3,7 +3,7 @@ import type { SampleKind } from '../editor/sample-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
-import { daysOf, goalKey } from '../stats/keys';
+import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
 import { db } from './db';
 import type { FileRef } from './files';
 import { fileBaseName, titleOf } from './text';
@@ -162,13 +162,17 @@ export async function writeSource(
   });
 }
 
-/** Also deletes its snapshot, its file handle, its goal, and its days' counts; never touches the file. */
+/** Also deletes its snapshot, its file handle, its goal, its days' counts, and its writing time; never touches the file. */
 export async function removeProject(id: string): Promise<void> {
   await db.transaction('rw', db.projects, db.snapshots, db.handles, db.settings, async () => {
     await db.settings.delete(goalKey(id));
     await db.settings
       .where('key')
       .between(...daysOf(id))
+      .delete();
+    await db.settings
+      .where('key')
+      .between(...statsDaysOf(id))
       .delete();
     const project = await db.projects.get(id);
     if (project?.fsHandleId) await db.handles.delete(project.fsHandleId);

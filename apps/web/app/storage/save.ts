@@ -1,6 +1,7 @@
 import { isolateHistory } from '@codemirror/commands';
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import { appChange } from '../editor/typewriter';
 import { kindOfFileName } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { CheckUnsettledError, useFileCheck } from './check';
@@ -258,7 +259,8 @@ export function revertToSaved(): void {
   view.dispatch({
     changes: { from, to: current.length - end, insert: target.slice(from, target.length - end) },
     // Its own undo step, not joined to the typing before it.
-    annotations: isolateHistory.of('full'),
+    // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
+    annotations: [isolateHistory.of('full'), appChange.of(true)],
     userEvent: 'input.replace',
   });
   void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);

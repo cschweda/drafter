@@ -12,7 +12,7 @@ import {
 } from '~/stats/sprint';
 
 defineProps<{ id: string }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; stats: [] }>();
 
 const { kind } = useEditor();
 const { counts, known } = useCounts();
@@ -216,6 +216,7 @@ function onKeydown(event: KeyboardEvent) {
     </section>
 
     <div class="buttons">
+      <button type="button" class="btn" @click="emit('stats')">Stats…</button>
       <button type="button" class="btn" @click="emit('close')">Close</button>
     </div>
   </div>
@@ -331,6 +332,7 @@ input {
 .buttons {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
   margin-top: 10px;
 }
 .btn {

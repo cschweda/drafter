@@ -141,6 +141,7 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['show-source', 'show-script', 'show-preview', 'show-problems'] },
     { pick: ['focus-mode'], fixed: [{ role: 'togglefullscreen' }] },
     { pick: prefix('sprint-'), submenu: 'Sprint' },
+    { pick: ['show-stats'] },
     { pick: ['switch-theme'] },
     {
       pick: [

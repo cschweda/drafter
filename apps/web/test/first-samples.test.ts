@@ -124,7 +124,12 @@ describe('the first New of a kind', () => {
     await t.session.newScript('stage-play');
     const before = t.text();
 
+    const spy = vi.spyOn(t.editor.view, 'dispatch');
+    const state = t.editor.view.state;
     expect(t.session.startBlank()).toBe(true);
+    // Drafter's change, not the writer's: no writing time for it.
+    const { writersEdit } = await import('../app/stats/writing');
+    expect(writersEdit(state.update(spy.mock.calls[0]?.[0] as never))).toBe(false);
     expect(t.text()).toMatch(/^Title: Untitled Play\nCredit: Written by\n/);
     expect(t.text()).toContain('"template":"stage-play-standard"');
     // The blank document is the one it is measured from now, and the bar's offer is spent.
@@ -261,8 +266,13 @@ describe('the Markdown sample', () => {
     expect(t.session.project.value?.kind).toBe('markdown');
     expect(t.text()).toBe(t.SAMPLE_MARKDOWN);
     t.editor.view.dispatch({ changes: { from: 0, insert: 'EDIT ' } });
+    const spy = vi.spyOn(t.editor.view, 'dispatch');
+    const state = t.editor.view.state;
     expect(t.session.resetSample()).toBe(true);
     expect(t.text()).toBe(t.SAMPLE_MARKDOWN);
+    // Drafter's change, not the writer's.
+    const { writersEdit } = await import('../app/stats/writing');
+    expect(writersEdit(state.update(spy.mock.calls[0]?.[0] as never))).toBe(false);
     expect(t.editor.view.state.selection.main.head).toBe(0);
   });
 });

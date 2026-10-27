@@ -38,6 +38,7 @@ vi.mock('../app/editor/session', async () => {
     view,
     doc,
     kind: shallowRef<'fountain' | 'markdown'>('fountain'),
+    locked: shallowRef(false),
     load(text: string, kind: 'fountain' | 'markdown' = 'fountain') {
       session.kind.value = kind;
       state = EditorState.create({ doc: text });
@@ -396,6 +397,26 @@ describe('a file with the same title as a script in the browser', () => {
     // The whole text changed in one transaction, so one undo brings the old text back.
     const changes = spy.mock.calls.filter(([spec]) => (spec as { changes?: unknown }).changes);
     expect(changes).toHaveLength(1);
+    // Drafter's change, not the writer's: no writing time for it.
+    const { writersEdit } = await import('../app/stats/writing');
+    const { EditorState } = await import('@codemirror/state');
+    expect(writersEdit(EditorState.create({ doc: SCRIPT }).update(changes[0]?.[0] as never))).toBe(
+      false,
+    );
+  });
+
+  test('Revert to Saved is Drafter’s change, not the writer’s', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Door.fountain', SCRIPT, 1));
+    t.type('More words.\n');
+    const { canRevert, revertToSaved } = await import('../app/storage/save');
+    expect(canRevert()).toBe(true);
+    const spy = vi.spyOn(t.editor.view, 'dispatch');
+    const state = t.editor.view.state;
+    revertToSaved();
+    expect(t.shown()).toBe(SCRIPT);
+    const { writersEdit } = await import('../app/stats/writing');
+    expect(writersEdit(state.update(spy.mock.calls[0]?.[0] as never))).toBe(false);
   });
 
   test('does not ask where saving writes in place, or for a different title', async () => {

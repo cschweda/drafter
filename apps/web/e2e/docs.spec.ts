@@ -140,6 +140,7 @@ test.describe('without JavaScript', () => {
       '/sw.js',
       'indexeddb',
       'localstorage',
+      'writing stats',
     ]) {
       expect(text, phrase).toContain(phrase);
     }

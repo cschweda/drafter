@@ -13,7 +13,9 @@ import { db } from '../storage/db';
 import { useGuard } from '../storage/guard';
 import { useScript } from '../storage/script';
 import { useCounts } from './counts';
-import { DAY_PREFIX, dayKey, goalKey } from './keys';
+import { DAY_PREFIX, dateKey, dayKey, goalKey } from './keys';
+
+export { dateKey };
 
 export interface Goal {
   unit: 'pages' | 'words';
@@ -57,6 +59,8 @@ export interface GoalStore {
   goal: Readonly<Ref<Goal | null>>;
   /** Growth since the day began; null without a goal, or until the day's start is known. */
   progress: Readonly<ComputedRef<Progress | null>>;
+  /** What the day began with, for the open script; null for a sample, or until it is read. The writing stats measure from it too. */
+  dayStart: Readonly<Ref<DayStart | null>>;
   /** A goal can be set: a script of the writer's own is open. */
   canSet: Readonly<ComputedRef<boolean>>;
   /** The tab is read-only: `setGoal` changes nothing. */
@@ -75,12 +79,6 @@ export interface GoalStore {
 
 /** Days of starting counts that are kept. */
 export const KEEP_DAYS = 30;
-
-/** The local date, `YYYY-MM-DD`. Local, because a writer's day ends at their midnight. */
-export function dateKey(date: Date): string {
-  const two = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
-}
 
 /** Whether `goal` is one that can be held: words in whole numbers, pages in tenths. */
 export function isGoal(goal: unknown): goal is Goal {
@@ -337,6 +335,7 @@ export function createGoal(deps: GoalDeps): GoalStore {
 
   return {
     goal: readonly(goal),
+    dayStart: readonly(start) as Readonly<Ref<DayStart | null>>,
     progress,
     canSet,
     locked,

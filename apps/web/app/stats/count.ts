@@ -1,6 +1,7 @@
 import type { Block, Doc } from '@drafter/fountain';
 import type { Layout, Page } from '@drafter/layout';
 import { wordsIn } from '../markdown/words';
+import { sceneCount } from './script-stats';
 
 export interface Counts {
   /**
@@ -85,7 +86,8 @@ export function countScript(doc: Doc, layout: Layout | null): Counts {
   const pages = layout ? pagesOfLayout(layout) : 0;
   const result: Counts = {
     pages,
-    scenes: doc.blocks.reduce((n, block) => n + (block.kind === 'scene_heading' ? 1 : 0), 0),
+    // A screenplay's scene headings, a stage play's `##` sections.
+    scenes: sceneCount(doc),
     words: wordsOfDoc(doc),
     minutes: Math.round(pages),
   };

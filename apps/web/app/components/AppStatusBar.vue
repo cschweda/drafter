@@ -6,7 +6,10 @@ import { useEditor } from '~/editor/session';
 import { templateIdOf, typeNameOf, unknownTemplateOf } from '~/editor/template';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { statsOpen } from '~/stats/dialog';
 import { progressLabel, useGoal } from '~/stats/goal';
+import { timeTodayLabel, wordsTodayLabel } from '~/stats/history';
+import { useWritingStats } from '~/stats/writing';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
 import { blankError, kindError, type RecoveryState, useScript } from '~/storage/script';
@@ -16,7 +19,14 @@ const { words } = useMarkdown();
 const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
 const { count } = useProblems();
-const { progress } = useGoal();
+const { progress, goal } = useGoal();
+// Words and time today (docs/drafter-stats-design.md §3): from the day's first edit, never for a
+// sample or in a read-only tab (`today` is null there). A goal in words already says the words.
+const { today } = useWritingStats();
+const writtenToday = computed(() => (today.value && today.value.ms > 0 ? today.value : null));
+const showWords = computed(
+  () => writtenToday.value?.words != null && !(progress.value && goal.value?.unit === 'words'),
+);
 // A template Drafter doesn't have is shown as a screenplay, and says so ("Screenplay (fallback)").
 const templateName = computed(() =>
   typeNameOf(kind.value, templateIdOf(doc.value), unknownTemplateOf(doc.value) !== undefined),
@@ -90,6 +100,12 @@ function closeCounts(refocus = true) {
   if (refocus) countsButton.value?.focus();
 }
 
+/** The panel's Stats… button: the panel closes (focus back on its button), and the window opens. */
+function openStats() {
+  closeCounts();
+  statsOpen.value = true;
+}
+
 function onPointerDown(event: PointerEvent) {
   if (countsOpen.value && !countsWrap.value?.contains(event.target as Node)) closeCounts(false);
 }
@@ -132,9 +148,14 @@ function onKeydown(event: KeyboardEvent) {
       >
         {{ countsLabel }}
       </button>
-      <CountsPanel v-if="countsOpen" id="counts-panel" @close="closeCounts()" />
+      <CountsPanel v-if="countsOpen" id="counts-panel" @close="closeCounts()" @stats="openStats" />
     </span>
     <span v-if="progress">{{ progressLabel(progress) }}</span>
+    <!-- Not live regions: a screen reader reads them when asked, not at every change. -->
+    <template v-if="writtenToday">
+      <span v-if="showWords" data-stat="words-today">{{ wordsTodayLabel(writtenToday.words ?? 0) }}</span>
+      <span data-stat="time-today">{{ timeTodayLabel(writtenToday.ms) }}</span>
+    </template>
     <!-- A sprint's time left (not a live region: only its end is announced). -->
     <SprintTimer />
     <span v-if="kind !== 'markdown'">{{ problemsLabel(count) }}</span>
