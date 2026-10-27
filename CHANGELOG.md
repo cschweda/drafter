@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-27
+
+**Drafter for Linux.** The same editor as drafter.dev, as an app you install (an AppImage or a `.deb`, x64), built with Electron:
+- **Real files**: Open and Save use the system's dialogs, and a save always goes back to the file, atomically. Drafter reads and writes only files you chose.
+- **Open a script from your file manager or the command line** (`drafterdev Script.fountain`), or by dropping it on the window.
+- **A menu bar** built from the same commands as the palette, and a **right-click menu** with spelling suggestions, offline, from its own US English dictionary.
+- **Closing never loses your text**: changes in no file are asked about first, in a native box.
+- **Updates from GitHub Releases that always ask first**: the AppImage downloads and offers Restart, and the `.deb` links to the release. The check is the app's only network request, and Settings can turn it off.
+- Scripts move freely between the desktop app and drafter.dev.
+
 ### Added
 
 - `docs`: a **Drafter for Linux** section in the README: where to download the `.deb` and the AppImage, how to install, start, and remove each, how updates work, and a table of how the desktop app differs from drafter.dev.
@@ -393,7 +403,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/cschweda/drafter/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/cschweda/drafter/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/cschweda/drafter/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cschweda/drafter/compare/v0.1.0...v0.2.0
