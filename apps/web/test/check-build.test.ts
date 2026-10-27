@@ -170,3 +170,26 @@ describe('checking the service worker’s precache', () => {
     });
   });
 });
+
+// The desktop app's build (DRAFTER_DESKTOP=1) serves its files from the app itself: it has no
+// service worker and no web app manifest, and a stray one would be served to a page that never
+// registers it.
+describe('checking the desktop build', () => {
+  const check = async (dir: string) =>
+    (await checkBuild(dir, { fixture: false, icons: [], desktop: true })).problems.join('\n');
+
+  test('passes with no service worker and no manifest', async () => {
+    expect(await check(await site({ 'a.js': 'x' }))).toBe('');
+  });
+
+  test('finds a service worker, its Workbox runtime, or a manifest', async () => {
+    const dir = await site({ 'a.js': 'x' });
+    await writeFile(join(dir, 'sw.js'), 'x');
+    await writeFile(join(dir, 'workbox-1a2b.js'), 'x');
+    await writeFile(join(dir, 'manifest.webmanifest'), '{}');
+    const problems = await check(dir);
+    expect(problems).toMatch(/sw\.js/);
+    expect(problems).toMatch(/workbox-1a2b\.js/);
+    expect(problems).toMatch(/manifest\.webmanifest/);
+  });
+});

@@ -14,7 +14,9 @@
     "check": "biome check .",
     "drafter": "node packages/cli/dist/index.js",
     "dev": "pnpm --filter @drafter/web dev",
-    "e2e": "pnpm --filter @drafter/web e2e"
+    "e2e": "pnpm --filter @drafter/web e2e",
+    "desktop:dev": "pnpm --filter @drafter/desktop dev",
+    "desktop:dist": "pnpm --filter @drafter/desktop dist"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",

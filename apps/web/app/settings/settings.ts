@@ -15,6 +15,8 @@ export interface Settings {
   typewriter: boolean;
   /** A short tone when a sprint ends; off by default, so Drafter makes no sound unless asked (§7.3). */
   sprintSound: boolean;
+  /** Desktop app only: look on GitHub for a newer version once, when Drafter starts; on by default. */
+  checkForUpdates: boolean;
   /** The Source and the Script pane (or the Preview) scroll together; on by default (decided 2026-10-27). */
   scrollSync: boolean;
 }
@@ -27,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lineNumbers: false,
   typewriter: false,
   sprintSound: false,
+  checkForUpdates: true,
   scrollSync: true,
 };
 

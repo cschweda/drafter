@@ -1,0 +1,227 @@
+# The Linux desktop app (Phase 1 Plan 6): build it, test it, package it, and publish it on a release.
+#
+#   push to main or phase-1-desktop   build, package, test the packages and the shell (xvfb)
+#   push of a tag v*                  the same, then publish the AppImage, the .deb, and
+#                                     latest-linux.yml as that tag's GitHub Release
+#   workflow_dispatch                 the same as a branch push, for trying it by hand
+#
+# To release: bump apps/desktop/package.json, merge, then push the tag (vX.Y.Z). The workflow checks
+# the tag against the version, builds and tests, and makes the release itself: as a draft, with all
+# its files uploaded and checked, published only then (.github/scripts/publish-release.sh).
+#
+# There is no pull_request trigger, so nothing here runs on a fork's pull request, and no job gets a
+# secret other than the repository's own GITHUB_TOKEN (read-only, except in `publish`).
+name: desktop
+
+on:
+  push:
+    branches: [main, phase-1-desktop]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # A desktop-sized virtual screen (xvfb-run's default is 640x480, which shrinks the app's window).
+  XVFB_SCREEN: "-screen 0 1920x1080x24"
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  linux:
+    # Ubuntu 24.04 on purpose: it restricts unprivileged user namespaces (AppArmor), which Chromium's
+    # sandbox needs, and that is what the packaged app has to cope with on a user's machine.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Cache Electron's and electron-builder's downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-${{ runner.os }}-
+
+      - name: The tag matches the app's version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME but apps/desktop/package.json says $version. Bump the version, then tag."
+            exit 1
+          fi
+
+      - name: System packages (a virtual display, xwininfo and xdotool, FUSE for the AppImage, the MIME database)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb x11-utils libfuse2t64 shared-mime-info xdotool
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build the app (main process, preload, and the web build for the desktop)
+        run: |
+          pnpm --filter @drafter/desktop build
+          pnpm --filter @drafter/desktop build:web
+      - name: Package (AppImage and .deb)
+        run: pnpm --filter @drafter/desktop package
+      - name: The package holds what it should (app.asar)
+        run: node apps/desktop/scripts/check-asar.mjs apps/desktop/release/linux-unpacked/resources/app.asar
+      - name: latest-linux.yml agrees with the packages
+        run: node apps/desktop/scripts/check-update-feed.mjs apps/desktop/release
+      - name: What was built
+        working-directory: apps/desktop/release
+        run: |
+          {
+            echo "## Desktop packages"
+            echo '```'
+            ls -l *.AppImage *.deb latest-linux.yml | awk '{print $5, $9}'
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          cat latest-linux.yml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-linux
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/latest-linux.yml
+
+      # The packages as a user runs them, with Ubuntu 24.04's default restriction on unprivileged
+      # user namespaces still in place.
+      - name: The restriction on this runner
+        run: |
+          sysctl kernel.apparmor_restrict_unprivileged_userns || true
+          lsb_release -ds
+      - name: The AppImage's desktop entry passes no --no-sandbox, takes files, and lists the script types
+        working-directory: apps/desktop/release
+        run: |
+          chmod +x ./*.AppImage
+          rm -rf "$RUNNER_TEMP/appimage" && mkdir "$RUNNER_TEMP/appimage"
+          (cd "$RUNNER_TEMP/appimage" && "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage --appimage-extract > /dev/null)
+          ls "$RUNNER_TEMP/appimage/squashfs-root" | head -20
+          cat "$RUNNER_TEMP/appimage"/squashfs-root/*.desktop
+          entry="$(echo "$RUNNER_TEMP"/appimage/squashfs-root/*.desktop)"
+          if grep -q -e '--no-sandbox' "$entry"; then echo "::error::--no-sandbox in $entry"; exit 1; fi
+          # electron-builder writes `AppRun %U` for an AppImage (the app opens local file:// URLs too).
+          grep -qx 'Exec=AppRun %U' "$entry"
+          grep -q '^MimeType=.*text/x-fountain;' "$entry"
+          grep -q '^MimeType=.*text/markdown;' "$entry"
+      - name: Packaged AppImage, with the restriction on (its launcher drops the sandbox, so the app asks first)
+        if: ${{ !cancelled() }}
+        run: |
+          DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)" \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
+      - name: Install the .deb
+        if: ${{ !cancelled() }}
+        run: |
+          sudo apt-get install -y -q ./apps/desktop/release/*.deb
+          ls -l /etc/apparmor.d/drafterdev /usr/bin/drafterdev
+          cat /etc/apparmor.d/drafterdev
+          sudo aa-status 2>/dev/null | grep -i drafterdev || echo "(aa-status shows no drafterdev profile)"
+      - name: Packaged .deb, with the restriction on (its AppArmor profile allows the sandbox; real keys by xdotool; SIGTERM)
+        if: ${{ !cancelled() }}
+        run: |
+          DRAFTER_XDOTOOL=1 DRAFTER_PACKAGED_KIND=deb DRAFTER_PACKAGED=/usr/bin/drafterdev \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
+      - name: Packaged AppImage, with a narrow AppArmor profile for its own path (the fix in the docs; restriction still on)
+        if: ${{ !cancelled() }}
+        run: |
+          set +e
+          image="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)"
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\n\nprofile drafter-appimage %s flags=(default_allow) {\n  userns,\n}\n' "$image" | sudo tee /etc/apparmor.d/drafter-appimage
+          sudo apparmor_parser -r /etc/apparmor.d/drafter-appimage
+          sysctl kernel.apparmor_restrict_unprivileged_userns
+          DRAFTER_APPIMAGE_PROFILED=1 DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$image" \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged -g "runs sandboxed|launches"
+          status=$?
+          sudo apparmor_parser -R /etc/apparmor.d/drafter-appimage || true
+          sudo rm -f /etc/apparmor.d/drafter-appimage
+          exit $status
+      - name: The unpacked build's fuses (the AppImage's binary is inside its image)
+        if: ${{ !cancelled() }}
+        run: |
+          DRAFTER_PACKAGED_KIND=unpacked DRAFTER_PACKAGED="$GITHUB_WORKSPACE/apps/desktop/release/linux-unpacked/drafterdev" \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged -g "Electron’s fuses"
+
+      # The shell's own tests launch node_modules' Electron, which has no AppArmor profile: lift the
+      # restriction for them, after the packages have been tried without.
+      - name: Allow unprivileged user namespaces, for the unpackaged shell's tests
+        if: ${{ !cancelled() }}
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Packaged AppImage, with user namespaces allowed (sandboxed, end to end)
+        if: ${{ !cancelled() }}
+        run: |
+          DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)" \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
+      # An update, for real: two AppImages built for the test (1.0.0 and 1.0.1, the release's own
+      # configuration with a feed on this machine, e2e/update-test.builder.cjs). 1.0.0 finds 1.0.1,
+      # downloads it, and Restart on its page runs electron-updater's own quitAndInstall: the file
+      # must be replaced at the same path and the new version must start from it.
+      - name: Two AppImages for the update test (1.0.0 and 1.0.1, with a feed on this machine)
+        if: ${{ !cancelled() }}
+        working-directory: apps/desktop
+        run: |
+          for version in 1.0.0 1.0.1; do
+            DRAFTER_TEST_VERSION=$version DRAFTER_TEST_FEED=http://127.0.0.1:47613/ \
+              DRAFTER_TEST_OUTPUT="$RUNNER_TEMP/update-$version" \
+              pnpm exec electron-builder --config e2e/update-test.builder.cjs --linux --publish never
+          done
+          ls -l "$RUNNER_TEMP"/update-1.0.0/*.AppImage "$RUNNER_TEMP"/update-1.0.1/*.AppImage
+          cat "$RUNNER_TEMP/update-1.0.1/latest-linux.yml"
+          node scripts/check-update-feed.mjs "$RUNNER_TEMP/update-1.0.1"
+      - name: An AppImage replaces itself in place on Restart (the real electron-updater swap)
+        if: ${{ !cancelled() }}
+        run: |
+          DRAFTER_UPDATE_OLD="$RUNNER_TEMP/update-1.0.0" DRAFTER_UPDATE_NEW="$RUNNER_TEMP/update-1.0.1" \
+            DRAFTER_UPDATE_PORT=47613 DRAFTER_PACKAGED_KIND=appimage \
+            DRAFTER_PACKAGED="$RUNNER_TEMP/update-1.0.0/Drafter-x86_64.AppImage" \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged -g "replaces itself"
+      - name: Chromium for the web side of the files test (e2e/interchange.spec.ts)
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @drafter/desktop exec playwright install --with-deps chromium
+      - name: The shell's end-to-end tests
+        if: ${{ !cancelled() }}
+        env:
+          DRAFTER_E2E_REUSE_WEB: "1"
+        run: xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: desktop-test-results
+          retention-days: 7
+          path: apps/desktop/test-results
+
+  publish:
+    # Only for a tag, only after everything above passed. This is the one job that can write.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: linux
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: desktop-linux
+          path: release
+      - name: Publish the release (a draft, filled and checked, then published)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -l release
+          .github/scripts/publish-release.sh "$GITHUB_REF_NAME" release

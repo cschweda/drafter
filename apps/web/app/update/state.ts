@@ -7,6 +7,19 @@ import { ref } from 'vue';
 export const needRefresh = ref(false);
 
 /**
+ * What the offer asks of the writer: `reload` (the web), `restart` (the desktop app, the new
+ * version is downloaded), or `get` (a .deb, which opens the release page). The service worker
+ * (`plugins/service-worker.client.ts`) is the web's source of updates and leaves this as it is;
+ * the desktop's (`desktop-source.ts`) sets it.
+ */
+export type UpdateKind = 'reload' | 'restart' | 'get';
+export const updateKind = ref<UpdateKind>('reload');
+/** The desktop app tried to install the update and couldn't: the toast says so (and keeps Later). */
+export const installError = ref(false);
+/** The version the desktop app found (empty on the web). */
+export const availableVersion = ref('');
+
+/**
  * Another tab already let the new version take over. This tab still runs the old files, so a
  * reload is all it needs (there is no waiting worker left to tell).
  */

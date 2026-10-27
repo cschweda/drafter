@@ -8,7 +8,7 @@ if (!page) throw new Error('The Saving page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    'How Save works in Chrome, Edge, Firefox, Safari, and Brave; keeping scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; and installing Drafter as an app.',
+    'How Save works in each browser; keeping scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; installing Drafter as an app; and downloading the desktop app for Linux.',
 });
 </script>
 
@@ -238,6 +238,51 @@ useDocsHead({
       </li>
       <li><strong>Firefox on a computer</strong> can’t install web apps.</li>
     </ul>
+
+    <h2 id="download-linux">Download Drafter for Linux</h2>
+    <p>
+      If you use Linux, Drafter also comes as a desktop app. It is the same editor as this site,
+      in a window of its own, and it adds what a browser can’t promise everyone:
+    </p>
+    <ul>
+      <li>Save writes back to the file you opened, in any desktop environment.</li>
+      <li>The recovery copy lives in the app, where no browser can clear it.</li>
+      <li>
+        You can open a script from a terminal with <code>drafterdev script.fountain</code>, and,
+        with the <code>.deb</code>, by double-clicking a <code>.fountain</code> file (an AppImage
+        doesn’t register file types by itself).
+      </li>
+      <li>It has a menu bar.</li>
+      <li>
+        Drafter checks for a new version when it starts (you can turn this off) and never installs
+        it by itself: the AppImage offers <strong>Restart</strong>, and the <code>.deb</code> offers
+        <strong>Get it</strong>, the release page.
+      </li>
+      <li>
+        It saves the same plain-text files as this site, so a script moves freely between the two.
+        Each keeps its own recovery copy and recent scripts.
+      </li>
+    </ul>
+    <p>It comes in two packages, for 64-bit Intel and AMD computers. Each is about 100 to 130 MB.</p>
+    <ul>
+      <li>
+        <strong>The <code>.deb</code></strong> is the one to use on Ubuntu 24.04 and later, and on
+        other Debian-based systems. On Ubuntu 24.04 and later it is the only package that runs with
+        no extra steps.
+      </li>
+      <li>
+        <strong>The AppImage</strong> is for other distributions. Make it executable and run it. It
+        needs <code>libfuse2</code>. On Ubuntu 24.04 and later it may ask whether to continue
+        without Chromium’s sandbox; the install guide says what to do.
+      </li>
+    </ul>
+    <p>
+      <a href="https://github.com/cschweda/drafter/releases/latest">Download the latest release</a>
+      from GitHub, and read the
+      <a href="https://github.com/cschweda/drafter/blob/main/docs/desktop-install-linux.md">install guide</a>
+      for the steps. Windows and macOS are coming; macOS will be last, because it needs Apple’s
+      developer account.
+    </p>
 
     <p class="docs-note">
       Everything here stays on your device. See <a href="/docs/privacy/">Privacy</a>, and the

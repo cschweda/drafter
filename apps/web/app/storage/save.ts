@@ -4,7 +4,7 @@ import { useEditor } from '../editor/session';
 import { kindOfFileName } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { CheckUnsettledError, useFileCheck } from './check';
-import { FileGoneError, type FileRef, useFiles } from './files';
+import { FileGoneError, FileProblemError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
 import { say, timedSay } from './say';
@@ -55,6 +55,10 @@ function messageFor(error: unknown): string {
   }
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
+  }
+  // The desktop app's writes replace the file whole or not at all (apps/desktop/src/files.ts).
+  if (error instanceof FileProblemError) {
+    return `Couldn’t save the file: ${error.message}. The file on disk is as it was.`;
   }
   return 'Couldn’t save the file.';
 }

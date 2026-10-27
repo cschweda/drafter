@@ -71,6 +71,16 @@ useDocsHead({
       remove the saved files, along with the worker, by clearing this site’s data.
     </p>
 
+    <h2 id="updates">Updates in the desktop app</h2>
+    <p>
+      When it starts, the desktop app makes a few requests to GitHub: the release information, and,
+      for the AppImage, the update itself, downloaded in the background. Nothing from your scripts
+      is sent. The desktop app never installs or restarts by itself. It says a new version is ready
+      (the AppImage, which waits for you to choose Restart) or available (a <code>.deb</code>,
+      which offers a link to the release page) and waits for your choice. Turn off
+      <strong>Check for updates</strong> in Settings and it makes no network request at all.
+    </p>
+
     <h2 id="modules">Script modules</h2>
     <p>
       A script module is an extra tool for Drafter, such as one that counts scenes. The modules are

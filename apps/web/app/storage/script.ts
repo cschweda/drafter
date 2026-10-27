@@ -11,6 +11,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
+import { desktop } from '../desktop';
 import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
@@ -78,6 +79,13 @@ export interface ScriptSession {
   project: Readonly<ShallowRef<Project | null>>;
   /** The text differs from what was last saved to the file. A new script that hasn't been typed in has no changes. */
   dirty: Readonly<ComputedRef<boolean>>;
+  /**
+   * Closing the page now would lose text that is in no file and not in a recovery copy that is
+   * known to work: changes to a script of the writer's own (a sample's edits are in its recovery
+   * copy), or to anything while the recovery copy can't be written. Never in a read-only tab. The
+   * browser's "leave this page?" question and the desktop app's close dialog both ask this.
+   */
+  wouldLose: Readonly<ComputedRef<boolean>>;
   recovery: Readonly<Ref<RecoveryState>>;
   /** The first project is open and the recovery copy has been checked once. */
   ready: Readonly<Ref<boolean>>;
@@ -1015,6 +1023,9 @@ function create(): ScriptSession {
   });
   const ask = (event: BeforeUnloadEvent) => {
     if (leaveAllowed()) return;
+    // The desktop app asks in its own dialog before it closes the window (see below). A page that
+    // vetoes the unload would only keep the window from closing.
+    if (desktop()) return;
     event.preventDefault();
     // Older browsers show their dialog only when this is set.
     event.returnValue = '';
@@ -1036,6 +1047,7 @@ function create(): ScriptSession {
   return {
     project,
     dirty,
+    wouldLose: asking,
     savedText: lastSaved,
     recovery,
     ready,

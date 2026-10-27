@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { HELP_PAGES, helpHref } from '~/commands/data';
+import { backToEditor } from '~/commands/help-back';
 
 // The frame of a help page (Phase 1 design §4.5): a way back to the app, the other help pages, and the
 // page itself. These pages are prerendered and read without JavaScript, so the links are plain links:
@@ -29,6 +30,8 @@ function appOpener(): Window | null {
  * which the two-tab guard would make read-only. A browser that won't close it follows the link.
  */
 function onBack(event: MouseEvent) {
+  // The desktop app's help pages are windows of their own: it brings the editor forward and closes this one.
+  if (backToEditor(event)) return;
   // A new tab or window asked for with a modifier, or a middle click, is the browser's to do.
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
     return;

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { EditorView } from '@codemirror/view';
 import { registerBuiltinCommands } from '~/commands/builtin';
+import { installDesktopClose } from '~/commands/desktop-close';
+import { installDesktopMenu } from '~/commands/desktop-menu';
 import { installGlobalKeys } from '~/commands/registry';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
@@ -9,9 +11,11 @@ import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
 import { installFileCheck } from '~/storage/check';
+import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
+import { installDesktopUpdates } from '~/update/desktop-source';
 import { leavesOnEscape } from '~/utils/focus';
 import { otherPane, type PaneId } from '~/utils/panes';
 
@@ -67,6 +71,10 @@ let stopWatchingSave: (() => void) | undefined;
 let stopSettings: (() => void) | undefined;
 let stopModules: (() => void) | undefined;
 let removeFileCheck: (() => void) | undefined;
+let removeSystemOpen: (() => void) | undefined;
+let removeDesktopMenu: (() => void) | undefined;
+let removeDesktopClose: (() => void) | undefined;
+let removeDesktopUpdates: (() => void) | undefined;
 
 // Focus mode swaps the layout for the Source alone. Entering puts the cursor in the editor; leaving
 // puts it back there if the editor is showing, else on the button that entered.
@@ -98,6 +106,10 @@ onMounted(() => {
   stopSettings = applySettings();
   stopModules = startModules();
   removeFileCheck = installFileCheck();
+  removeSystemOpen = installSystemOpen();
+  removeDesktopMenu = installDesktopMenu();
+  removeDesktopClose = installDesktopClose();
+  removeDesktopUpdates = installDesktopUpdates(useSettings());
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -108,6 +120,10 @@ onBeforeUnmount(() => {
   stopSettings?.();
   stopModules?.();
   removeFileCheck?.();
+  removeSystemOpen?.();
+  removeDesktopMenu?.();
+  removeDesktopClose?.();
+  removeDesktopUpdates?.();
 });
 </script>
 

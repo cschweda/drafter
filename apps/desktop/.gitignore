@@ -1,0 +1,9 @@
+# The web build, copied here by `pnpm build:web` and the e2e global setup.
+web/
+# A rebuild's new and old copies while `web/` is swapped (scripts/build-web.mjs).
+web.next-*/
+web.old-*/
+# Playwright's output.
+test-results/
+playwright-report/
+release/
