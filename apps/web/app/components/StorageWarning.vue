@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { installAdviceHere } from '~/storage/install-advice';
 import { useScript } from '~/storage/script';
 
 const { warning, dismissWarning } = useScript();
+// What to say about installing depends on the browser (by feature, see install-advice.ts). Read
+// only when the warning shows, which is in the browser: the site is generated without a window.
+const advice = computed(() => (import.meta.client ? installAdviceHere() : ''));
 </script>
 
 <template>
@@ -13,11 +17,7 @@ const { warning, dismissWarning } = useScript();
     -->
     <div role="status" data-warning-region="status">
       <div v-if="warning === 'not-persistent'" class="warning" data-warning="not-persistent">
-        <p>
-          This browser may clear your recovery copy. Save the script to a file to keep it safe, or
-          install Drafter as an app: in Safari, choose File → Add to Dock on a Mac, or Share → Add to
-          Home Screen on an iPhone or iPad.
-        </p>
+        <p>{{ advice }}</p>
         <button type="button" class="dismiss" @click="dismissWarning">Dismiss</button>
       </div>
     </div>

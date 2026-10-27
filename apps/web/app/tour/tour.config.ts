@@ -86,7 +86,7 @@ export function buildSteps(wide: boolean): TourStep[] {
           target: target('menu'),
           title: 'Screenplay or stage play',
           content:
-            'The same text, in two formats. On a small screen, choose it from the Drafter menu, or from the palette: Template: Stage play.',
+            'The same text, in two formats. On a small screen, choose it in the Drafter menu’s Template section, or from the palette: Template: Stage play.',
         },
     {
       id: 'save',

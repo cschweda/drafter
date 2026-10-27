@@ -5,7 +5,13 @@ import type { DocumentKind } from '../markdown/kind';
 import { useScript } from '../storage/script';
 import { askToUseMarkdown } from './markdown-question';
 import { useEditor } from './session';
-import { type DocumentType, isBuiltIn, type TemplateId, templateIdOf } from './template';
+import {
+  type DocumentType,
+  isBuiltIn,
+  type TemplateId,
+  templateIdOf,
+  unknownTemplateOf,
+} from './template';
 import { appChange } from './typewriter';
 
 // The switcher is apart from `template.ts` because that file is plain data and functions, which
@@ -24,6 +30,12 @@ export interface TemplateChoice {
    * `canChoose` is false. The session follows the new text (the layout, the lint) as for any edit.
    */
   choose(id: TemplateId): void;
+  /**
+   * Whether `type` is what the script is now: the template its block names, the screenplay when it
+   * names none, or Markdown. A script whose block names a template Drafter doesn't have is shown as a
+   * screenplay but is none of them, so Screenplay stays one the writer can choose (it replaces the name).
+   */
+  isCurrent(type: DocumentType): boolean;
   /**
    * Whether `chooseType(type)` can do anything now. Markdown also needs a script of the writer's
    * own (a sample stays a screenplay or a stage play), and going back to a template from
@@ -73,6 +85,15 @@ export function useTemplate(): TemplateChoice {
     });
   }
 
+  function isCurrent(type: DocumentType): boolean {
+    if (type.kind === 'markdown') return kind.value === 'markdown';
+    return (
+      kind.value === 'fountain' &&
+      type.id === id.value &&
+      unknownTemplateOf(doc.value) === undefined
+    );
+  }
+
   function canChooseType(type: DocumentType): boolean {
     if (locked.value) return false;
     if (type.kind === 'markdown') return !script.project.value?.sample;
@@ -101,5 +122,13 @@ export function useTemplate(): TemplateChoice {
     choose(type.id);
   }
 
-  return { id, kind: computed(() => kind.value), canChoose, choose, canChooseType, chooseType };
+  return {
+    id,
+    kind: computed(() => kind.value),
+    canChoose,
+    choose,
+    isCurrent,
+    canChooseType,
+    chooseType,
+  };
 }

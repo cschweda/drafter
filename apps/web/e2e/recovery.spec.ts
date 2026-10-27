@@ -505,6 +505,78 @@ test.describe('the recovery copy', () => {
   });
 });
 
+// The "may be cleared" warning suggests installing, in the steps of the browser that is showing it
+// (found by feature, app/storage/install-advice.ts; each project is an engine).
+test.describe('the install advice in the storage warning', () => {
+  const ADVICE: Record<string, { says: RegExp; not: RegExp }> = {
+    chromium: {
+      says: /use Install in the address bar \(or the browser menu’s Install Drafter\)/,
+      not: /Safari|Dock/,
+    },
+    phone: { says: /use Install in the address bar/, not: /Safari|Dock/ },
+    webkit: { says: /on a Mac, in Safari, choose File → Add to Dock/, not: /address bar/ },
+    'phone-webkit': {
+      says: /on an iPhone or iPad, choose Share → Add to Home Screen/,
+      not: /address bar/,
+    },
+    firefox: {
+      says: /install Drafter as an app, if your browser offers that/,
+      not: /Safari|Dock|address bar/,
+    },
+  };
+
+  test("is this browser's own", async ({ page }, testInfo) => {
+    const expected = ADVICE[testInfo.project.name];
+    expect(expected, `advice for ${testInfo.project.name}`).toBeDefined();
+    await stubPersistence(page, false);
+    await page.goto('/');
+    const notice = page.locator('[data-warning="not-persistent"]');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText(
+      'This browser may clear your recovery copy. Save the script to a file',
+    );
+    await expect(notice).toContainText(expected?.says as RegExp);
+    await expect(notice).not.toContainText(expected?.not as RegExp);
+  });
+
+  // An installed app has nothing left to install: only the advice to save to a file.
+  test('is only to save, in an installed app', async ({ page }) => {
+    await stubPersistence(page, false);
+    await page.addInitScript(() => {
+      const ask = window.matchMedia.bind(window);
+      window.matchMedia = (query: string) => {
+        const list = ask(query);
+        if (query !== '(display-mode: standalone)') return list;
+        return new Proxy(list, {
+          get(target, key) {
+            if (key === 'matches') return true;
+            const value = Reflect.get(target, key);
+            return typeof value === 'function' ? value.bind(target) : value;
+          },
+        });
+      };
+    });
+    await page.goto('/');
+    const notice = page.locator('[data-warning="not-persistent"]');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText(
+      'This browser may clear your recovery copy. Save the script to a file to keep it safe.',
+    );
+    await expect(notice).not.toContainText(/install|Safari|Dock|Home Screen|address bar/i);
+  });
+
+  test('is only to save, in an iPhone or iPad home-screen app', async ({ page }) => {
+    await stubPersistence(page, false);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
+    });
+    await page.goto('/');
+    const notice = page.locator('[data-warning="not-persistent"]');
+    await expect(notice).toBeVisible();
+    await expect(notice).not.toContainText(/install|Safari|Dock|Home Screen|address bar/i);
+  });
+});
+
 test.describe('the storage warnings', () => {
   const themes = ['dark', 'light'] as const;
 

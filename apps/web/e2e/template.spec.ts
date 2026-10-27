@@ -262,3 +262,64 @@ async function start0(page: Page, isMobile: boolean) {
   await expect(editor(page)).toBeAttached();
   if (!isMobile) await expect(chip(page)).toBeVisible();
 }
+
+// A script that names a template Drafter doesn't have is shown as a screenplay, and says so
+// (technical design §8.6). The phone's app menu shows the same in e2e/phone.spec.ts.
+test.describe('a template Drafter does not have', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'the chip is hidden on a phone');
+
+  const UNKNOWN = 'INT. HALL - DAY\n\nShe waits.\n\n/* drafter\n{"v":1,"template":"my-own"}\n*/\n';
+  const NOTE =
+    "This script asks for “my-own”, which Drafter doesn't have, so it's shown as a screenplay.";
+
+  async function setText(page: Page, text: string) {
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText(text);
+  }
+
+  test('reads “Screenplay (fallback)” in the chip and the status bar, and the menu says why', async ({
+    page,
+  }) => {
+    await start(page);
+    await setText(page, UNKNOWN);
+    await expect(chip(page)).toHaveText('Screenplay (fallback)');
+    await expect(chip(page)).toHaveAccessibleName('Template: Screenplay (fallback)');
+    await expect(status(page)).toContainText('Screenplay (fallback)');
+
+    await chip(page).click();
+    await expect(chipMenu(page).getByText(NOTE, { exact: true })).toBeVisible();
+    // None is checked: the script is not a screenplay, only shown as one, and Screenplay is a choice.
+    await expect(chipItem(page, 'Screenplay')).toHaveAttribute('aria-checked', 'false');
+    await expect(chipItem(page, 'Screenplay')).not.toHaveAttribute('data-disabled', '');
+    await expect(chipItem(page, 'Stage play')).toHaveAttribute('aria-checked', 'false');
+    await page.keyboard.press('Escape');
+  });
+
+  test('says nothing for a template it has, or none', async ({ page }) => {
+    await start(page);
+    await expect(chip(page)).toHaveText('Screenplay');
+    await chip(page).click();
+    await expect(chipMenu(page).getByText(/which Drafter doesn't have/)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await setText(page, UNKNOWN);
+    await expect(chip(page)).toHaveText('Screenplay (fallback)');
+    // Typing a template it has takes the fallback away.
+    await setText(page, UNKNOWN.replace('my-own', 'stage-play-standard'));
+    await expect(chip(page)).toHaveText('Stage play');
+    await expect(status(page)).not.toContainText('fallback');
+  });
+
+  test('is replaced when Screenplay is chosen, as one undo step', async ({ page }) => {
+    await start(page);
+    await setText(page, UNKNOWN);
+    await expect(chip(page)).toHaveText('Screenplay (fallback)');
+    await choose(page, 'Screenplay');
+    await expect(chip(page)).toHaveText('Screenplay');
+    const after = (await editor(page).textContent()) ?? '';
+    expect(after).toMatch(/"template":"us-screenplay"/);
+    expect(after).not.toMatch(/my-own/);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(chip(page)).toHaveText('Screenplay (fallback)');
+  });
+});

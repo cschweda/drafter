@@ -123,8 +123,8 @@ export function registerBuiltinCommands(): void {
       DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map((type): [string, Behavior] => [
         `template-${type.id}`,
         {
-          enabled: () =>
-            template.canChooseType(type) && !(isFountain() && template.id.value === type.id),
+          // Not the current one: a script that names a template Drafter doesn't have is none of them.
+          enabled: () => template.canChooseType(type) && !template.isCurrent(type),
           run: onEditor(() => void template.chooseType(type)),
         },
       ]),

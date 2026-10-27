@@ -22,6 +22,36 @@ export function templateIdOf(doc: Doc): TemplateId {
   return isBuiltIn(id) ? id : DEFAULT_TEMPLATE;
 }
 
+/** The longest name of an unknown template that is shown; the rest is cut. */
+const NAME_LIMIT = 60;
+
+/** Control characters, and the ones that reorder or hide text (direction overrides, isolates, marks, joiners). */
+const UNSHOWN = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
+
+/**
+ * The template `meta.template` asks for when Drafter doesn't have it, as text that is safe to show,
+ * else undefined (technical design §8.6). The script is shown as a screenplay then, and the chip and
+ * the menus say so. The value is whatever JSON the file held: a string, or a number, a list, or an
+ * object (shown as its JSON), all of which are templates Drafter doesn't have; only a missing value,
+ * `null`, and an empty string mean no template. The name is the writer's own file's, so it is shown
+ * without control characters or direction overrides (which could make the sentence read backward), and
+ * is cut to 60 characters with "…".
+ */
+export function unknownTemplateOf(doc: Doc): string | undefined {
+  const id: unknown = doc.meta?.template;
+  if (id === undefined || id === null || id === '' || isBuiltIn(id)) return undefined;
+  const raw = typeof id === 'string' ? id : (JSON.stringify(id) ?? String(id));
+  const shown = raw.replace(UNSHOWN, '');
+  if (shown === '') return '(unprintable)';
+  const chars = Array.from(shown);
+  return chars.length > NAME_LIMIT ? `${chars.slice(0, NAME_LIMIT).join('')}…` : shown;
+}
+
+/** What the template menus say about an unknown template, with its name in curly quotes. */
+export function unknownTemplateNote(name: string): string {
+  return `This script asks for “${name}”, which Drafter doesn't have, so it's shown as a screenplay.`;
+}
+
 /**
  * One kind of document the writer can make or switch to. A Fountain entry is a template, chosen
  * through the metadata block. The Markdown entry is not a template: choosing it changes the
@@ -60,9 +90,13 @@ export type NewKind = DocumentType['newKind'];
 /** The chip's name for a Markdown document. */
 export const MARKDOWN_NAME = 'Markdown (plain text)';
 
-/** The name of the document type a script is: Markdown, else its template's. */
-export function typeNameOf(kind: DocumentKind, template: TemplateId): string {
-  return kind === 'markdown' ? MARKDOWN_NAME : TEMPLATE_NAMES[template];
+/**
+ * The name of the document type a script is: Markdown, else its template's. `fallback` is for a
+ * script whose template Drafter doesn't have (`unknownTemplateOf`): "Screenplay (fallback)".
+ */
+export function typeNameOf(kind: DocumentKind, template: TemplateId, fallback = false): string {
+  if (kind === 'markdown') return MARKDOWN_NAME;
+  return fallback ? `${TEMPLATE_NAMES[template]} (fallback)` : TEMPLATE_NAMES[template];
 }
 
 /**
