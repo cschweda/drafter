@@ -300,7 +300,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
     </UDropdownMenu>
   </div>
   <!-- Hiding the bar says where to turn it back on, as a toast and a polite live region. -->
-  <div class="notice" :class="{ shown: notice }">
+  <div class="bar-notice" :class="{ shown: notice }">
     <span role="status" aria-live="polite">{{ notice }}</span>
   </div>
 </template>
@@ -391,7 +391,7 @@ button.here {
     border: 1px solid CanvasText;
   }
 }
-.notice {
+.bar-notice {
   position: fixed;
   z-index: 30;
   right: 16px;
@@ -407,7 +407,7 @@ button.here {
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
 }
-.notice:not(.shown) {
+.bar-notice:not(.shown) {
   width: 1px;
   height: 1px;
   padding: 0;

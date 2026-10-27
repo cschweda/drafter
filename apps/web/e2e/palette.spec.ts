@@ -301,9 +301,9 @@ test.describe('the command palette', () => {
 
   test('moves through the list with the arrow keys', async ({ page }) => {
     await openPalette(page);
-    await query(page).fill('make');
+    await query(page).fill('force');
     const rows = palette(page).getByRole('option');
-    await expect(rows.first()).toHaveAccessibleName(/^Make/);
+    await expect(rows.first()).toHaveAccessibleName(/^Force/);
     await expect(rows.first()).toHaveAttribute('data-highlighted', '');
     await page.keyboard.press('ArrowDown');
     await expect(rows.first()).not.toHaveAttribute('data-highlighted', '');
