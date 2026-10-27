@@ -9,6 +9,7 @@ import { loadFolderModules, syncFolderNetwork } from './folder';
 import { clearAllModuleProblems, clearModuleProblems, mapModuleProblems } from './problems';
 import {
   allModules,
+  BUILT_IN_IDS,
   loadEnabled,
   modulesToChange,
   moduleTabId,
@@ -108,7 +109,7 @@ export function startModules(): () => void {
   );
   // The desktop app's modules folder: read once, and kept told what each module may reach.
   const bridge = desktop()?.modules;
-  void loadFolderModules(bridge);
+  void loadFolderModules(bridge, BUILT_IN_IDS);
   const stopNetwork = bridge ? syncFolderNetwork(enabled, bridge) : () => {};
   const forget = editor.onChange((changes) => {
     if (changes) mapModuleProblems(changes);

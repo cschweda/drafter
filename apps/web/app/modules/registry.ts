@@ -2,7 +2,7 @@ import { computed, type Ref, ref, shallowRef } from 'vue';
 import { db } from '../storage/db';
 import { say } from '../storage/say';
 import { fixture } from './fixture';
-import { folderModules, folderOf, folderProblems } from './folder';
+import { folderModules, folderProblems } from './folder';
 import type { ScriptModule } from './types';
 
 // The modules this build has, which are on, and what a module's failure looks like. Nothing here
@@ -121,34 +121,22 @@ export const MODULES: readonly ScriptModule[] = collectModules({
     : {}),
 });
 
-/** The ids of the modules built into this copy of Drafter. */
-const BUILT_IN = new Set(MODULES.map((m) => m.id));
+/** The ids of the modules built into this copy of Drafter: a folder module may not take one. */
+export const BUILT_IN_IDS: readonly string[] = MODULES.map((m) => m.id);
 
-/**
- * Every module: the built-in ones, then (in the desktop app) those from the modules folder. A
- * folder module with a built-in module's id is left out (`folderModuleProblems` says so): the two
- * would share a storage prefix, a tab id, and a switch.
- */
+/** Every module: the built-in ones, then (in the desktop app) those from the modules folder. */
 export const allModules = computed<readonly ScriptModule[]>(() => [
   ...MODULES,
-  ...folderModules.value.filter((m) => !BUILT_IN.has(m.id)),
+  ...folderModules.value,
 ]);
 
 /** Whether `id` is a module from the desktop app's modules folder. */
 export function isFolderModule(id: string): boolean {
-  return !BUILT_IN.has(id) && folderModules.value.some((m) => m.id === id);
+  return folderModules.value.some((m) => m.id === id);
 }
 
 /** Why each folder the desktop app found isn't among the modules, one sentence each. */
-export const folderModuleProblems = computed<readonly string[]>(() => [
-  ...folderProblems.value,
-  ...folderModules.value
-    .filter((m) => BUILT_IN.has(m.id))
-    .map(
-      (m) =>
-        `Drafter skipped the folder “${folderOf(m.id) ?? m.id}”: a module built into Drafter has the id “${m.id}”.`,
-    ),
-]);
+export const folderModuleProblems = computed<readonly string[]>(() => folderProblems.value);
 
 /**
  * What the host must do to match `enabled`: turn modules on, turn them off, and refresh one that is

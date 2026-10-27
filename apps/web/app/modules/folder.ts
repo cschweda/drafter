@@ -23,6 +23,17 @@ import type { ModuleContext, ScriptModule } from './types';
 /** A folder module can't bring an icon (icons are bundled when the app is built): each has this. */
 export const FOLDER_ICON = 'i-lucide-puzzle';
 
+/**
+ * A folder module's id in the app: its own id under `folder.`. A built-in module's id has no dot,
+ * so the two can never meet: a folder module never shares a built-in's switch, its consent to the
+ * network, its storage rows (`module:folder.<id>:…`), its tab, or its commands.
+ */
+export const FOLDER_PREFIX = 'folder.';
+export const appIdOf = (id: string) => `${FOLDER_PREFIX}${id}`;
+/** The module's own id (its origin's host) from its id in the app. */
+export const folderIdOf = (appId: string) =>
+  appId.startsWith(FOLDER_PREFIX) ? appId.slice(FOLDER_PREFIX.length) : appId;
+
 const infos = shallowRef<readonly DesktopFolderModule[]>([]);
 /** What the desktop app skipped when it read the folder, one sentence each. */
 export const folderProblems = shallowRef<readonly string[]>([]);
@@ -34,13 +45,27 @@ export const folderNetworkReady = shallowRef<ReadonlySet<string>>(new Set());
 /** The hidden frame of each module that is on and loaded. */
 const runners = new Map<string, FrameChannel>();
 
-/** Sets the folder's modules and what was skipped (once, from the desktop app; tests set their own). */
+/**
+ * Sets the folder's modules and what was skipped (once, from the desktop app; tests set their own).
+ * One that takes a built-in module's id (`builtIn`) is skipped here, the one place the list comes
+ * in, so nothing (its frames, the network, Settings) ever sees it; the desktop app refuses such a
+ * module too.
+ */
 export function setFolderInfos(
   modules: readonly DesktopFolderModule[],
   problems: readonly string[],
+  builtIn: readonly string[] = [],
 ): void {
-  infos.value = modules;
-  folderProblems.value = problems;
+  infos.value = modules.filter((m) => !builtIn.includes(m.id));
+  folderProblems.value = [
+    ...problems,
+    ...modules
+      .filter((m) => builtIn.includes(m.id))
+      .map(
+        (m) =>
+          `Drafter skipped the folder “${m.folder}”: it uses the id “${m.id}”, which a module built into Drafter has.`,
+      ),
+  ];
   partsById.value = new Map();
   folderFailures.value = new Map();
 }
@@ -105,7 +130,7 @@ function surfaceOf(info: DesktopFolderModule, surface: Surface): Component {
 /** The `ScriptModule` that stands for a folder module: who it is, and (once loaded) its parts. */
 export function folderModuleOf(info: DesktopFolderModule, parts: Parts | undefined): ScriptModule {
   const module: ScriptModule = {
-    id: info.id,
+    id: appIdOf(info.id),
     name: info.name,
     description: info.description,
     icon: FOLDER_ICON,
@@ -151,11 +176,6 @@ export const folderModules = computed<readonly ScriptModule[]>(() =>
   }),
 );
 
-/** The folder each module came from, by id, for messages. */
-export function folderOf(id: string): string | undefined {
-  return infos.value.find((info) => info.id === id)?.folder;
-}
-
 const loaded = new WeakSet<DesktopModulesBridge>();
 
 /**
@@ -164,12 +184,17 @@ const loaded = new WeakSet<DesktopModulesBridge>();
  */
 export async function loadFolderModules(
   bridge: DesktopModulesBridge | null | undefined,
+  builtIn: readonly string[] = [],
 ): Promise<void> {
   if (!bridge || loaded.has(bridge)) return;
   loaded.add(bridge);
   try {
     const { modules, problems } = await bridge.list();
-    setFolderInfos(Array.isArray(modules) ? modules : [], Array.isArray(problems) ? problems : []);
+    setFolderInfos(
+      Array.isArray(modules) ? modules : [],
+      Array.isArray(problems) ? problems : [],
+      builtIn,
+    );
   } catch {
     // No folder modules this time; the built-in ones are unaffected.
   }
@@ -197,7 +222,7 @@ export function syncFolderNetwork(
     [enabled, infos],
     ([ids, list]) => {
       for (const info of list) {
-        const on = ids.includes(info.id);
+        const on = ids.includes(appIdOf(info.id));
         if ((told.get(info.id) ?? false) === on) continue;
         told.set(info.id, on);
         if (!on) setReady(info.id, false);

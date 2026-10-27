@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { contextFor } from '~/modules/context';
-import { folderModules, folderNetworkReady } from '~/modules/folder';
+import { folderIdOf, folderModules, folderNetworkReady } from '~/modules/folder';
 import { useModules } from '~/modules/registry';
 
 // The hidden frame of each module from the desktop app's modules folder that is on: it loads the
@@ -9,7 +9,7 @@ import { useModules } from '~/modules/registry';
 const { enabled } = useModules();
 const running = computed(() =>
   folderModules.value.filter(
-    (m) => enabled.value.includes(m.id) && folderNetworkReady.value.has(m.id),
+    (m) => enabled.value.includes(m.id) && folderNetworkReady.value.has(folderIdOf(m.id)),
   ),
 );
 </script>
@@ -19,7 +19,7 @@ const running = computed(() =>
     <FolderModuleFrame
       v-for="module in running"
       :key="module.id"
-      :module-id="module.id"
+      :module-id="folderIdOf(module.id)"
       :name="module.name"
       surface="background"
       :context="contextFor(module)"
