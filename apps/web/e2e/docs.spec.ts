@@ -76,7 +76,7 @@ test.describe('without JavaScript', () => {
     expect(descriptions.size).toBe(HELP_PAGES.length);
   });
 
-  test('prerenders a help index that links the three pages', async ({ page }) => {
+  test('prerenders a help index that links every help page', async ({ page }) => {
     for (const address of ['/docs', '/docs/']) {
       await page.goto(address);
       await expect(page, address).toHaveTitle('Help — Drafter');

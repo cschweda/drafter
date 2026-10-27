@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: **the element bar**, a slim row of buttons across the top of the Source pane that writes Fountain's marks for you, so you can write a correct script before you know them. It says which element you're in ("You're in: Dialogue"), and why when you hover or focus it; click it to read about that element. The buttons are **Scene**, **Action**, **Character**, **Dialogue**, **Parenthetical**, and **Transition**, then **More** (centered text, lyric, dual dialogue, note, boneyard, section, synopsis, page break, bold, italic, underline), the cheat sheet (**?**), and **⋯** to hide it. Each button shows its mark, its tooltip says the element's rule, its mark, and its key, and the button for the line you're on is shown pressed. A click writes natural Fountain where it can, with a forcing mark only where the line needs one (`MARGARET`, not `@MARGARET`; `INT. KITCHEN` for "kitchen"), as one change Undo reverses, and puts you back in the text where you'd type next; an empty line gets `INT. ` or a new character name with the list of locations or names open. A Markdown document gets its own bar: Heading, Bold, Italic, List, Numbered, Quote, Link, and Code. On a phone it's one row that scrolls sideways. It's on by default; **Settings → Element bar**, **⋯ → Hide the element bar**, and the palette turn it off and on, and it is hidden in focus mode and in a tab that only shows the script.
+- `apps/web`: every button on the bar is also a command in the palette and on the Keyboard shortcuts page: **Element: Scene heading**, **Element: Character**, and the rest, **Emphasis: Bold**, **Italic**, and **Underline**, **Markdown: Heading** and the rest, and **Show the element bar** and **Hide the element bar**.
+- `apps/web`: a **Fountain cheat sheet** among the help pages (`/docs/fountain/`, prerendered, and offline once installed): every element with its mark, its rule in a sentence, and an example, in the bar's order, plus emphasis, the title page, and Drafter's settings block at the end of a file. The bar's **?**, Help in the Drafter menu, and the palette open it.
+- `packages/cm-fountain`: the element bar's commands, `makeElement(kind)`, `insertPageBreak`, `wrapInBold`, `wrapInItalic`, and `wrapInUnderline`, with `canMakeParenthetical(state)` and `withCompletion(command)`.
+- `apps/desktop`: Edit has **Element**, **Emphasis**, and **Markdown** submenus, View has **Show/Hide the element bar**, and Help starts with **Fountain Cheat Sheet**.
+
+### Changed
+
+- `apps/web`: the commands on `Mod-Alt-1` to `7` are now called **Force scene heading (.)**, **Force action (!)**, **Force character (@)**, **Force parenthetical ( )**, **Force transition (>)**, **Force centered text (> <)**, and **Force lyric (~)**, so the palette tells them from the element bar's commands, which add a mark only where it's needed. The keys do what they did; the desktop app's Edit → Make submenu is now Edit → Force.
+
 ## [0.4.1] - 2026-10-27
 
 **Typewriter scrolling without the gap, and Markdown on a sample.**
