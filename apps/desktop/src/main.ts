@@ -17,6 +17,12 @@ import { type Spellcheck, setUpSpellcheck } from './spellcheck';
 import { setUpUpdates } from './updates-main';
 import { createMainWindow, fromApp, guard } from './window';
 
+// The app's name, before anything asks for it: the profile folder (userData), the macOS menu's
+// Hide/Quit items, and About. package.json's productName says the same; this holds however the app
+// is started (`electron .`, `electron dist/main.cjs`). An unpackaged app on macOS still shows
+// "Electron" as the menu bar's bold title, which comes from Electron.app's own bundle.
+app.setName('Drafter');
+
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
 // installed Drafter's profile can't be moved by an environment variable.
 if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {

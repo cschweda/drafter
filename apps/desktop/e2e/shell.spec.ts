@@ -243,3 +243,31 @@ test('opens the editor again from a second launch when only a help window is lef
   await new Promise((resolve) => setTimeout(resolve, 500));
   expect(app.windows()).toHaveLength(2);
 });
+
+test('calls itself Drafter, not Electron', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  // The name the menu's Hide/Quit roles, the profile folder, and About use; and every window's title.
+  expect(await app.evaluate(({ app }) => app.getName())).toBe('Drafter');
+  await expect(page).toHaveTitle(/Drafter/);
+  const titles = await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows().map((window) => window.getTitle()),
+  );
+  for (const title of titles) {
+    expect(title).toContain('Drafter');
+    expect(title).not.toContain('Electron');
+  }
+  const labels = await app.evaluate(({ Menu }) => {
+    const out: string[] = [];
+    const visit = (menu: Electron.Menu) => {
+      for (const item of menu.items) {
+        out.push(item.label);
+        if (item.submenu) visit(item.submenu);
+      }
+    };
+    const menu = Menu.getApplicationMenu();
+    if (menu) visit(menu);
+    return out;
+  });
+  expect(labels).toContain('About Drafter');
+  expect(labels.filter((label) => label.includes('Electron'))).toEqual([]);
+});
