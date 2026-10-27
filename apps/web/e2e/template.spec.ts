@@ -289,7 +289,9 @@ test.describe('a template Drafter does not have', () => {
 
     await chip(page).click();
     await expect(chipMenu(page).getByText(NOTE, { exact: true })).toBeVisible();
-    await expect(chipItem(page, 'Screenplay (fallback)')).toHaveAttribute('aria-checked', 'true');
+    // None is checked: the script is not a screenplay, only shown as one, and Screenplay is a choice.
+    await expect(chipItem(page, 'Screenplay')).toHaveAttribute('aria-checked', 'false');
+    await expect(chipItem(page, 'Screenplay')).not.toHaveAttribute('data-disabled', '');
     await expect(chipItem(page, 'Stage play')).toHaveAttribute('aria-checked', 'false');
     await page.keyboard.press('Escape');
   });

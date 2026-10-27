@@ -1,4 +1,6 @@
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 
@@ -7,15 +9,51 @@ import { removePickers } from './fs-stub';
 // checking there were none. (The accessibility suite waits for the project's final stage, decided
 // 2026-10-26; this is the functional half, which stays.)
 //
-// Safari's Tab skips buttons unless the reader turns that on in its settings, so the part that Tabs
-// to a button does not run in WebKit, which has the same keys otherwise; the other keyboard
-// tests put focus on a button for that reason.
+// Safari's Tab skips buttons unless the reader turns that on in its settings, so in WebKit the part
+// that Tabs to a button puts focus there instead (the other keyboard tests do the same), and the
+// tests that are Tab from end to end do not run there. Everything else runs in all three engines.
 test.skip(({ isMobile }) => !!isMobile, 'a phone has no keyboard');
+
+const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
+// pdf-lib is render-pdf's, so it is found from there.
+const { PDFDocument } = createRequire(`${ROOT}/packages/render-pdf/package.json`)(
+  'pdf-lib',
+) as typeof import('pdf-lib');
 
 const editor = (page: Page) => page.locator('.cm-content');
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const problemsList = (page: Page) => page.getByRole('tabpanel', { name: /^Problems/ });
+
+/**
+ * Records every pointer event the page is sent (a key's click has no position; a pointer's has a
+ * count), for `noPointer` to check. Call before `goto`.
+ */
+async function watchPointer(page: Page) {
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    (window as unknown as { pointerSeen: string[] }).pointerSeen = seen;
+    for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick']) {
+      window.addEventListener(type, () => seen.push(type), true);
+    }
+    window.addEventListener('click', (e) => e.detail > 0 && seen.push('click'), true);
+  });
+}
+const noPointer = async (page: Page) =>
+  expect(
+    await page.evaluate(() => (window as unknown as { pointerSeen: string[] }).pointerSeen),
+  ).toEqual([]);
+
+/**
+ * Opens the page and waits until the app is ready for a first key: the sample is loaded, and its bar
+ * (which shows once the project is) is up, so a shortcut finds the commands registered and the
+ * script session settled.
+ */
+async function open(page: Page) {
+  await page.goto('/');
+  await expect(editor(page)).toContainText('The Call');
+  await expect(page.getByRole('region', { name: 'Sample' })).toBeVisible();
+}
 
 /** The text of the lines CodeMirror has drawn: the whole script while it is this short. */
 const text = (page: Page) =>
@@ -39,19 +77,9 @@ test('writes, finds, fixes, switches, saves, and exports with no pointer', async
   page,
   browserName,
 }) => {
-  test.skip(browserName === 'webkit', "Safari's Tab skips buttons unless the reader turns that on");
   await removePickers(page);
-  await page.addInitScript(() => {
-    const seen: string[] = [];
-    (window as unknown as { pointerSeen: string[] }).pointerSeen = seen;
-    for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick']) {
-      window.addEventListener(type, () => seen.push(type), true);
-    }
-    // A key's click has no position; a pointer's has a count.
-    window.addEventListener('click', (e) => e.detail > 0 && seen.push('click'), true);
-  });
-  await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await watchPointer(page);
+  await open(page);
 
   // 1. A new screenplay, from its key, with the cursor in the editor.
   await page.keyboard.press('ControlOrMeta+Alt+n');
@@ -91,8 +119,13 @@ test('writes, finds, fixes, switches, saves, and exports with no pointer', async
   await run(page, 'Show Problems');
   const fix = problemsList(page).getByRole('button', { name: "Remove (CONT'D)" });
   await expect(fix).toBeVisible({ timeout: 2000 });
-  for (let i = 0; i < 12 && !(await fix.evaluate((el) => el === document.activeElement)); i++) {
-    await page.keyboard.press('Tab');
+  if (browserName === 'webkit') {
+    // Safari's Tab skips buttons; focus is put there instead, and the key does the rest.
+    await fix.focus();
+  } else {
+    for (let i = 0; i < 12 && !(await fix.evaluate((el) => el === document.activeElement)); i++) {
+      await page.keyboard.press('Tab');
+    }
   }
   await expect(fix).toBeFocused();
   await page.keyboard.press('Enter');
@@ -115,18 +148,22 @@ test('writes, finds, fixes, switches, saves, and exports with no pointer', async
   expect(source).toContain('INT. KITCHEN - DAY');
   expect(source).toContain('@MARGARET\n(quietly)\nIs anyone there?');
   expect(source).toContain('"template":"us-screenplay"');
+  expect(source).not.toContain("(CONT'D)");
+  expect(source).toContain('@MARGARET\nHello?');
 
   // 7. Export a PDF from the palette.
   const exported = page.waitForEvent('download');
   await run(page, 'Export as PDF');
   const pdf = await exported;
   expect(pdf.suggestedFilename()).toBe('Untitled.pdf');
-  expect((await readFile(await pdf.path())).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  const bytes = await readFile(await pdf.path());
+  expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  // A whole file: it ends as a PDF does, and holds the page (the title page is gone with Select All).
+  expect(bytes.subarray(-32).toString('latin1')).toContain('%%EOF');
+  expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
 
   // Nothing in all of that was a pointer.
-  expect(
-    await page.evaluate(() => (window as unknown as { pointerSeen: string[] }).pointerSeen),
-  ).toEqual([]);
+  await noPointer(page);
 });
 
 // The toolbar by Tab alone, from a fresh page: the order is the mark, Open, Save, Export, Focus, the
@@ -147,10 +184,17 @@ test.describe('the toolbar by Tab', () => {
     throw new Error(`Tab never reached ${name}`);
   }
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, isMobile }) => {
+    if (isMobile) return;
     await removePickers(page);
-    await page.goto('/');
-    await expect(editor(page)).toContainText('The Call');
+    await watchPointer(page);
+    await open(page);
+  });
+
+  test.afterEach(async ({ page, isMobile }, testInfo) => {
+    // The skipped tests (a phone has no keyboard) opened nothing to check.
+    if (isMobile || testInfo.status === 'skipped') return;
+    await noPointer(page);
   });
 
   test('chooses the template from the chip, and undoes it', async ({ page }) => {
@@ -184,7 +228,10 @@ test.describe('the toolbar by Tab', () => {
     await page.keyboard.press('Enter');
     const file = await exported;
     expect(file.suggestedFilename()).toBe('The Call.pdf');
-    expect((await readFile(await file.path())).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    const bytes = await readFile(await file.path());
+    expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    expect(bytes.subarray(-32).toString('latin1')).toContain('%%EOF');
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(3);
   });
 
   test('starts a new screenplay from the sample bar, with the cursor in the editor', async ({

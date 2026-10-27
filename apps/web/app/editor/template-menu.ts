@@ -29,12 +29,11 @@ export function useTemplateMenu(onPick: () => void) {
 
   const items = computed<DropdownMenuItem[]>(() =>
     DOCUMENT_TYPES.map((type) => {
-      const checked =
-        type.kind === 'markdown'
-          ? template.kind.value === 'markdown'
-          : template.kind.value === 'fountain' && type.id === template.id.value;
+      // While the template is unknown no item is checked: the chip says "(fallback)", and Screenplay is
+      // an ordinary choice that replaces the name Drafter doesn't have.
+      const checked = template.isCurrent(type);
       return {
-        label: checked && unknown.value !== undefined ? name.value : type.name,
+        label: type.name,
         type: 'checkbox' as const,
         checked,
         disabled: !template.canChooseType(type),
@@ -55,7 +54,9 @@ export function useTemplateMenu(onPick: () => void) {
             label: note.value,
             // Its width is the other items', so a long sentence wraps to the menu and does not widen it.
             class: 'w-0 min-w-full font-normal',
-            ui: { itemLabel: 'whitespace-normal overflow-visible text-clip' },
+            ui: {
+              itemLabel: 'whitespace-normal overflow-visible text-clip [overflow-wrap:anywhere]',
+            },
           },
         ]
       : [],

@@ -22,13 +22,29 @@ export function templateIdOf(doc: Doc): TemplateId {
   return isBuiltIn(id) ? id : DEFAULT_TEMPLATE;
 }
 
+/** The longest name of an unknown template that is shown; the rest is cut. */
+const NAME_LIMIT = 60;
+
+/** Control characters, and the ones that reorder or hide text (direction overrides, isolates, marks, joiners). */
+const UNSHOWN = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
+
 /**
- * The name `meta.template` asks for when Drafter doesn't have it, else undefined (technical design
- * §8.6). The script is shown as a screenplay then, and the chip and the menus say so.
+ * The template `meta.template` asks for when Drafter doesn't have it, as text that is safe to show,
+ * else undefined (technical design §8.6). The script is shown as a screenplay then, and the chip and
+ * the menus say so. The value is whatever JSON the file held: a string, or a number, a list, or an
+ * object (shown as its JSON), all of which are templates Drafter doesn't have; only a missing value,
+ * `null`, and an empty string mean no template. The name is the writer's own file's, so it is shown
+ * without control characters or direction overrides (which could make the sentence read backward), and
+ * is cut to 60 characters with "…".
  */
 export function unknownTemplateOf(doc: Doc): string | undefined {
-  const id = doc.meta?.template;
-  return typeof id === 'string' && id !== '' && !isBuiltIn(id) ? id : undefined;
+  const id: unknown = doc.meta?.template;
+  if (id === undefined || id === null || id === '' || isBuiltIn(id)) return undefined;
+  const raw = typeof id === 'string' ? id : (JSON.stringify(id) ?? String(id));
+  const shown = raw.replace(UNSHOWN, '');
+  if (shown === '') return '(unprintable)';
+  const chars = Array.from(shown);
+  return chars.length > NAME_LIMIT ? `${chars.slice(0, NAME_LIMIT).join('')}…` : shown;
 }
 
 /** What the template menus say about an unknown template, with its name in curly quotes. */

@@ -66,6 +66,29 @@ describe('an unknown template', () => {
     expect(unknownTemplateOf(withMeta('{"v":1,"template":"toString"}'))).toBe('toString');
   });
 
+  test('is any template value that is not a name Drafter has: a number, a list, an object', () => {
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":5}'))).toBe('5');
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":["a"]}'))).toBe('["a"]');
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":{"x":1}}'))).toBe('{"x":1}');
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":true}'))).toBe('true');
+    // null is no template at all.
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":null}'))).toBeUndefined();
+  });
+
+  test('is shown without control or direction-changing characters, and cut to 60', () => {
+    const shown = unknownTemplateOf(
+      withMeta('{"v":1,"template":"a\\u202Eb\\u0007c\\u2066d\\u200Fe\\nf"}'),
+    );
+    expect(shown).toBe('abcdef');
+    const long = 'x'.repeat(300);
+    const cut = unknownTemplateOf(withMeta(`{"v":1,"template":"${long}"}`));
+    expect(cut).toBe(`${'x'.repeat(60)}…`);
+    // A name of nothing but such characters still says something.
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":"\\u202E\\u0007"}'))).toBe(
+      '(unprintable)',
+    );
+  });
+
   test('is not there for a built-in, no template, or an empty name', () => {
     expect(unknownTemplateOf(withMeta('{"v":1,"template":"us-screenplay"}'))).toBeUndefined();
     expect(unknownTemplateOf(withMeta('{"v":1,"template":"stage-play-standard"}'))).toBeUndefined();
