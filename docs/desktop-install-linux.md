@@ -17,9 +17,11 @@ It adds Drafter to your applications (under Office), registers `.fountain` and `
 ## Any other distribution: the AppImage
 
 ```sh
-chmod +x Drafter-<version>-linux-x86_64.AppImage
-./Drafter-<version>-linux-x86_64.AppImage
+chmod +x Drafter-x86_64.AppImage
+./Drafter-x86_64.AppImage
 ```
+
+The AppImage has the same name, `Drafter-x86_64.AppImage`, in every release, so an update replaces the file where it is (see Updating, below).
 
 An AppImage needs FUSE 2 (`libfuse2`; on Ubuntu 24.04 the package is `libfuse2t64`). If it won't start, install that.
 
@@ -35,18 +37,18 @@ The AppImage's launcher turns the sandbox off when your system doesn't let it ma
    abi <abi/4.0>,
    include <tunables/global>
 
-   profile drafter-appimage /home/you/Applications/Drafter-<version>-linux-x86_64.AppImage flags=(default_allow) {
+   profile drafter-appimage /home/you/Applications/Drafter-x86_64.AppImage flags=(default_allow) {
      userns,
    }
    EOF
    sudo apparmor_parser -r /etc/apparmor.d/drafter-appimage
    ```
 
-   Then start Drafter again: it runs with the sandbox. The profile names one file, so change it if you move the AppImage, and for each new version you download. (Drafter's own tests check this on Ubuntu 24.04 with the restriction on.)
+   Then start Drafter again: it runs with the sandbox. The profile names one file, so change it if you move or rename the AppImage. Drafter's own updates replace the file at the same path, so the profile keeps working after them. (Drafter's own tests check this on Ubuntu 24.04 with the restriction on.)
 3. **Continue without the sandbox**, knowingly: choose **Continue without the sandbox**. Drafter remembers your answer in a file in its settings folder (`~/.config/Drafter/sandbox-continue-…`; the question names the file) and doesn't ask again for the same reason; delete the file to be asked again. To start without being asked at all, set `DRAFTER_ALLOW_NO_SANDBOX=1`:
 
    ```sh
-   DRAFTER_ALLOW_NO_SANDBOX=1 ./Drafter-<version>-linux-x86_64.AppImage
+   DRAFTER_ALLOW_NO_SANDBOX=1 ./Drafter-x86_64.AppImage
    ```
 
    A page that got past Drafter's other protections could then reach your files. Drafter's own pages come from the app itself and make no network requests of their own, so the risk is small, but it is a risk the first two choices don't take.
@@ -55,4 +57,10 @@ Turning the restriction off for the whole system (`kernel.apparmor_restrict_unpr
 
 ## Updating
 
-Updates arrive with the next release. For now, install the newer file from the releases page when a new version is published.
+A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**. Restart asks about unsaved changes first, then replaces the AppImage in place (the same file at the same path, so a launcher, an AppImage tool's menu entry, or the AppArmor profile above still points at it) and starts the new version. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all.
+
+If an AppImage update fails partway through replacing the file (the disk fills, the power goes), the AppImage may be missing or won't start: download `Drafter-x86_64.AppImage` from the [latest release](https://github.com/cschweda/drafter/releases/latest) again and put it where the old one was. Your scripts are files of their own and aren't affected, and Drafter's settings and recovery copy are in `~/.config/Drafter`.
+
+## Saving replaces the file
+
+Drafter writes each save in full to a new file next to yours and then puts it in your file's place, so a crash or a full disk can't leave a script half written. Because the saved script is a new file, a hard link to the old one keeps the old text, and the file's owner and group become yours (its permissions are kept).

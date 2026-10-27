@@ -311,7 +311,7 @@ Get it from the [latest release](https://github.com/cschweda/drafter/releases/la
 | Package | Use it on | File |
 |---|---|---|
 | `.deb` | Ubuntu, Debian, Linux Mint, Pop!_OS, and other Debian-based systems. **The one to use on Ubuntu 24.04 and later.** | `Drafter-<version>-linux-amd64.deb` |
-| AppImage | Any other distribution (Fedora, Arch, openSUSE, and so on). Nothing to install; it runs from where you put it. | `Drafter-<version>-linux-x86_64.AppImage` |
+| AppImage | Any other distribution (Fedora, Arch, openSUSE, and so on). Nothing to install; it runs from where you put it. | `Drafter-x86_64.AppImage` (the same name for every version, so an update replaces it in place) |
 
 ### Install and start the `.deb`
 
@@ -331,9 +331,9 @@ To remove it: `sudo apt remove drafterdev`. Your scripts are files you saved and
 ### Install and start the AppImage
 
 ```sh
-chmod +x Drafter-<version>-linux-x86_64.AppImage
-./Drafter-<version>-linux-x86_64.AppImage
-./Drafter-<version>-linux-x86_64.AppImage "My Script.fountain"   # with a script open
+chmod +x Drafter-x86_64.AppImage
+./Drafter-x86_64.AppImage
+./Drafter-x86_64.AppImage "My Script.fountain"   # with a script open
 ```
 
 An AppImage needs FUSE 2: install `libfuse2` if it won't start (on Ubuntu 24.04 the package is `libfuse2t64`). It doesn't add itself to your applications menu or file types, so double-clicking a script won't open it in Drafter until a tool such as Gear Lever or AppImageLauncher adds it; from a terminal, name the script as above. To remove it, delete the file.
@@ -342,7 +342,7 @@ On Ubuntu 24.04 and later, the AppImage can't use Chromium's sandbox (a system s
 
 ### Updates
 
-A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**; Restart asks about unsaved changes first, then replaces the AppImage in place. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all.
+A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**; Restart asks about unsaved changes first, then replaces the AppImage in place (same file, same name, so a launcher or an AppArmor profile for it still works) and starts the new version. If that replacement fails partway (the disk fills, the power goes), download the AppImage from the release page again; your scripts are files of their own and aren't affected. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all.
 
 ### Web and desktop: what's different
 
