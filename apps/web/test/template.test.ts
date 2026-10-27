@@ -1,6 +1,13 @@
 import { parse } from '@drafter/fountain';
 import { describe, expect, test } from 'vitest';
-import { DOCUMENT_TYPES, TEMPLATE_NAMES, templateIdOf } from '../app/editor/template';
+import {
+  DOCUMENT_TYPES,
+  TEMPLATE_NAMES,
+  templateIdOf,
+  typeNameOf,
+  unknownTemplateNote,
+  unknownTemplateOf,
+} from '../app/editor/template';
 
 const withMeta = (json: string) => parse(`INT. HALL - DAY\n\nHello.\n\n/* drafter\n${json}\n*/\n`);
 
@@ -50,5 +57,30 @@ describe('DOCUMENT_TYPES', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect([...ids].sort()).toEqual(Object.keys(TEMPLATE_NAMES).sort());
     for (const t of fountain) expect(t.name).toBe(TEMPLATE_NAMES[t.id]);
+  });
+});
+
+describe('an unknown template', () => {
+  test('is named when the metadata asks for one Drafter does not have', () => {
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":"my-own"}'))).toBe('my-own');
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":"toString"}'))).toBe('toString');
+  });
+
+  test('is not there for a built-in, no template, or an empty name', () => {
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":"us-screenplay"}'))).toBeUndefined();
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":"stage-play-standard"}'))).toBeUndefined();
+    expect(unknownTemplateOf(withMeta('{"v":1}'))).toBeUndefined();
+    expect(unknownTemplateOf(withMeta('{"v":1,"template":""}'))).toBeUndefined();
+    expect(unknownTemplateOf(parse('INT. HALL - DAY\n'))).toBeUndefined();
+  });
+
+  test('is said in the chip’s name and the menu’s note', () => {
+    expect(typeNameOf('fountain', 'us-screenplay', true)).toBe('Screenplay (fallback)');
+    expect(typeNameOf('fountain', 'us-screenplay')).toBe('Screenplay');
+    // A Markdown document has no template to fall back from.
+    expect(typeNameOf('markdown', 'us-screenplay', true)).toBe('Markdown (plain text)');
+    expect(unknownTemplateNote('my-own')).toBe(
+      "This script asks for “my-own”, which Drafter doesn't have, so it's shown as a screenplay.",
+    );
   });
 });

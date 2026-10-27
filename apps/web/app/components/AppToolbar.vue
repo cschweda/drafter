@@ -2,15 +2,13 @@
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
 import { useEditor } from '~/editor/session';
-import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
-import { useTemplate } from '~/editor/use-template';
+import { useTemplateMenu } from '~/editor/template-menu';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 
 const colorMode = useColorMode();
 const focus = useFocusMode();
 const { readOnly } = useGuard();
-const template = useTemplate();
 const editor = useEditor();
 // A choice puts focus in the editor, where Mod+Z undoes it; Escape, or leaving the menu, returns it to the chip as usual.
 let chosen = false;
@@ -20,30 +18,24 @@ function onCloseAutoFocus(event: Event) {
   event.preventDefault();
   editor.goto(editor.view.state.selection.main.head);
 }
-const templateName = computed(() => typeNameOf(template.kind.value, template.id.value));
-// A Markdown document has no template: its chip names the document, and the label says so.
+// The chip's name is the script's template ("Screenplay (fallback)" for one Drafter doesn't have); a
+// Markdown document has no template, so its chip names the document, and the label says so.
+const {
+  template,
+  name: templateName,
+  noteItems,
+  items: typeItems,
+} = useTemplateMenu(() => {
+  chosen = true;
+});
 const chipLabel = computed(() =>
   template.kind.value === 'markdown'
     ? `Document: ${templateName.value}`
     : `Template: ${templateName.value}`,
 );
-// The chip's menu: one checked item for the template (or the Markdown document) the script is, in
-// `DOCUMENT_TYPES` order. A tab that only shows the script, or a script with an unclosed `/*`, can't
-// be switched to a template; Markdown asks first.
+// The chip's menu: the note about an unknown template (if any), then the one list the app menu shows too.
 const templateItems = computed(() =>
-  DOCUMENT_TYPES.map((type) => ({
-    label: type.name,
-    type: 'checkbox' as const,
-    checked:
-      type.kind === 'markdown'
-        ? template.kind.value === 'markdown'
-        : template.kind.value === 'fountain' && type.id === template.id.value,
-    disabled: !template.canChooseType(type),
-    onSelect: () => {
-      chosen = true;
-      void template.chooseType(type);
-    },
-  })),
+  noteItems.value.length > 0 ? [noteItems.value, typeItems.value] : typeItems.value,
 );
 const paletteKeys = formatKeys('Mod-k', isApple());
 const dark = computed(() => colorMode.value !== 'light');

@@ -5,6 +5,7 @@ import { type Command, useCommands } from '~/commands/registry';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
+import { useTemplateMenu } from '~/editor/template-menu';
 import { useGuard } from '~/storage/guard';
 import { kindOf, type Project } from '~/storage/projects';
 import { revertNotice } from '~/storage/save';
@@ -48,6 +49,25 @@ function entry(id: string, icon: string, shows = false): DropdownMenuItem[] {
     },
   ];
 }
+
+// The Template section: the toolbar's icon row has no room for the template chip below 1024px, so a
+// phone chooses the template here (the palette's Template: commands reach the same list). It is
+// the chip's own list, built once (`useTemplateMenu`), so the two agree on what is checked, what is
+// off, and what a template Drafter doesn't have is called. The editor gets focus after a choice.
+const {
+  template,
+  name: templateName,
+  noteItems: templateNote,
+  items: templateItems,
+} = useTemplateMenu(() => choose(true));
+const templateSection = computed<DropdownMenuItem[]>(() => [
+  {
+    type: 'label',
+    label: `${template.kind.value === 'markdown' ? 'Document' : 'Template'}: ${templateName.value}`,
+  },
+  ...templateNote.value,
+  ...templateItems.value,
+]);
 
 // A script that is not open can be switched to while nothing else is switching.
 const canSwitch = computed(() => !!script.project.value && !script.busy.value && !taking.value);
@@ -97,6 +117,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
     ...entry('open', 'i-lucide-folder-open'),
   ],
+  templateSection.value,
   [{ type: 'label', label: 'Recent scripts' }, ...recentItems.value],
   [
     { type: 'label', label: 'Samples' },

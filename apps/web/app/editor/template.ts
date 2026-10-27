@@ -23,6 +23,20 @@ export function templateIdOf(doc: Doc): TemplateId {
 }
 
 /**
+ * The name `meta.template` asks for when Drafter doesn't have it, else undefined (technical design
+ * §8.6). The script is shown as a screenplay then, and the chip and the menus say so.
+ */
+export function unknownTemplateOf(doc: Doc): string | undefined {
+  const id = doc.meta?.template;
+  return typeof id === 'string' && id !== '' && !isBuiltIn(id) ? id : undefined;
+}
+
+/** What the template menus say about an unknown template, with its name in curly quotes. */
+export function unknownTemplateNote(name: string): string {
+  return `This script asks for “${name}”, which Drafter doesn't have, so it's shown as a screenplay.`;
+}
+
+/**
  * One kind of document the writer can make or switch to. A Fountain entry is a template, chosen
  * through the metadata block. The Markdown entry is not a template: choosing it changes the
  * project's kind (`Project.kind`), so `kind` is the discriminator.
@@ -60,9 +74,13 @@ export type NewKind = DocumentType['newKind'];
 /** The chip's name for a Markdown document. */
 export const MARKDOWN_NAME = 'Markdown (plain text)';
 
-/** The name of the document type a script is: Markdown, else its template's. */
-export function typeNameOf(kind: DocumentKind, template: TemplateId): string {
-  return kind === 'markdown' ? MARKDOWN_NAME : TEMPLATE_NAMES[template];
+/**
+ * The name of the document type a script is: Markdown, else its template's. `fallback` is for a
+ * script whose template Drafter doesn't have (`unknownTemplateOf`): "Screenplay (fallback)".
+ */
+export function typeNameOf(kind: DocumentKind, template: TemplateId, fallback = false): string {
+  if (kind === 'markdown') return MARKDOWN_NAME;
+  return fallback ? `${TEMPLATE_NAMES[template]} (fallback)` : TEMPLATE_NAMES[template];
 }
 
 /**
