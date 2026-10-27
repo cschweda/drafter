@@ -34,6 +34,7 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
         platform: bridge?.platform,
         // Named calls only (Task 2's files): no ipcRenderer, nothing else.
         files: Object.keys(bridge?.files ?? {}).sort(),
+        modules: Object.keys(bridge?.modules ?? {}).sort(),
         keys: Object.keys(bridge ?? {}).sort(),
       };
     }),
@@ -41,10 +42,13 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
     version: VERSION,
     platform: process.platform,
     files: ['pathOfDropped', 'read', 'realPath', 'showOpen', 'showSave', 'watch', 'write'],
+    // The modules folder: its list, and the origins agreed to for a module. Nothing more.
+    modules: ['list', 'setNetwork'],
     keys: [
       'backToEditor',
       'files',
       'menu',
+      'modules',
       'onCloseRequest',
       'onOpenFile',
       'platform',
