@@ -1,0 +1,6 @@
+{
+  "id": "tidy",
+  "name": "Tidy",
+  "description": "Finds spaces and tabs at the ends of lines, and removes them when you ask.",
+  "permissions": {}
+}
