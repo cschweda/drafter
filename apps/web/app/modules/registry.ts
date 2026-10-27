@@ -2,6 +2,7 @@ import { computed, type Ref, ref, shallowRef } from 'vue';
 import { db } from '../storage/db';
 import { say } from '../storage/say';
 import { fixture } from './fixture';
+import { folderModules, folderOf, folderProblems } from './folder';
 import type { ScriptModule } from './types';
 
 // The modules this build has, which are on, and what a module's failure looks like. Nothing here
@@ -120,6 +121,58 @@ export const MODULES: readonly ScriptModule[] = collectModules({
     : {}),
 });
 
+/** The ids of the modules built into this copy of Drafter. */
+const BUILT_IN = new Set(MODULES.map((m) => m.id));
+
+/**
+ * Every module: the built-in ones, then (in the desktop app) those from the modules folder. A
+ * folder module with a built-in module's id is left out (`folderModuleProblems` says so): the two
+ * would share a storage prefix, a tab id, and a switch.
+ */
+export const allModules = computed<readonly ScriptModule[]>(() => [
+  ...MODULES,
+  ...folderModules.value.filter((m) => !BUILT_IN.has(m.id)),
+]);
+
+/** Whether `id` is a module from the desktop app's modules folder. */
+export function isFolderModule(id: string): boolean {
+  return !BUILT_IN.has(id) && folderModules.value.some((m) => m.id === id);
+}
+
+/** Why each folder the desktop app found isn't among the modules, one sentence each. */
+export const folderModuleProblems = computed<readonly string[]>(() => [
+  ...folderProblems.value,
+  ...folderModules.value
+    .filter((m) => BUILT_IN.has(m.id))
+    .map(
+      (m) =>
+        `Drafter skipped the folder “${folderOf(m.id) ?? m.id}”: a module built into Drafter has the id “${m.id}”.`,
+    ),
+]);
+
+/**
+ * What the host must do to match `enabled`: turn modules on, turn them off, and refresh one that is
+ * on whose object changed (a folder module whose parts arrived once its frame loaded: its commands
+ * are registered again). `on` holds the module objects the host turned on, by id.
+ */
+export function modulesToChange(
+  modules: readonly ScriptModule[],
+  enabled: readonly string[],
+  on: ReadonlyMap<string, ScriptModule>,
+): { turnOn: ScriptModule[]; turnOff: ScriptModule[]; refresh: ScriptModule[] } {
+  const turnOn: ScriptModule[] = [];
+  const turnOff: ScriptModule[] = [];
+  const refresh: ScriptModule[] = [];
+  for (const module of modules) {
+    const wanted = enabled.includes(module.id);
+    const current = on.get(module.id);
+    if (wanted && !current) turnOn.push(module);
+    else if (!wanted && current) turnOff.push(current);
+    else if (wanted && current && current !== module) refresh.push(module);
+  }
+  return { turnOn, turnOff, refresh };
+}
+
 // ---- Toasts -------------------------------------------------------------------------------
 
 /** What a module said with `notify`: a toast, and a live region. Empty after a few seconds. */
@@ -193,7 +246,8 @@ export function consentedIds(
     .map((entry) => entry.id);
 }
 
-const declaredOrigins = (id: string) => MODULES.find((m) => m.id === id)?.permissions.network;
+const declaredOrigins = (id: string) =>
+  allModules.value.find((m) => m.id === id)?.permissions.network;
 
 const enabledIds = computed(() => consentedIds(stored.value, declaredOrigins));
 /** Modules the writer turned on whose origins have grown since: off until they agree again. */
@@ -241,7 +295,8 @@ export async function setEnabled(id: string, on: boolean): Promise<void> {
 }
 
 export function useModules(): {
-  modules: readonly ScriptModule[];
+  /** Every module, built-in and (in the desktop app) from the modules folder. */
+  modules: Readonly<Ref<readonly ScriptModule[]>>;
   enabled: Readonly<Ref<readonly string[]>>;
   /** On in the table, but off now: the module asks for network access the writer hasn't agreed to. */
   lapsed: Readonly<Ref<readonly string[]>>;
@@ -250,7 +305,7 @@ export function useModules(): {
   ready: Promise<void>;
 } {
   return {
-    modules: MODULES,
+    modules: allModules,
     enabled: enabledIds,
     lapsed: lapsedIds,
     setEnabled,

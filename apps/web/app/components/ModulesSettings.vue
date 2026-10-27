@@ -1,12 +1,28 @@
 <script setup lang="ts">
+import { desktop } from '~/desktop';
 import { contextFor, contextGeneration } from '~/modules/context';
-import { consentMessage, networkNotice, useModules } from '~/modules/registry';
+import { folderFailures } from '~/modules/folder';
+import {
+  consentMessage,
+  folderModuleProblems,
+  isFolderModule,
+  networkNotice,
+  useModules,
+} from '~/modules/registry';
 import type { ScriptModule } from '~/modules/types';
 
 // Settings → Modules (Phase 1 design §5.8): every module built into this copy of Drafter, with
 // what it is, what it may do, and a switch. All are off until turned on, and the choice is kept.
 // A module that uses the network asks first, in plain words; without a yes it stays off.
+// In the desktop app, the modules from its modules folder follow, under a warning of their own.
 const { modules, enabled, lapsed, setEnabled } = useModules();
+/** The desktop app, which has a modules folder; drafter.dev has none. */
+const hasFolder = desktop() !== null;
+/** Where the folder's modules start in the list (they come after the built-in ones), or -1. */
+/** Why a folder module that is on couldn't start, and what the desktop app skipped. */
+const failures = computed(() => folderFailures.value);
+const skipped = computed(() => folderModuleProblems.value);
+const firstFolder = computed(() => modules.value.findIndex((m) => isFolderModule(m.id)));
 
 const asking = ref<{ module: ScriptModule; question: string } | null>(null);
 const dialog = ref<HTMLDialogElement>();
@@ -57,7 +73,20 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
   <section v-if="modules.length > 0" class="modules" aria-labelledby="modules-title">
     <h3 id="modules-title">Modules</h3>
     <p class="intro">Optional features built into Drafter. Each is off until you turn it on.</p>
-    <div v-for="module in modules" :key="module.id" class="module" :data-module="module.id">
+    <template v-for="(module, i) in modules" :key="module.id">
+    <div v-if="i === firstFolder" class="folder-intro">
+      <h4 id="modules-folder-title">From your modules folder</h4>
+      <p class="intro">
+        Modules you add to Drafter’s modules folder (Help → Open Modules Folder). Restart Drafter
+        after adding one.
+      </p>
+      <p class="warning" data-folder-warning>
+        A module from this folder is code that Drafter didn’t write and hasn’t checked. It runs on
+        its own, with only its own permissions, apart from Drafter and your files, but while it is on
+        it can read the open script and change it. Turn one on only if you trust where it came from.
+      </p>
+    </div>
+    <div class="module" :data-module="module.id">
       <div class="row">
         <UIcon :name="module.icon" class="icon" />
         <div class="text">
@@ -67,6 +96,9 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
             {{ networkNotice(module) ?? 'It needs no network: your script stays on this device.' }}
             <template v-if="lapsed.includes(module.id)">
               It now asks for network access you haven’t agreed to, so it is off until you turn it on again.
+            </template>
+            <template v-if="isOn(module) && failures.get(module.id)">
+              It couldn’t start: {{ failures.get(module.id) }}.
             </template>
           </p>
         </div>
@@ -90,6 +122,17 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
         <component :is="module.settings" :context="contextFor(module)" />
       </ModuleBoundary>
     </div>
+    </template>
+    <div v-if="hasFolder && firstFolder === -1" class="folder-intro">
+      <h4 id="modules-folder-title">From your modules folder</h4>
+      <p class="intro">
+        There are no modules in Drafter’s modules folder. Help → Open Modules Folder shows it; restart
+        Drafter after adding one.
+      </p>
+    </div>
+    <ul v-if="hasFolder && skipped.length > 0" class="skipped" data-folder-problems>
+      <li v-for="problem in skipped" :key="problem">{{ problem }}</li>
+    </ul>
     <dialog
       ref="dialog"
       class="confirm"
@@ -125,6 +168,27 @@ h3 {
 }
 .module {
   padding: 8px 0;
+}
+.folder-intro {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+h4 {
+  margin: 0;
+  font-size: 13px;
+}
+.warning {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--heading);
+  line-height: 1.4;
+}
+.skipped {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 .row {
   display: flex;
