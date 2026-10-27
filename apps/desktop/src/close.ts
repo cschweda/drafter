@@ -97,6 +97,12 @@ export interface Closing {
   attach(window: BrowserWindow): void;
   /** The last window is gone: the app quits without asking again (there is no page to ask). */
   quitNow(): void;
+  /**
+   * Approves the next quit (an update's restart: the page already asked) until the returned
+   * function is called. Only a quit that really starts while approved is let through for good; if
+   * it never starts, taking the approval back leaves closing and quitting asking as before.
+   */
+  allowQuit(): () => void;
 }
 
 /**
@@ -110,6 +116,8 @@ export function setUpClosing(editor: () => BrowserWindow | null): Closing {
   const approved = new WeakSet<BrowserWindow>();
   /** Quitting was agreed to, or the session is ending. */
   let leaving = false;
+  /** An update's restart was chosen: the quit it starts needs no question. */
+  let quitApproved = false;
 
   const editorContents = () => {
     const window = editor();
@@ -234,6 +242,11 @@ export function setUpClosing(editor: () => BrowserWindow | null): Closing {
   // Quit from the menu, Ctrl+Q, a dock or launcher: ask first.
   app.on('before-quit', (event) => {
     if (leaving) return;
+    if (quitApproved) {
+      // The quit is really starting: from here the windows may close without asking.
+      leaving = true;
+      return;
+    }
     event.preventDefault();
     void request('quit');
   });
@@ -279,6 +292,12 @@ export function setUpClosing(editor: () => BrowserWindow | null): Closing {
     },
     quitNow() {
       leaving = true;
+    },
+    allowQuit() {
+      quitApproved = true;
+      return () => {
+        quitApproved = false;
+      };
     },
   };
 }

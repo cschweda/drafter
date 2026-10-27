@@ -1,12 +1,25 @@
 // Updates, the Electron half (updates.ts holds the rules). The updater runs here in the main
 // process, so the network backstop (network.ts), which cancels only requests a page made, leaves
 // it alone. Only the editor's page may speak to it.
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, type BrowserWindow, ipcMain } from 'electron';
 import { CHANNELS } from './channels';
 import { CHECK_DELAY_MS, type UpdaterLike, Updates, updateMode, validFeed } from './updates';
 import { fromEditor, openExternal } from './window';
+
+/** electron-updater's own CancellationToken, loaded with it (a transitive dependency isn't imported directly). */
+let CancellationToken: new () => { cancel(): void } = class {
+  cancel() {}
+};
+
+function isFile(path: string | undefined): boolean {
+  try {
+    return Boolean(path) && statSync(path as string).isFile();
+  } catch {
+    return false;
+  }
+}
 
 /** Unpackaged only (the e2e suite): the fake release server, the wait, and what replaces installing. */
 function hooks() {
@@ -33,13 +46,16 @@ export interface UpdatesMain {
  */
 export function setUpUpdates(
   editor: () => BrowserWindow | null,
-  beforeInstall: () => void,
+  approveQuit: () => () => void,
 ): UpdatesMain {
   const hook = hooks();
   const mode = updateMode({
     isPackaged: app.isPackaged,
     platform: process.platform,
     appImage: process.env.APPIMAGE,
+    appImageIsFile: isFile(process.env.APPIMAGE),
+    appDir: process.env.APPDIR,
+    execPath: process.execPath,
     feed: hook.feed ?? undefined,
   });
   const contents = () => {
@@ -52,8 +68,10 @@ export function setUpUpdates(
   const updates = new Updates({
     mode,
     delayMs: hook.delay,
+    newCancellation: () => new CancellationToken(),
     async createUpdater() {
-      const { AppImageUpdater } = await import('electron-updater');
+      const { AppImageUpdater, CancellationToken: Token } = await import('electron-updater');
+      CancellationToken = Token;
       const updater = new AppImageUpdater();
       if (hook.feed) {
         // The test feed: a plain server, whole downloads (the old file is a fake).
@@ -72,8 +90,18 @@ export function setUpUpdates(
         // downloads (autoDownload stays off), so it only needs to be let through.
         updater.forceDevUpdateConfig = true;
       }
-      // The e2e suite never replaces a file: `beforeInstall` below records and quits instead.
-      if (hook.install) updater.quitAndInstall = () => {};
+      // The e2e suite never replaces a file: it records the install and quits (or fails) instead.
+      if (hook.install) {
+        const log = hook.install;
+        updater.quitAndInstall = () => {
+          appendFileSync(log, 'install\n');
+          if (process.env.DRAFTER_E2E_UPDATE_INSTALL_FAILS === '1') {
+            updater.emit('error', new Error('EACCES: the AppImage is in a read-only folder'));
+            return;
+          }
+          setImmediate(() => app.quit());
+        };
+      }
       updater.logger = console;
       return updater as unknown as UpdaterLike;
     },
@@ -82,14 +110,7 @@ export function setUpUpdates(
       if (page && !page.isDestroyed()) page.send(CHANNELS.updateOffer, offer.version, offer.how);
     },
     openExternal,
-    beforeInstall() {
-      beforeInstall();
-      if (hook.install) {
-        // The e2e suite: say it, and quit the way quitAndInstall does, without installing.
-        appendFileSync(hook.install, 'install\n');
-        setImmediate(() => app.quit());
-      }
-    },
+    approveQuit,
     log: (message) => console.warn(message),
   });
 
@@ -111,9 +132,10 @@ export function setUpUpdates(
     if (!fromEditor(event, contents())) return;
     updates.openReleasePage();
   });
-  ipcMain.handle(CHANNELS.updateInstall, (event) => {
+  ipcMain.handle(CHANNELS.updateInstall, async (event) => {
     if (!fromEditor(event, contents())) throw new Error('not allowed');
-    if (!updates.install()) throw new Error('nothing to install');
+    const result = await updates.install();
+    throw new Error(result === 'nothing' ? 'nothing to install' : 'install-failed');
   });
 
   return { start: () => updates.start(), mode };

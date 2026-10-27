@@ -5,11 +5,12 @@ import {
   actionLabel,
   anywayLabel,
   DOWNLOADING_MESSAGE,
+  INSTALL_FAILED,
   offerText,
   unsavedMessage,
 } from '~/update/flow';
 import { clear, later, useUpdateFlow } from '~/update/prompt';
-import { applyUpdate, needRefresh, updateKind } from '~/update/state';
+import { applyUpdate, installError, needRefresh, updateKind } from '~/update/state';
 
 // "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload (Restart on the desktop app, Get it for a .deb), shown when the
 // service worker has a newer version waiting. It never reloads by itself. With changes that aren't
@@ -42,6 +43,8 @@ function choose() {
 
 function putOff() {
   later.value = true;
+  installError.value = false;
+  flow.cancel();
 }
 
 const shown = computed(() => needRefresh.value && clear.value && !later.value);
@@ -78,7 +81,15 @@ function onKeydown(event: KeyboardEvent) {
         data-update
         @keydown="onKeydown"
       >
-        <template v-if="flow.stage.value === 'toast' || flow.stage.value === 'downloading'">
+        <template v-if="installError">
+          <p>{{ INSTALL_FAILED }}</p>
+          <div class="actions">
+            <button ref="reloadButton" type="button" class="action quiet" @click="putOff">
+              Later
+            </button>
+          </div>
+        </template>
+        <template v-else-if="flow.stage.value === 'toast' || flow.stage.value === 'downloading'">
           <p>{{ flow.stage.value === 'downloading' ? DOWNLOADING_MESSAGE : offerText(updateKind) }}</p>
           <div class="actions">
             <button ref="reloadButton" type="button" class="action" @click="choose">

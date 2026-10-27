@@ -235,8 +235,9 @@ function start() {
     closing = setUpClosing(() => main);
     const updates = setUpUpdates(
       () => main,
-      // Restart was chosen after the page asked about unsaved changes: don't ask again.
-      () => closing?.quitNow(),
+      // Restart was chosen after the page asked about unsaved changes: the quit it starts needs no
+      // second question, but only that quit (an install that fails leaves closing as it was).
+      () => closing?.allowQuit() ?? (() => {}),
     );
     started = true;
     const window = openMain();

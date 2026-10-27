@@ -2,7 +2,7 @@ import { watch } from 'vue';
 import { desktop } from '~/desktop';
 import type { SettingsStore } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { availableVersion, needRefresh, setUpdater, updateKind } from './state';
+import { availableVersion, installError, needRefresh, setUpdater, updateKind } from './state';
 
 // The desktop app's source of updates, in place of the service worker (which the desktop build
 // doesn't have): the bridge says when a newer version is found, and what the writer chooses
@@ -26,7 +26,13 @@ export function installDesktopUpdates(settings: SettingsStore): () => void {
     }
     // The recovery copy is written before the app goes, whichever way the writer chose.
     await useScript().flush();
-    await updates.install();
+    // When it works the app quits and this never returns; when it doesn't (the AppImage is in a
+    // folder that can't be written, say) the toast says so and the app goes on as it was.
+    try {
+      await updates.install();
+    } catch {
+      installError.value = true;
+    }
   });
 
   const stopOffers = updates.onAvailable((version, how) => {

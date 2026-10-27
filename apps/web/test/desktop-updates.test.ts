@@ -10,18 +10,25 @@ import { installDesktopUpdates } from '../app/update/desktop-source';
 import {
   actionLabel,
   anywayLabel,
+  INSTALL_FAILED,
   offerText,
   UPDATE_AVAILABLE,
   UPDATE_READY,
   unsavedMessage,
 } from '../app/update/flow';
-import { applyUpdate, availableVersion, needRefresh, updateKind } from '../app/update/state';
+import {
+  applyUpdate,
+  availableVersion,
+  installError,
+  needRefresh,
+  updateKind,
+} from '../app/update/state';
 
 const flush = vi.fn(async () => {});
 vi.mock('../app/storage/script', () => ({ useScript: () => ({ flush }) }));
 
 /** A bridge whose update calls are recorded; `offer` plays what the main process sends. */
-function bridge() {
+function bridge(options: { installFails?: boolean } = {}) {
   const calls: string[] = [];
   let offer: ((version: string, how: 'restart' | 'get') => void) | undefined;
   let stops = 0;
@@ -36,6 +43,7 @@ function bridge() {
     },
     install: async () => {
       calls.push('install');
+      if (options.installFails) throw new Error('install-failed');
     },
     openReleasePage: () => {
       calls.push('open');
@@ -53,6 +61,7 @@ beforeEach(async () => {
   needRefresh.value = false;
   updateKind.value = 'reload';
   availableVersion.value = '';
+  installError.value = false;
   flush.mockClear();
   await Promise.all(db.tables.map((table) => table.clear()));
 });
@@ -148,6 +157,30 @@ describe('the desktop update source', () => {
     await applyUpdate();
     expect(b.calls).toContain('open');
     expect(b.calls.filter((c) => c === 'install')).toHaveLength(1);
+    stop();
+  });
+});
+
+describe('an install that fails', () => {
+  test('is said, not thrown, and the offer stays for Later', async () => {
+    const b = bridge({ installFails: true });
+    const stop = installDesktopUpdates(createSettings());
+    b.offer('0.9.0', 'restart');
+    await expect(applyUpdate({ anyway: true })).resolves.toBeUndefined();
+    expect(installError.value).toBe(true);
+    expect(needRefresh.value).toBe(true);
+    expect(INSTALL_FAILED).toBe(
+      'Drafter couldn’t install the update, and is still the version you have. Nothing was lost.',
+    );
+    stop();
+  });
+
+  test('a restart that works leaves no error', async () => {
+    const b = bridge();
+    const stop = installDesktopUpdates(createSettings());
+    b.offer('0.9.0', 'restart');
+    await applyUpdate();
+    expect(installError.value).toBe(false);
     stop();
   });
 });

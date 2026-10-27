@@ -18,6 +18,10 @@ export function actionLabel(kind: UpdateKind): string {
   return kind === 'restart' ? 'Restart' : kind === 'get' ? 'Get it' : 'Reload';
 }
 
+/** What the toast says when Restart didn't work. */
+export const INSTALL_FAILED =
+  'Drafter couldn’t install the update, and is still the version you have. Nothing was lost.';
+
 export const UNSAVED_MESSAGE =
   'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.';
 

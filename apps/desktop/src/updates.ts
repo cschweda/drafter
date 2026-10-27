@@ -12,28 +12,52 @@ export const RELEASES_URL = 'https://github.com/cschweda/drafter/releases/latest
 /** How long after the window is ready the one check waits. */
 export const CHECK_DELAY_MS = 5000;
 
+/** How long after quitAndInstall the app may keep running before the install counts as failed. */
+export const INSTALL_WAIT_MS = 3000;
+
 /** `appimage`: check, download, Restart. `deb`: check, Get it. `off`: no check. */
 export type UpdateMode = 'appimage' | 'deb' | 'off';
 
 export interface ModeInputs {
   isPackaged: boolean;
   platform: string;
-  /** `process.env.APPIMAGE`: set by an AppImage's launcher. */
+  /** `process.env.APPIMAGE`: the AppImage file, set by an AppImage's runtime. */
   appImage?: string;
+  /** Whether `appImage` names an existing regular file. */
+  appImageIsFile?: boolean;
+  /** `process.env.APPDIR`: where the AppImage's runtime mounted it. */
+  appDir?: string;
+  /** `process.execPath`: the running executable. */
+  execPath?: string;
   /** `DRAFTER_UPDATE_FEED`, honoured only when not packaged. */
   feed?: string;
 }
 
 /**
- * Which kind of install this is. A packaged Linux build is an AppImage when `APPIMAGE` is set and
- * a .deb when it isn't. Unpackaged (development, the e2e suite) there is no check unless the test
+ * Whether this process is really running from an AppImage. `APPIMAGE` alone isn't proof: it is
+ * inherited by anything started from an AppImage's terminal, and a .deb launched there would then
+ * overwrite that other file on Restart. The runtime also sets `APPDIR` (the mount) and runs the
+ * executable from inside it; `APPIMAGE` must name a file.
+ */
+export function runsFromAppImage(inputs: ModeInputs): boolean {
+  const { appImage, appDir, execPath } = inputs;
+  if (!appImage || !appDir || !execPath || inputs.appImageIsFile !== true) return false;
+  const root = appDir.endsWith('/') ? appDir : `${appDir}/`;
+  return execPath.startsWith(root);
+}
+
+/**
+ * Which kind of install this is. A packaged Linux build is an AppImage when it really runs from
+ * one (`runsFromAppImage`) and a .deb when it doesn't. Unpackaged (development, the e2e suite) there is no check unless the test
  * feed is set. Windows and macOS builds come later: no check there yet.
  */
 export function updateMode(inputs: ModeInputs): UpdateMode {
-  const appImage = Boolean(inputs.appImage);
-  if (!inputs.isPackaged) return inputs.feed ? (appImage ? 'appimage' : 'deb') : 'off';
+  // The test feed (unpackaged only) plays an AppImage by APPIMAGE alone.
+  if (!inputs.isPackaged) {
+    return inputs.feed ? (inputs.appImage ? 'appimage' : 'deb') : 'off';
+  }
   if (inputs.platform !== 'linux') return 'off';
-  return appImage ? 'appimage' : 'deb';
+  return runsFromAppImage(inputs) ? 'appimage' : 'deb';
 }
 
 /** The test feed if it is an http(s) URL, else null. */
@@ -64,6 +88,8 @@ export interface UpdaterLike {
   ): unknown;
   on(event: 'error', listener: (error: unknown) => void): unknown;
   checkForUpdates(): Promise<unknown>;
+  /** Downloads the version a check found (autoDownload stays off so the download can be cancelled). */
+  downloadUpdate(token?: unknown): Promise<unknown>;
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
 }
 
@@ -75,8 +101,14 @@ export interface UpdatesDeps {
   /** Sends the offer to the editor's page, if it is listening. */
   publish(offer: Offer): void;
   openExternal(url: string): void;
-  /** Called just before quitAndInstall, so the close flow doesn't ask again. */
-  beforeInstall(): void;
+  /**
+   * Lets the app quit without asking about unsaved changes (the page already asked), until the
+   * returned function is called. The approval is meant for one quit: it must end if the install
+   * fails and the app keeps running.
+   */
+  approveQuit(): () => void;
+  /** A token that cancels the download. */
+  newCancellation(): { cancel(): void };
   log(message: string): void;
 }
 
@@ -88,6 +120,9 @@ export class Updates {
   private downloaded = false;
   private updater: UpdaterLike | null = null;
   private listening = false;
+  private download: { cancel(): void } | null = null;
+  /** Set while an install is under way: an updater error then means it failed. */
+  private installFailed: ((message: string) => void) | null = null;
 
   constructor(private readonly deps: UpdatesDeps) {}
 
@@ -104,6 +139,11 @@ export class Updates {
   /** The page says whether Check for updates is on (when it has read the setting, and when it changes). */
   setEnabled(on: boolean): void {
     this.enabled = on === true;
+    // Turned off: a download under way stops, and nothing more is offered.
+    if (!this.enabled && this.download) {
+      this.download.cancel();
+      this.download = null;
+    }
     void this.maybeCheck();
   }
 
@@ -113,12 +153,36 @@ export class Updates {
     if (this.offer && this.enabled === true) this.deps.publish(this.offer);
   }
 
-  /** Restart: installs the downloaded update and restarts. False when there is nothing to install. */
-  install(): boolean {
-    if (this.deps.mode !== 'appimage' || !this.downloaded || !this.updater) return false;
-    this.deps.beforeInstall();
-    this.updater.quitAndInstall(false, true);
-    return true;
+  /**
+   * Restart: installs the downloaded update and restarts. `nothing`: there is nothing to install.
+   * `failed`: the updater said it couldn't, or the app is still running a few seconds after
+   * `quitAndInstall` (electron-updater reports a failed install as an error and does not quit);
+   * the quit approval is taken back, so closing with unsaved changes asks again. When it works the
+   * app quits, and this never settles.
+   */
+  async install(): Promise<'nothing' | 'failed'> {
+    if (this.deps.mode !== 'appimage' || !this.downloaded || !this.updater) return 'nothing';
+    if (this.installFailed) return 'failed';
+    const updater = this.updater;
+    const revoke = this.deps.approveQuit();
+    return new Promise((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const fail = (message: string) => {
+        clearTimeout(timer);
+        this.installFailed = null;
+        revoke();
+        this.deps.log(`update: install failed: ${message}`);
+        resolve('failed');
+      };
+      this.installFailed = fail;
+      timer = setTimeout(() => fail('the app did not quit'), INSTALL_WAIT_MS);
+      timer.unref?.();
+      try {
+        updater.quitAndInstall(false, true);
+      } catch (error) {
+        fail(errorText(error));
+      }
+    });
   }
 
   /** Get it: opens the release page, for a .deb that was offered an update. */
@@ -133,12 +197,22 @@ export class Updates {
       const updater = await this.deps.createUpdater();
       this.updater = updater;
       const appImage = this.deps.mode === 'appimage';
-      updater.autoDownload = appImage;
+      // Never automatic: a found version starts the download below, with a token that setEnabled(false) can cancel.
+      updater.autoDownload = false;
       updater.autoInstallOnAppQuit = false;
-      updater.on('error', (error) => this.deps.log(`update: ${errorText(error)}`));
+      updater.on('error', (error) => {
+        this.deps.log(`update: ${errorText(error)}`);
+        this.installFailed?.(errorText(error));
+      });
       updater.on('update-available', (info) => {
         if (appImage) {
           this.deps.log(`update: ${info.version} found, downloading`);
+          if (this.enabled !== true) return;
+          const token = this.deps.newCancellation();
+          this.download = token;
+          updater.downloadUpdate(token).catch((error) => {
+            this.deps.log(`update: ${errorText(error)}`);
+          });
           return;
         }
         this.make({ version: info.version, how: 'get' });

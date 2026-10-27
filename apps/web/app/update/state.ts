@@ -14,6 +14,8 @@ export const needRefresh = ref(false);
  */
 export type UpdateKind = 'reload' | 'restart' | 'get';
 export const updateKind = ref<UpdateKind>('reload');
+/** The desktop app tried to install the update and couldn't: the toast says so (and keeps Later). */
+export const installError = ref(false);
 /** The version the desktop app found (empty on the web). */
 export const availableVersion = ref('');
 

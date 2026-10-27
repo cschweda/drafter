@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import {
+  answerClose,
   closeAsked,
   editor,
   expect,
@@ -188,6 +189,41 @@ test('never restarts to update by itself', async ({ desktop, profile }) => {
   const again = await desktop();
   await expect(editor(again.page)).toContainText('INT. LIGHTHOUSE - NIGHT');
   expect((await stored(again.page)).some((p) => p.source.includes('INT. LIGHTHOUSE'))).toBe(true);
+});
+
+test('keeps asking about unsaved changes after an install that fails', async ({
+  desktop,
+  profile,
+}) => {
+  const f = await startFeed();
+  const launched = await desktop({
+    env: { ...env('appimage', profile, f.url), DRAFTER_E2E_UPDATE_INSTALL_FAILS: '1' },
+  });
+  const { page, app } = launched;
+  await chooseNewScreenplay(page);
+  await typeAtEnd(page, '\nINT. LIGHTHOUSE - NIGHT\n');
+  await button(page, 'Restart').click();
+  await button(page, 'Restart anyway').click();
+
+  // The updater said it could not install: the toast says so, the app goes on.
+  await expect(toast(page)).toContainText('Drafter couldn’t install the update');
+  expect(installs(profile)).toEqual(['install']);
+  await expect(editor(page)).toContainText('INT. LIGHTHOUSE - NIGHT');
+
+  // Closing the window still asks, because the quit approval was taken back.
+  answerClose(profile, ['cancel']);
+  await app.evaluate(({ BrowserWindow }) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.webContents.getURL() === 'app://drafter/') window.close();
+    }
+  });
+  await expect.poll(() => closeAsked(profile).length).toBe(1);
+  await settle(500);
+  await expect(editor(page)).toContainText('INT. LIGHTHOUSE - NIGHT');
+
+  // Later puts the message away.
+  await button(page, 'Later').click();
+  await expect(toast(page)).toBeHidden();
 });
 
 test('offers Get it for a .deb, which downloads nothing and installs nothing', async ({

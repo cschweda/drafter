@@ -79,6 +79,9 @@ export class CloseFlow {
   /** Where a request in progress is; `idle` when none is. */
   phase: 'idle' | 'asking' | 'saving' = 'idle';
   private waitingToQuit = false;
+  /** Ends the Save in progress with a verdict about the page (set while saving). */
+  private abortSave: ((result: 'unresponsive') => void) | null = null;
+  private probing = false;
 
   constructor(private readonly deps: CloseDeps) {}
 
@@ -94,6 +97,10 @@ export class CloseFlow {
   async decide(source: 'close' | 'quit'): Promise<'close' | 'stay'> {
     if (this.busy) {
       if (source === 'quit' && this.phase === 'saving') this.waitingToQuit = true;
+      // A close or quit while a Save is under way may be the writer's way of saying the window has
+      // hung (Chromium's own `unresponsive` event comes from input to the page, not from the
+      // title bar): ask the page, and if it doesn't answer, say so.
+      if (this.phase === 'saving') await this.probe();
       return 'stay';
     }
     this.phase = 'asking';
@@ -105,6 +112,20 @@ export class CloseFlow {
         this.waitingToQuit = false;
         setTimeout(() => this.deps.quit(), 0);
       }
+    }
+  }
+
+  /** Asks the page whether it is there, within the usual bound; no answer ends the Save as hung. */
+  private async probe(): Promise<void> {
+    if (this.probing) return;
+    this.probing = true;
+    try {
+      const page = this.deps.page();
+      if (!page) return;
+      const state = await within(page.state(), this.deps.askMs ?? ASK_MS);
+      if (state === TIMED_OUT && this.phase === 'saving') this.abortSave?.('unresponsive');
+    } finally {
+      this.probing = false;
     }
   }
 
@@ -162,8 +183,10 @@ export class CloseFlow {
       let stop = () => {};
       const settle = (result: 'saved' | 'failed' | 'unresponsive' | 'gone') => {
         stop();
+        this.abortSave = null;
         resolve(result);
       };
+      this.abortSave = settle;
       stop = this.deps.watchPage?.((kind) => settle(kind)) ?? stop;
       page.save().then(
         (saved) => settle(saved ? 'saved' : 'failed'),
@@ -212,7 +235,7 @@ export function closeDialogText(title: string, recoverable = true): DialogText {
     message: `Save the changes to “${oneLine(title)}” before closing?`,
     detail: recoverable
       ? "Your unsaved changes stay in Drafter's recovery copy either way."
-      : 'These changes are in no file and no recovery copy, so Don’t Save loses them.',
+      : "These changes are in no file and no recovery copy, so Don't Save loses them.",
     buttons: CLOSE_DIALOG.buttons,
     defaultId: 2,
     cancelId: 2,

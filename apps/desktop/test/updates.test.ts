@@ -11,11 +11,32 @@ import {
 } from '../src/updates';
 
 describe('updateMode', () => {
-  test('is the AppImage’s with APPIMAGE set, the .deb’s without, on a packaged Linux build', () => {
-    const base = { isPackaged: true, platform: 'linux' } as const;
-    expect(updateMode({ ...base, appImage: '/home/a/Drafter.AppImage' })).toBe('appimage');
-    expect(updateMode({ ...base })).toBe('deb');
-    expect(updateMode({ ...base, appImage: '' })).toBe('deb');
+  /** A real AppImage run: APPIMAGE a file, APPDIR the mount, the executable inside it. */
+  const real = {
+    isPackaged: true,
+    platform: 'linux',
+    appImage: '/home/a/Drafter.AppImage',
+    appImageIsFile: true,
+    appDir: '/tmp/.mount_Drafte1',
+    execPath: '/tmp/.mount_Drafte1/drafterdev',
+  } as const;
+
+  test('is the AppImage’s when it really is one, the .deb’s otherwise, on a packaged Linux build', () => {
+    expect(updateMode({ ...real })).toBe('appimage');
+    expect(updateMode({ isPackaged: true, platform: 'linux' })).toBe('deb');
+    expect(updateMode({ ...real, appImage: '' })).toBe('deb');
+  });
+
+  test('does not trust an APPIMAGE inherited from another program (a .deb run from an AppImage’s terminal)', () => {
+    // No APPDIR: the variable was not set by this app's own AppImage runtime.
+    expect(updateMode({ ...real, appDir: undefined })).toBe('deb');
+    expect(updateMode({ ...real, appDir: '' })).toBe('deb');
+    // The executable is not inside APPDIR: the .deb's /opt binary, with the other AppImage's env.
+    expect(updateMode({ ...real, execPath: '/opt/Drafter/drafterdev' })).toBe('deb');
+    // A prefix that is not a directory boundary.
+    expect(updateMode({ ...real, execPath: '/tmp/.mount_Drafte1x/drafterdev' })).toBe('deb');
+    // The file it names is gone, or is not a regular file.
+    expect(updateMode({ ...real, appImageIsFile: false })).toBe('deb');
   });
 
   test('checks nothing unpackaged unless the test feed is set, and then by APPIMAGE', () => {
@@ -60,6 +81,12 @@ function fakeUpdater(
     autoInstallOnAppQuit: true,
     checks: 0,
     quits: [] as unknown[][],
+    downloads: [] as unknown[],
+    quitBehaviour: 'silent' as 'silent' | 'error' | 'throw',
+    async downloadUpdate(token?: unknown) {
+      fake.downloads.push(token);
+      return [];
+    },
     on(event: string, listener: (arg: never) => void) {
       listeners.set(event, listener);
       return fake;
@@ -74,6 +101,8 @@ function fakeUpdater(
     },
     quitAndInstall(...args: unknown[]) {
       fake.quits.push(args);
+      if (fake.quitBehaviour === 'error') listeners.get('error')?.(new Error('EACCES') as never);
+      if (fake.quitBehaviour === 'throw') throw new Error('boom');
     },
   };
   return fake as unknown as Fake & { checks: number };
@@ -81,6 +110,8 @@ function fakeUpdater(
 type Fake = UpdaterLike & {
   emit(event: string, arg?: unknown): void;
   quits: unknown[][];
+  downloads: unknown[];
+  quitBehaviour: 'silent' | 'error' | 'throw';
 };
 
 interface Rig {
@@ -88,7 +119,9 @@ interface Rig {
   published: Array<{ version: string; how: string }>;
   opened: string[];
   log: string[];
-  before: ReturnType<typeof vi.fn>;
+  approve: ReturnType<typeof vi.fn>;
+  revoke: ReturnType<typeof vi.fn>;
+  cancels: () => number;
   created: Array<Fake & { checks: number }>;
   advance(ms: number): Promise<void>;
 }
@@ -105,7 +138,9 @@ function rig(
   const opened: string[] = [];
   const log: string[] = [];
   const created: Rig['created'] = [];
-  const before = vi.fn();
+  const revoke = vi.fn();
+  const approve = vi.fn(() => revoke);
+  let cancelled = 0;
   const updates = new Updates({
     mode: options.mode ?? 'appimage',
     delayMs: 5000,
@@ -117,7 +152,12 @@ function rig(
     },
     publish: (offer) => published.push({ version: offer.version, how: offer.how }),
     openExternal: (url) => opened.push(url),
-    beforeInstall: before,
+    approveQuit: approve,
+    newCancellation: () => ({
+      cancel: () => {
+        cancelled++;
+      },
+    }),
     log: (message) => log.push(message),
   });
   return {
@@ -125,7 +165,9 @@ function rig(
     published,
     opened,
     log,
-    before,
+    approve,
+    revoke,
+    cancels: () => cancelled,
     created,
     advance: async (ms) => {
       await vi.advanceTimersByTimeAsync(ms);
@@ -188,7 +230,9 @@ describe('the check', () => {
     r.updates.setEnabled(true);
     await r.advance(5000);
     const u = r.created[0];
-    expect(u?.autoDownload).toBe(true);
+    // Never on its own: a found version starts it (downloadUpdate), so it can be cancelled.
+    expect(u?.autoDownload).toBe(false);
+    expect(u?.downloads).toEqual([]);
     expect(u?.autoInstallOnAppQuit).toBe(false);
     vi.useRealTimers();
   });
@@ -249,17 +293,59 @@ describe('the offer (AppImage)', () => {
     vi.useRealTimers();
   });
 
-  test('installs only when asked: quitAndInstall, after the close flow is told', async () => {
+  test('installs only when asked: quitAndInstall, with the quit approved first', async () => {
     const r = rig({ script: downloaded });
     r.updates.start();
     r.updates.setEnabled(true);
     r.updates.listen();
     await r.advance(5000);
     expect(r.created[0]?.quits).toEqual([]);
-    expect(r.before).not.toHaveBeenCalled();
-    expect(r.updates.install()).toBe(true);
-    expect(r.before).toHaveBeenCalledTimes(1);
+    expect(r.approve).not.toHaveBeenCalled();
+    void r.updates.install();
+    expect(r.approve).toHaveBeenCalledTimes(1);
     expect(r.created[0]?.quits).toEqual([[false, true]]);
+    vi.useRealTimers();
+  });
+
+  /** An installed-and-downloaded rig whose quitAndInstall does `behaviour`. */
+  async function readyToInstall(behaviour: 'silent' | 'error' | 'throw') {
+    const r = rig({
+      script: (u) => {
+        u.quitBehaviour = behaviour;
+        downloaded(u);
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    r.updates.listen();
+    await r.advance(5000);
+    return r;
+  }
+
+  test('an install that fails (the updater says error and does not quit) takes the approval back', async () => {
+    const r = await readyToInstall('error');
+    expect(await r.updates.install()).toBe('failed');
+    expect(r.approve).toHaveBeenCalledTimes(1);
+    expect(r.revoke).toHaveBeenCalledTimes(1);
+    expect(r.log.join('\n')).toMatch(/EACCES/);
+    vi.useRealTimers();
+  });
+
+  test('an install that throws takes the approval back too', async () => {
+    const r = await readyToInstall('throw');
+    expect(await r.updates.install()).toBe('failed');
+    expect(r.revoke).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  test('an install that never quits is a failure after a few seconds, and the approval ends', async () => {
+    const r = await readyToInstall('silent');
+    const result = r.updates.install();
+    await r.advance(2999);
+    expect(r.revoke).not.toHaveBeenCalled();
+    await r.advance(2);
+    expect(await result).toBe('failed');
+    expect(r.revoke).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 
@@ -272,9 +358,9 @@ describe('the offer (AppImage)', () => {
     r.updates.start();
     r.updates.setEnabled(true);
     await r.advance(5000);
-    expect(r.updates.install()).toBe(false);
-    expect(r.updates.install()).toBe(false);
-    expect(r.before).not.toHaveBeenCalled();
+    expect(await r.updates.install()).toBe('nothing');
+    expect(await r.updates.install()).toBe('nothing');
+    expect(r.approve).not.toHaveBeenCalled();
     expect(r.created[0]?.quits).toEqual([]);
     vi.useRealTimers();
   });
@@ -317,8 +403,58 @@ describe('the offer (.deb)', () => {
     r.updates.openReleasePage();
     expect(r.opened).toEqual([RELEASES_URL]);
     expect(RELEASES_URL).toBe('https://github.com/cschweda/drafter/releases/latest');
-    expect(r.updates.install()).toBe(false);
+    expect(await r.updates.install()).toBe('nothing');
     expect(r.created[0]?.quits).toEqual([]);
+    vi.useRealTimers();
+  });
+});
+
+describe('the download', () => {
+  test('starts only when a check found a version, with a token, and never for a .deb', async () => {
+    const none = rig();
+    none.updates.start();
+    none.updates.setEnabled(true);
+    await none.advance(5000);
+    expect(none.created[0]?.downloads).toEqual([]);
+
+    const found = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    found.updates.start();
+    found.updates.setEnabled(true);
+    await found.advance(5000);
+    expect(found.created[0]?.downloads).toHaveLength(1);
+    expect(found.created[0]?.downloads[0]).toBeTruthy();
+
+    const deb = rig({
+      mode: 'deb',
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    deb.updates.start();
+    deb.updates.setEnabled(true);
+    await deb.advance(5000);
+    expect(deb.created[0]?.downloads).toEqual([]);
+    vi.useRealTimers();
+  });
+
+  test('is cancelled when Check for updates is turned off', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    expect(r.cancels()).toBe(0);
+    r.updates.setEnabled(true);
+    expect(r.cancels()).toBe(0);
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(1);
     vi.useRealTimers();
   });
 });

@@ -260,6 +260,80 @@ describe('a page that hangs while saving', () => {
   });
 });
 
+describe('a second close while a Save hangs', () => {
+  /** A page that answers `state` once, then never; its Save never finishes. */
+  function stuck(choice: CloseChoice) {
+    let asked = 0;
+    const dialog = vi.fn(async (_about: unknown) =>
+      dialog.mock.calls.length === 1 ? ('save' as CloseChoice) : choice,
+    );
+    const page: ClosePage = {
+      state: () => {
+        asked++;
+        return asked === 1
+          ? Promise.resolve({ unsaved: true, title: 'The Call', recoverable: true })
+          : new Promise(() => {});
+      },
+      save: () => new Promise<boolean>(() => {}),
+      flush: async () => {},
+    };
+    const quit = vi.fn();
+    const flow = new CloseFlow({ page: () => page, dialog, quit, askMs: 40, flushMs: 40 });
+    return { flow, dialog, quit, asked: () => asked };
+  }
+
+  test('asks the page, and when it does not answer offers the "isn’t responding" box', async () => {
+    const r = stuck('discard');
+    const first = r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(r.flow.phase).toBe('saving');
+    // The title bar's close button again: the page is probed.
+    expect(await r.flow.decide('close')).toBe('stay');
+    expect(r.asked()).toBe(2);
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true });
+    // Don't Save in that box ends the first request, which closes.
+    expect(await first).toBe('close');
+  });
+
+  test('a quit does the same', async () => {
+    const r = stuck('cancel');
+    const first = r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(await r.flow.decide('quit')).toBe('stay');
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true });
+    expect(await first).toBe('stay');
+  });
+
+  test('a page that answers (a Save As dialog is open) is left alone', async () => {
+    let asked = 0;
+    const dialog = vi.fn(async (_about: unknown) => 'save' as CloseChoice);
+    const page: ClosePage = {
+      state: async () => {
+        asked++;
+        return { unsaved: true, title: 'The Call', recoverable: true };
+      },
+      save: () => new Promise<boolean>(() => {}),
+      flush: async () => {},
+    };
+    const flow = new CloseFlow({ page: () => page, dialog, quit: vi.fn(), askMs: 40, flushMs: 40 });
+    void flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(await flow.decide('close')).toBe('stay');
+    expect(asked).toBe(2);
+    expect(dialog).toHaveBeenCalledTimes(1);
+    expect(flow.phase).toBe('saving');
+  });
+
+  test('probes once at a time', async () => {
+    const r = stuck('cancel');
+    void r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await Promise.all([r.flow.decide('close'), r.flow.decide('close'), r.flow.decide('quit')]);
+    expect(r.asked()).toBe(2);
+    expect(r.dialog).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('overlapping requests', () => {
   test('a second close while the dialog is up does nothing', async () => {
     const choice = later<CloseChoice>();
@@ -344,7 +418,7 @@ describe('what the dialogs say', () => {
   test('promises no recovery copy when there is none', () => {
     const text = closeDialogText('The Call', false);
     expect(text.detail).toBe(
-      'These changes are in no file and no recovery copy, so Don’t Save loses them.',
+      "These changes are in no file and no recovery copy, so Don't Save loses them.",
     );
     expect(text.detail).not.toMatch(/stay/);
     expect(text.buttons).toEqual(['Save', "Don't Save", 'Cancel']);
