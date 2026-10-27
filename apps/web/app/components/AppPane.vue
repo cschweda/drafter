@@ -150,6 +150,14 @@ function onKeydown(event: KeyboardEvent, index: number) {
             >
               Typewriter
             </button>
+            <button
+              type="button"
+              class="zoom-button"
+              :aria-pressed="settings.scrollSync ? 'true' : 'false'"
+              @click="set('scrollSync', !settings.scrollSync)"
+            >
+              Sync scrolling
+            </button>
           </div>
         </template>
         <template v-else-if="props.selected === 'problems' && canFixAll">

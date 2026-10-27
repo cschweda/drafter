@@ -8,7 +8,9 @@ let parked: { scroll: StateEffect<unknown>; focused: boolean } | undefined;
 
 <script setup lang="ts">
 import { restoreSelection } from '~/editor/restore-selection';
+import { sourcePane } from '~/editor/scroll-sync';
 import { useEditor } from '~/editor/session';
+import { useScrollSync } from '~/editor/use-scroll-sync';
 
 // The one editor lives in module state (editor/session.ts), so it keeps its
 // text, its undo history, and its cursor wherever the Source tab goes. This
@@ -16,6 +18,8 @@ import { useEditor } from '~/editor/session';
 // holder when the tab leaves or the layout changes.
 const { view } = useEditor();
 const host = ref<HTMLElement>();
+const sync = useScrollSync();
+let detach: (() => void) | undefined;
 
 onMounted(() => {
   host.value?.append(view.dom);
@@ -30,9 +34,12 @@ onMounted(() => {
       restoreSelection(view);
     }
   }
+  // Scrolling here moves the Script pane or the Preview, and theirs moves this.
+  detach = sync.attachSource(sourcePane(view));
 });
 
 onBeforeUnmount(() => {
+  detach?.();
   parked = { scroll: view.scrollSnapshot(), focused: view.hasFocus };
   document.querySelector('[data-editor-holder]')?.append(view.dom);
 });

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { domPane, type SyncPane } from '~/editor/scroll-sync';
+import { useEditor } from '~/editor/session';
+import { useScrollSync } from '~/editor/use-scroll-sync';
 import { renderMarkdown } from '~/markdown/render';
 import { useMarkdown } from '~/markdown/use-markdown';
 
@@ -7,6 +10,12 @@ import { useMarkdown } from '~/markdown/use-markdown';
 // which makes elements and sets text and nothing else: no HTML string is ever parsed.
 const { tree, updating } = useMarkdown();
 const content = ref<HTMLElement>();
+const article = ref<HTMLElement>();
+const { view } = useEditor();
+const sync = useScrollSync();
+// Scroll sync reads the blocks' offsets (`data-from`, from the tree) and where they stand.
+let syncPane: (SyncPane & { invalidate(): void }) | undefined;
+let detachSync: (() => void) | undefined;
 const empty = computed(() => !!tree.value && tree.value.children?.length === 0);
 // A long document's first drawing waits for the worker.
 const preparing = computed(() => !tree.value && updating.value);
@@ -14,14 +23,24 @@ const preparing = computed(() => !tree.value && updating.value);
 function draw() {
   if (!content.value) return;
   content.value.replaceChildren(tree.value ? renderMarkdown(tree.value, document) : '');
+  // A new drawing moves the blocks: the Preview is put back in step with the Source.
+  syncPane?.invalidate();
+  sync.placeView();
 }
 
-onMounted(draw);
+onMounted(() => {
+  if (article.value) {
+    syncPane = domPane(article.value, '[data-from]', () => view.state.doc.length);
+    detachSync = sync.attachView(syncPane);
+  }
+  draw();
+});
+onBeforeUnmount(() => detachSync?.());
 watch(tree, draw);
 </script>
 
 <template>
-  <article class="preview" tabindex="0" aria-label="Preview">
+  <article ref="article" class="preview" tabindex="0" aria-label="Preview">
     <div class="sheet">
       <p v-if="empty" class="nothing">Nothing to preview yet.</p>
       <p v-else-if="preparing" class="nothing" role="status">Preparing the preview…</p>

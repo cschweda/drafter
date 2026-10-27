@@ -53,6 +53,11 @@ const SWITCHES: Array<{ key: Exclude<keyof Settings, 'textSize'>; label: string;
     why: 'Keep the line you are writing at the middle of the Source pane.',
   },
   {
+    key: 'scrollSync',
+    label: 'Sync scrolling',
+    why: 'Scroll the Source and the Script pane (or the Preview) together, so both show the same part of your script.',
+  },
+  {
     key: 'sprintSound',
     label: 'Sprint sound',
     why: 'Play a short tone when a sprint ends. Drafter makes no sound unless you turn this on.',

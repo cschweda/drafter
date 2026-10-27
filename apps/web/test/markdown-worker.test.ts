@@ -37,6 +37,9 @@ describe('computeMarkdown', () => {
     expect(JSON.stringify(reply)).not.toContain('position');
     const tree = 'tree' in reply ? reply.tree : null;
     expect(tree?.children?.map((c) => c.type)).toEqual(['heading', 'paragraph']);
+    // A block keeps where it starts, for scroll sync; inline nodes keep nothing.
+    expect(tree?.children?.map((c) => c.from)).toEqual([0, 9]);
+    expect(tree?.children?.[1]?.children?.[0]?.from).toBeUndefined();
   });
 });
 

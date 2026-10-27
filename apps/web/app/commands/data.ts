@@ -137,6 +137,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },
   { id: 'turn-on-typewriter', title: 'Turn on typewriter scrolling', group: 'View' },
   { id: 'turn-off-typewriter', title: 'Turn off typewriter scrolling', group: 'View' },
+  { id: 'turn-on-scroll-sync', title: 'Turn on scroll sync', group: 'View' },
+  { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
   { id: 'fold-all', title: 'Fold all', group: 'View', keys: 'Ctrl-Alt-[' },
   { id: 'unfold-all', title: 'Unfold all', group: 'View', keys: 'Ctrl-Alt-]' },
 

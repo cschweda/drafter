@@ -277,6 +277,15 @@ export function registerBuiltinCommands(): void {
       enabled: () => settings.value.typewriter,
       run: () => void set('typewriter', false),
     },
+    // Scroll sync (decided 2026-10-27): the Source bar's Sync scrolling button and Settings set the same row.
+    'turn-on-scroll-sync': {
+      enabled: () => !settings.value.scrollSync,
+      run: () => void set('scrollSync', true),
+    },
+    'turn-off-scroll-sync': {
+      enabled: () => settings.value.scrollSync,
+      run: () => void set('scrollSync', false),
+    },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },
 
