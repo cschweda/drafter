@@ -15,6 +15,8 @@ export interface Settings {
   typewriter: boolean;
   /** A short tone when a sprint ends; off by default, so Drafter makes no sound unless asked (§7.3). */
   sprintSound: boolean;
+  /** Desktop app only: look on GitHub for a newer version once, when Drafter starts; on by default. */
+  checkForUpdates: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lineNumbers: false,
   typewriter: false,
   sprintSound: false,
+  checkForUpdates: true,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */

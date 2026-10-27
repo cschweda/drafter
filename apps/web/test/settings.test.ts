@@ -20,6 +20,7 @@ describe('settings', () => {
       lineNumbers: false,
       typewriter: false,
       sprintSound: false,
+      checkForUpdates: true,
     });
   });
 

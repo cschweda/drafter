@@ -15,6 +15,7 @@ import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
+import { installDesktopUpdates } from '~/update/desktop-source';
 import { leavesOnEscape } from '~/utils/focus';
 import { otherPane, type PaneId } from '~/utils/panes';
 
@@ -73,6 +74,7 @@ let removeFileCheck: (() => void) | undefined;
 let removeSystemOpen: (() => void) | undefined;
 let removeDesktopMenu: (() => void) | undefined;
 let removeDesktopClose: (() => void) | undefined;
+let removeDesktopUpdates: (() => void) | undefined;
 
 // Focus mode swaps the layout for the Source alone. Entering puts the cursor in the editor; leaving
 // puts it back there if the editor is showing, else on the button that entered.
@@ -107,6 +109,7 @@ onMounted(() => {
   removeSystemOpen = installSystemOpen();
   removeDesktopMenu = installDesktopMenu();
   removeDesktopClose = installDesktopClose();
+  removeDesktopUpdates = installDesktopUpdates(useSettings());
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -120,6 +123,7 @@ onBeforeUnmount(() => {
   removeSystemOpen?.();
   removeDesktopMenu?.();
   removeDesktopClose?.();
+  removeDesktopUpdates?.();
 });
 </script>
 

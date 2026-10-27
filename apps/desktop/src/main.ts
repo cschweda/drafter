@@ -21,6 +21,7 @@ import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './op
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
 import { type Spellcheck, setUpSpellcheck } from './spellcheck';
+import { setUpUpdates } from './updates-main';
 import { createMainWindow, fromApp, guard } from './window';
 
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
@@ -230,8 +231,16 @@ function start() {
     files = registerFileIpc();
     setUpMenu(() => main);
     closing = setUpClosing(() => main);
+    const updates = setUpUpdates(
+      () => main,
+      // Restart was chosen after the page asked about unsaved changes: don't ask again.
+      () => closing?.quitNow(),
+    );
     started = true;
-    openMain();
+    const window = openMain();
+    // The check waits a few seconds after the first page has loaded (and for the page to say
+    // Check for updates is on).
+    window.webContents.once('did-finish-load', () => updates.start());
     begin();
     // The files named on the command line: held until the page is up and listening.
     openFromSystem(process.argv.slice(1), process.cwd());

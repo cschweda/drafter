@@ -1,15 +1,36 @@
 import { ref } from 'vue';
+import type { UpdateKind } from './state';
 
 // The choices behind "A new version of Drafter is ready" (Phase 1 design §11). Nothing here
 // reloads by itself: every path to `apply` starts with the writer pressing a button.
 
 export const UPDATE_READY = 'A new version of Drafter is ready';
 
+export const UPDATE_AVAILABLE = 'A new version of Drafter is available';
+
+/** The toast's sentence: a .deb is only told one exists; the others have it ready. */
+export function offerText(kind: UpdateKind): string {
+  return kind === 'get' ? UPDATE_AVAILABLE : UPDATE_READY;
+}
+
+/** The toast's main button. */
+export function actionLabel(kind: UpdateKind): string {
+  return kind === 'restart' ? 'Restart' : kind === 'get' ? 'Get it' : 'Reload';
+}
+
 export const UNSAVED_MESSAGE =
   'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.';
 
 /** The question's text. With no recovery copy to promise (the browser can't keep one), it says so. */
-export function unsavedMessage(recovery: 'ok' | 'not-persistent' | 'unavailable' | string): string {
+export function unsavedMessage(
+  recovery: 'ok' | 'not-persistent' | 'unavailable' | string,
+  kind: UpdateKind = 'reload',
+): string {
+  if (kind === 'restart') {
+    return recovery === 'unavailable'
+      ? 'Drafter can’t keep a recovery copy right now, so your unsaved changes aren’t in your file or anywhere else yet.'
+      : 'Your unsaved changes stay in Drafter’s recovery copy, but they aren’t in your file yet.';
+  }
   return recovery === 'unavailable'
     ? 'Drafter can’t keep a recovery copy in this browser right now, so your unsaved changes aren’t in your file or anywhere else yet.'
     : UNSAVED_MESSAGE;
@@ -18,8 +39,14 @@ export function unsavedMessage(recovery: 'ok' | 'not-persistent' | 'unavailable'
 export const DOWNLOADING_MESSAGE = 'Your script is downloading. Reload when it has finished.';
 
 /** The button that reloads with changes unsaved: with no recovery copy, it says what it costs. */
+export function anywayLabel(recovery: string, kind: UpdateKind = 'reload'): string {
+  const verb = kind === 'restart' ? 'Restart' : 'Reload';
+  return recovery === 'unavailable' ? `${verb} and lose them` : `${verb} anyway`;
+}
+
+/** The web's label (kept for its callers). */
 export function reloadAnywayLabel(recovery: string): string {
-  return recovery === 'unavailable' ? 'Reload and lose them' : 'Reload anyway';
+  return anywayLabel(recovery, 'reload');
 }
 
 export interface UpdateDeps {

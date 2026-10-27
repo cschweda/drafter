@@ -71,6 +71,15 @@ useDocsHead({
       remove the saved files, along with the worker, by clearing this site’s data.
     </p>
 
+    <h2 id="updates">Updates in the desktop app</h2>
+    <p>
+      The desktop app makes one request of its own: when it starts, it asks GitHub whether a newer
+      version has been released, and for the AppImage it downloads that version in the background.
+      The request sends no script content. The desktop app never installs or restarts by itself; it
+      says a new version is ready and waits for you to choose Restart. Turn off
+      <strong>Check for updates</strong> in Settings and it makes no network request at all.
+    </p>
+
     <h2 id="modules">Script modules</h2>
     <p>
       A script module is an extra tool for Drafter, such as one that counts scenes. The modules are

@@ -89,6 +89,26 @@ export interface DesktopCloseHandlers {
 }
 
 /**
+ * Updates from GitHub Releases (apps/desktop/src/updates.ts). The desktop app checks once, when
+ * it starts, if the page says Check for updates is on, and never installs or restarts by itself.
+ */
+export interface DesktopUpdatesBridge {
+  /**
+   * Calls `cb` when a newer version is found. `how` is `restart` (the AppImage downloaded it:
+   * `install` restarts into it) or `get` (a .deb can't update itself: `openReleasePage`). What it
+   * holds from before the page listened, or before a reload, is sent now. Returns the function
+   * that stops listening.
+   */
+  onAvailable(cb: (version: string, how: 'restart' | 'get') => void): () => void;
+  /** Restart into the downloaded version. Rejects when there is nothing to install. */
+  install(): Promise<void>;
+  /** Opens the release page in the browser (a .deb's Get it). */
+  openReleasePage(): void;
+  /** Tells the desktop app whether Check for updates is on; it makes no request until it is. */
+  setEnabled(on: boolean): void;
+}
+
+/**
  * What the desktop app gives the page. Plain data and named calls only: never Electron's
  * `ipcRenderer` itself. Later tasks add to it (the menu, closing, updates).
  */
@@ -115,6 +135,8 @@ export interface DesktopBridge {
    * desktop app's to decide.
    */
   onCloseRequest(handlers: DesktopCloseHandlers): () => void;
+  /** Updates. */
+  updates: DesktopUpdatesBridge;
 }
 
 declare global {

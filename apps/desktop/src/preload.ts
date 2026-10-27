@@ -128,6 +128,28 @@ const bridge: DesktopBridge = {
       ipcRenderer.send(CHANNELS.closeReady, false);
     };
   },
+  // Updates: main finds a newer version once, when the app starts (if the setting is on), and says
+  // so; Restart and Get it are the writer's choices, sent back. Nothing installs by itself.
+  updates: {
+    onAvailable(cb) {
+      const listener = (_event: unknown, version: unknown, how: unknown) => {
+        if (typeof version === 'string' && (how === 'restart' || how === 'get')) cb(version, how);
+      };
+      ipcRenderer.on(CHANNELS.updateOffer, listener);
+      ipcRenderer.send(CHANNELS.updateListen, true);
+      return () => {
+        ipcRenderer.removeListener(CHANNELS.updateOffer, listener);
+        ipcRenderer.send(CHANNELS.updateListen, false);
+      };
+    },
+    install: () => invoke<void>(CHANNELS.updateInstall),
+    openReleasePage() {
+      ipcRenderer.send(CHANNELS.updateOpenRelease);
+    },
+    setEnabled(on) {
+      ipcRenderer.send(CHANNELS.updateEnabled, on === true);
+    },
+  },
   // Files the system names (the command line, a second launch, macOS's open-file): main granted
   // each before sending it. Telling main we listen is what lets it send those it was holding.
   onOpenFile(onPath, onProblem) {

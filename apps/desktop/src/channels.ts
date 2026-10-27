@@ -31,6 +31,16 @@ export const CHANNELS = {
   closeRequest: 'drafter:close:request',
   /** preload → main: `(id, ok, value)`: the page's answer to the request `id`. */
   closeReply: 'drafter:close:reply',
+  /** Updates (updates-main.ts). preload → main: the page listens for offers (`true`), or stops (`false`). */
+  updateListen: 'drafter:update:listen',
+  /** main → preload: `(version, how)`: a newer version was found (`how` is `restart` or `get`). */
+  updateOffer: 'drafter:update:offer',
+  /** preload → main: Restart (invoke). */
+  updateInstall: 'drafter:update:install',
+  /** preload → main: Get it. */
+  updateOpenRelease: 'drafter:update:open-release',
+  /** preload → main: whether Check for updates is on. */
+  updateEnabled: 'drafter:update:enabled',
 } as const;
 
 /** What main may ask the page before it closes (close-flow.ts `ClosePage`). */

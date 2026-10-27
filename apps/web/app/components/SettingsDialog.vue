@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { desktop } from '~/desktop';
 import { settingsOpen } from '~/settings/dialog';
 import { type Settings, TEXT_SIZES, useSettings } from '~/settings/settings';
 
@@ -26,7 +27,14 @@ function onClose() {
   if (!dialog.value?.open) settingsOpen.value = false;
 }
 
-const SWITCHES: Array<{ key: Exclude<keyof Settings, 'textSize'>; label: string; why: string }> = [
+interface Switch {
+  key: Exclude<keyof Settings, 'textSize'>;
+  label: string;
+  why: string;
+  /** Shown only in the desktop app. */
+  desktopOnly?: boolean;
+}
+const SWITCHES: Switch[] = [
   {
     key: 'matchSystem',
     label: 'Match system appearance',
@@ -57,7 +65,20 @@ const SWITCHES: Array<{ key: Exclude<keyof Settings, 'textSize'>; label: string;
     label: 'Sprint sound',
     why: 'Play a short tone when a sprint ends. Drafter makes no sound unless you turn this on.',
   },
+  {
+    key: 'checkForUpdates',
+    label: 'Check for updates',
+    why: 'When Drafter starts, look on GitHub for a newer version. Nothing from your scripts is sent, and Drafter never installs an update without asking.',
+    desktopOnly: true,
+  },
 ];
+// The desktop check is the one request the desktop app makes; the web has no such setting.
+// Known only in the browser, after the page is up, so the prerendered page and hydration agree.
+const onDesktop = ref(false);
+onMounted(() => {
+  onDesktop.value = desktop() !== null;
+});
+const shown = computed(() => SWITCHES.filter((item) => !item.desktopOnly || onDesktop.value));
 
 const percent = (size: number) => `${Math.round(size * 100)}%`;
 
@@ -90,7 +111,7 @@ function onSize(event: Event) {
         </option>
       </select>
     </div>
-    <div v-for="item in SWITCHES" :key="item.key" class="row">
+    <div v-for="item in shown" :key="item.key" class="row">
       <div class="text">
         <label :for="`settings-${item.key}`" class="name">{{ item.label }}</label>
         <p :id="`settings-${item.key}-why`" class="why">{{ item.why }}</p>

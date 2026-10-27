@@ -2,15 +2,16 @@
 import { useScript } from '~/storage/script';
 import { modalOpen, tourShowing } from '~/tour/state';
 import {
+  actionLabel,
+  anywayLabel,
   DOWNLOADING_MESSAGE,
-  reloadAnywayLabel,
-  UPDATE_READY,
+  offerText,
   unsavedMessage,
 } from '~/update/flow';
 import { clear, later, useUpdateFlow } from '~/update/prompt';
-import { needRefresh } from '~/update/state';
+import { applyUpdate, needRefresh, updateKind } from '~/update/state';
 
-// "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload, shown when the
+// "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload (Restart on the desktop app, Get it for a .deb), shown when the
 // service worker has a newer version waiting. It never reloads by itself. With changes that aren't
 // in a file, Reload asks first (Save first, Reload anyway, Cancel); those changes are in the
 // recovery copy either way. It isn't a modal, so the page stays usable behind it, and it waits
@@ -32,6 +33,12 @@ function look() {
 }
 watch(needRefresh, look, { immediate: true });
 onBeforeUnmount(() => clearTimeout(timer));
+
+// A .deb only opens the release page: nothing to save first.
+function choose() {
+  if (updateKind.value === 'get') void applyUpdate();
+  else void flow.reload();
+}
 
 function putOff() {
   later.value = true;
@@ -72,16 +79,16 @@ function onKeydown(event: KeyboardEvent) {
         @keydown="onKeydown"
       >
         <template v-if="flow.stage.value === 'toast' || flow.stage.value === 'downloading'">
-          <p>{{ flow.stage.value === 'downloading' ? DOWNLOADING_MESSAGE : UPDATE_READY }}</p>
+          <p>{{ flow.stage.value === 'downloading' ? DOWNLOADING_MESSAGE : offerText(updateKind) }}</p>
           <div class="actions">
-            <button ref="reloadButton" type="button" class="action" @click="flow.reload()">
-              Reload
+            <button ref="reloadButton" type="button" class="action" @click="choose">
+              {{ actionLabel(updateKind) }}
             </button>
             <button type="button" class="action quiet" @click="putOff">Later</button>
           </div>
         </template>
         <template v-else>
-          <p>{{ unsavedMessage(recovery) }}</p>
+          <p>{{ unsavedMessage(recovery, updateKind) }}</p>
           <div class="actions">
             <button
               ref="saveButton"
@@ -98,7 +105,7 @@ function onKeydown(event: KeyboardEvent) {
               :disabled="flow.saving.value"
               @click="flow.reloadAnyway()"
             >
-              {{ reloadAnywayLabel(recovery) }}
+              {{ anywayLabel(recovery, updateKind) }}
             </button>
             <button
               type="button"
