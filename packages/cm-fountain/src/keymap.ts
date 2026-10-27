@@ -42,7 +42,7 @@ function where(state: EditorState): Where {
  * transaction, with the user event `input`, which is not `input.type`, so the history keeps it
  * apart from the typing around it. Nothing happens in a read-only editor.
  */
-function command(spec: (state: EditorState) => TransactionSpec | null): StateCommand {
+export function command(spec: (state: EditorState) => TransactionSpec | null): StateCommand {
   return ({ state, dispatch }) => {
     const found = state.readOnly ? null : spec(state);
     if (!found) return false;
@@ -52,7 +52,7 @@ function command(spec: (state: EditorState) => TransactionSpec | null): StateCom
 }
 
 /** The byte-order mark, which `trim` counts as space and the editor does not. */
-const BOM = '\uFEFF';
+export const BOM = '\uFEFF';
 
 const indentOf = (text: string) => text.length - text.trimStart().length;
 
@@ -61,7 +61,7 @@ const indentOf = (text: string) => text.length - text.trimStart().length;
  * A group is a cue and the parentheticals, speech, and lyrics under it, and its blocks follow
  * each other with no blank line between them.
  */
-function cueIndex(blocks: readonly Block[], index: number): number {
+export function cueIndex(blocks: readonly Block[], index: number): number {
   for (let i = index; i >= 0; i--) {
     const block = blocks[i] as Block;
     if (block.kind === 'character') return i;
@@ -79,7 +79,7 @@ function cueIndex(blocks: readonly Block[], index: number): number {
  * cue is action to the parser, so a cue the writer has just typed can't be told from the parse of
  * the script alone. The parser decides here too, on the line by itself, so the rule is its own.
  */
-function readsAsCue(text: string): boolean {
+export function readsAsCue(text: string): boolean {
   return parse(`${text}\nx`).blocks[0]?.kind === 'character';
 }
 
@@ -314,7 +314,7 @@ function isOneGroup(text: string): boolean {
  * markers are the ones the parser reads at the start of a line, `!`, `@`, `~`, `>`, and `.` before
  * a letter or digit, and the wrappers are `>…<` and a `(…)` that is one group.
  */
-function unmarked(line: string): { start: number; body: string } {
+export function unmarked(line: string): { start: number; body: string } {
   const text = line.trim();
   const lead = indentOf(line);
   let open = 0;
@@ -414,6 +414,15 @@ export const wrapInNote: StateCommand = wrap('[[', ']]');
 
 /** Wraps the selection in `/* *\/`, a boneyard. */
 export const wrapInBoneyard: StateCommand = wrap('/*', '*/');
+
+/** Wraps the selection in `**`, bold. No key: the element bar and the palette run it. */
+export const wrapInBold: StateCommand = wrap('**', '**');
+
+/** Wraps the selection in `*`, italic. */
+export const wrapInItalic: StateCommand = wrap('*', '*');
+
+/** Wraps the selection in `_`, underlined. */
+export const wrapInUnderline: StateCommand = wrap('_', '_');
 
 /**
  * Enter, Tab, Shift-Tab, Mod-Alt-1…7 to force a kind, Mod-Shift-d, Mod-/, and Mod-Shift-/. Save

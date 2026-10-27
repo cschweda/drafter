@@ -34,6 +34,8 @@ new EditorView({
 | `fountainHighlighting()` | A view plugin that keeps `fountainDecorations` for the visible ranges. It brings `parsedDoc` with it. |
 | `fountainInput()`, `cueMode` | The input filters: upper-case typing in a cue started with Tab, and in a scene heading. |
 | `fountainKeymap` and its commands | Enter, Tab, Shift-Tab, Mod-Alt-1 to 7 to force a kind, Mod-Shift-d for dual dialogue, Mod-/ for a note, and Mod-Shift-/ for a boneyard: `fountainEnter`, `fountainTab`, `fountainShiftTab`, `convertToCharacter`, `convertToAction`, `forceKind`, `toggleDual`, `wrapInNote`, and `wrapInBoneyard`. |
+| `makeElement(kind)`, `insertPageBreak`, `wrapInBold`, `wrapInItalic`, `wrapInUnderline` | The element bar's commands: make the cursor's line (or each line of a selection) a scene heading, action, cue, dialogue, parenthetical, transition, centered text, lyric, section, or synopsis, writing natural Fountain and a forcing mark only where the line needs one; put in a page break; wrap the selection in emphasis. `canMakeParenthetical(state)` says whether a parenthetical applies at the cursor. |
+| `withCompletion(command)` | A view command that runs a state command and opens the completion list when its transaction asks (`opensCompletion(tr)`): a heading, cue, or transition just begun. |
 | `fountainCompletionSource(context)` | A CodeMirror completion source for character names, locations, times, transitions, and section titles, read from `parsedDoc`. The state must have the field. |
 | `fountainCompletion()` | `autocompletion({ override: [fountainCompletionSource] })`, with `parsedDoc` added. |
 | `fountainFolding()` | Folds sections and scenes. It brings `parsedDoc` and a `codeFolding` with its placeholder. |
