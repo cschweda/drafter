@@ -7,7 +7,7 @@
 > [!NOTE]
 > **Status: v0.3.0. You can write at [drafter.dev](https://drafter.dev).** Phase 1's web app is done, apart from its final accessibility pass. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, and sprints; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere. Next: the accessibility pass. A desktop app for Linux is on its way (below). The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
 
-**Drafter for Linux.** Drafter also comes as a desktop app for Linux, as a `.deb` (the one to use on Ubuntu 24.04 and later, and on other Debian-based systems) and an AppImage (other distributions; it needs `libfuse2`). It saves in place in any desktop environment, keeps a recovery copy no browser can clear, opens a script from the command line (`drafterdev script.fountain`), and asks before it updates. Each package is about 100 to 130 MB. [Download the latest release](https://github.com/cschweda/drafter/releases/latest) and read the [install guide](docs/desktop-install-linux.md). Windows and macOS follow; macOS comes last, because it needs Apple's developer account.
+**Drafter for Linux.** Drafter also comes as a desktop app for Linux. See [Drafter for Linux](#drafter-for-linux) for the download, how to install and start it, and how it differs from drafter.dev.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
@@ -27,6 +27,7 @@
 - [Roadmap](#roadmap)
 - [Stack](#stack)
 - [Storage and browsers](#storage-and-browsers)
+- [Drafter for Linux](#drafter-for-linux)
 - [Development](#development)
 - [Clean-room implementation](#clean-room-implementation)
 - [Contributing](#contributing)
@@ -283,6 +284,69 @@ Drafter never needs an account, and it saves like a desktop app. Your script is 
 Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. The leave warning is a desktop-browser feature; phones and tablets don't show it reliably, which is one more reason the recovery copy is always on.
 
 Drafter tells you when the recovery copy isn't safe, because the browser blocks storage or may clear it. Safari, for example, can clear storage for websites you haven't used recently; installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it. Every saved file is a complete `.fountain`, so any copy is a full backup. The full policy is in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
+
+## Drafter for Linux
+
+Drafter also comes as a desktop app for Linux: the same editor as drafter.dev, in a window of its own, built with Electron. Windows and macOS follow; macOS comes last, because it needs Apple's developer account.
+
+### Download
+
+Get it from the [latest release](https://github.com/cschweda/drafter/releases/latest) on GitHub. There are two packages, both for 64-bit Intel and AMD computers (x64), each about 100 to 130 MB:
+
+| Package | Use it on | File |
+|---|---|---|
+| `.deb` | Ubuntu, Debian, Linux Mint, Pop!_OS, and other Debian-based systems. **The one to use on Ubuntu 24.04 and later.** | `Drafter-<version>-linux-amd64.deb` |
+| AppImage | Any other distribution (Fedora, Arch, openSUSE, and so on). Nothing to install; it runs from where you put it. | `Drafter-<version>-linux-x86_64.AppImage` |
+
+### Install and start the `.deb`
+
+```sh
+sudo apt install ./Drafter-<version>-linux-amd64.deb
+```
+
+Drafter then appears in your applications (under Office), and `.fountain` and `.md` files open in it when you double-click them. Start it from the applications menu, or from a terminal:
+
+```sh
+drafterdev                      # start Drafter
+drafterdev "My Script.fountain" # start it with a script open
+```
+
+To remove it: `sudo apt remove drafterdev`. Your scripts are files you saved and aren't touched; Drafter's settings and recovery copies are in `~/.config/Drafter`.
+
+### Install and start the AppImage
+
+```sh
+chmod +x Drafter-<version>-linux-x86_64.AppImage
+./Drafter-<version>-linux-x86_64.AppImage
+./Drafter-<version>-linux-x86_64.AppImage "My Script.fountain"   # with a script open
+```
+
+An AppImage needs FUSE 2: install `libfuse2` if it won't start (on Ubuntu 24.04 the package is `libfuse2t64`). It doesn't add itself to your applications menu or file types; a tool such as Gear Lever or AppImageLauncher can. To remove it, delete the file.
+
+On Ubuntu 24.04 and later, the AppImage can't use Chromium's sandbox (a system setting blocks it) unless you give it a small AppArmor profile, and Drafter asks before it starts without one. Use the `.deb` there, or follow the [install guide](docs/desktop-install-linux.md), which has the profile and every other choice.
+
+### Updates
+
+Drafter checks for a new version when it starts and asks before installing it; it never updates or restarts by itself. The AppImage updates in place. The `.deb` takes you to the release page to download the new package. You can turn the check off in Settings, and then Drafter makes no network request at all.
+
+### Web and desktop: what's different
+
+The editor, the pages, export, the Problems pane, templates, Markdown documents, script modules, the writing aids, and the help pages are the same in both. These differ:
+
+| | drafter.dev (web) | Drafter for Linux (desktop) |
+|---|---|---|
+| Getting it | Nothing to install: open the site. Works in any modern browser, on any computer, tablet, or phone. | Download and install a 100 to 130 MB package. Linux now; Windows and macOS later. |
+| Saving | Saves straight back to your file in Chrome and Edge on a computer; elsewhere Save downloads a copy. | Always saves straight back to your file. Each save is written in full before it replaces the old file, so a crash or a full disk can't leave it half written. |
+| The recovery copy | Kept in the browser, which can clear it (Safari clears a site's storage after about a week without a visit, and "clear site data" removes it). | Kept in Drafter's own folder (`~/.config/Drafter`), which no browser clears. |
+| Opening scripts | Open, or drag a file onto the page. | Also double-click a file (with the `.deb`), start `drafterdev "My Script.fountain"` from a terminal, or open a file while Drafter is already running, and it comes to the front. |
+| Access to your files | In Chrome, a script saved to a file may open read-only after a reload until you choose **Check for changes**. | Drafter can read and write only the files you chose (by Open, Save As, a drop, or the command line), and doesn't ask again after a restart. |
+| Menus | The Drafter menu in the toolbar, and the command palette. | Also a menu bar (File, Edit, View, Go, Help). |
+| Closing with unsaved changes | The browser's own "Leave page?" warning. | Asks **Save**, **Don't Save**, or **Cancel**. |
+| Working offline | After the first visit, through the browser's service worker. | Always: everything is in the app. |
+| Updates | A new version is offered when you next open the site, with **Reload**. | Checked when Drafter starts (you can turn it off), and installed only when you choose **Restart**. |
+| Network | Loads the site from drafter.dev; after that, only the browser's check for a new version. | None, apart from the update check (or none at all with it off). |
+| Spellcheck | Your browser's. | A built-in English dictionary, so it works offline. |
+| Installing as an app | Chrome and Edge can install the site as an app; Safari can add it to the Dock or Home Screen. | It is an app. |
 
 ## Development
 
