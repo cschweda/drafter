@@ -8,6 +8,7 @@ import {
   closeAsked,
   closeRequested,
   editor,
+  editorDocument,
   editorText,
   expect,
   type Launched,
@@ -87,7 +88,8 @@ test('closes at once when only a sample was edited, and keeps the edit', async (
   await gone;
   expect(closeAsked(profile)).toEqual([]);
   const again = await desktop();
-  await expect(editor(again.page)).toContainText('A line in the sample.');
+  // The end of the sample, where the line went, may be below what the editor has drawn.
+  await expect.poll(() => editorDocument(again.page)).toContain('A line in the sample.');
 });
 
 test('asks before closing with unsaved changes', async ({ desktop, profile }) => {
@@ -300,5 +302,5 @@ test('the recovery copy is on disk after any way out', async ({ desktop, profile
   // Asked whether it held anything, then told to write, before the window went.
   expect(closeRequested(profile)).toEqual(['state', 'flush']);
   const again = await desktop();
-  await expect(editor(again.page)).toContainText('Typed just now.');
+  await expect.poll(() => editorDocument(again.page)).toContain('Typed just now.');
 });

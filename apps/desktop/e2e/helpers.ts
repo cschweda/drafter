@@ -160,8 +160,20 @@ export interface Launched {
 /** The editor's text area. */
 export const editor = (page: Page) => page.locator('.cm-content');
 
-/** The text in the editor. */
+/** The text in the editor, as far as the editor has drawn it (a long script is drawn in part). */
 export const editorText = (page: Page) => editor(page).evaluate((el) => el.textContent ?? '');
+
+/** The whole document in the editor, drawn or not (CodeMirror's view, kept on its content tile). */
+export const editorDocument = (page: Page) =>
+  page.evaluate(() => {
+    type View = { state: { doc: { toString(): string } } };
+    const tile = (
+      document.querySelector('.cm-content') as unknown as {
+        cmTile?: { root?: { view?: View }; view?: View };
+      } | null
+    )?.cmTile;
+    return (tile?.root?.view ?? tile?.view)?.state.doc.toString() ?? '';
+  });
 
 /** The first-run welcome dialog. */
 export const welcome = (page: Page) =>
@@ -262,6 +274,13 @@ export function launchAgain(profile: Profile, args: string[] = []): Promise<numb
 }
 
 async function launchApp(profile: Profile, options: LaunchOptions): Promise<Launched> {
+  // The tour is marked seen by a reload after the first start (below). A launch that names files
+  // would lose one sent to the page just before that reload, so a fresh profile is started once
+  // without them first, as a writer who had used Drafter before.
+  if (options.args?.length && !options.firstRun && !existsSync(profile.userData)) {
+    const priming = await launchApp(profile, { env: options.env });
+    await priming.close();
+  }
   const app = await _electron.launch({
     executablePath: ELECTRON,
     // On Linux Playwright adds `--no-sandbox` unless told not to; the app must run with the sandbox
