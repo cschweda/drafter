@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **the Stats window**, from **Stats…** at the foot of the Counts panel, **Show stats** in the palette, the Drafter menu, and the desktop app's View menu. **Today**: words and pages added, writing time, and the goal's progress. **This script**: pages, scenes, words, running time, and the characters who speak, with a table of each one's speeches, scenes, and words of dialogue (`(V.O.)` and `(CONT'D)` don't make a second character); for a screenplay, how its scene headings divide between interior and exterior, and day and night; for a Markdown document, words, headings, and reading time; and for every script, the total writing time, the days written, and the first. **Last 30 days**: a bar chart of words added each day (a cutting day below the line), with the time in each bar's tooltip and the same numbers in a table for screen readers, then days written, the best day, the average per writing day, and the current streak.
 - `apps/web`: the writing time is kept in this browser's storage (IndexedDB) with the daily goal, a row for each day a script was written, and is removed with the script. The **Privacy** page says so. Nothing is sent anywhere.
 
+### Fixed
+
+- `apps/web`: **a stage play's scenes are counted.** The Counts panel said a stage play had 0 scenes, because it counted INT./EXT. headings, which a play doesn't have. It now counts scenes the way the script's template has them: a screenplay's scene headings, a stage play's `## Scene` lines.
+
 ## [0.4.1] - 2026-10-27
 
 **Typewriter scrolling without the gap, and Markdown on a sample.**
