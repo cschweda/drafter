@@ -184,6 +184,8 @@ export interface MenuActions {
   about?: () => void;
   /** Help → Open the Releases Page. */
   releases?: () => void;
+  /** Help → Open Modules Folder: shows the folder a writer adds script modules to. */
+  modulesFolder?: () => void;
   /** File → Quit: the main process passes `app.quit()`, which a `before-quit` handler can stop. */
   quit?: () => void;
 }
@@ -202,6 +204,7 @@ export function menuTemplate(
   const apple = platform === 'darwin';
   const about = actions.about ?? (() => {});
   const releases = actions.releases ?? (() => {});
+  const modulesFolder = actions.modulesFolder ?? (() => {});
   const quit = actions.quit ?? (() => {});
 
   const itemFor = (command: MenuCommand, strip?: RegExp): Item => {
@@ -243,6 +246,7 @@ export function menuTemplate(
     if (rest.length > 0) sections.push(rest);
     if (group === 'Help') {
       sections.push([
+        { id: 'modules-folder', label: 'Open Modules Folder', click: modulesFolder },
         { id: 'releases', label: 'Open the Releases Page', click: releases },
         ...(apple ? [] : [{ id: 'about', label: 'About Drafter', click: about }]),
       ]);
@@ -282,11 +286,11 @@ export function menuTemplate(
 export const LIMITS = { commands: 400, id: 80, title: 200, keys: 4, key: 40 } as const;
 
 /**
- * The ids of the items the menu has of its own (Quit, About, the Releases page). The page's
+ * The ids of the items the menu has of its own (Quit, About, the Releases page, the modules folder). The page's
  * commands can't take them: an item the page names `quit` would be a second Quit that the
  * template's own ids (for `Menu.getMenuItemById`, and the tests) can't tell from the first.
  */
-const NATIVE_IDS: ReadonlySet<string> = new Set(['quit', 'about', 'releases']);
+const NATIVE_IDS: ReadonlySet<string> = new Set(['quit', 'about', 'releases', 'modules-folder']);
 
 /**
  * The list of commands in a message from the page, or null when it isn't well-formed: a list of at
