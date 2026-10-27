@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  chartBars,
   duration,
   lastDays,
   type StatsDay,
@@ -62,6 +63,16 @@ describe('the last 30 days', () => {
     expect(lastDays(days({ '2026-10-25': { ms: MIN, words: 1 } }), today).streak).toBe(0);
   });
 
+  test('the streak counts back past the 30 days shown', () => {
+    const rows: Record<string, StatsDay> = {};
+    for (let back = 0; back < 45; back++) {
+      const d = new Date(2026, 9, 27 - back);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      rows[key] = { ms: MIN, words: 10 };
+    }
+    expect(lastDays(days(rows), today).streak).toBe(45);
+  });
+
   test('counts days across a change of month and of clocks', () => {
     const month = lastDays(days({}), new Date(2026, 2, 30, 1, 0));
     expect(month.days[0]?.date).toBe('2026-03-01');
@@ -112,5 +123,32 @@ describe('the labels', () => {
     expect(signed(0)).toBe('0');
     expect(signed(0.3)).toBe('+0.3');
     expect(signed(-1.5)).toBe('−1.5');
+  });
+});
+
+describe('the chart', () => {
+  const day = (words: number, ms = MIN) => ({ date: '2026-10-27', words, ms });
+
+  test('draws growth up from the zero line and a cut down from it, inside the box', () => {
+    const { zero, bars } = chartBars([day(300), day(-100), day(0, 0)], 80);
+    expect(zero).toBe(60);
+    expect(bars[0]).toMatchObject({ y: 0, height: 60 });
+    expect(bars[1]).toMatchObject({ y: 60, height: 20 });
+    // A day not written draws nothing.
+    expect(bars[2]).toMatchObject({ height: 0 });
+  });
+
+  test('draws a written day with no growth as a sliver above the line, even when nothing grew', () => {
+    for (const list of [
+      [day(0), day(0)],
+      [day(0), day(-50)],
+      [day(0), day(40)],
+    ]) {
+      const { bars } = chartBars(list, 80);
+      const flat = bars[0] as { y: number; height: number };
+      expect(flat.height, JSON.stringify(list)).toBe(1);
+      expect(flat.y, JSON.stringify(list)).toBeGreaterThanOrEqual(0);
+      expect(flat.y + flat.height, JSON.stringify(list)).toBeLessThanOrEqual(80);
+    }
   });
 });

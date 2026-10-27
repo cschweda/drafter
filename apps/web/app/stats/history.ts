@@ -31,7 +31,10 @@ export interface Month {
   best: { date: string; words: number } | null;
   /** Net words per day written, to the whole word; null with none written. */
   average: number | null;
-  /** Days in a row with writing time, back from today (or from yesterday, when today has none yet). */
+  /**
+   * Days in a row with writing time, back from today (or from yesterday, when today has none yet),
+   * over every kept day, not only the 30.
+   */
   streak: number;
 }
 
@@ -53,11 +56,13 @@ export function lastDays(rows: ReadonlyMap<string, StatsDay>, today: Date): Mont
   const sum = written.reduce((total, day) => total + day.words, 0);
   let streak = 0;
   // Today counts when written; otherwise the streak may still end yesterday.
-  let at = days.length - 1;
-  if ((days[at] as DayFigure).ms <= 0) at--;
-  while (at >= 0 && (days[at] as DayFigure).ms > 0) {
+  const isWritten = (back: number) =>
+    (rows.get(dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - back)))
+      ?.ms ?? 0) > 0;
+  let back = isWritten(0) ? 0 : 1;
+  while (isWritten(back)) {
     streak++;
-    at--;
+    back++;
   }
   return {
     days,
@@ -87,6 +92,39 @@ export function scriptTotals(rows: ReadonlyMap<string, StatsDay>): ScriptTotals 
     if (firstDay === null || date < firstDay) firstDay = date;
   }
   return { ms, daysWritten, firstDay };
+}
+
+export interface ChartBar {
+  /** From the top of the chart, in its units. */
+  y: number;
+  height: number;
+}
+
+/**
+ * The 30-day chart's bars, in a box `height` units tall: growth up from the zero line, a cut down
+ * from it, each to scale on its own side. A day written with no growth is a sliver of 1 above the
+ * line, so a month of rewriting still shows; a day not written is nothing.
+ */
+export function chartBars(
+  days: readonly DayFigure[],
+  height: number,
+): { zero: number; bars: ChartBar[] } {
+  const up = Math.max(0, ...days.map((day) => day.words));
+  const down = Math.max(0, ...days.map((day) => -day.words));
+  // The line sits where the share of growth puts it, and never at the very top: the sliver needs room.
+  const zero =
+    up + down === 0 ? height : Math.min(height, Math.max(1, (up / (up + down)) * height));
+  const upScale = up > 0 ? zero / up : 0;
+  const downScale = down > 0 ? (height - zero) / down : 0;
+  const bars = days.map((day): ChartBar => {
+    if (day.words > 0) {
+      const size = day.words * upScale;
+      return { y: zero - size, height: size };
+    }
+    if (day.words < 0) return { y: zero, height: -day.words * downScale };
+    return day.ms > 0 ? { y: zero - 1, height: 1 } : { y: zero, height: 0 };
+  });
+  return { zero, bars };
 }
 
 /** "<1 min", "38 min", "1 h 05 min": a writing time, to the minute below. */
