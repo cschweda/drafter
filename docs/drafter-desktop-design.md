@@ -46,6 +46,8 @@ Closing the window with changes not in a file asks first, in a native dialog ("S
 
 ## 6. Script modules from a folder
 
+*Built 2026-10-27: [the plan](plans/2026-10-27-desktop-modules-folder.md), with the calls in `docs/DECISIONS.md`. One change of form: who a module is lives in a `module.json` beside its `index.js`, so Settings can show it before any of its code runs.*
+
 The compiled-in modules stay as they are. **Call (a follow-up release, v0.4.x, after the Linux app ships):** the desktop app also loads modules from a `modules` folder in the user's Drafter folder (`~/.config/Drafter/modules` on Linux, `%APPDATA%\Drafter\modules` on Windows, `~/Library/Application Support/Drafter/modules` on macOS), each a folder with a built `index.js` that default-exports a `ScriptModule`. They load at start (restart to add one), are listed in Settings → Modules **off until the writer turns them on**, with the network consent as today, and Settings says plainly that a module from this folder is code that runs with Drafter's permissions. A malformed one is skipped with a message naming its folder. **Help → Open Modules Folder** shows the folder. Because a module from a folder is code nobody reviewed, it runs isolated: each in a sandboxed `<iframe sandbox="allow-scripts">` on its own origin (`drafter-module://<id>/`), with `ModuleContext` crossing `postMessage` as a small RPC, so it never reaches the file bridge or the page. That is real work (the context's calls and a tab's component become messages), which is why it follows the first release.
 
 ## 7. Updates and distribution
