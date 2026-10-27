@@ -142,7 +142,7 @@ test.describe('new scripts and switching', () => {
       .getByRole('button')
       .evaluateAll((els) => els.map((el) => el.textContent?.trim()));
     expect(names.slice(0, 2)).toEqual(['New screenplay', 'New stage play']);
-    expect(names.slice(-2)).toEqual(['Screenplay', 'Stage play']);
+    expect(names.slice(-3)).toEqual(['Screenplay', 'Stage play', 'Markdown']);
   });
 
   test('switches between scripts from the Open menu, each with its own undo history', async ({

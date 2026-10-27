@@ -21,6 +21,7 @@ describe('settings', () => {
       typewriter: false,
       sprintSound: false,
       checkForUpdates: true,
+      scrollSync: true,
     });
   });
 

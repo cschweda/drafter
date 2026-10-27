@@ -1,4 +1,5 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
+import type { SampleKind } from '../editor/sample-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
@@ -21,8 +22,14 @@ export interface Project {
   /** The file's line break, used when writing it. */
   lineBreak: '\n' | '\r\n';
   meta: DrafterMeta | null;
-  /** Set on the two samples (Phase 1 design §4.2). */
-  sample?: 'screenplay' | 'stage-play';
+  /** Set on the samples (Phase 1 design §4.2): the screenplay, the stage play, and the Markdown document. */
+  sample?: SampleKind;
+  /**
+   * Set on a document that opened with a sample's text because it was the writer's first of its
+   * kind: the new-document text Start blank puts in instead, and where the cursor goes in it.
+   * Cleared once Start blank has been used. Unindexed, so it needed no new version.
+   */
+  blank?: { text: string; cursor: number };
   createdAt: number;
   updatedAt: number;
   savedHash?: string;
@@ -134,12 +141,18 @@ export async function updateProject(
  * the stored project's own fields that the result carries, and `current` stands in only for a
  * project that has gone from the database.
  */
-export async function writeSource(current: Project, source: string): Promise<Project> {
+export async function writeSource(
+  current: Project,
+  source: string,
+  /** Other fields to change in the same write. */
+  fields: Partial<Omit<Project, 'id' | 'source'>> = {},
+): Promise<Project> {
   return db.transaction('rw', db.projects, async () => {
     const stored = await db.projects.get(current.id);
     const base = stored ?? current;
     const next: Project = {
       ...base,
+      ...fields,
       ...derive(source, base.fileName, kindOf(base)),
       source,
       updatedAt: Date.now(),

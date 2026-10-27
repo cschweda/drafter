@@ -14,6 +14,30 @@ function draw(source: string): HTMLElement {
 }
 
 describe('the Markdown preview', () => {
+  test('marks each block with where it starts in the text, for scroll sync', () => {
+    const source = '# Title\n\nA paragraph.\n\n- one\n- two\n\n> quoted\n\n```\ncode\n```\n\n---\n';
+    const host = draw(source);
+    const marks = [...host.querySelectorAll<HTMLElement>('[data-from]')].map((el) => [
+      el.tagName,
+      Number(el.dataset.from),
+    ]);
+    expect(marks).toEqual([
+      ['H1', 0],
+      ['P', source.indexOf('A paragraph')],
+      ['UL', source.indexOf('- one')],
+      ['LI', source.indexOf('- one')],
+      ['LI', source.indexOf('- two')],
+      ['BLOCKQUOTE', source.indexOf('> quoted')],
+      ['P', source.indexOf('quoted')],
+      ['PRE', source.indexOf('```')],
+      ['HR', source.indexOf('---')],
+    ]);
+    // The offsets are numbers the tree gives, never the writer's text.
+    for (const el of host.querySelectorAll<HTMLElement>('[data-from]')) {
+      expect(el.dataset.from).toMatch(/^\d+$/);
+    }
+  });
+
   test('renders headings, emphasis, lists, quotes, and code as elements', () => {
     const host = draw(
       [

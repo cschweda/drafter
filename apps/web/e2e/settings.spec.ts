@@ -72,10 +72,10 @@ function stored(page: Page): Promise<Record<string, unknown>> {
             db.close();
             resolve(
               Object.fromEntries(
-                (request.result as Array<{ key: string; value: unknown }>).map((r) => [
-                  r.key,
-                  r.value,
-                ]),
+                (request.result as Array<{ key: string; value: unknown }>)
+                  // The samples met, which the tests start with (playwright.config.ts), are not settings.
+                  .filter((r) => !r.key.startsWith('sample-seen:'))
+                  .map((r) => [r.key, r.value]),
               ),
             );
           };

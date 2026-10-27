@@ -17,6 +17,8 @@ export interface Settings {
   sprintSound: boolean;
   /** Desktop app only: look on GitHub for a newer version once, when Drafter starts; on by default. */
   checkForUpdates: boolean;
+  /** The Source and the Script pane (or the Preview) scroll together; on by default (decided 2026-10-27). */
+  scrollSync: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   typewriter: false,
   sprintSound: false,
   checkForUpdates: true,
+  scrollSync: true,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */

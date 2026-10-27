@@ -135,6 +135,7 @@ onBeforeUnmount(() => {
       <FileBar />
       <StorageWarning />
       <SampleBar />
+      <StartBlankBar />
       <!-- Its region has no height; the offer itself is fixed in place. In the shell's grid it would be a row. -->
       <UpdatePrompt />
     </div>

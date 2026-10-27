@@ -1,12 +1,43 @@
 <main class="drafter-boot">
-  <img src="/mark.svg" alt="" width="48" height="48">
+  <!-- The mark (brand/mark.svg), inline so its lines can move while the app loads: CSS only, no script. -->
+  <svg class="drafter-boot-mark" width="48" height="48" viewBox="0 0 56 56" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="drafter-boot-gradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#8DB8E8"/>
+        <stop offset="0.5" stop-color="#F5A9C0"/>
+        <stop offset="1" stop-color="#F6E07A"/>
+      </linearGradient>
+    </defs>
+    <rect width="56" height="56" rx="14" fill="url(#drafter-boot-gradient)"/>
+    <g fill="#111216">
+      <rect class="drafter-boot-line" x="11" y="17" width="13" height="4" rx="2"/>
+      <rect class="drafter-boot-line" x="11" y="26" width="9" height="4" rx="2"/>
+      <rect class="drafter-boot-line" x="11" y="35" width="13" height="4" rx="2"/>
+      <rect x="27.25" y="13" width="1.5" height="30" opacity="0.35"/>
+      <rect class="drafter-boot-line" x="35" y="17" width="9" height="4" rx="2"/>
+      <rect class="drafter-boot-line" x="32" y="26" width="15" height="4" rx="2"/>
+      <rect class="drafter-boot-line" x="32" y="35" width="13" height="4" rx="2"/>
+    </g>
+  </svg>
   <h1>Drafter</h1>
   <p>Write screenplays and stage plays in plain-text Fountain and see formatted pages as you type. Free, open source, and no account: your scripts stay on your device.</p>
   <p class="drafter-boot-links">Read about <a href="/docs/saving">saving and your browser</a>, the <a href="/docs/shortcuts">keyboard shortcuts</a>, and <a href="/docs/privacy">privacy</a>.</p>
+  <p class="drafter-boot-wait" role="status" aria-live="polite">
+    <span class="drafter-boot-loading">Loading Drafter…</span>
+    <span class="drafter-boot-slow">Taking longer than usual. Try reloading.</span>
+  </p>
 </main>
+<noscript><style>.drafter-boot-wait { display: none; }</style></noscript>
 <style>
+  /* Dark by default, as the app is; light where the stored theme (the color-mode script's class on
+     <html>) or, before that is known, the system says so. */
   .drafter-boot {
+    /* The app's tokens (assets/css/tokens.css), so the page doesn't flash when it mounts. */
+    --boot-bg: #0f1013;
+    --boot-text: #e6e8ec;
+    --boot-muted: #8c93a1;
     min-height: 100dvh;
+    box-sizing: border-box;
     display: grid;
     place-content: center;
     justify-items: center;
@@ -14,8 +45,51 @@
     padding: 24px;
     text-align: center;
     font-family: "Inter Tight", system-ui, sans-serif;
+    background: var(--boot-bg);
+    color: var(--boot-text);
   }
+  @media (prefers-color-scheme: light) {
+    html:not(.dark) .drafter-boot { --boot-bg: #f4f4f2; --boot-text: #1c1d21; --boot-muted: #5f6575; }
+  }
+  html.light .drafter-boot { --boot-bg: #f4f4f2; --boot-text: #1c1d21; --boot-muted: #5f6575; }
   .drafter-boot h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
   .drafter-boot p { margin: 0; max-width: 36rem; line-height: 1.5; }
   .drafter-boot a { color: inherit; }
+
+  /* The mark's two halves write their lines in turn, left then right, in a 1.4 s loop, while a
+     goldenrod glow breathes around it. Only transform, opacity and filter move. */
+  .drafter-boot-mark { animation: drafter-boot-glow 1.4s ease-in-out infinite; }
+  .drafter-boot-line {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: drafter-boot-write 1.4s ease-in-out infinite;
+  }
+  .drafter-boot-line:nth-of-type(2) { animation-delay: 0.1s; }
+  .drafter-boot-line:nth-of-type(3) { animation-delay: 0.2s; }
+  .drafter-boot-line:nth-of-type(5) { animation-delay: 0.7s; }
+  .drafter-boot-line:nth-of-type(6) { animation-delay: 0.8s; }
+  .drafter-boot-line:nth-of-type(7) { animation-delay: 0.9s; }
+  @keyframes drafter-boot-write {
+    0%, 100% { transform: scaleX(1); opacity: 1; }
+    35% { transform: scaleX(0.3); opacity: 0.45; }
+    65% { transform: scaleX(1); opacity: 1; }
+  }
+  @keyframes drafter-boot-glow {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(229, 176, 74, 0)); }
+    50% { filter: drop-shadow(0 0 8px rgba(229, 176, 74, 0.55)); }
+  }
+
+  /* A slow start says so: after 3 s "Loading Drafter…", after 15 s the hint. Timed by CSS (no
+     script, so nothing for the content security policy to allow), with the space kept from the
+     start so nothing moves when they appear. */
+  .drafter-boot-wait { display: grid; min-height: 3em; color: var(--boot-muted); font-size: 14px; }
+  .drafter-boot-wait span { visibility: hidden; animation: drafter-boot-show 0s linear forwards; }
+  .drafter-boot-wait .drafter-boot-loading { animation-delay: 3s; }
+  .drafter-boot-wait .drafter-boot-slow { animation-delay: 15s; }
+  @keyframes drafter-boot-show { to { visibility: visible; } }
+
+  /* Reduced motion: the mark stands still. The words still appear, which is not motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .drafter-boot-mark, .drafter-boot-line { animation: none; }
+  }
 </style>

@@ -158,6 +158,14 @@ async function fresh(options: { inPlace?: boolean } = {}) {
   // Each test starts with an empty database.
   const { db } = await import('../app/storage/db');
   await Promise.all(db.tables.map((table) => table.clear()));
+  // The writer has met the samples, so New makes the blank documents these tests expect
+  // (first-samples.test.ts tests the first New of a kind).
+  await db.settings.bulkPut(
+    ['screenplay', 'stage-play', 'markdown'].map((kind) => ({
+      key: `sample-seen:${kind}`,
+      value: true,
+    })),
+  );
   const { useEditor } = await import('../app/editor/session');
   (useEditor() as unknown as { reset(): void }).reset();
   const { useScript } = await import('../app/storage/script');
