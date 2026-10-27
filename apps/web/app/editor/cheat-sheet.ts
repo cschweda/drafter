@@ -16,6 +16,8 @@ export interface CheatSheetEntry {
   example: string;
   /** The elements the parser reads in the example, in order. */
   reads: BlockKind[];
+  /** Stage plays have a part of their own, after the elements every script has. */
+  part?: 'stage';
 }
 
 export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
@@ -23,7 +25,7 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     id: 'scene-heading',
     name: 'Scene heading',
     mark: 'INT. or EXT., or a leading .',
-    rule: 'A line that starts with INT., EXT., EST., INT./EXT. or I/E, with a blank line before and after it, starts a scene and says where and when. Any line that starts with a dot and then a letter or number is a heading too, which is how a heading that names no place is written.',
+    rule: 'A line that starts with INT., EXT., EST., INT./EXT. or I/E, with a blank line before and after it, starts a scene and says where and when. Any line that starts with a dot and then a letter or number is a heading too, which is how a heading that names no place is written. A stage play’s scenes are ## lines instead (see Stage plays, below).',
     example: 'INT. KITCHEN - NIGHT\n\n.FLASHBACK',
     reads: ['scene_heading', 'scene_heading'],
   },
@@ -154,5 +156,42 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     rule: 'Drafter keeps what it needs to remember about a script, such as its template, in one boneyard at the very end of the file that starts /* drafter. Other Fountain programs skip a boneyard, so the file stays portable. Leave it as it is: Drafter writes it.',
     example: 'She waits.\n\n/* drafter\n{ "v": 1, "template": "us-screenplay" }\n*/',
     reads: ['action', 'boneyard'],
+  },
+  {
+    id: 'act',
+    name: 'Act',
+    mark: '#',
+    rule: 'In a stage play, a line that starts with # starts an act, and prints as its heading.',
+    example: '# ACT ONE',
+    reads: ['section'],
+    part: 'stage',
+  },
+  {
+    id: 'scene',
+    name: 'Scene',
+    mark: '##',
+    rule: 'In a stage play, a line that starts with ## starts a scene, and prints as its heading. A play has no INT. or EXT. headings, and no transitions: one prints as a stage direction.',
+    example: '# ACT ONE\n\n## Scene 1',
+    reads: ['section', 'section'],
+    part: 'stage',
+  },
+  {
+    id: 'stage-direction',
+    name: 'Stage direction',
+    mark: 'none, or a leading !',
+    rule: 'In a stage play, a paragraph that isn’t another element is a stage direction: what the audience sees and hears. It follows the same rules as action.',
+    example: 'Margaret crosses to the window.\n\nMARGARET\nStill raining.',
+    reads: ['action', 'character', 'dialogue'],
+    part: 'stage',
+  },
+  {
+    id: 'stage-template',
+    name: 'Which template',
+    mark: '/* drafter */',
+    rule: 'A script is laid out as a stage play when the settings block at the end of its file names the stage-play template. Drafter writes it when you choose Stage play; Fountain itself has no stage play.',
+    example:
+      'MARGARET\nStill raining.\n\n/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/',
+    reads: ['character', 'dialogue', 'boneyard'],
+    part: 'stage',
   },
 ];

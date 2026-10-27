@@ -23,11 +23,17 @@ describe('the cheat sheet’s examples', () => {
       }
       if (entry.id === 'title-page') expect(doc.titlePage).not.toBeNull();
       if (entry.id === 'drafter-block') expect(doc.meta).not.toBeNull();
+      if (entry.id === 'stage-template') expect(doc.meta?.template).toBe('stage-play-standard');
     });
   }
 
-  test('has a section for every element the bar can name', () => {
+  test('has a section for every element the bar can name, a stage play’s too', () => {
     const ids = new Set(CHEAT_SHEET.map((entry) => entry.id));
     for (const anchor of Object.values(CHEAT_SHEET_ANCHORS)) expect(ids).toContain(anchor);
+    for (const id of ['act', 'scene', 'stage-direction', 'stage-template'])
+      expect(ids).toContain(id);
+    // Those are in a part of their own, after the screenplay's.
+    const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage').map((entry) => entry.id);
+    expect(stage).toEqual(['act', 'scene', 'stage-direction', 'stage-template']);
   });
 });
