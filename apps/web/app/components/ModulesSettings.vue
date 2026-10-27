@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { desktop } from '~/desktop';
 import { contextFor, contextGeneration } from '~/modules/context';
-import { folderFailures } from '~/modules/folder';
+import { folderFailures, folderIdOf } from '~/modules/folder';
 import {
   consentMessage,
   folderModuleProblems,
@@ -97,8 +97,8 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
             <template v-if="lapsed.includes(module.id)">
               It now asks for network access you haven’t agreed to, so it is off until you turn it on again.
             </template>
-            <template v-if="isOn(module) && failures.get(module.id)">
-              It couldn’t start: {{ failures.get(module.id) }}.
+            <template v-if="isOn(module) && failures.get(folderIdOf(module.id))">
+              It couldn’t start: {{ failures.get(folderIdOf(module.id)) }}.
             </template>
           </p>
         </div>
