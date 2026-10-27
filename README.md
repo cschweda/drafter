@@ -218,6 +218,11 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Spellcheck with nspell and a per-script dictionary that knows your character names.
 - The built-in Reference tab.
 - Testing with NVDA and VoiceOver.
+- A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there.
+- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three-act, Save the Cat, five-act) laid over it as suggestions, never rules.
+- A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
+- Scene goals: optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes and shown on the cards and the map.
+- Setups and payoffs: mark a setup, link it to its payoff, and see the setups that never pay off.
 
 ### Phase 3 — Formats
 
@@ -225,6 +230,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Import from Highland, Fade In, and Celtx.
 - TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
 - User-added templates, dropped in as JSON, and template export.
+- For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
 - Standalone `.html` export.
 
 ### Phase 4 — Craft
@@ -236,6 +242,9 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Proof mode: readers add notes to a copy of the script, kept as standard Fountain notes. Drafter shows them in the margin like Word comments and carries them into the current draft.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
+- A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
+- Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
+- A breakdown report: locations, time of day, and cast for each scene, to export for production.
 - A PWA install flow and offline dictionary caching.
 
 ### Phase 5 — Community

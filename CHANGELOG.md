@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `docs`: the roadmap gains ways to see and work through a script: a script map, a pacing view with optional structure guides, a character-by-scene grid, scene goals, and setups and payoffs (Phase 2); French scenes, who is on stage, and a doubling chart for plays (Phase 3); a character pass, story order against script order, and a breakdown report (Phase 4).
 - `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
 
 ## [0.3.0] - 2026-10-26
