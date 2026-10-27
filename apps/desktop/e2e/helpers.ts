@@ -47,6 +47,12 @@ export interface Profile {
    * null for Cancel. An empty queue cancels. Each question asked is logged beside it (`.log`).
    */
   dialogs: string;
+  /**
+   * The answers the close dialog gives, in order (`DRAFTER_E2E_CLOSE`): `save`, `discard`, or
+   * `cancel`. An empty queue says `discard` (so a test that ends with changes can quit). Each
+   * dialog shown is logged beside it (`.log`).
+   */
+  closing: string;
   /** Where the About box writes what it says (`DRAFTER_E2E_ABOUT`), then presses its link. */
   about: string;
 }
@@ -62,12 +68,39 @@ export async function newProfile(): Promise<Profile> {
     externalLog: join(dir, 'external.log'),
     dialogs: join(dir, 'dialogs.json'),
     about: join(dir, 'about.log'),
+    closing: join(dir, 'close.json'),
   };
 }
 
 /** Queues the answers the next Open and Save dialogs give: a path each, or null for Cancel. */
 export function answerDialogs(profile: Profile, answers: (string | null)[]): void {
   writeFileSync(profile.dialogs, JSON.stringify(answers));
+}
+
+export type CloseAnswer = 'save' | 'discard' | 'cancel';
+
+/** Queues the answers the next close dialogs give. */
+export function answerClose(profile: Profile, answers: CloseAnswer[]): void {
+  writeFileSync(profile.closing, JSON.stringify(answers));
+}
+
+/** The close dialogs the app has shown, in order. */
+export function closeAsked(
+  profile: Profile,
+): { message: string; detail: string; buttons: string[] }[] {
+  const log = `${profile.closing}.log`;
+  if (!existsSync(log)) return [];
+  return readFileSync(log, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { message: string; detail: string; buttons: string[] });
+}
+
+/** What the app asked the page before closing (`state`, `save`, `flush`), in order. */
+export function closeRequested(profile: Profile): string[] {
+  const log = `${profile.closing}.requests`;
+  if (!existsSync(log)) return [];
+  return readFileSync(log, 'utf8').split('\n').filter(Boolean);
 }
 
 /** A question a dialog was asked: what kind, the folder (and name) it suggested. */
@@ -195,6 +228,7 @@ function envFor(profile: Profile, extra: Record<string, string> = {}): Record<st
     // Every dialog answers from the queue (Cancel when it is empty): no test waits on a person.
     DRAFTER_E2E_DIALOG: profile.dialogs,
     DRAFTER_E2E_ABOUT: profile.about,
+    DRAFTER_E2E_CLOSE: profile.closing,
     ...extra,
   };
 }

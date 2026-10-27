@@ -102,3 +102,15 @@ export function guard(contents: WebContents, preload: string): void {
 export function fromApp(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
   return navigationFor(event.senderFrame?.url ?? '') === 'app';
 }
+
+/**
+ * Whether an IPC message came from the editor's own page: its main frame, not a help window or a
+ * frame inside it. Only that page speaks for the script, so only it is asked or heard on closing.
+ */
+export function fromEditor(
+  event: IpcMainEvent | IpcMainInvokeEvent,
+  editor: WebContents | null | undefined,
+): boolean {
+  if (!editor || editor.isDestroyed()) return false;
+  return fromApp(event) && event.sender === editor && event.senderFrame === editor.mainFrame;
+}

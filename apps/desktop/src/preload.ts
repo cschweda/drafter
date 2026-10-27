@@ -6,8 +6,12 @@
 // Later tasks add calls here (the menu, closing, updates), each a named `ipcRenderer.invoke`
 // or a listener that hands the page plain data, never Electron's event object.
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-import type { DesktopBridge, DesktopFilesBridge } from '../../web/app/desktop';
-import { CHANNELS, type RendererReport, VERSION_ARG } from './channels';
+import type {
+  DesktopBridge,
+  DesktopCloseHandlers,
+  DesktopFilesBridge,
+} from '../../web/app/desktop';
+import { CHANNELS, type CloseRequestKind, type RendererReport, VERSION_ARG } from './channels';
 
 const version =
   process.argv.find((arg) => arg.startsWith(VERSION_ARG))?.slice(VERSION_ARG.length) ?? '';
@@ -72,6 +76,27 @@ function itemOf(value: unknown): { path?: string; problem?: string } {
   };
 }
 
+/** The page's answers to close requests (DesktopCloseHandlers), while it listens. */
+let closing: DesktopCloseHandlers | null = null;
+ipcRenderer.on(CHANNELS.closeRequest, async (_event, id: unknown, kind: unknown) => {
+  if (typeof id !== 'number') return;
+  const handlers = closing;
+  try {
+    if (!handlers) throw new Error('not listening');
+    const asked = kind as CloseRequestKind;
+    let value: unknown;
+    if (asked === 'state') value = await handlers.state();
+    else if (asked === 'save') value = await handlers.save();
+    else if (asked === 'flush') {
+      await handlers.flush();
+      value = true;
+    } else throw new Error('unknown request');
+    ipcRenderer.send(CHANNELS.closeReply, id, true, value);
+  } catch {
+    ipcRenderer.send(CHANNELS.closeReply, id, false, null);
+  }
+});
+
 const bridge: DesktopBridge = {
   version,
   platform: process.platform,
@@ -91,6 +116,17 @@ const bridge: DesktopBridge = {
         ipcRenderer.removeListener(CHANNELS.menuRun, listener);
       };
     },
+  },
+  // Closing: main asks, the page answers (and Saves or flushes when told to). Telling main we
+  // answer is what lets it ask rather than close at once.
+  onCloseRequest(handlers) {
+    closing = handlers;
+    ipcRenderer.send(CHANNELS.closeReady, true);
+    return () => {
+      if (closing !== handlers) return;
+      closing = null;
+      ipcRenderer.send(CHANNELS.closeReady, false);
+    };
   },
   // Files the system names (the command line, a second launch, macOS's open-file): main granted
   // each before sending it. Telling main we listen is what lets it send those it was holding.

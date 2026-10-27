@@ -316,8 +316,7 @@ test('says so when the file can’t be written, and leaves it as it was', async 
   } finally {
     chmodSync(path, 0o644);
   }
-  // Writable again, it saves. (Until Task 5 asks before closing, a window with unsaved changes
-  // won't close: its beforeunload holds it.)
+  // Writable again, it saves.
   await saveNow(app.page);
   await expect.poll(() => text(path)).toContain('Not saved.');
 });

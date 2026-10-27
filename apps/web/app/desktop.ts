@@ -65,6 +65,29 @@ export interface DesktopMenuBridge {
   onCommand(onRun: (id: string) => void): () => void;
 }
 
+/** What the page says when the desktop app is about to close its window (docs/drafter-desktop-design.md §5). */
+export interface DesktopCloseState {
+  /** The script has changes that are in no file (not a sample, not a read-only tab). */
+  unsaved: boolean;
+  /** The script's title, for the dialog the desktop app shows. */
+  title: string;
+}
+
+/**
+ * What the page does when the desktop app is about to close its window or quit. The desktop app
+ * asks `state`, shows its own dialog (the page's `beforeunload` question would block the window
+ * from closing, so on the desktop there is none), and may then ask for a `save`; every path that
+ * closes the window first asks for a `flush`. Any of them may be asked more than once.
+ */
+export interface DesktopCloseHandlers {
+  /** Whether closing would lose text that is in no file. */
+  state(): Promise<DesktopCloseState>;
+  /** Runs Save (a new script asks where). True only if the text reached its file. */
+  save(): Promise<boolean>;
+  /** Writes the recovery copy's pending text now. */
+  flush(): Promise<void>;
+}
+
 /**
  * What the desktop app gives the page. Plain data and named calls only: never Electron's
  * `ipcRenderer` itself. Later tasks add to it (the menu, closing, updates).
@@ -86,6 +109,12 @@ export interface DesktopBridge {
    * Returns the function that stops listening.
    */
   onOpenFile(onPath: (path: string) => void, onProblem?: (message: string) => void): () => void;
+  /**
+   * Answers the desktop app when it closes the window or quits (see `DesktopCloseHandlers`).
+   * Returns the function that stops answering. The page asks nothing of its own: closing is the
+   * desktop app's to decide.
+   */
+  onCloseRequest(handlers: DesktopCloseHandlers): () => void;
 }
 
 declare global {

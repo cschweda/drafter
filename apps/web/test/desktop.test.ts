@@ -13,6 +13,7 @@ const BRIDGE: DesktopBridge = {
   files: {} as DesktopFilesBridge,
   menu: { setCommands: () => {}, onCommand: () => () => {} },
   onOpenFile: () => () => {},
+  onCloseRequest: () => () => {},
 };
 
 describe('desktop()', () => {

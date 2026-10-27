@@ -25,7 +25,16 @@ export const CHANNELS = {
   menuCommands: 'drafter:menu:commands',
   /** main → preload: the id of the command a menu item stands for, chosen in the menu bar. */
   menuRun: 'drafter:menu:run',
+  /** preload → main: whether the page answers close requests (`true` once it listens, `false` when it stops). */
+  closeReady: 'drafter:close:ready',
+  /** main → preload: `(id, 'state' | 'save' | 'flush')`: a question for the page before the window closes. */
+  closeRequest: 'drafter:close:request',
+  /** preload → main: `(id, ok, value)`: the page's answer to the request `id`. */
+  closeReply: 'drafter:close:reply',
 } as const;
+
+/** What main may ask the page before it closes (close-flow.ts `ClosePage`). */
+export type CloseRequestKind = 'state' | 'save' | 'flush';
 
 /** What a preload says about its renderer: the e2e suite's evidence that it is sandboxed. */
 export interface RendererReport {

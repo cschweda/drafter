@@ -12,6 +12,7 @@ import {
   type WebContents,
 } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
+import { type Closing, setUpClosing } from './close';
 import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { setUpMenu } from './menu-main';
@@ -146,9 +147,13 @@ function start() {
     inbox.listen(page);
   });
 
+  // Closing the editor's window and quitting ask the page first (close.ts). Set up on `ready`.
+  let closing: Closing | null = null;
+
   /** Opens the editor's window, and keeps it as the one a second launch brings forward. */
   const openMain = () => {
     const window = createMainWindow(PRELOAD);
+    closing?.attach(window);
     window.on('closed', () => {
       if (main === window) main = null;
     });
@@ -176,7 +181,11 @@ function start() {
     });
   });
 
-  app.on('window-all-closed', () => app.quit());
+  app.on('window-all-closed', () => {
+    // No window is left to hold a script, so there is nothing to ask.
+    closing?.quitNow();
+    app.quit();
+  });
 
   void app.whenReady().then(() => {
     let csp: string | null = null;
@@ -220,6 +229,7 @@ function start() {
     protocol.handle(SCHEME, appHandler(WEB, csp, headers));
     files = registerFileIpc();
     setUpMenu();
+    closing = setUpClosing(() => main);
     started = true;
     openMain();
     begin();

@@ -41,7 +41,7 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
     version: VERSION,
     platform: process.platform,
     files: ['pathOfDropped', 'read', 'realPath', 'showOpen', 'showSave', 'watch', 'write'],
-    keys: ['files', 'menu', 'onOpenFile', 'platform', 'version'],
+    keys: ['files', 'menu', 'onCloseRequest', 'onOpenFile', 'platform', 'version'],
   });
   // Every file it asked for was there, and the CSP blocked nothing.
   expect(errors).toEqual([]);

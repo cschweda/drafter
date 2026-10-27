@@ -20,6 +20,7 @@ function bridge() {
     platform: 'linux',
     files: {} as never,
     onOpenFile: () => () => {},
+    onCloseRequest: () => () => {},
     menu: {
       setCommands: (list) => void sent.push(JSON.parse(JSON.stringify(list))),
       onCommand(onRun) {
