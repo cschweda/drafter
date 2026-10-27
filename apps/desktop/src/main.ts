@@ -228,7 +228,7 @@ function start() {
     }
     protocol.handle(SCHEME, appHandler(WEB, csp, headers));
     files = registerFileIpc();
-    setUpMenu();
+    setUpMenu(() => main);
     closing = setUpClosing(() => main);
     started = true;
     openMain();

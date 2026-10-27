@@ -267,6 +267,13 @@ export function menuTemplate(
 export const LIMITS = { commands: 400, id: 80, title: 200, keys: 4, key: 40 } as const;
 
 /**
+ * The ids of the items the menu has of its own (Quit, About, the Releases page). The page's
+ * commands can't take them: an item the page names `quit` would be a second Quit that the
+ * template's own ids (for `Menu.getMenuItemById`, and the tests) can't tell from the first.
+ */
+const NATIVE_IDS: ReadonlySet<string> = new Set(['quit', 'about', 'releases']);
+
+/**
  * The list of commands in a message from the page, or null when it isn't well-formed: a list of at
  * most `LIMITS.commands` commands, each with a short string id (once only), title, one of the five
  * groups, `enabled` a boolean, and up to four short key strings. Only the known fields are kept.
@@ -279,7 +286,10 @@ export function parseCommands(payload: unknown): MenuCommand[] | null {
   for (const entry of payload as unknown[]) {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return null;
     const { id, title, group, keys, enabled } = entry as Record<string, unknown>;
-    if (typeof id !== 'string' || id === '' || id.length > LIMITS.id || seen.has(id)) return null;
+    if (typeof id !== 'string' || id === '' || id.length > LIMITS.id || seen.has(id)) {
+      return null;
+    }
+    if (NATIVE_IDS.has(id)) return null;
     if (typeof title !== 'string' || title.length > LIMITS.title) return null;
     if (typeof group !== 'string' || !(GROUPS as readonly string[]).includes(group)) return null;
     if (typeof enabled !== 'boolean') return null;

@@ -23,7 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: on the desktop the page no longer holds the window open with the browser's “leave this page?” question (it would stop the window from ever closing); `commands/desktop-close.ts` answers the desktop app's questions instead (does closing lose text, Save, write the recovery copy). drafter.dev's `beforeunload` question is unchanged.
 
 ### Fixed
-
+- `apps/desktop`: the menu bar takes its commands only from the editor window, so a help window that turns into an editor (its “Back to Drafter” link, with the editor gone) can no longer take over where menu clicks go; a page can't name a command `quit`, `about`, or `releases`, the menu's own items.
 - `apps/desktop`: **a dropped or named file is judged by where it leads**, not by its name: a link called `notes.md` that points at a private file is no longer opened (it was the way past the “only scripts” rule).
 - `apps/desktop`: a script with a very long name (about 230 bytes, such as 80 Chinese characters) saves; leftover temp files from a write that was interrupted are cleared by the next save of that file; grants for files on a drive that isn’t mounted at launch are kept; copying no longer asks for a permission nothing needs.
 - `apps/desktop`: a file you open as “All files” that isn’t a script type (`letter.rtf`) opens as a new script, with a note saying so, instead of failing to save every time; an unreadable file says “read”, not “write”.

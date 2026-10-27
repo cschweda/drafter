@@ -272,6 +272,10 @@ describe('parseCommands', () => {
       [{ ...good[0], keys: ['a', 'b', 'c', 'd', 'e'] }],
       [{ ...good[0], keys: ['x'.repeat(41)] }],
       [{ ...good[0], id: 'x'.repeat(81) }],
+      // The native items' ids are not the page's to take.
+      [{ ...good[0], id: 'quit' }],
+      [{ ...good[0], id: 'about' }],
+      [{ ...good[0], id: 'releases' }],
       [{ ...good[0], title: 'x'.repeat(201) }],
       // Twice the same id.
       [good[0], good[0]],

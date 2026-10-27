@@ -174,6 +174,52 @@ test('chooses a menu item from the help window as well, and the editor answers',
   await expect.poll(async () => (await stored(page)).length).toBe(2);
 });
 
+test('takes its command list only from the editor window, not from a help window', async ({
+  desktop,
+}) => {
+  const { app, page } = await desktop();
+  await expect.poll(async () => (await menuItems(app)).some((i) => i.id === 'save')).toBe(true);
+  const before = await settledMenu(app);
+  // A help window that asks for a menu of its own (its page is the app's, with the app's preload).
+  const [help] = await Promise.all([
+    app.waitForEvent('window'),
+    page.evaluate(() => {
+      window.open('/docs/privacy/', '_blank');
+    }),
+  ]);
+  await help.waitForLoadState('domcontentloaded');
+  await help.evaluate(() => {
+    window.drafterDesktop?.menu.setCommands([
+      { id: 'palette', title: 'Not yours', group: 'Go', enabled: true },
+    ]);
+  });
+  expect(await settledMenu(app)).toEqual(before);
+});
+
+test('a help window that becomes an editor does not take the menu over', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  await expect.poll(async () => (await menuItems(app)).some((i) => i.id === 'palette')).toBe(true);
+  const [help] = await Promise.all([
+    app.waitForEvent('window'),
+    page.evaluate(() => {
+      window.open('/docs/privacy/', '_blank');
+    }),
+  ]);
+  await help.waitForLoadState('domcontentloaded');
+  // Its "Back to Drafter" link, with no opener to go back to: the help window becomes an editor,
+  // which sends the menu its own commands.
+  await help.evaluate(() => {
+    window.location.href = '/';
+  });
+  await expect(editor(help)).toBeVisible({ timeout: 30_000 });
+  await help.waitForTimeout(1500);
+  await settledMenu(app);
+
+  await chooseMenuItem(app, ['Go', 'Go to scene or command']);
+  await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
+  await expect(help.getByRole('dialog', { name: 'Command palette' })).toBeHidden();
+});
+
 test('takes the tour and resets the sample from Help and File', async ({ desktop }) => {
   const { app, page } = await desktop();
   await expect

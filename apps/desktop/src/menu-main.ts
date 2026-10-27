@@ -13,7 +13,7 @@ import {
   parseCommands,
   RELEASES_URL,
 } from './menu';
-import { fromApp, openExternal } from './window';
+import { fromEditor, openExternal } from './window';
 
 /**
  * Help → About Drafter: a native box with the version and a button to drafter.dev (opened in the
@@ -46,10 +46,12 @@ async function showAbout(parent: BrowserWindow | undefined): Promise<void> {
 
 /**
  * Builds the application menu now (with no commands, so About, the Releases page, and Quit work
- * before the page is up) and again whenever the editor's page sends a changed list. Call once,
- * after `ready`.
+ * before the page is up) and again whenever the editor's page sends a changed list. Only the
+ * editor window's own page is heard (`editor()` is that window): a help window that navigated to
+ * the editor (its “Back to Drafter” link with no opener) is an editor page too, but not the
+ * editor, and must not take over where menu clicks go. Call once, after `ready`.
  */
-export function setUpMenu(): void {
+export function setUpMenu(editor: () => BrowserWindow | null): void {
   let commands: MenuCommand[] = [];
   /** The page whose commands these are, and whose window runs them. */
   let source: WebContents | null = null;
@@ -93,7 +95,8 @@ export function setUpMenu(): void {
   };
 
   ipcMain.on(CHANNELS.menuCommands, (event, payload: unknown) => {
-    if (!fromApp(event)) return;
+    const window = editor();
+    if (!window || !fromEditor(event, window.webContents)) return;
     const parsed = parseCommands(payload);
     if (!parsed) return;
     const sender = event.sender;
