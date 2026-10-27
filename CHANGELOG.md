@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `docs`: the desktop app's design (`docs/drafter-desktop-design.md`: Electron, the Linux app first, then Windows and macOS) and the Electron-against-Tauri test on GitHub's Linux runners that chose it (`docs/desktop-spike.md`).
 - `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
 
 ## [0.3.0] - 2026-10-26
