@@ -1,6 +1,6 @@
 import type { Doc } from '@drafter/fountain';
 import type { DocumentKind } from '../markdown/kind';
-import type { SampleKind } from './samples';
+import type { SampleKind } from './sample-kinds';
 
 export type TemplateId = 'us-screenplay' | 'stage-play-standard';
 

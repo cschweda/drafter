@@ -21,9 +21,13 @@ import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/sav
 import { useScript } from '~/storage/script';
 import { requestTour } from '~/tour/state';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
+import { COMMAND_DATA, HELP_PAGES } from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
+
+/** What a command does and when it applies; the rest of a `Command` is in `data.ts`. */
+type Behavior = Pick<Command, 'run' | 'enabled' | 'why'>;
 
 const quietly = (action: () => Promise<unknown>) => () => void action().catch(() => {});
 
@@ -90,100 +94,61 @@ export function registerBuiltinCommands(): void {
     };
   }
 
-  const fountain = (
-    id: string,
-    title: string,
-    keys: string,
-    act: (view: EditorView) => unknown,
-  ): Command => ({
-    id,
-    title,
-    group: 'Edit',
-    keys,
+  /** One of the Fountain commands (technical design §3.3): on when the tab can edit a Fountain script. */
+  const fountain = (act: (view: EditorView) => unknown): Behavior => ({
     enabled: () => canEdit() && isFountain(),
     run: onEditor((v) => void act(v)),
   });
 
-  // ---- The commands -----------------------------------------------------------------------
+  // ---- What the commands do ---------------------------------------------------------------
+  // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
+  // them without an editor); this is the rest, by id, in the same order.
 
-  const commands: Command[] = [
-    {
-      id: 'palette',
-      title: 'Go to scene or command',
-      group: 'Go',
-      keys: 'Mod-k',
-      global: true,
-      run: togglePalette,
-    },
+  const behaviors: Record<string, Behavior> = {
+    palette: { run: togglePalette },
 
     // File
-    // One New command for each document type, in `DOCUMENT_TYPES` order (the chip and the Scripts menu read the same list).
-    ...DOCUMENT_TYPES.map(
-      (type): Command => ({
-        id: `new-${type.newKind}`,
-        title: type.newTitle,
-        group: 'File',
-        ...(type.newKeys && { keys: type.newKeys, global: true }),
-        enabled: canStart,
-        run: quietly(() => script.newScript(type.newKind)),
-      }),
+    // One New command for each document type (the chip and the Scripts menu read the same list).
+    ...Object.fromEntries(
+      DOCUMENT_TYPES.map((type): [string, Behavior] => [
+        `new-${type.newKind}`,
+        { enabled: canStart, run: quietly(() => script.newScript(type.newKind)) },
+      ]),
     ),
     // Switch the Fountain template (the toolbar's chip is hidden below 1024px, so the palette is how a phone does it).
     // Like show/hide line numbers, only the ones that apply are listed: not the current one, and none in a read-only
     // tab or with an unclosed `/*` that the choice would write after. In a Markdown document they are the way back
     // to Fountain (the text is kept). Each runs on the editor, so Mod+Z undoes the block it writes.
-    ...DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map(
-      (type): Command => ({
-        id: `template-${type.id}`,
-        title: `Template: ${type.name}`,
-        group: 'File',
-        enabled: () =>
-          template.canChooseType(type) && !(isFountain() && template.id.value === type.id),
-        run: onEditor(() => void template.chooseType(type)),
-      }),
+    ...Object.fromEntries(
+      DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map((type): [string, Behavior] => [
+        `template-${type.id}`,
+        {
+          enabled: () =>
+            template.canChooseType(type) && !(isFountain() && template.id.value === type.id),
+          run: onEditor(() => void template.chooseType(type)),
+        },
+      ]),
     ),
     // Markdown is a kind of document, not a template: it is listed in a Fountain script (after asking, because
     // Fountain's formatting stops applying and undo doesn't bring it back), and not in a Markdown document.
-    ...DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map(
-      (type): Command => ({
-        id: 'document-markdown',
-        title: `Document: ${type.name}`,
-        group: 'File',
-        enabled: () => isFountain() && template.canChooseType(type),
-        run: onEditor(() => void template.chooseType(type)),
-      }),
+    ...Object.fromEntries(
+      DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map((type): [string, Behavior] => [
+        'document-markdown',
+        {
+          enabled: () => isFountain() && template.canChooseType(type),
+          run: onEditor(() => void template.chooseType(type)),
+        },
+      ]),
     ),
-    {
-      id: 'open',
-      title: 'Open…',
-      group: 'File',
-      keys: 'Mod-o',
-      global: true,
+    open: {
       // A tab that only shows a script says why it can't open one, so this isn't `canStart`.
       enabled: idle,
       run: quietly(pickAndOpen),
     },
-    {
-      id: 'save',
-      title: 'Save',
-      group: 'File',
-      keys: 'Mod-s',
-      global: true,
-      // A tab that can't save says so when it's asked to.
-      run: quietly(save),
-    },
-    {
-      id: 'save-as',
-      title: 'Save As…',
-      group: 'File',
-      keys: 'Mod-Shift-s',
-      global: true,
-      run: quietly(saveAs),
-    },
-    {
-      id: 'revert-to-saved',
-      title: 'Revert to Saved',
-      group: 'File',
+    // A tab that can't save says so when it's asked to.
+    save: { run: quietly(save) },
+    'save-as': { run: quietly(saveAs) },
+    'revert-to-saved': {
       // Only while there are changes and a saved file to go back to; it says what it did, and undo reverses it.
       enabled: canRevert,
       why: revertWhy,
@@ -193,21 +158,15 @@ export function registerBuiltinCommands(): void {
       },
     },
     // The samples (the Scripts menu lists them too).
-    ...SAMPLES.map(
-      (sample): Command => ({
-        id: `open-sample-${sample.kind}`,
-        title: `Open sample: ${sample.name}`,
-        group: 'File',
-        enabled: idle,
-        run: quietly(() => script.openSample(sample.kind)),
-      }),
+    ...Object.fromEntries(
+      SAMPLES.map((sample): [string, Behavior] => [
+        `open-sample-${sample.kind}`,
+        { enabled: idle, run: quietly(() => script.openSample(sample.kind)) },
+      ]),
     ),
     // Back to the sample's own text, as one change Undo reverses; only while a sample is open and editable. The Help
     // section of the app menu lists it too.
-    {
-      id: 'reset-sample',
-      title: 'Reset sample',
-      group: 'File',
+    'reset-sample': {
       enabled: () => script.canResetSample.value,
       run: () => {
         if (script.resetSample()) editor.goto(view.state.selection.main.head);
@@ -215,248 +174,131 @@ export function registerBuiltinCommands(): void {
     },
     // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
     // section of the app menu lists it too. It waits for any dialog or the palette to close.
-    {
-      id: 'take-the-tour',
-      title: 'Take the tour',
-      group: 'Help',
-      run: requestTour,
-    },
+    'take-the-tour': { run: requestTour },
+    // The help pages (§4.5), prerendered. They open in this tab, as a link would: leaving with changes that aren't
+    // in a file asks the browser's own question, and the recovery copy has the text either way. The page links back.
+    ...Object.fromEntries(
+      HELP_PAGES.map((page): [string, Behavior] => [
+        page.id,
+        { run: () => window.location.assign(page.path) },
+      ]),
+    ),
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF or plain text; a Markdown document as its Markdown file or plain text (a PDF of one is deferred).
-    {
-      id: 'export-pdf',
-      title: 'Export as PDF',
-      group: 'File',
-      enabled: isFountain,
-      run: () => void exportScript('pdf'),
-    },
-    {
-      id: 'export-md',
-      title: 'Export as Markdown file',
-      group: 'File',
-      enabled: isMarkdown,
-      run: () => void exportScript('md'),
-    },
-    {
-      id: 'export-txt',
-      title: 'Export as plain text',
-      group: 'File',
-      run: () => void exportScript('txt'),
-    },
-    {
-      id: 'remove',
-      title: 'Remove from this browser',
-      group: 'File',
+    'export-pdf': { enabled: isFountain, run: () => void exportScript('pdf') },
+    'export-md': { enabled: isMarkdown, run: () => void exportScript('md') },
+    'export-txt': { run: () => void exportScript('txt') },
+    remove: {
       enabled: () => idle() && !script.project.value?.sample,
       run: () => {
         removing.value = script.project.value;
       },
     },
-
-    {
-      id: 'settings',
-      title: 'Settings…',
-      group: 'File',
-      keys: 'Mod-,',
-      global: true,
+    settings: {
       run: () => {
         settingsOpen.value = true;
       },
     },
 
     // Go
-    {
-      id: 'go-to-scene',
-      title: 'Go to scene…',
-      group: 'Go',
-      enabled: isFountain,
-      run: () => openPalette('scene'),
-    },
-    { id: 'go-to-line', title: 'Go to line…', group: 'Go', run: () => openPalette('line') },
-    {
-      id: 'next-problem',
-      title: 'Next problem',
-      group: 'Go',
-      keys: 'F8',
-      enabled: isFountain,
-      run: onEditor((v) => nextDiagnostic(v)),
-    },
-    {
-      id: 'previous-problem',
-      title: 'Previous problem',
-      group: 'Go',
-      keys: 'Shift-F8',
-      enabled: isFountain,
-      run: onEditor((v) => previousDiagnostic(v)),
-    },
+    'go-to-scene': { enabled: isFountain, run: () => openPalette('scene') },
+    'go-to-line': { run: () => openPalette('line') },
+    'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
+    'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
 
     // View
-    { id: 'show-source', title: 'Show Source', group: 'View', run: () => showTab('source') },
-    {
-      id: 'show-script',
-      title: 'Show Script',
-      group: 'View',
-      enabled: isFountain,
-      run: () => showTab('script'),
-    },
+    'show-source': { run: () => showTab('source') },
+    'show-script': { enabled: isFountain, run: () => showTab('script') },
     // The Script tab is the Preview in a Markdown document.
-    {
-      id: 'show-preview',
-      title: 'Show Preview',
-      group: 'View',
-      enabled: isMarkdown,
-      run: () => showTab('script'),
-    },
-    { id: 'show-problems', title: 'Show Problems', group: 'View', run: () => showTab('problems') },
-    {
-      id: 'focus-mode',
-      title: 'Toggle focus mode',
-      group: 'View',
-      icon: 'i-lucide-scan',
-      keys: 'Mod-Shift-Enter',
+    'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
+    'show-problems': { run: () => showTab('problems') },
+    'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
-      global: true,
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
       enabled: () => !document.querySelector('dialog[open]') && !view.composing,
       run: focus.toggle,
     },
     // Sprints (Phase 1 design §7.3): the three lengths here; any length from the Counts panel.
-    ...SPRINT_MINUTES.map(
-      (minutes): Command => ({
-        id: `sprint-${minutes}`,
-        title: `Start a ${minutes}-minute sprint`,
-        group: 'View',
-        enabled: () => !sprintOn(),
-        run: () => sprint.start(minutes),
-      }),
+    ...Object.fromEntries(
+      SPRINT_MINUTES.map((minutes): [string, Behavior] => [
+        `sprint-${minutes}`,
+        { enabled: () => !sprintOn(), run: () => sprint.start(minutes) },
+      ]),
     ),
-    {
-      id: 'sprint-pause',
-      title: 'Pause sprint',
-      group: 'View',
+    'sprint-pause': {
       enabled: () => sprint.state.value.status === 'running',
       run: sprint.pause,
     },
-    {
-      id: 'sprint-resume',
-      title: 'Resume sprint',
-      group: 'View',
+    'sprint-resume': {
       enabled: () => sprint.state.value.status === 'paused',
       run: sprint.resume,
     },
-    {
-      id: 'sprint-stop',
-      title: 'Stop sprint',
-      group: 'View',
-      enabled: sprintOn,
-      run: sprint.stop,
-    },
-    {
-      id: 'sprint-hide',
-      title: 'Hide sprint countdown',
-      group: 'View',
+    'sprint-stop': { enabled: sprintOn, run: sprint.stop },
+    'sprint-hide': {
       enabled: () => sprintOn() && !sprint.hidden.value,
       run: () => {
         sprint.hidden.value = true;
       },
     },
-    {
-      id: 'sprint-show',
-      title: 'Show sprint countdown',
-      group: 'View',
+    'sprint-show': {
       enabled: () => sprintOn() && sprint.hidden.value,
       run: () => {
         sprint.hidden.value = false;
       },
     },
-    {
-      id: 'switch-theme',
-      title: 'Switch theme',
-      group: 'View',
+    'switch-theme': {
       run: () => {
         colorMode.preference = colorMode.value === 'light' ? 'dark' : 'light';
       },
     },
-    {
-      id: 'show-line-numbers',
-      title: 'Show line numbers',
-      group: 'View',
+    'show-line-numbers': {
       enabled: () => !settings.value.lineNumbers,
       run: () => void set('lineNumbers', true),
     },
-    {
-      id: 'hide-line-numbers',
-      title: 'Hide line numbers',
-      group: 'View',
+    'hide-line-numbers': {
       enabled: () => settings.value.lineNumbers,
       run: () => void set('lineNumbers', false),
     },
-    {
-      id: 'turn-on-typewriter',
-      title: 'Turn on typewriter scrolling',
-      group: 'View',
+    'turn-on-typewriter': {
       enabled: () => !settings.value.typewriter,
       run: () => void set('typewriter', true),
     },
-    {
-      id: 'turn-off-typewriter',
-      title: 'Turn off typewriter scrolling',
-      group: 'View',
+    'turn-off-typewriter': {
       enabled: () => settings.value.typewriter,
       run: () => void set('typewriter', false),
     },
-    {
-      id: 'fold-all',
-      title: 'Fold all',
-      group: 'View',
-      keys: 'Ctrl-Alt-[',
-      run: onEditor((v) => foldAll(v)),
-    },
-    {
-      id: 'unfold-all',
-      title: 'Unfold all',
-      group: 'View',
-      keys: 'Ctrl-Alt-]',
-      run: onEditor((v) => unfoldAll(v)),
-    },
+    'fold-all': { run: onEditor((v) => foldAll(v)) },
+    'unfold-all': { run: onEditor((v) => unfoldAll(v)) },
 
     // Edit
-    {
-      id: 'undo',
-      title: 'Undo',
-      group: 'Edit',
-      keys: 'Mod-z',
-      enabled: canEdit,
-      run: onEditor((v) => undo(v)),
-    },
-    {
-      id: 'redo',
-      title: 'Redo',
-      group: 'Edit',
-      keys: 'Mod-Shift-z',
-      enabled: canEdit,
-      run: onEditor((v) => redo(v)),
-    },
-    {
-      id: 'find',
-      title: 'Find',
-      group: 'Edit',
-      keys: 'Mod-f',
-      run: onEditor((v) => openSearchPanel(v)),
-    },
+    undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
+    redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
+    find: { run: onEditor((v) => openSearchPanel(v)) },
 
     // Edit, the Fountain commands (technical design §3.3)
-    fountain('make-scene-heading', 'Make scene heading', 'Mod-Alt-1', forceKind('scene_heading')),
-    fountain('make-action', 'Make action', 'Mod-Alt-2', forceKind('action')),
-    fountain('make-character', 'Make character', 'Mod-Alt-3', forceKind('character')),
-    fountain('make-parenthetical', 'Make parenthetical', 'Mod-Alt-4', forceKind('parenthetical')),
-    fountain('make-transition', 'Make transition', 'Mod-Alt-5', forceKind('transition')),
-    fountain('make-centered', 'Make centered text', 'Mod-Alt-6', forceKind('centered')),
-    fountain('make-lyric', 'Make lyric', 'Mod-Alt-7', forceKind('lyric')),
-    fountain('dual-dialogue', 'Dual dialogue', 'Mod-Shift-d', toggleDual),
-    fountain('wrap-in-note', 'Wrap in a note', 'Mod-/', wrapInNote),
-    fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/', wrapInBoneyard),
-  ];
+    'make-scene-heading': fountain(forceKind('scene_heading')),
+    'make-action': fountain(forceKind('action')),
+    'make-character': fountain(forceKind('character')),
+    'make-parenthetical': fountain(forceKind('parenthetical')),
+    'make-transition': fountain(forceKind('transition')),
+    'make-centered': fountain(forceKind('centered')),
+    'make-lyric': fountain(forceKind('lyric')),
+    'dual-dialogue': fountain(toggleDual),
+    'wrap-in-note': fountain(wrapInNote),
+    'cut-to-boneyard': fountain(wrapInBoneyard),
+  };
 
-  registerCommands(commands);
+  // The data and the behavior must name the same commands: one without the other is a mistake in
+  // this file, found the first time the app starts.
+  const known = new Set(COMMAND_DATA.map((c) => c.id));
+  for (const id of Object.keys(behaviors)) {
+    if (!known.has(id)) throw new Error(`The command “${id}” has behavior but no data (data.ts).`);
+  }
+  registerCommands(
+    COMMAND_DATA.map((data): Command => {
+      const behavior = behaviors[data.id];
+      if (!behavior) throw new Error(`The command “${data.id}” has data but no behavior.`);
+      return { ...data, ...behavior };
+    }),
+  );
 }

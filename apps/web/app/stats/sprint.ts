@@ -26,8 +26,8 @@ export type SprintState =
 /** What a sprint is measured against: the words and pages when it began. */
 export type SprintCounts = Pick<Counts, 'words' | 'pages'>;
 
-/** The lengths the panel and the palette offer, in minutes. */
-export const SPRINT_MINUTES: readonly number[] = [15, 25, 45];
+export { SPRINT_MINUTES } from './sprint-minutes';
+
 const MAX_MINUTES = 180;
 const MINUTE = 60_000;
 

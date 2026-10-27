@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { HELP_PAGES } from '~/commands/data';
 import { formatKeys, isApple } from '~/commands/keys';
 import { type Command, useCommands } from '~/commands/registry';
 import { SAMPLES } from '~/editor/samples';
@@ -14,7 +15,7 @@ import { useScript } from '~/storage/script';
 // command (`commands/builtin.ts`), so this menu, the palette, and the keys never disagree; an item
 // whose command is off shows disabled. The recent scripts are the one list that isn't commands:
 // they open a script by id, as the Scripts menu does. The Help section is the last group and is
-// built from commands too (`helpItems`): Plan 5's Take the tour and the help pages are added there.
+// built from commands too (`helpItems`): Take the tour and the help pages.
 const commands = useCommands();
 const script = useScript();
 const editor = useEditor();
@@ -84,11 +85,17 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-txt': 'i-lucide-file-type',
 };
 
-// Help: the group at the end of the menu. Take the tour is first (always on); Reset sample is last (off
-// unless a sample is open); the help pages join them as their commands arrive.
+// Help: the group at the end of the menu. Take the tour is first (always on), then the three help pages
+// (they open in this tab: the page links back); Reset sample is last (off unless a sample is open).
+const HELP_ICONS: Record<string, string> = {
+  'help-saving': 'i-lucide-save',
+  'help-shortcuts': 'i-lucide-keyboard',
+  'help-privacy': 'i-lucide-shield-check',
+};
 const helpItems = computed<DropdownMenuItem[]>(() => [
   { type: 'label', label: 'Help' },
   ...entry('take-the-tour', 'i-lucide-compass'),
+  ...HELP_PAGES.flatMap((page) => entry(page.id, HELP_ICONS[page.id] ?? 'i-lucide-book-open')),
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
 ]);
 

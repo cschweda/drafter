@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
+import { HELP_PAGES } from '../app/commands/data';
 import { removePickers, stubPickers, textOf } from './fs-stub';
 
 // Offline use and updates (Phase 1 design §11), on Chromium with the service worker allowed (every
@@ -184,6 +185,29 @@ test.describe('offline', () => {
     await expect(editor(page)).toContainText('The Call');
   });
 
+  test('opens the help pages offline, with and without the trailing slash, and not as the app', async ({
+    page,
+    context,
+  }) => {
+    await start(page);
+    await context.setOffline(true);
+    // The page asks for nothing the worker can't answer (Nuxt fetches a prerendered page's payload).
+    const failed: string[] = [];
+    page.on('requestfailed', (request) => failed.push(request.url()));
+    for (const { path, title } of HELP_PAGES) {
+      for (const address of [path, `${path}/`]) {
+        await page.goto(address);
+        await expect(page.getByRole('heading', { level: 1 }), address).toHaveText(title);
+        await expect(editor(page), address).toHaveCount(0);
+        await page.waitForLoadState('networkidle');
+      }
+    }
+    expect(failed).toEqual([]);
+    // And from a page to the app, offline.
+    await page.getByRole('link', { name: /Back to Drafter/ }).click();
+    await expect(editor(page)).toContainText('The Call');
+  });
+
   test('caches nothing but the app’s own files', async ({ page }) => {
     await start(page);
     const stored = await page.evaluate(async () => {
@@ -210,6 +234,11 @@ test.describe('offline', () => {
     expect(stored.urls.filter((u) => u.startsWith('/fonts/courier-prime/'))).toHaveLength(4);
     for (const icon of ['/icon-192.png', '/icon-512.png', '/icon-maskable-512.png']) {
       expect(stored.urls).toContain(icon);
+    }
+    // The help pages, under both addresses.
+    for (const { path } of HELP_PAGES) {
+      expect(stored.urls).toContain(path);
+      expect(stored.urls).toContain(`${path}/`);
     }
     // Not the social image, and not the hosting fallbacks.
     expect(stored.urls).not.toContain('/og-image.png');

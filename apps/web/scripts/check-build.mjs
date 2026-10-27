@@ -61,6 +61,18 @@ async function precacheProblems(siteDir) {
     }
   }
   if (!cached.has('/')) problems.push('The service worker does not cache the app’s shell (/).');
+  // The prerendered pages (the help pages, `docs/<name>/index.html`) are not the app, and the
+  // worker's page fallback leaves `/docs` alone, so each must be cached under the address a
+  // reader or a link uses: with and without the trailing slash.
+  for (const page of await pagesUnder(siteDir)) {
+    for (const address of [page, `${page}/`]) {
+      if (!cached.has(address)) {
+        problems.push(
+          `The service worker does not cache “${address}”, so that page would be missing offline.`,
+        );
+      }
+    }
+  }
   for (const name of NOT_PRECACHED) {
     if (!files.includes(name) && cached.has(name)) {
       problems.push(`The service worker caches ${name}, which the app does not need.`);
@@ -72,6 +84,20 @@ async function precacheProblems(siteDir) {
     );
   }
   return problems;
+}
+
+/**
+ * The prerendered pages other than the app's shell: `docs/saving` for `docs/saving/index.html`.
+ * @param {string} siteDir
+ * @returns {Promise<string[]>}
+ */
+async function pagesUnder(siteDir) {
+  const found = await filesUnder(siteDir, /^index\.html$/);
+  return found
+    .map((path) => relative(siteDir, path).split(sep).join('/'))
+    .filter((name) => name !== 'index.html')
+    .map((name) => name.slice(0, -'/index.html'.length))
+    .sort();
 }
 
 /**
