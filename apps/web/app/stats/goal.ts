@@ -360,15 +360,19 @@ export function useGoal(): GoalStore {
   if (!shared) {
     const { project } = useScript();
     const guard = useGuard();
-    const { kind } = useEditor();
+    const editor = useEditor();
+    const { kind } = editor;
     const counts = useCounts();
     shared = createGoal({
       project: () => project.value?.id ?? null,
       sample: () => !!project.value?.sample,
       readOnly: () => guard.readOnly.value,
       kind: () => kind.value,
-      counts: () => counts.known.value,
+      // As of the last pause in typing: a key costs the goal nothing but a look at the date.
+      counts: () => counts.steady.value,
     });
+    // Every edit looks at the date, and only the date: the counts it would capture are the pause's.
+    editor.onChange(() => shared?.tick());
     // The window coming back to the front looks at the clock (a laptop that slept through midnight).
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
