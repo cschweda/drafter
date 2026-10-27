@@ -29,6 +29,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `README.md`, `apps/web`: scripts move freely between drafter.dev and the desktop app (the same plain-text files); each keeps its own recovery copy and recent scripts.
 - `apps/desktop`: **a test that files move between the two apps unchanged** (`e2e/interchange.spec.ts`): a screenplay with a title page, notes, a boneyard, dual dialogue, accents and Japanese; a stage play named by its `/* drafter */` block; a CRLF file with a byte-order mark; and a Markdown document are each opened, edited, and saved by the desktop app and opened in the web app (by File System Access and by the file input), and the other way round (saved to a file and downloaded). Each app reads the other's file as the same text, kind, and template, draws the same pages (or Preview), and writes the bytes back exactly as it found them.
 - `apps/desktop`: **a right-click menu in the editor**: on a misspelled word it lists spelling suggestions (choosing one replaces the word) and *Add to Dictionary*, then Cut, Copy, Paste, and Select All. Before, a right-click did nothing.
+- `README.md`: **how to release**: set the versions and the changelog, push the tag, let the workflow make and publish the GitHub Release, then edit its notes; never create the release by hand first.
 
 ### Fixed
 
