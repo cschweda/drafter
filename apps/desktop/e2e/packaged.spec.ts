@@ -36,7 +36,9 @@ const RESTRICTED = (() => {
   }
 })();
 /** The AppImage's launcher turns the sandbox off there, so the app asks first. */
-const REFUSED = KIND === 'appimage' && RESTRICTED;
+/** An AppArmor profile for the AppImage's own path was loaded (DRAFTER_APPIMAGE_PROFILED=1): then its launcher's user-namespace test may pass. */
+const PROFILED = process.env.DRAFTER_APPIMAGE_PROFILED === '1';
+const REFUSED = KIND === 'appimage' && RESTRICTED && !PROFILED;
 
 /**
  * MERGE CHECKLIST: flip to `true` when Task 3 (opening files from the command line) is merged. While it
@@ -279,6 +281,23 @@ test('is not a Node runtime, and takes no Node switches', async () => {
   expect(running.output()).not.toContain('DRAFTER_RAN_AS_NODE');
   expect(running.output()).not.toMatch(INSPECTOR_BANNER);
   expect(running.output()).not.toContain('/nonexistent/drafter.js');
+  await browser.close();
+});
+
+test('brings its spellcheck dictionary, and copies it into the profile', async () => {
+  test.skip(REFUSED, 'The AppImage asks about the sandbox here (tested below)');
+  // The dictionaries come with the app once the spellchecker is merged (apps/desktop/dictionaries/).
+  test.skip(
+    !existsSync(new URL('../dictionaries/', import.meta.url)),
+    'This build of the app has no dictionaries',
+  );
+  const running = await launch();
+  const { browser } = await editorPage(running);
+  // Read from inside app.asar, and copied where Chromium looks before it would download one.
+  const seeded = join(running.home, '.config', 'Drafter', 'Dictionaries');
+  await expect
+    .poll(() => (existsSync(seeded) ? readdirSync(seeded) : []).filter((n) => n.endsWith('.bdic')))
+    .not.toEqual([]);
   await browser.close();
 });
 

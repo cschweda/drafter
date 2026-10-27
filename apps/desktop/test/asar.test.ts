@@ -22,6 +22,19 @@ describe('checkListing', () => {
     expect(checkListing(['/web/index.html']).join('\n')).toMatch(/missing .*dist\/main\.cjs/);
   });
 
+  test('wants a dictionary when the app has dictionaries', () => {
+    expect(checkListing(GOOD, { dictionaries: true }).join('\n')).toMatch(
+      /missing .*dictionaries\/\*\.bdic/,
+    );
+    expect(
+      checkListing([...GOOD, '/dictionaries', '/dictionaries/en-US-10-2.bdic'], {
+        dictionaries: true,
+      }),
+    ).toEqual([]);
+    // Not asked for, nothing is missing.
+    expect(checkListing(GOOD, { dictionaries: false })).toEqual([]);
+  });
+
   test('refuses source maps, tests, the share image, and node_modules', () => {
     for (const extra of [
       '/web/_nuxt/entry.abc.js.map',

@@ -2,6 +2,7 @@
 // belong (source maps, tests, the share image). Run after packaging:
 // `node scripts/check-asar.mjs release/linux-unpacked/resources/app.asar`.
 // @electron/asar is electron-builder's own dependency, so it is found through electron-builder.
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -26,10 +27,18 @@ const UNWANTED = [
   ],
 ];
 
-/** @returns {string[]} what is wrong with the listing (paths as `/dist/main.cjs`). */
-export function checkListing(listing) {
+/**
+ * @param {string[]} listing the asar's entries (as `/dist/main.cjs`)
+ * @param {{ dictionaries?: boolean }} options `dictionaries`: the app has dictionaries to bring
+ * @returns {string[]} what is wrong with the listing
+ */
+export function checkListing(listing, options = {}) {
   const paths = listing.map((entry) => entry.replace(/\\/g, '/').replace(/^\//, ''));
   const problems = [];
+  // The spellchecker's dictionaries, once the app has them (apps/desktop/dictionaries/).
+  if (options.dictionaries && !paths.some((p) => /^dictionaries\/[^/]+\.bdic$/.test(p))) {
+    problems.push('missing from the package: dictionaries/*.bdic (the spellchecker has none)');
+  }
   for (const needed of MUST_HAVE) {
     if (!paths.includes(needed)) problems.push(`missing from the package: ${needed}`);
   }
@@ -52,7 +61,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const asar = createRequire(builder.resolve('app-builder-lib'))('@electron/asar');
   const listing = asar.listPackage(file);
   console.log(`${listing.length} entries in ${file}`);
-  const problems = checkListing(listing);
+  const problems = checkListing(listing, {
+    dictionaries: existsSync(new URL('../dictionaries/', import.meta.url)),
+  });
   if (problems.length > 0) {
     for (const problem of problems) console.error(`::error::${problem}`);
     process.exit(1);

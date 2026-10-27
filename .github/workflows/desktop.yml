@@ -126,6 +126,20 @@ jobs:
         run: |
           DRAFTER_PACKAGED_KIND=deb DRAFTER_PACKAGED=/usr/bin/drafterdev \
             xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged
+      - name: Packaged AppImage, with a narrow AppArmor profile for its own path (the fix in the docs; restriction still on)
+        if: ${{ !cancelled() }}
+        run: |
+          set +e
+          image="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)"
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\n\nprofile drafter-appimage %s flags=(default_allow) {\n  userns,\n}\n' "$image" | sudo tee /etc/apparmor.d/drafter-appimage
+          sudo apparmor_parser -r /etc/apparmor.d/drafter-appimage
+          sysctl kernel.apparmor_restrict_unprivileged_userns
+          DRAFTER_APPIMAGE_PROFILED=1 DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$image" \
+            xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged -g "runs sandboxed|launches"
+          status=$?
+          sudo apparmor_parser -R /etc/apparmor.d/drafter-appimage || true
+          sudo rm -f /etc/apparmor.d/drafter-appimage
+          exit $status
       - name: The unpacked build's fuses (the AppImage's binary is inside its image)
         if: ${{ !cancelled() }}
         run: |
