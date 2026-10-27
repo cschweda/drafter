@@ -48,17 +48,31 @@ export interface ModulesFolder {
 const isText = (value: unknown): value is string =>
   typeof value === 'string' && value.trim() !== '';
 
-/** Whether `value` is an origin a module may ask for: https, or plain http to this computer. */
+/** A host name: lowercase labels of letters, digits, and inner hyphens, joined by single dots. */
+const LABEL = '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?';
+const HOST_NAME = `${LABEL}(?:\\.${LABEL})*`;
+const IPV4 =
+  '(?:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
+const IPV6 = '\\[[0-9a-f:.]+\\]';
+/** A port of 1 to 65535, written without leading zeros. */
+const PORT = '(?::(?:6553[0-5]|655[0-2]\\d|65[0-4]\\d{2}|6[0-4]\\d{3}|[1-5]\\d{4}|[1-9]\\d{0,3}))?';
+const HTTPS_ORIGIN = new RegExp(`^https://(?:${HOST_NAME}|${IPV4}|${IPV6})${PORT}$`);
+const LOCAL_ORIGIN = new RegExp(`^http://(?:localhost|127\\.0\\.0\\.1|\\[::1\\])${PORT}$`);
+
+/**
+ * Whether `value` is an origin a module may ask for: https to a plain host name or address, or
+ * plain http to this computer, written exactly as the browser writes the origin (lowercase, no
+ * default port, no user, path, query, or fragment). Checked character by character, not only by
+ * the URL parser: the origin goes into the frame's CSP, where `*` is a wildcard and `;`, `,`, or a
+ * space would end or split the source list.
+ */
 function isOrigin(value: string): boolean {
-  let url: URL;
+  if (!HTTPS_ORIGIN.test(value) && !LOCAL_ORIGIN.test(value)) return false;
   try {
-    url = new URL(value);
+    return new URL(value).origin === value;
   } catch {
     return false;
   }
-  if (url.origin !== value) return false;
-  if (url.protocol === 'https:') return true;
-  return url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
 }
 
 /** Why `value` is not a module.json, or undefined when it is one. */
@@ -247,7 +261,7 @@ export function moduleCsp(id: string, origins: readonly string[]): string {
     `style-src ${self} 'unsafe-inline'`,
     `img-src ${self} data: blob:`,
     `font-src ${self}`,
-    [`connect-src ${self}`, ...origins].join(' '),
+    [`connect-src ${self}`, ...origins.filter(isOrigin)].join(' '),
     "base-uri 'none'",
     "form-action 'none'",
     `frame-ancestors ${APP_URL.replace(/\/$/, '')}`,
@@ -360,4 +374,22 @@ export function allowsModuleFrame(
   if (!target || (target[2] ?? '/') !== '/') return false;
   const id = moduleIdOf(url);
   return id !== null && known(id);
+}
+
+/**
+ * The origins the page says the writer agreed to for a module (`asked`, from the page), kept only
+ * where the module's module.json declares them: the page can't widen what a module may reach.
+ */
+export function agreedOrigins(declared: readonly string[], asked: unknown): string[] {
+  if (!Array.isArray(asked)) return [];
+  return declared.filter((origin) => asked.includes(origin));
+}
+
+/**
+ * The app's page policy, with its modules' frames allowed (`frame-src`; the policy's default would
+ * refuse them). Only the desktop app adds this, and only when it loaded a module: drafter.dev's
+ * policy is not changed.
+ */
+export function appCspWithModules(csp: string): string {
+  return `${csp.replace(/;\s*$/, '')}; frame-src ${MODULE_SCHEME}:`;
 }

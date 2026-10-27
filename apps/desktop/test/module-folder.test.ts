@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
+  agreedOrigins,
   allowsModuleFrame,
+  appCspWithModules,
   manifestProblem,
   moduleCsp,
   moduleHandler,
@@ -59,6 +61,64 @@ describe('manifestProblem', () => {
     expect(
       manifestProblem({ ...MANIFEST, permissions: { network: ['http://localhost:8080'] } }),
     ).toBeUndefined();
+  });
+
+  test('refuses an origin whose host isn’t a plain host name or address', () => {
+    // Each would reach the frame's CSP (connect-src), where `*` is a wildcard and `;` or a space
+    // ends the source list.
+    for (const origin of [
+      'https://*.example.com',
+      'https://*',
+      'https://a*b.example.com',
+      'https://a;b.example.com',
+      'https://a,b.example.com',
+      "https://a'b.example.com",
+      'https://a"b.example.com',
+      'https://a%20b.example.com',
+      'https://a..example.com',
+      'https://.example.com',
+      'https://example.com.',
+      'https://-a.example.com',
+      'https://a-.example.com',
+      'https://a_b.example.com',
+      'https://example.com/',
+      'https://example.com/path',
+      'https://example.com?q=1',
+      'https://example.com#x',
+      'https://user@example.com',
+      'https://user:pw@example.com',
+      'HTTPS://EXAMPLE.COM',
+      'http://example.com',
+      'http://10.0.0.1',
+      'ws://localhost',
+      'wss://example.com',
+      'file:///etc',
+      'data:text/plain,x',
+      'https://[::1',
+      'https://example.com:0',
+      'https://example.com:99999',
+      ' https://example.com',
+      'https://example.com ',
+    ]) {
+      expect(manifestProblem({ ...MANIFEST, permissions: { network: [origin] } }), origin).toMatch(
+        /not an origin/,
+      );
+    }
+    for (const origin of [
+      'https://example.com',
+      'https://api.example.com:8443',
+      'https://192.0.2.10',
+      'https://[2001:db8::1]',
+      'https://xn--bcher-kva.example',
+      'http://localhost',
+      'http://127.0.0.1:11434',
+      'http://[::1]:8080',
+    ]) {
+      expect(
+        manifestProblem({ ...MANIFEST, permissions: { network: [origin] } }),
+        origin,
+      ).toBeUndefined();
+    }
   });
 
   test('says what is wrong with one that isn’t', () => {
@@ -235,6 +295,14 @@ describe('moduleCsp', () => {
     expect(moduleCsp('tidy', ['https://api.example.com'])).toContain(
       'connect-src drafter-module://tidy https://api.example.com;',
     );
+    // Whatever reaches it, nothing but a strict origin goes into the policy.
+    expect(
+      moduleCsp('tidy', [
+        'https://*.example.com',
+        "https://a.example; script-src 'unsafe-eval'",
+        '*',
+      ]),
+    ).toContain('connect-src drafter-module://tidy;');
   });
 });
 
@@ -326,5 +394,25 @@ describe('allowsModuleFrame', () => {
     for (const [url, initiator, main] of cases) {
       expect(allowsModuleFrame(url, initiator, main, known), `${url} ${initiator}`).toBe(false);
     }
+  });
+});
+
+describe('agreedOrigins', () => {
+  test('keeps only what the module declares, once each', () => {
+    const declared = ['https://api.example.com', 'http://127.0.0.1:11434'];
+    expect(agreedOrigins(declared, ['https://api.example.com', 'https://evil.example'])).toEqual([
+      'https://api.example.com',
+    ]);
+    expect(agreedOrigins(declared, [...declared, ...declared])).toEqual(declared);
+    for (const bad of [null, 'https://api.example.com', [3], {}]) {
+      expect(agreedOrigins(declared, bad), JSON.stringify(bad)).toEqual([]);
+    }
+  });
+});
+
+describe('appCspWithModules', () => {
+  const CSP = "default-src 'self'; connect-src 'self'; frame-ancestors 'none'";
+  test('lets the app’s page frame the modules, and changes nothing else', () => {
+    expect(appCspWithModules(CSP)).toBe(`${CSP}; frame-src drafter-module:`);
   });
 });
