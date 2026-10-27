@@ -49,11 +49,21 @@ module.exports = {
       mimeType: 'text/x-fountain',
       role: 'Editor',
     },
+    // One extension per entry: electron-builder writes an `ext` list into the .deb's MIME file as a
+    // single glob (`*.md,markdown`), which matches nothing. `.markdown` carries no MIME type of its
+    // own (the system's shared-mime-info already gives `*.markdown` text/markdown), so the desktop
+    // entry lists text/markdown once.
     {
-      ext: ['md', 'markdown'],
+      ext: 'md',
       name: 'Markdown document',
       description: 'Markdown document',
       mimeType: 'text/markdown',
+      role: 'Editor',
+    },
+    {
+      ext: 'markdown',
+      name: 'Markdown document',
+      description: 'Markdown document',
       role: 'Editor',
     },
   ],
@@ -88,5 +98,9 @@ module.exports = {
     // installs an AppArmor profile (electron-builder's own, `userns` for /opt/Drafter/drafterdev)
     // so the sandbox works on Ubuntu 24.04 and later.
     packageName: 'drafterdev',
+    // The desktop entry's Exec ends in %F, so a file manager passes the files' paths (the app opens
+    // paths; it also accepts local file:// URIs, for the AppImage's entry, whose `AppRun %U`
+    // electron-builder writes itself). Without this electron-builder appends %U.
+    executableArgs: ['%F'],
   },
 };

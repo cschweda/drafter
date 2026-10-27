@@ -11,6 +11,7 @@
 // is said to be refused).
 import { type Stats, statSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { hasExtension, SCRIPT_EXTENSIONS } from './files';
 
 /** Why an argument wasn't opened. */
@@ -47,8 +48,24 @@ export function refusalsMessage(refusals: readonly Refusal[]): string {
 const same = (a: string, b: string) => resolve(a) === resolve(b);
 
 /**
+ * An argument as a path: itself, or for a URL (`scheme://…`) the local file a `file:` URL names, as a
+ * desktop entry's `%U` passes it (`file:///home/a/My%20Script.fountain`). Any other URL, a `file:`
+ * URL on another host, or one that doesn't decode is null: not a request.
+ */
+function fromUrl(arg: string): string | null {
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(arg)) return arg;
+  try {
+    const url = new URL(arg);
+    if (url.protocol !== 'file:' || (url.host !== '' && url.host !== 'localhost')) return null;
+    return fileURLToPath(new URL(`file://${url.pathname}`));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Sorts the arguments after the executable. Flags (anything starting with `-`, such as macOS's
- * `-psn_0_123`) and the paths in `ignore` (the app's own folder, the executable, the AppImage) are
+ * `-psn_0_123`) and URLs other than a local `file:` one and the paths in `ignore` (the app's own folder, the executable, the AppImage) are
  * dropped; relative paths are taken from `cwd`, the folder the launch happened in.
  */
 export function requestsFromArgs(args: string[], cwd: string, ignore: string[] = []): OpenRequests {
@@ -64,7 +81,9 @@ export function requestsFromArgs(args: string[], cwd: string, ignore: string[] =
       continue;
     }
     if (!paths && arg.startsWith('-')) continue;
-    const path = resolve(cwd, arg);
+    const named = !paths ? fromUrl(arg) : arg;
+    if (named === null) continue;
+    const path = resolve(cwd, named);
     if (ignore.some((skip) => same(skip, path))) continue;
     if (seen.has(path)) continue;
     seen.add(path);

@@ -3,6 +3,7 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   filesFromArgv,
@@ -164,6 +165,39 @@ describe('names that are not ASCII', () => {
     expect(refusalMessage(png[0] as Refusal)).toBe(
       'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, or .txt).',
     );
+  });
+});
+
+describe('file URLs (a desktop entry’s %U)', () => {
+  test('opens a local file:// URL as its path, spaces and CJK included', () => {
+    const plain = touch('My Script.fountain');
+    const cjk = touch('脚本.md');
+    const { files, refused } = requestsFromArgv(
+      [
+        'x',
+        pathToFileURL(plain).href,
+        pathToFileURL(cjk).href,
+        `file://localhost${pathToFileURL(plain).pathname}`,
+      ],
+      dir,
+    );
+    expect(files).toEqual([plain, cjk]);
+    expect(refused).toEqual([]);
+  });
+
+  test('says a missing file URL isn’t there, and leaves other hosts and schemes out', () => {
+    const { files, refused } = requestsFromArgv(
+      [
+        'x',
+        pathToFileURL(join(dir, 'gone.fountain')).href,
+        'file://server/share/a.fountain',
+        'https://example.com/a.fountain',
+        'file:///%E0%A4%A.fountain',
+      ],
+      dir,
+    );
+    expect(files).toEqual([]);
+    expect(refused).toEqual([{ name: 'gone.fountain', reason: 'it isn’t there' }]);
   });
 });
 
