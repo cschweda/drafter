@@ -413,6 +413,16 @@ describe('saveTarget', () => {
     expect(saveTarget(join(dir, '.hidden'), '.fountain')).toBe(join(dir, '.hidden.fountain'));
     expect(existsSync(join(dir, 'Notes.md'))).toBe(false);
   });
+
+  test('never puts one kind’s bytes under the other’s name: an export is a .pdf, a script is text', () => {
+    // Export (PDF) typed with a script's extension: the PDF's own is added.
+    expect(saveTarget(join(dir, 'Notes.fountain'), '.pdf')).toBe(join(dir, 'Notes.fountain.pdf'));
+    expect(saveTarget(join(dir, 'Notes.md'), '.pdf')).toBe(join(dir, 'Notes.md.pdf'));
+    expect(saveTarget(join(dir, 'Notes.PDF'), '.pdf')).toBe(join(dir, 'Notes.PDF'));
+    // A script typed as a .pdf: the script's own is added.
+    expect(saveTarget(join(dir, 'Notes.pdf'), '.fountain')).toBe(join(dir, 'Notes.pdf.fountain'));
+    expect(saveTarget(join(dir, 'Notes.pdf'), '.md')).toBe(join(dir, 'Notes.pdf.md'));
+  });
 });
 
 describe('the folder a dialog starts in', () => {

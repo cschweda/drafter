@@ -32,6 +32,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/desktop`: **an export never lands under a script's name**: a PDF typed as `Notes.fountain` in Export's dialog is saved as `Notes.fountain.pdf`, and a script typed as `Notes.pdf` as `Notes.pdf.fountain` (any script extension still suits a script).
 - `apps/desktop`: **the “Drafter isn’t responding” box promises a recovery copy only when there is one**: it goes by what the page last said about its recovery copy, and says changes may be lost when the copy isn’t working or the page never said.
 - `apps/desktop`: **an AppImage update replaces the file in place.** The AppImage is now `Drafter-x86_64.AppImage` in every release (the `.deb` keeps its version), so Restart writes the new version over the old file at the same path instead of leaving it under a new, versioned name, and a launcher, an AppImage tool's menu entry, or an AppArmor profile for the AppImage keeps working. `scripts/check-update-feed.mjs` refuses a feed whose AppImage name carries a version, and CI now builds two AppImages and checks a real Restart end to end: the file is replaced at its path and the new version starts from it.
 - `apps/desktop`: **Restart no longer races the new version's start**: once Drafter is quitting it ignores a second launch (which had brought its window back and stopped the quit), and a Drafter started by an update's Restart waits up to ten seconds for the old one to let go instead of handing over to it and exiting.

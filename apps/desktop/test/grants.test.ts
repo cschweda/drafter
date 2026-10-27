@@ -311,7 +311,8 @@ describe('what a page may read and write', () => {
     for (const name of ['a.fountain', 'a.md', 'a.markdown', 'a.txt', 'a.pdf', 'A.FOUNTAIN']) {
       const path = join(dir, name);
       const own = setUp([path]);
-      await own.handlers.showSave(own.event, name, '.fountain');
+      // Each saved as its own kind (an export as a .pdf; saveTarget keeps the kinds apart).
+      await own.handlers.showSave(own.event, name, name.endsWith('.pdf') ? '.pdf' : '.fountain');
       await own.handlers.write(own.event, path, bytes(name));
       expect(await readFile(path, 'utf8')).toBe(name);
     }

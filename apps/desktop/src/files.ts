@@ -402,13 +402,18 @@ export function nextDialogAnswer(file: string, request: DialogRequest): string |
 
 /**
  * Where a Save dialog's answer saves. Linux's dialogs don't add the extension of the type chosen,
- * and the app writes only scripts and exports (`WRITE_EXTENSIONS`), so a name without one of
- * those gets `extension` (`Notes` → `Notes.md`, `Notes.rtf` → `Notes.rtf.md`). If a file already
- * has that name a number is added (`Notes (2).md`): the writer agreed to replace only the name
- * they typed.
+ * so a name without an extension of the kind being saved gets `extension`: a script keeps any
+ * script extension the writer typed (they are all plain text), and an export must be a `.pdf`
+ * (`Notes` → `Notes.md`, `Notes.rtf` → `Notes.rtf.md`, `Notes.fountain` saved as a PDF →
+ * `Notes.fountain.pdf`, so PDF bytes never land under a script's name, nor a script's under a
+ * PDF's). If a file already has that name a number is added (`Notes (2).md`): the writer agreed to
+ * replace only the name they typed.
  */
 export function saveTarget(path: string, extension: string): string {
-  if (hasExtension(path, WRITE_EXTENSIONS)) return path;
+  const kind = SCRIPT_EXTENSIONS.includes(extension.toLowerCase())
+    ? SCRIPT_EXTENSIONS
+    : [extension.toLowerCase()];
+  if (hasExtension(path, kind)) return path;
   let candidate = `${path}${extension}`;
   for (let n = 2; existsSync(candidate) && n < 1000; n++) candidate = `${path} (${n})${extension}`;
   return candidate;
