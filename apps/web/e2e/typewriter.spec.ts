@@ -99,7 +99,6 @@ test.describe('typewriter scrolling', () => {
   });
 
   test('leaves the opening lines at the top, with no room above the text', async ({ page }) => {
-    const before = await offCenter(page, 'first');
     await turnOn(page);
     // Two frames, so the room around the text has been measured and written.
     await page.evaluate(
@@ -111,9 +110,10 @@ test.describe('typewriter scrolling', () => {
         () => document.querySelector<HTMLElement>('.cm-content')?.style.paddingTop,
       ),
     ).toBe('');
-    expect(
-      Math.abs(((await offCenter(page, 'first'))?.off ?? 0) - (before?.off ?? 0)),
-    ).toBeLessThanOrEqual(1);
+    // ... nor scrolls it: the first line is still at the top of the pane.
+    expect(await scroller(page).evaluate((el) => el.scrollTop)).toBeLessThanOrEqual(1);
+    const top = await offCenter(page, 'first');
+    expect(top?.off).toBeGreaterThan((top?.line ?? 0) * 2);
     await typeLines(page, 60);
     await page.keyboard.press('ControlOrMeta+Home');
     await expect
