@@ -147,6 +147,7 @@ onBeforeUnmount(() => {
     <ModuleConfirmDialog />
     <CommandPalette />
     <SettingsDialog />
+    <StatsDialog />
     <AppTour />
     <SprintNotice />
     <!-- Focus mode: the Source alone, in a column, with the marker in the corner. -->

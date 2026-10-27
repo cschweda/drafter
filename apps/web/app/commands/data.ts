@@ -132,6 +132,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'sprint-stop', title: 'Stop sprint', group: 'View' },
   { id: 'sprint-hide', title: 'Hide sprint countdown', group: 'View' },
   { id: 'sprint-show', title: 'Show sprint countdown', group: 'View' },
+  { id: 'show-stats', title: 'Show stats', group: 'View' },
   { id: 'switch-theme', title: 'Switch theme', group: 'View' },
   { id: 'show-line-numbers', title: 'Show line numbers', group: 'View' },
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },

@@ -143,7 +143,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],
   exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
-  entry('settings', 'i-lucide-settings'),
+  [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
   helpItems.value,
 ]);
 

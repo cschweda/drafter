@@ -13,6 +13,7 @@ import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
@@ -254,6 +255,12 @@ export function registerBuiltinCommands(): void {
       enabled: () => sprintOn() && sprint.hidden.value,
       run: () => {
         sprint.hidden.value = false;
+      },
+    },
+    // Writing stats (docs/drafter-stats-design.md §4): the Counts panel and the Drafter menu open it too.
+    'show-stats': {
+      run: () => {
+        statsOpen.value = true;
       },
     },
     'switch-theme': {
