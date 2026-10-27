@@ -405,12 +405,12 @@ test('installs a desktop entry, an icon, and an AppArmor profile', async () => {
   expect(mime).toContain('<glob pattern="*.fountain"/>');
   expect(mime).toContain('<glob pattern="*.md"/>');
   expect(mime).not.toMatch(/pattern="[^"]*,/);
-  // And the system now knows a .fountain file's type, so a double-click can open it in Drafter.
-  const folder = await tempDir('drafter-mime-');
-  const script = join(folder, 'Script.fountain');
-  await writeFile(script, 'INT. A ROOM - DAY\n');
-  const typed = execFileSync('xdg-mime', ['query', 'filetype', script], { encoding: 'utf8' });
-  expect(typed.trim()).toBe('text/x-fountain');
+  // And the system's MIME database (rebuilt by the .deb's post-install) now types a .fountain file
+  // text/x-fountain, so a file manager offers Drafter for it. (xdg-mime can't say: with no desktop
+  // environment it asks `file`, which knows only text/plain.)
+  const globs = readFileSync('/usr/share/mime/globs2', 'utf8');
+  expect(globs).toMatch(/^\d+:text\/x-fountain:\*\.fountain$/m);
+  expect(globs).toMatch(/^\d+:text\/markdown:\*\.md$/m);
   expect(existsSync('/usr/share/icons/hicolor/512x512/apps/drafterdev.png')).toBe(true);
   expect(existsSync('/usr/bin/drafterdev')).toBe(true);
   const profile = readFileSync('/etc/apparmor.d/drafterdev', 'utf8');

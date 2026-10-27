@@ -22,6 +22,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # A desktop-sized virtual screen (xvfb-run's default is 640x480, which shrinks the app's window).
+  XVFB_SCREEN: "-screen 0 1920x1080x24"
+
 concurrency:
   group: desktop-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
@@ -57,10 +61,10 @@ jobs:
             exit 1
           fi
 
-      - name: System packages (a virtual display and xwininfo, FUSE for the AppImage)
+      - name: System packages (a virtual display, xwininfo and xdotool, FUSE for the AppImage, the MIME database)
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q xvfb x11-utils libfuse2t64 xdg-utils shared-mime-info xdotool
+          sudo apt-get install -y -q xvfb x11-utils libfuse2t64 shared-mime-info xdotool
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
@@ -118,7 +122,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)" \
-            xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
       - name: Install the .deb
         if: ${{ !cancelled() }}
         run: |
@@ -130,7 +134,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           DRAFTER_XDOTOOL=1 DRAFTER_PACKAGED_KIND=deb DRAFTER_PACKAGED=/usr/bin/drafterdev \
-            xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
       - name: Packaged AppImage, with a narrow AppArmor profile for its own path (the fix in the docs; restriction still on)
         if: ${{ !cancelled() }}
         run: |
@@ -140,7 +144,7 @@ jobs:
           sudo apparmor_parser -r /etc/apparmor.d/drafter-appimage
           sysctl kernel.apparmor_restrict_unprivileged_userns
           DRAFTER_APPIMAGE_PROFILED=1 DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$image" \
-            xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged -g "runs sandboxed|launches"
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged -g "runs sandboxed|launches"
           status=$?
           sudo apparmor_parser -R /etc/apparmor.d/drafter-appimage || true
           sudo rm -f /etc/apparmor.d/drafter-appimage
@@ -149,7 +153,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           DRAFTER_PACKAGED_KIND=unpacked DRAFTER_PACKAGED="$GITHUB_WORKSPACE/apps/desktop/release/linux-unpacked/drafterdev" \
-            xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged -g "Electron’s fuses"
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged -g "Electron’s fuses"
 
       # The shell's own tests launch node_modules' Electron, which has no AppArmor profile: lift the
       # restriction for them, after the packages have been tried without.
@@ -160,12 +164,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)" \
-            xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
+      - name: Chromium for the web side of the files test (e2e/interchange.spec.ts)
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @drafter/desktop exec playwright install --with-deps chromium
       - name: The shell's end-to-end tests
         if: ${{ !cancelled() }}
         env:
           DRAFTER_E2E_REUSE_WEB: "1"
-        run: xvfb-run -a pnpm --filter @drafter/desktop e2e
+        run: xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:

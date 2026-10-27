@@ -71,12 +71,19 @@ const DICTIONARIES = join(app.getAppPath(), 'dictionaries');
 
 /** What each renderer's preload reported, by webContents id (read by the e2e suite). */
 const renderers = new Map<number, RendererReport>();
-/** How spelling is checked, and the dictionary downloads Chromium began (none, ever). */
-const spelling = { mode: 'off' as Spellcheck, downloads: [] as string[] };
+/**
+ * How spelling is checked, the dictionary downloads Chromium began (none, ever), and what it said
+ * about its dictionaries (`initialized en-US`, `download-failure en-US`), for the e2e suite.
+ */
+const spelling = { mode: 'off' as Spellcheck, downloads: [] as string[], events: [] as string[] };
 Object.assign(globalThis, {
   drafterShell: {
     renderers: () => [...renderers.values()],
-    spellcheck: () => ({ ...spelling, downloads: [...spelling.downloads] }),
+    spellcheck: () => ({
+      ...spelling,
+      downloads: [...spelling.downloads],
+      events: [...spelling.events],
+    }),
   },
 });
 
@@ -267,6 +274,14 @@ function start() {
     ses.on('spellcheck-dictionary-download-begin', (_event, language) => {
       spelling.downloads.push(language);
     });
+    for (const name of ['initialized', 'download-success', 'download-failure'] as const) {
+      ses.on(
+        `spellcheck-dictionary-${name}` as 'spellcheck-dictionary-initialized',
+        (_event, language) => {
+          spelling.events.push(`${name} ${language}`);
+        },
+      );
+    }
     try {
       spelling.mode = setUpSpellcheck(ses, {
         platform: process.platform,

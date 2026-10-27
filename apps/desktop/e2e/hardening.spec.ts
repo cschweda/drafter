@@ -74,9 +74,23 @@ test('underlines a misspelled word, with no dictionary downloaded', async ({ des
           () => (globalThis as unknown as { drafterMenu?: { word: string } }).drafterMenu?.word,
         );
       },
-      { timeout: 30_000, intervals: [500] },
+      {
+        timeout: 30_000,
+        intervals: [500],
+      },
     )
-    .toBe('quikc');
+    .toBe('quikc')
+    .catch(async (error: Error) => {
+      // What the spellchecker had, when it never marked the word.
+      const state = await app.evaluate(({ session }) => ({
+        shell: (
+          globalThis as unknown as { drafterShell: { spellcheck(): unknown } }
+        ).drafterShell.spellcheck(),
+        languages: session.defaultSession.getSpellCheckerLanguages(),
+        enabled: session.defaultSession.isSpellCheckerEnabled(),
+      }));
+      throw new Error(`${error.message}\nspellchecker: ${JSON.stringify(state)}`);
+    });
   const spell = await app.evaluate(() =>
     (
       globalThis as unknown as {
@@ -104,6 +118,11 @@ test('denies permissions the app doesn’t use', async ({ desktop }) => {
       microphone: await query('microphone'),
       // On macOS an unpackaged Electron waits on the system's own microphone prompt before it asks
       // the app (and the test can't answer it): checked on Linux, in CI.
+      // A computer with no microphone answers NotFoundError before any permission is asked (CI's
+      // runners have none), so there the answer says nothing about the handler.
+      microphones: (await navigator.mediaDevices.enumerateDevices()).filter(
+        (device) => device.kind === 'audioinput',
+      ).length,
       media: darwin
         ? 'NotAllowedError'
         : await navigator.mediaDevices
@@ -117,13 +136,14 @@ test('denies permissions the app doesn’t use', async ({ desktop }) => {
       persisted: await navigator.storage.persist(),
     };
   }, process.platform === 'darwin');
-  expect(answers).toEqual({
+  const { microphones, ...rest } = answers;
+  expect(rest).toEqual({
     notification: 'denied',
     notifications: 'denied',
     geolocation: 'denied',
     camera: 'denied',
     microphone: 'denied',
-    media: 'NotAllowedError',
+    media: microphones === 0 && process.platform === 'linux' ? 'NotFoundError' : 'NotAllowedError',
     midi: 'NotAllowedError',
     persisted: true,
   });

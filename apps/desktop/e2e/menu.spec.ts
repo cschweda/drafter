@@ -241,7 +241,10 @@ test('Back to Drafter in a help window brings the editor forward and closes the 
   // From the keyboard: the link is the first thing on the page.
   const back = help.getByRole('link', { name: /Back to Drafter/ });
   await back.focus();
-  await help.keyboard.press('Enter');
+  // The window may be gone before the press is done (on Linux it is): that is the point.
+  await help.keyboard.press('Enter').catch((error: Error) => {
+    if (!/closed/.test(error.message)) throw error;
+  });
   await closed;
   await expect.poll(() => app.windows().length).toBe(1);
   // The editor is still the one script, as it was: no second editor was loaded anywhere.
