@@ -6,7 +6,7 @@
 import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { APP_URL, contentTypeOf, resolveRawPath, within } from './protocol';
+import { APP_URL, contentTypeOf, navigationFor, resolveRawPath, within } from './protocol';
 
 /** The scheme (registered as privileged in main.ts: standard, secure, fetch, CORS; never `bypassCSP`). */
 export const MODULE_SCHEME = 'drafter-module';
@@ -341,4 +341,23 @@ export function moduleHandler(
       return notFound();
     }
   };
+}
+
+/**
+ * Whether a frame may navigate to `url`: only a sub-frame, only to a loaded module's page
+ * (`drafter-module://<id>/`), and only when the app's own page started it. A module's frame can't
+ * navigate itself or another frame, to another module or anywhere else.
+ */
+export function allowsModuleFrame(
+  url: string,
+  initiatorUrl: string | undefined,
+  isMainFrame: boolean,
+  known: (id: string) => boolean,
+): boolean {
+  if (isMainFrame || initiatorUrl === undefined) return false;
+  if (navigationFor(initiatorUrl) !== 'app') return false;
+  const target = MODULE_URL.exec(url);
+  if (!target || (target[2] ?? '/') !== '/') return false;
+  const id = moduleIdOf(url);
+  return id !== null && known(id);
 }

@@ -162,6 +162,47 @@ describe('the network', () => {
     before({ url: 'https://example.com/' }, (r: unknown) => answers.push(r));
     expect(answers).toEqual([{ cancel: true }, { cancel: false }]);
   });
+
+  test('lets a module’s frame reach only the origins the writer agreed to for it', () => {
+    const grants = (id: string) => (id === 'helper' ? ['https://api.example.com'] : []);
+    const from = (frameUrl: string, url: string) =>
+      refusesRequest({ url, webContentsId: 1, frameUrl }, grants);
+    expect(from('drafter-module://helper/?surface=background', 'https://api.example.com/v1')).toBe(
+      false,
+    );
+    // Another origin, another module, the app's own page, a socket to the same host: refused.
+    expect(from('drafter-module://helper/', 'https://evil.example/')).toBe(true);
+    expect(from('drafter-module://helper/', 'wss://api.example.com/')).toBe(true);
+    expect(from('drafter-module://other/', 'https://api.example.com/v1')).toBe(true);
+    expect(from('app://drafter/', 'https://api.example.com/v1')).toBe(true);
+    expect(refusesRequest({ url: 'https://api.example.com/', webContentsId: 1 }, grants)).toBe(
+      true,
+    );
+  });
+
+  test('reads the requesting frame from Electron’s details', () => {
+    const { session, handlers } = fakeSession();
+    refuseNetwork(session, () => ['https://api.example.com']);
+    const answers: unknown[] = [];
+    const before = handlers.beforeRequest as (...a: unknown[]) => void;
+    const frame = { url: 'drafter-module://helper/' };
+    before({ url: 'https://api.example.com/', webContentsId: 3, frame }, (r: unknown) =>
+      answers.push(r),
+    );
+    before({ url: 'https://api.example.com/', webContentsId: 3, frame: null }, (r: unknown) =>
+      answers.push(r),
+    );
+    // A frame that is gone throws when asked for its URL: refused.
+    const gone = {
+      get url(): string {
+        throw new Error('Render frame was disposed');
+      },
+    };
+    before({ url: 'https://api.example.com/', webContentsId: 3, frame: gone }, (r: unknown) =>
+      answers.push(r),
+    );
+    expect(answers).toEqual([{ cancel: false }, { cancel: true }, { cancel: true }]);
+  });
 });
 
 describe('the spellchecker’s dictionary', () => {

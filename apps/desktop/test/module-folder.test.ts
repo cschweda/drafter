@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
+  allowsModuleFrame,
   manifestProblem,
   moduleCsp,
   moduleHandler,
@@ -301,5 +302,29 @@ describe('moduleHandler', () => {
     expect((await get('drafter-module://tidy/leak.txt')).status).toBe(404);
     expect((await get('drafter-module://tidy/leak/secret.txt')).status).toBe(404);
     expect((await get('drafter-module://tidy/inside.js')).status).toBe(200);
+  });
+});
+
+describe('allowsModuleFrame', () => {
+  const known = (id: string) => id === 'tidy';
+  test('lets the app’s page load a loaded module’s frame', () => {
+    expect(
+      allowsModuleFrame('drafter-module://tidy/?surface=tab', 'app://drafter/', false, known),
+    ).toBe(true);
+  });
+
+  test('refuses a module navigating a frame, the main frame, an unknown module, or a file', () => {
+    const cases: [string, string | undefined, boolean][] = [
+      ['drafter-module://tidy/', 'drafter-module://tidy/', false],
+      ['drafter-module://tidy/', 'drafter-module://other/', false],
+      ['drafter-module://tidy/', undefined, false],
+      ['drafter-module://tidy/', 'app://drafter/', true],
+      ['drafter-module://other/', 'app://drafter/', false],
+      ['drafter-module://tidy/index.js', 'app://drafter/', false],
+      ['https://example.com/', 'app://drafter/', false],
+    ];
+    for (const [url, initiator, main] of cases) {
+      expect(allowsModuleFrame(url, initiator, main, known), `${url} ${initiator}`).toBe(false);
+    }
   });
 });
