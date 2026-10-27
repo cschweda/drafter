@@ -6,11 +6,13 @@ import type { DesktopBridge, DesktopCloseHandlers } from '../app/desktop';
 
 // The session and Save, as far as closing reads them.
 const wouldLose = ref(false);
+const recovery = ref('ok');
 const title = ref('The Call');
 const flush = vi.fn(async () => {});
 vi.mock('../app/storage/script', () => ({
   useScript: () => ({
     wouldLose,
+    recovery,
     flush,
     project: {
       get value() {
@@ -48,6 +50,7 @@ function bridge() {
 beforeEach(() => {
   vi.stubGlobal('__DRAFTER_DESKTOP__', true);
   wouldLose.value = false;
+  recovery.value = 'ok';
   title.value = 'The Call';
   flush.mockClear();
   save.mockClear();
@@ -61,9 +64,21 @@ afterEach(() => {
 describe('closeState', () => {
   test('is unsaved when the session says closing would lose text, with the title', () => {
     wouldLose.value = true;
-    expect(closeState()).toEqual({ unsaved: true, title: 'The Call' });
+    expect(closeState()).toEqual({ unsaved: true, title: 'The Call', recoverable: true });
     wouldLose.value = false;
-    expect(closeState()).toEqual({ unsaved: false, title: 'The Call' });
+    expect(closeState()).toEqual({ unsaved: false, title: 'The Call', recoverable: true });
+  });
+});
+
+describe('closeState and the recovery copy', () => {
+  test('says whether a recovery copy is there to promise', () => {
+    wouldLose.value = true;
+    recovery.value = 'unavailable';
+    expect(closeState().recoverable).toBe(false);
+    recovery.value = 'not-persistent';
+    expect(closeState().recoverable).toBe(true);
+    recovery.value = 'ok';
+    expect(closeState().recoverable).toBe(true);
   });
 });
 
@@ -77,7 +92,11 @@ describe('installDesktopClose', () => {
     const b = bridge();
     installDesktopClose();
     wouldLose.value = true;
-    expect(await b.handlers()?.state()).toEqual({ unsaved: true, title: 'The Call' });
+    expect(await b.handlers()?.state()).toEqual({
+      unsaved: true,
+      title: 'The Call',
+      recoverable: true,
+    });
     await b.handlers()?.flush();
     expect(flush).toHaveBeenCalledTimes(1);
   });

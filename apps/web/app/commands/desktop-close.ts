@@ -9,7 +9,12 @@ import { useScript } from '~/storage/script';
 /** What the page holds that closing would lose; the title is for the dialog. */
 export function closeState(): DesktopCloseState {
   const script = useScript();
-  return { unsaved: script.wouldLose.value, title: script.project.value?.title ?? '' };
+  return {
+    unsaved: script.wouldLose.value,
+    title: script.project.value?.title ?? '',
+    // With no recovery copy to write, the dialog must not say there is one.
+    recoverable: script.recovery.value !== 'unavailable',
+  };
 }
 
 /** Answers the desktop app's close requests. Does nothing in a browser. Returns the function that stops it. */

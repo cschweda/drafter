@@ -71,6 +71,8 @@ export interface DesktopCloseState {
   unsaved: boolean;
   /** The script's title, for the dialog the desktop app shows. */
   title: string;
+  /** A recovery copy is being kept, so the dialog may promise the changes stay in it. */
+  recoverable: boolean;
 }
 
 /**
@@ -137,6 +139,11 @@ export interface DesktopBridge {
   onCloseRequest(handlers: DesktopCloseHandlers): () => void;
   /** Updates. */
   updates: DesktopUpdatesBridge;
+  /**
+   * From a help window's "Back to Drafter": brings the editor's window forward and closes the
+   * help window that asked (instead of loading a second editor into it).
+   */
+  backToEditor(): void;
 }
 
 declare global {

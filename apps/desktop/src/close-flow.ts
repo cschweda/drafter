@@ -17,6 +17,8 @@ export interface CloseState {
   unsaved: boolean;
   /** The script's title, for the dialog. */
   title: string;
+  /** Whether a recovery copy is being kept, so the dialog may say the changes stay in it. */
+  recoverable: boolean;
 }
 
 /** The editor's page, as the flow asks it. Any call may reject or never answer (a hung page). */
@@ -29,7 +31,7 @@ export interface ClosePage {
 }
 
 /** What a dialog is about: a script with changes, or a page that isn't answering. */
-export type CloseAbout = { title: string } | { unresponsive: true };
+export type CloseAbout = { title: string; recoverable: boolean } | { unresponsive: true };
 
 export interface CloseDeps {
   /** The editor's page, or null when there is none to ask (no window, crashed, not up yet). */
@@ -38,6 +40,13 @@ export interface CloseDeps {
   dialog(about: CloseAbout): Promise<CloseChoice>;
   /** Quits the app (`app.quit()`): for a quit that waited for a Save. */
   quit(): void;
+  /**
+   * Reports trouble with the editor's page while a Save is under way: the window went
+   * `unresponsive`, or the page is `gone` (crashed, or navigated away). Returns the function that
+   * stops watching. Save has no time limit (a Save As dialog can take minutes); this is how a
+   * hung page is told from a slow one.
+   */
+  watchPage?(onTrouble: (kind: 'unresponsive' | 'gone') => void): () => void;
   /** How long the page has to say whether it has changes (default 3000 ms). */
   askMs?: number;
   /** How long the recovery copy has to be flushed (default 2000 ms). */
@@ -125,20 +134,43 @@ export class CloseFlow {
       await this.flush();
       return 'close';
     }
-    const choice = await this.choose({ title: state.title });
+    const choice = await this.choose({ title: state.title, recoverable: state.recoverable });
     if (choice === 'cancel') return 'stay';
     if (choice === 'save') {
       this.phase = 'saving';
-      let saved = false;
-      try {
-        saved = await page.save();
-      } catch {
-        // The page says why (the status bar); the window stays.
+      const result = await this.saving(page);
+      if (result === 'gone') return 'stay';
+      if (result === 'unresponsive') {
+        // The page hung mid-Save: like one that doesn't answer at all, only leave or stay.
+        const leave = await this.choose({ unresponsive: true });
+        if (leave !== 'discard') return 'stay';
+        await this.flush();
+        return 'close';
       }
-      if (!saved) return 'stay';
+      if (result !== 'saved') return 'stay';
     }
     await this.flush();
     return 'close';
+  }
+
+  /**
+   * Runs Save with no time limit, but gives up on it when the page is in trouble: the window goes
+   * unresponsive, or the page goes away.
+   */
+  private saving(page: ClosePage): Promise<'saved' | 'failed' | 'unresponsive' | 'gone'> {
+    return new Promise((resolve) => {
+      let stop = () => {};
+      const settle = (result: 'saved' | 'failed' | 'unresponsive' | 'gone') => {
+        stop();
+        resolve(result);
+      };
+      stop = this.deps.watchPage?.((kind) => settle(kind)) ?? stop;
+      page.save().then(
+        (saved) => settle(saved ? 'saved' : 'failed'),
+        // The page says why (the status bar); the window stays.
+        () => settle('failed'),
+      );
+    });
   }
 
   private async choose(about: CloseAbout): Promise<CloseChoice> {
@@ -175,10 +207,12 @@ function oneLine(title: string): string {
   return flat.length > 60 ? `${flat.slice(0, 59)}…` : flat;
 }
 
-export function closeDialogText(title: string): DialogText {
+export function closeDialogText(title: string, recoverable = true): DialogText {
   return {
     message: `Save the changes to “${oneLine(title)}” before closing?`,
-    detail: "Your unsaved changes stay in Drafter's recovery copy either way.",
+    detail: recoverable
+      ? "Your unsaved changes stay in Drafter's recovery copy either way."
+      : 'These changes are in no file and no recovery copy, so Don’t Save loses them.',
     buttons: CLOSE_DIALOG.buttons,
     defaultId: 2,
     cancelId: 2,
@@ -199,9 +233,14 @@ export function unresponsiveDialogText(): DialogText {
 /** The page's answer to `state`, or null if it isn't one. */
 export function parseCloseState(value: unknown): CloseState | null {
   if (typeof value !== 'object' || value === null) return null;
-  const { unsaved, title } = value as Record<string, unknown>;
+  const { unsaved, title, recoverable } = value as Record<string, unknown>;
   if (typeof unsaved !== 'boolean') return null;
-  return { unsaved, title: typeof title === 'string' ? title : '' };
+  // Only a page that says its recovery copy works is believed: otherwise nothing is promised.
+  return {
+    unsaved,
+    title: typeof title === 'string' ? title : '',
+    recoverable: recoverable === true,
+  };
 }
 
 // ---- The e2e hook ------------------------------------------------------------------------------

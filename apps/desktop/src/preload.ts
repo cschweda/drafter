@@ -128,6 +128,10 @@ const bridge: DesktopBridge = {
       ipcRenderer.send(CHANNELS.closeReady, false);
     };
   },
+  // A help window's Back to Drafter: main focuses the editor's window and closes this one.
+  backToEditor() {
+    ipcRenderer.send(CHANNELS.backToEditor);
+  },
   // Updates: main finds a newer version once, when the app starts (if the setting is on), and says
   // so; Restart and Get it are the writer's choices, sent back. Nothing installs by itself.
   updates: {

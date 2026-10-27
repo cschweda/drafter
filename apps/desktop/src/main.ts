@@ -2,15 +2,7 @@
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import {
-  app,
-  type BrowserWindow,
-  dialog,
-  ipcMain,
-  protocol,
-  session,
-  type WebContents,
-} from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, protocol, session, type WebContents } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { type Closing, setUpClosing } from './close';
 import { FileError } from './files';
@@ -172,6 +164,16 @@ function start() {
   app.on('web-contents-created', (_event, contents) => {
     if (contents.getType() === 'window') guard(contents, PRELOAD);
     contents.on('destroyed', () => renderers.delete(contents.id));
+  });
+
+  // A help window's Back to Drafter: the editor's window comes forward (opened again if it was
+  // closed while the help window kept the app running) and the help window goes. The editor's own
+  // window is never closed by this.
+  ipcMain.on(CHANNELS.backToEditor, (event) => {
+    if (!fromApp(event) || event.senderFrame !== event.sender.mainFrame) return;
+    if (main && !main.isDestroyed() && event.sender === main.webContents) return;
+    bringForward();
+    BrowserWindow.fromWebContents(event.sender)?.close();
   });
 
   ipcMain.on(CHANNELS.rendererReport, (event, report: RendererReport) => {

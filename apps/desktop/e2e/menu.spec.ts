@@ -220,6 +220,35 @@ test('a help window that becomes an editor does not take the menu over', async (
   await expect(help.getByRole('dialog', { name: 'Command palette' })).toBeHidden();
 });
 
+test('Back to Drafter in a help window brings the editor forward and closes the help window', async ({
+  desktop,
+}) => {
+  const { app, page } = await desktop();
+  await expect.poll(async () => (await menuItems(app)).some((i) => i.id === 'palette')).toBe(true);
+  const [help] = await Promise.all([
+    app.waitForEvent('window'),
+    page.evaluate(() => {
+      window.open('/docs/privacy/', '_blank');
+    }),
+  ]);
+  await help.waitForLoadState('domcontentloaded');
+  // Hydrated: before that the link is a plain link, which is what a page without JavaScript gets.
+  await expect
+    .poll(() => help.evaluate(() => '__vue_app__' in (document.getElementById('__nuxt') ?? {})))
+    .toBe(true);
+  await expect.poll(() => app.windows().length).toBe(2);
+  const closed = help.waitForEvent('close');
+  // From the keyboard: the link is the first thing on the page.
+  const back = help.getByRole('link', { name: /Back to Drafter/ });
+  await back.focus();
+  await help.keyboard.press('Enter');
+  await closed;
+  await expect.poll(() => app.windows().length).toBe(1);
+  // The editor is still the one script, as it was: no second editor was loaded anywhere.
+  expect(page.url()).toBe('app://drafter/');
+  await expect(editor(page)).toBeVisible();
+});
+
 test('takes the tour and resets the sample from Help and File', async ({ desktop }) => {
   const { app, page } = await desktop();
   await expect

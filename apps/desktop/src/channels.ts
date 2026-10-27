@@ -39,6 +39,8 @@ export const CHANNELS = {
   updateInstall: 'drafter:update:install',
   /** preload → main: Get it. */
   updateOpenRelease: 'drafter:update:open-release',
+  /** preload → main: a help window's Back to Drafter: focus the editor, close the sender. */
+  backToEditor: 'drafter:back-to-editor',
   /** preload → main: whether Check for updates is on. */
   updateEnabled: 'drafter:update:enabled',
 } as const;

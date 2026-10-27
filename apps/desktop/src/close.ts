@@ -18,9 +18,8 @@ import {
   type IpcMainEvent,
   ipcMain,
   powerMonitor,
-  type WebContents,
 } from 'electron';
-import { CHANNELS, type CloseRequestKind } from './channels';
+import { CHANNELS } from './channels';
 import {
   ASK_MS,
   type CloseAbout,
@@ -33,6 +32,7 @@ import {
   parseCloseState,
   unresponsiveDialogText,
 } from './close-flow';
+import { PageLink } from './page-link';
 import { fromEditor } from './window';
 
 /** Where the e2e suite's dialog answers are (`DRAFTER_E2E_CLOSE`), only for an unpackaged app. */
@@ -59,7 +59,7 @@ export async function closeDialog(
   parent?: BrowserWindow | null,
 ): Promise<CloseChoice> {
   const text: DialogText =
-    'title' in about ? closeDialogText(about.title) : unresponsiveDialogText();
+    'title' in about ? closeDialogText(about.title, about.recoverable) : unresponsiveDialogText();
   const choices: CloseChoice[] =
     'title' in about ? ['save', 'discard', 'cancel'] : ['discard', 'cancel'];
   const hook = closeHook();
@@ -90,56 +90,6 @@ export async function closeDialog(
       ? await dialog.showMessageBox(parent, options)
       : await dialog.showMessageBox(options);
   return choices[response] ?? 'cancel';
-}
-
-/** Asks the editor's page its three questions, over IPC, and settles when it answers or goes. */
-class PageLink {
-  private nextId = 0;
-  private readonly pending = new Map<
-    number,
-    { resolve: (value: unknown) => void; reject: (error: Error) => void }
-  >();
-
-  constructor(readonly contents: WebContents) {
-    const gone = () => this.rejectAll();
-    contents.once('destroyed', gone);
-    contents.on('render-process-gone', gone);
-    // A reload or a new page: whatever was asked of the old one will not be answered.
-    contents.on('did-start-navigation', (details) => {
-      if (details.isMainFrame && !details.isSameDocument) gone();
-    });
-  }
-
-  request(kind: CloseRequestKind): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      if (this.contents.isDestroyed() || this.contents.isCrashed()) {
-        reject(new Error('The page is gone.'));
-        return;
-      }
-      const id = ++this.nextId;
-      // The e2e suite reads what the page was asked, in order, after the app has gone.
-      const hook = closeHook();
-      if (hook) appendFileSync(`${hook}.requests`, `${kind}\n`);
-      this.pending.set(id, { resolve, reject });
-      this.contents.send(CHANNELS.closeRequest, id, kind);
-    });
-  }
-
-  reply(id: unknown, ok: unknown, value: unknown): void {
-    if (typeof id !== 'number') return;
-    const waiting = this.pending.get(id);
-    if (!waiting) return;
-    this.pending.delete(id);
-    if (ok === true) waiting.resolve(value);
-    else waiting.reject(new Error('The page could not answer.'));
-  }
-
-  private rejectAll(): void {
-    for (const [id, waiting] of this.pending) {
-      this.pending.delete(id);
-      waiting.reject(new Error('The page is gone.'));
-    }
-  }
 }
 
 export interface Closing {
@@ -198,14 +148,56 @@ export function setUpClosing(editor: () => BrowserWindow | null): Closing {
     },
     quit: () => app.quit(),
     askMs: askMs(),
+    // A hung page mid-Save: the window's own `unresponsive` event, or the page going away.
+    watchPage(onTrouble) {
+      const window = editor();
+      const contents = editorContents();
+      if (!window || !contents) {
+        onTrouble('gone');
+        return () => {};
+      }
+      const unresponsive = () => onTrouble('unresponsive');
+      const gone = () => onTrouble('gone');
+      const navigated = (details: { isMainFrame: boolean; isSameDocument: boolean }) => {
+        if (details.isMainFrame && !details.isSameDocument) onTrouble('gone');
+      };
+      window.on('unresponsive', unresponsive);
+      contents.on('render-process-gone', gone);
+      contents.once('destroyed', gone);
+      contents.on('did-start-navigation', navigated);
+      return () => {
+        window.removeListener('unresponsive', unresponsive);
+        if (contents.isDestroyed()) return;
+        contents.removeListener('render-process-gone', gone);
+        contents.removeListener('destroyed', gone);
+        contents.removeListener('did-start-navigation', navigated);
+      };
+    },
   });
 
   ipcMain.on(CHANNELS.closeReady, (event: IpcMainEvent, on: unknown) => {
     const contents = editorContents();
     if (!contents || !fromEditor(event, contents)) return;
-    listening = on === true ? new PageLink(contents) : null;
-    // A fresh link for each registration; the old one's waiting questions are answered or lost
-    // with its page, never mixed with the new one's.
+    // A fresh link for each registration; the old one stops listening to the page and its waiting
+    // questions are dropped, never mixed with the new one's.
+    listening?.dispose();
+    listening = null;
+    if (on !== true) return;
+    const link: PageLink = new PageLink(
+      contents,
+      CHANNELS.closeRequest,
+      // The page navigated away (a reload): it hasn't said it listens again yet, so a close now
+      // is not "not responding".
+      () => {
+        if (listening === link) listening = null;
+      },
+      (kind) => {
+        // The e2e suite reads what the page was asked, in order, after the app has gone.
+        const hook = closeHook();
+        if (hook) appendFileSync(`${hook}.requests`, `${kind}\n`);
+      },
+    );
+    listening = link;
   });
   ipcMain.on(
     CHANNELS.closeReply,

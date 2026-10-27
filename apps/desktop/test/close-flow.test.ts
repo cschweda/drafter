@@ -44,7 +44,7 @@ function rig(
   const full: ClosePage = {
     state: async () => {
       calls.push('state');
-      return { unsaved: false, title: 'The Call' };
+      return { unsaved: false, title: 'The Call', recoverable: true };
     },
     save: async () => {
       calls.push('save');
@@ -71,8 +71,8 @@ function rig(
 }
 
 const unsaved =
-  (title = 'The Call') =>
-  async () => ({ unsaved: true, title });
+  (title = 'The Call', recoverable = true) =>
+  async () => ({ unsaved: true, title, recoverable });
 
 describe('closing with nothing to lose', () => {
   test('closes at once when there is no editor page to ask', async () => {
@@ -102,7 +102,7 @@ describe('closing with unsaved changes', () => {
   test('asks about the script by its title', async () => {
     const { flow, dialog } = rig({ state: unsaved('Night Shift') }, 'cancel');
     await flow.decide('close');
-    expect(dialog).toHaveBeenCalledWith({ title: 'Night Shift' });
+    expect(dialog).toHaveBeenCalledWith({ title: 'Night Shift', recoverable: true });
   });
 
   test('Cancel stays and saves nothing', async () => {
@@ -159,11 +159,11 @@ describe('a page that does not answer', () => {
   });
 
   test('a late answer changes nothing', async () => {
-    const slow = later<{ unsaved: boolean; title: string }>();
+    const slow = later<{ unsaved: boolean; title: string; recoverable: boolean }>();
     const { flow, dialog } = rig({ state: () => slow.promise }, 'discard');
     const result = flow.decide('close');
     await new Promise((r) => setTimeout(r, 80));
-    slow.resolve({ unsaved: true, title: 'x' });
+    slow.resolve({ unsaved: true, title: 'x', recoverable: true });
     expect(await result).toBe('close');
     expect(dialog).toHaveBeenCalledTimes(1);
     expect(dialog).toHaveBeenCalledWith({ unresponsive: true });
@@ -173,6 +173,90 @@ describe('a page that does not answer', () => {
     const { flow, dialog } = rig({ state: () => Promise.reject(new Error('boom')) }, 'cancel');
     expect(await flow.decide('close')).toBe('stay');
     expect(dialog).toHaveBeenCalledWith({ unresponsive: true });
+  });
+});
+
+describe('a page that hangs while saving', () => {
+  /** A rig whose page never finishes Save; `trouble` plays the window's own events. */
+  function hung(choice: CloseChoice) {
+    const calls: string[] = [];
+    let trouble: (kind: 'unresponsive' | 'gone') => void = () => {};
+    let watching = 0;
+    let unwatched = 0;
+    const dialog = vi.fn(async (_about: unknown) => {
+      calls.push('dialog');
+      // The first box is the Save question; the next, if any, is "isn't responding".
+      return dialog.mock.calls.length === 1 ? ('save' as CloseChoice) : choice;
+    });
+    const page: ClosePage = {
+      state: async () => ({ unsaved: true, title: 'The Call', recoverable: true }),
+      save: () => new Promise<boolean>(() => {}),
+      flush: async () => {
+        calls.push('flush');
+      },
+    };
+    const flow = new CloseFlow({
+      page: () => page,
+      dialog,
+      quit: vi.fn(),
+      askMs: 40,
+      flushMs: 40,
+      watchPage(onTrouble) {
+        watching++;
+        trouble = onTrouble;
+        return () => {
+          unwatched++;
+        };
+      },
+    });
+    return {
+      flow,
+      dialog,
+      calls,
+      trouble: (k: 'unresponsive' | 'gone') => trouble(k),
+      counts: () => ({ watching, unwatched }),
+    };
+  }
+
+  test('is not given a time limit: a Save that is merely slow keeps waiting', async () => {
+    const r = hung('cancel');
+    let done = false;
+    void r.flow.decide('close').then(() => {
+      done = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(done).toBe(false);
+    expect(r.flow.phase).toBe('saving');
+  });
+
+  test('offers the "isn’t responding" box when the window goes unresponsive, and Don’t Save closes', async () => {
+    const r = hung('discard');
+    const result = r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    r.trouble('unresponsive');
+    expect(await result).toBe('close');
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true });
+    expect(r.calls).toEqual(['dialog', 'dialog', 'flush']);
+    expect(r.counts()).toEqual({ watching: 1, unwatched: 1 });
+  });
+
+  test('Cancel in that box stays, and the flow can run again', async () => {
+    const r = hung('cancel');
+    const result = r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    r.trouble('unresponsive');
+    expect(await result).toBe('stay');
+    expect(r.flow.phase).toBe('idle');
+  });
+
+  test('a page that is gone (crashed, or navigated away) ends the wait and stays', async () => {
+    const r = hung('discard');
+    const result = r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    r.trouble('gone');
+    expect(await result).toBe('stay');
+    expect(r.dialog).toHaveBeenCalledTimes(1);
+    expect(r.flow.phase).toBe('idle');
   });
 });
 
@@ -257,11 +341,24 @@ describe('what the dialogs say', () => {
     expect(CLOSE_DIALOG.choices).toEqual(['save', 'discard', 'cancel']);
   });
 
+  test('promises no recovery copy when there is none', () => {
+    const text = closeDialogText('The Call', false);
+    expect(text.detail).toBe(
+      'These changes are in no file and no recovery copy, so Don’t Save loses them.',
+    );
+    expect(text.detail).not.toMatch(/stay/);
+    expect(text.buttons).toEqual(['Save', "Don't Save", 'Cancel']);
+    expect(text.buttons[text.defaultId]).toBe('Cancel');
+    expect(closeDialogText('The Call', true).detail).toMatch(/recovery copy either way/);
+  });
+
   test('keeps a long or odd title to one line', () => {
     const long = closeDialogText(`${'x'.repeat(200)}\nsecond line`).message;
     expect(long).not.toContain('\n');
     expect(long.length).toBeLessThan(140);
-    expect(closeDialogText('   ').message).toBe('Save the changes to “Untitled” before closing?');
+    expect(closeDialogText('   ', false).message).toBe(
+      'Save the changes to “Untitled” before closing?',
+    );
   });
 
   test('says when the page is not responding, and offers no Save', () => {
@@ -276,9 +373,22 @@ describe('what the dialogs say', () => {
 
 describe('the renderer is not trusted', () => {
   test('parseCloseState takes an unsaved flag and a title, and nothing else', () => {
-    expect(parseCloseState({ unsaved: true, title: 'A' })).toEqual({ unsaved: true, title: 'A' });
-    expect(parseCloseState({ unsaved: false, title: 'A' })).toEqual({ unsaved: false, title: 'A' });
-    expect(parseCloseState({ unsaved: true })).toEqual({ unsaved: true, title: '' });
+    expect(parseCloseState({ unsaved: true, title: 'A', recoverable: true })).toEqual({
+      unsaved: true,
+      title: 'A',
+      recoverable: true,
+    });
+    expect(parseCloseState({ unsaved: false, title: 'A', recoverable: false })).toEqual({
+      unsaved: false,
+      title: 'A',
+      recoverable: false,
+    });
+    // A page that doesn't say its recovery copy works is not promised one.
+    expect(parseCloseState({ unsaved: true })).toEqual({
+      unsaved: true,
+      title: '',
+      recoverable: false,
+    });
     expect(parseCloseState({ unsaved: 'yes', title: 'A' })).toBeNull();
     expect(parseCloseState(null)).toBeNull();
     expect(parseCloseState('x')).toBeNull();
