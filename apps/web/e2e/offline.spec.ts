@@ -297,6 +297,24 @@ test.describe('a new version', () => {
     await notReloaded(page);
   });
 
+  test('Later lasts through focus mode, which only hides the offer while it is on', async ({
+    page,
+  }) => {
+    await start(page);
+    await deployNewVersion(page);
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
+    await later(page).click();
+    await expect(update(page)).toHaveCount(0);
+    // In and out of focus mode: the toolbar (and the offer with it) goes and comes back.
+    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await expect(page.locator('[data-focus-layout]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-focus-layout]')).toHaveCount(0);
+    // Long enough for the offer to have come back, had it been going to.
+    await page.waitForTimeout(1000);
+    await expect(update(page)).toHaveCount(0);
+  });
+
   test('reloads when Reload is chosen with nothing unsaved', async ({ page }) => {
     await start(page);
     await mark(page);
@@ -439,6 +457,25 @@ test.describe('a new version', () => {
     await reload(page).click();
     await reloaded(page);
     await expectAtEnd(page, 'Downloaded, then reloaded.');
+  });
+
+  test('a download under way is still said after focus mode', async ({ page }) => {
+    await removePickers(page);
+    await start(page);
+    await typeAtEnd(page, '\n\nDownloaded, then focused.');
+    await deployNewVersion(page);
+    await reload(page).click();
+    const download = page.waitForEvent('download');
+    await saveFirst(page).click();
+    await download;
+    const downloading = 'Your script is downloading. Reload when it has finished.';
+    await expect(update(page)).toContainText(downloading);
+    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await expect(page.locator('[data-focus-layout]')).toBeVisible();
+    await expect(update(page)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-focus-layout]')).toHaveCount(0);
+    await expect(update(page)).toContainText(downloading);
   });
 
   test('in two tabs: one reloads, the other keeps its text and its offer until its own Reload', async ({
