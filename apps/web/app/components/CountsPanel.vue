@@ -3,7 +3,13 @@ import { useEditor } from '~/editor/session';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
 import { isGoal, progressLabel, useGoal } from '~/stats/goal';
-import { parseMinutes, SPRINT_MINUTES, useSprint } from '~/stats/sprint';
+import {
+  lastSprint,
+  lastSprintLabel,
+  parseMinutes,
+  SPRINT_MINUTES,
+  useSprint,
+} from '~/stats/sprint';
 
 defineProps<{ id: string }>();
 const emit = defineEmits<{ close: [] }>();
@@ -169,6 +175,9 @@ function onKeydown(event: KeyboardEvent) {
 
     <section class="sprint" aria-labelledby="counts-sprint-title">
       <h3 id="counts-sprint-title">Start a sprint</h3>
+      <p v-if="lastSprint" class="today" data-last-sprint>
+        {{ lastSprintLabel(lastSprint.report, lastSprint.ended) }}
+      </p>
       <p v-if="running" class="note">
         A sprint is running. Its time left and its Pause, Stop, and Hide controls are in the status bar.
       </p>

@@ -116,6 +116,29 @@ test.describe('sprints', () => {
     await expect(notice(page)).not.toHaveClass(/shown/);
   });
 
+  test('keeps the last sprint’s result in the Counts panel until the next one starts', async ({
+    page,
+  }) => {
+    await begin(page);
+    await startFromPanel(page, '15 minutes');
+    await typeAtEnd(page, '\n\nOne two three.');
+    await page.clock.fastForward(15 * MINUTE);
+    await expect(noticeText(page)).toHaveText(/^Sprint done: 3 words/);
+    // Long after the toast has gone, the panel still says it.
+    await page.clock.runFor(MINUTE);
+    await expect(noticeText(page)).toHaveText('');
+    const last = panel(page).locator('[data-last-sprint]');
+    await countsButton(page).click();
+    await expect(last).toHaveText(
+      /^Last sprint: 3 words( \(\d+(\.\d)? pages?\))?, ended 10:15\sAM\.$/,
+    );
+    // A new sprint starts afresh: the panel no longer reports the last.
+    await panel(page).getByRole('button', { name: '15 minutes', exact: true }).click();
+    await countsButton(page).click();
+    await expect(panel(page)).toBeVisible();
+    await expect(last).toHaveCount(0);
+  });
+
   test('starts any whole number of minutes from 1 to 180, and says what is wrong with others', async ({
     page,
   }) => {
