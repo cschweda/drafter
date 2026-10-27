@@ -13,7 +13,17 @@ import {
   type WebContents,
 } from 'electron';
 import { VERSION_ARG } from './channels';
+import { allowsModuleFrame } from './module-folder';
 import { APP_URL, navigationFor } from './protocol';
+
+/** The URL of the frame that started a navigation, or undefined (none, or one that is gone). */
+function initiatorUrl(event: { initiator?: { url: string } | null }): string | undefined {
+  try {
+    return event.initiator?.url;
+  } catch {
+    return undefined;
+  }
+}
 
 /** The brand's dark chrome, so a window never flashes white before the page draws. */
 const BACKGROUND = '#0F1013';
@@ -74,8 +84,14 @@ export function openExternal(url: string): void {
  * goes to the system browser; `window.open` of an app page opens a window of the app's own (with
  * these same rules), and of anything else, nothing. main.ts calls this for every window created.
  */
-export function guard(contents: WebContents, preload: string): void {
+export function guard(
+  contents: WebContents,
+  preload: string,
+  knownModule: (id: string) => boolean = () => false,
+): void {
   contents.on('will-frame-navigate', (event) => {
+    // A folder module's frame, loaded by the app's own page (module-folder.ts).
+    if (allowsModuleFrame(event.url, initiatorUrl(event), event.isMainFrame, knownModule)) return;
     const where = navigationFor(event.url);
     if (where === 'app') return;
     event.preventDefault();

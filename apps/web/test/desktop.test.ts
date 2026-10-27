@@ -14,6 +14,7 @@ const BRIDGE: DesktopBridge = {
   menu: { setCommands: () => {}, onCommand: () => () => {} },
   onOpenFile: () => () => {},
   onCloseRequest: () => () => {},
+  modules: { list: async () => ({ modules: [], problems: [] }), setNetwork: async () => {} },
 };
 
 describe('desktop()', () => {

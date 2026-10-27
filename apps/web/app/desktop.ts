@@ -110,6 +110,27 @@ export interface DesktopUpdatesBridge {
   setEnabled(on: boolean): void;
 }
 
+/** A module from the desktop app's modules folder, as its module.json describes it. */
+export interface DesktopFolderModule {
+  id: string;
+  name: string;
+  description: string;
+  permissions: { network: string[] };
+  /** The name of its folder in the modules folder. */
+  folder: string;
+}
+
+/** The modules folder (docs/plans/2026-10-27-desktop-modules-folder.md). */
+export interface DesktopModulesBridge {
+  /** The modules read when the app started, and a sentence for each folder skipped. */
+  list(): Promise<{ modules: DesktopFolderModule[]; problems: string[] }>;
+  /**
+   * The network origins the writer agreed to for a module (none when it is off). The desktop app
+   * keeps only those the module declares, and lets only that module's frames reach them.
+   */
+  setNetwork(id: string, origins: readonly string[]): Promise<void>;
+}
+
 /**
  * What the desktop app gives the page. Plain data and named calls only: never Electron's
  * `ipcRenderer` itself. Later tasks add to it (the menu, closing, updates).
@@ -139,6 +160,8 @@ export interface DesktopBridge {
   onCloseRequest(handlers: DesktopCloseHandlers): () => void;
   /** Updates. */
   updates: DesktopUpdatesBridge;
+  /** Script modules from the modules folder. */
+  modules: DesktopModulesBridge;
   /**
    * From a help window's "Back to Drafter": brings the editor's window forward and closes the
    * help window that asked (instead of loading a second editor into it).

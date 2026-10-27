@@ -1,7 +1,7 @@
 // Drafter's main process: one instance, one window, the web build served from the app's own files
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
-import { existsSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { basename, isAbsolute, join } from 'node:path';
 import {
   app,
   BrowserWindow,
@@ -10,6 +10,7 @@ import {
   Menu,
   protocol,
   session,
+  shell,
   type WebContents,
 } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
@@ -19,6 +20,14 @@ import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { heldLaunches, onSecondInstance, takeInstanceLock } from './instance';
 import { setUpMenu } from './menu-main';
+import {
+  agreedOrigins,
+  appCspWithModules,
+  type LoadedModule,
+  MODULE_SCHEME,
+  moduleHandler,
+  readModulesFolder,
+} from './module-folder';
 import { refuseNetwork } from './network';
 import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './open-files';
 import { denyPermissions } from './permissions';
@@ -71,12 +80,20 @@ protocol.registerSchemesAsPrivileged([
       codeCache: true,
     },
   },
+  // The modules folder's scheme (module-folder.ts): each module at its own origin. Fetch and CORS,
+  // so a module's frame (an opaque origin) can load its own scripts; never `bypassCSP`.
+  {
+    scheme: MODULE_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+  },
 ]);
 
 /** The preload, beside this file in dist/. */
 const PRELOAD = join(__dirname, 'preload.cjs');
 /** The web build, copied into the app by `pnpm build:web`. */
 const WEB = join(app.getAppPath(), 'web');
+/** The frame runtime for folder modules, beside this file in dist/ (module-runtime.ts). */
+const MODULE_RUNTIME = join(__dirname, 'module-runtime.js');
 /** The spellchecker's dictionaries, for Linux (spellcheck.ts). */
 const DICTIONARIES = join(app.getAppPath(), 'dictionaries');
 
@@ -227,6 +244,45 @@ function start() {
     inbox.listen(page);
   });
 
+  // The modules folder, read once on `ready` (restart to add a module), and the network origins the
+  // writer agreed to for each module that is on.
+  let loaded: LoadedModule[] = [];
+  let skipped: string[] = [];
+  const grants = new Map<string, string[]>();
+  const modulesDir = () => join(app.getPath('userData'), 'modules');
+  const knownModule = (id: string) => loaded.some((m) => m.id === id);
+  /** Help → Open Modules Folder: made if it is missing, then shown in the file manager. */
+  const openModulesFolder = () => {
+    const dir = modulesDir();
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch {
+      // Shown anyway: the file manager says what is wrong.
+    }
+    const log = app.isPackaged ? undefined : process.env.DRAFTER_E2E_OPENED_FOLDER;
+    if (log && isAbsolute(log)) {
+      appendFileSync(log, `${dir}\n`);
+      return;
+    }
+    void shell.openPath(dir);
+  };
+  /** Only the app's own pages, in their main frame, ask about modules. */
+  const fromAppPage = (event: Electron.IpcMainInvokeEvent) =>
+    fromApp(event) && event.senderFrame === event.sender.mainFrame;
+  ipcMain.handle(CHANNELS.modulesList, (event) => {
+    if (!fromAppPage(event)) throw new Error('not-allowed');
+    return {
+      modules: loaded.map(({ root: _root, ...module }) => module),
+      problems: [...skipped],
+    };
+  });
+  ipcMain.handle(CHANNELS.modulesSetNetwork, (event, id: unknown, origins: unknown) => {
+    if (!fromAppPage(event)) throw new Error('not-allowed');
+    const module = loaded.find((m) => m.id === id);
+    if (!module) return;
+    grants.set(module.id, agreedOrigins(module.permissions.network, origins));
+  });
+
   // Closing the editor's window and quitting ask the page first (close.ts). Set up on `ready`.
   let closing: Closing | null = null;
 
@@ -266,7 +322,7 @@ function start() {
   );
 
   app.on('web-contents-created', (_event, contents) => {
-    if (contents.getType() === 'window') guard(contents, PRELOAD);
+    if (contents.getType() === 'window') guard(contents, PRELOAD, knownModule);
     contents.on('destroyed', () => renderers.delete(contents.id));
   });
 
@@ -313,7 +369,7 @@ function start() {
     // checks spelling with (Chromium would otherwise fetch one from Google for the first page).
     const ses = session.defaultSession;
     denyPermissions(ses);
-    refuseNetwork(ses);
+    refuseNetwork(ses, (id) => grants.get(id) ?? []);
     ses.on('spellcheck-dictionary-download-begin', (_event, language) => {
       spelling.downloads.push(language);
     });
@@ -341,9 +397,21 @@ function start() {
     } catch {
       // The CSP was read above; without the others the app still runs as before.
     }
+    // The modules folder, before the first page: the scheme serves exactly the modules read now.
+    ({ modules: loaded, problems: skipped } = readModulesFolder(modulesDir()));
+    for (const problem of skipped) console.warn(problem);
+    if (loaded.length > 0) csp = appCspWithModules(csp);
     protocol.handle(SCHEME, appHandler(WEB, csp, headers));
+    protocol.handle(
+      MODULE_SCHEME,
+      moduleHandler({
+        modules: new Map(loaded.map((m) => [m.id, m.root])),
+        runtime: MODULE_RUNTIME,
+        origins: (id) => grants.get(id) ?? [],
+      }),
+    );
     files = registerFileIpc();
-    setUpMenu(() => main);
+    setUpMenu(() => main, { modulesFolder: openModulesFolder });
     closing = setUpClosing(() => main);
     const updates = setUpUpdates(
       () => main,
