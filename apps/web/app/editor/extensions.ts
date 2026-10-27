@@ -106,6 +106,8 @@ export interface EditorHooks {
   /** Read at each lint; the Strict Fountain setting is in it. */
   lintOptions?: () => { strict?: boolean };
   onCursorElement: (element: CursorElement | null) => void;
+  /** Told why an element key (Mod-Alt-1…7) did nothing, for the element bar's notice. */
+  onHint?: (message: string) => void;
 }
 
 let markdownModule: typeof import('../markdown/editor') | undefined;
@@ -126,11 +128,11 @@ export const markdownModeLoaded = (): boolean => markdownModule !== undefined;
 
 /** The language extension for a kind of document: `language.reconfigure(languageExtension(…))` switches it. */
 export function languageExtension(
-  { template, lintOptions, onCursorElement }: EditorHooks,
+  { template, lintOptions, onCursorElement, onHint }: EditorHooks,
   kind: DocumentKind,
 ): Extension {
   if (kind === 'markdown') return markdownModule ? markdownModule.markdownMode() : [];
-  return fountain({ template, lintOptions, onCursorElement });
+  return fountain({ template, lintOptions, onCursorElement, onHint });
 }
 
 /**

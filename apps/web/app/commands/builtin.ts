@@ -11,6 +11,7 @@ import {
   forceKind,
   insertPageBreak,
   makeElement,
+  structureOf,
   toggleDual,
   withCompletion,
   wrapInBold,
@@ -45,7 +46,10 @@ import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
 
 /** What a command does and when it applies; the rest of a `Command` is in `data.ts`. */
-type Behavior = Pick<Command, 'run' | 'enabled' | 'why'>;
+type Behavior = Pick<Command, 'run' | 'enabled' | 'why'> & {
+  /** A title that follows the script, in place of the data's: a stage play's Scene and Stage direction. */
+  liveTitle?: () => string;
+};
 
 const quietly = (action: () => Promise<unknown>) => () => void action().catch(() => {});
 
@@ -139,6 +143,9 @@ export function registerBuiltinCommands(): void {
     },
   });
   const element = (kind: ElementKind) => inEditor(isFountain, makeElement(kind), kind);
+  /** What the script's template makes of its structure: a stage play's acts and scenes. */
+  const structure = () => structureOf(editor.template.value);
+  const isStage = () => !structure().headings;
 
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
@@ -350,8 +357,21 @@ export function registerBuiltinCommands(): void {
     find: { run: onEditor((v) => openSearchPanel(v)) },
 
     // Edit, the element bar's commands
-    'element-scene-heading': element('scene_heading'),
-    'element-action': element('action'),
+    // On a stage play Scene writes a `##` section and Action is a stage direction (the template's
+    // roles), so their titles say so; Act is there only, and Transition only where the template has one.
+    'element-scene-heading': {
+      ...element('scene_heading'),
+      liveTitle: () => (isStage() ? 'Element: Scene (##)' : 'Element: Scene heading'),
+    },
+    'element-act': inEditor(
+      () => isFountain() && structure().actDepth !== null,
+      makeElement('act'),
+      'act',
+    ),
+    'element-action': {
+      ...element('action'),
+      liveTitle: () => (isStage() ? 'Element: Stage direction' : 'Element: Action'),
+    },
     'element-character': element('character'),
     'element-dialogue': element('dialogue'),
     // Off where it doesn't apply, so the palette doesn't offer it (the bar's button says why).
@@ -360,7 +380,11 @@ export function registerBuiltinCommands(): void {
       makeElement('parenthetical'),
       'parenthetical',
     ),
-    'element-transition': element('transition'),
+    'element-transition': inEditor(
+      () => isFountain() && structure().transitions,
+      makeElement('transition'),
+      'transition',
+    ),
     'element-centered': element('centered'),
     'element-lyric': element('lyric'),
     'element-section': element('section'),
@@ -371,11 +395,17 @@ export function registerBuiltinCommands(): void {
     'emphasis-underline': inEditor(isFountain, wrapInUnderline),
 
     // Edit, the Fountain commands (technical design §3.3)
-    'make-scene-heading': fountain(forceKind('scene_heading')),
+    'make-scene-heading': {
+      ...fountain(forceKind('scene_heading')),
+      enabled: () => canEdit() && isFountain() && structure().headings,
+    },
     'make-action': fountain(forceKind('action')),
     'make-character': fountain(forceKind('character')),
     'make-parenthetical': fountain(forceKind('parenthetical')),
-    'make-transition': fountain(forceKind('transition')),
+    'make-transition': {
+      ...fountain(forceKind('transition')),
+      enabled: () => canEdit() && isFountain() && structure().transitions,
+    },
     'make-centered': fountain(forceKind('centered')),
     'make-lyric': fountain(forceKind('lyric')),
     'dual-dialogue': fountain(toggleDual),
@@ -401,7 +431,11 @@ export function registerBuiltinCommands(): void {
     COMMAND_DATA.map((data): Command => {
       const behavior = behaviors[data.id];
       if (!behavior) throw new Error(`The command “${data.id}” has data but no behavior.`);
-      return { ...data, ...behavior };
+      const { liveTitle, ...rest } = behavior;
+      const command: Command = { ...data, ...rest };
+      // The palette and the desktop menu read the title when they draw, so a getter follows the script.
+      if (liveTitle) Object.defineProperty(command, 'title', { get: liveTitle, enumerable: true });
+      return command;
     }),
   );
 }

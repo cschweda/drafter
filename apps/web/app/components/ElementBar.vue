@@ -5,7 +5,9 @@ import {
   elementHint,
   PARENTHETICAL_HINT,
   readsAsName,
+  structureOf,
 } from '@drafter/cm-fountain';
+import { resolveRole } from '@drafter/templates';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { isApple } from '~/commands/keys';
@@ -13,15 +15,13 @@ import { commandById } from '~/commands/registry';
 import { useFocusMode } from '~/composables/useFocusMode';
 import {
   type BarButton,
-  CHEAT_SHEET_ANCHORS,
-  FOUNTAIN_BUTTONS,
-  FOUNTAIN_MORE,
+  barFor,
+  currentOf,
   hereLabel,
   MARKDOWN_BUTTONS,
   reasonFor,
   tipFor,
 } from '~/editor/element-bar';
-import { ELEMENT_NAMES } from '~/editor/element-names';
 import { elementNotice, sayElement } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
 import { markdownElement } from '~/markdown/commands';
@@ -45,7 +45,12 @@ const TIP_UI = { content: 'h-auto max-w-80 py-1.5', text: 'whitespace-normal' };
 
 const shown = computed(() => settings.value.elementBar && !focus.on.value && !readOnly.value);
 const markdown = computed(() => editor.kind.value === 'markdown');
-const buttons = computed(() => (markdown.value ? MARKDOWN_BUTTONS : FOUNTAIN_BUTTONS));
+/** The script's structure by its template: a stage play has acts, `##` scenes, and stage directions. */
+const structure = computed(() => structureOf(editor.template.value));
+const bar = computed(() =>
+  markdown.value ? { buttons: MARKDOWN_BUTTONS, more: [] } : barFor(structure.value),
+);
+const buttons = computed(() => bar.value.buttons);
 
 // What the bar reads from the editor's state, worked out when the text or the selection changes
 // (and, for Markdown, when its grammar has more of the tree), each kept only when it differs, so
@@ -80,21 +85,28 @@ watch(markdown, () => follow(editor.view.state));
 
 // ---- Where the cursor is -------------------------------------------------------------------
 
-/** The element the bar names: the parse's, but a name with no speech yet is a Character. */
-const cursorKind = computed(() => {
-  if (markdown.value) return null;
-  return onName.value ? 'character' : (editor.cursor.value?.kind ?? null);
-});
-const here = computed(() => {
-  if (markdown.value) return hereLabel(markdownHere.value);
-  return hereLabel(cursorKind.value ? ELEMENT_NAMES[cursorKind.value] : null);
-});
-const why = computed(() => {
+/** The cursor's block, and its role in the template (a stage play's act, scene, stage direction). */
+const block = computed(() => {
   const element = editor.cursor.value;
-  const block =
-    element && element.blockIndex >= 0 ? editor.doc.value.blocks[element.blockIndex] : null;
+  return element && element.blockIndex >= 0 ? editor.doc.value.blocks[element.blockIndex] : null;
+});
+const role = computed(() => {
+  const found = block.value;
+  if (!found || (found.kind !== 'section' && found.kind !== 'action')) return null;
+  // Neither kind's rules look at the block before, so no previous role is needed.
+  return resolveRole(editor.template.value, found, null);
+});
+/** The element the bar names: the template's, and a name with no speech yet is a Character. */
+const shownLine = computed(() => {
+  if (markdown.value) return currentOf(null, null);
+  if (onName.value) return currentOf('character', null);
+  return currentOf(editor.cursor.value?.kind ?? null, role.value);
+});
+const here = computed(() => hereLabel(markdown.value ? markdownHere.value : shownLine.value.name));
+const why = computed(() => {
   const context = onName.value ? 'name' : inSpeech.value ? 'speech' : undefined;
-  const reason = reasonFor(cursorKind.value, !!block?.forced, context);
+  const kind = onName.value ? 'character' : (editor.cursor.value?.kind ?? null);
+  const reason = reasonFor(kind, !!block.value?.forced, context, onName.value ? null : role.value);
   return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}. Opens the Fountain cheat sheet there.`;
 });
 
@@ -102,14 +114,14 @@ const why = computed(() => {
 function openCheatSheet(atElement: boolean) {
   const sheet = HELP_PAGES.find((page) => page.id === 'help-fountain');
   if (!sheet) return;
-  const kind = cursorKind.value;
-  if (atElement && kind) window.open(`${helpHref(sheet)}#${CHEAT_SHEET_ANCHORS[kind]}`, '_blank');
+  const { anchor } = shownLine.value;
+  if (atElement && anchor) window.open(`${helpHref(sheet)}#${anchor}`, '_blank');
   else commandById(sheet.id)?.run();
 }
 
 // ---- The buttons ---------------------------------------------------------------------------
 
-const pressed = (button: BarButton) => !!button.kind && button.kind === cursorKind.value;
+const pressed = (button: BarButton) => button.command === shownLine.value.command;
 const off = (button: BarButton) =>
   button.command === 'element-parenthetical' && parenthesisOff.value;
 const tip = (button: BarButton) => (off(button) ? PARENTHETICAL_HINT : tipFor(button, apple));
@@ -129,7 +141,7 @@ function press(button: BarButton) {
 }
 
 const more = computed<DropdownMenuItem[]>(() =>
-  FOUNTAIN_MORE.map((button) => ({
+  bar.value.more.map((button) => ({
     label: button.label,
     // The mark, in the place a menu shows a shortcut.
     kbds: [button.mark],
@@ -279,7 +291,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
         class="button"
         :data-bar-item="button.command"
         :tabindex="stopOf(button.command)"
-        :aria-pressed="button.kind ? (pressed(button) ? 'true' : 'false') : undefined"
+        :aria-pressed="markdown ? undefined : pressed(button) ? 'true' : 'false'"
         :aria-disabled="off(button) ? 'true' : undefined"
         :aria-describedby="descId(button)"
         @mousedown.prevent
@@ -437,6 +449,15 @@ button.here {
   color: var(--text);
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+/* On a phone the keyboard and a two-line status bar take the bottom, so the toast goes at the top. */
+@media (max-width: 640px) {
+  .bar-notice {
+    top: 8px;
+    bottom: auto;
+    left: 16px;
+    max-width: none;
+  }
 }
 .bar-notice:not(.shown) {
   width: 1px;

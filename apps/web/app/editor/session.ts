@@ -9,6 +9,7 @@ import { useSettings } from '~/settings/settings';
 import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
 import { applyEditorSettings } from './apply-settings';
+import { sayElement } from './element-notice';
 import {
   type EditorHooks,
   editorExtensions,
@@ -129,6 +130,8 @@ function create(): EditorSession {
     onCursorElement: (element) => {
       cursor.value = element;
     },
+    // A key that can't act says why, as the element bar's buttons do.
+    onHint: (message) => void sayElement(message),
   };
 
   // Everything but the text, so `load` can make a new state from the same pieces.

@@ -276,3 +276,59 @@ test('is one row on a phone, which scrolls sideways', async ({ page, isMobile })
   const text = await page.locator('.cm-scroller').boundingBox();
   expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual((text?.y ?? 0) + 1);
 });
+
+test.describe('on a stage play', () => {
+  const PLAY = (body: string) =>
+    `${body}\n\n/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/`;
+
+  /** Puts a play in the editor, with the cursor at the start of its line `n` (from 0). */
+  async function play(page: Page, body: string, n: number) {
+    await setText(page, PLAY(body));
+    await page.keyboard.press('ControlOrMeta+Home');
+    for (let i = 0; i < n; i++) await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('End');
+  }
+
+  test('offers Act, Scene, and Stage direction, and no Transition', async ({ page }) => {
+    await play(page, '# ACT ONE\n\n## Scene 1\n\nMargaret waits.', 2);
+    await expect(button(page, 'Act')).toBeVisible();
+    await expect(button(page, 'Stage direction')).toBeVisible();
+    await expect(button(page, 'Transition')).toHaveCount(0);
+    await expect(here(page)).toHaveText('You’re in: Scene');
+    await expect(button(page, 'Scene')).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await expect(here(page)).toHaveText('You’re in: Act');
+    await page.keyboard.press('ControlOrMeta+Home');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
+    await expect(here(page)).toHaveText('You’re in: Stage direction');
+    await expect(button(page, 'Stage direction')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('writes a scene as ## from the button', async ({ page }) => {
+    await play(page, 'Margaret waits.\n\nthe porch', 2);
+    await press(page, 'Scene');
+    expect(await textOf(page)).toContain('Margaret waits.\n\n## the porch\n');
+  });
+
+  test('writes a scene as ## from Ctrl+Alt+1', async ({ page }) => {
+    await play(page, 'Margaret waits.\n\nthe porch', 2);
+    await page.keyboard.press('ControlOrMeta+Alt+1');
+    expect(await textOf(page)).toContain('Margaret waits.\n\n## the porch\n');
+  });
+
+  test('says why Ctrl+Alt+5 writes no transition', async ({ page }) => {
+    await play(page, 'Margaret waits.\n\ncut to:', 2);
+    await page.keyboard.press('ControlOrMeta+Alt+5');
+    await expect(page.getByRole('status').filter({ hasText: 'no transitions' })).toBeVisible();
+    expect(await textOf(page)).toContain('\n\ncut to:\n');
+  });
+});
+
+test('says why a key did nothing', async ({ page }) => {
+  await write(page, 'She waits.');
+  await page.keyboard.press('ControlOrMeta+Alt+4');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'under a character name' }),
+  ).toBeVisible();
+});

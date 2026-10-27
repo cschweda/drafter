@@ -1,7 +1,11 @@
+import { SCREENPLAY_STRUCTURE, structureOf } from '@drafter/cm-fountain';
+import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import { COMMAND_DATA } from '../app/commands/data';
 import {
+  barFor,
   CHEAT_SHEET_ANCHORS,
+  currentOf,
   ELEMENT_REASONS,
   FOUNTAIN_BUTTONS,
   FOUNTAIN_MORE,
@@ -106,5 +110,52 @@ describe('the element bar', () => {
   test('names where the cursor is', () => {
     expect(hereLabel('Dialogue')).toBe('You’re in: Dialogue');
     expect(hereLabel(null)).toBe('You’re on a blank line');
+  });
+});
+
+describe('the bar on a stage play', () => {
+  const play = structureOf(builtins['stage-play-standard'] as Template);
+
+  test('offers acts, scenes, and stage directions, and no transition or INT.', () => {
+    const { buttons, more } = barFor(play);
+    expect(buttons.map((b) => [b.label, b.mark])).toEqual([
+      ['Act', '#'],
+      ['Scene', '##'],
+      ['Stage direction', '!'],
+      ['Character', '@'],
+      ['Dialogue', ''],
+      ['Parenthetical', '( )'],
+    ]);
+    expect(buttons.find((b) => b.label === 'Scene')?.command).toBe('element-scene-heading');
+    expect(buttons.find((b) => b.label === 'Stage direction')?.command).toBe('element-action');
+    expect([...buttons, ...more].some((b) => b.command === 'element-transition')).toBe(false);
+    expect(barFor(SCREENPLAY_STRUCTURE).buttons).toBe(FOUNTAIN_BUTTONS);
+  });
+
+  test('names a line by its role in the template', () => {
+    expect(currentOf('section', 'act_heading')).toMatchObject({
+      name: 'Act',
+      command: 'element-act',
+      anchor: 'act',
+    });
+    expect(currentOf('section', 'scene_heading_play')).toMatchObject({
+      name: 'Scene',
+      command: 'element-scene-heading',
+      anchor: 'scene',
+    });
+    expect(currentOf('action', 'stage_direction')).toMatchObject({
+      name: 'Stage direction',
+      command: 'element-action',
+      anchor: 'stage-direction',
+    });
+    expect(currentOf('section', 'omit')).toMatchObject({
+      name: 'Section',
+      command: 'element-section',
+    });
+    expect(currentOf('dialogue', 'dialogue')).toMatchObject({ name: 'Dialogue' });
+    expect(currentOf(null, null)).toMatchObject({ name: null, command: null });
+    expect(reasonFor('section', false, undefined, 'scene_heading_play')).toBe(
+      'a line starting with ## in a stage play',
+    );
   });
 });

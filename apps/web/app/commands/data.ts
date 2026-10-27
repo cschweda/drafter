@@ -174,6 +174,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // with a forcing mark only where a line needs one, on Mod-Alt-1…7 (decided 2026-10-27). Dual
   // dialogue, the note, and the boneyard are the commands below.
   element('scene-heading', 'Scene heading', 'Mod-Alt-1'),
+  // A stage play's act, a `#` section (the template's act heading).
+  element('act', 'Act'),
   element('action', 'Action', 'Mod-Alt-2'),
   element('character', 'Character', 'Mod-Alt-3'),
   element('dialogue', 'Dialogue'),
