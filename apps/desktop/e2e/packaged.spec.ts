@@ -591,6 +591,19 @@ function readFromAsar(asar: string, name: string): string {
   return bytes.subarray(start, start + entry.size).toString('utf8');
 }
 
+/** A process's state letter from /proc (R, S, D, Z, …), or "gone". */
+function stateOf(pid: number): string {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    return stat.slice(stat.lastIndexOf(')') + 2).split(' ')[0] ?? '?';
+  } catch {
+    return 'gone';
+  }
+}
+
+/** Running, not a zombie or gone. */
+const isAlive = (pid: number) => !['Z', 'X', 'gone'].includes(stateOf(pid));
+
 /** The processes whose environment carries this HOME, each with its environment. */
 function launchedWith(home: string): { pid: number; argv: string[]; env: Map<string, string> }[] {
   const found = [];
@@ -657,10 +670,13 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
       program: image,
       env: { ELECTRON_ENABLE_LOGGING: '1', ELECTRON_LOG_FILE: chromiumLog },
     });
+    // Every Drafter process seen (by Restart's sampling below too): one may stop letting its
+    // environment be read, but is still ours to stop.
+    const seenPids = new Set<number>();
     stops.push(async () => {
-      for (const proc of launchedWith(running.home)) {
+      for (const proc of [...launchedWith(running.home).map((p) => p.pid), ...seenPids]) {
         try {
-          process.kill(proc.pid, 'SIGKILL');
+          process.kill(proc, 'SIGKILL');
         } catch {
           // Gone.
         }
@@ -673,7 +689,9 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
     // What ran, and when, from Restart on: printed whatever happens, so a failure says why.
     const began = Date.now();
     const timeline: string[] = [];
-    const known = new Set<number>();
+    /** Each main process (no --type) as first seen, while its environment could be read. */
+    const firstSeen = new Map<number, ReturnType<typeof launchedWith>[number]>();
+    const states = new Map<number, string>();
     let oldGoneAt: number | undefined;
     const sample = setInterval(() => {
       const at = Date.now() - began;
@@ -683,16 +701,18 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
       }
       const now = launchedWith(running.home);
       for (const proc of now) {
-        if (known.has(proc.pid) || proc.argv.some((arg) => arg.startsWith('--type='))) continue;
-        known.add(proc.pid);
+        seenPids.add(proc.pid);
+        if (firstSeen.has(proc.pid) || proc.argv.some((arg) => arg.startsWith('--type='))) continue;
+        firstSeen.set(proc.pid, proc);
         timeline.push(
           `${at} ms: + ${proc.pid} ${proc.argv.slice(0, 3).join(' ')} APPIMAGE=${proc.env.get('APPIMAGE') ?? ''} SILENT=${proc.env.get('APPIMAGE_SILENT_INSTALL') ?? ''}`,
         );
       }
-      for (const pid of known) {
-        if (!existsSync(`/proc/${pid}`)) {
-          known.delete(pid);
-          timeline.push(`${at} ms: - ${pid}`);
+      for (const pid of firstSeen.keys()) {
+        const state = stateOf(pid);
+        if (state !== states.get(pid)) {
+          states.set(pid, state);
+          timeline.push(`${at} ms: ${pid} is ${state}`);
         }
       }
     }, 100);
@@ -717,21 +737,23 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
     expect(createHash('sha512').update(readFileSync(image)).digest('base64')).not.toBe(oldSha);
     expect(readFileSync(image).equals(newBytes)).toBe(true);
 
-    // A new Drafter is running from that path: its main process (no --type) has APPIMAGE set to it,
-    // and the app mounted from it is 1.0.1.
+    // A new Drafter is running from that path: the main process (no --type) that the update started
+    // (APPIMAGE_SILENT_INSTALL=true, APPIMAGE the same file) is alive, and the app mounted from it is
+    // 1.0.1. Its environment is the one read when it was first seen.
     let main: ReturnType<typeof launchedWith>[number] | undefined;
     await expect
       .poll(
         () => {
-          main = launchedWith(running.home).find(
+          main = [...firstSeen.values()].find(
             (proc) =>
+              proc.env.get('APPIMAGE_SILENT_INSTALL') === 'true' &&
               proc.env.get('APPIMAGE') === image &&
-              (proc.argv[0] ?? '').endsWith('/drafterdev') &&
-              !proc.argv.some((arg) => arg.startsWith('--type=')),
+              /\/drafterdev$/.test(proc.argv[0] ?? '') &&
+              isAlive(proc.pid),
           );
           return main !== undefined;
         },
-        { timeout: 60_000, message: 'no new Drafter started from the AppImage' },
+        { timeout: 60_000, message: 'no new Drafter running from the AppImage' },
       )
       .toBe(true);
     const appDir = main?.env.get('APPDIR') as string;
@@ -742,7 +764,9 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
     // It stays up (it took the lock instead of handing over to the old one and exiting), and shows
     // its window.
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    expect(existsSync(`/proc/${main?.pid}`)).toBe(true);
+    expect(isAlive(main?.pid as number), `the new Drafter is ${stateOf(main?.pid as number)}`).toBe(
+      true,
+    );
     if (HAS_XDOTOOL) {
       const windows = execFileSync(
         'xdotool',
