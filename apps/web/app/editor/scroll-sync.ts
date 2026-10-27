@@ -201,6 +201,13 @@ export interface ScrollSyncDeps {
  */
 export const LEAD_MS = 300;
 
+/**
+ * The longest a press on the view holds the lead without the view scrolling. A press whose end
+ * never reaches the page (a native scroll bar's drag, a release outside the window) must not stop
+ * the Source from leading for good.
+ */
+export const HOLD_MAX_MS = 3000;
+
 /** The keys that scroll a pane the writer is reading. */
 const SCROLL_KEYS = new Set(['PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown', ' ']);
 
@@ -245,12 +252,35 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
   let place: { offset: number; from: Side } | null = null;
 
   /**
-   * The view while a press on it is held (its scroll bar's thumb, most often): it leads until the
-   * press ends, however long the writer pauses mid-drag, and then for `LEAD_MS` as usual.
+   * The presses held on the view, by pointer id (its scroll bar's thumb, most often): the view
+   * leads until the last one ends, however long the writer pauses mid-drag, then for `LEAD_MS` as
+   * usual. A lost end is covered: the hold also ends when the window loses focus or the page is
+   * hidden, when the writer turns to the Source (a press, the wheel, a key), and `HOLD_MAX_MS`
+   * after the view last scrolled.
    */
-  let held: Side | null = null;
+  const presses = new Set<number>();
+  let holdUntil = Number.NEGATIVE_INFINITY;
+  let watching: AbortController | null = null;
 
-  const leading = (side: Side) => held === side || (leader === side && now() < leadUntil);
+  function held(): boolean {
+    if (presses.size === 0) return false;
+    if (now() < holdUntil) return true;
+    // Run out: the view has been still for `HOLD_MAX_MS`, so no lead is left over either.
+    letGo(true);
+    return false;
+  }
+
+  /** Ends every press, and the view leads for `LEAD_MS` more (or not at all, `quietly`). */
+  function letGo(quietly = false) {
+    if (presses.size === 0) return;
+    presses.clear();
+    watching?.abort();
+    watching = null;
+    if (!quietly) lead('view');
+  }
+
+  const leading = (side: Side) =>
+    (side === 'view' && held()) || (leader === side && now() < leadUntil);
 
   /**
    * The cursor, when the other pane must keep it in view: the keys or the app moved the Source (not
@@ -287,6 +317,8 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
     if (leading(other)) return;
     // The view moved by the app (following the cursor), not by the writer.
     if (side === 'view' && !leading('view')) return;
+    // A held press that is still dragging keeps its hold.
+    if (side === 'view' && presses.size > 0) holdUntil = now() + HOLD_MAX_MS;
     lead(side);
     if (!scheduled) {
       scheduled = true;
@@ -301,14 +333,18 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
     const passive = { passive: true, signal };
     const touch = () => {
       if (!deps.enabled()) return;
-      if (side === 'source') reading = true;
+      if (side === 'source') {
+        reading = true;
+        // The writer has turned to the Source: any press the view thought held is over.
+        letGo(true);
+      }
       lead(side);
     };
     el.addEventListener('scroll', () => onScroll(side), passive);
     el.addEventListener('wheel', touch, passive);
     el.addEventListener('touchstart', touch, passive);
     el.addEventListener('touchmove', touch, passive);
-    el.addEventListener('pointerdown', side === 'view' ? () => hold(side) : touch, passive);
+    el.addEventListener('pointerdown', side === 'view' ? hold : touch, passive);
     el.addEventListener(
       'keydown',
       (event) => {
@@ -316,6 +352,7 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
         if (side === 'source') {
           // Typing and the keys move the cursor, which the other pane keeps in view.
           reading = false;
+          letGo(true);
           lead('source');
         } else if (SCROLL_KEYS.has(event.key)) lead('view');
       },
@@ -326,24 +363,33 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
       controller.abort();
       if (panes[side] === pane) panes[side] = null;
       if (leader === side) leader = null;
-      if (held === side) held = null;
+      if (side === 'view') letGo(true);
     };
   }
 
   /** A press on the view: it leads until the press ends anywhere (the pointer can leave the pane mid-drag). */
-  function hold(side: Side) {
+  function hold(event: Event) {
     if (!deps.enabled()) return;
-    lead(side);
-    held = side;
-    const release = new AbortController();
-    const end = () => {
-      release.abort();
-      if (held !== side) return;
-      held = null;
-      lead(side);
+    lead('view');
+    presses.add((event as PointerEvent).pointerId ?? 0);
+    holdUntil = now() + HOLD_MAX_MS;
+    if (watching) return;
+    watching = new AbortController();
+    const { signal } = watching;
+    const end = (e: Event) => {
+      presses.delete((e as PointerEvent).pointerId ?? 0);
+      if (presses.size === 0) letGo();
     };
-    window.addEventListener('pointerup', end, { signal: release.signal });
-    window.addEventListener('pointercancel', end, { signal: release.signal });
+    window.addEventListener('pointerup', end, { signal });
+    window.addEventListener('pointercancel', end, { signal });
+    window.addEventListener('blur', () => letGo(), { signal });
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (document.visibilityState === 'hidden') letGo();
+      },
+      { signal },
+    );
   }
 
   function placeView(): boolean {

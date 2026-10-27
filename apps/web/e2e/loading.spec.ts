@@ -7,8 +7,7 @@ import { expect, type Page, test } from '@playwright/test';
 const boot = (page: Page) => page.locator('.drafter-boot');
 const mark = (page: Page) => page.locator('.drafter-boot-mark');
 const loading = (page: Page) => page.getByText('Loading Drafter…');
-const slow = (page: Page) =>
-  page.getByText('Taking longer than usual — check your connection, or reload.');
+const slow = (page: Page) => page.getByText('Taking longer than usual. Try reloading.');
 
 /** Holds the app's scripts until `release` is called, so the loading screen stays up. */
 async function holdTheApp(page: Page): Promise<() => void> {

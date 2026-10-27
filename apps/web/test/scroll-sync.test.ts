@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import {
   type Anchors,
   createScrollSync,
+  HOLD_MAX_MS,
   keepInView,
   LEAD_MS,
   offsetForTop,
@@ -303,6 +304,101 @@ describe('the controller', () => {
     source.scroll(300);
     h.tick();
     expect(view.calls).toEqual([{ offset: 300 }]);
+  });
+
+  describe('a press that is never let go (a native scroll-bar drag, a release outside the window)', () => {
+    /** A press on the view whose pointerup never comes, and a view and Source attached. */
+    function lost() {
+      const h = harness();
+      const source = fakePane();
+      const view = fakePane();
+      h.sync.attachSource(source);
+      h.sync.attachView(view);
+      view.scroller.dispatchEvent(Object.assign(new Event('pointerdown'), { pointerId: 1 }));
+      return { h, source, view };
+    }
+    /** The Source scrolled by the app (no wheel): it leads only if nothing holds the view. */
+    function sourceScrollsQuietly(t: ReturnType<typeof lost>, to: number) {
+      t.source.at(to);
+      t.source.scroller.dispatchEvent(new Event('scroll'));
+      t.h.tick();
+    }
+
+    test('the Source takes the lead back with its own wheel', () => {
+      const t = lost();
+      t.h.tick(LEAD_MS * 2);
+      t.source.scroll(300);
+      t.h.tick();
+      expect(t.view.calls).toEqual([{ offset: 300 }]);
+    });
+
+    test('the Source takes it back with a key or a press', () => {
+      for (const event of [
+        new KeyboardEvent('keydown', { key: 'a' }),
+        Object.assign(new Event('pointerdown'), { pointerId: 2 }),
+      ]) {
+        const t = lost();
+        t.h.tick(LEAD_MS * 2);
+        t.source.scroller.dispatchEvent(event);
+        t.h.tick(LEAD_MS + 1);
+        sourceScrollsQuietly(t, 400);
+        expect(t.view.calls.map((c) => c.offset)).toEqual([400]);
+      }
+    });
+
+    test('the hold runs out after a few seconds without the view scrolling', () => {
+      const t = lost();
+      t.h.tick(HOLD_MAX_MS - 100);
+      // Still held: the Source's scroll is the echo.
+      sourceScrollsQuietly(t, 100);
+      expect(t.view.calls).toEqual([]);
+      // The view scrolling renews it.
+      t.view.at(50);
+      t.view.scroller.dispatchEvent(new Event('scroll'));
+      t.h.tick(HOLD_MAX_MS - 100);
+      sourceScrollsQuietly(t, 120);
+      expect(t.view.calls).toEqual([]);
+      // Then it runs out.
+      t.h.tick(200 + LEAD_MS);
+      sourceScrollsQuietly(t, 200);
+      expect(t.view.calls.map((c) => c.offset)).toEqual([200]);
+    });
+
+    test('the window losing focus, or the page being hidden, lets go', () => {
+      for (const lose of [
+        () => window.dispatchEvent(new Event('blur')),
+        () => {
+          Object.defineProperty(document, 'visibilityState', {
+            value: 'hidden',
+            configurable: true,
+          });
+          document.dispatchEvent(new Event('visibilitychange'));
+          Object.defineProperty(document, 'visibilityState', {
+            value: 'visible',
+            configurable: true,
+          });
+        },
+      ]) {
+        const t = lost();
+        lose();
+        t.h.tick(LEAD_MS + 1);
+        sourceScrollsQuietly(t, 250);
+        expect(t.view.calls.map((c) => c.offset)).toEqual([250]);
+      }
+    });
+
+    test('two presses: it is let go only when both are up', () => {
+      const t = lost();
+      t.view.scroller.dispatchEvent(Object.assign(new Event('pointerdown'), { pointerId: 2 }));
+      window.dispatchEvent(Object.assign(new Event('pointerup'), { pointerId: 1 }));
+      t.h.tick(LEAD_MS + 1);
+      sourceScrollsQuietly(t, 100);
+      expect(t.view.calls).toEqual([]);
+      window.dispatchEvent(Object.assign(new Event('pointerup'), { pointerId: 2 }));
+      t.h.tick(LEAD_MS + 1);
+      sourceScrollsQuietly(t, 200);
+      expect(t.view.calls.map((c) => c.offset)).toEqual([200]);
+    });
   });
 
   test('leaves a view the writer is scrolling where it is when it is drawn again', () => {
