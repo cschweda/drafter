@@ -1,23 +1,26 @@
+export { fountainKeymap } from './bindings';
 export { fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';
 export {
   canMakeParenthetical,
   type ElementKind,
+  elementHint,
   insertPageBreak,
   makeElement,
   opensCompletion,
+  PARENTHETICAL_HINT,
+  readsAsName,
   withCompletion,
 } from './elements';
 export { fountainFolding } from './fold';
 export { type FountainOptions, fountain } from './fountain';
 export { fountainDecorations, fountainHighlighting } from './highlight';
-export { cueMode, fountainInput } from './input';
+export { barCue, cueMode, fountainInput } from './input';
 export {
   convertToAction,
   convertToCharacter,
   forceKind,
   fountainEnter,
-  fountainKeymap,
   fountainShiftTab,
   fountainTab,
   toggleDual,

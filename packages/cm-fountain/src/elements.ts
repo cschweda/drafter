@@ -11,7 +11,7 @@ import {
 } from '@codemirror/state';
 import type { Command } from '@codemirror/view';
 import { type Block, blockAt, type Doc, reparse } from '@drafter/fountain';
-import { startCue } from './input';
+import { startBarCue, startCue } from './input';
 import { BOM, command, cueIndex, readsAsCue, unmarked } from './keymap';
 import { insideRegion, parsedDoc } from './state';
 
@@ -66,12 +66,12 @@ export function withCompletion(run: StateCommand): Command {
 const HEADING_START = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;
 
 /**
- * The headings that name no place, which get `.` and not `INT. `: the openers of the scenes a
- * script marks by what happens rather than where. A short list on purpose; any other text is taken
- * for a place, and the writer can change `INT.` to `EXT.` after.
+ * The headings that name no place, which get `.` and not `INT. `: a whole line of one of these
+ * words, which mark a scene by what happens rather than where. A short list on purpose; any other
+ * text, `DREAM HOUSE` included, is taken for a place, and the writer can change `INT.` to `EXT.`.
  */
 const NOT_A_PLACE =
-  /^(?:END\s+)?(?:FLASHBACK|MONTAGE|SERIES OF SHOTS|INTERCUT|DREAM)\b|^(?:BACK TO|(?:MOMENTS\s+)?LATER|CONTINUOUS)\b/;
+  /^(?:(?:END\s+)?(?:FLASHBACK|MONTAGE|SERIES OF SHOTS|DREAM SEQUENCE)|INTERCUT|BACK TO SCENE|(?:MOMENTS\s+)?LATER|CONTINUOUS)$/;
 
 /** A blank line as the parser reads one: only white space, but not the two spaces of a speech. */
 const isBlank = (text: string) => text !== '  ' && /^\s*$/.test(text);
@@ -88,15 +88,25 @@ interface Here {
   found: { block: Block; index: number } | null;
 }
 
-/** The line at `pos`, or null where no command acts: the title page, and a note or boneyard. */
-function here(state: EditorState, pos: number): Here | null {
+/** Where no command acts: the title page, and a note or boneyard. */
+function blocked(state: EditorState, pos: number): 'title page' | 'region' | null {
   const doc = state.field(parsedDoc);
   const line = state.doc.lineAt(pos);
   const { titlePage } = doc;
-  if (titlePage && line.from >= titlePage.span.from && line.from <= titlePage.span.to) return null;
+  if (titlePage && line.from >= titlePage.span.from && line.from <= titlePage.span.to) {
+    return 'title page';
+  }
+  const kind = blockAt(doc, line.from)?.block.kind;
+  if (kind === 'note' || kind === 'boneyard' || insideRegion(doc, line.from)) return 'region';
+  return null;
+}
+
+/** The line at `pos`, or null where no command acts. */
+function here(state: EditorState, pos: number): Here | null {
+  if (blocked(state, pos)) return null;
+  const doc = state.field(parsedDoc);
+  const line = state.doc.lineAt(pos);
   const found = blockAt(doc, line.from);
-  const kind = found?.block.kind;
-  if (kind === 'note' || kind === 'boneyard' || insideRegion(doc, line.from)) return null;
   const bom = line.text.startsWith(BOM) ? 1 : 0;
   return { state, doc, line, text: line.text.slice(bom), from: line.from + bom, found };
 }
@@ -150,6 +160,19 @@ function bodyOf(text: string): string {
   return unmarked(text).body;
 }
 
+/** A note or a boneyard within a line, closed or running to the line's end. */
+const REGION = /\[\[[\s\S]*?(?:\]\]|$)|\/\*[\s\S]*?(?:\*\/|$)/g;
+
+/** The text in capitals, but for the notes and boneyard in it: those are the writer's own words. */
+const upper = (text: string) =>
+  text
+    .split(/(\[\[[\s\S]*?(?:\]\]|$)|\/\*[\s\S]*?(?:\*\/|$))/)
+    .map((part, i) => (i % 2 ? part : part.toUpperCase()))
+    .join('');
+
+/** The text without its notes and boneyard, for reading what the line says. */
+const words = (text: string) => text.replace(REGION, '').trim();
+
 /** The kind the parse gives `pos` once `text` replaces the line, with a blank line above or not. */
 function kindWith(h: Here, text: string, blank: boolean): Block['kind'] | undefined {
   const insert = (blank ? '\n' : '') + text;
@@ -173,15 +196,16 @@ interface LineEdit {
  * that kind and keeps the selection; otherwise the cursor's line, and the cursor goes where the
  * edit says. A line the rule leaves as it was keeps the cursor where it is.
  */
-function lineCommand(rule: (h: Here) => LineEdit | null): StateCommand {
+function lineCommand(rule: (h: Here) => LineEdit | null, firstOnly = false): StateCommand {
   return command((state) => {
     const { main } = state.selection;
-    let first = state.doc.lineAt(main.from);
+    const first = state.doc.lineAt(main.from);
     let last = state.doc.lineAt(main.to);
-    // A selection of whole lines ends at the start of the next one, which isn't selected.
+    // A selection of whole lines (a triple click, Mod-L) ends at the start of the next line, which
+    // isn't selected.
     if (last.number > first.number && main.to === last.from) last = state.doc.line(last.number - 1);
+    if (firstOnly) last = first;
     const many = last.number > first.number;
-    if (!many) first = last = state.doc.lineAt(main.head);
     const changes: ChangeSpec[] = [];
     const effects: StateEffect<unknown>[] = [];
     let cursor: number | null = null;
@@ -215,7 +239,9 @@ function lineCommand(rule: (h: Here) => LineEdit | null): StateCommand {
     if (changes.length === 0) return effects.length ? { effects } : {};
     const set = state.changes(changes);
     const selection =
-      many || cursor === null ? state.selection.map(set) : EditorSelection.cursor(cursor);
+      many || cursor === null || (firstOnly && !main.empty)
+        ? state.selection.map(set)
+        : EditorSelection.cursor(cursor);
     return { changes: set, selection, effects };
   });
 }
@@ -232,18 +258,19 @@ function sceneHeading(h: Here): LineEdit {
   if (block?.kind === 'scene_heading') {
     // A heading already: a `.` it doesn't need comes off, and one typed in lower case (which
     // the parser allows) is upper-cased. A forced heading keeps its case.
-    if (!block.forced) return { ...edge, text: h.text.trim().toUpperCase() };
+    if (!block.forced) return { ...edge, text: upper(h.text.trim()) };
     return { ...edge, text: HEADING_START.test(body) ? body : h.text };
   }
-  const upper = body.toUpperCase();
-  if (HEADING_START.test(upper)) return { ...edge, text: upper };
-  return { ...edge, text: NOT_A_PLACE.test(upper) ? `.${upper}` : `INT. ${upper}` };
+  const heading = upper(body);
+  if (HEADING_START.test(heading)) return { ...edge, text: heading };
+  return { ...edge, text: NOT_A_PLACE.test(words(heading)) ? `.${heading}` : `INT. ${heading}` };
 }
 
 function character(h: Here): LineEdit {
   if (isBlank(h.text)) {
-    // As Tab does: an `@`, and cue mode upper-cases the name as it is typed.
-    return { text: '@', above: true, effects: [startCue.of(null), ask()] };
+    // As Tab does: an `@`, and cue mode upper-cases the name as it is typed. The `@` comes off
+    // when the cursor leaves the line, if the name doesn't need it (`startBarCue`).
+    return { text: '@', above: true, effects: [startCue.of(null), startBarCue.of(null), ask()] };
   }
   if (isCueLine(h)) {
     // A cue already: an `@` it doesn't need comes off.
@@ -251,8 +278,10 @@ function character(h: Here): LineEdit {
     const bare = name.slice(1).trimStart();
     return { text: name.startsWith('@') && readsAsCue(bare) ? bare : h.text, above: true };
   }
-  const upper = bodyOf(h.text).toUpperCase();
-  return { text: readsAsCue(upper) ? upper : `@${upper}`, above: true };
+  const body = bodyOf(h.text);
+  // A capital inside a word (`McDONALD`, `McDonald`) is the writer's spelling, and is kept.
+  const name = /\p{Ll}\p{Lu}/u.test(words(body)) ? body : upper(body);
+  return { text: readsAsCue(name) ? name : `@${name}`, above: true };
 }
 
 function action(h: Here): LineEdit | null {
@@ -261,7 +290,10 @@ function action(h: Here): LineEdit | null {
     return speechAbove(h) ? { text: '', above: true } : { text: h.text };
   }
   const block = h.found?.block;
-  if (block?.kind === 'action' && !block.forced) return { text: h.text };
+  // An unforced action line is one already, and a page break has no words to make one of.
+  if ((block?.kind === 'action' && !block.forced) || block?.kind === 'page_break') {
+    return { text: h.text };
+  }
   const body = bodyOf(h.text);
   const apart = inSpeech(h) && !blankAbove(h);
   const text = kindWith(h, body, apart) === 'action' ? body : `!${body}`;
@@ -274,10 +306,10 @@ function transition(h: Here): LineEdit {
   const body = bodyOf(h.text);
   const block = h.found?.block;
   if (block?.kind === 'transition') {
-    return { ...edge, text: block.forced && body.endsWith('TO:') ? body : h.text };
+    return { ...edge, text: block.forced && words(body).endsWith('TO:') ? body : h.text };
   }
-  const upper = body.toUpperCase();
-  return { ...edge, text: upper.endsWith('TO:') ? upper : `>${upper}` };
+  const line = upper(body);
+  return { ...edge, text: words(line).endsWith('TO:') ? line : `>${line}` };
 }
 
 function centered(h: Here): LineEdit {
@@ -315,7 +347,7 @@ function cueAbove(h: Here): TransactionSpec {
   return {
     changes: { from: h.from, to: line.to, insert },
     selection: { anchor: h.from + (blank ? 1 : 0) + 1 },
-    effects: [startCue.of(null), ask()],
+    effects: [startCue.of(null), startBarCue.of(null), ask()],
   };
 }
 
@@ -364,7 +396,7 @@ function dialogue(h: Here): TransactionSpec | null {
 function parenthetical(h: Here): TransactionSpec | null {
   const { state, line } = h;
   const lineBreak = state.lineBreak;
-  if (isCueLine(h)) {
+  if (isCueLine(h) || isLoneCue(h)) {
     const next = here(state, lineBelow(h)?.from ?? line.from);
     if (next && next.line !== line && next.found?.block.kind === 'parenthetical') return {};
     return {
@@ -405,7 +437,7 @@ export function canMakeParenthetical(state: EditorState): boolean {
 const COMMANDS: Record<ElementKind, StateCommand> = {
   scene_heading: lineCommand(sceneHeading),
   action: lineCommand(action),
-  character: lineCommand(character),
+  character: lineCommand(character, true),
   dialogue: atCursor(dialogue),
   parenthetical: atCursor(parenthetical),
   transition: lineCommand(transition),
@@ -455,4 +487,44 @@ function pageBreakOnLine(h: Here): TransactionSpec {
     },
     selection: { anchor: h.from + (above ? 1 : 0) + 3 },
   };
+}
+
+/**
+ * Whether the cursor's line is a name with no speech under it yet: the parser reads it as action
+ * (a cue needs a line after it), but it is a cue to the writer, and to the element bar.
+ */
+export function readsAsName(state: EditorState): boolean {
+  const h = here(state, state.selection.main.head);
+  return !!h && !isBlank(h.text) && isLoneCue(h);
+}
+
+/** What the element bar says when Parenthetical doesn't apply. */
+export const PARENTHETICAL_HINT =
+  'A parenthetical goes under a character name or in their dialogue. Put the cursor there first.';
+
+/**
+ * Why the command for `kind` would do nothing at the cursor, in a sentence for the writer, or null
+ * where it acts (or does something that needs no explaining).
+ */
+export function elementHint(kind: ElementKind | 'page_break', state: EditorState): string | null {
+  const { head } = state.selection.main;
+  const where = blocked(state, head);
+  if (where === 'title page') {
+    return 'This is the title page: Key: value lines at the top. Elements go after the blank line under it.';
+  }
+  if (where === 'region') return 'This line is inside a note or a boneyard, which never prints.';
+  const h = here(state, head);
+  if (!h) return null;
+  const block = h.found?.block;
+  if (kind === 'dialogue') {
+    if (block?.kind === 'dialogue') return 'This line is already dialogue.';
+    if (isBlank(h.text) && speechAbove(h)) {
+      return 'This line is already dialogue: type what they say here.';
+    }
+  }
+  if (kind === 'parenthetical' && parenthetical(h) === null) return PARENTHETICAL_HINT;
+  if (kind === 'action' && block?.kind === 'page_break') {
+    return 'A page break has no words to make action of.';
+  }
+  return null;
 }

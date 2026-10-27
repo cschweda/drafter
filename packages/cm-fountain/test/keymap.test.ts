@@ -94,12 +94,20 @@ describe('fountainKeymap', () => {
     expect(fountainKeymap.every((binding) => binding.run && !binding.preventDefault)).toBe(true);
   });
 
-  it('puts the seven kinds on Mod-Alt-1 to 7, in the order of the table', () => {
-    // Each key onto an empty line: the marker, or the pair with the cursor between.
-    const after = ['.|', '!|', '@|', '(|)', '>|', '>|<', '~|'];
-    after.forEach((expected, i) => {
+  it('puts the element commands on Mod-Alt-1 to 7, writing natural Fountain (decided 2026-10-27)', () => {
+    // Each key runs what the element bar's button runs, a forcing mark only where it's needed.
+    const table: Array<[string, string]> = [
+      ['kitchen|', 'INT. KITCHEN|'],
+      ['INT. HALL|', '!INT. HALL|'],
+      ['margaret|', 'MARGARET|'],
+      ['MARGARET\nquietly|', 'MARGARET\n(quietly|)'],
+      ['cut to:|', 'CUT TO:|'],
+      ['THE END|', '>THE END|<'],
+      ['La la|', '~La la|'],
+    ];
+    table.forEach(([before, after], i) => {
       const key = `Mod-Alt-${i + 1}`;
-      expect(render(apply(editor('|'), bound(key))), key).toBe(expected);
+      expect(render(apply(editor(before), bound(key))), key).toBe(after);
     });
   });
 });
@@ -116,7 +124,7 @@ describe('the table of technical design §3.3', () => {
     ['margaret|', 'Tab', '@MARGARET|'],
     ['@MARGARET|', 'Shift-Tab', 'Margaret|'],
     ['MARGARET\nHi.|', 'Mod-Shift-d', 'MARGARET ^\nHi.|'],
-    ['!She waits.|', 'Mod-Alt-3', '@She waits.|'],
+    ['!She waits.|', 'Mod-Alt-3', 'SHE WAITS.|'],
   ]);
 
   it('Tab on an empty line after a blank one starts cue mode', () => {
@@ -788,9 +796,9 @@ describe('the keymap in a view', () => {
     expect(key(enter, { key: 'Enter', keyCode: 13 })).toBe(true);
     expect(enter.state.sliceDoc()).toBe('INT. HALL - DAY\n\n');
 
-    const force = mount('She waits.|');
-    expect(key(force, { key: '3', keyCode: 51, ctrlKey: true, altKey: true })).toBe(true);
-    expect(force.state.sliceDoc()).toBe('@She waits.');
+    const element = mount('She waits.|');
+    expect(key(element, { key: '3', keyCode: 51, ctrlKey: true, altKey: true })).toBe(true);
+    expect(element.state.sliceDoc()).toBe('SHE WAITS.');
 
     const dual = mount('MARGARET\nHi.|');
     expect(key(dual, { key: 'D', keyCode: 68, ctrlKey: true, shiftKey: true })).toBe(true);

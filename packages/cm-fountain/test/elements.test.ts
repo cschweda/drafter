@@ -5,17 +5,21 @@ import {
   canMakeParenthetical,
   cueMode,
   type ElementKind,
+  elementHint,
   fountain,
+  fountainEnter,
+  fountainTab,
   insertPageBreak,
   makeElement,
   opensCompletion,
+  readsAsName,
   withCompletion,
   wrapInBold,
   wrapInItalic,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apply, BOM, editor, render, run } from './helpers';
+import { apply, BOM, editor, render, run, type } from './helpers';
 
 // The element bar's commands (docs/drafter-element-bar-design.md §4): each writes natural Fountain
 // where it can, and a forcing mark only where the line would read as something else without one.
@@ -52,6 +56,13 @@ describe('Scene heading', () => {
     ['flashback|', '.FLASHBACK|'],
     ['end montage|', '.END MONTAGE|'],
     ['moments later|', '.MOMENTS LATER|'],
+    ['dream sequence|', '.DREAM SEQUENCE|'],
+    // Only a whole line of those words: anything more is taken for a place.
+    ['dream house|', 'INT. DREAM HOUSE|'],
+    ['back to school hallway|', 'INT. BACK TO SCHOOL HALLWAY|'],
+    ['flashback kitchen|', 'INT. FLASHBACK KITCHEN|'],
+    // A note on the line is the writer's own words, and keeps its case.
+    ['the hallway [[check]]|', 'INT. THE HALLWAY [[check]]|'],
     // Another kind's mark goes.
     ['!int. hall|', 'INT. HALL|'],
     ['@kitchen|', 'INT. KITCHEN|'],
@@ -93,6 +104,13 @@ describe('Character', () => {
     ['margaret|', 'MARGARET|'],
     ['marg|aret', 'MARGARET|'],
     ['margaret (v.o.)|', 'MARGARET (V.O.)|'],
+    ['Margaret|', 'MARGARET|'],
+    // A name with a capital inside a word keeps its case, with the `@` it then needs.
+    ['McDonald|', '@McDonald|'],
+    ['McDONALD|', '@McDONALD|'],
+    // Notes and a boneyard on the line keep their case.
+    ['bob [[old name]]|', 'BOB [[old name]]|'],
+    ['bob /* was ted */|', 'BOB /* was ted */|'],
     ['She waits.\nmargaret|\nHello.', 'She waits.\n\nMARGARET|\nHello.'],
     ['!margaret|', 'MARGARET|'],
     // A name with no capitals to give needs the `@`.
@@ -151,10 +169,18 @@ describe('Parenthetical', () => {
     ['MARGARET\n(quie|tly)', 'MARGARET\n(quie|tly)'],
     // On a cue, it goes under the cue.
     ['MARG|ARET\nHello.', 'MARGARET\n(|)\nHello.'],
+    // A name just written, with no speech yet, is a cue too.
+    ['She waits.\n\nBOB|', 'She waits.\n\nBOB\n(|)'],
   ]);
 
   it('applies only under a cue or in a speech', () => {
-    for (const marked of ['MARGARET\n|', 'MARGARET\nHel|lo.', 'MAR|GARET\nHi.', 'MARGARET\n(a|)']) {
+    for (const marked of [
+      'MARGARET\n|',
+      'MARGARET\nHel|lo.',
+      'MAR|GARET\nHi.',
+      'MARGARET\n(a|)',
+      '\nBOB|',
+    ]) {
       expect(canMakeParenthetical(editor(marked)), marked).toBe(true);
     }
     for (const marked of ['She waits.|', 'She waits.\n\n|', '|', 'INT. HALL|', 'Title: A|\n\nB']) {
@@ -180,6 +206,8 @@ describe('Action', () => {
     // A line of a speech is set apart from it.
     ['MARGARET\nHello.|', 'MARGARET\n\nHello.|'],
     ['MARGARET\n|', 'MARGARET\n\n|'],
+    // A page break has no words to make action of.
+    ['===|', '===|'],
   ]);
 });
 
@@ -189,6 +217,7 @@ describe('Transition', () => {
     ['fade out.|', '>FADE OUT.|'],
     ['>CUT TO:|', 'CUT TO:|'],
     ['>FADE OUT.|', '>FADE OUT.|'],
+    ['smash cut to: [[maybe]]|', 'SMASH CUT TO: [[maybe]]|'],
     ['She waits.\ncut to:|\nHe goes.', 'She waits.\n\nCUT TO:|\n\nHe goes.'],
     ['|', '>|'],
   ]);
@@ -221,6 +250,79 @@ describe('Centered, Lyric, Section, and Synopsis', () => {
     ['|', '= |'],
     ['= She finds it.|', '= She finds it.|'],
   ]);
+});
+
+describe('a selection of whole lines', () => {
+  // A triple click or Mod-L selects a line and its break, to the start of the next line.
+  it('acts on the selected line, not the one after it', () => {
+    const doc = (marked: string, kind: ElementKind) =>
+      apply(editor(marked), makeElement(kind)).sliceDoc();
+    expect(doc('[kitchen\n]He runs.', 'scene_heading')).toBe('INT. KITCHEN\n\nHe runs.');
+    expect(doc('[cut to:\n]She runs.', 'transition')).toBe('CUT TO:\n\nShe runs.');
+    expect(doc('\n[bob\n]Hi.', 'character')).toBe('\nBOB\nHi.');
+  });
+
+  it('makes only the first line a cue', () => {
+    expect(apply(editor('[bob\nHi.]'), makeElement('character')).sliceDoc()).toBe('BOB\nHi.');
+  });
+});
+
+describe('a cue begun from the bar', () => {
+  /** Moves the cursor to the end of the text, as a click elsewhere would. */
+  const leave = (state: EditorState) =>
+    state.update({ selection: { anchor: state.doc.length } }).state;
+
+  it('loses its `@` when the name typed reads as a cue', () => {
+    let state = apply(editor('She waits.\n\n|'), makeElement('character'));
+    state = type(state, 'bob');
+    expect(state.sliceDoc()).toBe('She waits.\n\n@BOB');
+    state = apply(state, fountainEnter);
+    expect(render(state)).toBe('She waits.\n\nBOB\n|');
+  });
+
+  it('loses it when the cursor leaves the line, from Dialogue too', () => {
+    let state = apply(editor('She waits.\n\nHello there.|'), makeElement('dialogue'));
+    state = leave(type(state, 'bob'));
+    expect(state.sliceDoc()).toBe('She waits.\n\nBOB\nHello there.');
+  });
+
+  it('keeps it when the name needs it, and after a Tab', () => {
+    let state = apply(editor('She waits.\n\n|'), makeElement('character'));
+    state = leave(type(state, '丽丽'));
+    expect(state.sliceDoc()).toBe('She waits.\n\n@丽丽');
+    // Tab's cue is the writer's own `@`, as before.
+    const tab = leave(type(apply(editor('She waits.\n\n|'), fountainTab), 'bob'));
+    expect(tab.sliceDoc()).toBe('She waits.\n\n@BOB');
+  });
+});
+
+describe('readsAsName', () => {
+  it('finds a name with no speech under it yet', () => {
+    expect(readsAsName(editor('She waits.\n\nBOB|'))).toBe(true);
+    expect(readsAsName(editor('She waits.\n\nBOB|\n\nHe goes.'))).toBe(true);
+    expect(readsAsName(editor('She waits.\n\nBob runs.|'))).toBe(false);
+    expect(readsAsName(editor('She waits.\nBOB|'))).toBe(false);
+    expect(readsAsName(editor('BOB|\nHi.'))).toBe(false);
+  });
+});
+
+describe('elementHint', () => {
+  it('says why a command does nothing here', () => {
+    expect(elementHint('scene_heading', editor('Title: The Ca|ll\n\nShe waits.'))).toMatch(
+      /title page/,
+    );
+    expect(elementHint('action', editor('[[a note|]]'))).toMatch(/note or a boneyard/);
+    expect(elementHint('dialogue', editor('MARGARET\n|'))).toMatch(/already dialogue/);
+    expect(elementHint('dialogue', editor('MARGARET\nHel|lo.'))).toMatch(/already dialogue/);
+    expect(elementHint('parenthetical', editor('She waits.|'))).toMatch(/under a character name/);
+    expect(elementHint('action', editor('===|'))).toMatch(/page break/);
+  });
+
+  it('says nothing where the command acts', () => {
+    expect(elementHint('scene_heading', editor('kitchen|'))).toBeNull();
+    expect(elementHint('parenthetical', editor('MARGARET\n|'))).toBeNull();
+    expect(elementHint('dialogue', editor('She waits.\n\nHi.|'))).toBeNull();
+  });
 });
 
 describe('insertPageBreak', () => {
