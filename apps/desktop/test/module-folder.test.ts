@@ -218,6 +218,16 @@ describe('readModulesFolder', () => {
     }
   });
 
+  test('skips a module that takes the id of one built into Drafter', async () => {
+    await addModule('my-notes', { ...MANIFEST, id: 'notes' });
+    await addModule('tidy');
+    const { modules, problems } = readModulesFolder(dir, ['cast', 'notes']);
+    expect(modules.map((m) => m.id)).toEqual(['tidy']);
+    expect(problems).toEqual([
+      'Drafter skipped the folder “my-notes”: it uses the id “notes”, which a module built into Drafter has.',
+    ]);
+  });
+
   test('reads at most 50 modules', async () => {
     for (let i = 0; i < 52; i++) await addModule(`m${String(i).padStart(2, '0')}`);
     const { modules, problems } = readModulesFolder(dir);

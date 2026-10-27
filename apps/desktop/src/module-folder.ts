@@ -8,6 +8,16 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { APP_URL, contentTypeOf, navigationFor, resolveRawPath, within } from './protocol';
 
+/** Set by the build (tsdown.config.ts, from scripts/built-in-modules.mjs); undefined in the unit tests. */
+declare const __DRAFTER_BUILT_IN_MODULES__: readonly string[] | undefined;
+
+/**
+ * The ids of the modules built into Drafter. A module in the folder may not take one: it would share
+ * the built-in's switch, its consent to the network, and its storage in the page.
+ */
+export const BUILT_IN_IDS: readonly string[] =
+  typeof __DRAFTER_BUILT_IN_MODULES__ !== 'undefined' ? __DRAFTER_BUILT_IN_MODULES__ : [];
+
 /** The scheme (registered as privileged in main.ts: standard, secure, fetch, CORS; never `bypassCSP`). */
 export const MODULE_SCHEME = 'drafter-module';
 /** The frame runtime's path on every module's origin (`dist/module-runtime.js`). */
@@ -168,7 +178,10 @@ function readOne(dir: string, folder: string): LoadedModule | string {
  * folder has none. Loose files and folders whose names start with a dot are not modules and are
  * passed over in silence; any other folder that isn't a module is skipped with a sentence naming it.
  */
-export function readModulesFolder(dir: string): ModulesFolder {
+export function readModulesFolder(
+  dir: string,
+  reserved: readonly string[] = BUILT_IN_IDS,
+): ModulesFolder {
   let names: string[];
   try {
     names = readdirSync(dir, { withFileTypes: true })
@@ -198,6 +211,12 @@ export function readModulesFolder(dir: string): ModulesFolder {
     const read = readOne(dir, folder);
     if (typeof read === 'string') {
       problems.push(skipped(folder, read));
+      continue;
+    }
+    if (reserved.includes(read.id)) {
+      problems.push(
+        skipped(folder, `it uses the id “${read.id}”, which a module built into Drafter has`),
+      );
       continue;
     }
     const first = seen.get(read.id);
