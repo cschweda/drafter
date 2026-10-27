@@ -76,7 +76,7 @@ const groups = shortcutGroups(COMMAND_DATA);
           completion, or search) needs it.
         </li>
         <li>
-          Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux, and <kbd>Ctrl+Shift+Z</kbd> on Linux.
+          Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>
           Find next is <kbd>⌘G</kbd> on a Mac and <kbd>Ctrl+G</kbd> elsewhere, or <kbd>F3</kbd>;
