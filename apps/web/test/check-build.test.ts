@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { checkBuild, FIXTURE_MARKERS, iconNamesIn } from '../scripts/check-build.mjs';
 
@@ -87,6 +87,7 @@ describe('checking the service worker’s precache', () => {
       'sw.js': SW(urls, extra),
       'workbox-1.js': 'x',
     })) {
+      await mkdir(dirname(join(dir, name)), { recursive: true });
       await writeFile(join(dir, name), text);
     }
     return dir;
@@ -140,5 +141,32 @@ describe('checking the service worker’s precache', () => {
     );
     const none = await site({ 'a.js': 'x' });
     expect(await check(none)).toMatch(/sw\.js/);
+  });
+
+  // The help pages are prerendered at /docs/<name>/index.html. The worker has no shell fallback for
+  // /docs (nuxt.config.ts), so a page it didn't cache under the address used is a network error
+  // offline: each must be cached with and without the trailing slash.
+  describe('the help pages', () => {
+    const PAGES = { ...FILES, 'docs/saving/index.html': 'x', 'docs/privacy/index.html': 'x' };
+    const BOTH = ['docs/saving', 'docs/saving/', 'docs/privacy', 'docs/privacy/'];
+
+    test('passes when each is cached with and without the trailing slash', async () => {
+      expect(await check(await worker(PAGES, [...ALL, ...BOTH]))).toBe('');
+    });
+
+    test('finds a page cached under one address only, or not at all', async () => {
+      const noSlash = await check(
+        await worker(PAGES, [...ALL, 'docs/saving', 'docs/privacy', 'docs/privacy/']),
+      );
+      expect(noSlash).toMatch(/docs\/saving\//);
+      expect(noSlash).not.toMatch(/docs\/privacy/);
+      const bare = await check(
+        await worker(PAGES, [...ALL, 'docs/saving/', 'docs/privacy', 'docs/privacy/']),
+      );
+      expect(bare).toMatch(/“docs\/saving”/);
+      const none = await check(await worker(PAGES, ALL));
+      expect(none).toMatch(/“docs\/saving”/);
+      expect(none).toMatch(/“docs\/privacy\/”/);
+    });
   });
 });

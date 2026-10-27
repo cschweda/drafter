@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { HELP_PAGES } from '~/commands/data';
 import { formatKeys, isApple } from '~/commands/keys';
 import { type Command, useCommands } from '~/commands/registry';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
+import { useTemplateMenu } from '~/editor/template-menu';
 import { useGuard } from '~/storage/guard';
 import { kindOf, type Project } from '~/storage/projects';
 import { revertNotice } from '~/storage/save';
@@ -14,7 +16,7 @@ import { useScript } from '~/storage/script';
 // command (`commands/builtin.ts`), so this menu, the palette, and the keys never disagree; an item
 // whose command is off shows disabled. The recent scripts are the one list that isn't commands:
 // they open a script by id, as the Scripts menu does. The Help section is the last group and is
-// built from commands too (`helpItems`): Plan 5's Take the tour and the help pages are added there.
+// built from commands too (`helpItems`): Take the tour and the help pages.
 const commands = useCommands();
 const script = useScript();
 const editor = useEditor();
@@ -48,6 +50,25 @@ function entry(id: string, icon: string, shows = false): DropdownMenuItem[] {
     },
   ];
 }
+
+// The Template section: the toolbar's icon row has no room for the template chip below 1024px, so a
+// phone chooses the template here (the palette's Template: commands reach the same list). It is
+// the chip's own list, built once (`useTemplateMenu`), so the two agree on what is checked, what is
+// off, and what a template Drafter doesn't have is called. The editor gets focus after a choice.
+const {
+  template,
+  name: templateName,
+  noteItems: templateNote,
+  items: templateItems,
+} = useTemplateMenu(() => choose(true));
+const templateSection = computed<DropdownMenuItem[]>(() => [
+  {
+    type: 'label',
+    label: `${template.kind.value === 'markdown' ? 'Document' : 'Template'}: ${templateName.value}`,
+  },
+  ...templateNote.value,
+  ...templateItems.value,
+]);
 
 // A script that is not open can be switched to while nothing else is switching.
 const canSwitch = computed(() => !!script.project.value && !script.busy.value && !taking.value);
@@ -84,11 +105,22 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-txt': 'i-lucide-file-type',
 };
 
-// Help: the group at the end of the menu. Take the tour is first (always on); Reset sample is last (off
-// unless a sample is open); the help pages join them as their commands arrive.
+// Help: the group at the end of the menu. Take the tour is first (always on), then the three help pages
+// (each opens in a new tab, and is named by the page's title under the Help label); Reset sample is last (off unless a sample is open).
+const HELP_ICONS: Record<string, string> = {
+  'help-saving': 'i-lucide-save',
+  'help-shortcuts': 'i-lucide-keyboard',
+  'help-privacy': 'i-lucide-shield-check',
+};
 const helpItems = computed<DropdownMenuItem[]>(() => [
   { type: 'label', label: 'Help' },
   ...entry('take-the-tour', 'i-lucide-compass'),
+  ...HELP_PAGES.flatMap((page) =>
+    entry(page.id, HELP_ICONS[page.id] ?? 'i-lucide-book-open').map((item) => ({
+      ...item,
+      label: page.title,
+    })),
+  ),
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
 ]);
 
@@ -97,6 +129,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
     ...entry('open', 'i-lucide-folder-open'),
   ],
+  templateSection.value,
   [{ type: 'label', label: 'Recent scripts' }, ...recentItems.value],
   [
     { type: 'label', label: 'Samples' },

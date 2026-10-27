@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { HELP_PAGES } from '../app/commands/data';
 import { countScenes, runCommand, start, turnOnFixture } from './modules';
 
 declare global {
@@ -68,4 +69,30 @@ test('restores the light theme before the page body exists', async ({ page }) =>
     className: expect.stringMatching(/\blight\b/),
     bodyExists: false,
   });
+});
+
+// The help pages are prerendered, so their inline scripts (the theme, Nuxt's configuration) are
+// hashed into the policy like the app's (scripts/csp.mjs reads every page).
+test.describe('the help pages', () => {
+  for (const { path, title } of [{ path: '/docs', title: 'Help' }, ...HELP_PAGES]) {
+    test(`send the content security policy and load with no CSP violations: ${title}`, async ({
+      page,
+      request,
+    }) => {
+      const csp = (await request.get(path)).headers()['content-security-policy'];
+      expect(csp).toMatch(/^default-src 'self'; script-src 'self'( 'sha256-[^']+')+;/);
+      expect(csp).toContain("connect-src 'self'");
+
+      await page.addInitScript(() => {
+        window.__violations = [];
+        document.addEventListener('securitypolicyviolation', (event) =>
+          window.__violations.push(`${event.violatedDirective} ${event.blockedURI}`),
+        );
+      });
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
+      await page.waitForLoadState('networkidle');
+      expect(await page.evaluate(() => window.__violations)).toEqual([]);
+    });
+  }
 });

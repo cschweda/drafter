@@ -85,8 +85,13 @@ test.describe('the app menu', () => {
     await page.keyboard.press('ArrowDown');
     await expect(menu(page)).toBeVisible();
     await page.keyboard.press('End');
-    // The last item is Help's Reset sample (a sample is open), above it Take the tour, and above that Settings….
+    // The last item is Help's Reset sample (a sample is open); above it are the three help pages, then
+    // Take the tour, and above that Settings….
     await expect(item(page, /^Reset sample/)).toBeFocused();
+    for (const name of [/^Privacy/, /^Keyboard shortcuts/, /^Saving and your browser/]) {
+      await page.keyboard.press('ArrowUp');
+      await expect(item(page, name)).toBeFocused();
+    }
     await page.keyboard.press('ArrowUp');
     await expect(item(page, /^Take the tour/)).toBeFocused();
     await page.keyboard.press('ArrowUp');

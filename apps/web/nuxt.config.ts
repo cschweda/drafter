@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
 import { TOUR_ICONS } from './scripts/tour-icons.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
@@ -60,6 +61,10 @@ export default defineNuxtConfig({
       // documentation pages are their own pages (`/docs/...`, precached by `**/*.html`), not the app.
       navigateFallback: '/',
       navigateFallbackDenylist: [/\/[^/?]+\.[^/]+$/, /^\/docs(\/|$)/],
+      // A prerendered page fetches its payload with a build id in the query (`_payload.json?_b=...`):
+      // the cached file answers it, so the page doesn't fail to hydrate offline (Workbox's
+      // defaults, `utm_*` and `fbclid`, are kept).
+      ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^_b$/],
       runtimeCaching: [],
       cleanupOutdatedCaches: true,
       // The first visit's page is controlled by the worker once it is active, so its lazy chunks
@@ -115,12 +120,41 @@ export default defineNuxtConfig({
     },
   },
   // The editor runs in the browser; `/` is prerendered as a shell that
-  // carries the metadata and the loading template's description.
-  routeRules: { '/': { ssr: false } },
+  // carries the metadata and the loading template's description. The help pages (`/docs/...`,
+  // Phase 1 design §4.5) are prerendered with their content, so they read without JavaScript.
+  routeRules: { '/': { ssr: false }, '/docs/**': { prerender: true, ssr: true } },
   // Always plain static files in .output/public. On Netlify, Nitro would
   // otherwise pick its netlify-static preset and write dist/ instead, which
   // netlify.toml's publish directory and scripts/csp.mjs don't read.
-  nitro: { preset: 'static' },
+  nitro: {
+    preset: 'static',
+    prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path)] },
+  },
+  hooks: {
+    // The module turns each prerendered `docs/x/index.html` into the precache entry `docs/x`, which
+    // answers `/docs/x` and not `/docs/x/`; the worker's page fallback leaves `/docs` alone, so the
+    // address with the slash would be a network error offline. Each page is listed under both
+    // (same revision). scripts/check-build.mjs checks that they are.
+    'pwa:beforeBuildServiceWorker'(options) {
+      const workbox = options.workbox as {
+        manifestTransforms?: Array<
+          (entries: Array<{ url: string; revision?: string | null; size?: number }>) => unknown
+        >;
+      };
+      workbox.manifestTransforms = [
+        ...(workbox.manifestTransforms ?? []),
+        async (entries) => ({
+          manifest: [
+            ...entries,
+            ...entries
+              .filter((entry) => /^docs(\/[^/.]+)?$/.test(entry.url))
+              .map((entry) => ({ ...entry, url: `${entry.url}/` })),
+          ],
+          warnings: [],
+        }),
+      ];
+    },
+  },
   devtools: { enabled: false },
   telemetry: false,
   app: {
