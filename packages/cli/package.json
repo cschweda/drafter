@@ -1,6 +1,6 @@
 {
   "name": "@drafter/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The Drafter command line: lays out Fountain scripts and writes them as PDF, text, or JSON.",
   "license": "MIT",
   "type": "module",
