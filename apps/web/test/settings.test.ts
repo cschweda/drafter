@@ -22,6 +22,7 @@ describe('settings', () => {
       sprintSound: false,
       checkForUpdates: true,
       scrollSync: true,
+      elementBar: true,
     });
   });
 

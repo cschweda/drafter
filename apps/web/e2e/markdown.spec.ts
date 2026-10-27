@@ -217,7 +217,7 @@ test.describe('a Markdown document', () => {
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.insertText('INT. KITCHEN - NIGHT');
-    // Make scene heading, Make character: neither acts.
+    // Force scene heading, Force character: neither acts.
     await page.keyboard.press('ControlOrMeta+Alt+3');
     await page.keyboard.press('Enter');
     await page.keyboard.press('ControlOrMeta+Alt+1');
@@ -228,8 +228,10 @@ test.describe('a Markdown document', () => {
     await expect(page.locator('.cm-md-heading')).toContainText('# Untitled');
     // The palette leaves the Fountain commands and the problem keys out, and the scenes.
     await page.keyboard.press('ControlOrMeta+k');
-    await paletteDialog(page).locator('input').fill('Make');
-    await expect(paletteOption(page, 'Make scene heading')).toHaveCount(0);
+    await paletteDialog(page).locator('input').fill('Force');
+    await expect(paletteOption(page, 'Force scene heading (.)')).toHaveCount(0);
+    await paletteDialog(page).locator('input').fill('Element');
+    await expect(paletteOption(page, 'Element: Character')).toHaveCount(0);
     await paletteDialog(page).locator('input').fill('problem');
     await expect(paletteOption(page, 'Next problem')).toHaveCount(0);
     await paletteDialog(page).locator('input').fill('');

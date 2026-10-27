@@ -249,7 +249,7 @@ test.describe('the command palette', () => {
     await setText(page, 'The rain stops.');
     await page.keyboard.press('ControlOrMeta+Home');
     await toolbarField(page).click();
-    await choose(page, 'make scene heading', 'Make scene heading');
+    await choose(page, 'force scene heading', 'Force scene heading (.)');
     await expect(palette(page)).toBeHidden();
     await expect(editor(page)).toHaveText('.The rain stops.');
     await expect(editor(page)).toBeFocused();
@@ -258,7 +258,7 @@ test.describe('the command palette', () => {
   test('shows the Source tab for a command that works on the text', async ({ page }) => {
     await page.getByRole('tab', { name: 'Script' }).first().click();
     await openPalette(page);
-    await choose(page, 'make action', 'Make action');
+    await choose(page, 'force action', 'Force action (!)');
     await expect(palette(page)).toBeHidden();
     await expect(editor(page)).toBeVisible();
   });

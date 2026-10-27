@@ -30,6 +30,7 @@ export interface HelpPage {
 
 /** The help pages (Phase 1 design §4.5): prerendered at `path`, and opened from Help and the palette. */
 export const HELP_PAGES: readonly HelpPage[] = [
+  { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
@@ -48,6 +49,24 @@ const fountain = (id: string, title: string, keys: string): CommandData => ({
   group: 'Edit',
   keys,
 });
+
+const element = (id: string, name: string): CommandData => ({
+  id: `element-${id}`,
+  title: `Element: ${name}`,
+  group: 'Edit',
+});
+
+/** The Markdown buttons' actions (`markdown/commands.ts`), and what the palette calls each. */
+export const MARKDOWN_ACTIONS = [
+  ['heading', 'Heading'],
+  ['bold', 'Bold'],
+  ['italic', 'Italic'],
+  ['list', 'List'],
+  ['numbered', 'Numbered list'],
+  ['quote', 'Quote'],
+  ['link', 'Link'],
+  ['code', 'Code'],
+] as const;
 
 /** Every built-in command, in the order the palette lists them. */
 export const COMMAND_DATA: readonly CommandData[] = [
@@ -139,6 +158,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'turn-off-typewriter', title: 'Turn off typewriter scrolling', group: 'View' },
   { id: 'turn-on-scroll-sync', title: 'Turn on scroll sync', group: 'View' },
   { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
+  { id: 'show-element-bar', title: 'Show the element bar', group: 'View' },
+  { id: 'hide-element-bar', title: 'Hide the element bar', group: 'View' },
   { id: 'fold-all', title: 'Fold all', group: 'View', keys: 'Ctrl-Alt-[' },
   { id: 'unfold-all', title: 'Unfold all', group: 'View', keys: 'Ctrl-Alt-]' },
 
@@ -147,15 +168,43 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
 
-  // Edit, the Fountain commands (technical design §3.3)
-  fountain('make-scene-heading', 'Make scene heading', 'Mod-Alt-1'),
-  fountain('make-action', 'Make action', 'Mod-Alt-2'),
-  fountain('make-character', 'Make character', 'Mod-Alt-3'),
-  fountain('make-parenthetical', 'Make parenthetical', 'Mod-Alt-4'),
-  fountain('make-transition', 'Make transition', 'Mod-Alt-5'),
-  fountain('make-centered', 'Make centered text', 'Mod-Alt-6'),
-  fountain('make-lyric', 'Make lyric', 'Mod-Alt-7'),
+  // Edit, the element bar's commands (docs/drafter-element-bar-design.md §4): natural Fountain,
+  // with a forcing mark only where a line needs one. Dual dialogue, the note, and the boneyard are
+  // the commands below.
+  element('scene-heading', 'Scene heading'),
+  element('action', 'Action'),
+  element('character', 'Character'),
+  element('dialogue', 'Dialogue'),
+  element('parenthetical', 'Parenthetical'),
+  element('transition', 'Transition'),
+  element('centered', 'Centered text'),
+  element('lyric', 'Lyric'),
+  element('section', 'Section'),
+  element('synopsis', 'Synopsis'),
+  element('page-break', 'Page break'),
+  { id: 'emphasis-bold', title: 'Emphasis: Bold', group: 'Edit' },
+  { id: 'emphasis-italic', title: 'Emphasis: Italic', group: 'Edit' },
+  { id: 'emphasis-underline', title: 'Emphasis: Underline', group: 'Edit' },
+
+  // Edit, the Fountain commands (technical design §3.3). Each forces a kind with its mark, whatever
+  // the line reads as without one (the element commands above add a mark only where it's needed).
+  fountain('make-scene-heading', 'Force scene heading (.)', 'Mod-Alt-1'),
+  fountain('make-action', 'Force action (!)', 'Mod-Alt-2'),
+  fountain('make-character', 'Force character (@)', 'Mod-Alt-3'),
+  fountain('make-parenthetical', 'Force parenthetical ( )', 'Mod-Alt-4'),
+  fountain('make-transition', 'Force transition (>)', 'Mod-Alt-5'),
+  fountain('make-centered', 'Force centered text (> <)', 'Mod-Alt-6'),
+  fountain('make-lyric', 'Force lyric (~)', 'Mod-Alt-7'),
   fountain('dual-dialogue', 'Dual dialogue', 'Mod-Shift-d'),
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
+
+  // Edit, the element bar's buttons for a Markdown document (the design, §5)
+  ...MARKDOWN_ACTIONS.map(
+    ([action, name]): CommandData => ({
+      id: `markdown-${action}`,
+      title: `Markdown: ${name}`,
+      group: 'Edit',
+    }),
+  ),
 ];

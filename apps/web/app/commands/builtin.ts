@@ -2,8 +2,21 @@ import { redo, undo } from '@codemirror/commands';
 import { foldAll, unfoldAll } from '@codemirror/language';
 import { nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
 import { openSearchPanel } from '@codemirror/search';
+import type { StateCommand } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-fountain';
+import {
+  type ElementKind,
+  forceKind,
+  insertPageBreak,
+  makeElement,
+  toggleDual,
+  withCompletion,
+  wrapInBold,
+  wrapInBoneyard,
+  wrapInItalic,
+  wrapInNote,
+  wrapInUnderline,
+} from '@drafter/cm-fountain';
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
@@ -11,6 +24,7 @@ import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
+import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
@@ -21,7 +35,7 @@ import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/sav
 import { useScript } from '~/storage/script';
 import { requestTour } from '~/tour/state';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
-import { COMMAND_DATA, HELP_PAGES, helpHref } from './data';
+import { COMMAND_DATA, HELP_PAGES, helpHref, MARKDOWN_ACTIONS } from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
@@ -99,6 +113,21 @@ export function registerBuiltinCommands(): void {
     enabled: () => canEdit() && isFountain(),
     run: onEditor((v) => void act(v)),
   });
+
+  /**
+   * The element bar's commands (docs/drafter-element-bar-design.md §4), which the bar and the palette
+   * both run: the Source shows and has focus, and the command acts on the selection the editor has,
+   * which `onEditor` would collapse to the cursor. It opens completion where it begins a heading or a
+   * cue.
+   */
+  const inEditor = (applies: () => boolean, act: StateCommand): Behavior => ({
+    enabled: () => canEdit() && applies(),
+    run: () => {
+      showTab('source');
+      void nextTick().then(() => withCompletion(act)(view));
+    },
+  });
+  const element = (kind: ElementKind) => inEditor(isFountain, makeElement(kind));
 
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
@@ -286,6 +315,15 @@ export function registerBuiltinCommands(): void {
       enabled: () => settings.value.scrollSync,
       run: () => void set('scrollSync', false),
     },
+    // The element bar (decided 2026-10-27): its ⋯ menu and Settings set the same row.
+    'show-element-bar': {
+      enabled: () => !settings.value.elementBar,
+      run: () => void set('elementBar', true),
+    },
+    'hide-element-bar': {
+      enabled: () => settings.value.elementBar,
+      run: () => void set('elementBar', false),
+    },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },
 
@@ -293,6 +331,22 @@ export function registerBuiltinCommands(): void {
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
+
+    // Edit, the element bar's commands
+    'element-scene-heading': element('scene_heading'),
+    'element-action': element('action'),
+    'element-character': element('character'),
+    'element-dialogue': element('dialogue'),
+    'element-parenthetical': element('parenthetical'),
+    'element-transition': element('transition'),
+    'element-centered': element('centered'),
+    'element-lyric': element('lyric'),
+    'element-section': element('section'),
+    'element-synopsis': element('synopsis'),
+    'element-page-break': inEditor(isFountain, insertPageBreak),
+    'emphasis-bold': inEditor(isFountain, wrapInBold),
+    'emphasis-italic': inEditor(isFountain, wrapInItalic),
+    'emphasis-underline': inEditor(isFountain, wrapInUnderline),
 
     // Edit, the Fountain commands (technical design §3.3)
     'make-scene-heading': fountain(forceKind('scene_heading')),
@@ -305,6 +359,14 @@ export function registerBuiltinCommands(): void {
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),
+
+    // Edit, the element bar's buttons for a Markdown document
+    ...Object.fromEntries(
+      MARKDOWN_ACTIONS.map(([action]): [string, Behavior] => [
+        `markdown-${action}`,
+        inEditor(isMarkdown, MARKDOWN_COMMANDS[action]),
+      ]),
+    ),
   };
 
   // The data and the behavior must name the same commands: one without the other is a mistake in
