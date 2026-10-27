@@ -8,7 +8,7 @@ import { compareAssets } from '../scripts/check-release-assets.mjs';
 let dir: string;
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'drafter-assets-'));
-  await writeFile(join(dir, 'Drafter-1.0.0-linux-x86_64.AppImage'), 'image');
+  await writeFile(join(dir, 'Drafter-x86_64.AppImage'), 'image');
   await writeFile(join(dir, 'Drafter-1.0.0-linux-amd64.deb'), 'deb');
   await writeFile(join(dir, 'latest-linux.yml'), 'feed');
 });
@@ -18,7 +18,7 @@ const sha = (text: string) => `sha256:${createHash('sha256').update(text).digest
 const assets = (over: Record<string, object> = {}) =>
   [
     {
-      name: 'Drafter-1.0.0-linux-x86_64.AppImage',
+      name: 'Drafter-x86_64.AppImage',
       size: 5,
       state: 'uploaded',
       digest: sha('image'),

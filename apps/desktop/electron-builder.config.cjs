@@ -22,7 +22,7 @@ module.exports = {
     '!**/*.map',
   ],
   asar: true,
-  // Same name for the file and for latest-linux.yml, which names the AppImage the updater fetches.
+  // The .deb's name (the AppImage has its own, below). latest-linux.yml names both as they are.
   // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
   artifactName: 'Drafter-${version}-linux-${arch}.${ext}',
   // Written into the app (resources/app-update.yml) for electron-updater (Task 6), and into
@@ -88,6 +88,13 @@ module.exports = {
     desktop: { entry: { Keywords: 'screenplay;fountain;writing;script;' } },
   },
   appImage: {
+    // One name for every version (Drafter-x86_64.AppImage), and latest-linux.yml names it so.
+    // electron-updater's Restart deletes the running AppImage and moves the download to the same
+    // path when the old name holds no version; with a version in it, the new one would land under
+    // a new name and launchers, AppImage integrations, and an AppArmor profile for the old path
+    // would point at a deleted file. Each release is its own set of assets, so names don't collide.
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
+    artifactName: '${productName}-${arch}.${ext}',
     // electron-builder's default adds `--no-sandbox` to the desktop entry's Exec line. Drafter
     // runs with Chromium's sandbox or not at all, so the entry passes nothing.
     executableArgs: [],

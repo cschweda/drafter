@@ -1,6 +1,6 @@
 // Checks latest-linux.yml (the updater's feed, written by electron-builder) against the packages
 // next to it: every file it names exists in the folder, with the size and the sha512 it says, and
-// the file it names as `path` is one of them. Run before a release is published (the workflow's
+// the file it names as `path` is one of them, and the AppImage's name holds no version. Run before a release is published (the workflow's
 // `publish` job, and after packaging): `node scripts/check-update-feed.mjs <folder>`.
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -48,6 +48,13 @@ export function checkFeed(dir) {
     if (file.url.includes('/') || file.url.includes('\\') || file.url.startsWith('.')) {
       problems.push(`${file.url}: not a plain file name`);
       continue;
+    }
+    // A versioned AppImage would be installed under the next version's name (see the AppImage's
+    // artifactName in electron-builder.config.cjs), leaving launchers pointing at a deleted file.
+    if (file.url.endsWith('.AppImage') && /\d+\.\d+\.\d+/.test(file.url)) {
+      problems.push(
+        `${file.url}: an AppImage's name must not carry a version (an update must replace it in place)`,
+      );
     }
     if (!existsSync(path)) {
       problems.push(`${file.url}: named in latest-linux.yml but not in ${dir}`);
