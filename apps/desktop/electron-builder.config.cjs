@@ -10,11 +10,13 @@ module.exports = {
   copyright: 'Copyright © 2026 Christopher Schweda. MIT License.',
   // `dist/` is tsdown's (it cleans it), so the packages go elsewhere.
   directories: { output: 'release', buildResources: 'build' },
-  // Only what runs: the two bundles, the web build, the spellcheck dictionaries (src/spellcheck.ts
+  // Only what runs: the three bundles, the web build, the spellcheck dictionaries (src/spellcheck.ts
   // reads them from the app's own folder and copies them into the profile), and package.json.
   files: [
     'dist/main.cjs',
     'dist/preload.cjs',
+    // The runtime in each folder module's frame (src/module-runtime.ts).
+    'dist/module-runtime.js',
     'web/**/*',
     'dictionaries/**/*',
     'package.json',

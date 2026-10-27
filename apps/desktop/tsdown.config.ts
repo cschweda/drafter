@@ -18,4 +18,15 @@ const common: UserConfig = {
 export default defineConfig([
   { ...common, entry: { main: 'src/main.ts' }, clean: true },
   { ...common, entry: { preload: 'src/preload.ts' }, clean: false },
+  // The runtime in each folder module's frame (module-runtime.ts): a browser module script, served
+  // by the main process at drafter-module://<id>/__drafter__/runtime.js.
+  {
+    entry: { 'module-runtime': 'src/module-runtime.ts' },
+    format: 'esm',
+    platform: 'browser',
+    target: 'chrome140',
+    dts: false,
+    fixedExtension: false,
+    clean: false,
+  },
 ]);
