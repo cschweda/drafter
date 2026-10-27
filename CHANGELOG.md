@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- `docs`: the README's screenshots show a scene in both panes, the Fountain source on the left (a scene heading, action, character cues, a parenthetical, and dialogue) and the laid-out page on the right, instead of the title page's fields.
+
 ### Added
 
 - `docs`: the roadmap gains ways to see and work through a script: a script map, a pacing view with optional structure guides, a character-by-scene grid, scene goals, and setups and payoffs (Phase 2); French scenes, who is on stage, and a doubling chart for plays (Phase 3); a character pass, story order against script order, and a breakdown report (Phase 4).
