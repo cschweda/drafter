@@ -83,6 +83,8 @@ export function useTemplate(): TemplateChoice {
       userEvent: 'input',
       annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
+    // A first document's blank text names the template it was made with: the offer ends here.
+    script.forgetBlank();
   }
 
   function isCurrent(type: DocumentType): boolean {

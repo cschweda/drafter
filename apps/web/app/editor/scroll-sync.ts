@@ -244,7 +244,13 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
   /** Where the leading pane's top last was, for a pane that opens later (a phone's tabs). */
   let place: { offset: number; from: Side } | null = null;
 
-  const leading = (side: Side) => leader === side && now() < leadUntil;
+  /**
+   * The view while a press on it is held (its scroll bar's thumb, most often): it leads until the
+   * press ends, however long the writer pauses mid-drag, and then for `LEAD_MS` as usual.
+   */
+  let held: Side | null = null;
+
+  const leading = (side: Side) => held === side || (leader === side && now() < leadUntil);
 
   /**
    * The cursor, when the other pane must keep it in view: the keys or the app moved the Source (not
@@ -302,7 +308,7 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
     el.addEventListener('wheel', touch, passive);
     el.addEventListener('touchstart', touch, passive);
     el.addEventListener('touchmove', touch, passive);
-    el.addEventListener('pointerdown', touch, passive);
+    el.addEventListener('pointerdown', side === 'view' ? () => hold(side) : touch, passive);
     el.addEventListener(
       'keydown',
       (event) => {
@@ -320,7 +326,24 @@ export function createScrollSync(deps: ScrollSyncDeps): ScrollSync {
       controller.abort();
       if (panes[side] === pane) panes[side] = null;
       if (leader === side) leader = null;
+      if (held === side) held = null;
     };
+  }
+
+  /** A press on the view: it leads until the press ends anywhere (the pointer can leave the pane mid-drag). */
+  function hold(side: Side) {
+    if (!deps.enabled()) return;
+    lead(side);
+    held = side;
+    const release = new AbortController();
+    const end = () => {
+      release.abort();
+      if (held !== side) return;
+      held = null;
+      lead(side);
+    };
+    window.addEventListener('pointerup', end, { signal: release.signal });
+    window.addEventListener('pointercancel', end, { signal: release.signal });
   }
 
   function placeView(): boolean {

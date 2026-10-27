@@ -122,8 +122,6 @@ describe('the first New of a kind', () => {
   test('Start blank empties it to the new-document text as one change, which one Undo reverses', async () => {
     const t = await visit();
     await t.session.newScript('stage-play');
-    // Some typing first, which the change keeps apart from.
-    t.editor.view.dispatch({ changes: { from: 0, insert: 'EDIT ' }, userEvent: 'input.type' });
     const before = t.text();
 
     expect(t.session.startBlank()).toBe(true);
@@ -138,6 +136,57 @@ describe('the first New of a kind', () => {
     expect(t.text()).toBe(before);
     // A second Start blank has nothing to offer.
     expect(t.session.startBlank()).toBe(false);
+  });
+
+  test('is offered only on the untouched sample: an edit ends it for good', async () => {
+    const t = await visit();
+    await t.session.newScript('stage-play');
+    t.editor.view.dispatch({ changes: { from: 0, insert: 'MY PLAY ' }, userEvent: 'input.type' });
+    // At once: Start blank would wipe what the writer wrote.
+    expect(t.session.canStartBlank.value).toBe(false);
+    expect(t.session.startBlank()).toBe(false);
+    expect(t.text().startsWith('MY PLAY ')).toBe(true);
+    // And for good, once the recovery copy has the edit: undoing it doesn't bring the offer back.
+    await t.session.flush();
+    const id = t.session.project.value?.id ?? '';
+    expect((await t.db.projects.get(id))?.blank).toBeUndefined();
+    expect(t.session.project.value?.blank).toBeUndefined();
+    undo(t.editor.view as never);
+    expect(t.text()).toBe(t.SAMPLE_STAGE_PLAY);
+    expect(t.session.canStartBlank.value).toBe(false);
+
+    const later = await visit({ keep: true });
+    expect(later.session.project.value?.id).toBe(id);
+    expect(later.session.canStartBlank.value).toBe(false);
+  });
+
+  test('a change of kind ends the offer', async () => {
+    const t = await visit();
+    await t.session.newScript('stage-play');
+    await t.session.setKind('markdown');
+    expect(t.session.project.value?.blank).toBeUndefined();
+    expect(t.session.canStartBlank.value).toBe(false);
+    const id = t.session.project.value?.id ?? '';
+    expect((await t.db.projects.get(id))?.blank).toBeUndefined();
+  });
+
+  test('forgetBlank ends the offer, and says so if it can’t be kept', async () => {
+    const t = await visit();
+    await t.session.newScript('stage-play');
+    vi.spyOn(t.db.projects, 'put').mockRejectedValue(new Error('QuotaExceededError'));
+    t.session.forgetBlank();
+    expect(t.session.canStartBlank.value).toBe(false);
+    await vi.waitFor(() => expect(t.blankError.value).not.toBe(''));
+  });
+
+  test('the first visit remembers that it showed the screenplay sample', async () => {
+    const t = await visit();
+    await vi.waitFor(async () =>
+      expect(await t.db.settings.get('sample-seen:screenplay')).toEqual({
+        key: 'sample-seen:screenplay',
+        value: true,
+      }),
+    );
   });
 
   test('a first Markdown document opens with the Markdown sample; the second is blank', async () => {

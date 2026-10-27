@@ -9,7 +9,7 @@ import { useMarkdown } from '~/markdown/use-markdown';
 import { progressLabel, useGoal } from '~/stats/goal';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
-import { kindError, type RecoveryState, useScript } from '~/storage/script';
+import { blankError, kindError, type RecoveryState, useScript } from '~/storage/script';
 
 const { doc, kind } = useEditor();
 const { words } = useMarkdown();
@@ -117,6 +117,7 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
+    <span v-if="blankError" role="alert" class="failed">{{ blankError }}</span>
     <!-- The page item opens the counts. A Markdown document has words, no pages, and no checks. -->
     <span ref="countsWrap" class="counts-wrap" @focusout="onFocusOut">
       <button

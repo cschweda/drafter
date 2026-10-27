@@ -85,11 +85,6 @@ test.describe('the first New of a kind', () => {
     await expect(sampleBar(page)).toHaveCount(0);
     await expect(bar(page)).toBeVisible();
 
-    // Some typing of the writer's own, which Start blank replaces and Undo brings back.
-    await editor(page).click();
-    await page.keyboard.press('ControlOrMeta+Home');
-    await page.keyboard.insertText('MINE ');
-
     // By keyboard: the button is a tab stop, and Enter presses it.
     await startBlank(page).focus();
     await page.keyboard.press('Enter');
@@ -101,12 +96,47 @@ test.describe('the first New of a kind', () => {
 
     await page.keyboard.press('ControlOrMeta+z');
     await expect.poll(() => text(page)).toContain('This is a short sample stage play');
-    expect(await text(page)).toContain('MINE Title: The Call');
+    expect(await text(page)).toContain('Title: The Call');
+    expect(await text(page)).not.toContain('Untitled Play');
 
     // The second New stage play is the usual blank one.
     await command(page, 'New stage play');
     await expect.poll(() => text(page)).toContain('Title: Untitled Play');
     expect(await text(page)).not.toContain('sample');
+    await expect(bar(page)).toHaveCount(0);
+  });
+
+  test('an edit to the sample ends the offer, for good', async ({ page }) => {
+    await start(page);
+    await command(page, 'New stage play');
+    await showTab(page, 'Source');
+    await expect(bar(page)).toBeVisible();
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.insertText('MY OWN PLAY ');
+    // Start blank would wipe it: the bar goes at once, and the palette doesn't list it.
+    await expect(bar(page)).toHaveCount(0);
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette(page).locator('input').fill('Start blank');
+    await expect(palette(page).getByRole('option', { name: /^Start blank/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await page.reload();
+    await expect.poll(() => text(page)).toContain('MY OWN PLAY');
+    await expect(editor(page)).toBeAttached();
+    await page.waitForTimeout(300);
+    await expect(bar(page)).toHaveCount(0);
+  });
+
+  test('choosing another template ends the offer', async ({ page }) => {
+    await start(page);
+    await command(page, 'New stage play');
+    await expect(bar(page)).toBeVisible();
+    await command(page, 'Template: Screenplay');
+    await expect(bar(page)).toHaveCount(0);
+    await page.reload();
+    await expect.poll(() => text(page)).toContain('This is a short sample stage play');
+    await page.waitForTimeout(300);
     await expect(bar(page)).toHaveCount(0);
   });
 
@@ -153,7 +183,7 @@ test.describe('the first New of a kind', () => {
     await expect.poll(() => text(page)).toContain('This is a short sample stage play');
     await expect
       .poll(async () => (await seenRows(page)).map((r) => r.key))
-      .toEqual(['sample-seen:stage-play']);
+      .toEqual(['sample-seen:screenplay', 'sample-seen:stage-play']);
 
     await page.reload();
     // A returning visit opens the document it was on, still offering Start blank.

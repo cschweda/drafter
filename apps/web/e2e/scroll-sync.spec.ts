@@ -202,6 +202,32 @@ test.describe('scroll sync, on wide screens', () => {
     expect(Math.abs(source - script)).toBeLessThan(TOLERANCE);
   });
 
+  test('a press held on the Script pane past a pause keeps it leading as it is dragged', async ({
+    page,
+  }) => {
+    await fill(page, 'screenplay', SCRIPT);
+    await expect(
+      scriptHost(page).locator('.drafter-line', { hasText: 'INT. ROOM 40' }),
+    ).toBeAttached();
+    // Pressed on the pane's edge (the desk, not a line, so the release jumps nowhere), held still
+    // for longer than a lead lasts, then dragged: as a scroll bar's thumb is.
+    const box = await scriptHost(page).boundingBox();
+    if (!box) throw new Error('No Script pane.');
+    await page.mouse.move(box.x + 4, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(800);
+    await scriptHost(page).evaluate((el) => {
+      el.scrollTop += 5000;
+    });
+    await page.waitForTimeout(800);
+    const script = (await scriptTop(page)) ?? 0;
+    expect(script).toBeGreaterThan(3000);
+    const source = (await sourceTop(page, SCRIPT)) ?? -1;
+    expect(Math.abs(source - script)).toBeLessThan(TOLERANCE);
+    await page.mouse.up();
+    expect(await settled(page, '.script-host')).toBe(true);
+  });
+
   test('follows at 100% as at Fit width', async ({ page }) => {
     await fill(page, 'screenplay', SCRIPT);
     await page.getByRole('button', { name: '100%' }).click();

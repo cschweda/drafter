@@ -1,46 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import { drafterDatabase, sampleSeenRows } from './e2e/seed';
 
 // The tests run against the generated site (`pnpm e2e` builds it first),
 // served with its `_headers`, so they see what drafter.dev serves.
 // E2E_PORT lets two worktrees run their suites at once without sharing a server.
 const port = Number(process.env.E2E_PORT ?? 4173);
-
-const sampleSeenRows = ['screenplay', 'stage-play', 'markdown'].map((kind) => ({
-  key: `sample-seen:${kind}`,
-  value: true,
-}));
-
-/**
- * Drafter's database (`app/storage/db.ts`: Dexie's version 1, which IndexedDB knows as 10) holding
- * these settings rows, as Playwright's storage state restores it. The stores and indexes are the
- * ones Dexie makes, so it opens the database as its own.
- */
-function drafterDatabase(settings: Array<{ key: string; value: unknown }>) {
-  const index = (name: string) => ({ name, keyPath: name, multiEntry: false, unique: false });
-  const store = (
-    name: string,
-    keyPath: string,
-    indexes: string[] = [],
-    records: unknown[] = [],
-  ) => ({
-    name,
-    keyPath,
-    autoIncrement: false,
-    indexes: indexes.map(index),
-    records: records.map((value) => ({ value })),
-  });
-  return {
-    name: 'drafter',
-    version: 10,
-    stores: [
-      store('projects', 'id', ['title', 'updatedAt']),
-      store('snapshots', 'id', ['projectId', 'createdAt']),
-      store('templates', 'id'),
-      store('handles', 'id'),
-      store('settings', 'key', [], settings),
-    ],
-  };
-}
 
 // Accessibility checks wait for the project's final stage (decided 2026-10-26): tests named for
 // accessibility violations run only with A11Y=1 (`pnpm e2e:a11y`).

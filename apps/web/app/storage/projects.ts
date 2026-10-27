@@ -141,12 +141,18 @@ export async function updateProject(
  * the stored project's own fields that the result carries, and `current` stands in only for a
  * project that has gone from the database.
  */
-export async function writeSource(current: Project, source: string): Promise<Project> {
+export async function writeSource(
+  current: Project,
+  source: string,
+  /** Other fields to change in the same write. */
+  fields: Partial<Omit<Project, 'id' | 'source'>> = {},
+): Promise<Project> {
   return db.transaction('rw', db.projects, async () => {
     const stored = await db.projects.get(current.id);
     const base = stored ?? current;
     const next: Project = {
       ...base,
+      ...fields,
       ...derive(source, base.fileName, kindOf(base)),
       source,
       updatedAt: Date.now(),

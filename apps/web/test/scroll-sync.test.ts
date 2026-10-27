@@ -263,6 +263,48 @@ describe('the controller', () => {
     expect(again.calls).toEqual([{ offset: 900 }]);
   });
 
+  test('a press on the view (its scroll bar) leads for as long as it is held', () => {
+    const h = harness();
+    const source = fakePane();
+    const view = fakePane();
+    h.sync.attachSource(source);
+    h.sync.attachView(view);
+    view.scroller.dispatchEvent(new Event('pointerdown'));
+    // The writer pauses on the thumb for longer than a lead lasts, then drags.
+    h.tick(LEAD_MS * 3);
+    view.at(800);
+    view.scroller.dispatchEvent(new Event('scroll'));
+    h.tick();
+    expect(source.calls).toEqual([{ offset: 800 }]);
+    // The Source's echo, long after the press began, still moves nothing back.
+    h.tick(LEAD_MS * 3);
+    source.at(805);
+    source.scroller.dispatchEvent(new Event('scroll'));
+    h.tick();
+    expect(view.calls).toEqual([]);
+
+    // Let go: the lead runs out as usual, and the Source leads again.
+    window.dispatchEvent(new Event('pointerup'));
+    h.tick(LEAD_MS + 1);
+    source.scroll(300);
+    h.tick();
+    expect(view.calls).toEqual([{ offset: 300 }]);
+  });
+
+  test('a pointercancel lets go too', () => {
+    const h = harness();
+    const source = fakePane();
+    const view = fakePane();
+    h.sync.attachSource(source);
+    h.sync.attachView(view);
+    view.scroller.dispatchEvent(new Event('pointerdown'));
+    window.dispatchEvent(new Event('pointercancel'));
+    h.tick(LEAD_MS + 1);
+    source.scroll(300);
+    h.tick();
+    expect(view.calls).toEqual([{ offset: 300 }]);
+  });
+
   test('leaves a view the writer is scrolling where it is when it is drawn again', () => {
     const h = harness();
     const source = fakePane();

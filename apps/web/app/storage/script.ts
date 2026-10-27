@@ -71,6 +71,9 @@ export function isFirstVisit(): boolean {
 /** Why the last change of document type did nothing, for the status bar; empty after one that worked. */
 export const kindError = ref('');
 
+/** Why Start blank's offer couldn't be put away in the stored copy, for the status bar; empty otherwise. */
+export const blankError = ref('');
+
 export interface ScriptSession {
   project: Readonly<ShallowRef<Project | null>>;
   /** The text differs from what was last saved to the file. A new script that hasn't been typed in has no changes. */
@@ -98,8 +101,13 @@ export interface ScriptSession {
    * remembered (`storage/first-samples.ts`), and every later one is blank.
    */
   newScript(kind: NewKind): Promise<void>;
-  /** The open document opened with a sample's text and can be emptied: Start blank would do something. */
+  /**
+   * The open document opened with a sample's text, still has it untouched, and can be emptied:
+   * Start blank would do something. The first edit the recovery copy keeps ends the offer for good.
+   */
   canStartBlank: Readonly<ComputedRef<boolean>>;
+  /** Ends Start blank's offer on the open document (its template or kind was changed). */
+  forgetBlank(): void;
   /**
    * Puts the new-document text in place of a first document's sample text, as one undoable change
    * (one Undo brings back everything it replaced, and typing afterward isn't joined to it). The
@@ -307,8 +315,10 @@ function create(): ScriptSession {
           gone = true;
           return;
         }
-        // The title is a cache of the text.
-        project.value = await writeSource(current, source);
+        // The title is a cache of the text. The first edit to a first document's sample text
+        // ends Start blank's offer for good: from here the text is the writer's work.
+        const edited = current.blank !== undefined && source !== current.baseline;
+        project.value = await writeSource(current, source, edited ? { blank: undefined } : {});
       });
     } catch (error) {
       fail();
@@ -444,6 +454,8 @@ function create(): ScriptSession {
         attach(created, text(SAMPLE_SCREENPLAY), true, true);
         guardControl.finish();
         firstVisit.value = true;
+        // The writer has met the screenplay sample: a first New screenplay starts blank.
+        void rememberSample('screenplay');
         // A first visit starts where the story does, not on the title page's metadata.
         cursorAtFirstScene(SAMPLE_SCREENPLAY);
       }
@@ -596,6 +608,8 @@ function create(): ScriptSession {
       !!project.value?.blank &&
       // Saved to a file, the document is plainly the writer's: the offer ends there.
       project.value.fileName === undefined &&
+      // Only on the sample's own text: once the writer has changed it, emptying it would wipe their work.
+      !dirty.value &&
       !guard.readOnly.value &&
       !switching.value &&
       !fileLocked.value,
@@ -617,10 +631,27 @@ function create(): ScriptSession {
     // A new blank document is unchanged, as one made by New is; the offer goes with it.
     // The copy held here changes at once (the bar goes now); the stored one when its turn comes.
     baseline.value = text(blank.text);
-    const fields = { blank: undefined, baseline: blank.text };
-    project.value = { ...current, ...fields };
-    void patch(current.id, fields).catch(() => {});
+    dropBlank(current, { baseline: blank.text });
     return true;
+  }
+
+  /**
+   * Clears `blank` (with `more`) in the copy held here at once, so the offer goes now, and in the
+   * stored copy in turn. If that write fails the offer is gone for this visit only, and the status
+   * bar says so.
+   */
+  function dropBlank(current: Project, more: Partial<Project> = {}) {
+    const fields = { blank: undefined, ...more };
+    project.value = { ...current, ...fields };
+    blankError.value = '';
+    void patch(current.id, fields).catch(() =>
+      say(blankError, 'Couldn’t update this browser’s copy. Start blank may be offered again.'),
+    );
+  }
+
+  function forgetBlank() {
+    const current = project.value;
+    if (current?.blank) dropBlank(current);
   }
 
   async function setKind(kind: DocumentKind) {
@@ -636,6 +667,8 @@ function create(): ScriptSession {
     try {
       await patch(id, {
         kind,
+        // The blank text was the other kind's: the offer ends with the change.
+        blank: undefined,
         ...derive(view.state.doc.toString(), current.fileName, kind),
       });
     } catch {
@@ -1018,6 +1051,7 @@ function create(): ScriptSession {
     open,
     newScript,
     canStartBlank,
+    forgetBlank,
     startBlank,
     setKind,
     openSample,
