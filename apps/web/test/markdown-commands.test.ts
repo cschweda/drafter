@@ -55,10 +55,13 @@ describe('the Markdown commands', () => {
     ['Intro|', '# Intro|'],
     ['# Intro|', '## Intro|'],
     ['## Intro|', '### Intro|'],
-    // Past the third level it goes back to a paragraph.
-    ['### Intro|', 'Intro|'],
+    ['### Intro|', '#### Intro|'],
+    // Past the sixth level it goes back to a paragraph.
+    ['###### Intro|', 'Intro|'],
     ['|', '# |'],
     ['- item|', '# item|'],
+    // Several lines all go to the level after the first line's, so they end up alike.
+    ['[# a\n### b]', '[## a\n## b]'],
   ]);
   rows('bold', [
     ['a [word] b', 'a **[word]** b'],

@@ -105,15 +105,23 @@ function toggleLines(has: RegExp, replaces: readonly RegExp[], mark: (index: num
 
 const LINE_MARKS = [HEADING, BULLET, NUMBER, QUOTE];
 
-/** A heading one level deeper, to the third, and then a paragraph again. */
-const heading = command((state) =>
-  changeLines(state, markedLines(state), (line) => {
-    const found = HEADING.exec(line.text);
-    const level = found ? (found[1] as string).length : 0;
-    const insert = level >= 3 ? '' : `${'#'.repeat(level + 1)} `;
-    return { from: line.from, to: line.from + markLength(line.text, LINE_MARKS), insert };
-  }),
-);
+/** The heading level of a line, 0 for none. */
+const levelOf = (text: string) => (HEADING.exec(text)?.[1] as string | undefined)?.length ?? 0;
+
+/**
+ * A heading one level deeper, to the sixth, and then a paragraph again. With several lines, each
+ * goes to the level after the first line's, so a selection ends up all alike.
+ */
+const heading = command((state) => {
+  const lines = markedLines(state);
+  const level = levelOf(lines[0]?.text ?? '');
+  const insert = level >= 6 ? '' : `${'#'.repeat(level + 1)} `;
+  return changeLines(state, lines, (line) => ({
+    from: line.from,
+    to: line.from + markLength(line.text, LINE_MARKS),
+    insert,
+  }));
+});
 
 /** Wraps each selection in `open` and `close`, keeping it selected, or inserts the empty pair. */
 function wrap(open: string, close: string): StateCommand {
