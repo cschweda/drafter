@@ -46,7 +46,9 @@ export function lastDays(rows: ReadonlyMap<string, StatsDay>, today: Date): Mont
   const written = days.filter((day) => day.ms > 0);
   let best: Month['best'] = null;
   for (const day of days) {
-    if (day.words > 0 && (!best || day.words > best.words)) best = { date: day.date, words: day.words };
+    if (day.words > 0 && (!best || day.words > best.words)) {
+      best = { date: day.date, words: day.words };
+    }
   }
   const sum = written.reduce((total, day) => total + day.words, 0);
   let streak = 0;

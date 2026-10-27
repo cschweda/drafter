@@ -47,9 +47,16 @@ describe('the character table', () => {
 
   test('counts both speakers of dual dialogue', () => {
     const doc = parse(
-      ['INT. HALL - DAY', '', 'BRICK', 'Screw retirement.', '', 'STEEL ^', 'Screw it all.', ''].join(
-        '\n',
-      ),
+      [
+        'INT. HALL - DAY',
+        '',
+        'BRICK',
+        'Screw retirement.',
+        '',
+        'STEEL ^',
+        'Screw it all.',
+        '',
+      ].join('\n'),
     );
     expect(characterTable(doc)).toEqual([
       { name: 'STEEL', speeches: 1, scenes: 1, words: 3 },
