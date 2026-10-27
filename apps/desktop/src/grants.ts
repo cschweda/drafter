@@ -22,8 +22,9 @@
 //
 // Grants are kept in a JSON file in the profile, so a script bound to its file still saves after a
 // restart. The list is capped (the oldest go first), and entries whose file is gone from a folder
-// that is there are dropped when it is read (a drive that isn't mounted keeps its grants).
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+// that is there and has other things in it are dropped when it is read (a drive that isn't
+// mounted, whose empty mount point is still there, keeps its grants).
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { checkPath, FileError, hasExtension, targetOf, writeAtomic } from './files';
 
@@ -36,6 +37,20 @@ interface Grant {
 
 /** How many grants are kept: far more scripts than anyone keeps open. */
 export const MAX_GRANTS = 1000;
+
+/**
+ * Whether a folder is there and has something in it. An unmounted drive leaves its mount point
+ * (`/media/me/DRIVE`) behind, empty, so an empty folder is treated like one that isn't there: the
+ * grants under it are kept. (A folder the writer emptied keeps theirs too, which only matters if a
+ * file of that name appears again.)
+ */
+function folderInUse(folder: string): boolean {
+  try {
+    return readdirSync(folder).length > 0;
+  } catch {
+    return false;
+  }
+}
 
 const isGrant = (value: unknown): value is Grant =>
   !!value &&
@@ -73,7 +88,7 @@ export class Grants {
     for (const entry of listed) {
       // A file that is gone is no longer the writer's: whatever appears there later isn't either.
       // But if its folder is gone too (a drive or share not mounted yet), it may come back as it was.
-      if (!isGrant(entry) || (!existsSync(entry.real) && existsSync(dirname(entry.real)))) {
+      if (!isGrant(entry) || (!existsSync(entry.real) && folderInUse(dirname(entry.real)))) {
         dropped = true;
         continue;
       }

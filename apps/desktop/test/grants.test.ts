@@ -163,13 +163,31 @@ describe('what a page may read and write', () => {
     expect(await codeOf(second.handlers.read(second.event, file))).toBe('gone');
     await rename(away, drive);
     expect((await second.handlers.read(second.event, file)).bytes).toEqual(bytes('ON DRIVE'));
-    // Gone from a folder that is there, it is dropped at the next start, and not revived.
+    // Gone from a folder that is there (and has other things in it), it is dropped at the next
+    // start, and not revived.
+    await writeFile(join(drive, 'Other.txt'), 'OTHER');
     await unlink(file);
     const third = setUp();
     // (The list is read at the first use; by then the file is not there.)
     expect(await codeOf(third.handlers.read(third.event, file))).toBe('not-allowed');
     await writeFile(file, 'PLANTED');
     expect(await codeOf(third.handlers.read(third.event, file))).toBe('not-allowed');
+  });
+
+  test('keeps the grants of a mount point with nothing in it (an unmounted drive leaves its folder)', async () => {
+    // `/media/me/DRIVE` is there, empty, when the drive isn't plugged in: the folder exists.
+    const mount = join(dir, 'media-me-DRIVE');
+    await mkdir(mount);
+    const file = join(mount, 'On Drive.fountain');
+    await writeFile(file, 'ON DRIVE');
+    const first = setUp([file]);
+    await first.handlers.showOpen(first.event);
+    await unlink(file);
+    const second = setUp();
+    expect(await codeOf(second.handlers.read(second.event, file))).toBe('gone');
+    // Plugged in again: the file is the one the writer chose.
+    await writeFile(file, 'BACK');
+    expect((await second.handlers.read(second.event, file)).bytes).toEqual(bytes('BACK'));
   });
 
   test('remembers what was chosen across a restart, and forgets files that are gone', async () => {

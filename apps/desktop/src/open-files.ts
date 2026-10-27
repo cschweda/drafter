@@ -3,9 +3,13 @@
 //
 // The launch's arguments are not only files. They hold the executable, Chromium's and Electron's
 // flags, the app's own folder when run from source (`electron .`), and in an AppImage the
-// AppImage's path. Only a script that exists is opened; any other plain argument is said to be one
-// that Drafter couldn't open, and why.
-import { statSync } from 'node:fs';
+// AppImage's path. Only a script that exists is opened. A script that isn't there, and any other
+// file that exists, is said to be one Drafter couldn't open, and why. Anything else (a folder, a
+// name with no file behind it) is left out in silence: it is most likely the value of a switch
+// (`--user-data-dir /x`), not something the writer asked to open. The residual case is a switch's
+// value that happens to be an existing file (`--log-file ~/notes.md` opens it; `--log-file a.png`
+// is said to be refused).
+import { type Stats, statSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { hasExtension, SCRIPT_EXTENSIONS } from './files';
 
@@ -29,6 +33,16 @@ export const NOT_A_SCRIPT = 'it isn’t a script (.fountain, .md, .markdown, or 
 export const refusalMessage = ({ name, reason }: Refusal) =>
   `Drafter can’t open “${name}”: ${reason}.`;
 
+/** The message for several refusals at once: the first three by name, then how many more. */
+export function refusalsMessage(refusals: readonly Refusal[]): string {
+  if (refusals.length === 0) return '';
+  const [only] = refusals;
+  if (refusals.length === 1 && only) return refusalMessage(only);
+  const shown = refusals.slice(0, 3).map(({ name, reason }) => `“${name}” (${reason})`);
+  const more = refusals.length - shown.length;
+  return `Drafter can’t open ${refusals.length} files: ${shown.join('; ')}${more > 0 ? `; and ${more} more` : ''}.`;
+}
+
 /** The same path, however it is spelled (`/a/./b/../c`). */
 const same = (a: string, b: string) => resolve(a) === resolve(b);
 
@@ -41,26 +55,33 @@ export function requestsFromArgs(args: string[], cwd: string, ignore: string[] =
   const files: string[] = [];
   const refused: Refusal[] = [];
   const seen = new Set<string>();
+  // After a bare `--` every argument is a path, even one that starts with a dash.
+  let paths = false;
   for (const arg of args) {
-    if (typeof arg !== 'string' || arg === '' || arg.startsWith('-') || arg.includes('\0'))
+    if (typeof arg !== 'string' || arg === '' || arg.includes('\0')) continue;
+    if (!paths && arg === '--') {
+      paths = true;
       continue;
+    }
+    if (!paths && arg.startsWith('-')) continue;
     const path = resolve(cwd, arg);
     if (ignore.some((skip) => same(skip, path))) continue;
     if (seen.has(path)) continue;
     seen.add(path);
     const name = basename(path);
-    if (!hasExtension(path, SCRIPT_EXTENSIONS)) {
-      refused.push({ name, reason: NOT_A_SCRIPT });
-      continue;
-    }
-    let isFile: boolean;
+    let info: Stats | undefined;
     try {
-      isFile = statSync(path).isFile();
+      info = statSync(path);
     } catch {
-      refused.push({ name, reason: 'it isn’t there' });
+      info = undefined;
+    }
+    if (!hasExtension(path, SCRIPT_EXTENSIONS)) {
+      // Only an existing file is said to be refused; the rest is not a request.
+      if (info?.isFile()) refused.push({ name, reason: NOT_A_SCRIPT });
       continue;
     }
-    if (isFile) files.push(path);
+    if (!info) refused.push({ name, reason: 'it isn’t there' });
+    else if (info.isFile()) files.push(path);
     else refused.push({ name, reason: 'it isn’t a file' });
   }
   return { files, refused };
@@ -100,6 +121,14 @@ export class OpenInbox {
   constructor(channel: string, onRequest?: () => void) {
     this.#channel = channel;
     this.#onRequest = onRequest;
+  }
+
+  /**
+   * The page is navigating (or reloading) and can't be sent to: requests wait for the next
+   * `listen`. Only the page that is listening now is forgotten.
+   */
+  forget(page: OpenTarget): void {
+    if (this.#page === page) this.#page = null;
   }
 
   /** The page that is listening now. Whatever was waiting is sent to it. */

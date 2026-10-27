@@ -164,3 +164,38 @@ test('has a bridge call for it', async ({ desktop }) => {
   const { page } = await desktop();
   expect(await page.evaluate(() => typeof window.drafterDesktop?.onOpenFile)).toBe('function');
 });
+
+test('sends the files only to the editor, never to a help window', async ({ desktop, profile }) => {
+  const path = script(profile, 'The Lamp.fountain', LAMP);
+  const { app, page } = await desktop();
+  // A help window that asks to hear about files (as the editor's page does).
+  const opened = app.waitForEvent('window');
+  await page.evaluate(() => void window.open('/docs/privacy/', '_blank'));
+  const help = await opened;
+  await expect.poll(() => help.url()).toBe('app://drafter/docs/privacy/');
+  await help.evaluate(() => {
+    const g = window as unknown as { got: string[] };
+    g.got = [];
+    window.drafterDesktop?.onOpenFile((p) => g.got.push(p));
+  });
+
+  expect(await launchAgain(profile, [path])).toBe(0);
+  await expect(editor(page)).toContainText('The lamp turns.');
+  expect(await help.evaluate(() => (window as unknown as { got: string[] }).got)).toEqual([]);
+});
+
+test('keeps a file named while the editor reloads, and opens it afterward', async ({
+  desktop,
+  profile,
+}) => {
+  const path = script(profile, 'The Lamp.fountain', LAMP);
+  const { app, page } = await desktop();
+  // The page begins to reload; in the same breath a second launch names a file (the event the
+  // second instance causes), so the file arrives while there is no page to hear it.
+  await app.evaluate(({ app: electron, BrowserWindow }, named) => {
+    const [window] = BrowserWindow.getAllWindows();
+    window?.webContents.reload();
+    electron.emit('second-instance', {}, ['drafterdev', named], process.cwd());
+  }, path);
+  await expect(editor(page)).toContainText('The lamp turns.', { timeout: 20_000 });
+});

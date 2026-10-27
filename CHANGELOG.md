@@ -25,6 +25,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/desktop`: **a dropped or named file is judged by where it leads**, not by its name: a link called `notes.md` that points at a private file is no longer opened (it was the way past the “only scripts” rule).
 - `apps/desktop`: a script with a very long name (about 230 bytes, such as 80 Chinese characters) saves; leftover temp files from a write that was interrupted are cleared by the next save of that file; grants for files on a drive that isn’t mounted at launch are kept; copying no longer asks for a permission nothing needs.
 - `apps/desktop`: a file you open as “All files” that isn’t a script type (`letter.rtf`) opens as a new script, with a note saying so, instead of failing to save every time; an unreadable file says “read”, not “write”.
+- `apps/desktop`: starting Drafter with a switch that takes a separate value (`--user-data-dir /x`) no longer says it "can't open" the value; a folder or a name with no file behind it is left out in silence, and everything after a bare `--` is a file to open (even `-draft.fountain`).
+- `apps/desktop`: files named while the editor reloads wait for it instead of being lost, only the editor's window (not a help window) is sent them, and several files Drafter can't open are said together ("Drafter can’t open 3 files: …") instead of the last one only.
+- `apps/desktop`: a file on a drive that is unplugged keeps its place in the list of files Drafter may save to, even though the drive's empty mount point is still there; old temp files left by an interrupted save are looked for once in a folder, not at every save.
+
 
 ## [0.3.0] - 2026-10-26
 

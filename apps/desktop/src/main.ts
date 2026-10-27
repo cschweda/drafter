@@ -2,13 +2,21 @@
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { app, type BrowserWindow, dialog, ipcMain, protocol, session } from 'electron';
+import {
+  app,
+  type BrowserWindow,
+  dialog,
+  ipcMain,
+  protocol,
+  session,
+  type WebContents,
+} from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { setUpMenu } from './menu-main';
 import { refuseNetwork } from './network';
-import { NOT_A_SCRIPT, OpenInbox, refusalMessage, requestsFromArgs } from './open-files';
+import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './open-files';
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
 import { type Spellcheck, setUpSpellcheck } from './spellcheck';
@@ -108,8 +116,9 @@ function start() {
             });
           }
         }
-        // After the files: opening one clears the status bar's message.
-        for (const refusal of refused) inbox.add({ problem: refusalMessage(refusal) });
+        // After the files: opening one clears the status bar's message. One message for all
+        // the refusals, since the status bar shows one.
+        if (refused.length > 0) inbox.add({ problem: refusalsMessage(refused) });
       })
       .catch(() => {});
   };
@@ -121,8 +130,20 @@ function start() {
     openFromSystem([path], process.cwd());
   });
 
+  // Only the editor's own window takes what the system names (not a help window), and not while
+  // it is navigating: a reload begins, and what arrives meanwhile waits for the next openReady.
+  const navigating = new WeakSet<WebContents>();
   ipcMain.on(CHANNELS.openReady, (event) => {
-    if (fromApp(event)) inbox.listen(event.sender);
+    if (!fromApp(event) || !main || main.isDestroyed()) return;
+    const page = event.sender;
+    if (page !== main.webContents) return;
+    if (!navigating.has(page)) {
+      navigating.add(page);
+      page.on('did-start-navigation', (details) => {
+        if (details.isMainFrame && !details.isSameDocument) inbox.forget(page);
+      });
+    }
+    inbox.listen(page);
   });
 
   /** Opens the editor's window, and keeps it as the one a second launch brings forward. */

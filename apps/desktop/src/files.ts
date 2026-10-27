@@ -196,13 +196,22 @@ function truncateBytes(name: string, bytes: number): string {
 const tempPrefix = (target: string) =>
   `.${truncateBytes(basename(target), MAX_TEMP_BASE_BYTES)}${TEMP_MARK}`;
 
-/** Removes the temp files writes to `target` left long ago (the app was killed mid-write). */
-async function sweepTemps(folder: string, target: string): Promise<void> {
+/** The folders whose old temp files have been looked for in this run of the app. */
+const sweptFolders = new Set<string>();
+/** Any temp file of ours: `.<name>.drafter-tmp-<12 hex>`. */
+const TEMP_NAME = /^\..+\.drafter-tmp-[0-9a-f]{12}$/;
+
+/**
+ * Removes the temp files that writes in `folder` left long ago (the app was killed mid-write), for
+ * any file in it. Once per folder in a run of the app, not at every save: a save is not made to
+ * read the folder each time, and the files such a write leaves are found at the next start.
+ */
+async function sweepTemps(folder: string): Promise<void> {
+  if (sweptFolders.has(folder)) return;
+  sweptFolders.add(folder);
   try {
-    const prefix = tempPrefix(target);
-    const pattern = /^[0-9a-f]{12}$/;
     for (const name of await readdir(folder)) {
-      if (!name.startsWith(prefix) || !pattern.test(name.slice(prefix.length))) continue;
+      if (!TEMP_NAME.test(name)) continue;
       const path = join(folder, name);
       try {
         const info = await lstat(path);
@@ -255,7 +264,7 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
     await rename(temp, target);
     temp = undefined;
     await syncFolder(folder);
-    await sweepTemps(folder, target);
+    await sweepTemps(folder);
   } catch (error) {
     await handle?.close().catch(() => {});
     if (temp) await rm(temp, { force: true }).catch(() => {});

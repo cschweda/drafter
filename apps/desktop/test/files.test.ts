@@ -119,15 +119,30 @@ describe('writeAtomic', () => {
     const old = new Date(Date.now() - 10 * 60_000);
     const stale = join(dir, '.The Call.fountain.drafter-tmp-0123456789ab');
     const fresh = join(dir, '.The Call.fountain.drafter-tmp-ba9876543210');
+    // Another file's, in the same folder, is just as stale: all the folder's are cleared at once.
     const others = join(dir, '.Other.fountain.drafter-tmp-0123456789ab');
     const lookalike = join(dir, '.The Call.fountain.drafter-tmp-notours');
     for (const path of [stale, fresh, others, lookalike]) await writeFile(path, 'LEFT');
     for (const path of [stale, others, lookalike]) await utimes(path, old, old);
     await writeAtomic(file, bytes('NEW'));
     expect((await temps()).sort()).toEqual(
-      [fresh, others, lookalike].map((path) => path.slice(dir.length + 1)).sort(),
+      [fresh, lookalike].map((path) => path.slice(dir.length + 1)).sort(),
     );
     expect(await readFile(file, 'utf8')).toBe('NEW');
+  });
+
+  test('looks for them once in a folder, not at every save', async () => {
+    const file = join(dir, 'Often.fountain');
+    await writeAtomic(file, bytes('ONE'));
+    // Left by a write that was killed, after this session began: found at the next start, not now.
+    const old = new Date(Date.now() - 10 * 60_000);
+    const stale = join(dir, '.Often.fountain.drafter-tmp-0123456789ab');
+    await writeFile(stale, 'LEFT');
+    await utimes(stale, old, old);
+    await writeAtomic(file, bytes('TWO'));
+    await writeAtomic(file, bytes('THREE'));
+    expect(await temps()).toEqual(['.Often.fountain.drafter-tmp-0123456789ab']);
+    expect(await readFile(file, 'utf8')).toBe('THREE');
   });
 
   test('writes a new file', async () => {
