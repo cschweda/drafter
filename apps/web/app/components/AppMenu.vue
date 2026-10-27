@@ -121,6 +121,8 @@ const helpItems = computed<DropdownMenuItem[]>(() => [
       label: page.title,
     })),
   ),
+  // Start blank only while a first document still has its sample's text to offer it on.
+  ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
 ]);
 

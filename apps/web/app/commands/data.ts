@@ -90,6 +90,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
     }),
   ),
   { id: 'reset-sample', title: 'Reset sample', group: 'File' },
+  { id: 'start-blank', title: 'Start blank', group: 'File' },
   { id: 'take-the-tour', title: 'Take the tour', group: 'Help' },
   ...HELP_PAGES.map(
     (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),

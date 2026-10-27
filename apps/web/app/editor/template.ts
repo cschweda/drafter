@@ -63,7 +63,7 @@ export interface FountainType {
   /** The chip's and the status bar's name for it (`TEMPLATE_NAMES`). */
   name: string;
   /** What New makes: the sample kind `newScript` takes. */
-  newKind: SampleKind;
+  newKind: Exclude<SampleKind, 'markdown'>;
   /** The Scripts menu's and the palette's wording. */
   newTitle: string;
   newIcon: string;

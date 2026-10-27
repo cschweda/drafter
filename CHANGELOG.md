@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: **a sample the first time you start a stage play or a Markdown document.** The first **New stage play** in a browser opens with the annotated stage-play sample, and the first **New Markdown document** with a new annotated Markdown sample (`samples/markdown.md`: what Markdown is for in Drafter, such as treatments, outlines, and notes, with headings, emphasis, lists, block quotes, a link, code, and a short treatment). Each is your own document, kept and saved like any other, with a **Starting text** bar above it whose **Start blank** button (also in the palette and the Drafter menu's Help section) empties it to the usual new document in one change that Undo takes back. Every later New of that kind is blank, and Drafter remembers which samples you have met in this browser. A first **New screenplay** is blank, since the first visit already showed the screenplay sample, and a browser whose storage can't be read always starts blank.
+- `apps/web`: **Open sample: Markdown**, in the palette, the Drafter menu's Samples, and the Open menu, beside the screenplay and the stage play.
+
 ### Changed
 
 - `docs`: the README's screenshots show a scene in both panes, the Fountain source on the left (a scene heading, action, character cues, a parenthetical, and dialogue) and the laid-out page on the right, instead of the title page's fields.

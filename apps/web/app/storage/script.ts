@@ -18,6 +18,7 @@ import type { NewKind } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { db } from './db';
 import type { FileRef } from './files';
+import { metSample, rememberSample } from './first-samples';
 import { guardControl, useGuard } from './guard';
 import { hashText } from './hash';
 import { checkRecovery, type RecoveryState, requestPersistence } from './health';
@@ -90,8 +91,22 @@ export interface ScriptSession {
   flush(): Promise<void>;
   /** Flushes the current script's recovery copy, then loads `id` into the editor as a fresh state (its own undo history). */
   open(id: string): Promise<void>;
-  /** Keeps the current script's recovery copy, then opens a new script: a title page to fill in, with the cursor ready to type. */
+  /**
+   * Keeps the current script's recovery copy, then opens a new script: a title page to fill in,
+   * with the cursor ready to type. The writer's first of a kind opens with that kind's sample text
+   * instead, as a document of their own, which Start blank empties (`startBlank`); the kind is then
+   * remembered (`storage/first-samples.ts`), and every later one is blank.
+   */
   newScript(kind: NewKind): Promise<void>;
+  /** The open document opened with a sample's text and can be emptied: Start blank would do something. */
+  canStartBlank: Readonly<ComputedRef<boolean>>;
+  /**
+   * Puts the new-document text in place of a first document's sample text, as one undoable change
+   * (one Undo brings back everything it replaced, and typing afterward isn't joined to it). The
+   * blank text becomes what "changed" is measured from, and the offer is spent. Returns false,
+   * changing nothing, unless `canStartBlank`.
+   */
+  startBlank(): boolean;
   /**
    * Makes the open script a `kind` document: Markdown, or Fountain again. The text and its undo
    * history stay; the editor's language and the project's `kind` change, and the title is read
@@ -549,11 +564,63 @@ function create(): ScriptSession {
   async function newScript(kind: NewKind) {
     // A tab that only shows a script may show old text; it starts nothing (Phase 1 design §9.3).
     if (guard.readOnly.value) throw new Error('This tab is read-only.');
-    const { text: source, cursor } = newScriptText(kind, new Date());
+    const blank = newScriptText(kind, new Date());
     const made: DocumentKind = kind === 'markdown' ? 'markdown' : 'fountain';
-    await switchTo(() => createProject({ source, baseline: source, kind: made }), {
-      shown: () => editor.goto(cursor),
+    let cursor = blank.cursor;
+    await switchTo(
+      async () => {
+        // The writer's first of this kind opens with its sample, as a document of their own.
+        const first = !(await metSample(kind, await listProjects()));
+        if (!first) {
+          return createProject({ source: blank.text, baseline: blank.text, kind: made });
+        }
+        const source = SAMPLE_TEXT[kind];
+        // A screenplay starts where the story does, as the first visit does; the stage play and
+        // the Markdown document at the top, where they begin explaining.
+        cursor = kind === 'screenplay' ? firstSceneStart(source) : 0;
+        const created = await createProject({
+          source,
+          baseline: source,
+          kind: made,
+          blank: { text: blank.text, cursor: blank.cursor },
+        });
+        await rememberSample(kind);
+        return created;
+      },
+      { shown: () => editor.goto(cursor) },
+    );
+  }
+
+  const canStartBlank = computed(
+    () =>
+      !!project.value?.blank &&
+      // Saved to a file, the document is plainly the writer's: the offer ends there.
+      project.value.fileName === undefined &&
+      !guard.readOnly.value &&
+      !switching.value &&
+      !fileLocked.value,
+  );
+
+  function startBlank(): boolean {
+    const current = project.value;
+    const blank = current?.blank;
+    if (!current || !blank || !canStartBlank.value) return false;
+    // One transaction for the whole text, so one undo brings the sample back; an undo step of its
+    // own, so typing just after it isn't joined to it (as Reset sample does).
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: blank.text },
+      selection: { anchor: Math.min(blank.cursor, blank.text.length) },
+      scrollIntoView: true,
+      userEvent: 'input.replace',
+      annotations: isolateHistory.of('full'),
     });
+    // A new blank document is unchanged, as one made by New is; the offer goes with it.
+    // The copy held here changes at once (the bar goes now); the stored one when its turn comes.
+    baseline.value = text(blank.text);
+    const fields = { blank: undefined, baseline: blank.text };
+    project.value = { ...current, ...fields };
+    void patch(current.id, fields).catch(() => {});
+    return true;
   }
 
   async function setKind(kind: DocumentKind) {
@@ -589,7 +656,14 @@ function create(): ScriptSession {
 
   async function sampleProject(kind: SampleKind): Promise<Project> {
     const existing = (await listProjects()).find((p) => p.sample === kind);
-    return existing ?? createProject({ source: SAMPLE_TEXT[kind], sample: kind });
+    return (
+      existing ??
+      createProject({
+        source: SAMPLE_TEXT[kind],
+        sample: kind,
+        kind: kind === 'markdown' ? 'markdown' : 'fountain',
+      })
+    );
   }
 
   const openSample = async (kind: SampleKind) => {
@@ -607,7 +681,8 @@ function create(): ScriptSession {
     if (view.state.doc.toString() === original) return false;
     // One transaction for the whole text, so one undo brings the edits back; an undo step of its
     // own, so typing just after it isn't joined to it (as `replaceWith` does).
-    const at = firstSceneStart(original);
+    // A Markdown document has no scenes: its cursor goes to the top.
+    const at = kind === 'markdown' ? 0 : firstSceneStart(original);
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: original },
       selection: { anchor: at },
@@ -942,6 +1017,8 @@ function create(): ScriptSession {
     },
     open,
     newScript,
+    canStartBlank,
+    startBlank,
     setKind,
     openSample,
     canResetSample,

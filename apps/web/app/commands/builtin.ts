@@ -172,6 +172,14 @@ export function registerBuiltinCommands(): void {
         if (script.resetSample()) editor.goto(view.state.selection.main.head);
       },
     },
+    // A writer's first document of a kind opens with the sample's text (the bar above it offers this too): the
+    // new-document text instead, as one change Undo reverses.
+    'start-blank': {
+      enabled: () => script.canStartBlank.value,
+      run: () => {
+        if (script.startBlank()) editor.goto(view.state.selection.main.head);
+      },
+    },
     // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
     // section of the app menu lists it too. It waits for any dialog or the palette to close.
     'take-the-tour': { run: requestTour },
