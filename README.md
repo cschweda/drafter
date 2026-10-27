@@ -5,7 +5,9 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.3.0. You can write at [drafter.dev](https://drafter.dev).** Phase 1's web app is done, apart from its final accessibility pass. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, and sprints; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere. Next: a desktop app, then the accessibility pass. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+> **Status: v0.3.0. You can write at [drafter.dev](https://drafter.dev).** Phase 1's web app is done, apart from its final accessibility pass. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, and sprints; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere. Next: the accessibility pass. A desktop app for Linux is on its way (below). The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+
+**Drafter for Linux.** Drafter also comes as a desktop app for Linux, as a `.deb` (the one to use on Ubuntu 24.04 and later, and on other Debian-based systems) and an AppImage (other distributions; it needs `libfuse2`). It saves in place in any desktop environment, keeps a recovery copy no browser can clear, opens a script from the command line (`drafterdev script.fountain`), and asks before it updates. Each package is about 100 to 130 MB. [Download the latest release](https://github.com/cschweda/drafter/releases/latest) and read the [install guide](docs/desktop-install-linux.md). Windows and macOS follow; macOS comes last, because it needs Apple's developer account.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
@@ -156,7 +158,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 | Phase | Theme | Status |
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
-| [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev** (v0.3.0); the desktop app and the accessibility pass are next |
+| [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev** (v0.3.0); the desktop app (Linux first, then Windows and macOS) and the accessibility pass are next |
 | [2](#phase-2--structure) | Structure: outline, cards, beat board, storylines, snapshots, spellcheck, screen-reader testing | Planned |
 | [3](#phase-3--formats) | Formats: Final Draft and other imports; TV, radio, UK, and novel templates; user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |

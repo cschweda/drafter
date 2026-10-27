@@ -172,6 +172,35 @@ test.describe('without JavaScript', () => {
       expect(text, phrase).toContain(phrase);
     }
   });
+
+  test('links the Linux download from the Saving page', async ({ page }) => {
+    await page.goto('/docs/saving');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Download Drafter for Linux' }),
+    ).toBeVisible();
+    const releases = page.getByRole('link', { name: /latest release/i });
+    await expect(releases).toHaveAttribute(
+      'href',
+      'https://github.com/cschweda/drafter/releases/latest',
+    );
+    await expect(page.getByRole('link', { name: /install guide/i })).toHaveAttribute(
+      'href',
+      'https://github.com/cschweda/drafter/blob/main/docs/desktop-install-linux.md',
+    );
+    const text = await mainText(page);
+    for (const phrase of [
+      '.deb',
+      'AppImage',
+      'libfuse2',
+      'drafterdev',
+      'Ubuntu 24.04',
+      'Windows',
+      'macOS',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+    expect(text).not.toMatch(/ICJIA/i);
+  });
 });
 
 test.describe('with JavaScript', () => {
