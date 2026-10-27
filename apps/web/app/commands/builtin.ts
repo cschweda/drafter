@@ -172,6 +172,14 @@ export function registerBuiltinCommands(): void {
         if (script.resetSample()) editor.goto(view.state.selection.main.head);
       },
     },
+    // A writer's first document of a kind opens with the sample's text (the bar above it offers this too): the
+    // new-document text instead, as one change Undo reverses.
+    'start-blank': {
+      enabled: () => script.canStartBlank.value,
+      run: () => {
+        if (script.startBlank()) editor.goto(view.state.selection.main.head);
+      },
+    },
     // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
     // section of the app menu lists it too. It waits for any dialog or the palette to close.
     'take-the-tour': { run: requestTour },
@@ -268,6 +276,15 @@ export function registerBuiltinCommands(): void {
     'turn-off-typewriter': {
       enabled: () => settings.value.typewriter,
       run: () => void set('typewriter', false),
+    },
+    // Scroll sync (decided 2026-10-27): the Source bar's Sync scrolling button and Settings set the same row.
+    'turn-on-scroll-sync': {
+      enabled: () => !settings.value.scrollSync,
+      run: () => void set('scrollSync', true),
+    },
+    'turn-off-scroll-sync': {
+      enabled: () => settings.value.scrollSync,
+      run: () => void set('scrollSync', false),
     },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },

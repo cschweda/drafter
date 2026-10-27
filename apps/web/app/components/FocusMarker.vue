@@ -3,7 +3,7 @@ import { fileTrouble, troubleMessage, updatedNotice } from '~/storage/check';
 import { useGuard } from '~/storage/guard';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
-import { kindError, useScript } from '~/storage/script';
+import { blankError, kindError, useScript } from '~/storage/script';
 
 // The corner marker of focus mode (Phase 1 design §7.1). The status bar is gone, so this carries
 // what the writer must not lose sight of: whether the script has changes that aren't in its file,
@@ -39,6 +39,7 @@ const label = computed(() =>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
+    <span v-if="blankError" role="alert" class="failed">{{ blankError }}</span>
     <!-- The time left of a sprint, as in the status bar. -->
     <SprintTimer />
     <span class="state" data-focus-state>{{ label }}</span>

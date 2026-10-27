@@ -6,16 +6,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-27
+
+**Samples, scroll sync, and a moving logo.**
+- **A sample the first time** you start a stage play or a Markdown document, with **Start blank** while it's untouched; every later one starts clean.
+- **Scroll sync:** the Source and the pages (or the Markdown preview) stay at the same place as you scroll. Turn it off on the Source pane's bar.
+- **A moving logo** while Drafter starts, so a slow start doesn't look frozen.
+- **The README** shows a scene in both panes, gains a clean-room verification, and its roadmap grows (reader notes, a script map, a pacing view, and more).
+
+### Added
+
+- `apps/web`: **a sample the first time you start a stage play or a Markdown document.** The first **New stage play** in a browser opens with the annotated stage-play sample, and the first **New Markdown document** with a new annotated Markdown sample (`samples/markdown.md`: what Markdown is for in Drafter, such as treatments, outlines, and notes, with headings, emphasis, lists, block quotes, a link, code, and a short treatment). Each is your own document, kept and saved like any other. Until you change it, a **Starting text** bar above it offers **Start blank** (also in the palette and the Drafter menu's File section), which empties it to the usual new document in one change that Undo takes back; once you edit the sample, change its template, or save it, the offer is gone for good. Every later New of that kind is blank, and Drafter remembers which samples you have met in this browser. A first **New screenplay** is blank, since the first visit already showed the screenplay sample, and a browser whose storage can't be read always starts blank.
+- `apps/web`: **scroll sync**, on to begin with. Scroll the Source and the Script pane follows, so the same part of the script is at the top of both; scroll the Script pane and the Source follows. A Markdown document's Preview does the same. It works at Fit width and 100%, follows typing with typewriter scrolling (the line you're on stays in the middle and in view in the Script pane), and on a phone the pane you switch to opens at the place you were. A **Sync scrolling** button on the Source pane's bar, **Sync scrolling** in Settings, and **Turn on / Turn off scroll sync** in the palette set it, and Drafter remembers the choice.
+- `apps/web`: **a moving logo while Drafter starts.** On the loading screen the mark's two halves write their lines in turn, with a soft goldenrod glow, so a slow start doesn't look frozen. After 3 seconds it says **Loading Drafter…**, and after 15 seconds **Taking longer than usual. Try reloading.** It follows your theme, stands still when your system asks for reduced motion (the words still appear), and is CSS only.
+- `apps/web`: **Open sample: Markdown**, in the palette, the Drafter menu's Samples, and the Open menu, beside the screenplay and the stage play.
+- `docs`: the roadmap gains ways to see and work through a script: a script map, a pacing view with optional structure guides, a character-by-scene grid, scene goals, and setups and payoffs (Phase 2); French scenes, who is on stage, and a doubling chart for plays (Phase 3); a character pass, story order against script order, and a breakdown report (Phase 4).
+- `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
+
 ### Changed
 
 - `docs`: a **Clean-room verification** in the README, from an audit of the whole repository on 2026-10-27 (`docs/clean-room-audit.md`): no code from any screenwriting application or Fountain library, no copied code, general-purpose open-source libraries only, all declared. A film catchphrase in one fixture and two tests was replaced with original lines, and the architecture document's clean-room note now matches the permitted sources.
 - `docs`: the roadmap gains, after a review of Final Draft's features (`docs/final-draft-comparison.md`, drawn only from public product pages and documentation, as the clean-room rules allow, and saying so): reader notes with no account, sent back in the `.fountain` and merged into the current draft (moved up from Phase 4's proof mode to Phase 2), note categories and status, PDF with notes or clean with a watermark, a self-contained reader file, accepting a co-writer's changes one by one, and one character's dialogue for an actor.
 - `docs`: the README's screenshots show a scene in both panes, the Fountain source on the left (a scene heading, action, character cues, a parenthetical, and dialogue) and the laid-out page on the right, instead of the title page's fields.
-
-### Added
-
-- `docs`: the roadmap gains ways to see and work through a script: a script map, a pacing view with optional structure guides, a character-by-scene grid, scene goals, and setups and payoffs (Phase 2); French scenes, who is on stage, and a doubling chart for plays (Phase 3); a character pass, story order against script order, and a breakdown report (Phase 4).
-- `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
 
 ## [0.3.0] - 2026-10-26
 
@@ -329,7 +341,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/cschweda/drafter/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/cschweda/drafter/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cschweda/drafter/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cschweda/drafter/releases/tag/v0.1.0

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SAMPLES, type SampleKind } from '~/editor/sample-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
@@ -74,7 +75,7 @@ async function run(action: () => Promise<unknown>, refocus = true) {
 }
 
 const isCurrent = (p: Project) => project.value?.id === p.id;
-const isCurrentSample = (kind: 'screenplay' | 'stage-play') => project.value?.sample === kind;
+const isCurrentSample = (kind: SampleKind) => project.value?.sample === kind;
 
 // ---- Removing -------------------------------------------------------------------------------
 
@@ -232,22 +233,15 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <div role="group" aria-labelledby="scripts-samples">
         <p id="scripts-samples" class="head">Samples</p>
         <button
+          v-for="sample in SAMPLES"
+          :key="sample.kind"
           type="button"
           class="item"
-          :aria-current="isCurrentSample('screenplay') ? 'true' : undefined"
+          :aria-current="isCurrentSample(sample.kind) ? 'true' : undefined"
           :disabled="!idle"
-          @click="run(() => script.openSample('screenplay'))"
+          @click="run(() => script.openSample(sample.kind))"
         >
-          Screenplay
-        </button>
-        <button
-          type="button"
-          class="item"
-          :aria-current="isCurrentSample('stage-play') ? 'true' : undefined"
-          :disabled="!idle"
-          @click="run(() => script.openSample('stage-play'))"
-        >
-          Stage play
+          {{ sample.name }}
         </button>
       </div>
 

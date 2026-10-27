@@ -83,6 +83,8 @@ export function useTemplate(): TemplateChoice {
       userEvent: 'input',
       annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
+    // A first document's blank text names the template it was made with: the offer ends here.
+    script.forgetBlank();
   }
 
   function isCurrent(type: DocumentType): boolean {
@@ -98,6 +100,8 @@ export function useTemplate(): TemplateChoice {
     if (locked.value) return false;
     if (type.kind === 'markdown') return !script.project.value?.sample;
     if (kind.value === 'fountain') return canChoose.value;
+    // A sample is the example it is: the Markdown sample stays Markdown.
+    if (script.project.value?.sample) return false;
     // From Markdown: the kind changes either way; the block is written only for a template that isn't the default.
     return !changesBlock(type.id) || regionsClosed();
   }

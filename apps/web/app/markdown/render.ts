@@ -15,6 +15,33 @@ export interface MdNode {
   start?: number | null;
   spread?: boolean | null;
   alt?: string | null;
+  /** Where the node starts in the text, as `mdast-util-from-markdown` records it. */
+  position?: { start?: { offset?: number } };
+  /** Where a block starts in the text, kept when the worker sends the tree without `position`. */
+  from?: number;
+}
+
+/** The nodes the Preview draws as blocks of their own, which carry their offset (`data-from`) for scroll sync. */
+export const BLOCK_TYPES: ReadonlySet<string> = new Set([
+  'heading',
+  'paragraph',
+  'blockquote',
+  'list',
+  'listItem',
+  'code',
+  'thematicBreak',
+  'html',
+]);
+
+/** Where `node` starts in the text, if the tree says. */
+export function startOf(node: MdNode): number | undefined {
+  return node.from ?? node.position?.start?.offset;
+}
+
+/** Marks `el` with where `node` starts: a number, read by scroll sync (`editor/scroll-sync.ts`). */
+function mark(el: HTMLElement, node: MdNode): void {
+  const from = startOf(node);
+  if (from !== undefined) el.dataset.from = String(from);
 }
 
 type Make = <K extends keyof HTMLElementTagNameMap>(
@@ -64,6 +91,7 @@ function block(node: MdNode, parent: Node, doc: Document, make: Make, tight: boo
     case 'heading': {
       const level = Math.min(6, Math.max(1, node.depth ?? 1));
       const el = make(`h${level}` as 'h1');
+      mark(el, node);
       for (const child of node.children ?? []) inline(child, el, doc, make);
       parent.appendChild(el);
       return;
@@ -71,22 +99,26 @@ function block(node: MdNode, parent: Node, doc: Document, make: Make, tight: boo
     case 'paragraph': {
       // A tight list's item holds its text directly.
       const into = tight ? parent : parent.appendChild(make('p'));
+      if (!tight) mark(into as HTMLElement, node);
       for (const child of node.children ?? []) inline(child, into, doc, make);
       return;
     }
     case 'blockquote': {
       const el = make('blockquote');
+      mark(el, node);
       for (const child of node.children ?? []) block(child, el, doc, make, false);
       parent.appendChild(el);
       return;
     }
     case 'list': {
       const el = make(node.ordered ? 'ol' : 'ul');
+      mark(el, node);
       if (node.ordered && typeof node.start === 'number' && node.start !== 1) {
         el.setAttribute('start', String(node.start));
       }
       for (const item of node.children ?? []) {
         const li = make('li');
+        mark(li, item);
         for (const child of item.children ?? []) block(child, li, doc, make, !node.spread);
         el.appendChild(li);
       }
@@ -95,18 +127,23 @@ function block(node: MdNode, parent: Node, doc: Document, make: Make, tight: boo
     }
     case 'code': {
       const pre = make('pre');
+      mark(pre, node);
       const code = make('code');
       code.textContent = node.value ?? '';
       pre.appendChild(code);
       parent.appendChild(pre);
       return;
     }
-    case 'thematicBreak':
-      parent.appendChild(make('hr'));
+    case 'thematicBreak': {
+      const hr = make('hr');
+      mark(hr, node);
+      parent.appendChild(hr);
       return;
+    }
     case 'html': {
       // A raw HTML block is the writer's text, kept as typed.
       const el = make('p', 'md-raw');
+      mark(el, node);
       el.textContent = node.value ?? '';
       parent.appendChild(el);
       return;

@@ -139,6 +139,8 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...entry('save', 'i-lucide-save'),
     ...entry('save-as', 'i-lucide-save-all'),
     ...entry('revert-to-saved', 'i-lucide-undo-2', true),
+    // File, as in the palette: Start blank only while a first document still has its sample's untouched text.
+    ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],
   exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
   entry('settings', 'i-lucide-settings'),

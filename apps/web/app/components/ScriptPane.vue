@@ -2,10 +2,13 @@
 import { createScriptView, GOTO_EVENT, type ScriptView } from '@drafter/render-html';
 import '@drafter/render-html/style.css';
 import { useLayout } from '~/editor/layout';
+import { domPane, type SyncPane } from '~/editor/scroll-sync';
 import { useEditor } from '~/editor/session';
+import { useScrollSync } from '~/editor/use-scroll-sync';
 import { useSettings } from '~/settings/settings';
 
-const { goto } = useEditor();
+const { goto, view: editorView } = useEditor();
+const sync = useScrollSync();
 const { layout, layoutTemplate, cursorBlock, failed } = useLayout();
 const zoom = useScriptZoom();
 const { settings } = useSettings();
@@ -26,6 +29,9 @@ let view: ScriptView | undefined;
 let settling = true;
 let settled: ReturnType<typeof setTimeout> | undefined;
 let observer: ResizeObserver | undefined;
+/** The pages as scroll sync reads them: each line's source offset and where it stands. */
+let syncPane: (SyncPane & { invalidate(): void }) | undefined;
+let detachSync: (() => void) | undefined;
 
 function fontsReady(): Promise<unknown> {
   const wait = new Promise((resolve) => setTimeout(resolve, FONT_WAIT_MS));
@@ -49,6 +55,8 @@ function applyZoom(reveal = true) {
   // is drawn before the font settles the scale). `reveal` leaves a reader who has scrolled alone.
   // A resize (the observer) doesn't bring it back, so a pane being dragged wider doesn't yank a
   // reader's place: only the zoom buttons and text size, the first draw, and the settling after it.
+  // With scroll sync on, any change of scale puts the pages back in step with the Source instead.
+  if (sync.placeView()) return;
   if (reveal) view.reveal(cursorBlock.value);
 }
 
@@ -59,8 +67,11 @@ async function draw() {
   if (!current || !next || !template) return;
   await current.update(next, template);
   if (view !== current) return;
+  syncPane?.invalidate();
   applyZoom();
-  current.reveal(cursorBlock.value);
+  // The first draw, and the settling after it, is put in step with the Source when sync is on (on a
+  // phone, where the Source was); after that a drawing follows the cursor, which sync keeps in view.
+  if (!(settling && sync.placeView())) current.reveal(cursorBlock.value);
   if (settled === undefined) settled = setTimeout(() => (settling = false), SETTLE_MS);
 }
 
@@ -75,10 +86,13 @@ onMounted(() => {
   observer = new ResizeObserver(() => applyZoom(settling));
   observer.observe(host.value);
   if (probe.value) observer.observe(probe.value);
+  syncPane = domPane(host.value, '.drafter-line[data-from]', () => editorView.state.doc.length);
+  detachSync = sync.attachView(syncPane);
   void draw();
 });
 
 onBeforeUnmount(() => {
+  detachSync?.();
   clearTimeout(settled);
   observer?.disconnect();
   view?.destroy();

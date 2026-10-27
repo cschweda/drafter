@@ -90,6 +90,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
     }),
   ),
   { id: 'reset-sample', title: 'Reset sample', group: 'File' },
+  { id: 'start-blank', title: 'Start blank', group: 'File' },
   { id: 'take-the-tour', title: 'Take the tour', group: 'Help' },
   ...HELP_PAGES.map(
     (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
@@ -136,6 +137,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },
   { id: 'turn-on-typewriter', title: 'Turn on typewriter scrolling', group: 'View' },
   { id: 'turn-off-typewriter', title: 'Turn off typewriter scrolling', group: 'View' },
+  { id: 'turn-on-scroll-sync', title: 'Turn on scroll sync', group: 'View' },
+  { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
   { id: 'fold-all', title: 'Fold all', group: 'View', keys: 'Ctrl-Alt-[' },
   { id: 'unfold-all', title: 'Unfold all', group: 'View', keys: 'Ctrl-Alt-]' },
 
