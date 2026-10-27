@@ -152,8 +152,11 @@ A native Help item (`id: 'modules-folder'`, beside Open the Releases Page): it c
 | A module's code runs before the writer agreed | identity in `module.json`; frames exist only while the module is on |
 | A broken module breaks the app | skipped with a message at start; a frame's failure is a toast; `ModuleBoundary` around tab and settings |
 | A module spoofs the page to another module | the runtime checks `event.source === parent` and the app origin |
+| A module declares a wildcard or CSP-breaking origin (`https://*.example.com`, `a;b`) | strict origin grammar at load; `moduleCsp` drops anything else (security review) |
+| A folder module takes a built-in's id and inherits its switch, consent, or storage | app ids `folder.<id>` (no built-in id has a dot); refused by the main process (built-in ids baked in at build) and where the list enters the page (security review) |
+| A module's update asks for more of the network | consent keyed to the declared origins: off until agreed again |
 
-**Not closed (stated in Settings and the README):** a module that is on can read the open script and change it, and one granted a network origin can send the script there. That is what turning it on means. CPU use by a frame is not limited.
+**Not closed (stated in Settings and the README):** a different module dropped in under an id that was on, asking for no more network, stays on (DECISIONS records it); a module that is on can read the open script and change it, and one granted a network origin can send the script there. That is what turning it on means. CPU use by a frame is not limited.
 
 ## Tasks (TDD: each test first, watched failing)
 
