@@ -1,65 +1,96 @@
 import { describe, expect, test } from 'vitest';
-import { ALLOW_NO_SANDBOX, sandboxOff, sandboxRefusal } from '../src/sandbox';
+import {
+  ALLOW_NO_SANDBOX,
+  CONTINUE,
+  markerFor,
+  QUIT,
+  sandboxNotice,
+  sandboxOffReason,
+} from '../src/sandbox';
 
-describe('sandboxOff', () => {
+const none = { hasSwitch: () => false, argv: ['/opt/Drafter/drafterdev'], env: {} };
+
+describe('sandboxOffReason', () => {
   test('sees --no-sandbox on the command line', () => {
-    expect(sandboxOff({ hasSwitch: (name) => name === 'no-sandbox', argv: [], env: {} })).toBe(
-      true,
+    expect(sandboxOffReason({ ...none, hasSwitch: (name) => name === 'no-sandbox' })).toBe(
+      'no-sandbox-switch',
     );
-  });
-
-  test('sees ELECTRON_DISABLE_SANDBOX in the environment, set to anything', () => {
-    for (const value of ['1', 'true', '0', 'yes']) {
-      expect(
-        sandboxOff({ hasSwitch: () => false, argv: [], env: { ELECTRON_DISABLE_SANDBOX: value } }),
-      ).toBe(true);
-    }
   });
 
   test('sees --no-sandbox in argv even when app.commandLine does not (enableSandbox hides it)', () => {
-    const base = { hasSwitch: () => false, env: {} };
-    expect(sandboxOff({ ...base, argv: ['/opt/Drafter/drafterdev', '--no-sandbox'] })).toBe(true);
-    expect(sandboxOff({ ...base, argv: ['/opt/Drafter/drafterdev', '--no-sandbox=1'] })).toBe(true);
+    for (const flag of ['--no-sandbox', '--no-sandbox=1']) {
+      expect(sandboxOffReason({ ...none, argv: ['/opt/Drafter/drafterdev', flag] })).toBe(
+        'no-sandbox-switch',
+      );
+    }
     // The program's own name is not an argument, and a file named like the switch is not one.
-    expect(sandboxOff({ ...base, argv: ['--no-sandbox'] })).toBe(false);
-    expect(sandboxOff({ ...base, argv: ['drafterdev', '/home/me/--no-sandboxed.fountain'] })).toBe(
-      false,
-    );
+    expect(sandboxOffReason({ ...none, argv: ['--no-sandbox'] })).toBeNull();
+    expect(
+      sandboxOffReason({ ...none, argv: ['drafterdev', '/home/me/--no-sandboxed.fountain'] }),
+    ).toBeNull();
   });
 
-  test('is false when nothing turned the sandbox off', () => {
-    expect(sandboxOff({ hasSwitch: () => false, argv: ['drafterdev'], env: {} })).toBe(false);
+  test('sees ELECTRON_DISABLE_SANDBOX in the environment, set to anything, even empty', () => {
+    for (const value of ['1', 'true', '0', 'yes', '']) {
+      expect(sandboxOffReason({ ...none, env: { ELECTRON_DISABLE_SANDBOX: value } })).toBe(
+        'disable-sandbox-env',
+      );
+    }
+  });
+
+  test('is null when nothing turned the sandbox off', () => {
+    expect(sandboxOffReason(none)).toBeNull();
+    expect(sandboxOffReason({ ...none, env: { ELECTRON_DISABLE_SANDBOX: undefined } })).toBeNull();
+  });
+
+  test('the switch is the reason when both are present', () => {
     expect(
-      sandboxOff({ hasSwitch: () => false, argv: [], env: { ELECTRON_DISABLE_SANDBOX: '' } }),
-    ).toBe(false);
+      sandboxOffReason({
+        ...none,
+        argv: ['x', '--no-sandbox'],
+        env: { ELECTRON_DISABLE_SANDBOX: '1' },
+      }),
+    ).toBe('no-sandbox-switch');
   });
 });
 
-describe('sandboxRefusal', () => {
-  const off = { hasSwitch: () => true, argv: [], env: {} };
+describe('sandboxNotice', () => {
+  const off = { ...none, packaged: true, argv: ['/opt/Drafter/drafterdev', '--no-sandbox'] };
 
-  test('refuses a packaged app that has no sandbox', () => {
-    expect(sandboxRefusal({ ...off, packaged: true })).toMatch(/sandbox/i);
+  test('asks about a packaged app that has no sandbox', () => {
+    const notice = sandboxNotice(off);
+    expect(notice?.reason).toBe('no-sandbox-switch');
+    expect(notice?.message).toMatch(/sandbox/i);
   });
 
-  test('says what to do: the .deb, user namespaces, and the explicit opt-out', () => {
-    const message = sandboxRefusal({ ...off, packaged: true }) ?? '';
-    expect(message).toContain('.deb');
-    expect(message).toContain('apparmor_restrict_unprivileged_userns');
-    expect(message).toContain(ALLOW_NO_SANDBOX);
+  test('recommends the .deb, says why, and points at the doc and the opt-out', () => {
+    const detail = sandboxNotice(off)?.detail ?? '';
+    expect(detail).toContain('Ubuntu 24.04');
+    expect(detail).toContain('.deb');
+    expect(detail).toContain('AppArmor');
+    expect(detail).toContain('docs/desktop-install-linux.md');
+    expect(detail).toContain(ALLOW_NO_SANDBOX);
   });
 
-  test('lets it run when the writer opts out by name, and only for exactly 1', () => {
-    expect(sandboxRefusal({ ...off, packaged: true, env: { [ALLOW_NO_SANDBOX]: '1' } })).toBeNull();
+  test('keeps the answer in a file named for the reason', () => {
+    expect(sandboxNotice(off)?.marker).toBe(markerFor('no-sandbox-switch'));
     expect(
-      sandboxRefusal({ ...off, packaged: true, env: { [ALLOW_NO_SANDBOX]: 'yes' } }),
-    ).not.toBeNull();
+      sandboxNotice({ ...off, argv: ['x'], env: { ELECTRON_DISABLE_SANDBOX: '1' } })?.marker,
+    ).toBe(markerFor('disable-sandbox-env'));
+    expect(markerFor('no-sandbox-switch')).not.toBe(markerFor('disable-sandbox-env'));
+  });
+
+  test('skips the question when the writer opts out by name, and only for exactly 1', () => {
+    expect(sandboxNotice({ ...off, env: { [ALLOW_NO_SANDBOX]: '1' } })).toBeNull();
+    expect(sandboxNotice({ ...off, env: { [ALLOW_NO_SANDBOX]: 'yes' } })).not.toBeNull();
   });
 
   test('leaves an unpackaged app alone, and a sandboxed one', () => {
-    expect(sandboxRefusal({ ...off, packaged: false })).toBeNull();
-    expect(
-      sandboxRefusal({ packaged: true, hasSwitch: () => false, argv: [], env: {} }),
-    ).toBeNull();
+    expect(sandboxNotice({ ...off, packaged: false })).toBeNull();
+    expect(sandboxNotice({ ...none, packaged: true })).toBeNull();
+  });
+
+  test('has two buttons', () => {
+    expect([CONTINUE, QUIT]).toEqual(['Continue without the sandbox', 'Quit']);
   });
 });

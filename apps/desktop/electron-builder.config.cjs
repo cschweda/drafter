@@ -11,7 +11,14 @@ module.exports = {
   // `dist/` is tsdown's (it cleans it), so the packages go elsewhere.
   directories: { output: 'release', buildResources: 'build' },
   // Only what runs: the two bundles, the web build, and package.json (name, version, main).
-  files: ['dist/main.cjs', 'dist/preload.cjs', 'web/**/*', 'package.json', '!web/og-image.png'],
+  files: [
+    'dist/main.cjs',
+    'dist/preload.cjs',
+    'web/**/*',
+    'package.json',
+    '!web/og-image.png',
+    '!**/*.map',
+  ],
   asar: true,
   // Same name for the file and for latest-linux.yml, which names the AppImage the updater fetches.
   // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
@@ -74,20 +81,10 @@ module.exports = {
     executableArgs: [],
   },
   deb: {
-    // The .deb installs an AppArmor profile (electron-builder's own, `userns` for
-    // /opt/Drafter/drafterdev) so the sandbox works on Ubuntu 24.04 and later.
-    // `drafterdev`, like the command: `drafter` is the CLI's.
+    // `drafterdev`, like the command: `drafter` is the CLI's. The dependencies are
+    // electron-builder's defaults, which it keeps current for the Electron it packs. The .deb also
+    // installs an AppArmor profile (electron-builder's own, `userns` for /opt/Drafter/drafterdev)
+    // so the sandbox works on Ubuntu 24.04 and later.
     packageName: 'drafterdev',
-    depends: [
-      'libgtk-3-0',
-      'libnotify4',
-      'libnss3',
-      'libxss1',
-      'libxtst6',
-      'xdg-utils',
-      'libatspi2.0-0',
-      'libuuid1',
-      'libsecret-1-0',
-    ],
   },
 };

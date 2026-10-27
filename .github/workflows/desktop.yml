@@ -2,8 +2,12 @@
 #
 #   push to main or phase-1-desktop   build, package, test the packages and the shell (xvfb)
 #   push of a tag v*                  the same, then publish the AppImage, the .deb, and
-#                                     latest-linux.yml to that tag's GitHub Release
+#                                     latest-linux.yml as that tag's GitHub Release
 #   workflow_dispatch                 the same as a branch push, for trying it by hand
+#
+# To release: bump apps/desktop/package.json, merge, then push the tag (vX.Y.Z). The workflow checks
+# the tag against the version, builds and tests, and makes the release itself: as a draft, with all
+# its files uploaded and checked, published only then (.github/scripts/publish-release.sh).
 #
 # There is no pull_request trigger, so nothing here runs on a fork's pull request, and no job gets a
 # secret other than the repository's own GITHUB_TOKEN (read-only, except in `publish`).
@@ -53,10 +57,10 @@ jobs:
             exit 1
           fi
 
-      - name: System packages (a virtual display, FUSE for the AppImage)
+      - name: System packages (a virtual display and xwininfo, FUSE for the AppImage)
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q xvfb libfuse2t64
+          sudo apt-get install -y -q xvfb x11-utils libfuse2t64
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
@@ -66,6 +70,10 @@ jobs:
           pnpm --filter @drafter/desktop build:web
       - name: Package (AppImage and .deb)
         run: pnpm --filter @drafter/desktop package
+      - name: The package holds what it should (app.asar)
+        run: node apps/desktop/scripts/check-asar.mjs apps/desktop/release/linux-unpacked/resources/app.asar
+      - name: latest-linux.yml agrees with the packages
+        run: node apps/desktop/scripts/check-update-feed.mjs apps/desktop/release
       - name: What was built
         working-directory: apps/desktop/release
         run: |
@@ -101,7 +109,7 @@ jobs:
           ls "$RUNNER_TEMP/appimage/squashfs-root" | head -20
           cat "$RUNNER_TEMP/appimage"/squashfs-root/*.desktop
           ! grep -q -e '--no-sandbox' "$RUNNER_TEMP"/appimage/squashfs-root/*.desktop
-      - name: Packaged AppImage, with the restriction on (its launcher drops the sandbox, so the app refuses)
+      - name: Packaged AppImage, with the restriction on (its launcher drops the sandbox, so the app asks first)
         if: ${{ !cancelled() }}
         run: |
           DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)" \
@@ -154,18 +162,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: desktop-linux
           path: release
-      - name: Publish to the tag's GitHub Release
+      - name: Publish the release (a draft, filled and checked, then published)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           ls -l release
-          # The release is normally made first (with its notes); if it isn't there, make a bare one.
-          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" \
-                 --notes "Drafter $GITHUB_REF_NAME. See CHANGELOG.md for what changed."
-          gh release upload "$GITHUB_REF_NAME" --clobber release/*.AppImage release/*.deb release/latest-linux.yml
+          .github/scripts/publish-release.sh "$GITHUB_REF_NAME" release

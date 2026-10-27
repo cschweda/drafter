@@ -1,11 +1,11 @@
 // Drafter's main process: one instance, one window, the web build served from the app's own files
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, type BrowserWindow, dialog, ipcMain, protocol } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { appHandler, cspFromHeaders, SCHEME } from './protocol';
-import { sandboxRefusal } from './sandbox';
+import { CONTINUE, QUIT, type SandboxNotice, sandboxNotice } from './sandbox';
 import { createMainWindow, fromApp, guard } from './window';
 
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
@@ -15,10 +15,10 @@ if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {
 }
 
 // A packaged app whose sandbox was turned off (an AppImage launcher does it on a system that blocks
-// user namespaces) says so and stops, instead of running with it off in silence (src/sandbox.ts).
+// user namespaces) explains, and asks once whether to continue (see `askAboutSandbox`).
 // Looked at before `enableSandbox`, which hides `--no-sandbox` from `app.commandLine` without
 // turning it off: the switch still reaches Chromium's child processes.
-const refusal = sandboxRefusal({
+const sandboxQuestion = sandboxNotice({
   packaged: app.isPackaged,
   hasSwitch: (name) => app.commandLine.hasSwitch(name),
   argv: process.argv,
@@ -52,6 +52,40 @@ const WEB = join(app.getAppPath(), 'web');
 /** What each renderer's preload reported, by webContents id (read by the e2e suite). */
 const renderers = new Map<number, RendererReport>();
 Object.assign(globalThis, { drafterShell: { renderers: () => [...renderers.values()] } });
+
+/**
+ * Runs `carryOn` at once, unless the sandbox is off: then it explains and asks, once. Continue is
+ * remembered (a file in userData named for the reason) and carries on; Quit exits. The caller has
+ * the single-instance lock already, so a second launch can't ask a second time.
+ */
+function askAboutSandbox(question: SandboxNotice | null, carryOn: () => void) {
+  if (!question) return carryOn();
+  const marker = join(app.getPath('userData'), question.marker);
+  if (existsSync(marker)) return carryOn();
+  console.error(`${question.message}\n\n${question.detail}`);
+  // Asynchronous, so the process stays responsive while the question is open.
+  void app
+    .whenReady()
+    .then(() =>
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'Drafter',
+        message: question.message,
+        detail: question.detail,
+        buttons: [CONTINUE, QUIT],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      }),
+    )
+    .then(({ response }) => {
+      if (response !== 0) return app.exit(0);
+      mkdirSync(app.getPath('userData'), { recursive: true });
+      writeFileSync(marker, `${new Date().toISOString()}\n`);
+      carryOn();
+    })
+    .catch(() => app.exit(1));
+}
 
 function start() {
   let main: BrowserWindow | null = null;
@@ -98,20 +132,5 @@ function start() {
   });
 }
 
-if (refusal) {
-  console.error(refusal);
-  // Asynchronous, so the process stays responsive (and a test can end it); it exits when closed.
-  void app
-    .whenReady()
-    .then(() =>
-      dialog.showMessageBox({
-        type: 'error',
-        title: 'Drafter',
-        message: 'Drafter can’t start safely',
-        detail: refusal,
-        buttons: ['Quit'],
-      }),
-    )
-    .then(() => app.exit(1));
-} else if (app.requestSingleInstanceLock()) start();
+if (app.requestSingleInstanceLock()) askAboutSandbox(sandboxQuestion, start);
 else app.quit();

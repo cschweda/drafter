@@ -11,12 +11,13 @@
 // so Playwright's Electron driver, which needs `--inspect`, can't start it. These tests start it
 // themselves with Chromium's `--remote-debugging-port` and drive its page over CDP; the process
 // checks read /proc.
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Browser, chromium, expect, type Page, test } from '@playwright/test';
+import { markerFor, type SandboxReason } from '../src/sandbox';
 
 const PACKAGED = process.env.DRAFTER_PACKAGED;
 const KIND = process.env.DRAFTER_PACKAGED_KIND ?? 'unpacked';
@@ -34,8 +35,17 @@ const RESTRICTED = (() => {
     return false;
   }
 })();
-/** The AppImage's launcher turns the sandbox off there, so the app refuses to run. */
+/** The AppImage's launcher turns the sandbox off there, so the app asks first. */
 const REFUSED = KIND === 'appimage' && RESTRICTED;
+
+/**
+ * MERGE CHECKLIST: flip to `true` when Task 3 (opening files from the command line) is merged. While it
+ * is `false` the test below is skipped, and shows as skipped in every run; once it is `true` the test
+ * is a hard assertion, with no way to skip itself.
+ */
+const SHELL_OPENS_FILES = false;
+
+const SANDBOX_QUESTION = 'Drafter is about to start without Chromium’s sandbox';
 
 /** What Electron prints when its Node inspector is listening, or Node runs the app's `-e`. */
 const INSPECTOR_BANNER = /Debugger listening on ws:/;
@@ -48,10 +58,14 @@ interface Running {
   output(): string;
   /** HOME for this launch. */
   home: string;
+  /** The exit code once the app has exited, else undefined. */
+  exited(): number | null | undefined;
   stop(): Promise<void>;
 }
 
 interface LaunchOptions {
+  /** Runs with this launch's HOME before the app starts (to leave files in its profile). */
+  before?: (home: string) => Promise<void>;
   args?: string[];
   env?: Record<string, string>;
 }
@@ -74,6 +88,7 @@ async function tempDir(prefix: string): Promise<string> {
 async function launch(options: LaunchOptions = {}): Promise<Running> {
   const home = await tempDir('drafter-packaged-');
   await mkdir(join(home, '.config'), { recursive: true });
+  await options.before?.(home);
   const env: Record<string, string> = { ...(process.env as Record<string, string>) };
   // Nothing from the developer's environment may turn the sandbox off or make the app a Node.
   for (const name of ['ELECTRON_DISABLE_SANDBOX', 'ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS']) {
@@ -129,7 +144,7 @@ async function launch(options: LaunchOptions = {}): Promise<Running> {
       },
     )
     .not.toBe('');
-  return { child, endpoint, output: () => printed, home, stop };
+  return { child, endpoint, output: () => printed, home, exited: () => exited, stop };
 }
 
 /** The app's first page, over CDP, with the editor showing. */
@@ -214,7 +229,7 @@ function inspect(pid: number): Proc | null {
 }
 
 test('launches, and shows the editor', async () => {
-  test.skip(REFUSED, 'The AppImage refuses to run here (tested below)');
+  test.skip(REFUSED, 'The AppImage asks about the sandbox here (tested below)');
   const running = await launch();
   const { browser, page } = await editorPage(running);
   expect(await page.title()).toMatch(/Drafter/i);
@@ -224,7 +239,7 @@ test('launches, and shows the editor', async () => {
 });
 
 test('runs sandboxed, with no --no-sandbox from anywhere', async () => {
-  test.skip(REFUSED, 'The AppImage refuses to run here (tested below)');
+  test.skip(REFUSED, 'The AppImage asks about the sandbox here (tested below)');
   const running = await launch();
   const { browser } = await editorPage(running);
   const procs = family(running.child.pid as number, running.home)
@@ -250,7 +265,7 @@ test('runs sandboxed, with no --no-sandbox from anywhere', async () => {
 });
 
 test('is not a Node runtime, and takes no Node switches', async () => {
-  test.skip(REFUSED, 'The AppImage refuses to run here (tested below)');
+  test.skip(REFUSED, 'The AppImage asks about the sandbox here (tested below)');
   // With the fuses off, none of these does anything: the app starts as usual. With them on, Node would
   // run the `-e` script and exit, the inspector would listen, or the missing `--require` would fail.
   const running = await launch({
@@ -307,16 +322,16 @@ test('has Electron’s fuses set', async () => {
 });
 
 test('opens a file from the command line', async () => {
-  test.skip(REFUSED, 'The AppImage refuses to run here (tested below)');
+  test.skip(
+    !SHELL_OPENS_FILES,
+    'Task 3 (files) is not merged yet: flip SHELL_OPENS_FILES when it is',
+  );
+  test.skip(REFUSED, 'The AppImage asks about the sandbox here (tested below)');
   const folder = await tempDir('drafter-packaged-files-');
   const file = join(folder, 'from the shell.fountain');
   await writeFile(file, 'Title: Packaged Opening\n\nINT. A KITCHEN - DAY\n\nSomeone arrives.\n');
   const running = await launch({ args: [file] });
   const { browser, page } = await editorPage(running);
-  const hasOpen = await page.evaluate(
-    () => typeof (window.drafterDesktop as { onOpenFile?: unknown } | undefined)?.onOpenFile,
-  );
-  test.skip(hasOpen !== 'function', 'The shell has no files yet (Task 3 adds opening from argv)');
   await expect(page.locator('.cm-content')).toContainText('INT. A KITCHEN - DAY');
   await browser.close();
 });
@@ -336,42 +351,91 @@ test('installs a desktop entry, an icon, and an AppArmor profile', async () => {
   expect(profile).toContain('/opt/Drafter/drafterdev');
 });
 
-test('refuses to run with the sandbox off, unless asked by name', async () => {
-  test.skip(REFUSED, 'Covered by the AppImage’s own case below');
-  // An explicit --no-sandbox, or the environment variable, stops the app with a message.
-  for (const via of [{ args: ['--no-sandbox'] }, { env: { ELECTRON_DISABLE_SANDBOX: '1' } }]) {
-    const running = await launch(via);
-    await expect
-      .poll(() => running.output(), { timeout: 20_000 })
-      .toContain('Drafter won’t start without Chromium’s sandbox');
-    const browser = await chromium.connectOverCDP(running.endpoint);
-    const pages = browser.contexts().flatMap((context) => context.pages());
-    expect(pages.map((page) => page.url()).filter((url) => url.startsWith('app://'))).toEqual([]);
-    await browser.close();
-    await running.stop();
-  }
-  // Said by name, it runs, and plainly without the sandbox.
-  const running = await launch({
-    args: ['--no-sandbox'],
-    env: { DRAFTER_ALLOW_NO_SANDBOX: '1' },
-  });
+test('the window’s class is the desktop entry’s StartupWMClass', async () => {
+  test.skip(KIND !== 'deb', 'Only the .deb installs a desktop entry to compare with');
+  test.skip(REFUSED, 'Not an AppImage');
+  const entry = readFileSync('/usr/share/applications/drafter.desktop', 'utf8');
+  const wanted = /^StartupWMClass=(.+)$/m.exec(entry)?.[1];
+  expect(wanted, 'the desktop entry has no StartupWMClass').toBeTruthy();
+  const running = await launch();
   const { browser } = await editorPage(running);
+  // Every window on the display, with its WM_CLASS: `0x… "title": ("instance" "class")`.
+  const tree = execFileSync('xwininfo', ['-root', '-tree'], { encoding: 'utf8' });
+  const classes = [...tree.matchAll(/"[^"]*": \("([^"]*)" "([^"]*)"\)/g)].map((m) => m[2]);
+  expect(classes, `StartupWMClass=${wanted}; the windows are:\n${tree}`).toContain(wanted);
+  await browser.close();
+});
+
+/** Leaves the answer "Continue" for a reason in the profile of the launch about to start. */
+const continued = (reason: SandboxReason) => async (home: string) => {
+  const dir = join(home, '.config', 'Drafter');
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, markerFor(reason)), 'continue\n');
+};
+
+/** The question is on the screen: said on stderr, the app alive, no window, no renderer. */
+async function expectQuestionOnly(running: Running) {
+  await expect.poll(() => running.output(), { timeout: 20_000 }).toContain(SANDBOX_QUESTION);
+  expect(running.exited()).toBeUndefined();
+  const browser = await chromium.connectOverCDP(running.endpoint);
+  const pages = browser.contexts().flatMap((context) => context.pages());
+  expect(pages.map((page) => page.url()).filter((url) => url.startsWith('app://'))).toEqual([]);
+  await browser.close();
+  const procs = family(running.child.pid as number, running.home)
+    .map(inspect)
+    .filter((proc): proc is Proc => proc !== null);
+  expect(procs.filter((proc) => proc.argv.includes('--type=renderer'))).toEqual([]);
+}
+
+/** The app runs, and some process in it has the sandbox off. */
+async function expectRunningUnsandboxed(running: Running) {
+  const { browser } = await editorPage(running);
+  expect(running.output()).not.toContain(SANDBOX_QUESTION);
   const procs = family(running.child.pid as number, running.home)
     .map(inspect)
     .filter((proc): proc is Proc => proc !== null);
   expect(procs.some((proc) => proc.argv.includes('--no-sandbox'))).toBe(true);
   await browser.close();
+}
+
+test('asks before running with the sandbox off', async () => {
+  test.skip(REFUSED, 'The AppImage’s own case is below');
+  // `--no-sandbox`, and ELECTRON_DISABLE_SANDBOX set to anything (empty too), each stop at the question.
+  for (const via of [
+    { args: ['--no-sandbox'] },
+    { env: { ELECTRON_DISABLE_SANDBOX: '1' } },
+    { env: { ELECTRON_DISABLE_SANDBOX: '' } },
+  ]) {
+    const running = await launch(via);
+    await expectQuestionOnly(running);
+    await running.stop();
+  }
 });
 
-test('the AppImage refuses to run on a system that blocks user namespaces', async () => {
+test('carries on without the sandbox once that was chosen, or when asked by name', async () => {
+  test.skip(REFUSED, 'The AppImage’s own case is below');
+  // The answer "Continue" is kept per reason, in the profile.
+  await expectRunningUnsandboxed(
+    await launch({ args: ['--no-sandbox'], before: continued('no-sandbox-switch') }),
+  );
+  // An answer for another reason doesn't count.
+  const other = await launch({ args: ['--no-sandbox'], before: continued('disable-sandbox-env') });
+  await expectQuestionOnly(other);
+  await other.stop();
+  // Said by name, it never asks, and leaves no answer behind.
+  const byName = await launch({ args: ['--no-sandbox'], env: { DRAFTER_ALLOW_NO_SANDBOX: '1' } });
+  await expectRunningUnsandboxed(byName);
+  expect(existsSync(join(byName.home, '.config', 'Drafter', markerFor('no-sandbox-switch')))).toBe(
+    false,
+  );
+});
+
+test('the AppImage asks about the sandbox on a system that blocks user namespaces', async () => {
   test.skip(!REFUSED, 'Only an AppImage on a system with the restriction');
-  // Its launcher adds --no-sandbox there; the app sees it and stops.
-  const running = await launch();
-  await expect
-    .poll(() => running.output(), { timeout: 20_000 })
-    .toContain('Drafter won’t start without Chromium’s sandbox');
-  const procs = family(running.child.pid as number, running.home)
-    .map(inspect)
-    .filter((proc): proc is Proc => proc !== null);
-  expect(procs.filter((proc) => proc.argv.includes('--type=renderer'))).toEqual([]);
+  // Its launcher adds --no-sandbox there; the app sees it and asks, with nothing else running.
+  const asking = await launch();
+  await expectQuestionOnly(asking);
+  await asking.stop();
+  // After "Continue" (kept in the profile) it runs, plainly without the sandbox.
+  await expectRunningUnsandboxed(await launch({ before: continued('no-sandbox-switch') }));
 });
