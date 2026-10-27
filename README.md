@@ -30,6 +30,7 @@
 - [Drafter for Linux](#drafter-for-linux)
 - [Development](#development)
 - [Clean-room implementation](#clean-room-implementation)
+  - [Clean-room verification](#clean-room-verification)
 - [Contributing](#contributing)
 - [Design documents](#design-documents)
 - [Acknowledgments](#acknowledgments)
@@ -221,6 +222,13 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Spellcheck with nspell and a per-script dictionary that knows your character names.
 - The built-in Reference tab.
 - Testing with NVDA and VoiceOver.
+- A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there.
+- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three-act, Save the Cat, five-act) laid over it as suggestions, never rules.
+- A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
+- Scene goals: optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes and shown on the cards and the map.
+- Setups and payoffs: mark a setup, link it to its payoff, and see the setups that never pay off.
+- Reader notes, with no account: a reader opens your script at drafter.dev in a reader mode, adds comments to lines or selections (their name, a category and colour, replies), and sends them back as a file: the `.fountain` itself, the comments kept as Fountain notes any Fountain tool can show. You add a reader's file to your current draft even after you kept writing: each comment finds its place by its quote, its context, and its scene, a preview says how many matched, and none is ever dropped. You reply and resolve them in the margin, filter by reader or category, and send your replies back the same way. Notes typed by hand (`[[Name: comment]]`) merge too. Nothing passes through a server.
+- Note categories and status (open, resolved) in the Notes tab.
 
 ### Phase 3 — Formats
 
@@ -228,7 +236,10 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Import from Highland, Fade In, and Celtx.
 - TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
 - User-added templates, dropped in as JSON, and template export.
+- For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
 - Standalone `.html` export.
+- PDF export with notes in the margin, or a clean copy, and a watermark and header for drafts you send out (for example "CONFIDENTIAL" or the reader's name).
+- A self-contained reader file: one `.html` a reader opens in any browser to read and comment, for readers who won't visit a site.
 
 ### Phase 4 — Craft
 
@@ -236,9 +247,13 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Revision marks and colored-page PDF.
 - Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
 - Alternate versions of a line, switchable in place.
-- Proof mode: readers add notes to a copy of the script, kept as standard Fountain notes. Drafter shows them in the margin like Word comments and carries them into the current draft.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
+- A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
+- Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
+- A breakdown report: locations, time of day, and cast for each scene, to export for production.
+- Accept or reject a co-writer's edited copy change by change, from Compare.
+- One character's dialogue, exported for an actor.
 - A PWA install flow and offline dictionary caching.
 
 ### Phase 5 — Community
@@ -432,6 +447,21 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 - **Dependencies stay out of the domain.** No Fountain parsers and no screenwriting libraries, ever. A new dependency gets an entry in `docs/DEPENDENCIES.md` first, saying why it's needed and confirming it isn't screenwriting-related.
 - **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
 - **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.
+
+### Clean-room verification
+
+**The short version: Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library.**
+
+On 27 October 2026 the whole repository was audited against these rules: `main` at commit `6af51a7`, and the branches about to merge into it (the desktop app). [The full audit](docs/clean-room-audit.md) has the method and evidence for each check. It found:
+
+- **No code from screenwriting software.** Nothing names, ports, imports, or depends on another screenwriting or playwriting application or Fountain library. Of more than 700 installed packages, none is a Fountain or screenwriting package. The parser follows the [technical design](docs/drafter-technical-design.md), not any existing parser.
+- **No copied code from anywhere.** No source file carries another project's licence header or a note that it was adapted from elsewhere, nothing is vendored or minified, and the git history has no foreign files added and later removed. Every commit has one author.
+- **General-purpose libraries only, all declared.** Drafter does use open-source libraries, such as Vue, Nuxt, CodeMirror, pdf-lib, Dexie, and Electron, as ordinary dependencies. Each is listed with why it's there in [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md). No GPL code ships in the app.
+- **Original test content.** Fixtures and samples were written for Drafter. A few test inputs reuse example character names from the Fountain specification itself, a permitted source. One line in a fixture quoted a film; it was replaced.
+
+Most of Drafter's code was written by an AI coding assistant working under these rules, which forbid reading other implementations, and reviewed by the maintainer.
+
+**Limits.** An audit finds copying that leaves traces. It can't prove that something was never read or remembered, or rule out what an AI model learned in training. It covers the commits named above, and it isn't legal advice.
 
 ## Contributing
 
