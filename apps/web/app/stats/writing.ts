@@ -18,12 +18,12 @@ export const WRITE_MS = 5000;
 
 /**
  * Whether a transaction is the writer's own edit: typing, deleting, pasting, undoing, a drag of
- * text. Not the app's (a template block, a fix, a module's change, all marked `appChange`), not a
- * whole text put in (`input.replace`: a reset sample, Start blank, a file reloaded, Revert to
- * Saved), and not a change without a user event (a load).
+ * text, Find and Replace. Not the app's: a template block, a fix, a module's change, and the whole
+ * texts it puts in (a reset sample, Start blank, a file reloaded, Revert to Saved) are all marked
+ * `appChange`. Not a change without a user event either (a load).
  */
 export function writersEdit(tr: Transaction): boolean {
-  if (!tr.docChanged || tr.annotation(appChange) || tr.isUserEvent('input.replace')) return false;
+  if (!tr.docChanged || tr.annotation(appChange)) return false;
   return ['input', 'delete', 'undo', 'redo', 'move'].some((event) => tr.isUserEvent(event));
 }
 
@@ -65,7 +65,7 @@ export interface WritingStore {
   end(): void;
   /** Keeps what was counted now, not after `WRITE_MS`. */
   flush(): Promise<void>;
-  /** Every kept day of the open script, by date, this visit's time included; none for a sample. */
+  /** Every kept day of the open script, by date, this visit's time included; none for a sample. A read-only tab reads them too. */
   days(): Promise<Map<string, StatsDay>>;
   /** Settles when what has been asked of the table has been done. */
   settled(): Promise<void>;
@@ -189,7 +189,9 @@ export function createWritingStats(deps: WritingDeps): WritingStore {
     if (due.size === 0) return Promise.resolve();
     return queue(async () => {
       try {
-        await db.transaction('rw', db.settings, async () => {
+        await db.transaction('rw', db.settings, db.projects, async () => {
+          // A script removed since (the open one, as the next opens) gets no day back.
+          if (!(await db.projects.get(id))) return;
           for (const [date, ms] of due) {
             const key = statsDayKey(id, date);
             const row = statsDayOf((await db.settings.get(key))?.value);
@@ -199,7 +201,8 @@ export function createWritingStats(deps: WritingDeps): WritingStore {
           }
         });
       } catch {
-        // Held for this visit: the time shown still counts it.
+        // Kept for the next write, which tries again; the time shown counts it meanwhile.
+        of.tracker.giveBack(due);
       }
     });
   }
@@ -278,7 +281,8 @@ export function createWritingStats(deps: WritingDeps): WritingStore {
 
   async function days(): Promise<Map<string, StatsDay>> {
     await flush();
-    const id = current.id;
+    // A read-only tab keeps nothing, but shows what the tab that is editing keeps.
+    const id = deps.sample() ? null : deps.project();
     const kept = new Map<string, StatsDay>();
     if (id === null) return kept;
     await queue(async () => {

@@ -7,7 +7,7 @@ import { appChange } from '../app/editor/typewriter';
 import type { DayStart } from '../app/stats/goal';
 import { createWritingStats, WRITE_MS, type WritingStore, writersEdit } from '../app/stats/writing';
 import { db } from '../app/storage/db';
-import { createProject, removeProject } from '../app/storage/projects';
+import { createProject, type Project, removeProject } from '../app/storage/projects';
 
 const SEC = 1000;
 const MIN = 60 * SEC;
@@ -52,6 +52,10 @@ beforeEach(async () => {
   // Only the clock is faked: fake-indexeddb waits on setImmediate.
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
   vi.setSystemTime(at(9));
+  // The scripts the tests name: a day is kept only for a script that is still there.
+  await db.projects.bulkPut(
+    ['p1', 'p2'].map((id) => ({ id, title: id, source: '', updatedAt: 0 }) as unknown as Project),
+  );
 });
 
 afterEach(() => {
@@ -60,6 +64,15 @@ afterEach(() => {
 
 describe('writersEdit', () => {
   const base = EditorState.create({ doc: 'one two' });
+  test("is the writer's Find and Replace, one at a time or all at once", () => {
+    for (const userEvent of ['input.replace', 'input.replace.all']) {
+      expect(
+        writersEdit(base.update({ changes: { from: 0, to: 3, insert: 'ONE' }, userEvent })),
+        userEvent,
+      ).toBe(true);
+    }
+  });
+
   test("is the writer's typing, deleting, pasting, undoing, and dragging", () => {
     for (const userEvent of [
       'input.type',
@@ -88,8 +101,16 @@ describe('writersEdit', () => {
         }),
       ),
     ).toBe(false);
-    // Reset sample, Start blank, a file reloaded, Revert to Saved.
-    expect(writersEdit(base.update({ changes: change, userEvent: 'input.replace' }))).toBe(false);
+    // Reset sample, Start blank, a file reloaded, Revert to Saved: the app's, marked as such.
+    expect(
+      writersEdit(
+        base.update({
+          changes: change,
+          userEvent: 'input.replace',
+          annotations: appChange.of(true),
+        }),
+      ),
+    ).toBe(false);
     // No user event: loading, a change made by code.
     expect(writersEdit(base.update({ changes: change }))).toBe(false);
     expect(writersEdit(base.update({ selection: { anchor: 3 }, userEvent: 'select' }))).toBe(false);
@@ -279,16 +300,54 @@ describe('writing time', () => {
     expect((await store.days()).size).toBe(0);
   });
 
-  test('removing a script removes its days', async () => {
+  test('removing the open script removes its days for good', async () => {
     const p = await createProject({ source: 'Hello.' });
+    const q = await createProject({ source: 'Next.' });
     const t = setup(p.id);
     const store = t.make();
     await store.settled();
     store.edit();
     await store.flush();
     expect(Object.keys(await rows())).toContain(`stats-day:${p.id}:2026-10-27`);
-    store.stop();
+    // More time, not yet written, then the script is removed while it is open, and the next one opens:
+    // the removed script's last stretch is not written back.
+    await wait(10 * SEC);
+    store.edit();
     await removeProject(p.id);
-    expect(Object.keys(await rows()).filter((key) => key.startsWith('stats-day:'))).toEqual([]);
+    t.loaded.value++;
+    t.project.value = q.id;
+    await store.settled();
+    await store.flush();
+    await wait(WRITE_MS);
+    await store.settled();
+    expect(Object.keys(await rows()).filter((key) => key.includes(p.id))).toEqual([]);
+  });
+
+  test('a write that fails keeps its time for the next', async () => {
+    const t = setup();
+    const store = t.make();
+    await store.settled();
+    store.edit();
+    const failing = vi
+      .spyOn(db.settings, 'put')
+      .mockRejectedValueOnce(new Error('The disk is full.'));
+    await store.flush();
+    expect(await rows()).toEqual({});
+    failing.mockRestore();
+    await store.flush();
+    expect((await rows())['stats-day:p1:2026-10-27']).toMatchObject({ ms: 30 * SEC });
+  });
+
+  test('a read-only tab counts nothing, but can read the days the editing tab keeps', async () => {
+    await db.settings.put({ key: 'stats-day:p1:2026-10-26', value: { ms: 5 * MIN, words: 40 } });
+    const t = setup();
+    t.readOnly.value = true;
+    const store = t.make();
+    await store.settled();
+    store.edit();
+    expect(store.today.value).toBeNull();
+    expect(Object.fromEntries(await store.days())).toEqual({
+      '2026-10-26': { ms: 5 * MIN, words: 40 },
+    });
   });
 });
