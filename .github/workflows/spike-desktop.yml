@@ -1,0 +1,174 @@
+# Throwaway spike: Drafter in Electron vs Tauri on Linux (spike/desktop/). Never runs on main.
+name: spike-desktop
+
+on:
+  push:
+    branches: [spike-desktop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spike-desktop
+  cancel-in-progress: true
+
+jobs:
+  electron:
+    if: github.ref == 'refs/heads/spike-desktop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SPIKE_OUT: ${{ github.workspace }}/spike/desktop/out
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build the web app
+        working-directory: apps/web
+        run: NETLIFY=true pnpm build
+      - name: Install the Electron spike
+        working-directory: spike/desktop/electron
+        run: npm ci
+      - name: Package (AppImage + deb)
+        working-directory: spike/desktop/electron
+        run: |
+          mkdir -p "$SPIKE_OUT"
+          start=$(date +%s)
+          npm run dist
+          echo "{\"packageSeconds\": $(( $(date +%s) - start ))}" > "$SPIKE_OUT/electron-build.json"
+          ls -la dist
+      - name: Sizes
+        working-directory: spike/desktop/electron
+        run: |
+          {
+            echo "## Electron sizes"
+            ls -l dist/*.AppImage dist/*.deb | awk '{print $5, $9}'
+            echo "unpacked: $(du -sb dist/linux-unpacked | cut -f1) bytes"
+            du -sh dist/linux-unpacked/* | sort -h | tail -8
+          } | tee "$SPIKE_OUT/electron-sizes.txt"
+      - name: System packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb imagemagick xdotool libfuse2t64
+      - name: AppImage smoke test, with Ubuntu 24.04's default AppArmor userns restriction
+        working-directory: spike/desktop/electron
+        continue-on-error: true
+        run: |
+          sysctl kernel.apparmor_restrict_unprivileged_userns || true
+          chmod +x dist/*.AppImage
+          set +e
+          timeout 15 xvfb-run -a dist/*.AppImage > "$SPIKE_OUT/electron-appimage-smoke.txt" 2>&1
+          echo "exit: $?  (124 = still running after 15 s, i.e. it started)" | tee -a "$SPIKE_OUT/electron-appimage-smoke.txt"
+          tail -20 "$SPIKE_OUT/electron-appimage-smoke.txt"
+      - name: Allow unprivileged user namespaces (Chromium's sandbox), for the measured runs
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: AppImage smoke test, restriction lifted
+        working-directory: spike/desktop/electron
+        continue-on-error: true
+        run: |
+          set +e
+          timeout 15 xvfb-run -a dist/*.AppImage > "$SPIKE_OUT/electron-appimage-smoke2.txt" 2>&1
+          echo "exit: $?" | tee -a "$SPIKE_OUT/electron-appimage-smoke2.txt"
+          tail -20 "$SPIKE_OUT/electron-appimage-smoke2.txt"
+      - name: Measure (packaged app, under Xvfb)
+        working-directory: spike/desktop/electron
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs dist/linux-unpacked/drafter
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: electron-results
+          path: spike/desktop/out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: electron-installers
+          retention-days: 7
+          path: |
+            spike/desktop/electron/dist/*.AppImage
+            spike/desktop/electron/dist/*.deb
+
+  tauri:
+    if: github.ref == 'refs/heads/spike-desktop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      SPIKE_OUT: ${{ github.workspace }}/spike/desktop/out
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: System packages (Tauri's Linux prerequisites, the WebKit WebDriver, Xvfb)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev \
+            libssl-dev libayatana-appindicator3-dev librsvg2-dev webkit2gtk-driver \
+            xvfb imagemagick xdotool libfuse2t64
+      - name: WebKitGTK version
+        run: |
+          mkdir -p "$SPIKE_OUT"
+          {
+            echo "pkg-config webkit2gtk-4.1: $(pkg-config --modversion webkit2gtk-4.1)"
+            dpkg -s libwebkit2gtk-4.1-0 | grep -E '^(Version|Package)'
+            lsb_release -ds
+            rustc --version; cargo --version
+          } | tee "$SPIKE_OUT/tauri-webkit.txt"
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build the web app
+        working-directory: apps/web
+        run: NETLIFY=true pnpm build
+      - name: Install the Tauri spike
+        working-directory: spike/desktop/tauri
+        run: npm ci
+      - name: Install tauri-driver
+        run: |
+          start=$(date +%s)
+          cargo install tauri-driver --locked
+          echo "tauri-driver install: $(( $(date +%s) - start )) s" | tee -a "$SPIKE_OUT/tauri-webkit.txt"
+      - name: Build and package (AppImage + deb), cold, no cache
+        working-directory: spike/desktop/tauri
+        run: |
+          start=$(date +%s)
+          npx tauri build --bundles appimage,deb
+          echo "{\"packageSeconds\": $(( $(date +%s) - start ))}" > "$SPIKE_OUT/tauri-build.json"
+      - name: Sizes
+        working-directory: spike/desktop/tauri/src-tauri/target/release
+        run: |
+          {
+            echo "## Tauri sizes"
+            ls -l bundle/appimage/*.AppImage bundle/deb/*.deb | awk '{print $5, $9}'
+            echo "binary: $(stat -c %s drafter) bytes"
+            dpkg -I bundle/deb/*.deb | grep -E 'Depends|Installed-Size'
+          } | tee "$SPIKE_OUT/tauri-sizes.txt"
+      - name: AppImage smoke test
+        working-directory: spike/desktop/tauri/src-tauri/target/release
+        continue-on-error: true
+        run: |
+          set +e
+          chmod +x bundle/appimage/*.AppImage
+          timeout 15 xvfb-run -a bundle/appimage/*.AppImage > "$SPIKE_OUT/tauri-appimage-smoke.txt" 2>&1
+          echo "exit: $?  (124 = still running after 15 s, i.e. it started)" | tee -a "$SPIKE_OUT/tauri-appimage-smoke.txt"
+          tail -20 "$SPIKE_OUT/tauri-appimage-smoke.txt"
+      - name: Measure (release binary, through tauri-driver, under Xvfb)
+        working-directory: spike/desktop/tauri
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs src-tauri/target/release/drafter
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tauri-results
+          path: spike/desktop/out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tauri-installers
+          retention-days: 7
+          path: |
+            spike/desktop/tauri/src-tauri/target/release/bundle/appimage/*.AppImage
+            spike/desktop/tauri/src-tauri/target/release/bundle/deb/*.deb

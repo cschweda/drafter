@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The main window: core APIs and the dialog plugin. File I/O goes through the app's own commands.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default"]
+}

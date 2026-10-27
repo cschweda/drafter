@@ -1,0 +1,34 @@
+{
+  "name": "drafter-desktop-electron-spike",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Drafter, the Fountain screenplay editor (Electron spike)",
+  "author": "Christopher Schweda <cschweda@gmail.com>",
+  "homepage": "https://drafter.dev",
+  "license": "MIT",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "bench": "node run.mjs",
+    "copy-web": "rm -rf web && cp -R ../../../apps/web/.output/public web",
+    "dist": "npm run copy-web && electron-builder --linux AppImage deb --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "playwright-core": "1.64.1"
+  },
+  "build": {
+    "appId": "dev.drafter.spike",
+    "productName": "Drafter",
+    "executableName": "drafter",
+    "directories": { "output": "dist" },
+    "files": ["main.cjs", "preload.cjs", "web/**/*", "!web/og-image.png"],
+    "asar": true,
+    "linux": {
+      "category": "Office",
+      "maintainer": "Christopher Schweda <cschweda@gmail.com>",
+      "target": ["AppImage", "deb"]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Drafter",
+  "mainBinaryName": "drafter",
+  "version": "0.3.0",
+  "identifier": "dev.drafter.spike",
+  "build": {
+    "frontendDist": "../../../../apps/web/.output/public"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Drafter",
+        "width": 1440,
+        "height": 900,
+        "backgroundColor": "#0F1013"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'sha256-dIQJ0dhcqTUZzwYTgAGpJ/AASeoHZTDV5nBa2Rg7P0M=' 'sha256-dPipJ19ORAqehTNZHwmgjVcZPgM8QcZ0Gz6Bof7edfo=' 'sha256-yMtEXssBJ6hShkYT9XoG32vgqFpN5ero5fMMVhkHst0='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "appimage",
+      "deb"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Fountain screenplay editor",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png"
+    ],
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "drafter-desktop-tauri-spike",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "dist": "tauri build --bundles appimage,deb",
+    "bench": "node run.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4",
+    "webdriverio": "10.1.0"
+  }
+}

@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `spike/desktop` (throwaway branch `spike-desktop`, never merged): Electron vs Tauri on Linux, measured in CI. Iteration 1.
 - `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
 
 ## [0.3.0] - 2026-10-26

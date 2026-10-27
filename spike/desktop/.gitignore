@@ -1,0 +1,6 @@
+out/
+node_modules/
+electron/web/
+electron/dist/
+tauri/src-tauri/target/
+tauri/src-tauri/gen/
