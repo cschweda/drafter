@@ -13,7 +13,9 @@ import { db } from '../storage/db';
 import { useGuard } from '../storage/guard';
 import { useScript } from '../storage/script';
 import { useCounts } from './counts';
-import { DAY_PREFIX, dayKey, goalKey } from './keys';
+import { DAY_PREFIX, dateKey, dayKey, goalKey } from './keys';
+
+export { dateKey };
 
 export interface Goal {
   unit: 'pages' | 'words';
@@ -75,12 +77,6 @@ export interface GoalStore {
 
 /** Days of starting counts that are kept. */
 export const KEEP_DAYS = 30;
-
-/** The local date, `YYYY-MM-DD`. Local, because a writer's day ends at their midnight. */
-export function dateKey(date: Date): string {
-  const two = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
-}
 
 /** Whether `goal` is one that can be held: words in whole numbers, pages in tenths. */
 export function isGoal(goal: unknown): goal is Goal {
