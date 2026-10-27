@@ -1,5 +1,8 @@
 # Final Draft research for Drafter
 
+> **Clean room.** This comparison is drawn only from what the README's [clean-room rules](../README.md#clean-room-implementation) allow: other applications' public product pages and user documentation, used as a writer uses them. No source code, package, test, sample, or script from Final Draft or any other screenwriting tool was read or used. It records *what* those tools let writers do, in Drafter's own words; it is not a guide to *how* they do it. Any Drafter feature that follows from it is designed from the Fountain specification and Drafter's own decisions (`docs/DECISIONS.md`), and its notes and file formats are Drafter's own, written as standard Fountain. Product names are their owners' trademarks.
+
+
 Read 2026-10-27. Subject: Final Draft 13 (launched Jan 9, 2024 per the press coverage; a Sept 5, 2025 blog post lists FD13 updates). Sources are finaldraft.com product/blog/learn pages and the kb.finaldraft.com help center (the KB returned 403 to direct fetch; KB facts below come from search snippets and are marked "(snippet)"). Confidence is lower where only a snippet or a third party was available. "Story Map", "Speech to Script", and "Character Profiles" as named features were NOT found in official sources; the nearest FD13 items are Outline Editor, Navigator 2.0, and Character Development Tools.
 
 ## 1. Feature comparison
