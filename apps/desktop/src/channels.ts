@@ -4,6 +4,17 @@
 export const CHANNELS = {
   /** preload → main, once per renderer: how it was started (`RendererReport`). */
   rendererReport: 'drafter:renderer-report',
+  /** Files (files-ipc.ts): invoked by the preload, all paths absolute. */
+  filesShowOpen: 'drafter:files:show-open',
+  filesShowSave: 'drafter:files:show-save',
+  filesRead: 'drafter:files:read',
+  filesWrite: 'drafter:files:write',
+  filesRealPath: 'drafter:files:real-path',
+  /** preload → main: watch `(id, path)`; stop `(id)`. */
+  filesWatch: 'drafter:files:watch',
+  filesUnwatch: 'drafter:files:unwatch',
+  /** main → preload: the watched file `id` changed. */
+  filesChanged: 'drafter:files:changed',
 } as const;
 
 /** What a preload says about its renderer: the e2e suite's evidence that it is sandboxed. */

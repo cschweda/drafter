@@ -1,12 +1,15 @@
 /**
  * The one module that touches files: the File System Access API, file inputs, drops, and
- * downloads. Everything else reads and writes files through `FileAccess`, so a desktop build can
- * supply its own (`setFiles`) and a test can supply an in-memory one.
+ * downloads. Everything else reads and writes files through `FileAccess`, so the desktop app
+ * supplies its own (`desktopFiles`, by path, through the main process: chosen here when
+ * `desktop()` has a bridge) and a test can supply an in-memory one (`setFiles`).
  */
+import { desktop } from '../desktop';
+import { desktopFiles } from './desktop-files';
 
 /**
  * A file the writer chose. It must be structured-cloneable, so it can be kept in the `handles`
- * table: the browser version holds a `FileSystemFileHandle`, and a desktop version would hold a path.
+ * table: the browser version holds a `FileSystemFileHandle`, and the desktop version `{ name, path }`.
  */
 export interface FileRef {
   readonly name: string;
@@ -24,6 +27,17 @@ export class FileGoneError extends Error {
   constructor(message = 'The file is gone.') {
     super(message);
     this.name = 'FileGoneError';
+  }
+}
+
+/**
+ * The file system refused for a reason the writer can do something about ("the disk is full"):
+ * the message is said after "Couldn’t save the file: ". The file is as it was. (The desktop app's.)
+ */
+export class FileProblemError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FileProblemError';
   }
 }
 
@@ -45,6 +59,11 @@ export interface FileAccess {
   sameFile(a: FileRef, b: FileRef): Promise<boolean>;
   /** The fallback where `!canSaveInPlace`. */
   download(name: string, data: string | Uint8Array, type: string): void;
+  /**
+   * Calls `onChange` when another program changes the file; returns the function that stops it.
+   * Only where the file can be watched (the desktop app); the browser has no way to.
+   */
+  watch?(ref: FileRef, onChange: () => void): () => void;
 }
 
 // ---- The browser's version ---------------------------------------------------------------------
@@ -242,10 +261,14 @@ export const browserFiles: FileAccess = {
   },
 };
 
-let current: FileAccess = browserFiles;
+let current: FileAccess | undefined;
 
-/** The `FileAccess` in use: `browserFiles`, or a test's or a desktop build's own. */
+/** The `FileAccess` in use: `browserFiles`, the desktop app's, or a test's own. */
 export function useFiles(): FileAccess {
+  if (!current) {
+    const files = desktop()?.files;
+    current = files ? desktopFiles(files) : browserFiles;
+  }
   return current;
 }
 

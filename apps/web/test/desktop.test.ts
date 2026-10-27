@@ -1,8 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { desktop, isDesktopBuild } from '../app/desktop';
+import {
+  type DesktopBridge,
+  type DesktopFilesBridge,
+  desktop,
+  isDesktopBuild,
+} from '../app/desktop';
 
-const BRIDGE = { version: '0.3.0', platform: 'linux' as const };
+const BRIDGE: DesktopBridge = {
+  version: '0.3.0',
+  platform: 'linux',
+  files: {} as DesktopFilesBridge,
+};
 
 describe('desktop()', () => {
   afterEach(() => {

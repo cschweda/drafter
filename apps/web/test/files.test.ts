@@ -74,7 +74,12 @@ function memoryFiles(options: { inPlace?: boolean } = {}) {
     picks: [] as { name: string; kind: string }[],
     writes: [] as { ref: MemoryRef; data: string | Uint8Array }[],
     downloads: [] as { name: string; data: string | Uint8Array; type: string }[],
+    /** The files watched, and the ones let go, in order. */
+    watches: [] as number[],
+    unwatched: [] as number[],
   };
+  /** Each watched file's listener, by id: calling it is another program changing the file. */
+  const watchers = new Map<number, () => void>();
   const control = {
     /** The names `pickToSave` answers with; a null cancels. */
     answers: [] as (string | null)[],
@@ -131,8 +136,17 @@ function memoryFiles(options: { inPlace?: boolean } = {}) {
     download(name, data, type) {
       log.downloads.push({ name, data, type });
     },
+    watch(ref, onChange) {
+      const id = (ref as MemoryRef).id;
+      log.watches.push(id);
+      watchers.set(id, onChange);
+      return () => {
+        log.unwatched.push(id);
+        watchers.delete(id);
+      };
+    },
   };
-  return { access, files, log, control };
+  return { access, files, log, control, watchers };
 }
 
 async function fresh(options: { inPlace?: boolean } = {}) {
@@ -548,5 +562,72 @@ describe('a save belongs to the script it started on', () => {
     t.control.failNext = new DOMException('no', 'NotAllowedError');
     await t.save().catch(() => {});
     expect(t.saveError.value).toMatch(/Save As/);
+  });
+
+  test('says why the file system refused, and that the file is as it was', async () => {
+    const t = await fresh();
+    await t.script.newScript('screenplay');
+    const { FileProblemError } = await import('../app/storage/files');
+    t.control.failNext = new FileProblemError('the disk is full');
+    await t.save().catch(() => {});
+    expect(t.saveError.value).toBe(
+      'Couldn’t save the file: the disk is full. The file on disk is as it was.',
+    );
+  });
+});
+
+describe('watching the open script’s file (the desktop app)', () => {
+  const visibility = (state: 'visible' | 'hidden') =>
+    Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+  afterEach(() => visibility('visible'));
+
+  test('checks the file when another program changes it, and moves the watch with the script', async () => {
+    const t = await fresh();
+    visibility('visible');
+    const { installFileCheck } = await import('../app/storage/check');
+    const remove = installFileCheck();
+    try {
+      await t.script.newScript('screenplay');
+      t.type('FADE IN:\n');
+      expect(await t.save()).toBe('saved');
+      const first = (t.log.writes[0] as { ref: MemoryRef }).ref.id;
+      await vi.waitFor(() => expect(t.log.watches).toEqual([first]));
+
+      // Another program writes the file: the check runs, and the file's text comes in.
+      const file = t.files.get(first) as { bytes: Uint8Array };
+      file.bytes = new TextEncoder().encode(`${t.shown()}FROM ELSEWHERE\n`);
+      t.watchers.get(first)?.();
+      await vi.waitFor(() => expect(t.shown()).toContain('FROM ELSEWHERE'));
+
+      // While the window is hidden a change waits for it to come back.
+      visibility('hidden');
+      file.bytes = new TextEncoder().encode(`${t.shown()}WHILE AWAY\n`);
+      t.watchers.get(first)?.();
+      await vi.advanceTimersByTimeAsync(500);
+      expect(t.shown()).not.toContain('WHILE AWAY');
+      visibility('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.waitFor(() => expect(t.shown()).toContain('WHILE AWAY'));
+
+      // Another script is opened: its file (none) is watched instead, and the first is let go.
+      await t.script.newScript('screenplay');
+      await vi.waitFor(() => expect(t.log.unwatched).toEqual([first]));
+      expect(t.log.watches).toEqual([first]);
+    } finally {
+      remove();
+    }
+  });
+
+  test('lets the watch go when the check is removed', async () => {
+    const t = await fresh();
+    visibility('visible');
+    const { installFileCheck } = await import('../app/storage/check');
+    const remove = installFileCheck();
+    await t.script.newScript('screenplay');
+    await t.save();
+    const first = (t.log.writes[0] as { ref: MemoryRef }).ref.id;
+    await vi.waitFor(() => expect(t.log.watches).toEqual([first]));
+    remove();
+    expect(t.log.unwatched).toEqual([first]);
   });
 });

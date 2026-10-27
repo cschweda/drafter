@@ -8,7 +8,7 @@
 //     const { page } = await desktop();            // the editor, ready, the tour's welcome skipped
 //     const again = await desktop({ firstRun: true }); // (another profile would be `newProfile()`)
 //   });
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -39,13 +39,46 @@ export interface Profile {
   userData: string;
   /** Where the app writes the URLs it would have opened in the system browser (one per line). */
   externalLog: string;
+  /**
+   * The answers the app's Open and Save dialogs give, in order (`DRAFTER_E2E_DIALOG`): a path, or
+   * null for Cancel. An empty queue cancels. Each question asked is logged beside it (`.log`).
+   */
+  dialogs: string;
 }
 
 export async function newProfile(): Promise<Profile> {
   const dir = await mkdtemp(join(tmpdir(), 'drafter-desktop-e2e-'));
   const home = join(dir, 'home');
   await mkdir(join(home, '.config'), { recursive: true });
-  return { dir, home, userData: join(dir, 'user-data'), externalLog: join(dir, 'external.log') };
+  return {
+    dir,
+    home,
+    userData: join(dir, 'user-data'),
+    externalLog: join(dir, 'external.log'),
+    dialogs: join(dir, 'dialogs.json'),
+  };
+}
+
+/** Queues the answers the next Open and Save dialogs give: a path each, or null for Cancel. */
+export function answerDialogs(profile: Profile, answers: (string | null)[]): void {
+  writeFileSync(profile.dialogs, JSON.stringify(answers));
+}
+
+/** A question a dialog was asked: what kind, the folder (and name) it suggested. */
+export interface DialogAsked {
+  kind: 'open' | 'save';
+  defaultPath: string;
+  extension?: string;
+}
+
+/** The dialogs the app has shown, in order. */
+export function dialogsAsked(profile: Profile): DialogAsked[] {
+  const log = `${profile.dialogs}.log`;
+  if (!existsSync(log)) return [];
+  return readFileSync(log, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as DialogAsked);
 }
 
 /** The URLs the app handed to the system browser, in order. */
@@ -146,6 +179,8 @@ async function launchApp(profile: Profile, options: LaunchOptions): Promise<Laun
       // Honoured only by an unpackaged app (src/main.ts).
       DRAFTER_USER_DATA: profile.userData,
       DRAFTER_E2E_EXTERNAL_LOG: profile.externalLog,
+      // Every dialog answers from the queue (Cancel when it is empty): no test waits on a person.
+      DRAFTER_E2E_DIALOG: profile.dialogs,
       ...options.env,
     },
     timeout: 60_000,

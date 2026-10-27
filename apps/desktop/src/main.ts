@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, type BrowserWindow, dialog, ipcMain, protocol } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
+import { registerFileIpc } from './files-ipc';
 import { appHandler, cspFromHeaders, SCHEME } from './protocol';
 import { createMainWindow, fromApp, guard } from './window';
 
@@ -82,6 +83,7 @@ function start() {
       return;
     }
     protocol.handle(SCHEME, appHandler(WEB, csp));
+    registerFileIpc();
     main = createMainWindow(PRELOAD);
   });
 }

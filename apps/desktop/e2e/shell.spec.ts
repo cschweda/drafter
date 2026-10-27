@@ -17,9 +17,22 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
   await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
   expect(await page.title()).toContain('Drafter');
   // The page knows it is in the desktop app, through the one bridge.
-  expect(await page.evaluate(() => window.drafterDesktop)).toEqual({
+  expect(
+    await page.evaluate(() => {
+      const bridge = window.drafterDesktop;
+      return {
+        version: bridge?.version,
+        platform: bridge?.platform,
+        // Named calls only (Task 2's files): no ipcRenderer, nothing else.
+        files: Object.keys(bridge?.files ?? {}).sort(),
+        keys: Object.keys(bridge ?? {}).sort(),
+      };
+    }),
+  ).toEqual({
     version: VERSION,
     platform: process.platform,
+    files: ['pathOfDropped', 'read', 'realPath', 'showOpen', 'showSave', 'watch', 'write'],
+    keys: ['files', 'platform', 'version'],
   });
   // Every file it asked for was there, and the CSP blocked nothing.
   expect(errors).toEqual([]);

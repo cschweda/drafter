@@ -347,12 +347,42 @@ export function useFileCheck(): {
 
 /**
  * Starts checking: when the first script is ready and whenever another is shown or its file
- * changes, and when the window regains focus. Returns the function that stops it.
+ * changes, and when the window regains focus. Where the file can be watched (the desktop app), also
+ * when another program changes it while the window is showing; a change while it is hidden is
+ * checked when it shows again. Returns the function that stops it.
  */
 export function installFileCheck(): () => void {
   const script = useScript();
   const guard = useGuard();
   const run = () => void check();
+
+  // The watch follows the script that is open: another script, or no file, lets it go.
+  let unwatch: (() => void) | undefined;
+  let generation = 0;
+  const rewatch = async () => {
+    const mine = ++generation;
+    unwatch?.();
+    unwatch = undefined;
+    const files = useFiles();
+    const p = script.project.value;
+    if (!files.watch || !p || p.sample || !p.fsHandleId || guard.readOnly.value) return;
+    const handle = await getHandle(p.fsHandleId);
+    // Another script was opened while the ref was read.
+    if (!handle || mine !== generation) return;
+    unwatch = files.watch(handle, () => {
+      if (document.visibilityState === 'visible') run();
+    });
+  };
+  const stopWatching = watch(
+    [
+      () => script.project.value?.id,
+      () => script.project.value?.fsHandleId,
+      () => guard.readOnly.value,
+    ],
+    () => void rewatch(),
+    { immediate: true },
+  );
+
   const onVisible = () => {
     if (document.visibilityState === 'visible') run();
   };
@@ -374,5 +404,9 @@ export function installFileCheck(): () => void {
     window.removeEventListener('focus', run);
     document.removeEventListener('visibilitychange', onVisible);
     stop();
+    stopWatching();
+    generation++;
+    unwatch?.();
+    unwatch = undefined;
   };
 }
