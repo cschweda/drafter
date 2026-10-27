@@ -6,6 +6,7 @@ import {
   cueMode,
   type ElementKind,
   elementHint,
+  elementStructure,
   fountain,
   fountainEnter,
   fountainTab,
@@ -13,11 +14,13 @@ import {
   makeElement,
   opensCompletion,
   readsAsName,
+  structureOf,
   withCompletion,
   wrapInBold,
   wrapInItalic,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
+import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apply, BOM, editor, render, run, type } from './helpers';
 
@@ -270,7 +273,7 @@ describe('a selection of whole lines', () => {
 describe('a cue begun from the bar', () => {
   /** Moves the cursor to the end of the text, as a click elsewhere would. */
   const leave = (state: EditorState) =>
-    state.update({ selection: { anchor: state.doc.length } }).state;
+    state.update({ selection: { anchor: state.doc.length }, userEvent: 'select.pointer' }).state;
 
   it('loses its `@` when the name typed reads as a cue', () => {
     let state = apply(editor('She waits.\n\n|'), makeElement('character'));
@@ -447,5 +450,118 @@ describe('withCompletion', () => {
     expect(withCompletion(makeElement('character'))(view)).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(completionStatus(view.state)).toBeNull();
+  });
+});
+
+describe('a stage play (the template’s roles)', () => {
+  const play = builtins['stage-play-standard'] as Template;
+  const screenplay = builtins['us-screenplay'] as Template;
+  const stage = [elementStructure.of(() => structureOf(play))];
+  const on = (marked: string, kind: ElementKind) =>
+    render(apply(editor(marked, stage), makeElement(kind)));
+
+  it('reads acts, scenes, and stage directions from the role map', () => {
+    expect(structureOf(play)).toEqual({
+      actDepth: 1,
+      sceneDepth: 2,
+      headings: false,
+      transitions: false,
+      stageDirections: true,
+    });
+    expect(structureOf(screenplay)).toEqual({
+      actDepth: null,
+      sceneDepth: null,
+      headings: true,
+      transitions: true,
+      stageDirections: false,
+    });
+  });
+
+  it('makes a scene a ## line, and an act a # line', () => {
+    expect(on('|', 'scene_heading')).toBe('## |');
+    expect(on('The kitchen|', 'scene_heading')).toBe('## The kitchen|');
+    expect(on('She waits.\nScene two|', 'scene_heading')).toBe('She waits.\n\n## Scene two|');
+    expect(on('## Scene two|', 'scene_heading')).toBe('## Scene two|');
+    expect(on('# Scene two|', 'scene_heading')).toBe('## Scene two|');
+    expect(on('Act one|', 'act')).toBe('# Act one|');
+    expect(on('|', 'act')).toBe('# |');
+  });
+
+  it('writes no transition, and says why', () => {
+    const state = editor('cut to:|', stage);
+    expect(run(state, makeElement('transition')).handled).toBe(false);
+    expect(elementHint('transition', state)).toMatch(/no transitions/);
+  });
+
+  it('has no acts in a screenplay, and says why', () => {
+    const state = editor('Act one|');
+    expect(run(state, makeElement('act')).handled).toBe(false);
+    expect(elementHint('act', state)).toMatch(/no acts/);
+  });
+
+  it('runs Mod-Alt-1 as a scene there too', () => {
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: '',
+        extensions: fountain({ template: () => play }),
+      }),
+      parent: document.body,
+    });
+    view.dispatch({ selection: { anchor: 0 } });
+    view.contentDOM.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: '1',
+        keyCode: 49,
+        ctrlKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(view.state.sliceDoc()).toBe('## ');
+    view.destroy();
+  });
+
+  it('tells the app why a key did nothing', () => {
+    const hints: string[] = [];
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: 'She waits.',
+        selection: { anchor: 10 },
+        extensions: fountain({ onHint: (message) => hints.push(message) }),
+      }),
+      parent: document.body,
+    });
+    view.contentDOM.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: '4',
+        keyCode: 52,
+        ctrlKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(hints).toEqual([expect.stringMatching(/under a character name/)]);
+    view.destroy();
+  });
+});
+
+describe('a cue begun from the bar and left empty', () => {
+  it('leaves no lone @ behind', () => {
+    let state = apply(editor('She waits.\n\n|'), makeElement('character'));
+    expect(state.sliceDoc()).toBe('She waits.\n\n@');
+    state = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+    expect(state.sliceDoc()).toBe('She waits.\n\n');
+  });
+
+  it('is left alone by a change the app makes', () => {
+    let state = type(apply(editor('She waits.\n\n|'), makeElement('character')), 'bob');
+    // A file put back from disk (no user event) replaces the text; nothing of it is touched.
+    state = state.update({
+      changes: { from: 0, to: state.doc.length, insert: '@BOB\nHi.' },
+      selection: { anchor: 0 },
+    }).state;
+    expect(state.sliceDoc()).toBe('@BOB\nHi.');
   });
 });

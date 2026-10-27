@@ -5,6 +5,7 @@ import {
   type Line,
   StateEffect,
   StateField,
+  Transaction,
 } from '@codemirror/state';
 import { blockAt } from '@drafter/fountain';
 import { insideRegion, parsedDoc, readsAsCue } from './state';
@@ -66,10 +67,17 @@ const dropBarCueMark = EditorState.transactionFilter.of((tr) => {
   const value = tr.startState.field(barCue, false);
   if (value === null || value === undefined) return tr;
   if (tr.effects.some((effect) => effect.is(startBarCue))) return tr;
+  // Only the writer's own move off the line: not a change the app makes (a file put back from
+  // disk, Revert to Saved), which has no user event, nor a replace-all.
+  const event = tr.annotation(Transaction.userEvent);
+  if (!event || event.startsWith('input.replace')) return tr;
   const line = tr.newDoc.lineAt(tr.changes.mapPos(value, -1));
   if (tr.newDoc.lineAt(tr.newSelection.main.head).from === line.from) return tr;
   const mark = /^\s*@/.exec(line.text);
-  if (!mark || !readsAsCue(line.text.slice(mark[0].length).trim())) return tr;
+  if (!mark) return tr;
+  // A cue left with no name at all, a click and nothing typed, leaves no lone `@` behind.
+  const name = line.text.slice(mark[0].length).trim();
+  if (name && !readsAsCue(name)) return tr;
   const at = line.from + mark[0].length - 1;
   return [tr, { changes: { from: at, to: at + 1 }, sequential: true }];
 });

@@ -3,6 +3,7 @@ import {
   type ChangeSpec,
   EditorSelection,
   type EditorState,
+  Facet,
   type Line,
   type StateCommand,
   StateEffect,
@@ -10,7 +11,8 @@ import {
   type TransactionSpec,
 } from '@codemirror/state';
 import type { Command } from '@codemirror/view';
-import { type Block, blockAt, type Doc, reparse } from '@drafter/fountain';
+import { type Block, blockAt, type Doc, parse, reparse } from '@drafter/fountain';
+import { resolveRole, type Template } from '@drafter/templates';
 import { startBarCue, startCue } from './input';
 import { BOM, command, cueIndex, readsAsCue, unmarked } from './keymap';
 import { insideRegion, parsedDoc } from './state';
@@ -24,6 +26,7 @@ import { insideRegion, parsedDoc } from './state';
 
 /** The kinds the element bar makes a line. A page break is `insertPageBreak`. */
 export type ElementKind =
+  | 'act'
   | 'scene_heading'
   | 'action'
   | 'character'
@@ -34,6 +37,77 @@ export type ElementKind =
   | 'lyric'
   | 'section'
   | 'synopsis';
+
+/**
+ * What a template makes of a script's structure, read from its role map: a stage play's acts and
+ * scenes are `#` and `##` sections, its action is stage direction, and it has no scene headings or
+ * transitions (the role map disables them); a screenplay has headings and transitions and no acts.
+ */
+export interface ElementStructure {
+  /** The section depth that is an act heading, or null. */
+  actDepth: number | null;
+  /** The section depth that begins a scene, or null where a scene heading does. */
+  sceneDepth: number | null;
+  /** Whether a scene heading (`INT.`) is an element of the template. */
+  headings: boolean;
+  /** Whether a transition is. */
+  transitions: boolean;
+  /** Whether action prints as stage direction. */
+  stageDirections: boolean;
+}
+
+/** A screenplay's: the structure with no template. */
+export const SCREENPLAY_STRUCTURE: ElementStructure = {
+  actDepth: null,
+  sceneDepth: null,
+  headings: true,
+  transitions: true,
+  stageDirections: false,
+};
+
+/** A block of each kind the structure asks the role map about. */
+const SAMPLE_BLOCKS = (() => {
+  const blocks = parse('# A\n\n## B\n\n### C\n\nINT. D\n\nCUT TO:\n\nE.').blocks;
+  const [one, two, three, heading, transition, action] = blocks as Block[];
+  return { sections: [one, two, three] as Block[], heading, transition, action } as {
+    sections: Block[];
+    heading: Block;
+    transition: Block;
+    action: Block;
+  };
+})();
+
+const structures = new WeakMap<Template, ElementStructure>();
+
+/** The structure a template gives a script, from its role map. Kept for each template. */
+export function structureOf(template: Template): ElementStructure {
+  const known = structures.get(template);
+  if (known) return known;
+  const role = (block: Block) => resolveRole(template, block, null);
+  const depthOf = (wanted: string) => {
+    const index = SAMPLE_BLOCKS.sections.findIndex((block) => role(block) === wanted);
+    return index < 0 ? null : index + 1;
+  };
+  const structure: ElementStructure = {
+    actDepth: depthOf('act_heading'),
+    sceneDepth: depthOf('scene_heading_play'),
+    headings: role(SAMPLE_BLOCKS.heading) !== 'disabled',
+    transitions: role(SAMPLE_BLOCKS.transition) !== 'disabled',
+    stageDirections: role(SAMPLE_BLOCKS.action) === 'stage_direction',
+  };
+  structures.set(template, structure);
+  return structure;
+}
+
+/**
+ * The structure the element commands follow: `fountain({ template })` provides the template's, and
+ * a state without it is a screenplay's. A function, as the template can change.
+ */
+export const elementStructure = Facet.define<() => ElementStructure, () => ElementStructure>({
+  combine: (values) => values[0] ?? (() => SCREENPLAY_STRUCTURE),
+});
+
+const structureIn = (state: EditorState) => state.facet(elementStructure)();
 
 /** Sent by a command that leaves the cursor where completion has something to offer. */
 const askCompletion = StateEffect.define<null>();
@@ -250,7 +324,26 @@ function lineCommand(rule: (h: Here) => LineEdit | null, firstOnly = false): Sta
 
 const ask = () => askCompletion.of(null);
 
-function sceneHeading(h: Here): LineEdit {
+/** A line that is a section of `depth`: an act or a play's scene, set apart like a heading. */
+function sectionLine(h: Here, depth: number): LineEdit {
+  const edge = { above: true, below: true };
+  const block = h.found?.block;
+  if (block?.kind === 'section' && block.sem.depth === depth) return { ...edge, text: h.text };
+  const body = isBlank(h.text) ? '' : bodyOf(h.text);
+  return { ...edge, text: `${'#'.repeat(depth)} ${body}` };
+}
+
+function act(h: Here): LineEdit | null {
+  const { actDepth } = structureIn(h.state);
+  return actDepth === null ? null : sectionLine(h, actDepth);
+}
+
+function sceneHeading(h: Here): LineEdit | null {
+  const structure = structureIn(h.state);
+  // A stage play's scene is a section (`##`); its role map disables INT. headings.
+  if (!structure.headings) {
+    return structure.sceneDepth === null ? null : sectionLine(h, structure.sceneDepth);
+  }
   const edge = { above: true, below: true };
   if (isBlank(h.text)) return { ...edge, text: 'INT. ', effects: [ask()] };
   const body = bodyOf(h.text);
@@ -300,7 +393,8 @@ function action(h: Here): LineEdit | null {
   return { text, above: apart };
 }
 
-function transition(h: Here): LineEdit {
+function transition(h: Here): LineEdit | null {
+  if (!structureIn(h.state).transitions) return null;
   const edge = { above: true, below: true };
   if (isBlank(h.text)) return { ...edge, text: '>', effects: [ask()] };
   const body = bodyOf(h.text);
@@ -435,6 +529,7 @@ export function canMakeParenthetical(state: EditorState): boolean {
 }
 
 const COMMANDS: Record<ElementKind, StateCommand> = {
+  act: lineCommand(act),
   scene_heading: lineCommand(sceneHeading),
   action: lineCommand(action),
   character: lineCommand(character, true),
@@ -523,6 +618,16 @@ export function elementHint(kind: ElementKind | 'page_break', state: EditorState
     }
   }
   if (kind === 'parenthetical' && parenthetical(h) === null) return PARENTHETICAL_HINT;
+  const structure = structureIn(state);
+  if (kind === 'transition' && !structure.transitions) {
+    return 'This script’s template has no transitions: one would print as a stage direction. Write the change as a stage direction instead.';
+  }
+  if (kind === 'act' && structure.actDepth === null) {
+    return 'This script’s template has no acts. A line starting with # is a section, for your outline.';
+  }
+  if (kind === 'scene_heading' && !structure.headings && structure.sceneDepth === null) {
+    return 'This script’s template has no scene headings.';
+  }
   if (kind === 'action' && block?.kind === 'page_break') {
     return 'A page break has no words to make action of.';
   }

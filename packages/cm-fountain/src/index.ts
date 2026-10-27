@@ -4,12 +4,16 @@ export { type CursorElement, cursorElement, onCursorElement } from './cursor';
 export {
   canMakeParenthetical,
   type ElementKind,
+  type ElementStructure,
   elementHint,
+  elementStructure,
   insertPageBreak,
   makeElement,
   opensCompletion,
   PARENTHETICAL_HINT,
   readsAsName,
+  SCREENPLAY_STRUCTURE,
+  structureOf,
   withCompletion,
 } from './elements';
 export { fountainFolding } from './fold';
