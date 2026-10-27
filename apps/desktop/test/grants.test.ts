@@ -7,6 +7,7 @@ import {
   mkdtemp,
   readFile,
   realpath,
+  rename,
   rm,
   symlink,
   unlink,
@@ -118,6 +119,59 @@ describe('what a page may read and write', () => {
     expect(await codeOf(handlers.read(event, join(dir, 'missing.fountain')))).toBe('not-allowed');
   });
 
+  test('grants a dropped or named file by its real type, not the name of the link to it', async () => {
+    if (!posix) return;
+    const { handlers, event } = setUp();
+    const key = join(dir, 'id_ed25519');
+    await writeFile(key, 'PRIVATE KEY');
+    const photo = join(dir, 'photo.jpg');
+    await writeFile(photo, 'JPEG');
+    const script = join(dir, 'Real.fountain');
+    await writeFile(script, 'REAL');
+    // Names that look like scripts, leading elsewhere.
+    const toKey = join(dir, 'notes.md');
+    const toPhoto = join(dir, 'notes.txt');
+    const toKeyViaLink = join(dir, 'twice.fountain');
+    await symlink(key, toKey);
+    await symlink(photo, toPhoto);
+    await symlink(toKey, toKeyViaLink);
+    // A link to a script is a script.
+    const toScript = join(dir, 'Link.fountain');
+    await symlink(script, toScript);
+
+    for (const link of [toKey, toPhoto, toKeyViaLink]) {
+      void handlers.grantDropped(event, link);
+      expect(await codeOf(handlers.read(event, link)), link).toBe('not-allowed');
+      expect(await codeOf(handlers.grantScript(link)), link).toBe('not-allowed');
+    }
+    expect(await codeOf(handlers.read(event, key))).toBe('not-allowed');
+    void handlers.grantDropped(event, toScript);
+    expect((await handlers.read(event, toScript)).bytes).toEqual(bytes('REAL'));
+  });
+
+  test('keeps the grants of a folder that is not there (a drive not mounted), until the file is', async () => {
+    const drive = join(dir, 'drive');
+    await mkdir(drive);
+    const file = join(drive, 'On Drive.fountain');
+    await writeFile(file, 'ON DRIVE');
+    const first = setUp([file]);
+    await first.handlers.showOpen(first.event);
+    // Unmounted at the next start.
+    const away = join(dir, 'drive-away');
+    await rename(drive, away);
+    const second = setUp();
+    expect(await codeOf(second.handlers.read(second.event, file))).toBe('gone');
+    await rename(away, drive);
+    expect((await second.handlers.read(second.event, file)).bytes).toEqual(bytes('ON DRIVE'));
+    // Gone from a folder that is there, it is dropped at the next start, and not revived.
+    await unlink(file);
+    const third = setUp();
+    // (The list is read at the first use; by then the file is not there.)
+    expect(await codeOf(third.handlers.read(third.event, file))).toBe('not-allowed');
+    await writeFile(file, 'PLANTED');
+    expect(await codeOf(third.handlers.read(third.event, file))).toBe('not-allowed');
+  });
+
   test('remembers what was chosen across a restart, and forgets files that are gone', async () => {
     const kept = join(dir, 'Kept.md');
     const gone = join(dir, 'Gone.md');
@@ -193,6 +247,37 @@ describe('what a page may read and write', () => {
       'not-allowed',
     );
     expect(await readFile(join(elsewhere, 'In.fountain'), 'utf8')).toBe('OTHER');
+  });
+
+  test('listens for a page’s end once, however often it reloads', async () => {
+    const file = join(dir, 'Watched.fountain');
+    await writeFile(file, 'WATCHED');
+    const { handlers } = setUp([file]);
+    const listeners = { once: 0, on: 0 };
+    const navigated: (() => void)[] = [];
+    const sender = {
+      isDestroyed: () => false,
+      send: () => {},
+      once: () => {
+        listeners.once += 1;
+        return sender;
+      },
+      on: (_event: string, listener: () => void) => {
+        listeners.on += 1;
+        navigated.push(listener);
+        return sender;
+      },
+    };
+    const event = { sender } as unknown as FileEvent;
+    await handlers.showOpen(event);
+    for (let reload = 0; reload < 15; reload += 1) {
+      await handlers.watch(event, 1, file);
+      for (const listener of navigated) listener();
+    }
+    expect(listeners.once).toBe(1);
+    expect(listeners.on).toBe(1);
+    await handlers.watch(event, 1, file);
+    await handlers.unwatch(event, 1);
   });
 
   test('writes only scripts and exports, even when chosen', async () => {

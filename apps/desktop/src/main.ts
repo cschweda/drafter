@@ -4,9 +4,10 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { app, type BrowserWindow, dialog, ipcMain, protocol, session } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
+import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { refuseNetwork } from './network';
-import { OpenInbox, refusalMessage, requestsFromArgs } from './open-files';
+import { NOT_A_SCRIPT, OpenInbox, refusalMessage, requestsFromArgs } from './open-files';
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
 import { type Spellcheck, setUpSpellcheck } from './spellcheck';
@@ -98,8 +99,12 @@ function start() {
           try {
             await files.grant(path);
             inbox.add({ path });
-          } catch {
-            refused.push({ name: basename(path), reason: 'it can’t be read' });
+          } catch (error) {
+            const notScript = error instanceof FileError && error.code === 'not-allowed';
+            refused.push({
+              name: basename(path),
+              reason: notScript ? NOT_A_SCRIPT : 'it can’t be read',
+            });
           }
         }
         // After the files: opening one clears the status bar's message.

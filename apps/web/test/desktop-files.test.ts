@@ -124,6 +124,49 @@ describe('desktopFiles', () => {
     );
   });
 
+  test('opens a file that is not a script’s type unbound, and says why', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    put(fake, '/home/w/Mail/letter.rtf', 'LETTER');
+    fake.answers.push('/home/w/Mail/letter.rtf');
+    const picked = await files.pickToOpen();
+    expect(picked).toMatchObject({ ref: null, name: 'letter.rtf' });
+    expect(picked?.notice).toBe(
+      '“letter.rtf” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.',
+    );
+    // A script's name over something else (a link), too: judged by where it leads.
+    put(fake, '/home/w/key', 'KEY');
+    fake.realPaths.set('/home/w/notes.md', '/home/w/key');
+    const linked = await files.fromPath?.('/home/w/notes.md');
+    expect(linked?.ref).toBeNull();
+    expect(linked?.notice).toContain('“notes.md”');
+    // A script is bound, with no notice.
+    put(fake, '/home/w/Door.fountain', 'DOOR');
+    const script = await files.fromPath?.('/home/w/Door.fountain');
+    expect(script?.ref).toEqual({ name: 'Door.fountain', path: '/home/w/Door.fountain' });
+    expect(script?.notice).toBeUndefined();
+  });
+
+  test('says whether it was reading or writing that was not allowed', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    const ref = { name: 'Door.fountain', path: '/home/w/Door.fountain' };
+    fake.bridge.read = async () => {
+      throw new Error('not-allowed: not chosen');
+    };
+    fake.bridge.write = async () => {
+      throw new Error('not-allowed: not chosen');
+    };
+    await expect(files.read(ref)).rejects.toMatchObject({
+      name: 'NotAllowedError',
+      message: 'Drafter isn’t allowed to read that file.',
+    });
+    await expect(files.write(ref, 'x')).rejects.toMatchObject({
+      name: 'NotAllowedError',
+      message: 'Drafter isn’t allowed to write that file.',
+    });
+  });
+
   test('saves in place, always with permission', async () => {
     const files = desktopFiles(fakeBridge().bridge);
     expect(files.canSaveInPlace).toBe(true);

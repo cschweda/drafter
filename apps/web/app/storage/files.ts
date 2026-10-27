@@ -20,6 +20,8 @@ export interface PickedFile {
   name: string;
   bytes: Uint8Array;
   lastModified: number;
+  /** Said in the status bar after the file opens (the desktop app: why it is not tied to its file). */
+  notice?: string;
 }
 
 /** The file was moved or deleted, or its drive is gone. */

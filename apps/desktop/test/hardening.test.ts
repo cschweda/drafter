@@ -49,7 +49,7 @@ function fakeSession() {
 
 describe('permissions', () => {
   test('allows the app only what it uses, and nothing to anyone else', () => {
-    for (const permission of ['persistent-storage', 'clipboard-sanitized-write']) {
+    for (const permission of ['persistent-storage']) {
       expect(allowsPermission(permission, 'app://drafter/'), permission).toBe(true);
       expect(allowsPermission(permission, 'app://drafter'), permission).toBe(true);
       expect(allowsPermission(permission, 'https://example.com/'), permission).toBe(false);
@@ -66,6 +66,7 @@ describe('permissions', () => {
       'fullscreen',
       'openExternal',
       'clipboard-read',
+      'clipboard-sanitized-write',
       'display-capture',
       'idle-detection',
       'window-management',
@@ -105,7 +106,8 @@ describe('permissions', () => {
     expect(check({}, 'notifications', 'app://drafter', { requestingUrl: 'app://drafter/' })).toBe(
       false,
     );
-    expect(check({}, 'clipboard-sanitized-write', 'app://drafter', {})).toBe(true);
+    expect(check({}, 'clipboard-sanitized-write', 'app://drafter', {})).toBe(false);
+    expect(check({}, 'persistent-storage', 'app://drafter', {})).toBe(true);
     expect((handlers.device as () => boolean)()).toBe(false);
 
     let display: unknown = 'unanswered';

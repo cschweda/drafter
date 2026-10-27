@@ -6,16 +6,26 @@
 //   - the preload hands over a dropped file's path (`webUtils.getPathForFile`: a page can't make a
 //     File with a path on disk) and it is an existing script;
 //   - the command line or a second launch names it (Task 3, through `grant`).
+// A dropped or named file is a script by where it leads, not by its name: a link `x.md` to a
+// private key has the name of a script and is refused (the real path's extension is checked, and
+// recorded, in one step). A file the writer picked in a dialog is theirs whatever its kind.
+//
+// What this does not stop: main cannot tell that a drop came from a person. The preload runs in
+// the renderer's process, so a compromised renderer could call the drop channel itself and be
+// granted any script, Markdown, or text file (and any link leading to one) that the writer's own
+// account can read. That is accepted: it takes a compromised renderer to begin with (the CSP, the
+// absence of v-html, and the network block make that hard), and only script-type files are within
+// reach, never ~/.ssh or ~/.bashrc.
 // Each grant records the file's real path (every link followed). Every use works the real path
 // out again and refuses if it changed: a chosen file swapped for a link to another (or a folder on
 // its way swapped for one) is not the file the writer chose.
 //
 // Grants are kept in a JSON file in the profile, so a script bound to its file still saves after a
-// restart. The list is capped (the oldest go first), and entries whose file is gone are dropped
-// when it is read.
+// restart. The list is capped (the oldest go first), and entries whose file is gone from a folder
+// that is there are dropped when it is read (a drive that isn't mounted keeps its grants).
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
-import { checkPath, FileError, targetOf, writeAtomic } from './files';
+import { checkPath, FileError, hasExtension, targetOf, writeAtomic } from './files';
 
 interface Grant {
   /** The path as the page knows it (absolute, resolved). */
@@ -62,7 +72,8 @@ export class Grants {
     let dropped = false;
     for (const entry of listed) {
       // A file that is gone is no longer the writer's: whatever appears there later isn't either.
-      if (!isGrant(entry) || !existsSync(entry.real)) {
+      // But if its folder is gone too (a drive or share not mounted yet), it may come back as it was.
+      if (!isGrant(entry) || (!existsSync(entry.real) && existsSync(dirname(entry.real)))) {
         dropped = true;
         continue;
       }
@@ -86,10 +97,16 @@ export class Grants {
     return this.#saving;
   }
 
-  /** Grants `path` (an absolute path); resolves with it as the page should use it. */
-  async grant(path: string): Promise<string> {
+  /**
+   * Grants `path` (an absolute path); resolves with it as the page should use it. With
+   * `extensions`, the real path (every link followed) must end in one of them, else `not-allowed`.
+   */
+  async grant(path: string, extensions?: readonly string[]): Promise<string> {
     const key = resolve(checkPath(path));
     const real = await targetOf(key);
+    if (extensions && !hasExtension(real, extensions)) {
+      throw new FileError('not-allowed', 'not a script');
+    }
     const entries = this.#load();
     entries.delete(key);
     entries.set(key, { path: key, real });

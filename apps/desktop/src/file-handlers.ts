@@ -20,6 +20,7 @@ import {
   SCRIPT_EXTENSIONS,
   saveTarget,
   startFolder,
+  targetOf,
   WRITE_EXTENSIONS,
   watchFile,
   writeAtomic,
@@ -103,13 +104,19 @@ export function fileHandlers(deps: FileHandlerDeps) {
   async function grantScript(path: unknown): Promise<string> {
     const file = checkPath(path);
     if (!hasExtension(file, SCRIPT_EXTENSIONS)) throw new FileError('not-allowed', 'not a script');
+    // By where it leads, too: a link named `x.md` to a private key is not a script. (`grant`
+    // checks the real path again as it records it, so a swap in between is caught.)
+    if (!hasExtension(await targetOf(file), SCRIPT_EXTENSIONS)) {
+      throw new FileError('not-allowed', 'not a script');
+    }
     // Read once to be sure it is a regular file the writer can read (not a folder, a FIFO).
     await readFileAt(file);
-    return grants.grant(file);
+    return grants.grant(file, SCRIPT_EXTENSIONS);
   }
 
   // Watches, by page: each stops when the page asks, reloads, or goes.
   const watches = new Map<FileSender, Map<number, () => void>>();
+  const hooked = new WeakSet<FileSender>();
   const stopAll = (sender: FileSender) => {
     for (const stop of watches.get(sender)?.values() ?? []) stop();
     watches.delete(sender);
@@ -119,6 +126,10 @@ export function fileHandlers(deps: FileHandlerDeps) {
     if (!mine) {
       mine = new Map();
       watches.set(sender, mine);
+    }
+    // Once per page, however often it reloads: each reload forgets its watches but not the page.
+    if (!hooked.has(sender)) {
+      hooked.add(sender);
       sender.once('destroyed', () => stopAll(sender));
       sender.on('did-navigate', () => stopAll(sender));
     }
@@ -172,7 +183,9 @@ export function fileHandlers(deps: FileHandlerDeps) {
         if (!hasExtension(real, WRITE_EXTENSIONS)) {
           throw new FileError('not-allowed', 'not a script');
         }
-        // The real path, so no link is followed between the check and the write.
+        // The real path as just worked out, so a link put in place after the file was chosen
+        // can't redirect the write. (A swap in the instant between this check and the rename is
+        // not guarded against: it takes another program running as the writer.)
         await writeAtomic(real, data);
       }),
 

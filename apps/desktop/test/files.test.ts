@@ -13,6 +13,7 @@ import {
   rm,
   stat,
   symlink,
+  utimes,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -94,6 +95,39 @@ describe('writeAtomic', () => {
     await writing;
     expect(await readFile(file, 'utf8')).toBe('NEW TEXT\n');
     expect(await temps()).toEqual([]);
+  });
+
+  test('saves a file with a very long name', async () => {
+    // 80 CJK characters: 240 bytes, which leaves no room beside it for a temp file's own name.
+    const name = `${'脚'.repeat(76)}.fountain`;
+    expect(Buffer.byteLength(name)).toBeGreaterThan(230);
+    const file = join(dir, name);
+    await writeFile(file, 'OLD');
+    await writeAtomic(file, bytes('NEW'));
+    expect(await readFile(file, 'utf8')).toBe('NEW');
+    expect(await temps()).toEqual([]);
+    // And a name at the limit, new.
+    const longest = `${'a'.repeat(251)}.md`;
+    expect(Buffer.byteLength(longest)).toBe(254);
+    await writeAtomic(join(dir, longest), bytes('X'));
+    expect(await readFile(join(dir, longest), 'utf8')).toBe('X');
+  });
+
+  test('clears the temp files an interrupted write left, once one succeeds', async () => {
+    const file = join(dir, 'The Call.fountain');
+    await writeFile(file, 'OLD');
+    const old = new Date(Date.now() - 10 * 60_000);
+    const stale = join(dir, '.The Call.fountain.drafter-tmp-0123456789ab');
+    const fresh = join(dir, '.The Call.fountain.drafter-tmp-ba9876543210');
+    const others = join(dir, '.Other.fountain.drafter-tmp-0123456789ab');
+    const lookalike = join(dir, '.The Call.fountain.drafter-tmp-notours');
+    for (const path of [stale, fresh, others, lookalike]) await writeFile(path, 'LEFT');
+    for (const path of [stale, others, lookalike]) await utimes(path, old, old);
+    await writeAtomic(file, bytes('NEW'));
+    expect((await temps()).sort()).toEqual(
+      [fresh, others, lookalike].map((path) => path.slice(dir.length + 1)).sort(),
+    );
+    expect(await readFile(file, 'utf8')).toBe('NEW');
   });
 
   test('writes a new file', async () => {

@@ -149,6 +149,7 @@ export async function openFile(file: PickedFile): Promise<void> {
       return;
     }
     if (!openError.value) useEditor().view.focus();
+    if (file.notice) await say(openError, file.notice);
   } catch {
     await say(openError, MESSAGES.failed);
   }

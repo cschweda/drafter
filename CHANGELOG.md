@@ -18,6 +18,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: a save that fails for a reason the system gives says it: "Couldn’t save the file: the disk is full. The file on disk is as it was." (the desktop app).
 - `apps/desktop`: **open scripts from your file manager or the command line** (Phase 1 Plan 6, Task 3). `drafterdev Script.fountain` (or double-clicking a script, once the app is installed) opens the file in the Drafter window, which comes forward; starting Drafter again while it runs hands the files to the window that is open instead of starting a second one. A file that is already open is shown, not opened twice (links to it count), and the script you had on show is kept as it is when you choose Open. A file that isn’t a script, or isn’t there, is said in the status bar: “Drafter can’t open “x.png”: it isn’t a script.” macOS’s open-file event is wired for the macOS build.
 
+### Fixed
+
+- `apps/desktop`: **a dropped or named file is judged by where it leads**, not by its name: a link called `notes.md` that points at a private file is no longer opened (it was the way past the “only scripts” rule).
+- `apps/desktop`: a script with a very long name (about 230 bytes, such as 80 Chinese characters) saves; leftover temp files from a write that was interrupted are cleared by the next save of that file; grants for files on a drive that isn’t mounted at launch are kept; copying no longer asks for a permission nothing needs.
+- `apps/desktop`: a file you open as “All files” that isn’t a script type (`letter.rtf`) opens as a new script, with a note saying so, instead of failing to save every time; an unreadable file says “read”, not “write”.
+
 ## [0.3.0] - 2026-10-26
 
 **Writing aids, a welcome, and help.** Phase 1's web app, apart from the final accessibility pass:

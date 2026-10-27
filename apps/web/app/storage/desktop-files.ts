@@ -60,7 +60,10 @@ function translate(error: unknown, doing: 'reading' | 'writing'): unknown {
     case 'gone':
       return new FileGoneError();
     case 'not-allowed':
-      return new DOMException('Drafter isn’t allowed to write that file.', 'NotAllowedError');
+      return new DOMException(
+        `Drafter isn’t allowed to ${doing === 'reading' ? 'read' : 'write'} that file.`,
+        'NotAllowedError',
+      );
     case 'disk-full':
       return new FileProblemError('the disk is full');
     case 'too-big':
@@ -73,6 +76,9 @@ function translate(error: unknown, doing: 'reading' | 'writing'): unknown {
       );
   }
 }
+
+/** The files the desktop app saves in place (apps/desktop/src/files.ts `SCRIPT_EXTENSIONS`). */
+const SCRIPT_EXTENSION = /\.(?:fountain|md|markdown|txt)$/i;
 
 const encode = (data: string | Uint8Array) =>
   typeof data === 'string' ? new TextEncoder().encode(data) : data;
@@ -96,7 +102,25 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
 
   async function picked(path: string): Promise<PickedFile> {
     const ref = refOf(path);
-    return { ref, name: ref.name, ...(await read(path)) };
+    const file = await read(path);
+    // The desktop app writes only scripts (the real file's type, links followed). Anything else the
+    // writer opened ("All files") becomes a new script with its text, tied to no file, so Save
+    // asks where to put it instead of failing every time.
+    let real = path;
+    try {
+      real = await bridge.realPath(path);
+    } catch {
+      // Judged by its own name.
+    }
+    if (!SCRIPT_EXTENSION.test(real)) {
+      return {
+        ref: null,
+        name: ref.name,
+        ...file,
+        notice: `“${ref.name}” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.`,
+      };
+    }
+    return { ref, name: ref.name, ...file };
   }
 
   return {

@@ -21,6 +21,7 @@ import {
   type FileHandle,
   lstat,
   open,
+  readdir,
   readFile,
   readlink,
   realpath,
@@ -172,9 +173,53 @@ async function* chunksOf(data: Bytes): AsyncIterable<Uint8Array> {
   else yield* data;
 }
 
+const TEMP_MARK = '.drafter-tmp-';
+/** A file name is at most 255 bytes: a dot, the name's start, the mark, and 12 hex digits. */
+const MAX_TEMP_BASE_BYTES = 255 - 1 - TEMP_MARK.length - 12;
+/** A temp file older than this is left from a write that never finished. */
+const STALE_TEMP_MS = 60_000;
+
+/** The start of `name`, whole characters, in at most `bytes` bytes of UTF-8. */
+function truncateBytes(name: string, bytes: number): string {
+  let used = 0;
+  let out = '';
+  for (const char of name) {
+    const size = Buffer.byteLength(char);
+    if (used + size > bytes) break;
+    used += size;
+    out += char;
+  }
+  return out;
+}
+
+/** What every temp file of writes to `target` starts with (the name cut so the whole fits). */
+const tempPrefix = (target: string) =>
+  `.${truncateBytes(basename(target), MAX_TEMP_BASE_BYTES)}${TEMP_MARK}`;
+
+/** Removes the temp files writes to `target` left long ago (the app was killed mid-write). */
+async function sweepTemps(folder: string, target: string): Promise<void> {
+  try {
+    const prefix = tempPrefix(target);
+    const pattern = /^[0-9a-f]{12}$/;
+    for (const name of await readdir(folder)) {
+      if (!name.startsWith(prefix) || !pattern.test(name.slice(prefix.length))) continue;
+      const path = join(folder, name);
+      try {
+        const info = await lstat(path);
+        if (info.isFile() && Date.now() - info.mtimeMs > STALE_TEMP_MS)
+          await rm(path, { force: true });
+      } catch {
+        // Gone already, or not ours to remove.
+      }
+    }
+  } catch {
+    // The sweep is a courtesy; the write has succeeded.
+  }
+}
+
 /**
  * Replaces the file at `path` with `data`, atomically: the bytes go to `.<name>.drafter-tmp-<hex>`
- * in the same folder, are flushed to disk, and the temp file is renamed over the file (then the
+ * in the same folder (its name cut to fit if the file's is very long), are flushed to disk, and the temp file is renamed over the file (then the
  * folder is flushed, where the OS supports it). The file keeps its permissions. If anything fails
  * (the folder is read-only, the disk is full, the bytes stop coming) the temp file is removed and
  * the file is as it was. A file made read-only is refused, not replaced.
@@ -198,7 +243,7 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
     if (mode !== undefined) await access(target, constants.W_OK);
 
     const folder = dirname(target);
-    temp = join(folder, `.${basename(target)}.drafter-tmp-${randomBytes(6).toString('hex')}`);
+    temp = join(folder, `${tempPrefix(target)}${randomBytes(6).toString('hex')}`);
     // `wx`: never an existing file. A new file gets the usual permissions (0666 less the umask).
     handle = await open(temp, 'wx', mode ?? 0o666);
     // The umask applied to `open`'s mode; the file's own permissions are put back exactly.
@@ -210,6 +255,7 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
     await rename(temp, target);
     temp = undefined;
     await syncFolder(folder);
+    await sweepTemps(folder, target);
   } catch (error) {
     await handle?.close().catch(() => {});
     if (temp) await rm(temp, { force: true }).catch(() => {});
