@@ -59,7 +59,9 @@ export async function closeDialog(
   parent?: BrowserWindow | null,
 ): Promise<CloseChoice> {
   const text: DialogText =
-    'title' in about ? closeDialogText(about.title, about.recoverable) : unresponsiveDialogText();
+    'title' in about
+      ? closeDialogText(about.title, about.recoverable)
+      : unresponsiveDialogText(about.recoverable);
   const choices: CloseChoice[] =
     'title' in about ? ['save', 'discard', 'cancel'] : ['discard', 'cancel'];
   const hook = closeHook();

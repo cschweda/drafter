@@ -30,8 +30,13 @@ export interface ClosePage {
   flush(): Promise<void>;
 }
 
-/** What a dialog is about: a script with changes, or a page that isn't answering. */
-export type CloseAbout = { title: string; recoverable: boolean } | { unresponsive: true };
+/**
+ * What a dialog is about: a script with changes, or a page that isn't answering (with whether its
+ * recovery copy worked when it last said, false if it never has, so nothing missing is promised).
+ */
+export type CloseAbout =
+  | { title: string; recoverable: boolean }
+  | { unresponsive: true; recoverable: boolean };
 
 export interface CloseDeps {
   /** The editor's page, or null when there is none to ask (no window, crashed, not up yet). */
@@ -82,6 +87,8 @@ export class CloseFlow {
   /** Ends the Save in progress with a verdict about the page (set while saving). */
   private abortSave: ((result: 'unresponsive') => void) | null = null;
   private probing = false;
+  /** What the page last said about its recovery copy (false until it says). */
+  private recoverable = false;
 
   constructor(private readonly deps: CloseDeps) {}
 
@@ -123,7 +130,8 @@ export class CloseFlow {
       const page = this.deps.page();
       if (!page) return;
       const state = await within(page.state(), this.deps.askMs ?? ASK_MS);
-      if (state === TIMED_OUT && this.phase === 'saving') this.abortSave?.('unresponsive');
+      if (state !== TIMED_OUT) this.recoverable = state.recoverable;
+      else if (this.phase === 'saving') this.abortSave?.('unresponsive');
     } finally {
       this.probing = false;
     }
@@ -146,11 +154,12 @@ export class CloseFlow {
     const state = await within(page.state(), this.deps.askMs ?? ASK_MS);
     if (state === TIMED_OUT) {
       // The page can't say what it holds, so it can't be asked to save: only leave or stay.
-      const choice = await this.choose({ unresponsive: true });
+      const choice = await this.choose({ unresponsive: true, recoverable: this.recoverable });
       if (choice !== 'discard') return 'stay';
       await this.flush();
       return 'close';
     }
+    this.recoverable = state.recoverable;
     if (!state.unsaved) {
       await this.flush();
       return 'close';
@@ -163,7 +172,7 @@ export class CloseFlow {
       if (result === 'gone') return 'stay';
       if (result === 'unresponsive') {
         // The page hung mid-Save: like one that doesn't answer at all, only leave or stay.
-        const leave = await this.choose({ unresponsive: true });
+        const leave = await this.choose({ unresponsive: true, recoverable: this.recoverable });
         if (leave !== 'discard') return 'stay';
         await this.flush();
         return 'close';
@@ -242,11 +251,13 @@ export function closeDialogText(title: string, recoverable = true): DialogText {
   };
 }
 
-export function unresponsiveDialogText(): DialogText {
+/** `recoverable`: the page's recovery copy worked when it last said (else none is promised). */
+export function unresponsiveDialogText(recoverable = false): DialogText {
   return {
     message: 'Drafter isn’t responding.',
-    detail:
-      "Closing now may lose the last few seconds of typing. The rest stays in Drafter's recovery copy.",
+    detail: recoverable
+      ? "Closing now may lose the last few seconds of typing. The rest stays in Drafter's recovery copy."
+      : "Closing now may lose changes that are in no file: Drafter can't say whether its recovery copy has them.",
     buttons: ["Don't Save", 'Cancel'],
     defaultId: 1,
     cancelId: 1,

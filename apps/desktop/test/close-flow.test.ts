@@ -144,7 +144,7 @@ describe('a page that does not answer', () => {
   test("says so and offers only Don't Save and Cancel", async () => {
     const { flow, dialog } = rig({ state: () => new Promise(() => {}) }, 'cancel');
     expect(await flow.decide('close')).toBe('stay');
-    expect(dialog).toHaveBeenCalledWith({ unresponsive: true });
+    expect(dialog).toHaveBeenCalledWith({ unresponsive: true, recoverable: false });
   });
 
   test("Don't Save closes anyway", async () => {
@@ -166,19 +166,36 @@ describe('a page that does not answer', () => {
     slow.resolve({ unsaved: true, title: 'x', recoverable: true });
     expect(await result).toBe('close');
     expect(dialog).toHaveBeenCalledTimes(1);
-    expect(dialog).toHaveBeenCalledWith({ unresponsive: true });
+    expect(dialog).toHaveBeenCalledWith({ unresponsive: true, recoverable: false });
+  });
+
+  test('carries what the page last said about its recovery copy', async () => {
+    let answers = 0;
+    const page: Partial<ClosePage> = {
+      state: () => {
+        answers++;
+        return answers === 1
+          ? Promise.resolve({ unsaved: false, title: 'x', recoverable: true })
+          : new Promise(() => {});
+      },
+    };
+    const { flow, dialog } = rig(page, 'cancel');
+    // A first close the page answers (nothing unsaved, so it closes), then one it doesn't.
+    expect(await flow.decide('close')).toBe('close');
+    expect(await flow.decide('close')).toBe('stay');
+    expect(dialog).toHaveBeenCalledWith({ unresponsive: true, recoverable: true });
   });
 
   test('a page whose state call fails is treated the same', async () => {
     const { flow, dialog } = rig({ state: () => Promise.reject(new Error('boom')) }, 'cancel');
     expect(await flow.decide('close')).toBe('stay');
-    expect(dialog).toHaveBeenCalledWith({ unresponsive: true });
+    expect(dialog).toHaveBeenCalledWith({ unresponsive: true, recoverable: false });
   });
 });
 
 describe('a page that hangs while saving', () => {
   /** A rig whose page never finishes Save; `trouble` plays the window's own events. */
-  function hung(choice: CloseChoice) {
+  function hung(choice: CloseChoice, recoverable = true) {
     const calls: string[] = [];
     let trouble: (kind: 'unresponsive' | 'gone') => void = () => {};
     let watching = 0;
@@ -189,7 +206,7 @@ describe('a page that hangs while saving', () => {
       return dialog.mock.calls.length === 1 ? ('save' as CloseChoice) : choice;
     });
     const page: ClosePage = {
-      state: async () => ({ unsaved: true, title: 'The Call', recoverable: true }),
+      state: async () => ({ unsaved: true, title: 'The Call', recoverable }),
       save: () => new Promise<boolean>(() => {}),
       flush: async () => {
         calls.push('flush');
@@ -235,9 +252,18 @@ describe('a page that hangs while saving', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     r.trouble('unresponsive');
     expect(await result).toBe('close');
-    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true });
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true, recoverable: true });
     expect(r.calls).toEqual(['dialog', 'dialog', 'flush']);
     expect(r.counts()).toEqual({ watching: 1, unwatched: 1 });
+  });
+
+  test('with no recovery copy, that box doesn’t promise one (the last answer is carried)', async () => {
+    const r = hung('cancel', false);
+    const result = r.flow.decide('close');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    r.trouble('unresponsive');
+    expect(await result).toBe('stay');
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true, recoverable: false });
   });
 
   test('Cancel in that box stays, and the flow can run again', async () => {
@@ -290,7 +316,7 @@ describe('a second close while a Save hangs', () => {
     // The title bar's close button again: the page is probed.
     expect(await r.flow.decide('close')).toBe('stay');
     expect(r.asked()).toBe(2);
-    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true });
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true, recoverable: true });
     // Don't Save in that box ends the first request, which closes.
     expect(await first).toBe('close');
   });
@@ -300,7 +326,7 @@ describe('a second close while a Save hangs', () => {
     const first = r.flow.decide('close');
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(await r.flow.decide('quit')).toBe('stay');
-    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true });
+    expect(r.dialog).toHaveBeenLastCalledWith({ unresponsive: true, recoverable: true });
     expect(await first).toBe('stay');
   });
 
@@ -436,12 +462,20 @@ describe('what the dialogs say', () => {
   });
 
   test('says when the page is not responding, and offers no Save', () => {
-    const text = unresponsiveDialogText();
+    const text = unresponsiveDialogText(true);
     expect(text.message).toMatch(/isn.t responding/i);
     expect(text.buttons).toEqual(["Don't Save", 'Cancel']);
     expect(text.buttons[text.defaultId]).toBe('Cancel');
     expect(text.buttons[text.cancelId]).toBe('Cancel');
     expect(text.detail).toMatch(/recovery copy/);
+  });
+
+  test('without a recovery copy (or no word of one) promises none', () => {
+    const text = unresponsiveDialogText(false);
+    expect(text.buttons).toEqual(["Don't Save", 'Cancel']);
+    expect(text.detail).not.toMatch(/stays in Drafter's recovery copy/);
+    expect(text.detail).toMatch(/may lose/);
+    expect(unresponsiveDialogText(true).detail).toMatch(/stays in Drafter's recovery copy/);
   });
 });
 
