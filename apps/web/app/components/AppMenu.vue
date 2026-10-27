@@ -105,9 +105,10 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-txt': 'i-lucide-file-type',
 };
 
-// Help: the group at the end of the menu. Take the tour is first (always on), then the three help pages
+// Help: the group at the end of the menu. Take the tour is first (always on), then the help pages
 // (each opens in a new tab, and is named by the page's title under the Help label); Reset sample is last (off unless a sample is open).
 const HELP_ICONS: Record<string, string> = {
+  'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
   'help-shortcuts': 'i-lucide-keyboard',
   'help-privacy': 'i-lucide-shield-check',
@@ -143,7 +144,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],
   exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
-  entry('settings', 'i-lucide-settings'),
+  [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
   helpItems.value,
 ]);
 

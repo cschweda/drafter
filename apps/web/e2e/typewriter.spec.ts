@@ -99,7 +99,20 @@ test.describe('typewriter scrolling', () => {
   });
 
   test('leaves the opening lines at the top, with no room above the text', async ({ page }) => {
-    const before = await offCenter(page, 'first');
+    // Where the Source pane is scrolled once it has settled (a phone lays the pane out late).
+    const settled = async () => {
+      let last = Number.NaN;
+      await expect
+        .poll(async () => {
+          const now = await scroller(page).evaluate((el) => el.scrollTop);
+          const same = now === last;
+          last = now;
+          return same;
+        })
+        .toBe(true);
+      return last;
+    };
+    const before = await settled();
     await turnOn(page);
     // Two frames, so the room around the text has been measured and written.
     await page.evaluate(
@@ -111,9 +124,7 @@ test.describe('typewriter scrolling', () => {
         () => document.querySelector<HTMLElement>('.cm-content')?.style.paddingTop,
       ),
     ).toBe('');
-    expect(
-      Math.abs(((await offCenter(page, 'first'))?.off ?? 0) - (before?.off ?? 0)),
-    ).toBeLessThanOrEqual(1);
+    expect(Math.abs((await settled()) - before)).toBeLessThanOrEqual(1);
     await typeLines(page, 60);
     await page.keyboard.press('ControlOrMeta+Home');
     await expect

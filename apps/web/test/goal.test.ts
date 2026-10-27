@@ -60,6 +60,8 @@ describe('a daily goal', () => {
     // The day's start is what the script held when it was first seen today, kept per script and date.
     expect(await rows()).toEqual({ 'day:p1:2026-10-26': { pages: 10, words: 1000 } });
     expect(store.progress.value).toBeNull(); // no goal yet
+    // The writing stats measure the day from the same start.
+    expect(store.dayStart.value).toEqual({ pages: 10, words: 1000 });
 
     await store.setGoal({ unit: 'words', target: 1000 });
     expect(store.progress.value).toEqual({ done: 0, target: 1000, unit: 'words' });

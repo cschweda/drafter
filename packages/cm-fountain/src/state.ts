@@ -38,3 +38,12 @@ export function insideRegion(doc: Doc, pos: number): boolean {
   // An unclosed boneyard runs to the end of the text, which is still inside it.
   return !!region && region.span.from < pos && (pos < region.span.to || !region.closed);
 }
+
+/**
+ * Whether the parser would read a line as a cue if a line of speech followed it (rule 12). A lone
+ * cue is action to the parser, so a cue the writer has just typed can't be told from the parse of
+ * the script alone. The parser decides here too, on the line by itself, so the rule is its own.
+ */
+export function readsAsCue(text: string): boolean {
+  return parse(`${text}\nx`).blocks[0]?.kind === 'character';
+}

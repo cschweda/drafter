@@ -1,4 +1,4 @@
-import { type ChangeSet, EditorState } from '@codemirror/state';
+import { type ChangeSet, EditorState, type Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { type CursorElement, cursorElement, parsedDoc } from '@drafter/cm-fountain';
 import { type Doc, parse, type Span } from '@drafter/fountain';
@@ -9,6 +9,7 @@ import { useSettings } from '~/settings/settings';
 import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
 import { applyEditorSettings } from './apply-settings';
+import { sayElement } from './element-notice';
 import {
   type EditorHooks,
   editorExtensions,
@@ -67,6 +68,12 @@ export interface EditorSession {
    * positions can move them along or let them go. Returns a function that removes it.
    */
   onChange(listener: (changes: ChangeSet | null) => void): () => void;
+  /**
+   * Calls `listener` with the transactions of every update that changes the text, so what needs to
+   * know who made an edit (the writer, or the app) can tell; `load` is not one. Returns a function
+   * that removes it.
+   */
+  onEdit(listener: (transactions: readonly Transaction[]) => void): () => void;
   /** Selects `select` (default: the offset), scrolls it into view, shows the Source tab, and focuses the editor. */
   goto(offset: number, options?: { select?: Span }): void;
 }
@@ -101,6 +108,7 @@ function create(): EditorSession {
   const listeners = new Set<(state: EditorState) => void>();
   const updateListeners = new Set<(state: EditorState) => void>();
   const changeListeners = new Set<(changes: ChangeSet | null) => void>();
+  const editListeners = new Set<(transactions: readonly Transaction[]) => void>();
 
   /** Brings what the session shows up to date with `state`. */
   function follow(state: EditorState) {
@@ -122,6 +130,8 @@ function create(): EditorSession {
     onCursorElement: (element) => {
       cursor.value = element;
     },
+    // A key that can't act says why, as the element bar's buttons do.
+    onHint: (message) => void sayElement(message),
   };
 
   // Everything but the text, so `load` can make a new state from the same pieces.
@@ -130,6 +140,7 @@ function create(): EditorSession {
     EditorView.updateListener.of((update) => {
       if (update.docChanged) follow(update.state);
       if (update.docChanged) tell(changeListeners, update.changes);
+      if (update.docChanged) tell(editListeners, update.transactions);
       if (update.docChanged || update.selectionSet) tell(listeners, update.state);
       if (update.docChanged || update.transactions.some((tr) => tr.effects.length > 0)) {
         tell(updateListeners, update.state);
@@ -216,6 +227,11 @@ function create(): EditorSession {
     return () => changeListeners.delete(listener);
   }
 
+  function onEdit(listener: (transactions: readonly Transaction[]) => void) {
+    editListeners.add(listener);
+    return () => editListeners.delete(listener);
+  }
+
   function goto(offset: number, options: { select?: Span } = {}) {
     const length = view.state.doc.length;
     const clamp = (n: number) => Math.min(length, Math.max(0, n));
@@ -252,6 +268,7 @@ function create(): EditorSession {
     onState,
     onUpdate,
     onChange,
+    onEdit,
     goto,
   };
 }

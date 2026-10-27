@@ -16,6 +16,7 @@ import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
 import type { NewKind } from '../editor/template';
+import { appChange } from '../editor/typewriter';
 import type { DocumentKind } from '../markdown/kind';
 import { db } from './db';
 import type { FileRef } from './files';
@@ -634,7 +635,8 @@ function create(): ScriptSession {
       selection: { anchor: Math.min(blank.cursor, blank.text.length) },
       scrollIntoView: true,
       userEvent: 'input.replace',
-      annotations: isolateHistory.of('full'),
+      // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
+      annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
     // A new blank document is unchanged, as one made by New is; the offer goes with it.
     // The copy held here changes at once (the bar goes now); the stored one when its turn comes.
@@ -729,7 +731,8 @@ function create(): ScriptSession {
       selection: { anchor: at },
       effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
       userEvent: 'input.replace',
-      annotations: isolateHistory.of('full'),
+      // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
+      annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
     return true;
   }
@@ -915,7 +918,8 @@ function create(): ScriptSession {
       selection: { anchor: 0 },
       scrollIntoView: true,
       userEvent: 'input.replace',
-      annotations: isolateHistory.of('full'),
+      // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
+      annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
     await saved(file);
     return 'replaced';

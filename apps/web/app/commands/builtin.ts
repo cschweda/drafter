@@ -2,17 +2,36 @@ import { redo, undo } from '@codemirror/commands';
 import { foldAll, unfoldAll } from '@codemirror/language';
 import { nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
 import { openSearchPanel } from '@codemirror/search';
+import type { StateCommand } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { forceKind, toggleDual, wrapInBoneyard, wrapInNote } from '@drafter/cm-fountain';
+import {
+  canMakeParenthetical,
+  type ElementKind,
+  elementHint,
+  forceKind,
+  insertPageBreak,
+  makeElement,
+  structureOf,
+  toggleDual,
+  withCompletion,
+  wrapInBold,
+  wrapInBoneyard,
+  wrapInItalic,
+  wrapInNote,
+  wrapInUnderline,
+} from '@drafter/cm-fountain';
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
+import { sayElement } from '~/editor/element-notice';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
+import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
@@ -21,13 +40,16 @@ import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/sav
 import { useScript } from '~/storage/script';
 import { requestTour } from '~/tour/state';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
-import { COMMAND_DATA, HELP_PAGES, helpHref } from './data';
+import { COMMAND_DATA, HELP_PAGES, helpHref, MARKDOWN_ACTIONS } from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
 
 /** What a command does and when it applies; the rest of a `Command` is in `data.ts`. */
-type Behavior = Pick<Command, 'run' | 'enabled' | 'why'>;
+type Behavior = Pick<Command, 'run' | 'enabled' | 'why'> & {
+  /** A title that follows the script, in place of the data's: a stage play's Scene and Stage direction. */
+  liveTitle?: () => string;
+};
 
 const quietly = (action: () => Promise<unknown>) => () => void action().catch(() => {});
 
@@ -99,6 +121,31 @@ export function registerBuiltinCommands(): void {
     enabled: () => canEdit() && isFountain(),
     run: onEditor((v) => void act(v)),
   });
+
+  /**
+   * The element bar's commands (docs/drafter-element-bar-design.md §4), which the bar and the palette
+   * both run: the Source shows and has focus, and the command acts on the selection the editor has,
+   * which `onEditor` would collapse to the cursor. It opens completion where it begins a heading or a
+   * cue. Where an element command would do nothing (the title page, a note, a line that is already
+   * dialogue), the bar's notice says why.
+   */
+  const inEditor = (
+    applies: () => boolean,
+    act: StateCommand,
+    kind?: ElementKind | 'page_break',
+  ): Behavior => ({
+    enabled: () => canEdit() && applies(),
+    run: () => {
+      const hint = kind && elementHint(kind, view.state);
+      if (hint) void sayElement(hint);
+      showTab('source');
+      void nextTick().then(() => withCompletion(act)(view));
+    },
+  });
+  const element = (kind: ElementKind) => inEditor(isFountain, makeElement(kind), kind);
+  /** What the script's template makes of its structure: a stage play's acts and scenes. */
+  const structure = () => structureOf(editor.template.value);
+  const isStage = () => !structure().headings;
 
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
@@ -256,6 +303,12 @@ export function registerBuiltinCommands(): void {
         sprint.hidden.value = false;
       },
     },
+    // Writing stats (docs/drafter-stats-design.md §4): the Counts panel and the Drafter menu open it too.
+    'show-stats': {
+      run: () => {
+        statsOpen.value = true;
+      },
+    },
     'switch-theme': {
       run: () => {
         colorMode.preference = colorMode.value === 'light' ? 'dark' : 'light';
@@ -286,6 +339,15 @@ export function registerBuiltinCommands(): void {
       enabled: () => settings.value.scrollSync,
       run: () => void set('scrollSync', false),
     },
+    // The element bar (decided 2026-10-27): its ⋯ menu and Settings set the same row.
+    'show-element-bar': {
+      enabled: () => !settings.value.elementBar,
+      run: () => void set('elementBar', true),
+    },
+    'hide-element-bar': {
+      enabled: () => settings.value.elementBar,
+      run: () => void set('elementBar', false),
+    },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },
 
@@ -294,17 +356,69 @@ export function registerBuiltinCommands(): void {
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
 
+    // Edit, the element bar's commands
+    // On a stage play Scene writes a `##` section and Action is a stage direction (the template's
+    // roles), so their titles say so; Act is there only, and Transition only where the template has one.
+    'element-scene-heading': {
+      ...element('scene_heading'),
+      liveTitle: () => (isStage() ? 'Element: Scene (##)' : 'Element: Scene heading'),
+    },
+    'element-act': inEditor(
+      () => isFountain() && structure().actDepth !== null,
+      makeElement('act'),
+      'act',
+    ),
+    'element-action': {
+      ...element('action'),
+      liveTitle: () => (isStage() ? 'Element: Stage direction' : 'Element: Action'),
+    },
+    'element-character': element('character'),
+    'element-dialogue': element('dialogue'),
+    // Off where it doesn't apply, so the palette doesn't offer it (the bar's button says why).
+    'element-parenthetical': inEditor(
+      () => isFountain() && canMakeParenthetical(view.state),
+      makeElement('parenthetical'),
+      'parenthetical',
+    ),
+    'element-transition': inEditor(
+      () => isFountain() && structure().transitions,
+      makeElement('transition'),
+      'transition',
+    ),
+    'element-centered': element('centered'),
+    'element-lyric': element('lyric'),
+    'element-section': element('section'),
+    'element-synopsis': element('synopsis'),
+    'element-page-break': inEditor(isFountain, insertPageBreak, 'page_break'),
+    'emphasis-bold': inEditor(isFountain, wrapInBold),
+    'emphasis-italic': inEditor(isFountain, wrapInItalic),
+    'emphasis-underline': inEditor(isFountain, wrapInUnderline),
+
     // Edit, the Fountain commands (technical design §3.3)
-    'make-scene-heading': fountain(forceKind('scene_heading')),
+    'make-scene-heading': {
+      ...fountain(forceKind('scene_heading')),
+      enabled: () => canEdit() && isFountain() && structure().headings,
+    },
     'make-action': fountain(forceKind('action')),
     'make-character': fountain(forceKind('character')),
     'make-parenthetical': fountain(forceKind('parenthetical')),
-    'make-transition': fountain(forceKind('transition')),
+    'make-transition': {
+      ...fountain(forceKind('transition')),
+      enabled: () => canEdit() && isFountain() && structure().transitions,
+    },
     'make-centered': fountain(forceKind('centered')),
     'make-lyric': fountain(forceKind('lyric')),
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),
+
+    // Edit, the element bar's buttons for a Markdown document
+    ...Object.fromEntries(
+      MARKDOWN_ACTIONS.map(([action]): [string, Behavior] => [
+        `markdown-${action}`,
+        inEditor(isMarkdown, MARKDOWN_COMMANDS[action]),
+      ]),
+    ),
   };
 
   // The data and the behavior must name the same commands: one without the other is a mistake in
@@ -317,7 +431,11 @@ export function registerBuiltinCommands(): void {
     COMMAND_DATA.map((data): Command => {
       const behavior = behaviors[data.id];
       if (!behavior) throw new Error(`The command “${data.id}” has data but no behavior.`);
-      return { ...data, ...behavior };
+      const { liveTitle, ...rest } = behavior;
+      const command: Command = { ...data, ...rest };
+      // The palette and the desktop menu read the title when they draw, so a getter follows the script.
+      if (liveTitle) Object.defineProperty(command, 'title', { get: liveTitle, enumerable: true });
+      return command;
     }),
   );
 }

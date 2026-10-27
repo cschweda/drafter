@@ -3,6 +3,8 @@ import {
   type Completion,
   type CompletionContext,
   type CompletionResult,
+  insertCompletionText,
+  pickedCompletion,
 } from '@codemirror/autocomplete';
 import type { EditorState, Extension, Line } from '@codemirror/state';
 import { type Block, characters, type Doc, locations } from '@drafter/fountain';
@@ -32,6 +34,11 @@ interface Target {
    * so it is called only if a list may open.
    */
   labels: (doc: Doc) => string[];
+  /**
+   * Where a transition's `>` is: a transition that ends in `TO:` needs no mark, so accepting one
+   * replaces the `>` too (the element bar writes it on an empty line, then opens this list).
+   */
+  mark?: number;
 }
 
 /**
@@ -51,10 +58,11 @@ interface Target {
 export function fountainCompletionSource(context: CompletionContext): CompletionResult | null {
   const { state, pos, explicit } = context;
   const doc = state.field(parsedDoc);
-  for (const { from, labels } of targets(state, pos, explicit)) {
+  for (const { from, labels, mark } of targets(state, pos, explicit)) {
     const query = state.sliceDoc(from, pos);
     if (!explicit && query.length < 2) continue;
-    const options = optionsAfter(query, labels(withoutLine(doc, state.doc.lineAt(pos))));
+    let options = optionsAfter(query, labels(withoutLine(doc, state.doc.lineAt(pos))));
+    if (mark !== undefined) options = options.map((option) => bare(option, mark));
     if (options.length > 0) {
       // The typed start of each label is the part that matched.
       const matched = query ? [0, query.length] : [];
@@ -62,6 +70,19 @@ export function fountainCompletionSource(context: CompletionContext): Completion
     }
   }
   return null;
+}
+
+/** A transition that ends in `TO:`, accepted over its `>` as well, since it needs none. */
+function bare(option: Completion, mark: number): Completion {
+  if (!option.label.endsWith('TO:')) return option;
+  return {
+    ...option,
+    apply: (view, completion, _from, to) =>
+      view.dispatch({
+        ...insertCompletionText(view.state, completion.label, mark, to),
+        annotations: pickedCompletion.of(completion),
+      }),
+  };
 }
 
 /**
@@ -116,7 +137,7 @@ function targets(state: EditorState, pos: number, explicit: boolean): Target[] {
     return [{ from: start + lengthOf(/^#+\s*/, text), labels: (d) => sectionTitles(d) }];
   }
   if (text.startsWith('>')) {
-    return [{ from: start + lengthOf(/^>\s*/, text), labels: (d) => transitions(d) }];
+    return [{ from: start + lengthOf(/^>\s*/, text), labels: (d) => transitions(d), mark: start }];
   }
   const prefix = HEADING_PREFIX.exec(text);
   if (prefix) return headingTargets(text.slice(prefix[0].length), start + prefix[0].length);

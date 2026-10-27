@@ -122,13 +122,13 @@ test('creates one script on Mod+Alt+N, and the editor’s Mod+Alt keys still wor
     .poll(async () => (await menuItems(app)).some((i) => i.id === 'new-screenplay'))
     .toBe(true);
   expect((await stored(page)).length).toBe(1);
-  // Mod+Alt+1 forces the line to be a scene heading (a leading dot): the editor's own key, with the
+  // Mod+Alt+1 makes the line a scene heading (`INT. ` and capitals): the editor's own key, with the
   // menu bar showing. (In the sample: a script of one's own, unsaved, would ask before the app closes.)
   await editor(page).click();
   await page.keyboard.press(`${MOD}+End`);
   await page.keyboard.insertText('\nthe roof');
   await page.keyboard.press(`${MOD}+Alt+1`);
-  await expect.poll(() => editorText(page)).toContain('.the roof');
+  await expect.poll(() => editorText(page)).toContain('INT. THE ROOF');
   // Mod+Alt+N, the menu's key for New screenplay, makes one script, not two.
   await page.keyboard.press(`${MOD}+Alt+n`);
   await expect.poll(async () => (await stored(page)).length).toBe(2);

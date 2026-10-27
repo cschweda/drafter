@@ -47,6 +47,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="source">
+    <ElementBar />
     <div ref="host" class="host" />
     <ElementAnnouncer />
   </div>

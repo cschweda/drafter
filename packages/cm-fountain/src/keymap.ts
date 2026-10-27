@@ -7,10 +7,11 @@ import {
   type StateCommand,
   type TransactionSpec,
 } from '@codemirror/state';
-import type { KeyBinding } from '@codemirror/view';
-import { type Block, blockAt, type CharacterSem, type Doc, parse } from '@drafter/fountain';
+import { type Block, blockAt, type CharacterSem, type Doc } from '@drafter/fountain';
 import { startCue } from './input';
-import { insideRegion, parsedDoc } from './state';
+import { insideRegion, parsedDoc, readsAsCue } from './state';
+
+export { readsAsCue };
 
 // The keymap is a layer of conveniences over plain text editing (technical design §3.3). Every
 // command is an ordinary transaction, so it is one undo step, and each reads its context from the
@@ -42,7 +43,7 @@ function where(state: EditorState): Where {
  * transaction, with the user event `input`, which is not `input.type`, so the history keeps it
  * apart from the typing around it. Nothing happens in a read-only editor.
  */
-function command(spec: (state: EditorState) => TransactionSpec | null): StateCommand {
+export function command(spec: (state: EditorState) => TransactionSpec | null): StateCommand {
   return ({ state, dispatch }) => {
     const found = state.readOnly ? null : spec(state);
     if (!found) return false;
@@ -52,7 +53,7 @@ function command(spec: (state: EditorState) => TransactionSpec | null): StateCom
 }
 
 /** The byte-order mark, which `trim` counts as space and the editor does not. */
-const BOM = '\uFEFF';
+export const BOM = '\uFEFF';
 
 const indentOf = (text: string) => text.length - text.trimStart().length;
 
@@ -61,7 +62,7 @@ const indentOf = (text: string) => text.length - text.trimStart().length;
  * A group is a cue and the parentheticals, speech, and lyrics under it, and its blocks follow
  * each other with no blank line between them.
  */
-function cueIndex(blocks: readonly Block[], index: number): number {
+export function cueIndex(blocks: readonly Block[], index: number): number {
   for (let i = index; i >= 0; i--) {
     const block = blocks[i] as Block;
     if (block.kind === 'character') return i;
@@ -72,15 +73,6 @@ function cueIndex(blocks: readonly Block[], index: number): number {
     if (!above || above.span.to + 1 !== block.span.from) return -1;
   }
   return -1;
-}
-
-/**
- * Whether the parser would read a line as a cue if a line of speech followed it (rule 12). A lone
- * cue is action to the parser, so a cue the writer has just typed can't be told from the parse of
- * the script alone. The parser decides here too, on the line by itself, so the rule is its own.
- */
-function readsAsCue(text: string): boolean {
-  return parse(`${text}\nx`).blocks[0]?.kind === 'character';
 }
 
 // Enter ---------------------------------------------------------------------------------------
@@ -275,8 +267,8 @@ export const convertToAction: StateCommand = command((state) => toAction(where(s
 
 // Forcing a kind ------------------------------------------------------------------------------
 
-/** The kinds `forceKind` can force, in the order of Mod-Alt-1 to 7. */
-const FORCED_KINDS = [
+/** The kinds `forceKind` can force, in the order of Mod-Alt-1 to 7 (whose keys run `makeElement`). */
+export const FORCED_KINDS = [
   'scene_heading',
   'action',
   'character',
@@ -314,7 +306,7 @@ function isOneGroup(text: string): boolean {
  * markers are the ones the parser reads at the start of a line, `!`, `@`, `~`, `>`, and `.` before
  * a letter or digit, and the wrappers are `>…<` and a `(…)` that is one group.
  */
-function unmarked(line: string): { start: number; body: string } {
+export function unmarked(line: string): { start: number; body: string } {
   const text = line.trim();
   const lead = indentOf(line);
   let open = 0;
@@ -415,17 +407,11 @@ export const wrapInNote: StateCommand = wrap('[[', ']]');
 /** Wraps the selection in `/* *\/`, a boneyard. */
 export const wrapInBoneyard: StateCommand = wrap('/*', '*/');
 
-/**
- * Enter, Tab, Shift-Tab, Mod-Alt-1…7 to force a kind, Mod-Shift-d, Mod-/, and Mod-Shift-/. Save
- * keys belong to the app. No binding sets `preventDefault`, so a command that returns false
- * leaves its key to the browser.
- */
-export const fountainKeymap: readonly KeyBinding[] = [
-  { key: 'Enter', run: fountainEnter },
-  { key: 'Tab', run: fountainTab },
-  { key: 'Shift-Tab', run: fountainShiftTab },
-  ...FORCED_KINDS.map((kind, i) => ({ key: `Mod-Alt-${i + 1}`, run: forceKind(kind) })),
-  { key: 'Mod-Shift-d', run: toggleDual },
-  { key: 'Mod-/', run: wrapInNote },
-  { key: 'Mod-Shift-/', run: wrapInBoneyard },
-];
+/** Wraps the selection in `**`, bold. No key: the element bar and the palette run it. */
+export const wrapInBold: StateCommand = wrap('**', '**');
+
+/** Wraps the selection in `*`, italic. */
+export const wrapInItalic: StateCommand = wrap('*', '*');
+
+/** Wraps the selection in `_`, underlined. */
+export const wrapInUnderline: StateCommand = wrap('_', '_');

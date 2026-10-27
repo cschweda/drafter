@@ -108,6 +108,23 @@ describe('fountain()', () => {
     expect(currentCompletions(view.state).map((c) => c.label)).toEqual(['MARGARET', 'BRICK']);
   });
 
+  it('opens the name list after Mod-Alt-3 begins a cue on an empty line', async () => {
+    const view = mount('MARGARET\nHi.\n\nBRICK\nHo.\n\n');
+    const event = new KeyboardEvent('keydown', {
+      key: '3',
+      keyCode: 51,
+      ctrlKey: true,
+      altKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    view.contentDOM.dispatchEvent(event);
+    expect(view.state.doc.toString().endsWith('\n\n@')).toBe(true);
+    await vi.waitFor(() => expect(currentCompletions(view.state).length).toBeGreaterThan(0), {
+      timeout: 3000,
+    });
+  });
+
   it('does not open a list when Tab does something else', async () => {
     const view = mount('MARGARET\nHi.\n', fountain(), 3);
     // Tab on a cue cycles its extension.

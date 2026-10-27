@@ -19,6 +19,8 @@ export interface Settings {
   checkForUpdates: boolean;
   /** The Source and the Script pane (or the Preview) scroll together; on by default (decided 2026-10-27). */
   scrollSync: boolean;
+  /** The element bar over the Source pane, which writes Fountain's marks; on by default (decided 2026-10-27). */
+  elementBar: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sprintSound: false,
   checkForUpdates: true,
   scrollSync: true,
+  elementBar: true,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */

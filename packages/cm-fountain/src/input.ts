@@ -5,9 +5,10 @@ import {
   type Line,
   StateEffect,
   StateField,
+  Transaction,
 } from '@codemirror/state';
 import { blockAt } from '@drafter/fountain';
-import { insideRegion, parsedDoc } from './state';
+import { insideRegion, parsedDoc, readsAsCue } from './state';
 
 // Auto-uppercasing (technical design §3.3) is the one place the editor changes the case of what
 // the writer types. It applies only in a cue started with Tab and in a scene heading, to text as
@@ -15,6 +16,14 @@ import { insideRegion, parsedDoc } from './state';
 
 /** Sent by Tab when it starts a cue; `cueMode` turns on with it. */
 export const startCue = StateEffect.define();
+
+/**
+ * Sent with `startCue` by the element bar's commands, which write the `@` only so that cue mode can
+ * upper-case the name: `barCue` remembers the line, and the `@` comes off again when the cursor
+ * leaves it, if the name reads as a cue without one (docs/drafter-element-bar-design.md §4). Tab's
+ * `@` is the writer's, and stays.
+ */
+export const startBarCue = StateEffect.define();
 
 /** A line that opens with `@`, after any indentation: the cue that cue mode is for. */
 const CUE_LINE = /^\s*@/;
@@ -36,6 +45,41 @@ export const cueMode: StateField<boolean> = StateField.define<boolean>({
     const after = tr.newDoc.lineAt(tr.newSelection.main.head);
     return after.from === tr.changes.mapPos(before.from, -1) && CUE_LINE.test(after.text);
   },
+});
+
+/** The start of the line of a cue the element bar began, while the cursor is on it; else null. */
+export const barCue: StateField<number | null> = StateField.define<number | null>({
+  create: () => null,
+  update(value, tr) {
+    const head = tr.newDoc.lineAt(tr.newSelection.main.head);
+    if (tr.effects.some((effect) => effect.is(startBarCue))) return head.from;
+    if (value === null) return null;
+    const from = tr.changes.mapPos(value, -1);
+    return tr.newDoc.lineAt(from).from === head.from ? from : null;
+  },
+});
+
+/**
+ * Takes the `@` off a cue the element bar began, in the transaction that moves the cursor off its
+ * line (Enter, a click, an arrow key), when the name reads as a cue without it.
+ */
+const dropBarCueMark = EditorState.transactionFilter.of((tr) => {
+  const value = tr.startState.field(barCue, false);
+  if (value === null || value === undefined) return tr;
+  if (tr.effects.some((effect) => effect.is(startBarCue))) return tr;
+  // Only the writer's own move off the line: not a change the app makes (a file put back from
+  // disk, Revert to Saved), which has no user event, nor a replace-all.
+  const event = tr.annotation(Transaction.userEvent);
+  if (!event || event.startsWith('input.replace')) return tr;
+  const line = tr.newDoc.lineAt(tr.changes.mapPos(value, -1));
+  if (tr.newDoc.lineAt(tr.newSelection.main.head).from === line.from) return tr;
+  const mark = /^\s*@/.exec(line.text);
+  if (!mark) return tr;
+  // A cue left with no name at all, a click and nothing typed, leaves no lone `@` behind.
+  const name = line.text.slice(mark[0].length).trim();
+  if (name && !readsAsCue(name)) return tr;
+  const at = line.from + mark[0].length - 1;
+  return [tr, { changes: { from: at, to: at + 1 }, sequential: true }];
 });
 
 /**
@@ -134,8 +178,9 @@ const upperCaseTyping = EditorState.transactionFilter.of((tr) => {
 
 /**
  * The input filters: upper-case typing in cue mode, and in a scene heading whose prefix matched
- * (technical design §2.5, rule 11). It brings the fields it reads, `parsedDoc` and `cueMode`.
+ * (technical design §2.5, rule 11), and the `@` of a cue the element bar began taken off when it
+ * isn't needed. It brings the fields it reads, `parsedDoc`, `cueMode`, and `barCue`.
  */
 export function fountainInput(): Extension {
-  return [parsedDoc, cueMode, upperCaseTyping];
+  return [parsedDoc, cueMode, barCue, upperCaseTyping, dropBarCueMark];
 }

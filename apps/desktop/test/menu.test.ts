@@ -104,6 +104,36 @@ describe('menuTemplate', () => {
     expect(help.find((i) => i.id === 'releases')?.label).toBe('Open the Releases Page');
   });
 
+  test('puts the element bar’s commands in submenus of Edit, by their prefix', () => {
+    const commands = [
+      ...COMMANDS,
+      cmd('element-character', 'Edit', 'Element: Character', { keys: ['Mod-Alt-3'] }),
+      cmd('emphasis-bold', 'Edit', 'Emphasis: Bold'),
+      cmd('make-character', 'Edit', 'Force character (@)'),
+      cmd('markdown-list', 'Edit', 'Markdown: List'),
+      cmd('help-fountain', 'Help', 'Open the page: Fountain cheat sheet'),
+    ];
+    const t = menuTemplate(commands, () => {}, { platform: 'linux' });
+    const edit = submenu(menus(t).Edit);
+    const holding = (id: string) => edit.find((i) => submenu(i).some((c) => c.id === id));
+    expect(holding('element-character')?.label).toBe('Element');
+    expect(named(t, 'element-character')).toMatchObject({
+      label: 'Character',
+      accelerator: 'CmdOrCtrl+Alt+3',
+    });
+    expect(holding('emphasis-bold')?.label).toBe('Emphasis');
+    expect(holding('make-character')?.label).toBe('Force');
+    expect(named(t, 'make-character')?.label).toBe('Character (@)');
+    expect(named(t, 'make-character')?.accelerator).toBeUndefined();
+    expect(holding('markdown-list')?.label).toBe('Markdown');
+    expect(named(t, 'markdown-list')?.label).toBe('List');
+    // The cheat sheet comes first in Help.
+    expect(submenu(menus(t).Help)[0]).toMatchObject({
+      id: 'help-fountain',
+      label: 'Fountain Cheat Sheet',
+    });
+  });
+
   test('labels the help pages for a desktop, not a browser', () => {
     const t = menuTemplate(COMMANDS, () => {}, { platform: 'linux' });
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');

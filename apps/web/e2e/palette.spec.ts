@@ -249,7 +249,7 @@ test.describe('the command palette', () => {
     await setText(page, 'The rain stops.');
     await page.keyboard.press('ControlOrMeta+Home');
     await toolbarField(page).click();
-    await choose(page, 'make scene heading', 'Make scene heading');
+    await choose(page, 'force scene heading', 'Force scene heading (.)');
     await expect(palette(page)).toBeHidden();
     await expect(editor(page)).toHaveText('.The rain stops.');
     await expect(editor(page)).toBeFocused();
@@ -258,7 +258,7 @@ test.describe('the command palette', () => {
   test('shows the Source tab for a command that works on the text', async ({ page }) => {
     await page.getByRole('tab', { name: 'Script' }).first().click();
     await openPalette(page);
-    await choose(page, 'make action', 'Make action');
+    await choose(page, 'force action', 'Force action (!)');
     await expect(palette(page)).toBeHidden();
     await expect(editor(page)).toBeVisible();
   });
@@ -301,9 +301,9 @@ test.describe('the command palette', () => {
 
   test('moves through the list with the arrow keys', async ({ page }) => {
     await openPalette(page);
-    await query(page).fill('make');
+    await query(page).fill('force');
     const rows = palette(page).getByRole('option');
-    await expect(rows.first()).toHaveAccessibleName(/^Make/);
+    await expect(rows.first()).toHaveAccessibleName(/^Force/);
     await expect(rows.first()).toHaveAttribute('data-highlighted', '');
     await page.keyboard.press('ArrowDown');
     await expect(rows.first()).not.toHaveAttribute('data-highlighted', '');
