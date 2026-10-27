@@ -2,10 +2,13 @@
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, type BrowserWindow, dialog, ipcMain, protocol } from 'electron';
+import { app, type BrowserWindow, dialog, ipcMain, protocol, session } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { registerFileIpc } from './files-ipc';
-import { appHandler, cspFromHeaders, SCHEME } from './protocol';
+import { refuseNetwork } from './network';
+import { denyPermissions } from './permissions';
+import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
+import { type Spellcheck, setUpSpellcheck } from './spellcheck';
 import { createMainWindow, fromApp, guard } from './window';
 
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
@@ -37,18 +40,44 @@ protocol.registerSchemesAsPrivileged([
 const PRELOAD = join(__dirname, 'preload.cjs');
 /** The web build, copied into the app by `pnpm build:web`. */
 const WEB = join(app.getAppPath(), 'web');
+/** The spellchecker's dictionaries, for Linux (spellcheck.ts). */
+const DICTIONARIES = join(app.getAppPath(), 'dictionaries');
 
 /** What each renderer's preload reported, by webContents id (read by the e2e suite). */
 const renderers = new Map<number, RendererReport>();
-Object.assign(globalThis, { drafterShell: { renderers: () => [...renderers.values()] } });
+/** How spelling is checked, and the dictionary downloads Chromium began (none, ever). */
+const spelling = { mode: 'off' as Spellcheck, downloads: [] as string[] };
+Object.assign(globalThis, {
+  drafterShell: {
+    renderers: () => [...renderers.values()],
+    spellcheck: () => ({ ...spelling, downloads: [...spelling.downloads] }),
+  },
+});
 
 function start() {
   let main: BrowserWindow | null = null;
+  let started = false;
 
-  // A second launch focuses the window this one already has (Task 3 opens its files here).
+  /** Opens the editor's window, and keeps it as the one a second launch brings forward. */
+  const openMain = () => {
+    const window = createMainWindow(PRELOAD);
+    window.on('closed', () => {
+      if (main === window) main = null;
+    });
+    main = window;
+    return window;
+  };
+
+  // A second launch brings the editor's window forward, or opens it again if it was closed while
+  // another window (a help page) kept the app running. (Task 3 opens its files here.)
   app.on('second-instance', () => {
-    if (!main || main.isDestroyed()) return;
+    if (!started) return;
+    if (!main || main.isDestroyed()) {
+      openMain();
+      return;
+    }
     if (main.isMinimized()) main.restore();
+    main.show();
     main.focus();
   });
 
@@ -82,9 +111,34 @@ function start() {
       app.exit(1);
       return;
     }
-    protocol.handle(SCHEME, appHandler(WEB, csp));
+    // Before any page exists: what it may ask for, what it may reach, and the dictionary it
+    // checks spelling with (Chromium would otherwise fetch one from Google for the first page).
+    const ses = session.defaultSession;
+    denyPermissions(ses);
+    refuseNetwork(ses);
+    ses.on('spellcheck-dictionary-download-begin', (_event, language) => {
+      spelling.downloads.push(language);
+    });
+    try {
+      spelling.mode = setUpSpellcheck(ses, {
+        platform: process.platform,
+        dictionaries: DICTIONARIES,
+        userData: app.getPath('userData'),
+      });
+    } catch {
+      ses.setSpellCheckerEnabled(false);
+      spelling.mode = 'off';
+    }
+    let headers: Record<string, string> = {};
+    try {
+      headers = forwardedHeaders(readFileSync(join(WEB, '_headers'), 'utf8'));
+    } catch {
+      // The CSP was read above; without the others the app still runs as before.
+    }
+    protocol.handle(SCHEME, appHandler(WEB, csp, headers));
     registerFileIpc();
-    main = createMainWindow(PRELOAD);
+    started = true;
+    openMain();
   });
 }
 

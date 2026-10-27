@@ -8,6 +8,7 @@
 //     const { page } = await desktop();            // the editor, ready, the tour's welcome skipped
 //     const again = await desktop({ firstRun: true }); // (another profile would be `newProfile()`)
 //   });
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -168,21 +169,54 @@ export async function ready(page: Page) {
 /** The tour's "seen" key (nuxt-guided-tour, app/tour/tour.config.ts). */
 const TOUR_SEEN = 'drafter-tour-v1';
 
+/** The environment the app runs with: the profile's folders, and the test hooks. */
+function envFor(profile: Profile, extra: Record<string, string> = {}): Record<string, string> {
+  return {
+    ...(process.env as Record<string, string>),
+    HOME: profile.home,
+    XDG_CONFIG_HOME: join(profile.home, '.config'),
+    // Honoured only by an unpackaged app (src/main.ts).
+    DRAFTER_USER_DATA: profile.userData,
+    DRAFTER_E2E_EXTERNAL_LOG: profile.externalLog,
+    // Every dialog answers from the queue (Cancel when it is empty): no test waits on a person.
+    DRAFTER_E2E_DIALOG: profile.dialogs,
+    ...extra,
+  };
+}
+
+/** Second instances still running (`launchAgain`), stopped by the fixture when a test ends. */
+const spawned = new Set<ReturnType<typeof spawn>>();
+
+/**
+ * Starts the app again with `profile`, as a person double-clicking it would, while an instance
+ * already runs: the new one hands over to it and quits. Resolves with its exit code.
+ */
+export function launchAgain(profile: Profile, args: string[] = []): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(ELECTRON, [DESKTOP_DIR, ...args], {
+      env: envFor(profile),
+      stdio: 'ignore',
+    });
+    // Should the first instance be gone, this one would stay: it is stopped when the test ends.
+    spawned.add(child);
+    child.on('exit', () => spawned.delete(child));
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error('The second instance did not quit.'));
+    }, 30_000);
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      resolve(code);
+    });
+  });
+}
+
 async function launchApp(profile: Profile, options: LaunchOptions): Promise<Launched> {
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [DESKTOP_DIR, ...(options.args ?? [])],
-    env: {
-      ...(process.env as Record<string, string>),
-      HOME: profile.home,
-      XDG_CONFIG_HOME: join(profile.home, '.config'),
-      // Honoured only by an unpackaged app (src/main.ts).
-      DRAFTER_USER_DATA: profile.userData,
-      DRAFTER_E2E_EXTERNAL_LOG: profile.externalLog,
-      // Every dialog answers from the queue (Cancel when it is empty): no test waits on a person.
-      DRAFTER_E2E_DIALOG: profile.dialogs,
-      ...options.env,
-    },
+    env: envFor(profile, options.env),
     timeout: 60_000,
   });
   const page = await app.firstWindow();
@@ -241,5 +275,7 @@ export const test = base.extend<Fixtures>({
       }
       await app.close().catch(() => {});
     }
+    for (const child of spawned) child.kill();
+    spawned.clear();
   },
 });

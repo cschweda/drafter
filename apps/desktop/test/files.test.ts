@@ -1,6 +1,6 @@
 // The main process's file operations (src/files.ts), on real temp folders: what a writer's
 // script goes through every time it is opened, saved, or exported.
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import {
   chmod,
   lstat,
@@ -274,9 +274,9 @@ describe('watchFile', () => {
     const stop = watchFile(file, () => changes++, { debounceMs: 150 });
     try {
       await wait(200);
-      await writeFile(file, 'two');
-      await wait(20);
-      await writeFile(file, 'three');
+      // Two writes in a row (synchronous, so the watch can't look between a truncation and a write).
+      writeFileSync(file, 'two');
+      writeFileSync(file, 'three');
       await expect.poll(() => changes, { timeout: 5000 }).toBe(1);
       await wait(400);
       expect(changes).toBe(1);

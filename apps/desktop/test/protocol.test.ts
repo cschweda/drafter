@@ -1,10 +1,11 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
   appHandler,
   cspFromHeaders,
+  forwardedHeaders,
   headersFor,
   navigationFor,
   resolveAppUrl,
@@ -83,6 +84,39 @@ describe('headersFor', () => {
   });
 });
 
+describe('forwardedHeaders', () => {
+  test('takes the site’s other policies from the rule for every path', () => {
+    const text = [
+      '/*',
+      `  Content-Security-Policy: ${CSP}`,
+      '  X-Content-Type-Options: nosniff',
+      '  Referrer-Policy: no-referrer',
+      '  Permissions-Policy: camera=(), microphone=()',
+      '  Cross-Origin-Opener-Policy: same-origin',
+      '/_nuxt/*',
+      '  Cache-Control: public, max-age=31536000, immutable',
+      '  Referrer-Policy: unsafe-url',
+    ].join('\n');
+    // Not Cross-Origin-Opener-Policy (protocol.ts says why), nor what the browser needs no help with.
+    expect(forwardedHeaders(text)).toEqual({
+      'Referrer-Policy': 'no-referrer',
+      'Permissions-Policy': 'camera=(), microphone=()',
+    });
+    expect(forwardedHeaders('')).toEqual({});
+  });
+
+  test('are sent with every file', () => {
+    const forwarded = { 'Permissions-Policy': 'camera=()', 'Referrer-Policy': 'no-referrer' };
+    for (const file of ['index.html', 'a.js', 'a.css', 'a.woff2']) {
+      expect(headersFor(`/w/${file}`, CSP, forwarded), file).toMatchObject(forwarded);
+    }
+    // They never replace the type or the CSP.
+    expect(
+      headersFor('/w/index.html', CSP, { 'Content-Type': 'x', 'Content-Security-Policy': 'y' }),
+    ).toMatchObject({ 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CSP });
+  });
+});
+
 describe('cspFromHeaders', () => {
   test('reads the policy of the rule for every path', () => {
     const text = [
@@ -134,6 +168,33 @@ describe('appHandler', () => {
       expect((await get(url)).status, url).toBe(404);
     }
     expect((await get('app://drafter/index.html', 'POST')).status).toBe(405);
+  });
+
+  test('never follows a link out of the build', async () => {
+    if (process.platform === 'win32') return;
+    const outside = await mkdtemp(join(tmpdir(), 'drafter-outside-'));
+    try {
+      await writeFile(join(outside, 'secret.txt'), 'secret');
+      await mkdir(join(outside, 'folder'));
+      await writeFile(join(outside, 'folder', 'index.html'), 'secret page');
+      await symlink(join(outside, 'secret.txt'), join(root, 'leak.txt'));
+      await symlink(join(outside, 'folder'), join(root, 'leak'));
+      await symlink(join(root, 'a.js'), join(root, 'inside.js'));
+      expect((await get('app://drafter/leak.txt')).status).toBe(404);
+      expect((await get('app://drafter/leak/')).status).toBe(404);
+      expect((await get('app://drafter/leak/index.html')).status).toBe(404);
+      // A link that stays inside is served.
+      expect(await (await get('app://drafter/inside.js')).text()).toBe('export {}');
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('sends the forwarded headers', async () => {
+    const response = await appHandler(root, CSP, { 'Permissions-Policy': 'camera=()' })(
+      new Request('app://drafter/'),
+    );
+    expect(response.headers.get('permissions-policy')).toBe('camera=()');
   });
 });
 

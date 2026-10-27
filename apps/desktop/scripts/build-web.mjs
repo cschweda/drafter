@@ -3,7 +3,8 @@
 // Run as `pnpm build:web` (the e2e suite's global setup runs it too).
 //
 // The build is the same command Netlify runs, plus the flag, into `apps/web/.output/public`; that
-// folder is deleted first, so a stale build can't be copied. Extra environment (for example
+// folder is deleted first, so a stale build can't be copied, and again after the copy, so a
+// desktop build is never left where a web deploy might pick it up. Extra environment (for example
 // `DRAFTER_TEST_MODULES=1`) passes through.
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, rmSync } from 'node:fs';
@@ -27,6 +28,11 @@ export function buildWeb() {
     throw new Error(`The web build wrote no ${BUILT}index.html`);
   rmSync(TARGET, { recursive: true, force: true });
   cpSync(BUILT, TARGET, { recursive: true });
+  // The desktop build (no service worker) is not left where a web deploy or preview could take it.
+  rmSync(fileURLToPath(new URL('../../web/.output/', import.meta.url)), {
+    recursive: true,
+    force: true,
+  });
   console.log(`Copied the desktop web build to ${TARGET}`);
 }
 

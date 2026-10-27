@@ -1,7 +1,7 @@
 // The app's own scheme, app://drafter/, which serves the static web build from `web/` inside the
 // app. Pure Node (no Electron), so the unit tests run it as it is: main.ts registers the scheme
 // and hands `appHandler` to `protocol.handle`.
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 /** The scheme (registered as privileged in main.ts: standard, secure, fetch, CORS). */
@@ -40,7 +40,11 @@ const TYPES: Record<string, string> = {
  */
 const POLICED = new Set(['.html', '.js', '.mjs']);
 
-/** The scheme, the host, and the raw path; no user, no port. The query and fragment are dropped. */
+/**
+ * The scheme, the host, and the raw path; no user, no port. The query and fragment are dropped.
+ * Case-insensitive (`/i`), as a URL's scheme and host are: `APP://Drafter/` is the app.
+ * `navigationFor` agrees by another road, since the URL parser lowercases both before it compares.
+ */
 const APP_URL_PATTERN = /^app:\/\/drafter(\/[^?#]*)?(?:[?#].*)?$/i;
 
 /**
@@ -77,22 +81,29 @@ export function resolveAppUrl(url: string, root: string): string | null {
   return file;
 }
 
-/** The response headers for a file: Content-Type by extension, and the CSP on pages and scripts. */
-export function headersFor(path: string, csp: string): Record<string, string> {
+/**
+ * The response headers for a file: Content-Type by extension, the CSP on pages and scripts, and
+ * the site's other policies (`forwardedHeaders`) on everything, as Netlify sends them.
+ */
+export function headersFor(
+  path: string,
+  csp: string,
+  forwarded: Record<string, string> = {},
+): Record<string, string> {
   const extension = extname(path).toLowerCase();
   const headers: Record<string, string> = {
+    ...forwarded,
     'Content-Type': TYPES[extension] ?? 'application/octet-stream',
     'X-Content-Type-Options': 'nosniff',
   };
   if (POLICED.has(extension)) headers['Content-Security-Policy'] = csp;
+  else delete headers['Content-Security-Policy'];
   return headers;
 }
 
-/**
- * The Content-Security-Policy of the rule for every path (`/*`) in Netlify's `_headers` file, as
- * apps/web/scripts/csp.mjs writes it for each build (its script hashes change with the build).
- */
-export function cspFromHeaders(text: string): string | null {
+/** The headers of `_headers`' rule for every path (`/*`), by name as written. */
+function everyPathRule(text: string): [string, string][] {
+  const found: [string, string][] = [];
   let everyPath = false;
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -102,11 +113,42 @@ export function cspFromHeaders(text: string): string | null {
       continue;
     }
     const colon = trimmed.indexOf(':');
-    if (everyPath && trimmed.slice(0, colon).trim().toLowerCase() === 'content-security-policy') {
-      return trimmed.slice(colon + 1).trim() || null;
+    if (everyPath && colon > 0) {
+      found.push([trimmed.slice(0, colon).trim(), trimmed.slice(colon + 1).trim()]);
     }
   }
-  return null;
+  return found;
+}
+
+/** The site's policies, besides the CSP, that app:// sends as drafter.dev does. */
+const FORWARDED = ['Permissions-Policy', 'Referrer-Policy'];
+
+/**
+ * The headers of `_headers`' rule for every path that app:// forwards: Permissions-Policy (the
+ * camera, microphone, location, payment, and USB refused before the permission handlers are
+ * asked) and Referrer-Policy. Not Cross-Origin-Opener-Policy: it guards a page from cross-origin
+ * openers, and the app can't open or be opened by another origin; and with it, each window's first
+ * load moved to a new browsing context group, which raced Playwright's attach to the window (the
+ * e2e launches timed out now and then). See docs/DECISIONS.md.
+ */
+export function forwardedHeaders(text: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [name, value] of everyPathRule(text)) {
+    const known = FORWARDED.find((header) => header.toLowerCase() === name.toLowerCase());
+    if (known && value) headers[known] = value;
+  }
+  return headers;
+}
+
+/**
+ * The Content-Security-Policy of the rule for every path (`/*`) in Netlify's `_headers` file, as
+ * apps/web/scripts/csp.mjs writes it for each build (its script hashes change with the build).
+ */
+export function cspFromHeaders(text: string): string | null {
+  const found = everyPathRule(text).find(
+    ([name]) => name.toLowerCase() === 'content-security-policy',
+  );
+  return found?.[1] || null;
 }
 
 const notFound = () =>
@@ -115,12 +157,27 @@ const notFound = () =>
     headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
   });
 
+/** Whether `path` is `root` or inside it. */
+function within(root: string, path: string): boolean {
+  const inside = relative(root, path);
+  return (
+    inside === '' || (!inside.startsWith(`..${sep}`) && inside !== '..' && !isAbsolute(inside))
+  );
+}
+
 /**
  * The handler for `protocol.handle('app', …)`: a file under `root`, or a directory's `index.html`
  * (`/docs/saving/` and `/docs/saving` are the prerendered help page). Anything else is a 404: the
- * app is one page, so there is no fallback to it, and a missing file never becomes the app.
+ * app is one page, so there is no fallback to it, and a missing file never becomes the app. A
+ * symlink is followed only while it stays in `root` (the real path is checked), so a link in the
+ * build can never serve a file from elsewhere.
  */
-export function appHandler(root: string, csp: string): (request: Request) => Promise<Response> {
+export function appHandler(
+  root: string,
+  csp: string,
+  forwarded: Record<string, string> = {},
+): (request: Request) => Promise<Response> {
+  let realRoot: Promise<string> | undefined;
   return async (request) => {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
@@ -128,11 +185,13 @@ export function appHandler(root: string, csp: string): (request: Request) => Pro
     let file = resolveAppUrl(request.url, root);
     if (file === null) return notFound();
     try {
+      realRoot ??= realpath(root);
       if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
+      if (!within(await realRoot, await realpath(file))) return notFound();
       const body = await readFile(file);
       return new Response(request.method === 'HEAD' ? null : body, {
         status: 200,
-        headers: headersFor(file, csp),
+        headers: headersFor(file, csp, forwarded),
       });
     } catch {
       return notFound();

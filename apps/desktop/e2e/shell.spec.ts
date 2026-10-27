@@ -1,5 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { editor, expect, openedExternally, stored, test, welcome } from './helpers';
+import {
+  editor,
+  expect,
+  launchAgain,
+  openedExternally,
+  ready,
+  stored,
+  test,
+  welcome,
+} from './helpers';
 
 // The shell (Plan 6 Task 1): Drafter in an Electron window, served from its own files at
 // app://drafter/, with the security settings of docs/drafter-desktop-design.md §2.
@@ -185,4 +194,42 @@ test('runs the renderer sandboxed', async ({ desktop }) => {
   expect(
     await page.evaluate(() => [typeof require, typeof process, typeof module, typeof Buffer]),
   ).toEqual(['undefined', 'undefined', 'undefined', 'undefined']);
+});
+
+test('opens the editor again from a second launch when only a help window is left', async ({
+  desktop,
+  profile,
+}) => {
+  const { app, page } = await desktop();
+  // A help page in a top-level window of its own. (One the editor opens with window.open closes
+  // with the editor, Electron's default; Task 4's Help menu may open them like this.)
+  const help = app.waitForEvent('window');
+  await app.evaluate(({ BrowserWindow }) => {
+    const window = new BrowserWindow({ show: true });
+    void window.loadURL('app://drafter/docs/saving/');
+  });
+  const helpPage = await help;
+  await expect.poll(() => helpPage.url()).toContain('/docs/saving');
+  // The editor's window is closed; the help window stays, so the app keeps running.
+  const closed = page.waitForEvent('close');
+  await app.evaluate(({ BrowserWindow }) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.webContents.getURL() === 'app://drafter/') window.close();
+    }
+  });
+  await closed;
+  expect(app.windows()).toHaveLength(1);
+
+  // Launched again: the first instance opens the editor, and the second quits.
+  const editorWindow = app.waitForEvent('window');
+  expect(await launchAgain(profile)).toBe(0);
+  const reopened = await editorWindow;
+  await ready(reopened);
+  expect(reopened.url()).toBe('app://drafter/');
+  expect(app.windows()).toHaveLength(2);
+
+  // Launched once more: the same editor window comes forward, and no other opens.
+  expect(await launchAgain(profile)).toBe(0);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  expect(app.windows()).toHaveLength(2);
 });

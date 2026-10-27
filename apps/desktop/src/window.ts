@@ -39,10 +39,9 @@ export function windowOptions(preload: string): BrowserWindowConstructorOptions 
       allowRunningInsecureContent: false,
       webviewTag: false,
       navigateOnDragDrop: false,
-      // On Linux and Windows, Chromium's spellchecker downloads its dictionaries from Google, a
-      // request the app may not make (the update check is its only one). macOS uses the system's
-      // own spellchecker, with no download. (docs/DECISIONS.md, apps/desktop.)
-      spellcheck: process.platform === 'darwin',
+      // macOS checks spelling with the system's checker; Linux with the dictionary the app brings
+      // (spellcheck.ts), never one downloaded. The Spellcheck setting turns it off in the editor.
+      spellcheck: true,
       additionalArguments: [`${VERSION_ARG}${app.getVersion()}`],
     },
   };
