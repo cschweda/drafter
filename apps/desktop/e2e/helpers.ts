@@ -264,6 +264,9 @@ export function launchAgain(profile: Profile, args: string[] = []): Promise<numb
 async function launchApp(profile: Profile, options: LaunchOptions): Promise<Launched> {
   const app = await _electron.launch({
     executablePath: ELECTRON,
+    // On Linux Playwright adds `--no-sandbox` unless told not to; the app must run with the sandbox
+    // it ships with (and the sandbox test checks for it).
+    chromiumSandbox: true,
     args: [DESKTOP_DIR, ...(options.args ?? [])],
     env: envFor(profile, options.env),
     timeout: 60_000,

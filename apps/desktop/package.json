@@ -16,13 +16,18 @@
     "dev": "pnpm build && pnpm build:web && electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "e2e": "tsdown && playwright test"
+    "e2e": "tsdown && playwright test",
+    "package": "electron-builder --config electron-builder.config.cjs --linux --publish never",
+    "dist": "pnpm build && pnpm build:web && pnpm package",
+    "e2e:packaged": "playwright test --config playwright.packaged.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
-    "electron": "45.0.0"
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
   },
   "dependencies": {
     "electron-updater": "6.8.11"
-  }
+  },
+  "desktopName": "drafter.desktop"
 }

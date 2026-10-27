@@ -6,6 +6,8 @@ import { defineConfig } from '@playwright/test';
 // Locally they run on the developer's OS; in CI on Linux under xvfb (Plan 6 Task 7).
 export default defineConfig({
   testDir: 'e2e',
+  // The packaged app's tests have their own config (playwright.packaged.config.ts).
+  testIgnore: /packaged\.spec\.ts/,
   globalSetup: './e2e/global-setup.ts',
   // Each test starts its own Electron, a few hundred megabytes: a couple at once is plenty.
   workers: process.env.CI ? 1 : 2,

@@ -3,3 +3,4 @@ web/
 # Playwright's output.
 test-results/
 playwright-report/
+release/

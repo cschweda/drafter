@@ -1,6 +1,6 @@
 // Drafter's main process: one instance, one window, the web build served from the app's own files
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, protocol, session, type WebContents } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
@@ -12,6 +12,7 @@ import { refuseNetwork } from './network';
 import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './open-files';
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
+import { CONTINUE, QUIT, rememberAnswer, sandboxNotice } from './sandbox';
 import { type Spellcheck, setUpSpellcheck } from './spellcheck';
 import { setUpUpdates } from './updates-main';
 import { createMainWindow, fromApp, guard } from './window';
@@ -21,6 +22,20 @@ import { createMainWindow, fromApp, guard } from './window';
 if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {
   app.setPath('userData', process.env.DRAFTER_USER_DATA);
 }
+
+// A packaged app whose sandbox was turned off (an AppImage launcher does it on a system that blocks
+// user namespaces) explains, and asks once whether to continue (see `askAboutSandbox`).
+// Looked at before `enableSandbox`, which hides `--no-sandbox` from `app.commandLine` without
+// turning it off: the switch still reaches Chromium's child processes.
+const sandboxQuestion = sandboxNotice(
+  {
+    packaged: app.isPackaged,
+    hasSwitch: (name) => app.commandLine.hasSwitch(name),
+    argv: process.argv,
+    env: process.env,
+  },
+  app.getPath('userData'),
+);
 
 // Every renderer sandboxed, whatever a window's options say.
 app.enableSandbox();
@@ -58,6 +73,39 @@ Object.assign(globalThis, {
     spellcheck: () => ({ ...spelling, downloads: [...spelling.downloads] }),
   },
 });
+
+/**
+ * Runs `carryOn` at once, unless the sandbox is off: then it explains and asks, once. Continue is
+ * remembered (a file in userData named for the reason; if it can't be written, the app starts anyway) and carries on; Quit exits. The caller has
+ * the single-instance lock already, so a second launch can't ask a second time.
+ */
+function askAboutSandbox(question: typeof sandboxQuestion, carryOn: () => void) {
+  if (!question) return carryOn();
+  if (existsSync(question.marker)) return carryOn();
+  console.error(`${question.message}\n\n${question.detail}`);
+  // Asynchronous, so the process stays responsive while the question is open.
+  void app
+    .whenReady()
+    .then(() =>
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'Drafter',
+        message: question.message,
+        detail: question.detail,
+        buttons: [CONTINUE, QUIT],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      }),
+    )
+    .then(({ response }) => {
+      if (response !== 0) return app.exit(0);
+      // If the answer can't be written the question will come again next time; the app starts anyway.
+      rememberAnswer(question.marker);
+      carryOn();
+    })
+    .catch(() => app.exit(1));
+}
 
 function start() {
   let main: BrowserWindow | null = null;
@@ -250,5 +298,5 @@ function start() {
   });
 }
 
-if (app.requestSingleInstanceLock()) start();
+if (app.requestSingleInstanceLock()) askAboutSandbox(sandboxQuestion, start);
 else app.quit();
