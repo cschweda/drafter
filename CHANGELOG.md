@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `docs`: the desktop app's design (`docs/drafter-desktop-design.md`: Electron, the Linux app first, then Windows and macOS) and the Electron-against-Tauri test on GitHub's Linux runners that chose it (`docs/desktop-spike.md`), and the plan for the Linux app (`docs/plans/2026-10-27-phase1-plan6-desktop-linux.md`).
 - `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
+- `apps/desktop`: **the desktop app's shell** (Phase 1 Plan 6, Task 1), a new workspace package, `@drafter/desktop`. Drafter runs in an Electron 45 window from its own files: the same static build as drafter.dev, made with `DRAFTER_DESKTOP=1` and served from `app://drafter/` with the site's content security policy, so it never loads anything from the network. The window is sandboxed and context-isolated with no Node in the page; it stays on the app, sends https links to the system browser, and opens the app's own help pages in a window of their own. One instance runs at a time. `pnpm desktop:dev` builds and starts it; `pnpm --filter @drafter/desktop e2e` tests it with Playwright's Electron driver, each test in a fresh profile.
+- `apps/web`: a build for the desktop app (`DRAFTER_DESKTOP=1`) has no service worker and no web app manifest (`scripts/check-build.mjs` checks it), and doesn't warn that the recovery copy may be cleared, since the desktop app's profile never is. `app/desktop.ts` is the one place the web app asks whether it's in the desktop app. drafter.dev's build is unchanged.
 
 ## [0.3.0] - 2026-10-26
 

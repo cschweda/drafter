@@ -1,0 +1,5 @@
+# The web build, copied here by `pnpm build:web` and the e2e global setup.
+web/
+# Playwright's output.
+test-results/
+playwright-report/

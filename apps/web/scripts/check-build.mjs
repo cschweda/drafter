@@ -4,7 +4,8 @@
 //   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so);
 // - the service worker precaches every script, style, worker, font, and icon the build made (so the
 //   app, a Markdown document, and a PDF export all work offline), caches nothing else, and has no
-//   runtime caching (Phase 1 design §11).
+//   runtime caching (Phase 1 design §11);
+// - a build for the desktop app (DRAFTER_DESKTOP=1) has no service worker and no manifest at all.
 // Run as `node scripts/check-build.mjs .output/public`.
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
@@ -87,6 +88,21 @@ async function precacheProblems(siteDir) {
 }
 
 /**
+ * What is wrong with a build for the desktop app (`DRAFTER_DESKTOP=1`), if anything: it must have no
+ * service worker, no Workbox runtime, and no web app manifest, since the desktop app serves the
+ * files from inside itself and never registers a worker.
+ * @param {string} siteDir
+ * @returns {Promise<string[]>}
+ */
+async function desktopProblems(siteDir) {
+  const found = await filesUnder(siteDir, /^(?:sw\.js|workbox-[^/]*\.js|manifest\.webmanifest)$/);
+  return found.map(
+    (path) =>
+      `The desktop build has ${relative(siteDir, path).split(sep).join('/')}, which it must not (no service worker or manifest on the desktop).`,
+  );
+}
+
+/**
  * The prerendered pages other than the app's shell: `docs/saving` for `docs/saving/index.html`.
  * @param {string} siteDir
  * @returns {Promise<string[]>}
@@ -117,9 +133,10 @@ async function filesUnder(dir, pattern) {
 
 /**
  * @param {string} siteDir the generated site (`.output/public`)
- * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean }} expected whether the build is a
+ * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean, desktop?: boolean }} expected whether the build is a
  *   test build, the icon names (without `i-lucide-`) its bundle must have, and the Heroicons
- *   (without `heroicons:`) the guided tour draws, which the bundle must have in its Heroicons set
+ *   (without `heroicons:`) the guided tour draws, which the bundle must have in its Heroicons set;
+ *   `precache` checks the service worker's precache, and `desktop` checks a desktop build has none
  * @returns {Promise<{ problems: string[] }>}
  */
 export async function checkBuild(siteDir, expected) {
@@ -158,6 +175,7 @@ export async function checkBuild(siteDir, expected) {
   }
 
   if (expected.precache) problems.push(...(await precacheProblems(siteDir)));
+  if (expected.desktop) problems.push(...(await desktopProblems(siteDir)));
   return { problems };
 }
 
@@ -181,7 +199,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     fixture: process.env.DRAFTER_TEST_MODULES === '1',
     icons: await iconsNamedInTs(appDir),
     heroicons: TOUR_ICONS.map((name) => name.replace(/^heroicons:/, '')),
-    precache: true,
+    // The desktop app's build (DRAFTER_DESKTOP=1) has no service worker to check, and must not.
+    precache: process.env.DRAFTER_DESKTOP !== '1',
+    desktop: process.env.DRAFTER_DESKTOP === '1',
   });
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);

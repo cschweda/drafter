@@ -58,6 +58,16 @@ The app's own dependencies, declared in `apps/web/package.json`. None is a scree
 | `vue-tsc` (development) | Type-checking `.vue` files, through `nuxt typecheck`. |
 | `@playwright/test`, `@axe-core/playwright` (development) | End-to-end tests in Chromium, Firefox, and WebKit, and automated accessibility checks with axe. General-purpose testing tools. |
 
+## The desktop app (`apps/desktop`)
+
+The desktop shell's own dependencies, declared in `apps/desktop/package.json` (Phase 1 Plan 6; the choice of Electron is in `docs/desktop-spike.md`). None is a screenwriting tool or a Fountain library.
+
+| Dependency | Why |
+|---|---|
+| `electron` (development) | The desktop shell: a Chromium window and a Node main process, which serves the same static build as drafter.dev from the app's own files and does what a browser can't (real files, a menu bar, a close prompt). Pinned to an exact version (45.0.0), as Electron recommends, because its Chromium and Node versions change with each release. A development dependency because the packaged app bundles its own copy of the runtime. It has no install script: the binary for the platform downloads the first time it is used (`require('electron')`, or `pnpm --filter @drafter/desktop exec install-electron`), with `@electron/get` and `@electron-internal/extract-zip`, which it brings. A general-purpose application framework from the OpenJS Foundation. |
+| `@playwright/test` (development) | The desktop end-to-end tests, through its Electron driver (`_electron.launch`). The same version `apps/web` uses. |
+| `electron-builder` (development, Plan 6 Task 7) | Packaging the AppImage and the `.deb`. Its row is completed when it is added. |
+
 ## Fonts
 
 | Font | License | Why |

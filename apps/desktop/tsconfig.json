@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The preload and the tests' page callbacks run in a page; the main process in Node.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    // scripts/build-web.mjs, imported by the e2e global setup.
+    "allowJs": true
+  },
+  "include": ["src", "test", "e2e", "scripts", "playwright.config.ts", "tsdown.config.ts"]
+}

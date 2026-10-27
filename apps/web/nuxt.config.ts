@@ -11,13 +11,18 @@ const MODULES = fileURLToPath(new URL('../../modules', import.meta.url));
 // The icons the modules name: the icon bundle is built from the app's own files, and the modules
 // are outside them. (A build has no network to fetch an icon from, and the CSP forbids it.)
 const TEST_MODULES = process.env.DRAFTER_TEST_MODULES === '1';
+// `DRAFTER_DESKTOP=1` builds the web app for the desktop app (apps/desktop), which serves these
+// same files from inside itself: no service worker or web app manifest (its files are local, and
+// updates come from its own updater), and `__DRAFTER_DESKTOP__` true, so `app/desktop.ts` honours
+// the desktop app's bridge. drafter.dev's build is unchanged.
+const DESKTOP = process.env.DRAFTER_DESKTOP === '1';
 const moduleIcons = await moduleIconNames(MODULES);
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
   // The sample scripts live at the repository root, in samples/.
   alias: { '#samples': fileURLToPath(new URL('../../samples', import.meta.url)) },
-  modules: ['@nuxt/ui', 'nuxt-guided-tour', '@vite-pwa/nuxt'],
+  modules: ['@nuxt/ui', 'nuxt-guided-tour', ...(DESKTOP ? [] : ['@vite-pwa/nuxt'])],
   // The guided tour (app/tour/tour.config.ts). The highlight is the brand's goldenrod. The module's inline
   // `<style>` for it is fixed text at build time, which `style-src 'unsafe-inline'` allows (Plan 1).
   guidedTour: { highlightColor: '#E5B04A', highlightColorBright: '#F2CB7A' },
@@ -99,7 +104,11 @@ export default defineNuxtConfig({
   vite: {
     // `DRAFTER_TEST_MODULES=1` (set by `pnpm e2e`) puts the test module in the build. Without it the
     // constant is false, the module is dead code, and no production bundle has it.
-    define: { __DRAFTER_TEST_MODULES__: JSON.stringify(TEST_MODULES) },
+    // `__DRAFTER_DESKTOP__` the same way, from `DRAFTER_DESKTOP=1`.
+    define: {
+      __DRAFTER_TEST_MODULES__: JSON.stringify(TEST_MODULES),
+      __DRAFTER_DESKTOP__: JSON.stringify(DESKTOP),
+    },
     plugins: [
       {
         // Two modules with one id are a build error, naming both folders. (A module that builds
@@ -131,6 +140,15 @@ export default defineNuxtConfig({
     prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path)] },
   },
   hooks: {
+    // The desktop build has no PWA module, so the plugin that registers its worker (and imports
+    // the module's `virtual:pwa-register`) is left out.
+    'app:resolve'(app) {
+      if (DESKTOP) {
+        app.plugins = app.plugins.filter(
+          (plugin) => !plugin.src.endsWith('/plugins/service-worker.client.ts'),
+        );
+      }
+    },
     // The module turns each prerendered `docs/x/index.html` into the precache entry `docs/x`, which
     // answers `/docs/x` and not `/docs/x/`; the worker's page fallback leaves `/docs` alone, so the
     // address with the slash would be a network error offline. Each page is listed under both
@@ -183,7 +201,7 @@ export default defineNuxtConfig({
         { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
         { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
-        { rel: 'manifest', href: '/manifest.webmanifest' },
+        ...(DESKTOP ? [] : [{ rel: 'manifest' as const, href: '/manifest.webmanifest' }]),
       ],
     },
   },

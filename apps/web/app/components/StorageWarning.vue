@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { desktop } from '~/desktop';
 import { installAdviceHere } from '~/storage/install-advice';
 import { useScript } from '~/storage/script';
 
 const { warning, dismissWarning } = useScript();
+// The desktop app's profile is never cleared (no browser evicts it), so it never warns that the
+// recovery copy may be. That the copy can't be kept at all is still said: it is a real failure.
+const mayBeCleared = computed(() => warning.value === 'not-persistent' && desktop() === null);
 // What to say about installing depends on the browser (by feature, see install-advice.ts). Read
 // only when the warning shows, which is in the browser: the site is generated without a window.
 const advice = computed(() => (import.meta.client ? installAdviceHere() : ''));
@@ -16,7 +20,7 @@ const advice = computed(() => (import.meta.client ? installAdviceHere() : ''));
       alert is not announced. "Unavailable" matters most, so it goes in the alert.
     -->
     <div role="status" data-warning-region="status">
-      <div v-if="warning === 'not-persistent'" class="warning" data-warning="not-persistent">
+      <div v-if="mayBeCleared" class="warning" data-warning="not-persistent">
         <p>{{ advice }}</p>
         <button type="button" class="dismiss" @click="dismissWarning">Dismiss</button>
       </div>
