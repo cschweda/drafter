@@ -30,6 +30,16 @@ async function whereIs(page: Page, word: string) {
   }, word);
 }
 
+/** The labels of the editor's last right-click menu (main.ts keeps it for an unpackaged app). */
+type ShellMenu = { items: { label: string; role?: string; click(): void }[]; closePopup(): void };
+const menuLabels = (app: import('@playwright/test').ElectronApplication) =>
+  app.evaluate(() => {
+    const shell = globalThis as unknown as { drafterShell: { contextMenu(): ShellMenu | null } };
+    const menu = shell.drafterShell.contextMenu();
+    menu?.closePopup();
+    return menu ? menu.items.map((item) => item.label || item.role || '') : null;
+  });
+
 test('underlines a misspelled word, with no dictionary downloaded', async ({ desktop }) => {
   const { app, page } = await desktop();
   // Chromium checks spelling in the window that has the keyboard: with two tests running, another
@@ -69,7 +79,8 @@ test('underlines a misspelled word, with no dictionary downloaded', async ({ des
         await page.mouse.click(at.x, at.y, { button: 'right' });
         // The menu's event comes a moment after the click.
         await page.waitForTimeout(300);
-        await page.keyboard.press('Escape');
+        // The editor's own menu (main.ts) is up: close it.
+        await menuLabels(app);
         return app.evaluate(
           () => (globalThis as unknown as { drafterMenu?: { word: string } }).drafterMenu?.word,
         );
@@ -100,6 +111,56 @@ test('underlines a misspelled word, with no dictionary downloaded', async ({ des
   );
   expect(spell.downloads).toEqual([]);
   expect(spell.mode).toBe(process.platform === 'darwin' ? 'system' : 'bundled');
+});
+
+test('right-clicking a misspelled word offers suggestions, and one replaces it', async ({
+  desktop,
+}) => {
+  const { app, page } = await desktop();
+  const focus = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      window?.focus();
+      window?.webContents.focus();
+    });
+  await focus();
+  await editor(page).click();
+  await page.keyboard.press(`${MOD}+End`);
+  await page.keyboard.type('\nThe quikc brown fox.\n');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  // Right-click the word until the checker has marked it and the menu lists suggestions.
+  let labels: string[] | null = null;
+  await expect
+    .poll(
+      async () => {
+        await focus();
+        const at = await whereIs(page, 'quikc');
+        if (!at) return [];
+        await page.mouse.click(at.x, at.y, { button: 'right' });
+        await page.waitForTimeout(300);
+        labels = await menuLabels(app);
+        return labels ?? [];
+      },
+      { timeout: 30_000, intervals: [500] },
+    )
+    .toContain('Add to Dictionary');
+  const menu = labels as unknown as string[];
+  const suggestion = menu[0] as string;
+  expect(suggestion).not.toBe('No Suggestions');
+  expect(menu).toEqual(expect.arrayContaining(['Cut', 'Copy', 'Paste', 'Select All']));
+  if (process.platform === 'linux') expect(menu).toContain('quick');
+
+  // Choosing a suggestion (from the menu of the last right-click) replaces the word in the script.
+  const chosen = process.platform === 'linux' ? 'quick' : suggestion;
+  await app.evaluate((_electron, label) => {
+    const shell = globalThis as unknown as { drafterShell: { contextMenu(): ShellMenu | null } };
+    shell.drafterShell
+      .contextMenu()
+      ?.items.find((item) => item.label === label)
+      ?.click();
+  }, chosen);
+  await expect(editor(page)).toContainText(`The ${chosen} brown fox.`);
+  await expect(editor(page)).not.toContainText('quikc');
 });
 
 test('denies permissions the app doesn’t use', async ({ desktop }) => {

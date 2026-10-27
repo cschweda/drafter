@@ -2,9 +2,19 @@
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, protocol, session, type WebContents } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  protocol,
+  session,
+  type WebContents,
+} from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { type Closing, setUpClosing } from './close';
+import { contextMenuTemplate } from './context-menu';
 import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { onSecondInstance, takeInstanceLock } from './instance';
@@ -89,8 +99,11 @@ const renderers = new Map<number, RendererReport>();
  * about its dictionaries (`initialized en-US`, `download-failure en-US`), for the e2e suite.
  */
 const spelling = { mode: 'off' as Spellcheck, downloads: [] as string[], events: [] as string[] };
+/** The editor's last right-click menu, kept only by an unpackaged app (the e2e suite chooses from it). */
+let lastContextMenu: Electron.Menu | null = null;
 Object.assign(globalThis, {
   drafterShell: {
+    contextMenu: () => lastContextMenu,
     renderers: () => [...renderers.values()],
     spellcheck: () => ({
       ...spelling,
@@ -221,6 +234,18 @@ function start() {
   const openMain = () => {
     const window = createMainWindow(PRELOAD);
     closing?.attach(window);
+    // The right-click menu (context-menu.ts), in the editor's window only.
+    const contents = window.webContents;
+    contents.on('context-menu', (_event, params) => {
+      const template = contextMenuTemplate(params, {
+        replace: (word) => contents.replaceMisspelling(word),
+        addWord: (word) => contents.session.addWordToSpellCheckerDictionary(word),
+      });
+      if (template.length === 0) return;
+      const menu = Menu.buildFromTemplate(template);
+      if (!app.isPackaged) lastContextMenu = menu;
+      menu.popup({ window });
+    });
     window.on('closed', () => {
       if (main === window) main = null;
     });
