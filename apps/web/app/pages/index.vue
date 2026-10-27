@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { EditorView } from '@codemirror/view';
 import { registerBuiltinCommands } from '~/commands/builtin';
+import { installDesktopMenu } from '~/commands/desktop-menu';
 import { installGlobalKeys } from '~/commands/registry';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
@@ -69,6 +70,7 @@ let stopSettings: (() => void) | undefined;
 let stopModules: (() => void) | undefined;
 let removeFileCheck: (() => void) | undefined;
 let removeSystemOpen: (() => void) | undefined;
+let removeDesktopMenu: (() => void) | undefined;
 
 // Focus mode swaps the layout for the Source alone. Entering puts the cursor in the editor; leaving
 // puts it back there if the editor is showing, else on the button that entered.
@@ -101,6 +103,7 @@ onMounted(() => {
   stopModules = startModules();
   removeFileCheck = installFileCheck();
   removeSystemOpen = installSystemOpen();
+  removeDesktopMenu = installDesktopMenu();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -112,6 +115,7 @@ onBeforeUnmount(() => {
   stopModules?.();
   removeFileCheck?.();
   removeSystemOpen?.();
+  removeDesktopMenu?.();
 });
 </script>
 

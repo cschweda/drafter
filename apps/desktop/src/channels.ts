@@ -21,6 +21,10 @@ export const CHANNELS = {
   openReady: 'drafter:open:ready',
   /** main → preload: one `OpenItem`: a file (already granted) to open, or why one wasn't. */
   openItem: 'drafter:open:item',
+  /** preload → main: the page's command list for the menu bar (menu.ts `parseCommands` checks it). */
+  menuCommands: 'drafter:menu:commands',
+  /** main → preload: the id of the command a menu item stands for, chosen in the menu bar. */
+  menuRun: 'drafter:menu:run',
 } as const;
 
 /** What a preload says about its renderer: the e2e suite's evidence that it is sandboxed. */

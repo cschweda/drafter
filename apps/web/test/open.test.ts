@@ -496,6 +496,7 @@ describe('opening a file the system named (the desktop app)', () => {
       version: '0',
       platform: 'linux',
       files: {} as never,
+      menu: {} as never,
       onOpenFile(onPath: (path: string) => void, onProblem?: (message: string) => void) {
         named = onPath;
         problem = onProblem;

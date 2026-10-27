@@ -76,6 +76,22 @@ const bridge: DesktopBridge = {
   version,
   platform: process.platform,
   files,
+  // The menu bar: the page sends its commands (which of them apply, and their keys), main builds
+  // the menu from them, and the id of a chosen item comes back for the page to run.
+  menu: {
+    setCommands(list) {
+      ipcRenderer.send(CHANNELS.menuCommands, list);
+    },
+    onCommand(onRun) {
+      const listener = (_event: unknown, id: unknown) => {
+        if (typeof id === 'string') onRun(id);
+      };
+      ipcRenderer.on(CHANNELS.menuRun, listener);
+      return () => {
+        ipcRenderer.removeListener(CHANNELS.menuRun, listener);
+      };
+    },
+  },
   // Files the system names (the command line, a second launch, macOS's open-file): main granted
   // each before sending it. Telling main we listen is what lets it send those it was holding.
   onOpenFile(onPath, onProblem) {

@@ -321,7 +321,13 @@ describe('useFiles', () => {
   test('is the desktop app’s in the desktop app', async () => {
     vi.resetModules();
     vi.stubGlobal('__DRAFTER_DESKTOP__', true);
-    window.drafterDesktop = { version: '0.3.0', platform: 'linux', files: fakeBridge().bridge };
+    window.drafterDesktop = {
+      version: '0.3.0',
+      platform: 'linux',
+      files: fakeBridge().bridge,
+      menu: {} as never,
+      onOpenFile: () => () => {},
+    };
     const { useFiles: use, browserFiles: browser } = await import('../app/storage/files');
     expect(use()).not.toBe(browser);
     expect(use().canSaveInPlace).toBe(true);

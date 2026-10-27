@@ -46,6 +46,25 @@ export interface DesktopFilesBridge {
   watch(path: string, onChange: () => void): () => void;
 }
 
+/** One command, as the menu bar needs it (apps/desktop/src/menu.ts `MenuCommand`). */
+export interface DesktopMenuCommand {
+  id: string;
+  title: string;
+  group: string;
+  /** In CodeMirror's notation, such as `Mod-s`; the menu shows the first. */
+  keys?: readonly string[];
+  /** Whether the command applies right now. */
+  enabled: boolean;
+}
+
+/** The menu bar, built by the main process from the page's own commands. */
+export interface DesktopMenuBridge {
+  /** Sends the commands the menu is built from, with which of them apply right now. */
+  setCommands(list: readonly DesktopMenuCommand[]): void;
+  /** Calls `onRun` with the id of each command chosen in the menu. Returns the function that stops listening. */
+  onCommand(onRun: (id: string) => void): () => void;
+}
+
 /**
  * What the desktop app gives the page. Plain data and named calls only: never Electron's
  * `ipcRenderer` itself. Later tasks add to it (the menu, closing, updates).
@@ -57,6 +76,8 @@ export interface DesktopBridge {
   platform: DesktopPlatform;
   /** Files: the OS's dialogs, and reading and writing by path. */
   files: DesktopFilesBridge;
+  /** The menu bar. */
+  menu: DesktopMenuBridge;
   /**
    * Calls `onPath` with the path of each script the system asks Drafter to open: named on the
    * command line, in a second launch, or double-clicked in a file manager. The desktop app has

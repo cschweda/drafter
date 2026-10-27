@@ -6,6 +6,7 @@ import { app, type BrowserWindow, dialog, ipcMain, protocol, session } from 'ele
 import { CHANNELS, type RendererReport } from './channels';
 import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
+import { setUpMenu } from './menu-main';
 import { refuseNetwork } from './network';
 import { NOT_A_SCRIPT, OpenInbox, refusalMessage, requestsFromArgs } from './open-files';
 import { denyPermissions } from './permissions';
@@ -197,6 +198,7 @@ function start() {
     }
     protocol.handle(SCHEME, appHandler(WEB, csp, headers));
     files = registerFileIpc();
+    setUpMenu();
     started = true;
     openMain();
     begin();

@@ -8,6 +8,7 @@
 //     const { page } = await desktop();            // the editor, ready, the tour's welcome skipped
 //     const again = await desktop({ firstRun: true }); // (another profile would be `newProfile()`)
 //   });
+
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
@@ -22,6 +23,7 @@ import {
   expect,
   type Page,
 } from '@playwright/test';
+import type { Menu, MenuItem } from 'electron';
 
 export { expect };
 
@@ -45,6 +47,8 @@ export interface Profile {
    * null for Cancel. An empty queue cancels. Each question asked is logged beside it (`.log`).
    */
   dialogs: string;
+  /** Where the About box writes what it says (`DRAFTER_E2E_ABOUT`), then presses its link. */
+  about: string;
 }
 
 export async function newProfile(): Promise<Profile> {
@@ -57,6 +61,7 @@ export async function newProfile(): Promise<Profile> {
     userData: join(dir, 'user-data'),
     externalLog: join(dir, 'external.log'),
     dialogs: join(dir, 'dialogs.json'),
+    about: join(dir, 'about.log'),
   };
 }
 
@@ -80,6 +85,15 @@ export function dialogsAsked(profile: Profile): DialogAsked[] {
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line) as DialogAsked);
+}
+
+/** What the About box said, one JSON line each (`{ message, detail }`). */
+export function aboutShown(profile: Profile): { message: string; detail: string }[] {
+  if (!existsSync(profile.about)) return [];
+  return readFileSync(profile.about, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { message: string; detail: string });
 }
 
 /** The URLs the app handed to the system browser, in order. */
@@ -180,6 +194,7 @@ function envFor(profile: Profile, extra: Record<string, string> = {}): Record<st
     DRAFTER_E2E_EXTERNAL_LOG: profile.externalLog,
     // Every dialog answers from the queue (Cancel when it is empty): no test waits on a person.
     DRAFTER_E2E_DIALOG: profile.dialogs,
+    DRAFTER_E2E_ABOUT: profile.about,
     ...extra,
   };
 }
@@ -279,3 +294,90 @@ export const test = base.extend<Fixtures>({
     spawned.clear();
   },
 });
+
+/** An item of the application menu, as a test can see it from the main process. */
+export interface MenuItemState {
+  id: string;
+  label: string;
+  enabled: boolean;
+  accelerator: string;
+  registerAccelerator: boolean;
+}
+
+/** Every item (at any depth) of the application menu that has an id, in order. */
+export function menuItems(app: ElectronApplication): Promise<MenuItemState[]> {
+  return app.evaluate(({ Menu }) => {
+    const out: MenuItemState[] = [];
+    const visit = (menu: Menu) => {
+      for (const item of menu.items) {
+        if (item.id) {
+          out.push({
+            id: item.id,
+            label: item.label,
+            enabled: item.enabled,
+            accelerator: item.accelerator ? String(item.accelerator) : '',
+            registerAccelerator: item.registerAccelerator,
+          });
+        }
+        if (item.submenu) visit(item.submenu);
+      }
+    };
+    const menu = Menu.getApplicationMenu();
+    if (menu) visit(menu);
+    return out;
+  });
+}
+
+/** The labels of the menu bar's own menus, `&` mnemonics removed. */
+export function menuBar(app: ElectronApplication): Promise<string[]> {
+  return app.evaluate(({ Menu }) =>
+    (Menu.getApplicationMenu()?.items ?? []).map((item) => item.label.replace(/&/g, '')),
+  );
+}
+
+/**
+ * Chooses a menu item by its path of labels (`['File', 'Save']`), as a click on it would. The menu
+ * follows the page, so an item that isn't on yet is waited for (up to 10 s), as a person would.
+ */
+export async function chooseMenuItem(app: ElectronApplication, path: string[]): Promise<void> {
+  const choose = () =>
+    app.evaluate(({ Menu }, labels) => {
+      let menu: Menu | null | undefined = Menu.getApplicationMenu();
+      let item: MenuItem | undefined;
+      for (const label of labels) {
+        item = menu?.items.find((i) => i.label.replace(/&/g, '') === label);
+        if (!item) return false;
+        menu = item.submenu;
+      }
+      if (!item?.enabled) return false;
+      item.click();
+      return true;
+    }, path);
+  const until = Date.now() + 10_000;
+  while (!(await choose())) {
+    if (Date.now() > until) throw new Error(`No enabled menu item ${path.join(' → ')}`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
+/** The menu items once the page has stopped changing them (nothing new for a second). */
+export async function settledMenu(app: ElectronApplication): Promise<MenuItemState[]> {
+  let last = JSON.stringify(await menuItems(app));
+  for (let i = 0; i < 30; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const next = JSON.stringify(await menuItems(app));
+    if (next === last) return JSON.parse(next) as MenuItemState[];
+    last = next;
+  }
+  throw new Error('The menu kept changing.');
+}
+
+/** Where About and Quit are: Help and File, but on a Mac the app's own menu. */
+export const ABOUT_PATH =
+  process.platform === 'darwin' ? ['Drafter', 'About Drafter'] : ['Help', 'About Drafter'];
+export const QUIT_PATH =
+  process.platform === 'darwin' ? ['Drafter', 'Quit Drafter'] : ['File', 'Quit'];
+export const MENU_BAR =
+  process.platform === 'darwin'
+    ? ['Drafter', 'File', 'Edit', 'View', 'Go', 'Help']
+    : ['File', 'Edit', 'View', 'Go', 'Help'];
