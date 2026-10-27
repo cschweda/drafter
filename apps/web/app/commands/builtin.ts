@@ -21,7 +21,7 @@ import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/sav
 import { useScript } from '~/storage/script';
 import { requestTour } from '~/tour/state';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
-import { COMMAND_DATA, HELP_PAGES } from './data';
+import { COMMAND_DATA, HELP_PAGES, helpHref } from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
@@ -175,12 +175,14 @@ export function registerBuiltinCommands(): void {
     // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
     // section of the app menu lists it too. It waits for any dialog or the palette to close.
     'take-the-tour': { run: requestTour },
-    // The help pages (§4.5), prerendered. They open in this tab, as a link would: leaving with changes that aren't
-    // in a file asks the browser's own question, and the recovery copy has the text either way. The page links back.
+    // The help pages (§4.5), prerendered. Each opens in a new tab, so the writer's script and what is typed stay
+    // as they are (a command runs from a click or a key, which lets a page open one). The page's own link back
+    // to Drafter is a plain link, so there it opens a second editor, which the two-tab guard makes read-only for
+    // the script that is open here.
     ...Object.fromEntries(
       HELP_PAGES.map((page): [string, Behavior] => [
         page.id,
-        { run: () => window.location.assign(page.path) },
+        { run: () => void window.open(helpHref(page), '_blank', 'noopener') },
       ]),
     ),
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a

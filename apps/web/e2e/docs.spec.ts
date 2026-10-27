@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { COMMAND_DATA, HELP_PAGES } from '../app/commands/data';
+import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
 // They are prerendered, so they read without JavaScript, and they share the app's theme.
@@ -65,7 +65,7 @@ test.describe('without JavaScript', () => {
       await expect(page.locator('link[rel="canonical"]'), path).toHaveCount(1);
       await expect(page.locator('link[rel="canonical"]'), path).toHaveAttribute(
         'href',
-        `https://drafter.dev${path}`,
+        `https://drafter.dev${path}/`,
       );
       // Each is a page of its own, with a way back to the app.
       await expect(page.getByRole('link', { name: /Back to Drafter/ }), path).toHaveAttribute(
@@ -74,6 +74,20 @@ test.describe('without JavaScript', () => {
       );
     }
     expect(descriptions.size).toBe(HELP_PAGES.length);
+  });
+
+  test('prerenders a help index that links the three pages', async ({ page }) => {
+    for (const address of ['/docs', '/docs/']) {
+      await page.goto(address);
+      await expect(page, address).toHaveTitle('Help — Drafter');
+      await expect(heading(page), address).toHaveText('Help');
+      for (const help of HELP_PAGES) {
+        await expect(
+          page.locator('main').getByRole('link', { name: help.title }),
+          address,
+        ).toHaveAttribute('href', helpHref(help));
+      }
+    }
   });
 
   test('serves each page with and without a trailing slash', async ({ page }) => {
@@ -123,6 +137,9 @@ test.describe('without JavaScript', () => {
       'never leaves',
       'service worker',
       'recovery copy',
+      '/sw.js',
+      'indexeddb',
+      'localstorage',
     ]) {
       expect(text, phrase).toContain(phrase);
     }
@@ -146,6 +163,10 @@ test.describe('without JavaScript', () => {
       'Allow on every visit',
       'Add to Dock',
       'Add to Home Screen',
+      'iPhone or iPad',
+      'Android',
+      'Install page as app',
+      'Install this site as an app',
       'install',
     ]) {
       expect(text, phrase).toContain(phrase);
@@ -189,23 +210,13 @@ test.describe('with JavaScript', () => {
 });
 
 test.describe('from the app', () => {
-  test('reaches the pages from Help', async ({ page }) => {
-    for (const { title, path } of HELP_PAGES) {
-      await start(page);
-      await openMenu(page);
-      await expect(menu(page).getByText('Help', { exact: true })).toBeVisible();
+  /** Chooses `title` from Help in a new tab, which opens at the page. Returns that tab. */
+  async function fromMenu(page: Page, title: string, how: 'click' | 'keyboard') {
+    await openMenu(page);
+    const opened = page.context().waitForEvent('page');
+    if (how === 'click') {
       await menu(page).getByRole('menuitem', { name: title }).click();
-      await expect(page, title).toHaveURL(new RegExp(`${path}/?$`));
-      await expect(heading(page), title).toHaveText(title);
-    }
-  });
-
-  test('reaches the pages from Help with the keyboard alone', async ({ page }) => {
-    for (const { title, path } of HELP_PAGES) {
-      await start(page);
-      await mark(page).focus();
-      await page.keyboard.press('Enter');
-      await expect(menu(page)).toBeVisible();
+    } else {
       // Arrow down to the item; it is in the menu's last group.
       let found = false;
       for (let i = 0; i < 60 && !found; i += 1) {
@@ -217,8 +228,54 @@ test.describe('from the app', () => {
       }
       expect(found, title).toBe(true);
       await page.keyboard.press('Enter');
-      await expect(page, title).toHaveURL(new RegExp(`${path}/?$`));
-      await expect(heading(page), title).toHaveText(title);
+    }
+    const tab = await opened;
+    await tab.waitForLoadState();
+    return tab;
+  }
+
+  test('reaches the pages from Help, each in a new tab, and leaves the editor tab as it was', async ({
+    page,
+  }) => {
+    let asked = false;
+    page.on('dialog', (dialog) => {
+      asked = true;
+      void dialog.dismiss();
+    });
+    await start(page);
+    for (const { title, path } of HELP_PAGES) {
+      const tab = await fromMenu(page, title, 'click');
+      await expect(tab, title).toHaveURL(new RegExp(`${path}/?$`));
+      await expect(heading(tab), title).toHaveText(title);
+      await tab.close();
+      // The writer's tab is where it was: the app, its script, and no leave prompt.
+      await expect(page).toHaveURL(/\/$/);
+      await expect(editor(page)).toContainText('The Call');
+    }
+    expect(asked).toBe(false);
+  });
+
+  test('reaches the pages from Help with the keyboard alone', async ({ page }) => {
+    for (const { title, path } of HELP_PAGES) {
+      await start(page);
+      await mark(page).focus();
+      await page.keyboard.press('Enter');
+      await expect(menu(page)).toBeVisible();
+      const opened = page.context().waitForEvent('page');
+      let found = false;
+      for (let i = 0; i < 60 && !found; i += 1) {
+        found = await page.evaluate(
+          (name) => document.activeElement?.textContent?.trim().startsWith(name) ?? false,
+          title,
+        );
+        if (!found) await page.keyboard.press('ArrowDown');
+      }
+      expect(found, title).toBe(true);
+      await page.keyboard.press('Enter');
+      const tab = await opened;
+      await expect(tab, title).toHaveURL(new RegExp(`${path}/?$`));
+      await expect(heading(tab), title).toHaveText(title);
+      await tab.close();
     }
   });
 
@@ -229,53 +286,39 @@ test.describe('from the app', () => {
       await expect(palette(page)).toBeVisible();
       await page.keyboard.type(title);
       // The page is the first match, and the highlighted one.
-      await expect(palette(page).getByRole('option').first()).toContainText(title);
+      await expect(palette(page).getByRole('option').first()).toContainText(
+        `Open the page: ${title}`,
+      );
+      const opened = page.context().waitForEvent('page');
       await page.keyboard.press('Enter');
-      await expect(page, title).toHaveURL(new RegExp(`${path}/?$`));
-      await expect(heading(page), title).toHaveText(title);
+      const tab = await opened;
+      await expect(tab, title).toHaveURL(new RegExp(`${path}/?$`));
+      await expect(heading(tab), title).toHaveText(title);
+      await tab.close();
     }
   });
 
-  test('keeps the script that was being written when a page is read and left', async ({ page }) => {
-    // Leaving with changes asks the browser’s own question; the writer answers Leave.
-    page.on('dialog', (dialog) => void dialog.accept());
+  test('keeps what was being written, unsaved, when a page is read', async ({ page }) => {
+    let asked = false;
+    page.on('dialog', (dialog) => {
+      asked = true;
+      void dialog.dismiss();
+    });
     await start(page);
     await showSource(page);
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.insertText('\n\nA line written before reading the help.');
-    // The recovery copy has it before the writer leaves.
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () =>
-            new Promise<boolean>((resolve) => {
-              const open = indexedDB.open('drafter');
-              open.onerror = () => resolve(false);
-              open.onsuccess = () => {
-                const db = open.result;
-                const all = db.transaction('projects').objectStore('projects').getAll();
-                all.onsuccess = () => {
-                  db.close();
-                  resolve(
-                    (all.result as { source: string }[]).some((p) =>
-                      p.source.includes('A line written before reading the help.'),
-                    ),
-                  );
-                };
-                all.onerror = () => resolve(false);
-              };
-            }),
-        ),
-      )
-      .toBe(true);
 
-    await openMenu(page);
-    await menu(page).getByRole('menuitem', { name: 'Privacy' }).click();
-    await expect(heading(page)).toHaveText('Privacy');
-    await page.getByRole('link', { name: /Back to Drafter/ }).click();
-    await expect(editor(page)).toContainText('The Call');
-    // The editor draws only the lines in view: the end of the text is where the line is.
+    const tab = await fromMenu(page, 'Privacy', 'click');
+    await expect(heading(tab)).toHaveText('Privacy');
+    // The tab's link back opens the app, a second editor that can't edit the script that is open here.
+    await tab.getByRole('link', { name: /Back to Drafter/ }).click();
+    await expect(tab).toHaveURL(/\/$/);
+    await tab.close();
+
+    // The writer's tab is untouched: no leave prompt, and the line is there.
+    expect(asked).toBe(false);
     await showSource(page);
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');

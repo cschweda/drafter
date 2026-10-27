@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { COMMAND_DATA, HELP_PAGES } from '../app/commands/data';
+import { COMMAND_DATA, HELP_PAGES, helpCommandTitle, helpHref } from '../app/commands/data';
 import { formatKeys } from '../app/commands/keys';
 import { shortcutGroups } from '../app/commands/shortcuts';
 
@@ -35,8 +35,17 @@ describe('the command data', () => {
     for (const page of HELP_PAGES) {
       const command = COMMAND_DATA.find((c) => c.id === page.id);
       expect(command?.group, page.id).toBe('Help');
-      expect(command?.title).toBe(page.title);
+      expect(command?.title).toBe(`Open the page: ${page.title}`);
+      expect(command?.title).toBe(helpCommandTitle(page));
     }
+  });
+
+  test('links each page at its directory, where a static host serves it', () => {
+    expect(HELP_PAGES.map(helpHref)).toEqual([
+      '/docs/saving/',
+      '/docs/shortcuts/',
+      '/docs/privacy/',
+    ]);
   });
 });
 

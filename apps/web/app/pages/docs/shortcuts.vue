@@ -62,9 +62,31 @@ const groups = shortcutGroups(COMMAND_DATA);
 
     <section aria-labelledby="group-other">
       <h2 id="group-other">Other keys</h2>
+      <p>
+        These are not commands, so they aren’t in the palette. Some are the editor’s own, which
+        Drafter keeps.
+      </p>
       <ul>
-        <li><kbd>F6</kbd> moves between the two panes.</li>
-        <li><kbd>Esc</kbd> leaves focus mode, once nothing else (the palette, a menu, a dialog, completion, or search) needs it.</li>
+        <li>
+          <kbd>F6</kbd> moves between the two panes. It works where the two panes are side by side,
+          and not in focus mode.
+        </li>
+        <li>
+          <kbd>Esc</kbd> leaves focus mode, once nothing else (the palette, a menu, a dialog,
+          completion, or search) needs it.
+        </li>
+        <li>
+          Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux, and <kbd>Ctrl+Shift+Z</kbd> on Linux.
+        </li>
+        <li>
+          Find next is <kbd>⌘G</kbd> on a Mac and <kbd>Ctrl+G</kbd> elsewhere, or <kbd>F3</kbd>;
+          add <kbd>Shift</kbd> for find previous. <kbd>Esc</kbd> closes the search panel.
+        </li>
+        <li>
+          Completion (character names, locations, times, transitions, and section titles) opens as you type, or with
+          <kbd>Ctrl+Space</kbd> (also <kbd>⌥`</kbd> on a Mac). <kbd>↑</kbd> and <kbd>↓</kbd>
+          choose, <kbd>Enter</kbd> accepts, and <kbd>Esc</kbd> closes it.
+        </li>
       </ul>
     </section>
   </article>

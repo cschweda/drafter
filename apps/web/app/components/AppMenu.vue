@@ -86,7 +86,7 @@ const EXPORT_ICONS: Record<string, string> = {
 };
 
 // Help: the group at the end of the menu. Take the tour is first (always on), then the three help pages
-// (they open in this tab: the page links back); Reset sample is last (off unless a sample is open).
+// (each opens in a new tab, and is named by the page's title under the Help label); Reset sample is last (off unless a sample is open).
 const HELP_ICONS: Record<string, string> = {
   'help-saving': 'i-lucide-save',
   'help-shortcuts': 'i-lucide-keyboard',
@@ -95,7 +95,12 @@ const HELP_ICONS: Record<string, string> = {
 const helpItems = computed<DropdownMenuItem[]>(() => [
   { type: 'label', label: 'Help' },
   ...entry('take-the-tour', 'i-lucide-compass'),
-  ...HELP_PAGES.flatMap((page) => entry(page.id, HELP_ICONS[page.id] ?? 'i-lucide-book-open')),
+  ...HELP_PAGES.flatMap((page) =>
+    entry(page.id, HELP_ICONS[page.id] ?? 'i-lucide-book-open').map((item) => ({
+      ...item,
+      label: page.title,
+    })),
+  ),
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
 ]);
 

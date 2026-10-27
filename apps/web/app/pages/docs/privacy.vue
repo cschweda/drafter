@@ -41,13 +41,16 @@ useDocsHead({
       </li>
       <li>
         <strong>In a recovery copy in this browser.</strong> Drafter keeps a copy of each script in
-        the browser’s own storage so a crash doesn’t cost you your work. It stays on this device. See
-        <a href="/docs/saving#recovery-copy">Saving and your browser</a> for what it is and what can
+        the browser’s IndexedDB, its database for a website, so a crash doesn’t cost you your work.
+        It stays on this device. See
+        <a href="/docs/saving/#recovery-copy">Saving and your browser</a> for what it is and what can
         clear it.
       </li>
       <li>
-        <strong>In your settings,</strong> kept in the same browser storage: the theme, the text size,
-        your daily goal, and whether you have seen the tour.
+        <strong>In your settings.</strong> Your settings and each script’s daily goal are in the
+        same IndexedDB. The theme you chose, and whether you have seen the tour, are in the
+        browser’s localStorage, a small store for a website’s own notes. Neither is a cookie, and
+        neither leaves this device.
       </li>
     </ul>
     <p>
@@ -59,10 +62,12 @@ useDocsHead({
     <p>
       Drafter installs a <em>service worker</em>, a small program your browser keeps, so Drafter
       opens when you’re offline. It saves Drafter’s own files (the page, its code, the fonts, and the
-      icons) and nothing else. It doesn’t save your scripts, and it doesn’t fetch anything for
-      anyone. When a new version of Drafter is ready, it says so and waits for you to choose Reload;
-      it never reloads on its own. You can remove the saved files, along with the worker, by
-      clearing this site’s data.
+      icons) and nothing else. It doesn’t save your scripts. The one thing your browser does on its
+      own is this: when Drafter opens, the browser asks drafter.dev for the worker’s file
+      (<code>/sw.js</code>) to see whether there is a new version, and downloads the new files when
+      there is one. That request carries nothing from your scripts. When a new version is ready,
+      Drafter says so and waits for you to choose Reload; it never reloads on its own. You can
+      remove the saved files, along with the worker, by clearing this site’s data.
     </p>
 
     <h2 id="modules">Script modules</h2>

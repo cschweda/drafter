@@ -194,7 +194,7 @@ test.describe('offline', () => {
     // The page asks for nothing the worker can't answer (Nuxt fetches a prerendered page's payload).
     const failed: string[] = [];
     page.on('requestfailed', (request) => failed.push(request.url()));
-    for (const { path, title } of HELP_PAGES) {
+    for (const { path, title } of [{ path: '/docs', title: 'Help' }, ...HELP_PAGES]) {
       for (const address of [path, `${path}/`]) {
         await page.goto(address);
         await expect(page.getByRole('heading', { level: 1 }), address).toHaveText(title);
@@ -236,7 +236,7 @@ test.describe('offline', () => {
       expect(stored.urls).toContain(icon);
     }
     // The help pages, under both addresses.
-    for (const { path } of HELP_PAGES) {
+    for (const { path } of [{ path: '/docs' }, ...HELP_PAGES]) {
       expect(stored.urls).toContain(path);
       expect(stored.urls).toContain(`${path}/`);
     }

@@ -21,12 +21,26 @@ export interface CommandData {
   global?: boolean;
 }
 
+export interface HelpPage {
+  id: string;
+  /** The route, prerendered, and the service worker's entry. */
+  path: string;
+  title: string;
+}
+
 /** The help pages (Phase 1 design §4.5): prerendered at `path`, and opened from Help and the palette. */
-export const HELP_PAGES: readonly { id: string; path: string; title: string }[] = [
+export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
 ];
+
+/** The address a link uses: the page's directory, which is where a static host serves it (no redirect). */
+export const helpHref = (page: Pick<HelpPage, 'path'>): string => `${page.path}/`;
+
+/** What the palette and the shortcuts page call the command that opens a help page. */
+export const helpCommandTitle = (page: Pick<HelpPage, 'title'>): string =>
+  `Open the page: ${page.title}`;
 
 const fountain = (id: string, title: string, keys: string): CommandData => ({
   id,
@@ -77,7 +91,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   ),
   { id: 'reset-sample', title: 'Reset sample', group: 'File' },
   { id: 'take-the-tour', title: 'Take the tour', group: 'Help' },
-  ...HELP_PAGES.map((page): CommandData => ({ id: page.id, title: page.title, group: 'Help' })),
+  ...HELP_PAGES.map(
+    (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
+  ),
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },
   { id: 'export-md', title: 'Export as Markdown file', group: 'File' },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },

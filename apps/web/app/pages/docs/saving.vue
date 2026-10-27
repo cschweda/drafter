@@ -24,17 +24,19 @@ useDocsHead({
 
     <h2 id="what-save-does">What Save does</h2>
     <p>
-      <strong>In Chrome and Edge,</strong> Save writes straight back to the file you opened or saved
+      <strong>In Chrome and Edge on a computer,</strong> Save writes straight back to the file you opened or saved
       before. The first Save of a new script asks where to put it and what to call it, like any
       desktop program. Save As saves a copy somewhere else.
     </p>
     <p>
-      <strong>In Firefox, Safari, and Brave,</strong> a web page isn’t allowed to write to a file on
-      your computer. Save instead downloads a fresh, complete copy of the script. Each Save adds a
+      <strong>In Firefox, Safari, and Brave,</strong> and in every browser on a phone or tablet, a
+      web page isn’t allowed to write to a file on your device. Save instead downloads a fresh, complete copy of the script. Each Save adds a
       new file to your Downloads folder, so repeated saves pile up as numbered copies
       (<code>The Call.fountain</code>, <code>The Call (1).fountain</code>, and so on). Every one is
       a whole script, so any of them is a full backup. (Brave ships with the feature that lets Chrome
-      save in place turned off, which is why it saves by download.)
+      save in place turned off, which is why it saves by download.) Chrome and Edge on Android save
+      by download too. On an iPhone or iPad, Chrome, Edge, and Firefox are all built on Safari’s
+      engine, so every browser there behaves like Safari.
     </p>
     <p>
       Either way, Drafter marks a script whose changes aren’t in its file yet: a dot in the tab’s
@@ -52,9 +54,9 @@ useDocsHead({
         <thead>
           <tr>
             <th scope="col">What</th>
-            <th scope="col">Chrome and Edge</th>
-            <th scope="col">Firefox</th>
-            <th scope="col">Safari (Mac, iPhone, iPad)</th>
+            <th scope="col">Chrome and Edge on a computer</th>
+            <th scope="col">Firefox on a computer</th>
+            <th scope="col">Safari, and any browser on an iPhone or iPad</th>
             <th scope="col">Brave</th>
           </tr>
         </thead>
@@ -106,7 +108,7 @@ useDocsHead({
             <td>Usually, once you have used Drafter for a while</td>
             <td>It asks you</td>
             <td>Only when Drafter is installed as an app</td>
-            <td>Usually, once you have used Drafter for a while</td>
+            <td>Varies</td>
           </tr>
           <tr>
             <th scope="row">Risk of the browser deleting the recovery copy</th>
@@ -116,21 +118,21 @@ useDocsHead({
               Real. A site that isn’t installed can lose its data after about a week of not being
               visited.
             </td>
-            <td>Low once it agrees</td>
+            <td>Varies</td>
           </tr>
           <tr>
             <th scope="row">Install Drafter as an app</th>
             <td>Yes</td>
             <td>Not on a computer</td>
             <td>Yes: Add to Dock, or Add to Home Screen</td>
-            <td>Yes</td>
+            <td>Varies</td>
           </tr>
         </tbody>
       </table>
     </div>
     <p>
-      Opera, Vivaldi, and the other browsers built on Chromium behave like Chrome, unless they have
-      turned the file feature off, as Brave has.
+      Other Chromium-based browsers behave like Chrome unless they have turned this off, as Brave
+      has. “Varies” means it depends on the version and your settings.
     </p>
 
     <h2 id="synced-folders">Keeping scripts in a synced folder</h2>
@@ -141,7 +143,7 @@ useDocsHead({
     </p>
     <ul>
       <li>
-        <strong>Dropbox, Google Drive, or iCloud Drive, in Chrome or Edge.</strong> Save the script
+        <strong>Dropbox, Google Drive, or iCloud Drive, in Chrome or Edge on a computer.</strong> Save the script
         into the service’s folder on your computer (the Dropbox, Google Drive, or iCloud Drive
         folder that its app made). From then on, Save writes back to that file, and the service’s
         own app carries the change to your other computers.
@@ -150,7 +152,8 @@ useDocsHead({
         <strong>On a Chromebook,</strong> Google Drive appears in the Save dialog itself.
       </li>
       <li>
-        <strong>In Firefox, Safari, or Brave,</strong> each Save downloads a copy. Set the browser to
+        <strong>In Firefox, Safari, Brave, or any browser on a phone or tablet,</strong> each Save
+        downloads a copy. Set the browser to
         download into the synced folder, or move the files there. Open the newest one when you
         return.
       </li>
@@ -219,9 +222,12 @@ useDocsHead({
     </p>
     <ul>
       <li>
-        <strong>Chrome and Edge:</strong> choose the install button at the right end of the address
-        bar, or open the browser’s menu and choose the install item (“Install Drafter”, or “Apps”,
-        then “Install this site as an app”).
+        <strong>Chrome:</strong> choose the install button at the right end of the address bar, or
+        open the menu and choose “Cast, save, and share”, then “Install page as app”.
+      </li>
+      <li>
+        <strong>Edge:</strong> choose the install button in the address bar, or open the menu and
+        choose “Apps”, then “Install this site as an app”.
       </li>
       <li>
         <strong>Safari on a Mac:</strong> choose File, then <strong>Add to Dock</strong>.
@@ -234,8 +240,8 @@ useDocsHead({
     </ul>
 
     <p class="docs-note">
-      Everything here stays on your device. See <a href="/docs/privacy">Privacy</a>, and the
-      <a href="/docs/shortcuts">keyboard shortcuts</a> for Save, Save As, and the rest.
+      Everything here stays on your device. See <a href="/docs/privacy/">Privacy</a>, and the
+      <a href="/docs/shortcuts/">keyboard shortcuts</a> for Save, Save As, and the rest.
     </p>
   </article>
 </template>

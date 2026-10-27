@@ -126,7 +126,10 @@ export default defineNuxtConfig({
   // Always plain static files in .output/public. On Netlify, Nitro would
   // otherwise pick its netlify-static preset and write dist/ instead, which
   // netlify.toml's publish directory and scripts/csp.mjs don't read.
-  nitro: { preset: 'static', prerender: { routes: HELP_PAGES.map((page) => page.path) } },
+  nitro: {
+    preset: 'static',
+    prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path)] },
+  },
   hooks: {
     // The module turns each prerendered `docs/x/index.html` into the precache entry `docs/x`, which
     // answers `/docs/x` and not `/docs/x/`; the worker's page fallback leaves `/docs` alone, so the
@@ -144,7 +147,7 @@ export default defineNuxtConfig({
           manifest: [
             ...entries,
             ...entries
-              .filter((entry) => /^docs\/[^/]+$/.test(entry.url))
+              .filter((entry) => /^docs(\/[^/.]+)?$/.test(entry.url))
               .map((entry) => ({ ...entry, url: `${entry.url}/` })),
           ],
           warnings: [],

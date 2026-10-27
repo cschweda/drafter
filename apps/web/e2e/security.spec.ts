@@ -74,7 +74,7 @@ test('restores the light theme before the page body exists', async ({ page }) =>
 // The help pages are prerendered, so their inline scripts (the theme, Nuxt's configuration) are
 // hashed into the policy like the app's (scripts/csp.mjs reads every page).
 test.describe('the help pages', () => {
-  for (const { path, title } of HELP_PAGES) {
+  for (const { path, title } of [{ path: '/docs', title: 'Help' }, ...HELP_PAGES]) {
     test(`send the content security policy and load with no CSP violations: ${title}`, async ({
       page,
       request,

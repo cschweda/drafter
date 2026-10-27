@@ -6,7 +6,8 @@ import { SITE_URL } from '../../site';
  */
 export function useDocsHead(page: { title: string; description: string; path: string }) {
   const title = `${page.title} — Drafter`;
-  const url = `${SITE_URL}${page.path}`;
+  // The address a static host serves the page at: its directory, with the slash (`helpHref`).
+  const url = `${SITE_URL}${page.path.replace(/\/?$/, '/')}`;
   useSeoMeta({
     title,
     description: page.description,
