@@ -13,7 +13,7 @@ import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './op
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
 import { CONTINUE, QUIT, rememberAnswer, sandboxNotice } from './sandbox';
-import { type Spellcheck, setUpSpellcheck } from './spellcheck';
+import { type Spellcheck, seedDictionaries, setUpSpellcheck } from './spellcheck';
 import { setUpUpdates } from './updates-main';
 import { createMainWindow, fromApp, guard } from './window';
 
@@ -25,10 +25,6 @@ app.setName('Drafter');
 
 // The e2e suite gives each test its own profile. Only an unpackaged app honours it, so an
 // installed Drafter's profile can't be moved by an environment variable.
-// Electron has already fixed Chromium's dictionary folder (`<userData>/Dictionaries`) from the
-// default profile by the time this runs, so a moved profile's spellcheck dictionary is also seeded
-// there (spellcheck.ts); the test's HOME keeps it apart from a real profile.
-const DEFAULT_USER_DATA = app.getPath('userData');
 if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {
   app.setPath('userData', process.env.DRAFTER_USER_DATA);
 }
@@ -72,6 +68,18 @@ const PRELOAD = join(__dirname, 'preload.cjs');
 const WEB = join(app.getAppPath(), 'web');
 /** The spellchecker's dictionaries, for Linux (spellcheck.ts). */
 const DICTIONARIES = join(app.getAppPath(), 'dictionaries');
+
+// Into the profile now, before `ready`: Chromium's spellchecker opens `<userData>/Dictionaries` on a
+// thread of its own as soon as the session exists, and a copy made at `ready` lost that race (an
+// strace in CI showed it reading while the copy was written), so a first start had no dictionary
+// and tried to download one. setUpSpellcheck seeds again, which finds the copy and leaves it.
+if (process.platform !== 'darwin') {
+  try {
+    seedDictionaries(DICTIONARIES, app.getPath('userData'));
+  } catch {
+    // setUpSpellcheck tries again, and turns spelling off if there is still no dictionary.
+  }
+}
 
 /** What each renderer's preload reported, by webContents id (read by the e2e suite). */
 const renderers = new Map<number, RendererReport>();
@@ -291,8 +299,6 @@ function start() {
         platform: process.platform,
         dictionaries: DICTIONARIES,
         userData: app.getPath('userData'),
-        alsoUserData:
-          DEFAULT_USER_DATA !== app.getPath('userData') ? [DEFAULT_USER_DATA] : undefined,
       });
     } catch {
       ses.setSpellCheckerEnabled(false);
