@@ -12,8 +12,10 @@
 // themselves with Chromium's `--remote-debugging-port` and drive its page over CDP; the process
 // checks read /proc.
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Browser, chromium, expect, type Page, test } from '@playwright/test';
@@ -73,6 +75,8 @@ interface LaunchOptions {
   env?: Record<string, string>;
   /** Start with this HOME (an earlier launch's) instead of a new one. */
   home?: string;
+  /** Launch this program instead of DRAFTER_PACKAGED. */
+  program?: string;
 }
 
 const stops: (() => Promise<void>)[] = [];
@@ -101,7 +105,7 @@ async function launch(options: LaunchOptions = {}): Promise<Running> {
   }
   Object.assign(env, { HOME: home, XDG_CONFIG_HOME: join(home, '.config') }, options.env);
   const child = spawn(
-    PACKAGED as string,
+    options.program ?? (PACKAGED as string),
     ['--remote-debugging-port=0', ...(options.args ?? [])],
     // Its own process group, so stopping it stops the AppImage's launcher and the app together.
     { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
@@ -570,4 +574,150 @@ test('real keys: Alt+F opens the File menu, and Ctrl+Alt+N still makes one new s
   await page.waitForTimeout(800);
   expect(await count()).toBe(start + 2);
   await browser.close();
+});
+
+/** `name` from an app.asar's header and data (the asar format: a pickled JSON header, then files). */
+function readFromAsar(asar: string, name: string): string {
+  const bytes = readFileSync(asar);
+  // Pickle: [payload size][header pickle size][payload size][JSON length][JSON…]
+  const headerSize = bytes.readUInt32LE(4);
+  const jsonLength = bytes.readUInt32LE(12);
+  const header = JSON.parse(bytes.subarray(16, 16 + jsonLength).toString('utf8')) as {
+    files: Record<string, { offset: string; size: number }>;
+  };
+  const entry = header.files[name];
+  if (!entry) throw new Error(`${name} is not in ${asar}`);
+  const start = 8 + headerSize + Number(entry.offset);
+  return bytes.subarray(start, start + entry.size).toString('utf8');
+}
+
+/** The processes whose environment carries this HOME, each with its environment. */
+function launchedWith(home: string): { pid: number; argv: string[]; env: Map<string, string> }[] {
+  const found = [];
+  for (const entry of readdirSync('/proc')) {
+    if (!/^\d+$/.test(entry)) continue;
+    try {
+      const vars = readFileSync(`/proc/${entry}/environ`, 'utf8').split('\0');
+      if (!vars.includes(`HOME=${home}`)) continue;
+      const env = new Map(
+        vars.filter(Boolean).map((v) => [v.slice(0, v.indexOf('=')), v.slice(v.indexOf('=') + 1)]),
+      );
+      const argv = readFileSync(`/proc/${entry}/cmdline`, 'utf8').split('\0').filter(Boolean);
+      found.push({ pid: Number(entry), argv, env });
+    } catch {
+      // Ended while we looked, or not ours.
+    }
+  }
+  return found;
+}
+
+// The real thing, end to end: an AppImage of version 1.0.0 (built by CI for this test with a feed on
+// this machine, e2e/update-test.builder.cjs) finds 1.0.1, downloads it, and on Restart, chosen on
+// its page, electron-updater's own quitAndInstall replaces the file and starts the new version.
+// DRAFTER_UPDATE_OLD and DRAFTER_UPDATE_NEW are those builds' folders; DRAFTER_UPDATE_PORT the
+// feed's port, as built in.
+test('an AppImage replaces itself in place on Restart, and the new version runs', async () => {
+  const OLD = process.env.DRAFTER_UPDATE_OLD;
+  const NEW = process.env.DRAFTER_UPDATE_NEW;
+  const PORT = Number(process.env.DRAFTER_UPDATE_PORT);
+  test.skip(!OLD || !NEW || !PORT, 'The update test’s builds are not given (CI builds them)');
+  test.skip(KIND !== 'appimage' || REFUSED, 'An AppImage, with the sandbox usable');
+  test.setTimeout(240_000);
+  const NAME = 'Drafter-x86_64.AppImage';
+  const newBytes = readFileSync(join(NEW as string, NAME));
+  const newFeed = readFileSync(join(NEW as string, 'latest-linux.yml'), 'utf8');
+  expect(newFeed).toContain(`url: ${NAME}`);
+  expect(newFeed).toMatch(/^version: 1\.0\.1$/m);
+
+  // The release server: the feed and the new AppImage, as GitHub would serve them (whole files).
+  const seen: string[] = [];
+  const server = createServer((request, response) => {
+    const path = (request.url ?? '').split('?')[0] ?? '';
+    seen.push(
+      `${request.method} ${path}${request.headers.range ? ` ${request.headers.range}` : ''}`,
+    );
+    if (path === '/latest-linux.yml') response.writeHead(200).end(newFeed);
+    else if (path === `/${NAME}`) {
+      response.writeHead(200, { 'content-length': newBytes.length }).end(newBytes);
+    } else response.writeHead(404).end();
+  });
+  await new Promise<void>((resolve) => server.listen(PORT, '127.0.0.1', resolve));
+  try {
+    // Where a person keeps it: a folder of their own, under the release's name.
+    const folder = await tempDir('drafter-apps-');
+    const image = join(folder, NAME);
+    await copyFile(join(OLD as string, NAME), image);
+    await chmod(image, 0o755);
+    const oldSha = createHash('sha512').update(readFileSync(image)).digest('base64');
+
+    const running = await launch({ program: image });
+    stops.push(async () => {
+      for (const proc of launchedWith(running.home)) {
+        try {
+          process.kill(proc.pid, 'SIGKILL');
+        } catch {
+          // Gone.
+        }
+      }
+    });
+    const { browser, page } = await writingPage(running);
+    expect(await page.evaluate(() => window.drafterDesktop?.platform)).toBe('linux');
+    const toast = page.locator('[data-update]');
+    await expect(toast).toContainText('A new version of Drafter is ready', { timeout: 120_000 });
+    await toast.getByRole('button', { name: 'Restart', exact: true }).click();
+
+    // The old Drafter (its AppImage runtime, which waits for it) exits.
+    await expect
+      .poll(() => running.exited(), { timeout: 60_000, message: 'the old Drafter never quit' })
+      .not.toBeUndefined();
+    await browser.close().catch(() => {});
+    expect(running.output()).not.toMatch(/install failed/);
+
+    // The file at the same path is now the new version, and nothing else was left beside it.
+    expect(readdirSync(folder)).toEqual([NAME]);
+    expect(createHash('sha512').update(readFileSync(image)).digest('base64')).not.toBe(oldSha);
+    expect(readFileSync(image).equals(newBytes)).toBe(true);
+
+    // A new Drafter is running from that path: its main process (no --type) has APPIMAGE set to it,
+    // and the app mounted from it is 1.0.1.
+    let main: ReturnType<typeof launchedWith>[number] | undefined;
+    await expect
+      .poll(
+        () => {
+          main = launchedWith(running.home).find(
+            (proc) =>
+              proc.env.get('APPIMAGE') === image &&
+              (proc.argv[0] ?? '').endsWith('/drafterdev') &&
+              !proc.argv.some((arg) => arg.startsWith('--type=')),
+          );
+          return main !== undefined;
+        },
+        { timeout: 60_000, message: 'no new Drafter started from the AppImage' },
+      )
+      .toBe(true);
+    const appDir = main?.env.get('APPDIR') as string;
+    const version = JSON.parse(
+      readFromAsar(join(appDir, 'resources', 'app.asar'), 'package.json'),
+    ).version;
+    expect(version).toBe('1.0.1');
+    // It stays up (it took the lock instead of handing over to the old one and exiting), and shows
+    // its window.
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    expect(existsSync(`/proc/${main?.pid}`)).toBe(true);
+    if (HAS_XDOTOOL) {
+      const windows = execFileSync(
+        'xdotool',
+        ['search', '--sync', '--onlyvisible', '--pid', String(main?.pid)],
+        { encoding: 'utf8', timeout: 30_000 },
+      ).trim();
+      expect(windows).not.toBe('');
+    }
+    // What the updater fetched: the feed, then the AppImage.
+    expect(seen.some((line) => line.startsWith('GET /latest-linux.yml'))).toBe(true);
+    expect(seen.some((line) => line.startsWith(`GET /${NAME}`))).toBe(true);
+    console.log(`update test: the server saw\n  ${seen.join('\n  ')}`);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });

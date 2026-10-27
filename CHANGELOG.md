@@ -31,6 +31,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/desktop`: **an AppImage update replaces the file in place.** The AppImage is now `Drafter-x86_64.AppImage` in every release (the `.deb` keeps its version), so Restart writes the new version over the old file at the same path instead of leaving it under a new, versioned name, and a launcher, an AppImage tool's menu entry, or an AppArmor profile for the AppImage keeps working. `scripts/check-update-feed.mjs` refuses a feed whose AppImage name carries a version, and CI now builds two AppImages and checks a real Restart end to end: the file is replaced at its path and the new version starts from it.
+- `apps/desktop`: **Restart no longer races the new version's start**: once Drafter is quitting it ignores a second launch (which had brought its window back and stopped the quit), and a Drafter started by an update's Restart waits up to ten seconds for the old one to let go instead of handing over to it and exiting.
 - `apps/desktop`: **the `.deb` hands a double-clicked script to Drafter by its path** (`Exec=… %F`), and a script named as a `file://` URL (an AppImage's desktop entry, added by a tool such as AppImageLauncher, passes those) opens too. The `.deb`'s MIME file lists `*.md` properly (it had one glob, `*.md,markdown`, that matched nothing).
 - `apps/desktop`: an app started while `pnpm build:web` runs no longer refuses to start for want of its content security policy: the web build is swapped into `apps/desktop/web/` whole, never cleared and refilled.
 - `apps/desktop`: the app calls itself Drafter however it is started (`app.setName`), so its profile folder, the macOS Hide and Quit items, and About never say Electron.

@@ -35,7 +35,7 @@ jobs:
     # Ubuntu 24.04 on purpose: it restricts unprivileged user namespaces (AppArmor), which Chromium's
     # sandbox needs, and that is what the packaged app has to cope with on a user's machine.
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -165,6 +165,29 @@ jobs:
         run: |
           DRAFTER_PACKAGED_KIND=appimage DRAFTER_PACKAGED="$(echo "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage)" \
             xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged
+      # An update, for real: two AppImages built for the test (1.0.0 and 1.0.1, the release's own
+      # configuration with a feed on this machine, e2e/update-test.builder.cjs). 1.0.0 finds 1.0.1,
+      # downloads it, and Restart on its page runs electron-updater's own quitAndInstall: the file
+      # must be replaced at the same path and the new version must start from it.
+      - name: Two AppImages for the update test (1.0.0 and 1.0.1, with a feed on this machine)
+        if: ${{ !cancelled() }}
+        working-directory: apps/desktop
+        run: |
+          for version in 1.0.0 1.0.1; do
+            DRAFTER_TEST_VERSION=$version DRAFTER_TEST_FEED=http://127.0.0.1:47613/ \
+              DRAFTER_TEST_OUTPUT="$RUNNER_TEMP/update-$version" \
+              pnpm exec electron-builder --config e2e/update-test.builder.cjs --linux --publish never
+          done
+          ls -l "$RUNNER_TEMP"/update-1.0.0/*.AppImage "$RUNNER_TEMP"/update-1.0.1/*.AppImage
+          cat "$RUNNER_TEMP/update-1.0.1/latest-linux.yml"
+          node scripts/check-update-feed.mjs "$RUNNER_TEMP/update-1.0.1"
+      - name: An AppImage replaces itself in place on Restart (the real electron-updater swap)
+        if: ${{ !cancelled() }}
+        run: |
+          DRAFTER_UPDATE_OLD="$RUNNER_TEMP/update-1.0.0" DRAFTER_UPDATE_NEW="$RUNNER_TEMP/update-1.0.1" \
+            DRAFTER_UPDATE_PORT=47613 DRAFTER_PACKAGED_KIND=appimage \
+            DRAFTER_PACKAGED="$RUNNER_TEMP/update-1.0.0/Drafter-x86_64.AppImage" \
+            xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e:packaged -g "replaces itself"
       - name: Chromium for the web side of the files test (e2e/interchange.spec.ts)
         if: ${{ !cancelled() }}
         run: pnpm --filter @drafter/desktop exec playwright install --with-deps chromium
