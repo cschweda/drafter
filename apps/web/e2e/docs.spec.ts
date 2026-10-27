@@ -209,6 +209,11 @@ test.describe('with JavaScript', () => {
   });
 });
 
+/** An action's error, unless the tab it was done in closed under it, which is what was wanted. */
+const gone = (tab: Page) => (error: unknown) => {
+  if (!tab.isClosed()) throw error;
+};
+
 test.describe('from the app', () => {
   /** Chooses `title` from Help in a new tab, which opens at the page. Returns that tab. */
   async function fromMenu(page: Page, title: string, how: 'click' | 'keyboard') {
@@ -298,6 +303,29 @@ test.describe('from the app', () => {
     }
   });
 
+  test('Back to Drafter closes a help tab the app opened, after reading another page in it too', async ({
+    page,
+  }) => {
+    await start(page);
+    const tab = await fromMenu(page, 'Keyboard shortcuts', 'keyboard');
+    await expect(heading(tab)).toHaveText('Keyboard shortcuts');
+    // Another help page in the same tab: its Back still goes to the editor it came from.
+    await tab
+      .getByRole('navigation', { name: 'Help pages' })
+      .getByRole('link', { name: 'Privacy' })
+      .click();
+    await expect(heading(tab)).toHaveText('Privacy');
+    const closed = tab.waitForEvent('close');
+    await tab.getByRole('link', { name: /Back to Drafter/ }).focus();
+    // The tab goes away under the key, which Playwright reports as an error of the press.
+    await tab.keyboard.press('Enter').catch(gone(tab));
+    await closed;
+    // One tab, the editor, as it was.
+    expect(page.context().pages()).toEqual([page]);
+    await expect(page).toHaveURL(/\/$/);
+    await expect(editor(page)).toContainText('The Call');
+  });
+
   test('keeps what was being written, unsaved, when a page is read', async ({ page }) => {
     let asked = false;
     page.on('dialog', (dialog) => {
@@ -312,10 +340,14 @@ test.describe('from the app', () => {
 
     const tab = await fromMenu(page, 'Privacy', 'click');
     await expect(heading(tab)).toHaveText('Privacy');
-    // The tab's link back opens the app, a second editor that can't edit the script that is open here.
-    await tab.getByRole('link', { name: /Back to Drafter/ }).click();
-    await expect(tab).toHaveURL(/\/$/);
-    await tab.close();
+    // The tab's link back closes it, rather than open a second editor that can't edit the script.
+    const closed = tab.waitForEvent('close');
+    await tab
+      .getByRole('link', { name: /Back to Drafter/ })
+      .click()
+      .catch(gone(tab));
+    await closed;
+    expect(tab.isClosed()).toBe(true);
 
     // The writer's tab is untouched: no leave prompt, and the line is there.
     expect(asked).toBe(false);
