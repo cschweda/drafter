@@ -18,12 +18,17 @@ const figure = (page: Page, section: string, term: string) =>
     .locator('dt', { hasText: new RegExp(`^${term}$`) })
     .locator('+ dd');
 
-async function newScript(page: Page, name: 'New screenplay' | 'New Markdown document') {
+async function newScript(
+  page: Page,
+  name: 'New screenplay' | 'New stage play' | 'New Markdown document',
+) {
   await start(page);
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page.getByRole('group', { name: 'Scripts' }).getByRole('button', { name }).click();
   await showSource(page);
-  await expect(editor(page)).toContainText(name === 'New screenplay' ? 'Title:' : '# Untitled');
+  await expect(editor(page)).toContainText(
+    name === 'New Markdown document' ? '# Untitled' : 'Title:',
+  );
 }
 
 /** Types `text` at the end of the script, as the writer would. */
@@ -32,6 +37,25 @@ async function typeAtEnd(page: Page, text: string) {
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.insertText(text);
 }
+
+/** The keys of the writing-stats rows kept in this browser. */
+const statsKeys = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<string[]>((resolve) => {
+        const open = indexedDB.open('drafter');
+        open.onerror = () => resolve([]);
+        open.onsuccess = () => {
+          const db = open.result;
+          const keys = db.transaction('settings').objectStore('settings').getAllKeys();
+          keys.onsuccess = () => {
+            db.close();
+            resolve((keys.result as string[]).filter((key) => key.startsWith('stats-day:')));
+          };
+          keys.onerror = () => resolve([]);
+        };
+      }),
+  );
 
 /** The words the open script's day began with, as kept (the daily goal's `day:` row). */
 const dayStartWords = (page: Page) =>
@@ -182,5 +206,83 @@ test.describe('writing stats', () => {
     // No pages in a Markdown document.
     await expect(figure(page, 'Today', 'Pages added')).toHaveCount(0);
     await expect(stats(page).getByRole('table', { name: 'Characters' })).toHaveCount(0);
+  });
+
+  test('closing the window opened from the palette or the Drafter menu gives focus back to the script', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone shows the Script tab, not the editor, to begin with');
+    await start(page);
+    await showSource(page);
+    await editor(page).click();
+    await runCommand(page, 'Show stats');
+    await expect(stats(page)).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(stats(page)).toBeHidden();
+    await expect(editor(page)).toBeFocused();
+
+    await page.getByRole('button', { name: 'Drafter menu' }).click();
+    await page
+      .getByRole('menu', { name: 'Drafter menu' })
+      .getByRole('menuitem', { name: /^Show stats/ })
+      .click();
+    await expect(stats(page)).toBeFocused();
+    await stats(page).getByRole('button', { name: 'Close' }).click();
+    await expect(editor(page)).toBeFocused();
+  });
+
+  test('a stage play counts its ## scenes, for the script and for each character', async ({
+    page,
+  }) => {
+    await newScript(page, 'New stage play');
+    // After the title page, before the block at the end that names the template.
+    await editor(page).locator('.cm-line', { hasText: 'Draft date:' }).click();
+    await page.keyboard.press('End');
+    await page.keyboard.insertText(
+      '\n\n# Act One\n\n## Scene 1\n\nANN\nHello.\n\n## Scene 2\n\nANN\nAgain.',
+    );
+    await runCommand(page, 'Show stats');
+    await expect(figure(page, 'This script', 'Scenes')).toHaveText('2');
+    const characters = stats(page).getByRole('table', { name: 'Characters' });
+    await expect(characters.getByRole('row').nth(1)).toHaveText(/ANN\s*2\s*2\s*2/);
+    // A play has no INT./EXT. headings to divide.
+    await expect(stats(page).getByRole('table', { name: 'Scene headings' })).toHaveCount(0);
+  });
+
+  test('removing the open script removes its stats for good', async ({ page }) => {
+    await newScript(page, 'New screenplay');
+    await typeAtEnd(page, SCENES);
+    // Kept within a few seconds of the edit.
+    await expect.poll(() => statsKeys(page), { timeout: 10_000 }).toHaveLength(1);
+    // More words, not yet kept, then the script is removed while it is open.
+    await typeAtEnd(page, 'More.\n');
+    await runCommand(page, 'Remove from this browser');
+    const ask = page.getByRole('dialog', { name: /Remove “Untitled Screenplay”/ });
+    await ask.getByRole('button', { name: 'Remove', exact: true }).click();
+    await expect(ask).toBeHidden();
+    await expect(editor(page)).not.toContainText('Untitled Screenplay');
+    // Past the moment the last write would have come.
+    await page.waitForTimeout(6000);
+    expect(await statsKeys(page)).toEqual([]);
+  });
+
+  test('a tab that only shows the script says the editing tab keeps its stats, and shows them', async ({
+    page,
+    context,
+  }) => {
+    await newScript(page, 'New screenplay');
+    await typeAtEnd(page, SCENES);
+    // Kept within a few seconds of the edit.
+    await expect.poll(() => statsKeys(page), { timeout: 10_000 }).toHaveLength(1);
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect(other.getByRole('button', { name: 'Edit here instead' })).toBeVisible();
+    await runCommand(other, 'Show stats');
+    await expect(stats(other)).toContainText(
+      'Another tab is editing this script, and counts its writing time there.',
+    );
+    await expect(stats(other)).not.toContainText('Nothing written yet today.');
+    await expect(figure(other, 'Last 30 days', 'Days written')).toHaveText('1');
   });
 });

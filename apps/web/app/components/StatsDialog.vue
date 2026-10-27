@@ -7,6 +7,7 @@ import { useCounts } from '~/stats/counts';
 import { statsOpen } from '~/stats/dialog';
 import { progressLabel, useGoal } from '~/stats/goal';
 import {
+  chartBars,
   type DayFigure,
   duration,
   lastDays,
@@ -18,17 +19,20 @@ import {
 } from '~/stats/history';
 import { characterTable, headingCount, headingSplit, readingMinutes } from '~/stats/script-stats';
 import { useWritingStats } from '~/stats/writing';
+import { useGuard } from '~/storage/guard';
 import { useScript } from '~/storage/script';
 
 // The Stats window (docs/drafter-stats-design.md §4): today, the script as a whole, and the last
 // 30 days. Same look as Settings; opened from the Counts panel, Show stats, and the Drafter menu.
+// Its contents are drawn only while it is open, so a key costs the closed window nothing.
 const dialog = ref<HTMLDialogElement>();
-const { doc, kind } = useEditor();
+const { doc, kind, view } = useEditor();
 const { tree, words: markdownWords } = useMarkdown();
 const { counts, known } = useCounts();
 const { progress } = useGoal();
 const { project } = useScript();
 const writing = useWritingStats();
+const { readOnly } = useGuard();
 
 const markdown = computed(() => kind.value === 'markdown');
 const sample = computed(() => !!project.value?.sample);
@@ -64,8 +68,10 @@ function onCancel() {
 
 function onClose() {
   if (!dialog.value?.open) statsOpen.value = false;
-  // The browser gives focus back too, but not when the opener was in a panel that has closed since.
+  // The browser gives focus back too, but not to an opener that has gone since: the Counts panel's
+  // button, the palette's input, a menu's item. Then the script has it, when the Source shows.
   if (opener?.isConnected) opener.focus();
+  else if (view.dom.offsetParent !== null) view.focus();
   opener = null;
 }
 
@@ -113,25 +119,18 @@ const plural = (n: number, noun: string) =>
 const WIDTH = 300;
 const HEIGHT = 80;
 const BAR = WIDTH / 30;
-/** Bars on a zero line: growth above it, a cutting day below, each as tall as its share of the largest. */
+/** Bars on a zero line: growth above it, a cutting day below (`chartBars`). */
 const bars = computed(() => {
   const list = month.value?.days ?? [];
-  const up = Math.max(0, ...list.map((day) => day.words));
-  const down = Math.max(0, ...list.map((day) => -day.words));
-  const room = up + down || 1;
-  const zero = (up / room) * HEIGHT || (down > 0 ? 0 : HEIGHT);
+  const { zero, bars: shapes } = chartBars(list, HEIGHT);
   return {
     zero,
-    list: list.map((day, i) => {
-      const size = (Math.abs(day.words) / room) * HEIGHT;
-      return {
-        ...day,
-        x: i * BAR + 1,
-        y: day.words >= 0 ? zero - size : zero,
-        height: Math.max(day.ms > 0 ? 1 : 0, size),
-        label: dayLabel(day),
-      };
-    }),
+    list: list.map((day, i) => ({
+      ...day,
+      ...(shapes[i] as { y: number; height: number }),
+      x: i * BAR + 1,
+      label: dayLabel(day),
+    })),
   };
 });
 function dayLabel(day: DayFigure): string {
@@ -143,12 +142,16 @@ function dayLabel(day: DayFigure): string {
 
 <template>
   <dialog ref="dialog" class="stats" tabindex="-1" aria-labelledby="stats-title" @cancel.prevent="onCancel" @close="onClose">
+    <template v-if="statsOpen">
     <h2 id="stats-title">Stats</h2>
     <p v-if="sample" class="note">Stats are kept for your own scripts, not the samples.</p>
 
     <section v-if="!sample" class="part" aria-labelledby="stats-today-title">
       <h3 id="stats-today-title">Today</h3>
-      <p v-if="!today || today.ms <= 0" class="note">Nothing written yet today.</p>
+      <p v-if="readOnly" class="note">
+        Another tab is editing this script, and counts its writing time there. Its days so far are below.
+      </p>
+      <p v-else-if="!today || today.ms <= 0" class="note">Nothing written yet today.</p>
       <dl v-else class="figures">
         <dt>Words added</dt>
         <dd>{{ today.words === null ? 'Counting…' : signed(today.words) }}</dd>
@@ -243,7 +246,9 @@ function dayLabel(day: DayFigure): string {
     <section v-if="!sample" class="part" aria-labelledby="stats-month-title">
       <h3 id="stats-month-title">Last 30 days</h3>
       <p v-if="!days" class="note">Reading…</p>
-      <p v-else-if="month && month.daysWritten === 0" class="note">Writing time is counted from now on.</p>
+      <p v-else-if="month && month.daysWritten === 0" class="note">
+        {{ readOnly ? 'No writing time is kept for this script yet.' : 'Writing time is counted from now on.' }}
+      </p>
       <template v-else-if="month">
         <!-- The chart is a picture of the table below it, which is what a screen reader reads. -->
         <svg
@@ -303,6 +308,7 @@ function dayLabel(day: DayFigure): string {
     <div class="buttons">
       <button type="button" class="btn" @click="statsOpen = false">Close</button>
     </div>
+    </template>
   </dialog>
 </template>
 
