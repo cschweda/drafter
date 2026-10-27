@@ -46,7 +46,7 @@ test('shows over the Source, and names the element the cursor is in', async ({ p
   await expect(button(page, 'Character')).toHaveAttribute('aria-pressed', 'true');
   // Each button says what its element is, and its mark and key, as its description.
   await expect(button(page, 'Character')).toHaveAccessibleDescription(
-    /A name in capitals on its own line.*(Ctrl\+Alt\+3|⌘⌥3) always adds it\./,
+    /A name in capitals on its own line.*Shortcut: (Ctrl\+Alt\+3|⌘⌥3)\./,
   );
   // The reason for the element is the description of the words at the left.
   await expect(here(page)).toHaveAccessibleDescription(/^A name in capitals after a blank line/);
@@ -71,6 +71,9 @@ test('writes each element, natural Fountain first', async ({ page }) => {
   await page.keyboard.type('bob');
   await page.keyboard.press('Escape');
   expect(await textOf(page)).toBe('She waits.\n\n@BOB\nHello there.');
+  // The @ was only for typing the name in capitals: it goes once the cursor leaves the line.
+  await page.keyboard.press('ArrowDown');
+  expect(await textOf(page)).toBe('She waits.\n\nBOB\nHello there.');
 
   await write(page, 'MARGARET\nquietly');
   await press(page, 'Parenthetical');
@@ -90,6 +93,34 @@ test('starts a heading on an empty line and offers the locations', async ({ page
   await press(page, 'Scene');
   expect(await textOf(page)).toBe('INT. KITCHEN - NIGHT\n\nShe waits.\n\nINT. ');
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('KITCHEN');
+});
+
+test('names a name with no speech yet a Character, and lets a parenthetical go under it', async ({
+  page,
+}) => {
+  await write(page, 'She waits.\n\nmargaret');
+  await press(page, 'Character');
+  await expect(here(page)).toHaveText('You’re in: Character');
+  await expect(button(page, 'Character')).toHaveAttribute('aria-pressed', 'true');
+  await expect(button(page, 'Parenthetical')).not.toHaveAttribute('aria-disabled', 'true');
+  await press(page, 'Parenthetical');
+  expect(await textOf(page)).toBe('She waits.\n\nMARGARET\n()');
+});
+
+test('says why a button did nothing', async ({ page }) => {
+  await write(page, 'MARGARET\n');
+  await expect(here(page)).toHaveAccessibleDescription(/what you type here is their dialogue/);
+  await press(page, 'Dialogue');
+  await expect(page.getByRole('status').filter({ hasText: 'already dialogue' })).toContainText(
+    'type what they say here',
+  );
+  expect(await textOf(page)).toBe('MARGARET\n');
+});
+
+test('runs the element commands from Ctrl+Alt+1 to 7', async ({ page }) => {
+  await write(page, 'She waits.\n\nmargaret');
+  await page.keyboard.press('ControlOrMeta+Alt+3');
+  expect(await textOf(page)).toBe('She waits.\n\nMARGARET');
 });
 
 test('is one undo step', async ({ page }) => {
@@ -215,6 +246,24 @@ test('shows the Markdown set in a Markdown document', async ({ page }) => {
   await expect(editor(page)).toBeFocused();
   expect(await textOf(page)).toContain('- first');
   await expect(md.locator('[data-here]')).toHaveText('You’re in: List item');
+});
+
+test('is hidden in a tab that only shows the script', async ({ page, context, isMobile }) => {
+  test.skip(isMobile, 'two tabs are the same on a phone');
+  await expect(bar(page)).toBeVisible();
+  const other = await context.newPage();
+  await other.goto('/');
+  await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+  await showSource(other);
+  await expect(other.getByRole('toolbar', { name: 'Element bar' })).toHaveCount(0);
+});
+
+test('keeps the editor’s focus when a button is tapped on a phone', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'a phone’s touch screen');
+  await write(page, 'She waits.\n\nmargaret');
+  await button(page, 'Character').tap();
+  await expect(editor(page)).toBeFocused();
+  expect(await textOf(page)).toBe('She waits.\n\nMARGARET');
 });
 
 test('is one row on a phone, which scrolls sideways', async ({ page, isMobile }) => {

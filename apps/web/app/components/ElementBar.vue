@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { EditorState } from '@codemirror/state';
-import { canMakeParenthetical } from '@drafter/cm-fountain';
+import {
+  canMakeParenthetical,
+  elementHint,
+  PARENTHETICAL_HINT,
+  readsAsName,
+} from '@drafter/cm-fountain';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { isApple } from '~/commands/keys';
@@ -13,23 +18,23 @@ import {
   FOUNTAIN_MORE,
   hereLabel,
   MARKDOWN_BUTTONS,
-  PARENTHETICAL_WHY,
   reasonFor,
   tipFor,
 } from '~/editor/element-bar';
 import { ELEMENT_NAMES } from '~/editor/element-names';
+import { elementNotice, sayElement } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
 import { markdownElement } from '~/markdown/commands';
 import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
-import { timedSay } from '~/storage/say';
 
 // The element bar (docs/drafter-element-bar-design.md): a row of buttons over the Source that
 // writes Fountain's marks, and teaches them, for a writer who doesn't know them yet. Each button
 // runs a registered command (`commands/builtin.ts`), the one the palette runs, so it acts on the
 // selection and is one undo step. It is a toolbar: one tab stop, and the arrow keys move along it.
-// The element the cursor's line is shows at the left, and its button is shown pressed. It goes in
-// focus mode, in a tab that only shows the script, and when Settings turns it off.
+// The element the cursor's line is shows at the left, and its button is shown pressed. A press
+// doesn't take focus from the editor, so a phone's keyboard stays up. It goes in focus mode, in a
+// tab that only shows the script, and when Settings turns it off.
 const editor = useEditor();
 const focus = useFocusMode();
 const { readOnly } = useGuard();
@@ -42,32 +47,54 @@ const shown = computed(() => settings.value.elementBar && !focus.on.value && !re
 const markdown = computed(() => editor.kind.value === 'markdown');
 const buttons = computed(() => (markdown.value ? MARKDOWN_BUTTONS : FOUNTAIN_BUTTONS));
 
-// The editor's state, kept up to date: the parenthetical button and the Markdown element read it.
-const state = shallowRef<EditorState>(editor.view.state);
-const follow = (next: EditorState) => {
-  state.value = next;
-};
+// What the bar reads from the editor's state, worked out when the text or the selection changes
+// (and, for Markdown, when its grammar has more of the tree), each kept only when it differs, so
+// a scroll or a change of focus draws nothing again.
+const parenthesisOff = ref(false);
+/** The cursor's line is a name with no speech under it yet, which the parse calls action. */
+const onName = ref(false);
+/** The cursor is on the empty line under a name or a speech: what is typed there is dialogue. */
+const inSpeech = ref(false);
+const markdownHere = ref<string | null>(null);
+function follow(state: EditorState) {
+  if (markdown.value) {
+    markdownHere.value = markdownElement(state);
+    return;
+  }
+  parenthesisOff.value = !canMakeParenthetical(state);
+  onName.value = readsAsName(state);
+  inSpeech.value = !editor.cursor.value && elementHint('dialogue', state) !== null;
+}
+function followTree(state: EditorState) {
+  if (markdown.value) markdownHere.value = markdownElement(state);
+}
 const stops: Array<() => void> = [];
 onMounted(() => {
-  state.value = editor.view.state;
-  stops.push(editor.onState(follow), editor.onUpdate(follow));
+  follow(editor.view.state);
+  stops.push(editor.onState(follow), editor.onUpdate(followTree));
 });
 onBeforeUnmount(() => {
   for (const stop of stops.splice(0)) stop();
 });
+watch(markdown, () => follow(editor.view.state));
 
 // ---- Where the cursor is -------------------------------------------------------------------
 
-const cursorKind = computed(() => (markdown.value ? null : (editor.cursor.value?.kind ?? null)));
+/** The element the bar names: the parse's, but a name with no speech yet is a Character. */
+const cursorKind = computed(() => {
+  if (markdown.value) return null;
+  return onName.value ? 'character' : (editor.cursor.value?.kind ?? null);
+});
 const here = computed(() => {
-  if (markdown.value) return hereLabel(markdownElement(state.value));
+  if (markdown.value) return hereLabel(markdownHere.value);
   return hereLabel(cursorKind.value ? ELEMENT_NAMES[cursorKind.value] : null);
 });
 const why = computed(() => {
   const element = editor.cursor.value;
   const block =
     element && element.blockIndex >= 0 ? editor.doc.value.blocks[element.blockIndex] : null;
-  const reason = reasonFor(cursorKind.value, !!block?.forced);
+  const context = onName.value ? 'name' : inSpeech.value ? 'speech' : undefined;
+  const reason = reasonFor(cursorKind.value, !!block?.forced, context);
   return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}. Opens the Fountain cheat sheet there.`;
 });
 
@@ -84,15 +111,19 @@ function openCheatSheet(atElement: boolean) {
 
 const pressed = (button: BarButton) => !!button.kind && button.kind === cursorKind.value;
 const off = (button: BarButton) =>
-  button.command === 'element-parenthetical' && !canMakeParenthetical(state.value);
-const tip = (button: BarButton) => (off(button) ? PARENTHETICAL_WHY : tipFor(button, apple));
+  button.command === 'element-parenthetical' && parenthesisOff.value;
+const tip = (button: BarButton) => (off(button) ? PARENTHETICAL_HINT : tipFor(button, apple));
 
 function press(button: BarButton) {
   if (longPressed) {
     longPressed = false;
     return;
   }
-  if (off(button)) return;
+  // The command would do nothing: the bar says why, rather than nothing.
+  if (off(button)) {
+    void sayElement(PARENTHETICAL_HINT);
+    return;
+  }
   const command = commandById(button.command);
   if (command && command.enabled?.() !== false) void command.run();
 }
@@ -121,8 +152,6 @@ function onCloseAutoFocus(event: Event) {
 
 // ---- Hiding it -----------------------------------------------------------------------------
 
-const notice = ref('');
-const announce = timedSay(notice, 8000);
 const options = computed<DropdownMenuItem[]>(() => [
   {
     label: 'Hide the element bar',
@@ -130,7 +159,7 @@ const options = computed<DropdownMenuItem[]>(() => [
     onSelect: () => {
       chosen = true;
       void set('elementBar', false);
-      void announce(
+      void sayElement(
         'The element bar is hidden. Turn it back on in Settings, or with “Show the element bar” in the palette.',
       );
       editor.view.focus();
@@ -253,6 +282,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
         :aria-pressed="button.kind ? (pressed(button) ? 'true' : 'false') : undefined"
         :aria-disabled="off(button) ? 'true' : undefined"
         :aria-describedby="descId(button)"
+        @mousedown.prevent
         @pointerdown="onPointerDown($event, button.command)"
         @pointerup="onPointerEnd"
         @pointercancel="onPointerEnd"
@@ -282,6 +312,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
       :tabindex="stopOf('help')"
       aria-label="Fountain cheat sheet"
       title="Fountain cheat sheet"
+      @mousedown.prevent
       @click="openCheatSheet(false)"
     >
       ?
@@ -299,9 +330,9 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
       </button>
     </UDropdownMenu>
   </div>
-  <!-- Hiding the bar says where to turn it back on, as a toast and a polite live region. -->
-  <div class="bar-notice" :class="{ shown: notice }">
-    <span role="status" aria-live="polite">{{ notice }}</span>
+  <!-- Where a hidden bar comes back, and why a command did nothing: a toast and a polite live region. -->
+  <div class="bar-notice" :class="{ shown: elementNotice }">
+    <span role="status" aria-live="polite">{{ elementNotice }}</span>
   </div>
 </template>
 

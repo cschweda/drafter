@@ -217,7 +217,7 @@ test.describe('a Markdown document', () => {
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.insertText('INT. KITCHEN - NIGHT');
-    // Force scene heading, Force character: neither acts.
+    // Element: Character, Element: Scene heading: neither acts.
     await page.keyboard.press('ControlOrMeta+Alt+3');
     await page.keyboard.press('Enter');
     await page.keyboard.press('ControlOrMeta+Alt+1');

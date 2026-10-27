@@ -5,7 +5,9 @@ import { openSearchPanel } from '@codemirror/search';
 import type { StateCommand } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import {
+  canMakeParenthetical,
   type ElementKind,
+  elementHint,
   forceKind,
   insertPageBreak,
   makeElement,
@@ -20,6 +22,7 @@ import {
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
+import { sayElement } from '~/editor/element-notice';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
@@ -118,16 +121,23 @@ export function registerBuiltinCommands(): void {
    * The element bar's commands (docs/drafter-element-bar-design.md §4), which the bar and the palette
    * both run: the Source shows and has focus, and the command acts on the selection the editor has,
    * which `onEditor` would collapse to the cursor. It opens completion where it begins a heading or a
-   * cue.
+   * cue. Where an element command would do nothing (the title page, a note, a line that is already
+   * dialogue), the bar's notice says why.
    */
-  const inEditor = (applies: () => boolean, act: StateCommand): Behavior => ({
+  const inEditor = (
+    applies: () => boolean,
+    act: StateCommand,
+    kind?: ElementKind | 'page_break',
+  ): Behavior => ({
     enabled: () => canEdit() && applies(),
     run: () => {
+      const hint = kind && elementHint(kind, view.state);
+      if (hint) void sayElement(hint);
       showTab('source');
       void nextTick().then(() => withCompletion(act)(view));
     },
   });
-  const element = (kind: ElementKind) => inEditor(isFountain, makeElement(kind));
+  const element = (kind: ElementKind) => inEditor(isFountain, makeElement(kind), kind);
 
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
@@ -337,13 +347,18 @@ export function registerBuiltinCommands(): void {
     'element-action': element('action'),
     'element-character': element('character'),
     'element-dialogue': element('dialogue'),
-    'element-parenthetical': element('parenthetical'),
+    // Off where it doesn't apply, so the palette doesn't offer it (the bar's button says why).
+    'element-parenthetical': inEditor(
+      () => isFountain() && canMakeParenthetical(view.state),
+      makeElement('parenthetical'),
+      'parenthetical',
+    ),
     'element-transition': element('transition'),
     'element-centered': element('centered'),
     'element-lyric': element('lyric'),
     'element-section': element('section'),
     'element-synopsis': element('synopsis'),
-    'element-page-break': inEditor(isFountain, insertPageBreak),
+    'element-page-break': inEditor(isFountain, insertPageBreak, 'page_break'),
     'emphasis-bold': inEditor(isFountain, wrapInBold),
     'emphasis-italic': inEditor(isFountain, wrapInItalic),
     'emphasis-underline': inEditor(isFountain, wrapInUnderline),
