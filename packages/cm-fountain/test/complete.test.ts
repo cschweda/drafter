@@ -405,6 +405,27 @@ describe('transitions', () => {
     // Only a line that starts with a >.
     expect(ask(script('FADE OU|'))).toBeNull();
   });
+
+  it('takes the > off for a transition that ends in TO:, which needs none', () => {
+    // The element bar's Transition writes a > on an empty line and opens this list.
+    const accept = (marked: string, label: string) => {
+      const { state, pos } = at(marked);
+      const result = fountainCompletionSource(new CompletionContext(state, pos, true));
+      const option = result?.options.find((o) => o.label === label);
+      if (!result || !option) throw new Error(`no ${label}`);
+      let next = state;
+      const view = { state, dispatch: (spec: object) => (next = state.update(spec).state) };
+      if (typeof option.apply === 'function') {
+        option.apply(view as unknown as EditorView, option, result.from, pos);
+      } else {
+        next = state.update({ changes: { from: result.from, to: pos, insert: label } }).state;
+      }
+      return next.doc.line(next.doc.lines).text;
+    };
+    expect(accept(script('>|'), 'CUT TO:')).toBe('CUT TO:');
+    expect(accept(script('> sm|'), 'SMASH CUT TO:')).toBe('SMASH CUT TO:');
+    expect(accept(script('>|'), 'FADE OUT.')).toBe('>FADE OUT.');
+  });
 });
 
 describe('sections', () => {
