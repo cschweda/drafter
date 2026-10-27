@@ -102,6 +102,8 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
   return {
     canSaveInPlace: true,
 
+    fromPath: picked,
+
     async pickToOpen() {
       const path = await bridge.showOpen();
       return path ? picked(path) : null;

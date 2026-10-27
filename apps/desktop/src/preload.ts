@@ -62,7 +62,35 @@ const files: DesktopFilesBridge = {
   },
 };
 
-const bridge: DesktopBridge = { version, platform: process.platform, files };
+/** What main sends on `openItem` (open-files.ts `OpenItem`): a file to open, or why one wasn't. */
+function itemOf(value: unknown): { path?: string; problem?: string } {
+  if (typeof value !== 'object' || value === null) return {};
+  const { path, problem } = value as Record<string, unknown>;
+  return {
+    ...(typeof path === 'string' ? { path } : {}),
+    ...(typeof problem === 'string' ? { problem } : {}),
+  };
+}
+
+const bridge: DesktopBridge = {
+  version,
+  platform: process.platform,
+  files,
+  // Files the system names (the command line, a second launch, macOS's open-file): main granted
+  // each before sending it. Telling main we listen is what lets it send those it was holding.
+  onOpenFile(onPath, onProblem) {
+    const listener = (_event: unknown, value: unknown) => {
+      const item = itemOf(value);
+      if (item.path !== undefined) onPath(item.path);
+      else if (item.problem !== undefined) onProblem?.(item.problem);
+    };
+    ipcRenderer.on(CHANNELS.openItem, listener);
+    ipcRenderer.send(CHANNELS.openReady);
+    return () => {
+      ipcRenderer.removeListener(CHANNELS.openItem, listener);
+    };
+  },
+};
 
 contextBridge.exposeInMainWorld('drafterDesktop', bridge);
 

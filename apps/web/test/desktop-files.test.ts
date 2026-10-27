@@ -108,6 +108,22 @@ describe('desktopFiles', () => {
     expect(await files.pickToOpen()).toBeNull();
   });
 
+  test('opens a path the system named, with a ref to save back to', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    put(fake, '/home/w/Scripts/The Call.fountain', 'Title: The Call\n');
+    const picked = await files.fromPath?.('/home/w/Scripts/The Call.fountain');
+    expect(picked).toEqual({
+      ref: { name: 'The Call.fountain', path: '/home/w/Scripts/The Call.fountain' },
+      name: 'The Call.fountain',
+      bytes: new TextEncoder().encode('Title: The Call\n'),
+      lastModified: 1234,
+    });
+    await expect(files.fromPath?.('/home/w/Scripts/Gone.fountain')).rejects.toBeInstanceOf(
+      FileGoneError,
+    );
+  });
+
   test('saves in place, always with permission', async () => {
     const files = desktopFiles(fakeBridge().bridge);
     expect(files.canSaveInPlace).toBe(true);

@@ -48,6 +48,8 @@ export interface FileAccess {
   readonly canSaveInPlace: boolean;
   /** Null: cancelled. */
   pickToOpen(): Promise<PickedFile | null>;
+  /** The file at a path the system named (the desktop app's); the browser has no paths. */
+  fromPath?(path: string): Promise<PickedFile>;
   fromDrop(item: DataTransferItem): Promise<PickedFile | null>;
   /** Null: cancelled. */
   pickToSave(suggestedName: string, kind: FileKind): Promise<FileRef | null>;

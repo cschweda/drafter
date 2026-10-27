@@ -1,11 +1,12 @@
 // Drafter's main process: one instance, one window, the web build served from the app's own files
 // at app://drafter/ (docs/drafter-desktop-design.md §2). Built to dist/main.cjs by tsdown.
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { app, type BrowserWindow, dialog, ipcMain, protocol, session } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
-import { registerFileIpc } from './files-ipc';
+import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { refuseNetwork } from './network';
+import { OpenInbox, refusalMessage, requestsFromArgs } from './open-files';
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
 import { type Spellcheck, setUpSpellcheck } from './spellcheck';
@@ -58,6 +59,66 @@ function start() {
   let main: BrowserWindow | null = null;
   let started = false;
 
+  /** Brings the editor's window forward: restored, shown, focused (opened again if it is gone). */
+  const bringForward = () => {
+    if (!started) return;
+    if (!main || main.isDestroyed()) {
+      openMain();
+      return;
+    }
+    if (main.isMinimized()) main.restore();
+    main.show();
+    main.focus();
+  };
+
+  // What the system asks to open waits here until the editor's page is listening for it.
+  const inbox = new OpenInbox(CHANNELS.openItem, bringForward);
+  let files: FileAccessMain | null = null;
+  let begin: () => void = () => {};
+  const begun = new Promise<void>((resolve) => {
+    begin = resolve;
+  });
+  let queue: Promise<void> = Promise.resolve();
+
+  /**
+   * Opens the scripts among `args` (relative paths from `cwd`): each is granted to the page first
+   * (the page may read only what the writer chose), then sent; the others are said, with why.
+   * One request at a time, in the order they came.
+   */
+  const openFromSystem = (args: string[], cwd: string) => {
+    queue = queue
+      .then(async () => {
+        await begun;
+        if (!files) return;
+        const ignore = [app.getAppPath(), process.execPath, process.env.APPIMAGE ?? ''].filter(
+          Boolean,
+        );
+        const { files: scripts, refused } = requestsFromArgs(args, cwd, ignore);
+        for (const path of scripts) {
+          try {
+            await files.grant(path);
+            inbox.add({ path });
+          } catch {
+            refused.push({ name: basename(path), reason: 'it can’t be read' });
+          }
+        }
+        // After the files: opening one clears the status bar's message.
+        for (const refusal of refused) inbox.add({ problem: refusalMessage(refusal) });
+      })
+      .catch(() => {});
+  };
+
+  // macOS: a file double-clicked, dropped on the Dock icon, or opened with Drafter. It can arrive
+  // before `ready`, which is why requests wait for `begun`. (Untested until the macOS build.)
+  app.on('open-file', (event, path) => {
+    event.preventDefault();
+    openFromSystem([path], process.cwd());
+  });
+
+  ipcMain.on(CHANNELS.openReady, (event) => {
+    if (fromApp(event)) inbox.listen(event.sender);
+  });
+
   /** Opens the editor's window, and keeps it as the one a second launch brings forward. */
   const openMain = () => {
     const window = createMainWindow(PRELOAD);
@@ -69,16 +130,10 @@ function start() {
   };
 
   // A second launch brings the editor's window forward, or opens it again if it was closed while
-  // another window (a help page) kept the app running. (Task 3 opens its files here.)
-  app.on('second-instance', () => {
-    if (!started) return;
-    if (!main || main.isDestroyed()) {
-      openMain();
-      return;
-    }
-    if (main.isMinimized()) main.restore();
-    main.show();
-    main.focus();
+  // another window (a help page) kept the app running, and opens the files it names there.
+  app.on('second-instance', (_event, argv, workingDirectory) => {
+    bringForward();
+    openFromSystem(argv.slice(1), workingDirectory);
   });
 
   app.on('web-contents-created', (_event, contents) => {
@@ -136,9 +191,12 @@ function start() {
       // The CSP was read above; without the others the app still runs as before.
     }
     protocol.handle(SCHEME, appHandler(WEB, csp, headers));
-    registerFileIpc();
+    files = registerFileIpc();
     started = true;
     openMain();
+    begin();
+    // The files named on the command line: held until the page is up and listening.
+    openFromSystem(process.argv.slice(1), process.cwd());
   });
 }
 

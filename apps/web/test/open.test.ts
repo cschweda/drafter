@@ -70,8 +70,16 @@ interface MemoryRef extends FileRef {
 function memoryFiles(options: { inPlace?: boolean } = {}) {
   const writes: { ref: MemoryRef; data: string | Uint8Array }[] = [];
   const stored = new Map<number, Uint8Array>();
+  /** What `fromPath` answers, by path (the desktop app's way of opening a file named by the system). */
+  const byPath = new Map<string, PickedFile>();
   const access: FileAccess = {
     canSaveInPlace: options.inPlace ?? true,
+    async fromPath(path) {
+      const file = byPath.get(path);
+      // Imported now: the test resets its modules, so a top-level import is another class.
+      if (!file) throw new (await import('../app/storage/files')).FileGoneError();
+      return file;
+    },
     async pickToOpen() {
       return null;
     },
@@ -107,7 +115,7 @@ function memoryFiles(options: { inPlace?: boolean } = {}) {
     if (id !== null) stored.set(id, bytes);
     return { ref: id === null ? null : ({ id, name } as MemoryRef), name, bytes, lastModified: 0 };
   };
-  return { access, writes, stored, picked };
+  return { access, writes, stored, picked, byPath };
 }
 
 async function fresh(options: { inPlace?: boolean } = {}) {
@@ -475,5 +483,115 @@ describe('a save that finishes after another script was opened', () => {
     expect(made[0]?.savedHash).toBe(await t.hashText(text));
     // And nothing was written over the stage play.
     expect((await t.projects.getProject(t.script.project.value?.id ?? ''))?.source).toBe(t.shown());
+  });
+});
+
+describe('opening a file the system named (the desktop app)', () => {
+  /** A bridge that lets the test make the system name a file, or say it can't open one. */
+  function bridge() {
+    let named: ((path: string) => void) | undefined;
+    let problem: ((message: string) => void) | undefined;
+    let stops = 0;
+    window.drafterDesktop = {
+      version: '0',
+      platform: 'linux',
+      files: {} as never,
+      onOpenFile(onPath: (path: string) => void, onProblem?: (message: string) => void) {
+        named = onPath;
+        problem = onProblem;
+        return () => {
+          stops += 1;
+          named = undefined;
+        };
+      },
+    };
+    return {
+      name: (path: string) => named?.(path),
+      problem: (message: string) => problem?.(message),
+      listening: () => named !== undefined,
+      stops: () => stops,
+    };
+  }
+  beforeEach(() => vi.stubGlobal('__DRAFTER_DESKTOP__', true));
+  afterEach(() => {
+    delete window.drafterDesktop;
+  });
+
+  test('opens it as Open does, and listens only in the desktop app', async () => {
+    const t = await fresh();
+    t.byPath.set('/home/me/Door.fountain', t.picked('Door.fountain', SCRIPT, 3));
+    vi.stubGlobal('__DRAFTER_DESKTOP__', false);
+    const quiet = bridge();
+    expect(t.installSystemOpen()()).toBeUndefined();
+    expect(quiet.listening()).toBe(false);
+    vi.stubGlobal('__DRAFTER_DESKTOP__', true);
+
+    const system = bridge();
+    const stop = t.installSystemOpen();
+    expect(system.listening()).toBe(true);
+    system.name('/home/me/Door.fountain');
+    await vi.waitFor(() => expect(t.script.project.value?.fileName).toBe('Door.fountain'));
+    expect(t.shown()).toBe(SCRIPT);
+    expect(t.script.dirty.value).toBe(false);
+    stop();
+    expect(system.stops()).toBe(1);
+  });
+
+  test('shows a script that is already open, without opening it twice', async () => {
+    const t = await fresh();
+    const file = t.picked('Door.fountain', SCRIPT, 3);
+    t.byPath.set('/home/me/Door.fountain', file);
+    t.byPath.set('/home/me/link.fountain', t.picked('link.fountain', SCRIPT, 3));
+    await t.openFile(file);
+    const door = t.script.project.value?.id;
+    await t.openFile(t.picked('Other.fountain', 'Title: Other\n\nINT. A - DAY\n\nx\n', 4));
+    expect(t.script.project.value?.id).not.toBe(door);
+    const count = (await t.mine()).length;
+
+    const system = bridge();
+    t.installSystemOpen();
+    system.name('/home/me/link.fountain');
+    await vi.waitFor(() => expect(t.script.project.value?.id).toBe(door));
+    expect(await t.mine()).toHaveLength(count);
+  });
+
+  test('says why it couldn’t, and leaves the script on show alone', async () => {
+    const t = await fresh();
+    t.type('MORE\n');
+    const text = t.shown();
+    const system = bridge();
+    t.installSystemOpen();
+    system.name('/home/me/Gone.fountain');
+    await vi.waitFor(() =>
+      expect(t.openError.value).toBe('Drafter can’t open “Gone.fountain”: it isn’t there.'),
+    );
+    expect(t.shown()).toBe(text);
+
+    system.problem('Drafter can’t open “x.png”: it isn’t a script.');
+    await vi.waitFor(() =>
+      expect(t.openError.value).toBe('Drafter can’t open “x.png”: it isn’t a script.'),
+    );
+  });
+
+  test('opens several in the order they were named, one after another', async () => {
+    const t = await fresh();
+    t.byPath.set(
+      '/a/One.fountain',
+      t.picked('One.fountain', 'Title: One\n\nINT. A - DAY\n\na\n', 5),
+    );
+    t.byPath.set(
+      '/a/Two.fountain',
+      t.picked('Two.fountain', 'Title: Two\n\nINT. B - DAY\n\nb\n', 6),
+    );
+    const system = bridge();
+    t.installSystemOpen();
+    system.name('/a/One.fountain');
+    system.name('/a/Two.fountain');
+    await vi.waitFor(() => expect(t.script.project.value?.fileName).toBe('Two.fountain'));
+    expect((await t.mine()).map((p) => p.fileName).sort()).toEqual([
+      'One.fountain',
+      'Two.fountain',
+    ]);
+    expect(t.openError.value).toBe('');
   });
 });

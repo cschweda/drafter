@@ -9,6 +9,7 @@ import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
 import { installFileCheck } from '~/storage/check';
+import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
@@ -67,6 +68,7 @@ let stopWatchingSave: (() => void) | undefined;
 let stopSettings: (() => void) | undefined;
 let stopModules: (() => void) | undefined;
 let removeFileCheck: (() => void) | undefined;
+let removeSystemOpen: (() => void) | undefined;
 
 // Focus mode swaps the layout for the Source alone. Entering puts the cursor in the editor; leaving
 // puts it back there if the editor is showing, else on the button that entered.
@@ -98,6 +100,7 @@ onMounted(() => {
   stopSettings = applySettings();
   stopModules = startModules();
   removeFileCheck = installFileCheck();
+  removeSystemOpen = installSystemOpen();
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -108,6 +111,7 @@ onBeforeUnmount(() => {
   stopSettings?.();
   stopModules?.();
   removeFileCheck?.();
+  removeSystemOpen?.();
 });
 </script>
 

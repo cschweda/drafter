@@ -1,7 +1,9 @@
 import { ref, watch } from 'vue';
+import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
 import { kindOfFileName } from '../markdown/kind';
-import { type PickedFile, useFiles } from './files';
+import { nameOfPath } from './desktop-files';
+import { FileGoneError, FileProblemError, type PickedFile, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, kindOf, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';
@@ -167,4 +169,50 @@ export async function pickAndOpen(): Promise<void> {
     return;
   }
   if (file) await openFile(file);
+}
+
+/** Why a file the system named couldn't be read, said after "Drafter can’t open “x”: ". */
+function reasonFor(error: unknown): string {
+  if (error instanceof FileGoneError) return 'it isn’t there';
+  if (error instanceof FileProblemError) return error.message;
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'Drafter isn’t allowed to read it';
+  }
+  return 'it can’t be read';
+}
+
+/**
+ * Opens a script the system named (the desktop app: the command line, a second launch), the way
+ * Open from the menu does: a file that is already open is shown, the script on show stays in the
+ * browser store, and a file that can't be read is said so in the status bar. Never rejects.
+ */
+export async function openPath(path: string): Promise<void> {
+  const files = useFiles();
+  if (!files.fromPath) return;
+  let file: PickedFile;
+  try {
+    file = await files.fromPath(path);
+  } catch (error) {
+    await say(openError, `Drafter can’t open “${nameOfPath(path)}”: ${reasonFor(error)}.`);
+    return;
+  }
+  await openFile(file);
+}
+
+/**
+ * Listens for the scripts the desktop app is asked to open, one after another in the order named.
+ * Does nothing in a browser. Returns the function that stops it.
+ */
+export function installSystemOpen(): () => void {
+  const bridge = desktop();
+  if (!bridge) return () => {};
+  let queue: Promise<void> = Promise.resolve();
+  return bridge.onOpenFile(
+    (path) => {
+      queue = queue.then(() => openPath(path));
+    },
+    (message) => {
+      queue = queue.then(() => say(openError, message));
+    },
+  );
 }

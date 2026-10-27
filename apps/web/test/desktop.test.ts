@@ -11,6 +11,7 @@ const BRIDGE: DesktopBridge = {
   version: '0.3.0',
   platform: 'linux',
   files: {} as DesktopFilesBridge,
+  onOpenFile: () => () => {},
 };
 
 describe('desktop()', () => {

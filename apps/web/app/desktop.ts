@@ -57,6 +57,14 @@ export interface DesktopBridge {
   platform: DesktopPlatform;
   /** Files: the OS's dialogs, and reading and writing by path. */
   files: DesktopFilesBridge;
+  /**
+   * Calls `onPath` with the path of each script the system asks Drafter to open: named on the
+   * command line, in a second launch, or double-clicked in a file manager. The desktop app has
+   * already allowed the page to read it. What it holds from before the page listened is sent now.
+   * `onProblem` gets the message for each one it won't open ("Drafter can’t open “x.png”: …").
+   * Returns the function that stops listening.
+   */
+  onOpenFile(onPath: (path: string) => void, onProblem?: (message: string) => void): () => void;
 }
 
 declare global {

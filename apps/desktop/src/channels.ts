@@ -17,6 +17,10 @@ export const CHANNELS = {
   filesUnwatch: 'drafter:files:unwatch',
   /** main → preload: the watched file `id` changed. */
   filesChanged: 'drafter:files:changed',
+  /** preload → main: the page is listening for files the system names (open-files.ts). */
+  openReady: 'drafter:open:ready',
+  /** main → preload: one `OpenItem`: a file (already granted) to open, or why one wasn't. */
+  openItem: 'drafter:open:item',
 } as const;
 
 /** What a preload says about its renderer: the e2e suite's evidence that it is sandboxed. */
