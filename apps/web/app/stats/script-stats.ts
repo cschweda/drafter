@@ -1,4 +1,6 @@
-import type { Doc } from '@drafter/fountain';
+import type { Block, Doc } from '@drafter/fountain';
+import { builtins, resolveRole, type Template } from '@drafter/templates';
+import { templateIdOf } from '../editor/template';
 import type { MdNode } from '../markdown/render';
 import { wordsIn } from '../markdown/words';
 
@@ -6,12 +8,38 @@ import { wordsIn } from '../markdown/words';
 // speaks and how much, how the scene headings divide, and a Markdown document's headings. Pure
 // functions of the parse.
 
+/** The roles that begin a scene: a screenplay's heading, and a play's (a `##` section). */
+const SCENE_ROLES = new Set(['scene_heading', 'scene_heading_play']);
+
+/**
+ * Whether `block` begins a scene in the script's own template: a scene heading in a screenplay, a
+ * `##` section in a stage play (where an INT. heading is not a scene, and a section in a
+ * screenplay is only an outline marker). Only headings and sections are asked about, and neither
+ * template's rules for them look at the block before, so no previous role is needed.
+ */
+export function sceneStart(template: Template): (block: Block) => boolean {
+  return (block) =>
+    (block.kind === 'scene_heading' || block.kind === 'section') &&
+    SCENE_ROLES.has(resolveRole(template, block, null));
+}
+
+/** The template `doc` names, as the editor and the layout read it. */
+export const templateOf = (doc: Doc): Template => builtins[templateIdOf(doc)] as Template;
+
+/** The scenes in `doc`, by its template. */
+export function sceneCount(doc: Doc): number {
+  const starts = sceneStart(templateOf(doc));
+  let count = 0;
+  for (const block of doc.blocks) if (starts(block)) count++;
+  return count;
+}
+
 export interface CharacterRow {
   /** As first typed: a forced `@McCLANE` keeps its own capitals. */
   name: string;
   /** Cues: each is a speech, even one with only a parenthetical under it. */
   speeches: number;
-  /** Scenes the character speaks in; a speech before the first scene heading is in none. */
+  /** Scenes the character speaks in; a speech before the first scene is in none. */
   scenes: number;
   /** Words of dialogue, parentheticals left out. */
   words: number;
@@ -20,14 +48,15 @@ export interface CharacterRow {
 /**
  * The speaking characters, most speeches first (then most words, then first to speak). A cue's
  * extensions, `(V.O.)` or `(CONT'D)`, and a dual dialogue's `^` are not part of the name, and
- * names are one character whatever their capitals.
+ * names are one character whatever their capitals. Scenes are the template's (`sceneStart`).
  */
 export function characterTable(doc: Doc): CharacterRow[] {
+  const starts = sceneStart(templateOf(doc));
   const rows = new Map<string, CharacterRow & { seen: Set<number>; order: number }>();
   let scene = 0;
   let speaker: (CharacterRow & { seen: Set<number> }) | null = null;
   for (const block of doc.blocks) {
-    if (block.kind === 'scene_heading') {
+    if (starts(block)) {
       scene++;
       speaker = null;
     } else if (block.kind === 'character') {
@@ -65,6 +94,24 @@ export interface HeadingSplit {
   time: { day: number; night: number; other: number };
 }
 
+/** Both inside and outside, in either order: `INT./EXT.`, `EXT./INT.`, `I/E`, `E/I`. */
+const BOTH = /^\s*(?:INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|E\/I)\b/i;
+
+/**
+ * DAY or NIGHT, from the first part after the place that begins with either: the parts are split
+ * at ` - ` (or an en dash), so `NIGHT - CONTINUOUS`, `DAY - LATER`, and `NIGHT (1987)` are read,
+ * and the place's own words (`DAY CARE`) are not. Null for anything else, or no time.
+ */
+function timeOfDay(text: string, prefix: string | null): 'DAY' | 'NIGHT' | null {
+  const rest = prefix ? text.slice(prefix.length) : text;
+  const parts = rest.split(/\s+[-–]\s+/).slice(1);
+  for (const part of parts) {
+    const word = /^\p{L}+/u.exec(part.trim().toUpperCase())?.[0];
+    if (word === 'DAY' || word === 'NIGHT') return word;
+  }
+  return null;
+}
+
 /** How the scene headings divide between inside and outside, and day and night. */
 export function headingSplit(doc: Doc): HeadingSplit {
   const split: HeadingSplit = {
@@ -76,14 +123,15 @@ export function headingSplit(doc: Doc): HeadingSplit {
     if (block.kind !== 'scene_heading') continue;
     split.total++;
     const prefix = (block.sem.prefix ?? '').toUpperCase().replace(/\.$/, '');
-    if (prefix === 'INT') split.place.interior++;
+    // `EXT./INT.` is read by the parser as `EXT.` and a place starting with `/INT.`.
+    const both = BOTH.test(block.sem.text);
+    if (both || prefix === 'I/E' || /^INT\.?\/EXT$/.test(prefix)) split.place.both++;
+    else if (prefix === 'INT') split.place.interior++;
     else if (prefix === 'EXT' || prefix === 'EST') split.place.exterior++;
-    else if (prefix === 'I/E' || /^INT\.?\/EXT$/.test(prefix)) split.place.both++;
     else split.place.other++;
-    // The time's first word, so `NIGHT (1987)` is night.
-    const word = /^\p{L}+/u.exec((block.sem.time ?? '').toUpperCase())?.[0];
-    if (word === 'DAY') split.time.day++;
-    else if (word === 'NIGHT') split.time.night++;
+    const time = timeOfDay(block.sem.text, block.sem.prefix);
+    if (time === 'DAY') split.time.day++;
+    else if (time === 'NIGHT') split.time.night++;
     else split.time.other++;
   }
   return split;

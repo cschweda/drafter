@@ -1,6 +1,8 @@
 import { parse } from '@drafter/fountain';
+import { builtins } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import type { MdNode } from '../app/markdown/render';
+import { countScript } from '../app/stats/count';
 import {
   characterTable,
   headingCount,
@@ -98,6 +100,45 @@ describe('the character table', () => {
     ]);
   });
 
+  test('in a stage play, a scene is a ## section, as the stage-play template has it', () => {
+    const play = parse(
+      [
+        'Title: The Call',
+        '',
+        '# Act One',
+        '',
+        '## Scene 1',
+        '',
+        'MARGARET',
+        'You said you would call.',
+        '',
+        '## Scene 2',
+        '',
+        'MARGARET',
+        'Of course.',
+        '',
+        'DANNY',
+        'Look inside.',
+        '',
+        '/* drafter',
+        '{ "v": 1, "template": "stage-play-standard" }',
+        '*/',
+        '',
+      ].join('\n'),
+    );
+    expect(characterTable(play)).toEqual([
+      { name: 'MARGARET', speeches: 2, scenes: 2, words: 7 },
+      { name: 'DANNY', speeches: 1, scenes: 1, words: 2 },
+    ]);
+    // The scene count says the same.
+    expect(countScript(play, null).scenes).toBe(2);
+    // In a screenplay a ## section is only an outline marker.
+    const screenplay = parse('## Part\n\nINT. A - DAY\n\nANN\nHi.\n');
+    expect(characterTable(screenplay)[0]?.scenes).toBe(1);
+    expect(countScript(screenplay, null).scenes).toBe(1);
+    expect(builtins['stage-play-standard']).toBeDefined();
+  });
+
   test('is empty without characters', () => {
     expect(characterTable(parse('INT. A - DAY\n\nNobody talks.\n'))).toEqual([]);
   });
@@ -131,6 +172,27 @@ describe('the scene heading split', () => {
       place: { interior: 2, exterior: 3, both: 2, other: 1 },
       // A missing time and DAWN are other; NIGHT (1987) is night.
       time: { day: 2, night: 3, other: 3 },
+    });
+  });
+
+  test('reads EXT./INT. as both, and the time of day from any part after the place', () => {
+    const doc = parse(
+      [
+        'EXT./INT. CAR - DAY',
+        '',
+        'INT. HOUSE - NIGHT - CONTINUOUS',
+        '',
+        'EXT. ROAD - DAY - LATER',
+        '',
+        'INT. DAY CARE - MOMENTS LATER',
+        '',
+      ].join('\n'),
+    );
+    expect(headingSplit(doc)).toEqual({
+      total: 4,
+      place: { interior: 2, exterior: 1, both: 1, other: 0 },
+      // The place's own words (DAY CARE) are not a time.
+      time: { day: 2, night: 1, other: 1 },
     });
   });
 
