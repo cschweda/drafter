@@ -20,6 +20,8 @@ export interface TimeTracker {
    * can be negative, when a burst already taken was cut short by the next edit.
    */
   take(): Map<string, number>;
+  /** Hands back what a take returned that couldn't be kept (a failed write), so the next take has it again. */
+  giveBack(due: ReadonlyMap<string, number>): void;
 }
 
 /** The start of the local day after the one `time` falls in. */
@@ -32,7 +34,8 @@ function nextMidnight(time: number): number {
  * Counts writing time in stretches. A stretch runs from its first edit to its last, and an edit
  * more than `GAP_MS` after the one before starts a new one. A stretch counts at least `BURST_MS`,
  * but never past the edit that starts the next (after a hidden tab, that can be sooner than the
- * gap). The time counted is the span from a stretch's start, so it is split between days at local
+ * gap), nor past the midnight after its last edit, so a key just before midnight doesn't make the
+ * next day one written. The time counted is the span from a stretch's start, so it is split between days at local
  * midnight as it falls.
  */
 export function createTimeTracker(): TimeTracker {
@@ -63,10 +66,14 @@ export function createTimeTracker(): TimeTracker {
     credited = next;
   }
 
+  /** The stretch's due: first edit to last, or the burst, which stops at the midnight after the last edit. */
+  const due = (from: number, to: number) =>
+    Math.max(to - from, Math.min(BURST_MS, nextMidnight(to) - from));
+
   function edit(at: number) {
     if (start !== null && open && at >= last && at - last <= GAP_MS) {
       last = at;
-      creditTo(Math.max(last - start, BURST_MS));
+      creditTo(due(start, last));
       return;
     }
     // A new stretch. The last one's burst never reaches past this edit.
@@ -77,7 +84,7 @@ export function createTimeTracker(): TimeTracker {
     last = at;
     credited = 0;
     open = true;
-    creditTo(BURST_MS);
+    creditTo(due(at, at));
   }
 
   function take(): Map<string, number> {
@@ -90,8 +97,13 @@ export function createTimeTracker(): TimeTracker {
     return due;
   }
 
+  function giveBack(returned: ReadonlyMap<string, number>) {
+    for (const [day, ms] of returned) taken.set(day, (taken.get(day) ?? 0) - ms);
+  }
+
   return {
     edit,
+    giveBack,
     end: () => {
       open = false;
     },

@@ -81,11 +81,17 @@ describe('the writing-time tracker', () => {
     t.edit(at(0, 1, 0, 27));
     expect(t.counted().get('2026-10-26')).toBe(1 * MIN);
     expect(t.counted().get('2026-10-27')).toBe(1 * MIN);
-    // A burst that starts a few seconds before midnight crosses it too.
+  });
+
+  test('a burst stops at midnight, so a key just before it makes no day of the next', () => {
     const u = createTimeTracker();
     u.edit(at(23, 59, 50, 26));
     expect(u.counted().get('2026-10-26')).toBe(10 * SEC);
-    expect(u.counted().get('2026-10-27')).toBe(20 * SEC);
+    expect(u.counted().has('2026-10-27')).toBe(false);
+    // An edit after midnight in the same stretch counts the time to it.
+    u.edit(at(0, 0, 40, 27));
+    expect(u.counted().get('2026-10-26')).toBe(10 * SEC);
+    expect(u.counted().get('2026-10-27')).toBe(40 * SEC);
   });
 
   test('a clock that goes back starts a new stretch and counts nothing backward', () => {
@@ -112,5 +118,14 @@ describe('the writing-time tracker', () => {
     u.edit(at(10, 0, 10));
     // 10 seconds instead of 30 for the first, and 30 for the new burst: +10 in all.
     expect(Object.fromEntries(u.take())).toEqual({ '2026-10-27': 10 * SEC });
+  });
+
+  test('time given back after a failed write is handed over again', () => {
+    const t = createTimeTracker();
+    t.edit(at(9));
+    const due = t.take();
+    t.giveBack(due);
+    expect(Object.fromEntries(t.take())).toEqual({ '2026-10-27': 30 * SEC });
+    expect(t.take().size).toBe(0);
   });
 });
