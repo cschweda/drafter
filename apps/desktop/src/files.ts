@@ -111,7 +111,7 @@ const MAX_LINKS = 40;
  * the link stays a link (replacing the link with a file would cut it from what it points to). A
  * link to a file that doesn't exist yet makes that file. Anything else, `path` itself.
  */
-async function targetOf(path: string, links = 0): Promise<string> {
+export async function targetOf(path: string, links = 0): Promise<string> {
   try {
     return await realpath(path);
   } catch (error) {
@@ -121,13 +121,27 @@ async function targetOf(path: string, links = 0): Promise<string> {
   try {
     info = await lstat(path);
   } catch {
-    // No such file: a new one, in its folder (whose own links the rename goes through).
-    return path;
+    // No such file: a new one, in its folder, named by the folder's own real path (so the target
+    // has no link left in it, and is the same string every time it is worked out).
+    try {
+      return join(await realpath(dirname(path)), basename(path));
+    } catch {
+      return path;
+    }
   }
   if (!info.isSymbolicLink()) return path;
   if (links >= MAX_LINKS) throw new FileError('failed', 'ELOOP');
   return targetOf(resolve(dirname(path), await readlink(path)), links + 1);
 }
+
+/** The extensions of the files the app opens as scripts. */
+export const SCRIPT_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.markdown', '.txt'];
+/** The extensions of the files the app writes: scripts, and the exports. */
+export const WRITE_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, '.pdf'];
+
+/** Whether `path`'s extension is one of `extensions` (in any case). */
+export const hasExtension = (path: string, extensions: readonly string[]) =>
+  extensions.includes(extname(basename(path)).toLowerCase());
 
 /** Flushes a folder's entries (the rename) to disk where the OS can; Windows can't, and needn't. */
 async function syncFolder(folder: string): Promise<void> {
@@ -333,13 +347,16 @@ export function nextDialogAnswer(file: string, request: DialogRequest): string |
 
 /**
  * Where a Save dialog's answer saves. Linux's dialogs don't add the extension of the type chosen,
- * so a name typed without one gets it (`Notes` → `Notes.md`), unless a file already has that name:
- * the writer agreed to replace only the name they typed.
+ * and the app writes only scripts and exports (`WRITE_EXTENSIONS`), so a name without one of
+ * those gets `extension` (`Notes` → `Notes.md`, `Notes.rtf` → `Notes.rtf.md`). If a file already
+ * has that name a number is added (`Notes (2).md`): the writer agreed to replace only the name
+ * they typed.
  */
 export function saveTarget(path: string, extension: string): string {
-  if (extname(basename(path)) !== '') return path;
-  const withExtension = `${path}${extension}`;
-  return existsSync(withExtension) ? path : withExtension;
+  if (hasExtension(path, WRITE_EXTENSIONS)) return path;
+  let candidate = `${path}${extension}`;
+  for (let n = 2; existsSync(candidate) && n < 1000; n++) candidate = `${path} (${n})${extension}`;
+  return candidate;
 }
 
 const isFolder = (path: unknown): path is string => {

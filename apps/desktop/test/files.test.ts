@@ -348,13 +348,18 @@ describe('the e2e dialog hook', () => {
 });
 
 describe('saveTarget', () => {
-  test('adds the extension to a name typed without one, unless that would replace a file', async () => {
+  test('ends a name typed without a script’s extension with one, and never replaces a file unasked', async () => {
     await writeFile(join(dir, 'Taken.md'), 'x');
+    await writeFile(join(dir, 'Taken (2).md'), 'x');
     expect(saveTarget(join(dir, 'Notes'), '.md')).toBe(join(dir, 'Notes.md'));
     expect(saveTarget(join(dir, 'Notes.md'), '.md')).toBe(join(dir, 'Notes.md'));
+    // Another kind the app writes is the writer's choice.
     expect(saveTarget(join(dir, 'Notes.txt'), '.md')).toBe(join(dir, 'Notes.txt'));
-    // The writer confirmed replacing "Taken" (or nothing), never "Taken.md".
-    expect(saveTarget(join(dir, 'Taken'), '.md')).toBe(join(dir, 'Taken'));
+    expect(saveTarget(join(dir, 'Notes.MARKDOWN'), '.md')).toBe(join(dir, 'Notes.MARKDOWN'));
+    // A kind it doesn't write gets the extension after it.
+    expect(saveTarget(join(dir, 'Notes.rtf'), '.md')).toBe(join(dir, 'Notes.rtf.md'));
+    // The writer agreed to replace "Taken" (or nothing), never "Taken.md": a number is added.
+    expect(saveTarget(join(dir, 'Taken'), '.md')).toBe(join(dir, 'Taken (3).md'));
     // A leading dot alone is a name, not an extension.
     expect(saveTarget(join(dir, '.hidden'), '.fountain')).toBe(join(dir, '.hidden.fountain'));
     expect(existsSync(join(dir, 'Notes.md'))).toBe(false);

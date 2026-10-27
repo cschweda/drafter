@@ -38,13 +38,18 @@ const files: DesktopFilesBridge = {
   read: (path) => invoke(CHANNELS.filesRead, path),
   write: (path, bytes) => invoke(CHANNELS.filesWrite, path, bytes),
   realPath: (path) => invoke(CHANNELS.filesRealPath, path),
-  // A dropped file's path is known only here, in the renderer (Electron removed `File.path`).
+  // A dropped file's path is known only here, in the renderer (Electron removed `File.path`), and
+  // only for a real file on disk: a page can't make a File with a path. The main process is told,
+  // so it may grant it (if it is a script) before the page reads it; the read waits for that.
   pathOfDropped: (file) => {
+    let path = '';
     try {
-      return webUtils.getPathForFile(file);
+      path = webUtils.getPathForFile(file);
     } catch {
       return '';
     }
+    if (path) invoke(CHANNELS.filesGrantDropped, path).catch(() => {});
+    return path;
   },
   watch(path, onChange) {
     const id = ++lastWatch;

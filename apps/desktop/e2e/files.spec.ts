@@ -4,6 +4,7 @@ import {
   readFileSync,
   renameSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { rm } from 'node:fs/promises';
@@ -298,4 +299,86 @@ test('says so when the file can’t be written, and leaves it as it was', async 
   // won't close: its beforeunload holds it.)
   await saveNow(app.page);
   await expect.poll(() => text(path)).toContain('Not saved.');
+});
+
+test('refuses files the writer didn’t choose', async ({ desktop, profile }) => {
+  const secret = join(profile.home, 'id_rsa');
+  writeFileSync(secret, 'PRIVATE KEY');
+  const bashrc = join(profile.home, '.bashrc');
+  writeFileSync(bashrc, 'export PATH');
+  const script = join(folder(profile), 'Chosen.fountain');
+  writeFileSync(script, 'Title: Chosen\n');
+  const { page } = await desktop();
+  // What a page made to run someone else's code could ask the desktop app for.
+  const asked = await page.evaluate(
+    async ({ secret, bashrc, script }) => {
+      const files = window.drafterDesktop?.files;
+      const outcome = (work: Promise<unknown>) =>
+        work.then(
+          () => 'done',
+          (error: Error) => error.message,
+        );
+      return {
+        read: await outcome(files?.read(secret) as Promise<unknown>),
+        write: await outcome(
+          files?.write(bashrc, new TextEncoder().encode('rm -rf ~')) as Promise<unknown>,
+        ),
+        newFile: await outcome(
+          files?.write(`${bashrc}.fountain`, new TextEncoder().encode('x')) as Promise<unknown>,
+        ),
+        realPath: await outcome(files?.realPath(secret) as Promise<unknown>),
+        notChosenYet: await outcome(files?.read(script) as Promise<unknown>),
+      };
+    },
+    { secret, bashrc, script },
+  );
+  expect(asked).toEqual({
+    read: 'not-allowed: not chosen',
+    write: 'not-allowed: not chosen',
+    newFile: 'not-allowed: not chosen',
+    realPath: 'not-allowed: not chosen',
+    notChosenYet: 'not-allowed: not chosen',
+  });
+  expect(readFileSync(bashrc, 'utf8')).toBe('export PATH');
+  expect(lstatSync(`${bashrc}.fountain`, { throwIfNoEntry: false })).toBeUndefined();
+  // Chosen in the Open dialog, the same file may be read.
+  await openPath(page, profile, script);
+  await expect(editor(page)).toContainText('Title: Chosen');
+  const read = await page.evaluate(
+    async (path) =>
+      new TextDecoder().decode((await window.drafterDesktop?.files.read(path))?.bytes),
+    script,
+  );
+  expect(read).toBe('Title: Chosen\n');
+});
+
+test('refuses a chosen file swapped for a link to another', async ({ desktop, profile }) => {
+  test.skip(process.platform === 'win32', 'symlinks');
+  const scripts = folder(profile);
+  const path = join(scripts, 'Swapped.fountain');
+  writeFileSync(path, 'Title: Swapped\n\nINT. ROOM - DAY\n');
+  const victim = join(folder(profile, 'Elsewhere'), 'victim.fountain');
+  writeFileSync(victim, 'VICTIM');
+  const app = await desktop();
+  await openPath(app.page, profile, path);
+  await expect(editor(app.page)).toContainText('INT. ROOM - DAY');
+  unlinkSync(path);
+  symlinkSync(victim, path);
+  await typeAtEnd(app.page, '\nNot here.\n');
+  await saveNow(app.page);
+  await expect(
+    app.page.getByRole('alert').filter({ hasText: 'Drafter isn’t allowed to write that file' }),
+  ).toBeVisible();
+  expect(readFileSync(victim, 'utf8')).toBe('VICTIM');
+  // Saved somewhere the writer chooses, it is kept (and the window may close).
+  answerDialogs(profile, [join(scripts, 'Kept.fountain')]);
+  await chooseInScripts(app.page, 'Save As…');
+  await expect
+    .poll(() =>
+      lstatSync(join(scripts, 'Kept.fountain'), { throwIfNoEntry: false })
+        ? text(join(scripts, 'Kept.fountain'))
+        : '',
+    )
+    .toContain('Not here.');
+  expect(readFileSync(victim, 'utf8')).toBe('VICTIM');
 });

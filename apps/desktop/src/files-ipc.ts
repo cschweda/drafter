@@ -1,8 +1,8 @@
-// The page's file calls (DesktopFilesBridge, apps/web/app/desktop.ts), answered by the main
-// process: the OS's own Open and Save dialogs, and files.ts's reads and atomic writes. Every call
-// comes from one of the app's own pages (`fromApp`) and has its arguments checked before anything
-// touches the disk; an error reaches the page as its code (`gone`, `failed: EIO`), nothing more.
-import { dirname, join } from 'node:path';
+// The page's file calls (DesktopFilesBridge, apps/web/app/desktop.ts), registered with ipcMain:
+// file-handlers.ts answers them; this file adds Electron's part, the OS's own Open and Save
+// dialogs, and refuses a call from anything but one of the app's own pages (`fromApp`). An error
+// reaches the page as its code (`gone`, `not-allowed: not chosen`, `failed: EIO`), nothing more.
+import { join } from 'node:path';
 import {
   app,
   BrowserWindow,
@@ -10,27 +10,12 @@ import {
   type FileFilter,
   type IpcMainInvokeEvent,
   ipcMain,
-  type WebContents,
 } from 'electron';
 import { CHANNELS } from './channels';
-import {
-  checkBytes,
-  checkPath,
-  dialogHook,
-  FileError,
-  fileErrorOf,
-  nextDialogAnswer,
-  readFileAt,
-  realPathOf,
-  rememberFolder,
-  saveTarget,
-  startFolder,
-  watchFile,
-  writeAtomic,
-} from './files';
+import { type FileEvent, fileHandlers, type SaveExtension } from './file-handlers';
+import { dialogHook, fileErrorOf } from './files';
+import { Grants } from './grants';
 import { fromApp } from './window';
-
-type SaveExtension = '.fountain' | '.md' | '.txt' | '.pdf';
 
 const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
   '.fountain': { name: 'Fountain script', extensions: ['fountain'] },
@@ -47,64 +32,39 @@ const OPEN_FILTERS: FileFilter[] = [
   ALL_FILES,
 ];
 
-const isExtension = (value: unknown): value is SaveExtension =>
-  typeof value === 'string' && Object.hasOwn(SAVE_FILTERS, value);
+const windowOf = (event: FileEvent) =>
+  BrowserWindow.fromWebContents((event as IpcMainInvokeEvent).sender);
 
-/** A file name the page suggests: its last part only, never a path; at most 255 characters. */
-function checkName(value: unknown): string {
-  if (typeof value !== 'string' || value.includes('\0')) {
-    throw new FileError('failed', 'not a file name');
-  }
-  const name = value.split(/[\\/]/).at(-1)?.slice(0, 255) ?? '';
-  return name === '' || name === '.' || name === '..' ? 'Untitled' : name;
+/** What the rest of the main process may do with files: grant one the writer named (Task 3). */
+export interface FileAccessMain {
+  /**
+   * Grants an existing script the writer named outside the page (the command line, a second
+   * launch, a file double-clicked): the page may then open and save it. Rejects anything that
+   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`).
+   */
+  grant(path: string): Promise<string>;
 }
-
-/** How many files one page may watch at once (it watches one: the open script's). */
-const MAX_WATCHES = 32;
 
 /**
  * Registers the handlers. Call once, on `ready`, before the first window opens. An unpackaged app
  * run by the e2e suite answers its dialogs from `DRAFTER_E2E_DIALOG`'s queue instead of showing them.
  */
-export function registerFileIpc(): void {
-  const settings = join(app.getPath('userData'), 'desktop-settings.json');
-  const hook = dialogHook(app.isPackaged, process.env);
-
-  const folder = () => {
-    let documents = app.getPath('home');
-    try {
-      documents = app.getPath('documents');
-    } catch {
-      // No Documents folder on this system: home.
-    }
-    return startFolder(settings, documents, app.getPath('home'));
-  };
-  const remember = (path: string) => rememberFolder(settings, dirname(path)).catch(() => {});
-
-  /** An invoke handler that answers only the app's pages, and says only an error's code. */
-  function handle(
-    channel: string,
-    answer: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown>,
-  ) {
-    ipcMain.handle(channel, async (event, ...args: unknown[]) => {
-      if (!fromApp(event)) throw new Error('not-allowed');
+export function registerFileIpc(): FileAccessMain {
+  const userData = app.getPath('userData');
+  const handlers = fileHandlers({
+    grants: new Grants(join(userData, 'granted-files.json')),
+    settingsFile: join(userData, 'desktop-settings.json'),
+    documents: () => {
       try {
-        return await answer(event, ...args);
-      } catch (error) {
-        // A new Error with the code alone: the page never sees a stack, or a path it didn't send.
-        throw new Error(fileErrorOf(error).message);
+        return app.getPath('documents');
+      } catch {
+        return app.getPath('home');
       }
-    });
-  }
-
-  const windowOf = (event: IpcMainInvokeEvent) => BrowserWindow.fromWebContents(event.sender);
-
-  handle(CHANNELS.filesShowOpen, async (event) => {
-    const defaultPath = folder();
-    let chosen: string | null;
-    if (hook) {
-      chosen = nextDialogAnswer(hook, { kind: 'open', defaultPath });
-    } else {
+    },
+    home: app.getPath('home'),
+    hook: dialogHook(app.isPackaged, process.env),
+    changedChannel: CHANNELS.filesChanged,
+    async showOpenDialog(event, defaultPath) {
       const options = {
         title: 'Open',
         defaultPath,
@@ -115,21 +75,9 @@ export function registerFileIpc(): void {
       const result = window
         ? await dialog.showOpenDialog(window, options)
         : await dialog.showOpenDialog(options);
-      chosen = result.canceled ? null : (result.filePaths[0] ?? null);
-    }
-    if (chosen === null) return null;
-    const path = checkPath(chosen);
-    await remember(path);
-    return path;
-  });
-
-  handle(CHANNELS.filesShowSave, async (event, suggestedName, extension) => {
-    if (!isExtension(extension)) throw new FileError('failed', 'not a file type');
-    const defaultPath = join(folder(), checkName(suggestedName));
-    let chosen: string | null;
-    if (hook) {
-      chosen = nextDialogAnswer(hook, { kind: 'save', defaultPath, extension });
-    } else {
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+    async showSaveDialog(event, defaultPath, extension) {
       const options = {
         title: 'Save',
         defaultPath,
@@ -140,64 +88,36 @@ export function registerFileIpc(): void {
       const result = window
         ? await dialog.showSaveDialog(window, options)
         : await dialog.showSaveDialog(options);
-      chosen = result.canceled || !result.filePath ? null : result.filePath;
-    }
-    if (chosen === null) return null;
-    const path = saveTarget(checkPath(chosen), extension);
-    await remember(path);
-    return path;
+      return result.canceled || !result.filePath ? null : result.filePath;
+    },
   });
 
-  handle(CHANNELS.filesRead, async (_event, path) => readFileAt(checkPath(path)));
+  /** An invoke handler that answers only the app's pages, and says only an error's code. */
+  function handle(channel: string, answer: (event: FileEvent, ...args: unknown[]) => unknown) {
+    ipcMain.handle(channel, async (event, ...args: unknown[]) => {
+      if (!fromApp(event)) throw new Error('not-allowed');
+      try {
+        return await answer(event as unknown as FileEvent, ...args);
+      } catch (error) {
+        // A new Error with the code alone: the page never sees a stack, or a path it didn't send.
+        throw new Error(fileErrorOf(error).message);
+      }
+    });
+  }
 
-  handle(CHANNELS.filesWrite, async (_event, path, bytes) => {
-    await writeAtomic(checkPath(path), checkBytes(bytes));
+  handle(CHANNELS.filesShowOpen, (event) => handlers.showOpen(event));
+  handle(CHANNELS.filesShowSave, (event, name, extension) =>
+    handlers.showSave(event, name, extension),
+  );
+  // Answered at once (the grant is kept pending); a refused drop opens unbound, from its bytes.
+  handle(CHANNELS.filesGrantDropped, (event, path) => {
+    void handlers.grantDropped(event, path);
   });
+  handle(CHANNELS.filesRead, (event, path) => handlers.read(event, path));
+  handle(CHANNELS.filesWrite, (event, path, bytes) => handlers.write(event, path, bytes));
+  handle(CHANNELS.filesRealPath, (event, path) => handlers.realPath(event, path));
+  handle(CHANNELS.filesWatch, (event, id, path) => handlers.watch(event, id, path));
+  handle(CHANNELS.filesUnwatch, (event, id) => handlers.unwatch(event, id));
 
-  handle(CHANNELS.filesRealPath, async (_event, path) => realPathOf(checkPath(path)));
-
-  // Watches, by page: each stops when the page asks, reloads, or goes.
-  const watches = new Map<WebContents, Map<number, () => void>>();
-  const stopAll = (contents: WebContents) => {
-    for (const stop of watches.get(contents)?.values() ?? []) stop();
-    watches.delete(contents);
-  };
-  const watchesOf = (contents: WebContents) => {
-    let mine = watches.get(contents);
-    if (!mine) {
-      mine = new Map();
-      watches.set(contents, mine);
-      contents.once('destroyed', () => stopAll(contents));
-      contents.on('did-navigate', () => stopAll(contents));
-    }
-    return mine;
-  };
-  const checkId = (value: unknown): number => {
-    if (!Number.isSafeInteger(value) || (value as number) < 0) {
-      throw new FileError('failed', 'not a watch');
-    }
-    return value as number;
-  };
-
-  handle(CHANNELS.filesWatch, async (event, id, path) => {
-    const key = checkId(id);
-    const file = checkPath(path);
-    const contents = event.sender;
-    const mine = watchesOf(contents);
-    mine.get(key)?.();
-    if (mine.size >= MAX_WATCHES) throw new FileError('failed', 'too many watches');
-    mine.set(
-      key,
-      watchFile(file, () => {
-        if (!contents.isDestroyed()) contents.send(CHANNELS.filesChanged, key);
-      }),
-    );
-  });
-
-  handle(CHANNELS.filesUnwatch, async (event, id) => {
-    const key = checkId(id);
-    const mine = watches.get(event.sender);
-    mine?.get(key)?.();
-    mine?.delete(key);
-  });
+  return { grant: (path) => handlers.grantScript(path) };
 }

@@ -10,6 +10,8 @@ export const CHANNELS = {
   filesRead: 'drafter:files:read',
   filesWrite: 'drafter:files:write',
   filesRealPath: 'drafter:files:real-path',
+  /** preload → main: a dropped file's path, to be granted if it is a script (grants.ts). */
+  filesGrantDropped: 'drafter:files:grant-dropped',
   /** preload → main: watch `(id, path)`; stop `(id)`. */
   filesWatch: 'drafter:files:watch',
   filesUnwatch: 'drafter:files:unwatch',

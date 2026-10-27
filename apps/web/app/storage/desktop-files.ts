@@ -118,7 +118,15 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
       } catch {
         // No path: opened from the file itself, below.
       }
-      if (path) return picked(path);
+      if (path) {
+        try {
+          return await picked(path);
+        } catch (error) {
+          // The desktop app keeps only scripts it may write back (grants, apps/desktop): anything
+          // else dropped opens from its bytes, unbound, as a file with no path does.
+          if (!(error instanceof DOMException && error.name === 'NotAllowedError')) throw error;
+        }
+      }
       // A file with no place on disk (dragged from another app's memory): it opens, unbound.
       return {
         ref: null,

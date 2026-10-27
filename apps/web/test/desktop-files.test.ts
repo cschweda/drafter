@@ -206,6 +206,20 @@ describe('desktopFiles', () => {
     expect(await files.fromDrop(itemOf(null))).toBeNull();
   });
 
+  test('opens a dropped file the desktop app won’t grant from its bytes, unbound', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    const file = new File(['Title: Notes\n'], 'notes.rtf', { lastModified: 5 });
+    fake.dropped.set(file, '/home/w/notes.rtf');
+    // Not on the (fake) disk as a granted file: the bridge refuses it.
+    fake.bridge.read = async () => {
+      throw new Error('not-allowed: not a script');
+    };
+    const picked = await files.fromDrop(itemOf(file));
+    expect(picked).toMatchObject({ ref: null, name: 'notes.rtf', lastModified: 5 });
+    expect(decoder.decode(picked?.bytes)).toBe('Title: Notes\n');
+  });
+
   test('download asks where, then writes there', async () => {
     const fake = fakeBridge();
     const files = desktopFiles(fake.bridge);
