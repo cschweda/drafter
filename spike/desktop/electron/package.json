@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "bench": "node run.mjs",
-    "copy-web": "rm -rf web && cp -R ../../../apps/web/.output/public web",
+    "copy-web": "rm -rf web && cp -R ../../../apps/web/.output/public web && cp ../bench/startup.js startup.js",
     "dist": "npm run copy-web && electron-builder --linux AppImage deb --publish never"
   },
   "devDependencies": {
@@ -23,7 +23,7 @@
     "productName": "Drafter",
     "executableName": "drafter",
     "directories": { "output": "dist" },
-    "files": ["main.cjs", "preload.cjs", "web/**/*", "!web/og-image.png"],
+    "files": ["main.cjs", "preload.cjs", "startup.js", "web/**/*", "!web/og-image.png"],
     "asar": true,
     "linux": {
       "category": "Office",

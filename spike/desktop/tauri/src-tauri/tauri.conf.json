@@ -9,17 +9,12 @@
   },
   "app": {
     "withGlobalTauri": true,
-    "windows": [
-      {
-        "label": "main",
-        "title": "Drafter",
-        "width": 1440,
-        "height": 900,
-        "backgroundColor": "#0F1013"
-      }
-    ],
+    "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'sha256-dIQJ0dhcqTUZzwYTgAGpJ/AASeoHZTDV5nBa2Rg7P0M=' 'sha256-dPipJ19ORAqehTNZHwmgjVcZPgM8QcZ0Gz6Bof7edfo=' 'sha256-yMtEXssBJ6hShkYT9XoG32vgqFpN5ero5fMMVhkHst0='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+      "csp": "default-src 'self'; script-src 'self' 'sha256-dIQJ0dhcqTUZzwYTgAGpJ/AASeoHZTDV5nBa2Rg7P0M=' 'sha256-dPipJ19ORAqehTNZHwmgjVcZPgM8QcZ0Gz6Bof7edfo=' 'sha256-yMtEXssBJ6hShkYT9XoG32vgqFpN5ero5fMMVhkHst0='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'",
+      "dangerousDisableAssetCspModification": [
+        "style-src"
+      ]
     }
   },
   "bundle": {

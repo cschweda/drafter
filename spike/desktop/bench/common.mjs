@@ -19,6 +19,16 @@ export const MIN_PAGES = 110;
 export const PHRASE = 'Typing into a long script, one letter at a time. '.repeat(5).slice(0, 200);
 export const PERSIST = `PERSISTED-${Date.now()}`;
 
+/** A suffix for output files, so several runs (variants) can share one folder. */
+export const VARIANT = process.env.SPIKE_VARIANT ? `-${process.env.SPIKE_VARIANT}` : '';
+export const outName = (base, ext) => `${base}${VARIANT}.${ext}`;
+
+/** Startup from the shell's own process start to the app being ready (bench/startup.js). */
+export const startupOf = (info, startedAt) =>
+  Number.isFinite(info.readyAtMs) && startedAt
+    ? { processToReadyMs: Math.round(info.timeOrigin + info.readyAtMs - startedAt), navigationToReadyMs: info.readyAtMs }
+    : { error: 'no ready mark', readyAtMs: info.readyAtMs };
+
 export function save(name, data) {
   writeFileSync(resolve(OUT, name), `${JSON.stringify(data, null, 2)}\n`);
   console.log(`== ${name}\n${JSON.stringify(data, null, 2)}`);

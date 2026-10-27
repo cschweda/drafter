@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron } from 'playwright-core';
-import { BENCH, LONG, MIN_PAGES, OUT, PERSIST, PHRASE, save, sleep } from '../bench/common.mjs';
+import { BENCH, LONG, MIN_PAGES, OUT, outName, PERSIST, PHRASE, save, sleep, startupOf } from '../bench/common.mjs';
 
 const HERE = import.meta.dirname;
 const exe = process.argv[2] ? resolve(process.argv[2]) : undefined;
@@ -73,22 +73,32 @@ async function launch() {
   await page.waitForLoadState('domcontentloaded');
   await page.evaluate(BENCH);
   await untilReady(page);
-  return { app, page, readyMs: Date.now() - t0 };
+  const readyMs = Date.now() - t0;
+  const info = await page.evaluate(() => window.__spike.info());
+  const startedAt = await page.evaluate(() => window.drafterDesktop.startedAt());
+  return { app, page, readyMs, startup: startupOf(info, startedAt) };
 }
 
 // ---- First launch: a first visit. The tour's "seen" key is set and the page reloaded (the e2e
 // tests do the same with storageState), so the dialog doesn't take the keyboard.
-let { app, page, readyMs } = await launch();
+let { app, page, readyMs, startup } = await launch();
 result.firstLaunchReadyMs = readyMs;
+result.firstLaunchStartup = startup;
 result.electron = await app.evaluate(({ app }) => ({ version: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node, name: app.getName() }));
 await page.evaluate(() => localStorage.setItem('drafter-tour-v1', 'true'));
 await page.reload();
 await page.evaluate(BENCH);
 await untilReady(page);
 await sleep(1500);
-await page.screenshot({ path: join(OUT, 'electron-sample.png') });
-rootShot('electron-sample-root.png');
+await page.screenshot({ path: join(OUT, outName('electron-sample', 'png')) });
+rootShot(outName('electron-sample-root', 'png'));
 result.info = await page.evaluate(() => window.__spike.info());
+result.persisted = await page.evaluate(() => window.__spike.persisted());
+result.cspHeader = await page.evaluate(() => window.__spike.cspHeader());
+result.idle = await page.evaluate(() => window.__spike.idle(3000));
+// Baseline: typing into the 3-page sample, at its start, the in-page way.
+await page.evaluate(() => window.__spike.toStart());
+result.typingSampleInPage = await page.evaluate((p) => window.__spike.typeJS(p), PHRASE.slice(0, 100));
 await sleep(4000);
 result.serviceWorker = await page.evaluate(() => window.__spike.swStatus());
 result.serviceWorkerTry = await page.evaluate(() => window.__spike.swTry());
@@ -113,7 +123,7 @@ result.typingRealKeys = { chars: PHRASE.length, wallMs: realWall, firstPageShows
 await page.evaluate(() => window.__spike.toStart());
 result.typingInPage = await page.evaluate((p) => window.__spike.typeJS(p), PHRASE);
 result.memoryAtLong = treeRss(app.process().pid);
-await page.screenshot({ path: join(OUT, 'electron-long.png') });
+await page.screenshot({ path: join(OUT, outName('electron-long', 'png')) });
 
 // ---- PDF export through the app's own menu (the export worker, with its font fetches).
 result.exportPdf = await page.evaluate(() => window.__spike.exportPdf());
@@ -143,8 +153,9 @@ await page.keyboard.press(`${MOD}+Home`);
 await page.keyboard.type(`${PERSIST} `);
 await sleep(3000);
 await app.close();
-({ app, page, readyMs } = await launch());
+({ app, page, readyMs, startup } = await launch());
 result.relaunchReadyMs = readyMs;
+result.relaunchStartup = startup;
 await sleep(1000);
 const back = await page.evaluate(() => document.querySelector('.cm-content')?.textContent.slice(0, 300) ?? '');
 result.persistence = { marker: PERSIST, restored: back.includes(PERSIST), firstText: back.slice(0, 120) };
@@ -155,7 +166,7 @@ if (process.env.DISPLAY) {
     globalThis.__dlg = dialog.showOpenDialog(BrowserWindow.getAllWindows()[0], { properties: ['openFile'] });
   });
   await sleep(2500);
-  rootShot('electron-native-dialog.png');
+  rootShot(outName('electron-native-dialog', 'png'));
   try {
     execFileSync('xdotool', ['key', 'Escape']);
   } catch {}
@@ -165,4 +176,4 @@ if (process.env.DISPLAY) {
   ]);
 }
 await app.close();
-save('electron-results.json', result);
+save(outName('electron-results', 'json'), result);

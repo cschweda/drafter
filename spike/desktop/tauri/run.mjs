@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { remote } from 'webdriverio';
-import { BENCH, LONG, MIN_PAGES, OUT, PERSIST, PHRASE, save, sleep } from '../bench/common.mjs';
+import { BENCH, LONG, MIN_PAGES, OUT, outName, PERSIST, PHRASE, save, sleep, startupOf } from '../bench/common.mjs';
 
 const exe = resolve(process.argv[2] ?? 'src-tauri/target/release/drafter');
 const work = mkdtempSync(join(tmpdir(), 'drafter-tauri-'));
@@ -84,7 +84,10 @@ async function launch() {
   });
   await browser.setTimeout({ script: 300_000 });
   await untilReady(browser);
-  return { browser, readyMs: Date.now() - t0 };
+  const readyMs = Date.now() - t0;
+  const info = await browser.execute(() => window.__spike.info());
+  const startedAt = await browser.execute(() => window.__TAURI__.core.invoke('spike_started_at'));
+  return { browser, readyMs, startup: startupOf(info, startedAt) };
 }
 
 /** Real key events through WebDriver actions, one character at a time, paced like the Electron run. */
@@ -106,15 +109,29 @@ const step = async (name, fn) => {
   }
 };
 
-let { browser, readyMs } = await launch();
-result.firstLaunchReadyMs = readyMs;
+let { browser, readyMs, startup } = await launch();
+result.firstLaunchReadyMs = readyMs; // includes WebDriver session setup
+result.firstLaunchStartup = startup;
 await browser.execute(() => localStorage.setItem('drafter-tour-v1', 'true'));
 await browser.refresh();
 await untilReady(browser);
 await sleep(1500);
-await browser.saveScreenshot(join(OUT, 'tauri-sample.png')).catch((e) => console.log('screenshot', e));
-rootShot('tauri-sample-root.png');
+await browser.saveScreenshot(join(OUT, outName('tauri-sample', 'png'))).catch((e) => console.log('screenshot', e));
+rootShot(outName('tauri-sample-root', 'png'));
 await step('info', () => js(browser, () => window.__spike.info()));
+await step('persisted', () => js(browser, () => window.__spike.persisted()));
+await step('cspHeader', () => js(browser, () => window.__spike.cspHeader()));
+if (process.env.SPIKE_QUICK === '1') {
+  await browser.deleteSession().catch(() => {});
+  driver.kill();
+  save(outName('tauri-results', 'json'), result);
+  process.exit(0);
+}
+await step('idle', () => js(browser, () => window.__spike.idle(3000)));
+await step('typingSampleInPage', async () => {
+  await js(browser, () => window.__spike.toStart());
+  return js(browser, (p) => window.__spike.typeJS(p), PHRASE.slice(0, 100));
+});
 await step('tauriGlobal', () => js(browser, () => typeof window.__TAURI__ === 'object' && Object.keys(window.__TAURI__)));
 await sleep(4000);
 await step('serviceWorker', () => js(browser, () => window.__spike.swStatus()));
@@ -144,7 +161,7 @@ await step('typingInPage', async () => {
   return js(browser, (p) => window.__spike.typeJS(p), PHRASE);
 });
 result.memoryAtLong = treeRss();
-await browser.saveScreenshot(join(OUT, 'tauri-long.png')).catch(() => {});
+await browser.saveScreenshot(join(OUT, outName('tauri-long', 'png'))).catch(() => {});
 
 await step('exportPdf', () => js(browser, () => window.__spike.exportPdf()));
 
@@ -181,7 +198,7 @@ await step('nativeDialog', async () => {
     window.__TAURI__.core.invoke('spike_show_dialog');
   });
   await sleep(2500);
-  rootShot('tauri-native-dialog.png');
+  rootShot(outName('tauri-native-dialog', 'png'));
   try {
     execFileSync('xdotool', ['key', 'Escape']);
   } catch {}
@@ -200,12 +217,12 @@ await step('relaunch', async () => {
   browser = r.browser;
   await sleep(1000);
   const back = await js(browser, () => document.querySelector('.cm-content')?.textContent.slice(0, 300) ?? '');
-  return { readyMs: r.readyMs, restored: back.includes(PERSIST), firstText: back.slice(0, 120) };
+  return { readyMs: r.readyMs, startup: r.startup, restored: back.includes(PERSIST), firstText: back.slice(0, 120) };
 });
 await browser.deleteSession().catch(() => {});
 driver.kill();
 try {
   result.webkitDataDirs = execFileSync('bash', ['-c', 'ls -la ~/.local/share/dev.drafter.spike ~/.local/share/dev.drafter.spike/* 2>&1 | head -40'], { encoding: 'utf8' });
 } catch {}
-save('tauri-results.json', result);
+save(outName('tauri-results', 'json'), result);
 process.exit(0);

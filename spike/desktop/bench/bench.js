@@ -119,7 +119,40 @@
         fonts: [...document.fonts].map((f) => `${f.family}:${f.weight}:${f.status}`),
         pages: pages(),
         errors: state.errors,
+        cspViolations: JSON.parse(document.documentElement.getAttribute('data-spike-csp') ?? '[]'),
+        cspViolationCount: Number(document.documentElement.getAttribute('data-spike-csp-count') ?? 0),
+        readyAtMs: Number(document.documentElement.getAttribute('data-spike-ready') ?? NaN),
+        timeOrigin: Number(document.documentElement.getAttribute('data-spike-origin') ?? NaN),
+        editorFont: getComputedStyle(document.querySelector('.cm-content') ?? document.body).fontFamily,
+        editorStyled: !!document.querySelector('.cm-editor') && getComputedStyle(document.querySelector('.cm-editor')).display === 'flex',
+        iconMask: (() => {
+          const i = document.querySelector('[class*="i-lucide"]');
+          if (!i) return null;
+          const cs = getComputedStyle(i);
+          return { cls: i.className.baseVal ?? i.className, w: cs.width, mask: (cs.maskImage || cs.webkitMaskImage || '').slice(0, 40), bg: cs.backgroundColor };
+        })(),
       };
+    },
+    async persisted() {
+      try {
+        return { persisted: await navigator.storage?.persisted?.(), estimate: await navigator.storage?.estimate?.() };
+      } catch (e) {
+        return String(e);
+      }
+    },
+    async cspHeader() {
+      try {
+        const r = await fetch(location.href, { cache: 'no-store' });
+        return r.headers.get('content-security-policy');
+      } catch (e) {
+        return `fetch failed: ${e}`;
+      }
+    },
+    /** Frames and stalls with nothing happening: the shell's own baseline. */
+    async idle(ms = 3000) {
+      api.startRecording();
+      await sleep(ms);
+      return api.stopRecording();
     },
     async swStatus() {
       if (!('serviceWorker' in navigator)) return { supported: false };

@@ -1,5 +1,6 @@
 // Drafter in Electron: the built static site (apps/web/.output/public, copied to ./web at package
 // time) served from a privileged custom scheme, app://drafter/. Spike code: no menus, no updater.
+const STARTED = Date.now();
 const { app, BrowserWindow, protocol, ipcMain, dialog, session } = require('electron');
 const { readFile, writeFile, stat } = require('node:fs/promises');
 const { existsSync } = require('node:fs');
@@ -136,6 +137,12 @@ function registerFileIpc() {
   ipcMain.handle('files:write', async (_e, ref, data) => {
     if (!granted.has(ref.path)) throw new Error('not granted');
     await writeFile(ref.path, data);
+  });
+  ipcMain.handle('spike:startedAt', () => STARTED);
+  // The spike's document-start script (bench/startup.js), handed to the preload.
+  ipcMain.on('spike:startupScript', (event) => {
+    const file = [path.join(__dirname, 'startup.js'), path.join(__dirname, '../bench/startup.js')].find(existsSync);
+    event.returnValue = file ? require('node:fs').readFileSync(file, 'utf8') : '';
   });
   // The spike's check that the real dialog functions are there and callable from main.
   ipcMain.handle('spike:dialogInfo', () => ({

@@ -76,9 +76,12 @@ jobs:
           timeout 15 xvfb-run -a dist/*.AppImage > "$SPIKE_OUT/electron-appimage-smoke2.txt" 2>&1
           echo "exit: $?" | tee -a "$SPIKE_OUT/electron-appimage-smoke2.txt"
           tail -20 "$SPIKE_OUT/electron-appimage-smoke2.txt"
-      - name: Measure (packaged app, under Xvfb)
+      - name: Measure (packaged app, under Xvfb), run 1
         working-directory: spike/desktop/electron
-        run: xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs dist/linux-unpacked/drafter
+        run: SPIKE_VARIANT=run1 xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs dist/linux-unpacked/drafter
+      - name: Measure, run 2
+        working-directory: spike/desktop/electron
+        run: SPIKE_VARIANT=run2 xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs dist/linux-unpacked/drafter
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -157,9 +160,36 @@ jobs:
           timeout 15 xvfb-run -a bundle/appimage/*.AppImage > "$SPIKE_OUT/tauri-appimage-smoke.txt" 2>&1
           echo "exit: $?  (124 = still running after 15 s, i.e. it started)" | tee -a "$SPIKE_OUT/tauri-appimage-smoke.txt"
           tail -20 "$SPIKE_OUT/tauri-appimage-smoke.txt"
-      - name: Measure (release binary, through tauri-driver, under Xvfb)
+      - name: Keep the measured binary; build one with Tauri's default CSP handling, for comparison
         working-directory: spike/desktop/tauri
-        run: xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs src-tauri/target/release/drafter
+        run: |
+          cp src-tauri/target/release/drafter "$RUNNER_TEMP/drafter"
+          start=$(date +%s)
+          npx tauri build --no-bundle --config '{"app":{"security":{"dangerousDisableAssetCspModification":false}}}'
+          echo "incremental rebuild (config change, no bundle): $(( $(date +%s) - start )) s" | tee -a "$SPIKE_OUT/tauri-webkit.txt"
+          cp src-tauri/target/release/drafter "$RUNNER_TEMP/drafter-default-csp"
+      - name: Measure (release binary, through tauri-driver, under Xvfb), run 1
+        working-directory: spike/desktop/tauri
+        run: |
+          rm -rf ~/.local/share/dev.drafter.spike ~/.cache/dev.drafter.spike
+          SPIKE_VARIANT=run1 xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs "$RUNNER_TEMP/drafter"
+      - name: Measure, run 2
+        working-directory: spike/desktop/tauri
+        run: |
+          rm -rf ~/.local/share/dev.drafter.spike ~/.cache/dev.drafter.spike
+          SPIKE_VARIANT=run2 xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs "$RUNNER_TEMP/drafter"
+      - name: Measure with WEBKIT_DISABLE_COMPOSITING_MODE=1
+        working-directory: spike/desktop/tauri
+        continue-on-error: true
+        run: |
+          rm -rf ~/.local/share/dev.drafter.spike ~/.cache/dev.drafter.spike
+          WEBKIT_DISABLE_COMPOSITING_MODE=1 SPIKE_VARIANT=nocompositing xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs "$RUNNER_TEMP/drafter"
+      - name: Quick look with Tauri's default CSP handling (style-src nonce)
+        working-directory: spike/desktop/tauri
+        continue-on-error: true
+        run: |
+          rm -rf ~/.local/share/dev.drafter.spike ~/.cache/dev.drafter.spike
+          SPIKE_QUICK=1 SPIKE_VARIANT=default-csp xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs "$RUNNER_TEMP/drafter-default-csp"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

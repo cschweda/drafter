@@ -4,12 +4,14 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
+
+static STARTED: OnceLock<f64> = OnceLock::new();
 
 /// Paths the writer picked this session. The page may only read or write these.
 #[derive(Default)]
@@ -128,6 +130,12 @@ fn spike_show_dialog(app: AppHandle) {
     app.dialog().file().pick_file(|_| {});
 }
 
+/// When the process started (ms since the epoch), for the startup measurement.
+#[tauri::command]
+fn spike_started_at() -> f64 {
+    *STARTED.get().unwrap_or(&0.0)
+}
+
 /// Test hook: a clean quit, so WebKit's storage process can finish writing.
 #[tauri::command]
 fn spike_quit(app: AppHandle) {
@@ -135,13 +143,23 @@ fn spike_quit(app: AppHandle) {
 }
 
 fn main() {
+    let _ = STARTED.set(
+        std::time::SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs_f64() * 1000.0)
+            .unwrap_or(0.0),
+    );
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Granted::default())
         .setup(|app| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.set_title("Drafter");
-            }
+            // The window is made here rather than in tauri.conf.json, to add the spike's
+            // document-start script (bench/startup.js).
+            tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
+                .title("Drafter")
+                .inner_size(1440.0, 900.0)
+                .initialization_script(include_str!("../../../bench/startup.js"))
+                .build()?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -151,6 +169,7 @@ fn main() {
             write_file,
             dialog_info,
             spike_show_dialog,
+            spike_started_at,
             spike_quit
         ])
         .run(tauri::generate_context!())

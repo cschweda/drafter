@@ -8,5 +8,15 @@ contextBridge.exposeInMainWorld('drafterDesktop', {
   read: (ref) => ipcRenderer.invoke('files:read', ref),
   write: (ref, data) => ipcRenderer.invoke('files:write', ref, data),
   dialogInfo: () => ipcRenderer.invoke('spike:dialogInfo'),
+  startedAt: () => ipcRenderer.invoke('spike:startedAt'),
 });
 
+
+// Spike only: the document-start script (bench/startup.js). It runs in the preload's isolated world,
+// which shares the DOM with the page, and writes what it sees as attributes on <html>.
+try {
+  const text = ipcRenderer.sendSync('spike:startupScript');
+  if (text) new Function(text)();
+} catch (e) {
+  console.error('spike startup script', e);
+}
