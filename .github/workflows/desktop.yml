@@ -60,7 +60,7 @@ jobs:
       - name: System packages (a virtual display and xwininfo, FUSE for the AppImage)
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q xvfb x11-utils libfuse2t64
+          sudo apt-get install -y -q xvfb x11-utils libfuse2t64 xdg-utils shared-mime-info xdotool
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
@@ -100,7 +100,7 @@ jobs:
         run: |
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
           lsb_release -ds
-      - name: The AppImage's desktop entry passes no --no-sandbox
+      - name: The AppImage's desktop entry passes no --no-sandbox, takes files, and lists the script types
         working-directory: apps/desktop/release
         run: |
           chmod +x ./*.AppImage
@@ -108,7 +108,12 @@ jobs:
           (cd "$RUNNER_TEMP/appimage" && "$GITHUB_WORKSPACE"/apps/desktop/release/*.AppImage --appimage-extract > /dev/null)
           ls "$RUNNER_TEMP/appimage/squashfs-root" | head -20
           cat "$RUNNER_TEMP/appimage"/squashfs-root/*.desktop
-          ! grep -q -e '--no-sandbox' "$RUNNER_TEMP"/appimage/squashfs-root/*.desktop
+          entry="$(echo "$RUNNER_TEMP"/appimage/squashfs-root/*.desktop)"
+          if grep -q -e '--no-sandbox' "$entry"; then echo "::error::--no-sandbox in $entry"; exit 1; fi
+          # electron-builder writes `AppRun %U` for an AppImage (the app opens local file:// URLs too).
+          grep -qx 'Exec=AppRun %U' "$entry"
+          grep -q '^MimeType=.*text/x-fountain;' "$entry"
+          grep -q '^MimeType=.*text/markdown;' "$entry"
       - name: Packaged AppImage, with the restriction on (its launcher drops the sandbox, so the app asks first)
         if: ${{ !cancelled() }}
         run: |
@@ -121,10 +126,10 @@ jobs:
           ls -l /etc/apparmor.d/drafterdev /usr/bin/drafterdev
           cat /etc/apparmor.d/drafterdev
           sudo aa-status 2>/dev/null | grep -i drafterdev || echo "(aa-status shows no drafterdev profile)"
-      - name: Packaged .deb, with the restriction on (its AppArmor profile allows the sandbox)
+      - name: Packaged .deb, with the restriction on (its AppArmor profile allows the sandbox; real keys by xdotool; SIGTERM)
         if: ${{ !cancelled() }}
         run: |
-          DRAFTER_PACKAGED_KIND=deb DRAFTER_PACKAGED=/usr/bin/drafterdev \
+          DRAFTER_XDOTOOL=1 DRAFTER_PACKAGED_KIND=deb DRAFTER_PACKAGED=/usr/bin/drafterdev \
             xvfb-run -a pnpm --filter @drafter/desktop e2e:packaged
       - name: Packaged AppImage, with a narrow AppArmor profile for its own path (the fix in the docs; restriction still on)
         if: ${{ !cancelled() }}

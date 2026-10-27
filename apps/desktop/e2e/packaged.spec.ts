@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Browser, chromium, expect, type Page, test } from '@playwright/test';
 import { markerFor, type SandboxReason } from '../src/sandbox';
+import { editor, stored } from './helpers';
 
 const PACKAGED = process.env.DRAFTER_PACKAGED;
 const KIND = process.env.DRAFTER_PACKAGED_KIND ?? 'unpacked';
@@ -45,7 +46,7 @@ const REFUSED = KIND === 'appimage' && RESTRICTED && !PROFILED;
  * is `false` the test below is skipped, and shows as skipped in every run; once it is `true` the test
  * is a hard assertion, with no way to skip itself.
  */
-const SHELL_OPENS_FILES = false;
+const SHELL_OPENS_FILES = true;
 
 const SANDBOX_QUESTION = 'Drafter is about to start without Chromium’s sandbox';
 
@@ -70,6 +71,8 @@ interface LaunchOptions {
   before?: (home: string) => Promise<void>;
   args?: string[];
   env?: Record<string, string>;
+  /** Start with this HOME (an earlier launch's) instead of a new one. */
+  home?: string;
 }
 
 const stops: (() => Promise<void>)[] = [];
@@ -88,7 +91,7 @@ async function tempDir(prefix: string): Promise<string> {
 
 /** Launches the packaged app with a profile of its own, and waits until DevTools is listening. */
 async function launch(options: LaunchOptions = {}): Promise<Running> {
-  const home = await tempDir('drafter-packaged-');
+  const home = options.home ?? (await tempDir('drafter-packaged-'));
   await mkdir(join(home, '.config'), { recursive: true });
   await options.before?.(home);
   const env: Record<string, string> = { ...(process.env as Record<string, string>) };
@@ -168,6 +171,38 @@ async function editorPage(running: Running): Promise<{ browser: Browser; page: P
   const found = page as Page;
   await expect(found.locator('.cm-content')).toBeVisible({ timeout: 30_000 });
   return { browser, page: found };
+}
+
+/** The tour's "seen" key (as in e2e/helpers.ts): the welcome is left out, as the shell's e2e does. */
+const TOUR_SEEN = 'drafter-tour-v1';
+
+/** The editor, ready to write in: the welcome out of the way and the sample stored. */
+async function writingPage(running: Running): Promise<{ browser: Browser; page: Page }> {
+  const { browser, page } = await editorPage(running);
+  if ((await page.evaluate((key) => localStorage.getItem(key), TOUR_SEEN)) !== 'true') {
+    await page.evaluate((key) => localStorage.setItem(key, 'true'), TOUR_SEEN);
+    await page.reload();
+  }
+  await expect(editor(page)).toBeVisible({ timeout: 30_000 });
+  await expect
+    .poll(async () => (await stored(page)).length, { timeout: 30_000 })
+    .toBeGreaterThan(0);
+  return { browser, page };
+}
+
+/** True when the `xdotool` command is there. */
+const HAS_XDOTOOL = (() => {
+  try {
+    execFileSync('xdotool', ['version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+/** Real key presses through the X server (XTEST), as a person's keyboard sends them. */
+function xdotool(...args: string[]): string {
+  return execFileSync('xdotool', args, { encoding: 'utf8', timeout: 15_000 }).trim();
 }
 
 /**
@@ -361,8 +396,21 @@ test('installs a desktop entry, an icon, and an AppArmor profile', async () => {
   expect(entry).toContain('Categories=Office;TextEditor;');
   expect(entry).toMatch(/MimeType=.*text\/x-fountain;/);
   expect(entry).toMatch(/MimeType=.*text\/markdown;/);
-  expect(entry).toMatch(/^Exec=\/opt\/Drafter\/drafterdev %U$/m);
+  // %F: the files' paths, which the app opens (Exec takes no other arguments).
+  expect(entry).toMatch(/^Exec=\/opt\/Drafter\/drafterdev %F$/m);
   expect(entry).not.toContain('--no-sandbox');
+  expect(entry.match(/text\/markdown/g)).toHaveLength(1);
+  // The MIME types' file globs, one extension each (a list would be one glob that matches nothing).
+  const mime = readFileSync('/usr/share/mime/packages/drafterdev.xml', 'utf8');
+  expect(mime).toContain('<glob pattern="*.fountain"/>');
+  expect(mime).toContain('<glob pattern="*.md"/>');
+  expect(mime).not.toMatch(/pattern="[^"]*,/);
+  // And the system now knows a .fountain file's type, so a double-click can open it in Drafter.
+  const folder = await tempDir('drafter-mime-');
+  const script = join(folder, 'Script.fountain');
+  await writeFile(script, 'INT. A ROOM - DAY\n');
+  const typed = execFileSync('xdg-mime', ['query', 'filetype', script], { encoding: 'utf8' });
+  expect(typed.trim()).toBe('text/x-fountain');
   expect(existsSync('/usr/share/icons/hicolor/512x512/apps/drafterdev.png')).toBe(true);
   expect(existsSync('/usr/bin/drafterdev')).toBe(true);
   const profile = readFileSync('/etc/apparmor.d/drafterdev', 'utf8');
@@ -457,4 +505,69 @@ test('the AppImage asks about the sandbox on a system that blocks user namespace
   await asking.stop();
   // After "Continue" (kept in the profile) it runs, plainly without the sandbox.
   await expectRunningUnsandboxed(await launch({ before: continued('no-sandbox-switch') }));
+});
+
+test('quits on SIGTERM with no question, and the text is there at the next start', async () => {
+  // The app's main process is the one signalled: the .deb's command and the unpacked binary are it;
+  // an AppImage has its launcher in between.
+  test.skip(KIND === 'appimage', 'The AppImage’s launcher stands between the signal and the app');
+  const running = await launch();
+  const { browser, page } = await writingPage(running);
+  const before = (await stored(page)).length;
+  await page.keyboard.press('Control+Alt+n');
+  await expect.poll(async () => (await stored(page)).length).toBe(before + 1);
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.insertText('\nINT. LIGHTHOUSE - NIGHT\n');
+  await browser.close();
+  // At once: the page's own write comes 750 ms after the last key, so only the flush keeps this.
+  process.kill(running.child.pid as number, 'SIGTERM');
+  // Gone within seconds: a question or any other dialog would hold the app open.
+  await expect.poll(() => running.exited(), { timeout: 15_000 }).not.toBeUndefined();
+  expect(running.output()).not.toContain(SANDBOX_QUESTION);
+
+  const again = await launch({ home: running.home });
+  const next = await writingPage(again);
+  await expect(editor(next.page)).toContainText('INT. LIGHTHOUSE - NIGHT');
+  await next.browser.close();
+});
+
+test('real keys: Alt+F opens the File menu, and Ctrl+Alt+N still makes one new screenplay', async () => {
+  test.skip(KIND !== 'deb', 'Run once, on the installed .deb');
+  // CI installs xdotool and sets DRAFTER_XDOTOOL=1, so there it can't skip itself.
+  test.skip(
+    !HAS_XDOTOOL && process.env.DRAFTER_XDOTOOL !== '1',
+    'xdotool is not installed (CI has it)',
+  );
+  const running = await launch();
+  const { browser, page } = await writingPage(running);
+  const pid = String(running.child.pid);
+  // The editor's window, given the X input focus (there is no window manager under xvfb).
+  const window = xdotool('search', '--sync', '--onlyvisible', '--pid', pid).split(
+    '\n',
+  )[0] as string;
+  xdotool('windowfocus', '--sync', window);
+  await page.waitForTimeout(500);
+  const count = async () => (await stored(page)).length;
+  const start = await count();
+
+  // Alt+F is the File menu's mnemonic (the menu bar's `&File`): the menu opens with its first item,
+  // New screenplay, selected, and Enter chooses it. Had the keys reached the page instead, Enter
+  // would be a new line in the script and no script would be made.
+  xdotool('key', '--clearmodifiers', 'alt+f');
+  await page.waitForTimeout(700);
+  xdotool('key', '--clearmodifiers', 'Return');
+  await expect
+    .poll(count, { timeout: 10_000, message: 'Alt+F, Enter made no script' })
+    .toBe(start + 1);
+
+  // Ctrl+Alt+N, New screenplay's key, is not taken by the menu bar's Alt mnemonics: one script.
+  xdotool('windowfocus', '--sync', window);
+  xdotool('key', '--clearmodifiers', 'ctrl+alt+n');
+  await expect
+    .poll(count, { timeout: 10_000, message: 'Ctrl+Alt+N made no script' })
+    .toBe(start + 2);
+  await page.waitForTimeout(800);
+  expect(await count()).toBe(start + 2);
+  await browser.close();
 });
