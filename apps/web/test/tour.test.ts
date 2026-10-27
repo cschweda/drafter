@@ -52,6 +52,20 @@ describe('the tour’s steps', () => {
     expect(buildSteps(true)[4]?.target).toBe('[data-tour="template"]');
   });
 
+  test('say what Save does where it does it, and where typewriter scrolling is', () => {
+    for (const wide of [true, false]) {
+      const steps = buildSteps(wide);
+      const save = steps.find((s) => s.id === 'save')?.content ?? '';
+      // Chrome and Edge save in place on a computer; on a phone they download, as the rest do.
+      expect(save).toMatch(/Chrome and Edge on a computer/);
+      expect(save).toMatch(/phones/);
+      // The Focus button is focus mode; typewriter scrolling is the Source pane's Typewriter button.
+      const focus = steps.find((s) => s.id === 'focus')?.content ?? '';
+      expect(focus).toMatch(/Focus mode/);
+      expect(focus).toMatch(/Typewriter.*Source pane’s bar/);
+    }
+  });
+
   test('know which of them point at a pane', () => {
     expect(buildSteps(true).map((s) => paneOf(s))).toEqual([
       'source',
