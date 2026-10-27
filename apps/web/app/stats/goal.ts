@@ -59,6 +59,8 @@ export interface GoalStore {
   goal: Readonly<Ref<Goal | null>>;
   /** Growth since the day began; null without a goal, or until the day's start is known. */
   progress: Readonly<ComputedRef<Progress | null>>;
+  /** What the day began with, for the open script; null for a sample, or until it is read. The writing stats measure from it too. */
+  dayStart: Readonly<Ref<DayStart | null>>;
   /** A goal can be set: a script of the writer's own is open. */
   canSet: Readonly<ComputedRef<boolean>>;
   /** The tab is read-only: `setGoal` changes nothing. */
@@ -333,6 +335,7 @@ export function createGoal(deps: GoalDeps): GoalStore {
 
   return {
     goal: readonly(goal),
+    dayStart: readonly(start) as Readonly<Ref<DayStart | null>>,
     progress,
     canSet,
     locked,

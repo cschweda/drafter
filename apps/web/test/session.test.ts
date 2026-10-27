@@ -62,6 +62,24 @@ describe("the editor session's listeners", () => {
   });
 });
 
+describe('onEdit', () => {
+  test('hears the transactions of each edit, and nothing of a load or a cursor move', () => {
+    const editor = useEditor();
+    editor.load('INT. HALL - DAY\n');
+    const heard: string[] = [];
+    forget.push(
+      editor.onEdit((transactions) => {
+        for (const tr of transactions) heard.push(tr.isUserEvent('input.type') ? 'typed' : 'other');
+      }),
+    );
+    editor.view.dispatch({ changes: { from: 0, insert: 'x' }, userEvent: 'input.type' });
+    editor.view.dispatch({ selection: { anchor: 3 }, userEvent: 'select' });
+    editor.load('INT. YARD - NIGHT\n');
+    editor.view.dispatch({ changes: { from: 0, insert: 'y' } });
+    expect(heard).toEqual(['typed', 'other']);
+  });
+});
+
 describe('Fix all', () => {
   const STRICT = 'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\nthen louder)\nHi.\n';
   const FIXED = 'INT. HALL - DAY\n\nShe waits.\n\nMARGARET\n(quietly, then louder)\nHi.\n';
