@@ -650,7 +650,13 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
     await chmod(image, 0o755);
     const oldSha = createHash('sha512').update(readFileSync(image)).digest('base64');
 
-    const running = await launch({ program: image });
+    // Chromium's own log (the single-instance lock among it) for both versions: the new one inherits
+    // this environment from the old, and its output is otherwise thrown away.
+    const chromiumLog = join(folder, '..', `${NAME}.chromium.log`);
+    const running = await launch({
+      program: image,
+      env: { ELECTRON_ENABLE_LOGGING: '1', ELECTRON_LOG_FILE: chromiumLog },
+    });
     stops.push(async () => {
       for (const proc of launchedWith(running.home)) {
         try {
@@ -664,6 +670,39 @@ test('an AppImage replaces itself in place on Restart, and the new version runs'
     expect(await page.evaluate(() => window.drafterDesktop?.platform)).toBe('linux');
     const toast = page.locator('[data-update]');
     await expect(toast).toContainText('A new version of Drafter is ready', { timeout: 120_000 });
+    // What ran, and when, from Restart on: printed whatever happens, so a failure says why.
+    const began = Date.now();
+    const timeline: string[] = [];
+    const known = new Set<number>();
+    let oldGoneAt: number | undefined;
+    const sample = setInterval(() => {
+      const at = Date.now() - began;
+      if (oldGoneAt === undefined && running.exited() !== undefined) {
+        oldGoneAt = at;
+        timeline.push(`${at} ms: the old AppImage's launcher exited (${running.exited()})`);
+      }
+      const now = launchedWith(running.home);
+      for (const proc of now) {
+        if (known.has(proc.pid) || proc.argv.some((arg) => arg.startsWith('--type='))) continue;
+        known.add(proc.pid);
+        timeline.push(
+          `${at} ms: + ${proc.pid} ${proc.argv.slice(0, 3).join(' ')} APPIMAGE=${proc.env.get('APPIMAGE') ?? ''} SILENT=${proc.env.get('APPIMAGE_SILENT_INSTALL') ?? ''}`,
+        );
+      }
+      for (const pid of known) {
+        if (!existsSync(`/proc/${pid}`)) {
+          known.delete(pid);
+          timeline.push(`${at} ms: - ${pid}`);
+        }
+      }
+    }, 100);
+    const report = () => {
+      clearInterval(sample);
+      console.log(
+        `update test, from Restart:\n  ${timeline.join('\n  ')}\nthe old Drafter printed:\n${running.output()}\nChromium's log:\n${existsSync(chromiumLog) ? readFileSync(chromiumLog, 'utf8').slice(-20_000) : '(none)'}`,
+      );
+    };
+    stops.push(async () => report());
     await toast.getByRole('button', { name: 'Restart', exact: true }).click();
 
     // The old Drafter (its AppImage runtime, which waits for it) exits.
