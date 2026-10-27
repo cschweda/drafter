@@ -311,8 +311,8 @@ describe('manual-contd', () => {
       'MARGARET\nHi.\n\nShe sits.\n\nMARGARET\nStill here.\n',
     );
     fixesTo(
-      '@McCLANE\nHi.\n\nShe sits.\n\n@McCLANE (V.O.) (cont’d)\nYippee.\n',
-      '@McCLANE\nHi.\n\nShe sits.\n\n@McCLANE (V.O.)\nYippee.\n',
+      '@McCLANE\nHi.\n\nShe sits.\n\n@McCLANE (V.O.) (cont’d)\nGot it.\n',
+      '@McCLANE\nHi.\n\nShe sits.\n\n@McCLANE (V.O.)\nGot it.\n',
     );
   });
 

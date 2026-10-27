@@ -381,6 +381,21 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 - **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
 - **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.
 
+### Clean-room verification
+
+**The short version: Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library.**
+
+On 27 October 2026 the whole repository was audited against these rules: `main` at commit `6af51a7`, and the branches about to merge into it (the desktop app). [The full audit](docs/clean-room-audit.md) has the method and evidence for each check. It found:
+
+- **No code from screenwriting software.** Nothing names, ports, imports, or depends on another screenwriting or playwriting application or Fountain library. Of more than 700 installed packages, none is a Fountain or screenwriting package. The parser follows the [technical design](docs/drafter-technical-design.md), not any existing parser.
+- **No copied code from anywhere.** No source file carries another project's licence header or a note that it was adapted from elsewhere, nothing is vendored or minified, and the git history has no foreign files added and later removed. Every commit has one author.
+- **General-purpose libraries only, all declared.** Drafter does use open-source libraries, such as Vue, Nuxt, CodeMirror, pdf-lib, Dexie, and Electron, as ordinary dependencies. Each is listed with why it's there in [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md). No GPL code ships in the app.
+- **Original test content.** Fixtures and samples were written for Drafter. A few test inputs reuse example character names from the Fountain specification itself, a permitted source. One line in a fixture quoted a film; it was replaced.
+
+Most of Drafter's code was written by an AI coding assistant working under these rules, which forbid reading other implementations, and reviewed by the maintainer.
+
+**Limits.** An audit finds copying that leaves traces. It can't prove that something was never read or remembered, or rule out what an AI model learned in training. It covers the commits named above, and it isn't legal advice.
+
 ## Contributing
 
 **The clean-room rule.** While working on Drafter, **don't read the source code of other screenwriting applications or Fountain libraries**, and don't add their packages as dependencies. Reading their documentation, using their apps, and comparing their output are all fine. [Clean-room implementation](#clean-room-implementation) explains what's allowed, why, and how to handle the cases in between.

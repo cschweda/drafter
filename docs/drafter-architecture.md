@@ -16,7 +16,7 @@ Three principles, in priority order:
 2. **Local-first, offline-first, forever.** Files on your own disk, with a recovery copy in the browser. Static deploy. Nothing to pay for, nothing to log into, nothing that can be shut off.
 3. **Formats are templates, templates are data.** US screenplay, stage play, sitcom, radio drama — each is a declarative template the engine applies. Users can add their own.
 
-Clean-room note: Drafter is built from the public Fountain spec and the publicly documented FDX XML format. It borrows *ideas* from Beat (GPL-3) and others but no code, so Drafter can be MIT-licensed. If you ever want to pull in Beat code, the whole project becomes GPL — decide once, early. Recommendation: **MIT**.
+Clean-room note: Drafter is built from the public Fountain spec and the publicly documented FDX XML format. Like any writer, the design looked at what other screenwriting apps let people do, through their public documentation; it takes no code, tests, or files from Beat (GPL-3) or any other, so Drafter can be MIT-licensed. If you ever want to pull in Beat code, the whole project becomes GPL — decide once, early. Recommendation: **MIT**.
 
 ---
 

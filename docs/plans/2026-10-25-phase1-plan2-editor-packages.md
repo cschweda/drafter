@@ -274,7 +274,7 @@ The messages name the thing in plain language. For example: `"MARGARET" looks li
   miss('THE END\n');                                                                      // nothing after
   // manual-contd
   fixesTo("MARGARET (CONT'D)\nStill here.\n", 'MARGARET\nStill here.\n');
-  fixesTo('@McCLANE (V.O.) (cont’d)\nYippee.\n', '@McCLANE (V.O.)\nYippee.\n');
+  fixesTo('@McCLANE (V.O.) (cont’d)\nGot it.\n', '@McCLANE (V.O.)\nGot it.\n');
   miss('MARGARET (V.O.)\nHi.\n');
   miss("MARGARET\nHe said (CONT'D) twice.\n");                                            // in dialogue, not a cue
   // heading-no-time

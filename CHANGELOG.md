@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- `docs`: a **Clean-room verification** in the README, from an audit of the whole repository on 2026-10-27 (`docs/clean-room-audit.md`): no code from any screenwriting application or Fountain library, no copied code, general-purpose open-source libraries only, all declared. A film catchphrase in one fixture and two tests was replaced with original lines, and the architecture document's clean-room note now matches the permitted sources.
 - `docs`: the roadmap gains, after a review of Final Draft's features (`docs/final-draft-comparison.md`, drawn only from public product pages and documentation, as the clean-room rules allow, and saying so): reader notes with no account, sent back in the `.fountain` and merged into the current draft (moved up from Phase 4's proof mode to Phase 2), note categories and status, PDF with notes or clean with a watermark, a self-contained reader file, accepting a co-writer's changes one by one, and one character's dialogue for an actor.
 - `docs`: the README's screenshots show a scene in both panes, the Fountain source on the left (a scene heading, action, character cues, a parenthetical, and dialogue) and the laid-out page on the right, instead of the title page's fields.
 
