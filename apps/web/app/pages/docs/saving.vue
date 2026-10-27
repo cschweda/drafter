@@ -248,13 +248,19 @@ useDocsHead({
       <li>Save writes back to the file you opened, in any desktop environment.</li>
       <li>The recovery copy lives in the app, where no browser can clear it.</li>
       <li>
-        You can open a script by double-clicking it, or from a terminal with
-        <code>drafterdev script.fountain</code>.
+        You can open a script from a terminal with <code>drafterdev script.fountain</code>, and,
+        with the <code>.deb</code>, by double-clicking a <code>.fountain</code> file (an AppImage
+        doesn’t register file types by itself).
       </li>
       <li>It has a menu bar.</li>
       <li>
-        Drafter checks for a new version when it starts (you can turn this off) and asks before
-        installing it.
+        Drafter checks for a new version when it starts (you can turn this off) and never installs
+        it by itself: the AppImage offers <strong>Restart</strong>, and the <code>.deb</code> offers
+        <strong>Get it</strong>, the release page.
+      </li>
+      <li>
+        It saves the same plain-text files as this site, so a script moves freely between the two.
+        Each keeps its own recovery copy and recent scripts.
       </li>
     </ul>
     <p>It comes in two packages, for 64-bit Intel and AMD computers. Each is about 100 to 130 MB.</p>

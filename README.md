@@ -319,7 +319,7 @@ Get it from the [latest release](https://github.com/cschweda/drafter/releases/la
 sudo apt install ./Drafter-<version>-linux-amd64.deb
 ```
 
-Drafter then appears in your applications (under Office), and `.fountain` and `.md` files open in it when you double-click them. Start it from the applications menu, or from a terminal:
+Drafter then appears in your applications (under Office). A `.fountain` file opens in it when you double-click it; for a `.md` file, Drafter is offered under **Open With** (or make it the default there). Start it from the applications menu, or from a terminal:
 
 ```sh
 drafterdev                      # start Drafter
@@ -336,13 +336,13 @@ chmod +x Drafter-<version>-linux-x86_64.AppImage
 ./Drafter-<version>-linux-x86_64.AppImage "My Script.fountain"   # with a script open
 ```
 
-An AppImage needs FUSE 2: install `libfuse2` if it won't start (on Ubuntu 24.04 the package is `libfuse2t64`). It doesn't add itself to your applications menu or file types; a tool such as Gear Lever or AppImageLauncher can. To remove it, delete the file.
+An AppImage needs FUSE 2: install `libfuse2` if it won't start (on Ubuntu 24.04 the package is `libfuse2t64`). It doesn't add itself to your applications menu or file types, so double-clicking a script won't open it in Drafter until a tool such as Gear Lever or AppImageLauncher adds it; from a terminal, name the script as above. To remove it, delete the file.
 
 On Ubuntu 24.04 and later, the AppImage can't use Chromium's sandbox (a system setting blocks it) unless you give it a small AppArmor profile, and Drafter asks before it starts without one. Use the `.deb` there, or follow the [install guide](docs/desktop-install-linux.md), which has the profile and every other choice.
 
 ### Updates
 
-Drafter checks for a new version when it starts and asks before installing it; it never updates or restarts by itself. The AppImage updates in place. The `.deb` takes you to the release page to download the new package. You can turn the check off in Settings, and then Drafter makes no network request at all.
+A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**; Restart asks about unsaved changes first, then replaces the AppImage in place. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all.
 
 ### Web and desktop: what's different
 
@@ -352,13 +352,14 @@ The editor, the pages, export, the Problems pane, templates, Markdown documents,
 |---|---|---|
 | Getting it | Nothing to install: open the site. Works in any modern browser, on any computer, tablet, or phone. | Download and install a 100 to 130 MB package. Linux now; Windows and macOS later. |
 | Saving | Saves straight back to your file in Chrome and Edge on a computer; elsewhere Save downloads a copy. | Always saves straight back to your file. Each save is written in full before it replaces the old file, so a crash or a full disk can't leave it half written. |
-| The recovery copy | Kept in the browser, which can clear it (Safari clears a site's storage after about a week without a visit, and "clear site data" removes it). | Kept in Drafter's own folder (`~/.config/Drafter`), which no browser clears. |
-| Opening scripts | Open, or drag a file onto the page. | Also double-click a file (with the `.deb`), start `drafterdev "My Script.fountain"` from a terminal, or open a file while Drafter is already running, and it comes to the front. |
+| Your scripts | Plain-text files. | The same files: a script saved in one opens unchanged in the other, line breaks and all. |
+| The recovery copy | Kept in the browser, which can clear it (Safari clears a site's storage after about a week without a visit, and "clear site data" removes it). | Kept in Drafter's own folder (`~/.config/Drafter`), which no browser clears. Each keeps its own recovery copy and recent scripts; they aren't shared. |
+| Opening scripts | Open, or drag a file onto the page. | Also double-click a `.fountain` file (with the `.deb`; an AppImage doesn't register file types), start `drafterdev "My Script.fountain"` from a terminal, or open a file while Drafter is already running, and it comes to the front. |
 | Access to your files | In Chrome, a script saved to a file may open read-only after a reload until you choose **Check for changes**. | Drafter can read and write only the files you chose (by Open, Save As, a drop, or the command line), and doesn't ask again after a restart. |
 | Menus | The Drafter menu in the toolbar, and the command palette. | Also a menu bar (File, Edit, View, Go, Help). |
 | Closing with unsaved changes | The browser's own "Leave page?" warning. | Asks **Save**, **Don't Save**, or **Cancel**. |
 | Working offline | After the first visit, through the browser's service worker. | Always: everything is in the app. |
-| Updates | A new version is offered when you next open the site, with **Reload**. | Checked when Drafter starts (you can turn it off), and installed only when you choose **Restart**. |
+| Updates | A new version is offered when you next open the site, with **Reload**. | Checked once when Drafter starts (you can turn it off). The AppImage installs it only when you choose **Restart**; the `.deb` offers **Get it**, the release page. |
 | Network | Loads the site from drafter.dev; after that, only the browser's check for a new version. | None, apart from the update check (or none at all with it off). |
 | Spellcheck | Your browser's. | A built-in English dictionary, so it works offline. |
 | Installing as an app | Chrome and Edge can install the site as an app; Safari can add it to the Dock or Home Screen. | It is an app. |
