@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `docs`: the Lighthouse scores at v0.3.0, under that release, and the mobile layout shift they found, in `docs/DEFERRED.md`.
+
 ## [0.3.0] - 2026-10-26
 
 **Writing aids, a welcome, and help.** Phase 1's web app, apart from the final accessibility pass:
@@ -31,6 +35,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **the template, from the Drafter menu**: a **Template** section (Screenplay, Stage play, and Markdown), the chip's own list, so a phone can choose one.
 - `apps/web`: **a template Drafter doesn't have says so.** A script whose metadata block names one is shown as a screenplay as before, and now the chip, the status bar, and the Drafter menu read **Screenplay (fallback)** and say "This script asks for “my-own”, which Drafter doesn't have, so it's shown as a screenplay." (the name shortened and cleaned of control characters).
 - `apps/web`: `e2e/keyboard.spec.ts`, a keyboard-only journey (a new screenplay, a scene, go to it, fix a problem, a stage play and back, save, export a PDF) with no pointer event at all.
+
+**Lighthouse at release** (drafter.dev, lightcap): desktop 100 performance, 100 accessibility, 100 best practices, 100 SEO; mobile 93, 100, 100, 100 (a 0.15 layout shift as the bars above the panes appear, listed in `docs/DEFERRED.md`).
 
 ### Fixed
 
