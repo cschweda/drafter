@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- `docs`: the roadmap gains, after a review of Final Draft's features (`docs/final-draft-comparison.md`): reader notes with no account, sent back in the `.fountain` and merged into the current draft (moved up from Phase 4's proof mode to Phase 2), note categories and status, PDF with notes or clean with a watermark, a self-contained reader file, accepting a co-writer's changes one by one, and one character's dialogue for an actor.
 - `docs`: the README's screenshots show a scene in both panes, the Fountain source on the left (a scene heading, action, character cues, a parenthetical, and dialogue) and the laid-out page on the right, instead of the title page's fields.
 
 ### Added

@@ -223,6 +223,8 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
 - Scene goals: optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes and shown on the cards and the map.
 - Setups and payoffs: mark a setup, link it to its payoff, and see the setups that never pay off.
+- Reader notes, with no account: a reader opens your script at drafter.dev in a reader mode, adds comments to lines or selections (their name, a category and colour, replies), and sends them back as a file: the `.fountain` itself, the comments kept as Fountain notes any Fountain tool can show. You add a reader's file to your current draft even after you kept writing: each comment finds its place by its quote, its context, and its scene, a preview says how many matched, and none is ever dropped. You reply and resolve them in the margin, filter by reader or category, and send your replies back the same way. Notes typed by hand (`[[Name: comment]]`) merge too. Nothing passes through a server.
+- Note categories and status (open, resolved) in the Notes tab.
 
 ### Phase 3 — Formats
 
@@ -232,6 +234,8 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - User-added templates, dropped in as JSON, and template export.
 - For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
 - Standalone `.html` export.
+- PDF export with notes in the margin, or a clean copy, and a watermark and header for drafts you send out (for example "CONFIDENTIAL" or the reader's name).
+- A self-contained reader file: one `.html` a reader opens in any browser to read and comment, for readers who won't visit a site.
 
 ### Phase 4 — Craft
 
@@ -239,12 +243,13 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Revision marks and colored-page PDF.
 - Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
 - Alternate versions of a line, switchable in place.
-- Proof mode: readers add notes to a copy of the script, kept as standard Fountain notes. Drafter shows them in the margin like Word comments and carries them into the current draft.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
 - A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
 - Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
 - A breakdown report: locations, time of day, and cast for each scene, to export for production.
+- Accept or reject a co-writer's edited copy change by change, from Compare.
+- One character's dialogue, exported for an actor.
 - A PWA install flow and offline dictionary caching.
 
 ### Phase 5 — Community
