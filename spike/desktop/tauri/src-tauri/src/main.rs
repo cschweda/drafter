@@ -136,6 +136,15 @@ fn spike_started_at() -> f64 {
     *STARTED.get().unwrap_or(&0.0)
 }
 
+/// The page is ready (bench/startup.js): print the startup time; exit if asked to.
+#[tauri::command]
+fn spike_ready(app: AppHandle, epoch_ms: f64) {
+    println!("SPIKE_READY process_to_ready_ms={}", (epoch_ms - spike_started_at()).round());
+    if std::env::var("SPIKE_EXIT_ON_READY").as_deref() == Ok("1") {
+        app.exit(0);
+    }
+}
+
 /// Test hook: a clean quit, so WebKit's storage process can finish writing.
 #[tauri::command]
 fn spike_quit(app: AppHandle) {
@@ -170,6 +179,7 @@ fn main() {
             dialog_info,
             spike_show_dialog,
             spike_started_at,
+            spike_ready,
             spike_quit
         ])
         .run(tauri::generate_context!())

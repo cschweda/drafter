@@ -82,6 +82,16 @@ jobs:
       - name: Measure, run 2
         working-directory: spike/desktop/electron
         run: SPIKE_VARIANT=run2 xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs dist/linux-unpacked/drafter
+      - name: Startup with no driver (process start to pages drawn), 1 cold + 4 warm
+        working-directory: spike/desktop/electron
+        continue-on-error: true
+        run: |
+          export SPIKE_EXIT_ON_READY=1 SPIKE_USER_DATA="$RUNNER_TEMP/eprof"
+          for i in 1 2 3 4 5; do
+            s=$(date +%s%N)
+            out=$(timeout 60 xvfb-run -a dist/linux-unpacked/drafter 2>/dev/null | grep SPIKE_READY || echo "no ready line")
+            echo "$out wall_ms=$(( ($(date +%s%N) - s) / 1000000 ))"
+          done | tee "$SPIKE_OUT/electron-startup.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -190,6 +200,25 @@ jobs:
         run: |
           rm -rf ~/.local/share/dev.drafter.spike ~/.cache/dev.drafter.spike
           SPIKE_QUICK=1 SPIKE_VARIANT=default-csp xvfb-run -a -s "-screen 0 1600x1000x24" node run.mjs "$RUNNER_TEMP/drafter-default-csp"
+      - name: Startup with no driver (process start to pages drawn), 1 cold + 4 warm, per environment
+        working-directory: spike/desktop/tauri
+        continue-on-error: true
+        run: |
+          export SPIKE_EXIT_ON_READY=1
+          run5() {
+            rm -rf ~/.local/share/dev.drafter.spike ~/.cache/dev.drafter.spike
+            for i in 1 2 3 4 5; do
+              s=$(date +%s%N)
+              out=$(timeout 90 "$@" 2>/dev/null | grep SPIKE_READY || echo "no ready line")
+              echo "$out wall_ms=$(( ($(date +%s%N) - s) / 1000000 ))"
+            done
+          }
+          {
+            echo "## plain xvfb-run"; run5 xvfb-run -a "$RUNNER_TEMP/drafter"
+            echo "## NO_AT_BRIDGE=1"; NO_AT_BRIDGE=1 run5 xvfb-run -a "$RUNNER_TEMP/drafter"
+            echo "## dbus-run-session"; run5 dbus-run-session -- xvfb-run -a "$RUNNER_TEMP/drafter"
+            echo "## dbus-run-session + WEBKIT_DISABLE_COMPOSITING_MODE=1"; WEBKIT_DISABLE_COMPOSITING_MODE=1 run5 dbus-run-session -- xvfb-run -a "$RUNNER_TEMP/drafter"
+          } | tee "$SPIKE_OUT/tauri-startup.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

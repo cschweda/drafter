@@ -139,6 +139,10 @@ function registerFileIpc() {
     await writeFile(ref.path, data);
   });
   ipcMain.handle('spike:startedAt', () => STARTED);
+  ipcMain.on('spike:ready', (_e, epochMs) => {
+    console.log(`SPIKE_READY process_to_ready_ms=${Math.round(epochMs - STARTED)}`);
+    if (process.env.SPIKE_EXIT_ON_READY === '1') app.exit(0);
+  });
   // The spike's document-start script (bench/startup.js), handed to the preload.
   ipcMain.on('spike:startupScript', (event) => {
     const file = [path.join(__dirname, 'startup.js'), path.join(__dirname, '../bench/startup.js')].find(existsSync);

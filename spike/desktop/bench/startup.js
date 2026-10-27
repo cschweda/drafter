@@ -15,6 +15,13 @@
     if (pages > 0 && /Page \d+ of|Title page/.test(status)) {
       put('data-spike-ready', String(Math.round(performance.now())));
       put('data-spike-origin', String(Math.round(performance.timeOrigin)));
+      // Also tell the shell's own process, so startup can be timed with no driver attached.
+      // Electron's preload passes `report`; in Tauri the app's own command is invoked.
+      const epochMs = performance.timeOrigin + performance.now();
+      try {
+        if (typeof report === 'function') report(epochMs);
+        else window.__TAURI__?.core?.invoke('spike_ready', { epochMs });
+      } catch {}
       return;
     }
     setTimeout(check, 10);

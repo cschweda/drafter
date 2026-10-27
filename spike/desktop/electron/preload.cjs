@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('drafterDesktop', {
 // which shares the DOM with the page, and writes what it sees as attributes on <html>.
 try {
   const text = ipcRenderer.sendSync('spike:startupScript');
-  if (text) new Function(text)();
+  if (text) new Function('report', text)((epochMs) => ipcRenderer.send('spike:ready', epochMs));
 } catch (e) {
   console.error('spike startup script', e);
 }
