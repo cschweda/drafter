@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-27
+
+**Typewriter scrolling without the gap, and Markdown on a sample.**
+- Turning on **Typewriter** no longer leaves an empty half-pane above the title page: the opening lines stay at the top, and the line you're on stays in the middle once you're past it.
+- **Markdown** in the template menu now works while a sample is open: it opens the Markdown sample, and Screenplay or Stage play on the Markdown sample opens that sample.
+
+### Changed
+
+- `apps/web`: **typewriter scrolling has room only below the text.** It used to add half the pane's height above the text as well, so the first line could reach the middle, which left an empty half-pane over the title page when you turned it on at the start of a script. The opening lines now stay at the top, where they are without it; the line you're on is kept in the middle once you're past the middle of the pane, and the room below still lets the last lines reach it. (Room hidden above the visual viewport is still added.)
+- `apps/web`: **on a sample, a type of the other kind opens that type's sample.** **Markdown** in the template chip, the Drafter menu, and the palette (**Document: Markdown (plain text)**) was greyed on a sample, since a sample stays the example it is. It now opens the Markdown sample, with no question, and on the Markdown sample **Screenplay** and **Stage play** open those samples. The sample you were on is left as it was.
+
 ## [0.4.0] - 2026-10-27
 
 **Drafter for Linux.** The same editor as drafter.dev, as an app you install (an AppImage or a `.deb`, x64), built with Electron:
@@ -403,7 +414,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/cschweda/drafter/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/cschweda/drafter/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/cschweda/drafter/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/cschweda/drafter/compare/v0.2.0...v0.3.0

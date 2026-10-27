@@ -9,7 +9,8 @@ const state = vi.hoisted(() => ({
   kind: undefined as undefined | { value: string },
   doc: undefined as undefined | { value: unknown },
   setKind: undefined as undefined | ((kind: string) => Promise<void>),
-  project: undefined as undefined | { value: { id: string } | null },
+  openSample: undefined as undefined | ((kind: string) => Promise<void>),
+  project: undefined as undefined | { value: { id: string; sample?: string } | null },
 }));
 vi.mock('../app/editor/session', async () => {
   const { shallowRef } = await import('vue');
@@ -31,11 +32,13 @@ vi.mock('../app/editor/session', async () => {
 });
 vi.mock('../app/storage/script', async () => {
   const { shallowRef } = await import('vue');
-  const project = shallowRef<{ id: string } | null>({ id: 'a' });
+  const project = shallowRef<{ id: string; sample?: string } | null>({ id: 'a' });
   state.project = project;
   const setKind = vi.fn(async () => {});
   state.setKind = setKind;
-  return { useScript: () => ({ project, setKind }) };
+  const openSample = vi.fn(async () => {});
+  state.openSample = openSample;
+  return { useScript: () => ({ project, setKind, openSample }) };
 });
 
 const MARKDOWN = DOCUMENT_TYPES.find((t) => t.kind === 'markdown') as DocumentType;
@@ -43,6 +46,7 @@ const MARKDOWN = DOCUMENT_TYPES.find((t) => t.kind === 'markdown') as DocumentTy
 beforeEach(() => {
   state.source = 'INT. HALL - DAY\n\nShe waits.\n';
   vi.mocked(state.setKind as () => Promise<void>).mockClear();
+  vi.mocked(state.openSample as () => Promise<void>).mockClear();
   if (state.project) state.project.value = { id: 'a' };
   markdownQuestion.value = null;
 });
@@ -98,5 +102,37 @@ describe('which type is the current one', () => {
     (state.kind as { value: string }).value = 'markdown';
     expect(choice.isCurrent(MARKDOWN)).toBe(true);
     expect(choice.isCurrent(type('us-screenplay'))).toBe(false);
+  });
+});
+
+describe('choosing a type on a sample', () => {
+  test('Markdown on the screenplay sample opens the Markdown sample, asking nothing', async () => {
+    if (state.project) state.project.value = { id: 's', sample: 'screenplay' };
+    const template = useTemplate();
+    expect(template.canChooseType(MARKDOWN)).toBe(true);
+    await template.chooseType(MARKDOWN);
+    expect(markdownQuestion.value).toBeNull();
+    expect(state.setKind).not.toHaveBeenCalled();
+    expect(state.openSample).toHaveBeenCalledWith('markdown');
+  });
+
+  test('a template on the Markdown sample opens that sample', async () => {
+    if (state.project) state.project.value = { id: 'm', sample: 'markdown' };
+    const template = useTemplate();
+    if (state.kind) state.kind.value = 'markdown';
+    expect(template.canChooseType(type('stage-play-standard'))).toBe(true);
+    await template.chooseType(type('stage-play-standard'));
+    expect(state.setKind).not.toHaveBeenCalled();
+    expect(state.openSample).toHaveBeenCalledWith('stage-play');
+    await template.chooseType(type('us-screenplay'));
+    expect(state.openSample).toHaveBeenCalledWith('screenplay');
+  });
+
+  test('Markdown on the Markdown sample does nothing', async () => {
+    if (state.project) state.project.value = { id: 'm', sample: 'markdown' };
+    const template = useTemplate();
+    if (state.kind) state.kind.value = 'markdown';
+    await template.chooseType(MARKDOWN);
+    expect(state.openSample).not.toHaveBeenCalled();
   });
 });

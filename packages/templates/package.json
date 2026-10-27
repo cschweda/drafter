@@ -1,6 +1,6 @@
 {
   "name": "@drafter/templates",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Format templates for Drafter: the schema, the loader, and the built-in screenplay and stage-play formats.",
   "license": "MIT",
   "type": "module",

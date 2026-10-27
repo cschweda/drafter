@@ -98,19 +98,29 @@ test.describe('typewriter scrolling', () => {
       .toBe(true);
   });
 
-  test('lets the first line reach the middle', async ({ page }) => {
+  test('leaves the opening lines at the top, with no room above the text', async ({ page }) => {
+    const before = await offCenter(page, 'first');
     await turnOn(page);
+    // Two frames, so the room around the text has been measured and written.
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    // Turning it on doesn't move the text: no empty half-pane appears above the title page.
+    expect(
+      await page.evaluate(
+        () => document.querySelector<HTMLElement>('.cm-content')?.style.paddingTop,
+      ),
+    ).toBe('');
+    expect(
+      Math.abs(((await offCenter(page, 'first'))?.off ?? 0) - (before?.off ?? 0)),
+    ).toBeLessThanOrEqual(1);
     await typeLines(page, 60);
     await page.keyboard.press('ControlOrMeta+Home');
     await expect
-      .poll(async () => {
-        const at = await offCenter(page, 'first');
-        return at !== null && at.off <= at.line;
-      })
+      .poll(async () => (await scroller(page).evaluate((el) => el.scrollTop)) <= 1)
       .toBe(true);
-    await expect
-      .poll(async () => (await scroller(page).evaluate((el) => el.scrollTop)) <= 21)
-      .toBe(true);
+    const at = await offCenter(page, 'first');
+    expect(at?.off).toBeGreaterThan((at?.line ?? 0) * 2);
   });
 
   test('remembers the setting after a reload', async ({ page }) => {
@@ -270,12 +280,10 @@ test.describe('typewriter scrolling', () => {
         return at !== null && at.off <= at.line;
       })
       .toBe(true);
+    // Back at the start, the opening lines are at the top, as everywhere.
     await page.keyboard.press('ControlOrMeta+Home');
     await expect
-      .poll(async () => {
-        const at = await offCenter(page, 'first');
-        return at !== null && at.off <= at.line;
-      })
+      .poll(async () => (await scroller(page).evaluate((el) => el.scrollTop)) <= 1)
       .toBe(true);
   });
 

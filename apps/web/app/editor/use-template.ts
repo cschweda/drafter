@@ -4,6 +4,7 @@ import { type ComputedRef, computed } from 'vue';
 import type { DocumentKind } from '../markdown/kind';
 import { useScript } from '../storage/script';
 import { askToUseMarkdown } from './markdown-question';
+import type { SampleKind } from './sample-kinds';
 import { useEditor } from './session';
 import {
   type DocumentType,
@@ -96,18 +97,33 @@ export function useTemplate(): TemplateChoice {
     );
   }
 
+  /**
+   * A sample is the example it is, so it never changes kind: a type of the other kind (Markdown on
+   * the screenplay sample, a template on the Markdown sample) opens that type's own sample instead.
+   */
+  function sampleFor(type: DocumentType): SampleKind | null {
+    if (!script.project.value?.sample) return null;
+    if ((type.kind === 'markdown') === (kind.value === 'markdown')) return null;
+    if (type.kind === 'markdown') return 'markdown';
+    return type.id === 'stage-play-standard' ? 'stage-play' : 'screenplay';
+  }
+
   function canChooseType(type: DocumentType): boolean {
     if (locked.value) return false;
-    if (type.kind === 'markdown') return !script.project.value?.sample;
+    if (sampleFor(type)) return true;
+    if (type.kind === 'markdown') return true;
     if (kind.value === 'fountain') return canChoose.value;
-    // A sample is the example it is: the Markdown sample stays Markdown.
-    if (script.project.value?.sample) return false;
     // From Markdown: the kind changes either way; the block is written only for a template that isn't the default.
     return !changesBlock(type.id) || regionsClosed();
   }
 
   async function chooseType(type: DocumentType) {
     if (!canChooseType(type)) return;
+    const sample = sampleFor(type);
+    if (sample) {
+      await script.openSample(sample);
+      return;
+    }
     if (type.kind === 'markdown') {
       if (kind.value === 'markdown') return;
       // The app's keys still work under the question, so another script may be open by the time

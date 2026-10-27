@@ -134,8 +134,8 @@ test.describe('the template choice in the app menu', () => {
     await expect(typeItem(page, 'Screenplay')).toHaveAttribute('aria-checked', 'true');
     await expect(typeItem(page, 'Stage play')).toHaveAttribute('aria-checked', 'false');
     await expect(typeItem(page, /^Markdown/)).toHaveAttribute('aria-checked', 'false');
-    // The sample stays a screenplay or a stage play: Markdown is off, as it is in the toolbar's chip and the palette.
-    await expect(typeItem(page, /^Markdown/)).toHaveAttribute('data-disabled', '');
+    // On the sample Markdown is on, as in the toolbar's chip and the palette: it opens the Markdown sample.
+    await expect(typeItem(page, /^Markdown/)).not.toHaveAttribute('data-disabled', '');
   });
 
   test('switches to a stage play and back, as one undo each, naming it in the status bar', async ({

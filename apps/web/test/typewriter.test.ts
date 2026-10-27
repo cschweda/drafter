@@ -206,17 +206,24 @@ describe('the room around the text, with a soft keyboard', () => {
     view.dispatch({ effects: StateEffect.appendConfig.of(typewriterScrolling()) });
     const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     await frame();
-    // No keyboard: half the pane above and below.
-    expect(view.contentDOM.style.paddingTop).toBe('400px');
+    // No keyboard: half the pane below, and no room above (the first lines stay at the top).
+    expect(view.contentDOM.style.paddingTop).toBe('');
     expect(view.contentDOM.style.paddingBottom).toBe('400px');
 
-    // The keyboard opens over the bottom 300: the middle of what is left is 250 down, and the last
-    // line needs the keyboard's 300 as well as half of what is left.
+    // The keyboard opens over the bottom 300: the last line needs the keyboard's 300 as well as half
+    // of what is left.
     viewport.height = 500;
     target.dispatchEvent(new Event('resize'));
     await frame();
-    expect(view.contentDOM.style.paddingTop).toBe('250px');
+    expect(view.contentDOM.style.paddingTop).toBe('');
     expect(view.contentDOM.style.paddingBottom).toBe('550px');
+
+    // A pane whose top is hidden above the visual viewport keeps that much room above.
+    viewport.offsetTop = 100;
+    viewport.height = 700;
+    target.dispatchEvent(new Event('resize'));
+    await frame();
+    expect(view.contentDOM.style.paddingTop).toBe('100px');
   });
 });
 

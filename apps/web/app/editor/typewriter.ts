@@ -106,7 +106,9 @@ export function viewportInsets(
 /**
  * Typewriter scrolling (Phase 1 design §7.2): after each change or cursor move the writer makes,
  * the cursor's line is scrolled to the middle of the Source pane, and the pane has half its
- * height of room above and below the text so the first and last lines can reach the middle.
+ * height of room below the text so the last lines can reach the middle. There is no room above:
+ * the opening lines stay at the top, where they are without it, and the line you're on stays in
+ * the middle once you're past it (an empty half-pane over the title page only looked broken).
  *
  * The scroll is `scrollIntoView(…, { y: 'center' })` dispatched in a microtask, since a listener
  * may not dispatch during an update. It lands before CodeMirror's measure step, which keeps only
@@ -178,9 +180,9 @@ export function typewriterScrolling(): Extension {
         }
 
         /**
-         * Half of what can be seen above and below the text, so the first and last lines can reach the
-         * middle of it; what is hidden (under a soft keyboard) is added on its side. Measured again when
-         * the pane or the visual viewport is resized.
+         * Half of what can be seen below the text, so the last lines can reach the middle of it; what
+         * is hidden (under a soft keyboard, or above the visual viewport) is added on its side. Measured
+         * again when the pane or the visual viewport is resized.
          */
         private measure() {
           this.view.requestMeasure({
@@ -189,7 +191,7 @@ export function typewriterScrolling(): Extension {
               const { top, bottom } = insetsOf(view);
               const seen = Math.max(0, view.scrollDOM.clientHeight - top - bottom);
               return {
-                above: top + Math.round(seen / 2),
+                above: top,
                 below: bottom + Math.round(seen / 2),
               };
             },
@@ -197,7 +199,8 @@ export function typewriterScrolling(): Extension {
               const room = `${above}/${below}`;
               if (room === this.room || this.gone) return;
               this.room = room;
-              view.contentDOM.style.paddingTop = `${above}px`;
+              if (above > 0) view.contentDOM.style.paddingTop = `${above}px`;
+              else view.contentDOM.style.removeProperty('padding-top');
               view.contentDOM.style.paddingBottom = `${below}px`;
             },
           });

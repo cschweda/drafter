@@ -536,19 +536,50 @@ test.describe('switching between Markdown and Fountain', () => {
     expect((await stored(page)).filter((p) => p.kind === 'markdown')).toEqual([]);
   });
 
-  test('is not offered for a sample, which stays a screenplay', async ({ page, isMobile }) => {
+  test('on a sample, opens the Markdown sample, and the sample stays a screenplay', async ({
+    page,
+    isMobile,
+  }) => {
     await start(page);
-    if (!isMobile) {
+    if (isMobile) {
+      await page.keyboard.press('ControlOrMeta+k');
+      await paletteDialog(page).locator('input').fill('Document');
+      await paletteOption(page, 'Document: Markdown (plain text)').click();
+    } else {
       await chip(page).click();
-      await expect(chipItem(page, 'Markdown (plain text)')).toHaveAttribute(
+      await expect(chipItem(page, 'Markdown (plain text)')).not.toHaveAttribute(
         'aria-disabled',
         'true',
       );
-      await page.keyboard.press('Escape');
+      await chipItem(page, 'Markdown (plain text)').click();
     }
-    await page.keyboard.press('ControlOrMeta+k');
-    await paletteDialog(page).locator('input').fill('Document');
-    await expect(paletteOption(page, 'Document: Markdown (plain text)')).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    // No question: nothing of the writer's changes kind. The Markdown sample opens instead.
+    await expect(question(page)).toBeHidden();
+    await expect(tabs(page, 'Preview').first()).toBeVisible();
+    await expect(editor(page)).toContainText('Markdown');
+    await expect
+      .poll(async () =>
+        (await stored(page))
+          .filter((p) => p.sample)
+          .map((p) => [p.sample, p.kind])
+          .sort(),
+      )
+      .toEqual([
+        ['markdown', 'markdown'],
+        ['screenplay', 'fountain'],
+      ]);
+
+    // And back: Screenplay on the Markdown sample opens the screenplay sample.
+    if (isMobile) {
+      await page.keyboard.press('ControlOrMeta+k');
+      await paletteDialog(page).locator('input').fill('Template');
+      await paletteOption(page, 'Template: Screenplay').click();
+    } else {
+      await chip(page).click();
+      await chipItem(page, 'Screenplay').click();
+    }
+    await expect(tabs(page, 'Script').first()).toBeVisible();
+    await expect(editor(page)).toContainText('Title:');
+    expect((await stored(page)).filter((p) => p.sample === 'markdown')[0]?.kind).toBe('markdown');
   });
 });
