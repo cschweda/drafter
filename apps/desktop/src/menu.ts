@@ -131,8 +131,11 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['undo', 'redo'] },
     { fixed: [{ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { pick: ['find'] },
-    { pick: prefix('make-'), submenu: 'Make', strip: /^Make / },
+    { pick: prefix('element-'), submenu: 'Element', strip: /^Element: / },
+    { pick: prefix('emphasis-'), submenu: 'Emphasis', strip: /^Emphasis: / },
+    { pick: prefix('make-'), submenu: 'Force', strip: /^Force / },
     { pick: ['dual-dialogue', 'wrap-in-note', 'cut-to-boneyard'] },
+    { pick: prefix('markdown-'), submenu: 'Markdown', strip: /^Markdown: / },
   ],
   View: [
     { pick: ['show-source', 'show-script', 'show-preview', 'show-problems'] },
@@ -140,7 +143,14 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: prefix('sprint-'), submenu: 'Sprint' },
     { pick: ['switch-theme'] },
     {
-      pick: ['show-line-numbers', 'hide-line-numbers', 'turn-on-typewriter', 'turn-off-typewriter'],
+      pick: [
+        'show-line-numbers',
+        'hide-line-numbers',
+        'turn-on-typewriter',
+        'turn-off-typewriter',
+        'show-element-bar',
+        'hide-element-bar',
+      ],
     },
     { pick: ['fold-all', 'unfold-all'] },
   ],
@@ -149,11 +159,15 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['go-to-scene', 'go-to-line'] },
     { pick: ['next-problem', 'previous-problem'] },
   ],
-  Help: [{ pick: ['help-shortcuts', 'help-saving', 'help-privacy'] }, { pick: ['take-the-tour'] }],
+  Help: [
+    { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy'] },
+    { pick: ['take-the-tour'] },
+  ],
 };
 
 /** The help pages are called what a desktop would call them: there is no browser to speak of. */
 const LABELS: Record<string, string> = {
+  'help-fountain': 'Fountain Cheat Sheet',
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-privacy': 'Privacy',
