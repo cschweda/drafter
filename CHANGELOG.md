@@ -20,6 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/desktop`: on Windows, the command a `.fountain` file opens with quotes Drafter's path, which electron-builder's own leaves unquoted (a problem for a user name with a space).
 - `apps/desktop`: a module from the folder is pinned and served by the system's own real path, which on Windows agrees about short folder names and case; before, every file of a folder module was refused there.
 
 ### Security
