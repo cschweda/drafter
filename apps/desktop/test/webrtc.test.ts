@@ -15,17 +15,16 @@ describe('proxyForGrants', () => {
     ]);
     const { proxyRules, proxyBypassRules } = proxyForGrants(grants);
     expect(proxyRules).toBe(REFUSE_PROXY);
-    // Each granted host once, loopback (the proxy itself) always bypassed so the refusal is prompt.
-    // Each granted host, once; loopback keeps Chromium's own bypass (the proxy is on loopback).
+    // Each granted origin as scheme + host + explicit port; the scheme stops TURN-TCP using it.
     expect(proxyBypassRules.split(';').sort()).toEqual([
-      'a.example:8443',
-      'api.example.com',
-      'localhost:11434',
+      'http://localhost:11434',
+      'https://a.example:8443',
+      'https://api.example.com:443',
     ]);
   });
 
   test('ignores an entry that isn’t a valid origin', () => {
     const grants = new Map([['x', ['not a url', 'https://ok.example']]]);
-    expect(proxyForGrants(grants).proxyBypassRules).toBe('ok.example');
+    expect(proxyForGrants(grants).proxyBypassRules).toBe('https://ok.example:443');
   });
 });
