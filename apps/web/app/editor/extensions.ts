@@ -10,6 +10,7 @@ import {
   fountain,
   parsedDoc,
   relint as relintView,
+  sceneIds,
 } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
 import type { DocumentKind } from '../markdown/kind';
@@ -147,6 +148,8 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     lineNumbersGutter.of(lineNumbersExtension(false)),
     typewriter.of(typewriterExtension(false)),
     parsedDoc,
+    // Each scene's and section's identity for the visit (Phase 2 design §5.2), after the parse it reads.
+    sceneIds,
     language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),

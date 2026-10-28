@@ -35,4 +35,5 @@ export {
   wrapInUnderline,
 } from './keymap';
 export { fountainLint, relint, toCodeMirror } from './lint';
+export { sceneIdAt, sceneIds, sceneMoved } from './scene-ids';
 export { parsedDoc } from './state';

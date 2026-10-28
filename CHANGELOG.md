@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/outline`: moving a scene or a section (with its scenes and deeper sections) up, down, or after any other, as two text changes for one undo. The preamble, the metadata block, locked scene numbers, and a scene's closing transition stay as they should, and a move moved back restores the text exactly (property-tested).
 - `@drafter/outline`: a scene's synopsis and color, written in its header as `= …` and `[[Color: blue]]` (Phase 2 design §5.4). A color travels with its scene through renames and moves, and neither ever changes the printed pages (property-tested).
 - `@drafter/outline`: a treatment of the script as Markdown (sections, scene headings, synopses, and, as an option, each scene's first paragraph of action); Expand outline, which turns `=` lines and `- ` lists into scene stubs; and a screenplay made from a Markdown outline.
+- `@drafter/cm-fountain`: `sceneIds`, an id for each scene heading and section while the script is open, kept as the writer types and carried with a scene that Drafter moves (`sceneMoved`). Ids are never saved.
 - `@drafter/lint`: `stub-heading` (info) lists every scene still holding the stand-in heading that Expand outline writes, `INT. LOCATION - DAY` (in a play, `## New scene`).
 
 ### Changed
