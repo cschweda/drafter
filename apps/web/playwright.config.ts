@@ -6,13 +6,10 @@ import { drafterDatabase, sampleSeenRows } from './e2e/seed';
 // E2E_PORT lets two worktrees run their suites at once without sharing a server.
 const port = Number(process.env.E2E_PORT ?? 4173);
 
-// Accessibility checks wait for the project's final stage (decided 2026-10-26): tests named for
-// accessibility violations run only with A11Y=1 (`pnpm e2e:a11y`).
-const a11y = !!process.env.A11Y;
-
 export default defineConfig({
+  // The accessibility tests run with the rest (decided 2026-10-28, docs/DECISIONS.md);
+  // `pnpm e2e:a11y` runs them alone.
   testDir: 'e2e',
-  ...(a11y ? {} : { grepInvert: /accessibility violations/ }),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',

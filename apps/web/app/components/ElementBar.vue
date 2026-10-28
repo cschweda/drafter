@@ -304,7 +304,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
       </button>
     </UTooltip>
     <span v-for="button in buttons" :id="descId(button)" :key="`d-${button.command}`" class="sr-only">{{ tip(button) }}</span>
-    <UDropdownMenu v-if="!markdown" :items="more" :content="{ align: 'start', onCloseAutoFocus }">
+    <MenuButton v-if="!markdown" :items="more" :content="{ align: 'start', onCloseAutoFocus }">
       <button
         type="button"
         class="button"
@@ -314,7 +314,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
       >
         More
       </button>
-    </UDropdownMenu>
+    </MenuButton>
     <span class="spacer" />
     <button
       v-if="!markdown"
@@ -329,7 +329,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
     >
       ?
     </button>
-    <UDropdownMenu :items="options" :content="{ align: 'end', onCloseAutoFocus }">
+    <MenuButton :items="options" :content="{ align: 'end', onCloseAutoFocus }">
       <button
         type="button"
         class="button icon"
@@ -340,7 +340,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
       >
         ⋯
       </button>
-    </UDropdownMenu>
+    </MenuButton>
   </div>
   <!-- Where a hidden bar comes back, and why a command did nothing: a toast and a polite live region. -->
   <div class="bar-notice" :class="{ shown: elementNotice }">
@@ -419,7 +419,6 @@ button.here {
   margin-left: 5px;
   font-family: var(--font-mono);
   font-weight: 400;
-  opacity: 0.7;
 }
 .spacer {
   flex: 1 0 8px;

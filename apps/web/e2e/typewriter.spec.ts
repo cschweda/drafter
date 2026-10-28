@@ -265,7 +265,7 @@ test.describe('typewriter scrolling', () => {
   test('works in a Markdown document', async ({ page }) => {
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     await page
-      .getByRole('group', { name: 'Scripts' })
+      .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })
       .click();
     await expect(editor(page)).toContainText('# Untitled');

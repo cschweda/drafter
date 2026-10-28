@@ -48,7 +48,10 @@ watch(statsOpen, async (open) => {
   const el = dialog.value;
   if (!el) return;
   if (open && !el.open) {
-    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // A menu's item is never the opener: the menu is closing, though its fade can keep the item on
+    // the page until after this window closes again.
+    const active = document.activeElement;
+    opener = active instanceof HTMLElement && !active.closest('[role="menu"]') ? active : null;
     days.value = null;
     el.showModal();
     // The window itself has focus, so it opens at the top, not scrolled down to its Close button.

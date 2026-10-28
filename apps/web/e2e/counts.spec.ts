@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { editor, runCommand, setText, showSource, start } from './modules';
 
-// Counts and a daily goal (Plan 5 Task 3). The accessibility test the brief names is deferred to
-// the project's final stage (decided 2026-10-26); the panel's keyboard use is tested here.
+// Counts and a daily goal (Plan 5 Task 3). The accessibility test the brief names is in
+// a11y.spec.ts; the panel's keyboard use is tested here.
 
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const countsButton = (page: Page) => status(page).locator('.counts-button');
@@ -22,7 +22,7 @@ async function ownScript(page: Page) {
   await start(page);
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
   await showSource(page);

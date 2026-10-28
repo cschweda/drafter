@@ -183,7 +183,8 @@ function onCloseAutoFocus(event: Event) {
 </script>
 
 <template>
-  <UDropdownMenu
+  <!-- MenuButton: non-modal, with Tab closing the menu and giving focus back to the mark. -->
+  <MenuButton
     :items="items"
     :content="{ align: 'start', onCloseAutoFocus }"
     @update:open="onOpen"
@@ -191,7 +192,7 @@ function onCloseAutoFocus(event: Event) {
     <button ref="mark" type="button" class="mark" aria-label="Drafter menu" data-tour="menu">
       <slot />
     </button>
-  </UDropdownMenu>
+  </MenuButton>
   <!-- Revert to Saved says what it did here, as a toast and a polite live region. -->
   <div class="notice" :class="{ shown: revertNotice }">
     <span role="status" aria-live="polite">{{ revertNotice }}</span>

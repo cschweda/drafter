@@ -4,8 +4,8 @@ import { editor, openSettings, palette, paletteInput, setText, showSource, start
 // Sprints (Plan 5 Task 4), on Playwright's clock: it is stopped at the start of each test, and a
 // test moves it with `runFor` (every timer in between runs, as in a tab being used) or
 // `fastForward` (a jump that fires each due timer once, as in a tab that was in the background).
-// The accessibility test the brief names is deferred to the project's final stage (decided
-// 2026-10-26); the controls' keyboard use is tested here.
+// The accessibility test the brief names is in a11y.spec.ts; the controls' keyboard use is tested
+// here.
 
 const MINUTE = 60_000;
 const status = (page: Page) => page.locator('[data-tour="status"]');

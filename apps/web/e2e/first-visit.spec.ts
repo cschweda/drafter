@@ -4,8 +4,8 @@ import { removePickers } from './fs-stub';
 
 // A first visit (Phase 1 design §4): the screenplay sample, with the cursor on its first scene
 // heading and a bar offering the writer's own start. The welcome dialog is Task 6's; the
-// accessibility check of a first visit waits for the project's final stage (decided 2026-10-26),
-// and the sample bar's keyboard use is tested here.
+// accessibility check of a first visit is in a11y.spec.ts, and the sample bar's keyboard use is
+// tested here.
 
 const SAMPLE = readFileSync(
   new URL('../../../samples/screenplay.fountain', import.meta.url),
@@ -228,7 +228,7 @@ test.describe('a first visit', () => {
     if (!wide(page)) await page.getByRole('tab', { name: 'Script' }).first().click();
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     await page
-      .getByRole('group', { name: 'Scripts' })
+      .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })
       .click();
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');

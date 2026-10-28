@@ -1,13 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 
 // The keyboard-only journey (Phase 1 design §1, item 5): everything a writer does from a new script
 // to a PDF, with no pointer. The page records every pointer event it is sent, and the test ends by
-// checking there were none. (The accessibility suite waits for the project's final stage, decided
-// 2026-10-26; this is the functional half, which stays.)
+// checking there were none. (The axe half of the accessibility suite is
+// a11y.spec.ts.)
 //
 // Safari's Tab skips buttons unless the reader turns that on in its settings, so in WebKit the part
 // that Tabs to a button puts focus there instead (the other keyboard tests do the same), and the
@@ -26,17 +26,19 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palett
 const problemsList = (page: Page) => page.getByRole('tabpanel', { name: /^Problems/ });
 
 /**
- * Records every pointer event the page is sent (a key's click has no position; a pointer's has a
- * count), for `noPointer` to check. Call before `goto`.
+ * Records every pointer event the page is sent, for `noPointer` to check. Call before `goto`.
  */
 async function watchPointer(page: Page) {
   await page.addInitScript(() => {
     const seen: string[] = [];
     (window as unknown as { pointerSeen: string[] }).pointerSeen = seen;
+    // A pointer's click comes after its pointerdown and mousedown, which are recorded; clicks
+    // themselves are not. Neither a click's count nor isTrusted tells a pointer's from the rest:
+    // Firefox counts a link's click from Enter, and the app's own click() on a download link (a save
+    // with no picker) is untrusted. A synthetic click with no pointer is the app's, not the test's.
     for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick']) {
       window.addEventListener(type, () => seen.push(type), true);
     }
-    window.addEventListener('click', (e) => e.detail > 0 && seen.push('click'), true);
   });
 }
 const noPointer = async (page: Page) =>
@@ -197,6 +199,17 @@ test.describe('the toolbar by Tab', () => {
     await noPointer(page);
   });
 
+  test('skips to the editor from the first Tab', async ({ page }) => {
+    await page.keyboard.press('Tab');
+    const skip = page.getByRole('link', { name: 'Skip to the editor' });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport();
+    await page.keyboard.press('Enter');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('Zz');
+    expect(await text(page)).toContain('Zz');
+  });
+
   test('chooses the template from the chip, and undoes it', async ({ page }) => {
     await tabTo(page, /^Template:/);
     await page.keyboard.press('Enter');
@@ -243,5 +256,83 @@ test.describe('the toolbar by Tab', () => {
     await expect(editor(page)).toBeFocused();
     await page.keyboard.type('INT. HALL - DAY');
     await expect(editor(page)).toContainText('INT. HALL - DAY');
+  });
+});
+
+// Every menu, as the ARIA menu button pattern has it: Tab or Shift+Tab closes the menu and gives
+// focus back to the button that opened it, instead of leaving it on the page's body.
+test.describe('a menu and Tab', () => {
+  const menu = (page: Page) => page.getByRole('menu');
+  type Trigger = (page: Page) => Promise<Locator>;
+
+  /** Opens the menu from its button with Enter, presses `key`, and expects it closed and the button focused. */
+  async function tabLeaves(page: Page, trigger: Locator, key: 'Tab' | 'Shift+Tab') {
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    await expect(menu(page)).toBeVisible();
+    await expect(menu(page))
+      .toBeFocused({ timeout: 2000 })
+      .catch(() => {});
+    await page.keyboard.press(key);
+    await expect(menu(page)).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  }
+
+  /** Each menu's button, and whether only a narrow screen has it. */
+  const MENUS: Array<[string, Trigger, boolean]> = [
+    ['the app menu', async (page) => page.getByRole('button', { name: 'Drafter menu' }), false],
+    ['the template chip', async (page) => page.getByRole('button', { name: /^Template:/ }), false],
+    [
+      "the element bar's More",
+      async (page) =>
+        page
+          .getByRole('toolbar', { name: 'Element bar' })
+          .getByRole('button', { name: 'More elements' }),
+      false,
+    ],
+    [
+      "the element bar's options",
+      async (page) =>
+        page
+          .getByRole('toolbar', { name: 'Element bar' })
+          .getByRole('button', { name: 'Element bar options' }),
+      false,
+    ],
+    [
+      "the sample bar's More",
+      async (page) =>
+        page
+          .getByRole('region', { name: 'Sample' })
+          .getByRole('button', { name: 'More ways to start your own' }),
+      true,
+    ],
+  ];
+
+  for (const [name, trigger, narrow] of MENUS) {
+    for (const key of ['Tab', 'Shift+Tab'] as const) {
+      test(`${key} closes ${name} and gives focus back to its button`, async ({ page }) => {
+        if (narrow) await page.setViewportSize({ width: 390, height: 800 });
+        await open(page);
+        await tabLeaves(page, await trigger(page), key);
+      });
+    }
+  }
+
+  test("Tab and Shift+Tab close the Modules menu a narrow screen folds the modules' buttons into", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await open(page);
+    for (const module of ['Scene list', 'Cast', 'Notes']) {
+      await page.keyboard.press('ControlOrMeta+,');
+      const settings = page.getByRole('dialog', { name: 'Settings' });
+      await settings.getByRole('switch', { name: module, exact: true }).check();
+      await settings.getByRole('button', { name: 'Done' }).click();
+      await expect(settings).toBeHidden();
+    }
+    const modules = page.locator('[data-modules-menu]');
+    await expect(modules).toBeVisible();
+    await tabLeaves(page, modules, 'Tab');
+    await tabLeaves(page, modules, 'Shift+Tab');
   });
 });

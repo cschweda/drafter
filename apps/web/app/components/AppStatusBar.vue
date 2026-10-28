@@ -181,8 +181,13 @@ function onKeydown(event: KeyboardEvent) {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
-  padding: 6px 14px;
+  align-items: center;
+  gap: 0 16px;
+  /* Each button is a 24px target (WCAG 2.5.8), which a wrapped phone bar needs, so the padding is
+     what's left of the bar's old height. */
+  padding: 2px 14px;
+  min-height: 28px;
+  box-sizing: border-box;
   background: var(--chrome);
   border-top: 1px solid var(--line);
   color: var(--muted);
@@ -197,6 +202,7 @@ function onKeydown(event: KeyboardEvent) {
   padding-left: 8px;
 }
 .recovery {
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: none;
@@ -207,6 +213,7 @@ function onKeydown(event: KeyboardEvent) {
   cursor: pointer;
 }
 .counts-button {
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: none;

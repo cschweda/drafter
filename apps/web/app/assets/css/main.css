@@ -127,6 +127,11 @@ dialog:modal {
   color: var(--heading);
   text-underline-offset: 3px;
 }
+/* A link in the text is underlined, so it's told from the words around it without color
+   (WCAG 1.4.1); the bar's links stand alone and need no line. */
+.docs-main a {
+  text-decoration: underline;
+}
 .docs a[aria-current="page"] {
   color: var(--text);
   font-weight: 700;

@@ -77,13 +77,15 @@ async function onShow() {
 .sprint {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 10px;
+  align-items: center;
+  gap: 0 10px;
 }
 .time {
   font-variant-numeric: tabular-nums;
 }
 button {
+  /* A 24px target (WCAG 2.5.8): on a phone the status bar wraps, and its rows sit close. */
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: none;

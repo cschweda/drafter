@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: **a skip link.** The first Tab on the page is **Skip to the editor**, which puts the cursor in the Source (on a phone it brings the Source up first), past the toolbar and the bars under it.
+- Tests: **the accessibility suite** (`e2e/a11y.spec.ts`). axe checks every major state in both themes, at desktop and phone sizes: the first visit and each tour step; editing a screenplay, a stage play, and Markdown; the element bar and its menus; Problems; focus mode; typewriter scrolling; a sprint; the Counts panel and the Stats window; Settings and its modules; each question; each menu; and the help pages. It also checks what a screen reader reads: the landmarks, the Script's scene headings, a name on every control, and what the live regions say. `apps/desktop` runs axe on what only the desktop app shows: the modules folder in Settings, a folder module's question, button, and tab, and the update prompt. That test offers an update version of its own, because on Windows electron-updater's download cache sits outside each test's profile. These checks are automated; testing with NVDA and VoiceOver comes later.
+
+### Changed
+
+- Tests: the accessibility tests run with the rest of the end-to-end suite. `A11Y=1` is no longer needed.
+
+### Fixed
+
+- `apps/web`: links in the help pages' text are underlined, so they stand out from the words around them without relying on colour.
+- `apps/web`: the element bar's marks, the welcome and intro cards' text, icon, and buttons, and the intro's examples have enough contrast in both themes. The cards keep their look. In the light theme their amber is Drafter's darker goldenrod, and a button's hover is a darker shade.
+- `apps/web`: menus no longer hide the rest of the page from screen readers while its buttons can still take focus. They are non-modal now, and Tab or Shift+Tab in an open menu closes it and puts focus back on the button that opened it.
+- `apps/web`: on a phone, the buttons in the status bar and the focus-mode marker are at least 24 pixels tall, so neighbouring rows don't crowd each other. On a phone the intro card scrolls as a whole; a wider screen keeps its scrolling text box. The Fountain cheat sheet's wide examples can be scrolled from the keyboard and are named for screen readers.
+- `apps/web`: closing the Stats window opened from the Drafter menu puts the cursor back in the script. Before, focus could go to the menu's button instead.
+
 ## [0.8.0] - 2026-10-28
 
 **Drafter for Windows.** An installer for 64-bit PCs and one for Windows on Arm, each installing for you alone with no administrator. `.fountain` files open in Drafter with a double-click, and Drafter offers each new version and waits for you to restart. The installers aren't signed yet, so SmartScreen asks first (**More info → Run anyway**): see [docs/desktop-install-windows.md](docs/desktop-install-windows.md). The Linux app, the Mac build, and drafter.dev are otherwise unchanged.
