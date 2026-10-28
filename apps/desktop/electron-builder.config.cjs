@@ -158,7 +158,7 @@ module.exports = {
     // is never replaced in place, and a versioned name says which one it is.
     // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
     artifactName: 'Drafter-${version}-windows-${arch}-setup.${ext}',
-    // A one-click, per-user install: into %LOCALAPPDATA%\Programs\Drafter, no administrator, no
+    // A one-click, per-user install: into %LOCALAPPDATA%\Programs\drafter, no administrator, no
     // questions, with a Start menu shortcut, a desktop shortcut, and an uninstaller in Settings →
     // Apps. Updates install the same way, without asking for an administrator either.
     oneClick: true,

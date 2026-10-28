@@ -61,7 +61,7 @@ Before it is installed, the downloaded installer must match the release: its siz
 
 What isn't checked yet is a **signature**. Drafter's installers aren't signed, so there is no publisher whose signature an update could be required to carry. That is the same trust as downloading the installer yourself from the release page: both rely on GitHub and on Drafter's GitHub account. Neither would catch someone who took over that account and published a release of their own, since `latest.yml` would come from the same place.
 
-The planned fix is signing (Azure Trusted Signing, or a code-signing certificate). Once the installers are signed, each build records the publisher's name (`publisherName` in the app's `resources\app-update.yml`), and Drafter will then refuse any update not signed by that publisher. The release workflow already fails a signed build that doesn't record it. Signing will also quiet SmartScreen.
+The planned fix is signing (Azure Trusted Signing, or a code-signing certificate). Once the installers are signed, each build records the publisher's name (`publisherName` in the app's `resources\app-update.yml`), and Drafter will then refuse any update not signed by that publisher. The release workflow already fails a build that is signed, by its configuration or by what the built files carry, unless it records the signer as that publisher. Signing will also quiet SmartScreen.
 
 ## Uninstall
 
@@ -69,9 +69,9 @@ The planned fix is signing (Azure Trusted Signing, or a code-signing certificate
 
 ## The modules folder
 
-A script module from the folder is code nobody at Drafter has reviewed, so Drafter makes sure no one else on the PC could have changed it. On Linux and macOS it checks each file's owner and permissions. Windows has no such permissions to check, so Drafter relies on the protection Windows gives your own profile folder (`C:\Users\you`): only you, Windows itself, and the PC's administrators can change what is in it. So:
+A script module from the folder is code nobody at Drafter has reviewed, so Drafter makes sure no one else on the PC could have changed it. On Linux and macOS it checks each file's owner and permissions. Windows keeps who may change a file in its access lists (ACLs), which Drafter doesn't read yet; instead it relies on the protection Windows gives your own profile folder (`C:\Users\you`) by default: only you, Windows itself, and the PC's administrators can change what is in it. So:
 
-- Keep modules in `%APPDATA%\Drafter\modules` itself. A modules folder that is a link (a junction) to a folder somewhere else is skipped, and so is a module with a link out of its own folder.
+- Keep modules in `%APPDATA%\Drafter\modules` itself. A modules folder that is a link (a junction) to a folder somewhere else is skipped, and so is a module with a link out of its own folder or a hard-linked file. (A link one level up, `%APPDATA%\Drafter` itself made a junction, isn't noticed; only you could make one.)
 - Don't share the modules folder, or give other accounts on the PC access to it.
 - Administrators can change anything on the PC, and so can any program you run; that holds on every system.
 
