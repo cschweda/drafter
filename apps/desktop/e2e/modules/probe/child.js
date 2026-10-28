@@ -4,7 +4,7 @@
 async function run() {
   try {
     const config = await (await fetch('drafter-module://probe/config.json')).json();
-    const servers = config.ice && config.ice.turnTcp;
+    const servers = config.ice?.turnTcp;
     const Ctor = globalThis.RTCPeerConnection || globalThis.webkitRTCPeerConnection;
     if (!Ctor || !servers) return 'no webrtc';
     const pc = new Ctor({ iceServers: servers });

@@ -254,6 +254,11 @@ While it is on, it **can** read the open script and change it, and one you agree
 network can send the script to the origins it named. That is what turning it on means: turn one on
 only if you trust where it came from.
 
+It reaches the network only through the origins you agreed to (ordinary web requests). Other ways
+out — WebRTC among them — are blocked, so a module can't quietly open a side channel. One thing to
+know when you install from an archive: Drafter won't follow a symbolic link out of a module's
+folder, but it can't tell a *hard* link from a real file, so unpack modules from people you trust.
+
 ### Mistakes
 
 A folder that isn't a module (no `module.json`, JSON that doesn't parse, a missing field, no

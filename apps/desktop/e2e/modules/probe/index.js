@@ -90,7 +90,7 @@ export default {
             child.srcdoc =
               '<script type="module" src="drafter-module://probe/child.js"></scr' + 'ipt>';
             window.addEventListener('message', (e) => {
-              if (e.data && e.data.probeChild) resolve(e.data.probeChild);
+              if (e.data?.probeChild) resolve(e.data.probeChild);
             });
             document.body.append(child);
             setTimeout(() => resolve('no child'), 2000);
