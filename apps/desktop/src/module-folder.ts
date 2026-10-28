@@ -270,7 +270,32 @@ function firstInsecure(root: string, folder: string, me: Writer): Finding | null
   return scan(root, '');
 }
 
-const skipped = (folder: string, why: string) => `Drafter skipped the folder “${folder}”: ${why}.`;
+/** Control characters (newlines, escapes, bells), which a folder name could use to forge a message. */
+const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;
+
+/** Text for a message, with every control character shown as `?`: a name can't forge a line or a terminal escape. */
+export function shownText(text: string): string {
+  return text.replace(CONTROL, '?');
+}
+
+/** A path quoted for a POSIX shell: in single quotes, each `'` written `'\''`, so nothing in it runs. */
+export function shellQuote(path: string): string {
+  return `'${path.replaceAll("'", "'\\''")}'`;
+}
+
+/**
+ * The advice for a group-writable path: the exact command, quoted, or (for a path with a control
+ * character, which no command should be built from) just what to do.
+ */
+function groupFix(command: string, path: string): string {
+  CONTROL.lastIndex = 0;
+  return CONTROL.test(path)
+    ? 'Remove group write access from it'
+    : `Run: ${command} ${shellQuote(path)}`;
+}
+
+const skipped = (folder: string, why: string) =>
+  shownText(`Drafter skipped the folder “${folder}”: ${why}.`);
 
 /** Reads one folder's module, or says why it can't. */
 function readOne(dir: string, folder: string): LoadedModule | string {
@@ -362,7 +387,11 @@ export function readModulesFolder(
     if (problem === GROUP_PROBLEM) {
       return {
         modules: [],
-        problems: [`Drafter skipped the modules folder: ${GROUP_PROBLEM}. Run: chmod g-w ${dir}.`],
+        problems: [
+          shownText(
+            `Drafter skipped the modules folder: ${GROUP_PROBLEM}. ${groupFix('chmod g-w', dir)}.`,
+          ),
+        ],
       };
     }
     if (problem) {
@@ -388,7 +417,7 @@ export function readModulesFolder(
         skipped(
           folder,
           open.why === GROUP_PROBLEM
-            ? `${GROUP_PROBLEM} (${open.path}). Run: chmod -R g-w ${join(dir, folder)}`
+            ? `${GROUP_PROBLEM} (${open.path}). ${groupFix('chmod -R g-w', join(dir, folder))}`
             : `something under it (${open.path}) isn’t yours alone, or Drafter can’t read it, so Drafter won’t run it`,
         ),
       );

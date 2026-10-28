@@ -188,6 +188,21 @@ describe('the list of modules', () => {
   });
 });
 
+describe('folder names in messages', () => {
+  test('are shown without control characters', () => {
+    const builtIn = MODULES[0];
+    if (!builtIn) throw new Error('no built-in module');
+    setFolderInfos(
+      [{ ...TIDY, id: builtIn.id, folder: 'fake\nDrafter: all good' }],
+      [],
+      BUILT_IN_IDS,
+    );
+    expect(folderModuleProblems.value).toEqual([
+      `Drafter skipped the folder “fake?Drafter: all good”: it uses the id “${builtIn.id}”, which a module built into Drafter has.`,
+    ]);
+  });
+});
+
 describe('loadFolderModules', () => {
   test('reads the list the desktop app made at start', async () => {
     const bridge: DesktopModulesBridge = {

@@ -17,6 +17,8 @@ import {
   RUNTIME_PATH,
   readModulesFolder,
   resolveModuleUrl,
+  shellQuote,
+  shownText,
 } from '../src/module-folder';
 
 // The modules folder (docs/plans/2026-10-27-desktop-modules-folder.md §1, §3): what the main
@@ -627,7 +629,7 @@ describe('readModulesFolder, group-writable', () => {
     const { modules, problems } = readModulesFolder(dir, [], writer(false));
     expect(modules).toEqual([]);
     expect(problems).toEqual([
-      `Drafter skipped the folder “shared”: a group other than yours alone can change it (shared). Run: chmod -R g-w ${join(dir, 'shared')}.`,
+      `Drafter skipped the folder “shared”: a group other than yours alone can change it (shared). Run: chmod -R g-w '${join(dir, 'shared')}'.`,
     ]);
   });
 
@@ -639,7 +641,56 @@ describe('readModulesFolder, group-writable', () => {
     const { modules, problems } = readModulesFolder(dir, [], writer(false));
     expect(modules).toEqual([]);
     expect(problems).toEqual([
-      `Drafter skipped the modules folder: a group other than yours alone can change it. Run: chmod g-w ${dir}.`,
+      `Drafter skipped the modules folder: a group other than yours alone can change it. Run: chmod g-w '${dir}'.`,
+    ]);
+  });
+});
+
+describe('the advice is safe to paste into a shell', () => {
+  test('quotes a path for a POSIX shell, quotes included', () => {
+    expect(shellQuote('/a b/x; rm -rf ~')).toBe("'/a b/x; rm -rf ~'");
+    expect(shellQuote('/m/$(touch pwned)')).toBe("'/m/$(touch pwned)'");
+    expect(shellQuote("/m/it's")).toBe("'/m/it'\\''s'");
+  });
+
+  test('shows a name without its control characters', () => {
+    expect(shownText('a\nb\u0007c\u001b[31m')).toBe('a?b?c?[31m');
+  });
+
+  async function hostile(name: string) {
+    const { chmodSync, chownSync, mkdirSync, writeFileSync } = await import('node:fs');
+    const uid = (process.getuid as () => number)();
+    const gid = (process.getgid as () => number)();
+    const folder = join(dir, name);
+    mkdirSync(folder);
+    writeFileSync(join(folder, 'module.json'), JSON.stringify({ ...MANIFEST, id: 'evil' }));
+    writeFileSync(join(folder, 'index.js'), '');
+    for (const path of [dir, folder, join(folder, 'module.json'), join(folder, 'index.js')])
+      chownSync(path, uid, gid);
+    chmodSync(dir, 0o700);
+    chmodSync(folder, 0o775);
+    return { uid, gid, groupIsPrivate: false };
+  }
+
+  test('a folder named to inject a command gets it single-quoted, never run', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    for (const name of ['x; rm -rf ~', '$(touch pwned)', "it's"]) {
+      await rm(dir, { recursive: true, force: true });
+      await mkdir(dir);
+      const me = await hostile(name);
+      const { problems } = readModulesFolder(dir, [], me);
+      expect(problems).toEqual([
+        `Drafter skipped the folder “${name}”: a group other than yours alone can change it (${name}). Run: chmod -R g-w ${shellQuote(join(dir, name))}.`,
+      ]);
+    }
+  });
+
+  test('a folder name with a newline gets no command, and is shown without it', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    const me = await hostile('two\nlines');
+    const { problems } = readModulesFolder(dir, [], me);
+    expect(problems).toEqual([
+      'Drafter skipped the folder “two?lines”: a group other than yours alone can change it (two?lines). Remove group write access from it.',
     ]);
   });
 });

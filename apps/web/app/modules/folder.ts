@@ -69,7 +69,7 @@ export function setFolderInfos(
       .filter((m) => builtIn.includes(m.id))
       .map(
         (m) =>
-          `Drafter skipped the folder “${m.folder}”: it uses the id “${m.id}”, which a module built into Drafter has.`,
+          `Drafter skipped the folder “${m.folder.replace(/[\u0000-\u001f\u007f-\u009f]/g, '?')}”: it uses the id “${m.id}”, which a module built into Drafter has.`,
       ),
   ];
   partsById.value = new Map();
