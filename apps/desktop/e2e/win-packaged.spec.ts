@@ -11,7 +11,7 @@
 // e2e/update-test.builder.cjs, 1.0.0 and 1.0.1, with a feed on this machine), a real update too:
 // 1.0.0 finds 1.0.1, downloads it, and Restart runs the new installer, which starts 1.0.1.
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer as createHttpServer } from 'node:http';
 import { createRequire } from 'node:module';
@@ -77,6 +77,18 @@ const keyExists = (key: string) => {
     return true;
   } catch {
     return false;
+  }
+};
+
+/**
+ * A path as Windows reports a process's: long names, not the 8.3 short ones a temp folder can be
+ * given (`RUNNER~1`), in lower case.
+ */
+const longPath = (path: string) => {
+  try {
+    return realpathSync.native(path).toLowerCase();
+  } catch {
+    return path.toLowerCase();
   }
 };
 
@@ -281,7 +293,7 @@ test('a .fountain file opens in Drafter, as a double-click in Explorer opens it'
       { timeout: 60_000 },
     )
     .toBe(true);
-  expect(found?.path.toLowerCase()).toBe(exe().toLowerCase());
+  expect(longPath(found?.path ?? '')).toBe(longPath(exe()));
   killDrafters();
 });
 
@@ -367,8 +379,7 @@ test('updates itself for real: 1.0.0 downloads 1.0.1, and Restart installs and s
         .poll(
           () =>
             drafters().some(
-              (p) =>
-                p.path.toLowerCase() === exe().toLowerCase() && p.commandLine.includes('--updated'),
+              (p) => longPath(p.path) === longPath(exe()) && p.commandLine.includes('--updated'),
             ),
           { timeout: 120_000, intervals: [1000] },
         )

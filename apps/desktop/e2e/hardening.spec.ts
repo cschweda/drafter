@@ -204,7 +204,8 @@ test('denies permissions the app doesn’t use', async ({ desktop }) => {
     geolocation: 'denied',
     camera: 'denied',
     microphone: 'denied',
-    media: microphones === 0 && process.platform === 'linux' ? 'NotFoundError' : 'NotAllowedError',
+    // Linux and Windows runners have no microphone.
+    media: microphones === 0 && process.platform !== 'darwin' ? 'NotFoundError' : 'NotAllowedError',
     midi: 'NotAllowedError',
     persisted: true,
   });

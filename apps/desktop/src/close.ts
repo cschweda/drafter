@@ -11,6 +11,7 @@
 // Windows session end) there is no time to ask: the recovery copy is written, within a bound, and
 // the app quits.
 import { appendFileSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 import {
   app,
   type BrowserWindow,
@@ -39,7 +40,7 @@ import { fromEditor } from './window';
 function closeHook(): string | null {
   if (app.isPackaged) return null;
   const file = process.env.DRAFTER_E2E_CLOSE;
-  return file?.startsWith('/') ? file : null;
+  return file && isAbsolute(file) ? file : null;
 }
 
 /** How long the page has to answer, shortened by the e2e suite to test a page that doesn't. */
