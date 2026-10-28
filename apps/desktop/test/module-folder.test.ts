@@ -252,6 +252,58 @@ describe('readModulesFolder', () => {
   });
 });
 
+describe('readModulesFolder, pinning what was agreed to', () => {
+  test('a change to any of a module’s files, its code included, gives a new fingerprint', async () => {
+    await addModule('tidy');
+    const first = readModulesFolder(dir).modules[0]?.fingerprint;
+    await writeFile(join(dir, 'tidy', 'index.js'), 'export default { id: "other" };');
+    const code = readModulesFolder(dir).modules[0]?.fingerprint;
+    expect(code).not.toBe(first);
+    await mkdir(join(dir, 'tidy', 'lib'));
+    await writeFile(join(dir, 'tidy', 'lib', 'helper.js'), 'export const x = 1;');
+    const added = readModulesFolder(dir).modules[0]?.fingerprint;
+    expect(added).not.toBe(code);
+    // The same files read again: the same fingerprint.
+    expect(readModulesFolder(dir).modules[0]?.fingerprint).toBe(added);
+  });
+
+  test('skips a module folder that is a link to a folder elsewhere', async () => {
+    if (process.platform === 'win32') return;
+    const elsewhere = await mkdtemp(join(tmpdir(), 'drafter-elsewhere-'));
+    try {
+      await writeFile(join(elsewhere, 'module.json'), JSON.stringify(MANIFEST));
+      await writeFile(join(elsewhere, 'index.js'), 'export default {};');
+      await symlink(elsewhere, join(dir, 'tidy'));
+      const { modules, problems } = readModulesFolder(dir);
+      expect(modules).toEqual([]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('“tidy”');
+      expect(problems[0]).toContain('link');
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  test('serves only the files as they were when Drafter started', async () => {
+    await addModule('tidy', MANIFEST, 'export default { id: "tidy" };');
+    const [loaded] = readModulesFolder(dir).modules;
+    const serve = moduleHandler({
+      modules: new Map([['tidy', loaded?.root as string]]),
+      files: new Map([['tidy', loaded?.files as ReadonlyMap<string, string>]]),
+      runtime: join(dir, 'tidy', 'index.js'),
+      origins: () => [],
+    });
+    const get = (url: string) => serve(new Request(url));
+    expect((await get('drafter-module://tidy/index.js')).status).toBe(200);
+    // Changed after the start: refused, until Drafter starts again and asks again.
+    await writeFile(join(dir, 'tidy', 'index.js'), 'export default { id: "evil" };');
+    expect((await get('drafter-module://tidy/index.js')).status).toBe(404);
+    // A file added after the start: refused too.
+    await writeFile(join(dir, 'tidy', 'late.js'), 'export {};');
+    expect((await get('drafter-module://tidy/late.js')).status).toBe(404);
+  });
+});
+
 describe('resolveModuleUrl', () => {
   const roots = new Map([['tidy', '/modules/tidy']]);
 

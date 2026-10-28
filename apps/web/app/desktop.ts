@@ -118,7 +118,7 @@ export interface DesktopFolderModule {
   permissions: { network: string[] };
   /** The name of its folder in the modules folder. */
   folder: string;
-  /** A hash of the folder name and its module.json: changes when a different module takes the id. */
+  /** A hash of the folder name and every file in it: changes when the module changes at all, or another takes its id. */
   fingerprint: string;
 }
 

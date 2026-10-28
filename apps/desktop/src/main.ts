@@ -422,6 +422,7 @@ function start() {
       MODULE_SCHEME,
       moduleHandler({
         modules: new Map(loaded.map((m) => [m.id, m.root])),
+        files: new Map(loaded.map((m) => [m.id, m.files])),
         runtime: MODULE_RUNTIME,
         origins: (id) => grants.get(id) ?? [],
       }),

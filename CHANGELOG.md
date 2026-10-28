@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Security
+
+- `apps/desktop`: **a module from the folder runs only as you agreed to it.** Any change to a module, its code included, turns it off until you turn it on again (before, only a change to its `module.json` did), and Drafter serves a module's files only as they were when it started, so a file changed while it runs is refused. A module's folder must be in the modules folder itself: a link to a folder elsewhere is skipped, with a message saying so.
+
 ## [0.6.0] - 2026-10-27
 
 **Script modules from a folder, in the desktop app.**
