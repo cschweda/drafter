@@ -50,6 +50,7 @@ Both are under the SIL Open Font License 1.1. Inter Tight is in [`fonts/`](fonts
 | `icon-192.png`, `icon-512.png` | 192, 512 | The installed app's icons. |
 | `icon-maskable-512.png` | 512 × 512 | Android's maskable icon: the bars stay inside the safe circle. |
 | `icon-mac-1024.png` | 1024 × 1024 | The macOS app's icon (`icon-mac.svg`): the tile on Apple's grid, 824 pixels with a margin and a soft shadow, so it matches the other apps in the Dock. |
+| `icon-windows.ico` | 16 to 256 | The Windows app's icon (the taskbar, the Start menu, Explorer, and the installer): the favicon's pixel grid at 16, 24, and 32, the mark at 48, 64, 128, and 256. |
 | `icon-square.svg` | 512 × 512 | The full-bleed art the square icons are rendered from. |
 
 ## Rebuilding
