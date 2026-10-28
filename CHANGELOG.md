@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.
+- Docs: Final Draft `.fdx` import and export moves up from Phase 3 to Phase 2, as the release right after the Outline (v0.11.0); the Phase 2 design has its plan, the later plans each move up one minor version, and the README and architecture roadmaps list it under Phase 2 (decided 2026-10-28).
 - Docs: the Phase 2 design's one open question is decided (2026-10-28): a scene's color is a `[[Color: blue]]` line in the scene's header, not an entry in the metadata block. The README, the architecture, the technical design, and the Phase 1 design say so, and say that testing with NVDA and VoiceOver comes last, after every phase is built. The plan for Phase 2's first release, the Outline, is in `docs/plans/`.
 
 ## [0.8.0] - 2026-10-28

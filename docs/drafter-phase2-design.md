@@ -42,6 +42,7 @@ The file stays the whole project (architecture §1). Everything Phase 2 adds liv
 
 - A shared model: a scene index with stable identity (§5.1–5.2), and one convention for data kept in notes (§5.3).
 - The Outline tab, scene reordering by drag and by keyboard, and condense and expand (§6).
+- Final Draft `.fdx` import and export (Plan FD in §22; technical design §6.3). Decided 2026-10-28: moved up from Phase 3.
 - The Cards and Notes tabs, with note categories and status (§7, §8).
 - Scene goals, setups and payoffs, and storylines (§9, §10, §13).
 - Snapshots with a retention schedule, and Compare (§11).
@@ -507,6 +508,7 @@ Until then, every view is built for screen readers and checked automatically: ax
 | Piece | What it holds | Plan |
 |---|---|---|
 | `@drafter/outline` | The scene index (§5.1); move, synopsis, fields, color, and storyline edits; condense, expand, and treatment export | A |
+| `@drafter/fdx` | Final Draft XML: export, import to Fountain text, and a strict XML reader (technical design §6.3) | FD |
 | `@drafter/notes` | Keyed notes (§5.3), scene headers (§5.4), setups and payoffs, the Beat Board block (§5.6), anchors and the reader merge (§18.3) | B |
 | `@drafter/compare` | The line diff and its mapping to pages (§11.2) | C |
 | `@drafter/spell` | The nspell wrapper, the words never flagged, and the two dictionaries (§12) | D |
@@ -530,7 +532,9 @@ Builder: confirm each licence from the package's own files at the version added.
 
 Each plan is a shippable minor release with its own plan document, tag, GitHub Release, and changelog section. Versions follow v0.9.0, the accessibility pass. Call: if the Mac app ships between two plans, it takes the next minor and the plans after it move up one.
 
-The order is the suggested one with two changes, both Calls: **setups and payoffs move into Plan B**, because they are keyed notes listed in the Notes tab B builds, and **snapshots come before spellcheck**, because the browser's spellcheck already works while history does not exist, and Plans A and B make large structural edits that a writer drafting for the first time should be able to go back on.
+**Decided (2026-10-28): Final Draft files come right after Plan A,** as Plan FD (v0.11.0), moved up from Phase 3; the plans after it each take the next minor. Plan FD keeps its own name so the letters the rest of this document uses for B to H stay as they are.
+
+The order is otherwise the suggested one with two changes, both Calls: **setups and payoffs move into Plan B**, because they are keyed notes listed in the Notes tab B builds, and **snapshots come before spellcheck**, because the browser's spellcheck already works while history does not exist, and Plans A and B make large structural edits that a writer drafting for the first time should be able to go back on.
 
 ### Plan A — v0.10.0: The outline
 
@@ -545,7 +549,18 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - Expand turns a Markdown outline into stubs, and Problems lists them.
 - axe passes on the Outline, its menus, and Move to…, in both themes at both widths.
 
-### Plan B — v0.11.0: Cards and notes
+### Plan FD — v0.11.0: Final Draft files
+
+**Scope:** a new `packages/fdx` (`@drafter/fdx`), as technical design §6.3 describes it: **Export as Final Draft (.fdx)** from the Export menu and the palette, and **import** that turns an `.fdx` (opened, or dropped) into Fountain text, which is then parsed like any other script. Nothing is dropped silently: a paragraph type or element Drafter doesn't map comes in as action with a `[[fdx: Type]]` note. The XML is read with a strict parser written for the package (no DOM in a worker, no dependency unless one gets a `docs/DEPENDENCIES.md` row first) that refuses malformed input with a message rather than guessing. Built from `.fdx` files the writer owns, read as XML (the clean-room rule).
+
+**Done when:**
+
+- Export → import → export is stable on the supported fields (elements, title page, scene numbers, dual dialogue, emphasis, notes, synopses), by property test over random scripts.
+- Import never drops content silently: every unmapped element is a note, by fixture.
+- Malformed XML is refused with a plain message, and nothing is opened.
+- An `.fdx` opens from Open, a drop, and (on the desktop) the system, and Export writes one; axe passes on anything new on screen.
+
+### Plan B — v0.12.0: Cards and notes
 
 **Scope:** `@drafter/notes`; the Cards tab (§7); the Notes tab with categories and status (§8); Scene details and scene goals (§9); setups and payoffs, with the element bar's buttons and the lint rules (§10); `duplicate-field`.
 
@@ -558,7 +573,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - A setup with no payoff is listed in Notes and Problems.
 - axe passes on Cards, Notes, and Scene details, in both themes at both widths.
 
-### Plan C — v0.12.0: Snapshots and Compare
+### Plan C — v0.13.0: Snapshots and Compare
 
 **Scope:** the snapshot schedule, retention, and compression (§11.1); the History dialog; `@drafter/compare`; the Compare tab (§11.2); snapshots before bulk operations.
 
@@ -569,7 +584,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - Compare marks added, changed, and removed lines correctly on fixtures, including a moved scene, and Next change and the Changes list reach every change.
 - axe passes on History and Compare, in both themes at both widths.
 
-### Plan D — v0.13.0: Spellcheck
+### Plan D — v0.14.0: Spellcheck
 
 **Scope:** `@drafter/spell`, the worker, the two dictionaries (§12), the menus and commands, the script's and the writer's dictionaries, the phone's Spelling button, and the Spelling group in Problems. The browser's spellcheck is turned off.
 
@@ -581,7 +596,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - The dependencies have their DEPENDENCIES.md rows and notices.
 - axe passes with misspellings on screen and the menu open.
 
-### Plan E — v0.14.0: Seeing the script
+### Plan E — v0.15.0: Seeing the script
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15).
 
@@ -593,7 +608,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - The grid meets its time budget.
 - axe passes on every Stats section, the map, and the Timeline, in both themes at both widths.
 
-### Plan F — v0.15.0: The Beat Board
+### Plan F — v0.16.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -604,7 +619,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.16.0: Reader notes
+### Plan G — v0.17.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -615,7 +630,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.17.0: Reference
+### Plan H — v0.18.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 
@@ -687,4 +702,5 @@ Made with Plan A (2026-10-28):
 - **README** (Roadmap): move "Testing with NVDA and VoiceOver" out of Phase 2 to a final step after Phase 5; mark "Writing statistics by day" as shipped in v0.5.0; change Phase 1's "Testing with NVDA and VoiceOver follows in Phase 2" and the same date under "What makes it different" to say it comes last; link this design under Design documents.
 - **Architecture §5.1 and §5.3:** scene colors live in scene headers as keyed notes; the metadata block keeps script-wide data. **§12 and §13:** NVDA and VoiceOver come last. **§14:** the scene-identity question is closed by §5.2.
 - **Technical design §7:** colors and stubs as in §5.4 and §6.5; the scene index and identity as in §5.1–5.2. **§8.4:** the snapshot schedule as in §11.1. **§8.6:** the metadata block's Phase 2 keys. **§13:** NVDA and VoiceOver come last.
+- **README and architecture §13 (Final Draft, decided 2026-10-28):** `.fdx` import and export is listed under Phase 2 (Plan FD, v0.11.0), not Phase 3, and `@drafter/fdx` is a Phase 2 package.
 - **Phase 1 design §14:** the Beat Board's positions, colors, and links live in the Beat Board block, not the metadata block, and storylines are header notes with their colors in the metadata block.
