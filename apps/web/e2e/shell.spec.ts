@@ -284,7 +284,7 @@ test.describe('the tab row', () => {
       /^Outline/,
       /^(Scenes|Cast)/,
     ]);
-    const slot = (await tabs.last().innerText()).trim();
+    const slot = ((await tabs.last().textContent()) ?? '').trim();
     const other = slot === 'Cast' ? 'Scenes' : 'Cast';
     await more(page).click();
     await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
@@ -307,7 +307,7 @@ test.describe('the tab row', () => {
     await more(page).focus();
     await page.keyboard.press('Enter');
     await expect(item).toBeFocused();
-    const name = (await item.innerText()).trim();
+    const name = ((await item.textContent()) ?? '').trim();
     await page.keyboard.press('Escape');
     await expect(menu(page)).toBeHidden();
     await expect(more(page)).toBeFocused();

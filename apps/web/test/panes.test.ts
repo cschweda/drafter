@@ -28,7 +28,12 @@ describe('panes', () => {
   });
 
   test('has no Outline for a Markdown document', () => {
-    expect(coreTabs('fountain').map((t) => t.id)).toEqual(['source', 'script', 'problems', 'outline']);
+    expect(coreTabs('fountain').map((t) => t.id)).toEqual([
+      'source',
+      'script',
+      'problems',
+      'outline',
+    ]);
     expect(coreTabs('markdown').map((t) => t.id)).toEqual(['source', 'script', 'problems']);
     // A pane showing it shows another core tab instead.
     expect(dropTab({ left: 'source', right: 'outline' }, 'outline')).toEqual({

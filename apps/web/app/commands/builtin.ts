@@ -20,6 +20,7 @@ import {
   wrapInNote,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
+import { downTarget, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
@@ -29,6 +30,8 @@ import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
+import { runMove } from '~/outline/move';
+import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { statsOpen } from '~/stats/dialog';
@@ -146,6 +149,25 @@ export function registerBuiltinCommands(): void {
   /** What the script's template makes of its structure: a stage play's acts and scenes. */
   const structure = () => structureOf(editor.template.value);
   const isStage = () => !structure().headings;
+
+  /** The scene holding the cursor, in the Outline's index. */
+  const sceneAtCursor = () => {
+    const head = view.state.selection.main.head;
+    return useOutline().index.value.scenes.find((s) => head >= s.span.from && head <= s.span.to);
+  };
+  /** Move scene up or down (Phase 2 design §6.2): the cursor goes with the scene. */
+  const moveScene = (direction: 'up' | 'down'): Behavior => ({
+    enabled: () => canEdit() && isFountain() && !!sceneAtCursor(),
+    run: () => {
+      const scene = sceneAtCursor();
+      if (!scene) return;
+      const index = useOutline().index.value;
+      const target =
+        direction === 'up' ? upTarget(index, scene.block) : downTarget(index, scene.block);
+      runMove(scene.block, target, { keepCursor: true, direction });
+      editor.goto(view.state.selection.main.head);
+    },
+  });
 
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
@@ -269,6 +291,7 @@ export function registerBuiltinCommands(): void {
     // The Script tab is the Preview in a Markdown document.
     'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
     'show-problems': { run: () => showTab('problems') },
+    'show-outline': { enabled: isFountain, run: () => showTab('outline') },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
@@ -355,6 +378,8 @@ export function registerBuiltinCommands(): void {
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
+    'move-scene-up': moveScene('up'),
+    'move-scene-down': moveScene('down'),
 
     // Edit, the element bar's commands
     // On a stage play Scene writes a `##` section and Action is a stage direction (the template's

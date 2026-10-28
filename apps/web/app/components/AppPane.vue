@@ -208,6 +208,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
         v-if="moreOpen"
         :id="`more-tabs-${props.pane}`"
         ref="morePanel"
+        tabindex="-1"
         role="group"
         aria-label="More tabs"
         class="more-panel"
@@ -350,6 +351,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
 }
 .more-panel {
   position: fixed;
+  outline: none;
   z-index: 20;
   box-sizing: border-box;
   display: flex;

@@ -162,6 +162,7 @@ onBeforeUnmount(() => {
     <!-- The desktop app's folder modules run in hidden frames of their own; drafter.dev has none. -->
     <LazyFolderModuleRunners v-if="desktopBuild" />
     <CommandPalette />
+    <OutlineAnnouncer />
     <SettingsDialog />
     <StatsDialog />
     <AppTour />

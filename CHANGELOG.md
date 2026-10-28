@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/cm-fountain`: `sceneIds`, an id for each scene heading and section while the script is open, kept as the writer types and carried with a scene that Drafter moves (`sceneMoved`). Ids are never saved.
 - `@drafter/lint`: `stub-heading` (info) lists every scene still holding the stand-in heading that Expand outline writes, `INT. LOCATION - DAY` (in a play, `## New scene`).
 
+- `apps/web`: **the Outline tab.** Your script's sections and scenes as a tree, each scene with its number, heading, first synopsis, color, page and length, and who speaks. Filter it by heading, synopsis, or character; press Enter or click to go to a scene; edit a synopsis in place; give a scene a color, which is written into the scene as `[[Color: blue]]` and never prints. It works fully from the keyboard (arrow keys, Home and End, typing to jump), and a screen reader reads it as a tree.
+- `apps/web`: **moving scenes and sections.** Alt+Up and Alt+Down on an Outline row, its menu's Move up, Move down, and Move to…, dragging it, and **Move scene up** and **Move scene down** for the scene holding the cursor. The scene's whole text moves, notes and all; one undo puts it back; focus stays on the moved row, and a screen reader hears where it went.
+
 ### Changed
 
 - `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.

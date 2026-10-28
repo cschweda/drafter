@@ -132,6 +132,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-script', title: 'Show Script', group: 'View' },
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },
+  { id: 'show-outline', title: 'Show Outline', group: 'View' },
   {
     id: 'focus-mode',
     title: 'Toggle focus mode',
@@ -167,6 +168,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
 
   // Edit
   { id: 'undo', title: 'Undo', group: 'Edit', keys: 'Mod-z' },
+  // The Outline's moves, for the scene holding the cursor (Phase 2 design §6.2).
+  { id: 'move-scene-up', title: 'Move scene up', group: 'Edit' },
+  { id: 'move-scene-down', title: 'Move scene down', group: 'Edit' },
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
 
