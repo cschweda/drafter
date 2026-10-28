@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-28
+
+**The accessibility pass.** Every major state of Drafter, from the first visit and the tour to each dialog, menu, and help page, is checked with axe in both themes at desktop and phone width, and those checks now run with every test run. What they found is fixed: text contrast, menus that hid the page from screen readers, Tab in an open menu, small targets on a phone, scrolling areas a keyboard couldn't reach, and links in help text told apart by colour alone. A **Skip to the editor** link is the first Tab stop. Testing with NVDA and VoiceOver comes later, and Drafter claims no conformance until it's done.
+
 ### Added
 
 - `apps/web`: **a skip link.** The first Tab on the page is **Skip to the editor**, which puts the cursor in the Source (on a phone it brings the Source up first), past the toolbar and the bars under it.
@@ -527,7 +531,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/cschweda/drafter/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/cschweda/drafter/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/cschweda/drafter/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/cschweda/drafter/compare/v0.6.0...v0.6.1
