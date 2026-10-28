@@ -2,12 +2,17 @@
 // what is offered are tested here with a fake updater.
 import { describe, expect, test, vi } from 'vitest';
 import {
+  FEED_FILE,
+  isNewer,
+  MAC_FEED,
   RELEASES_URL,
+  ReleaseCheck,
   type UpdaterLike,
   Updates,
   type UpdatesDeps,
   updateMode,
   validFeed,
+  versionInFeed,
 } from '../src/updates';
 
 describe('updateMode', () => {
@@ -40,11 +45,18 @@ describe('updateMode', () => {
   });
 
   test('checks nothing unpackaged unless the test feed is set, and then by APPIMAGE', () => {
-    const base = { isPackaged: false, platform: 'darwin' } as const;
+    const base = { isPackaged: false, platform: 'linux' } as const;
     expect(updateMode({ ...base })).toBe('off');
     expect(updateMode({ ...base, appImage: '/x/D.AppImage' })).toBe('off');
     expect(updateMode({ ...base, feed: 'http://127.0.0.1:1' })).toBe('deb');
     expect(updateMode({ ...base, feed: 'http://127.0.0.1:1', appImage: '/x/D.AppImage' })).toBe(
+      'appimage',
+    );
+    // On a Mac the test feed plays the Mac app, unless APPIMAGE asks for the AppImage.
+    const mac = { isPackaged: false, platform: 'darwin' } as const;
+    expect(updateMode({ ...mac })).toBe('off');
+    expect(updateMode({ ...mac, feed: 'http://127.0.0.1:1' })).toBe('mac');
+    expect(updateMode({ ...mac, feed: 'http://127.0.0.1:1', appImage: '/x/D.AppImage' })).toBe(
       'appimage',
     );
   });
@@ -55,9 +67,23 @@ describe('updateMode', () => {
     );
   });
 
-  test('is off on a packaged platform other than Linux (their builds come later)', () => {
+  test('is the Mac app’s on a packaged Mac (check, then Get it: it can’t update itself)', () => {
+    expect(updateMode({ isPackaged: true, platform: 'darwin' })).toBe('mac');
+    // An APPIMAGE inherited from somewhere is nothing to a Mac.
+    expect(
+      updateMode({
+        isPackaged: true,
+        platform: 'darwin',
+        appImage: '/x/D.AppImage',
+        appImageIsFile: true,
+        appDir: '/x',
+        execPath: '/x/Drafter',
+      }),
+    ).toBe('mac');
+  });
+
+  test('is off on a packaged platform with no build yet (Windows)', () => {
     expect(updateMode({ isPackaged: true, platform: 'win32' })).toBe('off');
-    expect(updateMode({ isPackaged: true, platform: 'darwin' })).toBe('off');
   });
 });
 
@@ -476,5 +502,124 @@ describe('the setting turned off after an offer', () => {
     r.updates.listen();
     expect(r.published).toHaveLength(1);
     vi.useRealTimers();
+  });
+});
+
+describe('the offer (Mac)', () => {
+  const found = (u: Fake) => {
+    u.emit('update-available', { version: '0.9.0' });
+  };
+
+  test('comes as Get it, opens the release page, and never downloads or installs', async () => {
+    const r = rig({ mode: 'mac', script: found });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    r.updates.listen();
+    await r.advance(5000);
+    expect(r.published).toEqual([{ version: '0.9.0', how: 'get' }]);
+    expect(r.created[0]?.downloads).toEqual([]);
+    r.updates.openReleasePage();
+    expect(r.opened).toEqual([RELEASES_URL]);
+    expect(await r.updates.install()).toBe('nothing');
+    expect(r.created[0]?.quits).toEqual([]);
+    vi.useRealTimers();
+  });
+});
+
+describe('isNewer', () => {
+  test('compares versions part by part, as numbers', () => {
+    expect(isNewer('0.7.0', '0.6.0')).toBe(true);
+    expect(isNewer('0.6.1', '0.6.0')).toBe(true);
+    expect(isNewer('1.0.0', '0.99.99')).toBe(true);
+    expect(isNewer('0.10.0', '0.9.0')).toBe(true);
+    expect(isNewer('0.6.0', '0.6.0')).toBe(false);
+    expect(isNewer('0.5.9', '0.6.0')).toBe(false);
+    expect(isNewer('v0.7.0', '0.6.0')).toBe(true);
+  });
+
+  test('counts a release as newer than its own pre-release, and not the other way', () => {
+    expect(isNewer('0.7.0', '0.7.0-beta.1')).toBe(true);
+    expect(isNewer('0.7.0-beta.1', '0.7.0')).toBe(false);
+    expect(isNewer('0.7.0-beta.1', '0.6.0')).toBe(true);
+  });
+
+  test('is false for anything that isn’t a version', () => {
+    for (const bad of ['', 'latest', '1.2', '1.2.3.4', 'x.y.z', '1.2.3 ']) {
+      expect(isNewer(bad, '0.0.1')).toBe(false);
+      expect(isNewer('9.9.9', bad)).toBe(false);
+    }
+  });
+});
+
+describe('versionInFeed', () => {
+  test('reads the version from latest-linux.yml, as electron-builder writes it', () => {
+    expect(versionInFeed('version: 0.7.0\nfiles:\n  - url: x\n')).toBe('0.7.0');
+    expect(versionInFeed("files: []\nversion: '0.7.1'\n")).toBe('0.7.1');
+    expect(versionInFeed('version: "1.0.0"\r\n')).toBe('1.0.0');
+  });
+
+  test('is null when there is none', () => {
+    expect(versionInFeed('')).toBeNull();
+    expect(versionInFeed('files:\n  - version: 0.7.0\n')).toBeNull();
+    expect(versionInFeed('<html>Not Found</html>')).toBeNull();
+  });
+});
+
+describe('ReleaseCheck', () => {
+  const check = (feed: string, current: string, text: string | Error) => {
+    const asked: string[] = [];
+    const updater = new ReleaseCheck({
+      feed,
+      current,
+      fetchText: async (url) => {
+        asked.push(url);
+        if (text instanceof Error) throw text;
+        return text;
+      },
+    });
+    const found: string[] = [];
+    updater.on('update-available', (info) => found.push(info.version));
+    return { updater, asked, found };
+  };
+
+  test('reads the release’s latest-linux.yml and says when it is newer', async () => {
+    const c = check(MAC_FEED, '0.6.0', 'version: 0.7.0\n');
+    await c.updater.checkForUpdates();
+    expect(c.asked).toEqual([`${MAC_FEED}${FEED_FILE}`]);
+    expect(MAC_FEED).toBe('https://github.com/cschweda/drafter/releases/latest/download/');
+    expect(FEED_FILE).toBe('latest-linux.yml');
+    expect(c.found).toEqual(['0.7.0']);
+  });
+
+  test('says nothing when the release is not newer', async () => {
+    const c = check(MAC_FEED, '0.7.0', 'version: 0.7.0\n');
+    await c.updater.checkForUpdates();
+    expect(c.found).toEqual([]);
+  });
+
+  test('takes a test feed with or without its last slash', async () => {
+    const a = check('http://127.0.0.1:4000', '0.6.0', 'version: 0.6.0\n');
+    await a.updater.checkForUpdates();
+    const b = check('http://127.0.0.1:4000/feed/', '0.6.0', 'version: 0.6.0\n');
+    await b.updater.checkForUpdates();
+    expect([...a.asked, ...b.asked]).toEqual([
+      'http://127.0.0.1:4000/latest-linux.yml',
+      'http://127.0.0.1:4000/feed/latest-linux.yml',
+    ]);
+  });
+
+  test('fails (for the log) when the release can’t be read or names no version', async () => {
+    await expect(
+      check(MAC_FEED, '0.6.0', new Error('offline')).updater.checkForUpdates(),
+    ).rejects.toThrow('offline');
+    const empty = check(MAC_FEED, '0.6.0', 'Not Found');
+    await expect(empty.updater.checkForUpdates()).rejects.toThrow(/no version/);
+    expect(empty.found).toEqual([]);
+  });
+
+  test('downloads and installs nothing', async () => {
+    const c = check(MAC_FEED, '0.6.0', 'version: 0.7.0\n');
+    await expect(c.updater.downloadUpdate()).rejects.toThrow();
+    expect(() => c.updater.quitAndInstall()).toThrow();
   });
 });

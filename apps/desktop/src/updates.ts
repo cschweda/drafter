@@ -4,7 +4,9 @@
 //
 // Drafter never installs or restarts by itself. The AppImage downloads in the background only
 // after a check found a newer version, and then offers Restart. A .deb can't update itself, so it
-// offers Get it (the release page). Anything that goes wrong is logged and nothing else.
+// offers Get it (the release page). Nor can the Mac app, built on the writer's own Mac and signed
+// by no one (electron-updater installs only a signed one): it reads the release's version itself
+// (`ReleaseCheck`) and offers Get it. Anything that goes wrong is logged and nothing else.
 
 /** Where a .deb's Get it goes. */
 export const RELEASES_URL = 'https://github.com/cschweda/drafter/releases/latest';
@@ -15,8 +17,8 @@ export const CHECK_DELAY_MS = 5000;
 /** How long after quitAndInstall the app may keep running before the install counts as failed. */
 export const INSTALL_WAIT_MS = 3000;
 
-/** `appimage`: check, download, Restart. `deb`: check, Get it. `off`: no check. */
-export type UpdateMode = 'appimage' | 'deb' | 'off';
+/** `appimage`: check, download, Restart. `deb` and `mac`: check, Get it. `off`: no check. */
+export type UpdateMode = 'appimage' | 'deb' | 'mac' | 'off';
 
 export interface ModeInputs {
   isPackaged: boolean;
@@ -48,14 +50,19 @@ export function runsFromAppImage(inputs: ModeInputs): boolean {
 
 /**
  * Which kind of install this is. A packaged Linux build is an AppImage when it really runs from
- * one (`runsFromAppImage`) and a .deb when it doesn't. Unpackaged (development, the e2e suite) there is no check unless the test
- * feed is set. Windows and macOS builds come later: no check there yet.
+ * one (`runsFromAppImage`) and a .deb when it doesn't; a packaged Mac build is the Mac app.
+ * Unpackaged (development, the e2e suite) there is no check unless the test feed is set. The
+ * Windows build comes later: no check there yet.
  */
 export function updateMode(inputs: ModeInputs): UpdateMode {
-  // The test feed (unpackaged only) plays an AppImage by APPIMAGE alone.
+  // The test feed (unpackaged only) plays an AppImage by APPIMAGE alone, and otherwise the
+  // package of the system the tests run on.
   if (!inputs.isPackaged) {
-    return inputs.feed ? (inputs.appImage ? 'appimage' : 'deb') : 'off';
+    if (!inputs.feed) return 'off';
+    if (inputs.appImage) return 'appimage';
+    return inputs.platform === 'darwin' ? 'mac' : 'deb';
   }
+  if (inputs.platform === 'darwin') return 'mac';
   if (inputs.platform !== 'linux') return 'off';
   return runsFromAppImage(inputs) ? 'appimage' : 'deb';
 }
@@ -231,6 +238,93 @@ export class Updates {
   private make(offer: Offer): void {
     this.offer = offer;
     if (this.listening && this.enabled === true) this.deps.publish(offer);
+  }
+}
+
+// ---- The Mac app's check --------------------------------------------------------------------------
+
+/**
+ * Where the Mac app reads the latest release's version: its `latest-linux.yml`, the file the Linux
+ * app's updater reads too. A release has one version for every system, and the Mac app has no
+ * file of its own there (nothing for macOS is published until it can be signed).
+ */
+export const MAC_FEED = 'https://github.com/cschweda/drafter/releases/latest/download/';
+export const FEED_FILE = 'latest-linux.yml';
+
+const VERSION = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
+
+/**
+ * Whether version `latest` is newer than `current` (`0.7.0` than `0.6.0`; `0.7.0` than
+ * `0.7.0-beta.1`). Anything that isn't a version is never newer.
+ */
+export function isNewer(latest: string, current: string): boolean {
+  const a = VERSION.exec(latest);
+  const b = VERSION.exec(current);
+  if (!a || !b) return false;
+  for (let i = 1; i <= 3; i++) {
+    const diff = Number(a[i]) - Number(b[i]);
+    if (diff !== 0) return diff > 0;
+  }
+  // The same numbers: a release is newer than a pre-release of it, and nothing else is.
+  return a[4] === undefined && b[4] !== undefined;
+}
+
+/** The top-level `version:` in an electron-builder feed file, or null. */
+export function versionInFeed(text: string): string | null {
+  const match = /^version:[ \t]*(['"]?)([^'"\s]+)\1[ \t]*\r?$/m.exec(text);
+  return match?.[2] ?? null;
+}
+
+export interface ReleaseCheckDeps {
+  /** The folder the feed file is in: MAC_FEED, or the e2e suite's test feed. */
+  feed: string;
+  /** The running app's version. */
+  current: string;
+  /** Fetches a URL's text, rejecting when it can't (not found, offline). */
+  fetchText(url: string): Promise<string>;
+}
+
+/**
+ * The Mac app's updater: it reads the latest release's version and says when it is newer, as
+ * electron-updater's `update-available` does; Updates then offers Get it. It downloads and installs
+ * nothing.
+ */
+export class ReleaseCheck implements UpdaterLike {
+  autoDownload = false;
+  autoInstallOnAppQuit = false;
+  private readonly found: Array<(info: { version: string }) => void> = [];
+
+  constructor(private readonly deps: ReleaseCheckDeps) {}
+
+  on(
+    event: 'update-available' | 'update-downloaded',
+    listener: (info: { version: string }) => void,
+  ): this;
+  on(event: 'error', listener: (error: unknown) => void): this;
+  on(event: string, listener: (arg: never) => void): this {
+    if (event === 'update-available') {
+      this.found.push(listener as (info: { version: string }) => void);
+    }
+    return this;
+  }
+
+  async checkForUpdates(): Promise<{ version: string }> {
+    const base = this.deps.feed.endsWith('/') ? this.deps.feed : `${this.deps.feed}/`;
+    const text = await this.deps.fetchText(new URL(FEED_FILE, base).href);
+    const version = versionInFeed(text);
+    if (!version) throw new Error(`no version in ${FEED_FILE}`);
+    if (isNewer(version, this.deps.current)) {
+      for (const listener of this.found) listener({ version });
+    }
+    return { version };
+  }
+
+  async downloadUpdate(): Promise<never> {
+    throw new Error('The Mac app downloads nothing.');
+  }
+
+  quitAndInstall(): never {
+    throw new Error('The Mac app installs nothing.');
   }
 }
 

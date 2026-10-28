@@ -3,9 +3,17 @@
 // it alone. Only the editor's page may speak to it.
 import { appendFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, type BrowserWindow, ipcMain } from 'electron';
+import { app, type BrowserWindow, ipcMain, session } from 'electron';
 import { CHANNELS } from './channels';
-import { CHECK_DELAY_MS, type UpdaterLike, Updates, updateMode, validFeed } from './updates';
+import {
+  CHECK_DELAY_MS,
+  MAC_FEED,
+  ReleaseCheck,
+  type UpdaterLike,
+  Updates,
+  updateMode,
+  validFeed,
+} from './updates';
 import { fromEditor, openExternal } from './window';
 
 /** electron-updater's own CancellationToken, loaded with it (a transitive dependency isn't imported directly). */
@@ -70,6 +78,20 @@ export function setUpUpdates(
     delayMs: hook.delay,
     newCancellation: () => new CancellationToken(),
     async createUpdater() {
+      if (mode === 'mac') {
+        // A session of its own, as electron-updater's is: the default session's backstop and proxy
+        // (network.ts, webrtc.ts) are for pages, and this is the app's one request.
+        const net = session.fromPartition('drafter-update-check');
+        return new ReleaseCheck({
+          feed: hook.feed ?? MAC_FEED,
+          current: app.getVersion(),
+          async fetchText(url) {
+            const response = await net.fetch(url, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`${response.status} from ${url}`);
+            return response.text();
+          },
+        });
+      }
       const { AppImageUpdater, CancellationToken: Token } = await import('electron-updater');
       CancellationToken = Token;
       const updater = new AppImageUpdater();
