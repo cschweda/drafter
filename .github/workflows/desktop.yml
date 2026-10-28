@@ -268,8 +268,28 @@ jobs:
             node apps/desktop/scripts/check-update-config.mjs "apps/desktop/release/$unpacked/resources/app-update.yml"
             cat "apps/desktop/release/$unpacked/resources/app-update.yml"
           done
+      # The build itself, not only its configuration: if anything that was built carries a signature,
+      # app-update.yml must name its signer, or electron-updater would check no update's signature
+      # (a custom signer, for one, leaves publisherName out).
+      - name: Signed or not, the updater checks what the build is signed with
+        shell: pwsh
+        run: |
+          $files = @(
+            'apps/desktop/release/win-unpacked/Drafter.exe',
+            'apps/desktop/release/win-arm64-unpacked/Drafter.exe'
+          ) + (Get-ChildItem apps/desktop/release/*-setup.exe).FullName
+          $signatures = @($files | ForEach-Object {
+            $s = Get-AuthenticodeSignature -LiteralPath $_
+            [pscustomobject]@{ path = $_; status = "$($s.Status)"; subject = "$($s.SignerCertificate.Subject)" }
+          })
+          $signatures | Format-Table -AutoSize | Out-String -Width 200
+          ConvertTo-Json -InputObject $signatures | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/signatures.json"
+          foreach ($unpacked in 'win-unpacked', 'win-arm64-unpacked') {
+            node apps/desktop/scripts/check-update-config.mjs "apps/desktop/release/$unpacked/resources/app-update.yml" --signatures "$env:RUNNER_TEMP/signatures.json"
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
       - name: latest.yml agrees with the installers
-        run: node apps/desktop/scripts/check-update-feed.mjs apps/desktop/release latest.yml
+        run: node apps/desktop/scripts/check-update-feed.mjs --release apps/desktop/release latest.yml
       - name: What was built
         working-directory: apps/desktop/release
         run: |
