@@ -22,6 +22,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **Export as treatment…** (Export menu, File menu, palette): the outline as a Markdown file, with each scene's first paragraph of action if you like, or opened as a new Markdown document.
 - `apps/web`: **Expand outline** turns the `=` lines and `- ` lists you've selected (or the whole script's) into scene stubs, `INT. LOCATION - DAY` with the line as its synopsis, in one undo; **New screenplay from this outline** does the same for a Markdown outline, as a new screenplay. Problems lists every stub still waiting for its real heading.
 
+- Tests: axe checks every state the Outline adds (the tree, a row's menu and colors, Move to…, the treatment dialog, the tabs' More menu, a read-only tab), in both themes, at desktop and phone width, on every run.
+
 ### Changed
 
 - `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.

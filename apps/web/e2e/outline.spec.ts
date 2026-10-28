@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 import {
@@ -297,7 +298,8 @@ test.describe('moving in the Outline', () => {
 
   test("moves a scene from its row's ⋯ menu, as a phone does", async ({ page }) => {
     await openWith(page);
-    await tree(page).getByRole('button', { name: 'Actions for INT. HALL - DAY' }).click();
+    // The ⋯ button is for a pointer: the row's keys open the same menu.
+    await hall(page).locator('button.more').click();
     await rowMenu(page).getByRole('button', { name: 'Move scene down' }).click();
     await expect
       .poll(() => order(page))
@@ -483,3 +485,93 @@ test.describe('condense, expand, and treatments', () => {
     ).toHaveCount(2);
   });
 });
+
+// axe on every state the Outline adds, in both themes, in every project (so at desktop and at phone
+// width). These run by default: they aren't named for the opt-in accessibility suite.
+const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+
+async function clean(page: Page, state: string) {
+  // A fade still running is waited out: axe measures the colors on screen.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY)
+        .map((a) => a.finished.catch(() => {})),
+    ),
+  );
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+  expect(
+    violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`),
+    state,
+  ).toEqual([]);
+}
+
+for (const theme of ['dark', 'light'] as const) {
+  test.describe(`the Outline in the ${theme} theme`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
+      await openWith(page, SCRIPT.replace('= Ann arrives.', '= Ann arrives.\n[[Color: teal]]'));
+      await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
+    });
+
+    test(`passes axe on the Outline (${theme})`, async ({ page }) => {
+      await expect(row(page, /^Scene 1, INT\. HALL - DAY, teal/)).toBeVisible();
+      await clean(page, 'the Outline');
+      await page.getByRole('searchbox').fill('nobody');
+      await clean(page, 'the Outline, filtered to nothing');
+    });
+
+    test(`passes axe with a row's menu and its colors open (${theme})`, async ({ page }) => {
+      await menuFor(page, hall(page));
+      await clean(page, "a row's menu");
+      await rowMenu(page).getByRole('button', { name: 'Color…' }).click();
+      await expect(page.getByRole('group', { name: 'Color for INT. HALL - DAY' })).toBeVisible();
+      await clean(page, 'the colors');
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
+      await menuFor(page, yard(page));
+      await rowMenu(page).getByRole('button', { name: 'Edit synopsis' }).click();
+      await expect(page.getByRole('textbox', { name: /^Synopsis of/ })).toBeFocused();
+      await clean(page, 'editing a synopsis');
+    });
+
+    test(`passes axe with Move to… open (${theme})`, async ({ page }) => {
+      await menuFor(page, hall(page));
+      await rowMenu(page).getByRole('button', { name: 'Move scene to…' }).click();
+      await expect(page.getByRole('dialog', { name: 'Move INT. HALL - DAY' })).toBeVisible();
+      await clean(page, 'Move to…');
+    });
+
+    test(`passes axe with the treatment dialog open (${theme})`, async ({ page }) => {
+      await runCommand(page, 'Export as treatment…');
+      await expect(page.getByRole('dialog', { name: 'Export as treatment' })).toBeVisible();
+      await clean(page, 'the treatment dialog');
+    });
+
+    test(`passes axe with the tabs' More open (${theme})`, async ({ page }) => {
+      await page.keyboard.press('ControlOrMeta+,');
+      const settings = page.getByRole('dialog', { name: 'Settings' });
+      for (const name of ['Scene list', 'Cast']) {
+        await settings.getByRole('switch', { name, exact: true }).click();
+      }
+      await settings.getByRole('button', { name: 'Done' }).click();
+      await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
+      await expect(page.getByRole('group', { name: 'More tabs' })).toBeVisible();
+      await clean(page, "the tabs' More");
+    });
+
+    test(`passes axe in a read-only tab's menu (${theme})`, async ({ page, context, isMobile }) => {
+      test.skip(!!isMobile, 'two browser tabs are the same on a phone');
+      const second = await context.newPage();
+      await second.goto('/');
+      await expect(
+        second.getByText('This script is open for editing in another tab.'),
+      ).toBeVisible();
+      await showOutline(second);
+      await menuFor(second, tree(second).getByRole('treeitem').nth(1));
+      await clean(second, "a read-only tab's row menu");
+      void page;
+    });
+  });
+}

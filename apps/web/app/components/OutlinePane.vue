@@ -328,6 +328,9 @@ const sectionSummary = (row: Row) => {
   const count = `${scenes} ${scenes === 1 ? 'scene' : 'scenes'}`;
   return eighths === null ? count : `${count} · ${lengthLabel(eighths)}`;
 };
+/** A scene row's synopsis or speakers, shown under it and read as its description. */
+const hasDetails = (row: Row) =>
+  row.item.kind === 'scene' && (row.item.synopses.length > 0 || row.item.speakers.length > 0);
 const nameOfRow = (row: Row) =>
   row.item.kind === 'scene' ? sceneName(row.item) : sectionName(row.item);
 </script>
@@ -372,8 +375,7 @@ const nameOfRow = (row: Row) =>
           :aria-setsize="row.setsize"
           :aria-posinset="row.posinset"
           :aria-expanded="row.expandable ? (row.open ? 'true' : 'false') : undefined"
-          :aria-label="nameOfRow(row)"
-          :aria-describedby="row.item.kind === 'scene' ? `${domId(row.id)}-more` : undefined"
+          :aria-describedby="hasDetails(row) ? `${domId(row.id)}-more` : undefined"
           :draggable="readOnly === null && editing !== row.id ? 'true' : 'false'"
           :data-id="row.id"
           @keydown="onKeydown($event, row)"
@@ -384,7 +386,11 @@ const nameOfRow = (row: Row) =>
           @drop="onDrop"
           @dragend="onDragend"
         >
-          <div class="line">
+          <!-- The row's name is this one line of words; what's drawn is the same, laid out, and
+               hidden from screen readers so they read it once. Its synopsis and speakers are its
+               description. -->
+          <span class="sr-only">{{ nameOfRow(row) }}</span>
+          <div class="line" aria-hidden="true">
             <span
               v-if="row.expandable"
               class="twisty"
@@ -420,17 +426,22 @@ const nameOfRow = (row: Row) =>
               <UIcon name="i-lucide-ellipsis" aria-hidden="true" />
             </button>
           </div>
-          <div v-if="row.item.kind === 'scene'" :id="`${domId(row.id)}-more`" class="details">
-            <input
-              v-if="editing === row.id"
-              :id="`${domId(row.id)}-synopsis`"
-              v-model="draft"
-              class="synopsis-field"
-              :aria-label="`Synopsis of ${row.item.heading}`"
-              @keydown="onEditKeydown"
-              @blur="finishEditing(false)"
-            />
-            <span v-else-if="row.item.synopses[0]" class="synopsis">{{
+          <input
+            v-if="row.item.kind === 'scene' && editing === row.id"
+            :id="`${domId(row.id)}-synopsis`"
+            v-model="draft"
+            class="synopsis-field"
+            :aria-label="`Synopsis of ${row.item.heading}`"
+            @keydown="onEditKeydown"
+            @blur="finishEditing(false)"
+          />
+          <div
+            v-if="row.item.kind === 'scene' && hasDetails(row)"
+            :id="`${domId(row.id)}-more`"
+            class="details"
+            aria-hidden="true"
+          >
+            <span v-if="editing !== row.id && row.item.synopses[0]" class="synopsis">{{
               row.item.synopses[0].text
             }}</span>
             <span v-if="row.item.speakers.length > 0" class="who"
@@ -601,7 +612,9 @@ const nameOfRow = (row: Row) =>
   color: var(--text);
 }
 .synopsis-field {
-  flex: 1 1 100%;
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  margin: 2px 0 2px 24px;
   min-height: 26px;
   padding: 2px 6px;
   border: 1px solid var(--heading);
