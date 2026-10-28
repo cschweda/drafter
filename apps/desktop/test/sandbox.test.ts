@@ -134,6 +134,17 @@ describe('sandboxNotice', () => {
     ).toBeNull();
   });
 
+  test('names no Mac or Linux places on another system (Windows, when it comes)', () => {
+    const detail =
+      sandboxNotice({ ...off, platform: 'win32', argv: ['C:\\Drafter.exe', '--no-sandbox'] }, DATA)
+        ?.detail ?? '';
+    for (const elsewhere of ['Finder', 'Dock', 'Applications', 'AppImage', '.deb', 'AppArmor']) {
+      expect(detail).not.toContain(elsewhere);
+    }
+    expect(detail).toContain('--no-sandbox');
+    expect(detail).toContain(ALLOW_NO_SANDBOX);
+  });
+
   test('has two buttons', () => {
     expect([CONTINUE, QUIT]).toEqual(['Continue without the sandbox', 'Quit']);
   });

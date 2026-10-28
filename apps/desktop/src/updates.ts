@@ -250,6 +250,10 @@ export class Updates {
  */
 export const MAC_FEED = 'https://github.com/cschweda/drafter/releases/latest/download/';
 export const FEED_FILE = 'latest-linux.yml';
+/** The most of a feed file the check reads: one is under a kilobyte. */
+export const MAX_FEED_BYTES = 64 * 1024;
+/** How long the check waits for the release before it gives up (for the log). */
+export const FEED_TIMEOUT_MS = 15_000;
 
 const VERSION = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 
@@ -280,7 +284,10 @@ export interface ReleaseCheckDeps {
   feed: string;
   /** The running app's version. */
   current: string;
-  /** Fetches a URL's text, rejecting when it can't (not found, offline). */
+  /**
+   * Fetches a URL's text, rejecting when it can't (not found, offline, longer than
+   * FEED_TIMEOUT_MS, or plainly more than MAX_FEED_BYTES).
+   */
   fetchText(url: string): Promise<string>;
 }
 
@@ -311,6 +318,7 @@ export class ReleaseCheck implements UpdaterLike {
   async checkForUpdates(): Promise<{ version: string }> {
     const base = this.deps.feed.endsWith('/') ? this.deps.feed : `${this.deps.feed}/`;
     const text = await this.deps.fetchText(new URL(FEED_FILE, base).href);
+    if (text.length > MAX_FEED_BYTES) throw new Error(`${FEED_FILE} is too big`);
     const version = versionInFeed(text);
     if (!version) throw new Error(`no version in ${FEED_FILE}`);
     if (isNewer(version, this.deps.current)) {

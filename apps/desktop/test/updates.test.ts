@@ -5,6 +5,7 @@ import {
   FEED_FILE,
   isNewer,
   MAC_FEED,
+  MAX_FEED_BYTES,
   RELEASES_URL,
   ReleaseCheck,
   type UpdaterLike,
@@ -615,6 +616,13 @@ describe('ReleaseCheck', () => {
     const empty = check(MAC_FEED, '0.6.0', 'Not Found');
     await expect(empty.updater.checkForUpdates()).rejects.toThrow(/no version/);
     expect(empty.found).toEqual([]);
+  });
+
+  test('refuses a feed file far bigger than one is (it is under a kilobyte)', async () => {
+    expect(MAX_FEED_BYTES).toBe(64 * 1024);
+    const big = check(MAC_FEED, '0.6.0', `version: 9.9.9\n${'#'.repeat(MAX_FEED_BYTES)}`);
+    await expect(big.updater.checkForUpdates()).rejects.toThrow(/too big/);
+    expect(big.found).toEqual([]);
   });
 
   test('downloads and installs nothing', async () => {

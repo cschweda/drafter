@@ -7,7 +7,9 @@ import { app, type BrowserWindow, ipcMain, session } from 'electron';
 import { CHANNELS } from './channels';
 import {
   CHECK_DELAY_MS,
+  FEED_TIMEOUT_MS,
   MAC_FEED,
+  MAX_FEED_BYTES,
   ReleaseCheck,
   type UpdaterLike,
   Updates,
@@ -86,8 +88,15 @@ export function setUpUpdates(
           feed: hook.feed ?? MAC_FEED,
           current: app.getVersion(),
           async fetchText(url) {
-            const response = await net.fetch(url, { cache: 'no-store' });
+            const response = await net.fetch(url, {
+              cache: 'no-store',
+              signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
+            });
             if (!response.ok) throw new Error(`${response.status} from ${url}`);
+            // Not read at all when it says it is too big; ReleaseCheck checks what was read.
+            if (Number(response.headers.get('content-length')) > MAX_FEED_BYTES) {
+              throw new Error(`${url} is too big`);
+            }
             return response.text();
           },
         });
