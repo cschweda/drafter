@@ -89,7 +89,7 @@ Either pane can be collapsed, for "just write" or "just read."
 - **Stage plays as a first-class format.** A Dramatists Guild–style template and a documented convention for writing plays in standard Fountain.
 - **Lossless outline ⇄ script.** Sections, synopses, and scene headings already live in the file, so outlining and reordering are edits to the source, not a second document that can drift.
 - **Runs anywhere with a browser.** Chromebook, Linux, Windows, Mac, or iPad, with no install and no sign-up. It works offline once installed as an app.
-- **Accessibility as a feature.** WCAG 2.2 AA from the first public release. A screen-reader user can navigate the rendered script by structure, and every drag-and-drop has a keyboard equivalent.
+- **Accessibility as a feature.** WCAG 2.2 AA is the target, checked automatically with axe in every major state; testing with screen readers comes in Phase 2. A screen-reader user can navigate the rendered script by structure, and every drag-and-drop has a keyboard equivalent.
 - **The engine is a library.** The parser and pagination engine are standalone packages, so they also power a CLI (`drafter build script.fountain --pdf script.pdf`), CI checks, and other tools.
 - **Table read** (Phase 4). The browser's speech synthesis reads the script aloud with a different voice for each character.
 

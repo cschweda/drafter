@@ -18,9 +18,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - `apps/web`: links in the help pages' text are underlined, so they stand out from the words around them without relying on colour.
-- `apps/web`: the element bar's marks, the welcome and intro cards' smaller text, and the intro's examples have enough contrast in both themes. The cards keep their look, and in the light theme their amber is Drafter's darker goldenrod.
-- `apps/web`: menus no longer hide the rest of the page from screen readers while its buttons can still take focus. They are non-modal now, and Tab and the arrow keys still stay inside an open menu.
-- `apps/web`: on a phone, the buttons in the status bar and the focus-mode marker are at least 24 pixels tall, so neighbouring rows don't crowd each other. The intro card scrolls as a whole on a small screen, and the Fountain cheat sheet's wide examples can be scrolled from the keyboard.
+- `apps/web`: the element bar's marks, the welcome and intro cards' text, icon, and buttons, and the intro's examples have enough contrast in both themes. The cards keep their look. In the light theme their amber is Drafter's darker goldenrod, and a button's hover is a darker shade.
+- `apps/web`: menus no longer hide the rest of the page from screen readers while its buttons can still take focus. They are non-modal now, and Tab or Shift+Tab in an open menu closes it and puts focus back on the button that opened it.
+- `apps/web`: on a phone, the buttons in the status bar and the focus-mode marker are at least 24 pixels tall, so neighbouring rows don't crowd each other. On a phone the intro card scrolls as a whole; a wider screen keeps its scrolling text box. The Fountain cheat sheet's wide examples can be scrolled from the keyboard and are named for screen readers.
 - `apps/web`: closing the Stats window opened from the Drafter menu puts the cursor back in the script. Before, focus could go to the menu's button instead.
 
 ## [0.8.0] - 2026-10-28
