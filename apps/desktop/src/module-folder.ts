@@ -6,6 +6,7 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
+import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { APP_URL, contentTypeOf, navigationFor, resolveRawPath, within } from './protocol';
 
@@ -124,44 +125,89 @@ export function manifestProblem(value: unknown): string | undefined {
   return undefined;
 }
 
+/** Who is running Drafter, and whether their primary group is provably theirs alone. */
+export interface Writer {
+  uid: number;
+  gid: number;
+  /** True only on Linux when `groupIsPrivate` proved it; group-write is then the writer's alone. */
+  groupIsPrivate: boolean;
+}
+
+/** The reason a group-writable entry is refused (the one a `chmod g-w` fixes). */
+export const GROUP_PROBLEM = 'a group other than yours alone can change it';
+
 /**
  * Why another user could change an entry with this mode and owner, or undefined when only the
- * writer can (POSIX). Refused: writable by anyone (`o+w`), owned by someone else, or writable by a
- * group that isn't the writer's own primary group. Group-writable by the writer's own group is
- * fine: Ubuntu, Debian, and Fedora give each user a private group and a umask of 002, so the files
- * a writer unpacks (and folders they make) are group-writable by that group alone.
+ * writer can (POSIX). Refused: writable by anyone (`o+w`), owned by another user, or group-writable
+ * unless the group is the writer's own primary group and provably private to them (Linux's
+ * user-private groups: Ubuntu, Debian, and Fedora give each user one, with a umask of 002).
  */
 export function accessProblem(
   entry: { mode: number; uid: number; gid: number },
-  me: { uid: number; gid: number },
+  me: Writer,
 ): string | undefined {
   if ((entry.mode & 0o002) !== 0) return 'anyone on this computer can change it';
   if (entry.uid !== me.uid) return 'it is owned by another user';
-  if ((entry.mode & 0o020) !== 0 && entry.gid !== me.gid) {
-    return 'a group other than yours can change it';
+  if ((entry.mode & 0o020) !== 0 && !(me.groupIsPrivate && entry.gid === me.gid)) {
+    return GROUP_PROBLEM;
   }
   return undefined;
 }
 
-/** Whether a stat's mode or owner says another user could change this entry (POSIX). */
-function insecureMode(info: import('node:fs').Stats): boolean {
-  if (typeof process.getuid !== 'function' || typeof process.getgid !== 'function') return false;
-  return accessProblem(info, { uid: process.getuid(), gid: process.getgid() }) !== undefined;
+/**
+ * Whether group `gid` is private to `username`, from the text of /etc/group and /etc/passwd: the
+ * group's name is the user's, it lists no members, the user's own account has it as its primary
+ * group, and no other account does. Anything not found (an LDAP or SSSD group, an account not in
+ * the files) is doubt, and doubt is false.
+ */
+export function groupIsPrivate(
+  gid: number,
+  username: string,
+  groupText: string,
+  passwdText: string,
+): boolean {
+  const fields = (text: string) =>
+    text
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !line.startsWith('#'))
+      .map((line) => line.split(':'));
+  const group = fields(groupText).find((f) => Number(f[2]) === gid);
+  if (!group || group[0] !== username || (group[3] ?? '').trim() !== '') return false;
+  const accounts = fields(passwdText).filter((f) => Number(f[3]) === gid);
+  return accounts.length === 1 && accounts[0]?.[0] === username;
 }
 
 /**
- * Whether `dir` (the modules folder, or a module's folder) is one another user could change: group-
- * or other-writable, or not owned by the user running Drafter. Windows has no such bits. Fails
- * closed: a path that can't be read is treated as insecure by `firstInsecure`; this top-level check
- * is only used where a read failure is handled separately (an empty folder), so it returns false.
+ * The writer, for the checks below; null on Windows (no such bits), where none are made. Only on
+ * Linux can a group-writable file be accepted, and only when its group is provably private; on
+ * macOS every user's primary group is the shared `staff`, so group-write is always refused there.
  */
-function insecure(dir: string): boolean {
-  if (process.platform === 'win32' || typeof process.getuid !== 'function') return false;
-  try {
-    return insecureMode(statSync(dir));
-  } catch {
-    return false;
+export function currentWriter(
+  platform: string = process.platform,
+  ids: { uid: number; gid: number; username: string } | null = typeof process.getuid ===
+    'function' && typeof process.getgid === 'function'
+    ? { uid: process.getuid(), gid: process.getgid(), username: userInfo().username }
+    : null,
+  read: (path: string) => string = (path) => readFileSync(path, 'utf8'),
+): Writer | null {
+  if (platform === 'win32' || ids === null) return null;
+  let groupPrivate = false;
+  if (platform === 'linux') {
+    try {
+      groupPrivate = groupIsPrivate(ids.gid, ids.username, read('/etc/group'), read('/etc/passwd'));
+    } catch {
+      groupPrivate = false;
+    }
   }
+  return { uid: ids.uid, gid: ids.gid, groupIsPrivate: groupPrivate };
+}
+
+/** The first thing under `root` another user could change, or that Drafter can't vouch for. */
+interface Finding {
+  /** The module folder's name, or a path relative to it. */
+  path: string;
+  /** Why: an `accessProblem`, or that it can't be read or leaves the folder. */
+  why: string;
 }
 
 /**
@@ -172,43 +218,44 @@ function insecure(dir: string): boolean {
  * skipped, not loaded. A module's code and every file it serves live here, so one writable or
  * unreadable file anywhere is enough for someone else to change what Drafter runs.
  */
-function firstInsecure(root: string, folder: string): string | null {
-  if (process.platform === 'win32' || typeof process.getuid !== 'function') return null;
+function firstInsecure(root: string, folder: string, me: Writer): Finding | null {
+  const unsure = (path: string): Finding => ({ path, why: 'unsure' });
   let realRoot: string;
   try {
     realRoot = realpathSync(root);
   } catch {
-    return folder;
+    return unsure(folder);
   }
-  const scan = (path: string, rel: string): string | null => {
+  const scan = (path: string, rel: string): Finding | null => {
     const here = rel === '' ? folder : rel;
     let info: import('node:fs').Stats;
     try {
       info = lstatSync(path);
     } catch {
-      return here;
+      return unsure(here);
     }
     if (info.isSymbolicLink()) {
       let real: string;
       try {
         real = realpathSync(path);
       } catch {
-        return here; // A dangling link.
+        return unsure(here); // A dangling link.
       }
-      if (!within(realRoot, real)) return here; // A link out of the module's folder.
+      if (!within(realRoot, real)) return unsure(here); // A link out of the module's folder.
       try {
         info = statSync(path);
       } catch {
-        return here;
+        return unsure(here);
       }
     }
-    if (insecureMode(info)) return here;
+    const problem = accessProblem(info, me);
+    if (problem) return { path: here, why: problem };
     if (info.isDirectory()) {
       let entries: import('node:fs').Dirent[];
       try {
         entries = readdirSync(path, { withFileTypes: true });
       } catch {
-        return here; // A folder Drafter can't read.
+        return unsure(here); // A folder Drafter can't read.
       }
       for (const entry of entries) {
         const found = scan(
@@ -285,6 +332,7 @@ function readOne(dir: string, folder: string): LoadedModule | string {
 export function readModulesFolder(
   dir: string,
   reserved: readonly string[] = BUILT_IN_IDS,
+  me: Writer | null = currentWriter(),
 ): ModulesFolder {
   let names: string[];
   try {
@@ -304,13 +352,27 @@ export function readModulesFolder(
   } catch {
     return { modules: [], problems: [] };
   }
-  if (insecure(dir)) {
-    return {
-      modules: [],
-      problems: [
-        'Drafter skipped the modules folder: anyone on this computer can change it, so Drafter won’t run anything in it. Make it writable only by you.',
-      ],
-    };
+  if (me) {
+    let problem: string | undefined;
+    try {
+      problem = accessProblem(statSync(dir), me);
+    } catch {
+      problem = undefined; // Read above, so it exists; a failure here leaves nothing to load anyway.
+    }
+    if (problem === GROUP_PROBLEM) {
+      return {
+        modules: [],
+        problems: [`Drafter skipped the modules folder: ${GROUP_PROBLEM}. Run: chmod g-w ${dir}.`],
+      };
+    }
+    if (problem) {
+      return {
+        modules: [],
+        problems: [
+          'Drafter skipped the modules folder: anyone on this computer can change it, so Drafter won’t run anything in it. Make it writable only by you.',
+        ],
+      };
+    }
   }
   const modules: LoadedModule[] = [];
   const problems: string[] = [];
@@ -320,12 +382,14 @@ export function readModulesFolder(
       problems.push(skipped(folder, `Drafter reads at most ${LIMITS.modules} modules`));
       continue;
     }
-    const open = firstInsecure(join(dir, folder), folder);
+    const open = me ? firstInsecure(join(dir, folder), folder, me) : null;
     if (open !== null) {
       problems.push(
         skipped(
           folder,
-          `something under it (${open}) isn’t yours alone, or Drafter can’t read it, so Drafter won’t run it`,
+          open.why === GROUP_PROBLEM
+            ? `${GROUP_PROBLEM} (${open.path}). Run: chmod -R g-w ${join(dir, folder)}`
+            : `something under it (${open.path}) isn’t yours alone, or Drafter can’t read it, so Drafter won’t run it`,
         ),
       );
       continue;

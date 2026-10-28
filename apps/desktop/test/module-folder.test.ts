@@ -7,6 +7,9 @@ import {
   agreedOrigins,
   allowsModuleFrame,
   appCspWithModules,
+  currentWriter,
+  GROUP_PROBLEM,
+  groupIsPrivate,
   manifestProblem,
   moduleCsp,
   moduleHandler,
@@ -513,44 +516,130 @@ describe('readModulesFolder, insecure folders (POSIX)', () => {
 });
 
 describe('accessProblem (who may change a module)', () => {
-  const me = { uid: 501, gid: 20 };
-  test('accepts what the writer owns, writable by them alone or by their own group', () => {
+  const me = { uid: 501, gid: 20, groupIsPrivate: true };
+  test('accepts what the writer owns, writable by them alone or by their own private group', () => {
     expect(accessProblem({ mode: 0o40755, uid: 501, gid: 20 }, me)).toBeUndefined();
     expect(accessProblem({ mode: 0o100644, uid: 501, gid: 999 }, me)).toBeUndefined();
-    // Ubuntu's umask 002 with a user-private group: group-writable, but the group is the writer's own.
+    // Ubuntu's umask 002 with a user-private group.
     expect(accessProblem({ mode: 0o40775, uid: 501, gid: 20 }, me)).toBeUndefined();
     expect(accessProblem({ mode: 0o100664, uid: 501, gid: 20 }, me)).toBeUndefined();
   });
 
-  test('refuses world-writable, writable by another group, or owned by someone else', () => {
+  test('refuses world-writable, another group, a shared group, or another owner', () => {
     expect(accessProblem({ mode: 0o40777, uid: 501, gid: 20 }, me)).toMatch(/anyone/);
     expect(accessProblem({ mode: 0o100666, uid: 501, gid: 20 }, me)).toMatch(/anyone/);
-    expect(accessProblem({ mode: 0o40775, uid: 501, gid: 999 }, me)).toMatch(/group/);
+    expect(accessProblem({ mode: 0o40775, uid: 501, gid: 999 }, me)).toBe(GROUP_PROBLEM);
     expect(accessProblem({ mode: 0o100644, uid: 0, gid: 20 }, me)).toMatch(/owned/);
+    // The writer's own primary group, but not provably private (macOS's staff): refused.
+    const shared = { ...me, groupIsPrivate: false };
+    expect(accessProblem({ mode: 0o40775, uid: 501, gid: 20 }, shared)).toBe(GROUP_PROBLEM);
+    expect(accessProblem({ mode: 0o40755, uid: 501, gid: 20 }, shared)).toBeUndefined();
   });
 });
 
-describe('readModulesFolder, group-writable with the writer’s own group', () => {
-  test('loads a module unpacked under umask 002 when the group is the writer’s own', async () => {
-    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+describe('groupIsPrivate (Linux user-private groups)', () => {
+  const PASSWD =
+    'root:x:0:0:root:/root:/bin/bash\nana:x:1000:1000:Ana:/home/ana:/bin/bash\nbo:x:1001:1001::/home/bo:/bin/sh\n';
+  const GROUP = 'root:x:0:\nana:x:1000:\nbo:x:1001:\nstaff:x:50:ana,bo\n';
+  test('is private when its name is the user’s, it lists no members, and no one else has it', () => {
+    expect(groupIsPrivate(1000, 'ana', GROUP, PASSWD)).toBe(true);
+  });
+
+  test('is not when the name differs, it lists members, another account has it, or it is unknown', () => {
+    expect(groupIsPrivate(50, 'ana', GROUP, PASSWD)).toBe(false); // staff
+    expect(groupIsPrivate(1000, 'ana', GROUP.replace('ana:x:1000:', 'ana:x:1000:bo'), PASSWD)).toBe(
+      false,
+    );
+    expect(
+      groupIsPrivate(1000, 'ana', GROUP, `${PASSWD}eve:x:1002:1000::/home/eve:/bin/sh\n`),
+    ).toBe(false);
+    expect(groupIsPrivate(4242, 'ana', GROUP, PASSWD)).toBe(false); // LDAP or SSSD: not in the files
+    expect(groupIsPrivate(1000, 'ana', GROUP, 'root:x:0:0::/:/bin/sh\n')).toBe(false); // user not listed
+  });
+});
+
+describe('currentWriter', () => {
+  const ids = { uid: 1000, gid: 1000, username: 'ana' };
+  const files: Record<string, string> = {
+    '/etc/group': 'ana:x:1000:\n',
+    '/etc/passwd': 'ana:x:1000:1000::/home/ana:/bin/sh\n',
+  };
+  const read = (path: string) => {
+    const text = files[path];
+    if (text === undefined) throw new Error('ENOENT');
+    return text;
+  };
+  test('trusts a private group on Linux only', () => {
+    expect(currentWriter('linux', ids, read)).toEqual({
+      uid: 1000,
+      gid: 1000,
+      groupIsPrivate: true,
+    });
+    expect(currentWriter('darwin', ids, read)?.groupIsPrivate).toBe(false);
+    expect(currentWriter('freebsd', ids, read)?.groupIsPrivate).toBe(false);
+  });
+
+  test('fails closed when the files can’t be read, and checks nothing on Windows', () => {
+    expect(
+      currentWriter('linux', ids, () => {
+        throw new Error('EACCES');
+      })?.groupIsPrivate,
+    ).toBe(false);
+    expect(currentWriter('win32', ids, read)).toBeNull();
+  });
+});
+
+describe('readModulesFolder, group-writable', () => {
+  const writer = (groupIsPrivate: boolean) => ({
+    uid: (process.getuid as () => number)(),
+    gid: (process.getgid as () => number)(),
+    groupIsPrivate,
+  });
+  async function groupWritableModule(name: string) {
     const { chmodSync, chownSync } = await import('node:fs');
-    const uid = process.getuid();
-    const gid = (process.getgid as () => number)();
-    await addModule('ubuntu');
+    await addModule(name);
+    const me = writer(true);
     for (const path of [
       dir,
-      join(dir, 'ubuntu'),
-      join(dir, 'ubuntu', 'module.json'),
-      join(dir, 'ubuntu', 'index.js'),
+      join(dir, name),
+      join(dir, name, 'module.json'),
+      join(dir, name, 'index.js'),
     ]) {
-      chownSync(path, uid, gid);
+      chownSync(path, me.uid, me.gid);
     }
-    chmodSync(dir, 0o775);
-    chmodSync(join(dir, 'ubuntu'), 0o775);
-    chmodSync(join(dir, 'ubuntu', 'module.json'), 0o664);
-    chmodSync(join(dir, 'ubuntu', 'index.js'), 0o664);
-    const { modules, problems } = readModulesFolder(dir);
+    chmodSync(dir, 0o700);
+    chmodSync(join(dir, name), 0o775);
+    chmodSync(join(dir, name, 'module.json'), 0o664);
+    chmodSync(join(dir, name, 'index.js'), 0o664);
+  }
+
+  test('loads a module unpacked under umask 002 when the group is provably the writer’s own', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    await groupWritableModule('ubuntu');
+    const { modules, problems } = readModulesFolder(dir, [], writer(true));
     expect(problems).toEqual([]);
     expect(modules.map((m) => m.id)).toEqual(['ubuntu']);
+  });
+
+  test('refuses it when the group may be shared, with the command that fixes it', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    await groupWritableModule('shared');
+    const { modules, problems } = readModulesFolder(dir, [], writer(false));
+    expect(modules).toEqual([]);
+    expect(problems).toEqual([
+      `Drafter skipped the folder “shared”: a group other than yours alone can change it (shared). Run: chmod -R g-w ${join(dir, 'shared')}.`,
+    ]);
+  });
+
+  test('refuses a group-writable modules folder with the command that fixes it', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    const { chmodSync } = await import('node:fs');
+    await addModule('a');
+    chmodSync(dir, 0o770);
+    const { modules, problems } = readModulesFolder(dir, [], writer(false));
+    expect(modules).toEqual([]);
+    expect(problems).toEqual([
+      `Drafter skipped the modules folder: a group other than yours alone can change it. Run: chmod g-w ${dir}.`,
+    ]);
   });
 });
