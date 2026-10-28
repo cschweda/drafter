@@ -33,7 +33,8 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
     <section v-for="entry in common" :id="entry.id" :key="entry.id" class="entry">
       <h2>{{ entry.name }} <span class="mark">{{ entry.mark }}</span></h2>
       <p>{{ entry.rule }}</p>
-      <pre><code>{{ entry.example }}</code></pre>
+      <!-- An example wider than a phone scrolls sideways, so a keyboard can reach it too. -->
+      <pre tabindex="0" :aria-label="`${entry.name} example`"><code>{{ entry.example }}</code></pre>
     </section>
 
     <section id="stage-plays" aria-labelledby="stage-plays-title" class="entry">
@@ -47,7 +48,7 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
       <section v-for="entry in stage" :id="entry.id" :key="entry.id" class="entry">
         <h3>{{ entry.name }} <span class="mark">{{ entry.mark }}</span></h3>
         <p>{{ entry.rule }}</p>
-        <pre><code>{{ entry.example }}</code></pre>
+        <pre tabindex="0" :aria-label="`${entry.name} example`"><code>{{ entry.example }}</code></pre>
       </section>
     </section>
   </article>
@@ -70,5 +71,9 @@ pre {
   border-radius: 6px;
   background: var(--chrome-2);
   font: 13px/1.5 var(--font-mono, monospace);
+}
+pre:focus-visible {
+  outline: 2px solid var(--heading);
+  outline-offset: 2px;
 }
 </style>

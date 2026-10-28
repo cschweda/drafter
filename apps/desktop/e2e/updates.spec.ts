@@ -130,7 +130,7 @@ const settle = (ms = 1500) => new Promise((resolve) => setTimeout(resolve, ms));
 async function chooseNewScreenplay(page: Page) {
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
 }

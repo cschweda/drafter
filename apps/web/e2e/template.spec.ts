@@ -8,7 +8,7 @@ const chipMenu = (page: Page) => page.getByRole('menu');
 const chipItem = (page: Page, name: string) =>
   chipMenu(page).getByRole('menuitemcheckbox', { name });
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
-const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 
 const STAGE_BLOCK = /\/\* drafter\s*\{"v":1,"template":"stage-play-standard"\}\s*\*\//;
 

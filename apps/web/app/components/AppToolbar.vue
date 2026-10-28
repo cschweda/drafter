@@ -126,7 +126,7 @@ const ACTIONS = [
       </template>
       <ModuleButtons />
     </div>
-    <UDropdownMenu :items="templateItems" :content="{ align: 'start', onCloseAutoFocus }">
+    <UDropdownMenu :modal="false" :items="templateItems" :content="{ align: 'start', onCloseAutoFocus }">
       <button
         type="button"
         class="chip template"

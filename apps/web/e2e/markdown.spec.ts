@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { files, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
-// names is deferred to the project's final stage (decided 2026-10-26).
+// names is in a11y.spec.ts.
 
 const editor = (page: Page) => page.locator('.cm-content');
 const preview = (page: Page) => page.getByRole('article', { name: 'Preview' });
@@ -12,7 +12,7 @@ const chipMenu = (page: Page) => page.getByRole('menu');
 const chipItem = (page: Page, name: string) =>
   chipMenu(page).getByRole('menuitemcheckbox', { name });
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
-const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const paletteDialog = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const paletteOption = (page: Page, name: string) =>
   paletteDialog(page).getByRole('option', { name });

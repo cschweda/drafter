@@ -57,9 +57,10 @@ const label = computed(() =>
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px 12px;
+  gap: 0 12px;
   max-width: calc(100vw - 24px);
-  padding: 5px 12px;
+  /* Its buttons are 24px targets (WCAG 2.5.8): on a narrow phone the marker wraps. */
+  padding: 1px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--chrome);
@@ -72,6 +73,7 @@ const label = computed(() =>
   padding-left: 8px;
 }
 .leave {
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: none;

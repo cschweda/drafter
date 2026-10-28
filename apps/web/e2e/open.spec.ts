@@ -21,7 +21,7 @@ async function violations(page: Page) {
 
 const editor = (page: Page) => page.locator('.cm-content');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
-const menu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const zone = (page: Page) => page.locator('[data-drop-zone]');
 const dialog = (page: Page) => page.getByRole('dialog');

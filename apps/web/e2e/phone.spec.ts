@@ -6,7 +6,7 @@ import { setText } from './modules';
 // fit among them, so the app menu holds the template choice. The icon toolbar plus the app menu is
 // this design's "toolbar folds into a menu". These run at 320px (WCAG 1.4.10's reflow width) in
 // every engine, so the desktop projects check the same narrow layout.
-// (The accessibility checks for these states wait for the project's final stage, decided 2026-10-26.)
+// (The accessibility checks for these states, at phone sizes too, are in a11y.spec.ts.)
 
 const editor = (page: Page) => page.locator('.cm-content');
 const toolbar = (page: Page) => page.getByRole('banner');
@@ -86,9 +86,9 @@ test.describe('the toolbar at 320px', () => {
   }) => {
     // Open: the Scripts menu.
     await page.getByRole('button', { name: 'Open', exact: true }).click();
-    await expect(page.getByRole('group', { name: 'Scripts' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('group', { name: 'Scripts' })).toBeHidden();
+    await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeHidden();
 
     // Export: the export menu.
     await page.getByRole('button', { name: 'Export', exact: true }).click();

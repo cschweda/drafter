@@ -12,7 +12,7 @@ async function violations(page: Page) {
 const editor = (page: Page) => page.locator('.cm-content');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save', exact: true });
-const menu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const dialog = (page: Page) => page.getByRole('dialog');
 const bar = (page: Page) => page.locator('[data-file-bar]');

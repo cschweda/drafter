@@ -17,7 +17,7 @@ const notice = (page: Page) => page.locator('.notice [role="status"]');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
 const dialog = (page: Page) => page.getByRole('dialog');
 const bar = (page: Page) => page.locator('[data-file-bar]');
-const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 
 const MESSAGE = (file: string) =>
   `Reverted to the text last saved to ${file}. Undo brings your changes back.`;

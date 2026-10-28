@@ -27,7 +27,7 @@ const items = computed(() =>
 
 <template>
   <div class="modules">
-    <UDropdownMenu v-if="asMenu" :items="items" :content="{ align: 'end' }">
+    <UDropdownMenu :modal="false" v-if="asMenu" :items="items" :content="{ align: 'end' }">
       <button type="button" class="act" data-modules-menu>
         <span class="round module"><UIcon name="i-lucide-puzzle" class="icon" /></span>
         <span class="label">Modules</span>

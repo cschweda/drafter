@@ -697,7 +697,7 @@ test.describe('the text a closing page left behind', () => {
     await leaveStash(page, other.id, `${seeded}LAST WORDS`, now + 5000);
 
     await page.getByRole('button', { name: 'Open', exact: true }).click();
-    const menu = page.getByRole('group', { name: 'Scripts' });
+    const menu = page.getByRole('group', { name: 'Scripts', exact: true });
     await menu.locator('li', { hasText: 'Seeded' }).getByRole('button').first().click();
     await expect(editor(page)).toContainText('The stored words.');
     await expect(editor(page)).toContainText('LAST WORDS');
@@ -726,7 +726,7 @@ test.describe('the text a closing page left behind', () => {
     await leaveStash(page, other.id, 'A stale stash.', now - 5000);
 
     await page.getByRole('button', { name: 'Open', exact: true }).click();
-    const menu = page.getByRole('group', { name: 'Scripts' });
+    const menu = page.getByRole('group', { name: 'Scripts', exact: true });
     await menu.locator('li', { hasText: 'Seeded' }).getByRole('button').first().click();
     await expect(editor(page)).toContainText('The stored words.');
     await expect(editor(page)).not.toContainText('A stale stash.');

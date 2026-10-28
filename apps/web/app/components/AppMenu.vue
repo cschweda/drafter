@@ -183,7 +183,10 @@ function onCloseAutoFocus(event: Event) {
 </script>
 
 <template>
+  <!-- Every menu is non-modal: a modal one hides the page with aria-hidden while its controls stay
+       focusable (axe: aria-hidden-focus). A menu keeps Tab and arrow keys inside it either way. -->
   <UDropdownMenu
+    :modal="false"
     :items="items"
     :content="{ align: 'start', onCloseAutoFocus }"
     @update:open="onOpen"

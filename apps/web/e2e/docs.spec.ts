@@ -3,7 +3,7 @@ import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
 // They are prerendered, so they read without JavaScript, and they share the app's theme.
-// (Accessibility checks of these pages wait for the project's final stage, decided 2026-10-26.)
+// (Their accessibility checks are in a11y.spec.ts.)
 
 const editor = (page: Page) => page.locator('.cm-content');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });

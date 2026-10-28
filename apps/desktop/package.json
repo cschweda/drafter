@@ -26,6 +26,7 @@
     "e2e:packaged": "playwright test --config playwright.packaged.config.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
     "electron": "45.0.0",
     "electron-builder": "26.18.0"
