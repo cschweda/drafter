@@ -1,4 +1,13 @@
 export { readKeyedNote } from './keyed';
+export {
+  downTarget,
+  lineBreakOf,
+  type Move,
+  type MoveTarget,
+  moveItem,
+  targetAfterRow,
+  upTarget,
+} from './move';
 export { bodyEnd, sceneIndex, startsScene } from './scene-index';
 export type {
   OutlineItem,
