@@ -27,6 +27,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { checkPath, FileError, hasExtension, targetOf, writeAtomic } from './files';
+import { windowsPathProblem } from './windows-paths';
 
 interface Grant {
   /** The path as the page knows it (absolute, resolved). */
@@ -63,15 +64,18 @@ const isGrant = (value: unknown): value is Grant =>
 export class Grants {
   readonly #file: string;
   readonly #max: number;
+  /** On Windows, a real path Windows would read as another name, a stream, or a device is refused. */
+  readonly #windows: boolean;
   /** By path, oldest first. */
   #entries: Map<string, Grant> | undefined;
   /** Grants under way (a drop's), which a check waits for. */
   readonly #pending = new Set<Promise<unknown>>();
   #saving: Promise<void> = Promise.resolve();
 
-  constructor(file: string, options: { max?: number } = {}) {
+  constructor(file: string, options: { max?: number; platform?: string } = {}) {
     this.#file = file;
     this.#max = options.max ?? MAX_GRANTS;
+    this.#windows = (options.platform ?? process.platform) === 'win32';
   }
 
   #load(): Map<string, Grant> {
@@ -119,6 +123,10 @@ export class Grants {
   async grant(path: string, extensions?: readonly string[]): Promise<string> {
     const key = resolve(checkPath(path));
     const real = await targetOf(key);
+    // `checkPath` saw the name asked for; a link can lead to one Windows reads differently.
+    if (this.#windows && windowsPathProblem(real)) {
+      throw new FileError('not-allowed', 'a name Windows reads differently');
+    }
     if (extensions && !hasExtension(real, extensions)) {
       throw new FileError('not-allowed', 'not a script');
     }
@@ -152,6 +160,9 @@ export class Grants {
     const entry = this.#load().get(key);
     await this.#saving.catch(() => {});
     if (!entry) throw new FileError('not-allowed', 'not chosen');
+    if (this.#windows && windowsPathProblem(entry.real)) {
+      throw new FileError('not-allowed', 'a name Windows reads differently');
+    }
     if ((await targetOf(key)) !== entry.real) throw new FileError('not-allowed', 'moved');
     return entry.real;
   }

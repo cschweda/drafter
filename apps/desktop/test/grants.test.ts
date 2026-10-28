@@ -327,3 +327,26 @@ describe('what a page may read and write', () => {
     expect(await codeOf(handlers.watch(event, -1, join(dir, 'a')))).toBe('failed');
   });
 });
+
+describe.runIf(posix)('on Windows, the file a grant leads to', () => {
+  // Played on Linux and macOS, whose names may hold what a Windows name can't: a `:`.
+  test('is refused when its real name is one Windows reads as a stream (a link x.md to evil.exe:x.md)', async () => {
+    const target = join(dir, 'evil.exe:x.md');
+    await writeFile(target, 'not a script');
+    await symlink(target, join(dir, 'x.md'));
+    const grants = new Grants(join(dir, 'grants.json'), { platform: 'win32' });
+    expect(await codeOf(grants.grant(join(dir, 'x.md'), ['.md']))).toBe('not-allowed');
+    // Elsewhere the same file is a script by its real name's extension.
+    const elsewhere = new Grants(join(dir, 'grants-posix.json'), { platform: 'linux' });
+    expect(await elsewhere.grant(join(dir, 'x.md'), ['.md'])).toBe(join(dir, 'x.md'));
+  });
+
+  test('is refused by `allowed` too, for a grant kept from before', async () => {
+    const file = join(dir, 'notes.md:hidden');
+    await writeFile(file, 'x');
+    const list = join(dir, 'grants.json');
+    await writeFile(list, JSON.stringify({ files: [{ path: file, real: file }] }));
+    expect(await new Grants(list, { platform: 'linux' }).allowed(file)).toBe(file);
+    expect(await codeOf(new Grants(list, { platform: 'win32' }).allowed(file))).toBe('not-allowed');
+  });
+});
