@@ -12,6 +12,10 @@ import { apply, indexOf, screenplay, stagePlay } from './helpers';
 // pages with every Phase 2 note in place print the same as without them. Plan A writes scene
 // colors (`[[Color: …]]` header lines) and synopses; later plans add their notes and the Beat
 // Board block to this file.
+//
+// A color note typed by hand inside a line (`waits [[Color: red]] by`) is taken out alone: the
+// spaces around it stay (`waits  by`), because a note prints nothing and they print. Closing them up
+// would change the line's spacing on the page.
 
 const templateOf = (source: string) =>
   parse(source).meta?.template === 'stage-play-standard' ? stagePlay : screenplay;
@@ -72,4 +76,13 @@ describe('the printed script', () => {
       { numRuns: 200 },
     );
   });
+});
+
+test('taking out a color typed inside a line keeps the line as it prints', () => {
+  const source = 'INT. A - DAY\n\nShe waits [[Color: red]] by the door.\n';
+  const scene = indexOf(source).index.scenes[0];
+  if (!scene) throw new Error('no scene');
+  const plain = apply(source, setColor(parse(source), scene, null));
+  expect(plain).toBe('INT. A - DAY\n\nShe waits  by the door.\n');
+  expect(printed(plain)).toBe(printed(source));
 });

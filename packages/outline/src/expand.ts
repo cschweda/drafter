@@ -2,7 +2,7 @@ import type { Block, Doc, Span, TextChange } from '@drafter/fountain';
 import type { Template } from '@drafter/templates';
 import { safeLine } from './keyed';
 import { lineBreakOf } from './move';
-import { bodyEnd, contentEnd, sceneIndex, startsScene } from './scene-index';
+import { bodyEnd, contentEnd, hasStrayBoneyard, sceneIndex, startsScene } from './scene-index';
 
 // Expand outline (Phase 2 design §6.5): outline lines become scene stubs. A stub is a stand-in
 // heading, a blank line, and the line as its synopsis. The heading is always the same, never a
@@ -25,10 +25,13 @@ const stub = (heading: string, text: string, nl: string) => `${heading}${nl}${nl
 
 /**
  * The changes that turn every `=` line and every `- ` list paragraph in `range` that isn't in a
- * scene into scene stubs. Sections stay. A list paragraph only partly made of items is left as it
- * is. One transaction's worth of changes.
+ * scene into scene stubs. Sections stay, and so does a synopsis right under a section heading (the
+ * section's own). A list paragraph only partly made of items is left as it is. The line's words go
+ * in as they are, notes and boneyard included. Nothing while a `/*` is unclosed. One transaction's
+ * worth of changes.
  */
 export function expandOutline(doc: Doc, template: Template, range: Span): TextChange[] {
+  if (hasStrayBoneyard(doc)) return [];
   const { source } = doc;
   const nl = lineBreakOf(source);
   const heading = isPlay(template) ? STAGE_STUB : STUB_HEADING;
@@ -42,7 +45,17 @@ export function expandOutline(doc: Doc, template: Template, range: Span): TextCh
     const to = contentEnd(source, block.span.to);
     if (to < range.from || block.span.from > range.to) continue;
     if (inScene(block)) continue;
+    // A note or boneyard over more than one line would be split by the stubs: left alone.
+    const spansLines = doc.regions.some(
+      (r) =>
+        r.span.from < to &&
+        r.span.to > block.span.from &&
+        source.slice(r.span.from, r.span.to).includes('\n'),
+    );
+    if (spansLines) continue;
     let texts: string[] | null = null;
+    // A synopsis right under a section heading is the section's own, not a scene to be.
+    if (block.kind === 'synopsis' && doc.blocks[i - 1]?.kind === 'section') continue;
     if (block.kind === 'synopsis') {
       texts = block.lines.map((line) => line.raw.replace(/^\s*=\s*/, '').trim());
     } else if (block.kind === 'action') {
@@ -52,7 +65,7 @@ export function expandOutline(doc: Doc, template: Template, range: Span): TextCh
     if (!texts) continue;
     const stubs = texts
       .filter((t) => t !== '')
-      .map((t) => stub(heading, safeLine(t), nl))
+      .map((t) => stub(heading, t, nl))
       .join(nl + nl);
     if (stubs === '') continue;
     // A heading needs a blank line before it, and the next block one after the synopsis if it had

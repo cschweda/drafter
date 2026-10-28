@@ -97,8 +97,9 @@ describe('setColor', () => {
     expect(color('INT. A - DAY\n\n[[Color: blue]]\n[[Goal: Win.]]\n\nAction.\n', null)).toBe(
       'INT. A - DAY\n\n[[Goal: Win.]]\n\nAction.\n',
     );
-    expect(color('INT. A - DAY\n\nShe waits. [[Color: blue]]\n', null)).toBe(
-      'INT. A - DAY\n\nShe waits.\n',
+    // A note beside other text goes alone, and the spaces around it stay: the line prints as it did.
+    expect(color('INT. A - DAY\n\nShe waits [[Color: blue]] by.\n', null)).toBe(
+      'INT. A - DAY\n\nShe waits  by.\n',
     );
     expect(color('INT. A - DAY\n\nAction.\n', null)).toBe('INT. A - DAY\n\nAction.\n');
   });
@@ -128,5 +129,25 @@ describe('setColor', () => {
     expect(synopsis('INT. A - DAY\r\n\r\n[[Color: blue]]\r\n\r\nAction.\r\n', 'New.')).toBe(
       'INT. A - DAY\r\n\r\n= New.\r\n[[Color: blue]]\r\n\r\nAction.\r\n',
     );
+  });
+});
+
+describe('a script with an unclosed /*', () => {
+  const OPEN = 'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
+  test('gets no synopsis or color changes', () => {
+    const { doc, index } = indexOf(OPEN);
+    const scene = index.scenes[0];
+    if (!scene) throw new Error('no scene');
+    expect(setSynopsis(doc, scene, 'New.')).toEqual([]);
+    expect(setColor(doc, scene, 'blue')).toEqual([]);
+  });
+});
+
+describe('two-space lines', () => {
+  test("a synopsis joined to its neighbours by them isn't taken out", () => {
+    const source = 'INT. A - DAY\n\nCUT TO:\n  \n= the.\n  \n> the. <';
+    expect(synopsis(source, '')).toBe(source);
+    const speech = 'INT. A - DAY\n\nANN\nHi.\n  \n= the.\nANN\nHi.';
+    expect(synopsis(speech, '')).toBe(speech);
   });
 });

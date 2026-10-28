@@ -1,5 +1,5 @@
 import type { Doc, TextChange } from '@drafter/fountain';
-import { contentEnd } from './scene-index';
+import { contentEnd, hasBlankLine, hasStrayBoneyard } from './scene-index';
 import type { OutlineItem, SceneIndex } from './types';
 
 // Moving scenes and sections (Phase 2 design §6.2–6.3). A move is two changes, a delete and an
@@ -115,8 +115,9 @@ export function targetAfterRow(
 
 /**
  * Moves the scene or section whose heading is block `block` to `target`, as text changes. Null
- * when the move would change nothing, when the target is inside the moved section, or when
- * `block` is no scene or section.
+ * when the move would change nothing, when the target is inside the moved section, when `block`
+ * is no scene or section, while a `/*` is unclosed (a span could hold the metadata block), or when
+ * the item or its target isn't set off by blank lines (a script read leniently).
  */
 export function moveItem(
   doc: Doc,
@@ -125,7 +126,7 @@ export function moveItem(
   target: MoveTarget,
 ): Move | null {
   const item = itemAt(index, block);
-  if (!item) return null;
+  if (!item || hasStrayBoneyard(doc)) return null;
   const { source, blocks } = doc;
   const nl = lineBreakOf(source);
   const gap = nl + nl;
@@ -183,6 +184,20 @@ export function moveItem(
     cut = { from: range.from, to: next ? next.span.from : range.to };
   }
   if (at > cut.from && at < cut.to) return null;
+  // A script read leniently (a heading with no blank line before it, or two-space lines between
+  // items) could read differently once its pieces sit next to new neighbours: it isn't moved. The
+  // gaps that matter are the moved item's on both sides and the one at its target.
+  const nextFrom = (pos: number) => blocks.find((b) => b.span.from >= pos)?.span.from;
+  const gapAfter = (pos: number) => {
+    const next = nextFrom(pos);
+    return next === undefined ? null : source.slice(pos, next);
+  };
+  const gaps = [
+    previousEnd === undefined ? null : source.slice(previousEnd, range.from),
+    gapAfter(range.to),
+    'after' in target || index.preamble ? gapAfter(at) : null,
+  ];
+  if (gaps.some((g) => g !== null && !hasBlankLine(g))) return null;
 
   const start = (at <= cut.from ? at : at - (cut.to - cut.from)) + offset;
   const changes: TextChange[] = [

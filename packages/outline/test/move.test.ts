@@ -155,3 +155,21 @@ describe('targetAfterRow', () => {
     expect(targetAfterRow(index, actOne, false)).toEqual({ after: b.block });
   });
 });
+
+describe('a script with an unclosed /*', () => {
+  test('moves nothing, so the metadata block stays where it is', () => {
+    const source = 'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
+    expect(moved(source, 'INT. B', () => ({ start: true }))).toBeNull();
+    expect(up(source, 'INT. B')).toBeNull();
+    expect(down(source, 'INT. A')).toBeNull();
+  });
+});
+
+describe('a script read leniently', () => {
+  test('moves nothing whose heading has no blank line before it', () => {
+    // The last heading follows a lyric directly; next to a boneyard it would read differently.
+    const source =
+      'INT. A - DAY\n\nINT. B - DAY\n  \n/* x */\n\nINT. C - DAY\n\n~la.\nINT. D - DAY';
+    expect(moved(source, 'INT. C', () => ({ start: true }))).toBeNull();
+  });
+});

@@ -1,6 +1,7 @@
 import type { TextChange } from '@drafter/fountain';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
+import { fountainScript } from '../../../fixtures/generators/fountain';
 import { bodyEnd, type MoveTarget, moveItem, type SceneIndex } from '../src';
 import { anyScript } from './arbitraries';
 import { apply, indexOf } from './helpers';
@@ -11,15 +12,27 @@ const targets = (index: SceneIndex): MoveTarget[] => [
   ...index.items.map((i) => ({ after: i.block })),
 ];
 
-/** A script, one of its items, and a target: the move to try. */
-const moves = anyScript.chain((source) => {
-  const { index } = indexOf(source);
-  return fc.tuple(
-    fc.constant(source),
-    fc.integer({ min: 0, max: Math.max(0, index.items.length - 1) }),
-    fc.integer({ min: 0, max: index.items.length }),
-  );
-});
+/** A script from `scripts`, one of its items, and a target: the move to try. */
+const movesIn = (scripts: fc.Arbitrary<string>) =>
+  scripts.chain((source) => {
+    const { index } = indexOf(source);
+    return fc.tuple(
+      fc.constant(source),
+      fc.integer({ min: 0, max: Math.max(0, index.items.length - 1) }),
+      fc.integer({ min: 0, max: index.items.length }),
+    );
+  });
+/** Drafter-shaped scripts, one blank line between items. */
+const moves = movesIn(anyScript);
+/** Any script the parser's own generator makes, and Drafter-shaped ones. */
+const anyMoves = movesIn(fc.oneof(anyScript, fountainScript));
+
+/** The lines that hold anything, line breaks aside, sorted: what a move may only rearrange. */
+const nonBlankLines = (source: string) =>
+  source
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== '')
+    .sort();
 
 /** Where `pos` is after `changes` (none of them covers it). */
 function mapPos(pos: number, changes: readonly TextChange[]): number {
@@ -34,9 +47,9 @@ const sceneTexts = (source: string) => {
 };
 
 describe('moving, for any script', () => {
-  test("a move keeps every scene's text", () => {
+  test("a move keeps every scene's text, and the number of scenes", () => {
     fc.assert(
-      fc.property(moves, ([source, i, t]) => {
+      fc.property(anyMoves, ([source, i, t]) => {
         const { doc, index } = indexOf(source);
         const item = index.items[i];
         const target = targets(index)[t];
@@ -45,7 +58,11 @@ describe('moving, for any script', () => {
         if (!move) return;
         const result = apply(source, move.changes);
         expect(sceneTexts(result)).toEqual(sceneTexts(source));
-        expect(indexOf(result).index.scenes).toHaveLength(index.scenes.length);
+        const after = indexOf(result);
+        expect(after.index.scenes).toHaveLength(index.scenes.length);
+        const headingsIn = (d: typeof doc) =>
+          d.blocks.filter((b) => b.kind === 'scene_heading' || b.kind === 'section').length;
+        expect(headingsIn(after.doc)).toBe(headingsIn(doc));
         // The moved text is where the move says.
         expect(result.slice(move.at, move.at + (item.span.to - item.span.from))).toBe(
           source.slice(item.span.from, item.span.to),
@@ -84,9 +101,24 @@ describe('moving, for any script', () => {
     );
   });
 
+  test('a move changes no line, only where lines are', () => {
+    fc.assert(
+      fc.property(anyMoves, ([source, i, t]) => {
+        const { doc, index } = indexOf(source);
+        const item = index.items[i];
+        const target = targets(index)[t];
+        if (!item || !target) return;
+        const move = moveItem(doc, index, item.block, target);
+        if (!move) return;
+        expect(nonBlankLines(apply(source, move.changes))).toEqual(nonBlankLines(source));
+      }),
+      { numRuns: 500 },
+    );
+  });
+
   test('the preamble and the metadata block never move', () => {
     fc.assert(
-      fc.property(moves, ([source, i, t]) => {
+      fc.property(anyMoves, ([source, i, t]) => {
         const { doc, index } = indexOf(source);
         const item = index.items[i];
         const target = targets(index)[t];

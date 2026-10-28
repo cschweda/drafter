@@ -10,10 +10,20 @@ const expand = (source: string, range?: { from: number; to: number }) => {
 };
 
 describe('expandOutline', () => {
-  test('turns synopses outside scenes into stubs', () => {
-    expect(expand('# Act One\n\n= Margaret waits.\n\n= Danny comes home.\n')).toBe(
-      `# Act One\n\n${STUB_HEADING}\n\n= Margaret waits.\n\n${STUB_HEADING}\n\n= Danny comes home.\n`,
+  test("turns synopses outside scenes into stubs, but not a section's own", () => {
+    expect(expand('# Act One\n\n= The setup.\n\n= Margaret waits.\n\n= Danny comes home.\n')).toBe(
+      `# Act One\n\n= The setup.\n\n${STUB_HEADING}\n\n= Margaret waits.\n\n${STUB_HEADING}\n\n= Danny comes home.\n`,
     );
+  });
+
+  test('keeps notes and boneyard in a line as they are', () => {
+    expect(expand('= idea [[Color: red]] /* cut */\n')).toBe(
+      `${STUB_HEADING}\n\n= idea [[Color: red]] /* cut */\n`,
+    );
+  });
+
+  test('expands nothing while a /* is unclosed', () => {
+    expect(expand('= One.\n\n/* oops\n')).toBe('= One.\n\n/* oops\n');
   });
 
   test('turns a list into stubs', () => {
@@ -35,14 +45,14 @@ describe('expandOutline', () => {
   });
 
   test('keeps sections, and a blank line before a stub that follows a line directly', () => {
-    expect(expand('# Act One\n= Margaret waits.\n[[A note.]]\n')).toBe(
-      `# Act One\n\n${STUB_HEADING}\n\n= Margaret waits.\n[[A note.]]\n`,
+    expect(expand('# Act One\n\n[[A note.]]\n= Margaret waits.\n[[Another.]]\n')).toBe(
+      `# Act One\n\n[[A note.]]\n\n${STUB_HEADING}\n\n= Margaret waits.\n[[Another.]]\n`,
     );
   });
 
   test('uses ## New scene in a play', () => {
     const source =
-      '# Act One\n\n= Margaret waits.\n\n/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n';
+      '# Act One\n\n- Margaret waits.\n\n/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n';
     const result = expand(source);
     expect(result).toBe(
       `# Act One\n\n${STAGE_STUB}\n\n= Margaret waits.\n\n/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n`,

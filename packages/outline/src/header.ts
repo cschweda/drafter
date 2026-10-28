@@ -1,7 +1,7 @@
 import type { Block, Doc, TextChange } from '@drafter/fountain';
 import { safeLine } from './keyed';
 import { lineBreakOf } from './move';
-import { contentEnd } from './scene-index';
+import { contentEnd, hasStrayBoneyard, isPlainGap } from './scene-index';
 import type { Scene, SceneColor } from './types';
 
 // A scene's header (Phase 2 design §5.4): the synopsis and note lines right under the heading's
@@ -28,9 +28,10 @@ const endOf = (doc: Doc, block: Block) => contentEnd(doc.source, block.span.to);
 
 /**
  * The change that removes line `line` of block `index` along with one line break, so the lines
- * around it close up: the break after it inside a header, or the gap before it otherwise.
+ * around it close up: the break after it inside a header, or the gap before it otherwise. Null when
+ * two-space lines join it to what's around it, which would then join each other.
  */
-function removeLine(doc: Doc, index: number, line: number): TextChange {
+function removeLine(doc: Doc, index: number, line: number): TextChange | null {
   const block = doc.blocks[index] as Block;
   const lines = block.lines;
   const here = lines[line];
@@ -46,10 +47,17 @@ function removeLine(doc: Doc, index: number, line: number): TextChange {
     };
   }
   const next = doc.blocks[index + 1];
+  const previous = doc.blocks[index - 1];
+  // A two-space line joins lines; taking this one out next to one would join its neighbours.
+  const twoSpaces = (raw: string | undefined) => raw?.replace(/\r$/, '') === '  ';
+  if (twoSpaces(previous?.lines.at(-1)?.raw) || twoSpaces(next?.lines[0]?.raw)) return null;
   if (next && isLineBreak(next.leading)) {
+    // Only inside a header, where what closes up behind it prints nothing either.
+    if (next.kind !== 'note' && next.kind !== 'synopsis') return null;
     return { from: block.span.from, to: next.span.from, insert: '' };
   }
-  const previous = doc.blocks[index - 1];
+  // Two-space lines around it join it to its neighbours: taking it out would join them instead.
+  if (!isPlainGap(block.leading) || (next && !isPlainGap(next.leading))) return null;
   const from = previous ? endOf(doc, previous) : block.span.from;
   return { from, to: endOf(doc, block), insert: '' };
 }
@@ -60,6 +68,7 @@ function removeLine(doc: Doc, index: number, line: number): TextChange {
  * written on one line, and can't open a note or a boneyard.
  */
 export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] {
+  if (hasStrayBoneyard(doc)) return [];
   const words = safeLine(text);
   const nl = lineBreakOf(doc.source);
   const first = scene.synopses[0];
@@ -67,7 +76,10 @@ export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] 
     const block = doc.blocks[first.block] as Block;
     const line = block.lines[0];
     if (!line) return [];
-    if (words === '') return [removeLine(doc, first.block, 0)];
+    if (words === '') {
+      const removal = removeLine(doc, first.block, 0);
+      return removal ? [removal] : [];
+    }
     // The text runs to the first note on the line, if one follows it there.
     const lineEnd = contentEnd(doc.source, line.span.to);
     const note = doc.regions.find((r) => r.span.from > line.span.from && r.span.from < lineEnd);
@@ -90,9 +102,11 @@ export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] 
 /**
  * The changes that give the scene `color` (design §5.4): its color note changed in place, or
  * `[[Color: blue]]` added to the header after the synopses and before other notes. Null takes the
- * color away, with its line when it is alone on one.
+ * color away, with its line when it is alone on one; beside other text only the note goes. A script
+ * with an unclosed `/*` gets no changes.
  */
 export function setColor(doc: Doc, scene: Scene, color: SceneColor | null): TextChange[] {
+  if (hasStrayBoneyard(doc)) return [];
   const nl = lineBreakOf(doc.source);
   const note = `[[Color: ${color}]]`;
   const existing = scene.color;
@@ -112,11 +126,12 @@ export function setColor(doc: Doc, scene: Scene, color: SceneColor | null): Text
       if (!found) continue;
       const raw = doc.source.slice(found.span.from, contentEnd(doc.source, found.span.to));
       if (raw.trim() === doc.source.slice(existing.span.from, existing.span.to)) {
-        return [removeLine(doc, i, line)];
+        const removal = removeLine(doc, i, line);
+        return removal ? [removal] : [];
       }
-      let from = existing.span.from;
-      while (from > found.span.from && /[ \t]/.test(doc.source[from - 1] ?? '')) from--;
-      return [{ from, to: existing.span.to, insert: '' }];
+      // Beside other text, only the note goes: the spaces around it stay, so the line prints
+      // exactly as it did (a note prints nothing, and its neighbours' spaces do).
+      return [{ ...existing.span, insert: '' }];
     }
     return [{ ...existing.span, insert: '' }];
   }

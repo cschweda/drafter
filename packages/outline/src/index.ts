@@ -10,7 +10,7 @@ export {
   targetAfterRow,
   upTarget,
 } from './move';
-export { bodyEnd, sceneIndex, startsScene } from './scene-index';
+export { bodyEnd, hasStrayBoneyard, sceneIndex, startsScene } from './scene-index';
 export { markdownText, treatment } from './treatment';
 export type {
   OutlineItem,
