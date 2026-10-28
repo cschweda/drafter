@@ -18,7 +18,9 @@
     "typecheck": "tsc --noEmit",
     "e2e": "tsdown && playwright test",
     "package": "electron-builder --config electron-builder.config.cjs --linux --publish never",
+    "package:mac": "electron-builder --config electron-builder.config.cjs --mac --publish never",
     "dist": "pnpm build && pnpm build:web && pnpm package",
+    "desktop:mac": "pnpm build && pnpm build:web && pnpm package:mac",
     "e2e:packaged": "playwright test --config playwright.packaged.config.ts"
   },
   "devDependencies": {

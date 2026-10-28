@@ -233,6 +233,18 @@ files['icon-square.svg'] = svg(
   `<defs>${gradient('g')}</defs>${mark({ size: 512, id: 'g', square: true, inset: 0.8 })}`,
 );
 
+/**
+ * The macOS app icon: the tile on Apple's 1024-pixel grid (824 pixels, centred, with a soft shadow
+ * below), so it sits in the Dock and Finder at the size of every other app's.
+ */
+files['icon-mac.svg'] = svg(
+  1024,
+  1024,
+  `<defs>${gradient('g')}` +
+    '<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/></filter></defs>' +
+    `<g filter="url(#shadow)">${mark({ x: 100, y: 100, size: 824, id: 'g' })}</g>`,
+);
+
 for (const [name, content] of Object.entries(files)) writeFileSync(here(name), content);
 
 // --- PNGs and the .ico ----------------------------------------------------------
@@ -254,6 +266,7 @@ png('mark.svg', 192, 'icon-192.png');
 png('mark.svg', 512, 'icon-512.png');
 png('icon-square.svg', 180, 'apple-touch-icon.png');
 png('icon-square.svg', 512, 'icon-maskable-512.png');
+png('icon-mac.svg', 1024, 'icon-mac-1024.png');
 
 /** A .ico holding PNG images, which every current browser reads. */
 const sizes = [16, 32, 48];
@@ -282,4 +295,4 @@ sizes.forEach((size, i) => {
 });
 writeFileSync(here('favicon.ico'), Buffer.concat([header, ...images]));
 
-console.log(`Wrote ${Object.keys(files).length} SVGs, 6 PNGs, and favicon.ico to brand/.`);
+console.log(`Wrote ${Object.keys(files).length} SVGs, 7 PNGs, and favicon.ico to brand/.`);
