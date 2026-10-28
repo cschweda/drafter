@@ -247,7 +247,12 @@ interface Finding {
  * skipped, not loaded. A module's code and every file it serves live here, so one writable or
  * unreadable file anywhere is enough for someone else to change what Drafter runs.
  */
-function firstInsecure(root: string, folder: string, me: Writer | null): Finding | null {
+function firstInsecure(
+  root: string,
+  folder: string,
+  me: Writer | null,
+  windows = false,
+): Finding | null {
   const unsure = (path: string): Finding => ({ path, why: 'unsure' });
   let realRoot: string;
   try {
@@ -279,6 +284,9 @@ function firstInsecure(root: string, folder: string, me: Writer | null): Finding
     }
     const problem = me ? accessProblem(info, me) : undefined;
     if (problem) return { path: here, why: problem };
+    // On Windows nothing compares owners, so a hard link (one file under two names, the other
+    // anywhere on the drive) could be a file someone else can change: refused.
+    if (windows && info.isFile() && info.nlink > 1) return unsure(here);
     if (info.isDirectory()) {
       let entries: import('node:fs').Dirent[];
       try {
@@ -512,7 +520,7 @@ export function readModulesFolder(
       problems.push(skipped(folder, `Drafter reads at most ${LIMITS.modules} modules`));
       continue;
     }
-    const open = firstInsecure(join(dir, folder), folder, me);
+    const open = firstInsecure(join(dir, folder), folder, me, platform === 'win32');
     if (open !== null) {
       problems.push(
         skipped(

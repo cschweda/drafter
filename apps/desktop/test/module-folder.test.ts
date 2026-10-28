@@ -774,6 +774,24 @@ describe('on Windows (no POSIX permissions: the profile folder’s own protectio
     }
   });
 
+  test('skips a module with a hard link in it, which could be a file from anywhere on the drive', async () => {
+    const { link } = await import('node:fs/promises');
+    const outside = await mkdtemp(join(tmpdir(), 'drafter-outside-'));
+    try {
+      await writeFile(join(outside, 'shared.js'), 'export default {}');
+      await addModule('linked');
+      await link(join(outside, 'shared.js'), join(dir, 'linked', 'shared.js'));
+      await addModule('tidy');
+      const { modules, problems } = readModulesFolder(dir, [], null, 'win32');
+      expect(modules.map((m) => m.id)).toEqual(['tidy']);
+      expect(problems[0]).toMatch(
+        /Drafter skipped the folder “linked”: something under it \(shared\.js\)/,
+      );
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
   test('skips every module when the modules folder is itself a link to a folder elsewhere', async () => {
     const elsewhere = await mkdtemp(join(tmpdir(), 'drafter-elsewhere-'));
     const linked = join(dir, 'linked-modules');
