@@ -333,9 +333,10 @@ test('updates itself for real: 1.0.0 downloads 1.0.1, and Restart installs and s
     installDir = join(root, 'Programs', 'DrafterUpdate');
     run(oldSetup, ['/S', `/D=${installDir}`]);
     const version = () =>
+      // Windows gives four parts: 1.0.0.0.
       powershell(
         `(Get-Item -LiteralPath '${exe().replaceAll("'", "''")}').VersionInfo.ProductVersion`,
-      );
+      ).replace(/^(\d+\.\d+\.\d+)\.0$/, '$1');
     expect(version()).toBe('1.0.0');
     const { page } = await launch();
     // Past the first-run welcome, as a writer who has used Drafter (the offer comes again after it).
