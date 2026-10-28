@@ -1,19 +1,49 @@
-// Compares what a GitHub Release holds with the packages in a folder: each file must be on the
-// release as an uploaded asset of the same name and size, and, when the API gives a digest
-// ("sha256:…"), of the same content. Used by .github/scripts/publish-release.sh both to check a
-// draft after uploading and to decide whether a release that is already published is the same
-// build (it is never uploaded to):
+// What a release carries, and whether a GitHub Release holds it. A release is the Linux packages
+// (the AppImage, the .deb, latest-linux.yml) and the Windows installers (x64 and arm64, latest.yml),
+// all built from one tag, and nothing goes up unless all of them are there.
+//   node scripts/check-release-assets.mjs --list <folder>
+//     checks the folder holds exactly one of each and prints their names, one a line (the files
+//     .github/scripts/publish-release.sh uploads)
 //   gh api repos/OWNER/REPO/releases/ID --jq .assets | node scripts/check-release-assets.mjs <folder>
+//     checks the release holds each file as an uploaded asset of the same name and size, and, when
+//     the API gives a digest ("sha256:…"), of the same content. The script uses it both to check a
+//     draft after uploading and to decide whether a release that is already published is the same
+//     build (it is never uploaded to).
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** The files a release carries: the AppImage, the .deb, and the update feed. */
+/** Each file a release must carry: one in the folder for each. */
+export const RELEASE_FILES = [
+  { what: 'an AppImage', test: (name) => name.endsWith('.AppImage') },
+  { what: 'a .deb', test: (name) => name.endsWith('.deb') },
+  { what: 'latest-linux.yml', test: (name) => name === 'latest-linux.yml' },
+  { what: 'the x64 Windows installer', test: (name) => /-windows-x64-setup\.exe$/.test(name) },
+  { what: 'the arm64 Windows installer', test: (name) => /-windows-arm64-setup\.exe$/.test(name) },
+  { what: 'latest.yml', test: (name) => name === 'latest.yml' },
+];
+
+/** The files in the folder that a release carries, by name. */
 export function packageFiles(dir) {
   return readdirSync(dir)
-    .filter((name) => /\.(AppImage|deb)$/.test(name) || name === 'latest-linux.yml')
+    .filter((name) => RELEASE_FILES.some((kind) => kind.test(name)))
     .sort();
+}
+
+/** What is missing from the folder, or there twice; empty when it holds exactly one of each. */
+export function folderProblems(dir) {
+  const files = packageFiles(dir);
+  const problems = [];
+  for (const kind of RELEASE_FILES) {
+    const found = files.filter((name) => kind.test(name));
+    if (found.length === 0) problems.push(`${dir} has no ${kind.what.replace(/^(an?|the) /, '')}`);
+    if (found.length > 1)
+      problems.push(`${dir} has more than one of ${kind.what}: ${found.join(', ')}`);
+  }
+  return problems.length > 0
+    ? [`expected ${RELEASE_FILES.map((kind) => kind.what).join(', ')}; ${problems.join('; ')}`]
+    : [];
 }
 
 /**
@@ -22,14 +52,10 @@ export function packageFiles(dir) {
  * @returns {string[]} what differs, empty when the release holds exactly these files
  */
 export function compareAssets(dir, assets) {
-  const files = packageFiles(dir);
-  if (files.length !== 3) {
-    return [
-      `expected an AppImage, a .deb, and latest-linux.yml in ${dir}; found: ${files.join(', ')}`,
-    ];
-  }
+  const wrong = folderProblems(dir);
+  if (wrong.length > 0) return wrong;
   const problems = [];
-  for (const name of files) {
+  for (const name of packageFiles(dir)) {
     const asset = assets.find((candidate) => candidate.name === name);
     if (!asset) {
       problems.push(`${name}: not on the release`);
@@ -54,20 +80,31 @@ export function compareAssets(dir, assets) {
   return problems;
 }
 
+const fail = (problems) => {
+  for (const problem of problems) console.error(`::error::${problem}`);
+  process.exit(1);
+};
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const dir = process.argv[2];
-  if (!dir) {
-    console.error('usage: <assets JSON> | node scripts/check-release-assets.mjs <folder>');
+  const args = process.argv.slice(2);
+  if (args[0] === '--list' && args[1]) {
+    const problems = folderProblems(args[1]);
+    if (problems.length > 0) fail(problems);
+    for (const name of packageFiles(args[1])) console.log(name);
+  } else if (args[0] && !args[0].startsWith('-')) {
+    const dir = args[0];
+    const chunks = [];
+    process.stdin.on('data', (chunk) => chunks.push(chunk));
+    process.stdin.on('end', () => {
+      const problems = compareAssets(dir, JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      if (problems.length > 0) fail(problems);
+      console.log(`The release holds exactly the files in ${dir}`);
+    });
+  } else {
+    console.error(
+      'usage: node scripts/check-release-assets.mjs --list <folder>\n' +
+        '       <assets JSON> | node scripts/check-release-assets.mjs <folder>',
+    );
     process.exit(2);
   }
-  const chunks = [];
-  process.stdin.on('data', (chunk) => chunks.push(chunk));
-  process.stdin.on('end', () => {
-    const problems = compareAssets(dir, JSON.parse(Buffer.concat(chunks).toString('utf8')));
-    if (problems.length > 0) {
-      for (const problem of problems) console.error(`::error::${problem}`);
-      process.exit(1);
-    }
-    console.log(`The release holds exactly the files in ${dir}`);
-  });
 }
