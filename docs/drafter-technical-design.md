@@ -508,10 +508,11 @@ Every operation returns `TextChange[]` for the editor to apply in one transactio
 
 - **Scene range.** `sceneRange(i)` = from the heading block's `span.from` (including its `leading` if the user is moving it) to the `span.to` of the last block before the next heading or section. The metadata block (§8.6) is never part of a scene range, so moving the last scene leaves it at the end of the file.
 - **Move scene A after scene B.** Two changes: delete `sceneRange(A)`, insert its text after `sceneRange(B)`. Applied as a single transaction with CodeMirror's change-set composition so offsets are consistent. Scene numbers in `#n#` are left alone; a lint rule flags out-of-order locked numbers.
-- **Edit synopsis.** If the scene has a `synopsis` block, replace its text (after `=`); otherwise insert `= text` on a new line after the heading.
-- **Set color.** Write to the metadata block (§8.6) keyed by a stable scene id; scene ids are the heading text plus an occurrence counter, recomputed on each parse. Colors therefore survive reordering but not renaming — acceptable, and documented.
+- **The scene index and identity.** `sceneIndex(doc, template, layout?)` derives the scenes, sections, and tree from each parse ([Phase 2 design](drafter-phase2-design.md) §5.1). A scene's identity lives in the editor's session (`sceneIds` in `cm-fountain`), mapped through every change and carried across Drafter's own moves by an annotation (§5.2); it is never saved.
+- **Edit synopsis.** If the scene has a `synopsis` block, replace its text (after `=`); otherwise insert `= text` at the top of the scene's header, under the heading.
+- **Set color.** Write `[[Color: blue]]` in the scene's header, after its synopses (Phase 2 design §5.4; decided 2026-10-28). The color is in the scene's own text, so it survives reordering, renaming, and editing in another app.
 - **Condense.** Not an operation: it is the fold-all command (§3.5) plus the Outline tab. "Export as treatment" walks sections → synopses → first action paragraph of each scene into Markdown.
-- **Expand from outline.** Input: Markdown with `#` headings and list items. Output: Fountain text where headings become `#` sections, each list item becomes a `= synopsis` under a stub `INT./EXT.` heading chosen by a simple heuristic (`INT.` unless the item contains "outside", "exterior", "street", "road", etc.), followed by a blank action placeholder. The user then fixes headings. This is deliberately dumb; it is a scaffolding tool, not a story generator.
+- **Expand from outline.** Input: Markdown with `#` headings and list items. Output: Fountain text where headings become `#` sections, each list item becomes a `= synopsis` under a stub `INT./EXT.` heading chosen by a simple heuristic (`INT.` unless the item contains "outside", "exterior", "street", "road", etc.), followed by a blank action placeholder. The user then fixes headings. This is deliberately dumb; it is a scaffolding tool, not a story generator. *Superseded by Phase 2 design §6.5:* every stub's heading is `INT. LOCATION - DAY` (`## New scene` in a play), with no guessing, and the `stub-heading` lint rule (info) lists the stubs still holding it.
 - **Cards.** The Cards view is a different rendering of the same `OutlineModel = { sections: [{ title, scenes: [{ id, heading, synopsis, color, pageStart, pageEnd, characters }] }] }`, which `outline` computes from `Doc` + `Layout.index`.
 
 ---
@@ -557,7 +558,7 @@ Private windows can't always be detected, so the warning says the browser *may* 
 
 ### 8.4 Snapshots
 
-A snapshot is the full source (a feature is ~150–250 KB). Created: every 10 minutes of active editing, on every save to file, on explicit "Snapshot" (with optional label), before any outline operation, and before FDX import. Retention: keep all labeled snapshots; keep all unlabeled from the last 24 hours; thin to one per hour for 7 days; one per day for 90 days; then delete. Compare view diffs two snapshots at the line level (Myers diff on lines), renders both as pages, and marks changed lines; this is also the input to revision-mode PDF.
+A snapshot is the full source (a feature is ~150–250 KB), stored gzip-compressed with the browser's `CompressionStream`. Created: every 10 minutes of active writing, on every save to file, on explicit "Take snapshot" (with optional label), and before a bulk operation (expand, a reader merge, Fix all, Revert to Saved, restoring a snapshot) and FDX import; a single scene move is not one, since undo covers it (Phase 2 design §11.1). A snapshot equal to the newest is not taken. Retention: keep all labeled snapshots; keep all unlabeled from the last 24 hours; thin to one per hour for 7 days; one per day for 90 days; then delete. The snapshot of the last save is always kept. Compare view diffs two snapshots at the line level (Myers diff on lines), renders both as pages, and marks changed lines; this is also the input to revision-mode PDF.
 
 ### 8.5 Files on disk
 
@@ -575,12 +576,11 @@ On Chromium a project may be bound to a file. Save writes through the handle; Sa
 
 ### 8.6 Drafter metadata in the file
 
-Non-prose state that must travel with the file (template id, scene colors, locked dictionary, revision marks) lives in a single boneyard block at the end of the file:
+Non-prose state that belongs to the whole script and must travel with the file (template id, locked dictionary, revision marks) lives in a single boneyard block at the end of the file. Phase 2 adds `storylines` (each label's name and color), `categories` and `readers` (their colors), `review` (set while a copy is out for notes), and `guides` (the pacing view's structure guide); none is keyed by scene ([Phase 2 design](drafter-phase2-design.md) §5.5). Scene colors are header notes in the scene, not entries here (§7):
 
 ```
 /* drafter
 { "v": 1, "template": "us-screenplay",
-  "scenes": { "INT. KITCHEN - NIGHT#1": { "color": "blue" } },
   "dictionary": ["Keokuk", "Vogeltronics"],
   "revision": { "label": "Pink", "since": "2026-10-20T15:00:00Z" } }
 */
@@ -660,7 +660,7 @@ Web Speech API. The command walks dialogue groups; each distinct character is as
 
 ## 13. Accessibility
 
-Target WCAG 2.2 AA from the first public release, verified automatically from Phase 1 (axe, keyboard tests, and accessibility-tree assertions) and with NVDA and VoiceOver from Phase 2.
+Target WCAG 2.2 AA from the first public release, verified automatically from Phase 1 (axe, keyboard tests, and accessibility-tree assertions), and with NVDA and VoiceOver last, after every phase is built (Phase 2 design §20).
 
 - **Source pane:** CodeMirror's content element is `contenteditable` with `role="textbox"` and `aria-multiline`. Drafter adds a live region that announces element kind on block change ("Character", "Dialogue") so a screen-reader user hears structure. (A per-line `aria-roledescription` wouldn't work: browsers don't expose it on elements without a role, such as CodeMirror's line elements.)
 - **Rendered pane:** the script is one landmark region labeled "Script," not one region per page (a feature would have 120), and each page starts with a visually hidden "Page N" marker. Headings follow what prints, so heading navigation walks the script's structure: scene headings are `<h2>`, and in templates that print sections (the stage play), act headings are `<h2>` and scene headings `<h3>`. Character cues aren't headings, since a feature has about a thousand; each dialogue group is a group labeled by its cue. Synthetic lines (`(MORE)`, page numbers) are `aria-hidden`.

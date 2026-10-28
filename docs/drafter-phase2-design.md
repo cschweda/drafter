@@ -186,7 +186,7 @@ MARGARET sits at the table, not eating.
 
 In a stage play the heading is the `## Scene` line. Clearing a field removes its note, and the line with it. Every line here is transparent, so the pages don't change (§1, item 2).
 
-**Call: scene colors move into the header** as `[[Color: blue]]`, not the metadata block that technical design §7 and §8.6 planned (no color has been built yet). Reason: one rule (what belongs to a scene is in the scene) means a color travels with its scene through reorders, renames, and other apps. The cost is one visible note line in other apps, which tells their readers the color too. Colors are words from Drafter's palette (red, orange, yellow, green, teal, blue, purple, pink, gray), so the file reads plainly.
+**Decided (2026-10-28): scene colors move into the header** as `[[Color: blue]]`, not the metadata block that technical design §7 and §8.6 planned (no color has been built yet). Reason: one rule (what belongs to a scene is in the scene) means a color travels with its scene through reorders, renames, and other apps. The cost is one visible note line in other apps, which tells their readers the color too. Colors are words from Drafter's palette (red, orange, yellow, green, teal, blue, purple, pink, gray), so the file reads plainly.
 
 ### 5.5 The metadata block
 
@@ -637,7 +637,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 | 5.2 | Scene identity lives in the session, not the file | Per-scene data is inside the scene, so the file needs no ids. |
 | 5.3 | One keyed-note convention for all placed data | Notes never print, and every Fountain app keeps them. |
 | 5.3 | An all-capitals head is a category | `[[TODO: …]]` files itself. |
-| 5.4 | Scene colors are header notes, not metadata | They survive renames, reorders, and other apps. |
+| 5.4 | Scene colors are header notes, not metadata (decided 2026-10-28) | They survive renames, reorders, and other apps. |
 | 5.6 | Beat Board cards are synopsis lines in a boneyard | Placing a card needs no translation; other apps never show the board. |
 | 5.7 | No scene views for Markdown documents | Markdown has no scenes or notes. |
 | 5.8 | Four fixed tabs, one slot, then More | Nine tabs don't fit a pane. |
@@ -669,9 +669,7 @@ The order is the suggested one with two changes, both Calls: **setups and payoff
 
 ## 24. Open questions
 
-None blocks Plan A. One is worth the maintainer's eye before Plan B:
-
-- **Scene colors as visible notes (§5.4).** This document moves colors out of the metadata block, where the technical design planned them, into a `[[Color: blue]]` line in each colored scene. It's the better engineering answer, but writers who open the file in another app will see those lines. If that's unwelcome, colors can go back to the metadata block keyed by heading, accepting that a renamed heading loses its color.
+None. The one this section held, scene colors as visible notes (§5.4), was decided on 2026-10-28: a color is a `[[Color: blue]]` line in the scene's header. It survives renames, reordering, and other apps; notes never print; and it keeps the one-convention rule (§5.3). The cost, a visible note line in other apps, is accepted.
 
 ## 25. Left to the builder
 
@@ -684,7 +682,7 @@ None blocks Plan A. One is worth the maintainer's eye before Plan B:
 
 ## 26. Changes to the earlier documents
 
-To be made when this design is approved:
+Made with Plan A (2026-10-28):
 
 - **README** (Roadmap): move "Testing with NVDA and VoiceOver" out of Phase 2 to a final step after Phase 5; mark "Writing statistics by day" as shipped in v0.5.0; change Phase 1's "Testing with NVDA and VoiceOver follows in Phase 2" and the same date under "What makes it different" to say it comes last; link this design under Design documents.
 - **Architecture §5.1 and §5.3:** scene colors live in scene headers as keyed notes; the metadata block keeps script-wide data. **§12 and §13:** NVDA and VoiceOver come last. **§14:** the scene-identity question is closed by §5.2.

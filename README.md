@@ -163,11 +163,12 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev** (v0.8.0), with the desktop app for Linux and Windows; the accessibility pass is next, then macOS |
-| [2](#phase-2--structure) | Structure: outline, cards, beat board, storylines, snapshots, spellcheck, screen-reader testing | Planned |
+| [2](#phase-2--structure) | Structure: outline, cards, beat board, storylines, snapshots, spellcheck | Planned |
 | [3](#phase-3--formats) | Formats: Final Draft and other imports; TV, radio, UK, and novel templates; user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
 | [Later](#later) | Open from and save to Dropbox and Google Drive directly | Planned |
+| [Last](#last--testing-with-nvda-and-voiceover) | Testing with NVDA and VoiceOver, after every phase is built | Planned |
 
 ### Phase 0 — Engine (no UI)
 
@@ -210,7 +211,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
 - Deployment to drafter.dev.
 
-**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. Testing with NVDA and VoiceOver follows in Phase 2. The [Phase 1 design](docs/drafter-phase1-design.md) has the details.
+**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. Testing with NVDA and VoiceOver comes last, after every phase is built. The [Phase 1 design](docs/drafter-phase1-design.md) has the details.
 
 ### Phase 2 — Structure
 
@@ -220,12 +221,11 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Condense to outline and expand from outline, plus scene reordering with a keyboard equivalent for every drag.
 - Snapshots with a retention schedule, and a Compare view that renders two snapshots as script pages with changed lines marked.
 - The Stats tab, including screen time per character and who shares scenes with whom.
-- Writing statistics by day, kept on your device.
+- Writing statistics by day, kept on your device (shipped in v0.5.0).
 - Spellcheck with nspell and a per-script dictionary that knows your character names.
 - The built-in Reference tab.
-- Testing with NVDA and VoiceOver.
 - A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there.
-- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three-act, Save the Cat, five-act) laid over it as suggestions, never rules.
+- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.
 - A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
 - Scene goals: optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes and shown on the cards and the map.
 - Setups and payoffs: mark a setup, link it to its payoff, and see the setups that never pay off.
@@ -268,6 +268,10 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 ### Later
 
 - Open from and save to Dropbox and Google Drive directly. You sign in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server.
+
+### Last — Testing with NVDA and VoiceOver
+
+After every phase is built, the whole app is tested with NVDA on Windows and VoiceOver. Until then every view is built for screen readers and checked automatically (axe, keyboard-only tests, and the accessibility tree), and Drafter claims no conformance with any standard. The [Phase 2 design](docs/drafter-phase2-design.md) (§20) has the reasoning.
 
 **Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
 
@@ -541,6 +545,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Technical design](docs/drafter-technical-design.md): how each package works, from the parser and pagination to storage, linting, accessibility, security, and testing.
 - [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md): the self-contained brief for building the engine.
 - [Phase 1 design](docs/drafter-phase1-design.md): the first public release, from the first visit and its guided tour to the editor, saving, export, focus mode, and phones, with mockups in [`docs/phase1/`](docs/phase1/).
+- [Phase 2 design](docs/drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 

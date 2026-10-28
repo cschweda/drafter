@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: the Phase 2 design's one open question is decided (2026-10-28): a scene's color is a `[[Color: blue]]` line in the scene's header, not an entry in the metadata block. The README, the architecture, the technical design, and the Phase 1 design say so, and say that testing with NVDA and VoiceOver comes last, after every phase is built. The plan for Phase 2's first release, the Outline, is in `docs/plans/`.
+
 ## [0.8.0] - 2026-10-28
 
 **Drafter for Windows.** An installer for 64-bit PCs and one for Windows on Arm, each installing for you alone with no administrator. `.fountain` files open in Drafter with a double-click, and Drafter offers each new version and waits for you to restart. The installers aren't signed yet, so SmartScreen asks first (**More info → Run anyway**): see [docs/desktop-install-windows.md](docs/desktop-install-windows.md). The Linux app, the Mac build, and drafter.dev are otherwise unchanged.
