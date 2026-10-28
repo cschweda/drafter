@@ -8,7 +8,7 @@ if (!page) throw new Error('The Saving page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    'How Save works in each browser; keeping scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; installing Drafter as an app; and downloading the desktop app for Linux and Windows.',
+    'How Save works in each browser; scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; installing as an app; and the desktop app for Linux and Windows.',
 });
 </script>
 
@@ -305,7 +305,7 @@ useDocsHead({
 
     <h3 id="download-mac">Mac</h3>
     <p>
-      There is no Mac download yet: it needs Apple’s developer account to be signed. Until then you
+      There is no macOS download yet: it needs Apple’s developer account to be signed. Until then you
       can <a href="https://github.com/cschweda/drafter/blob/main/docs/desktop-install-macos.md">build it on your Mac</a>
       with one command; the guide says how. Drafter in your browser works on a Mac today, and can
       be installed as an app (above).
