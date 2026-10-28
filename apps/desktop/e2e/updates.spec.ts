@@ -293,6 +293,29 @@ test('makes no request when Check for updates is off', async ({ desktop, profile
   await check.focus();
   await first.page.keyboard.press('Space');
   await expect(check).not.toBeChecked();
+  // Closed only once the choice is in storage: a close mid-write would test the write, not the start.
+  await expect
+    .poll(() =>
+      first.page.evaluate(
+        () =>
+          new Promise<unknown>((resolve) => {
+            const open = indexedDB.open('drafter');
+            open.onerror = () => resolve(undefined);
+            open.onsuccess = () => {
+              const request = open.result
+                .transaction('settings')
+                .objectStore('settings')
+                .get('checkForUpdates');
+              request.onsuccess = () => {
+                resolve((request.result as { value?: unknown } | undefined)?.value);
+                open.result.close();
+              };
+              request.onerror = () => resolve(undefined);
+            };
+          }),
+      ),
+    )
+    .toBe(false);
   await first.close();
   expect(f.seen).toEqual([]);
 
