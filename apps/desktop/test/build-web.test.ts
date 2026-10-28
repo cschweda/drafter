@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { replaceFolder } from '../scripts/build-web.mjs';
+import { pnpmCommand, replaceFolder } from '../scripts/build-web.mjs';
 
 const made: string[] = [];
 afterEach(() => {
@@ -89,5 +89,33 @@ describe('replaceFolder (pnpm build:web)', () => {
     expectWhole(web, 'new');
     expect(existsSync(join(parent, 'web.next-123'))).toBe(false);
     expect(existsSync(join(parent, 'web.old-456'))).toBe(false);
+  });
+});
+
+describe('pnpmCommand (how build:web runs pnpm)', () => {
+  test('runs the pnpm that is running it, with this Node, on every system', () => {
+    const env = { npm_execpath: 'C:\\pnpm\\bin\\pnpm.cjs' };
+    expect(pnpmCommand(['build'], env, 'win32', 'C:\\node.exe')).toEqual({
+      file: 'C:\\node.exe',
+      args: ['C:\\pnpm\\bin\\pnpm.cjs', 'build'],
+      shell: false,
+    });
+  });
+
+  test('otherwise pnpm from the PATH, through a shell only on Windows (pnpm.cmd)', () => {
+    expect(pnpmCommand(['build'], {}, 'linux')).toEqual({
+      file: 'pnpm',
+      args: ['build'],
+      shell: false,
+    });
+    expect(pnpmCommand(['build'], {}, 'win32')).toEqual({
+      file: 'pnpm',
+      args: ['build'],
+      shell: true,
+    });
+    // npm's own entry is not pnpm.
+    expect(pnpmCommand(['build'], { npm_execpath: '/usr/lib/npm-cli.js' }, 'linux').file).toBe(
+      'pnpm',
+    );
   });
 });
