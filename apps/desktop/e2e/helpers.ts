@@ -435,5 +435,5 @@ export const QUIT_PATH =
   process.platform === 'darwin' ? ['Drafter', 'Quit Drafter'] : ['File', 'Quit'];
 export const MENU_BAR =
   process.platform === 'darwin'
-    ? ['Drafter', 'File', 'Edit', 'View', 'Go', 'Help']
+    ? ['Drafter', 'File', 'Edit', 'View', 'Go', 'Window', 'Help']
     : ['File', 'Edit', 'View', 'Go', 'Help'];

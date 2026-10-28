@@ -1,8 +1,9 @@
 // A packaged Drafter is meant to run with Chromium's sandbox. Some launchers turn it off without
 // being asked: electron-builder's AppImage `AppRun` adds `--no-sandbox` when the system won't let
 // it make a user namespace (Ubuntu 24.04 and later restrict that by default). The app does not run
-// that way in silence: it explains, recommends the .deb, and asks once whether to continue. Pure,
-// so it is unit-tested; main.ts shows the question and keeps the answer.
+// that way in silence: it explains, recommends the .deb, and asks once whether to continue. On a
+// Mac nothing Drafter ships turns it off, so the question there only says what did, with none of
+// the Linux advice. Pure, so it is unit-tested; main.ts shows the question and keeps the answer.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -18,6 +19,8 @@ export const QUIT = 'Quit';
 export type SandboxReason = 'no-sandbox-switch' | 'disable-sandbox-env';
 
 export interface SandboxFacts {
+  /** `process.platform`: the advice is Linux's only on Linux. */
+  platform: string;
   /** `app.isPackaged`. */
   packaged: boolean;
   /** `app.commandLine.hasSwitch`. */
@@ -61,13 +64,22 @@ export function sandboxNotice(facts: SandboxFacts, userData: string): SandboxNot
   if (!reason) return null;
   if (facts.env[ALLOW_NO_SANDBOX] === '1') return null;
   const marker = join(userData, markerFor(reason));
+  const why =
+    facts.platform === 'linux'
+      ? [
+          'The sandbox keeps a page that went wrong away from your files. Something started Drafter with it off: the AppImage’s launcher does that when the system won’t let a program make a user namespace, as Ubuntu 24.04 and later do by default.',
+          'The .deb runs with the sandbox on these systems, because it adds an AppArmor profile that allows it. Installing the .deb is the best fix. docs/desktop-install-linux.md in the Drafter repository (github.com/cschweda/drafter) has the details and the other choices.',
+        ]
+      : [
+          `The sandbox keeps a page that went wrong away from your files. Something started Drafter with it off: ${reason === 'no-sandbox-switch' ? 'the --no-sandbox switch' : 'the ELECTRON_DISABLE_SANDBOX environment variable'}. Drafter never turns it off itself.`,
+          'Start Drafter the usual way (from Applications, the Dock, or a file in Finder) and it runs with the sandbox on. Neither --no-sandbox nor ELECTRON_DISABLE_SANDBOX is needed on this system.',
+        ];
   return {
     reason,
     marker,
     message: 'Drafter is about to start without Chromium’s sandbox.',
     detail: [
-      'The sandbox keeps a page that went wrong away from your files. Something started Drafter with it off: the AppImage’s launcher does that when the system won’t let a program make a user namespace, as Ubuntu 24.04 and later do by default.',
-      'The .deb runs with the sandbox on these systems, because it adds an AppArmor profile that allows it. Installing the .deb is the best fix. docs/desktop-install-linux.md in the Drafter repository (github.com/cschweda/drafter) has the details and the other choices.',
+      ...why,
       `Continue only if you accept running without the sandbox. Your answer is remembered in ${marker}; delete that file to be asked again. To skip the question, start Drafter with ${ALLOW_NO_SANDBOX}=1.`,
     ].join('\n\n'),
   };

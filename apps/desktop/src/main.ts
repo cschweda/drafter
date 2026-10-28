@@ -29,7 +29,13 @@ import {
   readModulesFolder,
 } from './module-folder';
 import { refuseNetwork } from './network';
-import { NOT_A_SCRIPT, OpenInbox, refusalsMessage, requestsFromArgs } from './open-files';
+import {
+  heldOpenFiles,
+  NOT_A_SCRIPT,
+  OpenInbox,
+  refusalsMessage,
+  requestsFromArgs,
+} from './open-files';
 import { denyPermissions } from './permissions';
 import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol';
 import { CONTINUE, QUIT, rememberAnswer, sandboxNotice } from './sandbox';
@@ -56,6 +62,7 @@ if (!app.isPackaged && process.env.DRAFTER_USER_DATA) {
 // turning it off: the switch still reaches Chromium's child processes.
 const sandboxQuestion = sandboxNotice(
   {
+    platform: process.platform,
     packaged: app.isPackaged,
     hasSwitch: (name) => app.commandLine.hasSwitch(name),
     argv: process.argv,
@@ -222,12 +229,10 @@ function start() {
       .catch(() => {});
   };
 
-  // macOS: a file double-clicked, dropped on the Dock icon, or opened with Drafter. It can arrive
-  // before `ready`, which is why requests wait for `begun`. (Untested until the macOS build.)
-  app.on('open-file', (event, path) => {
-    event.preventDefault();
-    openFromSystem([path], process.cwd());
-  });
+  // macOS: a file double-clicked in Finder, dropped on the Dock icon, or opened with Drafter. Those
+  // that came before now were held (`openFiles`); requests wait for `begun` either way. The path is
+  // a path, whatever it starts with (`--`), and goes the way a launch's files go: granted, then sent.
+  openFiles.deliver((path) => openFromSystem(['--', path], process.cwd()));
 
   // Only the editor's own window takes what the system names (not a help window), and not while
   // it is navigating: a reload begins, and what arrives meanwhile waits for the next openReady.
@@ -358,9 +363,18 @@ function start() {
   });
 
   app.on('window-all-closed', () => {
+    // A Mac app keeps running with no window: the Dock icon, a file opened from Finder, or Quit
+    // (which asks nothing then: no page holds a script) is how it goes on.
+    if (process.platform === 'darwin') return;
     // No window is left to hold a script, so there is nothing to ask.
     closing?.quitNow();
     app.quit();
+  });
+
+  // macOS: the Dock icon was clicked (or the app opened again from Finder) with no window on show:
+  // the editor's window comes back.
+  app.on('activate', (_event, hasVisibleWindows) => {
+    if (!hasVisibleWindows) bringForward();
   });
 
   void app.whenReady().then(() => {
@@ -445,6 +459,11 @@ function start() {
     openFromSystem(process.argv.slice(1), process.cwd());
   });
 }
+
+// macOS names files to open with `open-file`, the first of them before `ready`: listened for now,
+// before anything else can happen, and held until the app has started (`start`).
+const openFiles = heldOpenFiles();
+app.on('open-file', openFiles.listener);
 
 // One Drafter at a time; one just started by an update's Restart waits for the old one to go.
 // Second launches are held from the moment the lock is ours until the app has started.

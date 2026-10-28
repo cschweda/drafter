@@ -191,9 +191,11 @@ export interface MenuActions {
 }
 
 /**
- * The menu template: File, Edit, View, Go, and Help, with the Quit of the platform. `run` gets the
- * id of the command an item stands for. An item shows its keys but does not register them
- * (`registerAccelerator: false`): the page's own handlers keep the keys, so nothing runs twice.
+ * The menu template: File, Edit, View, Go, and Help, with the Quit of the platform. On a Mac the
+ * app's own menu comes first (About, Settings…, Services, Hide, Quit), File ends with Close Window,
+ * and Window comes before Help. `run` gets the id of the command an item stands for. An item
+ * shows its keys but does not register them (`registerAccelerator: false`): the page's own
+ * handlers keep the keys, so nothing runs twice.
  */
 export function menuTemplate(
   commands: readonly MenuCommand[],
@@ -220,8 +222,11 @@ export function menuTemplate(
     };
   };
 
+  // On a Mac, Settings… is in the app's own menu (as every Mac app has it), not in File.
+  const inAppMenu = (c: MenuCommand) => apple && c.id === 'settings';
+
   const build = (group: Group): Item[] => {
-    const mine = commands.filter((c) => c.group === group);
+    const mine = commands.filter((c) => c.group === group && !inAppMenu(c));
     const placed = new Set<string>();
     const sections: Item[][] = [];
     for (const section of LAYOUT[group]) {
@@ -254,6 +259,8 @@ export function menuTemplate(
     if (group === 'File' && !apple) {
       sections.push([{ id: 'quit', label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: quit }]);
     }
+    // A Mac closes the window in front with ⌘W (the editor's asks first, as its close button does).
+    if (group === 'File' && apple) sections.push([{ role: 'close', label: 'Close Window' }]);
     return sections.flatMap((items, i) =>
       i === 0 ? items : [{ type: 'separator' as const }, ...items],
     );
@@ -261,13 +268,19 @@ export function menuTemplate(
 
   const bar: Item[] = GROUPS.map((group) => ({
     label: apple ? group : `&${group}`,
+    // On a Mac, Help is the system's Help menu (it adds the search field).
+    ...(apple && group === 'Help' && { role: 'help' as const }),
     submenu: build(group),
   }));
   if (apple) {
+    const settings = commands.filter(inAppMenu).map((c) => itemFor(c));
     bar.unshift({
       label: 'Drafter',
       submenu: [
         { id: 'about', label: 'About Drafter', click: about },
+        { type: 'separator' },
+        ...(settings.length > 0 ? [...settings, { type: 'separator' as const }] : []),
+        { role: 'services' },
         { type: 'separator' },
         { role: 'hide' },
         { role: 'hideOthers' },
@@ -276,6 +289,8 @@ export function menuTemplate(
         { id: 'quit', label: 'Quit Drafter', accelerator: 'CmdOrCtrl+Q', click: quit },
       ],
     });
+    // Minimize, Zoom, Bring All to Front, and the open windows: the system fills it in.
+    bar.splice(bar.length - 1, 0, { label: 'Window', role: 'windowMenu' });
   }
   return bar;
 }

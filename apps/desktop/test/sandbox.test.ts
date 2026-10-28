@@ -61,7 +61,12 @@ describe('sandboxOffReason', () => {
 const DATA = '/home/me/.config/Drafter';
 
 describe('sandboxNotice', () => {
-  const off = { ...none, packaged: true, argv: ['/opt/Drafter/drafterdev', '--no-sandbox'] };
+  const off = {
+    ...none,
+    platform: 'linux',
+    packaged: true,
+    argv: ['/opt/Drafter/drafterdev', '--no-sandbox'],
+  };
 
   test('asks about a packaged app that has no sandbox', () => {
     const notice = sandboxNotice(off, DATA);
@@ -99,7 +104,34 @@ describe('sandboxNotice', () => {
 
   test('leaves an unpackaged app alone, and a sandboxed one', () => {
     expect(sandboxNotice({ ...off, packaged: false }, DATA)).toBeNull();
-    expect(sandboxNotice({ ...none, packaged: true }, DATA)).toBeNull();
+    expect(sandboxNotice({ ...none, platform: 'linux', packaged: true }, DATA)).toBeNull();
+  });
+
+  test('on a Mac asks too, without the Linux advice (no AppImage, .deb, or AppArmor there)', () => {
+    const mac = {
+      ...off,
+      platform: 'darwin',
+      argv: ['/Applications/Drafter.app/Contents/MacOS/Drafter', '--no-sandbox'],
+    };
+    const DATA_MAC = '/Users/me/Library/Application Support/Drafter';
+    const notice = sandboxNotice(mac, DATA_MAC);
+    expect(notice?.reason).toBe('no-sandbox-switch');
+    expect(notice?.message).toBe(sandboxNotice(off, DATA)?.message);
+    const detail = notice?.detail ?? '';
+    for (const linuxOnly of ['AppImage', '.deb', 'AppArmor', 'Ubuntu', 'desktop-install-linux']) {
+      expect(detail).not.toContain(linuxOnly);
+    }
+    expect(detail).toContain('--no-sandbox');
+    expect(detail).toContain('ELECTRON_DISABLE_SANDBOX');
+    expect(detail).toContain(ALLOW_NO_SANDBOX);
+    expect(detail).toContain(`${DATA_MAC}/${markerFor('no-sandbox-switch')}`);
+    // Nothing to ask when the sandbox is on, as on Linux.
+    expect(
+      sandboxNotice(
+        { ...mac, argv: ['/Applications/Drafter.app/Contents/MacOS/Drafter'] },
+        DATA_MAC,
+      ),
+    ).toBeNull();
   });
 
   test('has two buttons', () => {

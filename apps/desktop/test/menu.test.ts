@@ -246,12 +246,69 @@ describe('menuTemplate', () => {
 
   test('on a Mac adds the app menu, which holds About and Quit', () => {
     const t = menuTemplate(COMMANDS, () => {}, { platform: 'darwin' });
-    expect(t.map(labelOf)).toEqual(['Drafter', 'File', 'Edit', 'View', 'Go', 'Help']);
+    expect(t.map(labelOf)).toEqual(['Drafter', 'File', 'Edit', 'View', 'Go', 'Window', 'Help']);
     const app = submenu(t[0]);
     expect(app.some((i) => i.id === 'about')).toBe(true);
     expect(app.some((i) => i.id === 'quit')).toBe(true);
     expect(submenu(menus(t).File).some((i) => i.id === 'quit')).toBe(false);
     expect(submenu(menus(t).Help).some((i) => i.id === 'about')).toBe(false);
+  });
+
+  test('on a Mac the app menu reads About, Settings…, Services, Hide, Quit, as a Mac app’s does', () => {
+    const t = menuTemplate(COMMANDS, () => {}, { platform: 'darwin' });
+    const app = submenu(t[0]);
+    expect(app.map((i) => i.id ?? i.role ?? i.type)).toEqual([
+      'about',
+      'separator',
+      'settings',
+      'separator',
+      'services',
+      'separator',
+      'hide',
+      'hideOthers',
+      'unhide',
+      'separator',
+      'quit',
+    ]);
+    // Settings… is the page's own command, with its key (⌘,) shown and left to the page.
+    const settings = named(t, 'settings');
+    expect(settings).toMatchObject({
+      label: 'Settings…',
+      accelerator: 'CmdOrCtrl+,',
+      registerAccelerator: false,
+    });
+    expect(named(t, 'quit')).toMatchObject({ label: 'Quit Drafter', accelerator: 'CmdOrCtrl+Q' });
+    // Only there: File has neither Settings… nor Quit.
+    const file = walk(submenu(menus(t).File));
+    expect(file.some((i) => i.id === 'settings')).toBe(false);
+    expect(walk(t).filter((i) => i.id === 'settings')).toHaveLength(1);
+  });
+
+  test('on a Mac Settings… runs the page’s command, and is off when the page says so', () => {
+    const run = vi.fn();
+    const t = menuTemplate(COMMANDS, run, { platform: 'darwin' });
+    choose(t, 'settings');
+    expect(run).toHaveBeenCalledWith('settings');
+    const off = COMMANDS.map((c) => (c.id === 'settings' ? { ...c, enabled: false } : c));
+    expect(named(menuTemplate(off, run, { platform: 'darwin' }), 'settings')?.enabled).toBe(false);
+  });
+
+  test('on a Mac File ends with Close Window (⌘W), and a Window menu sits before Help', () => {
+    const t = menuTemplate(COMMANDS, () => {}, { platform: 'darwin' });
+    const file = submenu(menus(t).File);
+    expect(file.at(-1)).toMatchObject({ role: 'close', label: 'Close Window' });
+    expect(file.at(-2)?.type).toBe('separator');
+    expect(menus(t).Window).toMatchObject({ role: 'windowMenu' });
+    expect(menus(t).Help).toMatchObject({ role: 'help' });
+  });
+
+  test('elsewhere keeps Settings… and Quit in File, with no Close Window or Window menu', () => {
+    const t = menuTemplate(COMMANDS, () => {}, { platform: 'linux' });
+    const file = walk(submenu(menus(t).File));
+    expect(file.some((i) => i.id === 'settings')).toBe(true);
+    expect(file.some((i) => i.id === 'quit')).toBe(true);
+    expect(walk(t).some((i) => i.role === 'close')).toBe(false);
+    expect(t.some((i) => i.role === 'windowMenu' || i.role === 'help')).toBe(false);
   });
 
   test('runs About, Releases, the modules folder, and Quit through the actions it is given', () => {
