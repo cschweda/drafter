@@ -685,3 +685,10 @@ Guide: [`docs/desktop-install-windows.md`](desktop-install-windows.md). Design �
 - **2026-10-28, review M3, M6** — A device name with spaces before its extension (`nul .md`, `CON  .fountain`) is refused too: Windows drops those spaces. And a grant checks the real path a link leads to (`Grants.grant`, and `allowed` for a grant kept from before), not only the name asked for, so `x.md` leading to `evil.exe:x.md` is refused on Windows.
 - **2026-10-28, review M4, M5** — On Windows a module with a hard-linked file (`nlink > 1`) is skipped, since nothing compares owners there. Not changed: `%APPDATA%\Drafter` itself made a junction isn't detected (the note above).
 
+
+## Phase 2, Plan A: the Outline (`@drafter/outline`, `apps/web`)
+
+- **2026-10-28** — **Scene colors are header notes** (`[[Color: blue]]`), decided by the maintainer; the Phase 2 design's one open question is closed (§24).
+- **2026-10-28** — `@drafter/outline` reads the keyed notes it needs itself (`readKeyedNote`, only `Color` for now), rather than wait for Plan B's `@drafter/notes`. Plan B moves the reader there; the reading is the same (any case, extra spaces, the head before the first colon, up to 40 characters).
+- **2026-10-28** — A scene ends at the last block before the next scene start or any section, as folding does. In a play, a `##` scene closes the open sections of depth 2 and deeper, so a `###` inside a scene ends it; an `INT.` line isn't a scene there. The metadata block, and a `/* beat board` boneyard just before it, are never in a scene or a section.
+- **2026-10-28** — A scene's words are its printed words (action, dialogue, and the rest that prints; not synopses, notes, boneyard, or sections), counted as runs of letters and digits. Its pages and eighths are the `scene-list` module's arithmetic, and only from a layout of the same parse (the block counts match). A section's length is the sum of its scenes' eighths.

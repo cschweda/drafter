@@ -90,6 +90,9 @@ importers:
       '@drafter/lint':
         specifier: workspace:*
         version: link:../../packages/lint
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../../packages/outline
       '@drafter/render-html':
         specifier: workspace:*
         version: link:../../packages/render-html
@@ -223,6 +226,25 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+
+  packages/outline:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+    devDependencies:
+      '@drafter/lint':
+        specifier: workspace:*
+        version: link:../lint
+      '@drafter/render-text':
+        specifier: workspace:*
+        version: link:../render-text
 
   packages/render-html:
     dependencies:

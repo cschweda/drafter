@@ -27,6 +27,7 @@
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
     "@drafter/lint": "workspace:*",
+    "@drafter/outline": "workspace:*",
     "@drafter/render-html": "workspace:*",
     "@drafter/render-pdf": "workspace:*",
     "@drafter/render-text": "workspace:*",

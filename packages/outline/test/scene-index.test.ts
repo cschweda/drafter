@@ -1,0 +1,197 @@
+import { parse } from '@drafter/fountain';
+import { paginate } from '@drafter/layout';
+import { describe, expect, test } from 'vitest';
+import { readKeyedNote, type Section, sceneIndex } from '../src';
+import {
+  headings,
+  indexOf,
+  SAMPLE_SCREENPLAY,
+  SAMPLE_STAGE_PLAY,
+  screenplay,
+  stagePlay,
+} from './helpers';
+
+const THREE = `Title: The Call
+Author: A. Writer
+
+[[An opening note.]]
+
+INT. HALL - DAY #12A#
+
+ANN
+Hello.
+
+EXT. YARD - NIGHT
+
+BEN
+Hi.
+
+CUT TO:
+
+INT. CAR - MOVING
+
+Driving.
+`;
+
+describe('sceneIndex', () => {
+  test("lists a screenplay's scenes in order with headings, numbers, and spans", () => {
+    const { doc, index } = indexOf(THREE);
+    expect(headings(index)).toEqual(['INT. HALL - DAY', 'EXT. YARD - NIGHT', 'INT. CAR - MOVING']);
+    expect(index.scenes.map((s) => s.ordinal)).toEqual([1, 2, 3]);
+    expect(index.scenes.map((s) => s.number)).toEqual(['12A', null, null]);
+    const [hall, yard, car] = index.scenes;
+    expect(doc.source.slice(hall?.span.from, hall?.span.to)).toBe(
+      'INT. HALL - DAY #12A#\n\nANN\nHello.',
+    );
+    // A transition closing a scene is part of it.
+    expect(doc.source.slice(yard?.span.from, yard?.span.to)).toBe(
+      'EXT. YARD - NIGHT\n\nBEN\nHi.\n\nCUT TO:',
+    );
+    expect(doc.source.slice(car?.span.from, car?.span.to)).toBe('INT. CAR - MOVING\n\nDriving.');
+    expect(index.items.map((i) => i.kind)).toEqual(['scene', 'scene', 'scene']);
+    expect(index.tree.map((n) => n.item.kind)).toEqual(['scene', 'scene', 'scene']);
+  });
+
+  test("lists a stage play's ## scenes inside its acts", () => {
+    const { index } = indexOf(SAMPLE_STAGE_PLAY);
+    expect(headings(index)).toEqual(['Scene 1', 'Scene 2']);
+    expect(index.sections.map((s) => s.title)).toEqual(['Act One']);
+    const [act] = index.tree;
+    expect(act?.item.kind).toBe('section');
+    expect(act && 'children' in act ? act.children.map((c) => c.item.kind) : []).toEqual([
+      'scene',
+      'scene',
+    ]);
+    const act1 = index.sections[0] as Section;
+    expect(index.scenes.every((s) => s.sections.join() === String(act1.block))).toBe(true);
+    expect(act1.scenes).toBe(2);
+  });
+
+  test('a stage play starts a new act with #, and an INT. line is not a scene there', () => {
+    const play = `# One\n\n## First\n\nINT. NOT A SCENE\n\nWords.\n\n# Two\n\n## Second\n\nMore.\n\n/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n`;
+    const { index } = indexOf(play);
+    expect(headings(index)).toEqual(['First', 'Second']);
+    expect(index.sections.map((s) => [s.title, s.scenes])).toEqual([
+      ['One', 1],
+      ['Two', 1],
+    ]);
+  });
+
+  test('nests scenes under the innermost section', () => {
+    const source = `# Act One\n\n= The setup.\n\n## Arrival\n\nINT. A - DAY\n\nOne.\n\nINT. B - DAY\n\nTwo.\n\n## Trouble\n\nINT. C - DAY\n\nThree.\n\n# Act Two\n\nINT. D - DAY\n\nFour.\n`;
+    const { doc, index } = indexOf(source);
+    const titles = (nodes: typeof index.tree): unknown[] =>
+      nodes.map((n) =>
+        'children' in n ? [(n.item as Section).title, titles(n.children)] : n.item.heading,
+      );
+    expect(titles(index.tree)).toEqual([
+      [
+        'Act One',
+        [
+          ['Arrival', ['INT. A - DAY', 'INT. B - DAY']],
+          ['Trouble', ['INT. C - DAY']],
+        ],
+      ],
+      ['Act Two', ['INT. D - DAY']],
+    ]);
+    const [actOne, arrival] = index.sections;
+    // A section's intro is its heading and what comes before its first child.
+    expect(doc.source.slice(actOne?.span.from, actOne?.introEnd)).toBe('# Act One\n\n= The setup.');
+    expect(doc.source.slice(actOne?.span.from, actOne?.span.to)).toMatch(
+      /^# Act One[\s\S]*Three\.$/,
+    );
+    expect(arrival?.parent).toBe(actOne?.block);
+    expect(actOne?.scenes).toBe(3);
+    expect(index.scenes[2]?.sections).toEqual([actOne?.block, index.sections[2]?.block]);
+  });
+
+  test('keeps the title page and an opening note in the preamble', () => {
+    const { doc, index } = indexOf(THREE);
+    expect(index.preamble).not.toBeNull();
+    expect(doc.source.slice(index.preamble?.from, index.preamble?.to)).toBe(
+      'Title: The Call\nAuthor: A. Writer\n\n[[An opening note.]]',
+    );
+    expect(indexOf('INT. A - DAY\n\nOne.\n').index.preamble).toBeNull();
+    // A cold open's action before the first heading is preamble too.
+    const cold = indexOf('A door slams.\n\nINT. A - DAY\n\nOne.\n');
+    expect(cold.doc.source.slice(cold.index.preamble?.from, cold.index.preamble?.to)).toBe(
+      'A door slams.',
+    );
+  });
+
+  test('leaves the metadata block and the beat board out of the last scene', () => {
+    const source =
+      'INT. A - DAY\n\nOne.\n\n/* beat board\n= An idea.\n*/\n\n/* drafter\n{"v":1}\n*/\n';
+    const { doc, index } = indexOf(source);
+    const [a] = index.scenes;
+    expect(doc.source.slice(a?.span.from, a?.span.to)).toBe('INT. A - DAY\n\nOne.');
+  });
+
+  test('reads the first synopsis and every synopsis', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\n= First.\n\nAction.\n\n= Second.\n\nINT. B - DAY\n\nNone.\n',
+    );
+    expect(index.scenes[0]?.synopses.map((s) => s.text)).toEqual(['First.', 'Second.']);
+    expect(index.scenes[1]?.synopses).toEqual([]);
+  });
+
+  test('reads [[Color: Blue]] in any case, anywhere in the scene', () => {
+    const source =
+      'INT. A - DAY\n\n= Syn.\n[[color :  Blue ]]\n\nINT. B - DAY\n\nShe waits. [[COLOR: teal]] [[Color: red]]\n\nINT. C - DAY\n\nNone.\n';
+    const { doc, index } = indexOf(source);
+    expect(index.scenes.map((s) => s.color?.value ?? null)).toEqual(['blue', 'teal', null]);
+    const a = index.scenes[0];
+    expect(doc.source.slice(a?.color?.span.from, a?.color?.span.to)).toBe('[[color :  Blue ]]');
+  });
+
+  test('lists who speaks, once each, in order', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\nANN\nHi.\n\nBEN (V.O.)\nYo.\n\nann\n\nANN\nAgain.\n\nINT. B - DAY\n\nQuiet.\n',
+    );
+    expect(index.scenes[0]?.speakers).toEqual(['ANN', 'BEN']);
+    expect(index.scenes[1]?.speakers).toEqual([]);
+    expect(index.scenes[0]?.words).toBeGreaterThan(0);
+  });
+
+  test('places scenes on pages and counts eighths when the layout matches', () => {
+    // The scene-list module's figures for the same sample: page 1, 1 1/8 pages; page 2, 2/8.
+    const { index } = indexOf(SAMPLE_SCREENPLAY, { pages: true });
+    expect(index.scenes.map((s) => [s.heading, s.pages?.page, s.pages?.eighths])).toEqual([
+      ['INT. KITCHEN - NIGHT', 1, 9],
+      ['EXT. BACK PORCH - LATER', 2, 2],
+    ]);
+  });
+
+  test('has no pages when the layout is for other text', () => {
+    const other = parse('INT. A - DAY\n\nOne.\n');
+    const layout = paginate(other, screenplay);
+    const doc = parse(SAMPLE_SCREENPLAY);
+    const index = sceneIndex(doc, screenplay, layout);
+    expect(index.scenes.every((s) => s.pages === null)).toBe(true);
+    expect(index.sections.every((s) => s.eighths === null)).toBe(true);
+  });
+
+  test("counts a section's scenes and length", () => {
+    const { index } = indexOf(SAMPLE_SCREENPLAY, { pages: true });
+    expect(index.sections.map((s) => [s.title, s.scenes, s.eighths])).toEqual([['Act One', 2, 11]]);
+  });
+
+  test('reads a play with its own template', () => {
+    // A play read with the screenplay template has no scenes: its ## lines are sections there.
+    const play = parse(SAMPLE_STAGE_PLAY);
+    expect(sceneIndex(play, screenplay).scenes).toEqual([]);
+    expect(sceneIndex(play, stagePlay).scenes).toHaveLength(2);
+  });
+});
+
+describe('readKeyedNote', () => {
+  test.each([
+    ['Color: blue', { key: 'color', body: 'blue' }],
+    ['  COLOR :blue  ', { key: 'color', body: 'blue' }],
+    ['Goal: Margaret wants: everything', { key: 'goal', body: 'Margaret wants: everything' }],
+    ['no head here', null],
+    [': no key', null],
+  ])('%j', (text, expected) => {
+    expect(readKeyedNote(text)).toEqual(expected);
+  });
+});

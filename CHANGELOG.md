@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/outline`, a new package: the scene index of a script (Phase 2 design §5.1). It lists the scenes in order, in either template (a screenplay's headings, a play's `##` scenes inside its acts), with the sections that hold them, each scene's synopses, color note, speakers, words, and, from a layout of the same text, its page and length in eighths.
+
 ### Changed
 
 - Docs: the Phase 2 design's one open question is decided (2026-10-28): a scene's color is a `[[Color: blue]]` line in the scene's header, not an entry in the metadata block. The README, the architecture, the technical design, and the Phase 1 design say so, and say that testing with NVDA and VoiceOver comes last, after every phase is built. The plan for Phase 2's first release, the Outline, is in `docs/plans/`.
