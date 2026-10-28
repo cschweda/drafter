@@ -303,6 +303,31 @@ describe('checkPath and checkBytes', () => {
     }
   });
 
+  test('on Windows, refuse a name Windows reads as another file, a stream, or a device', () => {
+    for (const bad of [
+      'C:\\Scripts\\notes.md.',
+      'C:\\Scripts\\program.exe:notes.md',
+      'C:\\Scripts\\nul.md',
+      '\\\\.\\pipe\\x.md',
+      '\\\\?\\C:\\Scripts\\x.md',
+    ]) {
+      expect(() => checkPath(bad, 'win32'), bad).toThrow(/a name Windows reads differently/);
+    }
+    for (const good of ['C:\\Scripts\\The Lamp.fountain', '\\\\server\\share\\x.md']) {
+      expect(checkPath(good, 'win32')).toBe(good);
+    }
+  });
+
+  test('read and write a file whose path is longer than Windows’s old 260-character limit', async () => {
+    let folder = dir;
+    while (folder.length < 300) folder = join(folder, 'a folder with a long name');
+    await mkdir(folder, { recursive: true });
+    const path = join(folder, 'The Lamp.fountain');
+    expect(path.length).toBeGreaterThan(260);
+    await writeAtomic(path, new TextEncoder().encode('INT. LIGHTHOUSE\r\n'));
+    expect(new TextDecoder().decode((await readFileAt(path)).bytes)).toBe('INT. LIGHTHOUSE\r\n');
+  });
+
   test('take bytes only, up to the limit', () => {
     const ok = new Uint8Array(3);
     expect(checkBytes(ok)).toBe(ok);

@@ -84,6 +84,27 @@ describe('filesFromArgv', () => {
   });
 });
 
+describe.runIf(process.platform === 'win32')('on Windows', () => {
+  test('a path as Explorer passes it: a drive, backslashes, spaces, and any case', () => {
+    const path = touch('The Lamp.FOUNTAIN');
+    expect(filesFromArgv(['Drafter.exe', path], dir)).toEqual([path]);
+    // A file:// URL with a drive, as some programs pass one.
+    expect(filesFromArgv(['Drafter.exe', pathToFileURL(path).href], dir)).toEqual([path]);
+  });
+
+  test('names compare without case: the app is ignored and a file opens once', () => {
+    const path = touch('pilot.fountain');
+    expect(filesFromArgv(['Drafter.exe', dir.toUpperCase()], dir, [dir.toLowerCase()])).toEqual([]);
+    expect(filesFromArgv(['Drafter.exe', path, path.toUpperCase()], dir)).toEqual([path]);
+  });
+
+  test('a name Windows reads as another, or a stream, is not opened', () => {
+    touch('notes.md');
+    const { files } = requestsFromArgv(['Drafter.exe', `${join(dir, 'notes.md')}.`], dir);
+    expect(files).toEqual([]);
+  });
+});
+
 describe('requestsFromArgv', () => {
   test('says why each other argument was not opened', () => {
     touch('picture.png');

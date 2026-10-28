@@ -44,8 +44,12 @@ export function refusalsMessage(refusals: readonly Refusal[]): string {
   return `Drafter can’t open ${refusals.length} files: ${shown.join('; ')}${more > 0 ? `; and ${more} more` : ''}.`;
 }
 
-/** The same path, however it is spelled (`/a/./b/../c`). */
-const same = (a: string, b: string) => resolve(a) === resolve(b);
+/** A path as compared: resolved, and on Windows, whose names have no case, in lower case. */
+const key = (path: string) =>
+  process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path);
+
+/** The same path, however it is spelled (`/a/./b/../c`; on Windows `C:\A` and `c:\a`). */
+const same = (a: string, b: string) => key(a) === key(b);
 
 /**
  * An argument as a path: itself, or for a URL (`scheme://…`) the local file a `file:` URL names, as a
@@ -85,8 +89,8 @@ export function requestsFromArgs(args: string[], cwd: string, ignore: string[] =
     if (named === null) continue;
     const path = resolve(cwd, named);
     if (ignore.some((skip) => same(skip, path))) continue;
-    if (seen.has(path)) continue;
-    seen.add(path);
+    if (seen.has(key(path))) continue;
+    seen.add(key(path));
     const name = basename(path);
     let info: Stats | undefined;
     try {
