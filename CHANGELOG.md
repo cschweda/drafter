@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/desktop`: **Drafter for Windows.** An installer for 64-bit Intel and AMD PCs and one for Windows on Arm (`Drafter-<version>-windows-x64-setup.exe`, `…-arm64-setup.exe`), built and tested on GitHub's Windows runners. It installs for you alone, with no administrator, into `%LOCALAPPDATA%\Programs\drafter`, with a Start menu shortcut, a desktop shortcut, and an uninstaller in **Settings → Apps**. `.fountain` files open in Drafter with a double-click; `.md` and `.markdown` offer it under **Open with**, and keep the app they open in now. The installers are not signed yet, so Windows SmartScreen warns about the download: see [docs/desktop-install-windows.md](docs/desktop-install-windows.md). `pnpm desktop:win` builds them on a Windows PC.
+- `apps/desktop`: **updates on Windows**, as for the AppImage: Drafter checks for a new version when it starts (you can turn this off), downloads the installer for your PC's processor in the background, checks it against the release's `latest.yml`, and offers **Restart**; it never installs by itself. Until the installers are signed, the check is the file's SHA-512 from the release, not a signature.
+- `brand`: `icon-windows.ico`, the Windows app's icon, 16 to 256 pixels.
+- CI: `windows` and `windows-arm` jobs build both installers and test them: unit tests and the shell's end-to-end tests on Windows, a silent install of each installer, its file types, a file opened from the command line and handed over by a second launch, a real update from 1.0.0 to 1.0.1, and a silent uninstall. A tag's release now waits for Linux and both Windows jobs and publishes the Linux and Windows files together, or nothing.
+
+### Security
+
+- `apps/desktop`: on Windows, Drafter refuses a path Windows would read as another name (a trailing dot or space), a stream inside a file (`name:stream`), a device (`nul.md`, `COM1.fountain`), or a device path (`\\.\`, `\\?\`), in files it opens and saves and in its own pages' addresses, and compares paths without case.
+- `apps/desktop`: on Windows the modules folder (`%APPDATA%\Drafter\modules`) relies on the protection Windows gives your profile folder, since Windows has no POSIX permissions to check: a modules folder that is a link to a folder elsewhere is skipped, and a module with a link out of its folder (a junction, say) is still skipped.
+
 ## [0.7.0] - 2026-10-27
 
 **Drafter on a Mac, built on your own Mac.** `pnpm desktop:mac` makes `Drafter.app` (see [docs/desktop-install-macos.md](docs/desktop-install-macos.md)): `.fountain` files open in it from Finder, it keeps running with its window closed, it has a Mac menu, and it tells you when a new version is out. A signed download, with updates that install themselves, comes once Drafter has an Apple developer account. The Linux app and drafter.dev are unchanged.
