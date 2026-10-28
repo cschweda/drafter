@@ -12,8 +12,11 @@
 // never give such a name.
 import { win32 } from 'node:path';
 
-/** The names Windows keeps for devices (with or without an extension), in any case. */
-const RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³]|conin\$|conout\$)(\..*)?$/i;
+/**
+ * The names Windows keeps for devices, in any case, with or without an extension, and with any
+ * spaces before it (Windows drops those too: `nul .md` is NUL).
+ */
+const RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³]|conin\$|conout\$)[ ]*(\..*)?$/i;
 
 /** Characters no Windows file name may hold (and the control characters). */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it finds.

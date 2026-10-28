@@ -38,6 +38,11 @@ describe('windowsPathProblem', () => {
     }
     expect(windowsPathProblem('C:\\CON\\x.md')).toMatch(/device/);
     expect(windowsPathProblem('C:\\Scripts\\COM¹.md')).toMatch(/device/);
+    // Windows drops the spaces before the extension too: `nul .md` is NUL.
+    for (const name of ['nul .md', 'CON  .fountain', 'aux   .txt', 'com1 .md']) {
+      expect(windowsPathProblem(`C:\\Scripts\\${name}`), name).toMatch(/device/);
+    }
+    expect(windowsPathProblem('C:\\Scripts\\nul notes.md')).toBeUndefined();
   });
 
   test('refuses device paths: pipes, raw volumes, and the \\\\?\\ namespace', () => {
