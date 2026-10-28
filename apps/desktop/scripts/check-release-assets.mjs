@@ -49,13 +49,21 @@ export function folderProblems(dir) {
 /**
  * @param {string} dir the folder with the packages
  * @param {{ name: string, size: number, state?: string, digest?: string | null }[]} assets the release's
- * @returns {string[]} what differs, empty when the release holds exactly these files
+ * @returns {string[]} what differs, empty when the release holds exactly these files and no others
  */
 export function compareAssets(dir, assets) {
   const wrong = folderProblems(dir);
   if (wrong.length > 0) return wrong;
   const problems = [];
-  for (const name of packageFiles(dir)) {
+  const files = packageFiles(dir);
+  // Both ways: nothing on the release that this build didn't make (a left-over upload would be a
+  // file people could download, and the updater could be pointed at).
+  for (const asset of assets) {
+    if (!files.includes(asset.name)) {
+      problems.push(`${asset.name}: on the release, but not one of this build’s files`);
+    }
+  }
+  for (const name of files) {
     const asset = assets.find((candidate) => candidate.name === name);
     if (!asset) {
       problems.push(`${name}: not on the release`);

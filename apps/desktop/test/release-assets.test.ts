@@ -41,9 +41,20 @@ describe('compareAssets', () => {
     expect(compareAssets(dir, assets())).toEqual([]);
   });
 
-  test('accepts assets with no digest (the API may not give one), and extra assets', () => {
+  test('accepts assets with no digest (the API may not give one)', () => {
     const plain = assets().map(({ digest: _digest, ...rest }) => rest);
-    expect(compareAssets(dir, [...plain, { name: 'notes.txt', size: 1 }])).toEqual([]);
+    expect(compareAssets(dir, plain)).toEqual([]);
+  });
+
+  test('refuses a release that holds anything else (an asset from an earlier upload, say)', () => {
+    expect(
+      compareAssets(dir, [
+        ...assets(),
+        { name: 'Drafter-0.9.0-windows-x64-setup.exe', size: 1, state: 'uploaded' },
+      ]).join('\n'),
+    ).toMatch(
+      /Drafter-0\.9\.0-windows-x64-setup\.exe: on the release, but not one of this build’s files/,
+    );
   });
 
   test('finds a file that is missing, a different size, or not uploaded', () => {
