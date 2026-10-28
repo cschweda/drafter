@@ -134,7 +134,7 @@ describe('sandboxNotice', () => {
     ).toBeNull();
   });
 
-  test('names no Mac or Linux places on another system (Windows, when it comes)', () => {
+  test('names no Mac or Linux places on another system (Windows)', () => {
     const detail =
       sandboxNotice({ ...off, platform: 'win32', argv: ['C:\\Drafter.exe', '--no-sandbox'] }, DATA)
         ?.detail ?? '';
