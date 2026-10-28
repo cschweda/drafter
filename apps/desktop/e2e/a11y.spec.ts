@@ -129,20 +129,23 @@ for (const theme of ['dark', 'light'] as const) {
     desktop,
     profile,
   }) => {
-    const bytes = Buffer.from('not really an AppImage, only bytes to download\n'.repeat(40));
+    // A version and bytes of its own: on Windows electron-updater keeps its download outside the
+    // test's profile (%LOCALAPPDATA%\drafter-updater), where updates.spec.ts's 9.9.9 must not find
+    // one already there.
+    const bytes = Buffer.from('an update for the accessibility test, only bytes\n'.repeat(40));
     const sha = createHash('sha512').update(bytes).digest('base64');
-    const yml = `version: 9.9.9
+    const yml = `version: 9.9.7
 files:
-  - url: Drafter-9.9.9.AppImage
+  - url: Drafter-9.9.7.AppImage
     sha512: ${sha}
     size: ${bytes.length}
-  - url: Drafter-9.9.9-windows-x64-setup.exe
+  - url: Drafter-9.9.7-windows-x64-setup.exe
     sha512: ${sha}
     size: ${bytes.length}
-  - url: Drafter-9.9.9-windows-arm64-setup.exe
+  - url: Drafter-9.9.7-windows-arm64-setup.exe
     sha512: ${sha}
     size: ${bytes.length}
-path: Drafter-9.9.9.AppImage
+path: Drafter-9.9.7.AppImage
 sha512: ${sha}
 releaseDate: '2026-10-27T00:00:00.000Z'
 `;
