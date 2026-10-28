@@ -335,7 +335,8 @@ export const test = base.extend<Fixtures>({
   profile: async ({}, use) => {
     const profile = await newProfile();
     await use(profile);
-    await rm(profile.dir, { recursive: true, force: true });
+    // Windows may still hold a file of the app that just quit for a moment.
+    await rm(profile.dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   },
   desktop: async ({ profile }, use, testInfo) => {
     const launched: Launched[] = [];

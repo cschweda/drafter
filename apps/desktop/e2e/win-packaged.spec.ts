@@ -345,15 +345,38 @@ test('updates itself for real: 1.0.0 downloads 1.0.1, and Restart installs and s
     const toast = page.locator('[data-update]');
     await expect(toast).toContainText('A new version of Drafter is ready', { timeout: 180_000 });
     expect(seen).toContain(`/${newName}`);
-    await toast.getByRole('button', { name: 'Restart', exact: true }).click();
-    // The old Drafter quits, the new installer replaces it, and the new version starts.
-    await expect.poll(version, { timeout: 180_000, intervals: [1000] }).toBe('1.0.1');
-    await expect
-      .poll(() => drafters().some((p) => p.path.toLowerCase() === exe().toLowerCase()), {
-        timeout: 120_000,
-        intervals: [1000],
-      })
-      .toBe(true);
+    // What ran from Restart on, printed whatever happens, so a failure says why.
+    const began = Date.now();
+    const timeline: string[] = [];
+    const sample = setInterval(() => {
+      try {
+        const now = drafters()
+          .filter((p) => !p.commandLine.includes('--type='))
+          .map((p) => `${p.pid} ${p.commandLine.slice(0, 200)}`);
+        timeline.push(`${Date.now() - began} ms: ${now.join(' | ') || '(no Drafter)'}`);
+      } catch (error) {
+        timeline.push(`${Date.now() - began} ms: ${String(error)}`);
+      }
+    }, 2000);
+    try {
+      await toast.getByRole('button', { name: 'Restart', exact: true }).click();
+      // The old Drafter quits, the new installer replaces it, and the new version starts, from the
+      // folder it was installed in, told it was updated (`--updated`).
+      await expect.poll(version, { timeout: 180_000, intervals: [1000] }).toBe('1.0.1');
+      await expect
+        .poll(
+          () =>
+            drafters().some(
+              (p) =>
+                p.path.toLowerCase() === exe().toLowerCase() && p.commandLine.includes('--updated'),
+            ),
+          { timeout: 120_000, intervals: [1000] },
+        )
+        .toBe(true);
+    } finally {
+      clearInterval(sample);
+      console.log(`update test, from Restart:\n  ${timeline.join('\n  ')}`);
+    }
   } finally {
     server.close();
     killDrafters();

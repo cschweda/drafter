@@ -319,6 +319,15 @@ jobs:
       - name: Chromium for the web side of the files test (e2e/interchange.spec.ts)
         if: ${{ !cancelled() }}
         run: pnpm --filter @drafter/desktop exec playwright install chromium
+      # The runner's screen is 1024 x 768, which shrinks the app's 1280 x 860 window below the
+      # editor's two-pane width (as xvfb's default does on Linux).
+      - name: A desktop-sized screen
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
       - name: The shell's end-to-end tests, on Windows
         if: ${{ !cancelled() }}
         env:
