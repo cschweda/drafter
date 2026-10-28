@@ -30,18 +30,22 @@ export function moduleStorage(id: string): ModuleContext['storage'] {
     },
     async set<T>(key: string, value: T) {
       const full = rowKey(key);
-      const rows = await db.settings.where('key').startsWith(prefix).toArray();
-      let bytes = sizeOf(full, value);
-      let keys = 1;
-      for (const row of rows) {
-        if (row.key === full) continue; // Overwriting this key reuses its room.
-        bytes += sizeOf(row.key, row.value);
-        keys += 1;
-      }
-      if (bytes > STORAGE_QUOTA.bytes || keys > STORAGE_QUOTA.keys) {
-        throw new Error('This module has used up its share of this browser’s storage.');
-      }
-      await db.settings.put({ key: full, value });
+      // Read, check, and write in one transaction, so two sets at once can't both slip past the
+      // quota (each would otherwise read the old total before the other wrote).
+      await db.transaction('rw', db.settings, async () => {
+        const rows = await db.settings.where('key').startsWith(prefix).toArray();
+        let bytes = sizeOf(full, value);
+        let keys = 1;
+        for (const row of rows) {
+          if (row.key === full) continue; // Overwriting this key reuses its room.
+          bytes += sizeOf(row.key, row.value);
+          keys += 1;
+        }
+        if (bytes > STORAGE_QUOTA.bytes || keys > STORAGE_QUOTA.keys) {
+          throw new Error('This module has used up its share of this browser’s storage.');
+        }
+        await db.settings.put({ key: full, value });
+      });
     },
     async remove(key: string) {
       await db.settings.delete(rowKey(key));

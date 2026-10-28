@@ -338,4 +338,16 @@ describe('module storage quota (minor 4)', () => {
     // Overwriting an existing key is fine.
     await expect(store.set('k0', 2)).resolves.toBeUndefined();
   });
+
+  test('holds the quota even when sets race (minor 2 / review)', async () => {
+    const { moduleStorage, STORAGE_QUOTA } = await import('../app/modules/storage');
+    const store = moduleStorage('folder.race');
+    const big = 'x'.repeat(Math.floor(STORAGE_QUOTA.bytes * 0.6));
+    // Each alone fits; together they exceed the quota. The check must be atomic, so one is refused.
+    const results = await Promise.allSettled([store.set('a', big), store.set('b', big)]);
+    expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+    const rows = await db.settings.where('key').startsWith('module:folder.race:').toArray();
+    const bytes = rows.reduce((n, row) => n + row.key.length + JSON.stringify(row.value).length, 0);
+    expect(bytes).toBeLessThanOrEqual(STORAGE_QUOTA.bytes);
+  });
 });
