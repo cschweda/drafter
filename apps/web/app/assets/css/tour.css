@@ -32,34 +32,49 @@
   }
 }
 
-/* The welcome and intro cards' text. The module colors it with Nuxt UI's tokens, whose dimmed gray
-   and amber fail WCAG contrast on its cards: a light card is #f8fafc, and a dark one is a gradient
+/* The welcome and intro cards' colors: their text, their icon, and their buttons. The module colors
+   them with Nuxt UI's tokens, whose dimmed gray and amber fail WCAG contrast on its cards: a light card is #f8fafc, and a dark one is a gradient
    from #475569 to #334155, which axe can't measure. These keep the cards' look and pass 4.5:1 on
    every stop; test/tour-colors.test.ts checks them. The light theme's amber is Drafter's own
    darkened goldenrod (--heading), which white button text also passes on. */
 .dark .welcome-card,
 .dark .intro-card {
+  --ui-text: #e4e4e7;
   --ui-text-muted: #cbd5e1;
   --ui-text-dimmed: #c8ced8;
+  --ui-primary: #ffb900;
+  --ui-text-inverted: #18181b;
+  --tour-primary-hover: #d1a01a;
 }
 .light .welcome-card,
 .light .intro-card {
+  --ui-text: #3f3f46;
   --ui-text-dimmed: #5f6575;
   --ui-primary: #8a5a00;
+  --ui-text-inverted: #ffffff;
+  --tour-primary-hover: #6b4500;
+}
+/* A solid button's hover and press. Nuxt UI draws the primary color at 75% over the card, under
+   which white text falls to about 3.6:1 in the light theme; the hover is a darker shade instead. */
+:root .welcome-card .bg-primary:is(:hover, :active):not(:disabled),
+:root .intro-card .bg-primary:is(:hover, :active):not(:disabled) {
+  background-color: var(--tour-primary-hover);
 }
 
-/* The intro card's text scrolls in its own box when the card is taller than the screen (a phone), and
-   a box that scrolls must be reachable from the keyboard. So the overlay scrolls instead, with the
-   card's buttons in it, and the card grows to fit its text. */
-:root .intro-overlay {
-  align-items: flex-start;
-  overflow-y: auto;
-  padding: 16px 0;
-}
-:root .intro-overlay .intro-dialog {
-  margin: auto;
-}
-:root .intro-overlay .intro-content {
-  max-height: none;
-  overflow: visible;
+/* The intro card's text scrolls in its own box, up to 60% of the screen's height. On a phone that box
+   would be most of the card, and a box that scrolls must be reachable from the keyboard, so there
+   the overlay scrolls instead, with the card's buttons in it, and the card grows to fit its text. */
+@media (max-width: 640px) {
+  :root .intro-overlay {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 16px 0;
+  }
+  :root .intro-overlay .intro-dialog {
+    margin: auto;
+  }
+  :root .intro-overlay .intro-content {
+    max-height: none;
+    overflow: visible;
+  }
 }

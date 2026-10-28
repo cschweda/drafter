@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 import {
   closeSettings,
@@ -382,7 +382,11 @@ test.describe('the accessibility tree', () => {
 
   test('labels every control', async ({ page }) => {
     const unlabelled: string[] = [];
-    const check = async (where: string) => {
+    const checked: Record<string, number> = {};
+    /** Checks every visible control in `scope`, once it shows; each state must have some. */
+    const check = async (where: string, scope: Locator) => {
+      await expect(scope).toBeVisible();
+      checked[where] = 0;
       for (const role of [
         'button',
         'link',
@@ -398,8 +402,9 @@ test.describe('the accessibility tree', () => {
         'spinbutton',
         'slider',
       ] as const) {
-        for (const control of await page.getByRole(role).all()) {
+        for (const control of await scope.getByRole(role).all()) {
           if (!(await control.isVisible())) continue;
+          checked[where]++;
           const name = await control.evaluate(
             (el) => el.getAttribute('aria-label') ?? el.textContent ?? '',
           );
@@ -412,22 +417,29 @@ test.describe('the accessibility tree', () => {
       }
     };
     await showSource(page);
-    await check('the page');
+    await check('the page', page.locator('body'));
     await openSettings(page);
-    await check('Settings');
+    await check('Settings', settingsDialog(page));
     await closeSettings(page);
     await countsButton(page).click();
-    await check('the Counts panel');
+    await check('the Counts panel', countsPanel(page));
     await page.keyboard.press('Escape');
+    await expect(countsPanel(page)).toBeHidden();
     await mark(page).click();
-    await check('the app menu');
+    await check('the app menu', appMenu(page));
     await page.keyboard.press('Escape');
+    await expect(appMenu(page)).toHaveCount(0);
     await openButton(page).click();
-    await check('the Scripts menu');
+    await check('the Scripts menu', scriptsMenu(page));
     await page.keyboard.press('Escape');
+    await expect(scriptsMenu(page)).toBeHidden();
     await page.keyboard.press('ControlOrMeta+k');
-    await check('the palette');
+    await check('the palette', palette(page));
     expect(unlabelled).toEqual([]);
+    for (const [where, count] of Object.entries(checked)) {
+      expect(count, `controls checked in ${where}`).toBeGreaterThan(0);
+    }
+    expect(Object.keys(checked)).toHaveLength(6);
   });
 
   test('names the toolbar’s controls', async ({ page }) => {
@@ -495,5 +507,47 @@ test.describe('the accessibility tree', () => {
     await expect(countsPanel(page)).toBeHidden();
     await page.clock.runFor(15 * 60_000 + 1000);
     await expect(page.locator('[data-sprint-notice]').getByRole('status')).toHaveText(/\S/);
+  });
+});
+
+test.describe('the tour cards and the help pages', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('darkens the light card’s button on hover, so its text keeps 4.5:1', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone has no hover');
+    await useTheme(page, 'light');
+    await page.goto('/');
+    const welcome = page.getByRole('alertdialog', { name: 'Welcome to Drafter' });
+    const start = welcome.getByRole('button', { name: 'Take the tour' });
+    await expect(start).toBeVisible();
+    await start.hover();
+    // tour.css's --tour-primary-hover for the light theme, #6b4500.
+    await expect(start).toHaveCSS('background-color', 'rgb(107, 69, 0)');
+  });
+
+  test('scrolls the intro’s text in its own box on a wide screen, and the whole card on a phone', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const welcome = page.getByRole('alertdialog', { name: 'Welcome to Drafter' });
+    await welcome.getByRole('button', { name: 'Take the tour' }).focus();
+    await page.keyboard.press('Enter');
+    const text = page.locator('#intro-description');
+    await expect(text).toBeVisible();
+    const phone = (page.viewportSize()?.width ?? 0) <= 640;
+    await expect(text).toHaveCSS('overflow-y', phone ? 'visible' : 'auto');
+    if (phone) await expect(text).toHaveCSS('max-height', 'none');
+    else await expect(text).not.toHaveCSS('max-height', 'none');
+  });
+
+  test('gives each cheat-sheet example a group with its name', async ({ page }) => {
+    await page.goto('/docs/fountain/');
+    const examples = page.locator('pre');
+    const count = await examples.count();
+    expect(count).toBeGreaterThan(0);
+    await expect(page.getByRole('group', { name: /example$/ })).toHaveCount(count);
   });
 });

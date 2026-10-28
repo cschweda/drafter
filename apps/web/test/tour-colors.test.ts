@@ -32,10 +32,13 @@ function contrast(a: string, b: string): number {
   return (light + 0.05) / (dark + 0.05);
 }
 
+const GRADIENT = ['#475569', '#334155'];
+const LIGHT_CARDS = ['#f8fafc', '#ffffff'];
+
 describe('the tour cards', () => {
   test.each([
-    ['dark', ['--ui-text-muted', '--ui-text-dimmed'], ['#475569', '#334155']],
-    ['light', ['--ui-text-dimmed', '--ui-primary'], ['#f8fafc', '#ffffff']],
+    ['dark', ['--ui-text', '--ui-text-muted', '--ui-text-dimmed'], GRADIENT],
+    ['light', ['--ui-text', '--ui-text-dimmed', '--ui-primary'], LIGHT_CARDS],
   ] as const)('give their text 4.5:1 in the %s theme', (theme, tokens, cards) => {
     const colors = block(theme);
     for (const token of tokens) {
@@ -47,7 +50,25 @@ describe('the tour cards', () => {
     }
   });
 
-  test('give white button text 4.5:1 on the light theme’s primary', () => {
-    expect(contrast('#ffffff', block('light')['--ui-primary'] ?? '')).toBeGreaterThanOrEqual(4.5);
+  // The intro's icon is drawn in the primary color: a graphic, so 3:1 (WCAG 1.4.11).
+  test.each([
+    ['dark', GRADIENT],
+    ['light', LIGHT_CARDS],
+  ] as const)('give the icon 3:1 in the %s theme', (theme, cards) => {
+    const primary = block(theme)['--ui-primary'] ?? '';
+    for (const card of cards) {
+      expect(contrast(primary, card), `--ui-primary on ${card}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  // The solid buttons: --ui-text-inverted on the primary color, and on its hover color.
+  test.each(['dark', 'light'] as const)('give button text 4.5:1 in the %s theme', (theme) => {
+    const colors = block(theme);
+    for (const background of ['--ui-primary', '--tour-primary-hover']) {
+      expect(
+        contrast(colors['--ui-text-inverted'] ?? '', colors[background] ?? ''),
+        `--ui-text-inverted on ${background}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
