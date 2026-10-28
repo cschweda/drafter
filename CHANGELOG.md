@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-27
+
+**Script modules from a folder, in the desktop app.**
+- Put a module's folder in Drafter's modules folder (**Help → Open Modules Folder**; `~/.config/Drafter/modules` on Linux) and restart. It's listed in **Settings → Modules**, off until you turn it on.
+- A module from the folder is code nobody at Drafter has reviewed, so it runs on its own, in a sandboxed frame: it can't reach your files, Drafter's page or storage, or other modules, and it reaches the network only at the addresses you agreed to when you turned it on. If its `module.json` changes (its name, description, or the addresses it asks for), it is off until you turn it on again.
+- `modules/README.md` shows how to write one, with an example (`modules/from-a-folder/tidy`). drafter.dev is unchanged.
+
 ### Added
 
 - `apps/desktop`: **a modules folder.** Put a script module's folder in Drafter's modules folder (`~/.config/Drafter/modules` on Linux) and restart: it is listed in **Settings → Modules**, under **From your modules folder**, off until you turn it on, with a plain warning that it is code Drafter didn't write and hasn't checked. A module there is a folder with a `module.json` (its id, name, description, and the network origins it asks for) and an `index.js` (its button, commands, tab, and settings). A folder that isn't a module is skipped, and Settings says which and why. `modules/README.md` says how to write one, and `modules/from-a-folder/tidy/` is a complete example.
@@ -450,7 +457,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/cschweda/drafter/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/cschweda/drafter/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/cschweda/drafter/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/cschweda/drafter/compare/v0.3.1...v0.4.0
