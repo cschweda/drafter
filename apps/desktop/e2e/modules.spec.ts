@@ -1,6 +1,8 @@
+import { createSocket } from 'node:dgram';
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { createServer as createHttpServer, type Server } from 'node:http';
+import { type AddressInfo, createServer as createTcpServer } from 'node:net';
+import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
@@ -112,7 +114,7 @@ function settingsRow(page: Page, key: string): Promise<unknown> {
 /** A local web server that counts the requests it gets. */
 async function countingServer(): Promise<{ server: Server; url: string; hits: () => number }> {
   let hits = 0;
-  const server = createServer((_request, response) => {
+  const server = createHttpServer((_request, response) => {
     hits++;
     response.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/plain' });
     response.end('ok');
@@ -314,6 +316,81 @@ test('lets a module reach the network only where the writer agreed, and only fro
   } finally {
     agreed.server.close();
     other.server.close();
+  }
+});
+
+/** The machine's own non-loopback IPv4, so a leak test doesn't hit loopback (which Chromium bypasses). */
+function lanAddress(): string | null {
+  for (const addrs of Object.values(networkInterfaces())) {
+    for (const a of addrs ?? []) {
+      if (a.family === 'IPv4' && !a.internal) return a.address;
+    }
+  }
+  return null;
+}
+
+test('keeps a module off WebRTC: no STUN or TURN leaves, over UDP or TCP, even from a srcdoc child', async ({
+  desktop,
+  profile,
+}) => {
+  const host = lanAddress();
+  test.skip(host === null, 'no non-loopback address to test against');
+  const lan = host as string;
+  let udpHits = 0;
+  let tcpHits = 0;
+  const udp = createSocket('udp4');
+  udp.on('message', () => {
+    udpHits++;
+  });
+  await new Promise<void>((resolve) => udp.bind(0, '0.0.0.0', resolve));
+  const tcp = createTcpServer((socket) => {
+    tcpHits++;
+    socket.end();
+  });
+  await new Promise<void>((resolve) => tcp.listen(0, '0.0.0.0', resolve));
+  const udpPort = (udp.address() as AddressInfo).port;
+  const tcpPort = (tcp.address() as AddressInfo).port;
+  try {
+    addProbe(profile);
+    // The probe asks for no network; these ICE servers are the attacker's.
+    const probeDir = join(modulesDir(profile), 'probe');
+    const config = JSON.parse(readFileSync(join(probeDir, 'config.json'), 'utf8'));
+    config.ice = {
+      turnUdp: [
+        { urls: `turn:${lan}:${udpPort}?transport=udp`, username: 'SECRETDATA', credential: 'x' },
+      ],
+      turnTcp: [
+        { urls: `turn:${lan}:${tcpPort}?transport=tcp`, username: 'SECRETDATA', credential: 'x' },
+      ],
+      stun: [{ urls: `stun:${lan}:${udpPort}` }],
+      dns: [{ urls: `stun:secretdata.leak.invalid:${udpPort}` }],
+    };
+    writeFileSync(join(probeDir, 'config.json'), JSON.stringify(config));
+
+    const { page } = await desktop();
+    await turnOn(page, 'Probe');
+    await page.getByRole('button', { name: 'Probe' }).click();
+    await expect
+      .poll(
+        async () =>
+          (await settingsRow(page, 'module:folder.probe:results')) as {
+            webrtc?: Record<string, string>;
+          },
+        { timeout: 20000 },
+      )
+      .toHaveProperty('webrtc');
+    const results = (await settingsRow(page, 'module:folder.probe:results')) as {
+      webrtc: Record<string, string>;
+    };
+    // The JS ran (the constructor is there), but nothing reached the attacker's servers.
+    expect(results.webrtc.srcdocChild).toBe('attempted');
+    // Give any late packet a moment.
+    await page.waitForTimeout(1000);
+    expect(udpHits, 'STUN/TURN UDP must not leave').toBe(0);
+    expect(tcpHits, 'TURN over TCP must not leave').toBe(0);
+  } finally {
+    udp.close();
+    tcp.close();
   }
 });
 

@@ -66,6 +66,36 @@ export default {
           return response.ok ? 'reached' : `status ${response.status}`;
         });
       }
+      // WebRTC: ICE (STUN and TURN over UDP and TCP) and a DNS channel. config.ice names the servers.
+      results.webrtc = {};
+      const Ctor = globalThis.RTCPeerConnection || globalThis.webkitRTCPeerConnection;
+      results.webrtc.constructor = Ctor ? 'present' : 'absent';
+      if (Ctor && config.ice) {
+        for (const [name, iceServers] of Object.entries(config.ice)) {
+          results.webrtc[name] = await tryIt(async () => {
+            const pc = new Ctor({ iceServers });
+            pc.createDataChannel('d');
+            await pc.setLocalDescription(await pc.createOffer());
+            await new Promise((r) => setTimeout(r, 400));
+            pc.close();
+            return 'attempted';
+          });
+        }
+      }
+      // From a srcdoc child frame, which gets a fresh RTCPeerConnection even if we deleted ours.
+      results.webrtc.srcdocChild = await tryIt(
+        () =>
+          new Promise((resolve) => {
+            const child = document.createElement('iframe');
+            child.srcdoc =
+              '<script type="module" src="drafter-module://probe/child.js"></scr' + 'ipt>';
+            window.addEventListener('message', (e) => {
+              if (e.data && e.data.probeChild) resolve(e.data.probeChild);
+            });
+            document.body.append(child);
+            setTimeout(() => resolve('no child'), 2000);
+          }),
+      );
       // Pretend to be Drafter to the other modules' frames: their runtimes must ignore it.
       for (let i = 0; i < window.parent.frames.length; i++) {
         const frame = window.parent.frames[i];
