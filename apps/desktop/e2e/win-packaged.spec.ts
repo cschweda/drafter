@@ -103,7 +103,10 @@ function killDrafters() {
   }
 }
 
-/** Runs an installer or uninstaller and waits for it. */
+/**
+ * Runs an installer or uninstaller and waits for it. NSIS takes `/D=` unquoted, to the end of the
+ * line, so the folders given to it here have no spaces (Node would quote such an argument).
+ */
 function run(program: string, args: string[], timeout = 180_000) {
   execFileSync(program, args, { stdio: 'inherit', timeout });
 }
@@ -327,7 +330,7 @@ test('updates itself for real: 1.0.0 downloads 1.0.1, and Restart installs and s
   });
   await new Promise<void>((resolve) => server.listen(PORT, '127.0.0.1', resolve));
   try {
-    installDir = join(root, 'Programs', 'Drafter Update');
+    installDir = join(root, 'Programs', 'DrafterUpdate');
     run(oldSetup, ['/S', `/D=${installDir}`]);
     const version = () =>
       powershell(
