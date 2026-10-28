@@ -3,6 +3,7 @@
 // at its own origin, drafter-module://<id>/, from its own folder only. A module's code runs in a
 // sandboxed frame there, never in the app's page. Pure Node (no Electron), so the unit tests run it
 // as it is: main.ts registers the scheme and hands `moduleHandler` to `protocol.handle`.
+import { createHash } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -47,6 +48,8 @@ export interface ModuleManifest {
 export interface LoadedModule extends ModuleManifest {
   folder: string;
   root: string;
+  /** A short hash of the folder's name and its module.json: changes when a different module takes the id (I1). */
+  fingerprint: string;
 }
 
 export interface ModulesFolder {
@@ -96,6 +99,7 @@ export function manifestProblem(value: unknown): string | undefined {
   }
   if (!isText(m.name)) return 'its module.json has no name';
   if (m.name.length > LIMITS.name) return `its name is longer than ${LIMITS.name} characters`;
+  if (/^\s*drafter\b/i.test(m.name)) return 'its name can’t be “Drafter” or start with it';
   if (!isText(m.description)) return 'its module.json has no description';
   if (m.description.length > LIMITS.description) {
     return `its description is longer than ${LIMITS.description} characters`;
@@ -118,6 +122,16 @@ export function manifestProblem(value: unknown): string | undefined {
     }
   }
   return undefined;
+}
+
+/** Whether anyone but the owner can write `path` (POSIX). Windows has no such bit: always false. */
+function worldWritable(path: string): boolean {
+  if (process.platform === 'win32') return false;
+  try {
+    return (statSync(path).mode & 0o022) !== 0;
+  } catch {
+    return false;
+  }
 }
 
 const skipped = (folder: string, why: string) => `Drafter skipped the folder “${folder}”: ${why}.`;
@@ -170,6 +184,7 @@ function readOne(dir: string, folder: string): LoadedModule | string {
     permissions: { network: [...(m.permissions.network ?? [])] },
     folder,
     root,
+    fingerprint: createHash('sha256').update(`${folder}\n${text}`).digest('hex').slice(0, 16),
   };
 }
 
@@ -206,6 +221,15 @@ export function readModulesFolder(
   for (const folder of names) {
     if (modules.length >= LIMITS.modules) {
       problems.push(skipped(folder, `Drafter reads at most ${LIMITS.modules} modules`));
+      continue;
+    }
+    if (worldWritable(join(dir, folder))) {
+      problems.push(
+        skipped(
+          folder,
+          'anyone on this computer can change it, so Drafter won’t run it. Make it writable only by you',
+        ),
+      );
       continue;
     }
     const read = readOne(dir, folder);
@@ -305,7 +329,11 @@ export function framePage(): string {
 const notFound = () =>
   new Response('Not found', {
     status: 404,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+    },
   });
 
 export interface ModuleHandlerOptions {
@@ -366,6 +394,8 @@ export function moduleHandler(
         headers: {
           ...common,
           'Content-Type': contentTypeOf(file),
+          // The module's own policy on every file, the runtime included (defense in depth).
+          'Content-Security-Policy': moduleCsp(target.id, options.origins(target.id)),
           // A sandboxed frame's origin is opaque, so its module scripts are cross-origin requests.
           'Access-Control-Allow-Origin': '*',
         },

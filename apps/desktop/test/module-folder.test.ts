@@ -130,6 +130,9 @@ describe('manifestProblem', () => {
       [{ ...MANIFEST, id: 'a'.repeat(64) }, /id must be lowercase/],
       [{ ...MANIFEST, name: '' }, /has no name/],
       [{ ...MANIFEST, name: 'x'.repeat(81) }, /name is longer than 80/],
+      [{ ...MANIFEST, name: 'Drafter' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'Drafter Helper' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'drafter' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, description: 3 }, /has no description/],
       [{ ...MANIFEST, description: 'x'.repeat(401) }, /description is longer than 400/],
       [{ ...MANIFEST, permissions: undefined }, /no permissions/],
@@ -164,6 +167,11 @@ describe('readModulesFolder', () => {
     ]);
     expect(modules[0]?.permissions).toEqual({ network: [] });
     expect(modules[0]?.root).toMatch(/beta$/);
+    // A fingerprint of the folder name and its module.json, so a different module under the same id
+    // is noticed (I1). The same folder read twice gives the same one; a changed module.json, a new one.
+    expect(modules[0]?.fingerprint).toMatch(/^[0-9a-f]{16}$/);
+    const again = readModulesFolder(dir);
+    expect(again.modules[0]?.fingerprint).toBe(modules[0]?.fingerprint);
   });
 
   test('has nothing when there is no folder, and ignores loose files and hidden folders', async () => {
@@ -357,6 +365,13 @@ describe('moduleHandler', () => {
     expect(await code.text()).toBe('export default { id: "tidy" };');
     expect(code.headers.get('access-control-allow-origin')).toBe('*');
     expect(code.headers.get('x-content-type-options')).toBe('nosniff');
+    // Every response carries a policy, the runtime and a 404 included (minor 11).
+    expect(code.headers.get('content-security-policy')).toBe(moduleCsp('tidy', []));
+    const runtime = await get(`drafter-module://tidy${RUNTIME_PATH}`);
+    expect(runtime.headers.get('content-security-policy')).toBe(moduleCsp('tidy', []));
+    const missing = await get('drafter-module://tidy/nope.js');
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
   });
 
   test('answers anything else with a 404', async () => {
@@ -424,5 +439,21 @@ describe('appCspWithModules', () => {
   const CSP = "default-src 'self'; connect-src 'self'; frame-ancestors 'none'";
   test('lets the app’s page frame the modules, and changes nothing else', () => {
     expect(appCspWithModules(CSP)).toBe(`${CSP}; frame-src drafter-module:`);
+  });
+});
+
+describe('readModulesFolder, insecure folders (POSIX)', () => {
+  test('skips a module folder anyone but its owner can write', async () => {
+    if (process.platform === 'win32') return;
+    const { chmodSync } = await import('node:fs');
+    await addModule('open-wide');
+    chmodSync(join(dir, 'open-wide'), 0o777);
+    await addModule('safe');
+    chmodSync(join(dir, 'safe'), 0o755);
+    const { modules, problems } = readModulesFolder(dir);
+    expect(modules.map((m) => m.id)).toEqual(['safe']);
+    expect(problems).toEqual([
+      'Drafter skipped the folder “open-wide”: anyone on this computer can change it, so Drafter won’t run it. Make it writable only by you.',
+    ]);
   });
 });
