@@ -13,7 +13,7 @@ Not sure which you have? **Settings → System → About** shows it under *Syste
 
 1. Download the installer for your PC from the [latest release](https://github.com/cschweda/drafter/releases/latest) (under *Assets*).
 2. Open it. Windows may stop it first: see the next section.
-3. It installs at once, with no questions and no administrator: Drafter is for you alone, in your own part of the PC. A progress bar shows, and then Drafter starts.
+3. It installs at once, with no questions and no administrator: Drafter is for you alone, in your own part of the PC. A progress bar shows, and then Drafter starts. On Windows on Arm the installer itself runs emulated, so this can take a few minutes; Drafter, once installed, is native.
 
 You get **Drafter** in the Start menu and on the desktop, and `.fountain` files open in Drafter with a double-click. Markdown files (`.md`, `.markdown`) keep the app they open in now; Drafter is offered for them under **Open with**.
 
