@@ -9,7 +9,8 @@
 #
 # Needs GH_TOKEN (contents: write), GH_REPO (owner/name), and jq, and runs from the repository root.
 #   1. latest-linux.yml and latest.yml must agree with the files (every url there exists here, sha512
-#      and size match) and give the same version.
+#      and size match) and give the same version, and latest.yml lists an installer for every
+#      processor (x64 and arm64).
 #   2. A release already PUBLISHED for the tag is never touched: its assets are compared with the
 #      local files (name, size, and the digest when the API gives one), and the script fails if they
 #      differ. A published release's files are what people have downloaded and what the updater
@@ -25,7 +26,7 @@ set -euo pipefail
 tag=${1:?usage: publish-release.sh <tag> <folder>}
 dir=${2:?usage: publish-release.sh <tag> <folder>}
 
-node apps/desktop/scripts/check-update-feed.mjs "$dir" latest-linux.yml latest.yml
+node apps/desktop/scripts/check-update-feed.mjs --release "$dir" latest-linux.yml latest.yml
 # Exactly one of each file, or nothing is made. Their names, one a line.
 listing=$(node apps/desktop/scripts/check-release-assets.mjs --list "$dir")
 

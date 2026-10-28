@@ -186,6 +186,20 @@ describe.skipIf(!runnable)('publish-release.sh', () => {
     expect(state().releases).toEqual([]);
   });
 
+  test('makes nothing when latest.yml lists only one processor’s installer', () => {
+    files();
+    const feed = readFileSync(join(release, 'latest.yml'), 'utf8');
+    // The arm64 entry dropped from the feed (its file still in the folder).
+    writeFileSync(
+      join(release, 'latest.yml'),
+      feed.replace(/ {2}- url: Drafter-1\.2\.3-windows-arm64-setup\.exe\n(?: {4}.*\n)+/, ''),
+    );
+    const run = publish('v1.2.3');
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toMatch(/names no installer for arm64/);
+    expect(calls()).toEqual([]);
+  });
+
   test('makes nothing when the feeds give different versions', () => {
     files('1.2.3');
     writeFileSync(

@@ -125,6 +125,18 @@ releaseDate: '2026-10-27T12:22:14.158Z'
     expect(checkFeed(dir, 'latest.yml')).toEqual([]);
   });
 
+  test('for a release, wants an installer for every processor', async () => {
+    // electron-updater falls back to the first .exe when none holds the app's processor, so an
+    // arm64 Drafter would install the x64 build over itself without a word.
+    await windows([X64]);
+    expect(checkFeed(dir, 'latest.yml', { release: true }).join('\n')).toMatch(
+      /latest\.yml names no installer for arm64/,
+    );
+    await windows();
+    expect(checkFeed(dir, 'latest.yml', { release: true })).toEqual([]);
+    expect(checkFeeds(dir, ['latest.yml'], { release: true })).toEqual([]);
+  });
+
   test('finds an installer that is missing or changed', async () => {
     await windows();
     await writeFile(join(dir, ARM), 'something else');

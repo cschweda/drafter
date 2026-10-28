@@ -6,7 +6,8 @@
 //                     name (electron-updater picks the one that holds the running app's) and the
 //                     feed's version
 // Run after packaging and before a release is published (the workflow's `publish` job):
-//   node scripts/check-update-feed.mjs <folder> [feed …]
+//   node scripts/check-update-feed.mjs [--release] <folder> [feed …]
+// `--release` (publish-release.sh): latest.yml must list an installer for every processor.
 // With no feed named, latest-linux.yml. With more than one, they must also give the same version.
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -67,7 +68,7 @@ function linuxProblems(files) {
 }
 
 /** What is wrong with the Windows feed's files, beyond what every feed is checked for. */
-function windowsProblems(files, version) {
+function windowsProblems(files, version, release) {
   const problems = [];
   const installers = files.filter((file) => file.url.toLowerCase().endsWith('.exe'));
   if (installers.length === 0)
@@ -90,11 +91,22 @@ function windowsProblems(files, version) {
       problems.push(`${file.url}: an installer's name must hold the feed's version (${version})`);
     }
   }
+  // A release has one for every processor: with none of its own, electron-updater takes the first
+  // .exe, and an arm64 Drafter would install the x64 build over itself without a word.
+  if (release) {
+    for (const arch of WINDOWS_ARCHS) {
+      if (!byArch.has(arch)) problems.push(`latest.yml names no installer for ${arch}`);
+    }
+  }
   return problems;
 }
 
-/** @returns {string[]} what is wrong, empty when the feed and the packages agree. */
-export function checkFeed(dir, feedName = 'latest-linux.yml') {
+/**
+ * @param {{ release?: boolean }} [options] `release`: a release's feed, which must list an
+ *   installer for every processor in WINDOWS_ARCHS (the update test's lists only its own)
+ * @returns {string[]} what is wrong, empty when the feed and the packages agree.
+ */
+export function checkFeed(dir, feedName = 'latest-linux.yml', options = {}) {
   const feed = join(dir, feedName);
   if (!existsSync(feed)) return [`${feed} does not exist`];
   const { files, top } = parse(readFileSync(feed, 'utf8'));
@@ -102,7 +114,8 @@ export function checkFeed(dir, feedName = 'latest-linux.yml') {
   if (files.length === 0) problems.push(`${feedName} names no files`);
   if (!top.version) problems.push(`${feedName} has no \`version\``);
   if (feedName === 'latest-linux.yml') problems.push(...linuxProblems(files));
-  else if (feedName === 'latest.yml') problems.push(...windowsProblems(files, top.version));
+  else if (feedName === 'latest.yml')
+    problems.push(...windowsProblems(files, top.version, options.release === true));
   else problems.push(`${feedName}: not a feed this release has (latest-linux.yml, latest.yml)`);
   for (const file of files) {
     const path = join(dir, file.url);
@@ -138,8 +151,8 @@ export function checkFeed(dir, feedName = 'latest-linux.yml') {
 }
 
 /** Every feed named checked, and when there are several, the same version in each. */
-export function checkFeeds(dir, feedNames = ['latest-linux.yml']) {
-  const problems = feedNames.flatMap((name) => checkFeed(dir, name));
+export function checkFeeds(dir, feedNames = ['latest-linux.yml'], options = {}) {
+  const problems = feedNames.flatMap((name) => checkFeed(dir, name, options));
   const versions = new Set(feedNames.map((name) => feedVersion(dir, name)));
   if (feedNames.length > 1 && versions.size > 1) {
     problems.push(
@@ -150,7 +163,9 @@ export function checkFeeds(dir, feedNames = ['latest-linux.yml']) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const [dir, ...named] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const release = args.includes('--release');
+  const [dir, ...named] = args.filter((arg) => arg !== '--release');
   if (!dir) {
     console.error(
       'usage: node scripts/check-update-feed.mjs <folder> [latest-linux.yml] [latest.yml]',
@@ -158,7 +173,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     process.exit(2);
   }
   const feeds = named.length > 0 ? named : ['latest-linux.yml'];
-  const problems = checkFeeds(dir, feeds);
+  const problems = checkFeeds(dir, feeds, { release });
   if (problems.length > 0) {
     for (const problem of problems) console.error(`::error::${problem}`);
     process.exit(1);
