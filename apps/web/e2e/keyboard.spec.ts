@@ -6,8 +6,8 @@ import { removePickers } from './fs-stub';
 
 // The keyboard-only journey (Phase 1 design §1, item 5): everything a writer does from a new script
 // to a PDF, with no pointer. The page records every pointer event it is sent, and the test ends by
-// checking there were none. (The accessibility suite waits for the project's final stage, decided
-// 2026-10-26; this is the functional half, which stays.)
+// checking there were none. (The axe half of the accessibility suite is
+// a11y.spec.ts.)
 //
 // Safari's Tab skips buttons unless the reader turns that on in its settings, so in WebKit the part
 // that Tabs to a button puts focus there instead (the other keyboard tests do the same), and the
@@ -26,17 +26,17 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palett
 const problemsList = (page: Page) => page.getByRole('tabpanel', { name: /^Problems/ });
 
 /**
- * Records every pointer event the page is sent (a key's click has no position; a pointer's has a
- * count), for `noPointer` to check. Call before `goto`.
+ * Records every pointer event the page is sent, for `noPointer` to check. Call before `goto`.
  */
 async function watchPointer(page: Page) {
   await page.addInitScript(() => {
     const seen: string[] = [];
     (window as unknown as { pointerSeen: string[] }).pointerSeen = seen;
+    // A pointer's click comes after its pointerdown and mousedown, which are recorded; the click
+    // itself is not, since Firefox gives a link's click from Enter a count too.
     for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick']) {
       window.addEventListener(type, () => seen.push(type), true);
     }
-    window.addEventListener('click', (e) => e.detail > 0 && seen.push('click'), true);
   });
 }
 const noPointer = async (page: Page) =>
@@ -195,6 +195,17 @@ test.describe('the toolbar by Tab', () => {
     // The skipped tests (a phone has no keyboard) opened nothing to check.
     if (isMobile || testInfo.status === 'skipped') return;
     await noPointer(page);
+  });
+
+  test('skips to the editor from the first Tab', async ({ page }) => {
+    await page.keyboard.press('Tab');
+    const skip = page.getByRole('link', { name: 'Skip to the editor' });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport();
+    await page.keyboard.press('Enter');
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.type('Zz');
+    expect(await text(page)).toContain('Zz');
   });
 
   test('chooses the template from the chip, and undoes it', async ({ page }) => {

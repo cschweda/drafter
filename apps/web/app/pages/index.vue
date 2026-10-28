@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
-import { installGlobalKeys } from '~/commands/registry';
+import { commandById, installGlobalKeys } from '~/commands/registry';
 import { isDesktopBuild } from '~/desktop';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
@@ -25,6 +25,12 @@ const { tabs, phoneTab, split, choose, resize } = usePanes();
 const wide = useWideScreen();
 const focus = useFocusMode();
 const shown = computed(() => (wide.value ? [tabs.value.left, tabs.value.right] : [phoneTab.value]));
+
+// The skip link: the first Tab stop, which puts the cursor in the editor (Show Source, which also
+// brings the Source up on a phone) past the toolbar and the bars under it.
+function skipToEditor() {
+  void commandById('show-source')?.run();
+}
 
 // F6 moves focus to the other pane's panel (technical design §13).
 function onKeydown(event: KeyboardEvent) {
@@ -131,6 +137,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="shell" :class="{ focusing: focus.on.value }" :style="{ '--split': split }">
+    <a v-if="!focus.on.value" href="#panel-source" class="skip" @click.prevent="skipToEditor">
+      Skip to the editor
+    </a>
     <div v-if="!focus.on.value" class="top">
       <AppToolbar />
       <ReadOnlyBar />
@@ -199,6 +208,26 @@ onBeforeUnmount(() => {
   height: 100dvh;
   background: var(--bg);
   color: var(--text);
+}
+/* Out of sight until it has focus, then over the toolbar's corner. Positioned, so it takes no row of
+   the grid. */
+.skip {
+  position: absolute;
+  z-index: 50;
+  top: 6px;
+  left: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--chrome-2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  transform: translateY(-200%);
+}
+.skip:focus {
+  transform: none;
 }
 .shell.focusing {
   grid-template-rows: minmax(0, 1fr);
