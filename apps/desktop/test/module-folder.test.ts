@@ -218,9 +218,8 @@ describe('readModulesFolder', () => {
       await symlink(join(outside, 'evil.js'), join(dir, 'linked', 'index.js'));
       const { modules, problems } = readModulesFolder(dir);
       expect(modules).toEqual([]);
-      expect(problems).toEqual([
-        'Drafter skipped the folder “linked”: its index.js is outside its folder.',
-      ]);
+      // The security walk catches the link out of the folder before the manifest is read.
+      expect(problems[0]).toMatch(/Drafter skipped the folder “linked”.*\(index\.js\)/);
     } finally {
       await rm(outside, { recursive: true, force: true });
     }
@@ -453,7 +452,7 @@ describe('readModulesFolder, insecure folders (POSIX)', () => {
     const { modules, problems } = readModulesFolder(dir);
     expect(modules.map((m) => m.id)).toEqual(['safe']);
     expect(problems).toEqual([
-      'Drafter skipped the folder “open-wide”: anyone on this computer can change it (open-wide), so Drafter won’t run it. Make it writable only by you.',
+      'Drafter skipped the folder “open-wide”: something under it (open-wide) isn’t yours alone, or Drafter can’t read it, so Drafter won’t run it.',
     ]);
   });
 
@@ -466,7 +465,37 @@ describe('readModulesFolder, insecure folders (POSIX)', () => {
     chmodSync(join(dir, 'nested', 'lib', 'util.js'), 0o666);
     const { modules, problems } = readModulesFolder(dir);
     expect(modules).toEqual([]);
-    expect(problems[0]).toMatch(/anyone on this computer can change it \(lib\/util\.js\)/);
+    expect(problems[0]).toMatch(/something under it \(lib\/util\.js\)/);
+  });
+
+  test('fails closed: skips a module with a subfolder it can’t read', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    if (process.getuid() === 0) return; // root can read anything; the check is meaningless.
+    const { chmodSync, mkdirSync } = await import('node:fs');
+    await addModule('locked');
+    mkdirSync(join(dir, 'locked', 'secret'));
+    chmodSync(join(dir, 'locked', 'secret'), 0o000);
+    try {
+      const { modules, problems } = readModulesFolder(dir);
+      expect(modules).toEqual([]);
+      expect(problems[0]).toMatch(/Drafter skipped the folder “locked”/);
+    } finally {
+      chmodSync(join(dir, 'locked', 'secret'), 0o755);
+    }
+  });
+
+  test('fails closed: skips a module with a dangling symlink, or a link out of its folder', async () => {
+    if (process.platform === 'win32') return;
+    const { symlinkSync } = await import('node:fs');
+    await addModule('dangling');
+    symlinkSync(join(dir, 'dangling', 'gone'), join(dir, 'dangling', 'link.js'));
+    await addModule('escapes');
+    symlinkSync('/etc/hosts', join(dir, 'escapes', 'out.js'));
+    const { modules, problems } = readModulesFolder(dir);
+    expect(modules.map((m) => m.id).sort()).not.toContain('dangling');
+    expect(modules.map((m) => m.id)).not.toContain('escapes');
+    expect(problems.join('\n')).toMatch(/Drafter skipped the folder “dangling”/);
+    expect(problems.join('\n')).toMatch(/Drafter skipped the folder “escapes”/);
   });
 
   test('skips every module when the modules folder itself is writable', async () => {

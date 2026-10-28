@@ -124,45 +124,84 @@ export function manifestProblem(value: unknown): string | undefined {
   return undefined;
 }
 
+/** Whether a stat's mode or owner says another user could change this entry (POSIX). */
+function insecureMode(info: import('node:fs').Stats): boolean {
+  if (typeof process.getuid !== 'function') return false;
+  return (info.mode & 0o022) !== 0 || info.uid !== process.getuid();
+}
+
 /**
- * Whether `path` is one another user could swap under the writer (POSIX): writable by group or
- * others, or not owned by the user running Drafter. Windows has no such bits: always false there.
+ * Whether `dir` (the modules folder, or a module's folder) is one another user could change: group-
+ * or other-writable, or not owned by the user running Drafter. Windows has no such bits. Fails
+ * closed: a path that can't be read is treated as insecure by `firstInsecure`; this top-level check
+ * is only used where a read failure is handled separately (an empty folder), so it returns false.
  */
-function insecure(path: string): boolean {
+function insecure(dir: string): boolean {
   if (process.platform === 'win32' || typeof process.getuid !== 'function') return false;
   try {
-    const info = statSync(path);
-    return (info.mode & 0o022) !== 0 || info.uid !== process.getuid();
+    return insecureMode(statSync(dir));
   } catch {
-    // A path that can't be read is left to the caller's own handling.
     return false;
   }
 }
 
 /**
- * The first path inside `root` (its own name, or a child's relative path) that anyone but the owner
- * could change, or null when every directory and file under it is the writer's own and locked down.
- * A module's code and its served files all live here, so one writable file anywhere is enough for
- * someone else to change what Drafter runs.
+ * The first path inside `root` (its own name, or a child's path relative to it) that another user
+ * could change, or null when the whole tree is the writer's own and locked down. Fails closed: a
+ * path that can't be lstat'd or read, a dangling symlink, and a symlink whose target leaves the
+ * module's real folder are all treated as insecure, so a module Drafter can't fully vouch for is
+ * skipped, not loaded. A module's code and every file it serves live here, so one writable or
+ * unreadable file anywhere is enough for someone else to change what Drafter runs.
  */
-function firstInsecure(root: string, name: string): string | null {
-  if (insecure(root)) return name;
-  let entries: import('node:fs').Dirent[];
+function firstInsecure(root: string, folder: string): string | null {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return null;
+  let realRoot: string;
   try {
-    entries = readdirSync(root, { withFileTypes: true });
+    realRoot = realpathSync(root);
   } catch {
-    return null;
+    return folder;
   }
-  for (const entry of entries) {
-    const child = join(root, entry.name);
-    if (insecure(child)) return entry.name;
-    // A directory: look inside, and name the offending path relative to the module's folder.
-    if (entry.isDirectory() && !entry.isSymbolicLink()) {
-      const deeper = firstInsecure(child, entry.name);
-      if (deeper) return `${entry.name}/${deeper}`;
+  const scan = (path: string, rel: string): string | null => {
+    const here = rel === '' ? folder : rel;
+    let info: import('node:fs').Stats;
+    try {
+      info = lstatSync(path);
+    } catch {
+      return here;
     }
-  }
-  return null;
+    if (info.isSymbolicLink()) {
+      let real: string;
+      try {
+        real = realpathSync(path);
+      } catch {
+        return here; // A dangling link.
+      }
+      if (!within(realRoot, real)) return here; // A link out of the module's folder.
+      try {
+        info = statSync(path);
+      } catch {
+        return here;
+      }
+    }
+    if (insecureMode(info)) return here;
+    if (info.isDirectory()) {
+      let entries: import('node:fs').Dirent[];
+      try {
+        entries = readdirSync(path, { withFileTypes: true });
+      } catch {
+        return here; // A folder Drafter can't read.
+      }
+      for (const entry of entries) {
+        const found = scan(
+          join(path, entry.name),
+          rel === '' ? entry.name : `${rel}/${entry.name}`,
+        );
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  return scan(root, '');
 }
 
 const skipped = (folder: string, why: string) => `Drafter skipped the folder “${folder}”: ${why}.`;
@@ -267,7 +306,7 @@ export function readModulesFolder(
       problems.push(
         skipped(
           folder,
-          `anyone on this computer can change it (${open}), so Drafter won’t run it. Make it writable only by you`,
+          `something under it (${open}) isn’t yours alone, or Drafter can’t read it, so Drafter won’t run it`,
         ),
       );
       continue;
