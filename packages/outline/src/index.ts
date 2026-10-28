@@ -1,3 +1,4 @@
+export { expandOutline, STAGE_STUB, STUB_HEADING, scriptFromMarkdown } from './expand';
 export { setColor, setSynopsis } from './header';
 export { readKeyedNote } from './keyed';
 export {
@@ -10,6 +11,7 @@ export {
   upTarget,
 } from './move';
 export { bodyEnd, sceneIndex, startsScene } from './scene-index';
+export { markdownText, treatment } from './treatment';
 export type {
   OutlineItem,
   OutlineNode,

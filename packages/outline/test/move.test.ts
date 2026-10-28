@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { downTarget, type MoveTarget, moveItem, targetAfterRow, upTarget } from '../src';
-import { apply, headings, indexOf } from './helpers';
+import { apply, indexOf } from './helpers';
 
 /** The script after moving the item whose heading starts with `name` to `target`, or null. */
 function moved(source: string, name: string, target: (block: number) => MoveTarget | null) {

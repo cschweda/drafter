@@ -672,6 +672,33 @@ describe('heading-no-time', () => {
   });
 });
 
+describe('stub-heading', () => {
+  const { found, miss } = forRule('stub-heading');
+
+  it('lists every stand-in heading as info', () => {
+    const source =
+      'INT. LOCATION - DAY\n\n= Margaret waits.\n\nINT. KITCHEN - NIGHT\n\nShe waits.\n\nint. location - day\n\n= Later.\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from])).toEqual([
+      ['info', 0],
+      ['info', source.indexOf('int. location')],
+    ]);
+    expect(all[0]?.message).toBe(
+      'This scene still has the stand-in heading “INT. LOCATION - DAY”. Write where and when it happens.',
+    );
+    miss('INT. LOCATION OF THE TRUTH - DAY\n\nShe waits.\n');
+  });
+
+  it("lists a play's stand-in scene titles", () => {
+    const source = '# Act One\n\n## New scene\n\n= Margaret waits.\n\n## Scene 2\n\nWords.\n';
+    expect(found(source, stagePlay).map((d) => [d.severity, d.span.from])).toEqual([
+      ['info', source.indexOf('## New scene')],
+    ]);
+    // In a screenplay a ## line is an outline marker, not a scene.
+    expect(found(source)).toEqual([]);
+  });
+});
+
 describe('transition-not-last', () => {
   const { found, hit, miss, missIn } = forRule('transition-not-last');
 
