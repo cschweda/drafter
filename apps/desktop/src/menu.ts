@@ -188,6 +188,40 @@ export interface MenuActions {
   modulesFolder?: () => void;
   /** File → Quit: the main process passes `app.quit()`, which a `before-quit` handler can stop. */
   quit?: () => void;
+  /**
+   * A Mac with no editor's window: the commands that start from a window (`opensWindow`) stay
+   * on, with their keys, and choosing one calls this, which opens the window and runs it there.
+   */
+  reopen?: (id: string) => void;
+}
+
+/** The commands a Mac's menu keeps on with no window: New (every kind), Open…, Open Recent, Settings…. */
+export const opensWindow = (id: string): boolean =>
+  id.startsWith('new-') || id === 'open' || id === 'open-recent' || id === 'settings';
+
+/**
+ * The command chosen with no window, waiting for the window's page: `take` gives it, once, to the
+ * first command list that has it on; a list without it at all drops it (that page can't run it).
+ */
+export class ParkedCommand {
+  #id: string | null = null;
+
+  park(id: string): void {
+    this.#id = id;
+  }
+
+  take(commands: readonly MenuCommand[]): string | null {
+    const id = this.#id;
+    if (id === null) return null;
+    const command = commands.find((c) => c.id === id);
+    if (!command) {
+      this.#id = null;
+      return null;
+    }
+    if (!command.enabled) return null;
+    this.#id = null;
+    return id;
+  }
 }
 
 /**
@@ -209,10 +243,22 @@ export function menuTemplate(
   const modulesFolder = actions.modulesFolder ?? (() => {});
   const quit = actions.quit ?? (() => {});
 
+  const reopen = apple ? actions.reopen : undefined;
+
   const itemFor = (command: MenuCommand, strip?: RegExp): Item => {
     const title =
       LABELS[command.id] ?? (strip ? capital(command.title.replace(strip, '')) : command.title);
     const key = command.keys?.map(accelerator).find(Boolean);
+    // No window on a Mac: there is no page to take the key, so the menu registers it.
+    if (reopen && opensWindow(command.id)) {
+      return {
+        id: command.id,
+        label: label(title),
+        enabled: true,
+        ...(key && { accelerator: key }),
+        click: () => reopen(command.id),
+      };
+    }
     return {
       id: command.id,
       label: label(title),

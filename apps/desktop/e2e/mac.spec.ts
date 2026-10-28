@@ -3,8 +3,10 @@ import { join } from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';
 import {
   answerClose,
+  answerDialogs,
   chooseMenuItem,
   closeAsked,
+  dialogsAsked,
   editor,
   expect,
   type Launched,
@@ -206,4 +208,93 @@ test('has a Mac app menu: About, Settings… (⌘,), Hide, Quit (⌘Q); Close Wi
   const settings = page.getByRole('dialog', { name: 'Settings' });
   await expect(settings).toBeVisible();
   await expect(settings).toContainText('On a Mac, Drafter can’t update itself yet');
+});
+
+test('with no window, New, Open…, and Settings… stay on, bring the window back, and run there once', async ({
+  desktop,
+  profile,
+}) => {
+  const lamp = script(profile, 'The Lamp.fountain', LAMP);
+  const launched = await desktop();
+  const { app } = launched;
+  await expect.poll(async () => (await menuItems(app)).some((i) => i.id === 'open')).toBe(true);
+  const before = (await stored(launched.page)).length;
+
+  await closeWindow(app);
+  await expect.poll(() => windowCount(app)).toBe(0);
+  // On, with their keys registered (no page to take them); the rest off.
+  await expect
+    .poll(async () => {
+      const items = new Map((await menuItems(app)).map((i) => [i.id, i]));
+      return ['new-screenplay', 'open', 'settings', 'save'].map((id) => [
+        id,
+        items.get(id)?.enabled,
+        items.get(id)?.registerAccelerator,
+      ]);
+    })
+    .toEqual([
+      ['new-screenplay', true, true],
+      ['open', true, true],
+      ['settings', true, true],
+      ['save', false, false],
+    ]);
+
+  // New screenplay: a window, and one new screenplay in it.
+  const page = await nextWindow(launched, () => chooseMenuItem(app, ['File', 'New screenplay']));
+  await expect.poll(async () => (await stored(page)).length).toBe(before + 1);
+  await settle();
+  expect((await stored(page)).length).toBe(before + 1);
+  // The window's page has the keys again.
+  await expect
+    .poll(async () => (await menuItems(app)).find((i) => i.id === 'open')?.registerAccelerator)
+    .toBe(false);
+
+  // Open…: the window comes back and asks once.
+  await closeWindow(app);
+  await expect.poll(() => windowCount(app)).toBe(0);
+  answerDialogs(profile, [lamp]);
+  const second = await nextWindow(launched, () => chooseMenuItem(app, ['File', 'Open…']));
+  await expect(editor(second)).toContainText('The lamp turns.');
+  expect(dialogsAsked(profile).filter((d) => d.kind === 'open')).toHaveLength(1);
+
+  // Settings…, from the app menu.
+  await closeWindow(app);
+  await expect.poll(() => windowCount(app)).toBe(0);
+  const third = await nextWindow(launched, () => chooseMenuItem(app, ['Drafter', 'Settings…']));
+  await expect(third.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+});
+
+test('reopened without a restart, the window has the text, can be edited, and Quit asks', async ({
+  desktop,
+  profile,
+}) => {
+  const launched = await desktop();
+  await launched.page.getByRole('button', { name: 'Open', exact: true }).click();
+  await launched.page
+    .getByRole('group', { name: 'Scripts' })
+    .getByRole('button', { name: 'New screenplay' })
+    .click();
+  await editor(launched.page).click();
+  await launched.page.keyboard.press('Control+End');
+  await launched.page.keyboard.type('\nINT. LIGHTHOUSE - NIGHT\n');
+
+  answerClose(profile, ['discard']);
+  await closeWindow(launched.app);
+  await expect.poll(() => windowCount(launched.app)).toBe(0);
+
+  const page = await nextWindow(launched, () => clickDock(launched.app));
+  // (a) the text is there,
+  await expect(editor(page)).toContainText('INT. LIGHTHOUSE - NIGHT');
+  // (b) the editor isn't read-only: the closed page's lock on the script was let go,
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('The lamp turns.\n');
+  await expect(editor(page)).toContainText('The lamp turns.');
+  // (c) and Quit asks about it.
+  answerClose(profile, ['cancel']);
+  await chooseMenuItem(launched.app, QUIT_PATH);
+  await expect.poll(() => closeAsked(profile).length).toBe(2);
+  await settle();
+  expect(await windowCount(launched.app)).toBe(1);
 });

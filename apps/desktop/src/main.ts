@@ -441,7 +441,7 @@ function start() {
       }),
     );
     files = registerFileIpc();
-    setUpMenu(() => main, { modulesFolder: openModulesFolder });
+    setUpMenu(() => main, { modulesFolder: openModulesFolder, bringForward });
     closing = setUpClosing(() => main);
     const updates = setUpUpdates(
       () => main,
@@ -461,7 +461,10 @@ function start() {
 }
 
 // macOS names files to open with `open-file`, the first of them before `ready`: listened for now,
-// before anything else can happen, and held until the app has started (`start`).
+// before anything else can happen, and held until the app has started (`start`). Each is taken
+// (preventDefault), so should this Drafter not start after all (another one has the lock, or the
+// sandbox question is answered Quit), what it held is dropped without a word: rare on a Mac, where
+// LaunchServices hands a file to the Drafter already running.
 const openFiles = heldOpenFiles();
 app.on('open-file', openFiles.listener);
 

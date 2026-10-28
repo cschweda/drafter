@@ -10,6 +10,7 @@ import {
   aboutText,
   type MenuCommand,
   menuTemplate,
+  ParkedCommand,
   parseCommands,
   RELEASES_URL,
 } from './menu';
@@ -49,17 +50,26 @@ async function showAbout(parent: BrowserWindow | undefined): Promise<void> {
  * before the page is up) and again whenever the editor's page sends a changed list. Only the
  * editor window's own page is heard (`editor()` is that window): a help window that navigated to
  * the editor (its “Back to Drafter” link with no opener) is an editor page too, but not the
- * editor, and must not take over where menu clicks go. Call once, after `ready`.
+ * editor, and must not take over where menu clicks go. On a Mac with no editor's window, New,
+ * Open…, and Settings… stay on with their keys: choosing one brings the window back (`bringForward`)
+ * and its page runs the command once it has sent its own list. Call once, after `ready`.
  */
 export function setUpMenu(
   editor: () => BrowserWindow | null,
-  more: { modulesFolder?: () => void } = {},
+  more: { modulesFolder?: () => void; bringForward?: () => void } = {},
 ): void {
   let commands: MenuCommand[] = [];
   /** The page whose commands these are, and whose window runs them. */
   let source: WebContents | null = null;
   const watched = new WeakSet<WebContents>();
   let built = '';
+  /**
+   * A Mac with no editor's window: New, Open…, or Settings… chosen meanwhile opens the window, and
+   * waits here until its page sends its commands (it listens for menu choices by then).
+   */
+  const parked = new ParkedCommand();
+  const noWindow = () =>
+    process.platform === 'darwin' && (!source || source.isDestroyed()) && commands.length > 0;
 
   const windowOf = (contents: WebContents | null) =>
     contents && !contents.isDestroyed() ? BrowserWindow.fromWebContents(contents) : null;
@@ -76,11 +86,18 @@ export function setUpMenu(
     source.send(CHANNELS.menuRun, id);
   };
 
+  const reopen = (id: string) => {
+    parked.park(id);
+    more.bringForward?.();
+  };
+
   const build = () => {
-    const key = JSON.stringify(commands);
+    const withoutWindow = noWindow();
+    const key = JSON.stringify([commands, withoutWindow]);
     if (key === built) return;
     built = key;
     const actions = {
+      ...(withoutWindow && { reopen }),
       platform: process.platform,
       about: () =>
         void showAbout(BrowserWindow.getFocusedWindow() ?? windowOf(source) ?? undefined),
@@ -117,6 +134,9 @@ export function setUpMenu(
       });
     }
     build();
+    // A command chosen while there was no window: this page runs it, once it has it on.
+    const waiting = parked.take(parsed);
+    if (waiting) sender.send(CHANNELS.menuRun, waiting);
   });
 
   build();
