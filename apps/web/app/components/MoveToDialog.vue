@@ -30,7 +30,8 @@ const options = computed<Option[]>(() => {
     { key: 'start', label: 'The start of the script', target: { start: true }, depth: 0 },
   ];
   for (const other of props.index.items) {
-    if (other === item || inside(other)) continue;
+    // By block: the index is made afresh after every edit, so objects aren't the same twice.
+    if (other.block === item.block || inside(other)) continue;
     const depth = other.kind === 'scene' ? other.sections.length : 0;
     out.push(
       other.kind === 'scene'

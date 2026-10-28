@@ -358,6 +358,44 @@ test.describe('moving in the Outline', () => {
     );
   });
 
+  test('undoes a move from the Outline, keeping focus on the row', async ({ page }) => {
+    await openWith(page);
+    await hall(page).focus();
+    await page.keyboard.press('Alt+ArrowDown');
+    await expect(hall(page)).toHaveAccessibleName(/^Scene 2, /);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(() => textOf(page)).toBe(SCRIPT);
+    await expect(hall(page)).toBeFocused();
+    await expect(hall(page)).toHaveAccessibleName(/^Scene 1, /);
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await expect(hall(page)).toHaveAccessibleName(/^Scene 2, /);
+    await expect(hall(page)).toBeFocused();
+  });
+
+  test('changes nothing while a /* is closed only by the metadata block, and says why', async ({
+    page,
+  }) => {
+    const stray = 'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
+    await openWith(page, stray);
+    const b = row(page, /^Scene 2, INT\. B - DAY/);
+    await b.focus();
+    await page.keyboard.press('Alt+ArrowUp');
+    const why =
+      'A /* in this script isn’t closed by its own */, so the outline changes nothing until it is.';
+    await expect(announcer(page)).toHaveText(why);
+    expect(await textOf(page)).toBe(stray);
+    await menuFor(page, b);
+    await expect(rowMenu(page)).toContainText(why);
+    await expect(rowMenu(page).getByRole('menuitem', { name: 'Move scene up' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await expect(rowMenu(page).getByRole('menuitem', { name: 'Color…' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
   test("doesn't move a scene in a read-only tab, and says why", async ({ context, isMobile }) => {
     test.skip(!!isMobile, 'two browser tabs are the same on a phone');
     const first = await context.newPage();
@@ -439,24 +477,36 @@ test.describe('condense, expand, and treatments', () => {
     await expect(editor(page)).toContainText('### INT. CAR - DAY');
   });
 
-  test('expands synopses into stubs in one undo, and Problems lists them', async ({ page }) => {
+  test('expands the selected outline into stubs in one undo, and Problems lists them', async ({
+    page,
+  }) => {
     const outline =
-      'Title: Plan\n\n# Act One\n\n= Margaret waits.\n\n- Danny comes home.\n- They eat cake.\n';
+      'Title: Plan\n\n# Act One\n\n= The setup.\n\n- Margaret waits.\n\n= Danny comes home.\n';
     await start(page);
     await setText(page, outline);
+    // Nothing selected: it asks for a selection, and changes nothing.
     await runCommand(page, 'Expand outline');
+    await expect(announcer(page)).toHaveText(
+      'Select the outline lines to expand first: = lines and - lists.',
+    );
+    expect(await textOf(page)).toBe(outline);
+    await showSource(page);
+    await editor(page).focus();
+    await page.keyboard.press('ControlOrMeta+a');
+    await runCommand(page, 'Expand outline');
+    // The section's own synopsis stays one.
     await expect
       .poll(() => textOf(page))
       .toBe(
-        'Title: Plan\n\n# Act One\n\nINT. LOCATION - DAY\n\n= Margaret waits.\n\nINT. LOCATION - DAY\n\n= Danny comes home.\n\nINT. LOCATION - DAY\n\n= They eat cake.\n',
+        'Title: Plan\n\n# Act One\n\n= The setup.\n\nINT. LOCATION - DAY\n\n= Margaret waits.\n\nINT. LOCATION - DAY\n\n= Danny comes home.\n',
       );
-    await expect(announcer(page)).toHaveText('Made 3 scene stubs. Problems lists them.');
+    await expect(announcer(page)).toHaveText('Made 2 scene stubs. Problems lists them.');
     await page
       .getByRole('tab', { name: /^Problems/ })
       .last()
       .click();
     const problems = page.getByRole('tabpanel', { name: /^Problems/ });
-    await expect(problems.getByText(/still has the stand-in heading/)).toHaveCount(3);
+    await expect(problems.getByText(/still has the stand-in heading/)).toHaveCount(2);
     await undo(page);
     await expect.poll(() => textOf(page)).toBe(outline);
   });

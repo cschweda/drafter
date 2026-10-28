@@ -1,4 +1,4 @@
-import { Annotation, type EditorState, MapMode, StateField } from '@codemirror/state';
+import { Annotation, type EditorState, MapMode, StateEffect, StateField } from '@codemirror/state';
 import type { Doc } from '@drafter/fountain';
 import { parsedDoc } from './state';
 
@@ -20,6 +20,28 @@ const nextId = () => `scene-${++counter}`;
  * change, and its offset after it. `@drafter/outline`'s moves report these.
  */
 export const sceneMoved = Annotation.define<ReadonlyArray<{ from: number; to: number }>>();
+
+/**
+ * The same as `sceneMoved`, as an effect, which an editor's history can invert so an undone move
+ * gives the scene its id back (`invertSceneMoves`).
+ */
+export const sceneMovedEffect = StateEffect.define<ReadonlyArray<{ from: number; to: number }>>();
+
+/**
+ * For `invertedEffects` from `@codemirror/commands`: a move's effect, the other way round, so undo
+ * and redo carry each moved heading's id back and forth.
+ */
+export function invertSceneMoves(transaction: {
+  effects: readonly StateEffect<unknown>[];
+}): StateEffect<unknown>[] {
+  const out: StateEffect<unknown>[] = [];
+  for (const effect of transaction.effects) {
+    if (effect.is(sceneMovedEffect)) {
+      out.push(sceneMovedEffect.of(effect.value.map(({ from, to }) => ({ from: to, to: from }))));
+    }
+  }
+  return out;
+}
 
 /** The offsets of the blocks that have ids: every scene heading and every section. */
 function headingOffsets(doc: Doc): number[] {
@@ -47,7 +69,10 @@ export const sceneIds: StateField<ReadonlyMap<number, string>> = StateField.defi
       claimed.set(offset, id);
       return true;
     };
-    const moved = transaction.annotation(sceneMoved) ?? [];
+    const moved = [
+      ...(transaction.annotation(sceneMoved) ?? []),
+      ...transaction.effects.flatMap((e) => (e.is(sceneMovedEffect) ? e.value : [])),
+    ];
     const movedFrom = new Set<number>();
     for (const { from, to } of moved) {
       const id = ids.get(from);

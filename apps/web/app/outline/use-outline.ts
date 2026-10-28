@@ -1,6 +1,7 @@
 import { sceneIds } from '@drafter/cm-fountain';
 import type { TextChange } from '@drafter/fountain';
 import {
+  hasStrayBoneyard,
   type OutlineItem,
   type Scene,
   type SceneColor,
@@ -57,6 +58,9 @@ function create(): OutlineSession {
     const readOnly = computed(() => {
       if (editor.locked.value) return 'This script is open for editing in another tab.';
       if (script.fileLocked.value) return 'Drafter is checking this script’s file first.';
+      if (hasStrayBoneyard(editor.doc.value)) {
+        return 'A /* in this script isn’t closed by its own */, so the outline changes nothing until it is.';
+      }
       return null;
     });
     const apply = (changes: readonly TextChange[], options?: ApplyOptions) =>

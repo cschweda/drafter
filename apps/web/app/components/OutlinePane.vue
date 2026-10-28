@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { redo, undo } from '@codemirror/commands';
 import {
   downTarget,
   type MoveTarget,
@@ -42,6 +43,11 @@ interface Row extends TreeRow {
   item: OutlineItem;
   setsize: number;
   posinset: number;
+  /**
+   * Everything a row draws, as one string: a row whose `sig` is the same isn't drawn again while
+   * the writer types elsewhere (`v-memo`). Its handlers look the row up by id, never from a draw.
+   */
+  sig: string;
 }
 
 const query = computed(() => filter.value.trim().toLowerCase());
@@ -68,8 +74,27 @@ const rows = computed<Row[]>(() => {
       const children = 'children' in node ? node.children : [];
       const expandable = children.length > 0;
       const open = expandable && (query.value !== '' || !closed.value.has(id));
+      const item = node.item;
+      const sig = JSON.stringify([
+        item.kind === 'scene'
+          ? [
+              sceneName(item),
+              item.heading,
+              item.color?.value,
+              item.synopses[0]?.text,
+              item.speakers,
+              item.pages,
+            ]
+          : [sectionName(item), item.title, item.scenes, item.eighths],
+        level,
+        expandable,
+        open,
+        kept.length,
+        i,
+      ]);
       out.push({
         id,
+        sig,
         item: node.item,
         level,
         parent,
@@ -85,6 +110,9 @@ const rows = computed<Row[]>(() => {
   walk(index.value.tree, 1, null);
   return out;
 });
+
+/** The row with this id as it is now, for a handler (a drawn row may be from an earlier draw). */
+const rowById = (id: string) => rows.value.find((r) => r.id === id);
 
 // One row is the tab stop: the one last focused, or the first.
 const active = ref<string | null>(null);
@@ -135,17 +163,25 @@ async function move(item: OutlineItem, target: MoveTarget | null, direction?: 'u
 const moveUp = (item: OutlineItem) => move(item, upTarget(index.value, item.block), 'up');
 const moveDown = (item: OutlineItem) => move(item, downTarget(index.value, item.block), 'down');
 
-// Move to…
-const movingTo = ref<OutlineItem | null>(null);
+/**
+ * The item with this id in the index as it is now. An action decided a moment ago (in a menu, a
+ * dialog) looks its item up again, so it never writes at offsets from before an edit.
+ */
+const now = (id: string) => outline.itemById(id);
+
+// Move to…: it holds the item's id, and the dialog shows the item as it is now.
+const movingToId = ref<string | null>(null);
+const movingTo = computed(() => (movingToId.value ? (now(movingToId.value) ?? null) : null));
 async function onMoveTo(target: MoveTarget) {
-  const item = movingTo.value;
-  movingTo.value = null;
+  const id = movingToId.value;
+  movingToId.value = null;
+  const item = id ? now(id) : undefined;
   if (item) await move(item, target);
 }
 async function onMoveToClose() {
-  const item = movingTo.value;
-  movingTo.value = null;
-  if (item) await focusRow(idOf(item));
+  const id = movingToId.value;
+  movingToId.value = null;
+  if (id) await focusRow(id);
 }
 
 // Drag: a drop line between rows shows where the row will land (design §6.2). Pointer only; the
@@ -153,7 +189,9 @@ async function onMoveToClose() {
 const dragging = ref<string | null>(null);
 const dropLine = ref<{ id: string; below: boolean } | null>(null);
 
-function onDragstart(event: DragEvent, row: Row) {
+function onDragstart(event: DragEvent, id: string) {
+  const row = rowById(id);
+  if (!row) return;
   if (readOnly.value) {
     event.preventDefault();
     return;
@@ -163,7 +201,9 @@ function onDragstart(event: DragEvent, row: Row) {
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 }
 
-function onDragover(event: DragEvent, row: Row) {
+function onDragover(event: DragEvent, id: string) {
+  const row = rowById(id);
+  if (!row) return;
   if (!dragging.value) return;
   event.preventDefault();
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
@@ -200,12 +240,15 @@ let afterMenu: (() => void) | null = null;
 function openMenu(row: Row) {
   active.value = row.id;
   menuFor.value = row.id;
+  menuRow = row.id;
 }
 
 /** A row's menu opened or closed. A menu closing late (its fade) never closes another row's. */
-function setMenu(row: Row, open: boolean) {
-  if (open) menuFor.value = row.id;
-  else if (menuFor.value === row.id) menuFor.value = null;
+function setMenu(id: string, open: boolean) {
+  if (open) {
+    menuFor.value = id;
+    menuRow = id;
+  } else if (menuFor.value === id) menuFor.value = null;
 }
 
 /** Runs `act` once the menu has closed and given focus back. */
@@ -213,43 +256,57 @@ const then = (act: () => void) => () => {
   afterMenu = act;
 };
 
-function onMenuCloseAutoFocus(event: Event, row: Row) {
+/** The row whose menu was open last, which gets focus back when it closes. */
+let menuRow: string | null = null;
+
+function onMenuCloseAutoFocus(event: Event) {
   event.preventDefault();
   const act = afterMenu;
+  const id = menuRow;
   afterMenu = null;
   requestAnimationFrame(() => {
     if (act) act();
     // Not when another row's menu has opened since: focus is that menu's now.
-    else if (menuFor.value === null) void focusRow(row.id);
+    else if (menuFor.value === null && id) void focusRow(id);
   });
 }
 
+/** One `content` for every row's menu, so drawing a row never makes a new one. */
+const MENU_CONTENT = { align: 'end' as const, onCloseAutoFocus: onMenuCloseAutoFocus };
+const NO_ITEMS: DropdownMenuItem[][] = [];
+
 function menuItems(row: Row): DropdownMenuItem[][] {
   const off = readOnly.value !== null;
-  const what = row.item.kind === 'scene' ? 'scene' : 'section';
-  const item = row.item;
+  const { id, item } = row;
+  const what = item.kind === 'scene' ? 'scene' : 'section';
+  /** Runs `act` on the item as it is when the menu has closed, if it is still there. */
+  const withItem = (act: (current: OutlineItem) => void) =>
+    then(() => {
+      const current = now(id);
+      if (current) act(current);
+    });
   const groups: DropdownMenuItem[][] = [];
   if (readOnly.value) groups.push([{ type: 'label', label: readOnly.value }]);
-  groups.push([{ label: 'Go to', icon: 'i-lucide-arrow-right', onSelect: then(() => go(item)) }]);
+  groups.push([{ label: 'Go to', icon: 'i-lucide-arrow-right', onSelect: withItem(go) }]);
   groups.push([
     {
       label: `Move ${what} up`,
       icon: 'i-lucide-arrow-up',
       disabled: off || upTarget(index.value, item.block) === null,
-      onSelect: then(() => void moveUp(item)),
+      onSelect: withItem((current) => void moveUp(current)),
     },
     {
       label: `Move ${what} down`,
       icon: 'i-lucide-arrow-down',
       disabled: off || downTarget(index.value, item.block) === null,
-      onSelect: then(() => void moveDown(item)),
+      onSelect: withItem((current) => void moveDown(current)),
     },
     {
       label: `Move ${what} to…`,
       icon: 'i-lucide-move',
       disabled: off,
       onSelect: then(() => {
-        movingTo.value = item;
+        movingToId.value = id;
       }),
     },
   ]);
@@ -259,9 +316,9 @@ function menuItems(row: Row): DropdownMenuItem[][] {
       type: 'checkbox',
       label: color ?? 'No color',
       checked: current === color,
-      onSelect: then(() => {
-        outline.setColor(item, color);
-        void focusRow(row.id);
+      onSelect: withItem((scene) => {
+        if (scene.kind === 'scene') outline.setColor(scene, color);
+        void focusRow(id);
       }),
     });
     groups.push([
@@ -269,7 +326,10 @@ function menuItems(row: Row): DropdownMenuItem[][] {
         label: 'Edit synopsis',
         icon: 'i-lucide-pencil',
         disabled: off,
-        onSelect: then(() => void startEditing(row)),
+        onSelect: then(() => {
+          const found = rows.value.find((r) => r.id === id);
+          if (found) void startEditing(found);
+        }),
       },
       {
         label: 'Color…',
@@ -322,7 +382,9 @@ function onEditKeydown(event: KeyboardEvent) {
 let typed = '';
 let typedAt = 0;
 
-function onKeydown(event: KeyboardEvent, row: Row) {
+function onKeydown(event: KeyboardEvent, id: string) {
+  const row = rowById(id);
+  if (!row) return;
   // Only keys on the row itself: its ⋯ button and the synopsis field have their own.
   if (event.target !== event.currentTarget) return;
   const { key } = event;
@@ -334,6 +396,16 @@ function onKeydown(event: KeyboardEvent, row: Row) {
   if (event.altKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
     event.preventDefault();
     void (key === 'ArrowUp' ? moveUp(row.item) : moveDown(row.item));
+    return;
+  }
+  // Undo and redo work here too, on the script, and focus stays in the Outline.
+  const mod = event.ctrlKey || event.metaKey;
+  if (mod && !event.altKey && (key.toLowerCase() === 'z' || key.toLowerCase() === 'y')) {
+    event.preventDefault();
+    const again = key.toLowerCase() === 'y' || event.shiftKey;
+    if (again) redo(editor.view);
+    else undo(editor.view);
+    void focusRow(row.id);
     return;
   }
   if (event.altKey || event.ctrlKey || event.metaKey) return;
@@ -361,15 +433,25 @@ function onKeydown(event: KeyboardEvent, row: Row) {
   }
 }
 
-function onRowClick(event: MouseEvent, row: Row) {
+function onRowClick(event: MouseEvent, id: string) {
+  const row = rowById(id);
+  if (!row) return;
   active.value = row.id;
   if ((event.target as HTMLElement).closest('.more, .twisty, input')) return;
   go(row.item);
 }
 
 // After a change in another tab or the source, a row that went away hands the tab stop on.
-watch(rows, () => {
-  if (active.value && !rows.value.some((r) => r.id === active.value)) active.value = null;
+watch(rows, async () => {
+  if (!active.value || rows.value.some((r) => r.id === active.value)) return;
+  // The row with focus went (an undo, an edit elsewhere): focus stays in the Outline, on the row
+  // that is the tab stop now, rather than falling to the page.
+  const hadFocus = document.activeElement === document.body || !document.activeElement?.isConnected;
+  active.value = null;
+  await nextTick();
+  if (hadFocus && document.activeElement === document.body && current.value) {
+    await focusRow(current.value);
+  }
 });
 
 const sceneLength = (row: Row) =>
@@ -432,11 +514,20 @@ const nameOfRow = (row: Row) =>
           :aria-describedby="hasDetails(row) ? `${domId(row.id)}-more` : undefined"
           :draggable="readOnly === null && editing !== row.id ? 'true' : 'false'"
           :data-id="row.id"
-          @keydown="onKeydown($event, row)"
+          v-memo="[
+            row.sig,
+            row.id === current,
+            dragging === row.id,
+            dropLine?.id === row.id ? dropLine.below : null,
+            editing === row.id,
+            menuFor === row.id,
+            readOnly,
+          ]"
+          @keydown="onKeydown($event, row.id)"
           @focus="active = row.id"
-          @click="onRowClick($event, row)"
-          @dragstart="onDragstart($event, row)"
-          @dragover="onDragover($event, row)"
+          @click="onRowClick($event, row.id)"
+          @dragstart="onDragstart($event, row.id)"
+          @dragover="onDragover($event, row.id)"
           @drop="onDrop"
           @dragend="onDragend"
         >
@@ -472,12 +563,9 @@ const nameOfRow = (row: Row) =>
             </template>
             <MenuButton
               :open="menuFor === row.id"
-              :items="menuFor === row.id ? menuItems(row) : []"
-              :content="{
-                align: 'end',
-                onCloseAutoFocus: (event: Event) => onMenuCloseAutoFocus(event, row),
-              }"
-              @update:open="(open: boolean) => setMenu(row, open)"
+              :items="menuFor === row.id ? menuItems(row) : NO_ITEMS"
+              :content="MENU_CONTENT"
+              @update:open="(open: boolean) => setMenu(row.id, open)"
             >
               <button
                 type="button"

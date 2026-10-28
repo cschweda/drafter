@@ -47,11 +47,16 @@ export function treeKey(rows: readonly TreeRow[], focused: string, key: string):
   }
 }
 
-/** The next row after `focused`, going round, whose label starts with `typed` (any case). */
+/**
+ * The next row after `focused`, going round, whose label starts with `typed` (any case). A prefix
+ * of more than one letter is still being typed, so it starts at `focused` itself, which stays put
+ * while it still matches.
+ */
 export function typeAhead(rows: readonly TreeRow[], focused: string, typed: string): string | null {
   const wanted = typed.toLowerCase();
   const at = rows.findIndex((row) => row.id === focused);
-  for (let step = 1; step <= rows.length; step++) {
+  const first = typed.length > 1 ? 0 : 1;
+  for (let step = first; step < rows.length + first; step++) {
     const row = rows[(at + step) % rows.length];
     if (row?.label.toLowerCase().startsWith(wanted)) return row.id;
   }

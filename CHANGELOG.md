@@ -22,6 +22,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **Expand outline** turns the `=` lines and `- ` lists you've selected (or the whole script's) into scene stubs, `INT. LOCATION - DAY` with the line as its synopsis, in one undo; **New screenplay from this outline** does the same for a Markdown outline, as a new screenplay. Problems lists every stub still waiting for its real heading.
 - Tests: axe checks every state the Outline adds (the tree, a row's menu and colors, Move to…, the treatment dialog, the tabs' More menu, a read-only tab), in both themes, at desktop and phone width, on every run.
 
+### Fixed
+
+- `@drafter/outline`, `apps/web`: a `/*` closed only by the metadata block's `*/` (or not at all) could let a scene's span hold the metadata block, and a move carry it into the script. While a `/*` is stray the Outline changes nothing and says why. Moves leave alone a scene or section whose heading isn't set off by a blank line.
+- `apps/web`: **Expand outline** now works on the selection only, keeps a section's own synopsis as one, and keeps a line's notes and boneyard as they are.
+- `apps/web`: undoing a move from the Outline (Mod+Z works there now) keeps focus on the scene's row; the Outline's menus and Move to… act on the scene as it is when you choose, not as it was when they opened; typing a longer name to jump stays on the row it found; a `$` in a Markdown outline's title is kept in the new screenplay's title.
+- `apps/web`: typing with the Outline showing is about three times faster on a long script.
+- `@drafter/outline`: taking out a color typed inside a line leaves the spaces around it, so the line prints as before.
+
 ### Changed
 
 - `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.

@@ -1,4 +1,4 @@
-import { sceneMoved } from '@drafter/cm-fountain';
+import { sceneMovedEffect } from '@drafter/cm-fountain';
 import { type MoveTarget, moveItem, type OutlineItem, type SceneIndex } from '@drafter/outline';
 import { useEditor } from '../editor/session';
 import { sayOutline } from './notice';
@@ -55,7 +55,7 @@ export function runMove(
   const head = editor.view.state.selection.main.head;
   const inside = head >= item.span.from && head <= item.span.to;
   const done = outline.apply(move.changes, {
-    annotations: [sceneMoved.of(move.moved)],
+    effects: [sceneMovedEffect.of(move.moved)],
     ...(options.keepCursor &&
       inside && { selection: { anchor: move.at + (head - item.span.from) } }),
   });

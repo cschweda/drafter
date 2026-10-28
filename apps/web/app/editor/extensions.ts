@@ -1,5 +1,5 @@
 import { completionKeymap } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, invertedEffects, redo } from '@codemirror/commands';
 import { foldGutter, foldKeymap } from '@codemirror/language';
 import { lintKeymap, previousDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
@@ -8,6 +8,7 @@ import { drawSelection, EditorView, keymap, lineNumbers, ViewPlugin } from '@cod
 import {
   type CursorElement,
   fountain,
+  invertSceneMoves,
   parsedDoc,
   relint as relintView,
   sceneIds,
@@ -142,6 +143,9 @@ export function languageExtension(
  * both: the session and the layout read it, and it is cheap, so a switch of kind is one
  * reconfigure of the language and nothing else.
  */
+/** Undo and redo carry a moved scene's id back and forth (Phase 2 design §5.2). */
+export const sceneMoveHistory: Extension = invertedEffects.of(invertSceneMoves);
+
 export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fountain'): Extension {
   return [
     remember,
@@ -150,6 +154,7 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     parsedDoc,
     // Each scene's and section's identity for the visit (Phase 2 design §5.2), after the parse it reads.
     sceneIds,
+    sceneMoveHistory,
     language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),

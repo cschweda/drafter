@@ -1,7 +1,7 @@
 import { parse } from '@drafter/fountain';
 import { describe, expect, test } from 'vitest';
 import { templateIdOf } from '../app/editor/template';
-import { newScriptText } from '../app/storage/new-script';
+import { newScriptText, screenplayFromOutline } from '../app/storage/new-script';
 
 const TODAY = new Date(2026, 9, 25, 14, 30);
 
@@ -53,5 +53,18 @@ describe('newScriptText', () => {
     const { text, cursor } = newScriptText('markdown', TODAY);
     expect(text).toBe('# Untitled\n\n');
     expect(cursor).toBe(text.length);
+  });
+});
+
+describe('screenplayFromOutline', () => {
+  test("takes the outline's title, even one with a $ in it", () => {
+    const text = screenplayFromOutline('# Cash $& Prizes\n\n- One.\n', TODAY);
+    expect(text).toBe(
+      'Title: Cash $& Prizes\nCredit: Written by\nAuthor: Your Name\nDraft date: October 25, 2026\n\nINT. LOCATION - DAY\n\n= One.\n',
+    );
+  });
+
+  test('keeps the untitled title page without a title', () => {
+    expect(screenplayFromOutline('- One.\n', TODAY)).toMatch(/^Title: Untitled Screenplay\n/);
   });
 });

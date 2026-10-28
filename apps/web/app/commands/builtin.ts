@@ -20,7 +20,7 @@ import {
   wrapInNote,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
-import { downTarget, expandOutline, scriptFromMarkdown, upTarget } from '@drafter/outline';
+import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
@@ -41,7 +41,7 @@ import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
-import { newScriptText } from '~/storage/new-script';
+import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
@@ -281,10 +281,8 @@ export function registerBuiltinCommands(): void {
     'screenplay-from-outline': {
       enabled: () => isMarkdown() && canStart(),
       run: quietly(async () => {
-        const { title, body } = scriptFromMarkdown(view.state.doc.toString());
-        const blank = newScriptText('screenplay', new Date()).text;
-        const titled = title ? blank.replace(/^Title: .*$/m, `Title: ${title}`) : blank;
-        const made = await script.addScript(`${titled}${body}`, { kind: 'fountain' });
+        const text = screenplayFromOutline(view.state.doc.toString(), new Date());
+        const made = await script.addScript(text, { kind: 'fountain' });
         await script.open(made.id);
         const stubs = useOutline().index.value.scenes.length;
         void sayOutline(
@@ -438,12 +436,21 @@ export function registerBuiltinCommands(): void {
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
-    // Expand outline (design §6.5): the selection's outline lines, or the whole script's, as scene stubs.
+    // Expand outline (design §6.5): the selection's outline lines as scene stubs.
     'expand-outline': {
       enabled: () => canEdit() && isFountain(),
       run: () => {
         const { from, to } = view.state.selection.main;
-        const range = from === to ? { from: 0, to: view.state.doc.length } : { from, to };
+        if (from === to) {
+          void sayOutline('Select the outline lines to expand first: = lines and - lists.');
+          return;
+        }
+        const blocked = useOutline().readOnly.value;
+        if (blocked) {
+          void sayOutline(blocked);
+          return;
+        }
+        const range = { from, to };
         const before = useOutline().index.value.scenes.length;
         const changes = expandOutline(editor.doc.value, editor.template.value, range);
         if (changes.length === 0) {

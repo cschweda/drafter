@@ -1,3 +1,4 @@
+import { scriptFromMarkdown } from '@drafter/outline';
 import { NEW_MARKDOWN } from '../markdown/kind';
 
 const MONTHS = [
@@ -34,4 +35,16 @@ export function newScriptText(
   const titlePage = `Title: ${title}\nCredit: Written by\nAuthor: Your Name\nDraft date: ${date}\n\n`;
   if (kind === 'screenplay') return { text: titlePage, cursor: titlePage.length };
   return { text: `${titlePage}\n${STAGE_PLAY_META}`, cursor: titlePage.length };
+}
+
+/**
+ * A new screenplay made from a Markdown outline (Phase 2 design §6.5): the new-screenplay title page,
+ * titled from the outline's first `#` heading if it has one, then the outline as sections and stubs.
+ */
+export function screenplayFromOutline(markdown: string, today: Date): string {
+  const { title, body } = scriptFromMarkdown(markdown);
+  const blank = newScriptText('screenplay', today).text;
+  // A function, so a `$` in the title is the writer's, not a replacement pattern.
+  const titled = title ? blank.replace(/^Title: .*$/m, () => `Title: ${title}`) : blank;
+  return `${titled}${body}`;
 }

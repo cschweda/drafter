@@ -1,5 +1,5 @@
 import { isolateHistory } from '@codemirror/commands';
-import type { Annotation, EditorSelection } from '@codemirror/state';
+import type { Annotation, EditorSelection, StateEffect } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { TextChange } from '@drafter/fountain';
 import { appChange } from './typewriter';
@@ -7,6 +7,8 @@ import { appChange } from './typewriter';
 export interface ApplyOptions {
   /** More annotations for the transaction, such as `sceneMoved` for a move. */
   annotations?: readonly Annotation<unknown>[];
+  /** Effects for the transaction, such as `sceneMovedEffect`, which undo can invert. */
+  effects?: readonly StateEffect<unknown>[];
   /** The selection after the change, in the new text's positions. */
   selection?: EditorSelection | { anchor: number; head?: number };
 }
@@ -33,6 +35,7 @@ export function applyTextChanges(
       insert: String(c.insert).replace(/\r?\n/g, view.state.lineBreak),
     })),
     ...(options.selection && { selection: options.selection }),
+    ...(options.effects && { effects: [...options.effects] }),
     userEvent: 'input',
     annotations: [isolateHistory.of('full'), appChange.of(true), ...(options.annotations ?? [])],
   });

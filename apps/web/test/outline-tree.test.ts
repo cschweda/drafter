@@ -38,9 +38,16 @@ describe('the outline tree keys', () => {
 
   test('type-ahead finds the next row by its start', () => {
     expect(typeAhead(rows, 'act1', 'int')).toBe('a');
-    expect(typeAhead(rows, 'a', 'int')).toBe('b');
-    expect(typeAhead(rows, 'b', 'int')).toBe('a');
+    // One letter again moves on to the next match, going round.
+    expect(typeAhead(rows, 'a', 'i')).toBe('b');
+    expect(typeAhead(rows, 'b', 'i')).toBe('a');
     expect(typeAhead(rows, 'a', 'e')).toBe('d');
     expect(typeAhead(rows, 'a', 'zz')).toBeNull();
+  });
+
+  test('a longer prefix keeps the row it has found if it still matches', () => {
+    // "i" went from Act One to A; "in" stays on A rather than moving on to B.
+    expect(typeAhead(rows, 'a', 'in')).toBe('a');
+    expect(typeAhead(rows, 'a', 'int. b')).toBe('b');
   });
 });
