@@ -56,6 +56,3 @@ export function sectionName(section: Section): string {
   if (section.eighths !== null) parts.push(lengthWords(section.eighths));
   return parts.join(', ');
 }
-
-/** What a row's menu can ask the Outline to do. */
-export type RowAction = 'go' | 'up' | 'down' | 'move-to' | 'synopsis';

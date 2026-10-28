@@ -4,15 +4,16 @@ import {
   type MoveTarget,
   type OutlineItem,
   type OutlineNode,
+  SCENE_COLORS,
   type SceneColor,
   targetAfterRow,
   upTarget,
 } from '@drafter/outline';
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
 import {
   colorName,
   lengthLabel,
-  type RowAction,
   sceneName,
   sceneNumber,
   sectionName,
@@ -190,42 +191,95 @@ function onDragend() {
 
 // ---- The row's menu ----------------------------------------------------------------------
 
-const menu = ref<{ row: Row; place: { top: number; left: number } } | null>(null);
+// MenuButton, as every menu is: a row's ⋯ button opens it, and so do the context-menu key and
+// Shift+F10 on the row. Closing it puts focus back on the row (the ⋯ button is a pointer's only), or
+// where the chosen action wants it.
+const menuFor = ref<string | null>(null);
+let afterMenu: (() => void) | null = null;
 
-function openMenu(row: Row, from: HTMLElement) {
-  const rect = from.getBoundingClientRect();
-  const width = 15 * 16;
-  menu.value = {
-    row,
-    place: {
-      top: Math.round(Math.min(rect.bottom + 4, window.innerHeight - 300)),
-      left: Math.max(8, Math.min(Math.round(rect.right - width), window.innerWidth - width - 8)),
+function openMenu(row: Row) {
+  active.value = row.id;
+  menuFor.value = row.id;
+}
+
+/** A row's menu opened or closed. A menu closing late (its fade) never closes another row's. */
+function setMenu(row: Row, open: boolean) {
+  if (open) menuFor.value = row.id;
+  else if (menuFor.value === row.id) menuFor.value = null;
+}
+
+/** Runs `act` once the menu has closed and given focus back. */
+const then = (act: () => void) => () => {
+  afterMenu = act;
+};
+
+function onMenuCloseAutoFocus(event: Event, row: Row) {
+  event.preventDefault();
+  const act = afterMenu;
+  afterMenu = null;
+  requestAnimationFrame(() => {
+    if (act) act();
+    // Not when another row's menu has opened since: focus is that menu's now.
+    else if (menuFor.value === null) void focusRow(row.id);
+  });
+}
+
+function menuItems(row: Row): DropdownMenuItem[][] {
+  const off = readOnly.value !== null;
+  const what = row.item.kind === 'scene' ? 'scene' : 'section';
+  const item = row.item;
+  const groups: DropdownMenuItem[][] = [];
+  if (readOnly.value) groups.push([{ type: 'label', label: readOnly.value }]);
+  groups.push([{ label: 'Go to', icon: 'i-lucide-arrow-right', onSelect: then(() => go(item)) }]);
+  groups.push([
+    {
+      label: `Move ${what} up`,
+      icon: 'i-lucide-arrow-up',
+      disabled: off || upTarget(index.value, item.block) === null,
+      onSelect: then(() => void moveUp(item)),
     },
-  };
-}
-
-function closeMenu(refocus: boolean) {
-  const row = menu.value?.row;
-  menu.value = null;
-  if (refocus && row) void focusRow(row.id);
-}
-
-function onAct(action: RowAction) {
-  const row = menu.value?.row;
-  menu.value = null;
-  if (!row) return;
-  if (action === 'go') go(row.item);
-  else if (action === 'up') void moveUp(row.item);
-  else if (action === 'down') void moveDown(row.item);
-  else if (action === 'move-to') movingTo.value = row.item;
-  else if (action === 'synopsis') void startEditing(row);
-}
-
-function onColor(color: SceneColor | null) {
-  const row = menu.value?.row;
-  menu.value = null;
-  if (row?.item.kind === 'scene') outline.setColor(row.item, color);
-  if (row) void focusRow(row.id);
+    {
+      label: `Move ${what} down`,
+      icon: 'i-lucide-arrow-down',
+      disabled: off || downTarget(index.value, item.block) === null,
+      onSelect: then(() => void moveDown(item)),
+    },
+    {
+      label: `Move ${what} to…`,
+      icon: 'i-lucide-move',
+      disabled: off,
+      onSelect: then(() => {
+        movingTo.value = item;
+      }),
+    },
+  ]);
+  if (item.kind === 'scene') {
+    const current = item.color?.value ?? null;
+    const pick = (color: SceneColor | null): DropdownMenuItem => ({
+      type: 'checkbox',
+      label: color ?? 'No color',
+      checked: current === color,
+      onSelect: then(() => {
+        outline.setColor(item, color);
+        void focusRow(row.id);
+      }),
+    });
+    groups.push([
+      {
+        label: 'Edit synopsis',
+        icon: 'i-lucide-pencil',
+        disabled: off,
+        onSelect: then(() => void startEditing(row)),
+      },
+      {
+        label: 'Color…',
+        icon: 'i-lucide-palette',
+        disabled: off,
+        children: [SCENE_COLORS.map(pick), [pick(null)]],
+      },
+    ]);
+  }
+  return groups;
 }
 
 // ---- Edit synopsis in place --------------------------------------------------------------
@@ -274,7 +328,7 @@ function onKeydown(event: KeyboardEvent, row: Row) {
   const { key } = event;
   if (key === 'ContextMenu' || (key === 'F10' && event.shiftKey)) {
     event.preventDefault();
-    openMenu(row, event.currentTarget as HTMLElement);
+    openMenu(row);
     return;
   }
   if (event.altKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
@@ -416,15 +470,25 @@ const nameOfRow = (row: Row) =>
               <span class="heading">{{ row.item.title || 'Untitled section' }}</span>
               <span class="length">{{ sectionSummary(row) }}</span>
             </template>
-            <button
-              type="button"
-              class="more"
-              tabindex="-1"
-              :aria-label="`Actions for ${row.label || 'this row'}`"
-              @click.stop="openMenu(row, $event.currentTarget as HTMLElement)"
+            <MenuButton
+              :open="menuFor === row.id"
+              :items="menuFor === row.id ? menuItems(row) : []"
+              :content="{
+                align: 'end',
+                onCloseAutoFocus: (event: Event) => onMenuCloseAutoFocus(event, row),
+              }"
+              @update:open="(open: boolean) => setMenu(row, open)"
             >
-              <UIcon name="i-lucide-ellipsis" aria-hidden="true" />
-            </button>
+              <button
+                type="button"
+                class="more"
+                tabindex="-1"
+                :aria-label="`Actions for ${row.label || 'this row'}`"
+                @click.stop
+              >
+                <UIcon name="i-lucide-ellipsis" aria-hidden="true" />
+              </button>
+            </MenuButton>
           </div>
           <input
             v-if="row.item.kind === 'scene' && editing === row.id"
@@ -451,18 +515,6 @@ const nameOfRow = (row: Row) =>
         </li>
       </ul>
     </template>
-    <OutlineRowMenu
-      v-if="menu"
-      :item="menu.row.item"
-      :name="menu.row.label"
-      :place="menu.place"
-      :read-only="readOnly"
-      :can-up="upTarget(index, menu.row.item.block) !== null"
-      :can-down="downTarget(index, menu.row.item.block) !== null"
-      @act="onAct"
-      @color="onColor"
-      @close="closeMenu"
-    />
     <MoveToDialog
       :item="movingTo"
       :index="index"

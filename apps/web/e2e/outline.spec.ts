@@ -50,7 +50,9 @@ const car = (page: Page) => row(page, /^Scene \d+, INT\. CAR - DAY/);
 const actOne = (page: Page) => row(page, /^Act One/);
 const actTwo = (page: Page) => row(page, /^Act Two/);
 const announcer = (page: Page) => page.locator('.outline-announcer');
-const rowMenu = (page: Page) => page.getByRole('group', { name: /^Actions for / });
+// The open one: a menu that is closing stays in the page for its fade.
+const rowMenu = (page: Page) =>
+  page.getByRole('menu', { name: /^Actions for / }).and(page.locator('[data-state="open"]'));
 
 /** The scene headings in the script's text, in order. */
 const order = async (page: Page) =>
@@ -157,7 +159,7 @@ test.describe('the Outline', () => {
   test('edits a synopsis in place and undoes it in one step', async ({ page }) => {
     await openWith(page);
     await menuFor(page, yard(page));
-    await rowMenu(page).getByRole('button', { name: 'Edit synopsis' }).click();
+    await rowMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
     const field = page.getByRole('textbox', { name: 'Synopsis of EXT. YARD - NIGHT' });
     await expect(field).toBeFocused();
     await field.fill('Bob says hi.');
@@ -167,7 +169,8 @@ test.describe('the Outline', () => {
     expect(await textOf(page)).toContain('EXT. YARD - NIGHT\n\n= Bob says hi.\n\nBOB');
     // Escape leaves it as it was.
     await menuFor(page, hall(page));
-    await rowMenu(page).getByRole('button', { name: 'Edit synopsis' }).click();
+    await rowMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
+    await expect(page.getByRole('textbox', { name: 'Synopsis of INT. HALL - DAY' })).toBeFocused();
     await page.keyboard.insertText(' Changed.');
     await page.keyboard.press('Escape');
     await expect(hall(page)).toBeFocused();
@@ -179,13 +182,10 @@ test.describe('the Outline', () => {
   test('colors a scene from the menu, and the color is a name too', async ({ page }) => {
     await openWith(page);
     await menuFor(page, hall(page));
-    await rowMenu(page).getByRole('button', { name: 'Color…' }).click();
-    const colors = page.getByRole('group', { name: 'Color for INT. HALL - DAY' });
-    await expect(colors.getByRole('button', { name: 'No color' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    await colors.getByRole('button', { name: 'blue' }).click();
+    await rowMenu(page).getByRole('menuitem', { name: 'Color…' }).click();
+    const noColor = page.getByRole('menuitemcheckbox', { name: 'No color' });
+    await expect(noColor).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('menuitemcheckbox', { name: 'blue' }).click();
     await expect(hall(page)).toBeFocused();
     await expect(row(page, /^Scene 1, INT\. HALL - DAY, blue/)).toBeVisible();
     await expect(hall(page)).toContainText('blue');
@@ -276,7 +276,7 @@ test.describe('moving in the Outline', () => {
   test('moves a scene with Move to…', async ({ page }) => {
     await openWith(page);
     await menuFor(page, hall(page));
-    await rowMenu(page).getByRole('button', { name: 'Move scene to…' }).click();
+    await rowMenu(page).getByRole('menuitem', { name: 'Move scene to…' }).click();
     const dialog = page.getByRole('dialog', { name: 'Move INT. HALL - DAY' });
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveAccessibleDescription('Put it after:');
@@ -300,7 +300,7 @@ test.describe('moving in the Outline', () => {
     await openWith(page);
     // The ⋯ button is for a pointer: the row's keys open the same menu.
     await hall(page).locator('button.more').click();
-    await rowMenu(page).getByRole('button', { name: 'Move scene down' }).click();
+    await rowMenu(page).getByRole('menuitem', { name: 'Move scene down' }).click();
     await expect
       .poll(() => order(page))
       .toEqual([
@@ -373,11 +373,9 @@ test.describe('moving in the Outline', () => {
     await expect(announcer(second)).toHaveText('This script is open for editing in another tab.');
     expect(await textOf(second)).toBe(before);
     await menuFor(second, kitchen);
-    const down = rowMenu(second).getByRole('button', { name: 'Move scene down' });
+    const down = rowMenu(second).getByRole('menuitem', { name: 'Move scene down' });
     await expect(down).toHaveAttribute('aria-disabled', 'true');
-    await expect(down).toHaveAccessibleDescription(
-      'This script is open for editing in another tab.',
-    );
+    await expect(rowMenu(second)).toContainText('This script is open for editing in another tab.');
   });
 });
 
@@ -525,20 +523,20 @@ for (const theme of ['dark', 'light'] as const) {
     test(`passes axe with a row's menu and its colors open (${theme})`, async ({ page }) => {
       await menuFor(page, hall(page));
       await clean(page, "a row's menu");
-      await rowMenu(page).getByRole('button', { name: 'Color…' }).click();
-      await expect(page.getByRole('group', { name: 'Color for INT. HALL - DAY' })).toBeVisible();
+      await rowMenu(page).getByRole('menuitem', { name: 'Color…' }).click();
+      await expect(page.getByRole('menuitemcheckbox', { name: 'blue' })).toBeVisible();
       await clean(page, 'the colors');
       await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
       await menuFor(page, yard(page));
-      await rowMenu(page).getByRole('button', { name: 'Edit synopsis' }).click();
+      await rowMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
       await expect(page.getByRole('textbox', { name: /^Synopsis of/ })).toBeFocused();
       await clean(page, 'editing a synopsis');
     });
 
     test(`passes axe with Move to… open (${theme})`, async ({ page }) => {
       await menuFor(page, hall(page));
-      await rowMenu(page).getByRole('button', { name: 'Move scene to…' }).click();
+      await rowMenu(page).getByRole('menuitem', { name: 'Move scene to…' }).click();
       await expect(page.getByRole('dialog', { name: 'Move INT. HALL - DAY' })).toBeVisible();
       await clean(page, 'Move to…');
     });
@@ -557,7 +555,7 @@ for (const theme of ['dark', 'light'] as const) {
       }
       await settings.getByRole('button', { name: 'Done' }).click();
       await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
-      await expect(page.getByRole('group', { name: 'More tabs' })).toBeVisible();
+      await expect(page.getByRole('menu', { name: 'More tabs' })).toBeVisible();
       await clean(page, "the tabs' More");
     });
 

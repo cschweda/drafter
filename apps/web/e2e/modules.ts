@@ -119,7 +119,7 @@ export async function chooseTab(page: Page, name: string) {
   }
   await pane.getByRole('button', { name: 'More tabs' }).click();
   await page
-    .getByRole('group', { name: 'More tabs' })
-    .getByRole('button', { name, exact: true })
+    .getByRole('menu', { name: 'More tabs' })
+    .getByRole('menuitem', { name, exact: true })
     .click();
 }

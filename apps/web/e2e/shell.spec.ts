@@ -257,7 +257,7 @@ test.describe('the tab row', () => {
   const firstPane = (page: Page) => page.locator('[data-pane]').first();
   const row = (page: Page) => firstPane(page).getByRole('tablist');
   const more = (page: Page) => firstPane(page).getByRole('button', { name: 'More tabs' });
-  const menu = (page: Page) => page.getByRole('group', { name: 'More tabs' });
+  const menu = (page: Page) => page.getByRole('menu', { name: 'More tabs' });
 
   test("shows Outline in each pane's tab row", async ({ page, isMobile }) => {
     await start(page);
@@ -288,8 +288,8 @@ test.describe('the tab row', () => {
     const other = slot === 'Cast' ? 'Scenes' : 'Cast';
     await more(page).click();
     await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
-    await expect(menu(page).getByRole('button')).toHaveText([other]);
-    await menu(page).getByRole('button', { name: other }).click();
+    await expect(menu(page).getByRole('menuitem')).toHaveText([other]);
+    await menu(page).getByRole('menuitem', { name: other }).click();
     await expect(menu(page)).toBeHidden();
     const chosen = row(page).getByRole('tab', { name: other });
     await expect(chosen).toHaveAttribute('aria-selected', 'true');
@@ -303,7 +303,7 @@ test.describe('the tab row', () => {
   test('More works from the keyboard, and Escape returns focus', async ({ page }) => {
     await start(page);
     await turnOn(page, ['Scene list', 'Cast']);
-    const item = menu(page).getByRole('button');
+    const item = menu(page).getByRole('menuitem');
     await more(page).focus();
     await page.keyboard.press('Enter');
     await expect(item).toBeFocused();

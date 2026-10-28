@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
@@ -81,76 +82,26 @@ const ZOOMS = [
 
 const tabButtons = ref<HTMLButtonElement[]>([]);
 
-// More: a small menu of the tabs that aren't in the row. Choosing one shows it here, in the slot.
-const moreOpen = ref(false);
-const moreButton = ref<HTMLButtonElement>();
-const morePanel = ref<HTMLElement>();
-const morePlace = reactive({ top: 0, left: 0 });
+// More: a menu of the tabs that aren't in the row (MenuButton, as every menu is). Choosing one shows
+// it here, in the slot, and focus goes to its tab rather than back to More.
+const moreItems = computed<DropdownMenuItem[]>(() =>
+  moreTabs.value.map((tab) => ({ label: tab.label, onSelect: () => chooseMore(tab.id) })),
+);
+let chosenTab: TabId | null = null;
 
-async function openMore() {
-  const rect = moreButton.value?.getBoundingClientRect();
-  const width = 14 * 16;
-  morePlace.top = Math.round((rect?.bottom ?? 40) + 4);
-  morePlace.left = Math.max(
-    8,
-    Math.min(Math.round(rect?.left ?? 8), window.innerWidth - width - 8),
-  );
-  moreOpen.value = true;
-  await nextTick();
-  morePanel.value?.querySelector<HTMLElement>('button')?.focus();
-}
-
-function closeMore(refocus: boolean) {
-  if (!moreOpen.value) return;
-  moreOpen.value = false;
-  if (refocus) moreButton.value?.focus();
-}
-
-async function chooseMore(tab: TabId) {
+function chooseMore(tab: TabId) {
   last.value = tab;
-  moreOpen.value = false;
+  chosenTab = tab;
   emit('choose', tab);
-  await nextTick();
-  document.getElementById(`tab-${props.pane}-${tab}`)?.focus();
 }
 
-function onMoreKeydown(event: KeyboardEvent) {
-  if (!moreOpen.value) return;
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMore(true);
-    return;
-  }
-  const items = [...(morePanel.value?.querySelectorAll<HTMLElement>('button') ?? [])];
-  const at = items.indexOf(document.activeElement as HTMLElement);
-  const next: Record<string, number> = {
-    ArrowDown: at < items.length - 1 ? at + 1 : 0,
-    ArrowUp: at > 0 ? at - 1 : items.length - 1,
-    Home: 0,
-    End: items.length - 1,
-  };
-  const to = next[event.key];
-  if (to === undefined || items.length === 0) return;
+function onMoreCloseAutoFocus(event: Event) {
+  const tab = chosenTab;
+  chosenTab = null;
+  if (!tab) return;
   event.preventDefault();
-  items[to]?.focus();
+  requestAnimationFrame(() => document.getElementById(`tab-${props.pane}-${tab}`)?.focus());
 }
-
-function onMoreFocusout(event: FocusEvent) {
-  const to = event.relatedTarget;
-  if (moreOpen.value && to instanceof Node && !morePanel.value?.parentElement?.contains(to)) {
-    closeMore(false);
-  }
-}
-
-function onPointerdown(event: PointerEvent) {
-  const root = morePanel.value?.parentElement;
-  if (moreOpen.value && event.target instanceof Node && !root?.contains(event.target)) {
-    closeMore(false);
-  }
-}
-onMounted(() => document.addEventListener('pointerdown', onPointerdown));
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown));
 
 // Manual activation: arrow keys move focus along the tabs, and Enter or Space
 // chooses one, so arrowing past a tab open in the other pane never swaps them.
@@ -192,39 +143,16 @@ function onKeydown(event: KeyboardEvent, index: number) {
         <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
       </button>
     </div>
-    <div v-if="moreTabs.length > 0" class="more" @keydown="onMoreKeydown" @focusout="onMoreFocusout">
-      <button
-        ref="moreButton"
-        type="button"
-        class="tab more-button"
-        :aria-expanded="moreOpen ? 'true' : 'false'"
-        :aria-controls="moreOpen ? `more-tabs-${props.pane}` : undefined"
-        @click="moreOpen ? closeMore(true) : openMore()"
-      >
+    <MenuButton
+      v-if="moreTabs.length > 0"
+      :items="moreItems"
+      :content="{ align: 'start', onCloseAutoFocus: onMoreCloseAutoFocus }"
+    >
+      <button type="button" class="tab more-button">
         More<span class="sr-only"> tabs</span>
         <UIcon name="i-lucide-chevron-down" class="chevron" aria-hidden="true" />
       </button>
-      <div
-        v-if="moreOpen"
-        :id="`more-tabs-${props.pane}`"
-        ref="morePanel"
-        tabindex="-1"
-        role="group"
-        aria-label="More tabs"
-        class="more-panel"
-        :style="{ top: `${morePlace.top}px`, left: `${morePlace.left}px` }"
-      >
-        <button
-          v-for="tab in moreTabs"
-          :key="tab.id"
-          type="button"
-          class="more-item"
-          @click="chooseMore(tab.id)"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
-    </div>
+    </MenuButton>
     </div>
     <div class="slim">
       <template v-if="props.selected === 'script' && markdown">
@@ -348,38 +276,6 @@ function onKeydown(event: KeyboardEvent, index: number) {
 .chevron {
   width: 12px;
   height: 12px;
-}
-.more-panel {
-  position: fixed;
-  outline: none;
-  z-index: 20;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  width: min(14rem, calc(100vw - 16px));
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
-}
-.more-item {
-  min-height: 32px;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 5px;
-  background: none;
-  color: var(--text);
-  font: 600 13px/1.2 var(--font-sans);
-  text-align: left;
-  cursor: pointer;
-}
-.more-item:hover {
-  background: var(--chrome);
-}
-.more-item:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
 }
 .tab {
   padding: 7px 10px 9px;
