@@ -328,7 +328,7 @@ test('uninstalls silently, taking its files, shortcut, and file types, and leavi
   killDrafters();
   run(uninstaller(), ['/S']);
   // The uninstaller copies itself elsewhere and goes on from there: wait for it to finish.
-  await expect.poll(() => existsSync(exe()), { timeout: 120_000 }).toBe(false);
+  await expect.poll(() => existsSync(exe()), { timeout: 540_000 }).toBe(false);
   await expect.poll(() => existsSync(startMenu()), { timeout: 60_000 }).toBe(false);
   await expect
     .poll(() => keyExists('HKCU\\Software\\Classes\\Drafter.fountain'), { timeout: 60_000 })
@@ -400,14 +400,15 @@ test('updates itself for real: 1.0.0 downloads 1.0.1, and Restart installs and s
       await toast.getByRole('button', { name: 'Restart', exact: true }).click();
       // The old Drafter quits, the new installer replaces it, and the new version starts, from the
       // folder it was installed in, told it was updated (`--updated`).
-      await expect.poll(version, { timeout: 180_000, intervals: [1000] }).toBe('1.0.1');
+      // Windows on Arm runs the installer emulated: minutes, not seconds.
+      await expect.poll(version, { timeout: 600_000, intervals: [2000] }).toBe('1.0.1');
       await expect
         .poll(
           () =>
             drafters().some(
               (p) => longPath(p.path) === longPath(exe()) && p.commandLine.includes('--updated'),
             ),
-          { timeout: 120_000, intervals: [1000] },
+          { timeout: 300_000, intervals: [2000] },
         )
         .toBe(true);
     } finally {
