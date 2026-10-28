@@ -15,7 +15,8 @@
 #      local files (name, size, and the digest when the API gives one), and the script fails if they
 #      differ. A published release's files are what people have downloaded and what the updater
 #      checks against; they are not replaced.
-#   3. Otherwise the release is made as a DRAFT (or the tag's draft from an earlier run is reused),
+#   3. Otherwise the release is made as a DRAFT (or the tag's one draft from an earlier run is
+#      reused; more than one draft for the tag stops the script),
 #      so nobody sees a release with files missing. Every file is uploaded (--clobber replaces a
 #      draft's earlier upload), then checked against what the draft now holds.
 #   4. Only then is the draft published, by id (--prerelease when the tag contains "-", as in
@@ -44,6 +45,14 @@ find_release() {
 compare_with_release() {
   gh api "repos/$GH_REPO/releases/$1" --jq .assets | node apps/desktop/scripts/check-release-assets.mjs "$dir"
 }
+
+# More than one draft for the tag (two runs that raced, or one made by hand) and `gh release upload
+# <tag>` could fill one while the check reads another: stop, and let a person delete the extra.
+drafts=$(gh api --paginate "repos/$GH_REPO/releases" | jq -r --arg tag "$tag" '[.[] | select(.tag_name == $tag and .draft)] | length' | awk '{n += $1} END {print n + 0}')
+if [ "$drafts" -gt 1 ]; then
+  echo "::error::There are $drafts drafts for $tag. Delete all but one (or all of them), then run this again."
+  exit 1
+fi
 
 found=$(find_release || true)
 if [ -z "$found" ]; then

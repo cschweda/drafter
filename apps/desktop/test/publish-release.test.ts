@@ -231,6 +231,19 @@ describe.skipIf(!runnable)('publish-release.sh', () => {
     expect(calls()).not.toContain('release upload');
   });
 
+  test('stops when the tag has more than one draft, so the upload and the check meet one release', () => {
+    files();
+    setState([
+      { id: 7, tag_name: 'v1.2.3', draft: true, prerelease: false, assets: [] },
+      { id: 8, tag_name: 'v1.2.3', draft: true, prerelease: false, assets: [] },
+    ]);
+    const run = publish('v1.2.3');
+    expect(run.status).not.toBe(0);
+    expect(run.stdout).toMatch(/There are 2 drafts for v1\.2\.3/);
+    expect(calls()).not.toContain('release upload');
+    expect(state().releases.every((r) => r.draft)).toBe(true);
+  });
+
   test('a tag with a "-" is published as a pre-release', () => {
     files('1.2.3-rc.1');
     const run = publish('v1.2.3-rc.1');
