@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-27
+
+**Drafter on a Mac, built on your own Mac.** `pnpm desktop:mac` makes `Drafter.app` (see [docs/desktop-install-macos.md](docs/desktop-install-macos.md)): `.fountain` files open in it from Finder, it keeps running with its window closed, it has a Mac menu, and it tells you when a new version is out. A signed download, with updates that install themselves, comes once Drafter has an Apple developer account. The Linux app and drafter.dev are unchanged.
+
+### Added
+
+- `apps/desktop`: **build Drafter on your Mac with one command.** `pnpm desktop:mac` builds `Drafter.app` for the Mac it runs on (Apple silicon or Intel), in `apps/desktop/release/mac-arm64/` (or `mac/`), with a `.dmg` of it. It is signed ad hoc and opens without a warning on the Mac it was built on; nothing for macOS is published until there is an Apple developer account for a signed download. `docs/desktop-install-macos.md` and the README's **Drafter on a Mac** say what to install first, where the app lands, how to put it in Applications, and how to update (`git pull`, then build again); drafter.dev installed from Chrome is the choice that needs no build.
+- `apps/desktop`: **the Mac app behaves like one.** A `.fountain` file opens in Drafter with a double-click in Finder (and `.md` and `.markdown` under **Open With**), dropped on the Dock icon, or with `open -a Drafter`, even when Drafter isn't running yet; it is opened the way a file named on the command line is, and only it may be read. Closing the window leaves Drafter running until you quit, and the Dock icon, **File → New** and **Open…** (⌘O), or **Settings…** (⌘,) bring the window back (and then do what they say); closing and quitting still ask first when there are unsaved changes. The **Drafter** menu has About, **Settings…** (⌘,), Services, Hide, and **Quit Drafter** (⌘Q); File ends with **Close Window** (⌘W); there is a **Window** menu. Settings, recovery copies, and the modules folder are in `~/Library/Application Support/Drafter`, and macOS's own spellchecker checks spelling.
+- `apps/desktop`: **the update check on a Mac** reads the newest release's version and offers **Get it** (the release page) when it is newer; it never downloads or installs anything, gives up after 15 seconds, and reads no more than a small file's worth. Settings' **Check for updates** says so on a Mac.
+- `brand`: `icon-mac-1024.png`, the Mac app's icon, sized to sit with the other apps in the Dock.
+- CI: a `mac` job builds the Mac app as the guide does and tests it (the built app's signature, file types, fuses, and a file opened as Finder opens one; and the desktop end-to-end tests on macOS), on branch pushes and by hand, not for a tag. It publishes nothing.
+
+### Changed
+
+- `apps/desktop`: the question Drafter asks before starting without Chromium's sandbox speaks of the AppImage and the `.deb` only on Linux; on a Mac it says what turned the sandbox off and to start Drafter the usual way.
+- `apps/web`: the Privacy page names the Mac app beside the `.deb` among the desktop apps that link to the release page instead of updating themselves.
+
 ## [0.6.1] - 2026-10-27
 
 **Modules from a folder run only as you agreed to them.** Any change to a module, its code included, turns it off until you turn it on again; Drafter serves its files only as they were when it started; and a module folder that is a link to somewhere else is skipped.
@@ -465,7 +482,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/cschweda/drafter/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/cschweda/drafter/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/cschweda/drafter/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/cschweda/drafter/compare/v0.4.1...v0.5.0

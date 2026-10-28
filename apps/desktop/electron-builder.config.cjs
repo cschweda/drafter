@@ -1,6 +1,8 @@
 // Packaging for the desktop app (Phase 1 Plan 6, Task 7): `pnpm package` runs electron-builder with
 // this file after `pnpm build` (dist/main.cjs, dist/preload.cjs) and `pnpm build:web` (web/).
 // Linux first: an AppImage and a .deb, x64. docs/DECISIONS.md (apps/desktop) explains the choices.
+// macOS (`pnpm package:mac`, from `pnpm desktop:mac`): Drafter.app built on the writer's own Mac,
+// for its own processor, signed ad hoc and published nowhere (docs/desktop-install-macos.md).
 const path = require('node:path');
 
 /** @type {import('electron-builder').Configuration} */
@@ -50,6 +52,8 @@ module.exports = {
       description: 'Fountain screenplay',
       mimeType: 'text/x-fountain',
       role: 'Editor',
+      // macOS: Drafter may be the app that opens these when nothing else claims them.
+      rank: 'Default',
     },
     // One extension per entry: electron-builder writes an `ext` list into the .deb's MIME file as a
     // single glob (`*.md,markdown`), which matches nothing. `.markdown` carries no MIME type of its
@@ -61,14 +65,57 @@ module.exports = {
       description: 'Markdown document',
       mimeType: 'text/markdown',
       role: 'Editor',
+      // macOS: in Open With, but never the app a Markdown file opens in unless the writer says so.
+      rank: 'Alternate',
     },
     {
       ext: 'markdown',
       name: 'Markdown document',
       description: 'Markdown document',
       role: 'Editor',
+      rank: 'Alternate',
     },
   ],
+  mac: {
+    // The Mac it is built on: arm64 on Apple silicon, x64 on Intel. `dir` is Drafter.app itself;
+    // the .dmg is the same app with the usual drag-to-Applications window.
+    target: [
+      { target: 'dir', arch: [process.arch === 'arm64' ? 'arm64' : 'x64'] },
+      { target: 'dmg', arch: [process.arch === 'arm64' ? 'arm64' : 'x64'] },
+    ],
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
+    artifactName: 'Drafter-${version}-mac-${arch}.${ext}',
+    icon: path.resolve(__dirname, '../../brand/icon-mac-1024.png'),
+    category: 'public.app-category.productivity',
+    // No Apple Developer ID yet: signed ad hoc ("-"), which Apple silicon requires of every app
+    // and which a Mac runs without asking when the app was built on it (nothing downloaded it, so
+    // it carries no quarantine). The hardened runtime is for notarised apps; with an ad-hoc
+    // signature it would refuse Electron's own frameworks, so it is off until the app is signed.
+    identity: '-',
+    hardenedRuntime: false,
+    // No notarisation without an Apple account.
+    notarize: false,
+    extendInfo: {
+      // macOS has no type for `.fountain` (it calls such a file "data", so Quick Look shows
+      // nothing): this one is plain text. Imported, not exported: should another app declare one
+      // of its own, the system prefers that, and Drafter still opens the file by its extension.
+      UTImportedTypeDeclarations: [
+        {
+          UTTypeIdentifier: 'dev.drafter.fountain',
+          UTTypeDescription: 'Fountain screenplay',
+          UTTypeConformsTo: ['public.plain-text'],
+          UTTypeTagSpecification: {
+            'public.filename-extension': ['fountain'],
+            'public.mime-type': ['text/x-fountain'],
+          },
+        },
+      ],
+    },
+  },
+  dmg: {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
+    artifactName: 'Drafter-${version}-mac-${arch}.${ext}',
+  },
   linux: {
     target: [
       { target: 'AppImage', arch: ['x64'] },

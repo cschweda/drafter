@@ -169,3 +169,27 @@ export class OpenInbox {
     else this.#waiting.push(item);
   }
 }
+
+/**
+ * macOS's `open-file` events: a file double-clicked in Finder, dropped on the Dock icon, or opened
+ * with `open -a Drafter`. The first can come before `ready`, while the app is still taking the
+ * single-instance lock, so `listener` goes on `open-file` as the main process starts and keeps each
+ * path (taking the event, so macOS doesn't say Drafter couldn't open it); `deliver`, once the app
+ * is up, hands them on in order and passes every later one straight on.
+ */
+export function heldOpenFiles() {
+  const waiting: string[] = [];
+  let handler: ((path: string) => void) | null = null;
+  return {
+    listener(event: { preventDefault(): void }, path: string) {
+      event.preventDefault();
+      if (typeof path !== 'string' || path === '' || path.includes('\0')) return;
+      if (handler) handler(path);
+      else waiting.push(path);
+    },
+    deliver(to: (path: string) => void) {
+      handler = to;
+      for (const path of waiting.splice(0)) to(path);
+    },
+  };
+}

@@ -33,6 +33,8 @@ interface Switch {
   why: string;
   /** Shown only in the desktop app. */
   desktopOnly?: boolean;
+  /** What it says in the desktop app on a Mac, where that differs. */
+  whyOnMac?: string;
 }
 const SWITCHES: Switch[] = [
   {
@@ -80,15 +82,25 @@ const SWITCHES: Switch[] = [
     label: 'Check for updates',
     why: 'When Drafter starts, look on GitHub for a newer version. Nothing from your scripts is sent, and Drafter never installs an update without asking.',
     desktopOnly: true,
+    // The Mac app is built on the writer's Mac and signed by no one, so it can't update itself.
+    whyOnMac:
+      'When Drafter starts, look on GitHub for a newer version, and say when one is out. Nothing from your scripts is sent. On a Mac, Drafter can’t update itself yet: build the new version the way you built this one.',
   },
 ];
 // The desktop check is the one request the desktop app makes; the web has no such setting.
 // Known only in the browser, after the page is up, so the prerendered page and hydration agree.
 const onDesktop = ref(false);
+const onMac = ref(false);
 onMounted(() => {
-  onDesktop.value = desktop() !== null;
+  const bridge = desktop();
+  onDesktop.value = bridge !== null;
+  onMac.value = bridge?.platform === 'darwin';
 });
-const shown = computed(() => SWITCHES.filter((item) => !item.desktopOnly || onDesktop.value));
+const shown = computed(() =>
+  SWITCHES.filter((item) => !item.desktopOnly || onDesktop.value).map((item) =>
+    onMac.value && item.whyOnMac ? { ...item, why: item.whyOnMac } : item,
+  ),
+);
 
 const percent = (size: number) => `${Math.round(size * 100)}%`;
 

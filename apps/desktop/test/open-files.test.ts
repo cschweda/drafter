@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   filesFromArgv,
+  heldOpenFiles,
   OpenInbox,
   type OpenItem,
   type Refusal,
@@ -297,5 +298,43 @@ describe('OpenInbox', () => {
     const inbox = new OpenInbox('open', seen);
     inbox.add({ path: '/a.md' });
     expect(seen).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('heldOpenFiles', () => {
+  const event = () => ({ preventDefault: vi.fn() });
+
+  test('keeps the files macOS names before the app has started, and hands them on in order', () => {
+    const held = heldOpenFiles();
+    const first = event();
+    held.listener(first, '/Users/a/A.fountain');
+    held.listener(event(), '/Users/a/B.md');
+    // Taken by Drafter, so macOS doesn't say it couldn't be opened.
+    expect(first.preventDefault).toHaveBeenCalledOnce();
+    const open = vi.fn();
+    held.deliver(open);
+    expect(open.mock.calls).toEqual([['/Users/a/A.fountain'], ['/Users/a/B.md']]);
+  });
+
+  test('passes the ones after that straight on, once each', () => {
+    const held = heldOpenFiles();
+    const open = vi.fn();
+    held.deliver(open);
+    const later = event();
+    held.listener(later, '/Users/a/C.markdown');
+    expect(later.preventDefault).toHaveBeenCalledOnce();
+    expect(open.mock.calls).toEqual([['/Users/a/C.markdown']]);
+    held.deliver(open);
+    expect(open).toHaveBeenCalledOnce();
+  });
+
+  test('takes no path that isn’t one', () => {
+    const held = heldOpenFiles();
+    const open = vi.fn();
+    held.deliver(open);
+    for (const bad of ['', 3, null, undefined, 'a\0b']) {
+      held.listener(event(), bad as never);
+    }
+    expect(open).not.toHaveBeenCalled();
   });
 });

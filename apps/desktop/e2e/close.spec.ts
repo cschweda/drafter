@@ -65,12 +65,26 @@ const windowCount = (app: ElectronApplication) =>
 /** Resolves when the app has exited. */
 const exited = (launched: Launched) => launched.app.waitForEvent('close');
 
+/**
+ * Resolves when closing the editor's window has ended the app. A Mac app keeps running with no
+ * window (mac.spec.ts tests that), so there, once the windows are gone, it is quit as well, which
+ * asks nothing: no page holds a script. Elsewhere closing the last window quits.
+ */
+async function closedForGood(launched: Launched): Promise<void> {
+  const gone = exited(launched);
+  if (process.platform === 'darwin') {
+    await expect.poll(() => windowCount(launched.app), { timeout: 30_000 }).toBe(0);
+    await launched.app.evaluate(({ app }) => app.quit());
+  }
+  await gone;
+}
+
 /** A moment for something that should not happen to have happened. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 700));
 
 test('closes at once with nothing unsaved', async ({ desktop, profile }) => {
   const launched = await desktop();
-  const gone = exited(launched);
+  const gone = closedForGood(launched);
   await closeWindow(launched.app);
   await gone;
   expect(closeAsked(profile)).toEqual([]);
@@ -83,7 +97,7 @@ test('closes at once when only a sample was edited, and keeps the edit', async (
   const first = await desktop();
   // The first visit opens the sample.
   await typeAtEnd(first.page, '\nA line in the sample.\n');
-  const gone = exited(first);
+  const gone = closedForGood(first);
   await closeWindow(first.app);
   await gone;
   expect(closeAsked(profile)).toEqual([]);
@@ -117,7 +131,7 @@ test('asks before closing with unsaved changes', async ({ desktop, profile }) =>
 
   // Don't Save closes; the recovery copy has the text on the next launch.
   answerClose(profile, ['discard']);
-  const gone = exited(first);
+  const gone = closedForGood(first);
   await closeWindow(first.app);
   await gone;
   expect(closeAsked(profile)).toHaveLength(3);
@@ -138,7 +152,7 @@ test('Save writes the file, then closes', async ({ desktop, profile }) => {
   // A new script asks where; the answer is the dialog queue's.
   answerDialogs(profile, [path]);
   answerClose(profile, ['save']);
-  const gone = exited(first);
+  const gone = closedForGood(first);
   await closeWindow(first.app);
   await gone;
   expect(readFileSync(path, 'utf8')).toContain('INT. LIGHTHOUSE - NIGHT');
@@ -181,7 +195,7 @@ test('stays open when Save is cancelled or fails, and says why', async ({ deskto
   }
   // Writable again, Save and close goes through.
   answerClose(profile, ['save']);
-  const gone = exited(first);
+  const gone = closedForGood(first);
   await closeWindow(first.app);
   await gone;
   expect(readFileSync(path, 'utf8')).toContain('Not saved.');
@@ -286,7 +300,7 @@ test('says the page isn’t responding, and closes or stays as asked', async ({
   expect(await windowCount(first.app)).toBe(1);
 
   answerClose(profile, ['discard']);
-  const gone = exited(first);
+  const gone = closedForGood(first);
   await closeWindow(first.app);
   await gone;
 });

@@ -188,12 +188,48 @@ export interface MenuActions {
   modulesFolder?: () => void;
   /** File → Quit: the main process passes `app.quit()`, which a `before-quit` handler can stop. */
   quit?: () => void;
+  /**
+   * A Mac with no editor's window: the commands that start from a window (`opensWindow`) stay
+   * on, with their keys, and choosing one calls this, which opens the window and runs it there.
+   */
+  reopen?: (id: string) => void;
+}
+
+/** The commands a Mac's menu keeps on with no window: New (every kind), Open…, Open Recent, Settings…. */
+export const opensWindow = (id: string): boolean =>
+  id.startsWith('new-') || id === 'open' || id === 'open-recent' || id === 'settings';
+
+/**
+ * The command chosen with no window, waiting for the window's page: `take` gives it, once, to the
+ * first command list that has it on; a list without it at all drops it (that page can't run it).
+ */
+export class ParkedCommand {
+  #id: string | null = null;
+
+  park(id: string): void {
+    this.#id = id;
+  }
+
+  take(commands: readonly MenuCommand[]): string | null {
+    const id = this.#id;
+    if (id === null) return null;
+    const command = commands.find((c) => c.id === id);
+    if (!command) {
+      this.#id = null;
+      return null;
+    }
+    if (!command.enabled) return null;
+    this.#id = null;
+    return id;
+  }
 }
 
 /**
- * The menu template: File, Edit, View, Go, and Help, with the Quit of the platform. `run` gets the
- * id of the command an item stands for. An item shows its keys but does not register them
- * (`registerAccelerator: false`): the page's own handlers keep the keys, so nothing runs twice.
+ * The menu template: File, Edit, View, Go, and Help, with the Quit of the platform. On a Mac the
+ * app's own menu comes first (About, Settings…, Services, Hide, Quit), File ends with Close Window,
+ * and Window comes before Help. `run` gets the id of the command an item stands for. An item
+ * shows its keys but does not register them (`registerAccelerator: false`): the page's own
+ * handlers keep the keys, so nothing runs twice.
  */
 export function menuTemplate(
   commands: readonly MenuCommand[],
@@ -207,10 +243,22 @@ export function menuTemplate(
   const modulesFolder = actions.modulesFolder ?? (() => {});
   const quit = actions.quit ?? (() => {});
 
+  const reopen = apple ? actions.reopen : undefined;
+
   const itemFor = (command: MenuCommand, strip?: RegExp): Item => {
     const title =
       LABELS[command.id] ?? (strip ? capital(command.title.replace(strip, '')) : command.title);
     const key = command.keys?.map(accelerator).find(Boolean);
+    // No window on a Mac: there is no page to take the key, so the menu registers it.
+    if (reopen && opensWindow(command.id)) {
+      return {
+        id: command.id,
+        label: label(title),
+        enabled: true,
+        ...(key && { accelerator: key }),
+        click: () => reopen(command.id),
+      };
+    }
     return {
       id: command.id,
       label: label(title),
@@ -220,8 +268,11 @@ export function menuTemplate(
     };
   };
 
+  // On a Mac, Settings… is in the app's own menu (as every Mac app has it), not in File.
+  const inAppMenu = (c: MenuCommand) => apple && c.id === 'settings';
+
   const build = (group: Group): Item[] => {
-    const mine = commands.filter((c) => c.group === group);
+    const mine = commands.filter((c) => c.group === group && !inAppMenu(c));
     const placed = new Set<string>();
     const sections: Item[][] = [];
     for (const section of LAYOUT[group]) {
@@ -254,6 +305,8 @@ export function menuTemplate(
     if (group === 'File' && !apple) {
       sections.push([{ id: 'quit', label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: quit }]);
     }
+    // A Mac closes the window in front with ⌘W (the editor's asks first, as its close button does).
+    if (group === 'File' && apple) sections.push([{ role: 'close', label: 'Close Window' }]);
     return sections.flatMap((items, i) =>
       i === 0 ? items : [{ type: 'separator' as const }, ...items],
     );
@@ -261,13 +314,19 @@ export function menuTemplate(
 
   const bar: Item[] = GROUPS.map((group) => ({
     label: apple ? group : `&${group}`,
+    // On a Mac, Help is the system's Help menu (it adds the search field).
+    ...(apple && group === 'Help' && { role: 'help' as const }),
     submenu: build(group),
   }));
   if (apple) {
+    const settings = commands.filter(inAppMenu).map((c) => itemFor(c));
     bar.unshift({
       label: 'Drafter',
       submenu: [
         { id: 'about', label: 'About Drafter', click: about },
+        { type: 'separator' },
+        ...(settings.length > 0 ? [...settings, { type: 'separator' as const }] : []),
+        { role: 'services' },
         { type: 'separator' },
         { role: 'hide' },
         { role: 'hideOthers' },
@@ -276,6 +335,8 @@ export function menuTemplate(
         { id: 'quit', label: 'Quit Drafter', accelerator: 'CmdOrCtrl+Q', click: quit },
       ],
     });
+    // Minimize, Zoom, Bring All to Front, and the open windows: the system fills it in.
+    bar.splice(bar.length - 1, 0, { label: 'Window', role: 'windowMenu' });
   }
   return bar;
 }

@@ -5,6 +5,8 @@ import {
   accelerator,
   type MenuCommand,
   menuTemplate,
+  opensWindow,
+  ParkedCommand,
   parseCommands,
   RELEASES_URL,
 } from '../src/menu';
@@ -246,12 +248,69 @@ describe('menuTemplate', () => {
 
   test('on a Mac adds the app menu, which holds About and Quit', () => {
     const t = menuTemplate(COMMANDS, () => {}, { platform: 'darwin' });
-    expect(t.map(labelOf)).toEqual(['Drafter', 'File', 'Edit', 'View', 'Go', 'Help']);
+    expect(t.map(labelOf)).toEqual(['Drafter', 'File', 'Edit', 'View', 'Go', 'Window', 'Help']);
     const app = submenu(t[0]);
     expect(app.some((i) => i.id === 'about')).toBe(true);
     expect(app.some((i) => i.id === 'quit')).toBe(true);
     expect(submenu(menus(t).File).some((i) => i.id === 'quit')).toBe(false);
     expect(submenu(menus(t).Help).some((i) => i.id === 'about')).toBe(false);
+  });
+
+  test('on a Mac the app menu reads About, Settings…, Services, Hide, Quit, as a Mac app’s does', () => {
+    const t = menuTemplate(COMMANDS, () => {}, { platform: 'darwin' });
+    const app = submenu(t[0]);
+    expect(app.map((i) => i.id ?? i.role ?? i.type)).toEqual([
+      'about',
+      'separator',
+      'settings',
+      'separator',
+      'services',
+      'separator',
+      'hide',
+      'hideOthers',
+      'unhide',
+      'separator',
+      'quit',
+    ]);
+    // Settings… is the page's own command, with its key (⌘,) shown and left to the page.
+    const settings = named(t, 'settings');
+    expect(settings).toMatchObject({
+      label: 'Settings…',
+      accelerator: 'CmdOrCtrl+,',
+      registerAccelerator: false,
+    });
+    expect(named(t, 'quit')).toMatchObject({ label: 'Quit Drafter', accelerator: 'CmdOrCtrl+Q' });
+    // Only there: File has neither Settings… nor Quit.
+    const file = walk(submenu(menus(t).File));
+    expect(file.some((i) => i.id === 'settings')).toBe(false);
+    expect(walk(t).filter((i) => i.id === 'settings')).toHaveLength(1);
+  });
+
+  test('on a Mac Settings… runs the page’s command, and is off when the page says so', () => {
+    const run = vi.fn();
+    const t = menuTemplate(COMMANDS, run, { platform: 'darwin' });
+    choose(t, 'settings');
+    expect(run).toHaveBeenCalledWith('settings');
+    const off = COMMANDS.map((c) => (c.id === 'settings' ? { ...c, enabled: false } : c));
+    expect(named(menuTemplate(off, run, { platform: 'darwin' }), 'settings')?.enabled).toBe(false);
+  });
+
+  test('on a Mac File ends with Close Window (⌘W), and a Window menu sits before Help', () => {
+    const t = menuTemplate(COMMANDS, () => {}, { platform: 'darwin' });
+    const file = submenu(menus(t).File);
+    expect(file.at(-1)).toMatchObject({ role: 'close', label: 'Close Window' });
+    expect(file.at(-2)?.type).toBe('separator');
+    expect(menus(t).Window).toMatchObject({ role: 'windowMenu' });
+    expect(menus(t).Help).toMatchObject({ role: 'help' });
+  });
+
+  test('elsewhere keeps Settings… and Quit in File, with no Close Window or Window menu', () => {
+    const t = menuTemplate(COMMANDS, () => {}, { platform: 'linux' });
+    const file = walk(submenu(menus(t).File));
+    expect(file.some((i) => i.id === 'settings')).toBe(true);
+    expect(file.some((i) => i.id === 'quit')).toBe(true);
+    expect(walk(t).some((i) => i.role === 'close')).toBe(false);
+    expect(t.some((i) => i.role === 'windowMenu' || i.role === 'help')).toBe(false);
   });
 
   test('runs About, Releases, the modules folder, and Quit through the actions it is given', () => {
@@ -274,6 +333,99 @@ describe('menuTemplate', () => {
       [about, releases, modulesFolder, quit].map((action) => action.mock.calls.length),
     ).toEqual([1, 1, 1, 1]);
     expect(RELEASES_URL).toBe('https://github.com/cschweda/drafter/releases');
+  });
+});
+
+describe('with no window (a Mac)', () => {
+  /** The commands as menu-main.ts keeps them once the editor's page is gone: all off. */
+  const gone = COMMANDS.map((c) => ({ ...c, enabled: false }));
+
+  test('New, Open…, and Settings… stay on, with their keys, and open a window to run in', () => {
+    const reopen = vi.fn();
+    const run = vi.fn();
+    const t = menuTemplate(gone, run, { platform: 'darwin', reopen });
+    for (const id of ['new-screenplay', 'new-stage-play', 'open', 'settings']) {
+      const item = named(t, id);
+      expect(item?.enabled, id).toBe(true);
+      // Registered: there is no page to take the key, so the menu must.
+      expect(item?.registerAccelerator, id).not.toBe(false);
+      choose(t, id);
+    }
+    expect(reopen.mock.calls).toEqual([
+      ['new-screenplay'],
+      ['new-stage-play'],
+      ['open'],
+      ['settings'],
+    ]);
+    expect(run).not.toHaveBeenCalled();
+    expect(named(t, 'open')?.accelerator).toBe('CmdOrCtrl+O');
+    expect(named(t, 'settings')?.accelerator).toBe('CmdOrCtrl+,');
+  });
+
+  test('everything else stays off', () => {
+    const t = menuTemplate(gone, () => {}, { platform: 'darwin', reopen: () => {} });
+    for (const id of ['save', 'save-as', 'export-pdf', 'undo', 'find', 'palette', 'reset-sample']) {
+      expect(named(t, id)?.enabled, id).toBe(false);
+    }
+  });
+
+  test('is a Mac rule only, and only while there is no window', () => {
+    const linux = menuTemplate(gone, () => {}, { platform: 'linux', reopen: () => {} });
+    expect(named(linux, 'open')?.enabled).toBe(false);
+    expect(named(linux, 'open')?.registerAccelerator).toBe(false);
+    // With a page, the page keeps the keys and runs the commands, as before.
+    const run = vi.fn();
+    const withPage = menuTemplate(COMMANDS, run, { platform: 'darwin' });
+    expect(named(withPage, 'open')?.registerAccelerator).toBe(false);
+    choose(withPage, 'open');
+    expect(run).toHaveBeenCalledWith('open');
+  });
+
+  test('opensWindow names New (every kind), Open…, Open Recent, and Settings…', () => {
+    for (const id of [
+      'new-screenplay',
+      'new-stage-play',
+      'new-markdown',
+      'open',
+      'open-recent',
+      'settings',
+    ]) {
+      expect(opensWindow(id), id).toBe(true);
+    }
+    for (const id of ['save', 'open-sample-screenplay', 'export-pdf', 'newish', 'reset-sample']) {
+      expect(opensWindow(id), id).toBe(false);
+    }
+  });
+});
+
+describe('ParkedCommand', () => {
+  const list = (id: string, enabled = true): MenuCommand[] => [
+    cmd('save', 'File'),
+    cmd(id, 'File', id, { enabled }),
+  ];
+
+  test('hands the parked command to the next page that has it on, once', () => {
+    const parked = new ParkedCommand();
+    parked.park('open');
+    expect(parked.take(list('open'))).toBe('open');
+    expect(parked.take(list('open'))).toBeNull();
+  });
+
+  test('waits while the page has it off, and forgets it if the page has no such command', () => {
+    const parked = new ParkedCommand();
+    parked.park('settings');
+    expect(parked.take(list('settings', false))).toBeNull();
+    expect(parked.take(list('settings'))).toBe('settings');
+    parked.park('new-gone');
+    expect(parked.take(list('settings'))).toBeNull();
+    expect(parked.take(list('new-gone'))).toBeNull();
+  });
+
+  test('keeps the last one chosen', () => {
+    const parked = new ParkedCommand();
+    parked.park('open');
+    parked.park('settings');
+    expect(parked.take([...list('open'), cmd('settings', 'File')])).toBe('settings');
   });
 });
 

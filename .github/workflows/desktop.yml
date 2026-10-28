@@ -5,6 +5,11 @@
 #                                     latest-linux.yml as that tag's GitHub Release
 #   workflow_dispatch                 the same as a branch push, for trying it by hand
 #
+# The `mac` job builds the Mac app as a writer builds it on their own Mac (`pnpm desktop:mac`,
+# signed ad hoc) and tests it, as a check only, on branch pushes and by hand (not for a tag):
+# nothing for macOS is uploaded or published until the app can be signed and notarised, and
+# `publish` doesn't wait for it.
+#
 # To release: bump apps/desktop/package.json, merge, then push the tag (vX.Y.Z). The workflow checks
 # the tag against the version, builds and tests, and makes the release itself: as a draft, with all
 # its files uploaded and checked, published only then (.github/scripts/publish-release.sh).
@@ -203,8 +208,63 @@ jobs:
           retention-days: 7
           path: apps/desktop/test-results
 
+  mac:
+    # Apple silicon, as most Macs a writer builds on now are. A check, never a release: not run for
+    # a tag, so a release's run is the Linux job and publish alone.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Cache Electron's and electron-builder's downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-${{ runner.os }}-
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build the Mac app, as docs/desktop-install-macos.md says to
+        run: pnpm desktop:mac
+      - name: The package holds what it should (app.asar)
+        run: node apps/desktop/scripts/check-asar.mjs apps/desktop/release/mac-arm64/Drafter.app/Contents/Resources/app.asar
+      - name: What was built
+        working-directory: apps/desktop/release
+        run: |
+          {
+            echo "## The Mac app (a check; not published)"
+            echo '```'
+            du -sh mac-arm64/Drafter.app
+            ls -l ./*.dmg | awk '{print $5, $9}'
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: The built app (signed ad hoc, its file types, its fuses, a file opened as Finder opens one)
+        run: DRAFTER_PACKAGED="$GITHUB_WORKSPACE/apps/desktop/release/mac-arm64/Drafter.app" pnpm --filter @drafter/desktop e2e:packaged
+      - name: Chromium for the web side of the files test (e2e/interchange.spec.ts)
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @drafter/desktop exec playwright install chromium
+      - name: The shell's end-to-end tests, on macOS (mac.spec.ts among them)
+        if: ${{ !cancelled() }}
+        env:
+          DRAFTER_E2E_REUSE_WEB: "1"
+        run: pnpm --filter @drafter/desktop e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: desktop-test-results-mac
+          retention-days: 7
+          path: apps/desktop/test-results
+
   publish:
-    # Only for a tag, only after everything above passed. This is the one job that can write.
+    # Only for a tag, only after the Linux job passed (the Mac job is a check, and publishes
+    # nothing). This is the one job that can write.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: linux
     runs-on: ubuntu-24.04
