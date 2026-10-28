@@ -271,7 +271,7 @@ function firstInsecure(root: string, folder: string, me: Writer): Finding | null
 }
 
 /** Control characters (newlines, escapes, bells), which a folder name could use to forge a message. */
-const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;
+const CONTROL = /\p{Cc}/gu;
 
 /** Text for a message, with every control character shown as `?`: a name can't forge a line or a terminal escape. */
 export function shownText(text: string): string {
