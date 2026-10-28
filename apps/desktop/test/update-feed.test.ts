@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { checkFeed } from '../scripts/check-update-feed.mjs';
+import { checkFeed, checkFeeds } from '../scripts/check-update-feed.mjs';
 
 const sha = (text: string) => createHash('sha512').update(text).digest('base64');
 
@@ -97,6 +97,84 @@ describe('checkFeed', () => {
   });
 });
 
+describe('checkFeed, for latest.yml (Windows)', () => {
+  const X64 = 'Drafter-1.0.0-windows-x64-setup.exe';
+  const ARM = 'Drafter-1.0.0-windows-arm64-setup.exe';
+  async function windows(names: string[] = [X64, ARM], options: { version?: string } = {}) {
+    for (const name of names) await writeFile(join(dir, name), `the ${name}`);
+    const [first] = names;
+    await writeFile(
+      join(dir, 'latest.yml'),
+      `version: ${options.version ?? '1.0.0'}
+files:
+${names.map((name) => `  - url: ${name}\n    sha512: ${sha(`the ${name}`)}\n    size: ${Buffer.byteLength(`the ${name}`)}`).join('\n')}
+path: ${first}
+sha512: ${sha(`the ${first}`)}
+releaseDate: '2026-10-27T12:22:14.158Z'
+`,
+    );
+  }
+
+  test('accepts an installer per processor, each named with its processor and the version', async () => {
+    await windows();
+    expect(checkFeed(dir, 'latest.yml')).toEqual([]);
+  });
+
+  test('accepts a single installer (the update test builds only x64)', async () => {
+    await windows([X64]);
+    expect(checkFeed(dir, 'latest.yml')).toEqual([]);
+  });
+
+  test('finds an installer that is missing or changed', async () => {
+    await windows();
+    await writeFile(join(dir, ARM), 'something else');
+    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(
+      /arm64-setup\.exe: sha512 is .* but latest\.yml says/,
+    );
+    await rm(join(dir, ARM));
+    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/named in latest\.yml but not in/);
+  });
+
+  test('wants each name to hold one processor, and no two the same', async () => {
+    // electron-updater takes the first .exe whose name holds process.arch.
+    await windows(['Drafter-1.0.0-windows-setup.exe']);
+    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/must hold exactly one of x64, arm64/);
+    await windows([X64, 'Drafter-1.0.0-windows-x64-setup-2.exe']);
+    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/is for x64 too/);
+  });
+
+  test('wants the version in each installer’s name', async () => {
+    await windows([X64, ARM], { version: '1.0.1' });
+    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(
+      /must hold the feed's version \(1\.0\.1\)/,
+    );
+  });
+
+  test('finds a feed with no installer', async () => {
+    await writeFile(join(dir, 'latest.yml'), 'version: 1.0.0\nfiles: []\n');
+    const problems = checkFeed(dir, 'latest.yml').join('\n');
+    expect(problems).toMatch(/names no installer/);
+    expect(problems).toMatch(/no `path`/);
+  });
+
+  test('both feeds of a release must give the same version', async () => {
+    await release();
+    await windows();
+    expect(checkFeeds(dir, ['latest-linux.yml', 'latest.yml'])).toEqual([]);
+    await windows([X64.replace('1.0.0', '1.0.1'), ARM.replace('1.0.0', '1.0.1')], {
+      version: '1.0.1',
+    });
+    expect(checkFeeds(dir, ['latest-linux.yml', 'latest.yml']).join('\n')).toMatch(
+      /different versions: latest-linux\.yml 1\.0\.0, latest\.yml 1\.0\.1/,
+    );
+  });
+
+  test('refuses a feed it doesn’t know', async () => {
+    await writeFile(join(dir, 'latest-mac.yml'), 'version: 1.0.0\n');
+    expect(checkFeed(dir, 'latest-mac.yml').join('\n')).toMatch(/not a feed this release has/);
+  });
+});
+
 describe('the packages’ names (electron-builder.config.cjs)', () => {
   const config = createRequire(import.meta.url)('../electron-builder.config.cjs');
   /** electron-builder's macros, as it expands them for an x64 Linux build. */
@@ -116,5 +194,34 @@ describe('the packages’ names (electron-builder.config.cjs)', () => {
   test('the .deb keeps its version in its name', () => {
     const pattern = config.deb?.artifactName ?? config.artifactName;
     expect(expand(pattern, 'amd64', 'deb')).toBe('Drafter-1.2.3-linux-amd64.deb');
+  });
+
+  test('the Windows installers keep their version, and name their processor', () => {
+    const pattern = config.nsis?.artifactName ?? config.win?.artifactName ?? config.artifactName;
+    expect(expand(pattern, 'x64', 'exe')).toBe('Drafter-1.2.3-windows-x64-setup.exe');
+    expect(expand(pattern, 'arm64', 'exe')).toBe('Drafter-1.2.3-windows-arm64-setup.exe');
+    // One installer per processor, not one holding both.
+    expect(config.nsis?.buildUniversalInstaller).toBe(false);
+    expect(config.win?.target).toEqual([{ target: 'nsis', arch: ['x64', 'arm64'] }]);
+  });
+
+  test('a per-user, one-click install that asks for no administrator', () => {
+    expect(config.nsis).toMatchObject({ oneClick: true, perMachine: false });
+    expect(config.nsis?.deleteAppDataOnUninstall).toBe(false);
+  });
+
+  test('each system names its own file types (electron-builder adds a platform’s to the top level’s)', () => {
+    expect(config.fileAssociations).toBeUndefined();
+    const exts = (list: { ext: string }[]) => list.map((type) => type.ext);
+    expect(exts(config.linux.fileAssociations)).toEqual(['fountain', 'md', 'markdown']);
+    expect(exts(config.mac.fileAssociations)).toEqual(['fountain', 'md', 'markdown']);
+    // Markdown is only offered on Windows (installer/windows.nsh), never taken.
+    expect(config.win.fileAssociations).toEqual([
+      { ext: 'fountain', name: 'Drafter.fountain', description: 'Fountain screenplay' },
+    ]);
+  });
+
+  test('the packed name makes plain folder names (not @drafterdesktop)', () => {
+    expect(config.extraMetadata?.name).toBe('drafter');
   });
 });

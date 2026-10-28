@@ -3,13 +3,56 @@
 // Linux first: an AppImage and a .deb, x64. docs/DECISIONS.md (apps/desktop) explains the choices.
 // macOS (`pnpm package:mac`, from `pnpm desktop:mac`): Drafter.app built on the writer's own Mac,
 // for its own processor, signed ad hoc and published nowhere (docs/desktop-install-macos.md).
+// Windows (`pnpm package:win`, on GitHub's Windows runner): an NSIS installer per processor, x64
+// and arm64, unsigned for now, with latest.yml for the updater (docs/desktop-install-windows.md).
 const path = require('node:path');
+
+/**
+ * The script types, for Linux and macOS. electron-builder adds a platform's own `fileAssociations` to
+ * the top-level ones, so each platform names its own (Windows has its own list, below).
+ */
+const SCRIPT_TYPES = [
+  {
+    ext: 'fountain',
+    name: 'Fountain screenplay',
+    description: 'Fountain screenplay',
+    mimeType: 'text/x-fountain',
+    role: 'Editor',
+    // macOS: Drafter may be the app that opens these when nothing else claims them.
+    rank: 'Default',
+  },
+  // One extension per entry: electron-builder writes an `ext` list into the .deb's MIME file as a
+  // single glob (`*.md,markdown`), which matches nothing. `.markdown` carries no MIME type of its
+  // own (the system's shared-mime-info already gives `*.markdown` text/markdown), so the desktop
+  // entry lists text/markdown once.
+  {
+    ext: 'md',
+    name: 'Markdown document',
+    description: 'Markdown document',
+    mimeType: 'text/markdown',
+    role: 'Editor',
+    // macOS: in Open With, but never the app a Markdown file opens in unless the writer says so.
+    rank: 'Alternate',
+  },
+  {
+    ext: 'markdown',
+    name: 'Markdown document',
+    description: 'Markdown document',
+    role: 'Editor',
+    rank: 'Alternate',
+  },
+];
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId: 'dev.drafter.app',
   productName: 'Drafter',
   copyright: 'Copyright © 2026 Christopher Schweda. MIT License.',
+  // The packed package.json's name. The workspace calls this package `@drafter/desktop`, which
+  // electron-builder would otherwise make into folder names: the Windows install folder
+  // (%LOCALAPPDATA%\Programs\@drafterdesktop) and the updater's download cache on every system
+  // (@drafterdesktop-updater). The app's own name is set in main.ts (`app.setName('Drafter')`).
+  extraMetadata: { name: 'drafter' },
   // `dist/` is tsdown's (it cleans it), so the packages go elsewhere.
   directories: { output: 'release', buildResources: 'build' },
   // Only what runs: the three bundles, the web build, the spellcheck dictionaries (src/spellcheck.ts
@@ -45,38 +88,8 @@ module.exports = {
     loadBrowserProcessSpecificV8Snapshot: false,
     grantFileProtocolExtraPrivileges: false,
   },
-  fileAssociations: [
-    {
-      ext: 'fountain',
-      name: 'Fountain screenplay',
-      description: 'Fountain screenplay',
-      mimeType: 'text/x-fountain',
-      role: 'Editor',
-      // macOS: Drafter may be the app that opens these when nothing else claims them.
-      rank: 'Default',
-    },
-    // One extension per entry: electron-builder writes an `ext` list into the .deb's MIME file as a
-    // single glob (`*.md,markdown`), which matches nothing. `.markdown` carries no MIME type of its
-    // own (the system's shared-mime-info already gives `*.markdown` text/markdown), so the desktop
-    // entry lists text/markdown once.
-    {
-      ext: 'md',
-      name: 'Markdown document',
-      description: 'Markdown document',
-      mimeType: 'text/markdown',
-      role: 'Editor',
-      // macOS: in Open With, but never the app a Markdown file opens in unless the writer says so.
-      rank: 'Alternate',
-    },
-    {
-      ext: 'markdown',
-      name: 'Markdown document',
-      description: 'Markdown document',
-      role: 'Editor',
-      rank: 'Alternate',
-    },
-  ],
   mac: {
+    fileAssociations: SCRIPT_TYPES,
     // The Mac it is built on: arm64 on Apple silicon, x64 on Intel. `dir` is Drafter.app itself;
     // the .dmg is the same app with the usual drag-to-Applications window.
     target: [
@@ -116,7 +129,56 @@ module.exports = {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
     artifactName: 'Drafter-${version}-mac-${arch}.${ext}',
   },
+  win: {
+    // An installer per processor: x64, and arm64 for Windows on Arm (a Snapdragon laptop, or
+    // Windows 11 in a VM on an Apple silicon Mac). Built on GitHub's Windows runner
+    // (`pnpm package:win`).
+    target: [{ target: 'nsis', arch: ['x64', 'arm64'] }],
+    // 16 to 256 pixels, from the brand folder (brand/build.mjs). The installer, the uninstaller,
+    // Drafter.exe, and its files' icons in Explorer are all this one.
+    icon: path.resolve(__dirname, '../../brand/icon-windows.ico'),
+    // On Windows the association's name is its ProgID, so it gets one of Drafter's own. Only
+    // `.fountain` is taken: Markdown is offered in Open with, never made Drafter's (installer/windows.nsh).
+    fileAssociations: [
+      { ext: 'fountain', name: 'Drafter.fountain', description: 'Fountain screenplay' },
+    ],
+    // Unsigned for now (docs/drafter-desktop-design.md §7): SmartScreen warns about the download
+    // until there is a certificate (docs/desktop-install-windows.md). With no certificate there is
+    // no publisher name in resources/app-update.yml, so electron-updater checks an update's sha512
+    // and not its signature (docs/DECISIONS.md, "Updates on Windows"). Once Drafter is signed,
+    // electron-builder writes the name and every later update must carry that signature.
+  },
+  nsis: {
+    // One installer per processor, each with its processor in its name: one installer holding both
+    // would be twice the download for everyone. latest.yml lists both, and electron-updater picks
+    // the one whose name holds the running app's processor (`x64` or `arm64`).
+    buildUniversalInstaller: false,
+    // The version stays in the name (unlike the AppImage's): an update downloads the new installer
+    // to electron-updater's own cache folder and runs it there, so the name the writer downloaded
+    // is never replaced in place, and a versioned name says which one it is.
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not a template.
+    artifactName: 'Drafter-${version}-windows-${arch}-setup.${ext}',
+    // A one-click, per-user install: into %LOCALAPPDATA%\Programs\Drafter, no administrator, no
+    // questions, with a Start menu shortcut, a desktop shortcut, and an uninstaller in Settings →
+    // Apps. Updates install the same way, without asking for an administrator either.
+    oneClick: true,
+    perMachine: false,
+    createStartMenuShortcut: true,
+    createDesktopShortcut: true,
+    shortcutName: 'Drafter',
+    // Uninstalling leaves the writer's recovery copies, settings, and modules folder
+    // (%APPDATA%\Drafter) where they are, as removing the Linux packages does.
+    deleteAppDataOnUninstall: false,
+    // No .blockmap to upload: an update downloads the whole installer (the Linux release has three
+    // files, and this keeps the Windows half to an installer per processor and latest.yml).
+    differentialPackage: false,
+    // Only a per-machine install needs elevate.exe, and this one never is.
+    packElevateHelper: false,
+    // `.md` and `.markdown` in Open with, and a clean uninstall of `.fountain`.
+    include: path.resolve(__dirname, 'installer/windows.nsh'),
+  },
   linux: {
+    fileAssociations: SCRIPT_TYPES,
     target: [
       { target: 'AppImage', arch: ['x64'] },
       { target: 'deb', arch: ['x64'] },

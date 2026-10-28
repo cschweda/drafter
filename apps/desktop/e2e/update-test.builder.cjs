@@ -15,7 +15,7 @@ function required(name) {
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   ...release,
-  extraMetadata: { version: required('DRAFTER_TEST_VERSION') },
+  extraMetadata: { ...release.extraMetadata, version: required('DRAFTER_TEST_VERSION') },
   directories: { ...release.directories, output: required('DRAFTER_TEST_OUTPUT') },
   publish: [{ provider: 'generic', url: required('DRAFTER_TEST_FEED') }],
   linux: { ...release.linux, target: [{ target: 'AppImage', arch: ['x64'] }] },
