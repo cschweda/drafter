@@ -61,7 +61,7 @@ The compiled-in modules stay as they are. **Call (a follow-up release, v0.4.x, a
 
 1. **Linux** (v0.4.0): AppImage and `.deb`, x64 (arm64 if the CI cost is small).
 2. **Windows** (v0.4.x): an NSIS installer, unsigned at first.
-3. **macOS** (v0.5.0 or with Phase 2): a notarized universal `.dmg`, after the Apple account.
+3. **macOS** (v0.5.0 or with Phase 2): a notarized universal `.dmg`, after the Apple account. *Until then (2026-10-27): `pnpm desktop:mac` builds an ad-hoc-signed `Drafter.app` on the writer's own Mac, published nowhere ([the guide](desktop-install-macos.md); `docs/DECISIONS.md`).*
 
 ## 9. Testing
 

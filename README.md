@@ -5,9 +5,9 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.6.0. You can write at [drafter.dev](https://drafter.dev), or [install Drafter on Linux](#drafter-for-linux).** Phase 1's web app is done, apart from its final accessibility pass. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the Linux desktop app (an AppImage or a `.deb`) saves in place always. The desktop app also loads script modules from a folder. Next: the Windows app, then the accessibility pass; the macOS app follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+> **Status: v0.6.0. You can write at [drafter.dev](https://drafter.dev), or [install Drafter on Linux](#drafter-for-linux) or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, apart from its final accessibility pass. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the Linux desktop app (an AppImage or a `.deb`) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: the Windows app, then the accessibility pass; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
 
-**Drafter for Linux.** Drafter also comes as a desktop app for Linux. See [Drafter for Linux](#drafter-for-linux) for the download, how to install and start it, and how it differs from drafter.dev.
+**Drafter for Linux.** Drafter also comes as a desktop app for Linux. See [Drafter for Linux](#drafter-for-linux) for the download, how to install and start it, and how it differs from drafter.dev. **On a Mac**, you can [build the same app yourself](#drafter-on-a-mac) with one command until a signed download is ready.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
@@ -28,6 +28,7 @@
 - [Stack](#stack)
 - [Storage and browsers](#storage-and-browsers)
 - [Drafter for Linux](#drafter-for-linux)
+- [Drafter on a Mac](#drafter-on-a-mac)
 - [Development](#development)
 - [Clean-room implementation](#clean-room-implementation)
   - [Clean-room verification](#clean-room-verification)
@@ -302,7 +303,7 @@ Drafter tells you when the recovery copy isn't safe, because the browser blocks 
 
 ## Drafter for Linux
 
-Drafter also comes as a desktop app for Linux: the same editor as drafter.dev, in a window of its own, built with Electron. Windows and macOS follow; macOS comes last, because it needs Apple's developer account.
+Drafter also comes as a desktop app for Linux: the same editor as drafter.dev, in a window of its own, built with Electron. Windows follows. A macOS download comes last, because it needs Apple's developer account; until then you can [build the Mac app yourself](#drafter-on-a-mac).
 
 ### Download
 
@@ -363,6 +364,33 @@ The editor, the pages, export, the Problems pane, templates, Markdown documents,
 | Network | Loads the site from drafter.dev; after that, only the browser's check for a new version. | None, apart from the update check (or none at all with it off). |
 | Spellcheck | Your browser's. | A built-in English dictionary, so it works offline. |
 | Installing as an app | Chrome and Edge can install the site as an app; Safari can add it to the Dock or Home Screen. | It is an app. |
+
+## Drafter on a Mac
+
+There's no Mac download yet: a Mac app from the internet has to be signed and notarised with an Apple developer account, which Drafter doesn't have yet. A signed download that updates itself comes later. Until then, the same desktop app builds on your own Mac with one command, and a Mac opens an app built on it without any warning.
+
+**Or skip the build:** open [drafter.dev](https://drafter.dev) in Chrome or Edge and install it as an app (the install button in the address bar). It sits in your Dock, works offline, and saves straight back to your files. The desktop app adds a recovery copy no browser can clear, double-clicking a `.fountain` file to open it, a menu bar, and a modules folder.
+
+### Build it on your Mac
+
+You need Node 22.13 or later and pnpm 10 (`corepack enable` provides it), and `git` (macOS offers to install Apple's command-line tools the first time you run it). Then:
+
+```sh
+git clone https://github.com/cschweda/drafter.git
+cd drafter
+pnpm install
+pnpm desktop:mac
+```
+
+The app lands in `apps/desktop/release/mac-arm64/Drafter.app` (on an Intel Mac, `apps/desktop/release/mac/Drafter.app`), with a `.dmg` of it beside that folder. Drag **Drafter.app** to your **Applications** folder and start it from there. It's built for the Mac it was built on: another Mac will refuse a copy of it, so build it there too.
+
+It is the Linux app's editor, files, menus, and recovery copy, made a Mac app: a `.fountain` file opens in it with a double-click (a `.md` file under **Open With**), the **Drafter** menu has **Settings…** (⌘,) and **Quit Drafter** (⌘Q), closing the window leaves it running until you quit, and its settings, recovery copies, and modules folder are in `~/Library/Application Support/Drafter`.
+
+### Updates on a Mac
+
+Drafter checks GitHub once when it starts and says when a new version is out, with **Get it** (the release page). It can't install it itself: to update, quit Drafter, then in the folder you cloned run `git pull`, `pnpm install`, and `pnpm desktop:mac`, and put the new `Drafter.app` in Applications in place of the old one. Your settings and recovery copies aren't in the app, so they stay.
+
+The [Mac guide](docs/desktop-install-macos.md) has the details: what to install first, opening files, where Drafter keeps things, removing it, and what to do if something goes wrong.
 
 ## Development
 

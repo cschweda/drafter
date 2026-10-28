@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/desktop`: **build Drafter on your Mac with one command.** `pnpm desktop:mac` builds `Drafter.app` for the Mac it runs on (Apple silicon or Intel), in `apps/desktop/release/mac-arm64/` (or `mac/`), with a `.dmg` of it. It is signed ad hoc and opens without a warning on the Mac it was built on; nothing for macOS is published until there is an Apple developer account for a signed download. `docs/desktop-install-macos.md` and the README's **Drafter on a Mac** say what to install first, where the app lands, how to put it in Applications, and how to update (`git pull`, then build again); drafter.dev installed from Chrome is the choice that needs no build.
+- `apps/desktop`: **the Mac app behaves like one.** A `.fountain` file opens in Drafter with a double-click in Finder (and `.md` and `.markdown` under **Open With**), dropped on the Dock icon, or with `open -a Drafter`, even when Drafter isn't running yet; it is opened the way a file named on the command line is, and only it may be read. Closing the window leaves Drafter running until you quit, and the Dock icon brings the window back; closing and quitting still ask first when there are unsaved changes. The **Drafter** menu has About, **Settings…** (⌘,), Services, Hide, and **Quit Drafter** (⌘Q); File ends with **Close Window** (⌘W); there is a **Window** menu. Settings, recovery copies, and the modules folder are in `~/Library/Application Support/Drafter`, and macOS's own spellchecker checks spelling.
+- `apps/desktop`: **the update check on a Mac** reads the newest release's version and offers **Get it** (the release page) when it is newer; it never downloads or installs anything. Settings' **Check for updates** says so on a Mac.
+- `brand`: `icon-mac-1024.png`, the Mac app's icon, sized to sit with the other apps in the Dock.
+- CI: a `mac` job builds the Mac app as the guide does and tests it (the built app's signature, file types, fuses, and a file opened as Finder opens one; and the desktop end-to-end tests on macOS). It publishes nothing.
+
+### Changed
+
+- `apps/desktop`: the question Drafter asks before starting without Chromium's sandbox speaks of the AppImage and the `.deb` only on Linux; on a Mac it says what turned the sandbox off and to start Drafter the usual way.
+- `apps/web`: the Privacy page names the Mac app beside the `.deb` among the desktop apps that link to the release page instead of updating themselves.
+
 ## [0.6.0] - 2026-10-27
 
 **Script modules from a folder, in the desktop app.**
