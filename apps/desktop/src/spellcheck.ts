@@ -1,6 +1,7 @@
 // The spellchecker (Plan 6, Ruling D5). macOS checks spelling with the system's own checker, which
-// needs nothing. On Linux (and Windows, later) Chromium checks with Hunspell, and fetches each
-// language's dictionary from Google the first time: a request the desktop app may not make. So the
+// needs nothing. On Linux and Windows Chromium checks with Hunspell (on Windows alongside the
+// system's own checker), and fetches each language's dictionary from Google the first time: a
+// request the desktop app may not make. So the
 // app brings its own en-US dictionary (`dictionaries/`, from SCOWL by way of Chromium; see
 // docs/DEPENDENCIES.md) and copies it into the profile's `Dictionaries` folder, where Chromium
 // looks before it downloads anything. The download address is pointed at the bundled folder too

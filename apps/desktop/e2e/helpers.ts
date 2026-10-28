@@ -27,8 +27,12 @@ import type { Menu, MenuItem } from 'electron';
 
 export { expect };
 
-/** apps/desktop: launched as a folder, so Electron reads its package.json (name, version, main). */
-export const DESKTOP_DIR = fileURLToPath(new URL('..', import.meta.url));
+/**
+ * apps/desktop: launched as a folder, so Electron reads its package.json (name, version, main).
+ * Without its last separator: on Windows `"C:\…\desktop\"` on a command line ends in `\"`, which
+ * reads as an escaped quote, so Electron would get a path that isn't there.
+ */
+export const DESKTOP_DIR = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 /** The Electron binary (Electron 45 downloads it on first `require`). */
 const ELECTRON = createRequire(import.meta.url)('electron') as unknown as string;
 
@@ -331,7 +335,8 @@ export const test = base.extend<Fixtures>({
   profile: async ({}, use) => {
     const profile = await newProfile();
     await use(profile);
-    await rm(profile.dir, { recursive: true, force: true });
+    // Windows may still hold a file of the app that just quit for a moment.
+    await rm(profile.dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   },
   desktop: async ({ profile }, use, testInfo) => {
     const launched: Launched[] = [];

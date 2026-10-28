@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 # Publishes the desktop packages to the GitHub Release of a tag, as one complete release:
 #
-#   publish-release.sh <tag> <folder with the .AppImage, the .deb, and latest-linux.yml>
+#   publish-release.sh <tag> <folder with the release's files>
+#
+# The folder holds the Linux packages (the .AppImage, the .deb, latest-linux.yml) and the Windows
+# installers (x64 and arm64, latest.yml), every one of them (apps/desktop/scripts/check-release-assets.mjs):
+# a release with one system's files missing is never made.
 #
 # Needs GH_TOKEN (contents: write), GH_REPO (owner/name), and jq, and runs from the repository root.
-#   1. latest-linux.yml must agree with the files (every url there exists here, sha512 and size match).
+#   1. latest-linux.yml and latest.yml must agree with the files (every url there exists here, sha512
+#      and size match) and give the same version, and latest.yml lists an installer for every
+#      processor (x64 and arm64).
 #   2. A release already PUBLISHED for the tag is never touched: its assets are compared with the
 #      local files (name, size, and the digest when the API gives one), and the script fails if they
 #      differ. A published release's files are what people have downloaded and what the updater
 #      checks against; they are not replaced.
-#   3. Otherwise the release is made as a DRAFT (or the tag's draft from an earlier run is reused),
+#   3. Otherwise the release is made as a DRAFT (or the tag's one draft from an earlier run is
+#      reused; more than one draft for the tag stops the script),
 #      so nobody sees a release with files missing. Every file is uploaded (--clobber replaces a
 #      draft's earlier upload), then checked against what the draft now holds.
 #   4. Only then is the draft published, by id (--prerelease when the tag contains "-", as in
@@ -20,7 +27,9 @@ set -euo pipefail
 tag=${1:?usage: publish-release.sh <tag> <folder>}
 dir=${2:?usage: publish-release.sh <tag> <folder>}
 
-node apps/desktop/scripts/check-update-feed.mjs "$dir"
+node apps/desktop/scripts/check-update-feed.mjs --release "$dir" latest-linux.yml latest.yml
+# Exactly one of each file, or nothing is made. Their names, one a line.
+listing=$(node apps/desktop/scripts/check-release-assets.mjs --list "$dir")
 
 prerelease=false
 case "$tag" in *-*) prerelease=true ;; esac
@@ -36,6 +45,14 @@ find_release() {
 compare_with_release() {
   gh api "repos/$GH_REPO/releases/$1" --jq .assets | node apps/desktop/scripts/check-release-assets.mjs "$dir"
 }
+
+# More than one draft for the tag (two runs that raced, or one made by hand) and `gh release upload
+# <tag>` could fill one while the check reads another: stop, and let a person delete the extra.
+drafts=$(gh api --paginate "repos/$GH_REPO/releases" | jq -r --arg tag "$tag" '[.[] | select(.tag_name == $tag and .draft)] | length' | awk '{n += $1} END {print n + 0}')
+if [ "$drafts" -gt 1 ]; then
+  echo "::error::There are $drafts drafts for $tag. Delete all but one (or all of them), then run this again."
+  exit 1
+fi
 
 found=$(find_release || true)
 if [ -z "$found" ]; then
@@ -62,12 +79,8 @@ if [ "$draft" != "true" ]; then
   exit 0
 fi
 
-shopt -s nullglob
-files=("$dir"/*.AppImage "$dir"/*.deb "$dir/latest-linux.yml")
-if [ "${#files[@]}" -ne 3 ]; then
-  echo "::error::Expected one AppImage, one .deb, and latest-linux.yml in $dir; found: ${files[*]}"
-  exit 1
-fi
+files=()
+while IFS= read -r name; do files+=("$dir/$name"); done <<<"$listing"
 gh release upload "$tag" "${files[@]}" --clobber
 
 # What the draft holds now must be what was built.

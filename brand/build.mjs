@@ -268,31 +268,48 @@ png('icon-square.svg', 180, 'apple-touch-icon.png');
 png('icon-square.svg', 512, 'icon-maskable-512.png');
 png('icon-mac.svg', 1024, 'icon-mac-1024.png');
 
-/** A .ico holding PNG images, which every current browser reads. */
-const sizes = [16, 32, 48];
-const images = sizes.map((size) =>
-  execFileSync('rsvg-convert', [
-    '-w',
-    String(size),
-    '-h',
-    String(size),
-    here('favicon.svg').pathname,
+/**
+ * A .ico of PNG images, from `{ size, source }` pairs: every current browser reads one, and so does
+ * Windows (Vista on), whose 256-pixel entry has 0 for its width and height.
+ */
+function ico(entries) {
+  const images = entries.map(({ size, source }) =>
+    execFileSync('rsvg-convert', ['-w', String(size), '-h', String(size), here(source).pathname]),
+  );
+  const header = Buffer.alloc(6 + 16 * entries.length);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(entries.length, 4);
+  let offset = header.length;
+  entries.forEach(({ size }, i) => {
+    const entry = 6 + i * 16;
+    header.writeUInt8(size >= 256 ? 0 : size, entry);
+    header.writeUInt8(size >= 256 ? 0 : size, entry + 1);
+    header.writeUInt16LE(1, entry + 4);
+    header.writeUInt16LE(32, entry + 6);
+    header.writeUInt32LE(images[i].length, entry + 8);
+    header.writeUInt32LE(offset, entry + 12);
+    offset += images[i].length;
+  });
+  return Buffer.concat([header, ...images]);
+}
+
+writeFileSync(
+  here('favicon.ico'),
+  ico([16, 32, 48].map((size) => ({ size, source: 'favicon.svg' }))),
+);
+
+/**
+ * The Windows app's icon: the taskbar, the Start menu, Explorer, the installer. The favicon's
+ * pixel grid up to 32 pixels, so the bars stay sharp at 16, 24, and 32; the mark above that.
+ */
+writeFileSync(
+  here('icon-windows.ico'),
+  ico([
+    ...[16, 24, 32].map((size) => ({ size, source: 'favicon.svg' })),
+    ...[48, 64, 128, 256].map((size) => ({ size, source: 'mark.svg' })),
   ]),
 );
-const header = Buffer.alloc(6 + 16 * sizes.length);
-header.writeUInt16LE(1, 2);
-header.writeUInt16LE(sizes.length, 4);
-let offset = header.length;
-sizes.forEach((size, i) => {
-  const entry = 6 + i * 16;
-  header.writeUInt8(size, entry);
-  header.writeUInt8(size, entry + 1);
-  header.writeUInt16LE(1, entry + 4);
-  header.writeUInt16LE(32, entry + 6);
-  header.writeUInt32LE(images[i].length, entry + 8);
-  header.writeUInt32LE(offset, entry + 12);
-  offset += images[i].length;
-});
-writeFileSync(here('favicon.ico'), Buffer.concat([header, ...images]));
 
-console.log(`Wrote ${Object.keys(files).length} SVGs, 7 PNGs, and favicon.ico to brand/.`);
+console.log(
+  `Wrote ${Object.keys(files).length} SVGs, 7 PNGs, favicon.ico, and icon-windows.ico to brand/.`,
+);

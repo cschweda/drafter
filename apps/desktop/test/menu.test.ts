@@ -88,6 +88,17 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('on Windows, as on Linux: Alt opens each menu by its underlined letter, and Quit ends File', () => {
+    const template = menuTemplate(COMMANDS, () => {}, { platform: 'win32' });
+    expect(template.map((item) => item.label)).toEqual(['&File', '&Edit', '&View', '&Go', '&Help']);
+    const file = submenu(menus(template).File);
+    expect(file.at(-1)).toMatchObject({ id: 'quit', label: 'Quit', accelerator: 'CmdOrCtrl+Q' });
+    // No Mac app menu, no Window menu.
+    expect(
+      walk(template).some((item) => item.role === 'appMenu' || item.role === 'windowMenu'),
+    ).toBe(false);
+  });
+
   test('puts Quit (CmdOrCtrl+Q, the platform’s own) last in File, and About and Releases in Help', () => {
     const m = menus(menuTemplate(COMMANDS, () => {}, { platform: 'linux' }));
     const file = submenu(m.File);

@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   accessProblem,
@@ -319,11 +319,11 @@ describe('resolveModuleUrl', () => {
     });
     expect(resolveModuleUrl('drafter-module://tidy/index.js', roots)).toEqual({
       id: 'tidy',
-      file: join('/modules/tidy', 'index.js'),
+      file: resolve('/modules/tidy', 'index.js'),
     });
     expect(resolveModuleUrl('drafter-module://tidy/lib/a%20b.js', roots)).toEqual({
       id: 'tidy',
-      file: join('/modules/tidy', 'lib', 'a b.js'),
+      file: resolve('/modules/tidy', 'lib', 'a b.js'),
     });
   });
 
@@ -744,5 +744,69 @@ describe('the advice is safe to paste into a shell', () => {
     expect(problems).toEqual([
       'Drafter skipped the folder “two?lines”: a group other than yours alone can change it (two?lines). Remove group write access from it.',
     ]);
+  });
+});
+
+describe('on Windows (no POSIX permissions: the profile folder’s own protection)', () => {
+  test('loads a module whatever its mode bits say, which mean nothing there', async () => {
+    const { chmodSync } = await import('node:fs');
+    await addModule('tidy');
+    if (process.platform !== 'win32') chmodSync(join(dir, 'tidy', 'index.js'), 0o666);
+    const { modules, problems } = readModulesFolder(dir, [], null, 'win32');
+    expect(problems).toEqual([]);
+    expect(modules.map((m) => m.id)).toEqual(['tidy']);
+  });
+
+  test('still skips a module with a link out of its folder (Windows: a junction any user can make)', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'drafter-outside-'));
+    try {
+      await writeFile(join(outside, 'evil.js'), 'export default {}');
+      await addModule('escapes');
+      // A junction needs no privilege on Windows; elsewhere a symlink to a folder plays it.
+      await symlink(outside, join(dir, 'escapes', 'lib'), 'junction');
+      const { modules, problems } = readModulesFolder(dir, [], null, 'win32');
+      expect(modules).toEqual([]);
+      expect(problems[0]).toMatch(
+        /Drafter skipped the folder “escapes”: something under it \(lib\)/,
+      );
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('skips a module with a hard link in it, which could be a file from anywhere on the drive', async () => {
+    const { link } = await import('node:fs/promises');
+    const outside = await mkdtemp(join(tmpdir(), 'drafter-outside-'));
+    try {
+      await writeFile(join(outside, 'shared.js'), 'export default {}');
+      await addModule('linked');
+      await link(join(outside, 'shared.js'), join(dir, 'linked', 'shared.js'));
+      await addModule('tidy');
+      const { modules, problems } = readModulesFolder(dir, [], null, 'win32');
+      expect(modules.map((m) => m.id)).toEqual(['tidy']);
+      expect(problems[0]).toMatch(
+        /Drafter skipped the folder “linked”: something under it \(shared\.js\)/,
+      );
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('skips every module when the modules folder is itself a link to a folder elsewhere', async () => {
+    const elsewhere = await mkdtemp(join(tmpdir(), 'drafter-elsewhere-'));
+    const linked = join(dir, 'linked-modules');
+    try {
+      await mkdir(join(elsewhere, 'tidy'));
+      await writeFile(join(elsewhere, 'tidy', 'module.json'), JSON.stringify(MANIFEST));
+      await writeFile(join(elsewhere, 'tidy', 'index.js'), 'export default {}');
+      await symlink(elsewhere, linked, 'junction');
+      const { modules, problems } = readModulesFolder(linked, [], null, 'win32');
+      expect(modules).toEqual([]);
+      expect(problems).toEqual([
+        'Drafter skipped the modules folder: it is a link to a folder elsewhere, which your Windows profile folder’s protection may not cover. Put the modules in the folder itself.',
+      ]);
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true });
+    }
   });
 });

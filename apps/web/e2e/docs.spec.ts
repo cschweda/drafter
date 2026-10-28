@@ -174,20 +174,33 @@ test.describe('without JavaScript', () => {
     }
   });
 
-  test('links the Linux download from the Saving page', async ({ page }) => {
+  test('links the Linux and Windows downloads from the Saving page, and the Mac build guide', async ({
+    page,
+  }) => {
     await page.goto('/docs/saving');
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Download Drafter for Linux' }),
+      page.getByRole('heading', { level: 2, name: 'Download the desktop app' }),
     ).toBeVisible();
+    for (const name of ['Linux', 'Windows', 'Mac']) {
+      await expect(page.getByRole('heading', { level: 3, name })).toBeVisible();
+    }
+    // The old address of the Linux section still lands on it.
+    await expect(page.locator('#download-linux')).toHaveText('Linux');
     const releases = page.getByRole('link', { name: /latest release/i });
-    await expect(releases).toHaveAttribute(
+    await expect(releases.first()).toHaveAttribute(
       'href',
       'https://github.com/cschweda/drafter/releases/latest',
     );
-    await expect(page.getByRole('link', { name: /install guide/i })).toHaveAttribute(
-      'href',
-      'https://github.com/cschweda/drafter/blob/main/docs/desktop-install-linux.md',
-    );
+    for (const [name, guide] of [
+      [/Linux install guide/i, 'desktop-install-linux.md'],
+      [/Windows install guide/i, 'desktop-install-windows.md'],
+      [/build it on your Mac/i, 'desktop-install-macos.md'],
+    ] as const) {
+      await expect(page.getByRole('link', { name })).toHaveAttribute(
+        'href',
+        `https://github.com/cschweda/drafter/blob/main/docs/${guide}`,
+      );
+    }
     const text = await mainText(page);
     for (const phrase of [
       '.deb',
@@ -196,6 +209,10 @@ test.describe('without JavaScript', () => {
       'drafterdev',
       'Ubuntu 24.04',
       'Windows',
+      'SmartScreen',
+      'More info',
+      'Run anyway',
+      'Arm',
       'macOS',
     ]) {
       expect(text, phrase).toContain(phrase);

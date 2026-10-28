@@ -22,6 +22,8 @@ import {
 // fake AppImage. An AppImage is played with APPIMAGE set, a .deb without it. quitAndInstall is
 // replaced by a hook (DRAFTER_E2E_UPDATE_INSTALL): it records "install" and quits, installing
 // nothing. The real swap of the AppImage and the .deb's behaviour are Linux-only: CI (Task 7).
+// On Windows the feed without APPIMAGE plays the installer's app: a latest.yml naming an installer
+// per processor, which electron-updater's NsisUpdater downloads and checks by its sha512.
 
 const NEWER = '9.9.9';
 const APPIMAGE_BYTES = Buffer.from('not really an AppImage, only bytes to download\n'.repeat(40));
@@ -41,6 +43,21 @@ sha512: ${sha512(APPIMAGE_BYTES)}
 releaseDate: '2026-10-27T00:00:00.000Z'
 `;
 
+const EXE_BYTES = Buffer.from('not really an installer, only bytes to download\n'.repeat(40));
+const exe = (arch: string) => `Drafter-${NEWER}-windows-${arch}-setup.exe`;
+const WINDOWS_FEED_YML = (sha = sha512(EXE_BYTES)) => `version: ${NEWER}
+files:
+  - url: ${exe('x64')}
+    sha512: ${sha}
+    size: ${EXE_BYTES.length}
+  - url: ${exe('arm64')}
+    sha512: ${sha}
+    size: ${EXE_BYTES.length}
+path: ${exe('x64')}
+sha512: ${sha}
+releaseDate: '2026-10-27T00:00:00.000Z'
+`;
+
 interface Feed {
   url: string;
   /** Every request path the server saw, in order. */
@@ -57,6 +74,8 @@ async function feed(yml = FEED_YML): Promise<Feed> {
       response.writeHead(200, { 'content-type': 'text/yaml' }).end(yml);
     } else if (path.endsWith('.AppImage')) {
       response.writeHead(200, { 'content-type': 'application/octet-stream' }).end(APPIMAGE_BYTES);
+    } else if (path.endsWith('.exe')) {
+      response.writeHead(200, { 'content-type': 'application/octet-stream' }).end(EXE_BYTES);
     } else {
       response.writeHead(404).end();
     }
@@ -84,7 +103,11 @@ async function startFeed(yml?: string): Promise<Feed> {
   return f;
 }
 
-/** The environment for an AppImage (`appimage`) or a .deb (`deb`) that checks `feedUrl` soon. */
+/**
+ * The environment for an AppImage (`appimage`) or, without APPIMAGE, the system's own package
+ * (`deb`: a .deb on Linux, the Mac app on a Mac, the installer's app on Windows) that checks
+ * `feedUrl` soon.
+ */
 function env(kind: 'appimage' | 'deb', profile: Profile, feedUrl: string, delay = 100) {
   return {
     DRAFTER_UPDATE_FEED: feedUrl,
@@ -230,6 +253,7 @@ test('offers Get it for a .deb, which downloads nothing and installs nothing', a
   desktop,
   profile,
 }) => {
+  test.skip(process.platform === 'win32', 'Windows has no .deb: its installer updates itself');
   const f = await startFeed();
   const { page } = await desktop({ env: env('deb', profile, f.url) });
   await expect(toast(page)).toContainText('A new version of Drafter is available');
@@ -350,4 +374,43 @@ test('lets updater requests through the network backstop, while pages still get 
   );
   expect(reached).toBe(false);
   expect(f.seen.length).toBe(before);
+});
+
+test('on Windows, downloads the installer for this processor, checks it, and installs only on Restart', async ({
+  desktop,
+  profile,
+}) => {
+  test.skip(process.platform !== 'win32', 'The Windows installer’s app');
+  const f = await startFeed(WINDOWS_FEED_YML());
+  const launched = await desktop({ env: env('deb', profile, f.url) });
+  const { page } = launched;
+  await expect(toast(page)).toContainText('A new version of Drafter is ready');
+  await expect(button(page, 'Restart')).toBeVisible();
+  await expect(button(page, 'Later')).toBeVisible();
+  // Its own processor's installer, and only that one.
+  const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+  expect(f.seen.filter((p) => p.endsWith('.exe'))).toEqual([`/${exe(arch)}`]);
+  expect(f.seen.filter((p) => p === '/latest.yml')).toHaveLength(1);
+  await settle();
+  expect(installs(profile)).toEqual([]);
+
+  const gone = exited(launched);
+  await button(page, 'Restart').click();
+  await gone;
+  expect(installs(profile)).toEqual(['install']);
+  expect(closeAsked(profile)).toEqual([]);
+});
+
+test('on Windows, an installer that isn’t the one latest.yml describes is never offered', async ({
+  desktop,
+  profile,
+}) => {
+  test.skip(process.platform !== 'win32', 'The Windows installer’s app');
+  // The feed's sha512 is another file's: the download is refused.
+  const f = await startFeed(WINDOWS_FEED_YML(sha512(Buffer.from('another installer'))));
+  const { page } = await desktop({ env: env('deb', profile, f.url) });
+  await expect.poll(() => f.seen.some((p) => p.endsWith('.exe'))).toBe(true);
+  await settle(2500);
+  await expect(toast(page)).toHaveCount(0);
+  expect(installs(profile)).toEqual([]);
 });

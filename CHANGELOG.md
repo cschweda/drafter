@@ -6,6 +6,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/desktop`: **Drafter for Windows.** An installer for 64-bit Intel and AMD PCs and one for Windows on Arm (`Drafter-<version>-windows-x64-setup.exe`, `…-arm64-setup.exe`), built and tested on GitHub's Windows runners. It installs for you alone, with no administrator, into `%LOCALAPPDATA%\Programs\drafter`, with a Start menu shortcut, a desktop shortcut, and an uninstaller in **Settings → Apps**. `.fountain` files open in Drafter with a double-click; `.md` and `.markdown` offer it under **Open with**, and keep the app they open in now. The installers are not signed yet, so Windows SmartScreen warns about the download: see [docs/desktop-install-windows.md](docs/desktop-install-windows.md). On Windows on Arm the installer itself runs emulated and takes a few minutes. `pnpm desktop:win` builds them on a Windows PC.
+- `apps/desktop`: **updates on Windows**, as for the AppImage: Drafter checks for a new version when it starts (you can turn this off), downloads the installer for your PC's processor in the background, checks it against the release's `latest.yml`, and offers **Restart**; it never installs by itself. Until the installers are signed, the check is the file's SHA-512 from the release, not a signature.
+- `brand`: `icon-windows.ico`, the Windows app's icon, 16 to 256 pixels.
+- CI: `windows` and `windows-arm` jobs build both installers and test them: unit tests and the shell's end-to-end tests on Windows, a silent install of each installer, its file types, a file opened from the command line and handed over by a second launch, a real update from 1.0.0 to 1.0.1 (the new version must start from the same folder), and a silent uninstall. An installer gets up to ten minutes, since Windows on Arm runs it emulated (about four minutes on GitHub's Arm runner, against seconds on x64), and the screen is saved if it doesn't finish. The Windows runner's screen is set to 1920 × 1080 first, so the window has the editor's two-pane width. A tag's release now waits for Linux and both Windows jobs and publishes the Linux and Windows files together, or nothing.
+
+### Changed
+
+- `apps/web`: the Saving page's download section is now **Download the desktop app**, with Linux, Windows (the two installers, and SmartScreen's **More info → Run anyway**), and Mac (no download yet: build it on your Mac); the old `#download-linux` address still lands on the Linux part. The Privacy page names the Windows app beside the AppImage among those that download an update and wait for Restart.
+- `apps/desktop`: the packed app is named `drafter` (it was the workspace's `@drafter/desktop`), so the updater's download cache is `drafter-updater` on every system.
+
+### Fixed
+
+- `apps/desktop`: the close dialog's test hook takes a Windows path (the desktop end-to-end tests run on Windows now).
+- `apps/desktop`: on Windows, the command a `.fountain` file opens with quotes Drafter's path, which electron-builder's own leaves unquoted (a problem for a user name with a space).
+- `apps/desktop`: a module from the folder is pinned and served by the system's own real path, which on Windows agrees about short folder names and case; before, every file of a folder module was refused there.
+
+### Security
+
+- `apps/desktop`, CI: a Windows build that is signed, whether by its configuration (a custom signer, a certificate file, thumbprint, or subject among them) or by what the built files carry, must name its signer as the publisher the updater checks, or CI fails; a release's `latest.yml` must list an installer for every processor; a release may hold only this build's files; and on Windows a device name with spaces before its extension, a grant whose link leads to a name Windows reads differently, and a module with a hard-linked file are refused.
+- `apps/desktop`: on Windows, Drafter refuses a path Windows would read as another name (a trailing dot or space), a stream inside a file (`name:stream`), a device (`nul.md`, `COM1.fountain`), or a device path (`\\.\`, `\\?\`), in files it opens and saves and in its own pages' addresses, and compares paths without case.
+- `apps/desktop`: on Windows the modules folder (`%APPDATA%\Drafter\modules`) relies on the protection Windows gives your profile folder, since Windows has no POSIX permissions to check: a modules folder that is a link to a folder elsewhere is skipped, and a module with a link out of its folder (a junction, say) is still skipped.
+
 ## [0.7.0] - 2026-10-27
 
 **Drafter on a Mac, built on your own Mac.** `pnpm desktop:mac` makes `Drafter.app` (see [docs/desktop-install-macos.md](docs/desktop-install-macos.md)): `.fountain` files open in it from Finder, it keeps running with its window closed, it has a Mac menu, and it tells you when a new version is out. A signed download, with updates that install themselves, comes once Drafter has an Apple developer account. The Linux app and drafter.dev are unchanged.

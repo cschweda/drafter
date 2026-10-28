@@ -29,7 +29,8 @@ import {
   rm,
   stat,
 } from 'node:fs/promises';
-import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, resolve, win32 } from 'node:path';
+import { windowsPathProblem } from './windows-paths';
 
 /** What went wrong, as the page is told it (the codes `DesktopFilesBridge` documents). */
 export type FileErrorCode =
@@ -83,16 +84,25 @@ export function fileErrorOf(error: unknown): FileError {
   }
 }
 
-/** An absolute path, from the page: a string, with no NUL, no longer than a path can be. */
-export function checkPath(value: unknown): string {
+/**
+ * An absolute path, from the page (or a launch's arguments): a string, with no NUL, no longer than
+ * a path can be. On Windows, also none that Windows reads as another name, a stream inside a file,
+ * or a device (`windowsPathProblem`): `notes.md.` would open `notes.md`, and `x.exe:a.md` a stream
+ * of `x.exe`, past the checks made on the name.
+ */
+export function checkPath(value: unknown, platform: string = process.platform): string {
+  const windows = platform === 'win32';
   if (
     typeof value !== 'string' ||
     value === '' ||
     value.length > MAX_PATH ||
     value.includes('\0') ||
-    !isAbsolute(value)
+    !(windows ? win32.isAbsolute(value) : isAbsolute(value))
   ) {
     throw new FileError('failed', 'not an absolute path');
+  }
+  if (windows && windowsPathProblem(value)) {
+    throw new FileError('failed', 'a name Windows reads differently');
   }
   return value;
 }
@@ -315,7 +325,7 @@ export function watchFile(
   const debounce = options.debounceMs ?? 300;
   let real = path;
   try {
-    real = realpathSync(path);
+    real = realpathSync.native(path);
   } catch {
     // Not there (yet): its folder is watched for it.
   }

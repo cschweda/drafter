@@ -2,7 +2,7 @@
 // process, so the network backstop (network.ts), which cancels only requests a page made, leaves
 // it alone. Only the editor's page may speak to it.
 import { appendFileSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { app, type BrowserWindow, ipcMain, session } from 'electron';
 import { CHANNELS } from './channels';
 import {
@@ -39,7 +39,7 @@ function hooks() {
   return {
     feed: validFeed(process.env.DRAFTER_UPDATE_FEED),
     delay: Number.isFinite(delay) && delay >= 0 ? delay : CHECK_DELAY_MS,
-    install: install?.startsWith('/') ? install : null,
+    install: install && isAbsolute(install) ? install : null,
   };
 }
 
@@ -101,9 +101,25 @@ export function setUpUpdates(
           },
         });
       }
-      const { AppImageUpdater, CancellationToken: Token } = await import('electron-updater');
+      const {
+        AppImageUpdater,
+        NsisUpdater,
+        CancellationToken: Token,
+      } = await import('electron-updater');
       CancellationToken = Token;
-      const updater = new AppImageUpdater();
+      const updater = mode === 'nsis' ? new NsisUpdater() : new AppImageUpdater();
+      if (updater instanceof NsisUpdater) {
+        // The release has no .blockmap files (electron-builder.config.cjs), so the whole installer
+        // is downloaded, and checked against latest.yml's sha512 (fetched from the release over
+        // https). Unsigned for now: with no publisherName in resources/app-update.yml,
+        // electron-updater checks no Authenticode signature. Once Drafter is signed,
+        // electron-builder writes the name there and electron-updater refuses an update not signed
+        // by it; `verifyUpdateCodeSignature` is never replaced here, so that check stays its own
+        // (scripts/check-update-config.mjs fails a signed build without the name).
+        updater.disableDifferentialDownload = true;
+        // Only the full installer: a web installer would fetch its package from elsewhere.
+        updater.disableWebInstaller = true;
+      }
       if (hook.feed) {
         // The test feed: a plain server, whole downloads (the old file is a fake).
         updater.forceDevUpdateConfig = true;

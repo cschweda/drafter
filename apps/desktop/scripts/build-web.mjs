@@ -62,12 +62,33 @@ export function replaceFolder(
   if (hadOld) rmSync(old, { recursive: true, force: true });
 }
 
+/**
+ * How to run pnpm: the pnpm that is running this (`npm_execpath`, its JavaScript entry, run by this
+ * Node), or else `pnpm` from the PATH. On Windows that is `pnpm.cmd`, which only a shell can start
+ * (Node refuses to run a .cmd without one), so it is started through one; its arguments are fixed.
+ * @returns {{ file: string, args: string[], shell: boolean }}
+ */
+export function pnpmCommand(
+  args,
+  env = process.env,
+  platform = process.platform,
+  node = process.execPath,
+) {
+  const entry = env.npm_execpath;
+  if (entry && /\.[cm]?js$/.test(entry) && /pnpm/i.test(entry)) {
+    return { file: node, args: [entry, ...args], shell: false };
+  }
+  return { file: 'pnpm', args, shell: platform === 'win32' };
+}
+
 export function buildWeb() {
   rmSync(fileURLToPath(new URL('../../web/.output/', import.meta.url)), {
     recursive: true,
     force: true,
   });
-  execFileSync('pnpm', ['build'], {
+  const pnpm = pnpmCommand(['build']);
+  execFileSync(pnpm.file, pnpm.args, {
+    shell: pnpm.shell,
     cwd: WEB_APP,
     stdio: 'inherit',
     env: { ...process.env, DRAFTER_DESKTOP: '1', NETLIFY: 'true' },

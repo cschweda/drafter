@@ -17,7 +17,8 @@
     "e2e": "pnpm --filter @drafter/web e2e",
     "desktop:dev": "pnpm --filter @drafter/desktop dev",
     "desktop:dist": "pnpm --filter @drafter/desktop dist",
-    "desktop:mac": "pnpm --filter @drafter/desktop desktop:mac"
+    "desktop:mac": "pnpm --filter @drafter/desktop desktop:mac",
+    "desktop:win": "pnpm --filter @drafter/desktop desktop:win"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",

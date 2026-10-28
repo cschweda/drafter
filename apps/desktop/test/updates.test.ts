@@ -83,8 +83,32 @@ describe('updateMode', () => {
     ).toBe('mac');
   });
 
-  test('is off on a packaged platform with no build yet (Windows)', () => {
-    expect(updateMode({ isPackaged: true, platform: 'win32' })).toBe('off');
+  test('is the installer’s on a packaged Windows build (check, download, Restart)', () => {
+    expect(updateMode({ isPackaged: true, platform: 'win32' })).toBe('nsis');
+    // An APPIMAGE inherited from somewhere is nothing to Windows.
+    expect(
+      updateMode({
+        isPackaged: true,
+        platform: 'win32',
+        appImage: 'C:\\x\\D.AppImage',
+        appImageIsFile: true,
+        appDir: 'C:\\x',
+        execPath: 'C:\\x\\Drafter.exe',
+      }),
+    ).toBe('nsis');
+  });
+
+  test('on Windows the test feed plays the installer, unless APPIMAGE asks for the AppImage', () => {
+    const win = { isPackaged: false, platform: 'win32' } as const;
+    expect(updateMode({ ...win })).toBe('off');
+    expect(updateMode({ ...win, feed: 'http://127.0.0.1:1' })).toBe('nsis');
+    expect(updateMode({ ...win, feed: 'http://127.0.0.1:1', appImage: 'C:\\x\\D.AppImage' })).toBe(
+      'appimage',
+    );
+  });
+
+  test('is off on a packaged system with no build (FreeBSD, say)', () => {
+    expect(updateMode({ isPackaged: true, platform: 'freebsd' })).toBe('off');
   });
 });
 
@@ -397,6 +421,80 @@ describe('the offer (AppImage)', () => {
     r.updates.start();
     r.updates.setEnabled(true);
     await r.advance(5000);
+    r.updates.openReleasePage();
+    expect(r.opened).toEqual([]);
+    vi.useRealTimers();
+  });
+});
+
+describe('the offer (Windows installer)', () => {
+  const downloaded = (u: Fake) => {
+    u.emit('update-available', { version: '0.9.0' });
+    u.emit('update-downloaded', { version: '0.9.0' });
+  };
+
+  test('downloads in the background after a check found a version, then offers Restart', async () => {
+    const r = rig({
+      mode: 'nsis',
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    r.updates.listen();
+    await r.advance(5000);
+    expect(r.created[0]?.autoDownload).toBe(false);
+    expect(r.created[0]?.autoInstallOnAppQuit).toBe(false);
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    expect(r.published).toEqual([]);
+    r.created[0]?.emit('update-downloaded', { version: '0.9.0' });
+    expect(r.published).toEqual([{ version: '0.9.0', how: 'restart' }]);
+    vi.useRealTimers();
+  });
+
+  test('installs only when asked, with the quit approved first, and runs the new version after', async () => {
+    const r = rig({ mode: 'nsis', script: downloaded });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    r.updates.listen();
+    await r.advance(5000);
+    expect(r.created[0]?.quits).toEqual([]);
+    void r.updates.install();
+    expect(r.approve).toHaveBeenCalledTimes(1);
+    // Not silent: the installer shows its progress while Drafter is gone, then starts it again.
+    expect(r.created[0]?.quits).toEqual([[false, true]]);
+    vi.useRealTimers();
+  });
+
+  test('an install that fails takes the approval back', async () => {
+    const r = rig({
+      mode: 'nsis',
+      script: (u) => {
+        u.quitBehaviour = 'error';
+        downloaded(u);
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    expect(await r.updates.install()).toBe('failed');
+    expect(r.revoke).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  test('a download stops when Check for updates is turned off, and never opens the release page', async () => {
+    const r = rig({
+      mode: 'nsis',
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(1);
     r.updates.openReleasePage();
     expect(r.opened).toEqual([]);
     vi.useRealTimers();

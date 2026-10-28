@@ -19,8 +19,10 @@
     "e2e": "tsdown && playwright test",
     "package": "electron-builder --config electron-builder.config.cjs --linux --publish never",
     "package:mac": "electron-builder --config electron-builder.config.cjs --mac --publish never",
+    "package:win": "electron-builder --config electron-builder.config.cjs --win --publish never",
     "dist": "pnpm build && pnpm build:web && pnpm package",
     "desktop:mac": "pnpm build && pnpm build:web && pnpm package:mac",
+    "desktop:win": "pnpm build && pnpm build:web && pnpm package:win",
     "e2e:packaged": "playwright test --config playwright.packaged.config.ts"
   },
   "devDependencies": {

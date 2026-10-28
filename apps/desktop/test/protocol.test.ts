@@ -64,6 +64,33 @@ describe('resolveAppUrl', () => {
   });
 });
 
+describe('resolveAppUrl on Windows', () => {
+  test('refuses a name Windows would read as another (index.html. is index.html), a stream, or a device', () => {
+    for (const url of [
+      'app://drafter/index.html.',
+      'app://drafter/index.html%20',
+      'app://drafter/_nuxt./entry.js',
+      'app://drafter/index.html:$DATA',
+      'app://drafter/index.html%3A%3A%24DATA',
+      'app://drafter/nul.js',
+      'app://drafter/docs/CON/index.html',
+    ]) {
+      expect(resolveAppUrl(url, ROOT, 'win32'), url).toBeNull();
+    }
+  });
+
+  test('serves the build’s own names as before', () => {
+    expect(resolveAppUrl('app://drafter/index.html', ROOT, 'win32')).toBe(join(ROOT, 'index.html'));
+    expect(resolveAppUrl('app://drafter/docs/saving/', ROOT, 'win32')).toBe(
+      join(ROOT, 'docs', 'saving'),
+    );
+  });
+
+  test('elsewhere, leaves such names to the file system (they are names of their own there)', () => {
+    expect(resolveAppUrl('app://drafter/nul.js', ROOT, 'linux')).toBe(join(ROOT, 'nul.js'));
+  });
+});
+
 describe('headersFor', () => {
   test('sends the CSP on pages and scripts only', () => {
     expect(headersFor('/w/index.html', CSP)).toEqual({

@@ -4,7 +4,22 @@
 // sandboxed frame there, never in the app's page. Pure Node (no Electron), so the unit tests run it
 // as it is: main.ts registers the scheme and hands `moduleHandler` to `protocol.handle`.
 import { createHash } from 'node:crypto';
-import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import {
+  realpathSync as jsRealpathSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from 'node:fs';
+
+/**
+ * The system's own real path, as `fs.promises.realpath` (which `moduleHandler` uses) gives it. Node's
+ * default `realpathSync` is worked out in JavaScript and, on Windows, leaves a short 8.3 name
+ * (`RUNNER~1`) or a name's case as written, so the paths pinned at start and those asked for later
+ * wouldn't match.
+ */
+const realpathSync = jsRealpathSync.native;
+
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';
@@ -184,7 +199,12 @@ export function groupIsPrivate(
 }
 
 /**
- * The writer, for the checks below; null on Windows (no such bits), where none are made. Only on
+ * The writer, for the checks below; null on Windows, where mode bits and owners mean nothing to
+ * Node (every file reads as 0o666 or 0o444) and none are compared. There the modules folder is
+ * `%APPDATA%\Drafter\modules`, inside the writer's profile folder, which Windows gives only the
+ * writer, SYSTEM, and the administrators; Drafter relies on that, refuses a modules folder that is
+ * a link to somewhere else (outside that protection), and still walks every module for links out
+ * of it and anything it can't read (docs/DECISIONS.md, "The modules folder on Windows"). Only on
  * Linux can a group-writable file be accepted, and only when its group is provably private; on
  * macOS every user's primary group is the shared `staff`, so group-write is always refused there.
  */
@@ -208,7 +228,10 @@ export function currentWriter(
   return { uid: ids.uid, gid: ids.gid, groupIsPrivate: groupPrivate };
 }
 
-/** The first thing under `root` another user could change, or that Drafter can't vouch for. */
+/**
+ * The first thing under `root` another user could change, or that Drafter can't vouch for. With no
+ * writer (Windows), owners and modes aren't compared, and the rest of the walk is as strict.
+ */
 interface Finding {
   /** The module folder's name, or a path relative to it. */
   path: string;
@@ -224,7 +247,12 @@ interface Finding {
  * skipped, not loaded. A module's code and every file it serves live here, so one writable or
  * unreadable file anywhere is enough for someone else to change what Drafter runs.
  */
-function firstInsecure(root: string, folder: string, me: Writer): Finding | null {
+function firstInsecure(
+  root: string,
+  folder: string,
+  me: Writer | null,
+  windows = false,
+): Finding | null {
   const unsure = (path: string): Finding => ({ path, why: 'unsure' });
   let realRoot: string;
   try {
@@ -254,8 +282,11 @@ function firstInsecure(root: string, folder: string, me: Writer): Finding | null
         return unsure(here);
       }
     }
-    const problem = accessProblem(info, me);
+    const problem = me ? accessProblem(info, me) : undefined;
     if (problem) return { path: here, why: problem };
+    // On Windows nothing compares owners, so a hard link (one file under two names, the other
+    // anywhere on the drive) could be a file someone else can change: refused.
+    if (windows && info.isFile() && info.nlink > 1) return unsure(here);
     if (info.isDirectory()) {
       let entries: import('node:fs').Dirent[];
       try {
@@ -417,7 +448,26 @@ export function readModulesFolder(
   dir: string,
   reserved: readonly string[] = BUILT_IN_IDS,
   me: Writer | null = currentWriter(),
+  platform: string = process.platform,
 ): ModulesFolder {
+  // On Windows the profile folder's protection is what keeps other users out (`currentWriter`), so
+  // the modules folder must be in it, not a link (a junction, say) to a folder somewhere else.
+  if (platform === 'win32') {
+    let linked = false;
+    try {
+      linked = lstatSync(dir).isSymbolicLink();
+    } catch {
+      return { modules: [], problems: [] };
+    }
+    if (linked) {
+      return {
+        modules: [],
+        problems: [
+          'Drafter skipped the modules folder: it is a link to a folder elsewhere, which your Windows profile folder’s protection may not cover. Put the modules in the folder itself.',
+        ],
+      };
+    }
+  }
   let names: string[];
   try {
     names = readdirSync(dir, { withFileTypes: true })
@@ -470,7 +520,7 @@ export function readModulesFolder(
       problems.push(skipped(folder, `Drafter reads at most ${LIMITS.modules} modules`));
       continue;
     }
-    const open = me ? firstInsecure(join(dir, folder), folder, me) : null;
+    const open = firstInsecure(join(dir, folder), folder, me, platform === 'win32');
     if (open !== null) {
       problems.push(
         skipped(

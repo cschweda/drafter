@@ -3,6 +3,7 @@
 // and hands `appHandler` to `protocol.handle`.
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { windowsNameProblem } from './windows-paths';
 
 /** The scheme (registered as privileged in main.ts: standard, secure, fetch, CORS). */
 export const SCHEME = 'app';
@@ -51,12 +52,18 @@ const APP_URL_PATTERN = /^app:\/\/drafter(\/[^?#]*)?(?:[?#].*)?$/i;
  * Maps an app://drafter/ URL to a file under `root`, or null for anything outside it (.., absolute,
  * other hosts). The path is checked before and after percent-decoding: a `..` segment, an encoded
  * slash or backslash, a NUL, an empty segment (`//`), or a drive letter is refused, and the result
- * must still be inside `root`. The file need not exist.
+ * must still be inside `root`. On Windows a segment Windows would read as another name (a trailing
+ * dot or space), a stream (`:`), or a device (`nul.js`) is refused too (windows-paths.ts). The
+ * file need not exist.
  */
-export function resolveAppUrl(url: string, root: string): string | null {
+export function resolveAppUrl(
+  url: string,
+  root: string,
+  platform: string = process.platform,
+): string | null {
   const match = APP_URL_PATTERN.exec(url);
   if (!match) return null;
-  return resolveRawPath(match[1] ?? '/', root);
+  return resolveRawPath(match[1] ?? '/', root, platform);
 }
 
 /**
@@ -64,7 +71,11 @@ export function resolveAppUrl(url: string, root: string): string | null {
  * one that leaves it, by the rules `resolveAppUrl` describes. The modules folder's scheme
  * (module-folder.ts) uses the same rules.
  */
-export function resolveRawPath(raw: string, root: string): string | null {
+export function resolveRawPath(
+  raw: string,
+  root: string,
+  platform: string = process.platform,
+): string | null {
   // Encoded separators and NULs would change what the decoded path means.
   if (/%(?:2f|5c|00)|\\/i.test(raw)) return null;
   let path: string;
@@ -80,6 +91,7 @@ export function resolveRawPath(raw: string, root: string): string | null {
   for (const segment of inner) {
     if (segment === '' || segment === '.' || segment === '..') return null;
     if (/^[a-z]:$/i.test(segment)) return null;
+    if (platform === 'win32' && windowsNameProblem(segment)) return null;
   }
   const base = resolve(root);
   const file = resolve(base, ...inner);
