@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
-import { editor, expect, type Profile, ready, test } from './helpers';
+import { editor, expect, type Profile, test } from './helpers';
 
 // axe on what only the desktop app draws (Phase 1 design §1 item 5; the web app's states are
 // apps/web/e2e/a11y.spec.ts): the modules folder in Settings, with a folder module's question about
@@ -40,11 +40,9 @@ async function clean(page: Page, state: string) {
   ).toEqual([]);
 }
 
-/** Reloads the window in `theme`, as a returning writer's choice would open it. */
+/** Switches the window to `theme` with the toolbar's button, as a writer does (dark is the default). */
 async function useTheme(page: Page, theme: 'dark' | 'light') {
-  await page.evaluate((t) => localStorage.setItem('nuxt-color-mode', t), theme);
-  await page.reload();
-  await ready(page);
+  if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
   await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
 }
 
@@ -165,8 +163,7 @@ releaseDate: '2026-10-27T00:00:00.000Z'
       const { page } = await desktop({
         env: {
           DRAFTER_UPDATE_FEED: `http://127.0.0.1:${port}`,
-          // Long enough for the theme's reload to come first.
-          DRAFTER_E2E_UPDATE_DELAY_MS: '3000',
+          DRAFTER_E2E_UPDATE_DELAY_MS: '100',
           DRAFTER_E2E_UPDATE_INSTALL: join(profile.dir, 'install.log'),
           APPIMAGE: join(profile.dir, 'Drafter.AppImage'),
         },
