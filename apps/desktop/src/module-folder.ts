@@ -32,6 +32,7 @@ export const LIMITS = {
   modules: 50,
   manifest: 64 * 1024,
   file: 20 * 1024 * 1024,
+  module: 64 * 1024 * 1024,
   name: 80,
   description: 400,
   origins: 16,
@@ -49,8 +50,13 @@ export interface ModuleManifest {
 export interface LoadedModule extends ModuleManifest {
   folder: string;
   root: string;
-  /** A short hash of the folder's name and its module.json: changes when a different module takes the id (I1). */
+  /**
+   * A short hash of the folder's name and every file in it, its code included: it changes when a
+   * different module takes the id (I1) or the module changes at all, so the writer agrees again.
+   */
   fingerprint: string;
+  /** Each file's real path and the SHA-256 of what it held at start: only those files, unchanged, are served. */
+  files: ReadonlyMap<string, string>;
 }
 
 export interface ModulesFolder {
@@ -297,11 +303,57 @@ function groupFix(command: string, path: string): string {
 const skipped = (folder: string, why: string) =>
   shownText(`Drafter skipped the folder “${folder}”: ${why}.`);
 
+const sha256 = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex');
+
+/**
+ * Every file under a module's real folder, by its path in the folder, with the SHA-256 of what it
+ * holds now; null when the module is larger than `LIMITS.module` or something can't be read.
+ * `firstInsecure` has already checked that every link stays in the folder.
+ */
+function hashFiles(root: string): Map<string, { real: string; hash: string }> | null {
+  const found = new Map<string, { real: string; hash: string }>();
+  let total = 0;
+  const walk = (path: string, rel: string): boolean => {
+    let entries: import('node:fs').Dirent[];
+    try {
+      entries = readdirSync(path, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+    for (const entry of entries) {
+      const child = join(path, entry.name);
+      const name = rel === '' ? entry.name : `${rel}/${entry.name}`;
+      try {
+        const real = realpathSync(child);
+        if (!within(root, real)) return false;
+        const info = statSync(real);
+        if (info.isDirectory()) {
+          if (entry.isSymbolicLink()) continue; // Its files are read where the folder really is.
+          if (!walk(child, name)) return false;
+        } else if (info.isFile()) {
+          total += info.size;
+          if (total > LIMITS.module) return false;
+          found.set(name, { real, hash: sha256(readFileSync(real)) });
+        }
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  };
+  return walk(root, '') ? found : null;
+}
+
 /** Reads one folder's module, or says why it can't. */
 function readOne(dir: string, folder: string): LoadedModule | string {
   const path = join(dir, folder);
   let root: string;
   try {
+    // A link to a folder elsewhere would put the module's real home, and the folders above it,
+    // outside what Drafter checks: the module's own folder must be here.
+    if (lstatSync(path).isSymbolicLink()) {
+      return 'it is a link to a folder elsewhere; put the module’s own folder here instead';
+    }
     root = realpathSync(path);
     if (!statSync(root).isDirectory()) return 'it is not a folder';
   } catch {
@@ -332,6 +384,12 @@ function readOne(dir: string, folder: string): LoadedModule | string {
   } catch {
     return 'it has no index.js';
   }
+  const hashed = hashFiles(root);
+  if (hashed === null) return 'it is larger than 64 MB, or Drafter can’t read all of it';
+  const listing = [...hashed]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([name, { hash }]) => `${name}\0${hash}\n`)
+    .join('');
   const m = value as {
     id: string;
     name: string;
@@ -345,7 +403,8 @@ function readOne(dir: string, folder: string): LoadedModule | string {
     permissions: { network: [...(m.permissions.network ?? [])] },
     folder,
     root,
-    fingerprint: createHash('sha256').update(`${folder}\n${text}`).digest('hex').slice(0, 16),
+    fingerprint: sha256(`${folder}\n${listing}`).slice(0, 16),
+    files: new Map([...hashed.values()].map(({ real, hash }) => [real, hash])),
   };
 }
 
@@ -530,6 +589,11 @@ const notFound = () =>
 export interface ModuleHandlerOptions {
   /** The loaded modules: id → the folder's real path. */
   modules: ReadonlyMap<string, string>;
+  /**
+   * Each module's files as they were at start (real path → SHA-256). When given, a file missing
+   * from it, or changed since, is a 404: the code the writer agreed to is the code that runs.
+   */
+  files?: ReadonlyMap<string, ReadonlyMap<string, string>>;
   /** The frame runtime's file (`dist/module-runtime.js`). */
   runtime: string;
   /** The origins the writer agreed to for a module, now. */
@@ -569,6 +633,7 @@ export function moduleHandler(
     }
     try {
       const file = target.file === 'runtime' ? options.runtime : target.file;
+      let pinned: string | undefined;
       if (target.file !== 'runtime') {
         const root = options.modules.get(target.id) as string;
         let real = realRoots.get(target.id);
@@ -576,11 +641,18 @@ export function moduleHandler(
           real = realpath(root);
           realRoots.set(target.id, real);
         }
-        if (!within(await real, await realpath(file))) return notFound();
+        const realFile = await realpath(file);
+        if (!within(await real, realFile)) return notFound();
+        if (options.files) {
+          pinned = options.files.get(target.id)?.get(realFile);
+          if (pinned === undefined) return notFound();
+        }
       }
       const info = await stat(file);
       if (!info.isFile() || info.size > LIMITS.file) return notFound();
-      return new Response(body(await readFile(file)), {
+      const data = await readFile(file);
+      if (pinned !== undefined && sha256(data) !== pinned) return notFound();
+      return new Response(body(data), {
         status: 200,
         headers: {
           ...common,

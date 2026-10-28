@@ -248,7 +248,10 @@ folder and nowhere else. It can't reach Drafter's page, your files, Drafter's st
 recovery copies, other modules' settings), or another module. It can't open windows, navigate,
 submit forms, or ask for the camera, notifications, or anything like them. It reaches the network
 only if it declares the origins and you agreed when you turned it on, and then only those origins;
-if a later version declares more, it is off until you agree again.
+if a later version declares more, it is off until you agree again. In fact any change to the
+module, its code included, turns it off until you turn it on again, and Drafter serves only the
+files as they were when it started: change a module, then restart Drafter and turn it on again.
+A module's folder must be in the modules folder itself, not a link to a folder elsewhere.
 
 While it is on, it **can** read the open script and change it, and one you agreed to give the
 network can send the script to the origins it named. That is what turning it on means: turn one on
