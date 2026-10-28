@@ -26,6 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Security
 
+- `apps/desktop`, CI: a Windows build that is signed, whether by its configuration (a custom signer, a certificate file, thumbprint, or subject among them) or by what the built files carry, must name its signer as the publisher the updater checks, or CI fails; a release's `latest.yml` must list an installer for every processor; a release may hold only this build's files; and on Windows a device name with spaces before its extension, a grant whose link leads to a name Windows reads differently, and a module with a hard-linked file are refused.
 - `apps/desktop`: on Windows, Drafter refuses a path Windows would read as another name (a trailing dot or space), a stream inside a file (`name:stream`), a device (`nul.md`, `COM1.fountain`), or a device path (`\\.\`, `\\?\`), in files it opens and saves and in its own pages' addresses, and compares paths without case.
 - `apps/desktop`: on Windows the modules folder (`%APPDATA%\Drafter\modules`) relies on the protection Windows gives your profile folder, since Windows has no POSIX permissions to check: a modules folder that is a link to a folder elsewhere is skipped, and a module with a link out of its folder (a junction, say) is still skipped.
 
