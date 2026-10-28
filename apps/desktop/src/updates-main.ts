@@ -110,8 +110,12 @@ export function setUpUpdates(
       const updater = mode === 'nsis' ? new NsisUpdater() : new AppImageUpdater();
       if (updater instanceof NsisUpdater) {
         // The release has no .blockmap files (electron-builder.config.cjs), so the whole installer
-        // is downloaded, and checked against latest.yml's sha512. Unsigned for now: with no
-        // publisher name in resources/app-update.yml, electron-updater checks no signature.
+        // is downloaded, and checked against latest.yml's sha512 (fetched from the release over
+        // https). Unsigned for now: with no publisherName in resources/app-update.yml,
+        // electron-updater checks no Authenticode signature. Once Drafter is signed,
+        // electron-builder writes the name there and electron-updater refuses an update not signed
+        // by it; `verifyUpdateCodeSignature` is never replaced here, so that check stays its own
+        // (scripts/check-update-config.mjs fails a signed build without the name).
         updater.disableDifferentialDownload = true;
         // Only the full installer: a web installer would fetch its package from elsewhere.
         updater.disableWebInstaller = true;
