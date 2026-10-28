@@ -18,6 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: **the Outline tab.** Your script's sections and scenes as a tree, each scene with its number, heading, first synopsis, color, page and length, and who speaks. Filter it by heading, synopsis, or character; press Enter or click to go to a scene; edit a synopsis in place; give a scene a color, which is written into the scene as `[[Color: blue]]` and never prints. It works fully from the keyboard (arrow keys, Home and End, typing to jump), and a screen reader reads it as a tree.
 - `apps/web`: **moving scenes and sections.** Alt+Up and Alt+Down on an Outline row, its menu's Move up, Move down, and Move to…, dragging it, and **Move scene up** and **Move scene down** for the scene holding the cursor. The scene's whole text moves, notes and all; one undo puts it back; focus stays on the moved row, and a screen reader hears where it went.
 
+- `apps/web`: **Condense to outline** folds every scene to its heading and synopsis and shows the Outline beside the Source; **Expand all** unfolds them.
+- `apps/web`: **Export as treatment…** (Export menu, File menu, palette): the outline as a Markdown file, with each scene's first paragraph of action if you like, or opened as a new Markdown document.
+- `apps/web`: **Expand outline** turns the `=` lines and `- ` lists you've selected (or the whole script's) into scene stubs, `INT. LOCATION - DAY` with the line as its synopsis, in one undo; **New screenplay from this outline** does the same for a Markdown outline, as a new screenplay. Problems lists every stub still waiting for its real heading.
+
 ### Changed
 
 - `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.

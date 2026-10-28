@@ -118,6 +118,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },
   { id: 'export-md', title: 'Export as Markdown file', group: 'File' },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
+  { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },
+  { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },
   { id: 'settings', title: 'Settings…', group: 'File', keys: 'Mod-,', global: true },
 
@@ -165,12 +167,16 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'hide-element-bar', title: 'Hide the element bar', group: 'View' },
   { id: 'fold-all', title: 'Fold all', group: 'View', keys: 'Ctrl-Alt-[' },
   { id: 'unfold-all', title: 'Unfold all', group: 'View', keys: 'Ctrl-Alt-]' },
+  // Condense and expand (Phase 2 design §6.4): the names a writer looks for, for folding.
+  { id: 'condense', title: 'Condense to outline', group: 'View' },
+  { id: 'expand-all', title: 'Expand all', group: 'View' },
 
   // Edit
   { id: 'undo', title: 'Undo', group: 'Edit', keys: 'Mod-z' },
   // The Outline's moves, for the scene holding the cursor (Phase 2 design §6.2).
   { id: 'move-scene-up', title: 'Move scene up', group: 'Edit' },
   { id: 'move-scene-down', title: 'Move scene down', group: 'Edit' },
+  { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
 

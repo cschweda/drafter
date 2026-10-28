@@ -163,6 +163,7 @@ onBeforeUnmount(() => {
     <LazyFolderModuleRunners v-if="desktopBuild" />
     <CommandPalette />
     <OutlineAnnouncer />
+    <TreatmentDialog />
     <SettingsDialog />
     <StatsDialog />
     <AppTour />

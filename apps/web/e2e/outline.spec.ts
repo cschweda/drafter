@@ -1,4 +1,6 @@
+import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
+import { removePickers } from './fs-stub';
 import {
   editor,
   palette,
@@ -374,5 +376,110 @@ test.describe('moving in the Outline', () => {
     await expect(down).toHaveAccessibleDescription(
       'This script is open for editing in another tab.',
     );
+  });
+});
+
+test.describe('condense, expand, and treatments', () => {
+  test('condenses to the outline and expands again', async ({ page }) => {
+    await start(page);
+    await setText(page, SCRIPT);
+    await runCommand(page, 'Condense to outline');
+    await expect(tree(page)).toBeVisible();
+    await expect(announcer(page)).toHaveText(
+      'Condensed to the outline: every scene is folded to its heading and synopsis.',
+    );
+    await showSource(page);
+    await expect(page.locator('.cm-foldPlaceholder')).toHaveCount(3);
+    await expect(page.locator('.cm-foldPlaceholder', { hasText: 'Ann arrives.' })).toHaveCount(1);
+    await expect(editor(page)).toContainText('# Act Two');
+    await expect(editor(page)).not.toContainText('Hello.');
+    await runCommand(page, 'Expand all');
+    await expect(page.locator('.cm-foldPlaceholder')).toHaveCount(0);
+    await expect(editor(page)).toContainText('Hello.');
+  });
+
+  test('exports a treatment as a Markdown file', async ({ page }) => {
+    await removePickers(page);
+    await start(page);
+    await setText(page, SCRIPT);
+    await runCommand(page, 'Export as treatment…');
+    const dialog = page.getByRole('dialog', { name: 'Export as treatment' });
+    await expect(dialog).toBeVisible();
+    await dialog
+      .getByRole('checkbox', { name: 'Include each scene’s first paragraph of action' })
+      .check();
+    const download = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Save file' }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe('The Test — treatment.md');
+    expect(await readFile(await file.path(), 'utf8')).toBe(
+      `${[
+        '# The Test',
+        '## Act One',
+        '### INT. HALL - DAY',
+        'Ann arrives.',
+        '### EXT. YARD - NIGHT',
+        '## Act Two',
+        '### INT. CAR - DAY',
+        'Driving.',
+      ].join('\n\n')}\n`,
+    );
+    await expect(dialog).toBeHidden();
+  });
+
+  test('opens a treatment as a document', async ({ page }) => {
+    await start(page);
+    await setText(page, SCRIPT);
+    await runCommand(page, 'Export as treatment…');
+    const dialog = page.getByRole('dialog', { name: 'Export as treatment' });
+    await dialog.getByRole('button', { name: 'Open as a document' }).click();
+    await expect(page.getByRole('tab', { name: 'Preview' }).first()).toBeVisible();
+    await showSource(page);
+    await expect(editor(page)).toContainText('# The Test');
+    await expect(editor(page)).toContainText('### INT. CAR - DAY');
+  });
+
+  test('expands synopses into stubs in one undo, and Problems lists them', async ({ page }) => {
+    const outline =
+      'Title: Plan\n\n# Act One\n\n= Margaret waits.\n\n- Danny comes home.\n- They eat cake.\n';
+    await start(page);
+    await setText(page, outline);
+    await runCommand(page, 'Expand outline');
+    await expect
+      .poll(() => textOf(page))
+      .toBe(
+        'Title: Plan\n\n# Act One\n\nINT. LOCATION - DAY\n\n= Margaret waits.\n\nINT. LOCATION - DAY\n\n= Danny comes home.\n\nINT. LOCATION - DAY\n\n= They eat cake.\n',
+      );
+    await expect(announcer(page)).toHaveText('Made 3 scene stubs. Problems lists them.');
+    await page
+      .getByRole('tab', { name: /^Problems/ })
+      .last()
+      .click();
+    const problems = page.getByRole('tabpanel', { name: /^Problems/ });
+    await expect(problems.getByText(/still has the stand-in heading/)).toHaveCount(3);
+    await undo(page);
+    await expect.poll(() => textOf(page)).toBe(outline);
+  });
+
+  test('makes a screenplay from a Markdown outline', async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'New Markdown document');
+    await setText(page, '# The Plan\n\n## Act One\n\n- Margaret waits.\n- Danny comes home.\n');
+    await runCommand(page, 'New screenplay from this outline');
+    await expect(page.getByRole('tab', { name: 'Outline' }).first()).toBeVisible();
+    await expect
+      .poll(() => textOf(page))
+      .toMatch(
+        /^Title: The Plan\n[\s\S]*\n\n## Act One\n\nINT\. LOCATION - DAY\n\n= Margaret waits\.\n\nINT\. LOCATION - DAY\n\n= Danny comes home\.\n$/,
+      );
+    await showOutline(page);
+    await expect(tree(page).getByRole('treeitem')).toHaveCount(3);
+    await page
+      .getByRole('tab', { name: /^Problems/ })
+      .last()
+      .click();
+    await expect(
+      page.getByRole('tabpanel', { name: /^Problems/ }).getByText(/still has the stand-in heading/),
+    ).toHaveCount(2);
   });
 });
