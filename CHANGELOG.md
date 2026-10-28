@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-28
+
+**Drafter for Windows.** An installer for 64-bit PCs and one for Windows on Arm, each installing for you alone with no administrator. `.fountain` files open in Drafter with a double-click, and Drafter offers each new version and waits for you to restart. The installers aren't signed yet, so SmartScreen asks first (**More info → Run anyway**): see [docs/desktop-install-windows.md](docs/desktop-install-windows.md). The Linux app, the Mac build, and drafter.dev are otherwise unchanged.
+
 ### Added
 
 - `apps/desktop`: **Drafter for Windows.** An installer for 64-bit Intel and AMD PCs and one for Windows on Arm (`Drafter-<version>-windows-x64-setup.exe`, `…-arm64-setup.exe`), built and tested on GitHub's Windows runners. It installs for you alone, with no administrator, into `%LOCALAPPDATA%\Programs\drafter`, with a Start menu shortcut, a desktop shortcut, and an uninstaller in **Settings → Apps**. `.fountain` files open in Drafter with a double-click; `.md` and `.markdown` offer it under **Open with**, and keep the app they open in now. The installers are not signed yet, so Windows SmartScreen warns about the download: see [docs/desktop-install-windows.md](docs/desktop-install-windows.md). On Windows on Arm the installer itself runs emulated and takes a few minutes. `pnpm desktop:win` builds them on a Windows PC.
@@ -506,7 +510,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/cschweda/drafter/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/cschweda/drafter/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/cschweda/drafter/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/cschweda/drafter/compare/v0.5.0...v0.6.0
