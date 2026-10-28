@@ -6,8 +6,9 @@
 #   workflow_dispatch                 the same as a branch push, for trying it by hand
 #
 # The `mac` job builds the Mac app as a writer builds it on their own Mac (`pnpm desktop:mac`,
-# signed ad hoc) and tests it, as a check only: nothing for macOS is uploaded or published until
-# the app can be signed and notarised, and `publish` doesn't wait for it.
+# signed ad hoc) and tests it, as a check only, on branch pushes and by hand (not for a tag):
+# nothing for macOS is uploaded or published until the app can be signed and notarised, and
+# `publish` doesn't wait for it.
 #
 # To release: bump apps/desktop/package.json, merge, then push the tag (vX.Y.Z). The workflow checks
 # the tag against the version, builds and tests, and makes the release itself: as a draft, with all
@@ -208,7 +209,9 @@ jobs:
           path: apps/desktop/test-results
 
   mac:
-    # Apple silicon, as most Macs a writer builds on now are. A check, never a release.
+    # Apple silicon, as most Macs a writer builds on now are. A check, never a release: not run for
+    # a tag, so a release's run is the Linux job and publish alone.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: macos-15
     timeout-minutes: 45
     steps:

@@ -1,6 +1,7 @@
 // The Mac app as `pnpm desktop:mac` builds it (docs/desktop-install-macos.md): run by
 // `pnpm e2e:packaged` with DRAFTER_PACKAGED set to the built Drafter.app
-// (`release/mac-arm64/Drafter.app` on Apple silicon). macOS only; CI doesn't run it.
+// (`release/mac-arm64/Drafter.app` on Apple silicon). macOS only: CI's `mac` job runs it
+// (.github/workflows/desktop.yml).
 //
 // A packaged app ignores the e2e suite's profile variable, and on a Mac its profile is always in
 // ~/Library/Application Support/Drafter, whatever HOME says: each launch here passes Chromium's
