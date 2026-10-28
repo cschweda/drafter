@@ -35,6 +35,7 @@ import { appHandler, cspFromHeaders, forwardedHeaders, SCHEME } from './protocol
 import { CONTINUE, QUIT, rememberAnswer, sandboxNotice } from './sandbox';
 import { type Spellcheck, seedDictionaries, setUpSpellcheck } from './spellcheck';
 import { setUpUpdates } from './updates-main';
+import { proxyForGrants, WEBRTC_POLICY } from './webrtc';
 import { createMainWindow, fromApp, guard } from './window';
 
 // The app's name, before anything asks for it: the profile folder (userData), the macOS menu's
@@ -281,7 +282,14 @@ function start() {
     const module = loaded.find((m) => m.id === id);
     if (!module) return;
     grants.set(module.id, agreedOrigins(module.permissions.network, origins));
+    // The proxy that keeps a module's frame off TURN-over-TCP bypasses the granted hosts, so a
+    // module reaches its consented origins and nothing else (webrtc.ts).
+    void applyModuleProxy();
   });
+
+  /** Refuses every renderer connection but the hosts a module was granted (webrtc.ts). */
+  const applyModuleProxy = () =>
+    session.defaultSession.setProxy(proxyForGrants(grants)).catch(() => {});
 
   // Closing the editor's window and quitting ask the page first (close.ts). Set up on `ready`.
   let closing: Closing | null = null;
@@ -322,6 +330,9 @@ function start() {
   );
 
   app.on('web-contents-created', (_event, contents) => {
+    // No renderer uses WebRTC; a module frame could otherwise reach a STUN/TURN server over UDP
+    // past the CSP and the webRequest backstop (webrtc.ts). `disable_non_proxied_udp` stops that.
+    contents.setWebRTCIPHandlingPolicy(WEBRTC_POLICY);
     if (contents.getType() === 'window') guard(contents, PRELOAD, knownModule);
     contents.on('destroyed', () => renderers.delete(contents.id));
   });
@@ -370,6 +381,9 @@ function start() {
     const ses = session.defaultSession;
     denyPermissions(ses);
     refuseNetwork(ses, (id) => grants.get(id) ?? []);
+    // TURN over TCP isn't a UDP request, so the policy above doesn't stop it: a proxy refuses every
+    // renderer connection but the granted hosts. The updater has its own session, so it is unaffected.
+    void applyModuleProxy();
     ses.on('spellcheck-dictionary-download-begin', (_event, language) => {
       spelling.downloads.push(language);
     });
