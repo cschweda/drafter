@@ -71,9 +71,9 @@ const more = computed<DropdownMenuItem[]>(() =>
       >
         {{ actions[0].label }}
       </button>
-      <UDropdownMenu :modal="false" :items="more" :content="{ align: 'end' }">
+      <MenuButton :items="more" :content="{ align: 'end' }">
         <button type="button" class="action" aria-label="More ways to start your own">More</button>
-      </UDropdownMenu>
+      </MenuButton>
     </template>
   </section>
 </template>
