@@ -13,6 +13,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `brand`: `icon-windows.ico`, the Windows app's icon, 16 to 256 pixels.
 - CI: `windows` and `windows-arm` jobs build both installers and test them: unit tests and the shell's end-to-end tests on Windows, a silent install of each installer, its file types, a file opened from the command line and handed over by a second launch, a real update from 1.0.0 to 1.0.1, and a silent uninstall. A tag's release now waits for Linux and both Windows jobs and publishes the Linux and Windows files together, or nothing.
 
+### Changed
+
+- `apps/web`: the Saving page's download section is now **Download the desktop app**, with Linux, Windows (the two installers, and SmartScreen's **More info → Run anyway**), and Mac (no download yet: build it on your Mac); the old `#download-linux` address still lands on the Linux part. The Privacy page names the Windows app beside the AppImage among those that download an update and wait for Restart.
+- `apps/desktop`: the packed app is named `drafter` (it was the workspace's `@drafter/desktop`), so the updater's download cache is `drafter-updater` on every system.
+
+### Fixed
+
+- `apps/desktop`: a module from the folder is pinned and served by the system's own real path, which on Windows agrees about short folder names and case; before, every file of a folder module was refused there.
+
 ### Security
 
 - `apps/desktop`: on Windows, Drafter refuses a path Windows would read as another name (a trailing dot or space), a stream inside a file (`name:stream`), a device (`nul.md`, `COM1.fountain`), or a device path (`\\.\`, `\\?\`), in files it opens and saves and in its own pages' addresses, and compares paths without case.
