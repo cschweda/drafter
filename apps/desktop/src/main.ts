@@ -256,7 +256,8 @@ function start() {
   const openModulesFolder = () => {
     const dir = modulesDir();
     try {
-      mkdirSync(dir, { recursive: true });
+      // Private to the writer: a folder another user could write would be refused (module-folder.ts).
+      mkdirSync(dir, { recursive: true, mode: 0o700 });
     } catch {
       // Shown anyway: the file manager says what is wrong.
     }
@@ -277,14 +278,15 @@ function start() {
       problems: [...skipped],
     };
   });
-  ipcMain.handle(CHANNELS.modulesSetNetwork, (event, id: unknown, origins: unknown) => {
+  ipcMain.handle(CHANNELS.modulesSetNetwork, async (event, id: unknown, origins: unknown) => {
     if (!fromAppPage(event)) throw new Error('not-allowed');
     const module = loaded.find((m) => m.id === id);
     if (!module) return;
     grants.set(module.id, agreedOrigins(module.permissions.network, origins));
     // The proxy that keeps a module's frame off TURN-over-TCP bypasses the granted hosts, so a
-    // module reaches its consented origins and nothing else (webrtc.ts).
-    void applyModuleProxy();
+    // module reaches its consented origins and nothing else (webrtc.ts). Awaited, so the page loads
+    // the module's frames only once the proxy is in force.
+    await applyModuleProxy();
   });
 
   /** Refuses every renderer connection but the hosts a module was granted (webrtc.ts). */

@@ -124,10 +124,29 @@ export function manifestProblem(value: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Why another user could change an entry with this mode and owner, or undefined when only the
+ * writer can (POSIX). Refused: writable by anyone (`o+w`), owned by someone else, or writable by a
+ * group that isn't the writer's own primary group. Group-writable by the writer's own group is
+ * fine: Ubuntu, Debian, and Fedora give each user a private group and a umask of 002, so the files
+ * a writer unpacks (and folders they make) are group-writable by that group alone.
+ */
+export function accessProblem(
+  entry: { mode: number; uid: number; gid: number },
+  me: { uid: number; gid: number },
+): string | undefined {
+  if ((entry.mode & 0o002) !== 0) return 'anyone on this computer can change it';
+  if (entry.uid !== me.uid) return 'it is owned by another user';
+  if ((entry.mode & 0o020) !== 0 && entry.gid !== me.gid) {
+    return 'a group other than yours can change it';
+  }
+  return undefined;
+}
+
 /** Whether a stat's mode or owner says another user could change this entry (POSIX). */
 function insecureMode(info: import('node:fs').Stats): boolean {
-  if (typeof process.getuid !== 'function') return false;
-  return (info.mode & 0o022) !== 0 || info.uid !== process.getuid();
+  if (typeof process.getuid !== 'function' || typeof process.getgid !== 'function') return false;
+  return accessProblem(info, { uid: process.getuid(), gid: process.getgid() }) !== undefined;
 }
 
 /**

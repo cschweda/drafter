@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
+  accessProblem,
   agreedOrigins,
   allowsModuleFrame,
   appCspWithModules,
@@ -508,5 +509,48 @@ describe('readModulesFolder, insecure folders (POSIX)', () => {
     expect(problems).toEqual([
       'Drafter skipped the modules folder: anyone on this computer can change it, so Drafter won’t run anything in it. Make it writable only by you.',
     ]);
+  });
+});
+
+describe('accessProblem (who may change a module)', () => {
+  const me = { uid: 501, gid: 20 };
+  test('accepts what the writer owns, writable by them alone or by their own group', () => {
+    expect(accessProblem({ mode: 0o40755, uid: 501, gid: 20 }, me)).toBeUndefined();
+    expect(accessProblem({ mode: 0o100644, uid: 501, gid: 999 }, me)).toBeUndefined();
+    // Ubuntu's umask 002 with a user-private group: group-writable, but the group is the writer's own.
+    expect(accessProblem({ mode: 0o40775, uid: 501, gid: 20 }, me)).toBeUndefined();
+    expect(accessProblem({ mode: 0o100664, uid: 501, gid: 20 }, me)).toBeUndefined();
+  });
+
+  test('refuses world-writable, writable by another group, or owned by someone else', () => {
+    expect(accessProblem({ mode: 0o40777, uid: 501, gid: 20 }, me)).toMatch(/anyone/);
+    expect(accessProblem({ mode: 0o100666, uid: 501, gid: 20 }, me)).toMatch(/anyone/);
+    expect(accessProblem({ mode: 0o40775, uid: 501, gid: 999 }, me)).toMatch(/group/);
+    expect(accessProblem({ mode: 0o100644, uid: 0, gid: 20 }, me)).toMatch(/owned/);
+  });
+});
+
+describe('readModulesFolder, group-writable with the writer’s own group', () => {
+  test('loads a module unpacked under umask 002 when the group is the writer’s own', async () => {
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+    const { chmodSync, chownSync } = await import('node:fs');
+    const uid = process.getuid();
+    const gid = (process.getgid as () => number)();
+    await addModule('ubuntu');
+    for (const path of [
+      dir,
+      join(dir, 'ubuntu'),
+      join(dir, 'ubuntu', 'module.json'),
+      join(dir, 'ubuntu', 'index.js'),
+    ]) {
+      chownSync(path, uid, gid);
+    }
+    chmodSync(dir, 0o775);
+    chmodSync(join(dir, 'ubuntu'), 0o775);
+    chmodSync(join(dir, 'ubuntu', 'module.json'), 0o664);
+    chmodSync(join(dir, 'ubuntu', 'index.js'), 0o664);
+    const { modules, problems } = readModulesFolder(dir);
+    expect(problems).toEqual([]);
+    expect(modules.map((m) => m.id)).toEqual(['ubuntu']);
   });
 });
