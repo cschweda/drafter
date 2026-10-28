@@ -4,7 +4,22 @@
 // sandboxed frame there, never in the app's page. Pure Node (no Electron), so the unit tests run it
 // as it is: main.ts registers the scheme and hands `moduleHandler` to `protocol.handle`.
 import { createHash } from 'node:crypto';
-import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import {
+  realpathSync as jsRealpathSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from 'node:fs';
+
+/**
+ * The system's own real path, as `fs.promises.realpath` (which `moduleHandler` uses) gives it. Node's
+ * default `realpathSync` is worked out in JavaScript and, on Windows, leaves a short 8.3 name
+ * (`RUNNER~1`) or a name's case as written, so the paths pinned at start and those asked for later
+ * wouldn't match.
+ */
+const realpathSync = jsRealpathSync.native;
+
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';

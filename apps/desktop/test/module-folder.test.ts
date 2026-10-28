@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   accessProblem,
@@ -319,11 +319,11 @@ describe('resolveModuleUrl', () => {
     });
     expect(resolveModuleUrl('drafter-module://tidy/index.js', roots)).toEqual({
       id: 'tidy',
-      file: join('/modules/tidy', 'index.js'),
+      file: resolve('/modules/tidy', 'index.js'),
     });
     expect(resolveModuleUrl('drafter-module://tidy/lib/a%20b.js', roots)).toEqual({
       id: 'tidy',
-      file: join('/modules/tidy', 'lib', 'a b.js'),
+      file: resolve('/modules/tidy', 'lib', 'a b.js'),
     });
   });
 

@@ -325,7 +325,7 @@ export function watchFile(
   const debounce = options.debounceMs ?? 300;
   let real = path;
   try {
-    real = realpathSync(path);
+    real = realpathSync.native(path);
   } catch {
     // Not there (yet): its folder is watched for it.
   }
