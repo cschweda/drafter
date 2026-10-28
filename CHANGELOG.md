@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-27
+
+**Modules from a folder run only as you agreed to them.** Any change to a module, its code included, turns it off until you turn it on again; Drafter serves its files only as they were when it started; and a module folder that is a link to somewhere else is skipped.
+
 ### Security
 
 - `apps/desktop`: **a module from the folder runs only as you agreed to it.** Any change to a module, its code included, turns it off until you turn it on again (before, only a change to its `module.json` did), and Drafter serves a module's files only as they were when it started, so a file changed while it runs is refused. A module's folder must be in the modules folder itself: a link to a folder elsewhere is skipped, with a message saying so.
@@ -461,7 +465,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/cschweda/drafter/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/cschweda/drafter/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/cschweda/drafter/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/cschweda/drafter/compare/v0.4.0...v0.4.1
