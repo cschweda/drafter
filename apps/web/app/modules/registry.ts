@@ -2,7 +2,7 @@ import { computed, type Ref, ref, shallowRef } from 'vue';
 import { db } from '../storage/db';
 import { say } from '../storage/say';
 import { fixture } from './fixture';
-import { folderModules, folderProblems } from './folder';
+import { FOLDER_PREFIX, folderFingerprint, folderModules, folderProblems } from './folder';
 import type { ScriptModule } from './types';
 
 // The modules this build has, which are on, and what a module's failure looks like. Nothing here
@@ -215,6 +215,8 @@ const ENABLED_KEY = 'modules:enabled';
 export interface EnabledEntry {
   id: string;
   origins: string[];
+  /** For a folder module (`folder.<id>`): the fingerprint of the module that was agreed to (I1). */
+  fingerprint?: string;
 }
 
 const stored = shallowRef<readonly EnabledEntry[]>([]);
@@ -237,6 +239,46 @@ export function consentedIds(
 const declaredOrigins = (id: string) =>
   allModules.value.find((m) => m.id === id)?.permissions.network;
 
+/**
+ * The enabled entries to keep when the folder's modules arrive at start (I1): a built-in module's
+ * entry always, a folder module's (`folder.<id>`) only while that same module is loaded now — the
+ * one with that id and the fingerprint the writer agreed to. A folder module that isn't loaded, or
+ * a different one under an id that was on, is dropped, so it can't run or keep its consent without
+ * the writer turning it on again.
+ */
+export function folderConsentToKeep(
+  entries: readonly EnabledEntry[],
+  loaded: readonly { id: string; fingerprint: string }[],
+): EnabledEntry[] {
+  return entries.filter((entry) => {
+    if (!entry.id.startsWith(FOLDER_PREFIX)) return true;
+    const match = loaded.find((m) => m.id === entry.id);
+    return match !== undefined && match.fingerprint === entry.fingerprint;
+  });
+}
+
+/**
+ * Drops the stored consent of any folder module that isn't loaded now, or that a different module
+ * has replaced (its fingerprint changed). Call once the folder's modules are known, before they
+ * can run.
+ */
+export async function reconcileFolderConsent(
+  loaded: readonly { id: string; fingerprint: string }[] = folderModules.value.map((m) => ({
+    id: m.id,
+    fingerprint: folderFingerprint(m.id) ?? '',
+  })),
+): Promise<void> {
+  await loadEnabled();
+  const keep = folderConsentToKeep(stored.value, loaded);
+  if (keep.length === stored.value.length) return;
+  stored.value = keep;
+  try {
+    await db.settings.put({ key: ENABLED_KEY, value: stored.value });
+  } catch {
+    // Held for this visit; nothing runs that shouldn't, since `enabled` reads `stored`.
+  }
+}
+
 const enabledIds = computed(() => consentedIds(stored.value, declaredOrigins));
 /** Modules the writer turned on whose origins have grown since: off until they agree again. */
 const lapsedIds = computed(() =>
@@ -246,9 +288,13 @@ const lapsedIds = computed(() =>
 function entryOf(value: unknown): EnabledEntry | undefined {
   if (isText(value)) return { id: value, origins: [] };
   if (typeof value !== 'object' || value === null) return undefined;
-  const { id, origins } = value as { id?: unknown; origins?: unknown };
+  const { id, origins, fingerprint } = value as {
+    id?: unknown;
+    origins?: unknown;
+    fingerprint?: unknown;
+  };
   if (!isText(id) || !Array.isArray(origins) || !origins.every(isText)) return undefined;
-  return { id, origins: [...origins] };
+  return { id, origins: [...origins], ...(isText(fingerprint) && { fingerprint }) };
 }
 
 /** Reads which modules are on, once (or again, with `force`). Settles when done, whether or not the table could be read. */
@@ -274,7 +320,13 @@ export function loadEnabled(force = false): Promise<void> {
 export async function setEnabled(id: string, on: boolean): Promise<void> {
   await loadEnabled();
   const without = stored.value.filter((entry) => entry.id !== id);
-  stored.value = on ? [...without, { id, origins: [...(declaredOrigins(id) ?? [])] }] : without;
+  const fingerprint = id.startsWith(FOLDER_PREFIX) ? folderFingerprint(id) : undefined;
+  stored.value = on
+    ? [
+        ...without,
+        { id, origins: [...(declaredOrigins(id) ?? [])], ...(fingerprint && { fingerprint }) },
+      ]
+    : without;
   try {
     await db.settings.put({ key: ENABLED_KEY, value: stored.value });
   } catch {

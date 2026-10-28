@@ -1,5 +1,6 @@
 import {
   type HostMessage,
+  jsonShaped,
   LIMITS,
   messageSize,
   type Parts,
@@ -12,14 +13,19 @@ import {
 import { answerCall } from './folder-rpc';
 import type { ModuleContext } from './types';
 
+/** The calls a background frame may make only inside a run the writer started (minor 5). */
+const RUN_ONLY = new Set(['goto', 'confirm', 'applyChanges', 'openTab']);
+
 // The page's end of one folder module frame (folder-protocol.ts): it hears that frame alone,
 // answers its calls with the module's own context (or, in a run, the run's), runs the module's
 // button and commands, and passes on what the module offers. Pure: the component that draws the
 // frame (FolderModuleFrame.vue) hands it the frame's messages and posts what it says.
 
 export interface ChannelOptions {
-  /** The module's name, for nothing but messages. */
+  /** The module's name: it heads the module's questions and prefixes its notices. */
   name: string;
+  /** Which frame this is: a background frame may act only inside a run (minor 5). */
+  surface?: 'background' | 'tab' | 'settings';
   /** The frame's window (`iframe.contentWindow`): only its messages are heard. */
   frame(): unknown;
   /** Posts a message to the frame. */
@@ -54,6 +60,14 @@ export interface FrameChannel {
   dispose(): void;
 }
 
+/** The context, with the module's name on everything it shows the writer (minor 1). */
+function withName(ctx: ModuleContext, name: string): ModuleContext {
+  return {
+    ...ctx,
+    notify: (message: string) => ctx.notify(`${name}: ${message}`),
+  };
+}
+
 export function frameChannel(options: ChannelOptions): FrameChannel {
   const runs = new Map<number, Run>();
   let lastRun = 0;
@@ -82,15 +96,23 @@ export function frameChannel(options: ChannelOptions): FrameChannel {
 
   async function call(id: number, run: number | undefined, method: string, args: unknown[]) {
     let context: ModuleContext;
-    if (run === undefined) context = options.context();
-    else {
+    if (run === undefined) {
+      // A background frame acts only while the writer has it running (minor 5).
+      if (options.surface === 'background' && RUN_ONLY.has(method)) {
+        return reply(id, {
+          ok: false,
+          error: `Drafter runs “${method}” only while it is running.`,
+        });
+      }
+      context = options.context();
+    } else {
       const known = runs.get(run);
       if (!known) return reply(id, { ok: false, error: 'That run has ended.' });
       context = known.context;
     }
     waiting++;
     try {
-      const value = await answerCall(context, method, args);
+      const value = await answerCall(withName(context, options.name), method, args);
       reply(id, { ok: true, value });
     } catch (error) {
       reply(id, { ok: false, error: error instanceof Error ? error.message : String(error) });
@@ -106,14 +128,18 @@ export function frameChannel(options: ChannelOptions): FrameChannel {
       if (event.origin !== 'null') return;
       const message = readFrameMessage(event.data);
       if (!message) return;
-      if (messageSize(event.data) > LIMITS.message) {
+      if (!jsonShaped(event.data) || messageSize(event.data) > LIMITS.message) {
         if (message.kind === 'call') {
-          reply(message.id, { ok: false, error: 'The message is larger than 4 MB.' });
+          reply(message.id, {
+            ok: false,
+            error: 'The message must be plain data, no larger than 4 MB.',
+          });
         }
         return;
       }
       switch (message.kind) {
         case 'ready': {
+          if (ready) return; // The first `ready` per frame load is the module's; ignore a flood.
           const parts = readParts(message.parts);
           if (typeof parts === 'string') return failed(parts);
           clearTimeout(startTimer);

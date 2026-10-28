@@ -124,10 +124,12 @@ export async function answerCall(
       return ctx.applyChanges(changes(args[0]));
     case 'setProblems':
       return ctx.setProblems(problems(args[0]));
-    case 'goto':
+    case 'goto': {
       if (!finite(args[0])) throw new Error('goto needs a number: an offset in the text.');
+      if (!Number.isInteger(args[0])) throw new Error('goto needs a whole number.');
       ctx.goto(args[0]);
       return undefined;
+    }
     case 'confirm':
       return ctx.confirm(text(args[0], 'confirm’s message'), confirmOptions(args[1]));
     case 'openTab':

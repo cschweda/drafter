@@ -18,11 +18,14 @@ import type { FrameChannel } from '../app/modules/folder-channel';
 import {
   allModules,
   BUILT_IN_IDS,
+  folderConsentToKeep,
   folderModuleProblems,
   isFolderModule,
   isScriptModule,
+  loadEnabled,
   MODULES,
   modulesToChange,
+  reconcileFolderConsent,
   setEnabled,
   useModules,
 } from '../app/modules/registry';
@@ -42,6 +45,7 @@ const TIDY: DesktopFolderModule = {
   description: 'Finds spaces at the ends of lines.',
   permissions: { network: [] },
   folder: 'tidy',
+  fingerprint: 'tidyfp0000000000',
 };
 const PARTS = {
   action: { label: 'Tidy' },
@@ -267,5 +271,71 @@ describe('modulesToChange', () => {
       turnOff: [],
       refresh: [],
     });
+  });
+});
+
+describe('folderConsentToKeep (I1)', () => {
+  test('keeps a folder module’s consent only while the same module is loaded', () => {
+    const loaded = [
+      { id: 'folder.tidy', fingerprint: 'tidyfp0000000000' },
+      { id: 'folder.helper', fingerprint: 'newfp00000000000' },
+    ];
+    const stored = [
+      { id: 'cast', origins: [] }, // a built-in: always kept
+      { id: 'folder.tidy', origins: [], fingerprint: 'tidyfp0000000000' }, // same module: kept
+      { id: 'folder.helper', origins: [], fingerprint: 'oldfp00000000000' }, // changed: dropped
+      { id: 'folder.ghost', origins: [], fingerprint: 'x' }, // not loaded this start: dropped
+    ];
+    expect(folderConsentToKeep(stored, loaded).map((e) => e.id)).toEqual(['cast', 'folder.tidy']);
+  });
+});
+
+describe('reconcileFolderConsent (I1)', () => {
+  test('drops a reused or changed folder module’s stored consent before it can run', async () => {
+    await db.settings.put({
+      key: 'modules:enabled',
+      value: [
+        { id: 'cast', origins: [] },
+        { id: 'folder.tidy', origins: [], fingerprint: 'OLD-DIFFERENT-ONE' },
+      ],
+    });
+    await loadEnabled(true);
+    // A *different* module is now in the folder under the id tidy (a new fingerprint).
+    setFolderInfos([TIDY], []);
+    await reconcileFolderConsent();
+    expect(useModules().enabled.value).toContain('cast');
+    expect(useModules().enabled.value).not.toContain('folder.tidy');
+    const saved = (await db.settings.get('modules:enabled'))?.value as Array<{ id: string }>;
+    expect(saved.map((e) => e.id)).toEqual(['cast']);
+  });
+
+  test('keeps a folder module on across a restart when it is the same module', async () => {
+    setFolderInfos([TIDY], []);
+    await db.settings.clear();
+    await setEnabled('folder.tidy', true);
+    await loadEnabled(true);
+    await reconcileFolderConsent();
+    expect(useModules().enabled.value).toContain('folder.tidy');
+  });
+});
+
+describe('module storage quota (minor 4)', () => {
+  test('refuses a module more than its share of this browser’s storage', async () => {
+    const { moduleStorage, STORAGE_QUOTA } = await import('../app/modules/storage');
+    const store = moduleStorage('folder.hog');
+    await store.set('a', 'x'.repeat(STORAGE_QUOTA.bytes - 100));
+    await expect(store.set('b', 'y'.repeat(1000))).rejects.toThrow(/storage/i);
+    // Removing frees it again.
+    await store.remove('a');
+    await expect(store.set('b', 'y'.repeat(1000))).resolves.toBeUndefined();
+  });
+
+  test('refuses more than its share of keys', async () => {
+    const { moduleStorage, STORAGE_QUOTA } = await import('../app/modules/storage');
+    const store = moduleStorage('folder.many');
+    for (let i = 0; i < STORAGE_QUOTA.keys; i++) await store.set(`k${i}`, i);
+    await expect(store.set('one-too-many', 1)).rejects.toThrow(/storage/i);
+    // Overwriting an existing key is fine.
+    await expect(store.set('k0', 2)).resolves.toBeUndefined();
   });
 });

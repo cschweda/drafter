@@ -118,6 +118,8 @@ export interface DesktopFolderModule {
   permissions: { network: string[] };
   /** The name of its folder in the modules folder. */
   folder: string;
+  /** A hash of the folder name and its module.json: changes when a different module takes the id. */
+  fingerprint: string;
 }
 
 /** The modules folder (docs/plans/2026-10-27-desktop-modules-folder.md). */

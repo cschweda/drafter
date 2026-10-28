@@ -55,6 +55,7 @@ function onLoad() {
 onMounted(() => {
   channel = frameChannel({
     name: props.name,
+    surface: props.surface,
     frame: () => frame.value?.contentWindow ?? undefined,
     // The frame's origin is opaque, so it can't be named: `*` reaches whatever the frame holds,
     // which can only be this module's page (the desktop app refuses any other navigation in it).

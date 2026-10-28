@@ -83,6 +83,27 @@ export type HostMessage =
   | { drafter: 1; kind: 'changed' };
 
 const whole = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n);
+/** Caps a string a frame controls (an error message) before it reaches a toast. */
+const capText = (text: string) =>
+  text.length > LIMITS.text ? `${text.slice(0, LIMITS.text - 1)}…` : text;
+
+/**
+ * Whether `value` is plain JSON data (null, a boolean, a number, a string, or an array or plain
+ * object of the same), so its size can be measured and it can cross postMessage as data. An
+ * ArrayBuffer, a Map, a Set, or a Blob serializes to `{}` and would slip past a JSON size check.
+ */
+export function jsonShaped(value: unknown, depth = 0): boolean {
+  if (value === null) return true;
+  const type = typeof value;
+  if (type === 'string' || type === 'boolean') return true;
+  if (type === 'number') return Number.isFinite(value as number);
+  if (depth > 200 || (type !== 'object' && type !== 'undefined')) return type === 'undefined';
+  if (Array.isArray(value)) return value.every((item) => jsonShaped(item, depth + 1));
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) {
+    return false;
+  }
+  return Object.values(value as Record<string, unknown>).every((v) => jsonShaped(v, depth + 1));
+}
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -100,11 +121,11 @@ export function readFrameMessage(data: unknown): FrameMessage | null {
     }
     case 'done': {
       if (!whole(data.run)) return null;
-      const error = data.error === undefined ? undefined : String(data.error);
+      const error = data.error === undefined ? undefined : capText(String(data.error));
       return { drafter: 1, kind: 'done', run: data.run, ...(error !== undefined && { error }) };
     }
     case 'failed':
-      return { drafter: 1, kind: 'failed', error: String(data.error ?? 'it failed') };
+      return { drafter: 1, kind: 'failed', error: capText(String(data.error ?? 'it failed')) };
     case 'size':
       return typeof data.height === 'number' && Number.isFinite(data.height)
         ? { drafter: 1, kind: 'size', height: data.height }

@@ -173,6 +173,7 @@ describe('answerCall', () => {
       ['setProblems', [{}], /list of problems/],
       ['setProblems', [Array.from({ length: LIMITS.problems + 1 }, () => ({}))], /at most/],
       ['goto', ['3'], /a number/],
+      ['goto', [2.5], /whole number/],
       ['notify', [42], /text/],
       ['notify', ['x'.repeat(LIMITS.text + 1)], /longer than/],
       ['confirm', ['x'.repeat(LIMITS.text + 1)], /longer than/],
@@ -351,6 +352,69 @@ describe('frameChannel', () => {
     const settled = expect(done).rejects.toThrow('it took longer than 5 minutes');
     await vi.advanceTimersByTimeAsync(LIMITS.runMs + 1);
     await settled;
+  });
+
+  test('refuses a message whose data isn’t plain JSON (minor 3)', async () => {
+    const channel = make();
+    channel.receive(call(1, 'notify', [new ArrayBuffer(8)]));
+    await vi.runAllTimersAsync();
+    expect(replies()[0]).toMatchObject({
+      id: 1,
+      ok: false,
+      error: expect.stringMatching(/plain data/),
+    });
+  });
+
+  test('caps the error text a frame can put in a toast (minor 2)', () => {
+    const channel = make();
+    channel.receive(from({ drafter: 1, kind: 'failed', error: 'x'.repeat(5000) }));
+    expect(failed[0]?.length).toBeLessThanOrEqual(2000);
+  });
+
+  test('takes only the first ready per frame (minor 7)', () => {
+    const channel = make();
+    channel.receive(from({ drafter: 1, kind: 'ready', parts: { action: { label: 'One' } } }));
+    channel.receive(from({ drafter: 1, kind: 'ready', parts: { action: { label: 'Two' } } }));
+    expect(ready).toHaveLength(1);
+    expect((ready[0] as { action?: { label: string } }).action?.label).toBe('One');
+  });
+
+  test('prefixes a notice with the module’s name (minor 1)', async () => {
+    const notices: string[] = [];
+    const ctx = fakeContext();
+    ctx.notify = (m: string) => notices.push(m);
+    const channel = make(ctx);
+    channel.receive(call(1, 'notify', ['Done.']));
+    await vi.runAllTimersAsync();
+    expect(notices).toEqual(['Tidy: Done.']);
+  });
+
+  test('a background frame may goto, confirm, or applyChanges only inside a run (minor 5)', async () => {
+    const ctx = fakeContext({ source: 'Hi' });
+    const channel = frameChannel({
+      name: 'Tidy',
+      surface: 'background',
+      frame: () => FRAME,
+      post: (m) => posted.push(m),
+      context: () => ctx,
+    });
+    channel.receive(from({ drafter: 1, kind: 'ready', parts: {} }));
+    // Outside a run: refused.
+    channel.receive(call(1, 'goto', [2]));
+    channel.receive(call(2, 'applyChanges', [[{ from: 0, to: 0, insert: 'x' }]]));
+    await vi.runAllTimersAsync();
+    expect(ctx.calls.goto).toEqual([]);
+    expect(replies()[0]).toMatchObject({
+      id: 1,
+      ok: false,
+      error: expect.stringMatching(/only while it is running/),
+    });
+    // Inside a run: allowed.
+    channel.run('action', ctx).catch(() => {});
+    channel.receive(call(3, 'goto', [2], 1));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ctx.calls.goto).toEqual([2]);
+    channel.dispose();
   });
 
   test('tells the frame when the script changes, and stops when it is gone', async () => {

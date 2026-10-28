@@ -12,6 +12,7 @@ import FolderModuleFrame from '../components/FolderModuleFrame.vue';
 import type { DesktopFolderModule, DesktopModulesBridge } from '../desktop';
 import type { FrameChannel } from './folder-channel';
 import type { Parts, Surface } from './folder-protocol';
+import { reconcileFolderConsent } from './registry';
 import type { ModuleContext, ScriptModule } from './types';
 
 // The desktop app's modules folder (docs/plans/2026-10-27-desktop-modules-folder.md): each module
@@ -33,6 +34,11 @@ export const appIdOf = (id: string) => `${FOLDER_PREFIX}${id}`;
 /** The module's own id (its origin's host) from its id in the app. */
 export const folderIdOf = (appId: string) =>
   appId.startsWith(FOLDER_PREFIX) ? appId.slice(FOLDER_PREFIX.length) : appId;
+
+/** The fingerprint of the loaded folder module with this app id (`folder.<id>`), or undefined. */
+export function folderFingerprint(appId: string): string | undefined {
+  return infos.value.find((info) => appIdOf(info.id) === appId)?.fingerprint;
+}
 
 const infos = shallowRef<readonly DesktopFolderModule[]>([]);
 /** What the desktop app skipped when it read the folder, one sentence each. */
@@ -190,11 +196,14 @@ export async function loadFolderModules(
   loaded.add(bridge);
   try {
     const { modules, problems } = await bridge.list();
-    setFolderInfos(
-      Array.isArray(modules) ? modules : [],
-      Array.isArray(problems) ? problems : [],
-      builtIn,
+    const list = Array.isArray(modules) ? modules : [];
+    // Before any folder module can turn on: drop the stored consent of one that isn't here now, or
+    // that a different module has replaced (I1). Uses the kept list, built-in clashes removed.
+    const kept = list.filter((m) => !builtIn.includes(m.id));
+    await reconcileFolderConsent(
+      kept.map((m) => ({ id: appIdOf(m.id), fingerprint: m.fingerprint })),
     );
+    setFolderInfos(list, Array.isArray(problems) ? problems : [], builtIn);
   } catch {
     // No folder modules this time; the built-in ones are unaffected.
   }
