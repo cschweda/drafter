@@ -88,12 +88,12 @@ describe('sandboxNotice', () => {
 
   test('keeps the answer in a file named for the reason, and says where', () => {
     const notice = sandboxNotice(off, DATA);
-    expect(notice?.marker).toBe(`${DATA}/${markerFor('no-sandbox-switch')}`);
+    expect(notice?.marker).toBe(join(DATA, markerFor('no-sandbox-switch')));
     expect(notice?.detail).toContain('remembered');
     expect(notice?.detail).toContain(notice?.marker);
     expect(
       sandboxNotice({ ...off, argv: ['x'], env: { ELECTRON_DISABLE_SANDBOX: '1' } }, DATA)?.marker,
-    ).toBe(`${DATA}/${markerFor('disable-sandbox-env')}`);
+    ).toBe(join(DATA, markerFor('disable-sandbox-env')));
     expect(markerFor('no-sandbox-switch')).not.toBe(markerFor('disable-sandbox-env'));
   });
 
@@ -124,7 +124,7 @@ describe('sandboxNotice', () => {
     expect(detail).toContain('--no-sandbox');
     expect(detail).toContain('ELECTRON_DISABLE_SANDBOX');
     expect(detail).toContain(ALLOW_NO_SANDBOX);
-    expect(detail).toContain(`${DATA_MAC}/${markerFor('no-sandbox-switch')}`);
+    expect(detail).toContain(join(DATA_MAC, markerFor('no-sandbox-switch')));
     // Nothing to ask when the sandbox is on, as on Linux.
     expect(
       sandboxNotice(
@@ -168,8 +168,9 @@ describe('rememberAnswer', () => {
       // A file where the folder should be.
       await writeFile(join(root, 'Drafter'), 'in the way');
       expect(rememberAnswer(join(root, 'Drafter', markerFor('no-sandbox-switch')))).toBe(false);
-      // A folder that can't be written to (not for root, which writes anywhere).
-      if (process.getuid?.() !== 0) {
+      // A folder that can't be written to (not for root, which writes anywhere; and Windows has no
+      // such mode bits for chmod to set).
+      if (process.getuid?.() !== 0 && process.platform !== 'win32') {
         await chmod(root, 0o500);
         expect(rememberAnswer(join(root, 'other', markerFor('no-sandbox-switch')))).toBe(false);
         await chmod(root, 0o700);
