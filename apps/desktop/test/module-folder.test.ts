@@ -453,7 +453,31 @@ describe('readModulesFolder, insecure folders (POSIX)', () => {
     const { modules, problems } = readModulesFolder(dir);
     expect(modules.map((m) => m.id)).toEqual(['safe']);
     expect(problems).toEqual([
-      'Drafter skipped the folder “open-wide”: anyone on this computer can change it, so Drafter won’t run it. Make it writable only by you.',
+      'Drafter skipped the folder “open-wide”: anyone on this computer can change it (open-wide), so Drafter won’t run it. Make it writable only by you.',
+    ]);
+  });
+
+  test('skips a module with a writable file anywhere under it, naming the file', async () => {
+    if (process.platform === 'win32') return;
+    const { chmodSync, mkdirSync, writeFileSync } = await import('node:fs');
+    await addModule('nested');
+    mkdirSync(join(dir, 'nested', 'lib'));
+    writeFileSync(join(dir, 'nested', 'lib', 'util.js'), '');
+    chmodSync(join(dir, 'nested', 'lib', 'util.js'), 0o666);
+    const { modules, problems } = readModulesFolder(dir);
+    expect(modules).toEqual([]);
+    expect(problems[0]).toMatch(/anyone on this computer can change it \(lib\/util\.js\)/);
+  });
+
+  test('skips every module when the modules folder itself is writable', async () => {
+    if (process.platform === 'win32') return;
+    const { chmodSync } = await import('node:fs');
+    await addModule('a');
+    chmodSync(dir, 0o777);
+    const { modules, problems } = readModulesFolder(dir);
+    expect(modules).toEqual([]);
+    expect(problems).toEqual([
+      'Drafter skipped the modules folder: anyone on this computer can change it, so Drafter won’t run anything in it. Make it writable only by you.',
     ]);
   });
 });

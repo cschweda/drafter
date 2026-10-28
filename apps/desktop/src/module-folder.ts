@@ -124,14 +124,45 @@ export function manifestProblem(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Whether anyone but the owner can write `path` (POSIX). Windows has no such bit: always false. */
-function worldWritable(path: string): boolean {
-  if (process.platform === 'win32') return false;
+/**
+ * Whether `path` is one another user could swap under the writer (POSIX): writable by group or
+ * others, or not owned by the user running Drafter. Windows has no such bits: always false there.
+ */
+function insecure(path: string): boolean {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return false;
   try {
-    return (statSync(path).mode & 0o022) !== 0;
+    const info = statSync(path);
+    return (info.mode & 0o022) !== 0 || info.uid !== process.getuid();
   } catch {
+    // A path that can't be read is left to the caller's own handling.
     return false;
   }
+}
+
+/**
+ * The first path inside `root` (its own name, or a child's relative path) that anyone but the owner
+ * could change, or null when every directory and file under it is the writer's own and locked down.
+ * A module's code and its served files all live here, so one writable file anywhere is enough for
+ * someone else to change what Drafter runs.
+ */
+function firstInsecure(root: string, name: string): string | null {
+  if (insecure(root)) return name;
+  let entries: import('node:fs').Dirent[];
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  for (const entry of entries) {
+    const child = join(root, entry.name);
+    if (insecure(child)) return entry.name;
+    // A directory: look inside, and name the offending path relative to the module's folder.
+    if (entry.isDirectory() && !entry.isSymbolicLink()) {
+      const deeper = firstInsecure(child, entry.name);
+      if (deeper) return `${entry.name}/${deeper}`;
+    }
+  }
+  return null;
 }
 
 const skipped = (folder: string, why: string) => `Drafter skipped the folder “${folder}”: ${why}.`;
@@ -215,6 +246,14 @@ export function readModulesFolder(
   } catch {
     return { modules: [], problems: [] };
   }
+  if (insecure(dir)) {
+    return {
+      modules: [],
+      problems: [
+        'Drafter skipped the modules folder: anyone on this computer can change it, so Drafter won’t run anything in it. Make it writable only by you.',
+      ],
+    };
+  }
   const modules: LoadedModule[] = [];
   const problems: string[] = [];
   const seen = new Map<string, string>();
@@ -223,11 +262,12 @@ export function readModulesFolder(
       problems.push(skipped(folder, `Drafter reads at most ${LIMITS.modules} modules`));
       continue;
     }
-    if (worldWritable(join(dir, folder))) {
+    const open = firstInsecure(join(dir, folder), folder);
+    if (open !== null) {
       problems.push(
         skipped(
           folder,
-          'anyone on this computer can change it, so Drafter won’t run it. Make it writable only by you',
+          `anyone on this computer can change it (${open}), so Drafter won’t run it. Make it writable only by you`,
         ),
       );
       continue;
