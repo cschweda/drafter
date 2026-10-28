@@ -133,12 +133,14 @@ describe('moveItem', () => {
     ]);
   });
 
-  test('keeps the script readable with a CRLF line break style', () => {
+  test('keeps a CRLF line break style', () => {
     const source = 'INT. A - DAY\r\n\r\nOne.\r\n\r\nINT. B - DAY\r\n\r\nTwo.\r\n';
-    expect(headings(indexOf(down(source, 'INT. A') as string).index)).toEqual([
-      'INT. B - DAY',
-      'INT. A - DAY',
-    ]);
+    expect(down(source, 'INT. A')).toBe(
+      'INT. B - DAY\r\n\r\nTwo.\r\n\r\nINT. A - DAY\r\n\r\nOne.\r\n',
+    );
+    expect(up(source, 'INT. B')).toBe(
+      'INT. B - DAY\r\n\r\nTwo.\r\n\r\nINT. A - DAY\r\n\r\nOne.\r\n',
+    );
   });
 });
 

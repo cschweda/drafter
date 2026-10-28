@@ -1,4 +1,5 @@
 import type { Doc, TextChange } from '@drafter/fountain';
+import { contentEnd } from './scene-index';
 import type { OutlineItem, SceneIndex } from './types';
 
 // Moving scenes and sections (Phase 2 design §6.2–6.3). A move is two changes, a delete and an
@@ -171,7 +172,8 @@ export function moveItem(
 
   // What is cut: the text and the gap before it, or, with nothing before it, the gap after.
   const first = blocks.findIndex((b) => b.span.from === range.from);
-  const previousEnd = first > 0 ? blocks[first - 1]?.span.to : doc.titlePage?.span.to;
+  const end = first > 0 ? blocks[first - 1]?.span.to : doc.titlePage?.span.to;
+  const previousEnd = end === undefined ? undefined : contentEnd(source, end);
   let cut: { from: number; to: number };
   if (previousEnd !== undefined) {
     if (at === previousEnd) return null;

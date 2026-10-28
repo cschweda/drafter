@@ -1,3 +1,4 @@
+export { setColor, setSynopsis } from './header';
 export { readKeyedNote } from './keyed';
 export {
   downTarget,

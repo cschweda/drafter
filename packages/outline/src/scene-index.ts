@@ -36,6 +36,14 @@ export function bodyEnd(doc: Doc): number {
   return end;
 }
 
+/**
+ * `to` moved back before a CRLF's `\r`: a block's span ends with its last line, `\r` and all, and
+ * what Drafter writes goes before the line break, never inside it.
+ */
+export function contentEnd(source: string, to: number): number {
+  return to > 0 && source[to - 1] === '\r' ? to - 1 : to;
+}
+
 /** Words in a line of printed text: runs of letters or digits. */
 function wordsIn(text: string): number {
   return text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)?.length ?? 0;
@@ -104,7 +112,8 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
   const firstStructural = structural[0] ?? end;
   const lastPreamble = blocks[firstStructural - 1];
   const preambleFrom = doc.titlePage?.span.from ?? blocks[0]?.span.from;
-  const preambleTo = lastPreamble?.span.to ?? doc.titlePage?.span.to;
+  const preambleEnd = lastPreamble?.span.to ?? doc.titlePage?.span.to;
+  const preambleTo = preambleEnd === undefined ? undefined : contentEnd(source, preambleEnd);
   const preamble: Span | null =
     preambleFrom !== undefined && preambleTo !== undefined && (doc.titlePage || firstStructural > 0)
       ? { from: preambleFrom, to: preambleTo }
@@ -132,7 +141,7 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
   structural.forEach((index, n) => {
     const block = blocks[index] as Block;
     const next = structural[n + 1] ?? end;
-    const unitEnd = (blocks[next - 1] as Block).span.to;
+    const unitEnd = contentEnd(source, (blocks[next - 1] as Block).span.to);
 
     if (startsScene(template, block)) {
       if (block.kind === 'section') close(block.sem.depth);
