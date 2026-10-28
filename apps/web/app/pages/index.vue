@@ -18,7 +18,7 @@ import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
 import { installDesktopUpdates } from '~/update/desktop-source';
 import { leavesOnEscape } from '~/utils/focus';
-import { otherPane, type PaneId } from '~/utils/panes';
+import { dropTab, otherPane, type PaneId, PHONE_DEFAULT_TAB } from '~/utils/panes';
 
 const desktopBuild = isDesktopBuild();
 const { tabs, phoneTab, split, choose, resize } = usePanes();
@@ -45,6 +45,18 @@ function onEscape(event: KeyboardEvent) {
 
 // The editor is parked here whenever the Source tab isn't showing.
 const { view, doc, kind } = useEditor();
+
+// A Markdown document has no scenes, so no Outline tab (Phase 2 design §5.7): a pane showing it
+// shows another tab.
+watch(
+  kind,
+  (now) => {
+    if (now !== 'markdown') return;
+    tabs.value = dropTab(tabs.value, 'outline');
+    if (phoneTab.value === 'outline') phoneTab.value = PHONE_DEFAULT_TAB;
+  },
+  { immediate: true },
+);
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();

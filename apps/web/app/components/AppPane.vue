@@ -9,7 +9,7 @@ import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { TABS, type TabId } from '~/utils/panes';
+import { coreTabs, TABS, type Tab, type TabId, tabRow } from '~/utils/panes';
 
 const props = defineProps<{
   /** `left`, `right`, or `phone`; it names the tabs' ids. */
@@ -36,12 +36,28 @@ function onFixAll() {
   document.getElementById('panel-problems')?.focus();
 }
 const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
-// The core three tabs, then the tabs of the modules that are on.
+// The core tabs (no Outline in a Markdown document), then one slot for another tab (a module's),
+// then More with the rest (Phase 2 design §5.8).
 const moduleTabs = useModuleTabs();
-const allTabs = computed<Array<{ id: TabId; label: string }>>(() => [
-  ...TABS,
-  ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
-]);
+const last = useTabSlot();
+const core = computed(() => {
+  const tabs = coreTabs(kind.value);
+  // A pane still showing a tab the document has no more of keeps its button until it moves on.
+  const own = TABS.find((tab) => tab.id === props.selected);
+  return own && !tabs.includes(own) ? [...tabs, own] : tabs;
+});
+const others = computed<Tab[]>(() => moduleTabs.value.map(({ id, label }) => ({ id, label })));
+const row = computed(() => tabRow(core.value, others.value, props.selected, last.value));
+const allTabs = computed(() => row.value.row);
+const moreTabs = computed(() => row.value.more);
+// A tab other than the core ones that this pane shows keeps the slot when the pane moves on.
+watch(
+  () => props.selected,
+  (tab) => {
+    if (others.value.some((other) => other.id === tab)) last.value = tab;
+  },
+  { immediate: true },
+);
 const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
 const SLIM = computed<Record<'source' | 'problems', string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
@@ -65,6 +81,77 @@ const ZOOMS = [
 
 const tabButtons = ref<HTMLButtonElement[]>([]);
 
+// More: a small menu of the tabs that aren't in the row. Choosing one shows it here, in the slot.
+const moreOpen = ref(false);
+const moreButton = ref<HTMLButtonElement>();
+const morePanel = ref<HTMLElement>();
+const morePlace = reactive({ top: 0, left: 0 });
+
+async function openMore() {
+  const rect = moreButton.value?.getBoundingClientRect();
+  const width = 14 * 16;
+  morePlace.top = Math.round((rect?.bottom ?? 40) + 4);
+  morePlace.left = Math.max(
+    8,
+    Math.min(Math.round(rect?.left ?? 8), window.innerWidth - width - 8),
+  );
+  moreOpen.value = true;
+  await nextTick();
+  morePanel.value?.querySelector<HTMLElement>('button')?.focus();
+}
+
+function closeMore(refocus: boolean) {
+  if (!moreOpen.value) return;
+  moreOpen.value = false;
+  if (refocus) moreButton.value?.focus();
+}
+
+async function chooseMore(tab: TabId) {
+  last.value = tab;
+  moreOpen.value = false;
+  emit('choose', tab);
+  await nextTick();
+  document.getElementById(`tab-${props.pane}-${tab}`)?.focus();
+}
+
+function onMoreKeydown(event: KeyboardEvent) {
+  if (!moreOpen.value) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMore(true);
+    return;
+  }
+  const items = [...(morePanel.value?.querySelectorAll<HTMLElement>('button') ?? [])];
+  const at = items.indexOf(document.activeElement as HTMLElement);
+  const next: Record<string, number> = {
+    ArrowDown: at < items.length - 1 ? at + 1 : 0,
+    ArrowUp: at > 0 ? at - 1 : items.length - 1,
+    Home: 0,
+    End: items.length - 1,
+  };
+  const to = next[event.key];
+  if (to === undefined || items.length === 0) return;
+  event.preventDefault();
+  items[to]?.focus();
+}
+
+function onMoreFocusout(event: FocusEvent) {
+  const to = event.relatedTarget;
+  if (moreOpen.value && to instanceof Node && !morePanel.value?.parentElement?.contains(to)) {
+    closeMore(false);
+  }
+}
+
+function onPointerdown(event: PointerEvent) {
+  const root = morePanel.value?.parentElement;
+  if (moreOpen.value && event.target instanceof Node && !root?.contains(event.target)) {
+    closeMore(false);
+  }
+}
+onMounted(() => document.addEventListener('pointerdown', onPointerdown));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown));
+
 // Manual activation: arrow keys move focus along the tabs, and Enter or Space
 // chooses one, so arrowing past a tab open in the other pane never swaps them.
 function onKeydown(event: KeyboardEvent, index: number) {
@@ -84,7 +171,8 @@ function onKeydown(event: KeyboardEvent, index: number) {
 
 <template>
   <section class="pane" :data-pane="props.pane">
-    <div role="tablist" :aria-label="props.label" class="tabs">
+    <div class="tabs">
+    <div role="tablist" :aria-label="props.label" class="tablist">
       <button
         v-for="(tab, index) in allTabs"
         :id="`tab-${props.pane}-${tab.id}`"
@@ -103,6 +191,39 @@ function onKeydown(event: KeyboardEvent, index: number) {
         {{ labelOf(tab) }}
         <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
       </button>
+    </div>
+    <div v-if="moreTabs.length > 0" class="more" @keydown="onMoreKeydown" @focusout="onMoreFocusout">
+      <button
+        ref="moreButton"
+        type="button"
+        class="tab more-button"
+        :aria-expanded="moreOpen ? 'true' : 'false'"
+        :aria-controls="moreOpen ? `more-tabs-${props.pane}` : undefined"
+        @click="moreOpen ? closeMore(true) : openMore()"
+      >
+        More<span class="sr-only"> tabs</span>
+        <UIcon name="i-lucide-chevron-down" class="chevron" aria-hidden="true" />
+      </button>
+      <div
+        v-if="moreOpen"
+        :id="`more-tabs-${props.pane}`"
+        ref="morePanel"
+        role="group"
+        aria-label="More tabs"
+        class="more-panel"
+        :style="{ top: `${morePlace.top}px`, left: `${morePlace.left}px` }"
+      >
+        <button
+          v-for="tab in moreTabs"
+          :key="tab.id"
+          type="button"
+          class="more-item"
+          @click="chooseMore(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
     </div>
     <div class="slim">
       <template v-if="props.selected === 'script' && markdown">
@@ -128,6 +249,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </template>
       <template v-else-if="moduleTab">
         {{ moduleTab.module.name }}
+      </template>
+      <template v-else-if="props.selected === 'outline'">
+        <OutlineSlim />
       </template>
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
@@ -188,6 +312,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </ModuleBoundary>
       <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
+      <OutlinePane v-else-if="props.selected === 'outline'" />
       <ProblemsPane v-else />
     </div>
   </section>
@@ -203,11 +328,56 @@ function onKeydown(event: KeyboardEvent, index: number) {
 }
 .tabs {
   display: flex;
+  align-items: flex-end;
   gap: 2px;
   padding: 7px 10px 0;
   overflow-x: auto;
   background: var(--chrome);
   border-bottom: 1px solid var(--line);
+}
+.tablist {
+  display: flex;
+  gap: 2px;
+}
+.more-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chevron {
+  width: 12px;
+  height: 12px;
+}
+.more-panel {
+  position: fixed;
+  z-index: 20;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(14rem, calc(100vw - 16px));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--chrome-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+.more-item {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: 600 13px/1.2 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.more-item:hover {
+  background: var(--chrome);
+}
+.more-item:focus-visible {
+  outline: 2px solid var(--heading);
+  outline-offset: 2px;
 }
 .tab {
   padding: 7px 10px 9px;

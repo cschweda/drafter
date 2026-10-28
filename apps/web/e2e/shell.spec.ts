@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { closeSettings, openSettings, settingsDialog, start } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -170,10 +171,10 @@ test.describe('on a phone', () => {
     await expect(page.getByRole('tablist')).toBeVisible();
   });
 
-  test('shows one pane with all three tabs on a phone', async ({ page }) => {
+  test('shows one pane with all four tabs on a phone', async ({ page }) => {
     await expect(page.getByRole('tablist')).toHaveCount(1);
     const tabs = page.getByRole('tablist', { name: 'Panes' }).getByRole('tab');
-    await expect(tabs).toHaveText(['Source', 'Script', /^Problems(\s+\d+)?\s*$/]);
+    await expect(tabs).toHaveText(['Source', 'Script', /^Problems(\s+\d+)?\s*$/, 'Outline']);
     await expect(page.getByRole('tab', { name: 'Script' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -237,5 +238,83 @@ test.describe('on a phone', () => {
 
   test('has no accessibility violations on a phone', async ({ page }) => {
     expect(await violations(page)).toEqual([]);
+  });
+});
+
+// The tab row (Phase 2 design §5.8): Source, Script, Problems, and Outline, then one slot for
+// another tab (a module's), then More with the rest.
+test.describe('the tab row', () => {
+  /** Turns sample modules on in Settings. */
+  async function turnOn(page: Page, names: string[]) {
+    await openSettings(page);
+    for (const name of names) {
+      const toggle = settingsDialog(page).getByRole('switch', { name, exact: true });
+      await toggle.click();
+      await expect(toggle).toBeChecked();
+    }
+    await closeSettings(page);
+  }
+  const firstPane = (page: Page) => page.locator('[data-pane]').first();
+  const row = (page: Page) => firstPane(page).getByRole('tablist');
+  const more = (page: Page) => firstPane(page).getByRole('button', { name: 'More tabs' });
+  const menu = (page: Page) => page.getByRole('group', { name: 'More tabs' });
+
+  test("shows Outline in each pane's tab row", async ({ page, isMobile }) => {
+    await start(page);
+    for (const list of await page.getByRole('tablist').all()) {
+      await expect(list.getByRole('tab')).toHaveText([
+        'Source',
+        'Script',
+        /^Problems(\s+\d+)?\s*$/,
+        'Outline',
+      ]);
+    }
+    await expect(page.getByRole('tablist')).toHaveCount(isMobile ? 1 : 2);
+    await expect(page.getByRole('button', { name: 'More tabs' })).toHaveCount(0);
+  });
+
+  test('chooses a module tab from More, which then takes the slot', async ({ page }) => {
+    await start(page);
+    await turnOn(page, ['Scene list', 'Cast']);
+    const tabs = row(page).getByRole('tab');
+    await expect(tabs).toHaveText([
+      /^Source/,
+      /^Script/,
+      /^Problems/,
+      /^Outline/,
+      /^(Scenes|Cast)/,
+    ]);
+    const slot = (await tabs.last().innerText()).trim();
+    const other = slot === 'Cast' ? 'Scenes' : 'Cast';
+    await more(page).click();
+    await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
+    await expect(menu(page).getByRole('button')).toHaveText([other]);
+    await menu(page).getByRole('button', { name: other }).click();
+    await expect(menu(page)).toBeHidden();
+    const chosen = row(page).getByRole('tab', { name: other });
+    await expect(chosen).toHaveAttribute('aria-selected', 'true');
+    await expect(chosen).toBeFocused();
+    await expect(row(page).getByRole('tab', { name: slot })).toHaveCount(0);
+    // Back to a core tab: the one chosen keeps the slot.
+    await row(page).getByRole('tab', { name: 'Outline' }).click();
+    await expect(tabs.last()).toHaveText(other);
+  });
+
+  test('More works from the keyboard, and Escape returns focus', async ({ page }) => {
+    await start(page);
+    await turnOn(page, ['Scene list', 'Cast']);
+    const item = menu(page).getByRole('button');
+    await more(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(item).toBeFocused();
+    const name = (await item.innerText()).trim();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(more(page)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('ArrowDown');
+    await expect(item).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(row(page).getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
   });
 });

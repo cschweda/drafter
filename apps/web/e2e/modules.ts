@@ -105,3 +105,21 @@ export async function showProblems(page: Page) {
   await problemsTab(page).click();
   await expect(problemsList(page)).toBeVisible();
 }
+
+/**
+ * Chooses the tab called `name` in the first pane: from the tab row, or from More when it isn't
+ * in the row (Phase 2 design §5.8: the core tabs, one slot, then More).
+ */
+export async function chooseTab(page: Page, name: string) {
+  const pane = page.locator('[data-pane]').first();
+  const tab = pane.getByRole('tab', { name, exact: true });
+  if ((await tab.count()) > 0) {
+    await tab.click();
+    return;
+  }
+  await pane.getByRole('button', { name: 'More tabs' }).click();
+  await page
+    .getByRole('group', { name: 'More tabs' })
+    .getByRole('button', { name, exact: true })
+    .click();
+}
