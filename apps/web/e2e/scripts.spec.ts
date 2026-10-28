@@ -10,7 +10,7 @@ async function violations(page: Page) {
 
 const editor = (page: Page) => page.locator('.cm-content');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
-const menu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const chip = (page: Page) => page.locator('.chip.template');

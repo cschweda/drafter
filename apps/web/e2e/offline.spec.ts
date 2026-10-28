@@ -145,7 +145,7 @@ test.describe('offline', () => {
     await context.setOffline(true);
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     await page
-      .getByRole('group', { name: 'Scripts' })
+      .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })
       .click();
     await expect(editor(page)).toContainText('# Untitled');
@@ -361,7 +361,7 @@ test.describe('a new version', () => {
     await start(page);
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     await page
-      .getByRole('group', { name: 'Scripts' })
+      .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })
       .click();
     await typeAtEnd(page, '\n\nTyped in a script of my own.');

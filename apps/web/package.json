@@ -12,7 +12,7 @@
     "test": "vitest run",
     "typecheck": "nuxt typecheck && vue-tsc --noEmit -p ../../modules/tsconfig.json",
     "postinstall": "nuxt prepare",
-    "e2e:a11y": "rm -rf .output && DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm build && A11Y=1 playwright test --grep \"accessibility violations\""
+    "e2e:a11y": "rm -rf .output && DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm build && playwright test --grep \"accessibility violations\""
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

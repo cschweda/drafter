@@ -12,6 +12,7 @@ import {
   type Launched,
   openedExternally,
   type Profile,
+  ready,
   stored,
   test,
 } from './helpers';
@@ -130,7 +131,7 @@ const settle = (ms = 1500) => new Promise((resolve) => setTimeout(resolve, ms));
 async function chooseNewScreenplay(page: Page) {
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
 }
@@ -169,6 +170,31 @@ test('offers an update and installs only when asked', async ({ desktop, profile 
   await gone;
   expect(installs(profile)).toEqual(['install']);
   expect(closeAsked(profile)).toEqual([]);
+});
+
+test('offers the update again after the page reloads, and again if the offer came during the reload', async ({
+  desktop,
+  profile,
+}) => {
+  const f = await startFeed();
+  const { page } = await desktop({ env: env('appimage', profile, f.url) });
+  await expect(toast(page)).toContainText('A new version of Drafter is ready');
+  await page.reload();
+  await ready(page);
+  await expect(toast(page)).toContainText('A new version of Drafter is ready');
+  await expect(button(page, 'Restart')).toBeVisible();
+  expect(installs(profile)).toEqual([]);
+});
+
+test('keeps an offer made while the page was reloading', async ({ desktop, profile }) => {
+  const f = await startFeed();
+  // The offer comes about a second after the window is ready: the page reloads over it.
+  const { page } = await desktop({ env: env('appimage', profile, f.url, 900) });
+  for (let i = 0; i < 4; i++) {
+    await page.reload();
+    await ready(page);
+  }
+  await expect(toast(page)).toContainText('A new version of Drafter is ready', { timeout: 30_000 });
 });
 
 test('never restarts to update by itself', async ({ desktop, profile }) => {

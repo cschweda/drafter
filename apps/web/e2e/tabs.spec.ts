@@ -195,7 +195,7 @@ test.describe('one tab at a time', () => {
   test('applies the text a closed tab left behind when another tab switches to that script', async ({
     context,
   }) => {
-    const menuOf = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+    const menuOf = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
     const openMenu = async (page: Page) => {
       await page.getByRole('button', { name: 'Open', exact: true }).click();
       await expect(menuOf(page)).toBeVisible();
@@ -283,7 +283,7 @@ test.describe('one tab at a time', () => {
 
     // B is still waiting for A: choosing another script now would take the lock for the wrong one.
     await b.getByRole('button', { name: 'Open', exact: true }).click();
-    const menu = b.getByRole('group', { name: 'Scripts' });
+    const menu = b.getByRole('group', { name: 'Scripts', exact: true });
     await expect(menu).toBeVisible();
     for (const name of ['Screenplay', 'Stage play']) {
       await expect(menu.getByRole('button', { name, exact: true })).toBeDisabled();

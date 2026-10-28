@@ -27,12 +27,12 @@ const items = computed(() =>
 
 <template>
   <div class="modules">
-    <UDropdownMenu v-if="asMenu" :items="items" :content="{ align: 'end' }">
+    <MenuButton v-if="asMenu" :items="items" :content="{ align: 'end' }">
       <button type="button" class="act" data-modules-menu>
         <span class="round module"><UIcon name="i-lucide-puzzle" class="icon" /></span>
         <span class="label">Modules</span>
       </button>
-    </UDropdownMenu>
+    </MenuButton>
     <template v-else>
       <button
         v-for="module in modules"

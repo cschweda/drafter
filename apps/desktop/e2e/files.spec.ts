@@ -29,7 +29,7 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save', exact: true });
-const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const fileBar = (page: Page) => page.locator('[data-file-bar]');
 
 /** A folder of the test's own for the writer's files. */

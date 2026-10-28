@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { editor, runCommand, showSource, start } from './modules';
 
 // Writing stats (docs/drafter-stats-design.md): words and time today in the status bar, and the
-// Stats window. No accessibility test here: those wait for the project's final stage.
+// Stats window. Its accessibility test is in a11y.spec.ts.
 
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const countsButton = (page: Page) => status(page).locator('.counts-button');
@@ -24,7 +24,10 @@ async function newScript(
 ) {
   await start(page);
   await page.getByRole('button', { name: 'Open', exact: true }).click();
-  await page.getByRole('group', { name: 'Scripts' }).getByRole('button', { name }).click();
+  await page
+    .getByRole('group', { name: 'Scripts', exact: true })
+    .getByRole('button', { name })
+    .click();
   await showSource(page);
   await expect(editor(page)).toContainText(
     name === 'New Markdown document' ? '# Untitled' : 'Title:',

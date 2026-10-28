@@ -64,7 +64,7 @@ test('opens a file that is already open in the same window, once', async ({ desk
   // Another script is on show; the file is named again, by its own name and by a link to it.
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
   await expect(editor(page)).not.toContainText('The lamp turns.');
@@ -75,7 +75,7 @@ test('opens a file that is already open in the same window, once', async ({ desk
   await expect(editor(page)).toContainText('The lamp turns.');
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
   await expect(editor(page)).not.toContainText('The lamp turns.');

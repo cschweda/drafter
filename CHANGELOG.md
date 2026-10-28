@@ -17,11 +17,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `apps/web`: **the Outline tab.** Your script's sections and scenes as a tree, each scene with its number, heading, first synopsis, color, page and length, and who speaks. Filter it by heading, synopsis, or character; press Enter or click to go to a scene; edit a synopsis in place; give a scene a color, which is written into the scene as `[[Color: blue]]` and never prints. It works fully from the keyboard (arrow keys, Home and End, typing to jump), and a screen reader reads it as a tree.
 - `apps/web`: **moving scenes and sections.** Alt+Up and Alt+Down on an Outline row, its menu's Move up, Move down, and Move to…, dragging it, and **Move scene up** and **Move scene down** for the scene holding the cursor. The scene's whole text moves, notes and all; one undo puts it back; focus stays on the moved row, and a screen reader hears where it went.
-
 - `apps/web`: **Condense to outline** folds every scene to its heading and synopsis and shows the Outline beside the Source; **Expand all** unfolds them.
 - `apps/web`: **Export as treatment…** (Export menu, File menu, palette): the outline as a Markdown file, with each scene's first paragraph of action if you like, or opened as a new Markdown document.
 - `apps/web`: **Expand outline** turns the `=` lines and `- ` lists you've selected (or the whole script's) into scene stubs, `INT. LOCATION - DAY` with the line as its synopsis, in one undo; **New screenplay from this outline** does the same for a Markdown outline, as a new screenplay. Problems lists every stub still waiting for its real heading.
-
 - Tests: axe checks every state the Outline adds (the tree, a row's menu and colors, Move to…, the treatment dialog, the tabs' More menu, a read-only tab), in both themes, at desktop and phone width, on every run.
 
 ### Changed
@@ -29,6 +27,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.
 - Docs: Final Draft `.fdx` import and export moves up from Phase 3 to Phase 2, as the release right after the Outline (v0.11.0); the Phase 2 design has its plan, the later plans each move up one minor version, and the README and architecture roadmaps list it under Phase 2 (decided 2026-10-28).
 - Docs: the Phase 2 design's one open question is decided (2026-10-28): a scene's color is a `[[Color: blue]]` line in the scene's header, not an entry in the metadata block. The README, the architecture, the technical design, and the Phase 1 design say so, and say that testing with NVDA and VoiceOver comes last, after every phase is built. The plan for Phase 2's first release, the Outline, is in `docs/plans/`.
+
+## [0.9.0] - 2026-10-28
+
+**The accessibility pass.** Every major state of Drafter, from the first visit and the tour to each dialog, menu, and help page, is checked with axe in both themes at desktop and phone width, and those checks now run with every test run. What they found is fixed: text contrast, menus that hid the page from screen readers, Tab in an open menu, small targets on a phone, scrolling areas a keyboard couldn't reach, and links in help text told apart by colour alone. A **Skip to the editor** link is the first Tab stop. Testing with NVDA and VoiceOver comes later, and Drafter claims no conformance until it's done.
+
+### Added
+
+- `apps/web`: **a skip link.** The first Tab on the page is **Skip to the editor**, which puts the cursor in the Source (on a phone it brings the Source up first), past the toolbar and the bars under it.
+- Tests: **the accessibility suite** (`e2e/a11y.spec.ts`). axe checks every major state in both themes, at desktop and phone sizes: the first visit and each tour step; editing a screenplay, a stage play, and Markdown; the element bar and its menus; Problems; focus mode; typewriter scrolling; a sprint; the Counts panel and the Stats window; Settings and its modules; each question; each menu; and the help pages. It also checks what a screen reader reads: the landmarks, the Script's scene headings, a name on every control, and what the live regions say. `apps/desktop` runs axe on what only the desktop app shows: the modules folder in Settings, a folder module's question, button, and tab, and the update prompt. That test offers an update version of its own, because on Windows electron-updater's download cache sits outside each test's profile. These checks are automated; testing with NVDA and VoiceOver comes later.
+
+### Changed
+
+- Tests: the accessibility tests run with the rest of the end-to-end suite. `A11Y=1` is no longer needed.
+
+### Fixed
+
+- `apps/web`: links in the help pages' text are underlined, so they stand out from the words around them without relying on colour.
+- `apps/web`: the element bar's marks, the welcome and intro cards' text, icon, and buttons, and the intro's examples have enough contrast in both themes. The cards keep their look. In the light theme their amber is Drafter's darker goldenrod, and a button's hover is a darker shade.
+- `apps/web`: menus no longer hide the rest of the page from screen readers while its buttons can still take focus. They are non-modal now, and Tab or Shift+Tab in an open menu closes it and puts focus back on the button that opened it.
+- `apps/web`: on a phone, the buttons in the status bar and the focus-mode marker are at least 24 pixels tall, so neighbouring rows don't crowd each other. On a phone the intro card scrolls as a whole; a wider screen keeps its scrolling text box. The Fountain cheat sheet's wide examples can be scrolled from the keyboard and are named for screen readers.
+- `apps/web`: closing the Stats window opened from the Drafter menu puts the cursor back in the script. Before, focus could go to the menu's button instead.
 
 ## [0.8.0] - 2026-10-28
 
@@ -534,7 +553,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/cschweda/drafter/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/cschweda/drafter/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/cschweda/drafter/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/cschweda/drafter/compare/v0.6.0...v0.6.1

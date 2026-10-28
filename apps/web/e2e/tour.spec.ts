@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 // The welcome dialog and the guided tour (Phase 1 design §4.4). playwright.config.ts marks the tour
 // as seen for every other test; these start with an empty storage, so each is a true first visit.
-// The accessibility check of each step waits for the project's final stage (decided 2026-10-26).
+// The accessibility check of each step is in a11y.spec.ts.
 test.use({ storageState: { cookies: [], origins: [] } });
 
 const welcome = (page: Page) => page.getByRole('alertdialog', { name: 'Welcome to Drafter' });

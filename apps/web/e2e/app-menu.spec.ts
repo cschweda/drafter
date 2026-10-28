@@ -1,8 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, removePickers, stubPickers } from './fs-stub';
 
-// The accessibility test for the open menu ("has no accessibility violations with the menu open")
-// waits for the project's final stage (decided 2026-10-26); keyboard behavior is tested here.
+// The accessibility test for the open menu is in a11y.spec.ts; keyboard behavior is tested here.
 
 const editor = (page: Page) => page.locator('.cm-content');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });

@@ -12,7 +12,7 @@ import {
 
 // The element bar (docs/drafter-element-bar-design.md): a row of buttons over the Source that
 // writes Fountain's marks, names the element the cursor is in, and teaches the marks as it goes.
-// (No accessibility check here: those wait for the project's final stage, decided 2026-10-26.)
+// (Its accessibility checks are in a11y.spec.ts.)
 
 const bar = (page: Page) => page.getByRole('toolbar', { name: 'Element bar' });
 const button = (page: Page, name: string) => bar(page).getByRole('button', { name, exact: true });
@@ -228,7 +228,7 @@ test('is hidden in focus mode', async ({ page }) => {
 test('shows the Markdown set in a Markdown document', async ({ page }) => {
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New Markdown document' })
     .click();
   await expect(editor(page)).toContainText('# Untitled');

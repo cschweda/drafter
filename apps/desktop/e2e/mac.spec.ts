@@ -104,7 +104,7 @@ test('asks before the window closes with unsaved text, and Quit with no window a
   const first = await desktop();
   await first.page.getByRole('button', { name: 'Open', exact: true }).click();
   await first.page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
   await editor(first.page).click();
@@ -271,7 +271,7 @@ test('reopened without a restart, the window has the text, can be edited, and Qu
   const launched = await desktop();
   await launched.page.getByRole('button', { name: 'Open', exact: true }).click();
   await launched.page
-    .getByRole('group', { name: 'Scripts' })
+    .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
     .click();
   await editor(launched.page).click();

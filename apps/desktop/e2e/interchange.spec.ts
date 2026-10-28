@@ -257,7 +257,7 @@ async function webPage(route: 'picker' | 'download') {
   return { context, page };
 }
 
-const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts' });
+const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 
 async function openFileItem(page: Page) {
   await page.getByRole('button', { name: 'Open', exact: true }).click();
