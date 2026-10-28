@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/desktop`: **a modules folder.** Put a script module's folder in Drafter's modules folder (`~/.config/Drafter/modules` on Linux) and restart: it is listed in **Settings → Modules**, under **From your modules folder**, off until you turn it on, with a plain warning that it is code Drafter didn't write and hasn't checked. A module there is a folder with a `module.json` (its id, name, description, and the network origins it asks for) and an `index.js` (its button, commands, tab, and settings). A folder that isn't a module is skipped, and Settings says which and why. `modules/README.md` says how to write one, and `modules/from-a-folder/tidy/` is a complete example.
+- `apps/desktop`: **Help → Open Modules Folder** shows the folder, making it if it is missing.
+
+### Security
+
+- `apps/desktop`: **a module from the folder runs apart from Drafter.** Each runs in a sandboxed frame of its own, on its own origin (`drafter-module://<id>/`), served from its own folder only (no `..`, no link out of it), with a policy that allows nothing else. It can't reach Drafter's page, your files, Drafter's storage, or another module, can't open windows or navigate, and talks to Drafter only through a small, checked set of messages (the same calls a built-in module has). It reaches the network only to origins it declares and you agreed to when you turned it on, and only from its own frame — WebRTC and other side channels are blocked too; one that later asks for more is off until you agree again. A folder module can't take a built-in module's id, and never shares a built-in module's switch, consent, or storage. A different module dropped in under an id that was on is turned off until you agree again, and Drafter won't run a module folder that other users of the computer can change (your own group, as Ubuntu sets it up, is fine).
+
 ## [0.5.0] - 2026-10-27
 
 **The element bar and writing stats.**

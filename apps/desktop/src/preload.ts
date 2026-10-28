@@ -154,6 +154,12 @@ const bridge: DesktopBridge = {
       ipcRenderer.send(CHANNELS.updateEnabled, on === true);
     },
   },
+  // The modules folder: what main read at start, and the origins the writer agreed to for a module
+  // (main keeps only those its module.json declares, and lets only that module's frames reach them).
+  modules: {
+    list: () => invoke(CHANNELS.modulesList),
+    setNetwork: (id, origins) => invoke<void>(CHANNELS.modulesSetNetwork, id, [...origins]),
+  },
   // Files the system names (the command line, a second launch, macOS's open-file): main granted
   // each before sending it. Telling main we listen is what lets it send those it was holding.
   onOpenFile(onPath, onProblem) {

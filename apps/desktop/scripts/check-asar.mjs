@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const MUST_HAVE = [
   'dist/main.cjs',
   'dist/preload.cjs',
+  'dist/module-runtime.js',
   'package.json',
   'web/index.html',
   'web/_headers',

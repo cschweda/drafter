@@ -51,7 +51,10 @@ async function showAbout(parent: BrowserWindow | undefined): Promise<void> {
  * the editor (its “Back to Drafter” link with no opener) is an editor page too, but not the
  * editor, and must not take over where menu clicks go. Call once, after `ready`.
  */
-export function setUpMenu(editor: () => BrowserWindow | null): void {
+export function setUpMenu(
+  editor: () => BrowserWindow | null,
+  more: { modulesFolder?: () => void } = {},
+): void {
   let commands: MenuCommand[] = [];
   /** The page whose commands these are, and whose window runs them. */
   let source: WebContents | null = null;
@@ -82,6 +85,7 @@ export function setUpMenu(editor: () => BrowserWindow | null): void {
       about: () =>
         void showAbout(BrowserWindow.getFocusedWindow() ?? windowOf(source) ?? undefined),
       releases: () => openExternal(RELEASES_URL),
+      modulesFolder: more.modulesFolder,
       // Through app.quit(), so a before-quit handler (asking about unsaved changes) can stop it.
       quit: () => app.quit(),
     };

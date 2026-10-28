@@ -43,6 +43,10 @@ export const CHANNELS = {
   backToEditor: 'drafter:back-to-editor',
   /** preload → main: whether Check for updates is on. */
   updateEnabled: 'drafter:update:enabled',
+  /** The modules folder (module-folder.ts). preload → main: the modules read at start, and what was skipped (invoke). */
+  modulesList: 'drafter:modules:list',
+  /** preload → main: `(id, origins)`: the network origins the writer agreed to for a module (invoke). */
+  modulesSetNetwork: 'drafter:modules:set-network',
 } as const;
 
 /** What main may ask the page before it closes (close-flow.ts `ClosePage`). */

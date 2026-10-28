@@ -56,7 +56,15 @@ const APP_URL_PATTERN = /^app:\/\/drafter(\/[^?#]*)?(?:[?#].*)?$/i;
 export function resolveAppUrl(url: string, root: string): string | null {
   const match = APP_URL_PATTERN.exec(url);
   if (!match) return null;
-  const raw = match[1] ?? '/';
+  return resolveRawPath(match[1] ?? '/', root);
+}
+
+/**
+ * Maps a URL's raw path (`/a/b%20c.js`, still percent-encoded) to a file under `root`, or null for
+ * one that leaves it, by the rules `resolveAppUrl` describes. The modules folder's scheme
+ * (module-folder.ts) uses the same rules.
+ */
+export function resolveRawPath(raw: string, root: string): string | null {
   // Encoded separators and NULs would change what the decoded path means.
   if (/%(?:2f|5c|00)|\\/i.test(raw)) return null;
   let path: string;
@@ -81,6 +89,11 @@ export function resolveAppUrl(url: string, root: string): string | null {
   return file;
 }
 
+/** The Content-Type of a file, by its extension. */
+export function contentTypeOf(path: string): string {
+  return TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream';
+}
+
 /**
  * The response headers for a file: Content-Type by extension, the CSP on pages and scripts, and
  * the site's other policies (`forwardedHeaders`) on everything, as Netlify sends them.
@@ -93,7 +106,7 @@ export function headersFor(
   const extension = extname(path).toLowerCase();
   const headers: Record<string, string> = {
     ...forwarded,
-    'Content-Type': TYPES[extension] ?? 'application/octet-stream',
+    'Content-Type': contentTypeOf(path),
     'X-Content-Type-Options': 'nosniff',
   };
   if (POLICED.has(extension)) headers['Content-Security-Policy'] = csp;
@@ -158,7 +171,7 @@ const notFound = () =>
   });
 
 /** Whether `path` is `root` or inside it. */
-function within(root: string, path: string): boolean {
+export function within(root: string, path: string): boolean {
   const inside = relative(root, path);
   return (
     inside === '' || (!inside.startsWith(`..${sep}`) && inside !== '..' && !isAbsolute(inside))

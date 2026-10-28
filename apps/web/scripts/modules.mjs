@@ -41,7 +41,7 @@ export async function moduleFolders(modulesDir) {
  * @param {string} source
  * @returns {string | undefined}
  */
-function declaredId(source) {
+export function declaredId(source) {
   const start = /export default\s*\{/.exec(source)?.index ?? 0;
   return /\bid\s*:\s*(['"`])([a-z0-9-]+)\1/.exec(source.slice(start))?.[2];
 }
@@ -93,4 +93,21 @@ export async function moduleIconNames(modulesDir) {
   }
   for (const folder of await moduleFolders(modulesDir)) await walk(join(modulesDir, folder));
   return [...icons].map((name) => name.replace(/^i-lucide-/, 'lucide:')).sort();
+}
+
+/**
+ * The ids of the modules in `modulesDir`, with each folder's name besides (the app names a module
+ * by its id, the build by its folder): what a module from the desktop app's modules folder may not
+ * take. Sorted, without repeats.
+ * @param {string} modulesDir
+ * @returns {Promise<string[]>}
+ */
+export async function moduleIds(modulesDir) {
+  const ids = new Set();
+  for (const folder of await moduleFolders(modulesDir)) {
+    ids.add(folder);
+    const id = declaredId(await readFile(join(modulesDir, folder, 'index.ts'), 'utf8'));
+    if (id) ids.add(id);
+  }
+  return [...ids].sort();
 }

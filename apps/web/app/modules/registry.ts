@@ -2,6 +2,7 @@ import { computed, type Ref, ref, shallowRef } from 'vue';
 import { db } from '../storage/db';
 import { say } from '../storage/say';
 import { fixture } from './fixture';
+import { FOLDER_PREFIX, folderFingerprint, folderModules, folderProblems } from './folder';
 import type { ScriptModule } from './types';
 
 // The modules this build has, which are on, and what a module's failure looks like. Nothing here
@@ -120,6 +121,46 @@ export const MODULES: readonly ScriptModule[] = collectModules({
     : {}),
 });
 
+/** The ids of the modules built into this copy of Drafter: a folder module may not take one. */
+export const BUILT_IN_IDS: readonly string[] = MODULES.map((m) => m.id);
+
+/** Every module: the built-in ones, then (in the desktop app) those from the modules folder. */
+export const allModules = computed<readonly ScriptModule[]>(() => [
+  ...MODULES,
+  ...folderModules.value,
+]);
+
+/** Whether `id` is a module from the desktop app's modules folder. */
+export function isFolderModule(id: string): boolean {
+  return folderModules.value.some((m) => m.id === id);
+}
+
+/** Why each folder the desktop app found isn't among the modules, one sentence each. */
+export const folderModuleProblems = computed<readonly string[]>(() => folderProblems.value);
+
+/**
+ * What the host must do to match `enabled`: turn modules on, turn them off, and refresh one that is
+ * on whose object changed (a folder module whose parts arrived once its frame loaded: its commands
+ * are registered again). `on` holds the module objects the host turned on, by id.
+ */
+export function modulesToChange(
+  modules: readonly ScriptModule[],
+  enabled: readonly string[],
+  on: ReadonlyMap<string, ScriptModule>,
+): { turnOn: ScriptModule[]; turnOff: ScriptModule[]; refresh: ScriptModule[] } {
+  const turnOn: ScriptModule[] = [];
+  const turnOff: ScriptModule[] = [];
+  const refresh: ScriptModule[] = [];
+  for (const module of modules) {
+    const wanted = enabled.includes(module.id);
+    const current = on.get(module.id);
+    if (wanted && !current) turnOn.push(module);
+    else if (!wanted && current) turnOff.push(current);
+    else if (wanted && current && current !== module) refresh.push(module);
+  }
+  return { turnOn, turnOff, refresh };
+}
+
 // ---- Toasts -------------------------------------------------------------------------------
 
 /** What a module said with `notify`: a toast, and a live region. Empty after a few seconds. */
@@ -174,6 +215,8 @@ const ENABLED_KEY = 'modules:enabled';
 export interface EnabledEntry {
   id: string;
   origins: string[];
+  /** For a folder module (`folder.<id>`): the fingerprint of the module that was agreed to (I1). */
+  fingerprint?: string;
 }
 
 const stored = shallowRef<readonly EnabledEntry[]>([]);
@@ -193,7 +236,48 @@ export function consentedIds(
     .map((entry) => entry.id);
 }
 
-const declaredOrigins = (id: string) => MODULES.find((m) => m.id === id)?.permissions.network;
+const declaredOrigins = (id: string) =>
+  allModules.value.find((m) => m.id === id)?.permissions.network;
+
+/**
+ * The enabled entries to keep when the folder's modules arrive at start (I1): a built-in module's
+ * entry always, a folder module's (`folder.<id>`) only while that same module is loaded now — the
+ * one with that id and the fingerprint the writer agreed to. A folder module that isn't loaded, or
+ * a different one under an id that was on, is dropped, so it can't run or keep its consent without
+ * the writer turning it on again.
+ */
+export function folderConsentToKeep(
+  entries: readonly EnabledEntry[],
+  loaded: readonly { id: string; fingerprint: string }[],
+): EnabledEntry[] {
+  return entries.filter((entry) => {
+    if (!entry.id.startsWith(FOLDER_PREFIX)) return true;
+    const match = loaded.find((m) => m.id === entry.id);
+    return match !== undefined && match.fingerprint === entry.fingerprint;
+  });
+}
+
+/**
+ * Drops the stored consent of any folder module that isn't loaded now, or that a different module
+ * has replaced (its fingerprint changed). Call once the folder's modules are known, before they
+ * can run.
+ */
+export async function reconcileFolderConsent(
+  loaded: readonly { id: string; fingerprint: string }[] = folderModules.value.map((m) => ({
+    id: m.id,
+    fingerprint: folderFingerprint(m.id) ?? '',
+  })),
+): Promise<void> {
+  await loadEnabled();
+  const keep = folderConsentToKeep(stored.value, loaded);
+  if (keep.length === stored.value.length) return;
+  stored.value = keep;
+  try {
+    await db.settings.put({ key: ENABLED_KEY, value: stored.value });
+  } catch {
+    // Held for this visit; nothing runs that shouldn't, since `enabled` reads `stored`.
+  }
+}
 
 const enabledIds = computed(() => consentedIds(stored.value, declaredOrigins));
 /** Modules the writer turned on whose origins have grown since: off until they agree again. */
@@ -204,9 +288,13 @@ const lapsedIds = computed(() =>
 function entryOf(value: unknown): EnabledEntry | undefined {
   if (isText(value)) return { id: value, origins: [] };
   if (typeof value !== 'object' || value === null) return undefined;
-  const { id, origins } = value as { id?: unknown; origins?: unknown };
+  const { id, origins, fingerprint } = value as {
+    id?: unknown;
+    origins?: unknown;
+    fingerprint?: unknown;
+  };
   if (!isText(id) || !Array.isArray(origins) || !origins.every(isText)) return undefined;
-  return { id, origins: [...origins] };
+  return { id, origins: [...origins], ...(isText(fingerprint) && { fingerprint }) };
 }
 
 /** Reads which modules are on, once (or again, with `force`). Settles when done, whether or not the table could be read. */
@@ -232,7 +320,13 @@ export function loadEnabled(force = false): Promise<void> {
 export async function setEnabled(id: string, on: boolean): Promise<void> {
   await loadEnabled();
   const without = stored.value.filter((entry) => entry.id !== id);
-  stored.value = on ? [...without, { id, origins: [...(declaredOrigins(id) ?? [])] }] : without;
+  const fingerprint = id.startsWith(FOLDER_PREFIX) ? folderFingerprint(id) : undefined;
+  stored.value = on
+    ? [
+        ...without,
+        { id, origins: [...(declaredOrigins(id) ?? [])], ...(fingerprint && { fingerprint }) },
+      ]
+    : without;
   try {
     await db.settings.put({ key: ENABLED_KEY, value: stored.value });
   } catch {
@@ -241,7 +335,8 @@ export async function setEnabled(id: string, on: boolean): Promise<void> {
 }
 
 export function useModules(): {
-  modules: readonly ScriptModule[];
+  /** Every module, built-in and (in the desktop app) from the modules folder. */
+  modules: Readonly<Ref<readonly ScriptModule[]>>;
   enabled: Readonly<Ref<readonly string[]>>;
   /** On in the table, but off now: the module asks for network access the writer hasn't agreed to. */
   lapsed: Readonly<Ref<readonly string[]>>;
@@ -250,7 +345,7 @@ export function useModules(): {
   ready: Promise<void>;
 } {
   return {
-    modules: MODULES,
+    modules: allModules,
     enabled: enabledIds,
     lapsed: lapsedIds,
     setEnabled,

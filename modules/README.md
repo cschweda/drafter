@@ -146,3 +146,123 @@ decision for the maintainer, recorded when a module that needs it is planned.
 A module whose default export doesn't have this shape is skipped with a console warning naming its
 folder; it never breaks the build or the app. Two modules with the same `id` fail the build, naming
 both folders.
+
+## Modules from a folder (the desktop app)
+
+The desktop app can also load a module **without rebuilding Drafter**: put its folder in Drafter's
+modules folder and restart. **Help → Open Modules Folder** shows the folder:
+
+| System | Folder |
+| --- | --- |
+| Linux | `~/.config/Drafter/modules` |
+| Windows | `%APPDATA%\Drafter\modules` |
+| macOS | `~/Library/Application Support/Drafter/modules` |
+
+A module there is listed in **Settings → Modules**, under **From your modules folder**, and is off
+until you turn it on. drafter.dev has no modules folder: a browser runs only the code drafter.dev
+serves.
+
+[`from-a-folder/tidy/`](from-a-folder/tidy/README.md) is a complete example, with a button, a
+command, a tab, and settings. Copy it to start your own.
+
+### The folder
+
+```
+modules/              (Drafter's modules folder, not this one)
+  tidy/
+    module.json       who the module is: read before any of its code runs
+    index.js          the module: an ES module, with everything it needs in it (no bare imports)
+    …                 anything index.js imports or fetches, from this folder only
+```
+
+`module.json`:
+
+```json
+{
+  "id": "tidy",
+  "name": "Tidy",
+  "description": "Finds spaces and tabs at the ends of lines, and removes them when you ask.",
+  "permissions": { "network": [] }
+}
+```
+
+- `id`: lowercase letters and digits joined by single hyphens, at most 63 characters, and not the
+  id of a module built into Drafter. Two folders with the same id: the second is skipped.
+- `name` (at most 80 characters) and `description` (one sentence, at most 400) are what Settings
+  shows.
+- `permissions.network`: the origins the module may send the script to, each `https://host` or
+  `https://host:port` (or `http://localhost`, `http://127.0.0.1` for a program on your own
+  computer). At most 16, written exactly as an origin: no path, no `*`. Leave it out, or empty, and
+  the module has no network at all.
+
+Every folder module has the puzzle icon: icons are bundled when Drafter is built.
+
+`index.js` default-exports the module. Every part is optional except `id`, which must be the one in
+`module.json`:
+
+```js
+export default {
+  id: 'tidy',
+  action: { label: 'Tidy', async run(ctx) { … } },          // the toolbar button
+  commands: [{ id: 'trim', title: 'Tidy: remove spaces at line ends', async run(ctx) { … } }],
+  tab: { id: 'tidy', label: 'Tidy', mount(root, ctx) { …; return () => {} } },
+  settings: { mount(root, ctx) { … } },                       // its section in Settings → Modules
+};
+```
+
+A tab and a settings section are drawn by the module into `root`, an element in its own frame, with
+whatever it was built with (plain DOM, or a framework bundled into `index.js`). The frame has the
+app's colors as CSS variables (`var(--text)`, `var(--muted)`, `var(--line)`, `var(--chrome-2)`,
+`var(--heading)`, `var(--font-sans)`), and its body has no margin. `mount` may return a function,
+called when the tab goes. A settings section grows to fit what it draws, up to 800 pixels.
+
+### The context
+
+The same calls as a built-in module's context, but each is a message to Drafter, so **each returns
+a promise**:
+
+- Reading: `await ctx.source()`, `doc()`, `layout()`, `layoutFailed()`, `template()`, `title()`,
+  `kind()`, `cursor()`. `doc()` is the parse as plain data: `DocJSON` (version 1, what
+  `drafter build --json` writes), with `blocks[i].kind`, `span`, `lines`, and `sem`.
+- Changing: `await ctx.applyChanges(changes)`: one undoable change. It rejects with Drafter's
+  message where a built-in module's would throw (a change outside the text, two that overlap).
+- Reporting, asking, going, telling: `setProblems(items)`, `confirm(message, options)`,
+  `goto(offset)`, `openTab()`, `notify(message)`, as for a built-in module.
+- Remembering: `ctx.storage.get`, `set`, `remove`. A value must be JSON, at most 1 MB.
+- Following: `ctx.onChange(listener)` calls `listener` (at most every 250 ms) when the script, its
+  pages, or the open script change, and returns the function that stops it. A tab and settings
+  use it to draw again.
+
+The rules are a built-in module's: a button's or a command's run has a context of its own, which
+refuses to change text the writer has edited since the run began, and a run that throws is a toast
+naming the module. A run that takes longer than 5 minutes is ended. Limits keep a module from
+flooding Drafter: a message of at most 4 MB, at most 64 calls waiting at once, at most 10 000
+changes or 5 000 problems at a time, a `notify` or `confirm` message of at most 2 000 characters,
+and at most 50 commands.
+
+### What a folder module can and can't do
+
+A module from the folder is code nobody at Drafter has checked, so it runs apart: in a frame
+sandboxed with scripts only, on an origin of its own (`drafter-module://<id>/`), served from its own
+folder and nowhere else. It can't reach Drafter's page, your files, Drafter's storage (your
+recovery copies, other modules' settings), or another module. It can't open windows, navigate,
+submit forms, or ask for the camera, notifications, or anything like them. It reaches the network
+only if it declares the origins and you agreed when you turned it on, and then only those origins;
+if a later version declares more, it is off until you agree again.
+
+While it is on, it **can** read the open script and change it, and one you agreed to give the
+network can send the script to the origins it named. That is what turning it on means: turn one on
+only if you trust where it came from.
+
+It reaches the network only through the origins you agreed to (ordinary web requests). Other ways
+out — WebRTC among them — are blocked, so a module can't quietly open a side channel. One thing to
+know when you install from an archive: Drafter won't follow a symbolic link out of a module's
+folder, but it can't tell a *hard* link from a real file, so unpack modules from people you trust.
+
+### Mistakes
+
+A folder that isn't a module (no `module.json`, JSON that doesn't parse, a missing field, no
+`index.js`, an `index.js` that is a link out of the folder, an id already taken) is skipped, and
+Settings → Modules says which folder and why. A module whose `index.js` won't load, or whose
+default export has the wrong shape or the wrong id, is a toast when you turn it on, and Settings
+says why it couldn't start. Restart Drafter after fixing it.

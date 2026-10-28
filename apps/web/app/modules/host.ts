@@ -1,13 +1,17 @@
 import { type ComputedRef, computed, watch } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { type Command, registerCommands, unregisterCommands } from '../commands/registry';
+import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
 import { dropTab, PHONE_DEFAULT_TAB } from '../utils/panes';
 import { contextFor, moduleTurnedOff, runContextFor, scriptChanged } from './context';
+import { loadFolderModules, syncFolderNetwork } from './folder';
 import { clearAllModuleProblems, clearModuleProblems, mapModuleProblems } from './problems';
 import {
+  allModules,
+  BUILT_IN_IDS,
   loadEnabled,
-  MODULES,
+  modulesToChange,
   moduleTabId,
   reportModuleFailure,
   runModuleAction,
@@ -57,8 +61,11 @@ export function startModules(): () => void {
   const panes = usePanes();
   /** The ids of the commands each module on has registered. */
   const on = new Map<string, string[]>();
+  /** The module object each module on was turned on as (a folder module's changes when it loads). */
+  const objects = new Map<string, ScriptModule>();
 
   function turnOn(module: ScriptModule) {
+    objects.set(module.id, module);
     let ids: string[] = [];
     try {
       const commands = (module.commands?.(contextFor(module)) ?? []).map((c) =>
@@ -76,6 +83,7 @@ export function startModules(): () => void {
   function turnOff(module: ScriptModule) {
     unregisterCommands(on.get(module.id) ?? []);
     on.delete(module.id);
+    objects.delete(module.id);
     moduleTurnedOff(module.id);
     clearModuleProblems(module.id);
     if (module.tab) {
@@ -86,16 +94,23 @@ export function startModules(): () => void {
   }
 
   const stop = watch(
-    enabled,
-    (ids) => {
-      for (const module of MODULES) {
-        const wanted = ids.includes(module.id);
-        if (wanted && !on.has(module.id)) turnOn(module);
-        else if (!wanted && on.has(module.id)) turnOff(module);
+    [enabled, allModules],
+    ([ids, modules]) => {
+      const { turnOn: up, turnOff: down, refresh } = modulesToChange(modules, ids, objects);
+      for (const module of down) turnOff(module);
+      for (const module of up) turnOn(module);
+      // Its commands again, from the parts it now has; its problems and tab stay.
+      for (const module of refresh) {
+        unregisterCommands(on.get(module.id) ?? []);
+        turnOn(module);
       }
     },
     { immediate: true },
   );
+  // The desktop app's modules folder: read once, and kept told what each module may reach.
+  const bridge = desktop()?.modules;
+  void loadFolderModules(bridge, BUILT_IN_IDS);
+  const stopNetwork = bridge ? syncFolderNetwork(enabled, bridge) : () => {};
   const forget = editor.onChange((changes) => {
     if (changes) mapModuleProblems(changes);
     else {
@@ -106,6 +121,7 @@ export function startModules(): () => void {
   void loadEnabled();
   return () => {
     stop();
+    stopNetwork();
     forget();
     for (const ids of on.values()) unregisterCommands(ids);
     on.clear();
@@ -124,7 +140,7 @@ export interface ModuleTab {
 export function useModuleTabs(): ComputedRef<ModuleTab[]> {
   const { enabled } = useModules();
   return computed(() =>
-    MODULES.flatMap((module) =>
+    allModules.value.flatMap((module) =>
       module.tab && enabled.value.includes(module.id)
         ? [
             {
@@ -142,5 +158,5 @@ export function useModuleTabs(): ComputedRef<ModuleTab[]> {
 /** The modules that are on and have a button, in module order. */
 export function useModuleButtons(): ComputedRef<ScriptModule[]> {
   const { enabled } = useModules();
-  return computed(() => MODULES.filter((m) => m.action && enabled.value.includes(m.id)));
+  return computed(() => allModules.value.filter((m) => m.action && enabled.value.includes(m.id)));
 }

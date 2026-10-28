@@ -4,6 +4,7 @@ import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
 import { installGlobalKeys } from '~/commands/registry';
+import { isDesktopBuild } from '~/desktop';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
 import { markdownTitle } from '~/markdown/title';
@@ -19,6 +20,7 @@ import { installDesktopUpdates } from '~/update/desktop-source';
 import { leavesOnEscape } from '~/utils/focus';
 import { otherPane, type PaneId } from '~/utils/panes';
 
+const desktopBuild = isDesktopBuild();
 const { tabs, phoneTab, split, choose, resize } = usePanes();
 const wide = useWideScreen();
 const focus = useFocusMode();
@@ -145,6 +147,8 @@ onBeforeUnmount(() => {
     <BothChangedDialog />
     <RemoveDialog />
     <ModuleConfirmDialog />
+    <!-- The desktop app's folder modules run in hidden frames of their own; drafter.dev has none. -->
+    <LazyFolderModuleRunners v-if="desktopBuild" />
     <CommandPalette />
     <SettingsDialog />
     <StatsDialog />

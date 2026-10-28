@@ -5,6 +5,7 @@ const GOOD = [
   '/dist',
   '/dist/main.cjs',
   '/dist/preload.cjs',
+  '/dist/module-runtime.js',
   '/package.json',
   '/web',
   '/web/index.html',

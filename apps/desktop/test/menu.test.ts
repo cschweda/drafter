@@ -97,10 +97,12 @@ describe('menuTemplate', () => {
       'help-saving',
       'help-privacy',
       'take-the-tour',
+      'modules-folder',
       'releases',
       'about',
     ]);
     expect(help.find((i) => i.id === 'about')?.label).toBe('About Drafter');
+    expect(help.find((i) => i.id === 'modules-folder')?.label).toBe('Open Modules Folder');
     expect(help.find((i) => i.id === 'releases')?.label).toBe('Open the Releases Page');
   });
 
@@ -252,17 +254,25 @@ describe('menuTemplate', () => {
     expect(submenu(menus(t).Help).some((i) => i.id === 'about')).toBe(false);
   });
 
-  test('runs About, Releases, and Quit through the actions it is given', () => {
+  test('runs About, Releases, the modules folder, and Quit through the actions it is given', () => {
     const about = vi.fn();
     const releases = vi.fn();
+    const modulesFolder = vi.fn();
     const quit = vi.fn();
-    const t = menuTemplate(COMMANDS, () => {}, { platform: 'linux', about, releases, quit });
+    const t = menuTemplate(COMMANDS, () => {}, {
+      platform: 'linux',
+      about,
+      releases,
+      modulesFolder,
+      quit,
+    });
     choose(t, 'about');
     choose(t, 'releases');
+    choose(t, 'modules-folder');
     choose(t, 'quit');
-    expect([about.mock.calls.length, releases.mock.calls.length, quit.mock.calls.length]).toEqual([
-      1, 1, 1,
-    ]);
+    expect(
+      [about, releases, modulesFolder, quit].map((action) => action.mock.calls.length),
+    ).toEqual([1, 1, 1, 1]);
     expect(RELEASES_URL).toBe('https://github.com/cschweda/drafter/releases');
   });
 });
@@ -306,6 +316,7 @@ describe('parseCommands', () => {
       [{ ...good[0], id: 'quit' }],
       [{ ...good[0], id: 'about' }],
       [{ ...good[0], id: 'releases' }],
+      [{ ...good[0], id: 'modules-folder' }],
       [{ ...good[0], title: 'x'.repeat(201) }],
       // Twice the same id.
       [good[0], good[0]],
