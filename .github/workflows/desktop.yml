@@ -221,7 +221,7 @@ jobs:
     # Builds both installers (x64, and arm64 by cross-building, which electron-builder does on x64)
     # and tests the x64 one here; `windows-arm` tests the arm64 one.
     runs-on: windows-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     defaults:
       run:
         shell: bash
@@ -345,7 +345,7 @@ jobs:
     # Windows 11 in a VM on an Apple silicon Mac. A release waits for it too.
     needs: windows
     runs-on: windows-11-arm
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         shell: bash
@@ -399,6 +399,12 @@ jobs:
             DRAFTER_UPDATE_PORT=47614 \
             DRAFTER_PACKAGED="$(cygpath -w "$(echo "$GITHUB_WORKSPACE"/windows-release/*-windows-arm64-setup.exe)")" \
             pnpm --filter @drafter/desktop e2e:packaged -g "updates itself"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: desktop-test-results-windows-arm
+          retention-days: 7
+          path: apps/desktop/test-results
 
   mac:
     # Apple silicon, as most Macs a writer builds on now are. A check, never a release: not run for

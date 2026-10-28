@@ -119,8 +119,33 @@ function killDrafters() {
  * Runs an installer or uninstaller and waits for it. NSIS takes `/D=` unquoted, to the end of the
  * line, so the folders given to it here have no spaces (Node would quote such an argument).
  */
-function run(program: string, args: string[], timeout = 180_000) {
-  execFileSync(program, args, { stdio: 'inherit', timeout });
+function run(program: string, args: string[], timeout = 600_000) {
+  const began = Date.now();
+  try {
+    execFileSync(program, args, { stdio: 'inherit', timeout });
+  } catch (error) {
+    // What was going on, for the log: the processes still running, and the screen (a dialog the
+    // installer showed would be on it), saved beside the test's results.
+    try {
+      console.log(
+        powershell(
+          "Get-Process | Where-Object { $_.Name -match 'setup|Drafter|Uninstall|7z|Au_' } | Format-Table Id, Name, CPU, StartTime -AutoSize | Out-String -Width 200",
+        ),
+      );
+      const shot = join(process.cwd(), 'test-results', `screen-${Date.now()}.png`);
+      mkdirSync(join(process.cwd(), 'test-results'), { recursive: true });
+      powershell(
+        `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $i = New-Object System.Drawing.Bitmap $b.Width, $b.Height; [System.Drawing.Graphics]::FromImage($i).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size); $i.Save('${shot}')`,
+      );
+      console.log(`the screen: ${shot}`);
+    } catch {
+      // The error below says enough.
+    }
+    throw error;
+  }
+  console.log(
+    `${basename(program)} ${args.join(' ')}: ${Math.round((Date.now() - began) / 1000)} s`,
+  );
 }
 
 /** A port nothing is listening on. */
@@ -188,7 +213,8 @@ async function launch(
 }
 
 test('installs silently, for this user only, into the folder it is given', () => {
-  test.setTimeout(240_000);
+  // Windows on Arm runs the (x86) installer emulated, which takes longer.
+  test.setTimeout(660_000);
   run(INSTALLER, ['/S', `/D=${installDir}`]);
   expect(existsSync(exe()), exe()).toBe(true);
   expect(existsSync(uninstaller())).toBe(true);
@@ -298,7 +324,7 @@ test('a .fountain file opens in Drafter, as a double-click in Explorer opens it'
 });
 
 test('uninstalls silently, taking its files, shortcut, and file types, and leaving the writer’s', async () => {
-  test.setTimeout(180_000);
+  test.setTimeout(660_000);
   killDrafters();
   run(uninstaller(), ['/S']);
   // The uninstaller copies itself elsewhere and goes on from there: wait for it to finish.
@@ -323,7 +349,7 @@ test('updates itself for real: 1.0.0 downloads 1.0.1, and Restart installs and s
   const NEW = process.env.DRAFTER_UPDATE_NEW;
   const PORT = Number(process.env.DRAFTER_UPDATE_PORT);
   test.skip(!OLD || !NEW || !PORT, 'The update test’s installers are not given (CI builds them)');
-  test.setTimeout(420_000);
+  test.setTimeout(1_500_000);
   const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
   const oldSetup = join(OLD as string, `Drafter-1.0.0-windows-${arch}-setup.exe`);
   const newName = `Drafter-1.0.1-windows-${arch}-setup.exe`;
