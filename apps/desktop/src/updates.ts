@@ -2,8 +2,9 @@
 // electron-updater so they can be tested: when the one check happens, what is offered, and what a
 // press of Restart or Get it does. updates-main.ts wires it to the real updater and the IPC.
 //
-// Drafter never installs or restarts by itself. The AppImage downloads in the background only
-// after a check found a newer version, and then offers Restart. A .deb can't update itself, so it
+// Drafter never installs or restarts by itself. The AppImage and the Windows installer's app
+// download in the background only after a check found a newer version, and then offer Restart
+// (Windows: the new installer runs, then the new Drafter). A .deb can't update itself, so it
 // offers Get it (the release page). Nor can the Mac app, built on the writer's own Mac and signed
 // by no one (electron-updater installs only a signed one): it reads the release's version itself
 // (`ReleaseCheck`) and offers Get it. Anything that goes wrong is logged and nothing else.
@@ -17,8 +18,14 @@ export const CHECK_DELAY_MS = 5000;
 /** How long after quitAndInstall the app may keep running before the install counts as failed. */
 export const INSTALL_WAIT_MS = 3000;
 
-/** `appimage`: check, download, Restart. `deb` and `mac`: check, Get it. `off`: no check. */
-export type UpdateMode = 'appimage' | 'deb' | 'mac' | 'off';
+/**
+ * `appimage` and `nsis` (the Windows installer's app): check, download, Restart. `deb` and `mac`:
+ * check, Get it. `off`: no check.
+ */
+export type UpdateMode = 'appimage' | 'nsis' | 'deb' | 'mac' | 'off';
+
+/** The modes that download an update and install it on Restart. */
+const INSTALLS: readonly UpdateMode[] = ['appimage', 'nsis'];
 
 export interface ModeInputs {
   isPackaged: boolean;
@@ -50,9 +57,9 @@ export function runsFromAppImage(inputs: ModeInputs): boolean {
 
 /**
  * Which kind of install this is. A packaged Linux build is an AppImage when it really runs from
- * one (`runsFromAppImage`) and a .deb when it doesn't; a packaged Mac build is the Mac app.
- * Unpackaged (development, the e2e suite) there is no check unless the test feed is set. The
- * Windows build comes later: no check there yet.
+ * one (`runsFromAppImage`) and a .deb when it doesn't; a packaged Mac build is the Mac app; a
+ * packaged Windows build was put there by its installer. Unpackaged (development, the e2e suite)
+ * there is no check unless the test feed is set.
  */
 export function updateMode(inputs: ModeInputs): UpdateMode {
   // The test feed (unpackaged only) plays an AppImage by APPIMAGE alone, and otherwise the
@@ -60,9 +67,11 @@ export function updateMode(inputs: ModeInputs): UpdateMode {
   if (!inputs.isPackaged) {
     if (!inputs.feed) return 'off';
     if (inputs.appImage) return 'appimage';
-    return inputs.platform === 'darwin' ? 'mac' : 'deb';
+    if (inputs.platform === 'darwin') return 'mac';
+    return inputs.platform === 'win32' ? 'nsis' : 'deb';
   }
   if (inputs.platform === 'darwin') return 'mac';
+  if (inputs.platform === 'win32') return 'nsis';
   if (inputs.platform !== 'linux') return 'off';
   return runsFromAppImage(inputs) ? 'appimage' : 'deb';
 }
@@ -168,7 +177,7 @@ export class Updates {
    * app quits, and this never settles.
    */
   async install(): Promise<'nothing' | 'failed'> {
-    if (this.deps.mode !== 'appimage' || !this.downloaded || !this.updater) return 'nothing';
+    if (!INSTALLS.includes(this.deps.mode) || !this.downloaded || !this.updater) return 'nothing';
     if (this.installFailed) return 'failed';
     const updater = this.updater;
     const revoke = this.deps.approveQuit();
@@ -185,6 +194,8 @@ export class Updates {
       timer = setTimeout(() => fail('the app did not quit'), INSTALL_WAIT_MS);
       timer.unref?.();
       try {
+        // Not silent: on Windows the installer shows its progress while Drafter is away. Then the
+        // new version starts (`isForceRunAfter`).
         updater.quitAndInstall(false, true);
       } catch (error) {
         fail(errorText(error));
@@ -203,7 +214,7 @@ export class Updates {
     try {
       const updater = await this.deps.createUpdater();
       this.updater = updater;
-      const appImage = this.deps.mode === 'appimage';
+      const downloads = INSTALLS.includes(this.deps.mode);
       // Never automatic: a found version starts the download below, with a token that setEnabled(false) can cancel.
       updater.autoDownload = false;
       updater.autoInstallOnAppQuit = false;
@@ -212,7 +223,7 @@ export class Updates {
         this.installFailed?.(errorText(error));
       });
       updater.on('update-available', (info) => {
-        if (appImage) {
+        if (downloads) {
           this.deps.log(`update: ${info.version} found, downloading`);
           if (this.enabled !== true) return;
           const token = this.deps.newCancellation();
@@ -225,7 +236,7 @@ export class Updates {
         this.make({ version: info.version, how: 'get' });
       });
       updater.on('update-downloaded', (info) => {
-        if (!appImage) return;
+        if (!downloads) return;
         this.downloaded = true;
         this.make({ version: info.version, how: 'restart' });
       });

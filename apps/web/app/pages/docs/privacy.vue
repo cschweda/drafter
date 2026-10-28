@@ -76,9 +76,10 @@ useDocsHead({
     <h2 id="updates">Updates in the desktop app</h2>
     <p>
       When it starts, the desktop app makes a few requests to GitHub: the release information, and,
-      for the AppImage, the update itself, downloaded in the background. Nothing from your scripts
-      is sent. The desktop app never installs or restarts by itself. It says a new version is ready
-      (the AppImage, which waits for you to choose Restart) or available (a <code>.deb</code>, or
+      for the AppImage and the Windows app, the update itself, downloaded in the background.
+      Nothing from your scripts is sent. The desktop app never installs or restarts by itself. It
+      says a new version is ready (the AppImage and the Windows app, which wait for you to choose
+      Restart) or available (a <code>.deb</code>, or
       the app built on a Mac, which offers a link to the release page) and waits for your choice. Turn off
       <strong>Check for updates</strong> in Settings and it makes no network request at all.
     </p>
