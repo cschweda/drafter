@@ -8,7 +8,7 @@ if (!page) throw new Error('The Saving page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    'How Save works in each browser; keeping scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; installing Drafter as an app; and downloading the desktop app for Linux.',
+    'How Save works in each browser; keeping scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; installing Drafter as an app; and downloading the desktop app for Linux and Windows.',
 });
 </script>
 
@@ -239,49 +239,76 @@ useDocsHead({
       <li><strong>Firefox on a computer</strong> can’t install web apps.</li>
     </ul>
 
-    <h2 id="download-linux">Download Drafter for Linux</h2>
+    <h2 id="download">Download the desktop app</h2>
     <p>
-      If you use Linux, Drafter also comes as a desktop app. It is the same editor as this site,
-      in a window of its own, and it adds what a browser can’t promise everyone:
+      Drafter also comes as a desktop app for Linux and Windows. It is the same editor as this
+      site, in a window of its own, and it adds what a browser can’t promise everyone:
     </p>
     <ul>
-      <li>Save writes back to the file you opened, in any desktop environment.</li>
+      <li>Save writes back to the file you opened, whatever browser you would have used.</li>
       <li>The recovery copy lives in the app, where no browser can clear it.</li>
-      <li>
-        You can open a script from a terminal with <code>drafterdev script.fountain</code>, and,
-        with the <code>.deb</code>, by double-clicking a <code>.fountain</code> file (an AppImage
-        doesn’t register file types by itself).
-      </li>
+      <li>You can open a script by double-clicking a <code>.fountain</code> file.</li>
       <li>It has a menu bar.</li>
       <li>
         Drafter checks for a new version when it starts (you can turn this off) and never installs
-        it by itself: the AppImage offers <strong>Restart</strong>, and the <code>.deb</code> offers
-        <strong>Get it</strong>, the release page.
+        it by itself: it offers <strong>Restart</strong> once the new version is downloaded, or
+        <strong>Get it</strong>, the release page, where it can’t update itself.
       </li>
       <li>
         It saves the same plain-text files as this site, so a script moves freely between the two.
         Each keeps its own recovery copy and recent scripts.
       </li>
     </ul>
-    <p>It comes in two packages, for 64-bit Intel and AMD computers. Each is about 100 to 130 MB.</p>
+    <p>
+      <a href="https://github.com/cschweda/drafter/releases/latest">Download the latest release</a>
+      from GitHub. Each download is about 100 to 130 MB.
+    </p>
+
+    <h3 id="download-linux">Linux</h3>
+    <p>Two packages, for 64-bit Intel and AMD computers:</p>
     <ul>
       <li>
         <strong>The <code>.deb</code></strong> is the one to use on Ubuntu 24.04 and later, and on
         other Debian-based systems. On Ubuntu 24.04 and later it is the only package that runs with
-        no extra steps.
+        no extra steps. A <code>.fountain</code> file opens in it with a double-click, and
+        <code>drafterdev script.fountain</code> opens one from a terminal. It offers
+        <strong>Get it</strong> when there is a new version.
       </li>
       <li>
         <strong>The AppImage</strong> is for other distributions. Make it executable and run it. It
-        needs <code>libfuse2</code>. On Ubuntu 24.04 and later it may ask whether to continue
-        without Chromium’s sandbox; the install guide says what to do.
+        needs <code>libfuse2</code>, doesn’t register file types by itself, and updates itself with
+        <strong>Restart</strong>. On Ubuntu 24.04 and later it may ask whether to continue without
+        Chromium’s sandbox; the install guide says what to do.
       </li>
     </ul>
     <p>
-      <a href="https://github.com/cschweda/drafter/releases/latest">Download the latest release</a>
-      from GitHub, and read the
-      <a href="https://github.com/cschweda/drafter/blob/main/docs/desktop-install-linux.md">install guide</a>
-      for the steps. Windows and macOS are coming; macOS will be last, because it needs Apple’s
-      developer account.
+      The
+      <a href="https://github.com/cschweda/drafter/blob/main/docs/desktop-install-linux.md">Linux install guide</a>
+      has the steps.
+    </p>
+
+    <h3 id="download-windows">Windows</h3>
+    <p>
+      An installer for Windows 10 and 11: <code>…-windows-x64-setup.exe</code> for most PCs, and
+      <code>…-windows-arm64-setup.exe</code> for Windows on Arm (a Snapdragon laptop, or Windows in
+      a virtual machine on an Apple silicon Mac). It installs for you alone, without asking for an
+      administrator, adds Drafter to the Start menu, and opens <code>.fountain</code> files with a
+      double-click. It updates itself with <strong>Restart</strong>.
+    </p>
+    <p>
+      The installer isn’t signed yet, so Windows SmartScreen may stop it with “Windows protected
+      your PC”. Choose <strong>More info</strong>, check that the app is Drafter’s installer, then
+      <strong>Run anyway</strong>. The
+      <a href="https://github.com/cschweda/drafter/blob/main/docs/desktop-install-windows.md">Windows install guide</a>
+      has the steps, and how to uninstall.
+    </p>
+
+    <h3 id="download-mac">Mac</h3>
+    <p>
+      There is no Mac download yet: it needs Apple’s developer account to be signed. Until then you
+      can <a href="https://github.com/cschweda/drafter/blob/main/docs/desktop-install-macos.md">build it on your Mac</a>
+      with one command; the guide says how. Drafter in your browser works on a Mac today, and can
+      be installed as an app (above).
     </p>
 
     <p class="docs-note">
