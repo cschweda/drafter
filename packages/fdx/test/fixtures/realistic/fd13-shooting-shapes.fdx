@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- Synthetic test file: written by hand for Drafter, with original text and invented values; not made in Final Draft. Its element names follow the shapes a Final Draft 13 shooting script showed (names only). -->
+<FinalDraft DocumentType="Script" Template="No" Version="6">
+
+  <Content>
+    <Paragraph Type="Outline 1">
+      <Text>Part One: The Orchard</Text>
+    </Paragraph>
+    <Paragraph Number="7" Type="Scene Heading">
+      <SceneProperties Length="2/8" Page="3" Title="">
+        <SceneArcBeats/>
+      </SceneProperties>
+      <Text>EXT. </Text>
+      <Text TagNumber="12">PEAR ORCHARD</Text>
+      <Text> - DAWN</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text TagNumber="31">Ilse</Text>
+      <Text> lifts a </Text>
+      <Text TagNumber="32">ladder</Text>
+      <Text RevisionID="2"> off the </Text>
+      <Text RevisionID="2"></Text>
+      <Text TagNumber="33">cart</Text>
+      <Text>, careful of the </Text>
+      <Text RevisionID="2" TagNumber="34">blossom</Text>
+      <Text>.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A shout from the gate: </Text>
+      <Text Style="AllCaps">young Petr</Text>
+      <Text>, running.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>The cart's axle creaks.</Text>
+      <Text Style="HiddenText">Sound team: a dry, wooden creak.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text Style="Strikeout">Frost on the grass.</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>CUT TO:</Text>
+    </Paragraph>
+    <Paragraph Number="8" Type="Scene Heading">
+      <SceneProperties Length="1/8" Page="3" Title="">
+        <SceneArcBeats/>
+      </SceneProperties>
+      <Text RevisionID="2">OMITTED</Text>
+      <OmittedScene>
+        <Paragraph Type="Scene Heading">
+          <SceneProperties Length="4/8" Page="3" Title="">
+            <SceneArcBeats/>
+          </SceneProperties>
+          <Text TagNumber="13">INT. PACKING SHED - DAY</Text>
+        </Paragraph>
+        <Paragraph Type="Action">
+          <Text TagNumber="31">Ilse</Text>
+          <Text> counts </Text>
+          <Text TagNumber="35">crates</Text>
+          <Text> by the </Text>
+          <Text TagNumber="36">door</Text>
+          <Text>, losing her place twice.</Text>
+        </Paragraph>
+        <Paragraph Type="Character">
+          <Text>ILSE</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>Forty. No. Forty-one.</Text>
+        </Paragraph>
+        <Paragraph Type="Transition">
+          <Text>CUT TO:</Text>
+        </Paragraph>
+        <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.50" RightIndent="7.50" SpaceBefore="12" Spacing="1" StartsNewPage="No" Type="Outline 1">
+          <Text Style="Italic+HiddenText">Part Two: The Market</Text>
+        </Paragraph>
+        <Paragraph Type="Summary">
+          <Text>The pears go to town, and so does the quarrel.</Text>
+        </Paragraph>
+      </OmittedScene>
+    </Paragraph>
+    <Paragraph Number="9" Type="Scene Heading">
+      <SceneProperties Length="3/8" Page="4" Title="Market day">
+        <SceneArcBeats>
+          <CharacterArcBeat Name="ILSE">
+            <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.50" OutlineLevel="0" RightIndent="7.50" SpaceBefore="0" Spacing="1" StartsNewPage="No"/>
+          </CharacterArcBeat>
+        </SceneArcBeats>
+        <AttributedTitle>
+          <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.50" OutlineLevel="0" RightIndent="7.50" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+            <Text AdornmentStyle="0" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">Market day</Text>
+          </Paragraph>
+        </AttributedTitle>
+      </SceneProperties>
+      <Text>EXT. </Text>
+      <Text TagNumber="14">TOWN SQUARE</Text>
+      <Text> - DAY </Text>
+      <Text TagNumber="15">(1952)</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Stalls in rows. Petr sells the bruised ones cheap.</Text>
+    </Paragraph>
+  </Content>
+
+  <Revisions ActiveSet="2" Location="5" RevisionMode="No" RevisionsShown="Active" ShowAllMarks="No" ShowAllSets="No" ShowPageColor="No">
+    <Revision Color="#000000000000" FullRevision="No" ID="1" Mark="*" Name="First draft" PageColor="#FFFFFFFFFFFF" Style=""/>
+    <Revision Color="#00000000FFFF" FullRevision="No" ID="2" Mark="*" Name="Blue pages" PageColor="#C0C0FFFFFFFF" Style=""/>
+  </Revisions>
+
+  <DeletedText>
+    <DeletedTextLocation Offset="214" RevisionID="2"/>
+    <DeletedTextLocation Offset="388" RevisionID="2"/>
+  </DeletedText>
+
+  <LockedPages>
+    <LockedPage Number="3" Suffix=""/>
+  </LockedPages>
+
+</FinalDraft>

@@ -717,6 +717,16 @@ describe('fdx-note', () => {
     expect(found(source, stagePlay)).toHaveLength(3);
   });
 
+  it('says how to restore or drop an omitted scene, and a hidden run or paragraph', () => {
+    const source =
+      '.OMITTED #8#\n\n[[fdx: Omitted: Ilse counts crates.]]\n\nA door[[fdx: Hidden: brass]] opens.\n\nINT. BARN - NIGHT #7#\n\n[[fdx: Hidden paragraph: INT. BARN - NIGHT]]\n';
+    expect(found(source).map((d) => d.message)).toEqual([
+      "This is a scene Final Draft's shooting script omits, kept as a note so it doesn't print. To restore it, take off the note's marks, “[[fdx: Omitted:” and “]]”; to drop it, delete the note.",
+      "Final Draft hid this text, so it doesn't print. To print it, take off the note's marks, “[[fdx: Hidden:” and “]]”; to drop it, delete the note.",
+      "Final Draft hid all the text of the paragraph above this note that it quotes, so it didn't print there. Here it prints, so the paragraph keeps its kind: change or delete it if it shouldn't, then delete the note.",
+    ]);
+  });
+
   it('leaves other notes, an unclosed one, and one in a boneyard alone', () => {
     miss('She waits. [[fdx is a file type]]\n');
     miss('She waits. [[ fdxnote ]]\n');
