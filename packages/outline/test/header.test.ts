@@ -272,10 +272,24 @@ describe('setSceneDetails', () => {
     expect(printed(changed)).toBe(printed(source));
     // Through setSynopsis too.
     expect(synopsis(source, '')).toBe(cleared);
-    // Words after the note are the synopsis's too: without its `=` they would print, so the line goes.
-    expect(synopsis('INT. A - DAY\n\n= [[a note]] the.\n\nAction.\n', '')).toBe(
-      'INT. A - DAY\n\nAction.\n',
-    );
+    // Words around the notes are the synopsis's: they go with its `=`, and every note stays.
+    const shapes: Array<[string, string]> = [
+      ['= Syn. [[Setup: the letter]] more words.', '[[Setup: the letter]]'],
+      ['= [[a note]] the.', '[[a note]]'],
+      ['= /* cut */ Syn. [[Sam: why?]] end.', '/* cut */ [[Sam: why?]]'],
+    ];
+    for (const [line, kept] of shapes) {
+      const before = `INT. A - DAY\n\n${line}\n\nAction.\n`;
+      const after = synopsis(before, '');
+      expect(after).toBe(`INT. A - DAY\n\n${kept}\n\nAction.\n`);
+      expect(details(before, { synopsis: '' })).toBe(after);
+      expect(printed(after)).toBe(printed(before));
+    }
+    // Among lines it would join, where the line of notes would print differently, nothing changes.
+    const joined = 'INT. A - DAY\n\n!LOUD NOISE.\nThe walls shake.\n= [[a note]] the.\n> the. <';
+    expect(synopsis(joined, '')).toBe(joined);
+    // With nothing else on it, the line goes.
+    expect(synopsis('INT. A - DAY\n\n= Syn.\n\nAction.\n', '')).toBe('INT. A - DAY\n\nAction.\n');
   });
 
   test('a value typed in another case is no change', () => {

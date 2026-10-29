@@ -37,25 +37,46 @@ function headerOf(doc: Doc, scene: Scene): number[] {
 
 const endOf = (doc: Doc, block: Block) => contentEnd(doc.source, block.span.to);
 
-/** Whether from `at` to the end of its line (past any note that runs on) there are only notes and spaces. */
-function onlyNotesFrom(doc: Doc, at: number): boolean {
+/** Blocks that never print: synopses and sections are outline marks; notes and boneyards are hidden. */
+const HIDDEN = new Set(['synopsis', 'section', 'note', 'boneyard']);
+
+/** What a parse prints: each block that prints, its kind and its printing lines' text. */
+const printing = (doc: Doc) =>
+  JSON.stringify(
+    doc.blocks.flatMap((b) => {
+      const lines = HIDDEN.has(b.kind) ? [] : b.lines.filter((l) => !l.transparent);
+      return lines.length === 0
+        ? []
+        : [[b.kind, lines.map((l) => l.inline.map((r) => r.text).join(''))]];
+    }),
+  );
+
+/**
+ * The notes and boneyards after `from` on its line (and on the lines a region runs onto), and the
+ * end of the last line they reach.
+ */
+function regionsOnLine(doc: Doc, from: number) {
   const { source } = doc;
-  let pos = at;
-  for (;;) {
-    while (source[pos] === ' ' || source[pos] === '\t') pos++;
-    const region = doc.regions.find((r) => r.kind === 'note' && r.closed && r.span.from === pos);
-    if (region) {
-      pos = region.span.to;
-      continue;
-    }
-    return pos >= source.length || source[pos] === '\n' || source[pos] === '\r';
+  const lineEndAt = (at: number) => {
+    const newline = source.indexOf('\n', at);
+    return contentEnd(source, newline < 0 ? source.length : newline);
+  };
+  let end = lineEndAt(from);
+  const found: Array<{ from: number; to: number }> = [];
+  for (const region of doc.regions) {
+    if (region.span.from <= from || !region.closed) continue;
+    if (region.span.from >= end) break;
+    found.push(region.span);
+    if (region.span.to > end) end = lineEndAt(region.span.to);
   }
+  return { found, end };
 }
 
 /**
  * The changes that make `text` the scene's first synopsis: its text replaced in place, or a new
- * `= text` line at the top of the header. Empty text removes the first synopsis's line, or only its
- * `= text` when only notes follow it there (they stay where they are). The text is
+ * `= text` line at the top of the header. Empty text removes the first synopsis's line, or, when it
+ * holds notes or boneyards, only the `=` and its words, so they stay on the line (or nothing, where
+ * that line would print differently among the lines it joins). The text is
  * written on one line, and can't open a note or a boneyard.
  */
 export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] {
@@ -72,9 +93,18 @@ export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] 
     const note = doc.regions.find((r) => r.span.from > line.span.from && r.span.from < lineEnd);
     const to = note ? note.span.from : lineEnd;
     if (words === '') {
-      // The notes on the line stay, on a line of their own, which prints nothing either.
-      if (note && onlyNotesFrom(doc, note.span.from))
-        return [{ from: line.span.from, to, insert: '' }];
+      // Every note and boneyard on the line stays, one space apart, on a line that prints
+      // nothing; the `=` and the synopsis's words around them go. With none, the line goes.
+      const { found, end } = regionsOnLine(doc, line.span.from);
+      if (found.length > 0) {
+        // Checked by parsing: next to lines it would join (no blank line, or a two-space line),
+        // the line of notes could change what prints, and then nothing changes.
+        const kept = found.map((r) => doc.source.slice(r.from, r.to)).join(' ');
+        const after = doc.source.slice(0, line.span.from) + kept + doc.source.slice(end);
+        return printing(parse(after)) === printing(doc)
+          ? [{ from: line.span.from, to: end, insert: kept }]
+          : [];
+      }
       const removal = removeLine(doc, first.block, 0);
       return removal ? [removal] : [];
     }
