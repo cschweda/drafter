@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-29
+
+**History and Compare.** Drafter now keeps earlier versions of your script as you work: one every 10 minutes of writing, one each time you save or open a file, and one before anything that changes a lot at once (Expand outline, Fix all, Revert to Saved, reloading a changed file, a Final Draft import). **History** lists them; restore any one in one undo (Drafter keeps what you had first), label it, save it as its own file, or delete it. Older snapshots are thinned out over time, and labeled ones are always kept. **Compare** shows what changed between two versions as script pages, with each changed line marked and markers where lines were removed; a Changes list and **N** and **Shift+N** take you from change to change. Snapshots live in your browser and never change your file or your printed pages. Also fixed: in Safari, typing just after clicking a tab or a toolbar or status bar button could go into the script.
+
 ### Added
 
 - `@drafter/compare`, a new package for Compare (Phase 2 design §11.2). `diffLines` gives a shortest line diff of two versions as runs of same, added, and removed lines (half-open ranges on both sides, adjacent runs of one kind merged, and a removal before the addition that replaces it), with a Myers diff written for Drafter in linear space. `changesOf` diffs two texts and gives each change as added, removed, or changed (a removal and the addition beside it), with its lines in both versions, its offsets in the newer text, and the lines it took out. `splitLines` reads `\n` and `\r\n` alike, so a script saved with either line break has no changes against itself. A moved scene is removed where it was and added where it is. Property-tested against a longest common subsequence; two unrelated 5,000-line scripts diff in well under the 2-second budget.
@@ -627,7 +631,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/cschweda/drafter/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/cschweda/drafter/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/cschweda/drafter/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/cschweda/drafter/compare/v0.9.0...v0.10.0
