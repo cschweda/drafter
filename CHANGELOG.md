@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/notes`, a new package for keyed notes (Phase 2 design §5.3). `readNote` reads `[[Head: body]]` into a typed head (a scene field such as `Goal`, a `Setup` or `Payoff` mark, `Card`, an all-capitals category such as `TODO`, or a person: `Sam`, `Sam on “the words”`, `Sam re Ann`), the body, its `#tags`, and whether it is `#resolved`; reading takes any case and spacing, and a URL or a time is never a head. `writeNote` and `fieldNote` write `[[Key: body]]` exactly, in title case with one space, the body on one line, and never closing the note or opening a boneyard; writing and reading any body gives it back (property-tested, and the parser reads what is written as one note). It also holds the scene palette and the text helpers `@drafter/outline` used for its edits, which moved here; `@drafter/outline` exports everything it did.
+
 ### Fixed
 
 - `apps/web`: in Safari, a click on the lower half of an element bar button could do nothing when the bar had just scrolled sideways. Safari's scrollbar floats over the row while it shows, covers the lower half of the buttons, and takes the click. Where scrollbars float, the bar's is hidden now. The bar still scrolls by swipe, trackpad, and the arrow keys, and a browser whose scrollbar takes room below the row keeps it.

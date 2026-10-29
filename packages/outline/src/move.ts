@@ -1,5 +1,5 @@
 import type { Doc, TextChange } from '@drafter/fountain';
-import { contentEnd, hasBlankLine, hasStrayBoneyard } from './scene-index';
+import { contentEnd, hasBlankLine, hasStrayBoneyard, lineBreakOf } from '@drafter/notes';
 import type { OutlineItem, SceneIndex } from './types';
 
 // Moving scenes and sections (Phase 2 design §6.2–6.3). A move is two changes, a delete and an
@@ -21,12 +21,6 @@ export interface Move {
   moved: Array<{ from: number; to: number }>;
   /** The moved heading's offset after the move. */
   at: number;
-}
-
-/** The script's own line break: the first one in it, `\r\n` or `\n`, else `\n`. */
-export function lineBreakOf(source: string): string {
-  const at = source.indexOf('\n');
-  return at > 0 && source[at - 1] === '\r' ? '\r\n' : '\n';
 }
 
 const itemAt = (index: SceneIndex, block: number) => index.items.find((i) => i.block === block);

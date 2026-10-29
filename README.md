@@ -138,6 +138,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 4 (the rest) |
+| `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis and color edits | 2 |
 | `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
 | `@drafter/stats` | Script statistics | 2 |

@@ -1,7 +1,7 @@
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { describe, expect, test } from 'vitest';
-import { readKeyedNote, type Section, sceneIndex } from '../src';
+import { type Section, sceneIndex } from '../src';
 import {
   headings,
   indexOf,
@@ -181,17 +181,5 @@ describe('sceneIndex', () => {
     const play = parse(SAMPLE_STAGE_PLAY);
     expect(sceneIndex(play, screenplay).scenes).toEqual([]);
     expect(sceneIndex(play, stagePlay).scenes).toHaveLength(2);
-  });
-});
-
-describe('readKeyedNote', () => {
-  test.each([
-    ['Color: blue', { key: 'color', body: 'blue' }],
-    ['  COLOR :blue  ', { key: 'color', body: 'blue' }],
-    ['Goal: Margaret wants: everything', { key: 'goal', body: 'Margaret wants: everything' }],
-    ['no head here', null],
-    [': no key', null],
-  ])('%j', (text, expected) => {
-    expect(readKeyedNote(text)).toEqual(expected);
   });
 });

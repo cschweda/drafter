@@ -1,29 +1,5 @@
 import type { Span } from '@drafter/fountain';
 
-/** Drafter's scene colors (Phase 2 design §5.4), written in the file as these words. */
-export type SceneColor =
-  | 'red'
-  | 'orange'
-  | 'yellow'
-  | 'green'
-  | 'teal'
-  | 'blue'
-  | 'purple'
-  | 'pink'
-  | 'gray';
-
-export const SCENE_COLORS: readonly SceneColor[] = [
-  'red',
-  'orange',
-  'yellow',
-  'green',
-  'teal',
-  'blue',
-  'purple',
-  'pink',
-  'gray',
-];
-
 /** Where a scene sits in the pages, from a layout that matches the parse. */
 export interface ScenePages {
   /** The page number it starts on (1-based; the title page is 0). */

@@ -1,8 +1,7 @@
 import type { Block, Doc, Span, TextChange } from '@drafter/fountain';
+import { bodyEnd, contentEnd, hasStrayBoneyard, lineBreakOf, safeLine } from '@drafter/notes';
 import type { Template } from '@drafter/templates';
-import { safeLine } from './keyed';
-import { lineBreakOf } from './move';
-import { bodyEnd, contentEnd, hasStrayBoneyard, sceneIndex, startsScene } from './scene-index';
+import { sceneIndex, startsScene } from './scene-index';
 
 // Expand outline (Phase 2 design §6.5): outline lines become scene stubs. A stub is a stand-in
 // heading, a blank line, and the line as its synopsis. The heading is always the same, never a
