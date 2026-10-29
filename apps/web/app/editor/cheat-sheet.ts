@@ -102,6 +102,23 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     reads: ['action', 'note'],
   },
   {
+    id: 'keyed-notes',
+    name: 'Keyed note',
+    mark: '[[Key: text]]',
+    rule: 'A word and a colon at the start of a note gives it a meaning. Goal, Conflict, Outcome, Shift, and Storyline describe a scene and show on its card; a category in capitals, such as TODO, sorts a note in the Notes tab; a name, such as Sam, marks a note from a reader. Ending a note with #resolved closes it, and other #tags are yours to use.',
+    example:
+      'INT. KITCHEN - NIGHT\n\n[[Goal: Margaret wants the call to end.]]\n[[TODO: Cut the second line. #resolved]]\n[[Sam: Does she know yet?]]',
+    reads: ['scene_heading', 'note'],
+  },
+  {
+    id: 'setups-payoffs',
+    name: 'Setup and payoff',
+    mark: '[[Setup: label]]',
+    rule: 'A [[Setup: label]] where something is planted and a [[Payoff: label]] where it comes back are matched by their label. The Notes tab lists them under Setups & payoffs, and the Problems tab advises about any with no partner. They never print.',
+    example: 'She hides the key. [[Setup: key]]\n\nShe opens the door. [[Payoff: key]]',
+    reads: ['action', 'action'],
+  },
+  {
     id: 'boneyard',
     name: 'Boneyard',
     mark: '/* */',

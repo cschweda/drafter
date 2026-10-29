@@ -1,5 +1,7 @@
 # Notes
 
+> Drafter now has a **Notes** tab of its own (every note and boneyard, with categories, readers, and status) and a **Cards** tab; this module is the small version that reports in the Problems pane.
+
 The notes in the script (`[[like this]]`) listed in the Problems pane with their line numbers, and a
 command that removes them all.
 

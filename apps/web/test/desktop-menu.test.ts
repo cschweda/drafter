@@ -214,3 +214,28 @@ describe('the Outline in the desktop menus', () => {
     });
   });
 });
+
+describe('Cards and notes in the desktop menus', () => {
+  test('puts Show Cards and Show Notes in View, and Scene details, New note, Setup, and Payoff in Edit', () => {
+    const ids = [
+      'show-cards',
+      'show-notes',
+      'scene-details',
+      'new-note',
+      'mark-setup',
+      'mark-payoff',
+    ];
+    registerCommands(ids.map((id) => command(id)));
+    const groups = Object.fromEntries(
+      menuCommands(useCommands().value).map((c) => [c.id, c.group]),
+    );
+    expect(groups).toEqual({
+      'show-cards': 'View',
+      'show-notes': 'View',
+      'scene-details': 'Edit',
+      'new-note': 'Edit',
+      'mark-setup': 'Edit',
+      'mark-payoff': 'Edit',
+    });
+  });
+});
