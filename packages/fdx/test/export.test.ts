@@ -5,6 +5,7 @@ import { builtins } from '@drafter/templates';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { readXml, toFdx, type XmlElement, type XmlNode } from '../src';
+import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const screenplay = builtins['us-screenplay'];
 const play = builtins['stage-play-standard'];
@@ -316,4 +317,27 @@ describe('toFdx', () => {
       { numRuns: 300 },
     );
   });
+});
+
+describe('toFdx on a line of very many styled runs', () => {
+  it('exports it without overflowing the stack', () => {
+    const doc = parse(`${'*a* b '.repeat(250_000)}\n`);
+    const xml = toFdx(doc, builtins['us-screenplay']);
+    expect(xml).toContain('<Text Style="Italic">a</Text>');
+  });
+});
+
+describe('toFdx on many notes', () => {
+  it(
+    'exports notes on their own lines in linear time',
+    () => {
+      const screenplay = builtins['us-screenplay'];
+      const make = (n: number) => parse('[[n]]\n\n'.repeat(n));
+      const { growth, large } = scaling(make, (doc) => toFdx(doc, screenplay), 5_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      expect(toFdx(make(3), screenplay).match(/DrafterNote="Yes"/g)).toHaveLength(3);
+    },
+    SCALING_TIMEOUT,
+  );
 });

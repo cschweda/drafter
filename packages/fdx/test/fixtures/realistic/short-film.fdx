@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- Synthetic test file: written by hand for Drafter, with original text and invented values; not made in Final Draft. -->
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+
+  <Content>
+    <Paragraph Number="1" Type="Scene Heading">
+      <SceneProperties Title="" Summary="Wren cuts a key for a stranger who won't say whose door it opens."/>
+      <Text Color="#000000" Font="Courier" Size="12" Style="">EXT. KWIK KEYS KIOSK - SHOPPING ARCADE - DAY</Text>
+    </Paragraph>
+    <Paragraph Alignment="Left" LeftIndent="1.00" SpaceBefore="1" StartsNewPage="No" Type="Action">
+      <Text Color="#000000" Font="Courier" Size="12" Style="">A booth the size of a phone box, wedged between a nail bar and a shuttered bakery. Inside, </Text>
+      <Text Color="#000000" Font="Courier" Size="12" Style="Bold">WREN MADDOX</Text>
+      <Text Color="#000000" Font="Courier" Size="12" Style=""> (40s, reading glasses on a chain, a burn scar on one thumb) files a blank against the grinder.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A MAN IN A WET RAINCOAT (60s) sets a single brass key on the counter. Old. </Text>
+      <Text Style="Italic">Hand-cut.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Two copies or one?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>RAINCOAT</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(not looking at her)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>One. And I'll wait.</Text>
+    </Paragraph>
+    <Paragraph Type="Shot">
+      <Text>CLOSE ON THE KEY</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A tiny anchor is stamped where the maker's mark should be. Wren turns it over. Her face gives nothing away. Her thumb does: it </Text>
+      <Text Style="Underline">stops</Text>
+      <Text> on the anchor.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Where did you get this?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>RAINCOAT</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Does it matter?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>My dad made this. He's been </Text>
+      <Text Style="Bold+Italic">dead</Text>
+      <Text> nine years.</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>CUT TO:</Text>
+    </Paragraph>
+
+    <Paragraph Number="2" Type="Scene Heading">
+      <SceneProperties Title="" Summary="Wren and her nephew Dov argue over the key; both of them want to try it."/>
+      <Text>INT. WREN'S FLAT - KITCHEN - NIGHT</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Cramped. A radiator ticks. </Text>
+      <Text Style="Bold">DOV</Text>
+      <Text> (17), all elbows, eats cereal out of a mixing bowl. The brass key sits between them on a saucer, like evidence.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DOV</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>So you just kept his key.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>I kept the </Text>
+      <Text Style="Italic">copy</Text>
+      <Text>. He's got the original.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DOV</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(mouth full)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>And you didn't follow him.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>She didn't. She hates that she didn't.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Granddad stamped that anchor on one lock in his whole life. The boathouse at Fenwick Reach.</Text>
+    </Paragraph>
+    <Paragraph>
+      <DualDialogue>
+        <Paragraph Type="Character">
+          <Text>DOV</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>We're going tonight.</Text>
+        </Paragraph>
+        <Paragraph Type="Character">
+          <Text>WREN</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>We are </Text>
+          <Text Style="Bold+Underline">not</Text>
+          <Text> going tonight.</Text>
+        </Paragraph>
+      </DualDialogue>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A beat. Wren reaches for her coat anyway.</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>SMASH CUT TO:</Text>
+    </Paragraph>
+
+    <Paragraph Number="3" StartsNewPage="Yes" Type="Scene Heading">
+      <SceneProperties Title="The boathouse" Summary="The key fits. Someone has been living inside."/>
+      <Text>EXT. FENWICK REACH - BOATHOUSE - NIGHT</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Wind off the estuary. A long timber shed on stilts, half its windows boarded. Wren's torch finds the padlock: brass, green with age, the same anchor.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Dov holds the torch. Wren slides the key home. It turns like silk.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DOV</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(whispering)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Somebody oiled that. Recently.</Text>
+    </Paragraph>
+    <Paragraph Type="General">
+      <Text>The SOUND of water slapping the pilings, close.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Inside: a camp bed, made with hospital corners. A kettle on a gas ring. On the far wall, dozens of keys hang on nails, each with a paper tag.</Text>
+    </Paragraph>
+    <Paragraph Type="Shot">
+      <Text>ANGLE ON THE TAGS</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Every tag carries a date in the same careful hand. The last one is </Text>
+      <Text Style="Bold+Italic+Underline">today's</Text>
+      <Text>.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(barely)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>That's his writing.</Text>
+    </Paragraph>
+
+    <Paragraph Number="4" Type="Scene Heading">
+      <SceneProperties Title=""/>
+      <Text>INT. BOATHOUSE - CONTINUOUS</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A floorboard creaks behind them. The man in the raincoat stands in the doorway, a carrier bag of groceries in one hand.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>RAINCOAT</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>You've got his hands. I watched you file that blank.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Who are you?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>RAINCOAT (CONT'D)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>I kept his locks working. He asked me to, at the end. Somebody had to know where all the doors were.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>He holds out his palm. Wren looks at the key, at Dov, at the wall of tags.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>She puts the key in his hand. Then she takes a blank from her coat pocket and sets it beside it.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>WREN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Teach me the rest.</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>FADE OUT.</Text>
+    </Paragraph>
+  </Content>
+
+  <TitlePage>
+    <HeaderAndFooter Visible="No"/>
+    <Content>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text Color="#000000" Font="Courier" Size="12" Style="Underline">THE SPARE KEY</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text>Written by</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text>Marguerite Osei-Lund</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" LeftIndent="1.00" StartsNewPage="No">
+        <Text>Based on the story "Copies" by Pell Arden</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" LeftIndent="1.00" StartsNewPage="No">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" LeftIndent="1.00" StartsNewPage="No">
+        <Text>Second Draft, 3 March 2026</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" LeftIndent="1.00" StartsNewPage="No">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" LeftIndent="1.00" StartsNewPage="No">
+        <Text>Harrow Lane Pictures</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" LeftIndent="1.00" StartsNewPage="No">
+        <Text>41 Wicket Street, Leeds</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" LeftIndent="1.00" StartsNewPage="No">
+        <Text>m.oseilund@example.com</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+
+  <ElementSettings Type="Action">
+    <FontSpec Color="#000000" Font="Courier" Size="12"/>
+  </ElementSettings>
+  <ElementSettings Type="Character">
+    <FontSpec Color="#000000" Font="Courier" Size="12"/>
+  </ElementSettings>
+
+  <PageLayout BottomMargin="1.00" TopMargin="1.00"/>
+
+  <HeaderAndFooter Visible="Yes">
+    <Header>
+      <Paragraph Type="Header">
+        <Text>The Spare Key - draft two</Text>
+      </Paragraph>
+    </Header>
+  </HeaderAndFooter>
+
+  <SmartType>
+    <Characters>
+      <Character>DOV</Character>
+      <Character>RAINCOAT</Character>
+      <Character>WREN</Character>
+    </Characters>
+    <Transitions>
+      <Transition>CUT TO:</Transition>
+      <Transition>SMASH CUT TO:</Transition>
+    </Transitions>
+  </SmartType>
+
+  <Revisions Current="1">
+    <Revision Color="#000000" ID="1" Name="Draft two"/>
+  </Revisions>
+
+  <Macros>
+    <Macro Name="interior" Text="INT. "/>
+  </Macros>
+
+  <ScriptNotes>
+    <ScriptNote ID="1">
+      <Paragraph Type="General">
+        <Text>Is the anchor too neat? Maybe the stamp is worn, half there.</Text>
+      </Paragraph>
+    </ScriptNote>
+    <ScriptNote ID="2">
+      <Paragraph Type="General">
+        <Text>Give Dov one more beat of wanting to go.</Text>
+      </Paragraph>
+    </ScriptNote>
+  </ScriptNotes>
+
+  <TagData>
+    <Tag Id="t1" Label="brass key">
+      <Ref>tag-ref-0001</Ref>
+    </Tag>
+    <Tag Id="t2" Label="paper tags">
+      <Ref>tag-ref-0002</Ref>
+    </Tag>
+  </TagData>
+</FinalDraft>
