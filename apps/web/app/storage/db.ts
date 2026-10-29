@@ -1,14 +1,32 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { FileRef } from './files';
 import type { Project } from './projects';
+import type { SnapshotReason } from './snapshots';
 
-/** A saved copy of a script's text (technical design §8.4). */
+/**
+ * A saved copy of a script's text (technical design §8.4): the saved row, `saved:<projectId>`, the
+ * text as last saved to its file, as Phase 1 wrote it; or a history snapshot (`storage/snapshots.ts`).
+ * Every field after `createdAt` is optional and unindexed, so they needed no new version, and a row
+ * written before they existed reads as it did.
+ */
 export interface Snapshot {
   id: string;
   projectId: string;
   createdAt: number;
-  source: string;
+  /** The saved row's text, and a history snapshot's where it was kept uncompressed. */
+  source?: string;
+  /** The text, gzip-compressed. */
+  gz?: Uint8Array;
+  /** The writer's; the saved row's 'Saved' stays as it is. */
   label?: string;
+  /** Every history snapshot has one; the saved row has none. */
+  reason?: SnapshotReason;
+  /** A file's name, for 'opened' and 'imported'. */
+  detail?: string;
+  /** `hashText` of the text. */
+  hash?: string;
+  /** `wordsIn` of the text. */
+  words?: number;
 }
 
 /** A user template. Plan 3 creates none; the table is here so no later plan adds a migration. */
