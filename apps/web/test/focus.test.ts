@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { leavesOnEscape } from '../app/utils/focus';
+import { backspaceGoesBack, leavesOnEscape, releaseEditorSelection } from '../app/utils/focus';
 
 /** Dispatches a keydown on `target` and returns what a window listener saw of it. */
 function seen(target: Element, init: KeyboardEventInit = { key: 'Escape' }, prevent = false) {
@@ -86,5 +86,54 @@ describe('leavesOnEscape', () => {
     expect(seen(document.getElementById('editor') as Element)).toBe(true);
     document.body.innerHTML = '<dialog open id="asking"></dialog><div id="editor"></div>';
     expect(seen(document.getElementById('editor') as Element)).toBe(false);
+  });
+});
+
+describe('releaseEditorSelection', () => {
+  function setup() {
+    document.body.innerHTML =
+      '<div class="cm-content" contenteditable="true"><div class="cm-line">She waits.</div></div><div id="panel" tabindex="0"><button>Go</button></div>';
+    const content = document.querySelector('.cm-content') as HTMLElement;
+    const line = content.firstElementChild?.firstChild as Text;
+    const selection = document.getSelection() as Selection;
+    selection.collapse(line, 3);
+    return { content, selection, panel: document.getElementById('panel') as HTMLElement };
+  }
+
+  test('lets go of a selection in the editor when focus goes elsewhere', () => {
+    const { content, selection, panel } = setup();
+    releaseEditorSelection(panel.querySelector('button'), content);
+    expect(selection.rangeCount).toBe(0);
+  });
+
+  test('keeps it when focus goes to the editor, or the selection is elsewhere', () => {
+    const { content, selection, panel } = setup();
+    releaseEditorSelection(content, content);
+    expect(selection.anchorNode && content.contains(selection.anchorNode)).toBe(true);
+    selection.collapse(panel, 0);
+    releaseEditorSelection(panel, content);
+    expect(selection.anchorNode).toBe(panel);
+  });
+});
+
+describe('backspaceGoesBack', () => {
+  const key = (target: Element, init: KeyboardEventInit = { key: 'Backspace' }) => {
+    let result: boolean | undefined;
+    target.addEventListener('keydown', (event) => {
+      result = backspaceGoesBack(event as KeyboardEvent);
+    });
+    target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }));
+    return result;
+  };
+
+  test('is a Backspace outside a text field, with no modifier', () => {
+    document.body.innerHTML =
+      '<div id="panel" tabindex="0"></div><input id="field"><div id="edit" contenteditable="true"><p id="p">a</p></div>';
+    const byId = (id: string) => document.getElementById(id) as HTMLElement;
+    expect(key(byId('panel'))).toBe(true);
+    expect(key(byId('field'))).toBe(false);
+    expect(key(byId('p'))).toBe(false);
+    expect(key(byId('panel'), { key: 'Backspace', metaKey: true })).toBe(false);
+    expect(key(byId('panel'), { key: 'Delete' })).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ import {
   splitLines,
   stepChange,
 } from '@drafter/compare';
-import { parse } from '@drafter/fountain';
+import { type Doc, parse } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
 import { type Scene, sceneIndex } from '@drafter/outline';
 import { builtins, type Template } from '@drafter/templates';
@@ -147,7 +147,7 @@ function create(): CompareSession {
 
   let client: LayoutClient | null = null;
   /** What each layout request was for, so a layout is marked with its own comparison. */
-  const requests = new Map<number, { comparison: Comparison; template: Template }>();
+  const requests = new Map<number, { comparison: Comparison; template: Template; doc: Doc }>();
   let newest = 0;
 
   function endWorker() {
@@ -165,13 +165,12 @@ function create(): CompareSession {
           const asked = requests.get(seq);
           for (const key of requests.keys()) if (key <= seq) requests.delete(key);
           if (!asked || asked.comparison !== current.value) return;
-          const doc = parse(asked.comparison.newer.text);
           pages.value = {
             comparison: asked.comparison,
             layout,
             template: asked.template,
             marks: markPages(layout, asked.comparison.changes),
-            scenes: sceneIndex(doc, asked.template).scenes,
+            scenes: sceneIndex(asked.doc, asked.template).scenes,
           };
           failed.value = false;
         },
@@ -196,9 +195,11 @@ function create(): CompareSession {
       failed.value = true;
       return;
     }
-    const template = builtins[templateIdOf(parse(comparison.newer.text))] as Template;
+    // One parse: the template it names, and the scenes the Changes list names.
+    const doc = parse(comparison.newer.text);
+    const template = builtins[templateIdOf(doc)] as Template;
     newest = client.request(comparison.newer.text, template);
-    requests.set(newest, { comparison, template });
+    requests.set(newest, { comparison, template, doc });
   }
 
   function compare(older: Version, newer: Version) {

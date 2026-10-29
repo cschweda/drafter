@@ -1,5 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
-import { editor, runCommand, setText, showSource, start } from './modules';
+import {
+  editor,
+  expectTypingLeavesScript,
+  runCommand,
+  setText,
+  showSource,
+  start,
+} from './modules';
 
 // Compare (Phase 2 design §11.2): the newer of two versions as pages, changed and added lines with
 // an asterisk, removed lines behind a button, a Changes list, and Next and Previous change (N and
@@ -257,11 +264,10 @@ test.describe('Compare', () => {
   test('offers no edits: Compare is read-only', async ({ page }) => {
     await compareWithNow(page, BASE, BASE.replace('Wind.', 'Wind.\n\nRain.'));
     await expect(panel(page).locator('input, textarea, [contenteditable="true"]')).toHaveCount(0);
-    // Keys typed in it change nothing drawn there.
+    // Keys typed in it change nothing drawn there, and nothing in the script (Safari would type
+    // into the editor), and N still goes to a change.
     const before = await panel(page).textContent();
-    await panel(page).focus();
-    await page.keyboard.type('xyz');
-    await page.keyboard.press('Backspace');
+    await expectTypingLeavesScript(page, panel(page));
     expect(await panel(page).textContent()).toBe(before);
   });
 });

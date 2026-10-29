@@ -63,12 +63,30 @@ async function focusPending() {
   void sayOutline(stop.label);
 }
 
+/** Keys that would edit text somewhere: a character, Backspace, Delete, and Enter off a button. */
+function edits(event: KeyboardEvent): boolean {
+  if (event.ctrlKey || event.metaKey) return false;
+  if (event.key === 'Backspace' || event.key === 'Delete') return true;
+  if (event.key === 'Enter') return !(event.target as Element | null)?.closest('button, summary');
+  return event.key.length === 1 && event.key !== ' ';
+}
+
 // N and Shift+N, while focus is anywhere in the tab, its panel included (the tab has no text input).
+// Compare is read-only, so the other editing keys do nothing here (Space and Enter still press a
+// button).
 function onKeydown(event: KeyboardEvent) {
-  if (event.key !== 'n' && event.key !== 'N') return;
-  if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
-  event.preventDefault();
-  compare.step(event.shiftKey ? -1 : 1);
+  if (event.isComposing) return;
+  if (
+    (event.key === 'n' || event.key === 'N') &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey
+  ) {
+    event.preventDefault();
+    compare.step(event.shiftKey ? -1 : 1);
+    return;
+  }
+  if (edits(event)) event.preventDefault();
 }
 
 let panel: HTMLElement | null = null;

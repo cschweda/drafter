@@ -13,6 +13,7 @@ import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
+import { backspaceGoesBack, releaseEditorSelection } from '~/utils/focus';
 import { COMPARE_TAB, coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
 
 const props = defineProps<{
@@ -27,7 +28,16 @@ const props = defineProps<{
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
 const { project } = useScript();
-const { kind } = useEditor();
+const { kind, view: editorView } = useEditor();
+// Focus coming into a panel, other than to the editor, lets go of the editor's selection in the
+// page, so Safari doesn't type into the script (`releaseEditorSelection`).
+function onPanelFocusin(event: FocusEvent) {
+  releaseEditorSelection(event.target, editorView.contentDOM);
+}
+// With the editor's selection let go, a Backspace in a panel would take WebKit back a page.
+function onPanelKeydown(event: KeyboardEvent) {
+  if (backspaceGoesBack(event)) event.preventDefault();
+}
 const { words, updating: previewing } = useMarkdown();
 const markdown = computed(() => kind.value === 'markdown');
 /** The Script tab is the Preview in a Markdown document. */
@@ -269,6 +279,8 @@ function onKeydown(event: KeyboardEvent, index: number) {
           props.selected === 'compare',
       }"
       :data-tour="props.selected"
+      @focusin="onPanelFocusin"
+      @keydown="onPanelKeydown"
     >
       <SourcePane v-if="props.selected === 'source'" />
       <!-- Keyed by the script as well: a tab keeps the context it is drawn with, so another

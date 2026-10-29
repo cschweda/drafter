@@ -35,3 +35,31 @@ function modalOpen(): boolean {
   // The palette and other dialogs of the page's own are not native elements.
   return !!document.querySelector('[role="dialog"], [role="alertdialog"]');
 }
+
+/**
+ * Whether a keydown is a Backspace that would do nothing where it was pressed but take the page
+ * back (WebKit's Backspace goes back a page outside a text field): not in an input, a text area,
+ * or editable content, and with no modifier.
+ */
+export function backspaceGoesBack(event: KeyboardEvent): boolean {
+  if (event.key !== 'Backspace' || event.ctrlKey || event.metaKey || event.altKey) return false;
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return true;
+  return !target.closest(
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+  );
+}
+
+/**
+ * Lets go of the editor's selection in the page when focus goes to `target`, somewhere other than
+ * the editor (decided 2026-10-29). Safari types into a contenteditable that holds the page's
+ * selection even when focus is elsewhere, so keys pressed in the Outline, Cards, Notes, Problems,
+ * or Compare tab would change the script. CodeMirror keeps its own selection and puts it back in
+ * the page when the editor has focus again, so the cursor is where it was.
+ */
+export function releaseEditorSelection(target: EventTarget | null, content: Element): void {
+  if (target instanceof Node && content.contains(target)) return;
+  const selection = target instanceof Node ? target.ownerDocument?.getSelection() : null;
+  const anchor = selection?.anchorNode;
+  if (selection && anchor && content.contains(anchor)) selection.removeAllRanges();
+}

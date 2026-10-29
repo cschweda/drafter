@@ -20,6 +20,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `apps/web`: Revert to Saved and Restore share one whole-text replacement (`replaceText`): only the part that differs, its own undo step, and no writing time for it. Revert to Saved works as before.
 
+### Fixed
+
+- `apps/web`: in Safari, typing while the Outline, Cards, Notes, Problems, or Compare tab had focus could change the script: the editor's selection stayed in the page, and Safari typed there. A tab other than the Source now lets go of it when it takes focus, and the cursor is where it was when you go back to the editor. Backspace in one of those tabs no longer takes the page back. Compare ignores the other editing keys.
+
 ## [0.12.0] - 2026-10-29
 
 **Cards and notes.** A **Cards** tab shows your scenes as index cards, grouped by section, with each scene's heading, synopsis, color, length, and goal. Edit a synopsis on its card, and move cards by dragging them, with Alt and the arrow keys, or with Move to…, each in one undo. A **Notes** tab lists every note in your script, filed by who wrote it or what it's about (`[[Sam: …]]`, `[[TODO: …]]`, `#story`), with filters, and resolve, reopen, edit, set category, and delete, each one undo; its tab shows how many are open. **Scene details** writes a scene's goal, conflict, outcome, and shift into its header, and the Outline shows each scene's goal. **Setup** and **Payoff** on the element bar mark the threads you plant and pay off, the Notes tab lists them, and Problems says when a setup is never paid off or a field is written twice. None of it changes your printed pages. Also: in Safari, a click on the lower half of an element bar button no longer goes missing.
