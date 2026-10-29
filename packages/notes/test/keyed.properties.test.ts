@@ -38,7 +38,9 @@ const lower = 'abcdefghijklmnopqrstuvwxyzéø';
 const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÉØ';
 const name = fc
   .tuple(word(upper, lower), fc.option(word(upper, `${lower}'.-`), { nil: undefined }))
-  .map(([a, b]) => (b ? `${a} ${b}` : a));
+  .map(([a, b]) => (b ? `${a} ${b}` : a))
+  // A key is never a person's name.
+  .filter((n) => !/^(color|storyline|goal|conflict|outcome|shift|setup|payoff|card)$/i.test(n));
 
 /** A head as written, and the head it reads as. */
 const heads: fc.Arbitrary<[string, Head]> = fc.oneof(

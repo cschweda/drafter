@@ -72,6 +72,51 @@ function nameOf(text: string): string | null {
   return name.length <= MAX_HEAD && HEAD.test(name) ? name : null;
 }
 
+/** Lowercase words a name may hold between its capitalized ones (`Luis de la Cruz`). */
+const PARTICLES = new Set([
+  'de',
+  'da',
+  'del',
+  'della',
+  'di',
+  'du',
+  'la',
+  'le',
+  'van',
+  'von',
+  'der',
+  'den',
+  'ter',
+  'bin',
+  'ibn',
+  'al',
+]);
+
+/** Whether `lower` is a field key, a mark, or `card`. */
+const isKey = (lower: string) =>
+  (FIELD_ORDER as readonly string[]).includes(lower) ||
+  (MARKS as readonly string[]).includes(lower) ||
+  lower === 'card';
+
+/**
+ * A person's name, or null (controller ruling 1): one to four words, each starting with a capital,
+ * except a lowercase particle between two of them. A word with no cased letter (a script such as
+ * Japanese) passes. A key is never a name, so `Goal on “x”` is no head.
+ */
+function personOf(text: string): string | null {
+  const name = nameOf(text);
+  if (name === null || isKey(name.toLowerCase())) return null;
+  const words = name.split(' ');
+  if (words.length > 4) return null;
+  const ok = words.every(
+    (word, i) =>
+      /^[\p{Lu}\p{Lt}]/u.test(word) ||
+      !/[\p{Lu}\p{Ll}\p{Lt}]/u.test(word) ||
+      (i > 0 && i < words.length - 1 && PARTICLES.has(word)),
+  );
+  return ok ? name : null;
+}
+
 /** The head `text` (before the colon) names, or null. `open` is whether the colon has room after it. */
 function headOf(text: string, open: boolean): Head | null {
   if (/[\r\n]/.test(text.trim())) return null;
@@ -88,11 +133,13 @@ function headOf(text: string, open: boolean): Head | null {
   if (!/\p{Ll}/u.test(head) && /\p{Lu}/u.test(head)) return { kind: 'category', name: lower };
   const reply = / re /.exec(head);
   if (reply) {
-    const name = nameOf(head.slice(0, reply.index));
-    const re = nameOf(head.slice(reply.index + 4));
-    if (name && re) return { kind: 'person', name, on: null, re };
+    // `Ann re Bob re Cy` has no head: `Bob re Cy` isn't a name.
+    const name = personOf(head.slice(0, reply.index));
+    const re = personOf(head.slice(reply.index + 4));
+    return name && re ? { kind: 'person', name, on: null, re } : null;
   }
-  return { kind: 'person', name: head, on: null, re: null };
+  const name = personOf(head);
+  return name ? { kind: 'person', name, on: null, re: null } : null;
 }
 
 /** Whether the colon at `colon` is followed by a space or the end. */
@@ -116,7 +163,7 @@ export function readNote(inner: string): KeyedNote {
   let head: Head | null = null;
   let body = inner.trim();
   const quoted = ON.exec(inner);
-  const quotedName = quoted ? nameOf(quoted[1] as string) : null;
+  const quotedName = quoted ? personOf(quoted[1] as string) : null;
   if (quoted && quotedName && openAfter(inner, quoted[0].length - 1)) {
     head = { kind: 'person', name: quotedName, on: quoted[2] as string, re: null };
     body = inner.slice(quoted[0].length).trim();
@@ -143,13 +190,7 @@ const titleCase = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).to
 function writtenHead(head: string): string {
   const text = safeBody(head);
   const lower = collapse(text).toLowerCase();
-  if (
-    (FIELD_ORDER as readonly string[]).includes(lower) ||
-    (MARKS as readonly string[]).includes(lower) ||
-    lower === 'card'
-  ) {
-    return titleCase(lower);
-  }
+  if (isKey(lower)) return titleCase(lower);
   // A quote keeps its words exactly; only the name before it is collapsed.
   const quote = text.search(/["“]/);
   if (quote < 0) return collapse(text);
@@ -159,13 +200,22 @@ function writtenHead(head: string): string {
     .trimStart()}${text.slice(quote)}`;
 }
 
-/** `[[Head: body]]` exactly (`[[body]]` with no head), the body through `safeBody`. */
+/**
+ * `[[Head: body]]` exactly (`[[body]]` with no head, or a blank one), the body through `safeBody`.
+ * Throws a RangeError for a head that wouldn't read back as a head, such as `Note to self` or one
+ * holding a colon: the note would read as the writer's own, with the head in its body.
+ */
 export function writeNote(head: string | null, body: string): string {
   const text = safeBody(body);
   // A body ending in `]` would close the note one early; reading trims the space.
   const safe = text.endsWith(']') ? `${text} ` : text;
-  if (head === null) return `[[${safe}]]`;
-  return `[[${writtenHead(head)}:${safe === '' ? '' : ` ${safe}`}]]`;
+  if (head === null || head.trim() === '') return `[[${safe}]]`;
+  const written = writtenHead(head);
+  const check = readNote(`${written}: x`);
+  if (check.head === null || check.body !== 'x') {
+    throw new RangeError(`“${head}” can't be a note's head.`);
+  }
+  return `[[${written}:${safe === '' ? '' : ` ${safe}`}]]`;
 }
 
 /** `[[Goal: body]]`, the key in title case. */

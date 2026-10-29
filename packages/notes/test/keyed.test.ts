@@ -137,6 +137,49 @@ describe('readNote', () => {
     expect(readNote('  just a thought  ').body).toBe('just a thought');
   });
 
+  test('reads no head from a sentence', () => {
+    expect(readNote('Note to self: x')).toMatchObject({ head: null, body: 'Note to self: x' });
+    expect(head('Why did she leave? Because: x')).toBeNull();
+    expect(head('see: http://a')).toBeNull();
+    expect(head('call me: later')).toBeNull();
+    expect(head('Sam and Ann: x')).toBeNull();
+    expect(head('Ann Bo Cy Di Ed: x')).toBeNull();
+    // A single capitalized word still reads as a person.
+    expect(head('Remember: x')).toEqual({ kind: 'person', name: 'Remember', on: null, re: null });
+  });
+
+  test('reads a capitalized name, with particles between its words, as a person', () => {
+    const person = (name: string, on: string | null = null, re: string | null = null) => ({
+      kind: 'person',
+      name,
+      on,
+      re,
+    });
+    expect(head('Sam: x')).toEqual(person('Sam'));
+    expect(head('Ann Marie: x')).toEqual(person('Ann Marie'));
+    expect(head('Luis de la Cruz: x')).toEqual(person('Luis de la Cruz'));
+    expect(head('Omar al Rashid: x')).toEqual(person('Omar al Rashid'));
+    expect(head("O'Brien: x")).toEqual(person("O'Brien"));
+    expect(head('Jean-Luc: x')).toEqual(person('Jean-Luc'));
+    expect(head('Sam re Ann: x')).toEqual(person('Sam', null, 'Ann'));
+    expect(head('Sam on “x”: y')).toEqual(person('Sam', 'x'));
+    expect(head('田中: x')).toEqual(person('田中'));
+    // A particle doesn't start or end a name.
+    expect(head('de Sam: x')).toBeNull();
+    expect(head('Sam de: x')).toBeNull();
+    expect(head('Sam re ann: x')).toBeNull();
+    expect(head('sam on “x”: y')).toBeNull();
+  });
+
+  test('a field key is never a person, quoting or replying', () => {
+    expect(head('Goal on "x": y')).toBeNull();
+    expect(head('Goal re Ann: y')).toBeNull();
+  });
+
+  test('reads no head from a reply to a reply', () => {
+    expect(head('Ann re Bob re Cy: x')).toBeNull();
+  });
+
   test('reads no head longer than 40 characters', () => {
     const forty = `A${'b'.repeat(39)}`;
     expect(head(`${forty}: hi`)).toEqual({ kind: 'person', name: forty, on: null, re: null });
@@ -190,6 +233,20 @@ describe('writeNote', () => {
     expect(writeNote('Sam', 'see [x]')).toBe('[[Sam: see [x] ]]');
     expect(safeBody('one\r\n\r\ntwo')).toBe('one / two');
     expect(safeLine('[[[ /*/ */*')).toBe('[ [ [ / * / * / *');
+  });
+});
+
+describe('writeNote, heads', () => {
+  test('a blank head writes no head', () => {
+    expect(writeNote('', 'A thought.')).toBe('[[A thought.]]');
+    expect(writeNote('  \t ', 'A thought.')).toBe('[[A thought.]]');
+  });
+
+  test('a head that would not read back throws', () => {
+    expect(() => writeNote('Note to self', 'x')).toThrow(RangeError);
+    expect(() => writeNote('Sam: Ann', 'x')).toThrow(RangeError);
+    expect(() => writeNote('10:30', 'x')).toThrow(RangeError);
+    expect(() => writeNote('Sam]]', 'x')).toThrow(RangeError);
   });
 });
 
