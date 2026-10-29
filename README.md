@@ -5,7 +5,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.10.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 has begun with an **Outline** tab: your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: Final Draft (`.fdx`) import and export, then cards and notes; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+> **Status: v0.10.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 has begun with an **Outline** tab (your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export) and **Final Draft files**: open an `.fdx` as a new script, or export your script as one. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: cards and notes; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
 
 **Drafter for Linux and Windows.** Drafter also comes as a desktop app. See [Drafter for Linux](#drafter-for-linux) and [Drafter for Windows](#drafter-for-windows) for the downloads, how to install and start it, and how it differs from drafter.dev. **On a Mac**, you can [build the same app yourself](#drafter-on-a-mac) with one command until a signed download is ready.
 
@@ -141,7 +141,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis and color edits | 2 |
 | `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
 | `@drafter/stats` | Script statistics | 2 |
-| `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built in Plan FD) |
+| `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built) |
 
 Planned repository layout:
 
@@ -163,7 +163,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev**, with the desktop app for Linux and Windows; a signed macOS download comes later |
-| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline is live (v0.10.0) |
+| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline and Final Draft import and export are built |
 | [3](#phase-3--formats) | Formats: other apps' imports; TV, radio, UK, and novel templates; user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
@@ -205,7 +205,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - The Script tab, with live pagination in a Web Worker.
 - The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
 - Saving like a desktop app: Save and Save As to a `.fountain` file, a warning before leaving with unsaved changes, and an always-on recovery copy in the browser, with a warning when the browser may clear it.
-- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF and `.txt`. On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
+- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF, plain text, and Final Draft (`.fdx`), which Open also reads. On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
 - A template switcher for screenplay and stage play, and a sample script for each.
 - Phones and tablets, with one pane at a time on a phone.
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
@@ -216,7 +216,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 ### Phase 2 — Structure
 
 - Outline, Cards, and Notes tabs, where every change is an edit to the source.
-- Final Draft `.fdx` import and export (moved up from Phase 3), with nothing dropped silently on import.
+- Final Draft `.fdx` import and export (moved up from Phase 3), with nothing dropped silently on import. Built: an import comes in as a new, unsaved script, anything Drafter has no element for becomes a `[[fdx: …]]` note that Problems lists, and the `.fdx` itself is never changed.
 - A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
 - Condense to outline and expand from outline, plus scene reordering with a keyboard equivalent for every drag.
@@ -468,7 +468,7 @@ Drafter's permitted sources:
 | The [Fountain specification](https://fountain.io/syntax) | What each element of a script is, and how it's written in plain text |
 | Industry formatting conventions for screenplays and stage plays | Margins, indents, `(MORE)` and `(CONT'D)`, title pages, and the rest of what a page looks like |
 | General software engineering | Parsing, line breaking, pagination, and browser storage, all common knowledge |
-| `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 2) |
+| `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 2; built from the structure description and hand-made fixtures, real files still to test) |
 | Other applications, used as a writer uses them | Their documentation, and comparing their output with Drafter's |
 | [Courier Prime](https://fonts.google.com/specimen/Courier+Prime) | The typeface: a font under the SIL Open Font License, not code |
 
@@ -500,7 +500,7 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 - **Work from the specification, never from another implementation.** That includes a quick look at how another app splits dialogue or detects a title page. If you've studied another screenwriting application's source in the past, say so in your pull request, so a reviewer can take extra care, and write from the specification, not from memory.
 - **When the specification is silent, decide and write it down.** Add a dated entry to `docs/DECISIONS.md`, and a fixture or test that pins the behavior. Comparing Drafter's output with another app's is fine; reproducing its code or its test cases isn't.
 - **Expect small differences from other tools.** Where the specification is ambiguous, Drafter may read a file differently from another tool. That's a documented decision, not a bug to fix by imitation, and the file stays standard Fountain either way.
-- **Final Draft support comes from the files.** Phase 2's `.fdx` import and export will be built from the XML structure of files a user owns, not from another program's converter.
+- **Final Draft support comes from the files.** The `.fdx` import and export were built from the published description of the file's XML structure in the technical design and from hand-made fixtures, not from another program's converter. Testing against real Final Draft files is still to come.
 - **Dependencies stay out of the domain.** No Fountain parsers and no screenwriting libraries, ever. A new dependency gets an entry in `docs/DEPENDENCIES.md` first, saying why it's needed and confirming it isn't screenwriting-related.
 - **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
 - **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.

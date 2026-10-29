@@ -551,6 +551,8 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 
 ### Plan FD — v0.11.0: Final Draft files
 
+**Status:** built (2026-10-28). Not yet tested against real Final Draft files; see `docs/DEFERRED.md`.
+
 **Scope:** a new `packages/fdx` (`@drafter/fdx`), as technical design §6.3 describes it: **Export as Final Draft (.fdx)** from the Export menu and the palette, and **import** that turns an `.fdx` (opened, or dropped) into Fountain text, which is then parsed like any other script. Nothing is dropped silently: a paragraph type or element Drafter doesn't map comes in as action with a `[[fdx: Type]]` note. The XML is read with a strict parser written for the package (no DOM in a worker, no dependency unless one gets a `docs/DEPENDENCIES.md` row first) that refuses malformed input with a message rather than guessing. Built from `.fdx` files the writer owns, read as XML (the clean-room rule).
 
 **Done when:**

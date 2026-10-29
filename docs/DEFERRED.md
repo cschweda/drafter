@@ -14,3 +14,19 @@ Work that Phase 0 deliberately leaves for later, with the phase it belongs to.
 - **A stage play from a Markdown outline** (when asked for). New screenplay from this outline makes a screenplay; a play's version would write `##` stubs under `#` acts and its metadata block.
 - **More tabs in a very wide pane's row** (when asked for; Phase 2 design §5.8 leaves it to the builder). Today the row is always the four core tabs, one slot, and More.
 - **Final Draft's own notes** (Plan FD, Phase 2; when the maintainer supplies real `.fdx` files). Real Final Draft notes anchor to ranges of a paragraph's text. Export writes a note on its own line as a `General` paragraph with `DrafterNote="Yes"`, and a note inside a line as `[[…]]` in the text; mapping to Final Draft's anchored notes waits for real files to test against.
+
+## Plan FD: Final Draft files
+
+What Plan FD (v0.11.0) left for later. Final Draft's own anchored notes are the item above.
+
+- **Testing against real Final Draft files** (when the maintainer supplies them; the files are never committed). Import and export were built from the structure description in the technical design and from hand-made fixtures. Real files may use elements, attributes, or orderings the fixtures don't, and a round trip through Final Draft itself has not been tried.
+- **Revisions** (when asked for). Final Draft's revision marks and colors are not read or written.
+- **Final Draft's formatting and settings** (when asked for). Page layout, fonts, smart type, headers and footers, and the like are read and listed as ignored on import, and not written on export. Drafter's templates decide the look.
+- **Scene Properties beyond the synopsis** (when asked for). A synopsis on a scene heading comes in. A `Summary` on the outer paragraph of a dual-dialogue pair, and bare text directly inside that paragraph, are dropped without a note.
+- **A visible backslash on some imported lines.** A line from Final Draft that begins with `#`, `=`, `(`, or `~` and would read as another element is written with a `\` in front, because Fountain has no escape for those. It prints, so the writer deletes it, or changes the line.
+- **Small gaps in export.** The space before a note at the end of a line is not put back. A tab or newline inside an attribute value is kept as typed, where XML would turn it into a space. `writeXml` does not check names or nesting depth (its input is always Drafter's own tree), and an element holding only an empty string does not round-trip.
+- **Error offsets.** An `XmlError`'s offset counts characters after line endings are normalized, not in the original file.
+- **Speed on very large exports.** Exporting a note on its own line scans every region of the script for each note, which is quadratic in the number of notes. Nobody has noticed; fix it if a big script is slow.
+- **A shorter `import.ts`.** The importer is about 800 lines; the emphasis writer could move into its own file.
+- **The `.deb` file association.** The Linux package installs a system-wide `*.fdx` glob, which may compete with another application's for Open with. It is offered, never made the default.
+- **Tests.** The round-trip property test runs under the default 5 second limit, which could be tight on a slow CI machine. The import property checks kinds only when nothing was mapped to a note. The phone-width WebKit accessibility specs time out when six workers run at once (the pages have no axe violations); run fewer workers.
