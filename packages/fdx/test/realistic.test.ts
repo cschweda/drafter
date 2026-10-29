@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { type Block, type Doc, parse, print } from '@drafter/fountain';
-import { builtins } from '@drafter/templates';
+import { builtins, resolveRole, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { type FdxImport, fromFdx, IGNORED, readXml, toFdx, type XmlElement } from '../src';
 import { makeFeature } from './fixtures/realistic/make-feature';
@@ -15,7 +15,13 @@ const path = (name: string) =>
   fileURLToPath(new URL(`./fixtures/realistic/${name}`, import.meta.url));
 const read = (name: string) => readFileSync(path(name), 'utf8');
 
-const FILES = ['short-film.fdx', 'edge-cases.fdx', 'revisions.fdx', 'stage-play.fdx'] as const;
+const FILES = [
+  'short-film.fdx',
+  'edge-cases.fdx',
+  'revisions.fdx',
+  'stage-play.fdx',
+  'fd13-shapes.fdx',
+] as const;
 
 const elements = (node: XmlElement) =>
   node.children.filter((c): c is XmlElement => typeof c !== 'string');
@@ -29,37 +35,64 @@ const ownText = (node: XmlElement) => node.children.filter((c) => typeof c === '
 const sceneNumber = (n: string) =>
   /^[\p{L}\p{N}.-]+$/u.test(n.trim()) ? `#${n.trim()}#` : `Number ${n}`;
 
+/** Each paragraph's text in an element, or the element's whole text when it has none. */
+const paragraphTexts = (e: XmlElement) => {
+  const ps = elements(e).filter((c) => c.name === 'Paragraph');
+  return ps.length > 0 ? ps.map(textOf) : [textOf(e)];
+};
+const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
+
 /**
  * Every piece of writing in a file, as import must keep it: each innermost paragraph's runs (and
  * anything nested in them) and its own text, its other child elements, a scene's Title, Summary,
- * and number, what a SceneProperties holds, stray text and elements inside a DualDialogue, the
- * title page's paragraphs and its other children, elements in a Content that aren't paragraphs,
- * and every element under the root that isn't one of the settings `IGNORED` names. Elements
- * `IGNORED` names are skipped wherever they are. Blank pieces are left out.
+ * and number, what a SceneProperties holds (a styled title that differs from the Title, each arc
+ * beat's character and text), a paragraph's alternates that differ from its text, stray text and
+ * elements inside a DualDialogue, the title page's paragraphs and its other children, elements in
+ * a Content that aren't paragraphs, each beat card's title and text, each script note's writer and
+ * text, the alternates no paragraph names, and every other element under the root that isn't one
+ * of the settings `IGNORED` names. Elements `IGNORED` names are skipped wherever they are. Blank
+ * pieces are left out.
  */
 function writing(root: XmlElement): string[] {
   const out: string[] = [];
+  const alts = new Map<string, string>();
+  const used = new Set<string>();
+  for (const top of elements(root))
+    if (top.name === 'AltCollection')
+      for (const alt of elements(top)) alts.set(alt.attrs.Id ?? '', paragraphTexts(alt).join('\n'));
   const element = (e: XmlElement) => {
     if (!IGNORED.has(e.name)) out.push(textOf(e));
   };
   const paragraph = (p: XmlElement) => {
-    out.push(
-      elements(p)
-        .filter((c) => c.name === 'Text')
-        .map(textOf)
-        .join(''),
-      ownText(p),
-    );
+    const runs = elements(p)
+      .filter((c) => c.name === 'Text')
+      .map(textOf)
+      .join('');
+    out.push(runs, ownText(p));
     if (p.attrs.Number) out.push(sceneNumber(p.attrs.Number));
     for (const c of elements(p)) {
-      if (c.name === 'Text') continue;
+      if (c.name === 'Text' || c.name === 'Picture') continue;
       if (c.name === 'DualDialogue') {
         out.push(ownText(c));
         for (const inner of elements(c))
           inner.name === 'Paragraph' ? paragraph(inner) : element(inner);
       } else if (c.name === 'SceneProperties') {
         out.push(c.attrs.Title ?? '', c.attrs.Summary ?? '', ownText(c));
-        elements(c).forEach(element);
+        for (const d of elements(c)) {
+          if (d.name === 'AttributedTitle') {
+            const text = paragraphTexts(d).join(' ');
+            if (oneLine(text) !== oneLine(c.attrs.Title ?? '')) out.push(text);
+          } else if (d.name === 'SceneArcBeats') {
+            for (const beat of elements(d))
+              out.push(beat.attrs.Name ?? '', ...paragraphTexts(beat));
+          } else element(d);
+        }
+      } else if (c.name === 'Alts') {
+        for (const id of elements(c).map((a) => textOf(a).trim())) {
+          used.add(id);
+          const text = alts.get(id) ?? '';
+          if (oneLine(text) !== oneLine(runs)) out.push(text);
+        }
       } else element(c);
     }
   };
@@ -70,6 +103,17 @@ function writing(root: XmlElement): string[] {
     if (top.name === 'Content') content(top);
     else if (top.name === 'TitlePage') {
       for (const c of elements(top)) c.name === 'Content' ? content(c) : element(c);
+    } else if (top.name === 'ListItems') {
+      for (const item of elements(top)) {
+        const body = elements(item).find((c) => c.name === 'Content');
+        out.push(item.attrs.Title ?? '', ...(body ? paragraphTexts(body) : []));
+      }
+    } else if (top.name === 'ScriptNotes') {
+      for (const note of elements(top))
+        out.push(note.attrs.WriterName ?? '', ...paragraphTexts(note));
+    } else if (top.name === 'AltCollection') {
+      for (const alt of elements(top))
+        if (!used.has(alt.attrs.Id ?? '')) out.push(...paragraphTexts(alt));
     } else element(top);
   }
   return out.filter((t) => t.trim() !== '');
@@ -97,6 +141,34 @@ function imported(name: string): FdxImport & { doc: Doc; root: XmlElement } {
 
 const blockText = (b: Block) => b.lines.map((l) => l.inline.map((r) => r.text).join('')).join('\n');
 const kindOf = (doc: Doc, text: string) => doc.blocks.find((b) => blockText(b) === text)?.kind;
+
+/**
+ * Each block's kind and text, with a scene's synopses moved up to right after its heading: export
+ * gathers them onto the heading (Plan FD ruling 6), so one written later in the scene comes back
+ * there, the one difference the round trip allows.
+ */
+function sceneOrder(doc: Doc, template: Template): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
+  let scene = -1;
+  for (const b of doc.blocks) {
+    const item: [string, string] = [b.kind, blockText(b)];
+    const heading =
+      b.kind === 'scene_heading' ||
+      (b.kind === 'section' && resolveRole(template, b, null) === 'scene_heading_play');
+    if (heading) {
+      scene = out.length;
+      out.push(item);
+    } else if (b.kind === 'synopsis' && scene >= 0) {
+      let at = scene + 1;
+      while (out[at]?.[0] === 'synopsis') at++;
+      out.splice(at, 0, item);
+    } else {
+      if (b.kind === 'section') scene = -1;
+      out.push(item);
+    }
+  }
+  return out;
+}
 
 describe.each(FILES)('%s', (name) => {
   it('imports, and its text prints back exactly', () => {
@@ -138,9 +210,7 @@ describe.each(FILES)('%s', (name) => {
     const again = parse(fromFdx(x1).text);
     const x2 = toFdx(again, template);
     expect(readXml(x2)).toEqual(readXml(x1));
-    expect(again.blocks.map((b) => [b.kind, blockText(b)])).toEqual(
-      doc.blocks.map((b) => [b.kind, blockText(b)]),
-    );
+    expect(sceneOrder(again, template)).toEqual(sceneOrder(doc, template));
   });
 });
 
@@ -190,7 +260,7 @@ describe('short-film.fdx', () => {
   it('notes the General paragraph and the script notes, and ignores breakdown tags', () => {
     expect(film.mapped).toEqual([
       { type: 'General', count: 1 },
-      { type: 'ScriptNotes', count: 1 },
+      { type: 'Script note', count: 2 },
     ]);
     expect(film.ignored).toContain('TagData');
     expect(film.text).not.toContain('tag-ref-0001');
@@ -310,7 +380,7 @@ describe('revisions.fdx', () => {
   it('reads revised text as text, and the revision sets as settings', () => {
     expect(rev.text).toContain('Forty sacks out. *Thirty-one* paid for.');
     expect(rev.ignored).toEqual(expect.arrayContaining(['Revisions', 'HeaderAndFooter']));
-    expect(rev.mapped).toEqual([{ type: 'ScriptNotes', count: 1 }]);
+    expect(rev.mapped).toEqual([{ type: 'Script note', count: 1 }]);
   });
 });
 
@@ -331,6 +401,55 @@ describe('stage-play.fdx', () => {
     expect(kindOf(doc, '(gently)')).toBe('parenthetical');
     expect(kindOf(doc, 'THE END')).toBe('centered');
     expect(play.title).toBe('HABERDASHERY A Play in Two Acts');
+  });
+});
+
+describe('fd13-shapes.fdx', () => {
+  const fd = imported('fd13-shapes.fdx');
+  const { doc } = fd;
+
+  it('reads outline paragraphs as sections, summaries as synopses, and notes as notes', () => {
+    const sections = doc.blocks.flatMap((b) =>
+      b.kind === 'section' ? [[b.sem.depth, blockText(b)]] : [],
+    );
+    expect(sections).toEqual([
+      [1, 'Act One: The Lock'],
+      [2, 'The night boat'],
+      [3, 'Oda hears an engine'],
+    ]);
+    expect(kindOf(doc, 'Oda keeps the canal lock; a boat arrives that should not exist.')).toBe(
+      'synopsis',
+    );
+    expect(kindOf(doc, 'Fenn is not who he says.')).toBe('synopsis');
+    expect(fd.text).toContain('\n\n[[Lock diagram goes here; ask the art department.]]\n\n');
+  });
+
+  it('keeps arc beats, alternates, beats, and script notes, and never the image', () => {
+    expect(fd.mapped).toEqual([
+      { type: 'Arc beat', count: 1 },
+      { type: 'Alternate', count: 3 },
+      { type: 'Picture', count: 1 },
+      { type: 'AttributedTitle', count: 1 },
+      { type: 'End of Act', count: 1 },
+      { type: 'Beat', count: 2 },
+      { type: 'Script note', count: 2 },
+    ]);
+    expect(fd.text).toContain(
+      '[[fdx: Arc beat, ODA: Decides to open the gates against the rules.]]',
+    );
+    expect(fd.text).toContain(
+      "[[fdx: Beat, The boat that shouldn't exist: Registered to a yard that closed in the sixties. Its paint is still wet.]]",
+    );
+    expect(fd.text).toContain('[[S. Lindqvist: Is the fog doing too much work here?]]');
+    expect(fd.text).not.toContain('aW52');
+    expect(fd.ignored).toEqual(expect.arrayContaining(['Images', 'AttributedTitle']));
+    // The current text of each paragraph with alternates is the script's text; the alternate that
+    // repeats it is not noted again.
+    expect(kindOf(doc, 'Fog on the water. A diesel engine coughs somewhere upstream.')).toBe(
+      'action',
+    );
+    expect(fd.text.match(/Fog on the water/g)).toHaveLength(1);
+    expect(fd.text.match(/cargo that won't keep/g)).toHaveLength(1);
   });
 });
 

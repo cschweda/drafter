@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- Synthetic test file: written by hand for Drafter, with original text and invented values; not made in Final Draft. Its element names follow the shapes a Final Draft 13 file showed (names only). -->
+<FinalDraft DocumentType="Script" Template="No" Version="6">
+
+  <Content>
+    <Paragraph Type="Outline 1 (Acts)">
+      <Text>Act One: The Lock</Text>
+    </Paragraph>
+    <Paragraph Type="Summary">
+      <Text>Oda keeps the canal lock; a boat arrives that should not exist.</Text>
+    </Paragraph>
+    <Paragraph Type="Outline 2 (Sequences)">
+      <Text>The night boat</Text>
+    </Paragraph>
+    <Paragraph OutlineLevel="3" Type="Outline 3 (Scenes)">
+      <Text>Oda hears an engine</Text>
+    </Paragraph>
+    <Paragraph Number="1" Type="Scene Heading">
+      <SceneProperties Title="The engine">
+        <AttributedTitle>
+          <Paragraph>
+            <Text Style="Bold">The engine</Text>
+          </Paragraph>
+        </AttributedTitle>
+        <SceneArcBeats>
+          <CharacterArcBeat Name="ODA">
+            <Paragraph>
+              <Text>Decides to open the gates against the rules.</Text>
+            </Paragraph>
+          </CharacterArcBeat>
+          <CharacterArcBeat Name="FENN"/>
+        </SceneArcBeats>
+      </SceneProperties>
+      <Text>EXT. CANAL LOCK - NIGHT</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Alts Current="0">
+        <AltId>alt-01</AltId>
+        <AltId>alt-02</AltId>
+      </Alts>
+      <Text>Fog on the water. A diesel engine coughs somewhere upstream.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Picture Height="120" Id="pic-01" Width="200"/>
+    </Paragraph>
+    <Paragraph Type="Note">
+      <Text>Lock diagram goes here; ask the art department.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>FENN (O.S.)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Alts Current="1">
+        <AltId>alt-03</AltId>
+        <AltId>alt-04</AltId>
+      </Alts>
+      <Text>Open up! I've a cargo that won't keep.</Text>
+    </Paragraph>
+    <Paragraph Type="Summary">
+      <Text>Fenn is not who he says.</Text>
+    </Paragraph>
+    <Paragraph>
+      <DualDialogue>
+        <Paragraph Type="Character">
+          <Text>ODA</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>Nobody goes through after ten.</Text>
+        </Paragraph>
+        <SpellCheckIgnoreLists>
+          <IgnoredWord>Fenn</IgnoredWord>
+        </SpellCheckIgnoreLists>
+        <Paragraph Type="Character">
+          <Text>FENN</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>Then make it nine.</Text>
+        </Paragraph>
+      </DualDialogue>
+    </Paragraph>
+    <Paragraph Number="2" Type="Scene Heading">
+      <SceneProperties Title="">
+        <AttributedTitle>
+          <Paragraph>
+            <Text>Fenn's cargo, a title only the child holds</Text>
+          </Paragraph>
+        </AttributedTitle>
+      </SceneProperties>
+      <Text>INT. LOCK-KEEPER'S HUT - CONTINUOUS</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Oda turns the windlass. The hut's one bulb dims with every turn.</Text>
+    </Paragraph>
+    <Paragraph Type="End of Act">
+      <Text>END OF ACT ONE</Text>
+    </Paragraph>
+  </Content>
+
+  <TitlePage>
+    <Content>
+      <Paragraph Alignment="Center">
+        <Text>NIGHT LOCK</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>by</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>Saoirse Lindqvist</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+
+  <DocumentRef Id="doc-01"/>
+  <ElementSettings Type="Action">
+    <FontSpec Color="#000000" Font="Courier" Size="12"/>
+  </ElementSettings>
+  <PageLayout BottomMargin="1.00" TopMargin="1.00"/>
+  <HeaderAndFooter Visible="Yes">
+    <Header>
+      <Paragraph Type="Header">
+        <Text>Night Lock - outline draft</Text>
+      </Paragraph>
+    </Header>
+  </HeaderAndFooter>
+  <Actors>
+    <Actor Name="Voice A"/>
+  </Actors>
+  <Cast>
+    <Member Actor="Voice A" Character="ODA"/>
+  </Cast>
+  <CastList/>
+  <CharacterHighlighting Enabled="No"/>
+  <ScriptNavigatorPreferences Mode="List"/>
+  <Writers>
+    <Writer Name="S. Lindqvist">first pass</Writer>
+  </Writers>
+  <WriterMarkup Visible="No"/>
+  <Navigator>
+    <Tab>Scenes</Tab>
+  </Navigator>
+  <Outlines>
+    <Outline Name="Acts">invented outline settings</Outline>
+  </Outlines>
+  <TargetScriptLength>95</TargetScriptLength>
+  <Characters>
+    <Character Name="ODA">
+      <Trait>stubborn, kind to dogs</Trait>
+    </Character>
+  </Characters>
+
+  <AltCollection>
+    <Alt Id="alt-01">
+      <Paragraph Type="Action">
+        <Text>Fog on the water. A diesel engine coughs somewhere upstream.</Text>
+      </Paragraph>
+    </Alt>
+    <Alt Id="alt-02">
+      <Paragraph Type="Action">
+        <Text>Thick fog. Upstream, an engine where no engine should be.</Text>
+      </Paragraph>
+    </Alt>
+    <Alt Id="alt-03">
+      <Paragraph Type="Dialogue">
+        <Text>Let me through, keeper.</Text>
+      </Paragraph>
+    </Alt>
+    <Alt Id="alt-04">
+      <Paragraph Type="Dialogue">
+        <Text>Open up! I've a cargo that won't keep.</Text>
+      </Paragraph>
+    </Alt>
+    <Alt Id="alt-99">
+      <Paragraph Type="Action">
+        <Text>An alternate line no paragraph points to.</Text>
+      </Paragraph>
+    </Alt>
+  </AltCollection>
+
+  <ListItems>
+    <ListItem Color="#336699" Id="beat-01" Title="The boat that shouldn't exist" Type="Beat">
+      <SubordinateTo Id="beat-00"/>
+      <Content>
+        <Paragraph>
+          <Text>Registered to a yard that closed in the sixties.</Text>
+        </Paragraph>
+        <Paragraph>
+          <Text>Its paint is still wet.</Text>
+        </Paragraph>
+      </Content>
+    </ListItem>
+    <ListItem Color="#993366" Id="beat-02" Title="" Type="Beat">
+      <Content>
+        <Paragraph>
+          <Text>Oda finds her father's handwriting in the boat's log.</Text>
+        </Paragraph>
+      </Content>
+    </ListItem>
+  </ListItems>
+
+  <ScriptNotes>
+    <ScriptNote Color="#FFCC00" Id="note-01" Range="120,168" WriterName="S. Lindqvist">
+      <Paragraph>
+        <Text>Is the fog doing too much work here?</Text>
+      </Paragraph>
+    </ScriptNote>
+    <ScriptNote Color="#FFCC00" Id="note-02" Range="300,341">
+      <Paragraph>
+        <Text>Fenn needs a reason to say nine.</Text>
+      </Paragraph>
+    </ScriptNote>
+  </ScriptNotes>
+
+  <Images>
+    <Image Id="pic-01" Length="32" Path="lock-diagram.png">aW52ZW50ZWQgaW1hZ2UgYnl0ZXMgZm9yIGEgdGVzdA==</Image>
+  </Images>
+</FinalDraft>
