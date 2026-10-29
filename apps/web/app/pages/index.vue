@@ -175,6 +175,7 @@ onBeforeUnmount(() => {
     <OutlineAnnouncer />
     <TreatmentDialog />
     <SceneDetailsDialog />
+    <NewNoteDialog />
     <SettingsDialog />
     <StatsDialog />
     <AppTour />

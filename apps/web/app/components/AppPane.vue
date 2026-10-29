@@ -8,6 +8,8 @@ import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
+import { openCount } from '~/notes/filter';
+import { useNotes } from '~/notes/use-notes';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import { coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
@@ -47,8 +49,15 @@ const core = computed(() => {
   const own = TABS.find((tab) => tab.id === props.selected);
   return own && !tabs.includes(own) ? [...tabs, own] : tabs;
 });
+// The Notes tab's badge is the open notes in My notes and Readers (Call 15), named "Notes, 3 open".
+const { entries: noteEntries } = useNotes();
+const openNotes = computed(() => openCount(noteEntries.value));
 const others = computed<Tab[]>(() => [
-  ...viewTabs(kind.value),
+  ...viewTabs(kind.value).map((tab) =>
+    tab.id === 'notes' && openNotes.value > 0
+      ? { ...tab, badge: String(openNotes.value), badgeName: `${openNotes.value} open` }
+      : tab,
+  ),
   ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
 ]);
 const row = computed(() => tabRow(core.value, others.value, props.selected, last.value));
@@ -89,11 +98,17 @@ const tabButtons = ref<HTMLButtonElement[]>([]);
 // it here, in the slot, and focus goes to its tab rather than back to More.
 const moreItems = computed<DropdownMenuItem[]>(() =>
   moreTabs.value.map((tab) => ({
-    label: tab.badge ? `${tab.label} ${tab.badge}` : tab.label,
+    label: tabName(tab),
     onSelect: () => chooseMore(tab.id),
   })),
 );
 let chosenTab: TabId | null = null;
+
+/** A tab's name with its badge: "Notes, 3 open". */
+function tabName(tab: Tab): string {
+  if (!tab.badge) return tab.label;
+  return `${tab.label}, ${tab.badgeName ?? tab.badge}`;
+}
 
 function chooseMore(tab: TabId) {
   last.value = tab;
@@ -142,12 +157,13 @@ function onKeydown(event: KeyboardEvent, index: number) {
         :aria-selected="tab.id === props.selected ? 'true' : 'false'"
         :aria-controls="props.shown.includes(tab.id) ? `panel-${tab.id}` : undefined"
         :tabindex="tab.id === props.selected ? 0 : -1"
+        :aria-label="tab.badge ? tabName(tab) : undefined"
         @click="emit('choose', tab.id)"
         @keydown="onKeydown($event, index)"
       >
         {{ labelOf(tab) }}
         <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
-        <span v-else-if="tab.badge" class="badge">{{ tab.badge }}</span>
+        <span v-else-if="tab.badge" class="badge" aria-hidden="true">{{ tab.badge }}</span>
       </button>
     </div>
     <MenuButton
@@ -192,7 +208,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <template v-else-if="props.selected === 'cards'">
         <CardsSlim />
       </template>
-      <template v-else-if="props.selected === 'notes'" />
+      <template v-else-if="props.selected === 'notes'">
+        <NotesSlim />
+      </template>
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
         <template v-if="props.selected === 'source'">
@@ -254,8 +272,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <ScriptPane v-else-if="props.selected === 'script'" />
       <OutlinePane v-else-if="props.selected === 'outline'" />
       <CardsPane v-else-if="props.selected === 'cards'" />
-      <!-- The Notes list comes with the rest of the notes (Plan B, Task 8). -->
-      <p v-else-if="props.selected === 'notes'" class="placeholder">The Notes list isn’t here yet.</p>
+      <NotesPane v-else-if="props.selected === 'notes'" />
       <ProblemsPane v-else />
     </div>
   </section>
@@ -393,11 +410,6 @@ function onKeydown(event: KeyboardEvent, index: number) {
 }
 .tab.on .badge {
   background: var(--chrome);
-}
-.placeholder {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
 }
 .fix-all {
   min-height: 24px;

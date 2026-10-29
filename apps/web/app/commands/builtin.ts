@@ -31,6 +31,7 @@ import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
+import { openNewNote } from '~/notes/use-notes';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
@@ -473,6 +474,11 @@ export function registerBuiltinCommands(): void {
     },
     'move-scene-up': moveScene('up'),
     'move-scene-down': moveScene('down'),
+    'new-note': {
+      enabled: () => isFountain() && useOutline().readOnly.value === null,
+      why: () => useOutline().readOnly.value ?? undefined,
+      run: () => openNewNote(),
+    },
     'scene-details': {
       // On in a read-only tab too: the form opens read-only (Save says why).
       enabled: () => isFountain() && !!sceneAtCursor(),

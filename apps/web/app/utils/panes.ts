@@ -18,6 +18,8 @@ export interface Tab {
   label: string;
   /** A count drawn beside the label, as Problems has. */
   badge?: string;
+  /** What the badge means, for the tab's name: `3 open` makes the name "Notes, 3 open". */
+  badgeName?: string;
 }
 
 /** The core tabs, always in the row (Phase 2 design §5.8). A module adds its own after them while it is on. */

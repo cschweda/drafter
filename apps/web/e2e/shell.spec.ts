@@ -309,7 +309,8 @@ test.describe('the tab row', () => {
     await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
     await expect(menu(page).getByRole('menuitem')).toHaveText([
       'Cards',
-      'Notes',
+      // The sample's open notes are counted in Notes' name.
+      /^Notes, \d+ open$/,
       /^(Scenes|Cast)$/,
       /^(Scenes|Cast)$/,
     ]);

@@ -105,7 +105,7 @@ test.describe('script modules', () => {
     await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
       'Cards',
-      'Notes',
+      /^Notes, \d+ open$/,
     ]);
     await page.keyboard.press('Escape');
     await expect(page.getByText('Fixture Info:')).toHaveCount(0);

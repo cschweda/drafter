@@ -84,6 +84,14 @@ const groups = shortcutGroups(COMMAND_DATA);
           <kbd>Alt+↓</kbd> move it a row up or down (<kbd>⌥</kbd> on a Mac).
         </li>
         <li>
+          In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and
+          <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. On a note, <kbd>Enter</kbd>
+          goes to it in the Source, <kbd>E</kbd> edits it in place (<kbd>Enter</kbd> saves,
+          <kbd>Esc</kbd> cancels), <kbd>R</kbd> resolves or reopens it, <kbd>C</kbd> sets its
+          category, and <kbd>Delete</kbd> (or <kbd>Backspace</kbd>) deletes it. The context-menu key
+          or <kbd>Shift+F10</kbd> opens the note’s menu.
+        </li>
+        <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>

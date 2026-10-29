@@ -15,6 +15,7 @@ export {
   type FieldKey,
   fieldNote,
   type Head,
+  isTagWord,
   type KeyedNote,
   type MarkKey,
   normalizeLabel,
