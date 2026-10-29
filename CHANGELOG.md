@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- With two panes side by side, the first line of text in each now starts at the same height, and the Source no longer starts with an empty band above a title page.
+- With two panes side by side, the first line of text in each now starts at the same height.
 
 ## [0.13.0] - 2026-10-29
 
