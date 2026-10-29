@@ -35,6 +35,9 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
         // Named calls only (Task 2's files): no ipcRenderer, nothing else.
         files: Object.keys(bridge?.files ?? {}).sort(),
         modules: Object.keys(bridge?.modules ?? {}).sort(),
+        updates: Object.keys(bridge?.updates ?? {}).sort(),
+        // For About Drafter: plain strings, nothing to call.
+        runtime: Object.entries(bridge?.runtime ?? {}).map(([k, v]) => [k, typeof v]),
         keys: Object.keys(bridge ?? {}).sort(),
       };
     }),
@@ -44,6 +47,12 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
     files: ['pathOfDropped', 'read', 'realPath', 'showOpen', 'showSave', 'watch', 'write'],
     // The modules folder: its list, and the origins agreed to for a module. Nothing more.
     modules: ['list', 'setNetwork'],
+    updates: ['check', 'install', 'onAvailable', 'openReleasePage', 'setEnabled'],
+    runtime: [
+      ['arch', 'string'],
+      ['electron', 'string'],
+      ['chrome', 'string'],
+    ],
     keys: [
       'backToEditor',
       'files',
@@ -52,6 +61,7 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
       'onCloseRequest',
       'onOpenFile',
       'platform',
+      'runtime',
       'updates',
       'version',
     ],

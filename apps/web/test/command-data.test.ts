@@ -41,6 +41,19 @@ describe('the command data', () => {
     }
   });
 
+  test('has About Drafter, Check for updates, and a sample script of each kind in Help', () => {
+    const help = COMMAND_DATA.filter((c) => c.group === 'Help').map((c) => [c.id, c.title]);
+    expect(help).toEqual(
+      expect.arrayContaining([
+        ['about-drafter', 'About Drafter'],
+        ['check-for-updates', 'Check for updates…'],
+        ['sample-script-screenplay', 'Sample script: Screenplay'],
+        ['sample-script-stage-play', 'Sample script: Stage play'],
+        ['sample-script-markdown', 'Sample script: Markdown'],
+      ]),
+    );
+  });
+
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
       '/docs/fountain/',

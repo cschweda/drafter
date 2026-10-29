@@ -258,6 +258,27 @@ describe('the first New of a kind', () => {
   });
 });
 
+describe('Help’s sample scripts', () => {
+  test('one opened as a new script is not a meeting with the annotated sample, nor the writer’s own of that kind', async () => {
+    const t = await visit();
+    const text =
+      'Title: Sample: Stage play\n\n## Scene 1\n\nA bench.\n\n/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/\n';
+    const made = await t.session.addScript(text, {
+      kind: 'fountain',
+      baseline: text,
+      sampleScript: 'stage-play',
+    });
+    await t.session.open(made.id);
+    expect(t.text()).toBe(text);
+    expect(t.session.project.value?.sampleScript).toBe('stage-play');
+    expect(t.session.project.value?.sample).toBeUndefined();
+    // Opened unchanged, with no file.
+    expect(t.session.dirty.value).toBe(false);
+    await t.session.newScript('stage-play');
+    expect(t.text()).toBe(t.SAMPLE_STAGE_PLAY);
+  });
+});
+
 describe('the Markdown sample', () => {
   test('opens as a Markdown sample, and Reset sample puts it back', async () => {
     const t = await visit();

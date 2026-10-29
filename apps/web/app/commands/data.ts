@@ -117,6 +117,16 @@ export const COMMAND_DATA: readonly CommandData[] = [
   ...HELP_PAGES.map(
     (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
   ),
+  // Help → Sample scripts: a tiny sample of each kind, opened as a new script of the writer's own.
+  ...SAMPLES.map(
+    (sample): CommandData => ({
+      id: `sample-script-${sample.kind}`,
+      title: `Sample script: ${sample.name}`,
+      group: 'Help',
+    }),
+  ),
+  { id: 'check-for-updates', title: 'Check for updates…', group: 'Help' },
+  { id: 'about-drafter', title: 'About Drafter', group: 'Help', icon: 'i-lucide-info' },
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },
   { id: 'export-md', title: 'Export as Markdown file', group: 'File' },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },

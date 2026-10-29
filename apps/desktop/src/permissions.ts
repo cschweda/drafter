@@ -2,8 +2,9 @@
 // permission request unless the app says otherwise, so the default session gets handlers that
 // allow only what Drafter uses, and only to the app's own pages:
 //   - `persistent-storage`: `navigator.storage.persist()` (storage/health.ts), for the recovery copy.
-// (Copy and paste in the editor are the browser's own, which need no permission; nothing calls
-// `navigator.clipboard`, so that permission is not given.)
+// (Copy and paste in the editor are the browser's own, which need no permission. About Drafter's
+// Copy version info tries `navigator.clipboard.writeText` and, if that is refused, falls back to
+// the browser's own Copy of a hidden field, so no clipboard permission is given.)
 // Everything else (the camera and microphone, location, notifications, MIDI, devices, the screen,
 // full screen, the File System Access pickers) is refused, and a device picker is cancelled before
 // it is shown. drafter.dev's Permissions-Policy header, sent on app:// too, refuses the camera,

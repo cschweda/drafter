@@ -58,7 +58,7 @@ The app is for the Mac it was built on. Copied to another Mac (by AirDrop, a dow
 
 ## Updating
 
-When it starts, Drafter checks GitHub once for a newer version (you can turn **Check for updates** off in Settings, and then it makes no network request at all). When there is one, it says so, with **Get it**, which opens the release page so you can read what changed. Drafter for the Mac can't install the new version itself yet. To update, quit Drafter, then build again in the folder you cloned:
+When it starts, Drafter checks GitHub once for a newer version (you can turn **Check for updates** off in Settings, and then it makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off). When there is one, it says so, with **Get it**, which opens the release page so you can read what changed. Drafter for the Mac can't install the new version itself yet. To update, quit Drafter, then build again in the folder you cloned:
 
 ```sh
 cd drafter

@@ -1,0 +1,36 @@
+Title: Sample: Stage play
+Credit: A play in one act by
+Author: Drafter
+
+# Act One
+
+## Scene 1
+
+A bus shelter at dusk. One bench. Rain drums on the roof.
+
+JUNE sits at one end with a closed umbrella across her knees. ARLO enters, soaked.
+
+ARLO
+Is this seat taken?
+
+JUNE
+(without looking up)
+Only by the rain.
+
+He sits. A long pause. She opens the umbrella over both of them.
+
+## Scene 2
+
+The same shelter, the next morning. The bench is dry.
+
+ARLO
+Same time tomorrow?
+
+JUNE
+Bring your *own* umbrella.
+
+Blackout.
+
+/* drafter
+{ "v": 1, "template": "stage-play-standard" }
+*/

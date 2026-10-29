@@ -25,6 +25,12 @@ export interface Project {
   /** Set on the samples (Phase 1 design §4.2): the screenplay, the stage play, and the Markdown document. */
   sample?: SampleKind;
   /**
+   * Set on a document made from one of Help's sample scripts (`editor/sample-scripts.ts`): the
+   * writer's own document, but not one that says they have met that kind's annotated sample
+   * (`storage/first-samples.ts`). Unindexed, so it needed no new version.
+   */
+  sampleScript?: SampleKind;
+  /**
    * Set on a document that opened with a sample's text because it was the writer's first of its
    * kind: the new-document text Start blank puts in instead, and where the cursor goes in it.
    * Cleared once Start blank has been used. Unindexed, so it needed no new version.

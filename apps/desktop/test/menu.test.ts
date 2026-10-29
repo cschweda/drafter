@@ -347,6 +347,65 @@ describe('menuTemplate', () => {
   });
 });
 
+describe('Help’s About, sample scripts, and Check for updates', () => {
+  const HELP = [
+    ...COMMANDS,
+    cmd('sample-script-screenplay', 'Help', 'Sample script: Screenplay'),
+    cmd('sample-script-stage-play', 'Help', 'Sample script: Stage play'),
+    cmd('sample-script-markdown', 'Help', 'Sample script: Markdown'),
+    cmd('check-for-updates', 'Help', 'Check for updates…'),
+    cmd('about-drafter', 'Help', 'About Drafter'),
+  ];
+
+  test('puts the sample scripts in a submenu, then Check for updates, then the app’s own items', () => {
+    const help = submenu(menus(menuTemplate(HELP, () => {}, { platform: 'linux' })).Help);
+    const samples = help.find((i) => i.label === 'Sample Scripts');
+    expect(submenu(samples).map((i) => [i.id, i.label])).toEqual([
+      ['sample-script-screenplay', 'Screenplay'],
+      ['sample-script-stage-play', 'Stage play'],
+      ['sample-script-markdown', 'Markdown'],
+    ]);
+    expect(help.map((i) => i.id).filter(Boolean)).toEqual([
+      'help-shortcuts',
+      'help-saving',
+      'help-privacy',
+      'take-the-tour',
+      'check-for-updates',
+      'modules-folder',
+      'releases',
+      'about-drafter',
+    ]);
+    expect(help.find((i) => i.id === 'check-for-updates')?.label).toBe('Check for Updates…');
+  });
+
+  test('About Drafter is the page’s dialog while the page is there, once, where About goes', () => {
+    const run = vi.fn();
+    const about = vi.fn();
+    const linux = menuTemplate(HELP, run, { platform: 'linux', about });
+    expect(walk(linux).filter((i) => i.label === 'About Drafter')).toHaveLength(1);
+    expect(named(linux, 'about')).toBeUndefined();
+    choose(linux, 'about-drafter');
+    expect(run).toHaveBeenCalledWith('about-drafter');
+    expect(about).not.toHaveBeenCalled();
+
+    const mac = menuTemplate(HELP, run, { platform: 'darwin', about });
+    expect(submenu(mac[0])[0]).toMatchObject({ id: 'about-drafter', label: 'About Drafter' });
+    expect(walk(mac).filter((i) => i.label === 'About Drafter')).toHaveLength(1);
+  });
+
+  test('with no page to show it (the command is off), About Drafter is the app’s own box', () => {
+    const about = vi.fn();
+    const off = HELP.map((c) => (c.id === 'about-drafter' ? { ...c, enabled: false } : c));
+    for (const platform of ['linux', 'darwin'] as const) {
+      const t = menuTemplate(off, () => {}, { platform, about });
+      expect(named(t, 'about-drafter')).toBeUndefined();
+      expect(walk(t).filter((i) => i.label === 'About Drafter')).toHaveLength(1);
+      choose(t, 'about');
+    }
+    expect(about).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('with no window (a Mac)', () => {
   /** The commands as menu-main.ts keeps them once the editor's page is gone: all off. */
   const gone = COMMANDS.map((c) => ({ ...c, enabled: false }));

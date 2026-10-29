@@ -53,7 +53,7 @@ From a terminal, `"%LOCALAPPDATA%\Programs\drafter\Drafter.exe" "My Script.fount
 
 ## Updating
 
-A few seconds after it starts, Drafter checks GitHub once for a new version. If there is one, it downloads the installer for your PC's processor in the background, then says *"A new version of Drafter is ready"* with **Restart** and **Later**. It never installs or restarts by itself. **Restart** asks about unsaved changes first, then closes Drafter, runs the new installer (a progress bar shows for a few seconds), and starts the new version. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all. You can also update by hand at any time: download the new installer and run it over the old one.
+A few seconds after it starts, Drafter checks GitHub once for a new version. If there is one, it downloads the installer for your PC's processor in the background, then says *"A new version of Drafter is ready"* with **Restart** and **Later**. It never installs or restarts by itself. **Restart** asks about unsaved changes first, then closes Drafter, runs the new installer (a progress bar shows for a few seconds), and starts the new version. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version. You can also update by hand at any time: download the new installer and run it over the old one.
 
 ### What an update is checked for
 

@@ -109,7 +109,9 @@ const EXPORT_ICONS: Record<string, string> = {
 };
 
 // Help: the group at the end of the menu. Take the tour is first (always on), then the help pages
-// (each opens in a new tab, and is named by the page's title under the Help label); Reset sample is last (off unless a sample is open).
+// (each opens in a new tab, and is named by the page's title under the Help label), the Sample
+// scripts submenu (a tiny sample of each kind, opened as a new script), Reset sample (off unless a
+// sample is open), Check for updates…, and About Drafter last.
 const HELP_ICONS: Record<string, string> = {
   'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
@@ -125,7 +127,21 @@ const helpItems = computed<DropdownMenuItem[]>(() => [
       label: page.title,
     })),
   ),
+  {
+    label: 'Sample scripts',
+    icon: 'i-lucide-files',
+    children: [
+      SAMPLES.flatMap((sample) =>
+        entry(`sample-script-${sample.kind}`, 'i-lucide-file-text', true).map((item) => ({
+          ...item,
+          label: sample.name,
+        })),
+      ),
+    ],
+  },
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
+  ...entry('check-for-updates', 'i-lucide-refresh-cw'),
+  ...entry('about-drafter', 'i-lucide-info'),
 ]);
 
 const items = computed<DropdownMenuItem[][]>(() => [

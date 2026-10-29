@@ -6,10 +6,12 @@ import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import {
   answerClose,
+  chooseMenuItem,
   closeAsked,
   editor,
   expect,
   type Launched,
+  menuItems,
   openedExternally,
   type Profile,
   ready,
@@ -439,4 +441,91 @@ test('on Windows, an installer that isn’t the one latest.yml describes is neve
   await settle(2500);
   await expect(toast(page)).toHaveCount(0);
   expect(installs(profile)).toEqual([]);
+});
+
+// Help → Check for Updates… (decided 2026-10-29): a check now, whatever the setting says.
+const checkDialog = (page: Page) => page.getByRole('dialog', { name: 'Check for updates' });
+
+async function checkNow(launched: Launched) {
+  await expect
+    .poll(async () => (await menuItems(launched.app)).some((i) => i.id === 'check-for-updates'))
+    .toBe(true);
+  await chooseMenuItem(launched.app, ['Help', 'Check for Updates…']);
+  await expect(checkDialog(launched.page)).toBeVisible();
+}
+
+test('Check for Updates runs the updater now, with the setting off, and offers Restart', async ({
+  desktop,
+  profile,
+}) => {
+  const f = await startFeed();
+  // The start's own check is a long way off, and the setting is turned off first.
+  const launched = await desktop({ env: env('appimage', profile, f.url, 60_000) });
+  const { page } = launched;
+  await page.keyboard.press('ControlOrMeta+,');
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const check = settings.getByRole('switch', { name: 'Check for updates' });
+  await check.focus();
+  await page.keyboard.press('Space');
+  await expect(check).not.toBeChecked();
+  await page.keyboard.press('Escape');
+  await settle(500);
+  expect(f.seen).toEqual([]);
+
+  await checkNow(launched);
+  const message = checkDialog(page).getByRole('status');
+  await expect(message).toHaveText(/Drafter v9\.9\.9 is (downloading|ready)/);
+  expect(f.seen.filter((p) => /\/latest.*\.yml$/.test(p))).toHaveLength(1);
+  // Once downloaded, the offer is the app's own: Restart, which installs only when chosen.
+  await checkDialog(page).getByRole('button', { name: 'Close' }).click();
+  await expect(button(page, 'Restart')).toBeVisible();
+  expect(installs(profile)).toEqual([]);
+  // Asked again: the downloaded version, offered from the dialog too.
+  await checkNow(launched);
+  await expect(message).toHaveText('Drafter v9.9.9 is ready. Restart to use it.');
+  await expect(checkDialog(page).getByRole('button', { name: 'Restart' })).toBeFocused();
+  const gone = exited(launched);
+  await checkDialog(page).getByRole('button', { name: 'Restart' }).click();
+  await gone;
+  expect(installs(profile)).toEqual(['install']);
+});
+
+test('Check for Updates says the version is up to date when the release is not newer', async ({
+  desktop,
+  profile,
+}) => {
+  const f = await startFeed(FEED_YML.replace(`version: ${NEWER}`, 'version: 0.0.1'));
+  const launched = await desktop({ env: env('appimage', profile, f.url, 60_000) });
+  const version = await launched.page.evaluate(() => window.drafterDesktop?.version);
+  await checkNow(launched);
+  await expect(checkDialog(launched.page).getByRole('status')).toHaveText(
+    `Drafter v${version} is up to date.`,
+  );
+  expect(f.seen.filter((p) => /\/latest.*\.yml$/.test(p))).toHaveLength(1);
+  await expect(toast(launched.page)).toHaveCount(0);
+});
+
+test('Check for Updates says so plainly when the release server is down', async ({
+  desktop,
+  profile,
+}) => {
+  const f = await startFeed();
+  const url = f.url;
+  await f.close();
+  const launched = await desktop({ env: env('appimage', profile, url, 60_000) });
+  await checkNow(launched);
+  await expect(checkDialog(launched.page).getByRole('status')).toHaveText(
+    'Drafter couldn’t check for updates. You may be offline; try again later.',
+  );
+  await expect(checkDialog(launched.page).getByRole('button', { name: 'Try again' })).toBeVisible();
+});
+
+test('Check for Updates says an unpackaged build without a feed can’t check', async ({
+  desktop,
+}) => {
+  const launched = await desktop();
+  await checkNow(launched);
+  await expect(checkDialog(launched.page).getByRole('status')).toHaveText(
+    'This copy of Drafter can’t check for updates: it isn’t an installed build.',
+  );
 });

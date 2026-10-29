@@ -729,3 +729,185 @@ describe('ReleaseCheck', () => {
     expect(() => c.updater.quitAndInstall()).toThrow();
   });
 });
+
+describe('a check the writer asks for (Help → Check for updates)', () => {
+  test('checks now, with the setting off and before the start’s wait is over', async () => {
+    const r = rig({ script: () => {} });
+    r.updates.start();
+    r.updates.setEnabled(false);
+    const result = await r.updates.checkNow();
+    expect(result).toEqual({ status: 'latest' });
+    expect(r.created).toHaveLength(1);
+    expect(r.created[0]?.checks).toBe(1);
+    // The start's own check still never happens with the setting off.
+    await r.advance(60_000);
+    expect(r.created[0]?.checks).toBe(1);
+    vi.useRealTimers();
+  });
+
+  test('an AppImage downloads what it found and offers Restart, even with the setting off', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.listen();
+    const result = await r.updates.checkNow();
+    expect(result).toEqual({ status: 'downloading', version: '0.9.0' });
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    r.created[0]?.emit('update-downloaded', { version: '0.9.0' });
+    expect(r.published).toEqual([{ version: '0.9.0', how: 'restart' }]);
+    // Asked again: the downloaded version is the answer, and nothing downloads twice.
+    expect(await r.updates.checkNow()).toEqual({
+      status: 'found',
+      version: '0.9.0',
+      how: 'restart',
+    });
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  test('a .deb or the Mac app is offered Get it', async () => {
+    for (const mode of ['deb', 'mac'] as const) {
+      const r = rig({
+        mode,
+        script: (u) => {
+          u.emit('update-available', { version: '0.9.0' });
+        },
+      });
+      r.updates.listen();
+      expect(await r.updates.checkNow()).toEqual({ status: 'found', version: '0.9.0', how: 'get' });
+      expect(r.published).toEqual([{ version: '0.9.0', how: 'get' }]);
+      r.updates.openReleasePage();
+      expect(r.opened).toEqual([RELEASES_URL]);
+      vi.useRealTimers();
+    }
+  });
+
+  test('says error when the check fails, and off when this build can’t check', async () => {
+    const failing = rig({
+      script: () => {
+        throw new Error('ENOTFOUND github.com');
+      },
+    });
+    expect(await failing.updates.checkNow()).toEqual({ status: 'error' });
+    expect(failing.log.join('\n')).toMatch(/ENOTFOUND/);
+    vi.useRealTimers();
+    const none = rig({ createFails: true });
+    expect(await none.updates.checkNow()).toEqual({ status: 'error' });
+    vi.useRealTimers();
+    const off = rig({ mode: 'off' });
+    expect(await off.updates.checkNow()).toEqual({ status: 'off' });
+    expect(off.created).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
+  test('a check under way is the one asked for: one updater, one request', async () => {
+    let release: () => void = () => {};
+    const r = rig({
+      script: () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    const asked = r.updates.checkNow();
+    await r.advance(10);
+    release();
+    expect(await asked).toEqual({ status: 'latest' });
+    expect(r.created).toHaveLength(1);
+    expect(r.created[0]?.checks).toBe(1);
+    vi.useRealTimers();
+  });
+
+  test('a failed check can be asked again', async () => {
+    let fail = true;
+    const r = rig({
+      script: () => {
+        if (fail) throw new Error('offline');
+      },
+    });
+    expect(await r.updates.checkNow()).toEqual({ status: 'error' });
+    fail = false;
+    expect(await r.updates.checkNow()).toEqual({ status: 'latest' });
+    vi.useRealTimers();
+  });
+});
+
+describe('a check the writer asked for, and the setting', () => {
+  test('a download the writer asked for is not cancelled when the page says the setting is off', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.setEnabled(false);
+    expect(await r.updates.checkNow()).toEqual({ status: 'downloading', version: '0.9.0' });
+    // The page starts again (a reload, a Mac window opened again) and says the setting is off.
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(0);
+    r.created[0]?.emit('update-downloaded', { version: '0.9.0' });
+    r.updates.listen();
+    expect(r.published).toEqual([{ version: '0.9.0', how: 'restart' }]);
+    vi.useRealTimers();
+  });
+
+  test('a download the start began is still cancelled when the setting is turned off', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(1);
+    vi.useRealTimers();
+  });
+
+  test('a download the start began becomes the writer’s when they ask: the setting no longer stops it', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    expect(await r.updates.checkNow()).toEqual({ status: 'downloading', version: '0.9.0' });
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(0);
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  test('a failed check the writer asked for doesn’t take the place of the start’s check', async () => {
+    let fail = true;
+    const r = rig({
+      script: () => {
+        if (fail) throw new Error('offline');
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    expect(await r.updates.checkNow()).toEqual({ status: 'error' });
+    fail = false;
+    await r.advance(5000);
+    expect(r.created[0]?.checks).toBe(2);
+    vi.useRealTimers();
+  });
+
+  test('a check the writer asked for that worked is the start’s check', async () => {
+    const r = rig({ script: () => {} });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    expect(await r.updates.checkNow()).toEqual({ status: 'latest' });
+    await r.advance(60_000);
+    expect(r.created[0]?.checks).toBe(1);
+    vi.useRealTimers();
+  });
+});
