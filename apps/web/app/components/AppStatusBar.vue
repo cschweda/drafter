@@ -6,6 +6,7 @@ import { useEditor } from '~/editor/session';
 import { templateIdOf, typeNameOf, unknownTemplateOf } from '~/editor/template';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { historyOpen } from '~/snapshots/history';
 import { snapshotProblem } from '~/snapshots/use-snapshots';
 import { statsOpen } from '~/stats/dialog';
 import { progressLabel, useGoal } from '~/stats/goal';
@@ -69,6 +70,10 @@ const file = computed(() => {
   return sample ? 'Sample · your edits stay in this browser' : 'Not saved to a file yet';
 });
 
+function openHistory() {
+  historyOpen.value = { focusLabel: false };
+}
+
 const RECOVERY: Record<RecoveryState, { label: string; why: string }> = {
   persistent: {
     label: 'Recovery copy: kept in this browser',
@@ -128,7 +133,17 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <footer class="status" data-tour="status" @keydown="onKeydown">
-    <span>{{ file }}</span>
+    <!-- The save item opens History (§11.1, Call 14): "History, Saved 4 min ago". -->
+    <button
+      type="button"
+      class="history-button"
+      aria-haspopup="dialog"
+      :aria-label="`History, ${file}`"
+      title="History"
+      @click="openHistory"
+    >
+      {{ file }}
+    </button>
     <span class="sr-only" role="status">{{ announcement }}</span>
     <span v-if="saveError" role="alert" class="failed">{{ saveError }}</span>
     <span v-if="openError" role="alert" class="failed">{{ openError }}</span>
@@ -214,7 +229,8 @@ function onKeydown(event: KeyboardEvent) {
   text-underline-offset: 3px;
   cursor: pointer;
 }
-.counts-button {
+.counts-button,
+.history-button {
   min-height: 24px;
   padding: 0;
   border: 0;
@@ -226,6 +242,7 @@ function onKeydown(event: KeyboardEvent) {
   cursor: pointer;
 }
 .counts-button:focus-visible,
+.history-button:focus-visible,
 .recovery:focus-visible {
   outline: 2px solid var(--heading);
   outline-offset: 2px;

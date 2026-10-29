@@ -41,6 +41,7 @@ import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { historyOpen } from '~/snapshots/history';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
@@ -243,6 +244,20 @@ export function registerBuiltinCommands(): void {
       run: () => {
         revertToSaved();
         editor.goto(view.state.selection.main.head);
+      },
+    },
+    // History (§11.1): the script's snapshots, opened from here, the app menu, and the status bar's save item.
+    // Take snapshot… opens it on its label field (Call 13); a read-only tab's says why it can't take one.
+    history: {
+      enabled: hasScript,
+      run: () => {
+        historyOpen.value = { focusLabel: false };
+      },
+    },
+    'take-snapshot': {
+      enabled: hasScript,
+      run: () => {
+        historyOpen.value = { focusLabel: true };
       },
     },
     // The samples (the Scripts menu lists them too).

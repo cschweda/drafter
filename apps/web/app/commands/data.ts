@@ -102,6 +102,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save', title: 'Save', group: 'File', keys: 'Mod-s', global: true },
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
+  { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
+  { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
   ...SAMPLES.map(
     (sample): CommandData => ({
       id: `open-sample-${sample.kind}`,

@@ -164,6 +164,10 @@ test.describe('the welcome and the tour', () => {
     await page.keyboard.press('ControlOrMeta+k');
     await expect(palette(page)).toBeVisible();
     await page.keyboard.type('Take the tour');
+    // Take snapshot… is listed first while only "Take" is typed: Enter waits for the filter to catch up.
+    await expect(
+      palette(page).getByRole('option', { name: 'Take the tour', exact: true }),
+    ).toHaveAttribute('data-highlighted', '');
     await page.keyboard.press('Enter');
     await expect(palette(page)).toBeHidden();
     await expect(intro(page)).toBeVisible();
@@ -180,6 +184,10 @@ test.describe('the welcome and the tour', () => {
     await page.keyboard.press('ControlOrMeta+k');
     await expect(palette(page)).toBeVisible();
     await page.keyboard.type('Take the tour');
+    // Take snapshot… is listed first while only "Take" is typed: Enter waits for the filter to catch up.
+    await expect(
+      palette(page).getByRole('option', { name: 'Take the tour', exact: true }),
+    ).toHaveAttribute('data-highlighted', '');
     await page.keyboard.press('Enter');
     await expect(palette(page)).toBeHidden();
     await expect(intro(page)).toBeVisible();
