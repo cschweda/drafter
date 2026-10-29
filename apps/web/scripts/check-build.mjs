@@ -4,6 +4,7 @@
 //   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so);
 // - the service worker precaches every script, style, worker, font, icon, and spelling dictionary
 //   the build made (so the app, a Markdown document, a PDF export, and spellcheck all work offline),
+//   and the licence files the Third-party licences page links (so its links work offline too),
 //   caches nothing else, and has no runtime caching (Phase 1 design §11);
 // - the spellchecker's dictionaries and the licence files that go with them are in the build;
 // - a build for the desktop app (DRAFTER_DESKTOP=1) has no service worker and no manifest at all.
@@ -50,6 +51,12 @@ export const REQUIRED_FILES = [
 ];
 
 /**
+ * The licence files the Third-party licences page links (the `.txt`s of REQUIRED_FILES): precached,
+ * so the page's links work offline. Any other text file is not the app's.
+ */
+export const LICENCE_FILES = REQUIRED_FILES.filter((name) => name.endsWith('.txt'));
+
+/**
  * What is wrong with the service worker's precache, if anything.
  * @param {string} siteDir
  * @returns {Promise<string[]>}
@@ -69,8 +76,9 @@ async function precacheProblems(siteDir) {
       problems.push(`The service worker lists ${name} more than once.`);
     }
   }
-  const files = (await filesUnder(siteDir, PRECACHED))
+  const files = (await filesUnder(siteDir, /./))
     .map((path) => relative(siteDir, path).split(sep).join('/'))
+    .filter((name) => PRECACHED.test(name) || LICENCE_FILES.includes(name))
     .filter((name) => name !== 'sw.js' && !/^workbox-[^/]*\.js$/.test(name));
   for (const name of files) {
     if (NOT_PRECACHED.includes(name)) {

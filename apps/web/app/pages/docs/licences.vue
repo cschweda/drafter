@@ -100,7 +100,7 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
       <h3>Inter Tight</h3>
       <p>
         The typeface of Drafter’s menus, buttons, and these pages. Under the SIL Open Font License,
-        Version 1.1, the same licence as Courier Prime’s, whose full text is linked above.
+        Version 1.1, the same licence as Courier Prime’s.
       </p>
       <p>Copyright 2022 The Inter Project Authors</p>
       <p>

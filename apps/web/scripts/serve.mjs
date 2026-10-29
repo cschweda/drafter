@@ -97,9 +97,10 @@ export function createStaticServer(root) {
     }
     const file = path === null ? null : await findFile(base, path);
     if (file) {
+      // A rule's Content-Type names the file's type, as Netlify's does (the dictionaries').
       res.writeHead(200, {
-        ...headers,
         'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream',
+        ...headers,
       });
       createReadStream(file).pipe(res);
       return;
