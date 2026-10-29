@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/fdx`, a new package for Final Draft (`.fdx`) files, starting with its XML reader and writer. The reader treats a file as untrusted: it refuses a DOCTYPE, any entity beyond the five built-in ones and valid numeric references, processing instructions other than a leading XML declaration, mismatched tags, duplicate attributes, unclosed elements, text after the root, nesting deeper than 64, and files over 5 MB, and it reads in a single pass. The writer produces an indented document with its text escaped; reading what it writes gives the same tree (property-tested).
+
 ## [0.10.0] - 2026-10-28
 
 **The Outline.** Phase 2 starts with an **Outline** tab: your script's sections and scenes as a tree, each scene with its number, heading, synopsis, color, page, length, and who speaks. Move a scene or a whole section by dragging it, with Alt+Up and Alt+Down, or with Move to…, and one undo puts it back. Write a synopsis in place, give a scene a color (written into the script as a note, so it never prints), condense the script to its outline, export a treatment as Markdown, and turn an outline of `=` lines or a Markdown list into scene stubs.

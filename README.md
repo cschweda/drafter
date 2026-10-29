@@ -141,7 +141,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis and color edits | 2 |
 | `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
 | `@drafter/stats` | Script statistics | 2 |
-| `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 |
+| `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built in Plan FD) |
 
 Planned repository layout:
 

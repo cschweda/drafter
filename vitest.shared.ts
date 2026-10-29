@@ -10,6 +10,7 @@ const packages = [
   'render-html',
   'lint',
   'outline',
+  'fdx',
   'cm-fountain',
   'cli',
 ];
