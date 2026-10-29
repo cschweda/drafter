@@ -258,3 +258,21 @@ This adds one task to this plan:
 - **What it opens:** a new script with the Fountain kind. Save asks where to put it as `.fountain`; the `.md` file is never overwritten as Fountain.
 - **Where it's described:** the CHANGELOG and README.
 - **Tests:** the same file opens as each kind; the choice is off in a tab that can't open scripts; the desktop menu item is present.
+
+## Maintainer request (2026-10-29): Export as Markdown for scripts
+
+The maintainer asked for a full **Export as Markdown** for screenplays and stage plays: "yes please add the full markdown". It writes the whole script, not only the treatment (outline headings and synopses). The result has to read well in any Markdown viewer and paste cleanly into a website, a notes app, or an AI chat.
+
+This adds one task to this plan:
+- **The title page** comes first: the title as `#`, then the other keys (credit, author, draft date and so on) as plain lines.
+- **Sections** are headings, one level below the title.
+- **Scene headings** are headings one level below the deepest section in use, with the scene number when the script has one.
+- **Action** is paragraphs.
+- **A speech** is the character name in bold, then any parenthetical in italics, then the dialogue as a paragraph. Dual dialogue is marked as such.
+- **Transitions** are right-aligned in a screenplay; here they become a paragraph of their own in capitals. Centered text and lyrics are kept and marked.
+- **Notes and boneyard** are left out by default, like a PDF, with an option to include notes.
+- **Emphasis** stays as `*italic*`, `**bold**` and `_underline_`, escaped so Markdown shows exactly what the writer typed.
+- **A stage play** gets the same treatment with its own parts: acts and scenes as headings, stage directions in italics, and the cast list.
+- **Where it appears:** the Export menu, the palette, and the desktop app's File menu, for both kinds. Markdown documents keep their existing Export as Markdown file.
+- **Tests:** a property test checks that every element's text comes through once and in order, with escaping round-tripped through the app's Markdown parser, and a scaling test checks a 120-page script exports in linear time.
+- **Docs:** README, CHANGELOG, and a line in DECISIONS for each mapping Call.
