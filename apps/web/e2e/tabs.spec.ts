@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { alertsHeard, watchAlerts } from './fs-stub';
+import { start } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -429,4 +430,49 @@ test.describe('the read-only bar', () => {
       expect(await violations(b)).toEqual([]);
     });
   }
+});
+
+// The tab row (Phase 2 design §5.8): Cards and Notes are not core tabs, so they share the slot and
+// More with module tabs, first in More.
+test.describe('the tab row’s slot', () => {
+  test('chooses Cards from More, which then takes the slot', async ({ page }) => {
+    await start(page);
+    const pane = page.locator('[data-pane]').first();
+    const row = pane.getByRole('tablist');
+    const more = pane.getByRole('button', { name: 'More tabs' });
+    const menu = page.getByRole('menu', { name: 'More tabs' });
+    // On the emulated phone WebKit a tap is now and then ignored (the Plan 4 deferred list), so
+    // More is tapped again until its menu is open.
+    const openMore = () =>
+      expect(async () => {
+        if (!(await menu.isVisible())) await more.click();
+        await expect(menu).toBeVisible({ timeout: 1000 });
+      }).toPass();
+    await expect(row.getByRole('tab')).toHaveText([
+      'Source',
+      'Script',
+      /^Problems/,
+      'Outline',
+      'Cards',
+    ]);
+    // Notes from More takes the slot; Cards goes to More.
+    await openMore();
+    await expect(menu.getByRole('menuitem')).toHaveText(['Notes']);
+    await menu.getByRole('menuitem', { name: 'Notes' }).click();
+    await expect(menu).toBeHidden();
+    await expect(row.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
+    await expect(row.getByRole('tab', { name: 'Cards' })).toHaveCount(0);
+    // Then Cards from More: it takes the slot, and focus goes to its tab.
+    await openMore();
+    await expect(menu.getByRole('menuitem')).toHaveText(['Cards']);
+    await menu.getByRole('menuitem', { name: 'Cards' }).click();
+    await expect(menu).toBeHidden();
+    const cards = row.getByRole('tab', { name: 'Cards' });
+    await expect(cards).toHaveAttribute('aria-selected', 'true');
+    await expect(cards).toBeFocused();
+    await expect(page.getByRole('listbox', { name: 'Cards' })).toBeVisible();
+    // Back to a core tab: Cards keeps the slot.
+    await row.getByRole('tab', { name: 'Outline' }).click();
+    await expect(row.getByRole('tab').last()).toHaveText('Cards');
+  });
 });

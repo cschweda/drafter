@@ -23,7 +23,20 @@ describe('settings', () => {
       checkForUpdates: true,
       scrollSync: true,
       elementBar: true,
+      cardSize: 'medium',
     });
+  });
+
+  test('cardSize defaults to medium', async () => {
+    const store = createSettings();
+    await store.ready;
+    expect(store.settings.value.cardSize).toBe('medium');
+    await store.set('cardSize', 'large');
+    expect(store.settings.value.cardSize).toBe('large');
+    expect(await db.settings.get('cardSize')).toEqual({ key: 'cardSize', value: 'large' });
+    // A size it doesn't have changes nothing.
+    await store.set('cardSize', 'huge' as never);
+    expect(store.settings.value.cardSize).toBe('large');
   });
 
   test('keeps a change in the settings table', async () => {

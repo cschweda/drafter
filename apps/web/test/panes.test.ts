@@ -11,6 +11,8 @@ import {
   SPLIT,
   TABS,
   tabRow,
+  VIEW_TABS,
+  viewTabs,
 } from '../app/utils/panes';
 
 describe('panes', () => {
@@ -39,6 +41,16 @@ describe('panes', () => {
     expect(dropTab({ left: 'source', right: 'outline' }, 'outline')).toEqual({
       left: 'source',
       right: 'script',
+    });
+  });
+
+  test('drops Cards and Notes from a pane when the document turns Markdown', () => {
+    let tabs = { left: 'cards', right: 'notes' };
+    for (const tab of ['outline', 'cards', 'notes']) tabs = dropTab(tabs, tab);
+    expect(tabs).toEqual({ left: 'source', right: 'script' });
+    expect(dropTab({ left: 'script', right: 'cards' }, 'cards')).toEqual({
+      left: 'script',
+      right: 'source',
     });
   });
 
@@ -118,6 +130,27 @@ describe('panes', () => {
       const { row, more } = tabRow(TABS, others, 'module:b', 'module:c');
       expect(ids(row).at(-1)).toBe('module:b');
       expect(ids(more)).toEqual(['module:a', 'module:c']);
+    });
+
+    test('puts Cards and Notes in the slot and More, before module tabs', () => {
+      expect(VIEW_TABS).toEqual([
+        { id: 'cards', label: 'Cards' },
+        { id: 'notes', label: 'Notes' },
+      ]);
+      const { row, more } = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', null);
+      expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline', 'cards']);
+      expect(ids(more)).toEqual(['notes', 'module:a', 'module:b', 'module:c']);
+      // A module's tab chosen last takes the slot, and Cards goes first in More.
+      const later = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', 'module:b');
+      expect(ids(later.row).at(-1)).toBe('module:b');
+      expect(ids(later.more)).toEqual(['cards', 'notes', 'module:a', 'module:c']);
+    });
+
+    test('has no Cards or Notes for a Markdown document', () => {
+      expect(viewTabs('markdown')).toEqual([]);
+      const { row, more } = tabRow(coreTabs('markdown'), viewTabs('markdown'), 'source', null);
+      expect(ids(row)).toEqual(['source', 'script', 'problems']);
+      expect(more).toEqual([]);
     });
 
     test('has no More with one other tab, and no slot with none', () => {

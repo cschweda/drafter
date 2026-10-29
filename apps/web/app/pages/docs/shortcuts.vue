@@ -76,6 +76,12 @@ const groups = shortcutGroups(COMMAND_DATA);
           completion, or search) needs it.
         </li>
         <li>
+          In the Cards tab, the arrow keys move between the cards as they are drawn, and
+          <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. <kbd>Enter</kbd> edits a
+          card’s synopsis (<kbd>Enter</kbd> saves, <kbd>Esc</kbd> cancels), and the context-menu
+          key or <kbd>Shift+F10</kbd> opens the card’s menu.
+        </li>
+        <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>

@@ -3,9 +3,10 @@
 // the other pane swaps the two, so there's always one editor, one Script
 // view, and one Problems list.
 
-/** A tab's id: one of the core four, or a script module's (`moduleTabId`). */
+/** A tab's id: one of the core four, Cards or Notes, or a script module's (`moduleTabId`). */
 export type TabId = string;
 export type CoreTabId = 'source' | 'script' | 'problems' | 'outline';
+export type ViewTabId = 'cards' | 'notes';
 export type PaneId = 'left' | 'right';
 export interface PaneTabs {
   left: TabId;
@@ -15,6 +16,8 @@ export interface PaneTabs {
 export interface Tab {
   id: TabId;
   label: string;
+  /** A count drawn beside the label, as Problems has. */
+  badge?: string;
 }
 
 /** The core tabs, always in the row (Phase 2 design §5.8). A module adds its own after them while it is on. */
@@ -28,6 +31,20 @@ export const TABS: ReadonlyArray<{ id: CoreTabId; label: string }> = [
 /** The core tabs a document of `kind` has: a Markdown document has no scenes, so no Outline. */
 export function coreTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
   return kind === 'markdown' ? TABS.filter((tab) => tab.id !== 'outline') : TABS;
+}
+
+/**
+ * Cards and Notes (design §5.8): not core, so they share the slot and More with module tabs, first
+ * in More, in the design's order. None for Markdown: a Markdown document has no scenes or notes.
+ */
+export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
+  { id: 'cards', label: 'Cards' },
+  { id: 'notes', label: 'Notes' },
+];
+
+/** The view tabs a document of `kind` has, before any module's. */
+export function viewTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
+  return kind === 'markdown' ? [] : VIEW_TABS;
 }
 
 /**
@@ -80,7 +97,7 @@ export function revealTab(tabs: PaneTabs, tab: TabId, from?: PaneId): PaneTabs {
 
 /**
  * The tabs with `tab` taken away (its module was turned off, or a Markdown document has no
- * Outline): a pane that showed it shows the first core tab, in the order Source, Script,
+ * Outline, Cards, or Notes): a pane that showed it shows the first core tab, in the order Source, Script,
  * Problems, that the other pane isn't showing.
  */
 export function dropTab(tabs: PaneTabs, tab: TabId): PaneTabs {

@@ -21,7 +21,13 @@ export interface Settings {
   scrollSync: boolean;
   /** The element bar over the Source pane, which writes Fountain's marks; on by default (decided 2026-10-27). */
   elementBar: boolean;
+  /** How big the Cards tab draws its cards, chosen on its slim bar; medium by default (Phase 2 design §7). */
+  cardSize: CardSize;
 }
+
+export type CardSize = 'small' | 'medium' | 'large';
+/** The card sizes, smallest first. */
+export const CARD_SIZES: readonly CardSize[] = ['small', 'medium', 'large'];
 
 export const DEFAULT_SETTINGS: Settings = {
   matchSystem: false,
@@ -34,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   checkForUpdates: true,
   scrollSync: true,
   elementBar: true,
+  cardSize: 'medium',
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -45,9 +52,9 @@ function isKey(key: string): key is keyof Settings {
 
 /** Whether `value` is one `key` can hold: a stored row from an older or damaged table may not be. */
 function isValid(key: keyof Settings, value: unknown): boolean {
-  return key === 'textSize'
-    ? typeof value === 'number' && TEXT_SIZES.includes(value)
-    : typeof value === 'boolean';
+  if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
+  if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
+  return typeof value === 'boolean';
 }
 
 export interface SettingsStore {

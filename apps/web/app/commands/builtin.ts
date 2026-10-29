@@ -318,6 +318,9 @@ export function registerBuiltinCommands(): void {
     'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
     'show-problems': { run: () => showTab('problems') },
     'show-outline': { enabled: isFountain, run: () => showTab('outline') },
+    // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
+    'show-cards': { enabled: isFountain, run: () => showTab('cards') },
+    'show-notes': { enabled: isFountain, run: () => showTab('notes') },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.

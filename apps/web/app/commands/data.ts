@@ -136,6 +136,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
+  { id: 'show-cards', title: 'Show Cards', group: 'View' },
+  { id: 'show-notes', title: 'Show Notes', group: 'View' },
   {
     id: 'focus-mode',
     title: 'Toggle focus mode',

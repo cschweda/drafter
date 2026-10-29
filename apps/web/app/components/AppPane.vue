@@ -10,7 +10,7 @@ import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { coreTabs, TABS, type Tab, type TabId, tabRow } from '~/utils/panes';
+import { coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
 
 const props = defineProps<{
   /** `left`, `right`, or `phone`; it names the tabs' ids. */
@@ -37,8 +37,8 @@ function onFixAll() {
   document.getElementById('panel-problems')?.focus();
 }
 const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
-// The core tabs (no Outline in a Markdown document), then one slot for another tab (a module's),
-// then More with the rest (Phase 2 design §5.8).
+// The core tabs (no Outline in a Markdown document), then one slot for another tab (Cards, Notes,
+// or a module's), then More with the rest, Cards and Notes first (Phase 2 design §5.8).
 const moduleTabs = useModuleTabs();
 const last = useTabSlot();
 const core = computed(() => {
@@ -47,7 +47,10 @@ const core = computed(() => {
   const own = TABS.find((tab) => tab.id === props.selected);
   return own && !tabs.includes(own) ? [...tabs, own] : tabs;
 });
-const others = computed<Tab[]>(() => moduleTabs.value.map(({ id, label }) => ({ id, label })));
+const others = computed<Tab[]>(() => [
+  ...viewTabs(kind.value),
+  ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
+]);
 const row = computed(() => tabRow(core.value, others.value, props.selected, last.value));
 const allTabs = computed(() => row.value.row);
 const moreTabs = computed(() => row.value.more);
@@ -85,7 +88,10 @@ const tabButtons = ref<HTMLButtonElement[]>([]);
 // More: a menu of the tabs that aren't in the row (MenuButton, as every menu is). Choosing one shows
 // it here, in the slot, and focus goes to its tab rather than back to More.
 const moreItems = computed<DropdownMenuItem[]>(() =>
-  moreTabs.value.map((tab) => ({ label: tab.label, onSelect: () => chooseMore(tab.id) })),
+  moreTabs.value.map((tab) => ({
+    label: tab.badge ? `${tab.label} ${tab.badge}` : tab.label,
+    onSelect: () => chooseMore(tab.id),
+  })),
 );
 let chosenTab: TabId | null = null;
 
@@ -141,6 +147,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       >
         {{ labelOf(tab) }}
         <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
+        <span v-else-if="tab.badge" class="badge">{{ tab.badge }}</span>
       </button>
     </div>
     <MenuButton
@@ -182,6 +189,10 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <template v-else-if="props.selected === 'outline'">
         <OutlineSlim />
       </template>
+      <template v-else-if="props.selected === 'cards'">
+        <CardsSlim />
+      </template>
+      <template v-else-if="props.selected === 'notes'" />
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
         <template v-if="props.selected === 'source'">
@@ -242,6 +253,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
       <OutlinePane v-else-if="props.selected === 'outline'" />
+      <CardsPane v-else-if="props.selected === 'cards'" />
+      <!-- The Notes list comes with the rest of the notes (Plan B, Task 8). -->
+      <p v-else-if="props.selected === 'notes'" class="placeholder">The Notes list isn’t here yet.</p>
       <ProblemsPane v-else />
     </div>
   </section>
@@ -256,6 +270,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
   background: var(--bg);
 }
 .tabs {
+  /* Holds the More button's hidden words, which are positioned, inside the row's own scrolling:
+     else they would stick out past the row and widen the page on a narrow phone. */
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 2px;
@@ -311,14 +328,15 @@ function onKeydown(event: KeyboardEvent, index: number) {
   color: var(--muted);
   font-size: 12px;
 }
-.spacer {
+/* `:deep`, so a tab's own slim bar (CardsSlim) draws its buttons the same. */
+.slim :deep(.spacer) {
   flex: 1;
 }
-.zoom {
+.slim :deep(.zoom) {
   display: flex;
   gap: 2px;
 }
-.zoom-button {
+.slim :deep(.zoom-button) {
   min-height: 24px;
   padding: 0 8px;
   border: 0;
@@ -331,14 +349,14 @@ function onKeydown(event: KeyboardEvent, index: number) {
   font-weight: 600;
   cursor: pointer;
 }
-.zoom-button[aria-pressed='true'] {
+.slim :deep(.zoom-button[aria-pressed='true']) {
   background: var(--tab-on);
   color: var(--text);
   border-bottom-color: var(--heading);
 }
 /* Forced colors drops the background, so a border marks the pressed one. */
 @media (forced-colors: active) {
-  .zoom-button[aria-pressed='true'] {
+  .slim :deep(.zoom-button[aria-pressed='true']) {
     border: 1px solid CanvasText;
   }
 }
@@ -360,6 +378,11 @@ function onKeydown(event: KeyboardEvent, index: number) {
 }
 .tab.on .badge {
   background: var(--chrome);
+}
+.placeholder {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--muted);
 }
 .fix-all {
   min-height: 24px;
