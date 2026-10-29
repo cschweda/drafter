@@ -272,3 +272,13 @@ The design's 22 Calls (its §8) are binding and get their DECISIONS lines as the
 31. **Labels take the rates as an optional last argument, defaulting to 1 minute a page and 150 words a minute** (Task 5).
 32. **`docs/technical-details.md` is a Vitest file snapshot of the page,** rewritten with `-u` and failing when stale (Task 6).
 33. **The Technical details page is the last help page,** with `i-lucide-cpu` in the app menu and "Technical Details" in the desktop Help menu (Task 6).
+
+## Controller rulings (2026-10-29)
+
+- **Merge order (Call 23):** merge `main` at v0.16.0 before Task 1, as planned.
+- **.fdx scene numbers (Call 8):** accepted. A `.fdx` keeps the numbers written in the script, because Final Draft decides what it prints and dropping them would lose them. The dialog says so.
+- **The deliberate Problem (Call 4):** dropped. The screenplay starter opens with no Problems, so a newcomer's first look is clean. Its notes teach why a scene heading has a time of day, and the "Your turn" heading is complete.
+- **Speaking pace (Call 13):** kept as a per-script setting, since the maintainer asked for "a rate you can set".
+- **Options stay in this browser (Call 9):** accepted. Keeping them with the file, in its metadata block, is in DEFERRED.
+- **CLI flags:** deferred, as planned.
+- **Diagrams (Calls 20–21):** accepted. The page draws them in HTML/CSS, readable in both themes and by a screen reader, and `docs/technical-details.md` carries the same diagrams as Mermaid, which GitHub renders. The maintainer's "feel free to use mermaid" is met without a runtime library.
