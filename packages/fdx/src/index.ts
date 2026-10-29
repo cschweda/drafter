@@ -1,3 +1,4 @@
+export { toFdx } from './export';
 export {
   MAX_XML_CHARS,
   MAX_XML_DEPTH,

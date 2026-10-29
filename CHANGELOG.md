@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - `@drafter/fdx`, a new package for Final Draft (`.fdx`) files, starting with its XML reader and writer. The reader treats a file as untrusted: it refuses a DOCTYPE, any entity beyond the five built-in ones and valid numeric references, processing instructions other than a leading XML declaration, mismatched tags, duplicate attributes, unclosed elements, text after the root, nesting deeper than 64, and files over 5 MB, and it reads in a single pass. The writer produces an indented document with its text escaped; reading what it writes gives the same tree (property-tested).
+- `@drafter/fdx`: `toFdx(doc, template)` exports a parsed script as Final Draft XML. Scene headings (with locked numbers and their synopses), action, centered text, speeches (extensions kept, lyrics as italic dialogue), transitions, dual dialogue, page breaks, emphasis (one run per style change), the title page, sections, and notes are mapped; a boneyard and the metadata block are left out. What Final Draft has no place for (a section's depth, a note on its own line, a lyric, a title-page key) is kept in `Drafter…` attributes Final Draft ignores, so it survives a round trip.
 
 ## [0.10.0] - 2026-10-28
 
