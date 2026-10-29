@@ -37,9 +37,25 @@ function headerOf(doc: Doc, scene: Scene): number[] {
 
 const endOf = (doc: Doc, block: Block) => contentEnd(doc.source, block.span.to);
 
+/** Whether from `at` to the end of its line (past any note that runs on) there are only notes and spaces. */
+function onlyNotesFrom(doc: Doc, at: number): boolean {
+  const { source } = doc;
+  let pos = at;
+  for (;;) {
+    while (source[pos] === ' ' || source[pos] === '\t') pos++;
+    const region = doc.regions.find((r) => r.kind === 'note' && r.closed && r.span.from === pos);
+    if (region) {
+      pos = region.span.to;
+      continue;
+    }
+    return pos >= source.length || source[pos] === '\n' || source[pos] === '\r';
+  }
+}
+
 /**
  * The changes that make `text` the scene's first synopsis: its text replaced in place, or a new
- * `= text` line at the top of the header. Empty text removes the first synopsis's line. The text is
+ * `= text` line at the top of the header. Empty text removes the first synopsis's line, or only its
+ * `= text` when only notes follow it there (they stay where they are). The text is
  * written on one line, and can't open a note or a boneyard.
  */
 export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] {
@@ -51,14 +67,17 @@ export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] 
     const block = doc.blocks[first.block] as Block;
     const line = block.lines[0];
     if (!line) return [];
-    if (words === '') {
-      const removal = removeLine(doc, first.block, 0);
-      return removal ? [removal] : [];
-    }
     // The text runs to the first note on the line, if one follows it there.
     const lineEnd = contentEnd(doc.source, line.span.to);
     const note = doc.regions.find((r) => r.span.from > line.span.from && r.span.from < lineEnd);
     const to = note ? note.span.from : lineEnd;
+    if (words === '') {
+      // The notes on the line stay, on a line of their own, which prints nothing either.
+      if (note && onlyNotesFrom(doc, note.span.from))
+        return [{ from: line.span.from, to, insert: '' }];
+      const removal = removeLine(doc, first.block, 0);
+      return removal ? [removal] : [];
+    }
     const insert = `= ${words}${note ? ' ' : ''}`;
     if (doc.source.slice(line.span.from, to) === insert) return [];
     return [{ from: line.span.from, to, insert }];
@@ -156,10 +175,24 @@ function insertField(doc: Doc, scene: Scene, key: FieldKey, note: string): TextC
   return [{ from: at, to: at, insert: `${nl}${nl}${note}` }];
 }
 
+/** The span of the scene's first `[[Key:]]` note with nothing in it, if there is one. */
+function emptyField(doc: Doc, scene: Scene, key: FieldKey): Span | undefined {
+  for (const region of doc.regions) {
+    if (region.span.from < scene.span.from || region.span.from >= scene.span.to) continue;
+    if (region.kind !== 'note' || !region.closed) continue;
+    const note = readNote(doc.source.slice(region.span.from + 2, region.span.to - 2));
+    if (note.head?.kind === 'field' && note.head.key === key && note.body === '') {
+      return { ...region.span };
+    }
+  }
+  return undefined;
+}
+
 /**
  * One field: changed where it is, wherever the writer typed it (§5.3); taken out (with its line
  * when it is alone on one) when `value` is empty; or added to the header. A field already holding
- * `value` isn't rewritten, however it was typed.
+ * `value` isn't rewritten, however it was typed (a color in any case). An empty note of the key is
+ * filled in where it is.
  */
 function setField(doc: Doc, scene: Scene, key: FieldKey, value: string): TextChange[] {
   const body = safeBody(value);
@@ -169,9 +202,13 @@ function setField(doc: Doc, scene: Scene, key: FieldKey, value: string): TextCha
     const entry = noteEntries(doc).find((e) => e.span.from === existing.span.from);
     return entry ? deleteEntry(doc, entry) : [];
   }
-  if (existing?.body === body) return [];
+  const same = (a: string) =>
+    key === 'color' ? a.toLowerCase() === body.toLowerCase() : a === body;
+  if (existing && same(existing.body)) return [];
   const note = fieldNote(key, value);
-  if (existing) return [{ ...existing.span, insert: note }];
+  // An empty note of the key (no field for reading) is filled in where it is.
+  const target = existing?.span ?? emptyField(doc, scene, key);
+  if (target) return [{ ...target, insert: note }];
   return insertField(doc, scene, key, note);
 }
 

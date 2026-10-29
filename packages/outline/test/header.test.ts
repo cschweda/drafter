@@ -1,3 +1,6 @@
+import { parse } from '@drafter/fountain';
+import { paginate } from '@drafter/layout';
+import { renderText } from '@drafter/render-text';
 import { describe, expect, test } from 'vitest';
 import {
   downTarget,
@@ -8,7 +11,9 @@ import {
   setSceneDetails,
   setSynopsis,
 } from '../src';
-import { apply, indexOf } from './helpers';
+import { apply, indexOf, screenplay } from './helpers';
+
+const printed = (source: string) => renderText(paginate(parse(source), screenplay), screenplay);
 
 /** The script after `edit` on its scene number `n` (1-based). */
 function edited(
@@ -249,6 +254,44 @@ describe('setSceneDetails', () => {
     expect(
       details('INT. A - DAY\n\n[[Goal: One.]]\n\nAction. [[Goal: Two.]]\n', { goal: 'Three.' }),
     ).toBe('INT. A - DAY\n\n[[Goal: Three.]]\n\nAction. [[Goal: Two.]]\n');
+  });
+
+  test('clears or changes a synopsis without the notes on its line', () => {
+    const source =
+      'INT. A - DAY\n\n= Syn. [[Setup: the letter]] [[Sam: cut?]]\n[[Goal: Win.]]\n\nAction.\n';
+    const cleared = details(source, { synopsis: '' });
+    expect(cleared).toBe(
+      'INT. A - DAY\n\n[[Setup: the letter]] [[Sam: cut?]]\n[[Goal: Win.]]\n\nAction.\n',
+    );
+    expect(printed(cleared)).toBe(printed(source));
+    expect(indexOf(cleared).index.scenes[0]?.marks.map((m) => m.label)).toEqual(['the letter']);
+    const changed = details(source, { synopsis: 'New.', goal: 'Lose.' });
+    expect(changed).toBe(
+      'INT. A - DAY\n\n= New. [[Setup: the letter]] [[Sam: cut?]]\n[[Goal: Lose.]]\n\nAction.\n',
+    );
+    expect(printed(changed)).toBe(printed(source));
+    // Through setSynopsis too.
+    expect(synopsis(source, '')).toBe(cleared);
+    // Words after the note are the synopsis's too: without its `=` they would print, so the line goes.
+    expect(synopsis('INT. A - DAY\n\n= [[a note]] the.\n\nAction.\n', '')).toBe(
+      'INT. A - DAY\n\nAction.\n',
+    );
+  });
+
+  test('a value typed in another case is no change', () => {
+    const source = 'INT. A - DAY\n\n[[color: Blue]]\n\nAction.\n';
+    const { doc, index } = indexOf(source);
+    const scene = index.scenes[0];
+    if (!scene) throw new Error('no scene');
+    expect(setSceneDetails(doc, scene, { color: 'blue' })).toEqual([]);
+  });
+
+  test('fills in an empty field where it is', () => {
+    expect(details('INT. A - DAY\n\nAction. [[Goal:]]\n', { goal: 'Win.', color: 'red' })).toBe(
+      'INT. A - DAY\n\n[[Color: red]]\n\nAction. [[Goal: Win.]]\n',
+    );
+    // An empty one is still no field for reading.
+    expect(indexOf('INT. A - DAY\n\n[[Goal:]]\n').index.scenes[0]?.fields).toEqual({});
   });
 
   test('writes a synopsis and fields together under a bare heading', () => {
