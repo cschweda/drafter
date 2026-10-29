@@ -8,11 +8,19 @@ import { lookupForms } from './tokens';
 /** Each word of a name or a location: letters, marks, and digits, with apostrophes between them. */
 const WORD = /[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}\p{N}]+)*/gu;
 
-/** Lowercased: every word of every cue's name and of every scene heading's location. */
+/**
+ * Lowercased: every word of every cue's name and of every scene heading's location, and a
+ * possessive's base (`ZEPHYRINE'S` gives `zephyrine's` and `zephyrine`). Never cut as a plural: a
+ * name ending in s (`ODALYS`) is itself; plurals are `lookupForms`' at lookup.
+ */
 export function harvestedWords(doc: Doc): Set<string> {
   const out = new Set<string>();
   const add = (text: string) => {
-    for (const [word] of text.matchAll(WORD)) for (const form of lookupForms(word)) out.add(form);
+    for (const [word] of text.matchAll(WORD)) {
+      const lower = word.toLowerCase().replaceAll('’', "'");
+      out.add(lower);
+      if (lower.endsWith("'s") && lower.length > 2) out.add(lower.slice(0, -2));
+    }
   };
   for (const block of doc.blocks) {
     if (block.kind === 'character') add(block.sem.name);
@@ -69,4 +77,12 @@ export function knownSet(...lists: Iterable<string>[]): Set<string> {
 /** Any of lookupForms(word). */
 export function isKnown(word: string, known: ReadonlySet<string>): boolean {
   return lookupForms(word).some((form) => known.has(form));
+}
+
+/**
+ * A hyphenated compound (a token's `compound`) is known when the whole of it is, as written
+ * (`walkie-talkie`) or with its hyphens taken out (`prelap` for `pre-lap`).
+ */
+export function isKnownCompound(compound: string, known: ReadonlySet<string>): boolean {
+  return isKnown(compound, known) || isKnown(compound.replaceAll('-', ''), known);
 }

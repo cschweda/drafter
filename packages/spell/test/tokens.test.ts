@@ -35,10 +35,28 @@ describe('tokenize', () => {
   test('splits hyphenated words', () => {
     expect(tokenize('a well-meant twenty-one')).toEqual([
       { from: 0, to: 1, word: 'a' },
-      { from: 2, to: 6, word: 'well' },
-      { from: 7, to: 12, word: 'meant' },
-      { from: 13, to: 19, word: 'twenty' },
-      { from: 20, to: 23, word: 'one' },
+      { from: 2, to: 6, word: 'well', compound: 'well-meant' },
+      { from: 7, to: 12, word: 'meant', compound: 'well-meant' },
+      { from: 13, to: 19, word: 'twenty', compound: 'twenty-one' },
+      { from: 20, to: 23, word: 'one', compound: 'twenty-one' },
+    ]);
+    // Each part carries the whole compound, with emphasis and ’ read as the word's are; a part
+    // that isn't checked (a digit, short capitals) still belongs to it.
+    expect(tokenize('a *walkie*-talkie’s B-roll 3-way')).toEqual([
+      { from: 0, to: 1, word: 'a' },
+      { from: 3, to: 9, word: 'walkie', compound: "walkie-talkie's" },
+      { from: 11, to: 19, word: "talkie's", compound: "walkie-talkie's" },
+      { from: 22, to: 26, word: 'roll', compound: 'B-roll' },
+      { from: 29, to: 32, word: 'way', compound: '3-way' },
+    ]);
+    // Two hyphens, a dash, or a hyphen at an edge joins nothing.
+    expect(tokenize('wait--what pre- -lap so–so').map((t) => t.compound)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
     ]);
   });
 
@@ -51,6 +69,15 @@ describe('tokenize', () => {
     expect(lookupForms("Margaret's")).toEqual(["margaret's", 'margaret']);
     expect(lookupForms('Margaret’s')).toEqual(["margaret's", 'margaret']);
     expect(lookupForms('Kettle')).toEqual(['kettle']);
+  });
+
+  test('looks a word up as a plural and a plural possessive too', () => {
+    expect(lookupForms('Halvorsens')).toEqual(['halvorsens', 'halvorsen']);
+    expect(lookupForms("Halvorsens'")).toEqual(["halvorsens'", 'halvorsens', 'halvorsen']);
+    expect(lookupForms('Halvorsens’')).toEqual(["halvorsens'", 'halvorsens', 'halvorsen']);
+    expect(lookupForms('Velloxes')).toEqual(['velloxes', 'velloxe', 'vellox']);
+    // Three letters or fewer are never cut.
+    expect(lookupForms('bus')).toEqual(['bus']);
   });
 
   test('skips words in other scripts', () => {

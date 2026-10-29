@@ -9,6 +9,11 @@ export interface Token {
    * `un*believ*able` is `unbelievable`: its length may differ from `to - from`.
    */
   word: string;
+  /**
+   * When the word is one part of a hyphenated compound (`walkie-talkie`, `B-roll`), the whole
+   * compound, read as `word` is (`*`s removed, ’ as '); absent otherwise.
+   */
+  compound?: string;
 }
 
 /** A whitespace-delimited chunk. */
@@ -45,24 +50,64 @@ function isShortCapitals(word: string): boolean {
  * The words of `text` to check, offset by `offset`. Leaves out: a word with a digit; a whole web
  * or e-mail address (a whitespace-delimited chunk with `://`, `www.`, a letter@letter, or a dotted
  * domain ending in 2–6 letters); an all-capital word of 3 letters or fewer; a word with no Latin
- * letter. A hyphenated word is its parts.
+ * letter. A hyphenated word is its parts, each with the whole as its `compound` (two words joined
+ * by one `-`, with any emphasis `*`s beside it; `--`, a dash, or a hyphen at an edge joins nothing).
  */
 export function tokenize(text: string, offset = 0): Token[] {
   const tokens: Token[] = [];
   for (const chunk of text.matchAll(CHUNK)) {
     if (isAddress(chunk[0])) continue;
-    for (const match of chunk[0].matchAll(WORD)) {
+    const matches = [...chunk[0].matchAll(WORD)];
+    // Each run of matches joined by single hyphens, as [first, last] indices into `matches`.
+    const runOf: number[] = [];
+    let first = 0;
+    matches.forEach((match, i) => {
+      if (i > 0) {
+        const before = matches[i - 1] as RegExpExecArray;
+        const between = chunk[0].slice(before.index + before[0].length, match.index);
+        if (between.replaceAll('*', '') !== '-') first = i;
+      }
+      runOf.push(first);
+    });
+    const compoundOf = (i: number): string | undefined => {
+      const start = runOf[i] as number;
+      let end = i;
+      while (end + 1 < matches.length && runOf[end + 1] === start) end++;
+      if (start === end) return undefined;
+      const a = matches[start] as RegExpExecArray;
+      const b = matches[end] as RegExpExecArray;
+      return chunk[0]
+        .slice(a.index, b.index + b[0].length)
+        .replaceAll('*', '')
+        .replaceAll('’', "'");
+    };
+    matches.forEach((match, i) => {
       const word = match[0].replaceAll('*', '').replaceAll('’', "'");
-      if (DIGIT.test(word) || !LATIN.test(word) || isShortCapitals(word)) continue;
+      if (DIGIT.test(word) || !LATIN.test(word) || isShortCapitals(word)) return;
       const from = offset + chunk.index + match.index;
-      tokens.push({ from, to: from + match[0].length, word });
-    }
+      const compound = compoundOf(i);
+      tokens.push({ from, to: from + match[0].length, word, ...(compound && { compound }) });
+    });
   }
   return tokens;
 }
 
-/** The lowercased forms a known-words set is asked about: the word, then without a final 's (or ’s). */
+/**
+ * The lowercased forms a known-words set is asked about: the word; without a final 's (or ’s), or a
+ * plural possessive's final ' (`Halvorsens'` as `halvorsens`); then that as a plural, without a
+ * final `s`, or `es` both ways (`Halvorsens` as `halvorsen`, `Velloxes` as `velloxe` and `vellox`).
+ * A word of three letters or fewer is only itself.
+ */
 export function lookupForms(word: string): string[] {
   const lower = word.toLowerCase().replaceAll('’', "'");
-  return lower.endsWith("'s") && lower.length > 2 ? [lower, lower.slice(0, -2)] : [lower];
+  const forms = [lower];
+  if (lower.length <= 3) return forms;
+  let base = lower;
+  if (base.endsWith("'s")) base = base.slice(0, -2);
+  else if (base.endsWith("s'")) base = base.slice(0, -1);
+  if (base !== lower) forms.push(base);
+  if (base.length <= 3) return forms;
+  if (base.endsWith('es')) forms.push(base.slice(0, -1), base.slice(0, -2));
+  else if (base.endsWith('s')) forms.push(base.slice(0, -1));
+  return forms;
 }

@@ -6,9 +6,11 @@ export {
   addToScriptDictionary,
   harvestedWords,
   isKnown,
+  isKnownCompound,
   knownSet,
   scriptDictionary,
 } from './known';
+export { SCREEN_WORDS } from './screen-words';
 export type { CheckInput, Misspelling, SessionLimits, SpellSession } from './session';
 export { createSpellSession } from './session';
 export type { Token } from './tokens';

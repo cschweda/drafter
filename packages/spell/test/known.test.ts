@@ -58,8 +58,22 @@ describe('harvested words', () => {
     for (const word of ['Odalys', 'ODALYS', 'odalys', "Brennigan's", 'Brennigan’s', 'KEOKUK']) {
       expect(isKnown(word, known)).toBe(true);
     }
-    expect(isKnown('Odalyses', known)).toBe(false);
+    expect(isKnown('Odalysez', known)).toBe(false);
     expect(isKnown('recieve', known)).toBe(false);
+  });
+
+  test('a harvested name is known as a plural too, and its plural possessive', () => {
+    const doc = parse('INT. DOCK - DAY\n\nHALVORSEN\nAhoy.\n\nVELLOX\nAhoy.\n');
+    const known = knownSet(harvestedWords(doc));
+    for (const word of ['Halvorsens', 'HALVORSENS', "Halvorsens'", 'Halvorsens’', 'Velloxes']) {
+      expect(isKnown(word, known)).toBe(true);
+    }
+    // The harvest itself keeps only the name and its possessive: a name ending in s isn't cut.
+    expect([...knownSet(harvestedWords(parse('INT. DOCK - DAY\n\nODALYS\nAhoy.\n')))]).toEqual([
+      'dock',
+      'odalys',
+    ]);
+    expect(isKnown('Halvorsenz', known)).toBe(false);
   });
 });
 

@@ -1,6 +1,7 @@
 import { parse } from '@drafter/fountain';
 import type { Checker } from './checker';
-import { harvestedWords, isKnown, knownSet, scriptDictionary } from './known';
+import { harvestedWords, isKnown, isKnownCompound, knownSet, scriptDictionary } from './known';
+import { SCREEN_WORDS } from './screen-words';
 import { type Token, tokenize } from './tokens';
 import { fountainUnits, markdownUnits, type Unit } from './units';
 
@@ -106,15 +107,17 @@ export function createSpellSession(checker: Checker, limits: SessionLimits = LIM
       if (kind === 'fountain') {
         const doc = parse(source);
         units = fountainUnits(doc, { notes });
-        known = knownSet(harvestedWords(doc), scriptDictionary(doc), mine);
+        known = knownSet(SCREEN_WORDS, harvestedWords(doc), scriptDictionary(doc), mine);
       } else {
         units = markdownUnits(source);
-        known = knownSet(mine);
+        known = knownSet(SCREEN_WORDS, mine);
       }
       const out: Misspelling[] = [];
       for (const unit of units) {
         for (const token of tokensOf(unit)) {
-          if (isKnown(token.word, known) || correct(token.word)) continue;
+          if (isKnown(token.word, known)) continue;
+          if (token.compound !== undefined && isKnownCompound(token.compound, known)) continue;
+          if (correct(token.word)) continue;
           out.push({ from: unit.from + token.from, to: unit.from + token.to, word: token.word });
         }
       }
