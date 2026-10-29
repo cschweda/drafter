@@ -48,7 +48,7 @@ describe('fountainUnits', () => {
       'sets',
       'down',
       'the',
-      'kettle',
+      'kettel',
       "Brennigan's",
       'coat',
       'hangs',
@@ -83,7 +83,7 @@ describe('fountainUnits', () => {
       'Steam',
       'fogs',
       'the',
-      'window',
+      'windoe',
       'of',
       'the',
       'Halversham',
@@ -99,7 +99,19 @@ describe('fountainUnits', () => {
 
   test('transitions, page breaks, the title page, scene numbers, and the metadata block are never units', () => {
     const doc = parse(fixture('skips.fountain'));
-    expect(checked(doc, true)).toEqual(['DUSK', 'mailbox', 'crooked']);
+    expect(checked(doc, true)).toEqual([
+      'DUSK',
+      'mailbox',
+      'crooked',
+      'ORMSBY',
+      'on',
+      'its',
+      'side',
+      'stikker',
+      'on',
+      'the',
+      'flag',
+    ]);
     const covered = coveredOffsets(doc, true);
     const heading = doc.blocks[0];
     expect(heading?.kind).toBe('scene_heading');
@@ -175,7 +187,7 @@ describe('fountainUnits', () => {
       'stands',
       'at',
       'the',
-      'stove',
+      'stvoe',
       'The',
       "kettle's",
       'been',

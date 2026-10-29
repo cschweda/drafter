@@ -36,6 +36,21 @@ for (const unit of fountainUnits(doc, { notes: false })) {
 - `harvestedWords(doc)` is every word of every character name and scene heading location, lowercased: never flagged. `isKnown(word, known)` matches in any case, and without a final `'s`, so the cue `MARGARET` knows `Margaret’s`.
 - `scriptDictionary(doc)` reads the script's own words, `dictionary` in the metadata block; `addToScriptDictionary(doc, word)` gives the change that adds one, sorted and once, through `setMeta` from `@drafter/fountain`.
 
+## Checking
+
+```ts
+import en from 'dictionary-en'; // in Node; the app's worker fetches the same two files
+import { createChecker, createSpellSession } from '@drafter/spell';
+
+const session = createSpellSession(createChecker(en));
+session.check({ source, kind: 'fountain', notes: false, mine: ['Odalys'] });
+// [{ from, to, word: 'recieve' }, …]: offsets in `source`, in order
+session.suggest('recieve'); // ['receive', 'relieve']
+```
+
+- `createChecker({ aff, dic })` loads a Hunspell dictionary into nspell (text, a `Uint8Array`, or a Buffer). Make one per language and keep it. `correct(word)` is also true when the word without its accents is correct (`café` as `cafe`, since the dictionaries are built without them); `suggest(word, limit)` gives at most `SUGGESTION_LIMIT` (five), in nspell's order.
+- `createSpellSession(checker)` parses a Fountain script itself (or scans a Markdown document) and gives every misspelling, in order. It caches each unit's words by its key and each word's verdict, so a second check tokenizes only the blocks that changed and asks the checker only about new words. The known words (the script's names and locations, its dictionary, and `mine`, My dictionary) are rebuilt on every check and filter the cached verdicts, so adding a word never checks anything again. A word of one or two letters is never marked (`e.g.`, `'n'`, `'em`). The caches keep at most 20,000 units and 200,000 words, dropping the least recently used. `work()` says how many units were tokenized and words checked since it was last called, for tests.
+
 ## License
 
 MIT. The dictionaries are `(MIT AND BSD)`, under SCOWL's and Ispell's notices; see each package's `license` file.

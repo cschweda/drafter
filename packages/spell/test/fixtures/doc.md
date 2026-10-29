@@ -5,7 +5,7 @@ tags: [zzqxtag]
 
 # Notes on the second draft
 
-The *second* act drags. See <https://example.com/zzqxauto> and [the outline](https://example.com/zzqxdest "Zzqxtitle") or [the reference][zzqxlabel].
+The *second* act dragz. See <https://example.com/zzqxauto> and [the outline](https://example.com/zzqxdest "Zzqxtitle") or [the reference][zzqxlabel].
 
 Run `zzqxcode --fast` before the read, and ``a `zzqxdouble` span`` too.
 

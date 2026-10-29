@@ -67,7 +67,7 @@ describe('markdownUnits', () => {
       'The',
       'second',
       'act',
-      'drags',
+      'dragz',
       'See',
       'and',
       'the',

@@ -1,3 +1,5 @@
+export type { Checker } from './checker';
+export { createChecker, SUGGESTION_LIMIT } from './checker';
 export type { DictionaryInfo, SpellLanguage } from './dictionaries';
 export { DICTIONARIES, SPELL_LANGUAGES } from './dictionaries';
 export {
@@ -7,6 +9,8 @@ export {
   knownSet,
   scriptDictionary,
 } from './known';
+export type { CheckInput, Misspelling, SessionLimits, SpellSession } from './session';
+export { createSpellSession } from './session';
 export type { Token } from './tokens';
 export { lookupForms, tokenize } from './tokens';
 export type { Unit, UnitOptions } from './units';
