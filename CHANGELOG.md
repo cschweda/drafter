@@ -17,7 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- `apps/web`: **AltGr types its letter again off a Mac.** On Windows AltGr is Ctrl+Alt, so on a layout where AltGr+N or AltGr+O types a letter (Polish ń, ó) the global keys Mod+Alt+N (New screenplay) and Mod+Alt+O (Toggle the structure strip) took it. Ctrl+Alt shortcuts are now read by the key they type, so they work on Dvorak and Colemak, falling back to the physical key only on a non-Latin layout (Cyrillic, Greek); an accented letter, punctuation, or dead key typed with AltGr is left to type, and nothing matches when the browser reports AltGr. On a Mac Option is read from the physical key, as before.
+- `apps/web`: **AltGr now types its letter off a Mac.** On Windows AltGr is Ctrl+Alt, so on a layout where AltGr+N or AltGr+O types a letter (Polish ń, ó) the global keys Mod+Alt+N (New screenplay) and Mod+Alt+O (Toggle the structure strip) took it. Ctrl+Alt shortcuts are now read by the key they type, so they work on Dvorak and Colemak, falling back to the physical key only on a non-Latin layout (Cyrillic, Greek); an accented letter, punctuation, or dead key typed with AltGr is left to type, and a reported AltGr only stops a key that doesn't type the bound letter. On a Mac Option is read from the physical key, as before.
 - `apps/web`: the toolbar keeps to one row at 1024 px with its five actions, in a Markdown document or a script whose template Drafter doesn't have: the template chip is cut short with an ellipsis when room runs out (its accessible name stays whole, and hovering it shows the full name), and the toolbar's gaps are a little narrower below 1200 px.
 
 ## [0.14.0] - 2026-10-29

@@ -61,10 +61,11 @@ export function matchesKey(event: KeyboardEvent, keys: string, apple: boolean): 
   if (event.shiftKey !== has('Shift')) return false;
   if (event.altKey && /^[a-z0-9]$/i.test(key)) {
     if (!apple && event.ctrlKey) {
-      if (event.getModifierState?.('AltGraph')) return false;
-      // The key it types decides (Dvorak's o is on KeyS); only a letter of another script, as on a
-      // Cyrillic or Greek layout, falls back to the physical key. Anything else is AltGr typing.
+      // The key it types decides (Dvorak's o is on KeyS), even where the browser reports AltGr for
+      // a plain Ctrl+Alt: no layout's AltGr types a plain letter. Only a letter of another script, as
+      // on a Cyrillic or Greek layout, falls back to the physical key. Anything else is AltGr typing.
       if (event.key.toLowerCase() === key.toLowerCase()) return true;
+      if (event.getModifierState?.('AltGraph')) return false;
       if (!/^(?!\p{Script=Latin})\p{L}$/u.test(event.key)) return false;
     }
     return event.code === (/^[0-9]$/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`);

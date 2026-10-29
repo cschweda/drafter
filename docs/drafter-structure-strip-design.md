@@ -62,7 +62,7 @@ The scene index has pages only when the layout matches the parse. While typing a
 - **Call:** one setting, `structureStrip` in `settings.ts`, **off by default** (as the script map, §14 of the Phase 2 design, keeps the writing screen calm for a newcomer), remembered on this device like every setting.
 - Three controls set it:
   - a **Structure** round button in the toolbar, after Focus, pressed while the strip shows (`aria-pressed`), with its own pastel circle;
-  - **Toggle the structure strip** in the palette, the View group, the Keyboard shortcuts page, and the desktop app's View menu, on **Mod+Alt+O** (Call: a key next to Mod+, for Settings, unused by CodeMirror's keymaps and the major browsers; bound on the window, so it works with focus anywhere);
+  - **Toggle the structure strip** in the palette, the View group, the Keyboard shortcuts page, and the desktop app's View menu, on **Mod+Alt+O** (Call: Mod+. went to Spelling suggestions, so Mod+Alt+O, for Outline, unused by CodeMirror's keymaps and the major browsers; bound on the window, so it works with focus anywhere);
   - a **Structure strip** switch in Settings: "Show your script's sections and scenes as a band of blocks above the panes, each as wide as it is long. Click one to go there."
 - **Markdown documents** have no scenes, so the strip never shows for one. The button and the command stay where they are, disabled with the reason ("A Markdown document has no scenes."), and the setting is kept for the next Fountain script.
 - **Focus mode** hides it (it sits in `.top`, which focus mode removes).

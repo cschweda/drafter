@@ -32,6 +32,7 @@ import { useStrip } from '~/strip/use-strip';
 const { view, current, go } = useStrip();
 const outline = useOutline();
 const editor = useEditor();
+const focusMode = useFocusMode();
 
 /** The live items by id, so a block kept from before the layout caught up is named as it is now. */
 const items = computed(() => {
@@ -66,7 +67,8 @@ onBeforeUnmount(() => {
   observer?.disconnect();
   // The strip going with focus in it (turned off, a Markdown document, a narrow window) would leave
   // focus nowhere: it goes to the editor, at the cursor, instead (Call 32).
-  if (root.value?.contains(document.activeElement)) {
+  // Focus mode puts the cursor in the editor itself, and a goto there would switch a pane's tab.
+  if (root.value?.contains(document.activeElement) && !focusMode.on.value) {
     editor.goto(editor.view.state.selection.main.head);
   }
 });

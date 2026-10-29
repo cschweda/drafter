@@ -78,8 +78,14 @@ describe('matchesKey', () => {
     // On Dvorak the key that types o is KeyS, and KeyO types r.
     expect(matchesKey(altGr('o', 'KeyS'), 'Mod-Alt-o', false)).toBe(true);
     expect(matchesKey(altGr('r', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
-    // A browser that reports AltGr itself is believed, whatever the key says.
-    const reported = altGr('o', 'KeyO');
+    // A browser that reports AltGr is believed for a letter of another script, but a plain o is
+    // still the shortcut (Chromium may report AltGr for left Ctrl+Alt on an AltGr layout).
+    const plain = altGr('o', 'KeyO');
+    Object.defineProperty(plain, 'getModifierState', {
+      value: (name: string) => name === 'AltGraph',
+    });
+    expect(matchesKey(plain, 'Mod-Alt-o', false)).toBe(true);
+    const reported = altGr('щ', 'KeyO');
     Object.defineProperty(reported, 'getModifierState', {
       value: (name: string) => name === 'AltGraph',
     });

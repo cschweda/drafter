@@ -210,5 +210,5 @@ The design's 22 Calls (its §12) are binding and get their DECISIONS lines as th
 28. **Focus enters on the last block focused this visit, else the cursor's scene, else the first scene** (Task 3).
 29. **The in-view marker is the Script pane's top page,** published by `ScriptPane.vue` at most once a frame; none while the Script pane isn't showing (Task 3).
 30. **The toolbar's Structure button** is the fifth round action, `#b7a6e6`, `i-lucide-panel-top`, hidden below 1024 px (Task 4).
-31. **Mod+Alt+O** is matched on the physical O key; where it can't be pressed, the other three controls do the job (Task 4).
+31. **Mod+Alt+O** is matched by the key it types off a Mac (the physical O key on a Mac, or on a layout whose letters aren't Latin); where it can't be pressed, the other three controls do the job (Task 4).
 32. **When the strip goes with focus in it, focus goes to the editor** (Task 4).
