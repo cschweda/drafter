@@ -7,7 +7,7 @@ Drafter for Windows is an installer, published with each release on GitHub: <htt
 | Most PCs: 64-bit Intel or AMD | `Drafter-<version>-windows-x64-setup.exe` |
 | Windows on Arm: a Snapdragon laptop, or Windows 11 in a virtual machine on an Apple silicon Mac (Parallels, VMware Fusion, UTM) | `Drafter-<version>-windows-arm64-setup.exe` |
 
-Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor". Windows 10 and 11 are supported.
+Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor". Windows 10 and 11 are supported. How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
 
 ## Install
 
@@ -74,6 +74,10 @@ A script module from the folder is code nobody at Drafter has reviewed, so Draft
 - Keep modules in `%APPDATA%\Drafter\modules` itself. A modules folder that is a link (a junction) to a folder somewhere else is skipped, and so is a module with a link out of its own folder or a hard-linked file. (A link one level up, `%APPDATA%\Drafter` itself made a junction, isn't noticed; only you could make one.)
 - Don't share the modules folder, or give other accounts on the PC access to it.
 - Administrators can change anything on the PC, and so can any program you run; that holds on every system.
+
+## Building the installers yourself
+
+On a Windows PC with Node 22.13 or later and pnpm 10, in a clone of the repository: `pnpm install`, then `pnpm desktop:win`. The installers land in `apps/desktop/release/`.
 
 ## If something goes wrong
 

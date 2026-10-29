@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- `docs`: **the README is about half as long (9,166 words to about 5,100) and easier to scan, with nothing taken out of the repository.** Reference detail moved to the documents made for it, and the README keeps a summary and a link:
+  - **Install and update steps** for Linux, Windows, and the Mac are in `docs/desktop-install-linux.md`, `docs/desktop-install-windows.md`, and `docs/desktop-install-macos.md`. The README keeps the download names, a one-line install, and the link. The Linux guide gains the package table, starting with a script open, removing each package, and the AppImage's file types; the Windows guide gains building the installers yourself.
+  - **The web and desktop comparison table** is in a new `docs/web-and-desktop.md`, linked from the README and both install guides.
+  - **The roadmap's per-phase lists** are in the architecture document's §13, which now has the full lists with what has shipped and in which version (merged with what §13 already said). The README keeps one table: what shipped, in which version, and what's next.
+  - **The full clean-room statement** is in a new `docs/clean-room.md`, word for word. The README keeps a short statement of the rule, what's permitted and excluded, and a summary of the audit, under the same two headings. `DEPENDENCIES.md`, `final-draft-comparison.md`, and `clean-room-audit.md` link to the new document.
+  - **The top of the README** is a short status line and a list of what you can do today. Long paragraphs became lists, and facts said twice now live in one place.
+  - **Corrected on the way:** Final Draft files are a Phase 2 feature, not Phase 1; screen-reader testing comes last, not in Phase 2; offline dictionaries already ship (v0.14.0); import has been checked against Final Draft 13's Outline, Script, and Shooting Script samples, not one (the architecture document had said not yet against any); the repository layout shows what's there now (`apps/desktop`, `modules`, `brand`; `templates/` is still planned); `@drafter/stats` is marked planned; and the package README list includes `notes`, `compare`, `outline`, `spell`, and `fdx`.
+
 ## [0.15.1] - 2026-10-29
 
 **Final Draft shooting scripts import cleanly.** An omitted scene's lines come in as notes after its OMITTED heading instead of spilling into the script, hidden text comes in as a note, and All Caps text comes in in capitals, checked against Final Draft 13's own Outline, Script, and Shooting Script samples.
