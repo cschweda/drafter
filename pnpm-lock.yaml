@@ -84,6 +84,9 @@ importers:
       '@drafter/cm-fountain':
         specifier: workspace:*
         version: link:../../packages/cm-fountain
+      '@drafter/compare':
+        specifier: workspace:*
+        version: link:../../packages/compare
       '@drafter/fdx':
         specifier: workspace:*
         version: link:../../packages/fdx
@@ -214,6 +217,12 @@ importers:
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
+
+  packages/compare:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
 
   packages/fdx:
     dependencies:

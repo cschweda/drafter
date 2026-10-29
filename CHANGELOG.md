@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/compare`, a new package for Compare (Phase 2 design §11.2). `diffLines` gives a shortest line diff of two versions as runs of same, added, and removed lines (half-open ranges on both sides, adjacent runs of one kind merged, and a removal before the addition that replaces it), with a Myers diff written for Drafter in linear space. `changesOf` diffs two texts and gives each change as added, removed, or changed (a removal and the addition beside it), with its lines in both versions, its offsets in the newer text, and the lines it took out. `splitLines` reads `\n` and `\r\n` alike, so a script saved with either line break has no changes against itself. A moved scene is removed where it was and added where it is. Property-tested against a longest common subsequence; two unrelated 5,000-line scripts diff in well under the 2-second budget.
+
 ## [0.12.0] - 2026-10-29
 
 **Cards and notes.** A **Cards** tab shows your scenes as index cards, grouped by section, with each scene's heading, synopsis, color, length, and goal. Edit a synopsis on its card, and move cards by dragging them, with Alt and the arrow keys, or with Move to…, each in one undo. A **Notes** tab lists every note in your script, filed by who wrote it or what it's about (`[[Sam: …]]`, `[[TODO: …]]`, `#story`), with filters, and resolve, reopen, edit, set category, and delete, each one undo; its tab shows how many are open. **Scene details** writes a scene's goal, conflict, outcome, and shift into its header, and the Outline shows each scene's goal. **Setup** and **Payoff** on the element bar mark the threads you plant and pay off, the Notes tab lists them, and Problems says when a setup is never paid off or a field is written twice. None of it changes your printed pages. Also: in Safari, a click on the lower half of an element bar button no longer goes missing.
