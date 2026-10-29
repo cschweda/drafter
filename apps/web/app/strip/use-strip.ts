@@ -10,6 +10,7 @@ import { useLayout } from '../editor/layout';
 import { useEditor } from '../editor/session';
 import { sayOutline } from '../outline/notice';
 import { useOutline } from '../outline/use-outline';
+import { useSettings } from '../settings/settings';
 import { GONE } from './labels';
 
 // The Structure strip's session (structure strip design §3.2, §4): the strip of the Outline's
@@ -58,7 +59,7 @@ export function currentBlocks(index: SceneIndex, cursorBlock: number): number[] 
 }
 
 export interface StripSession {
-  /** Null after a load until the next index. */
+  /** Null after a load until the next index, and while the strip is turned off. */
   view: Readonly<ShallowRef<StripView | null>>;
   /** The ids of `currentBlocks`, from the live index. */
   current: Readonly<ComputedRef<ReadonlySet<string>>>;
@@ -72,9 +73,12 @@ function create(): StripSession {
   const editor = useEditor();
   const { layout, failed, cursorBlock } = useLayout();
   const outline = useOutline();
+  const { settings } = useSettings();
   return effectScope(true).run(() => {
     const view = shallowRef<StripView | null>(null);
-    const built = computed<StripView>(() => {
+    // Nothing is built while the strip is off, so a hidden strip costs no work after a parse.
+    const built = computed<StripView | null>(() => {
+      if (!settings.value.structureStrip) return null;
       const index = outline.index.value;
       return {
         strip: structureStrip(index, linesPerPage(layout.value)),
@@ -84,7 +88,7 @@ function create(): StripSession {
     watch(
       [built, failed],
       ([next, layoutFailed]) => {
-        view.value = nextView(view.value, next, layoutFailed);
+        view.value = next && nextView(view.value, next, layoutFailed);
       },
       { immediate: true },
     );
