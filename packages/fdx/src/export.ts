@@ -271,7 +271,9 @@ class Exporter {
     blocks.forEach((block, index) => {
       switch (block.kind) {
         case 'page_break':
+          // A break ends the speech before it: what follows starts its own paragraph, on a new page.
           this.pageBreak = true;
+          this.open = null;
           return;
         case 'synopsis':
           // One a scene took is already in its properties; any other has no scene to ride on, so

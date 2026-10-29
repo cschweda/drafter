@@ -454,8 +454,10 @@ class Importer {
     const all = linesOf(paragraph);
     const lines = type === 'Action' || type === 'Dialogue' ? all : trimBlank(all);
     const inSpeech = type === 'Parenthetical' || type === 'Dialogue';
-    if (attrs.StartsNewPage === 'Yes' && !(inSpeech && this.speech)) {
-      // Fountain can't break a page inside a speech, so a break there is left out.
+    const lyricMark = type === 'Dialogue' && attrs.DrafterLyric === 'Yes';
+    if (attrs.StartsNewPage === 'Yes' && !(inSpeech && this.speech && !lyricMark)) {
+      // Fountain can't break a page inside a speech, so a break there is left out, except before
+      // a lyric Drafter wrote: it stands alone, and export put the break before it.
       this.flushSpeech();
       this.pageBreak = true;
     }

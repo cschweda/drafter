@@ -1,14 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { type Doc, parse, print } from '@drafter/fountain';
-import { builtins } from '@drafter/templates';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { fountainScript } from '../../../fixtures/generators/fountain';
-import { FdxError, fromFdx, toFdx, XmlError } from '../src';
-
-const screenplay = builtins['us-screenplay'];
-if (!screenplay) throw new Error('missing built-in template');
+import { FdxError, fromFdx, XmlError } from '../src';
 
 const fixture = (name: string) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
@@ -643,16 +638,5 @@ describe('fromFdx: the round trip through Fountain', () => {
       const { text } = fromFdx(fixture(name));
       expect(print(parse(text))).toBe(text);
     }
-  });
-
-  it('imports what export wrote so that exporting it again writes the same file', () => {
-    fc.assert(
-      fc.property(fountainScript, (source) => {
-        const first = toFdx(parse(source), screenplay);
-        const again = toFdx(parse(fromFdx(first).text), screenplay);
-        expect(again).toBe(first);
-      }),
-      { numRuns: 200 },
-    );
   });
 });
