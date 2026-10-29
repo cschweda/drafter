@@ -110,7 +110,7 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 
 ## Samples
 
-[`samples/`](samples/) holds two short scripts that tell the same story, one as a [screenplay](samples/screenplay.fountain) and one as a [stage play](samples/stage-play.fountain). Neither is complete; together they show how Drafter's Fountain works and how the two formats differ. Notes in double brackets explain each piece of syntax in the source and never print. In the app (Phase 1), a first visit opens on the screenplay, and both are under Open → Samples. Help → **Sample scripts** has three much smaller ones, written for the app: a screenplay and a stage play, each under a page and using each element its template has once, and a Markdown document. Each opens as a new script of your own, leaving the one you had open as it was.
+[`samples/`](samples/) holds two short scripts that tell the same story, one as a [screenplay](samples/screenplay.fountain) and one as a [stage play](samples/stage-play.fountain). Neither is complete; together they show how Drafter's Fountain works and how the two formats differ. Notes in double brackets explain each piece of syntax in the source and never print. In the app (Phase 1), a first visit opens on the screenplay, and both are under Open → Samples. Help → **Sample scripts** has three much smaller ones, written for the app: a screenplay and a stage play, each under a page (the screenplay uses every Fountain element once; the stage play its acts, scenes, cues, and stage directions), and a Markdown document. Each opens as a new script of your own, leaving the one you had open as it was.
 
 | | Screenplay | Stage play |
 |---|---|---|

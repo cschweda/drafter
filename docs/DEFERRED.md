@@ -62,3 +62,12 @@ What Plan C (v0.13.0) leaves for later.
 - **Compare's edges.** Closing Compare forgets which tab the slot held before; the newer text is parsed twice when a comparison opens; the Changes list names a change by the scene it falls in, and when two removals sit before the same line their gaps overlap; a snapshot's label in the Compare bar has a time but no date.
 - **Snapshot timing details.** A clock set back can date a snapshot in the future, and thinning would then keep it as recent. Each take reads the script's whole history about three times, which is fine at hundreds of snapshots. The hour buckets use local time and are off by an hour's worth of grouping across a daylight-saving change. A take for a script that was just removed answers "unchanged". A failed snapshot on save restarts the 10-minute count, on purpose.
 - **Diff performance.** `markPages` compares every change with every printed line, which is quadratic in the number of changes; a rewrite of a whole feature has not been timed. The diff's budget tests use cheap input shapes; a scrambled input from a small alphabet would be a harder test.
+
+## Help: About, samples, and updates
+
+What the Help menu's About Drafter, Sample scripts, and Check for updates (after v0.13.0) leave for later.
+
+- **A slow web install says nothing for a minute.** On drafter.dev, Check for updates waits up to 60 seconds for a new service worker it found to install, with only "Checking for updates…" showing, and then calls it an error. A progress line ("Downloading the new version…") would say more.
+- **A sample script that can't be stored fails silently.** When the browser's storage is full, opening a sample script makes nothing and says nothing (the command's error is swallowed, as New's is). It should say why, as a failed save does.
+- **A sample script stays a sample script.** `sampleScript` stays on the project after the writer edits or saves it, so it never counts as their own document of that kind for the first New's annotated sample. Clearing it on the first edit or save would be more exact.
+- **axe on About and Check for updates** (the final accessibility steps).
