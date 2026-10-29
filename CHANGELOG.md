@@ -29,6 +29,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `apps/web`: undoing a move from the Outline (Mod+Z works there now) keeps focus on the scene's row; the Outline's menus and Move to… act on the scene as it is when you choose, not as it was when they opened; typing a longer name to jump stays on the row it found; a `$` in a Markdown outline's title is kept in the new screenplay's title.
 - `apps/web`: typing with the Outline showing is about three times faster on a long script.
 - `@drafter/outline`: taking out a color typed inside a line leaves the spaces around it, so the line prints as before.
+- Tests: the element bar's hide test waits for the setting to be stored before it reloads, which it sometimes didn't (it failed about one run in twelve); a unit test for moving scenes closes the editors it makes, so they don't measure after the test has ended.
 
 ### Changed
 

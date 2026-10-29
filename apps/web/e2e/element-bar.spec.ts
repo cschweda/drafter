@@ -7,6 +7,7 @@ import {
   settingsDialog,
   showSource,
   start,
+  stored,
   textOf,
 } from './modules';
 
@@ -202,7 +203,8 @@ test('hides from its ⋯ menu, and Settings brings it back', async ({ page }) =>
   await expect(page.getByRole('status').filter({ hasText: 'element bar is hidden' })).toContainText(
     'Turn it back on in Settings',
   );
-  // It stays hidden after a reload.
+  // It stays hidden after a reload, once the setting has been kept.
+  await expect.poll(async () => (await stored(page)).elementBar).toBe(false);
   await page.reload();
   await expect(editor(page)).toBeAttached();
   await showSource(page);

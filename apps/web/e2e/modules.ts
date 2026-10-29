@@ -123,3 +123,33 @@ export async function chooseTab(page: Page, name: string) {
     .getByRole('menuitem', { name, exact: true })
     .click();
 }
+
+/** What the settings table holds, a row to a setting. */
+export function stored(page: Page): Promise<Record<string, unknown>> {
+  return page.evaluate(
+    () =>
+      new Promise<Record<string, unknown>>((resolve) => {
+        const open = indexedDB.open('drafter');
+        open.onerror = () => resolve({});
+        open.onsuccess = () => {
+          const db = open.result;
+          const request = db.transaction('settings').objectStore('settings').getAll();
+          request.onsuccess = () => {
+            db.close();
+            resolve(
+              Object.fromEntries(
+                (request.result as Array<{ key: string; value: unknown }>)
+                  // The samples met, which the tests start with (playwright.config.ts), are not settings.
+                  .filter((r) => !r.key.startsWith('sample-seen:'))
+                  .map((r) => [r.key, r.value]),
+              ),
+            );
+          };
+          request.onerror = () => {
+            db.close();
+            resolve({});
+          };
+        };
+      }),
+  );
+}

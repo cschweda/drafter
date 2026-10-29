@@ -39,6 +39,7 @@ describe('applyTextChanges, for a view', () => {
     expect(view.state.selection.main.head).toBe(22);
     expect(undo(view)).toBe(true);
     expect(view.state.doc.toString()).toBe('INT. A - DAY\n\nOne.\n\nINT. B - DAY\n\nTwo.\n');
+    view.destroy();
   });
 
   test('the editor keeps scene ids', () => {
@@ -80,5 +81,6 @@ describe('scene ids through undo', () => {
     expect(sceneIdAt(view.state, 0)).toBe(a);
     redo(view);
     expect(sceneIdAt(view.state, 20)).toBe(a);
+    view.destroy();
   });
 });
