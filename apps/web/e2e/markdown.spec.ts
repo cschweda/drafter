@@ -495,6 +495,11 @@ test.describe('switching between Markdown and Fountain', () => {
     await chipItem(page, 'Stage play').click();
     await expect(chip(page)).toHaveText('Stage play');
     await expect(tabs(page, 'Script').first()).toBeVisible();
+    // The rest is from the keyboard. Take the mouse off where the menu was, and let the menu finish
+    // closing: until it has gone, a pointer resting over it focuses its items, and its going puts
+    // focus back in the editor, whatever has focus by then.
+    await page.mouse.move(0, 0);
+    await expect(chipMenu(page)).toHaveCount(0);
     await editor(page).focus();
     await page.keyboard.press('ControlOrMeta+End');
     await expect(editor(page)).toContainText('"template":"stage-play-standard"');
