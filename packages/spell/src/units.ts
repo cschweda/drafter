@@ -194,7 +194,8 @@ function linesOf(source: string): LineSpan[] {
   }
 }
 
-const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+/** A fence at any indent: one under a list item is indented four or more. */
+const FENCE = /^\s*(`{3,}|~{3,})/;
 const ATX = /^ {0,3}#{1,6}(?:\s|$)/;
 /** Four columns of indent: a tab, or four spaces (a tab after up to three). */
 const INDENTED = /^(?: {0,3}\t| {4})/;
@@ -244,24 +245,35 @@ function blankCodeSpans(chars: string[], text: string, base: number): void {
   }
 }
 
+/**
+ * Each bracket's partner: for every `(` and `[`, the offset of the `)` or `]` that closes it, or
+ * -1. One pass with a stack per kind, skipping escaped characters, so it is linear.
+ */
+function partners(text: string): Int32Array {
+  const out = new Int32Array(text.length).fill(-1);
+  const parens: number[] = [];
+  const squares: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '\\') i++;
+    else if (c === '(') parens.push(i);
+    else if (c === '[') squares.push(i);
+    else if (c === ')' && parens.length > 0) out[parens.pop() as number] = i;
+    else if (c === ']' && squares.length > 0) out[squares.pop() as number] = i;
+  }
+  return out;
+}
+
 /** A link's `(destination "title")` after `](`, and a full reference's `[label]` after `]`. */
 function blankLinkTargets(chars: string[], text: string, base: number): void {
+  const partner = partners(text);
   for (let i = text.indexOf(']'); i >= 0; i = text.indexOf(']', i + 1)) {
     const open = text[i + 1];
     if (open !== '(' && open !== '[') continue;
-    const close = open === '(' ? ')' : ']';
-    let depth = 0;
-    for (let k = i + 1; k < text.length; k++) {
-      if (text[k] === '\\') {
-        k++;
-      } else if (text[k] === open) {
-        depth++;
-      } else if (text[k] === close && --depth === 0) {
-        blank(chars, 0, base + i + 1, base + k + 1);
-        i = k;
-        break;
-      }
-    }
+    const close = partner[i + 1] as number;
+    if (close < 0) continue;
+    blank(chars, 0, base + i + 1, base + close + 1);
+    i = close;
   }
 }
 

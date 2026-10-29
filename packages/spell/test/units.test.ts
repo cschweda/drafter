@@ -16,7 +16,9 @@ function checked(doc: Doc, notes = false): string[] {
       if (unit.text[i] !== ' ') expect(unit.text[i]).toBe(doc.source[unit.from + i]);
     }
     for (const token of tokenize(unit.text, unit.from)) {
-      expect(doc.source.slice(token.from, token.to).replaceAll('’', "'")).toBe(token.word);
+      expect(doc.source.slice(token.from, token.to).replaceAll('*', '').replaceAll('’', "'")).toBe(
+        token.word,
+      );
       out.push(token.word);
     }
   }
@@ -205,6 +207,7 @@ describe('fountainUnits', () => {
       'ANA\r\nI *did* it 😀 [[a nöte]] \\*really\\* /* gone */ yes.\r\n\r\nBO ^\r\n𐐀 recieve _now_.\r\n';
     const doc = parse(source);
     expect(checked(doc)).toEqual(['did', 'it', 'really', 'yes', 'recieve', 'now']);
+    expect(checked(parse('Un*believ*able.\n'))).toEqual(['Unbelievable']);
     expect(checked(doc, true)).toEqual([
       'did',
       'it',

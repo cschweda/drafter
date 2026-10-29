@@ -12,7 +12,9 @@ function checked(source: string): string[] {
       if (unit.text[i] !== ' ') expect(unit.text[i]).toBe(source[unit.from + i]);
     }
     for (const token of tokenize(unit.text, unit.from)) {
-      expect(source.slice(token.from, token.to).replaceAll('’', "'")).toBe(token.word);
+      expect(source.slice(token.from, token.to).replaceAll('*', '').replaceAll('’', "'")).toBe(
+        token.word,
+      );
       out.push(token.word);
     }
   }
@@ -29,6 +31,12 @@ describe('markdownUnits', () => {
     // An unclosed fence runs to the end; a lone backtick stays text.
     expect(checked('Before.\n\n~~~\nzzqx\n\nzzqy\n')).toEqual(['Before']);
     expect(checked('a `lone tick')).toEqual(['a', 'lone', 'tick']);
+    // A fence is a fence at any indent, as under a list item.
+    for (const fence of ['```', '~~~']) {
+      expect(
+        checked(`- Run:\n    ${fence}sh\n    pnpm zzqxinstall\n    ${fence}\n- Done \`one\`\n`),
+      ).toEqual(['Run', 'Done']);
+    }
     // Four spaces inside a paragraph are a continuation, not code.
     expect(checked('One line\n    and more')).toEqual(['One', 'line', 'and', 'more']);
   });
@@ -40,6 +48,13 @@ describe('markdownUnits', () => {
     expect(words).not.toContain('amp');
     expect(words).not.toContain('title');
     expect(checked(doc.replaceAll('\n', '\r\n'))).toEqual(words);
+  });
+
+  test('reads a long paragraph of unclosed link openers in linear time', () => {
+    const source = `${'a](b '.repeat(20_000)}x][y `.repeat(2);
+    const start = performance.now();
+    markdownUnits(source);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 
   test('keeps link text', () => {

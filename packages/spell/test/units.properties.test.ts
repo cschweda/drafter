@@ -25,7 +25,9 @@ describe('fountainUnits, for any script', () => {
             if (ch !== ' ') expect(ch).toBe(source[unit.from + i]);
           }
           for (const token of tokenize(unit.text, unit.from)) {
-            expect(source.slice(token.from, token.to).replaceAll('’', "'")).toBe(token.word);
+            expect(
+              source.slice(token.from, token.to).replaceAll('*', '').replaceAll('’', "'"),
+            ).toBe(token.word);
           }
         }
       }),

@@ -65,5 +65,14 @@ describe('tokenize', () => {
       { from: 14, to: 17, word: 'now' },
       { from: 21, to: 24, word: 'lit' },
     ]);
+    // A run of `*` between letters joins the word: the token spans the source, its word has no `*`.
+    expect(tokenize('un*believ*able')).toEqual([{ from: 0, to: 14, word: 'unbelievable' }]);
+    expect(tokenize('*un*believable')).toEqual([{ from: 1, to: 14, word: 'unbelievable' }]);
+    expect(tokenize('un**believ**able don’t')).toEqual([
+      { from: 0, to: 16, word: 'unbelievable' },
+      { from: 17, to: 22, word: "don't" },
+    ]);
+    // `_` never joins: snake_case is two words.
+    expect(words('snake_case')).toEqual(['snake', 'case']);
   });
 });

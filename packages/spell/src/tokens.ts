@@ -4,14 +4,20 @@
 export interface Token {
   from: number;
   to: number;
-  /** The source text with ’ read as '. */
+  /**
+   * The source text from `from` to `to` with ’ read as ' and any `*` inside the word removed, so
+   * `un*believ*able` is `unbelievable`: its length may differ from `to - from`.
+   */
   word: string;
 }
 
 /** A whitespace-delimited chunk. */
 const CHUNK = /\S+/gu;
-/** Letters, marks, and digits, with apostrophes only between them. A hyphen, `*`, or `_` ends one. */
-const WORD = /[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}\p{N}]+)*/gu;
+/**
+ * Letters, marks, and digits, with apostrophes or emphasis `*`s only between them (`un*believ*able`
+ * is one word). A hyphen or `_` ends one, so `snake_case` is two.
+ */
+const WORD = /[\p{L}\p{M}\p{N}]+(?:(?:['’]|\*+)[\p{L}\p{M}\p{N}]+)*/gu;
 const DIGIT = /\p{N}/u;
 const LATIN = /\p{Script=Latin}/u;
 const LETTER = /\p{L}/gu;
@@ -46,10 +52,10 @@ export function tokenize(text: string, offset = 0): Token[] {
   for (const chunk of text.matchAll(CHUNK)) {
     if (isAddress(chunk[0])) continue;
     for (const match of chunk[0].matchAll(WORD)) {
-      const word = match[0];
+      const word = match[0].replaceAll('*', '').replaceAll('’', "'");
       if (DIGIT.test(word) || !LATIN.test(word) || isShortCapitals(word)) continue;
       const from = offset + chunk.index + match.index;
-      tokens.push({ from, to: from + word.length, word: word.replaceAll('’', "'") });
+      tokens.push({ from, to: from + match[0].length, word });
     }
   }
   return tokens;
