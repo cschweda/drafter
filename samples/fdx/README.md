@@ -1,0 +1,3 @@
+# Final Draft samples
+
+`short-film.fdx` (a four-scene short, *The Spare Key*) and `stage-play.fdx` (a two-act play, *Haberdashery*) are synthetic Final Draft files for trying Drafter's import: Open either one in Drafter and it comes in as a new, unsaved Fountain script, with anything Drafter has no element for as a `[[fdx: …]]` note that Problems lists. They were written by hand from the `.fdx` file's XML structure, with original text, and were **not** made in Final Draft, so they show the shape of a Final Draft save, not exactly what Final Draft writes. They are copies of the test files in `packages/fdx/test/fixtures/realistic/`, and the app doesn't ship them.

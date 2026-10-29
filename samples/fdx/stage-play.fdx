@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+
+  <Content>
+    <Paragraph Alignment="Center" Type="New Act">
+      <Text Style="Underline">ACT ONE</Text>
+    </Paragraph>
+    <Paragraph Alignment="Center" Type="Scene Heading">
+      <SceneProperties Length="2 4/8" Page="1" Title="" Summary="The sisters open the shop for the last time."/>
+      <Text>SCENE 1</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>(A haberdashery in a market town. Drawers to the ceiling, each labelled by hand. Early morning. ROSALIND, sixty, unlocks the door; her younger sister PHILIPPA, fifty-five, is already inside, sitting on the counter.)</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>ROSALIND</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>How did you get in?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>PHILIPPA</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Same way I always did. The coal hatch. I've kept my figure, at least.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>(ROSALIND sets down her bag. She does not take off her coat.)</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>ROSALIND</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(opening a drawer, closing it)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Buttons. Bone, horn, shell. Mother sorted these by the sound they made.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>PHILIPPA</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>She sorted </Text>
+      <Text Style="Italic">us</Text>
+      <Text> by the sound we made.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>(A shop bell. Nobody has come in. They both look at the door anyway. Lights fade.)</Text>
+    </Paragraph>
+    <Paragraph Alignment="Center" Type="Scene Heading">
+      <SceneProperties Length="1 6/8" Page="3" Title="" Summary="An offer for the building; Philippa wants to take it."/>
+      <Text>SCENE 2</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>(The same, that afternoon. The drawers stand open. Piles of ribbon on every surface.)</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>PHILIPPA</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>He'll pay for the stock as well. All of it. Even the green felt nobody has wanted since nineteen eighty.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>ROSALIND</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Then he's a fool, and I don't sell to fools.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>PHILIPPA</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(gently)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Ros. You've sold to fools for forty years. It's how we ate.</Text>
+    </Paragraph>
+    <Paragraph Type="End of Act">
+      <Text>END OF ACT ONE</Text>
+    </Paragraph>
+
+    <Paragraph Alignment="Center" StartsNewPage="Yes" Type="New Act">
+      <Text Style="Underline">ACT TWO</Text>
+    </Paragraph>
+    <Paragraph Alignment="Center" Type="General">
+      <Text>Scene 1</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>(Night. The shop is empty but for the counter. PHILIPPA sits on it, as before. ROSALIND enters with a single drawer held against her chest.)</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>ROSALIND</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>I kept one.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>PHILIPPA</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Which?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>ROSALIND</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Shell. They were always the loudest.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>(She shakes the drawer once. The sound fills the room. Blackout.)</Text>
+    </Paragraph>
+    <Paragraph Alignment="Center" Type="Action">
+      <Text>THE END</Text>
+    </Paragraph>
+  </Content>
+
+  <TitlePage>
+    <Content>
+      <Paragraph Alignment="Center">
+        <Text Style="Bold">HABERDASHERY</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>A Play in Two Acts</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>by</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>Constance Abernethy-Roy</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Left">
+        <Text>c.abernethy@example.com</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+
+  <ElementSettings Type="New Act">
+    <FontSpec Font="Courier Final Draft" Size="12" Style="Underline+AllCaps"/>
+    <ParagraphSpec Alignment="Center" LeftIndent="1.50" RightIndent="7.50" SpaceBefore="0" StartsNewPage="Yes"/>
+    <Behavior PaginateAs="Scene Heading" ReturnKey="Scene Heading" Shortcut="8"/>
+  </ElementSettings>
+  <ElementSettings Type="End of Act">
+    <FontSpec Font="Courier Final Draft" Size="12" Style="Underline+AllCaps"/>
+    <ParagraphSpec Alignment="Center" LeftIndent="1.50" RightIndent="7.50" SpaceBefore="24"/>
+    <Behavior PaginateAs="Scene Heading" ReturnKey="New Act" Shortcut="9"/>
+  </ElementSettings>
+  <ElementSettings Type="Action">
+    <FontSpec Font="Courier Final Draft" Size="12" Style=""/>
+    <ParagraphSpec Alignment="Left" LeftIndent="3.75" RightIndent="7.50" SpaceBefore="12"/>
+    <Behavior PaginateAs="Action" ReturnKey="Character" Shortcut="2"/>
+  </ElementSettings>
+  <PageLayout BottomMargin="72" FooterMargin="36" HeaderMargin="36" TopMargin="72"/>
+  <SmartType>
+    <Characters>
+      <Character>PHILIPPA</Character>
+      <Character>ROSALIND</Character>
+    </Characters>
+  </SmartType>
+</FinalDraft>
