@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import { useEditor } from '~/editor/session';
 import { outlineNotice, sayOutline } from '~/outline/notice';
 import {
@@ -131,6 +132,8 @@ function onKeydownCapture(event: KeyboardEvent) {
 
 function onCancel() {
   if (performance.now() - menuEscapeAt < 500) return;
+  // Escape in Compare with…'s list goes back to the snapshots.
+  if (picking.value) return cancelPick();
   historyOpen.value = null;
 }
 
@@ -139,6 +142,7 @@ let keepFocus = false;
 function onClose() {
   historyOpen.value = null;
   menuFor.value = null;
+  picking.value = null;
   if (!keepFocus) {
     if (opener?.isConnected) opener.focus();
     else if (editor.view.dom.offsetParent !== null) editor.view.focus();
@@ -185,8 +189,68 @@ const UNREADABLE = 'This snapshot can’t be read. It can only be deleted.';
 /** Says `message`, which the dialog's own status line shows too: the page behind is inert. */
 const tell = (message: string) => void sayOutline(message);
 
-function compare(_row: HistoryRow) {
-  tell('Compare isn’t ready yet.');
+// Compare (§11.2): History closes and the Compare tab opens on the two, the newer drawn.
+const comparing = useCompare();
+
+/** The snapshot as a side of a comparison, or null (and why said) when it can't be read. */
+async function versionOf(row: HistoryRow): Promise<Version | null> {
+  const text = await snapshotText(row.id);
+  if (text === null) {
+    tell((await snapshotNow(row.id)) ? UNREADABLE : GONE);
+    return null;
+  }
+  return { label: snapshotTime(row.createdAt), at: row.createdAt, text };
+}
+
+/** Now: the editor's text as it is (Call 15). */
+const nowVersion = (): Version => ({
+  label: nowLabel(Date.now()),
+  at: null,
+  text: editor.view.state.doc.toString(),
+});
+
+function startCompare(a: Version, b: Version) {
+  keepFocus = true;
+  close();
+  comparing.open(a, b);
+}
+
+async function compareNow(row: HistoryRow) {
+  if (!row.readable) return tell(UNREADABLE);
+  const version = await versionOf(row);
+  if (version) startCompare(version, nowVersion());
+}
+
+// Compare with…: a second list in the dialog, Now and then the other readable snapshots.
+const picking = shallowRef<HistoryRow | null>(null);
+const choices = computed(() =>
+  picking.value ? items.value.filter((r) => r.readable && r.id !== picking.value?.id) : [],
+);
+const pickList = ref<HTMLElement>();
+let pickAt = 0;
+
+async function compareWith(row: HistoryRow) {
+  if (!row.readable) return tell(UNREADABLE);
+  pickAt = placeOf(row);
+  picking.value = row;
+  await nextTick();
+  pickList.value?.querySelector<HTMLElement>('button')?.focus();
+}
+
+function cancelPick() {
+  const was = picking.value;
+  picking.value = null;
+  if (was) void focusAfter(was.id, pickAt);
+}
+
+async function pick(other: HistoryRow | null) {
+  const row = picking.value;
+  if (!row) return;
+  const version = await versionOf(row);
+  if (!version) return;
+  if (other === null) return startCompare(version, nowVersion());
+  const second = await versionOf(other);
+  if (second) startCompare(version, second);
 }
 
 async function restore(row: HistoryRow) {
@@ -390,9 +454,16 @@ function menuItems(row: HistoryRow): DropdownMenuItem[][] {
   if (why.value) groups.push([{ type: 'label', label: why.value }]);
   if (row.readable) {
     groups.push([
-      // Task 6 brings Compare.
-      { label: 'Compare with now', icon: 'i-lucide-git-compare', disabled: true },
-      { label: 'Compare with…', icon: 'i-lucide-git-compare-arrows', disabled: true },
+      {
+        label: 'Compare with now',
+        icon: 'i-lucide-git-compare',
+        onSelect: later(() => void compareNow(row)),
+      },
+      {
+        label: 'Compare with…',
+        icon: 'i-lucide-git-compare-arrows',
+        onSelect: later(() => void compareWith(row)),
+      },
     ]);
     groups.push([
       {
@@ -428,10 +499,9 @@ function menuItems(row: HistoryRow): DropdownMenuItem[][] {
 // ---- Keys --------------------------------------------------------------------------------------
 
 function run(action: HistoryAction, row: HistoryRow) {
-  if (action === 'compare-now' || action === 'compare-with') {
-    if (!row.readable) tell(UNREADABLE);
-    else compare(row);
-  } else if (action === 'restore') void restore(row);
+  if (action === 'compare-now') void compareNow(row);
+  else if (action === 'compare-with') void compareWith(row);
+  else if (action === 'restore') void restore(row);
   else if (action === 'label') void openLabel(row);
   else if (action === 'save') void saveAsFile(row);
   else if (action === 'delete') void askDelete(row);
@@ -507,6 +577,26 @@ const nameOf = (row: HistoryRow) =>
       <p v-else-if="items.length === 0" class="empty">
         No snapshots yet. One is taken every 10 minutes of writing, and each time you save to a file.
       </p>
+      <div
+        v-else-if="picking"
+        ref="pickList"
+        role="group"
+        aria-labelledby="history-pick-title"
+        class="list pick"
+      >
+        <h3 id="history-pick-title" class="pick-title">
+          Compare the snapshot from {{ snapshotTime(picking.createdAt) }} with
+        </h3>
+        <ul>
+          <li><button type="button" class="choice" @click="pick(null)">Now</button></li>
+          <li v-for="other in choices" :key="other.id">
+            <button type="button" class="choice" @click="pick(other)">
+              {{ snapshotTime(other.createdAt) }}, {{ other.said }}
+            </button>
+          </li>
+        </ul>
+        <button type="button" class="btn" @click="cancelPick">Cancel</button>
+      </div>
       <div v-else role="listbox" aria-label="Snapshots" class="list">
         <div
           v-for="day in days"
@@ -675,6 +765,33 @@ h2 {
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
+}
+.pick {
+  padding: 8px 10px;
+}
+.pick-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.pick ul {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.choice {
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.choice:hover {
+  background: var(--chrome);
 }
 .day-title {
   padding: 8px 10px 4px;

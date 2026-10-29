@@ -44,6 +44,23 @@ export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
   { id: 'notes', label: 'Notes' },
 ];
 
+/**
+ * Compare (Phase 2 design §5.8, §11.2, Call 16): an other tab that exists only while a comparison is
+ * open, first among the others then, so opening it puts it in the slot of the pane it opens in.
+ */
+export const COMPARE_TAB: Tab = { id: 'compare', label: 'Compare' };
+
+/** The pane Compare opens in: the one not showing Source; the right one when neither does. */
+export function comparePane(tabs: PaneTabs): PaneId {
+  return tabs.right === 'source' ? 'left' : 'right';
+}
+
+/** The tabs with Compare showing: where it is, else in the pane `comparePane` picks. */
+export function openCompare(tabs: PaneTabs): PaneTabs {
+  if (tabs.left === COMPARE_TAB.id || tabs.right === COMPARE_TAB.id) return tabs;
+  return { ...tabs, [comparePane(tabs)]: COMPARE_TAB.id };
+}
+
 /** The view tabs a document of `kind` has, before any module's. */
 export function viewTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
   return kind === 'markdown' ? [] : VIEW_TABS;

@@ -24,6 +24,7 @@ import {
 } from '@drafter/cm-fountain';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
+import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { applyTextChanges } from '~/editor/apply-changes';
@@ -86,6 +87,13 @@ export function registerBuiltinCommands(): void {
   const template = useTemplate();
   const sprint = useSprint();
   const sprintOn = () => sprint.state.value.status !== 'idle';
+  const compare = useCompare();
+  const comparing = () => compare.current.value !== null;
+  /** Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus. */
+  const stepChange = (direction: 1 | -1) => () => {
+    compare.show(false);
+    compare.step(direction);
+  };
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -339,6 +347,8 @@ export function registerBuiltinCommands(): void {
     'go-to-line': { run: () => openPalette('line') },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
+    'next-change': { enabled: comparing, run: stepChange(1) },
+    'previous-change': { enabled: comparing, run: stepChange(-1) },
 
     // View
     'show-source': { run: () => showTab('source') },
@@ -350,6 +360,8 @@ export function registerBuiltinCommands(): void {
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
+    // Compare's tab goes with the comparison (Call 16).
+    'close-compare': { enabled: comparing, run: () => compare.close() },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.

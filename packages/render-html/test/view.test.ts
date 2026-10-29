@@ -90,8 +90,13 @@ afterEach(() => {
 const scrolled = () => scrollIntoView.mock.contexts as Element[];
 
 describe('the package', () => {
-  it('exports the view, its click event, and speechRoles', () => {
-    expect(Object.keys(api).sort()).toEqual(['GOTO_EVENT', 'createScriptView', 'speechRoles']);
+  it('exports the view, its click event, buildPage, and speechRoles', () => {
+    expect(Object.keys(api).sort()).toEqual([
+      'GOTO_EVENT',
+      'buildPage',
+      'createScriptView',
+      'speechRoles',
+    ]);
     expect(GOTO_EVENT).toBe('drafter:goto');
   });
 });

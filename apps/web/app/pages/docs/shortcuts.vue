@@ -101,6 +101,11 @@ const groups = shortcutGroups(COMMAND_DATA);
           snapshot’s menu.
         </li>
         <li>
+          In the Compare tab, <kbd>N</kbd> goes to the next change and <kbd>Shift+N</kbd> to the
+          previous one, and says what changed; the palette’s Next change and Previous change do the
+          same from anywhere while a comparison is open.
+        </li>
+        <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>

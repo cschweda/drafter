@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { alertsHeard, watchAlerts } from './fs-stub';
-import { start } from './modules';
+import { runCommand, start } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -467,5 +467,39 @@ test.describe('the tab row’s slot', () => {
     // Back to a core tab: Cards keeps the slot.
     await row.getByRole('tab', { name: 'Outline' }).click();
     await expect(row.getByRole('tab').last()).toHaveText('Cards');
+  });
+
+  test('Compare is in no pane’s row until a comparison opens', async ({ page }) => {
+    await start(page);
+    const panes = page.locator('[data-pane]');
+    const compare = page.getByRole('tab', { name: 'Compare', exact: true });
+    const more = page.getByRole('menu', { name: 'More tabs' });
+    await expect(compare).toHaveCount(0);
+    for (const pane of await panes.all()) {
+      await pane.getByRole('button', { name: 'More tabs' }).click();
+      await expect(more).toBeVisible();
+      await expect(more.getByRole('menuitem', { name: 'Compare' })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(more).toBeHidden();
+    }
+    // A comparison opens it, in the slot of the pane not showing Source; closing takes it away.
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    const scripts = page.getByRole('group', { name: 'Scripts', exact: true });
+    await scripts.getByRole('button', { name: 'New screenplay' }).click();
+    await expect(scripts).toBeHidden();
+    await runCommand(page, 'Take snapshot…');
+    const history = page.getByRole('dialog', { name: 'History' });
+    // History focuses its label field once the snapshots are read; Enter there takes one.
+    await expect(history.getByRole('textbox', { name: 'Label' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    const row = history.getByRole('option').first();
+    await expect(row).toBeVisible();
+    await row.focus();
+    await page.keyboard.press('Enter');
+    await expect(
+      page.getByRole('tab', { name: 'Compare', exact: true, selected: true }),
+    ).toBeVisible();
+    await runCommand(page, 'Close comparison');
+    await expect(compare).toHaveCount(0);
   });
 });
