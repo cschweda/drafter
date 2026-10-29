@@ -1,6 +1,6 @@
 {
   "name": "@drafter/outline",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Structure for Drafter: the scene index of a Fountain script, and moves, synopses, colors, treatments, and outlines as text changes.",
   "license": "MIT",
   "type": "module",

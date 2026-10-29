@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-29
+
+**The Structure strip.** Your whole script at a glance: a band across the top of the window shows your acts, sequences, and scenes as blocks as wide as their share of the pages, colored as you've colored them, with a page ruler that marks where the Script pane is. Click a block to go there. Turn it on from the toolbar's new Structure button, Ctrl+Alt+O (⌘⌥O on a Mac), the palette, or Settings; it's off until you do. Also fixed: AltGr letters on Windows are no longer taken by Ctrl+Alt shortcuts, and the toolbar keeps to one row at 1024 px.
+
 ### Added
 
 - **The Structure strip: your whole script at a glance, above the panes.** Turn it on with the **Structure** button in the toolbar, **Mod+Alt+O** (Ctrl+Alt+O, or ⌘⌥O on a Mac), the palette's **Toggle the structure strip**, or the **Structure strip** switch in Settings, and a band across the top of the window shows your acts and sequences (a row for each of `#`, `##`, and `###` you use), every scene, and a page ruler. Each block is as wide as its share of the pages, so you can see at once which act runs long or where the short scenes bunch up, and a scene with a color note shows that color. Click a block, or press Enter on it, to go there: the cursor goes to the scene's heading and the Script pane follows. The scene you're in is outlined, a small triangle on the ruler marks the page the Script pane shows, and hovering or focusing a block shows its heading, page, length, goal, and synopsis. The strip is one Tab stop: the arrow keys move along and between rows, and Home and End go to a row's ends. It's off until you turn it on, and remembered on this device; it changes nothing in your script, and isn't shown for a Markdown document, in focus mode, or on a phone.
@@ -708,7 +712,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/cschweda/drafter/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/cschweda/drafter/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/cschweda/drafter/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/cschweda/drafter/compare/v0.12.0...v0.13.0
