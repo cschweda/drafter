@@ -235,7 +235,7 @@ test('installs silently, for this user only, into the folder it is given', () =>
   expect(uninstall).toContain(installDir);
 });
 
-test('opens .fountain files, and offers itself for Markdown without taking it over', () => {
+test('opens .fountain files, and offers itself for Markdown and Final Draft without taking them over', () => {
   expect(registry('HKCU\\Software\\Classes\\.fountain')).toBe('Drafter.fountain');
   expect(registry('HKCU\\Software\\Classes\\Drafter.fountain')).toBe('Fountain screenplay');
   const command = registry('HKCU\\Software\\Classes\\Drafter.fountain\\shell\\open\\command');
@@ -248,6 +248,12 @@ test('opens .fountain files, and offers itself for Markdown without taking it ov
     expect(registry(`HKCU\\Software\\Classes\\${ext}`) ?? '').not.toMatch(/Drafter/);
   }
   expect(registry('HKCU\\Software\\Classes\\Drafter.markdown\\shell\\open\\command')).toBe(
+    `"${exe()}" "%1"`,
+  );
+  // A Final Draft file is offered the same way (it is imported), never taken.
+  expect(registry('HKCU\\Software\\Classes\\.fdx\\OpenWithProgids', 'Drafter.fdx')).not.toBeNull();
+  expect(registry('HKCU\\Software\\Classes\\.fdx') ?? '').not.toMatch(/Drafter/);
+  expect(registry('HKCU\\Software\\Classes\\Drafter.fdx\\shell\\open\\command')).toBe(
     `"${exe()}" "%1"`,
   );
 });
@@ -334,6 +340,8 @@ test('uninstalls silently, taking its files, shortcut, and file types, and leavi
     .poll(() => keyExists('HKCU\\Software\\Classes\\Drafter.fountain'), { timeout: 60_000 })
     .toBe(false);
   expect(keyExists('HKCU\\Software\\Classes\\Drafter.markdown')).toBe(false);
+  expect(keyExists('HKCU\\Software\\Classes\\Drafter.fdx')).toBe(false);
+  expect(registry('HKCU\\Software\\Classes\\.fdx\\OpenWithProgids', 'Drafter.fdx')).toBeNull();
   expect(registry('HKCU\\Software\\Classes\\.fountain') ?? '').not.toBe('Drafter.fountain');
   for (const ext of ['.md', '.markdown']) {
     expect(

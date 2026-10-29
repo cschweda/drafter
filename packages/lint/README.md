@@ -41,7 +41,7 @@ The first four carry over what the parser reports on its own (technical design Â
 | `heading-blank-after` | info; warning when `strict` | A scene heading or transition with text right below it, which Drafter reads but the Fountain spec doesn't. | **Insert a blank line** |
 | `multiline-parenthetical` | info; warning when `strict` | A parenthetical wrapped over several lines. | **Join onto one line** |
 
-The other five look at the structure of the script, and each has a control against false alarms.
+The other seven look at the structure of the script, and each has a control against false alarms.
 
 | Rule | Severity | Reports | Fix |
 |---|---|---|---|
@@ -50,6 +50,7 @@ The other five look at the structure of the script, and each has a control again
 | `heading-no-time` | warning | A scene heading with no time of day. A forced heading (`.MONTAGE`) is how Fountain writes one without, so it is never reported. | None |
 | `transition-not-last` | warning | A transition whose next block isn't a scene heading, a section, or a page break. Notes, boneyard, synopses, and centered text in between are skipped, so a transition before `> THE END <` passes, and a transition that ends the script passes. | None |
 | `stub-heading` | info | A scene that still has the stand-in heading Expand outline writes, `INT. LOCATION - DAY` (in a play, `## New scene`), so the Problems tab lists the stubs left to name. | None |
+| `fdx-note` | info | A `[[fdx: â€¦]]` note, which an import from Final Draft (`@drafter/fdx`) leaves on what Drafter has no element for (a `Cast List` paragraph, a scene number Fountain can't hold), so the Problems tab lists what to check after an import. Only a closed note whose text starts with `fdx:`. | None |
 | `similar-names` | info | Two character names one edit apart (`MARGERET` beside `MARGARET`: a letter changed, added, or left out, or two side by side swapped), probably one character typed two ways. Both names need at least five letters, one is cued twice or less, and neither is the start of the other, so `MAX` and `MAC` and `DANNY` and `DANNYS` are left alone. Names that differ only in case (`@McCLANE`, `MCCLANE`) are one name, and names that differ only in their digits (`GUARD 1`, `GUARD 2`) are numbered characters, never reported. Neither are names whose one edit falls inside a word of three letters or fewer (`MR. SMITH`, `MRS. SMITH`; `JOHN JR.`, `JOHN SR.`; `GUARD A`, `GUARD B`), where the short word is what tells two people apart; `MARIO` and `MARIA`, and `OFFICER DAVID` and `OFFICER DAVIS`, are still reported. One diagnostic for each pair, at the first cue of the rarer name, or of the one that appears later when they tie. | **Mark as distinct**: adds the pair to `meta.distinctNames` |
 
 `stage-play-standard` turns off `heading-no-time` and `transition-not-last` through its `lint.disable`, since a play has no sluglines or transitions.

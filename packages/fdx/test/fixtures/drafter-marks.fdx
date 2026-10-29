@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="General" DrafterSection="1">
+      <Text>Act One</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterSynopsis="Yes">
+      <Text>The keeper loses the light.</Text>
+    </Paragraph>
+    <Paragraph Type="Scene Heading" DrafterSection="2">
+      <SceneProperties Title="" Summary="A storm."/>
+      <Text>Scene 1</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>check the tide tables</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>THEO</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue" DrafterLyric="Yes">
+      <Text Style="Italic">Row the boat, </Text>
+      <Text Style="Bold+Italic">row</Text>
+    </Paragraph>
+  </Content>
+  <TitlePage>
+    <Content>
+      <Paragraph Alignment="Center" DrafterKey="Title" Type="Action">
+        <Text Style="Italic">The</Text>
+        <Text> Last Lamp</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" DrafterKey="Contact" Type="Action">
+        <Text>I. Vale</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" Type="Action">
+        <Text>vale@example.com</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" DrafterKey="Draft date" Type="Action">
+        <Text>1 March</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+</FinalDraft>

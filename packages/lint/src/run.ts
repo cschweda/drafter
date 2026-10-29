@@ -2,6 +2,7 @@ import type { Doc } from '@drafter/fountain';
 import type { Template } from '@drafter/templates';
 import { manualContd } from './rules/contd';
 import { characterWithoutDialogue } from './rules/cue';
+import { fdxNote } from './rules/fdx';
 import { headingNoTime } from './rules/heading';
 import { similarNames } from './rules/names';
 import {
@@ -24,6 +25,7 @@ export const rules: readonly Rule[] = [
   manualContd,
   headingNoTime,
   stubHeading,
+  fdxNote,
   transitionNotLast,
   similarNames,
 ];

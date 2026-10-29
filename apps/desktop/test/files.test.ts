@@ -447,6 +447,10 @@ describe('saveTarget', () => {
     // A script typed as a .pdf: the script's own is added.
     expect(saveTarget(join(dir, 'Notes.pdf'), '.fountain')).toBe(join(dir, 'Notes.pdf.fountain'));
     expect(saveTarget(join(dir, 'Notes.pdf'), '.md')).toBe(join(dir, 'Notes.pdf.md'));
+    // A Final Draft export is a .fdx, and a script is never one.
+    expect(saveTarget(join(dir, 'Notes'), '.fdx')).toBe(join(dir, 'Notes.fdx'));
+    expect(saveTarget(join(dir, 'Notes.fountain'), '.fdx')).toBe(join(dir, 'Notes.fountain.fdx'));
+    expect(saveTarget(join(dir, 'Notes.fdx'), '.fountain')).toBe(join(dir, 'Notes.fdx.fountain'));
   });
 });
 

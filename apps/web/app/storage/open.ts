@@ -1,8 +1,10 @@
+import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
-import { kindOfFileName } from '../markdown/kind';
+import { isFinalDraftName, kindOfFileName } from '../markdown/kind';
 import { nameOfPath } from './desktop-files';
+import { sayInToast } from './export';
 import { FileGoneError, FileProblemError, type PickedFile, useFiles } from './files';
 import { useGuard } from './guard';
 import { getHandle, kindOf, listProjects } from './projects';
@@ -61,6 +63,42 @@ function problemWith(bytes: Uint8Array): string | null {
 
 const nameKey = (title: string) => title.trim().toLowerCase();
 
+/**
+ * What an import says: "Imported “The Call.fdx”.", and how many items came in as `[[fdx: …]]`
+ * notes, which Problems lists (`fdx-note`). Items, not paragraphs: `mapped` also counts a scene
+ * number Fountain can't hold and elements that aren't paragraphs.
+ */
+function importedMessage(name: string, mapped: FdxImport['mapped']): string {
+  const notes = mapped.reduce((sum, { count }) => sum + count, 0);
+  const said = `Imported “${name}”.`;
+  if (notes === 0) return said;
+  return notes === 1
+    ? `${said} 1 item came in as a note; Problems lists it.`
+    : `${said} ${notes} items came in as notes; Problems lists them.`;
+}
+
+/**
+ * Imports a Final Draft file's text (Phase 2 design §22) as a new Fountain script with no file:
+ * unsaved, so Save asks for a `.fountain` and never writes over the `.fdx`. A file `fromFdx`
+ * refuses is said in the status bar, and nothing opens.
+ */
+async function importFinalDraft(name: string, xml: string): Promise<void> {
+  let imported: FdxImport;
+  try {
+    imported = fromFdx(xml);
+  } catch (error) {
+    if (!(error instanceof FdxError)) throw error;
+    await say(openError, error.message);
+    return;
+  }
+  if (!(await useScript().openImported(imported.text, name))) {
+    await say(openError, MESSAGES.busy);
+    return;
+  }
+  useEditor().view.focus();
+  await sayInToast(importedMessage(name, imported.mapped));
+}
+
 /** The script already open for this file, if it came from the same file on disk. */
 async function openedAlready(file: PickedFile) {
   if (!file.ref) return undefined;
@@ -112,6 +150,11 @@ export async function openFile(file: PickedFile): Promise<void> {
       return;
     }
     await ready();
+    // A Final Draft file is never a script's file: it comes in as a new one.
+    if (isFinalDraftName(file.name)) {
+      await importFinalDraft(file.name, decoded.text);
+      return;
+    }
     const script = useScript();
     const kind = kindOfFileName(file.name);
     const opened = { ...decoded, fileName: file.name, ref: file.ref, kind };

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Scene Heading" Number="12A">
+      <SceneProperties Title="" Summary="The lamp goes out.&#10;Nobody moves."/>
+      <Text>INT. LIGHTHOUSE - NIGHT</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Wind </Text>
+      <Text Style="Bold">rattles</Text>
+      <Text> the glass. A </Text>
+      <Text Style="Italic">slow</Text>
+      <Text> creak, then </Text>
+      <Text Style="Underline">silence</Text>
+      <Text>.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>ODILE (O.S.)</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(from below)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Is the keeper awake?</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>CUT TO:</Text>
+    </Paragraph>
+    <Paragraph Type="Scene Heading" StartsNewPage="Yes">
+      <Text>THE STAIRWELL</Text>
+    </Paragraph>
+    <Paragraph Type="Action" Alignment="Center">
+      <Text>INTERMISSION</Text>
+    </Paragraph>
+    <Paragraph>
+      <DualDialogue>
+        <Paragraph Type="Character">
+          <Text>ODILE</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>Left.</Text>
+        </Paragraph>
+        <Paragraph Type="Character">
+          <Text>THEO</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>Right.</Text>
+        </Paragraph>
+      </DualDialogue>
+    </Paragraph>
+    <Paragraph Type="Shot">
+      <Text>CLOSE ON THE LANTERN</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>Fade to grey.</Text>
+    </Paragraph>
+  </Content>
+</FinalDraft>

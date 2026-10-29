@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="New Act">
+      <Text>ACT ONE</Text>
+    </Paragraph>
+    <Paragraph Type="Cast List">
+      <Text>ODILE, a keeper's daughter</Text>
+    </Paragraph>
+    <Paragraph Type="General">
+      <Text>A plain general line.</Text>
+    </Paragraph>
+    <Paragraph Type="Cast List">
+      <Text>THEO, a ferryman</Text>
+    </Paragraph>
+    <Paragraph Type="End of Act"/>
+  </Content>
+  <Sketchbook>
+    <Page>
+      <Text>A drawing of the tower.</Text>
+    </Page>
+  </Sketchbook>
+  <ElementSettings Type="Action">
+    <FontSpec Font="Courier Final Draft" Size="12"/>
+  </ElementSettings>
+  <PageLayout BottomMargin="72" TopMargin="72"/>
+  <HeaderAndFooter>
+    <Header>
+      <Paragraph Type="Header"><Text>Page header text</Text></Paragraph>
+    </Header>
+  </HeaderAndFooter>
+  <SmartType>
+    <Characters><Character>ODILE</Character></Characters>
+  </SmartType>
+</FinalDraft>

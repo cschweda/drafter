@@ -75,6 +75,16 @@ export function titleFor(kind: DocumentKind, source: string, fallback = 'Untitle
     : titleOf(parse(source), fallback);
 }
 
+/**
+ * The file a script with no title is called after: its own, else the Final Draft file it was
+ * imported from (`Project.importedFrom`), which it is never saved to.
+ */
+export function titleFileOf(
+  project: { fileName?: string; importedFrom?: string } | null | undefined,
+): string | undefined {
+  return project?.fileName ?? project?.importedFrom;
+}
+
 /** A file's name without its extension: the title of a script that has none. */
 export function fileBaseName(name: string | undefined): string {
   if (!name) return 'Untitled';
@@ -94,7 +104,7 @@ const MAX_NAME = 120;
  */
 export function fileNameFor(
   title: string,
-  extension: '.fountain' | '.md' | '.pdf' | '.txt',
+  extension: '.fountain' | '.md' | '.pdf' | '.txt' | '.fdx',
 ): string {
   const cleaned = title.replace(UNSAFE, '').replace(/\s+/g, ' ').trim();
   // Cut by code point, so an emoji is never split.

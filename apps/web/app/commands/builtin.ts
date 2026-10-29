@@ -267,8 +267,10 @@ export function registerBuiltinCommands(): void {
       ]),
     ),
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
-    // PDF or plain text; a Markdown document as its Markdown file or plain text (a PDF of one is deferred).
+    // PDF, plain text, or a Final Draft file; a Markdown document as its Markdown file or plain text (a PDF of
+    // one is deferred).
     'export-pdf': { enabled: isFountain, run: () => void exportScript('pdf') },
+    'export-fdx': { enabled: isFountain, run: () => void exportScript('fdx') },
     'export-md': { enabled: isMarkdown, run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },
     'export-treatment': {

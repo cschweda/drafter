@@ -10,7 +10,7 @@ import { useGuard } from './guard';
 import { getHandle, getProject } from './projects';
 import { say, timedSay } from './say';
 import { useScript } from './script';
-import { encodeFile, fileBaseName, fileNameFor, titleOf } from './text';
+import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './text';
 import { inTurn, whenIdle } from './turn';
 
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
@@ -75,7 +75,7 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   // A Markdown document is called by its first heading and saved as `.md`; one with no title is
   // called after its file, as the project's own title is.
   const markdown = editor.kind.value === 'markdown';
-  const fallback = fileBaseName(held?.fileName);
+  const fallback = fileBaseName(titleFileOf(held));
   const title = markdown
     ? (markdownTitle(editor.view.state.doc.toString()) ?? fallback)
     : titleOf(editor.doc.value, fallback);

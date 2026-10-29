@@ -318,6 +318,36 @@ describe('what a page may read and write', () => {
     }
   });
 
+  test('reads a Final Draft file dropped or named, and writes one only where an export was saved', async () => {
+    const { handlers, event } = setUp();
+    const imported = join(dir, 'The Call.fdx');
+    await writeFile(imported, '<FinalDraft/>');
+    // Dropped (or named on the command line): granted, and read …
+    void handlers.grantDropped(event, imported);
+    expect((await handlers.read(event, imported)).bytes).toEqual(bytes('<FinalDraft/>'));
+    expect(await handlers.grantScript(imported)).toBe(imported);
+    // … but never written: an import is a new script, saved as a .fountain.
+    expect(await codeOf(handlers.write(event, imported, bytes('X')))).toBe('not-allowed');
+    expect(await readFile(imported, 'utf8')).toBe('<FinalDraft/>');
+    // Chosen in the Open dialog, the same.
+    const opened = setUp([imported]);
+    expect(await opened.handlers.showOpen(opened.event)).toBe(imported);
+    expect(await codeOf(opened.handlers.write(opened.event, imported, bytes('X')))).toBe(
+      'not-allowed',
+    );
+    // Chosen in a Save dialog for an export, written; a name typed without .fdx gets it.
+    const exported = setUp([join(dir, 'Export')]);
+    const path = await exported.handlers.showSave(exported.event, 'Export.fdx', '.fdx');
+    expect(path).toBe(join(dir, 'Export.fdx'));
+    await exported.handlers.write(exported.event, path, bytes('<FinalDraft/>'));
+    expect(await readFile(join(dir, 'Export.fdx'), 'utf8')).toBe('<FinalDraft/>');
+    // A script saved as one gets its own extension after it: a .fdx is never a script's file.
+    const saved = setUp([join(dir, 'Script.fdx')]);
+    expect(await saved.handlers.showSave(saved.event, 'Script.fountain', '.fountain')).toBe(
+      join(dir, 'Script.fdx.fountain'),
+    );
+  });
+
   test('checks every argument', async () => {
     const { handlers, event } = setUp();
     for (const bad of ['relative.fountain', '', 42, null, { path: '/a' }]) {

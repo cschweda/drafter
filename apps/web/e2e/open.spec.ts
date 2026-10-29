@@ -336,7 +336,7 @@ test.describe('opening a file where there is no picker', () => {
   test('opens a dropped file', async ({ page }) => {
     await start(page);
     await dragFile(page, 'Dropped.txt', SCRIPT, false);
-    await expect(zone(page)).toContainText('Drop a .fountain, .md, or .txt file to open it');
+    await expect(zone(page)).toContainText('Drop a .fountain, .md, .txt, or .fdx file to open it');
     await dragFile(page, 'Dropped.txt', SCRIPT, true);
     await expect(zone(page)).toHaveCount(0);
     await expect(editor(page)).toContainText('A door opens.');

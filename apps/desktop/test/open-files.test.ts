@@ -65,6 +65,15 @@ describe('filesFromArgv', () => {
     ]);
   });
 
+  test('takes a Final Draft file, to import', () => {
+    const a = touch('The Call.fdx', '<FinalDraft/>');
+    touch('B.FDX', '<FinalDraft/>');
+    expect(filesFromArgv(['/usr/bin/drafterdev', a, 'B.FDX'], dir)).toEqual([
+      a,
+      join(dir, 'B.FDX'),
+    ]);
+  });
+
   test('leaves out the executable, the app, and an AppImage, however they are written', () => {
     const script = touch('x.txt');
     const app = join(dir, 'app.txt'); // an app path that happens to look like a script
@@ -118,11 +127,11 @@ describe('requestsFromArgv', () => {
     expect(refused.map((r) => r.name)).toEqual(['ok.fountain', 'picture.png', 'missing.md']);
     expect(refused.map((r) => r.reason)).toEqual([
       'it isn’t there',
-      'it isn’t a script (.fountain, .md, .markdown, or .txt)',
+      'it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx)',
       'it isn’t there',
     ]);
     expect(refusalMessage(refused[1] as Refusal)).toBe(
-      'Drafter can’t open “picture.png”: it isn’t a script (.fountain, .md, .markdown, or .txt).',
+      'Drafter can’t open “picture.png”: it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx).',
     );
   });
 
@@ -185,7 +194,7 @@ describe('names that are not ASCII', () => {
     touch('写真.png');
     const png = requestsFromArgv(['x', '写真.png'], dir).refused;
     expect(refusalMessage(png[0] as Refusal)).toBe(
-      'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, or .txt).',
+      'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx).',
     );
   });
 });

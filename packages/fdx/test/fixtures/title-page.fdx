@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Action">
+      <Text>The sea.</Text>
+    </Paragraph>
+  </Content>
+  <TitlePage>
+    <Content>
+      <Paragraph Alignment="Center" Type="Action"/>
+      <Paragraph Alignment="Center" Type="Action">
+        <Text Style="Bold+Underline">THE LAST LAMP</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" Type="Action"/>
+      <Paragraph Alignment="Center" Type="Action">
+        <Text>written by</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center" Type="Action"/>
+      <Paragraph Alignment="Center" Type="Action">
+        <Text>Imogen Vale</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" Type="Action">
+        <Text>12 Harbour Row</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left" Type="Action">
+        <Text>vale@example.com</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+</FinalDraft>

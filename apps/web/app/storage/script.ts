@@ -41,7 +41,7 @@ import {
   writeSource,
 } from './projects';
 import { say } from './say';
-import type { LineBreak } from './text';
+import { type LineBreak, titleFileOf } from './text';
 import { allStashes, clearStash, readStash, stash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
@@ -167,6 +167,13 @@ export interface ScriptSession {
    * under way (nothing is made then). The script that was open is kept first, as for any switch.
    */
   openedFile(file: OpenedFile): Promise<boolean>;
+  /**
+   * Opens Fountain `text` imported from the Final Draft file named `importedFrom` as a new script
+   * with no file: not saved, so Save asks for a `.fountain`, and never writes the `.fdx`. A script
+   * with no title is called after the file. Resolves false if another switch was under way
+   * (nothing is made then).
+   */
+  openImported(text: string, importedFrom: string): Promise<boolean>;
   /**
    * Puts a file's text in script `id`, in place of what it holds: one undoable change in the
    * editor, and the script counts as saved to that file. `'held'`: another tab has the script
@@ -679,7 +686,7 @@ function create(): ScriptSession {
         kind,
         // The blank text was the other kind's: the offer ends with the change.
         blank: undefined,
-        ...derive(view.state.doc.toString(), current.fileName, kind),
+        ...derive(view.state.doc.toString(), titleFileOf(current), kind),
       });
     } catch {
       // The kind could not be stored: the editor goes back to the one that is, so the two agree.
@@ -907,6 +914,10 @@ function create(): ScriptSession {
     });
   }
 
+  function openImported(text: string, importedFrom: string): Promise<boolean> {
+    return switchTo(() => createProject({ source: text, kind: 'fountain', importedFrom }));
+  }
+
   async function replaceWith(id: string, file: OpenedFile): Promise<'replaced' | 'held' | 'busy'> {
     await open(id);
     if (project.value?.id !== id) return 'busy';
@@ -1076,6 +1087,7 @@ function create(): ScriptSession {
     scripts,
     saved,
     openedFile,
+    openImported,
     replaceWith,
     changed,
     busy: switching,

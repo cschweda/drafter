@@ -12,7 +12,7 @@
 import { type Stats, statSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { hasExtension, SCRIPT_EXTENSIONS } from './files';
+import { hasExtension, OPEN_EXTENSIONS } from './files';
 
 /** Why an argument wasn't opened. */
 export interface Refusal {
@@ -28,7 +28,7 @@ export interface OpenRequests {
   refused: Refusal[];
 }
 
-export const NOT_A_SCRIPT = 'it isn’t a script (.fountain, .md, .markdown, or .txt)';
+export const NOT_A_SCRIPT = 'it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx)';
 
 /** The status-bar message for a refusal. */
 export const refusalMessage = ({ name, reason }: Refusal) =>
@@ -98,7 +98,7 @@ export function requestsFromArgs(args: string[], cwd: string, ignore: string[] =
     } catch {
       info = undefined;
     }
-    if (!hasExtension(path, SCRIPT_EXTENSIONS)) {
+    if (!hasExtension(path, OPEN_EXTENSIONS)) {
       // Only an existing file is said to be refused; the rest is not a request.
       if (info?.isFile()) refused.push({ name, reason: NOT_A_SCRIPT });
       continue;
@@ -115,7 +115,10 @@ export function requestsFromArgv(argv: string[], cwd: string, ignore: string[] =
   return requestsFromArgs(argv.slice(1), cwd, ignore);
 }
 
-/** The scripts a launch's `argv` names: existing `.fountain`, `.md`, `.markdown`, `.txt` files. */
+/**
+ * The scripts a launch's `argv` names: existing `.fountain`, `.md`, `.markdown`, `.txt` files, and
+ * Final Draft `.fdx` files to import.
+ */
 export function filesFromArgv(argv: string[], cwd: string, ignore: string[] = []): string[] {
   return requestsFromArgv(argv, cwd, ignore).files;
 }

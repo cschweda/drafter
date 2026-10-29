@@ -699,6 +699,32 @@ describe('stub-heading', () => {
   });
 });
 
+describe('fdx-note', () => {
+  const { found, miss } = forRule('fdx-note');
+
+  it('lists every note an import from Final Draft left, as info', () => {
+    const source =
+      'THEO, a keeper [[fdx: Cast List]]\n\nINT. HALL - DAY [[fdx: Number 12 A]]\n\nShe waits. [[a note of my own]]\n\n[[fdx: New Act]]\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from, d.span.to])).toEqual([
+      ['info', source.indexOf('[[fdx: Cast'), source.indexOf(']]') + 2],
+      ['info', source.indexOf('[[fdx: Number'), source.indexOf(' 12 A]]') + 7],
+      ['info', source.indexOf('[[fdx: New'), source.lastIndexOf(']]') + 2],
+    ]);
+    expect(all[0]?.message).toBe(
+      'This came in from Final Draft as “Cast List”, which Drafter has no element for. Check it, then delete the note.',
+    );
+    expect(found(source, stagePlay)).toHaveLength(3);
+  });
+
+  it('leaves other notes, an unclosed one, and one in a boneyard alone', () => {
+    miss('She waits. [[fdx is a file type]]\n');
+    miss('She waits. [[ fdxnote ]]\n');
+    miss('She waits. [[fdx: Cast List\n\nMore.\n');
+    miss('/* [[fdx: Cast List]] */\n\nShe waits.\n');
+  });
+});
+
 describe('transition-not-last', () => {
   const { found, hit, miss, missIn } = forRule('transition-not-last');
 

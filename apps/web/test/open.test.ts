@@ -134,6 +134,7 @@ async function fresh(options: { inPlace?: boolean } = {}) {
   const { save } = await import('../app/storage/save');
   const projects = await import('../app/storage/projects');
   const { hashText } = await import('../app/storage/hash');
+  const { exportNotice } = await import('../app/storage/export');
   const script = useScript();
   await vi.waitFor(() => expect(script.ready.value).toBe(true));
   const editor = useEditor();
@@ -142,7 +143,20 @@ async function fresh(options: { inPlace?: boolean } = {}) {
     editor.view.dispatch({ changes: { from: editor.view.state.doc.length, insert: text } });
   /** The scripts that are not samples. */
   const mine = async () => (await projects.listProjects()).filter((p) => !p.sample);
-  return { ...memory, ...open, save, projects, hashText, script, editor, shown, type, mine, db };
+  return {
+    ...memory,
+    ...open,
+    save,
+    projects,
+    hashText,
+    exportNotice,
+    script,
+    editor,
+    shown,
+    type,
+    mine,
+    db,
+  };
 }
 
 beforeEach(() => {
@@ -504,6 +518,140 @@ describe('a save that finishes after another script was opened', () => {
     expect(made[0]?.savedHash).toBe(await t.hashText(text));
     // And nothing was written over the stage play.
     expect((await t.projects.getProject(t.script.project.value?.id ?? ''))?.source).toBe(t.shown());
+  });
+});
+
+/** A Final Draft file, hand-made: a title page, a scene, and a line of dialogue. */
+const fdx = (content: string, titlePage = '') =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<FinalDraft DocumentType="Script" Template="No" Version="5">\n<Content>\n${content}\n</Content>\n${titlePage}</FinalDraft>\n`;
+const paragraph = (type: string, text: string) =>
+  `<Paragraph Type="${type}"><Text>${text}</Text></Paragraph>`;
+const LAMP_TITLE =
+  '<TitlePage><Content><Paragraph Alignment="Center" Type="Action"><Text>The Last Lamp</Text></Paragraph></Content></TitlePage>\n';
+const LAMP = fdx(
+  [
+    paragraph('Scene Heading', 'EXT. LIGHTHOUSE - NIGHT'),
+    paragraph('Action', 'The lamp turns.'),
+    paragraph('Character', 'THEO'),
+    paragraph('Dialogue', 'Keep it lit.'),
+  ].join('\n'),
+  LAMP_TITLE,
+);
+
+describe('importing a Final Draft file', () => {
+  test('opens it as a new Fountain script with no file, unsaved, titled by its title page', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('lamp.fdx', LAMP, 11));
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toContain('EXT. LIGHTHOUSE - NIGHT');
+    expect(t.shown()).toContain('THEO\nKeep it lit.');
+    expect(t.editor.kind.value).toBe('fountain');
+    const row = t.script.project.value;
+    expect(row?.title).toBe('The Last Lamp');
+    expect(row?.kind).toBe('fountain');
+    // Not the file's: no name, no handle, nothing saved, so Save asks for a new .fountain.
+    expect(row?.fileName).toBeUndefined();
+    expect(row?.fsHandleId).toBeUndefined();
+    expect(row?.savedHash).toBeUndefined();
+    expect(t.script.dirty.value).toBe(true);
+    expect(t.exportNotice.value).toBe('Imported “lamp.fdx”.');
+    // The .fdx is never written.
+    expect(t.writes).toEqual([]);
+  });
+
+  test('imports the same file twice as two scripts, never as the file’s script', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('lamp.fdx', LAMP, 11));
+    await t.openFile(t.picked('lamp.fdx', LAMP, 11));
+    expect(await t.mine()).toHaveLength(2);
+  });
+
+  test('names a script with no title after the file, and keeps that name as it is edited', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Rough Cut.fdx', fdx(paragraph('Action', 'A door opens.'))));
+    expect(t.script.project.value?.title).toBe('Rough Cut');
+    t.type('\nMore.\n');
+    await vi.waitFor(
+      async () =>
+        expect((await t.projects.getProject(t.script.project.value?.id ?? ''))?.source).toContain(
+          'More.',
+        ),
+      { timeout: 3000 },
+    );
+    expect(t.script.project.value?.title).toBe('Rough Cut');
+    expect((await t.projects.getProject(t.script.project.value?.id ?? ''))?.title).toBe(
+      'Rough Cut',
+    );
+  });
+
+  test('Save asks for a .fountain named after it, and never writes over the .fdx', async () => {
+    const t = await fresh();
+    const asked: string[] = [];
+    t.access.pickToSave = async (name, kind) => {
+      asked.push(`${name} ${kind}`);
+      return { id: 12, name } as unknown as FileRef;
+    };
+    await t.openFile(t.picked('Rough Cut.fdx', fdx(paragraph('Action', 'A door opens.')), 11));
+    expect(await t.save()).toBe('saved');
+    expect(asked).toEqual(['Rough Cut.fountain fountain']);
+    expect(t.writes.map((w) => w.ref.id)).toEqual([12]);
+    expect(t.stored.get(11)).toEqual(
+      new TextEncoder().encode(fdx(paragraph('Action', 'A door opens.'))),
+    );
+    expect(t.script.project.value?.fileName).toBe('Rough Cut.fountain');
+    expect(t.script.dirty.value).toBe(false);
+  });
+
+  test('says how many items came in as notes, which Problems lists', async () => {
+    const t = await fresh();
+    const odd = fdx(
+      [
+        paragraph('Action', 'A door opens.'),
+        paragraph('Cast List', 'THEO, a keeper'),
+        paragraph('Cast List', 'MARA, a pilot'),
+      ].join('\n'),
+    );
+    await t.openFile(t.picked('odd.fdx', odd));
+    expect(t.shown()).toContain('[[fdx: Cast List]]');
+    expect(t.exportNotice.value).toBe(
+      'Imported “odd.fdx”. 2 items came in as notes; Problems lists them.',
+    );
+    await t.openFile(t.picked('one.fdx', fdx(paragraph('Cast List', 'THEO, a keeper'))));
+    expect(t.exportNotice.value).toBe(
+      'Imported “one.fdx”. 1 item came in as a note; Problems lists it.',
+    );
+  });
+
+  test('reads a file that starts with a byte order mark', async () => {
+    const t = await fresh();
+    const bytes = new TextEncoder().encode(`\uFEFF${LAMP}`);
+    await t.openFile(t.picked('lamp.fdx', bytes));
+    expect(t.openError.value).toBe('');
+    expect(t.script.project.value?.title).toBe('The Last Lamp');
+  });
+
+  test('refuses a file that isn’t Final Draft XML, says why, and opens nothing', async () => {
+    const t = await fresh();
+    const was = t.script.project.value?.id;
+    await t.openFile(t.picked('broken.fdx', '<FinalDraft><Content></FinalDraft>'));
+    expect(t.openError.value).toMatch(/^This isn’t a Final Draft file: /);
+    expect(t.script.project.value?.id).toBe(was);
+    expect(await t.mine()).toHaveLength(0);
+    await t.openFile(t.picked('notes.fdx', 'INT. HALL - DAY\n'));
+    expect(t.openError.value).toMatch(/^This isn’t a Final Draft file: /);
+    expect(await t.mine()).toHaveLength(0);
+    // The size and text checks come first, as for any file.
+    await t.openFile(t.picked('cafe.fdx', new Uint8Array([0x3c, 0x61, 0xe9, 0x3e])));
+    expect(t.openError.value).toMatch(/isn’t UTF-8 text/);
+    expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('a read-only tab imports nothing', async () => {
+    const t = await fresh();
+    const { useGuard } = await import('../app/storage/guard');
+    (useGuard().readOnly as { value: boolean }).value = true;
+    await t.openFile(t.picked('lamp.fdx', LAMP));
+    expect(await t.mine()).toHaveLength(0);
   });
 });
 

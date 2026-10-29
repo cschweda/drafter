@@ -129,7 +129,7 @@ test('is signed ad hoc, whole, without the hardened runtime', () => {
   expect(about).toMatch(/flags=0x[0-9a-f]+\(adhoc\)/);
 });
 
-test('opens .fountain, .md, and .markdown, and says a .fountain file is plain text', () => {
+test('opens .fountain, .md, .markdown, and .fdx, and says a .fountain file is plain text', () => {
   const info = plist();
   expect(info.CFBundleIdentifier).toBe('dev.drafter.app');
   expect(info.CFBundleName).toBe('Drafter');
@@ -143,6 +143,7 @@ test('opens .fountain, .md, and .markdown, and says a .fountain file is plain te
       [['fountain'], 'Editor', 'Default'],
       [['md'], 'Editor', 'Alternate'],
       [['markdown'], 'Editor', 'Alternate'],
+      [['fdx'], 'Viewer', 'Alternate'],
     ],
   );
   const [fountain] = info.UTImportedTypeDeclarations as {

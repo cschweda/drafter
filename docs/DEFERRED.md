@@ -13,3 +13,25 @@ Work that Phase 0 deliberately leaves for later, with the phase it belongs to.
 - **A snapshot before Expand outline** (Plan C, Phase 2). The design takes one before every bulk operation (§6.5, §11.1); snapshots with history arrive in Plan C, and until then one undo reverses an expand.
 - **A stage play from a Markdown outline** (when asked for). New screenplay from this outline makes a screenplay; a play's version would write `##` stubs under `#` acts and its metadata block.
 - **More tabs in a very wide pane's row** (when asked for; Phase 2 design §5.8 leaves it to the builder). Today the row is always the four core tabs, one slot, and More.
+- **Final Draft's own notes** (Plan FD, Phase 2; when the maintainer supplies real `.fdx` files). Real Final Draft notes anchor to ranges of a paragraph's text. Export writes a note on its own line as a `General` paragraph with `DrafterNote="Yes"`, and a note inside a line as `[[…]]` in the text; mapping to Final Draft's anchored notes waits for real files to test against.
+
+## Plan FD: Final Draft files
+
+What Plan FD (v0.11.0) left for later. Final Draft's own anchored notes are the item above.
+
+- **Testing against real Final Draft files** (when the maintainer supplies them; the files are never committed). Import and export were built from the structure description in the technical design and from hand-made fixtures. Real files may use elements, attributes, or orderings the fixtures don't, and a round trip through Final Draft itself has not been tried.
+- **Revisions** (when asked for). Final Draft's revision marks and colors are not read or written.
+- **Final Draft's formatting and settings** (when asked for). Page layout, fonts, smart type, headers and footers, and the like are read and listed as ignored on import, and not written on export. Drafter's templates decide the look.
+- **Scene Properties beyond the synopsis** (when asked for). A `Summary` (and a scene `Title`) comes in as a synopsis; Final Draft's other scene properties (color, page length, and the like) are attributes import doesn't read.
+- **A visible backslash on some imported lines.** A line from Final Draft that begins with `#`, `=`, `(`, or `~` and would read as another element is written with a `\` in front, because Fountain has no escape for those. It prints, so the writer deletes it, or changes the line.
+- **Small gaps in export.** The space before a note at the end of a line is not put back. `writeXml` does not check names or nesting depth (its input is always Drafter's own tree), and an element holding only an empty string does not round-trip.
+- **Attribute values on import.** The reader keeps a tab or newline inside an attribute value as typed, where XML would turn it into a space; a scene's `Summary` with a line break is read as two synopsis lines, which is what Drafter's export means by it.
+- **Import on the main thread.** Export runs in the export worker; import runs on the main thread, so a worst-case 5 MB file freezes the page for about 1.4 seconds. Move it into the worker if real files are slow.
+- **An import can grow past 5 MB.** Escaping (`\*`, two-space lines, a tab as four spaces, `[[fdx: …]]` notes) makes the Fountain text longer than the file's text, so an adversarial `.fdx` near 5 MB can import as more than 5 MB of script, which Drafter's own 5 MB open limit would refuse once it is saved. Real scripts are far below it.
+- **Stray text on an imported title page.** Text written directly in a title-page `Paragraph`, beside its `Text` runs, is not read, and nothing says so. Final Draft doesn't write that shape; body paragraphs keep such text as a `[[fdx: Paragraph text]]` note, and the title page should do the same.
+- **Stray text joins its neighbours.** Text written directly in a `Paragraph` between child elements is joined without a space (`a<Text>b</Text>c` keeps `ac`), and stray text inside a speech ends the speech, so the lines after it come in as noted action. Nothing is lost; it only reads oddly, and Final Draft doesn't write that shape.
+- **Error offsets.** An `XmlError`'s offset counts characters after line endings are normalized, not in the original file.
+- **Speed on very large exports.** Exporting a note on its own line scans every region of the script for each note, which is quadratic in the number of notes. Nobody has noticed; fix it if a big script is slow.
+- **A shorter `import.ts`.** The importer is about 800 lines; the emphasis writer could move into its own file.
+- **The `.deb` file association.** The Linux package installs a system-wide `*.fdx` glob, which may compete with another application's for Open with. Drafter never asks to be the default, but where nothing else claims `.fdx` a file manager may open it in Drafter; `docs/desktop-install-linux.md` says how to change that.
+- **Tests.** The round-trip property test runs under the default 5 second limit, which could be tight on a slow CI machine. The import property checks kinds only when nothing was mapped to a note. The phone-width WebKit accessibility specs time out when six workers run at once (the pages have no axe violations); run fewer workers.

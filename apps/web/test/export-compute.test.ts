@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { FONT_FILES, type FontSet } from '@drafter/render-pdf';
@@ -33,6 +34,13 @@ describe('the export worker', () => {
     const reply = await createExporter(realFonts)({ kind: 'pdf', source: SOURCE, template });
     if (!('data' in reply) || typeof reply.data === 'string') throw new Error('no bytes');
     expect(new TextDecoder().decode(reply.data.slice(0, 5))).toBe('%PDF-');
+  });
+
+  test('writes a Final Draft file, as toFdx does, without the fonts', async () => {
+    const load = vi.fn(realFonts);
+    const reply = await createExporter(load)({ kind: 'fdx', source: SOURCE, template });
+    expect(reply).toEqual({ data: toFdx(parse(SOURCE), template) });
+    expect(load).not.toHaveBeenCalled();
   });
 
   test('loads the fonts once, however many exports', async () => {

@@ -8,7 +8,7 @@ if (!page) throw new Error('The Saving page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    'How Save works in each browser; scripts in a Dropbox, Google Drive, or iCloud Drive folder; the recovery copy; installing as an app; and the desktop app for Linux and Windows.',
+    'How Save works in each browser; scripts in a Dropbox, Google Drive, or iCloud Drive folder; Final Draft files; the recovery copy; installing as an app; and the desktop app for Linux and Windows.',
 });
 </script>
 
@@ -97,7 +97,7 @@ useDocsHead({
             <td>Yes</td>
           </tr>
           <tr>
-            <th scope="row">Export as PDF or plain text</th>
+            <th scope="row">Export as PDF, plain text, or Final Draft</th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
@@ -189,6 +189,30 @@ useDocsHead({
       The same check runs when you come back to the window. In Firefox, Safari, and Brave there is no
       file to check, because Save downloads a copy. Opening a file with the same title as a script
       already in the browser asks whether to replace that script or open the file beside it.
+    </p>
+
+    <h2 id="final-draft">Final Draft files</h2>
+    <p>
+      Drafter opens a Final Draft file (<code>.fdx</code>) the way it opens any other: choose
+      <strong>Open a file…</strong>, or drop it on the window. It comes in as a new script with its
+      text turned into Fountain, and the <code>.fdx</code> itself is never changed. The new script
+      has no file yet, so the first Save asks where to put it and saves a <code>.fountain</code>.
+    </p>
+    <p>
+      Scene headings, action, characters, parentheticals, dialogue, dual dialogue, transitions,
+      shots, centered text, bold, italic, and underline, page breaks, scene numbers and summaries,
+      and the title page all come across. A paragraph Drafter has no element for, such as a cast
+      list or an act break, comes in as action with a note after it, like
+      <code>[[fdx: Cast List]]</code>, so nothing is dropped without a word. Drafter says how many
+      came in that way, and the Problems tab lists each one, with a jump to it (Find, with
+      <code>fdx:</code>, finds them too). Final Draft’s page layout,
+      fonts, element settings, revisions, and other settings are left out.
+    </p>
+    <p>
+      To go the other way, choose Export, then <strong>Final Draft (.fdx)</strong>. Drafter writes a
+      <code>.fdx</code> file with the script’s elements as Final Draft names them. Sections, notes,
+      synopses, and lyrics, which Final Draft has no element for, are marked so that opening the file
+      in Drafter again brings them back.
     </p>
 
     <h2 id="recovery-copy">The recovery copy</h2>
