@@ -374,6 +374,49 @@ describe('renderDocumentPdf', () => {
     }
   });
 
+  /** Renders with every subset embedder passed through `change` first; answers the font programs. */
+  const renderWithSubsets = async (change: (subset: object, call: number) => object) => {
+    const embed = PDFDocument.prototype.embedFont;
+    let calls = 0;
+    const spy = vi.spyOn(PDFDocument.prototype, 'embedFont').mockImplementation(async function (
+      this: PDFDocument,
+      ...args
+    ) {
+      const font = await embed.apply(this, args);
+      const embedder = (font as unknown as { embedder: { subset?: object } }).embedder;
+      if (embedder.subset) embedder.subset = change(embedder.subset, calls++);
+      return font;
+    });
+    try {
+      const { bytes } = await render('Harbour notes: the keeper climbs.');
+      const [page] = await extract(bytes, { spaces: true });
+      expect(page?.items.map((item) => item.str).join('')).toBe(
+        'Harbour notes: the keeper climbs.',
+      );
+      return fontPrograms(bytes);
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  it('embeds a face whole when its glyph data can’t be padded', async () => {
+    // A subset of the shape the padding knows, but whose glyph data comes out as plain bytes with
+    // no zero-filled `alloc`, so no glyph could be padded.
+    const programs = await renderWithSubsets((subset) => {
+      const font = (subset as { font: object }).font;
+      const plain = Object.create(font, { stream: { value: { buffer: new Uint8Array(4) } } });
+      return Object.create(subset, { font: { value: plain, writable: true } });
+    });
+    expect(programs.get('/InterTight-Regular')).toEqual(documentFonts.text);
+  });
+
+  it('embeds a face whole when the document’s own subset can’t be padded', async () => {
+    // The scratch check passes, but the subset made in the real document is another shape.
+    const programs = await renderWithSubsets((subset, call) => (call === 0 ? subset : {}));
+    expect(programs.get('/InterTight-Regular')).toEqual(documentFonts.text);
+    expect(programs.size).toBe(1);
+  });
+
   it('draws what the writer typed: fractions and dates stay as typed, and nothing is kerned', async () => {
     // Three glyphs each for "1/2", five for "10/12", ten for "29/10/2026": no fraction glyphs.
     const { bytes } = await render('1/2\n\n10/12\n\n29/10/2026');

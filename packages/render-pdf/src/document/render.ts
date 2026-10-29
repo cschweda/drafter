@@ -52,8 +52,16 @@ const COLORS = {
 interface GlyfSubset {
   glyf: Uint8Array[];
   offset: number;
+  /** The font being subset; a simple glyph's data is a slice of its stream's buffer. */
+  font?: { stream?: { buffer?: Uint8Array } };
   _addGlyph(gid: number): number;
 }
+
+/** A buffer class with a zero-filled `alloc`, as fontkit's (Node's `Buffer`, or its bundled one). */
+type ZeroAlloc = { alloc?: (size: number) => Uint8Array };
+const canAlloc = (data: unknown): boolean =>
+  typeof ((data as { constructor?: ZeroAlloc } | undefined)?.constructor as ZeroAlloc | undefined)
+    ?.alloc === 'function';
 
 /**
  * Pads each glyph of a font's subset to an even length. fontkit writes a small subset's `loca` in
@@ -61,21 +69,23 @@ interface GlyfSubset {
  * glyph of odd length every offset is wrong and a viewer draws blanks. Inter Tight has hundreds of
  * odd-length glyphs (Courier Prime has none, so its subset is unchanged). The padding is a zero
  * byte after the glyph's data, which the format allows. This reaches into pdf-lib's private
- * embedder (pdf-lib and fontkit are pinned for it), so it never throws: it returns false when the
- * subset isn't the shape it knows, and the caller embeds the face whole instead.
+ * embedder (pdf-lib and fontkit are pinned for it), so it never throws: it returns false, and
+ * installs nothing, when the subset isn't the shape it knows (no `_addGlyph`, or glyph data with no
+ * zero-filled `alloc` to pad it with), and the caller embeds the face whole instead.
  * `document-render.test.ts` reads each embedded subset back and compares its glyphs with the font's.
  */
 function evenGlyphs(font: PDFFont): boolean {
   const subset = (font as unknown as { embedder?: { subset?: GlyfSubset } }).embedder?.subset;
-  if (typeof subset?._addGlyph !== 'function') return false;
+  if (typeof subset?._addGlyph !== 'function' || !canAlloc(subset.font?.stream?.buffer)) {
+    return false;
+  }
   const add = subset._addGlyph;
   subset._addGlyph = function (this: GlyfSubset, gid: number) {
     const index = add.call(this, gid);
     const data = this.glyf?.[index];
     // fontkit's own Buffer class, which its encoder checks for; `alloc` fills with zeros.
-    const kind = data?.constructor as unknown as { alloc?: (size: number) => Uint8Array };
-    if (data && data.length % 2 === 1 && typeof kind?.alloc === 'function') {
-      const padded = kind.alloc(data.length + 1);
+    if (data && data.length % 2 === 1 && canAlloc(data)) {
+      const padded = (data.constructor as ZeroAlloc).alloc?.(data.length + 1) as Uint8Array;
       padded.set(data);
       this.glyf[index] = padded;
       this.offset += 1;
@@ -97,6 +107,17 @@ async function canPad(bytes: Uint8Array): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Takes a font out of the fonts pdf-lib writes at `save` (its private `fonts` list), so a subset
+ * that couldn't be padded never reaches the file. Nothing refers to it yet: it has drawn nothing.
+ */
+function unembed(doc: PDFDocument, font: PDFFont): void {
+  const list = (doc as unknown as { fonts?: unknown }).fonts;
+  if (!Array.isArray(list)) return;
+  const at = list.indexOf(font);
+  if (at >= 0) list.splice(at, 1);
 }
 
 type LinkItem = Extract<DocItem, { kind: 'link' }>;
@@ -170,13 +191,20 @@ export async function renderDocumentPdf(
     if (!font) {
       // A subset, padded; or, if this pdf-lib can't be padded, the whole font: a bigger file,
       // never blank letters.
+      const embedFace = (subset: boolean) =>
+        doc.embedFont(fonts[face], {
+          subset,
+          customName: FONT_NAMES[face],
+          features: layoutFeatures(),
+        });
       const subset = await canPad(fonts[face]);
-      font = await doc.embedFont(fonts[face], {
-        subset,
-        customName: FONT_NAMES[face],
-        features: layoutFeatures(),
-      });
-      if (subset) evenGlyphs(font);
+      font = await embedFace(subset);
+      if (subset && !evenGlyphs(font)) {
+        // This document's subset isn't the shape the scratch one was: drop it before it's
+        // written, and embed the face whole.
+        unembed(doc, font);
+        font = await embedFace(false);
+      }
       embedded.set(face, font);
     }
     return font;
