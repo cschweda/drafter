@@ -163,6 +163,8 @@ const LAYOUT: Record<Group, Section[]> = {
   Help: [
     { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy'] },
     { pick: ['take-the-tour'] },
+    { pick: prefix('sample-script-'), submenu: 'Sample Scripts', strip: /^Sample script: / },
+    { pick: ['check-for-updates'] },
   ],
 };
 
@@ -172,7 +174,15 @@ const LABELS: Record<string, string> = {
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-privacy': 'Privacy',
+  'check-for-updates': 'Check for Updates…',
 };
+
+/**
+ * The page's About Drafter command: its dialog (the version, Electron's and Chromium's, the links,
+ * Copy version info). The menu's About Drafter runs it while the page can; with no page to show it
+ * (none yet, or a Mac with no window), About is the app's own box (`MenuActions.about`).
+ */
+export const ABOUT_COMMAND = 'about-drafter';
 
 /** A title as a menu label: `&` would set a mnemonic on Linux and Windows, so it is doubled. */
 const label = (text: string) => text.replaceAll('&', '&&');
@@ -270,9 +280,17 @@ export function menuTemplate(
 
   // On a Mac, Settings… is in the app's own menu (as every Mac app has it), not in File.
   const inAppMenu = (c: MenuCommand) => apple && c.id === 'settings';
+  // About Drafter, once: the page's dialog while the page can show it, else the app's own box.
+  const aboutCommand = commands.find((c) => c.id === ABOUT_COMMAND && c.enabled);
+  const aboutItem = (): Item =>
+    aboutCommand
+      ? { ...itemFor(aboutCommand), label: 'About Drafter' }
+      : { id: 'about', label: 'About Drafter', click: about };
 
   const build = (group: Group): Item[] => {
-    const mine = commands.filter((c) => c.group === group && !inAppMenu(c));
+    const mine = commands.filter(
+      (c) => c.group === group && !inAppMenu(c) && c.id !== ABOUT_COMMAND,
+    );
     const placed = new Set<string>();
     const sections: Item[][] = [];
     for (const section of LAYOUT[group]) {
@@ -299,7 +317,7 @@ export function menuTemplate(
       sections.push([
         { id: 'modules-folder', label: 'Open Modules Folder', click: modulesFolder },
         { id: 'releases', label: 'Open the Releases Page', click: releases },
-        ...(apple ? [] : [{ id: 'about', label: 'About Drafter', click: about }]),
+        ...(apple ? [] : [aboutItem()]),
       ]);
     }
     if (group === 'File' && !apple) {
@@ -323,7 +341,7 @@ export function menuTemplate(
     bar.unshift({
       label: 'Drafter',
       submenu: [
-        { id: 'about', label: 'About Drafter', click: about },
+        aboutItem(),
         { type: 'separator' },
         ...(settings.length > 0 ? [...settings, { type: 'separator' as const }] : []),
         { role: 'services' },

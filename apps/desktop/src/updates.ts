@@ -94,6 +94,16 @@ export interface Offer {
   how: OfferHow;
 }
 
+/**
+ * What a check the writer asked for found (Help → Check for updates; apps/web `DesktopUpdateCheck`):
+ * `latest`; `found`, offered too; `downloading`, offered once it has downloaded; `off`, a build
+ * that can't check (unpackaged, with no test feed); `error`, which is logged as well.
+ */
+export type CheckResult =
+  | { status: 'latest' | 'off' | 'error' }
+  | { status: 'downloading'; version: string }
+  | { status: 'found'; version: string; how: OfferHow };
+
 /** The part of electron-updater's updater that is used. */
 export interface UpdaterLike {
   autoDownload: boolean;
@@ -137,6 +147,12 @@ export class Updates {
   private updater: UpdaterLike | null = null;
   private listening = false;
   private download: { cancel(): void } | null = null;
+  /** The version being downloaded, while it is. */
+  private downloading: string | null = null;
+  /** The writer asked for a check (Help → Check for updates): it may offer with the setting off. */
+  private asked = false;
+  private updaterReady: Promise<UpdaterLike> | null = null;
+  private checking: Promise<void> | null = null;
   /** Set while an install is under way: an updater error then means it failed. */
   private installFailed: ((message: string) => void) | null = null;
 
@@ -155,10 +171,12 @@ export class Updates {
   /** The page says whether Check for updates is on (when it has read the setting, and when it changes). */
   setEnabled(on: boolean): void {
     this.enabled = on === true;
-    // Turned off: a download under way stops, and nothing more is offered.
+    // Turned off: a download under way stops, and nothing more is offered (until the writer asks).
+    if (!this.enabled) this.asked = false;
     if (!this.enabled && this.download) {
       this.download.cancel();
       this.download = null;
+      this.downloading = null;
     }
     void this.maybeCheck();
   }
@@ -166,7 +184,7 @@ export class Updates {
   /** The page listens for offers (again, after a reload): it is told the one it hasn't had. */
   listen(): void {
     this.listening = true;
-    if (this.offer && this.enabled === true) this.deps.publish(this.offer);
+    if (this.offer && this.allowed()) this.deps.publish(this.offer);
   }
 
   /**
@@ -208,11 +226,58 @@ export class Updates {
     if (this.offer?.how === 'get') this.deps.openExternal(RELEASES_URL);
   }
 
+  /**
+   * Help → Check for updates: a check now, whatever the setting says and however long the start's
+   * wait has left (that wait's check is then this one). What it finds is offered as the start's
+   * would be. A check under way is this one: one request, never two at once.
+   */
+  async checkNow(): Promise<CheckResult> {
+    if (this.deps.mode === 'off') return { status: 'off' };
+    this.asked = true;
+    this.began = true;
+    try {
+      await this.runCheck();
+    } catch (error) {
+      this.deps.log(`update: ${errorText(error)}`);
+      return { status: 'error' };
+    }
+    if (this.offer) return { status: 'found', version: this.offer.version, how: this.offer.how };
+    if (this.downloading) return { status: 'downloading', version: this.downloading };
+    return { status: 'latest' };
+  }
+
+  /** Whether an offer may be made: the setting is on, or the writer asked. */
+  private allowed(): boolean {
+    return this.enabled === true || this.asked;
+  }
+
   private async maybeCheck(): Promise<void> {
     if (this.began || !this.waited || this.enabled !== true || this.deps.mode === 'off') return;
     this.began = true;
     try {
-      const updater = await this.deps.createUpdater();
+      await this.runCheck();
+    } catch (error) {
+      this.deps.log(`update: ${errorText(error)}`);
+    }
+  }
+
+  /** One check at a time, on the one updater. */
+  private runCheck(): Promise<void> {
+    if (!this.checking) {
+      this.checking = (async () => {
+        const updater = await this.getUpdater();
+        await updater.checkForUpdates();
+      })().finally(() => {
+        this.checking = null;
+      });
+    }
+    return this.checking;
+  }
+
+  /** The updater, made and set up once (again after it couldn't be made). */
+  private getUpdater(): Promise<UpdaterLike> {
+    if (this.updaterReady) return this.updaterReady;
+    const ready = this.deps.createUpdater().then((updater) => {
       this.updater = updater;
       const downloads = INSTALLS.includes(this.deps.mode);
       // Never automatic: a found version starts the download below, with a token that setEnabled(false) can cancel.
@@ -224,12 +289,19 @@ export class Updates {
       });
       updater.on('update-available', (info) => {
         if (downloads) {
+          // Found again by a later check: it is downloaded, or downloading, already.
+          if (this.downloaded || this.download) return;
           this.deps.log(`update: ${info.version} found, downloading`);
-          if (this.enabled !== true) return;
+          if (!this.allowed()) return;
           const token = this.deps.newCancellation();
           this.download = token;
+          this.downloading = info.version;
           updater.downloadUpdate(token).catch((error) => {
             this.deps.log(`update: ${errorText(error)}`);
+            if (this.download === token) {
+              this.download = null;
+              this.downloading = null;
+            }
           });
           return;
         }
@@ -238,17 +310,21 @@ export class Updates {
       updater.on('update-downloaded', (info) => {
         if (!downloads) return;
         this.downloaded = true;
+        this.downloading = null;
         this.make({ version: info.version, how: 'restart' });
       });
-      await updater.checkForUpdates();
-    } catch (error) {
-      this.deps.log(`update: ${errorText(error)}`);
-    }
+      return updater;
+    });
+    this.updaterReady = ready;
+    ready.catch(() => {
+      if (this.updaterReady === ready) this.updaterReady = null;
+    });
+    return ready;
   }
 
   private make(offer: Offer): void {
     this.offer = offer;
-    if (this.listening && this.enabled === true) this.deps.publish(offer);
+    if (this.listening && this.allowed()) this.deps.publish(offer);
   }
 }
 

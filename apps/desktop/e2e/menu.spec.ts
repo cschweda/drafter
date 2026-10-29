@@ -273,18 +273,48 @@ test('takes the tour and resets the sample from Help and File', async ({ desktop
   await expect.poll(() => editorText(page)).not.toContain('MY OWN EDIT.');
 });
 
-test('shows About with the version and opens drafter.dev outside the app', async ({
+test('shows About Drafter with Electron’s version, and opens its links outside the app', async ({
   desktop,
   profile,
 }) => {
   const { app, page } = await desktop();
   const version = await page.evaluate(() => window.drafterDesktop?.version);
+  const [appVersion, electron, chrome] = await app.evaluate(({ app }) => [
+    app.getVersion(),
+    process.versions.electron,
+    process.versions.chrome,
+  ]);
+  expect(version).toBe(appVersion);
+  // The page's own command, once its list is in the menu: About is its dialog, not the native box.
+  await expect
+    .poll(async () => (await menuItems(app)).some((i) => i.id === 'about-drafter'))
+    .toBe(true);
   await chooseMenuItem(app, ABOUT_PATH);
-  await expect.poll(() => aboutShown(profile).length).toBe(1);
-  const [about] = aboutShown(profile);
-  expect(about?.message).toContain(`Drafter ${version}`);
-  expect(about?.detail).toContain('drafter.dev');
-  await expect.poll(() => openedExternally(profile)).toEqual(['https://drafter.dev/']);
+  const about = page.getByRole('dialog', { name: 'Drafter', exact: true });
+  await expect(about).toBeVisible();
+  await expect(about.locator('[data-about-version]')).toHaveText(`v${appVersion}`);
+  await expect(about).toContainText('The desktop app');
+  await expect(about.locator('[data-about-runtime]')).toHaveText(
+    `Electron ${electron}, Chromium ${chrome}`,
+  );
+  expect(aboutShown(profile)).toEqual([]);
+  // A link goes to the system browser; the app's window stays where it is.
+  await about.getByRole('link', { name: 'Source code on GitHub' }).click();
+  await expect
+    .poll(() => openedExternally(profile))
+    .toEqual(['https://github.com/cschweda/drafter']);
+  expect(page.url()).toBe('app://drafter/');
+  expect(app.windows()).toHaveLength(1);
+  await page.keyboard.press('Escape');
+  await expect(about).toBeHidden();
+});
+
+test('opens a sample script from Help as a new script', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  const before = (await stored(page)).length;
+  await chooseMenuItem(app, ['Help', 'Sample Scripts', 'Stage play']);
+  await expect.poll(() => editorText(page)).toContain('Sample: Stage play');
+  await expect.poll(async () => (await stored(page)).length).toBe(before + 1);
 });
 
 test('opens the releases page in the browser, not the app', async ({ desktop, profile }) => {
