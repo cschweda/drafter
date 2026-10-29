@@ -2,6 +2,15 @@
 // where a card is drawn. Pure functions of card positions; `columns` is measured from the drawn
 // cards, so it follows the pane's width and the card size (one column on a phone).
 
+import {
+  downTarget,
+  type MoveTarget,
+  type Scene,
+  type SceneIndex,
+  targetBefore,
+  upTarget,
+} from '@drafter/outline';
+
 /**
  * Where `key` takes focus from card `focused` of `count` cards in rows of `columns`: Right and
  * Left one card, Down and Up a row (Down from above a short last row's end goes to its last card),
@@ -81,4 +90,44 @@ export function cardsKey(
     }
   }
   return null;
+}
+
+/**
+ * How many cards each group holds: a group is each run of scenes in the same innermost section,
+ * as the Cards tab draws them.
+ */
+export function groupSizes(scenes: readonly Scene[]): number[] {
+  const sizes: number[] = [];
+  let section: number | null | undefined;
+  scenes.forEach((scene, i) => {
+    const inner = scene.sections.at(-1) ?? null;
+    if (i > 0 && inner === section) sizes[sizes.length - 1] = (sizes.at(-1) ?? 0) + 1;
+    else sizes.push(1);
+    section = inner;
+  });
+  return sizes;
+}
+
+/**
+ * Alt+Up: before the card one row up in the same column; Alt+Down: after the card one row down
+ * (rows as drawn, in rows of `columns`, by `cardsKey`). In one column (a phone) a row is one
+ * place, so they are `upTarget` and `downTarget`, crossing a section's edge as the Outline does.
+ * Null at an edge, or for a block that is no scene.
+ */
+export function rowMoveTarget(
+  index: SceneIndex,
+  block: number,
+  columns: number,
+  direction: 'up' | 'down',
+): MoveTarget | null {
+  const at = index.scenes.findIndex((s) => s.block === block);
+  if (at < 0) return null;
+  if (Math.floor(columns) <= 1) {
+    return direction === 'up' ? upTarget(index, block) : downTarget(index, block);
+  }
+  const key = direction === 'up' ? 'ArrowUp' : 'ArrowDown';
+  const to = cardsKey(groupSizes(index.scenes), columns, at, key);
+  const other = to === null ? undefined : index.scenes[to];
+  if (!other) return null;
+  return direction === 'up' ? targetBefore(index, other.block) : { after: other.block };
 }

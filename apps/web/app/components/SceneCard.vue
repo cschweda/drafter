@@ -1,3 +1,8 @@
+<script lang="ts">
+/** Where a drop line shows on a card: beside it in a row of cards, above or below in one column. */
+export type DropSide = 'left' | 'right' | 'above' | 'below';
+</script>
+
 <script setup lang="ts">
 import type { Scene } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
@@ -19,6 +24,10 @@ const props = defineProps<{
   menuOpen: boolean;
   menuItems: DropdownMenuItem[][];
   menuContent: object;
+  /** Being dragged. */
+  dragging?: boolean;
+  /** Where a drop line shows on this card, or none. */
+  drop?: DropSide | null;
 }>();
 const emit = defineEmits<{ 'update:menuOpen': [open: boolean]; edited: [save: boolean] }>();
 const draft = defineModel<string>('draft', { default: '' });
@@ -45,7 +54,11 @@ function onEditKeydown(event: KeyboardEvent) {
     :id="props.domId"
     role="option"
     class="card"
-    :class="{ colored: !!props.scene.color }"
+    :class="{
+      colored: !!props.scene.color,
+      dragging: props.dragging,
+      [`drop-${props.drop}`]: !!props.drop,
+    }"
     :style="{ '--stripe': swatch }"
     :tabindex="props.current ? 0 : -1"
     :aria-selected="props.current ? 'true' : 'false'"
@@ -211,7 +224,35 @@ function onEditKeydown(event: KeyboardEvent) {
   color: var(--text);
   font: inherit;
 }
+.card.dragging {
+  opacity: 0.5;
+}
+/* The drop line, in the gap on the side the card will land. */
+.card.drop-left {
+  box-shadow: -5px 0 0 -1px var(--heading);
+}
+.card.drop-right {
+  box-shadow: 5px 0 0 -1px var(--heading);
+}
+.card.drop-above {
+  box-shadow: 0 -5px 0 -1px var(--heading);
+}
+.card.drop-below {
+  box-shadow: 0 5px 0 -1px var(--heading);
+}
 @media (forced-colors: active) {
+  .card.drop-left {
+    border-left: 4px solid Highlight;
+  }
+  .card.drop-right {
+    border-right: 4px solid Highlight;
+  }
+  .card.drop-above {
+    border-top: 4px solid Highlight;
+  }
+  .card.drop-below {
+    border-bottom: 4px solid Highlight;
+  }
   .stripe {
     border-top-color: CanvasText;
   }

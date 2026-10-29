@@ -1,5 +1,8 @@
+import { parse } from '@drafter/fountain';
+import { downTarget, sceneIndex, upTarget } from '@drafter/outline';
+import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { cardsKey, gridKey } from '../app/cards/grid';
+import { cardsKey, gridKey, rowMoveTarget } from '../app/cards/grid';
 
 // Cards flow into rows of `columns` (measured from the drawn cards); the arrow keys move by where
 // a card is drawn (Phase 2 design §7).
@@ -66,5 +69,77 @@ describe('cardsKey', () => {
     expect(cardsKey(groups, 3, 6, 'ArrowUp')).toBe(4);
     expect(cardsKey([3, 2], 3, 4, 'ArrowUp')).toBe(1);
     expect(cardsKey(groups, 3, 1, 'ArrowUp')).toBeNull();
+  });
+});
+
+describe('rowMoveTarget', () => {
+  // Act One holds three cards and Act Two one; in rows of two:  HALL YARD / SHED  //  CAR
+  const index = sceneIndex(
+    parse(
+      [
+        '# Act One',
+        '',
+        'INT. HALL - DAY',
+        '',
+        'Hi.',
+        '',
+        'EXT. YARD - NIGHT',
+        '',
+        'Hi.',
+        '',
+        'INT. SHED - DAY',
+        '',
+        'Hi.',
+        '',
+        '# Act Two',
+        '',
+        'INT. CAR - DAY',
+        '',
+        'Hi.',
+        '',
+      ].join('\n'),
+    ),
+    builtins['us-screenplay'] as Template,
+  );
+  const block = (name: string) => {
+    const item = index.items.find((i) => (i.kind === 'scene' ? i.heading : i.title) === name);
+    if (!item) throw new Error(`no ${name}`);
+    return item.block;
+  };
+
+  test('rowMoveTarget goes before the card above', () => {
+    // Before HALL, the first card of Act One: the section's start.
+    expect(rowMoveTarget(index, block('INT. SHED - DAY'), 2, 'up')).toEqual({
+      after: block('Act One'),
+    });
+    // From a section's first row, before the card in the last row above, same column.
+    expect(rowMoveTarget(index, block('INT. CAR - DAY'), 2, 'up')).toEqual({
+      after: block('EXT. YARD - NIGHT'),
+    });
+  });
+
+  test('rowMoveTarget goes after the card below', () => {
+    expect(rowMoveTarget(index, block('INT. HALL - DAY'), 2, 'down')).toEqual({
+      after: block('INT. SHED - DAY'),
+    });
+    // Down from a section's last row: after the card below it in the next section.
+    expect(rowMoveTarget(index, block('INT. SHED - DAY'), 2, 'down')).toEqual({
+      after: block('INT. CAR - DAY'),
+    });
+  });
+
+  test('rowMoveTarget is null on the top row going up', () => {
+    expect(rowMoveTarget(index, block('INT. HALL - DAY'), 2, 'up')).toBeNull();
+    expect(rowMoveTarget(index, block('EXT. YARD - NIGHT'), 2, 'up')).toBeNull();
+    expect(rowMoveTarget(index, block('INT. CAR - DAY'), 2, 'down')).toBeNull();
+    // No such scene.
+    expect(rowMoveTarget(index, block('Act One'), 2, 'up')).toBeNull();
+  });
+
+  test('rowMoveTarget is one place in one column, as on a phone', () => {
+    for (const name of ['INT. HALL - DAY', 'INT. SHED - DAY', 'INT. CAR - DAY']) {
+      expect(rowMoveTarget(index, block(name), 1, 'up')).toEqual(upTarget(index, block(name)));
+      expect(rowMoveTarget(index, block(name), 1, 'down')).toEqual(downTarget(index, block(name)));
+    }
   });
 });

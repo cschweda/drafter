@@ -5,10 +5,12 @@ import {
   type MoveTarget,
   type OutlineItem,
   type Scene,
+  targetBefore,
   upTarget,
 } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { cardsKey } from '~/cards/grid';
+import { cardsKey, rowMoveTarget } from '~/cards/grid';
+import type { DropSide } from '~/components/SceneCard.vue';
 import { useEditor } from '~/editor/session';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
@@ -20,7 +22,9 @@ import { useSettings } from '~/settings/settings';
 // section's title. The cards are one listbox with a group per section and one tab stop; the arrow
 // keys move by where a card is drawn, Home and End go to the first and last. Enter edits the
 // card's first synopsis in place; its menu (the ⋯ button, the context-menu key, or Shift+F10) is
-// the Outline row's (`scene-menu.ts`). Every change is a text change, undone in one step.
+// the Outline row's (`scene-menu.ts`). Alt+Left and Alt+Right move a card one place, Alt+Up and
+// Alt+Down a row as drawn; the menu moves it too (a phone's way), and a pointer can drag it. Every
+// change is a text change, undone in one step, and focus stays on the moved card.
 
 const editor = useEditor();
 const outline = useOutline();
@@ -97,9 +101,15 @@ async function focusCard(id: string) {
   document.getElementById(domId(id))?.focus();
 }
 
-/** How many cards a row of the grid holds, as drawn: the cards level with the group's first. */
+/**
+ * How many cards a row of the grid holds, as drawn: the grid's tracks (every group's grid has the
+ * same, so a section of one card still counts the row's width), or else the cards level with the
+ * group's first.
+ */
 function columnsAt(id: string): number {
   const grid = document.getElementById(domId(id))?.parentElement;
+  const tracks = grid ? getComputedStyle(grid).gridTemplateColumns.trim() : '';
+  if (/^[\d.]+px( [\d.]+px)*$/.test(tracks)) return tracks.split(' ').length;
   const drawn = grid ? Array.from(grid.children) : [];
   const top = drawn[0]?.getBoundingClientRect().top;
   if (top === undefined) return 1;
@@ -115,13 +125,19 @@ function go(item: OutlineItem) {
   editor.goto(item.span.from);
 }
 
-// ---- Moving, from the card's menu -------------------------------------------------------------
+// ---- Moving: the keys, the menu, Move to…, and drag ---------------------------------------------
 
 async function move(item: OutlineItem, target: MoveTarget | null, direction?: 'up' | 'down') {
   const id = runMove(item.block, target, direction ? { direction } : {});
   const back = id ?? active.value;
   if (back) await focusCard(back);
 }
+
+const moveUp = (item: OutlineItem) => move(item, upTarget(index.value, item.block), 'up');
+const moveDown = (item: OutlineItem) => move(item, downTarget(index.value, item.block), 'down');
+/** Alt+Up and Alt+Down: a row of the grid as drawn (one place in one column). */
+const moveRow = (item: OutlineItem, id: string, direction: 'up' | 'down') =>
+  move(item, rowMoveTarget(index.value, item.block, columnsAt(id), direction), direction);
 
 const movingToId = ref<string | null>(null);
 const movingTo = computed(() => (movingToId.value ? (now(movingToId.value) ?? null) : null));
@@ -136,6 +152,58 @@ async function onMoveToClose() {
   movingToId.value = null;
   if (id) await focusCard(id);
 }
+
+// Drag: a drop line before or after the card under the pointer shows where the card will land
+// (its left or right half in a row of cards, its top or bottom half in one column). A pointer's
+// way only, on a wide screen; the keys, the menu, and Move to… do the same.
+const dragging = ref<string | null>(null);
+/** The card the drop line is on, whether the card lands after it, and the line's side. */
+const dropLine = ref<{ id: string; after: boolean; side: DropSide } | null>(null);
+const canDrag = computed(() => wide.value && readOnly.value === null);
+
+function onDragstart(event: DragEvent, id: string) {
+  const card = cardById(id);
+  if (!card || readOnly.value || editing.value === id) {
+    event.preventDefault();
+    return;
+  }
+  dragging.value = id;
+  event.dataTransfer?.setData('text/plain', card.scene.heading);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragover(event: DragEvent, id: string) {
+  if (!dragging.value || !cardById(id)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const row = columnsAt(id) > 1;
+  const after = row
+    ? event.clientX > rect.left + rect.width / 2
+    : event.clientY > rect.top + rect.height / 2;
+  const side: DropSide = row ? (after ? 'right' : 'left') : after ? 'below' : 'above';
+  if (dropLine.value?.id !== id || dropLine.value.side !== side) {
+    dropLine.value = { id, after, side };
+  }
+}
+
+function onDrop(event: DragEvent) {
+  event.preventDefault();
+  const from = dragging.value ? now(dragging.value) : undefined;
+  const line = dropLine.value;
+  dragging.value = null;
+  dropLine.value = null;
+  const onto = line ? now(line.id) : undefined;
+  if (!from || !line || !onto) return;
+  void move(from, line.after ? { after: onto.block } : targetBefore(index.value, onto.block));
+}
+
+function onDragend() {
+  dragging.value = null;
+  dropLine.value = null;
+}
+
+const dropAt = (id: string) => (dropLine.value?.id === id ? dropLine.value.side : null);
 
 // ---- The card's menu --------------------------------------------------------------------------
 
@@ -178,8 +246,8 @@ function menuItems(card: Card): DropdownMenuItem[][] {
   return sceneMenuItems(card.id, card.scene, {
     go: withItem(go),
     edit: (id) => afterClosing(() => void startEditing(id)),
-    moveUp: withItem((item) => void move(item, upTarget(index.value, item.block), 'up')),
-    moveDown: withItem((item) => void move(item, downTarget(index.value, item.block), 'down')),
+    moveUp: withItem((item) => void moveUp(item)),
+    moveDown: withItem((item) => void moveDown(item)),
     moveTo: (id) =>
       afterClosing(() => {
         movingToId.value = id;
@@ -227,6 +295,16 @@ function onKeydown(event: KeyboardEvent, id: string) {
     event.preventDefault();
     setMenu(id, true);
     return;
+  }
+  if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+    const item = key.startsWith('Arrow') ? now(id) : undefined;
+    if (item) {
+      event.preventDefault();
+      if (key === 'ArrowLeft') void moveUp(item);
+      else if (key === 'ArrowRight') void moveDown(item);
+      else void moveRow(item, id, key === 'ArrowUp' ? 'up' : 'down');
+      return;
+    }
   }
   // Undo and redo work here too, on the script, and focus stays on the cards.
   const mod = event.ctrlKey || event.metaKey;
@@ -307,6 +385,9 @@ watch(cards, async () => {
               editing === card.id ? draft : null,
               menuFor === card.id,
               readOnly,
+              canDrag,
+              dragging === card.id,
+              dropAt(card.id),
             ]"
             v-model:draft="draft"
             :scene="card.scene"
@@ -316,11 +397,18 @@ watch(cards, async () => {
             :menu-open="menuFor === card.id"
             :menu-items="menuFor === card.id ? menuItems(card) : NO_ITEMS"
             :menu-content="MENU_CONTENT"
+            :draggable="canDrag && editing !== card.id ? 'true' : 'false'"
+            :dragging="dragging === card.id"
+            :drop="dropAt(card.id)"
             @update:menu-open="(open: boolean) => setMenu(card.id, open)"
             @edited="finishEditing"
             @keydown="onKeydown($event, card.id)"
             @focus="active = card.id"
             @click="active = card.id"
+            @dragstart="onDragstart($event, card.id)"
+            @dragover="onDragover($event, card.id)"
+            @drop="onDrop"
+            @dragend="onDragend"
           />
         </div>
       </div>

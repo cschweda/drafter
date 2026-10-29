@@ -79,7 +79,9 @@ const groups = shortcutGroups(COMMAND_DATA);
           In the Cards tab, the arrow keys move between the cards as they are drawn, and
           <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. <kbd>Enter</kbd> edits a
           card’s synopsis (<kbd>Enter</kbd> saves, <kbd>Esc</kbd> cancels), and the context-menu
-          key or <kbd>Shift+F10</kbd> opens the card’s menu.
+          key or <kbd>Shift+F10</kbd> opens the card’s menu. <kbd>Alt+←</kbd> and
+          <kbd>Alt+→</kbd> move a card one place earlier or later, and <kbd>Alt+↑</kbd> and
+          <kbd>Alt+↓</kbd> move it a row up or down (<kbd>⌥</kbd> on a Mac).
         </li>
         <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
