@@ -13,10 +13,19 @@ export interface FdxImport {
   text: string;
   /** The title page's Title, as plain text, or null when there is none. */
   title: string | null;
-  /** The paragraph types and elements that came in as `[[fdx: …]]` notes, with how many of each. */
+  /**
+   * What came in as notes because Drafter has no element for it, with how many of each: paragraph
+   * types and elements as `[[fdx: …]]` notes, and Final Draft's script notes (`Script note`), which
+   * are `[[Writer: …]]` notes when they name their writer.
+   */
   mapped: Array<{ type: string; count: number }>;
-  /** The formatting and settings elements of the file that were left out, each named once. */
+  /**
+   * The formatting and settings elements of the file that were left out, each named once: the
+   * first `MAX_IGNORED` of them, so a hostile file can't make the list as large as itself.
+   */
   ignored: string[];
+  /** How many different names were left out, `ignored`'s included. */
+  ignoredCount: number;
 }
 
 /** Why a file was refused: it isn't XML the reader accepts, or isn't a Final Draft document. */
@@ -73,16 +82,22 @@ export const IGNORED: ReadonlySet<string> = new Set([
   'TableColumnSettings',
 ]);
 
+/** The most names `ignored` lists; `ignoredCount` says how many there were. */
+export const MAX_IGNORED = 50;
+
+/** An element whose content is never text for the script: a setting, or an image's bytes. */
+const skipped = (name: string) => IGNORED.has(name) || name === 'Picture';
+
 /** An `Outline N (label)` paragraph type: a section of depth N. */
 const OUTLINE = /^Outline ([1-9])(?:\s|$)/;
 
-/** All the text inside an element, with each paragraph in it on its own line. */
+/**
+ * All the text inside an element, each child on its own line: its paragraphs, and anything else it
+ * holds beside them, so nothing in a note, an alternate, or a beat is left out.
+ */
 function paragraphsText(element: XmlElement): string {
-  const paragraphs = element.children.filter(
-    (c): c is XmlElement => typeof c !== 'string' && c.name === 'Paragraph',
-  );
-  const texts = paragraphs.length > 0 ? paragraphs.map(textOf) : [textOf(element)];
-  return texts
+  return element.children
+    .map((c) => (typeof c === 'string' ? c : skipped(c.name) ? '' : textOf(c)))
     .map((t) => t.trim())
     .filter(Boolean)
     .join('\n');
@@ -91,8 +106,17 @@ function paragraphsText(element: XmlElement): string {
 /** Text with its runs of whitespace made one space, for comparing what reads the same. */
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-/** A note on its own line holding `text`; a `]]` inside gets a space so it can't end it early. */
-const ownNote = (text: string) => `[[${oneLine(text).replaceAll(']]', '] ]')}]]`;
+/**
+ * Text that can't end a note early: a space after each `]` that a `]` follows, and after a last
+ * `]`, as `@drafter/notes` writes a note's body (`safeBody`, `writeNote`).
+ */
+const closeSafe = (text: string) => {
+  const safe = text.replace(/\](?=\])/g, '] ');
+  return safe.endsWith(']') ? `${safe} ` : safe;
+};
+
+/** A note on its own line holding `text`, on one line. */
+const ownNote = (text: string) => `[[${closeSafe(oneLine(text))}]]`;
 
 interface Style {
   bold: boolean;
@@ -134,9 +158,14 @@ const noteText = (text: string) =>
     .map((line, k) => (k > 0 && /^\s*$/.test(line) ? '  ' : line))
     .join('\n');
 
-/** All the text inside an element, an element inside it included (`<Text>a<B>b</B></Text>`). */
+/**
+ * All the text inside an element, an element inside it included (`<Text>a<B>b</B></Text>`), except
+ * what a setting or an image holds.
+ */
 function textOf(element: XmlElement): string {
-  return element.children.map((c) => (typeof c === 'string' ? c : textOf(c))).join('');
+  return element.children
+    .map((c) => (typeof c === 'string' ? c : skipped(c.name) ? '' : textOf(c)))
+    .join('');
 }
 
 /** The text directly inside an element, outside its children, or '' when that is only spaces. */
@@ -146,7 +175,7 @@ function bareText(element: XmlElement): string {
 }
 
 /** A `[[fdx: …]]` note naming what Drafter couldn't map; a `]]` inside can't end it early. */
-const fdxNote = (label: string) => `[[fdx: ${label.replace(/\s+/g, ' ').replaceAll(']]', '] ]')}]]`;
+const fdxNote = (label: string) => `[[fdx: ${closeSafe(label.replace(/\s+/g, ' '))}]]`;
 
 /** The paragraph's `<Text>` runs, as lines of styled characters and notes. */
 function linesOf(paragraph: XmlElement): Tok[][] {
@@ -392,7 +421,7 @@ interface Field {
 class Importer {
   private readonly blocks: string[] = [];
   private readonly mappedCounts = new Map<string, number>();
-  private readonly ignoredNames: string[] = [];
+  private readonly ignoredNames = new Set<string>();
   private pageBreak = false;
   private speech: Speech | null = null;
   /** The cue being read is the second speaker of a `DualDialogue`. */
@@ -431,7 +460,8 @@ class Importer {
       text: parts.length > 0 ? `${parts.join('\n\n')}\n` : '',
       title: titlePage?.title ?? null,
       mapped: [...this.mappedCounts].map(([type, count]) => ({ type, count })),
-      ignored: this.ignoredNames,
+      ignored: [...this.ignoredNames].slice(0, MAX_IGNORED),
+      ignoredCount: this.ignoredNames.size,
     };
   }
 
@@ -455,8 +485,7 @@ class Importer {
    * it comes in as a note after it, the first time any paragraph names it. Which one is current (`Current`) needn't be trusted: the text
    * in the paragraph is what Final Draft shows.
    */
-  private alternates(alts: XmlElement, paragraph: XmlElement) {
-    const shown = oneLine(visible(linesOf(paragraph)).join('\n'));
+  private alternates(alts: XmlElement, shown: () => string) {
     for (const child of alts.children) {
       if (typeof child === 'string' || child.name !== 'AltId') continue;
       const id = textOf(child).trim();
@@ -465,21 +494,31 @@ class Importer {
       if (this.usedAlts.has(id)) continue;
       const text = this.alts.get(id);
       this.usedAlts.add(id);
-      if (text === undefined || text === '' || oneLine(text) === shown) continue;
+      if (text === undefined || text === '' || oneLine(text) === shown()) continue;
       this.count('Alternate');
       this.place(fdxNote(`Alternate: ${text}`));
     }
   }
 
-  /** The alternates no paragraph named come in as notes, after the script; the rest are used. */
+  /**
+   * The alternates no paragraph named come in as notes, after the script; the rest are used. A
+   * later `Alt` with an id already seen (only the first is looked up) comes in too, unless its text
+   * is the first's.
+   */
   private unusedAlts(collection: XmlElement) {
+    const seen = new Set<string>();
     for (const alt of collection.children) {
       if (typeof alt === 'string' || alt.name !== 'Alt') continue;
       const id = alt.attrs.Id;
-      if (id !== undefined && this.usedAlts.has(id)) continue;
       const text = paragraphsText(alt);
+      if (id !== undefined) {
+        const first = !seen.has(id);
+        seen.add(id);
+        if (first ? this.usedAlts.has(id) : oneLine(text) === oneLine(this.alts.get(id) ?? ''))
+          continue;
+        this.usedAlts.add(id);
+      }
       if (text === '') continue;
-      if (id !== undefined) this.usedAlts.add(id);
       this.flushSpeech();
       this.count('Alternate');
       this.push(fdxNote(`Alternate: ${text}`));
@@ -536,7 +575,7 @@ class Importer {
   }
 
   private ignore(name: string) {
-    if (!this.ignoredNames.includes(name)) this.ignoredNames.push(name);
+    this.ignoredNames.add(name);
   }
 
   private count(type: string) {
@@ -569,8 +608,10 @@ class Importer {
     const texts: string[] = [];
     const walk = (node: XmlElement) => {
       for (const child of node.children) {
-        if (typeof child !== 'string') walk(child);
-        else if (child.trim() !== '') texts.push(child.trim());
+        if (typeof child !== 'string') {
+          if (skipped(child.name)) this.ignore(child.name);
+          else walk(child);
+        } else if (child.trim() !== '') texts.push(child.trim());
       }
     };
     walk(element);
@@ -639,7 +680,9 @@ class Importer {
       this.flushSpeech();
       this.pageBreak = true;
     }
-    if (!inSpeech) this.flushSpeech();
+    // A summary or a note inside a speech waits for its end rather than breaking it.
+    const aside = (type === 'Summary' || type === 'Note') && this.speech !== null;
+    if (!inSpeech && !aside) this.flushSpeech();
 
     // A section's depth is 1 to 6, as export writes it; any other value (a huge one would make a
     // huge script) is a mark Drafter can't trust, so the paragraph comes in as unmapped.
@@ -662,10 +705,11 @@ class Importer {
       if (outlineDepth === 0 || lines.length > 0)
         this.push(`${'#'.repeat(depth)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
     } else if (type === 'Summary') {
-      // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order.
-      if (lines.length > 0) this.push(this.synopsisLines(lines));
+      // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order
+      // (after the speech, inside one).
+      if (lines.length > 0) this.place(this.synopsisLines(lines));
     } else if ((type === 'General' && attrs.DrafterNote === 'Yes') || type === 'Note') {
-      if (lines.length > 0 || type !== 'Note') this.note(lines);
+      if (lines.length > 0 || type !== 'Note') this.place(this.note(lines));
     } else if (type === 'General' && attrs.DrafterSynopsis === 'Yes') {
       if (lines.length > 0) this.push(this.synopsisLines(lines));
     } else if (type === 'Scene Heading' || type === 'Shot') {
@@ -696,10 +740,17 @@ class Importer {
     }
 
     this.strayText(paragraph);
+    // The paragraph's text as an alternate is compared with it, worked out once and only if needed:
+    // a paragraph can hold many `Alts`.
+    let shownText: string | undefined;
+    const shown = () => {
+      shownText ??= oneLine(visible(all).join('\n'));
+      return shownText;
+    };
     for (const child of paragraph.children) {
       if (typeof child === 'string' || child.name === 'Text') continue;
       if (child.name === 'SceneProperties') this.propertiesContent(child);
-      else if (child.name === 'Alts') this.alternates(child, paragraph);
+      else if (child.name === 'Alts') this.alternates(child, shown);
       else if (child.name === 'Picture') {
         // A picture's image is in `Images`, which is ignored; a short note says one was here.
         this.count('Picture');
@@ -758,12 +809,12 @@ class Importer {
   }
 
   /**
-   * A note Drafter carried on its own line (`DrafterNote`), its brackets written back. A `]]`
-   * inside would end it early, so it gets a space.
+   * A note on its own line (Drafter's `DrafterNote`, or Final Draft's `Note` paragraph), its
+   * brackets written back. A `]` that would end it early gets a space after it (`closeSafe`).
    */
-  private note(lines: Tok[][]) {
+  private note(lines: Tok[][]): string {
     const text = lines.map((line) => line.map((tok) => (isNote(tok) ? tok.note : tok.ch)).join(''));
-    this.push(`[[${noteText(text.join('\n')).replaceAll(']]', '] ]')}]]`);
+    return `[[${closeSafe(noteText(text.join('\n')))}]]`;
   }
 
   private synopsisLines(lines: Tok[][]): string {

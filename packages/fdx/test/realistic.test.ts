@@ -25,8 +25,13 @@ const FILES = [
 
 const elements = (node: XmlElement) =>
   node.children.filter((c): c is XmlElement => typeof c !== 'string');
+// What a setting or an image holds is never the script's text, wherever it sits (as import reads it).
 const textOf = (node: XmlElement): string =>
-  node.children.map((c) => (typeof c === 'string' ? c : textOf(c))).join('');
+  node.children
+    .map((c) =>
+      typeof c === 'string' ? c : IGNORED.has(c.name) || c.name === 'Picture' ? '' : textOf(c),
+    )
+    .join('');
 
 /** The text directly in an element, outside its children. */
 const ownText = (node: XmlElement) => node.children.filter((c) => typeof c === 'string').join('');
@@ -36,10 +41,8 @@ const sceneNumber = (n: string) =>
   /^[\p{L}\p{N}.-]+$/u.test(n.trim()) ? `#${n.trim()}#` : `Number ${n}`;
 
 /** Each paragraph's text in an element, or the element's whole text when it has none. */
-const paragraphTexts = (e: XmlElement) => {
-  const ps = elements(e).filter((c) => c.name === 'Paragraph');
-  return ps.length > 0 ? ps.map(textOf) : [textOf(e)];
-};
+const paragraphTexts = (e: XmlElement) =>
+  e.children.map((c) => (typeof c === 'string' ? c : IGNORED.has(c.name) ? '' : textOf(c)));
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 /**

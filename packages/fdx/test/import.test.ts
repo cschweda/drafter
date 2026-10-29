@@ -686,6 +686,7 @@ describe('fromFdx: refusals', () => {
       title: null,
       mapped: [],
       ignored: [],
+      ignoredCount: 0,
     });
   });
 });
@@ -1054,5 +1055,117 @@ describe('fromFdx: Final Draft 13 shapes', () => {
     expect(result.mapped).toEqual([]);
     expect(result.ignored).toEqual(['SpellCheckIgnoreLists', ...names]);
     expect(result.text).toBe(lines('The sea.', '', 'A', 'Hi.', '', 'B ^', 'Bye.'));
+  });
+});
+
+describe('fromFdx: review fixes for the Final Draft 13 shapes', () => {
+  const lines = (...parts: string[]) => `${parts.join('\n')}\n`;
+
+  it(
+    'reads a long paragraph with many Alts in linear time',
+    () => {
+      // The paragraph grows with n and so does its number of `<Alts/>`: reading the paragraph
+      // again for each one would grow about 16 times from n to 4n.
+      const make = (n: number) =>
+        fdx(
+          `<Paragraph Type="Action"><Text>${'w '.repeat(n)}</Text>${'<Alts/>'.repeat(n / 10)}</Paragraph>`,
+        );
+      const { growth, large } = scaling(make, fromFdx, 5_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it(
+    'lists ignored names in linear time, and at most 50 of them',
+    () => {
+      const make = (n: number) =>
+        fdx(P('Action', 'x') + Array.from({ length: n }, (_, k) => `<Empty${k}/>`).join(''));
+      const { growth, large } = scaling(make, fromFdx, 5_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      const result = fromFdx(make(200));
+      expect(result.ignored).toHaveLength(50);
+      expect(result.ignored[0]).toBe('Empty0');
+      expect(result.ignoredCount).toBe(200);
+      expect(fromFdx(make(3)).ignoredCount).toBe(3);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('never brings an image or a picture payload into the script, wherever it sits', () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'x'),
+        '<Wrapper><Images><Image Id="i1">QUFBQUJCQkI=</Image></Images><Label>kept words</Label></Wrapper>' +
+          '<ListItems><ListItem Id="b1" Title="T" Type="Beat"><Content><Paragraph><Text>Beat words.</Text>' +
+          '<Picture Id="p1">Q0NDQ0REREQ=</Picture></Paragraph></Content></ListItem></ListItems>',
+      ),
+    );
+    expect(result.text).toContain('kept words');
+    expect(result.text).toContain('[[fdx: Beat, T: Beat words.]]');
+    expect(result.text).not.toContain('QUFB');
+    expect(result.text).not.toContain('Q0ND');
+  });
+
+  it('keeps a note whose text ends in ] or holds runs of ], as a note', () => {
+    const result = fromFdx(
+      fdx(P('Note', 'ends with ]') + P('Note', 'x ]]] y') + P('Note', '] ]') + P('Action', 'y]')),
+    );
+    expect(result.text).toBe(
+      lines('[[ends with ] ]]', '', '[[x ] ] ] y]]', '', '[[] ] ]]', '', 'y]'),
+    );
+    expect(kinds(parse(result.text))).toEqual(['note', 'note', 'note', 'action']);
+    const label = fromFdx(fdx(P('Kind]', 'z')));
+    expect(label.text).toBe('z [[fdx: Kind] ]]\n');
+    expect(parse(label.text).regions.filter((r) => r.kind === 'note')).toHaveLength(1);
+  });
+
+  it('keeps a second Alt with the same id and other text, as a note', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a1</AltId></Alts><Text>Now.</Text></Paragraph>',
+        '<AltCollection>' +
+          '<Alt Id="a1"><Paragraph><Text>First take.</Text></Paragraph></Alt>' +
+          '<Alt Id="a1"><Paragraph><Text>Second take.</Text></Paragraph></Alt>' +
+          '<Alt Id="a1"><Paragraph><Text>First take.</Text></Paragraph></Alt>' +
+          '</AltCollection>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines('Now.', '', '[[fdx: Alternate: First take.]]', '', '[[fdx: Alternate: Second take.]]'),
+    );
+    expect(result.mapped).toEqual([{ type: 'Alternate', count: 2 }]);
+  });
+
+  it('keeps a speech whole when a Summary or a Note paragraph sits inside it', () => {
+    const result = fromFdx(
+      fdx(
+        P('Character', 'BOB') +
+          P('Summary', 'He lies.') +
+          P('Dialogue', 'Hi.') +
+          P('Note', 'too short') +
+          P('Dialogue', 'Bye.'),
+      ),
+    );
+    expect(result.text).toBe(lines('BOB', 'Hi.', 'Bye.', '', '= He lies.', '', '[[too short]]'));
+    expect(kinds(parse(result.text))).toEqual(['character', 'dialogue', 'synopsis', 'note']);
+    expect(result.mapped).toEqual([]);
+  });
+
+  it('keeps what a note, an alternate, a beat, or an arc beat holds beside its paragraphs', () => {
+    const extra = (n: number) => `<Extra>more words ${n}</Extra>`;
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title=""><SceneArcBeats>' +
+          `<CharacterArcBeat Name="ODA"><Paragraph><Text>Arc.</Text></Paragraph>${extra(1)}</CharacterArcBeat>` +
+          '</SceneArcBeats></SceneProperties><Text>INT. HUT - DAY</Text></Paragraph>',
+        `<AltCollection><Alt Id="a9"><Paragraph><Text>Alt.</Text></Paragraph>${extra(2)}</Alt></AltCollection>` +
+          `<ListItems><ListItem Id="b1" Title="T" Type="Beat"><Content><Paragraph><Text>Beat.</Text></Paragraph>${extra(3)}</Content></ListItem></ListItems>` +
+          `<ScriptNotes><ScriptNote Id="n1"><Paragraph><Text>Note.</Text></Paragraph>${extra(4)}</ScriptNote></ScriptNotes>`,
+      ),
+    );
+    for (const n of [1, 2, 3, 4]) expect(result.text).toContain(`more words ${n}`);
   });
 });
