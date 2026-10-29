@@ -791,3 +791,225 @@ describe('fromFdx: the round trip through Fountain', () => {
     }
   });
 });
+
+// Shapes a Final Draft 13 file showed (element and attribute names only; every text and value
+// here is invented).
+describe('fromFdx: Final Draft 13 shapes', () => {
+  const lines = (...parts: string[]) => `${parts.join('\n')}\n`;
+
+  it('accepts a root of Version 6', () => {
+    const xml =
+      '<?xml version="1.0"?><FinalDraft DocumentType="Script" Template="No" Version="6"><Content>' +
+      `${P('Action', 'The sea.')}</Content></FinalDraft>`;
+    expect(fromFdx(xml).text).toBe('The sea.\n');
+  });
+
+  it('ignores an image and puts a short note where a paragraph holds a picture', () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'A map on the wall.') +
+          '<Paragraph Type="Action"><Picture Id="p1" Width="100" Height="80"/></Paragraph>' +
+          '<Paragraph Type="Action"><Text>See below:</Text><Picture Id="p1" Width="10" Height="8"/></Paragraph>',
+        '<Images><Image Id="p1" Length="24" Path="map.png">ZmFrZSBpbWFnZSBieXRlcw==</Image></Images>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines('A map on the wall.', '', '[[fdx: Picture]]', '', 'See below:', '', '[[fdx: Picture]]'),
+    );
+    expect(result.text).not.toContain('ZmFr');
+    expect(result.mapped).toEqual([{ type: 'Picture', count: 2 }]);
+    expect(result.ignored).toEqual(['Images']);
+  });
+
+  it('maps outline paragraphs to sections, Summary to a synopsis in place, and Note to a note', () => {
+    const result = fromFdx(
+      fdx(
+        P('Outline 1 (Acts)', 'The Flood') +
+          P('Outline 2 (Sequences)', 'Rising water') +
+          P('Outline 9 (Custom)', 'Sandbags', ' OutlineLevel="3"') +
+          P('Summary', 'The river wins.') +
+          P('Note', 'Check the tide tables') +
+          P('Scene Heading', 'INT. CELLAR - NIGHT') +
+          P('Action', 'Water at the steps.') +
+          P('Summary', 'Everyone moves upstairs.') +
+          P('Outline 3 (Scenes)', 'Upstairs', ' OutlineLevel="2"'),
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        '# The Flood',
+        '',
+        '## Rising water',
+        '',
+        '### Sandbags',
+        '',
+        '= The river wins.',
+        '',
+        '[[Check the tide tables]]',
+        '',
+        'INT. CELLAR - NIGHT',
+        '',
+        'Water at the steps.',
+        '',
+        '= Everyone moves upstairs.',
+        '',
+        '## Upstairs',
+      ),
+    );
+    expect(kinds(parse(result.text))).toEqual([
+      'section',
+      'section',
+      'section',
+      'synopsis',
+      'note',
+      'scene_heading',
+      'action',
+      'synopsis',
+      'section',
+    ]);
+    expect(result.mapped).toEqual([]);
+  });
+
+  it('reads a scene title written again as a child, and keeps arc beats as notes', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title="The cellar">' +
+          '<AttributedTitle><Paragraph><Text>The cellar</Text></Paragraph></AttributedTitle>' +
+          '<SceneArcBeats><CharacterArcBeat Name="MOIRA"><Paragraph><Text>Stops pretending.</Text></Paragraph></CharacterArcBeat>' +
+          '<CharacterArcBeat Name="TOMAS"/></SceneArcBeats>' +
+          '</SceneProperties><Text>INT. CELLAR - NIGHT</Text></Paragraph>' +
+          '<Paragraph Type="Scene Heading"><SceneProperties Title="">' +
+          '<AttributedTitle><Paragraph><Text>A different title</Text></Paragraph></AttributedTitle>' +
+          '</SceneProperties><Text>INT. STAIRS - NIGHT</Text></Paragraph>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'INT. CELLAR - NIGHT',
+        '',
+        '= The cellar',
+        '',
+        '[[fdx: Arc beat, MOIRA: Stops pretending.]]',
+        '',
+        'INT. STAIRS - NIGHT',
+        '',
+        'A different title [[fdx: AttributedTitle]]',
+      ),
+    );
+    expect(result.mapped).toEqual([
+      { type: 'Arc beat', count: 1 },
+      { type: 'AttributedTitle', count: 1 },
+    ]);
+    expect(result.ignored).toEqual(['AttributedTitle', 'CharacterArcBeat']);
+  });
+
+  it('keeps the current text of a paragraph with alternates, and the others as notes after it', () => {
+    const alt = (id: string, type: string, text: string) =>
+      `<Alt Id="${id}"><Paragraph Type="${type}"><Text>${text}</Text></Paragraph></Alt>`;
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a1</AltId><AltId>a2</AltId></Alts><Text>The door sticks.</Text></Paragraph>' +
+          P('Character', 'MOIRA') +
+          '<Paragraph Type="Dialogue"><Alts Current="1"><AltId>a3</AltId><AltId>a4</AltId></Alts><Text>Push harder.</Text></Paragraph>' +
+          P('Action', 'After.'),
+        `<AltCollection>${alt('a1', 'Action', 'The door sticks.')}${alt('a2', 'Action', 'The door will not budge.')}${alt('a3', 'Dialogue', 'Push harder.')}${alt('a4', 'Dialogue', 'Use your shoulder.')}${alt('a9', 'Action', 'An orphan line.')}</AltCollection>`,
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'The door sticks.',
+        '',
+        '[[fdx: Alternate: The door will not budge.]]',
+        '',
+        'MOIRA',
+        'Push harder.',
+        '',
+        '[[fdx: Alternate: Use your shoulder.]]',
+        '',
+        'After.',
+        '',
+        '[[fdx: Alternate: An orphan line.]]',
+      ),
+    );
+    expect(result.mapped).toEqual([{ type: 'Alternate', count: 3 }]);
+  });
+
+  it('brings beat cards in as notes after the script, one per beat, with their titles', () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        '<ListItems>' +
+          '<ListItem Color="#000000" Id="b1" Title="The flood" Type="Beat"><SubordinateTo Id="x"/><Content>' +
+          '<Paragraph><Text>Water comes in.</Text></Paragraph><Paragraph><Text>Nobody leaves.</Text></Paragraph></Content></ListItem>' +
+          '<ListItem Id="b2" Title="" Type="Beat"><Content><Paragraph><Text>An untitled beat.</Text></Paragraph></Content></ListItem>' +
+          '<ListItem Id="b3" Title="Empty" Type="Beat"/>' +
+          '<ListItem Id="b4" Title="" Type="Beat"/>' +
+          '</ListItems>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'The sea.',
+        '',
+        '[[fdx: Beat, The flood: Water comes in. Nobody leaves.]]',
+        '',
+        '[[fdx: Beat: An untitled beat.]]',
+        '',
+        '[[fdx: Beat, Empty]]',
+      ),
+    );
+    expect(result.mapped).toEqual([{ type: 'Beat', count: 3 }]);
+    expect(result.ignored).toEqual(['ListItem']);
+  });
+
+  it("keeps each script note, headed by its writer's name where it has one", () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        '<ScriptNotes>' +
+          '<ScriptNote Id="n1" Range="10,24" WriterName="Ada Quill"><Paragraph><Text>Too long?</Text></Paragraph><Paragraph><Text>Cut a line.</Text></Paragraph></ScriptNote>' +
+          '<ScriptNote Id="n2" Range="40,52"><Paragraph><Text>Check this ]] here.</Text></Paragraph></ScriptNote>' +
+          '<ScriptNote Id="n3" Range="60,61" WriterName="Ada Quill"/>' +
+          '</ScriptNotes>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'The sea.',
+        '',
+        '[[Ada Quill: Too long? Cut a line.]]',
+        '',
+        '[[fdx: Script note: Check this ] ] here.]]',
+      ),
+    );
+    expect(result.mapped).toEqual([{ type: 'Script note', count: 2 }]);
+    expect(kinds(parse(result.text))).toEqual(['action', 'note', 'note']);
+  });
+
+  it('lists the settings and data blocks a Final Draft 13 file carries as ignored', () => {
+    const names = [
+      'DocumentRef',
+      'Actors',
+      'Cast',
+      'CastList',
+      'CharacterHighlighting',
+      'ScriptNavigatorPreferences',
+      'Writers',
+      'WriterMarkup',
+      'Navigator',
+      'Outlines',
+      'TargetScriptLength',
+      'Characters',
+    ];
+    const result = fromFdx(
+      fdx(
+        `${P('Action', 'The sea.')}<Paragraph><DualDialogue>${P('Character', 'A')}${P('Dialogue', 'Hi.')}` +
+          `<SpellCheckIgnoreLists><IgnoredWord>zzz</IgnoredWord></SpellCheckIgnoreLists>${P('Character', 'B')}${P('Dialogue', 'Bye.')}</DualDialogue></Paragraph>`,
+        names.map((n) => `<${n} Id="x1"><Item Label="y">invented text ${n}</Item></${n}>`).join(''),
+      ),
+    );
+    expect(result.mapped).toEqual([]);
+    expect(result.ignored).toEqual(['SpellCheckIgnoreLists', ...names]);
+    expect(result.text).toBe(lines('The sea.', '', 'A', 'Hi.', '', 'B ^', 'Bye.'));
+  });
+});

@@ -52,7 +52,45 @@ export const IGNORED: ReadonlySet<string> = new Set([
   'FontSpec',
   // Breakdown tags: categories, and ids naming stretches of the script's own text.
   'TagData',
+  // Blocks a Final Draft 13 file carries (names seen in its own sample script): an embedded
+  // image's encoded bytes, references, the cast and voices, the writers and their markup, the
+  // navigator, outline and length settings, and character charts. None is the script's writing.
+  'Images',
+  'Image',
+  'DocumentRef',
+  'Actors',
+  'Cast',
+  'CastList',
+  'CharacterHighlighting',
+  'ScriptNavigatorPreferences',
+  'Writers',
+  'WriterMarkup',
+  'Navigator',
+  'Outlines',
+  'TargetScriptLength',
+  'Characters',
 ]);
+
+/** An `Outline N (label)` paragraph type: a section of depth N. */
+const OUTLINE = /^Outline ([1-9])(?:\s|$)/;
+
+/** All the text inside an element, with each paragraph in it on its own line. */
+function paragraphsText(element: XmlElement): string {
+  const paragraphs = element.children.filter(
+    (c): c is XmlElement => typeof c !== 'string' && c.name === 'Paragraph',
+  );
+  const texts = paragraphs.length > 0 ? paragraphs.map(textOf) : [textOf(element)];
+  return texts
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+/** Text with its runs of whitespace made one space, for comparing what reads the same. */
+const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+/** A note on its own line holding `text`; a `]]` inside gets a space so it can't end it early. */
+const ownNote = (text: string) => `[[${oneLine(text).replaceAll(']]', '] ]')}]]`;
 
 interface Style {
   bold: boolean;
@@ -359,6 +397,9 @@ class Importer {
   private dualCue = false;
   /** Synopses from paragraphs inside the open speech, written once it is. */
   private afterSpeech: string[] = [];
+  /** The alternates of the file's `AltCollection`, by id, and the ids a paragraph has used. */
+  private readonly alts = new Map<string, string>();
+  private readonly usedAlts = new Set<string>();
 
   run(root: XmlElement): FdxImport {
     const content = root.children.find(
@@ -367,11 +408,17 @@ class Importer {
     if (root.name !== 'FinalDraft' || !content) {
       throw new FdxError('it has no FinalDraft root holding a Content element.');
     }
+    for (const child of root.children) {
+      if (typeof child !== 'string' && child.name === 'AltCollection') this.collectAlts(child);
+    }
     this.content(content);
     let titlePage: { text: string; title: string | null } | null = null;
     for (const child of root.children) {
       if (typeof child === 'string' || child === content) continue;
       if (child.name === 'TitlePage' && !titlePage) titlePage = this.titlePage(child);
+      else if (child.name === 'AltCollection') this.unusedAlts(child);
+      else if (child.name === 'ListItems') this.listItems(child);
+      else if (child.name === 'ScriptNotes') this.scriptNotes(child);
       else this.other(child);
     }
     this.flushSpeech();
@@ -384,6 +431,103 @@ class Importer {
       mapped: [...this.mappedCounts].map(([type, count]) => ({ type, count })),
       ignored: this.ignoredNames,
     };
+  }
+
+  /** Pushes a block where it belongs: after the open speech, which can't be broken, or now. */
+  private place(text: string) {
+    if (this.speech) this.afterSpeech.push(text);
+    else this.push(text);
+  }
+
+  /** Reads each `Alt` of an `AltCollection`: its text, by its `Id`. */
+  private collectAlts(collection: XmlElement) {
+    for (const alt of collection.children) {
+      if (typeof alt === 'string' || alt.name !== 'Alt') continue;
+      const id = alt.attrs.Id;
+      if (id !== undefined && !this.alts.has(id)) this.alts.set(id, paragraphsText(alt));
+    }
+  }
+
+  /**
+   * A paragraph's `Alts`: its text is the current one, so every alternate whose text differs from
+   * it comes in as a note after it. Which one is current (`Current`) needn't be trusted: the text
+   * in the paragraph is what Final Draft shows.
+   */
+  private alternates(alts: XmlElement, paragraph: XmlElement) {
+    const shown = oneLine(visible(linesOf(paragraph)).join('\n'));
+    for (const child of alts.children) {
+      if (typeof child === 'string' || child.name !== 'AltId') continue;
+      const id = textOf(child).trim();
+      const text = this.alts.get(id);
+      this.usedAlts.add(id);
+      if (text === undefined || text === '' || oneLine(text) === shown) continue;
+      this.count('Alternate');
+      this.place(fdxNote(`Alternate: ${text}`));
+    }
+  }
+
+  /** The alternates no paragraph named come in as notes, after the script; the rest are used. */
+  private unusedAlts(collection: XmlElement) {
+    for (const alt of collection.children) {
+      if (typeof alt === 'string' || alt.name !== 'Alt') continue;
+      const id = alt.attrs.Id;
+      if (id !== undefined && this.usedAlts.has(id)) continue;
+      const text = paragraphsText(alt);
+      if (text === '') continue;
+      if (id !== undefined) this.usedAlts.add(id);
+      this.flushSpeech();
+      this.count('Alternate');
+      this.push(fdxNote(`Alternate: ${text}`));
+    }
+  }
+
+  /** Beat cards (`ListItem Type="Beat"`), one note each, after the script, with their titles. */
+  private listItems(items: XmlElement) {
+    for (const item of items.children) {
+      if (typeof item === 'string') continue;
+      if (item.name !== 'ListItem' || item.attrs.Type !== 'Beat') {
+        this.other(item);
+        continue;
+      }
+      const title = oneLine(item.attrs.Title ?? '');
+      const content = item.children.find(
+        (c): c is XmlElement => typeof c !== 'string' && c.name === 'Content',
+      );
+      const text = content ? oneLine(paragraphsText(content)) : '';
+      if (title === '' && text === '') {
+        this.ignore('ListItem');
+        continue;
+      }
+      this.flushSpeech();
+      this.count('Beat');
+      const label =
+        title === '' ? `Beat: ${text}` : text === '' ? `Beat, ${title}` : `Beat, ${title}: ${text}`;
+      this.push(fdxNote(label));
+    }
+  }
+
+  /**
+   * Final Draft's script notes, one note each, after the script (they anchor to a `Range` of the
+   * script's text, which Drafter can't place yet). A note with a `WriterName` is headed by it, as
+   * Drafter writes a reader's note (`[[Name: …]]`); one without says where it came from.
+   */
+  private scriptNotes(notes: XmlElement) {
+    for (const note of notes.children) {
+      if (typeof note === 'string') continue;
+      if (note.name !== 'ScriptNote') {
+        this.other(note);
+        continue;
+      }
+      const text = oneLine(paragraphsText(note));
+      if (text === '') {
+        this.ignore('ScriptNote');
+        continue;
+      }
+      this.flushSpeech();
+      this.count('Script note');
+      const writer = oneLine(note.attrs.WriterName ?? '').replaceAll(']]', '] ]');
+      this.push(writer ? ownNote(`${writer}: ${text}`) : fdxNote(`Script note: ${text}`));
+    }
   }
 
   private ignore(name: string) {
@@ -475,7 +619,12 @@ class Importer {
     const type = attrs.Type ?? 'Paragraph';
     // Blank lines print in action and dialogue, even a paragraph of nothing else (a blank line
     // the writer typed, written as a two-space line); in every other kind they are dropped.
-    const all = linesOf(paragraph);
+    // A paragraph holding only a picture has no text to bring in; its note comes after.
+    const pictureOnly =
+      bareText(paragraph) === '' &&
+      paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Picture') &&
+      !paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Text');
+    const all = pictureOnly ? [] : linesOf(paragraph);
     const lines = type === 'Action' || type === 'Dialogue' ? all : trimBlank(all);
     const inSpeech = type === 'Parenthetical' || type === 'Dialogue';
     const lyricMark = type === 'Dialogue' && attrs.DrafterLyric === 'Yes';
@@ -493,13 +642,25 @@ class Importer {
     const section =
       sectionMark !== undefined && /^[1-6]$/.test(sectionMark) ? Number(sectionMark) : 0;
     const sectionType = type === 'General' || type === 'Scene Heading';
-    const isSection = sectionType && section > 0;
-    if (sectionType && sectionMark !== undefined && !isSection) {
+    // Final Draft's outline paragraphs (`Outline 1 (Acts)` and so on) are sections of their
+    // depth, or of their `OutlineLevel` when they carry one; deeper than six is six.
+    const outline = OUTLINE.exec(type);
+    const level = attrs.OutlineLevel?.trim() ?? '';
+    const outlineDepth = outline
+      ? Math.min(Number(/^[1-9]$/.test(level) ? level : outline[1]), 6)
+      : 0;
+    const depth = sectionType && section > 0 ? section : outlineDepth;
+    const isSection = depth > 0;
+    if (sectionType && sectionMark !== undefined && !(section > 0)) {
       this.action(lines, type);
     } else if (isSection) {
-      this.push(`${'#'.repeat(section)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
-    } else if (type === 'General' && attrs.DrafterNote === 'Yes') {
-      this.note(lines);
+      if (outlineDepth === 0 || lines.length > 0)
+        this.push(`${'#'.repeat(depth)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
+    } else if (type === 'Summary') {
+      // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order.
+      if (lines.length > 0) this.push(this.synopsisLines(lines));
+    } else if ((type === 'General' && attrs.DrafterNote === 'Yes') || type === 'Note') {
+      if (lines.length > 0 || type !== 'Note') this.note(lines);
     } else if (type === 'General' && attrs.DrafterSynopsis === 'Yes') {
       if (lines.length > 0) this.push(this.synopsisLines(lines));
     } else if (type === 'Scene Heading' || type === 'Shot') {
@@ -533,7 +694,12 @@ class Importer {
     for (const child of paragraph.children) {
       if (typeof child === 'string' || child.name === 'Text') continue;
       if (child.name === 'SceneProperties') this.propertiesContent(child);
-      else this.other(child);
+      else if (child.name === 'Alts') this.alternates(child, paragraph);
+      else if (child.name === 'Picture') {
+        // A picture's image is in `Images`, which is ignored; a short note says one was here.
+        this.count('Picture');
+        this.place(fdxNote('Picture'));
+      } else this.other(child);
     }
   }
 
@@ -550,12 +716,39 @@ class Importer {
   /** What a `SceneProperties` holds besides its attributes has no place, so it comes in as notes. */
   private propertiesContent(properties: XmlElement) {
     for (const child of properties.children) {
-      if (typeof child !== 'string') this.other(child);
+      if (typeof child === 'string') continue;
+      if (child.name === 'AttributedTitle') {
+        // The scene's title again, styled: nothing new when it reads as the `Title` (a synopsis).
+        const text = oneLine(paragraphsText(child));
+        if (text === '' || text === oneLine(properties.attrs.Title ?? '')) this.ignore(child.name);
+        else this.other(child);
+      } else if (child.name === 'SceneArcBeats') {
+        this.arcBeats(child);
+      } else this.other(child);
     }
     const bare = bareText(properties);
     if (bare !== '') {
       this.flushSpeech();
       this.action(fromPlain(bare), 'SceneProperties');
+    }
+  }
+
+  /** A scene's character arc beats, one note each after its heading, named for the character. */
+  private arcBeats(beats: XmlElement) {
+    for (const beat of beats.children) {
+      if (typeof beat === 'string') continue;
+      if (beat.name !== 'CharacterArcBeat') {
+        this.other(beat);
+        continue;
+      }
+      const text = oneLine(paragraphsText(beat));
+      if (text === '') {
+        this.ignore(beat.name);
+        continue;
+      }
+      const name = oneLine(beat.attrs.Name ?? '');
+      this.count('Arc beat');
+      this.place(fdxNote(name ? `Arc beat, ${name}: ${text}` : `Arc beat: ${text}`));
     }
   }
 
