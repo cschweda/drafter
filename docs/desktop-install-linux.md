@@ -12,7 +12,9 @@ On Ubuntu 24.04 and later, **use the `.deb`**. It works with the sandbox on, wit
 sudo apt install ./Drafter-<version>-linux-amd64.deb
 ```
 
-It adds Drafter to your applications (under Office), registers `.fountain` and `.md` files, and installs an AppArmor profile that lets Drafter, and only Drafter, use the sandbox. Start it from the menu, or with `drafterdev`, or open a file with it.
+It adds Drafter to your applications (under Office), registers `.fountain`, `.md`, and Final Draft `.fdx` files, and installs an AppArmor profile that lets Drafter, and only Drafter, use the sandbox. Start it from the menu, or with `drafterdev`, or open a file with it.
+
+Drafter only imports a `.fdx` (as a new script you save as a `.fountain`), but where no other app claims `.fdx` files your file manager may open them in Drafter by default; to change that, choose another app in the file's Open With (or Properties) dialog, or run `xdg-mime default other-app.desktop application/x-fdx`.
 
 ## Any other distribution: the AppImage
 

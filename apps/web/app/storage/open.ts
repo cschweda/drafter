@@ -63,14 +63,18 @@ function problemWith(bytes: Uint8Array): string | null {
 
 const nameKey = (title: string) => title.trim().toLowerCase();
 
-/** What an import says: "Imported “The Call.fdx”.", and how many paragraphs came in as notes. */
+/**
+ * What an import says: "Imported “The Call.fdx”.", and how many items came in as `[[fdx: …]]`
+ * notes, which Problems lists (`fdx-note`). Items, not paragraphs: `mapped` also counts a scene
+ * number Fountain can't hold and elements that aren't paragraphs.
+ */
 function importedMessage(name: string, mapped: FdxImport['mapped']): string {
   const notes = mapped.reduce((sum, { count }) => sum + count, 0);
   const said = `Imported “${name}”.`;
   if (notes === 0) return said;
   return notes === 1
-    ? `${said} 1 paragraph came in as a note marked [[fdx: …]].`
-    : `${said} ${notes} paragraphs came in as notes marked [[fdx: …]].`;
+    ? `${said} 1 item came in as a note; Problems lists it.`
+    : `${said} ${notes} items came in as notes; Problems lists them.`;
 }
 
 /**

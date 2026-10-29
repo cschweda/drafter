@@ -602,7 +602,7 @@ describe('importing a Final Draft file', () => {
     expect(t.script.dirty.value).toBe(false);
   });
 
-  test('says how many paragraphs came in as notes', async () => {
+  test('says how many items came in as notes, which Problems lists', async () => {
     const t = await fresh();
     const odd = fdx(
       [
@@ -614,11 +614,11 @@ describe('importing a Final Draft file', () => {
     await t.openFile(t.picked('odd.fdx', odd));
     expect(t.shown()).toContain('[[fdx: Cast List]]');
     expect(t.exportNotice.value).toBe(
-      'Imported “odd.fdx”. 2 paragraphs came in as notes marked [[fdx: …]].',
+      'Imported “odd.fdx”. 2 items came in as notes; Problems lists them.',
     );
     await t.openFile(t.picked('one.fdx', fdx(paragraph('Cast List', 'THEO, a keeper'))));
     expect(t.exportNotice.value).toBe(
-      'Imported “one.fdx”. 1 paragraph came in as a note marked [[fdx: …]].',
+      'Imported “one.fdx”. 1 item came in as a note; Problems lists it.',
     );
   });
 

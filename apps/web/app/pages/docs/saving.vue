@@ -203,8 +203,9 @@ useDocsHead({
       shots, centered text, bold, italic, and underline, page breaks, scene numbers and summaries,
       and the title page all come across. A paragraph Drafter has no element for, such as a cast
       list or an act break, comes in as action with a note after it, like
-      <code>[[fdx: Cast List]]</code>, so nothing is dropped without a word; Drafter says how many
-      came in that way, and Find (<code>fdx:</code>) takes you to each. Final Draft’s page layout,
+      <code>[[fdx: Cast List]]</code>, so nothing is dropped without a word. Drafter says how many
+      came in that way, and the Problems tab lists each one, with a jump to it (Find, with
+      <code>fdx:</code>, finds them too). Final Draft’s page layout,
       fonts, element settings, revisions, and other settings are left out.
     </p>
     <p>

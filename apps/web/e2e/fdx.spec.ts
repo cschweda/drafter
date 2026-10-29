@@ -89,7 +89,7 @@ async function expectImported(page: Page) {
   await expect(editor(page)).toContainText('Keep it lit.');
   await expect(editor(page)).toContainText('[[fdx: Cast List]]');
   await expect(toast(page)).toHaveText(
-    'Imported “lamp.fdx”. 1 paragraph came in as a note marked [[fdx: …]].',
+    'Imported “lamp.fdx”. 1 item came in as a note; Problems lists it.',
   );
   await expect(status(page)).toContainText('Not saved to a file yet');
   const row = await imported(page);
@@ -164,10 +164,18 @@ test.describe('importing a Final Draft file where there is no picker', () => {
     await expectImported(page);
   });
 
-  test('opens a dropped one', async ({ page }) => {
+  test('opens a dropped one, and Problems lists what came in as a note', async ({ page }) => {
     await start(page);
     await drop(page, 'lamp.fdx', LAMP);
     await expectImported(page);
+    await page
+      .getByRole('tab', { name: /^Problems/ })
+      .last()
+      .click();
+    const problems = page.getByRole('tabpanel', { name: /^Problems/ });
+    await expect(
+      problems.getByText('This came in from Final Draft as “Cast List”', { exact: false }),
+    ).toHaveCount(1);
   });
 
   test('refuses a file that isn’t Final Draft XML, says why, and opens nothing', async ({
@@ -218,6 +226,14 @@ test.describe('exporting as Final Draft', () => {
     await exportButton(page).click();
     await expect(fdxItem(page)).toBeVisible();
     await page.keyboard.press('Escape');
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    if (!isMobile) {
+      await page.keyboard.press('ControlOrMeta+k');
+      await palette.locator('input').fill('Final Draft');
+      await expect(palette.getByRole('option', { name: /^Export as Final Draft/ })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(palette).toBeHidden();
+    }
 
     const appMenu = page.getByRole('menu', { name: 'Drafter menu' });
     await page.getByRole('button', { name: 'Drafter menu' }).click();
@@ -236,7 +252,6 @@ test.describe('exporting as Final Draft', () => {
 
     if (isMobile) return;
     await page.keyboard.press('ControlOrMeta+k');
-    const palette = page.getByRole('dialog', { name: 'Command palette' });
     await palette.locator('input').fill('Final Draft');
     await expect(palette.getByRole('option', { name: /^Export as Final Draft/ })).toHaveCount(0);
   });
