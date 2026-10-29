@@ -18,15 +18,17 @@ export interface NoteEntry {
   alone: boolean;
 }
 
-/** Whether `text` holds nothing but spaces, tabs, and a CRLF's `\r`. */
-const isSpace = (text: string) => /^[ \t\r]*$/.test(text);
-
 /** Whether the region `[from, to)` has only spaces and tabs beside it on its first and last lines. */
 function aloneAt(source: string, from: number, to: number): boolean {
-  const lineStart = source.lastIndexOf('\n', from - 1) + 1;
-  const newline = source.indexOf('\n', to);
-  const lineEnd = newline < 0 ? source.length : newline;
-  return isSpace(source.slice(lineStart, from)) && isSpace(source.slice(to, lineEnd));
+  // Walk out from the region and stop at the first thing that isn't blank, so a line of many
+  // notes costs each of them only the spaces beside it.
+  const blank = (c: string | undefined) => c === ' ' || c === '\t' || c === '\r';
+  let i = from - 1;
+  while (i >= 0 && blank(source[i])) i--;
+  if (i >= 0 && source[i] !== '\n') return false;
+  let j = to;
+  while (j < source.length && blank(source[j])) j++;
+  return j >= source.length || source[j] === '\n';
 }
 
 /**

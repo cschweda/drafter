@@ -3,6 +3,7 @@ import type { Template } from '@drafter/templates';
 import { manualContd } from './rules/contd';
 import { characterWithoutDialogue } from './rules/cue';
 import { fdxNote } from './rules/fdx';
+import { duplicateField } from './rules/fields';
 import { headingNoTime } from './rules/heading';
 import { similarNames } from './rules/names';
 import {
@@ -11,6 +12,7 @@ import {
   multilineParenthetical,
   unclosedRegion,
 } from './rules/parse';
+import { payoffWithoutSetup, setupWithoutPayoff } from './rules/setups';
 import { stubHeading } from './rules/stub';
 import { transitionNotLast } from './rules/transition';
 import type { LintDiagnostic, LintOptions, Rule, RuleContext } from './types';
@@ -26,6 +28,9 @@ export const rules: readonly Rule[] = [
   headingNoTime,
   stubHeading,
   fdxNote,
+  setupWithoutPayoff,
+  payoffWithoutSetup,
+  duplicateField,
   transitionNotLast,
   similarNames,
 ];

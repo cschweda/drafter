@@ -237,6 +237,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates

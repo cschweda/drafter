@@ -458,6 +458,9 @@ describe('rules', () => {
       'heading-no-time': 'warning',
       'stub-heading': 'info',
       'fdx-note': 'info',
+      'setup-without-payoff': 'info',
+      'payoff-without-setup': 'info',
+      'duplicate-field': 'info',
       'transition-not-last': 'warning',
       'similar-names': 'info',
     };
@@ -472,6 +475,7 @@ describe('rules', () => {
       "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
       'MARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGERET\nHi.\n',
       'INT. LOCATION - DAY\n\nTHEO, a keeper [[fdx: Cast List]]\n',
+      'INT. A - DAY\n\n[[Setup: a]] [[Payoff: b]] [[Goal: x]] [[Goal: y]]\n',
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);
     for (const d of found) {

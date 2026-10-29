@@ -1,8 +1,13 @@
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
+import { lint } from '@drafter/lint';
+import { fieldNote, insertNote } from '@drafter/notes';
+import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import { type Section, sceneIndex } from '../src';
+import { anyScript } from './arbitraries';
 import {
+  apply,
   headings,
   indexOf,
   SAMPLE_SCREENPLAY,
@@ -232,5 +237,47 @@ describe('sceneIndex', () => {
     const play = parse(SAMPLE_STAGE_PLAY);
     expect(sceneIndex(play, screenplay).scenes).toEqual([]);
     expect(sceneIndex(play, stagePlay).scenes).toHaveLength(2);
+  });
+});
+
+describe('duplicate-field', () => {
+  const KEYS = ['goal', 'conflict', 'outcome', 'shift', 'color', 'storyline'] as const;
+  const noteArb = fc.tuple(fc.nat(), fc.constantFrom(...KEYS), fc.constantFrom('', 'one', 'two'));
+
+  test('agrees with the scene index on which notes are second', () => {
+    fc.assert(
+      fc.property(anyScript, fc.array(noteArb, { maxLength: 10 }), (script, picks) => {
+        let source = script;
+        for (const [at, key, body] of picks) {
+          const text =
+            body === '' ? `[[${key[0]?.toUpperCase()}${key.slice(1)}:]]` : fieldNote(key, body);
+          source = apply(source, insertNote(parse(source), at % (source.length + 1), text).changes);
+        }
+        const { doc, index, template } = indexOf(source);
+        // The second and later field notes of a scene, by the index: every non-empty field note
+        // inside a scene that isn't the one it reads (Storyline notes all count, so none is second).
+        const expected: number[] = [];
+        for (const scene of index.scenes) {
+          for (const region of doc.regions) {
+            if (region.kind !== 'note' || !region.closed) continue;
+            if (region.span.from < scene.span.from || region.span.from >= scene.span.to) continue;
+            const key = KEYS.find((k) => {
+              const m = new RegExp(`^\\[\\[\\s*${k}\\s*:`, 'i').exec(
+                doc.source.slice(region.span.from, region.span.to),
+              );
+              return m !== null;
+            });
+            if (!key || key === 'storyline') continue;
+            const inner = doc.source.slice(region.span.from + 2, region.span.to - 2);
+            if (inner.slice(inner.indexOf(':') + 1).trim() === '') continue;
+            if (scene.fields[key]?.span.from !== region.span.from) expected.push(region.span.from);
+          }
+        }
+        const found = lint(doc, template)
+          .filter((d) => d.ruleId === 'duplicate-field')
+          .map((d) => d.span.from);
+        expect(found).toEqual(expected.sort((a, b) => a - b));
+      }),
+    );
   });
 });

@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@drafter/fountain": "workspace:*",
+    "@drafter/notes": "workspace:*",
     "@drafter/templates": "workspace:*"
   },
   "devDependencies": {
