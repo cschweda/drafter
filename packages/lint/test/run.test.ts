@@ -456,6 +456,8 @@ describe('rules', () => {
       'character-without-dialogue': 'warning',
       'manual-contd': 'info',
       'heading-no-time': 'warning',
+      'stub-heading': 'info',
+      'fdx-note': 'info',
       'transition-not-last': 'warning',
       'similar-names': 'info',
     };
@@ -469,6 +471,7 @@ describe('rules', () => {
       'Margaret waits.\n\n/* drafter\n{ nope }\n*/\n',
       "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
       'MARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGERET\nHi.\n',
+      'INT. LOCATION - DAY\n\nTHEO, a keeper [[fdx: Cast List]]\n',
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);
     for (const d of found) {
