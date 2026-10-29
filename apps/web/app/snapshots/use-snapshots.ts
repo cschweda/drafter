@@ -18,6 +18,8 @@ export interface SnapshotSession {
   take(label?: string): Promise<TakeResult>;
   /** Captures the text now, synchronously, and keeps it in the background as `reason`; the caller doesn't wait. Nothing for a sample or a read-only tab. */
   before(reason: Extract<SnapshotReason, `before-${string}`>): void;
+  /** Keeps the text of a script just made from `name` (a Final Draft file) as an 'imported' snapshot, in the background. */
+  afterImport(text: string, name: string): void;
   /** Bumped after every take or change, so History can list again. */
   version: Readonly<Ref<number>>;
   /** Why snapshots aren't kept here, or null: a sample, a read-only tab. */
@@ -145,6 +147,10 @@ function create(): SnapshotSession {
     before(reason) {
       const id = kept();
       if (id !== null) void keep(id, text(), reason);
+    },
+    afterImport(imported, name) {
+      const id = kept();
+      if (id !== null) void keep(id, imported, 'imported', { detail: name });
     },
     version,
     notKept,

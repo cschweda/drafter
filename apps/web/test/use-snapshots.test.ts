@@ -215,6 +215,23 @@ describe('the snapshot session', () => {
     await vi.waitFor(() => expect(session.version.value).toBeGreaterThan(version));
   });
 
+  test('afterImport keeps the imported text with the file name, and none for a sample', async () => {
+    const { session, taken, store } = await visit();
+    session.afterImport('Title: Came in\n\nHello.\n', 'lamp.fdx');
+    await vi.waitFor(async () => expect(await taken()).toHaveLength(1));
+    const [first] = await taken();
+    expect(first).toMatchObject({ reason: 'imported', detail: 'lamp.fdx' });
+    expect(await store.snapshotText(first?.id ?? '')).toBe('Title: Came in\n\nHello.\n');
+
+    vi.resetModules();
+    mock.edits.clear();
+    mock.recorded.clear();
+    const sample = await visit({ sample: true });
+    sample.session.afterImport('Title: Came in\n', 'lamp.fdx');
+    await settle();
+    expect(await sample.taken()).toEqual([]);
+  });
+
   test('says a failed snapshot once per visit', async () => {
     const { session, db, snapshotProblem } = await visit();
     const full = () => Object.assign(new Error('full'), { name: 'QuotaExceededError' });

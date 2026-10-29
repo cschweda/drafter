@@ -8,6 +8,7 @@ import { type ComputedRef, computed, type ShallowRef, shallowRef } from 'vue';
 import { moduleProblems } from '../modules/problems';
 import { reportModuleFailure } from '../modules/registry';
 import { useSettings } from '../settings/settings';
+import { useSnapshots } from '../snapshots/use-snapshots';
 import { applyTextChanges } from './apply-changes';
 import { relint } from './extensions';
 import { useEditor } from './session';
@@ -227,6 +228,7 @@ export function useProblems(): {
       insert: change.insert.replace(/\r?\n/g, view.state.lineBreak),
     }));
     if (changes.length === 0) return;
+    useSnapshots().before('before-fix-all');
     // One undo step of its own, never joined to typing before or after it.
     view.dispatch({
       changes,

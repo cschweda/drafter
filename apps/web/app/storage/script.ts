@@ -18,6 +18,7 @@ import { useEditor } from '../editor/session';
 import type { NewKind } from '../editor/template';
 import { appChange } from '../editor/typewriter';
 import type { DocumentKind } from '../markdown/kind';
+import { useSnapshots } from '../snapshots/use-snapshots';
 import { db } from './db';
 import type { FileRef } from './files';
 import { metSample, rememberSample } from './first-samples';
@@ -962,6 +963,7 @@ function create(): ScriptSession {
     await open(id);
     if (project.value?.id !== id) return 'busy';
     if (guard.readOnly.value || !writer) return 'held';
+    useSnapshots().before('before-reload');
     // One transaction for the whole text, so one undo brings the old text back; an undo step of
     // its own, so typing just after it isn't joined to it.
     view.dispatch({

@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { expectNewestThenCompare } from './bulk-snapshot';
 import { nextFileName, putFile, stubPickers, textOf } from './fs-stub';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -168,6 +169,19 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await expect(status(page)).toContainText('Unsaved changes');
     // The file itself was not touched by any of it.
     expect(await textOf(page, NAME)).toBe(V2);
+  });
+
+  test('takes a snapshot before reloading a changed file', async ({ page }) => {
+    await start(page);
+    await openTheCall(page);
+    // Text the browser has that no snapshot holds yet, when the file is opened over it.
+    await typeAtEnd(page, 'Mine.');
+    await changeFile(page, V2);
+    await dialog(page).getByRole('button', { name: 'Open the file' }).click();
+    await expect(editor(page)).toContainText('Nobody answers.');
+    await expect(editor(page)).not.toContainText('Mine.');
+    // The reload itself was saved after it, so the snapshot is the second row.
+    await expectNewestThenCompare(page, 'Before reloading the file', 1);
   });
 
   test('keeps the loaded file an undo step of its own, apart from typing just after it', async ({

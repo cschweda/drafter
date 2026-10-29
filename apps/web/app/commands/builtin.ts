@@ -43,6 +43,7 @@ import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
+import { useSnapshots } from '~/snapshots/use-snapshots';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
@@ -504,6 +505,7 @@ export function registerBuiltinCommands(): void {
           void sayOutline('Nothing to expand: no = lines or - lists outside a scene.');
           return;
         }
+        useSnapshots().before('before-expand');
         applyTextChanges(view, changes);
         const made = useOutline().index.value.scenes.length - before;
         void sayOutline(

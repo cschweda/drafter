@@ -3,6 +3,7 @@ import { replaceText } from '../editor/replace-text';
 import { useEditor } from '../editor/session';
 import { kindOfFileName } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
+import { useSnapshots } from '../snapshots/use-snapshots';
 import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, FileProblemError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
@@ -245,6 +246,8 @@ export function revertToSaved(): void {
   const file = script.project.value?.fileName as string;
   // Only the part that differs is replaced, so the cursor, the folds, and the scroll stay where they
   // are; its own undo step, and Drafter's change, not the writer's (no writing time for it).
+  if (view.state.readOnly) return;
+  useSnapshots().before('before-revert');
   if (!replaceText(view, target)) return;
   void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);
 }

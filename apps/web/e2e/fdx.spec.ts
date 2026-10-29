@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
+import { runCommand } from './modules';
 
 // Final Draft files (Phase 2 Plan FD): a .fdx opens as a new Fountain script that is not the
 // file's (Save asks for a .fountain, and the .fdx is never written), and a Fountain script exports
@@ -147,6 +148,25 @@ test.describe('importing a Final Draft file (Chromium, with the picker)', () => 
 test.describe('importing a Final Draft file where there is no picker', () => {
   test.beforeEach(async ({ page }) => {
     await removePickers(page);
+  });
+
+  test('takes a snapshot of an imported script', async ({ page }) => {
+    await start(page);
+    await drop(page, 'lamp.fdx', LAMP);
+    await expectImported(page);
+    await runCommand(page, 'History…');
+    const history = page.getByRole('dialog', { name: 'History' });
+    const rows = history.getByRole('listbox', { name: 'Snapshots' }).getByRole('option');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Imported from lamp.fdx');
+    // Compare with now: the text is as it came in, so Compare says nothing changed.
+    await rows.first().focus();
+    await page.keyboard.press('Enter');
+    await expect(history).toBeHidden();
+    await expect(
+      page.getByRole('tab', { name: 'Compare', exact: true, selected: true }),
+    ).toBeVisible();
+    await expect(page.locator('#panel-compare')).toContainText(/no changes|same/i);
   });
 
   test('opens one from the file input', async ({ page }) => {

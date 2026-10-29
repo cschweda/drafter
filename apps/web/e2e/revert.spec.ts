@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { expectNewestThenCompare } from './bulk-snapshot';
 import {
   countFileAccess,
   fileAccess,
@@ -86,6 +87,20 @@ test.describe('Revert to Saved (Chromium)', () => {
     // Redo reverts again.
     await page.keyboard.press('ControlOrMeta+Shift+z');
     await expect(editor(page)).not.toContainText('MORE WORDS');
+  });
+
+  test('takes a snapshot before Revert to Saved', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'The Call.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, ' MORE WORDS');
+    await openMenu(page);
+    await revert(page).click();
+    await expect(editor(page)).not.toContainText('MORE WORDS');
+    await expectNewestThenCompare(page, 'Before Revert to Saved');
   });
 
   test('is a command in the palette while there are changes to revert', async ({ page }) => {

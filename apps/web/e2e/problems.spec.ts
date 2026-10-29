@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { expectNewestThenCompare, listedReasons, newScreenplay } from './bulk-snapshot';
+
 const editor = (page: Page) => page.locator('.cm-content');
 
 /** The pane that holds Problems when it is chosen: the right pane, or the only one on a phone. */
@@ -197,6 +199,30 @@ test('fixes everything at once in Strict Fountain', async ({ page }) => {
   await editor(page).click();
   await page.keyboard.press('ControlOrMeta+Z');
   await expect.poll(() => text(page)).toBe(STRICT);
+});
+
+test('takes a snapshot before Fix all, and none when the text equals the newest', async ({
+  page,
+}) => {
+  await newScreenplay(page);
+  await setText(page, STRICT);
+  await enableStrict(page);
+  await showProblems(page);
+  await page.getByRole('button', { name: 'Fix all' }).click();
+  await expect
+    .poll(() => text(page))
+    .toBe('INT. HALL - DAY\n\nShe waits.\n\nMARGARET\n(quietly, then louder)\nHi.\n');
+  const count = await expectNewestThenCompare(page, 'Before Fix all');
+
+  // Undo, and Fix all again: the text before it equals the newest snapshot, so none is added.
+  await showSource(page);
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+Z');
+  await expect.poll(() => text(page)).toBe(STRICT);
+  await showProblems(page);
+  await page.getByRole('button', { name: 'Fix all' }).click();
+  await expect.poll(() => text(page)).not.toBe(STRICT);
+  expect(await listedReasons(page)).toHaveLength(count);
 });
 
 test('jumps to a problem and applies its fix from the keyboard', async ({ page }) => {
