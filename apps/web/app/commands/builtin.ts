@@ -9,7 +9,9 @@ import {
   type ElementKind,
   elementHint,
   forceKind,
+  insertMark,
   insertPageBreak,
+  MARK_REFUSED,
   makeElement,
   structureOf,
   toggleDual,
@@ -155,6 +157,17 @@ export function registerBuiltinCommands(): void {
   /** What the script's template makes of its structure: a stage play's acts and scenes. */
   const structure = () => structureOf(editor.template.value);
   const isStage = () => !structure().headings;
+
+  /** Setup and Payoff (Phase 2 design §10): a mark at the end of the cursor's line, labels offered. */
+  const mark = (head: 'Setup' | 'Payoff'): Behavior => ({
+    enabled: () => canEdit() && isFountain(),
+    run: () => {
+      showTab('source');
+      void nextTick().then(() => {
+        if (!withCompletion(insertMark(head))(view)) void sayElement(MARK_REFUSED);
+      });
+    },
+  });
 
   /** The scene holding the cursor, in the Outline's index. */
   const sceneAtCursor = () => {
@@ -540,6 +553,8 @@ export function registerBuiltinCommands(): void {
     },
     'make-centered': fountain(forceKind('centered')),
     'make-lyric': fountain(forceKind('lyric')),
+    'mark-setup': mark('Setup'),
+    'mark-payoff': mark('Payoff'),
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),

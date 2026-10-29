@@ -12,6 +12,7 @@ import {
 } from '@codemirror/state';
 import type { Command } from '@codemirror/view';
 import { type Block, blockAt, type Doc, parse, reparse } from '@drafter/fountain';
+import { insertNote } from '@drafter/notes';
 import { resolveRole, type Template } from '@drafter/templates';
 import { startBarCue, startCue } from './input';
 import { BOM, command, cueIndex, readsAsCue, unmarked } from './keymap';
@@ -135,6 +136,27 @@ export function withCompletion(run: StateCommand): Command {
     return handled;
   };
 }
+
+/** What to say when a mark can't go in at the cursor. */
+export const MARK_REFUSED =
+  'Nothing was added: a mark at the cursor would change how the script reads.';
+
+/**
+ * A setup or payoff mark (`[[Setup: ]]`, `[[Payoff: ]]`) at the end of the cursor's line, after one
+ * space (`insertNote`), with the cursor before its `]]` and the labels in use offered at once
+ * (Phase 2 design §10). False, changing nothing, where the mark would change how the script reads.
+ */
+export const insertMark = (head: 'Setup' | 'Payoff'): StateCommand =>
+  command((state) => {
+    const note = `[[${head}: ]]`;
+    const { changes, cursor } = insertNote(state.field(parsedDoc), state.selection.main.head, note);
+    if (changes.length === 0) return null;
+    return {
+      changes,
+      selection: EditorSelection.cursor(cursor),
+      effects: ask(),
+    };
+  });
 
 /** The parser's start of a scene heading (rule 11): a prefix, then a dot or a space. */
 const HEADING_START = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;

@@ -218,6 +218,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   fountain('make-lyric', 'Force lyric (~)'),
   fountain('dual-dialogue', 'Dual dialogue', 'Mod-Shift-d'),
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
+  fountain('mark-setup', 'Mark a setup'),
+  fountain('mark-payoff', 'Mark a payoff'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
 
   // Edit, the element bar's buttons for a Markdown document (the design, §5)

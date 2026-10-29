@@ -452,6 +452,36 @@ describe('sections', () => {
   });
 });
 
+describe('setup and payoff labels', () => {
+  const script = text(
+    'INT. HALL - DAY',
+    '',
+    'Ann pockets the key. [[Setup: the key]]',
+    '',
+    'She finds a map. [[Setup: Map room]]',
+    '',
+    'She waits.',
+  );
+
+  it('offers the labels in use inside [[Payoff: ]]', () => {
+    const found = ask(`${script} [[Payoff: |]]`, true);
+    expect(found?.labels).toEqual(['the key', 'Map room']);
+    expect(found?.replaces).toBe('');
+  });
+
+  it('offers the labels that go on from what is typed, inside [[Setup: ]] too', () => {
+    const found = ask(`${script} [[setup: ma|]]`);
+    expect(found?.labels).toEqual(['Map room']);
+    expect(found?.replaces).toBe('ma');
+  });
+
+  it('offers nothing outside a mark', () => {
+    expect(ask(`${script} the |`)).toBeNull();
+    expect(ask(`${script} [[Payoff: the key]] ma|`)).toBeNull();
+    expect(ask(`${script} [[Sam: ma|]]`)).toBeNull();
+  });
+});
+
 describe('the list the source gives', () => {
   it('has a plain label for each option, and marks the typed start of each', () => {
     const { state, pos } = at(text('MARGARET', 'Hi.', '', 'MARK', 'Ho.', '', 'MA|'));

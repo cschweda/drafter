@@ -208,6 +208,9 @@ importers:
       '@drafter/lint':
         specifier: workspace:*
         version: link:../lint
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
