@@ -1,5 +1,7 @@
 # Scene list
 
+> The **Outline** and **Cards** tabs now list every scene with its page and length; this module is the small version.
+
 Every scene heading in the script, numbered, with its page and its length in eighths of a page.
 Choosing a scene goes to its heading in the Source pane.
 

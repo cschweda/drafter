@@ -143,6 +143,53 @@ test('says why Parenthetical is off where it does not apply', async ({ page }) =
   expect(await textOf(page)).toBe('She waits.');
 });
 
+/** Chooses a button from the bar's More menu. */
+async function chooseMore(page: Page, name: string) {
+  await button(page, 'More elements').click();
+  await page.getByRole('menuitem', { name }).click();
+  await expect(editor(page)).toBeFocused();
+}
+
+test('Setup adds a mark at the end of the line with the cursor in its label', async ({ page }) => {
+  await write(page, 'INT. HALL - DAY\n\nAnn pockets the key.');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await chooseMore(page, 'Setup');
+  expect(await textOf(page)).toBe('INT. HALL - DAY\n\nAnn pockets the key. [[Setup: ]]');
+  await page.keyboard.type('the key');
+  expect(await textOf(page)).toBe('INT. HALL - DAY\n\nAnn pockets the key. [[Setup: the key]]');
+});
+
+test('Payoff offers the setup’s label', async ({ page }) => {
+  await write(page, 'Ann pockets the key. [[Setup: the key]]\n\nShe opens the door.');
+  await chooseMore(page, 'Payoff');
+  expect(await textOf(page)).toBe(
+    'Ann pockets the key. [[Setup: the key]]\n\nShe opens the door. [[Payoff: ]]',
+  );
+  const option = page.getByRole('option', { name: 'the key' });
+  await expect(option).toBeVisible();
+  await option.click();
+  expect(await textOf(page)).toBe(
+    'Ann pockets the key. [[Setup: the key]]\n\nShe opens the door. [[Payoff: the key]]',
+  );
+});
+
+test('Setup and Payoff are one undo each', async ({ page }) => {
+  await write(page, 'One.\n\nTwo.');
+  await chooseMore(page, 'Setup');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ControlOrMeta+ArrowUp');
+  await chooseMore(page, 'Payoff');
+  await page.keyboard.press('Escape');
+  expect(await textOf(page)).toBe('One. [[Payoff: ]]\n\nTwo. [[Setup: ]]');
+  await page.keyboard.press('ControlOrMeta+z');
+  expect(await textOf(page)).toBe('One.\n\nTwo. [[Setup: ]]');
+  await page.keyboard.press('ControlOrMeta+z');
+  expect(await textOf(page)).toBe('One.\n\nTwo.');
+});
+
 test('has the rest in More', async ({ page }) => {
   const choose = async (name: string) => {
     await button(page, 'More elements').click();

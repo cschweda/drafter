@@ -9,7 +9,9 @@ import {
   type ElementKind,
   elementHint,
   forceKind,
+  insertMark,
   insertPageBreak,
+  MARK_REFUSED,
   makeElement,
   structureOf,
   toggleDual,
@@ -31,8 +33,10 @@ import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
+import { openNewNote } from '~/notes/use-notes';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
+import { openSceneDetails } from '~/outline/scene-details';
 import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
@@ -153,6 +157,17 @@ export function registerBuiltinCommands(): void {
   /** What the script's template makes of its structure: a stage play's acts and scenes. */
   const structure = () => structureOf(editor.template.value);
   const isStage = () => !structure().headings;
+
+  /** Setup and Payoff (Phase 2 design §10): a mark at the end of the cursor's line, labels offered. */
+  const mark = (head: 'Setup' | 'Payoff'): Behavior => ({
+    enabled: () => canEdit() && isFountain(),
+    run: () => {
+      showTab('source');
+      void nextTick().then(() => {
+        if (!withCompletion(insertMark(head))(view)) void sayElement(MARK_REFUSED);
+      });
+    },
+  });
 
   /** The scene holding the cursor, in the Outline's index. */
   const sceneAtCursor = () => {
@@ -317,6 +332,9 @@ export function registerBuiltinCommands(): void {
     'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
     'show-problems': { run: () => showTab('problems') },
     'show-outline': { enabled: isFountain, run: () => showTab('outline') },
+    // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
+    'show-cards': { enabled: isFountain, run: () => showTab('cards') },
+    'show-notes': { enabled: isFountain, run: () => showTab('notes') },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
@@ -469,6 +487,19 @@ export function registerBuiltinCommands(): void {
     },
     'move-scene-up': moveScene('up'),
     'move-scene-down': moveScene('down'),
+    'new-note': {
+      enabled: () => isFountain() && useOutline().readOnly.value === null,
+      why: () => useOutline().readOnly.value ?? undefined,
+      run: () => openNewNote(),
+    },
+    'scene-details': {
+      // On in a read-only tab too: the form opens read-only (Save says why).
+      enabled: () => isFountain() && !!sceneAtCursor(),
+      run: () => {
+        const scene = sceneAtCursor();
+        if (scene) openSceneDetails(useOutline().idOf(scene));
+      },
+    },
 
     // Edit, the element bar's commands
     // On a stage play Scene writes a `##` section and Action is a stage direction (the template's
@@ -522,6 +553,8 @@ export function registerBuiltinCommands(): void {
     },
     'make-centered': fountain(forceKind('centered')),
     'make-lyric': fountain(forceKind('lyric')),
+    'mark-setup': mark('Setup'),
+    'mark-payoff': mark('Payoff'),
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),

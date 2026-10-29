@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { downTarget, type MoveTarget, moveItem, targetAfterRow, upTarget } from '../src';
+import {
+  downTarget,
+  type MoveTarget,
+  moveItem,
+  targetAfterRow,
+  targetBefore,
+  upTarget,
+} from '../src';
 import { apply, indexOf } from './helpers';
 
 /** The script after moving the item whose heading starts with `name` to `target`, or null. */
@@ -153,6 +160,23 @@ describe('targetAfterRow', () => {
     expect(targetAfterRow(index, a, true)).toEqual({ after: a.block });
     expect(targetAfterRow(index, actOne, true)).toEqual({ after: actOne.block });
     expect(targetAfterRow(index, actOne, false)).toEqual({ after: b.block });
+  });
+});
+
+describe('targetBefore', () => {
+  test('targetBefore puts a scene before the first scene of a section', () => {
+    const { index } = indexOf(ACTS);
+    const c = index.scenes.find((s) => s.heading === 'INT. C - DAY');
+    if (!c) throw new Error('no C');
+    expect(moved(ACTS, 'INT. A', () => targetBefore(index, c.block))).toBe(
+      '# Act One\n\nINT. B - DAY\n\nTwo.\n\n# Act Two\n\n= Things go wrong.\n\nINT. A - DAY\n\nOne.\n\nINT. C - DAY\n\nThree.\n',
+    );
+    const abc = indexOf(ABC).index;
+    const [a, b] = abc.scenes;
+    if (!a || !b) throw new Error('no scenes');
+    expect(targetBefore(abc, b.block)).toEqual({ after: a.block });
+    expect(targetBefore(abc, a.block)).toEqual({ start: true });
+    expect(targetBefore(abc, 999)).toBeNull();
   });
 });
 

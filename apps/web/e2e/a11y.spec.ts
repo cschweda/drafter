@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 import {
+  chooseTab,
   closeSettings,
   consentDialog,
   editor,
@@ -225,7 +226,7 @@ for (const theme of THEMES) {
       await closeSettings(page);
       // The module's button, and its tab.
       await page.getByRole('button', { name: 'Count scenes' }).click();
-      await page.getByRole('tab', { name: 'Fixture' }).first().click();
+      await chooseTab(page, 'Fixture');
       await expect(page.getByRole('tabpanel', { name: 'Fixture' })).toBeVisible();
       await clean(page, "a module's button and tab");
     });

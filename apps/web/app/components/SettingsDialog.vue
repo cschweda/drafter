@@ -28,7 +28,7 @@ function onClose() {
 }
 
 interface Switch {
-  key: Exclude<keyof Settings, 'textSize'>;
+  key: Exclude<keyof Settings, 'textSize' | 'cardSize'>;
   label: string;
   why: string;
   /** Shown only in the desktop app. */

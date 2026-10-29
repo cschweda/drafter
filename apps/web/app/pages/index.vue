@@ -52,14 +52,15 @@ function onEscape(event: KeyboardEvent) {
 // The editor is parked here whenever the Source tab isn't showing.
 const { view, doc, kind } = useEditor();
 
-// A Markdown document has no scenes, so no Outline tab (Phase 2 design §5.7): a pane showing it
-// shows another tab.
+// A Markdown document has no scenes or notes, so no Outline, Cards, or Notes tab (Phase 2 design
+// §5.7): a pane showing one shows another tab.
+const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes'];
 watch(
   kind,
   (now) => {
     if (now !== 'markdown') return;
-    tabs.value = dropTab(tabs.value, 'outline');
-    if (phoneTab.value === 'outline') phoneTab.value = PHONE_DEFAULT_TAB;
+    for (const tab of NOT_FOR_MARKDOWN) tabs.value = dropTab(tabs.value, tab);
+    if (NOT_FOR_MARKDOWN.includes(phoneTab.value)) phoneTab.value = PHONE_DEFAULT_TAB;
   },
   { immediate: true },
 );
@@ -173,6 +174,8 @@ onBeforeUnmount(() => {
     <CommandPalette />
     <OutlineAnnouncer />
     <TreatmentDialog />
+    <SceneDetailsDialog />
+    <NewNoteDialog />
     <SettingsDialog />
     <StatsDialog />
     <AppTour />

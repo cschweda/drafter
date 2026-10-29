@@ -76,6 +76,22 @@ const groups = shortcutGroups(COMMAND_DATA);
           completion, or search) needs it.
         </li>
         <li>
+          In the Cards tab, the arrow keys move between the cards as they are drawn, and
+          <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. <kbd>Enter</kbd> edits a
+          card’s synopsis (<kbd>Enter</kbd> saves, <kbd>Esc</kbd> cancels), and the context-menu
+          key or <kbd>Shift+F10</kbd> opens the card’s menu. <kbd>Alt+←</kbd> and
+          <kbd>Alt+→</kbd> move a card one place earlier or later, and <kbd>Alt+↑</kbd> and
+          <kbd>Alt+↓</kbd> move it a row up or down (<kbd>⌥</kbd> on a Mac).
+        </li>
+        <li>
+          In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and
+          <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. On a note, <kbd>Enter</kbd>
+          goes to it in the Source, <kbd>E</kbd> edits it in place (<kbd>Enter</kbd> saves,
+          <kbd>Esc</kbd> cancels), <kbd>R</kbd> resolves or reopens it, <kbd>C</kbd> sets its
+          category, and <kbd>Delete</kbd> (or <kbd>Backspace</kbd>) deletes it. The context-menu key
+          or <kbd>Shift+F10</kbd> opens the note’s menu.
+        </li>
+        <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>

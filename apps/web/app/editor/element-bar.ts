@@ -98,6 +98,18 @@ export const FOUNTAIN_MORE: readonly BarButton[] = [
     tip: 'Text between [[ and ]] is a note to yourself, and never prints. It wraps the selection.',
   },
   {
+    label: 'Setup',
+    mark: '[[Setup: ]]',
+    command: 'mark-setup',
+    tip: 'Marks something planted here, to pay off later. Give the payoff the same label.',
+  },
+  {
+    label: 'Payoff',
+    mark: '[[Payoff: ]]',
+    command: 'mark-payoff',
+    tip: 'Marks where a setup pays off. Use the setup’s label.',
+  },
+  {
     label: 'Boneyard',
     mark: '/* */',
     command: 'cut-to-boneyard',

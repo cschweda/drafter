@@ -136,6 +136,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
+  { id: 'show-cards', title: 'Show Cards', group: 'View' },
+  { id: 'show-notes', title: 'Show Notes', group: 'View' },
   {
     id: 'focus-mode',
     title: 'Toggle focus mode',
@@ -177,6 +179,10 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // The Outline's moves, for the scene holding the cursor (Phase 2 design §6.2).
   { id: 'move-scene-up', title: 'Move scene up', group: 'Edit' },
   { id: 'move-scene-down', title: 'Move scene down', group: 'Edit' },
+  // Scene details (Phase 2 design §9), for the scene holding the cursor.
+  { id: 'scene-details', title: 'Scene details…', group: 'Edit' },
+  // New note (Phase 2 design §8): at the end of the cursor's line, with an optional category.
+  { id: 'new-note', title: 'New note…', group: 'Edit' },
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
@@ -212,6 +218,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   fountain('make-lyric', 'Force lyric (~)'),
   fountain('dual-dialogue', 'Dual dialogue', 'Mod-Shift-d'),
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
+  fountain('mark-setup', 'Mark a setup'),
+  fountain('mark-payoff', 'Mark a payoff'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
 
   // Edit, the element bar's buttons for a Markdown document (the design, §5)

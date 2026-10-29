@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import {
+  chooseTab,
   closeSettings,
   consentDialog,
   countScenes,
   editor,
+  expectTabOffered,
   fixtureSwitch,
   fixtureTab,
   lastPane,
@@ -71,8 +73,8 @@ test.describe('script modules', () => {
 
     // Its parts: the button, the tab, and the command.
     await expect(countScenes(page)).toBeVisible();
-    // In the tab row of each pane showing: the two on a wide screen, the one on a phone.
-    await expect(fixtureTab(page).first()).toBeVisible();
+    // Offered in the tab row, under More until it is chosen (Phase 2 design §5.8).
+    await expectTabOffered(page, 'Fixture');
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();
     await page.keyboard.insertText('Fixture');
@@ -99,6 +101,13 @@ test.describe('script modules', () => {
     await closeSettings(page);
     await expect(countScenes(page)).toHaveCount(0);
     await expect(fixtureTab(page)).toHaveCount(0);
+    // Nor under More, which has only Cards and Notes now.
+    await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
+    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
+      'Cards',
+      /^Notes, \d+ open$/,
+    ]);
+    await page.keyboard.press('Escape');
     await expect(page.getByText('Fixture Info:')).toHaveCount(0);
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();
@@ -111,7 +120,7 @@ test.describe('script modules', () => {
   test('closes the module tab when the module is turned off', async ({ page }) => {
     await start(page);
     await turnOnFixture(page);
-    await fixtureTab(page).first().click();
+    await chooseTab(page, 'Fixture');
     await expect(page.getByRole('tabpanel', { name: 'Fixture' })).toBeVisible();
     await openSettings(page);
     await fixtureSwitch(page).click();
@@ -204,7 +213,7 @@ test.describe('script modules', () => {
     await page.reload();
     await expect(editor(page)).toBeAttached();
     await expect(countScenes(page)).toBeVisible();
-    await expect(fixtureTab(page).first()).toBeVisible();
+    await expectTabOffered(page, 'Fixture');
     await openSettings(page);
     await expect(fixtureSwitch(page)).toBeChecked();
     // Off is remembered too.
@@ -219,7 +228,10 @@ test.describe('script modules', () => {
     await expect(countScenes(page)).toHaveCount(0);
   });
 
-  test("reaches the module's button, tab, and command from the keyboard", async ({ page }) => {
+  test("reaches the module's button, tab, and command from the keyboard", async ({
+    page,
+    browserName,
+  }) => {
     await start(page);
     await openSettings(page);
     // The switch with the keyboard: Space asks, the dialog's buttons answer.
@@ -250,11 +262,21 @@ test.describe('script modules', () => {
       problemsList(page).getByRole('button', { name: 'Fixture Info: Scene 1 Line 1' }),
     ).toBeVisible();
 
-    // The tab: the arrow keys reach it along the tab row, and Enter chooses it.
+    // The tab: More, after the tab row, offers it (no tab is in the slot yet); the arrow keys reach
+    // it there, and Enter chooses it, with focus on its tab.
     await lastPane(page).getByRole('tab', { selected: true }).focus();
-    await page.keyboard.press('End');
-    await expect(fixtureTab(page).last()).toBeFocused();
+    // WebKit's Tab skips buttons unless Alt is held, as Safari's does by default.
+    await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab');
+    const more = lastPane(page).getByRole('button', { name: 'More tabs' });
+    await expect(more).toBeFocused();
     await page.keyboard.press('Enter');
+    const item = page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem', {
+      name: 'Fixture',
+    });
+    await page.keyboard.press('End');
+    await expect(item).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(fixtureTab(page).last()).toBeFocused();
     const panel = page.getByRole('tabpanel', { name: 'Fixture' });
     await expect(panel).toBeVisible();
     // It lists the title of the script.
@@ -342,7 +364,7 @@ test.describe('script modules', () => {
     await expect(fixtureSwitch(page)).toBeChecked();
     await closeSettings(page);
 
-    await fixtureTab(page).first().click();
+    await chooseTab(page, 'Fixture');
     const panel = page.getByRole('tabpanel', { name: 'Fixture' });
     await expect(panel).toContainText('Fixture’s tab couldn’t be shown.');
     await expect(
@@ -398,7 +420,7 @@ test.describe('script modules', () => {
     await runCommand(page, 'New Markdown document');
     await expect(page.getByRole('tab', { name: 'Preview' }).first()).toBeVisible();
     // The module's tab reads the title (the first heading); its button finds no Fountain scenes.
-    await fixtureTab(page).first().click();
+    await chooseTab(page, 'Fixture');
     const panel = page.getByRole('tabpanel', { name: 'Fixture' });
     await expect(panel).toContainText('Untitled');
     await countScenes(page).click();

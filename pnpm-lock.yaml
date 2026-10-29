@@ -96,6 +96,9 @@ importers:
       '@drafter/lint':
         specifier: workspace:*
         version: link:../../packages/lint
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../../packages/notes
       '@drafter/outline':
         specifier: workspace:*
         version: link:../../packages/outline
@@ -205,6 +208,9 @@ importers:
       '@drafter/lint':
         specifier: workspace:*
         version: link:../lint
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -234,6 +240,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -241,6 +250,12 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+
+  packages/notes:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
 
   packages/outline:
     dependencies:
@@ -250,6 +265,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates

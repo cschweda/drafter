@@ -5,9 +5,11 @@ import {
   type OutlineItem,
   type Scene,
   type SceneColor,
+  type SceneDetails,
   type SceneIndex,
   sceneIndex,
   setColor,
+  setSceneDetails,
   setSynopsis,
 } from '@drafter/outline';
 import { type ComputedRef, computed, effectScope } from 'vue';
@@ -34,6 +36,8 @@ export interface OutlineSession {
   apply(changes: readonly TextChange[], options?: ApplyOptions): boolean;
   setSynopsis(scene: Scene, text: string): boolean;
   setColor(scene: Scene, color: SceneColor | null): boolean;
+  /** Scene details: writes the header's changed fields in one undo, and says so. */
+  setDetails(scene: Scene, details: SceneDetails): boolean;
 }
 
 let session: OutlineSession | undefined;
@@ -80,6 +84,28 @@ function create(): OutlineSession {
           );
         }
         return done;
+      },
+      setDetails: (scene, details) => {
+        if (Object.keys(details).length === 0) return false;
+        if (readOnly.value) {
+          void sayOutline(readOnly.value);
+          return false;
+        }
+        const changes = setSceneDetails(editor.doc.value, scene, details);
+        // A change refused because the script would print differently (a synopsis cleared from
+        // a line of notes that would join the lines around it), or a tab that can't edit.
+        if (changes.length === 0) {
+          void sayOutline(
+            'Nothing was changed: saving these details would change how the script prints.',
+          );
+          return false;
+        }
+        if (!apply(changes)) {
+          void sayOutline('Nothing was changed: this tab can’t edit the script now.');
+          return false;
+        }
+        void sayOutline(`Saved the details of ${scene.heading || 'the untitled scene'}.`);
+        return true;
       },
     } satisfies OutlineSession;
   }) as OutlineSession;

@@ -93,6 +93,18 @@ export const fixture: ScriptModule = {
       },
     },
     {
+      // As the one above, with a note long enough to move everything after it far down: for the
+      // Notes tab's test that a note is still found after the script grew a long way above it.
+      id: 'add-long-note-later',
+      title: 'Fixture: put in a long note after a pause',
+      group: 'Edit',
+      async run() {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        const at = ctx.cursor();
+        ctx.applyChanges([{ from: at, to: at, insert: `[[${'A long note. '.repeat(24)}]]` }]);
+      },
+    },
+    {
       id: 'fail',
       title: 'Fixture: fail on purpose',
       group: 'Edit',

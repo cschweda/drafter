@@ -1,8 +1,13 @@
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
+import { lint } from '@drafter/lint';
+import { fieldNote, insertNote } from '@drafter/notes';
+import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { readKeyedNote, type Section, sceneIndex } from '../src';
+import { type Section, sceneIndex } from '../src';
+import { anyScript } from './arbitraries';
 import {
+  apply,
   headings,
   indexOf,
   SAMPLE_SCREENPLAY,
@@ -144,6 +149,57 @@ describe('sceneIndex', () => {
     expect(doc.source.slice(a?.color?.span.from, a?.color?.span.to)).toBe('[[color :  Blue ]]');
   });
 
+  test('reads every field in any case, anywhere in the scene', () => {
+    const source =
+      'INT. A - DAY\n\n= Syn.\n[[color: Blue]]\n[[GOAL: Win the bet.]]\n\nShe waits. [[conflict :  The clock. ]]\n\n[[Outcome: She loses.]] [[shift: hope → dread]]\n[[Storyline: A]]\n\nINT. B - DAY\n\nNone. [[Goal:]]\n';
+    const { doc, index } = indexOf(source);
+    const [a, b] = index.scenes;
+    const read = Object.fromEntries(
+      Object.entries(a?.fields ?? {}).map(([key, field]) => [
+        key,
+        [field.body, doc.source.slice(field.span.from, field.span.to)],
+      ]),
+    );
+    expect(read).toEqual({
+      color: ['Blue', '[[color: Blue]]'],
+      goal: ['Win the bet.', '[[GOAL: Win the bet.]]'],
+      conflict: ['The clock.', '[[conflict :  The clock. ]]'],
+      outcome: ['She loses.', '[[Outcome: She loses.]]'],
+      shift: ['hope → dread', '[[shift: hope → dread]]'],
+      storyline: ['A', '[[Storyline: A]]'],
+    });
+    // An empty field is no field, as an empty color is no color.
+    expect(b?.fields).toEqual({});
+    expect(a?.color?.value).toBe('blue');
+  });
+
+  test('the first of two Goals wins', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\nAction. [[Goal: First.]]\n\n[[goal: Second.]]\n\nINT. B - DAY\n\n[[Goal: Third.]]\n',
+    );
+    expect(index.scenes.map((s) => s.fields.goal?.body)).toEqual(['First.', 'Third.']);
+  });
+
+  test('reads storylines from every Storyline note', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\n[[Storyline: A, B]]\n\nAction. [[storyline :  b , C,, ]]\n\n[[Storyline:]]\n\nINT. B - DAY\n\nNone.\n',
+    );
+    expect(index.scenes.map((s) => s.storylines)).toEqual([['A', 'B', 'C'], []]);
+    expect(index.scenes[0]?.fields.storyline?.body).toBe('A, B');
+  });
+
+  test('lists setups and payoffs as marks', () => {
+    const source =
+      'INT. A - DAY\n\nA letter sticks out. [[Setup: the letter]] [[Setup:]]\n\nShe reads it. [[PAYOFF :  The Letter ]]\n\nINT. B - DAY\n\nNone.\n';
+    const { doc, index } = indexOf(source);
+    const marks = index.scenes[0]?.marks ?? [];
+    expect(marks.map((m) => [m.key, m.label, doc.source.slice(m.span.from, m.span.to)])).toEqual([
+      ['setup', 'the letter', '[[Setup: the letter]]'],
+      ['payoff', 'The Letter', '[[PAYOFF :  The Letter ]]'],
+    ]);
+    expect(index.scenes[1]?.marks).toEqual([]);
+  });
+
   test('lists who speaks, once each, in order', () => {
     const { index } = indexOf(
       'INT. A - DAY\n\nANN\nHi.\n\nBEN (V.O.)\nYo.\n\nann\n\nANN\nAgain.\n\nINT. B - DAY\n\nQuiet.\n',
@@ -184,14 +240,44 @@ describe('sceneIndex', () => {
   });
 });
 
-describe('readKeyedNote', () => {
-  test.each([
-    ['Color: blue', { key: 'color', body: 'blue' }],
-    ['  COLOR :blue  ', { key: 'color', body: 'blue' }],
-    ['Goal: Margaret wants: everything', { key: 'goal', body: 'Margaret wants: everything' }],
-    ['no head here', null],
-    [': no key', null],
-  ])('%j', (text, expected) => {
-    expect(readKeyedNote(text)).toEqual(expected);
+describe('duplicate-field', () => {
+  const KEYS = ['goal', 'conflict', 'outcome', 'shift', 'color', 'storyline'] as const;
+  const noteArb = fc.tuple(fc.nat(), fc.constantFrom(...KEYS), fc.constantFrom('', 'one', 'two'));
+
+  test('agrees with the scene index on which notes are second', () => {
+    fc.assert(
+      fc.property(anyScript, fc.array(noteArb, { maxLength: 10 }), (script, picks) => {
+        let source = script;
+        for (const [at, key, body] of picks) {
+          const text =
+            body === '' ? `[[${key[0]?.toUpperCase()}${key.slice(1)}:]]` : fieldNote(key, body);
+          source = apply(source, insertNote(parse(source), at % (source.length + 1), text).changes);
+        }
+        const { doc, index, template } = indexOf(source);
+        // The second and later field notes of a scene, by the index: every non-empty field note
+        // inside a scene that isn't the one it reads (Storyline notes all count, so none is second).
+        const expected: number[] = [];
+        for (const scene of index.scenes) {
+          for (const region of doc.regions) {
+            if (region.kind !== 'note' || !region.closed) continue;
+            if (region.span.from < scene.span.from || region.span.from >= scene.span.to) continue;
+            const key = KEYS.find((k) => {
+              const m = new RegExp(`^\\[\\[\\s*${k}\\s*:`, 'i').exec(
+                doc.source.slice(region.span.from, region.span.to),
+              );
+              return m !== null;
+            });
+            if (!key || key === 'storyline') continue;
+            const inner = doc.source.slice(region.span.from + 2, region.span.to - 2);
+            if (inner.slice(inner.indexOf(':') + 1).trim() === '') continue;
+            if (scene.fields[key]?.span.from !== region.span.from) expected.push(region.span.from);
+          }
+        }
+        const found = lint(doc, template)
+          .filter((d) => d.ruleId === 'duplicate-field')
+          .map((d) => d.span.from);
+        expect(found).toEqual(expected.sort((a, b) => a - b));
+      }),
+    );
   });
 });

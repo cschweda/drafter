@@ -36,6 +36,8 @@ describe('the element bar', () => {
       'Lyric',
       'Dual dialogue',
       'Note',
+      'Setup',
+      'Payoff',
       'Boneyard',
       'Section',
       'Synopsis',
@@ -54,6 +56,23 @@ describe('the element bar', () => {
       'Link',
       'Code',
     ]);
+  });
+
+  test('has Setup and Payoff in More, after Note', () => {
+    const labels = FOUNTAIN_MORE.map((b) => b.label);
+    expect(labels.slice(labels.indexOf('Note'), labels.indexOf('Note') + 3)).toEqual([
+      'Note',
+      'Setup',
+      'Payoff',
+    ]);
+    expect(FOUNTAIN_MORE.find((b) => b.label === 'Setup')).toMatchObject({
+      mark: '[[Setup: ]]',
+      command: 'mark-setup',
+    });
+    expect(FOUNTAIN_MORE.find((b) => b.label === 'Payoff')).toMatchObject({
+      mark: '[[Payoff: ]]',
+      command: 'mark-payoff',
+    });
   });
 
   test('runs only commands the palette has, and takes each command’s keys from it', () => {

@@ -9,6 +9,7 @@ const packages = [
   'render-text',
   'render-html',
   'lint',
+  'notes',
   'outline',
   'fdx',
   'cm-fountain',

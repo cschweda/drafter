@@ -10,6 +10,7 @@ import {
   fountain,
   fountainEnter,
   fountainTab,
+  insertMark,
   insertPageBreak,
   makeElement,
   opensCompletion,
@@ -22,7 +23,7 @@ import {
 } from '@drafter/cm-fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apply, BOM, editor, render, run, type } from './helpers';
+import { apply, BOM, editor, render, run, stateOf, type } from './helpers';
 
 // The element bar's commands (docs/drafter-element-bar-design.md §4): each writes natural Fountain
 // where it can, and a forcing mark only where the line would read as something else without one.
@@ -563,5 +564,31 @@ describe('a cue begun from the bar and left empty', () => {
       selection: { anchor: 0 },
     }).state;
     expect(state.sliceDoc()).toBe('@BOB\nHi.');
+  });
+});
+
+describe('insertMark', () => {
+  const mark = (doc: string, head: 'Setup' | 'Payoff', readOnly = false) => {
+    const state = stateOf(doc, [EditorState.readOnly.of(readOnly)]);
+    let after = state;
+    const handled = insertMark(head)({
+      state,
+      dispatch: (tr) => {
+        after = tr.state;
+      },
+    });
+    return { handled, text: after.doc.toString(), head: after.selection.main.head };
+  };
+
+  it('puts the mark at the end of the line, with the cursor before its ]]', () => {
+    const found = mark('She waits.', 'Setup');
+    expect(found.handled).toBe(true);
+    expect(found.text).toBe('She waits. [[Setup: ]]');
+    expect(found.head).toBe(found.text.length - 2);
+  });
+
+  it('does nothing where the mark would change the script, or in a read-only editor', () => {
+    expect(mark('/* cut', 'Payoff').handled).toBe(false);
+    expect(mark('She waits.', 'Payoff', true).handled).toBe(false);
   });
 });

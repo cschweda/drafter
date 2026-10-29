@@ -3,9 +3,10 @@
 // the other pane swaps the two, so there's always one editor, one Script
 // view, and one Problems list.
 
-/** A tab's id: one of the core four, or a script module's (`moduleTabId`). */
+/** A tab's id: one of the core four, Cards or Notes, or a script module's (`moduleTabId`). */
 export type TabId = string;
 export type CoreTabId = 'source' | 'script' | 'problems' | 'outline';
+export type ViewTabId = 'cards' | 'notes';
 export type PaneId = 'left' | 'right';
 export interface PaneTabs {
   left: TabId;
@@ -15,6 +16,10 @@ export interface PaneTabs {
 export interface Tab {
   id: TabId;
   label: string;
+  /** A count drawn beside the label, as Problems has. */
+  badge?: string;
+  /** What the badge means, for the tab's name: `3 open` makes the name "Notes, 3 open". */
+  badgeName?: string;
 }
 
 /** The core tabs, always in the row (Phase 2 design §5.8). A module adds its own after them while it is on. */
@@ -31,9 +36,24 @@ export function coreTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
 }
 
 /**
+ * Cards and Notes (design §5.8): not core, so they share the slot and More with module tabs, first
+ * in More, in the design's order, until one is chosen. None for Markdown: a Markdown document has no scenes or notes.
+ */
+export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
+  { id: 'cards', label: 'Cards' },
+  { id: 'notes', label: 'Notes' },
+];
+
+/** The view tabs a document of `kind` has, before any module's. */
+export function viewTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
+  return kind === 'markdown' ? [] : VIEW_TABS;
+}
+
+/**
  * A pane's tab row (Phase 2 design §5.8): the core tabs, then one slot for another tab, then a
  * More menu with the rest. The slot holds the pane's own tab when it shows another one, else the
- * one chosen from More last (`last`), else the first; nine tabs never have to fit a pane's width.
+ * one chosen last (`last`), else nothing (controller ruling 4: never a tab nobody chose), at any
+ * width; nine tabs never have to fit a pane's width.
  */
 export function tabRow(
   core: ReadonlyArray<Tab>,
@@ -41,8 +61,7 @@ export function tabRow(
   selected: TabId,
   last: TabId | null,
 ): { row: Tab[]; more: Tab[] } {
-  const slot =
-    others.find((tab) => tab.id === selected) ?? others.find((tab) => tab.id === last) ?? others[0];
+  const slot = others.find((tab) => tab.id === selected) ?? others.find((tab) => tab.id === last);
   return {
     row: [...core, ...(slot ? [slot] : [])],
     more: others.filter((tab) => tab !== slot),
@@ -80,7 +99,7 @@ export function revealTab(tabs: PaneTabs, tab: TabId, from?: PaneId): PaneTabs {
 
 /**
  * The tabs with `tab` taken away (its module was turned off, or a Markdown document has no
- * Outline): a pane that showed it shows the first core tab, in the order Source, Script,
+ * Outline, Cards, or Notes): a pane that showed it shows the first core tab, in the order Source, Script,
  * Problems, that the other pane isn't showing.
  */
 export function dropTab(tabs: PaneTabs, tab: TabId): PaneTabs {

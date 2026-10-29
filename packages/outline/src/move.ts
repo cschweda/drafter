@@ -1,5 +1,5 @@
 import type { Doc, TextChange } from '@drafter/fountain';
-import { contentEnd, hasBlankLine, hasStrayBoneyard } from './scene-index';
+import { contentEnd, hasBlankLine, hasStrayBoneyard, lineBreakOf } from '@drafter/notes';
 import type { OutlineItem, SceneIndex } from './types';
 
 // Moving scenes and sections (Phase 2 design §6.2–6.3). A move is two changes, a delete and an
@@ -23,12 +23,6 @@ export interface Move {
   at: number;
 }
 
-/** The script's own line break: the first one in it, `\r\n` or `\n`, else `\n`. */
-export function lineBreakOf(source: string): string {
-  const at = source.indexOf('\n');
-  return at > 0 && source[at - 1] === '\r' ? '\r\n' : '\n';
-}
-
 const itemAt = (index: SceneIndex, block: number) => index.items.find((i) => i.block === block);
 
 /** The end of the item's own unit: a scene's end, or a section's heading and intro. */
@@ -47,6 +41,16 @@ function lastWithin(index: SceneIndex, item: OutlineItem): OutlineItem {
 function before(index: SceneIndex, item: OutlineItem): MoveTarget {
   const previous = index.items[index.items.indexOf(item) - 1];
   return previous ? { after: previous.block } : { start: true };
+}
+
+/**
+ * The target that puts an item just before the scene at `block`: after the item before it in source
+ * order (so before the first scene of a section, it lands at the section's start), or the start.
+ * Null when `block` is no scene or section.
+ */
+export function targetBefore(index: SceneIndex, block: number): MoveTarget | null {
+  const item = itemAt(index, block);
+  return item ? before(index, item) : null;
 }
 
 /** The section a scene or section sits in directly, or null at the top. */

@@ -122,6 +122,29 @@ export async function chooseTab(page: Page, name: string) {
     .getByRole('menu', { name: 'More tabs' })
     .getByRole('menuitem', { name, exact: true })
     .click();
+  // Focus goes to the chosen tab once the menu has closed; wait for it, so it can't take focus
+  // from whatever the test does next.
+  await expect(pane.getByRole('tab', { name, exact: true })).toBeFocused();
+}
+
+/**
+ * Expects the first pane to offer the tab called `name`: in its tab row, or under More (a tab
+ * that isn't core takes the slot only once it is chosen). The More menu is closed again.
+ */
+export async function expectTabOffered(page: Page, name: string) {
+  const pane = page.locator('[data-pane]').first();
+  if ((await pane.getByRole('tab', { name, exact: true }).count()) > 0) return;
+  const more = pane.getByRole('button', { name: 'More tabs' });
+  const menu = page.getByRole('menu', { name: 'More tabs' });
+  // On the emulated phone WebKit a tap is now and then ignored (the Plan 4 deferred list), so More
+  // is tapped again until its menu is open.
+  await expect(async () => {
+    if (!(await menu.isVisible())) await more.click();
+    await expect(menu).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
 }
 
 /** What the settings table holds, a row to a setting. */

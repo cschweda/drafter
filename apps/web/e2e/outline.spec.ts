@@ -417,6 +417,170 @@ test.describe('moving in the Outline', () => {
   });
 });
 
+// Scene details (Phase 2 design §9, Plan B): the form for a scene's header, from a row's menu or
+// the palette; one undo, and the goal's first line in the Outline.
+const detailsOf = (page: Page, heading: string) =>
+  page.getByRole('dialog', { name: `Scene details for ${heading}` });
+
+async function openDetails(page: Page, target: ReturnType<typeof row>, heading: string) {
+  await menuFor(page, target);
+  await rowMenu(page).getByRole('menuitem', { name: 'Scene details…' }).click();
+  const dialog = detailsOf(page, heading);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('textbox', { name: 'Synopsis' })).toBeFocused();
+  return dialog;
+}
+
+test.describe('Scene details', () => {
+  test('writes the four fields from Scene details in the header order, in one undo', async ({
+    page,
+  }) => {
+    await openWith(page);
+    const dialog = await openDetails(page, hall(page), 'INT. HALL - DAY');
+    await expect(dialog.getByRole('textbox', { name: 'Synopsis' })).toHaveValue('Ann arrives.');
+    // Filled out of order; written in the header's.
+    await dialog.getByRole('textbox', { name: 'Shift' }).fill('doubt → relief');
+    await dialog.getByRole('textbox', { name: 'Goal' }).fill('Ann wants in. / Then out.');
+    await dialog.getByRole('textbox', { name: 'Outcome' }).fill('She gets in.');
+    await dialog.getByRole('textbox', { name: 'Conflict' }).fill('The door sticks.');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(hall(page)).toBeFocused();
+    await expect
+      .poll(() => textOf(page))
+      .toContain(
+        'INT. HALL - DAY\n\n= Ann arrives.\n[[Goal: Ann wants in. / Then out.]]\n[[Conflict: The door sticks.]]\n[[Outcome: She gets in.]]\n[[Shift: doubt → relief]]\n\nANN',
+      );
+    await expect(announcer(page)).toHaveText('Saved the details of INT. HALL - DAY.');
+    await undo(page);
+    await expect.poll(() => textOf(page)).toBe(SCRIPT);
+  });
+
+  test('clears a field from Scene details', async ({ page }) => {
+    const filled = SCRIPT.replace(
+      '= Ann arrives.',
+      '= Ann arrives.\n[[Color: teal]]\n[[Goal: Get in.]]\n[[Conflict: Locked.]]',
+    );
+    await openWith(page, filled);
+    // Cancel and Escape change nothing.
+    let dialog = await openDetails(page, hall(page), 'INT. HALL - DAY');
+    await dialog.getByRole('textbox', { name: 'Goal' }).fill('Something else.');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(hall(page)).toBeFocused();
+    dialog = await openDetails(page, hall(page), 'INT. HALL - DAY');
+    await expect(dialog.getByRole('textbox', { name: 'Goal' })).toHaveValue('Get in.');
+    await dialog.getByRole('textbox', { name: 'Goal' }).fill('Something else.');
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    expect(await textOf(page)).toBe(filled);
+    dialog = await openDetails(page, hall(page), 'INT. HALL - DAY');
+    await expect(dialog.getByRole('combobox', { name: 'Color' })).toHaveValue('teal');
+    await dialog.getByRole('textbox', { name: 'Goal' }).fill('');
+    await dialog.getByRole('combobox', { name: 'Color' }).selectOption({ label: 'No color' });
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect
+      .poll(() => textOf(page))
+      .toBe(SCRIPT.replace('= Ann arrives.', '= Ann arrives.\n[[Conflict: Locked.]]'));
+  });
+
+  test("opens Scene details for the cursor's scene from the palette", async ({ page }) => {
+    await start(page);
+    await setText(page, SCRIPT);
+    await showSource(page);
+    await editor(page).getByText('Hi.').click();
+    await runCommand(page, 'Scene details…');
+    const dialog = detailsOf(page, 'EXT. YARD - NIGHT');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('textbox', { name: 'Storylines' }).fill('B');
+    await dialog.getByRole('textbox', { name: 'Goal' }).fill('Bob says hi.');
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await expect
+      .poll(() => textOf(page))
+      .toContain('EXT. YARD - NIGHT\n\n[[Storyline: B]]\n[[Goal: Bob says hi.]]\n\nBOB');
+    await expect(editor(page)).toBeFocused();
+  });
+
+  test("shows a scene's goal in its row", async ({ page }) => {
+    await openWith(
+      page,
+      SCRIPT.replace('= Ann arrives.', '= Ann arrives.\n[[Goal: Ann wants in. / Then out.]]'),
+    );
+    await expect(hall(page)).toContainText('Goal: Ann wants in.');
+    await expect(hall(page)).not.toContainText('Then out.');
+    await expect(hall(page)).toHaveAccessibleDescription(/Ann arrives\..*Goal: Ann wants in\./);
+    // A row with nothing to describe has no description.
+    await expect(car(page)).not.toHaveAttribute('aria-describedby', /./);
+  });
+
+  test('opens Scene details read-only in a read-only tab, and says why', async ({
+    context,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'two browser tabs are the same on a phone');
+    const why = 'This script is open for editing in another tab.';
+    const first = await context.newPage();
+    await start(first);
+    const second = await context.newPage();
+    await second.goto('/');
+    await expect(second.getByText(why)).toBeVisible();
+    await showOutline(second);
+    const before = await textOf(second);
+    const kitchen = row(second, /^Scene 1, INT\. KITCHEN - NIGHT/);
+    await menuFor(second, kitchen);
+    const item = rowMenu(second).getByRole('menuitem', { name: 'Scene details…' });
+    await expect(item).not.toHaveAttribute('aria-disabled', 'true');
+    await item.click();
+    const dialog = detailsOf(second, 'INT. KITCHEN - NIGHT');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(why);
+    const save = dialog.getByRole('button', { name: 'Save' });
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await expect(save).toHaveAccessibleDescription(why);
+    // Playwright won't click an aria-disabled button, so Save is pressed from the keyboard.
+    await save.focus();
+    await second.keyboard.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(announcer(second)).toHaveText(why);
+    expect(await textOf(second)).toBe(before);
+    await second.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(kitchen).toBeFocused();
+  });
+
+  test('shows Scene details read-only while a /* is stray, with its fields', async ({ page }) => {
+    const stray =
+      'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\n= Bee.\n[[Goal: Win.]]\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
+    const why =
+      'A /* in this script isn’t closed by its own */, so the outline changes nothing until it is.';
+    await openWith(page, stray);
+    const dialog = await openDetails(page, row(page, /^Scene 2, INT\. B - DAY/), 'INT. B - DAY');
+    await expect(dialog.getByRole('textbox', { name: 'Synopsis' })).toHaveValue('Bee.');
+    await expect(dialog.getByRole('textbox', { name: 'Goal' })).toHaveValue('Win.');
+    await expect(dialog.getByRole('button', { name: 'Save' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await page.keyboard.press('Enter');
+    await expect(announcer(page)).toHaveText(why);
+    await expect(dialog).toBeVisible();
+    expect(await textOf(page)).toBe(stray);
+  });
+
+  test('says so when Scene details can change nothing', async ({ page }) => {
+    // Clearing this synopsis would leave a line of notes that joins the lines around it.
+    const joined = 'INT. A - DAY\n\n!LOUD NOISE.\nThe walls shake.\n= [[a note]] the.\n> the. <\n';
+    await openWith(page, joined);
+    const dialog = await openDetails(page, row(page, /^Scene 1, INT\. A - DAY/), 'INT. A - DAY');
+    await dialog.getByRole('textbox', { name: 'Synopsis' }).fill('');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(announcer(page)).toHaveText(/^Nothing was changed: /);
+    expect(await textOf(page)).toBe(joined);
+  });
+});
+
 test.describe('condense, expand, and treatments', () => {
   test('condenses to the outline and expands again', async ({ page }) => {
     await start(page);

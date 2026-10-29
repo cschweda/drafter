@@ -8,6 +8,7 @@ import {
 } from '@codemirror/autocomplete';
 import type { EditorState, Extension, Line } from '@codemirror/state';
 import { type Block, characters, type Doc, locations } from '@drafter/fountain';
+import { markLabels } from '@drafter/notes';
 import { parsedDoc } from './state';
 
 // Completion for the Source pane (technical design §3.4). What to offer is read from the parse in
@@ -124,6 +125,9 @@ function optionsAfter(query: string, labels: readonly string[]): Completion[] {
   return options;
 }
 
+/** The end of the text before the cursor, in a `[[Setup:` or `[[Payoff:` not yet closed: the label so far. */
+const OPEN_MARK = /\[\[\s*(?:setup|payoff)\s*:[ \t]*([^\]]*)$/i;
+
 /** How many characters of `text` the pattern, anchored at its start, matches. */
 const lengthOf = (pattern: RegExp, text: string) => pattern.exec(text)?.[0].length ?? 0;
 
@@ -133,6 +137,9 @@ function targets(state: EditorState, pos: number, explicit: boolean): Target[] {
   // Leading space is no part of the line to the parser, and none to the completion.
   const text = state.sliceDoc(line.from, pos).trimStart();
   const start = pos - text.length;
+  // Inside a setup or payoff mark that is still open on this line: the labels already in use.
+  const mark = OPEN_MARK.exec(text);
+  if (mark) return [{ from: pos - (mark[1] ?? '').length, labels: (d) => markLabels(d) }];
   if (text.startsWith('#')) {
     return [{ from: start + lengthOf(/^#+\s*/, text), labels: (d) => sectionTitles(d) }];
   }

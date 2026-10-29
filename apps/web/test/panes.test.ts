@@ -11,6 +11,8 @@ import {
   SPLIT,
   TABS,
   tabRow,
+  VIEW_TABS,
+  viewTabs,
 } from '../app/utils/panes';
 
 describe('panes', () => {
@@ -39,6 +41,16 @@ describe('panes', () => {
     expect(dropTab({ left: 'source', right: 'outline' }, 'outline')).toEqual({
       left: 'source',
       right: 'script',
+    });
+  });
+
+  test('drops Cards and Notes from a pane when the document turns Markdown', () => {
+    let tabs = { left: 'cards', right: 'notes' };
+    for (const tab of ['outline', 'cards', 'notes']) tabs = dropTab(tabs, tab);
+    expect(tabs).toEqual({ left: 'source', right: 'script' });
+    expect(dropTab({ left: 'script', right: 'cards' }, 'cards')).toEqual({
+      left: 'script',
+      right: 'source',
     });
   });
 
@@ -102,10 +114,10 @@ describe('panes', () => {
     ];
     const ids = (tabs: Array<{ id: string }>) => tabs.map((t) => t.id);
 
-    test('shows the first other tab in the slot and the rest under More', () => {
+    test('leaves the slot empty until another tab is chosen, with every other tab under More', () => {
       const { row, more } = tabRow(TABS, others, 'source', null);
-      expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline', 'module:a']);
-      expect(ids(more)).toEqual(['module:b', 'module:c']);
+      expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline']);
+      expect(ids(more)).toEqual(['module:a', 'module:b', 'module:c']);
     });
 
     test('shows the last other tab chosen in the slot', () => {
@@ -120,8 +132,35 @@ describe('panes', () => {
       expect(ids(more)).toEqual(['module:a', 'module:c']);
     });
 
-    test('has no More with one other tab, and no slot with none', () => {
-      expect(tabRow(TABS, others.slice(0, 1), 'source', null).more).toEqual([]);
+    test('puts Cards and Notes in the slot and More, before module tabs', () => {
+      expect(VIEW_TABS).toEqual([
+        { id: 'cards', label: 'Cards' },
+        { id: 'notes', label: 'Notes' },
+      ]);
+      const { row, more } = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', null);
+      expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline']);
+      expect(ids(more)).toEqual(['cards', 'notes', 'module:a', 'module:b', 'module:c']);
+      // Chosen, Cards takes the slot.
+      const chosen = tabRow(TABS, [...viewTabs('fountain'), ...others], 'cards', 'cards');
+      expect(ids(chosen.row).at(-1)).toBe('cards');
+      expect(ids(chosen.more)).toEqual(['notes', 'module:a', 'module:b', 'module:c']);
+      // A module's tab chosen last takes the slot, and Cards goes first in More.
+      const later = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', 'module:b');
+      expect(ids(later.row).at(-1)).toBe('module:b');
+      expect(ids(later.more)).toEqual(['cards', 'notes', 'module:a', 'module:c']);
+    });
+
+    test('has no Cards or Notes for a Markdown document', () => {
+      expect(viewTabs('markdown')).toEqual([]);
+      const { row, more } = tabRow(coreTabs('markdown'), viewTabs('markdown'), 'source', null);
+      expect(ids(row)).toEqual(['source', 'script', 'problems']);
+      expect(more).toEqual([]);
+    });
+
+    test('has no More when the one other tab is in the slot, and no slot with none', () => {
+      // One other tab, not chosen: it waits under More.
+      expect(ids(tabRow(TABS, others.slice(0, 1), 'source', null).more)).toEqual(['module:a']);
+      expect(tabRow(TABS, others.slice(0, 1), 'source', 'module:a').more).toEqual([]);
       expect(tabRow(TABS, [], 'source', 'module:a')).toEqual({ row: TABS, more: [] });
     });
   });

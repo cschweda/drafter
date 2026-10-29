@@ -1,0 +1,34 @@
+{
+  "name": "@drafter/notes",
+  "version": "0.11.0",
+  "description": "Keyed notes for Drafter: read and write `[[Head: body]]` notes in a Fountain script, with the text helpers every structural edit shares.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/notes"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*"
+  }
+}

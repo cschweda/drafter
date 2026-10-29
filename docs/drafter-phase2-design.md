@@ -564,6 +564,8 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 
 ### Plan B — v0.12.0: Cards and notes
 
+**Status:** built (2026-10-29), except that axe on Cards, Notes, and Scene details waits for the final accessibility steps, and the Notes tab for Markdown documents is not built; see `docs/DEFERRED.md`.
+
 **Scope:** `@drafter/notes`; the Cards tab (§7); the Notes tab with categories and status (§8); Scene details and scene goals (§9); setups and payoffs, with the element bar's buttons and the lint rules (§10); `duplicate-field`.
 
 **Done when:**

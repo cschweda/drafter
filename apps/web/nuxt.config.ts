@@ -122,7 +122,7 @@ export default defineNuxtConfig({
     resolve: {
       alias: [
         {
-          find: /^@drafter\/(cm-fountain|fdx|fountain|layout|lint|outline|render-html|render-pdf|render-text|templates)$/,
+          find: /^@drafter\/(cm-fountain|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

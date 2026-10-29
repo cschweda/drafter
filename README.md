@@ -5,7 +5,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.11.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 has begun with an **Outline** tab (your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export) and **Final Draft files**: open an `.fdx` as a new script, or export your script as one. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: cards and notes; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+> **Status: v0.11.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 has begun with an **Outline** tab (your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export) **Cards** and **Notes** (an index card for every scene, moved by drag or keys; every note and boneyard in one list, with categories, readers' names, and open or resolved status; scene goals; setups and payoffs), and **Final Draft files**: open an `.fdx` as a new script, or export your script as one. The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: snapshots and Compare; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
 
 **Drafter for Linux and Windows.** Drafter also comes as a desktop app. See [Drafter for Linux](#drafter-for-linux) and [Drafter for Windows](#drafter-for-windows) for the downloads, how to install and start it, and how it differs from drafter.dev. **On a Mac**, you can [build the same app yourself](#drafter-on-a-mac) with one command until a signed download is ready.
 
@@ -67,10 +67,10 @@ The left pane is a [CodeMirror 6](https://codemirror.net) editor showing the raw
 |---|---|---|
 | **Script** | The paginated, formatted script, built from the same page model as the PDF export. Click a line to jump to it in the source. | Phase 1 |
 | **Problems** | Lint results, like a compiler's error list. Click to jump. | Phase 1 |
-| **Outline** | Sections, scenes, synopses, scene colors, and page counts. Reorder scenes by drag or keyboard, and the source is rewritten. | Phase 2 |
-| **Cards** | An index-card view of scenes with synopsis and color. | Phase 2 |
+| **Outline** | Sections, scenes, synopses, scene colors, and page counts. Reorder scenes by drag or keyboard, and the source is rewritten. | Phase 2 (built) |
+| **Cards** | An index-card view of scenes with synopsis and color, moved by drag or keyboard. | Phase 2 (built) |
 | **Beat Board** | A free canvas of idea cards to color, link, and move into the outline, with storylines shown in color. | Phase 2 |
-| **Notes** | Every `[[note]]` and `/* boneyard */` in one place, linked to its position. | Phase 2 |
+| **Notes** | Every `[[note]]` and `/* boneyard */` in one place, linked to its position, with categories, readers, and open or resolved status. | Phase 2 (built) |
 | **Stats** | Page count, estimated runtime, dialogue share per character, INT/EXT and DAY/NIGHT breakdowns, pacing. | Phase 2 |
 | **Reference** | Fountain syntax and the active template's formatting rules, built in. | Phase 2 |
 
@@ -137,8 +137,9 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
-| `@drafter/lint` | Problems-pane rules | 1 (starter set), 4 (the rest) |
-| `@drafter/outline` | Condense and expand, scene reordering, synopsis and color edits | 2 |
+| `@drafter/lint` | Problems-pane rules (Phase 2 adds setups and payoffs, and duplicate scene fields) | 1 (starter set), 4 (the rest) |
+| `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
+| `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits | 2 |
 | `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
 | `@drafter/stats` | Script statistics | 2 |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built) |
@@ -163,7 +164,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev**, with the desktop app for Linux and Windows; a signed macOS download comes later |
-| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline and Final Draft import and export are built |
+| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline, Final Draft import and export, and Cards and Notes are built |
 | [3](#phase-3--formats) | Formats: other apps' imports; TV, radio, UK, and novel templates; user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
@@ -215,7 +216,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 ### Phase 2 — Structure
 
-- Outline, Cards, and Notes tabs, where every change is an edit to the source.
+- Outline, Cards, and Notes tabs, where every change is an edit to the source. Built: the Outline, and Cards and Notes with Scene details, scene goals, and setups and payoffs.
 - Final Draft `.fdx` import and export (moved up from Phase 3), with nothing dropped silently on import. Built: an import comes in as a new, unsaved script, anything Drafter has no element for becomes a `[[fdx: …]]` note that Problems lists, and the `.fdx` itself is never changed.
 - A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.

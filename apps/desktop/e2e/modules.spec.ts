@@ -6,7 +6,15 @@ import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
-import { chooseMenuItem, editor, editorDocument, expect, type Profile, test } from './helpers';
+import {
+  chooseMenuItem,
+  chooseTab,
+  editor,
+  editorDocument,
+  expect,
+  type Profile,
+  test,
+} from './helpers';
 
 // The modules folder (docs/plans/2026-10-27-desktop-modules-folder.md): modules dropped into
 // <userData>/modules are listed off, run in sandboxed frames of their own when turned on, and can't
@@ -163,7 +171,7 @@ test('lists a folder module off, with the warning; turned on, its button, comman
   ).toBeVisible();
 
   // The tab: drawn in its own frame, listing the lines (in the pane beside the Source).
-  await page.getByRole('tab', { name: 'Tidy' }).last().click();
+  await chooseTab(page, 'Tidy');
   await expect(editor(page)).toBeVisible();
   const tab = page.frameLocator('iframe[data-surface="tab"]');
   await expect(tab.getByText('2 lines end in spaces.')).toBeVisible();

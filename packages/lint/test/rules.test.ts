@@ -725,6 +725,102 @@ describe('fdx-note', () => {
   });
 });
 
+describe('setup-without-payoff', () => {
+  const { found, miss } = forRule('setup-without-payoff');
+
+  it('lists a setup never paid off, as info', () => {
+    const source =
+      'INT. A - DAY\n\nA letter sticks out. [[Setup: the letter]]\n\nShe waits. [[Setup: the gun]] [[Payoff: the gun]]\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from, d.span.to])).toEqual([
+      ['info', source.indexOf('[[Setup: the letter'), source.indexOf('r]]') + 3],
+    ]);
+    expect(all[0]?.message).toBe('Nothing pays off the setup “the letter” later in the script.');
+  });
+
+  it('lists a setup that comes after the last payoff', () => {
+    const source = '[[Setup: x]] [[Payoff: x]] [[Setup: x]]\n';
+    expect(found(source).map((d) => d.span.from)).toEqual([source.lastIndexOf('[[Setup')]);
+  });
+
+  it('is quiet once a later payoff matches in another case', () => {
+    miss(
+      'INT. A - DAY\n\nA letter. [[Setup: The Letter]]\n\nINT. B - DAY\n\nRead. [[payoff :  the  letter ]]\n',
+    );
+  });
+
+  it('leaves an empty setup and one in a boneyard alone', () => {
+    miss('A letter. [[Setup:]]\n');
+    miss('/* [[Setup: the letter]] */\n\nShe waits.\n');
+  });
+});
+
+describe('payoff-without-setup', () => {
+  const { found, miss } = forRule('payoff-without-setup');
+
+  it('lists a payoff with no setup, as info', () => {
+    const source = 'INT. A - DAY\n\nShe reads it. [[Payoff: the letter]]\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from, d.span.to])).toEqual([
+      ['info', source.indexOf('[[Payoff'), source.indexOf(']]') + 2],
+    ]);
+    expect(all[0]?.message).toBe('No setup for “the letter” comes before this payoff.');
+  });
+
+  it('says when the setup comes after', () => {
+    const source = '[[Payoff: the letter]]\n\nINT. A - DAY\n\n[[Setup: The Letter]]\n';
+    const all = found(source);
+    expect(all).toHaveLength(1);
+    expect(all[0]?.message).toBe('This payoff comes before its setup “the letter”.');
+  });
+
+  it('is quiet when a setup comes first', () => {
+    miss('[[Setup: a]]\n\n[[Payoff: A]] [[Payoff: a]]\n');
+    miss('A. [[Payoff:]]\n');
+  });
+});
+
+describe('duplicate-field', () => {
+  const { found, miss } = forRule('duplicate-field');
+
+  it('lists a second Goal in a scene', () => {
+    const source =
+      'INT. A - DAY\n\nAction. [[Goal: First.]]\n\n[[goal: Second.]] [[GOAL: Third.]]\n\nINT. B - DAY\n\n[[Goal: Only.]]\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from])).toEqual([
+      ['info', source.indexOf('[[goal: Second')],
+      ['info', source.indexOf('[[GOAL: Third')],
+    ]);
+    expect(all[0]?.message).toBe('This scene already has a Goal; Drafter reads the first one.');
+  });
+
+  it('allows several Storyline, Setup, and Payoff notes, and skips an empty field', () => {
+    miss(
+      'INT. A - DAY\n\n[[Storyline: A]] [[Storyline: B]] [[Setup: x]] [[Setup: y]] [[Payoff: x]] [[Payoff: y]]\n',
+    );
+    miss('INT. A - DAY\n\n[[Goal:]] [[Goal: Real.]] [[Goal:]]\n');
+  });
+
+  it('treats each scene apart in a stage play', () => {
+    const source =
+      '# Act One\n\n[[Goal: stray]]\n\n## Scene 1\n\n[[Goal: A]]\n\n## Scene 2\n\n[[Goal: B]] [[Goal: C]]\n\n# Act Two\n\n[[Goal: D]]\n';
+    expect(found(source, stagePlay).map((d) => d.span.from)).toEqual([source.indexOf('[[Goal: C')]);
+    // In a screenplay a ## line is no scene: the notes after INT. share one.
+    const film = 'INT. A - DAY\n\n[[Goal: A]]\n\n## Beat\n\n[[Goal: B]]\n';
+    expect(found(film)).toEqual([]);
+  });
+});
+
+describe('setups, payoffs, and duplicate fields', () => {
+  it('none of them counts as a problem', () => {
+    const source = 'INT. A - DAY\n\n[[Setup: a]] [[Payoff: b]] [[Goal: x]] [[Goal: y]]\n';
+    const ours = ['setup-without-payoff', 'payoff-without-setup', 'duplicate-field'];
+    const all = lint(parse(source), screenplay).filter((d) => ours.includes(d.ruleId));
+    expect(new Set(all.map((d) => d.ruleId))).toEqual(new Set(ours));
+    for (const d of all) expect(d.severity).toBe('info');
+  });
+});
+
 describe('transition-not-last', () => {
   const { found, hit, miss, missIn } = forRule('transition-not-last');
 
