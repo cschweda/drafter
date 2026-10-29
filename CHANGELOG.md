@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- README: "proof mode" is gone from Phase 4's roadmap row. It was the early name for Reader notes, which Phase 2 already plans (Plan G).
 - `docs`: **the README is about half as long (9,166 words to about 5,100) and easier to scan, with nothing taken out of the repository.** Reference detail moved to the documents made for it, and the README keeps a summary and a link:
   - **Install and update steps** for Linux, Windows, and the Mac are in `docs/desktop-install-linux.md`, `docs/desktop-install-windows.md`, and `docs/desktop-install-macos.md`. The README keeps the download names, a one-line install, and the link. The Linux guide gains the package table, starting with a script open, removing each package, and the AppImage's file types; the Windows guide gains building the installers yourself.
   - **The web and desktop comparison table** is in a new `docs/web-and-desktop.md`, linked from the README and both install guides.
