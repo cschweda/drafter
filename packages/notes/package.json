@@ -1,6 +1,6 @@
 {
   "name": "@drafter/notes",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Keyed notes for Drafter: read and write `[[Head: body]]` notes in a Fountain script, with the text helpers every structural edit shares.",
   "license": "MIT",
   "type": "module",

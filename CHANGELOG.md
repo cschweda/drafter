@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-29
+
+**Spellcheck.** Drafter checks your spelling as you write, in US or British English, with its own dictionaries built in, so it works offline and in the desktop app. It knows a screenplay: character names, the locations in your scene headings, the title page, transitions, and the craft's own words (INTERCUT, PRE-LAP, voiceover) are never marked, and notes and boneyard are skipped unless you ask. A misspelled word is underlined; right-click it, or press **Mod+.**, for suggestions (a suggestion changes only the letters that differ, so your emphasis stays), **Add to this script's dictionary** (kept in the file, one undo), **Add to my dictionary** (for every script), or **Ignore here**. **Mod+;** and **Mod+Shift+;** go to the next and previous misspelling, **Check spelling** lists them all in Problems' Spelling group, and on a phone the element bar has a Spelling button. Settings has the language, notes and boneyard, and your dictionary. Checking runs in the background and never slows typing. A Third-party licences help page lists the dictionaries' licences.
+
 ### Added
 
 - `@drafter/spell`, a new package for spellcheck (Phase 2 design §12). It names the two dictionaries Drafter bundles, US English (`dictionary-en` 4.0.0) and British English (`dictionary-en-gb` 3.0.0), with each one's version, licence, and where the app serves its files. Its dependencies are `nspell` 2.1.5 (MIT; it brings `is-buffer` 2.0.5, MIT) and the two dictionaries (`(MIT AND BSD)`, made from SCOWL), each pinned exactly and listed in `docs/DEPENDENCIES.md`; `@types/nspell` 2.1.6 is a development dependency. A test fails if an installed version or a declared licence changes, or if a dictionary's licence file mentions the GPL or LGPL.
@@ -690,7 +694,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/cschweda/drafter/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/cschweda/drafter/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/cschweda/drafter/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/cschweda/drafter/compare/v0.11.0...v0.12.0
