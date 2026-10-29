@@ -171,7 +171,7 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['next-misspelling', 'previous-misspelling'] },
   ],
   Help: [
-    { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy'] },
+    { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy', 'help-licences'] },
     { pick: ['take-the-tour'] },
   ],
 };
@@ -182,6 +182,7 @@ const LABELS: Record<string, string> = {
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-privacy': 'Privacy',
+  'help-licences': 'Third-party Licences',
 };
 
 /** A title as a menu label: `&` would set a mnemonic on Linux and Windows, so it is doubled. */

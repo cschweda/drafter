@@ -52,6 +52,9 @@ test('a misspelling is marked with no download, and right-click opens Drafter’
     ).drafterShell.spellcheck(),
   );
   expect(spell.downloads).toEqual([]);
+  // The other text fields keep Chromium's checker: on Linux and Windows with the app's own bundled
+  // English dictionary (so they work offline too), on a Mac the system's.
+  expect(spell.mode).toBe(process.platform === 'darwin' ? 'system' : 'bundled');
   const outside = requests.filter((url) => !/^(app|blob|data):/.test(url));
   expect(outside).toEqual([]);
   expect(requests.some((url) => /\/dictionaries\/en-US\/index\.dic$/.test(url))).toBe(true);

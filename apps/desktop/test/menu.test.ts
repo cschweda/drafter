@@ -36,6 +36,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('help-shortcuts', 'Help', 'Open the page: Keyboard shortcuts'),
   cmd('help-saving', 'Help', 'Open the page: Saving and your browser'),
   cmd('help-privacy', 'Help', 'Open the page: Privacy'),
+  cmd('help-licences', 'Help', 'Open the page: Third-party licences'),
   cmd('go-to-scene', 'Go', 'Go to scene…'),
   cmd('next-problem', 'Go', 'Next problem', { keys: ['F8'] }),
   cmd('previous-problem', 'Go', 'Previous problem', { keys: ['Shift-F8'] }),
@@ -122,6 +123,7 @@ describe('menuTemplate', () => {
       'help-shortcuts',
       'help-saving',
       'help-privacy',
+      'help-licences',
       'take-the-tour',
       'modules-folder',
       'releases',
@@ -167,6 +169,7 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');
     expect(named(t, 'help-saving')?.label).toBe('Saving');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
+    expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
 
   test('sends the command’s id when an item is chosen', () => {
