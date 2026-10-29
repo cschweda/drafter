@@ -16,6 +16,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `@drafter/fdx`: **a Final Draft outline comes in as Drafter's outline.** Final Draft's `Outline 1`, `Outline 2`, and `Outline 3` paragraphs (acts, sequences, scenes) import as `#`, `##`, and `###` sections, a `Summary` paragraph as a synopsis in its place, and a `Note` paragraph as a note on its own line, instead of as action with `[[fdx: …]]` notes. Each script note comes in as a note of its own, headed by its writer's name where it has one (`[[Name: …]]`). A scene's character arc beats, a paragraph's alternate texts, and the beat board's cards come in as notes, one each, with their characters and titles; a scene title repeated as a styled child is no longer noted twice. Found by checking a real Final Draft 13 sample's structure.
 
+### Security
+
+- `@drafter/fdx`: **an alternate text is imported once, however many paragraphs name it.** A hostile `.fdx` could point thousands of paragraphs at one large alternate and turn a small file into a script megabytes long; each alternate now comes in at its first reference only.
+
 ### Fixed
 
 - `@drafter/fdx`: **an image in a Final Draft file is no longer pasted into the script.** A file with a picture holds the image's encoded bytes, which import brought in as one huge `[[fdx: Images]]` note at the end (most of a sample script's imported text). Images are now listed as ignored, and a paragraph that holds a picture gets a short `[[fdx: Picture]]` note in its place. The settings and data blocks a Final Draft 13 file carries (writers, navigator, outlines, character charts, target length, list columns, and the like) are listed as ignored too, not brought in as notes.

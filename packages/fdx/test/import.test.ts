@@ -934,6 +934,49 @@ describe('fromFdx: Final Draft 13 shapes', () => {
     expect(result.mapped).toEqual([{ type: 'Alternate', count: 3 }]);
   });
 
+  it('brings each alternate in once, however many paragraphs name it', () => {
+    // A hostile file could name one large alternate from thousands of places; output must stay
+    // near the size of what the file holds, not grow with the number of references.
+    const altText = 'The lantern swings and goes out. '.repeat(31); // about 1 KB
+    const collection = `<AltCollection><Alt Id="a1"><Paragraph Type="Action"><Text>${altText}</Text></Paragraph></Alt></AltCollection>`;
+    const ids = (n: number) => '<AltId>a1</AltId>'.repeat(n);
+    const one = (n: number) =>
+      fdx(
+        `<Paragraph Type="Action"><Alts Current="0">${ids(n)}</Alts><Text>Dark.</Text></Paragraph>`,
+        collection,
+      );
+    const many = (n: number) =>
+      fdx(
+        `<Paragraph Type="Action"><Alts Current="0">${ids(1)}</Alts><Text>Dark.</Text></Paragraph>`.repeat(
+          n,
+        ),
+        collection,
+      );
+    const base = fromFdx(one(1)).text.length;
+    expect(base).toBeGreaterThan(altText.length);
+    expect(fromFdx(one(10_000)).text.length).toBe(base);
+    const spread = fromFdx(many(10_000));
+    // 10,000 paragraphs of "Dark." and one alternate: about 7 characters a paragraph, not 1 KB.
+    expect(spread.text.length).toBeLessThan(10_000 * 8 + altText.length + 2_000);
+    expect(spread.mapped).toEqual([{ type: 'Alternate', count: 1 }]);
+  });
+
+  it(
+    'reads many references to one alternate in linear time',
+    () => {
+      const collection = `<AltCollection><Alt Id="a1"><Paragraph><Text>${'x'.repeat(1000)}</Text></Paragraph></Alt></AltCollection>`;
+      const make = (n: number) =>
+        fdx(
+          `<Paragraph Type="Action"><Alts Current="0">${'<AltId>a1</AltId>'.repeat(n)}</Alts><Text>Dark.</Text></Paragraph>`,
+          collection,
+        );
+      const { growth, large } = scaling(make, fromFdx, 50_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
   it('brings beat cards in as notes after the script, one per beat, with their titles', () => {
     const result = fromFdx(
       fdx(

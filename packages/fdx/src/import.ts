@@ -452,7 +452,7 @@ class Importer {
 
   /**
    * A paragraph's `Alts`: its text is the current one, so every alternate whose text differs from
-   * it comes in as a note after it. Which one is current (`Current`) needn't be trusted: the text
+   * it comes in as a note after it, the first time any paragraph names it. Which one is current (`Current`) needn't be trusted: the text
    * in the paragraph is what Final Draft shows.
    */
   private alternates(alts: XmlElement, paragraph: XmlElement) {
@@ -460,6 +460,9 @@ class Importer {
     for (const child of alts.children) {
       if (typeof child === 'string' || child.name !== 'AltId') continue;
       const id = textOf(child).trim();
+      // Each alternate comes in once, at its first reference: a file naming one large alternate
+      // from many places would otherwise make a script far larger than the file.
+      if (this.usedAlts.has(id)) continue;
       const text = this.alts.get(id);
       this.usedAlts.add(id);
       if (text === undefined || text === '' || oneLine(text) === shown) continue;
