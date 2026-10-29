@@ -16,6 +16,7 @@ const P = (type: string, text: string, attrs = '') =>
   `<Paragraph Type="${type}"${attrs}><Text>${text}</Text></Paragraph>`;
 
 const kinds = (doc: Doc) => doc.blocks.map((b) => b.kind);
+const squashed = (text: string) => text.replace(/\s+/g, '');
 /** Each block's kind and printable text, the way the round trip compares them. */
 const printed = (doc: Doc) =>
   doc.blocks.map((b) => [
@@ -1403,8 +1404,114 @@ describe('fromFdx: shooting scripts', () => {
       '<Text Style="Bold+HiddenText">brass]]</Text><Text Style="HiddenText">)</Text>' +
       '<Text> opens.</Text><Text Style="HiddenText">   </Text></Paragraph>';
     const result = fromFdx(fdx(p));
-    expect(result.text).toBe('A door[[ (prop: brass] ])]] opens.\n');
+    expect(result.text).toBe('A door[[fdx: Hidden: (prop: brass] ])]] opens.\n');
     expect(parse(result.text).blocks.map((b) => b.kind)).toEqual(['action']);
+    // Each note is counted, so the import says text came in as notes.
+    expect(result.mapped).toEqual([{ type: 'Hidden', count: 1 }]);
+  });
+
+  it('keeps a stray [[ before a hidden run from joining its note: the visible text all prints', () => {
+    const runs = '<Text>a [[ b </Text><Text Style="HiddenText">h</Text><Text> c</Text>';
+    const text = fromFdx(
+      fdx(
+        `<Paragraph Type="Action">${runs}</Paragraph>` +
+          `<Paragraph Type="Scene Heading">${runs.replace('a [[', 'INT. A [[')}</Paragraph>` +
+          P('Character', 'ADA') +
+          `<Paragraph Type="Dialogue">${runs}</Paragraph>`,
+      ),
+    ).text;
+    const doc = parse(text);
+    expect(kinds(doc)).toEqual(['action', 'scene_heading', 'character', 'dialogue']);
+    const shown = printed(doc).map(([, t]) => squashed(t as string));
+    expect(shown).toEqual(['a[\\[bc', 'INT.A[\\[bc', 'ADA', 'a[\\[bc']);
+    expect(text).toContain('[[fdx: Hidden: h]]');
+  });
+
+  it('keeps a paragraph all of whose text is hidden as its kind, a heading its number', () => {
+    const hid = (type: string, text: string, attrs = '') =>
+      `<Paragraph${attrs} Type="${type}"><Text Style="HiddenText">${text}</Text></Paragraph>`;
+    const result = fromFdx(
+      fdx(
+        `<Paragraph Number="7" Type="Scene Heading"><Text Style="HiddenText">INT. BARN - NIGHT</Text><SceneProperties Summary="Dark."/></Paragraph>` +
+          hid('Character', 'ADA') +
+          P('Dialogue', 'One.') +
+          P('Character', 'BO') +
+          hid('Parenthetical', '(soft)') +
+          hid('Dialogue', 'Two.') +
+          hid('Transition', 'CUT TO:') +
+          hid('Action', 'Unseen.'),
+      ),
+    );
+    const doc = parse(result.text);
+    const written = doc.blocks.filter((b) => b.kind !== 'note');
+    expect(written.map((b) => b.kind)).toEqual([
+      'scene_heading',
+      'synopsis',
+      'character',
+      'dialogue',
+      'character',
+      'parenthetical',
+      'dialogue',
+      'transition',
+    ]);
+    const heading = written[0];
+    expect(heading?.kind === 'scene_heading' && heading.sem.number).toBe('7');
+    expect(printed(doc).filter(([k]) => k !== 'note')).toEqual([
+      ['scene_heading', 'INT. BARN - NIGHT'],
+      ['synopsis', 'Dark.'],
+      ['character', 'ADA'],
+      ['dialogue', 'One.'],
+      ['character', 'BO'],
+      ['parenthetical', '(soft)'],
+      ['dialogue', 'Two.'],
+      ['transition', 'CUT TO:'],
+    ]);
+    // Each says, in a note after it (after its summary, and after its speech inside one), that
+    // Final Draft hid it; an
+    // action all hidden is its note alone, which doesn't print either.
+    expect(result.text).toBe(
+      [
+        'INT. BARN - NIGHT #7#\n\n= Dark.',
+        '[[fdx: Hidden paragraph: INT. BARN - NIGHT]]',
+        'ADA\nOne.',
+        '[[fdx: Hidden paragraph: ADA]]',
+        'BO\n(soft)\nTwo.',
+        '[[fdx: Hidden paragraph: (soft)]]\n\n[[fdx: Hidden paragraph: Two.]]',
+        'CUT TO:',
+        '[[fdx: Hidden paragraph: CUT TO:]]',
+        '[[fdx: Hidden: Unseen.]]\n',
+      ].join('\n\n'),
+    );
+    expect(result.mapped).toEqual([{ type: 'Hidden', count: 6 }]);
+  });
+
+  it('keeps hidden text as text inside an omitted scene, which never prints anyway', () => {
+    const inner =
+      '<Paragraph Type="Action"><Text>Seen </Text><Text Style="HiddenText">hid</Text></Paragraph>';
+    const result = fromFdx(fdx(omittedHeading('6', inner)));
+    expect(result.text).toBe('.OMITTED #6#\n\n[[fdx: Omitted: Seen hid]]\n');
+    expect(result.mapped).toEqual([{ type: 'Omitted', count: 1 }]);
+  });
+
+  it('reads an omitted scene inside a dual dialogue, or beside one, as an omitted scene', () => {
+    const omitted = `<OmittedScene>${P('Action', 'Gone.')}</OmittedScene>`;
+    const text = fromFdx(
+      fdx(
+        `<Paragraph><DualDialogue>${P('Character', 'ODILE')}${P('Dialogue', 'Now.')}${P('Character', 'THEO')}${P('Dialogue', 'Later.')}${omitted}</DualDialogue>${omitted}</Paragraph>`,
+      ),
+    ).text;
+    expect(text).not.toContain('[[fdx: OmittedScene]]');
+    expect(text.match(/\[\[fdx: Omitted: Gone\.\]\]/g)).toHaveLength(2);
+  });
+
+  it('leaves no double space in the title where a hidden run was', () => {
+    const title = fromFdx(
+      fdx(
+        P('Action', 'x'),
+        '<TitlePage><Content><Paragraph Alignment="Center"><Text>The </Text><Text Style="HiddenText">working</Text><Text> Pear</Text></Paragraph></Content></TitlePage>',
+      ),
+    ).title;
+    expect(title).toBe('The Pear');
   });
 
   it('keeps hidden text as the text of a kind that never prints', () => {

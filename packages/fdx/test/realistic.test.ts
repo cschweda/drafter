@@ -514,7 +514,10 @@ describe('fd13-shooting-shapes.fdx', () => {
     const sections = doc.blocks.flatMap((b) => (b.kind === 'section' ? [blockText(b)] : []));
     expect(sections).toEqual(['Part One: The Orchard']);
     expect(doc.blocks.filter((b) => b.kind === 'transition').map(blockText)).toEqual(['CUT TO:']);
-    expect(fd.mapped).toEqual([{ type: 'Omitted', count: 6 }]);
+    expect(fd.mapped).toEqual([
+      { type: 'Hidden', count: 1 },
+      { type: 'Omitted', count: 6 },
+    ]);
   });
 
   it('keeps a scene title after its heading, and an empty arc beat out', () => {
@@ -528,7 +531,9 @@ describe('fd13-shooting-shapes.fdx', () => {
   });
 
   it('brings hidden text in as a note in its place, so it never prints', () => {
-    expect(fd.text).toContain("The cart's axle creaks.[[Sound team: a dry, wooden creak.]]\n");
+    expect(fd.text).toContain(
+      "The cart's axle creaks.[[fdx: Hidden: Sound team: a dry, wooden creak.]]\n",
+    );
     expect(kindOf(doc, "The cart's axle creaks.")).toBe('action');
   });
 
