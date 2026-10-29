@@ -98,6 +98,34 @@ const barred = computed(
     (props.selected === 'outline' && !markdown.value),
 );
 
+/**
+ * Side by side, the Outline's tree scrolls under its filter rather than the panel, so the keys
+ * that scroll a focused panel (F6 puts focus there) scroll the tree, as they scrolled the panel.
+ */
+function onPanelKeydown(event: KeyboardEvent) {
+  if (!barred.value || event.target !== event.currentTarget || event.defaultPrevented) return;
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  const panel = event.currentTarget as HTMLElement;
+  const area = [...panel.querySelectorAll<HTMLElement>(':scope > * > :not([data-pane-bar])')].find(
+    (el) => el.scrollHeight > el.clientHeight,
+  );
+  if (!area) return;
+  const page = area.clientHeight * 0.875;
+  const by: Record<string, number> = {
+    ArrowDown: 40,
+    ArrowUp: -40,
+    PageDown: page,
+    PageUp: -page,
+    ' ': event.shiftKey ? -page : page,
+    Home: -area.scrollHeight,
+    End: area.scrollHeight,
+  };
+  const delta = by[event.key];
+  if (delta === undefined) return;
+  event.preventDefault();
+  area.scrollBy({ top: delta });
+}
+
 const { page, updating } = useLayout();
 const zoom = useScriptZoom();
 const ZOOMS = [
@@ -281,6 +309,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
           props.selected === 'compare',
       }"
       :data-tour="props.selected"
+      @keydown="onPanelKeydown"
     >
       <SourcePane v-if="props.selected === 'source'" />
       <!-- Keyed by the script as well: a tab keeps the context it is drawn with, so another
@@ -519,7 +548,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
   .pane.side .preview .sheet {
     padding-top: calc(11px + 2px * var(--text-scale, 1));
   }
-  .pane.side .panel .empty {
+  .pane.side .panel > * > .empty:first-child {
     padding-top: 12px;
   }
   .pane.side .problems > .problem:first-child {

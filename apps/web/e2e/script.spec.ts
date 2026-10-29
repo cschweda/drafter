@@ -81,15 +81,27 @@ test.describe('the Script pane on a desktop', () => {
   });
 
   test('follows the cursor', async ({ page }) => {
-    // At the text's end (the empty line after the last one) the Script shows the end of the last
-    // page, with the last line about a pane's height above it: in WebKit's 1280×720 window, with
-    // the panes' bars level, that is just above the pane's top. A taller window shows it.
-    await page.setViewportSize({ width: 1280, height: 800 });
     const last = lineOf(page, 'END OF SAMPLE');
     await expect(last).not.toBeInViewport();
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+End');
     await expect(last).toBeInViewport();
+  });
+
+  // At the text's end (the empty line after the last line) the Script keeps the last line in view,
+  // not the blank lower half of the last page, even in a short window; and typing at the end of
+  // the last line keeps it there too.
+  test('follows the cursor to the end in a short window', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    const last = lineOf(page, 'END OF SAMPLE');
+    await expect(last).not.toBeInViewport();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect(last).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('End');
+    await page.keyboard.insertText(' ZZ');
+    await expect(lineOf(page, 'ZZ')).toBeInViewport({ ratio: 1 });
   });
 
   test('shows the current page in the slim bar and the status bar', async ({ page }) => {
