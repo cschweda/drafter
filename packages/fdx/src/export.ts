@@ -290,7 +290,9 @@ class Exporter {
           this.scene(block, index, block.sem.number ? { Number: block.sem.number } : {});
           return;
         case 'section': {
-          const depth = String(block.sem.depth);
+          // Import takes a depth of 1 to 6 (a mark it can't trust beyond that), so a deeper section
+          // is written as six.
+          const depth = String(Math.min(block.sem.depth, 6));
           if (resolveRole(this.template, block, null) === 'scene_heading_play') {
             this.scene(block, index, { DrafterSection: depth });
           } else {

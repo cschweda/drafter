@@ -97,11 +97,21 @@ function textOf(element: XmlElement): string {
   return element.children.map((c) => (typeof c === 'string' ? c : textOf(c))).join('');
 }
 
+/** The text directly inside an element, outside its children, or '' when that is only spaces. */
+function bareText(element: XmlElement): string {
+  const text = element.children.filter((c) => typeof c === 'string').join('');
+  return text.trim() === '' ? '' : text.trim();
+}
+
 /** A `[[fdx: …]]` note naming what Drafter couldn't map; a `]]` inside can't end it early. */
 const fdxNote = (label: string) => `[[fdx: ${label.replace(/\s+/g, ' ').replaceAll(']]', '] ]')}]]`;
 
 /** The paragraph's `<Text>` runs, as lines of styled characters and notes. */
 function linesOf(paragraph: XmlElement): Tok[][] {
+  // A paragraph with no `<Text>` but text of its own (`<Paragraph>Hi</Paragraph>`) is read as it.
+  const hasText = paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Text');
+  const bare = bareText(paragraph);
+  if (!hasText && bare !== '') return fromPlain(bare);
   let plain = '';
   const styles: Style[] = [];
   for (const child of paragraph.children) {
@@ -429,8 +439,11 @@ class Importer {
     if (dual) {
       this.flushSpeech();
       // Anything beside the pair in its paragraph, or between its speeches, has no place there.
+      this.strayText(paragraph);
       for (const child of paragraph.children) {
-        if (typeof child !== 'string' && child !== dual) this.other(child);
+        if (typeof child === 'string' || child === dual) continue;
+        if (child.name === 'SceneProperties') this.propertiesContent(child);
+        else this.other(child);
       }
       let speakers = 0;
       for (const child of dual.children) {
@@ -445,6 +458,9 @@ class Importer {
       }
       this.dualCue = false;
       this.flushSpeech();
+      // A summary on the pair's paragraph is a synopsis after it, as on any other paragraph.
+      const summary = this.synopses(paragraph);
+      if (summary !== null) this.push(summary);
       return;
     }
 
@@ -463,9 +479,16 @@ class Importer {
     }
     if (!inSpeech) this.flushSpeech();
 
-    const section = Number.parseInt(attrs.DrafterSection ?? '', 10);
-    const isSection = (type === 'General' || type === 'Scene Heading') && section >= 1;
-    if (isSection) {
+    // A section's depth is 1 to 6, as export writes it; any other value (a huge one would make a
+    // huge script) is a mark Drafter can't trust, so the paragraph comes in as unmapped.
+    const sectionMark = attrs.DrafterSection;
+    const section =
+      sectionMark !== undefined && /^[1-6]$/.test(sectionMark) ? Number(sectionMark) : 0;
+    const sectionType = type === 'General' || type === 'Scene Heading';
+    const isSection = sectionType && section > 0;
+    if (sectionType && sectionMark !== undefined && !isSection) {
+      this.action(lines, type);
+    } else if (isSection) {
       this.push(`${'#'.repeat(section)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
     } else if (type === 'General' && attrs.DrafterNote === 'Yes') {
       this.note(lines);
@@ -498,10 +521,33 @@ class Importer {
       else this.push(summary);
     }
 
+    this.strayText(paragraph);
     for (const child of paragraph.children) {
-      if (typeof child === 'string' || child.name === 'Text' || child.name === 'SceneProperties')
-        continue;
-      this.other(child);
+      if (typeof child === 'string' || child.name === 'Text') continue;
+      if (child.name === 'SceneProperties') this.propertiesContent(child);
+      else this.other(child);
+    }
+  }
+
+  /** Text directly in a paragraph that also has `<Text>` runs comes in as a note. */
+  private strayText(paragraph: XmlElement) {
+    const hasText = paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Text');
+    const dual = paragraph.children.some((c) => typeof c !== 'string' && c.name === 'DualDialogue');
+    const bare = bareText(paragraph);
+    if (bare === '' || (!hasText && !dual)) return;
+    this.flushSpeech();
+    this.action(fromPlain(bare), 'Paragraph text');
+  }
+
+  /** What a `SceneProperties` holds besides its attributes has no place, so it comes in as notes. */
+  private propertiesContent(properties: XmlElement) {
+    for (const child of properties.children) {
+      if (typeof child !== 'string') this.other(child);
+    }
+    const bare = bareText(properties);
+    if (bare !== '') {
+      this.flushSpeech();
+      this.action(fromPlain(bare), 'SceneProperties');
     }
   }
 

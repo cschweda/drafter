@@ -143,6 +143,29 @@ describe('readXml refuses', () => {
   });
 });
 
+describe('readXml error messages', () => {
+  it('shorten a long name', () => {
+    const long = 'a'.repeat(200_000);
+    for (const xml of [
+      `<r></${long}>`,
+      `<${long}`,
+      `<r ${long}></r>`,
+      `<r ${long}="1" ${long}="2"/>`,
+      `<r><${long}>`,
+    ]) {
+      let message = '';
+      try {
+        readXml(xml);
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).not.toBe('');
+      expect(message.length).toBeLessThan(120);
+      expect(message).toContain('…');
+    }
+  });
+});
+
 describe('readXml on a large file', () => {
   it('reads 5 MB in under 3 seconds', () => {
     const row = '<Paragraph Type="Action"><Text>Some words &amp; more.</Text></Paragraph>\n';

@@ -114,6 +114,12 @@ describe('toFdx', () => {
     ]);
   });
 
+  it('caps a section deeper than six levels at six, the most import takes', () => {
+    expect(content('####### Deeper\n')).toEqual([
+      P('General', { DrafterSection: '6' }, T('Deeper')),
+    ]);
+  });
+
   it('carries a note on its own line, and keeps a note inside a line in the text', () => {
     expect(content('[[remember this]]\n\nHe *runs* [[a note]] fast.\n')).toEqual([
       P('General', { DrafterNote: 'Yes' }, T('remember this')),

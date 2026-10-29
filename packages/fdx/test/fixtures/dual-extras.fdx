@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph>
+      <SceneProperties Title="" Summary="Both talk at once."/>
+      loose words
+      <DualDialogue>
+        <Paragraph Type="Character"><Text>ODILE</Text></Paragraph>
+        <Paragraph Type="Dialogue"><Text>Now.</Text></Paragraph>
+        <Paragraph Type="Character"><Text>THEO</Text></Paragraph>
+        <Paragraph Type="Dialogue"><Text>Later.</Text></Paragraph>
+      </DualDialogue>
+    </Paragraph>
+  </Content>
+</FinalDraft>

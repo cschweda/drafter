@@ -488,6 +488,79 @@ describe('fromFdx: content in unexpected places', () => {
   });
 });
 
+describe("fromFdx: values Drafter can't trust", () => {
+  it('takes a section depth from 1 to 6, and brings any other in as a note', () => {
+    const section = (depth: string) =>
+      `<Paragraph Type="General" DrafterSection="${depth}"><Text>Part</Text></Paragraph>`;
+    expect(fromFdx(fdx(section('6'))).text).toBe('###### Part\n');
+    const start = performance.now();
+    const result = fromFdx(
+      fdx(
+        section('30000000') +
+          section('999999999999') +
+          section('deep') +
+          section('0') +
+          section('7') +
+          section('2.5'),
+      ),
+    );
+    expect(performance.now() - start).toBeLessThan(1000);
+    expect(result.text).toBe(`${Array(6).fill('Part [[fdx: General]]').join('\n\n')}\n`);
+    expect(result.mapped).toEqual([{ type: 'General', count: 6 }]);
+    const heading = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading" DrafterSection="99"><Text>INT. A - DAY</Text></Paragraph>',
+      ),
+    );
+    expect(heading.text).toBe('!INT. A - DAY [[fdx: Scene Heading]]\n');
+  });
+});
+
+describe('fromFdx: text outside its elements', () => {
+  it('reads text placed directly in a paragraph as its text', () => {
+    expect(fromFdx(fdx('<Paragraph Type="Action">Hello bare</Paragraph>')).text).toBe(
+      'Hello bare\n',
+    );
+  });
+
+  it('keeps text beside the Text runs as a note', () => {
+    const result = fromFdx(
+      fdx('<Paragraph Type="Action"><Text>Hi.</Text> stray words</Paragraph>'),
+    );
+    expect(result.text).toBe('Hi.\n\nstray words [[fdx: Paragraph text]]\n');
+    expect(result.mapped).toEqual([{ type: 'Paragraph text', count: 1 }]);
+  });
+
+  it('keeps what a SceneProperties holds inside it', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Summary="S"><Paragraph Type="Action"><Text>inner</Text></Paragraph></SceneProperties><Text>INT. A - DAY</Text></Paragraph>',
+      ),
+    );
+    expect(result.text).toBe('INT. A - DAY\n\n= S\n\ninner [[fdx: Paragraph]]\n');
+    expect(result.mapped).toEqual([{ type: 'Paragraph', count: 1 }]);
+  });
+
+  it("keeps a dual pair's summary and the text beside it", () => {
+    const result = fromFdx(fixture('dual-extras.fdx'));
+    expect(result.text).toBe(
+      [
+        'loose words [[fdx: Paragraph text]]',
+        '',
+        'ODILE',
+        'Now.',
+        '',
+        'THEO ^',
+        'Later.',
+        '',
+        '= Both talk at once.',
+        '',
+      ].join('\n'),
+    );
+    expect(result.ignored).toEqual([]);
+  });
+});
+
 describe('fromFdx on a large file', () => {
   const big = (paragraph: (text: string) => string, unit: string) => {
     const shell = fdx(paragraph(''));

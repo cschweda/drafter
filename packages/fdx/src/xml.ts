@@ -48,6 +48,9 @@ function validCodePoint(cp: number): boolean {
   );
 }
 
+/** A name as an error message shows it: at most 40 characters, so a hostile name can't fill an alert. */
+const short = (name: string) => (name.length > 40 ? `${name.slice(0, 40)}…` : name);
+
 const NAMED: Record<string, string> = { lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" };
 
 /** Reads one XML document. Whitespace-only text between elements is kept; callers ignore it. */
@@ -195,7 +198,7 @@ export function readXml(text: string): XmlElement {
       if (src[i] !== '>') fail('Expected > to end a closing tag');
       i++;
       const open = stack.pop() as XmlElement;
-      if (open.name !== name) fail(`</${name}> closes <${open.name}>`, at);
+      if (open.name !== name) fail(`</${short(name)}> closes <${short(open.name)}>`, at);
       if (stack.length === 0) {
         root = open;
         seenRoot = true;
@@ -210,18 +213,18 @@ export function readXml(text: string): XmlElement {
         skipSpace();
         const c = src[i];
         if (c === '>' || c === '/') break;
-        if (i >= n) fail(`The tag <${name}> is not closed`);
+        if (i >= n) fail(`The tag <${short(name)}> is not closed`);
         if (!hadSpace) fail('Expected a space before an attribute');
         const attr = readName();
         skipSpace();
-        if (src[i] !== '=') fail(`Expected = after the attribute ${attr}`);
+        if (src[i] !== '=') fail(`Expected = after the attribute ${short(attr)}`);
         i++;
         skipSpace();
         const q = src[i];
         if (q !== '"' && q !== "'") fail('Expected a quoted attribute value');
         const close = src.indexOf(q, i + 1);
         if (close < 0) fail('An attribute value is not closed');
-        if (Object.hasOwn(el.attrs, attr)) fail(`The attribute ${attr} appears twice`);
+        if (Object.hasOwn(el.attrs, attr)) fail(`The attribute ${short(attr)} appears twice`);
         // defineProperty keeps an attribute named `__proto__` an ordinary key instead of a prototype.
         Object.defineProperty(el.attrs, attr, {
           value: decode(i + 1, close, true),
@@ -253,7 +256,7 @@ export function readXml(text: string): XmlElement {
   }
 
   if (stack.length > 0)
-    fail(`<${(stack[stack.length - 1] as XmlElement).name}> is never closed`, n);
+    fail(`<${short((stack[stack.length - 1] as XmlElement).name)}> is never closed`, n);
   if (!root) fail('The file has no root element', n);
   return root as XmlElement;
 
