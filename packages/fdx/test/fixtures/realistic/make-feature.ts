@@ -2,9 +2,9 @@
 // original: a handful of scenes, written for Drafter, repeated with numbered locations and names
 // so no two scenes are the same. The output is never written to disk or committed.
 
-/** A `<Text>` run carrying the formatting attributes a Final Draft save puts on every run. */
+/** A `<Text>` run with a few formatting attributes (invented values) that import should ignore. */
 const run = (text: string, style = '') =>
-  `<Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="${style}">${text}</Text>`;
+  `<Text Color="#000000" Font="Courier" Size="12" Style="${style}">${text}</Text>`;
 
 const para = (type: string, body: string, attrs = '') =>
   `    <Paragraph${attrs} Type="${type}">\n      ${body}\n    </Paragraph>`;
@@ -28,7 +28,7 @@ function scene(n: number): string {
   const summary =
     n % 3 === 0 ? ` Summary="Parcel ${n} goes to the wrong address, on purpose."` : '';
   return [
-    `    <Paragraph Number="${n}" Type="Scene Heading">\n      <SceneProperties Length="1" Page="${n}" Title=""${summary}/>\n      ${run(`${n % 2 ? 'INT.' : 'EXT.'} ${place} - ${time}`)}\n    </Paragraph>`,
+    `    <Paragraph Number="${n}" Type="Scene Heading">\n      <SceneProperties Title=""${summary}/>\n      ${run(`${n % 2 ? 'INT.' : 'EXT.'} ${place} - ${time}`)}\n    </Paragraph>`,
     para(
       'Action',
       `${run(`Rain on corrugated iron. Parcel ${n} sits on a trolley, its label half peeled. `)}${run(`${a}`, 'Bold')}${run(' (20s, bike clips still on) checks the address against a list that has been folded too many times.')}`,
@@ -83,9 +83,9 @@ ${body}
     </Content>
   </TitlePage>
   <ElementSettings Type="Action">
-    <FontSpec Font="Courier Final Draft" Size="12" Style=""/>
+    <FontSpec Color="#000000" Font="Courier" Size="12"/>
   </ElementSettings>
-  <PageLayout BottomMargin="72" TopMargin="72"/>
+  <PageLayout BottomMargin="1.00" TopMargin="1.00"/>
   <SmartType>
     <Characters>${Array.from({ length: scenes }, (_, k) => `<Character>COURIER ${k + 1}</Character>`).join('')}</Characters>
   </SmartType>

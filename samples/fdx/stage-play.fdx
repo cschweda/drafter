@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- Synthetic test file: written by hand for Drafter, with original text and invented values; not made in Final Draft. -->
 <FinalDraft DocumentType="Script" Template="No" Version="5">
 
   <Content>
@@ -6,7 +7,7 @@
       <Text Style="Underline">ACT ONE</Text>
     </Paragraph>
     <Paragraph Alignment="Center" Type="Scene Heading">
-      <SceneProperties Length="2 4/8" Page="1" Title="" Summary="The sisters open the shop for the last time."/>
+      <SceneProperties Title="" Summary="The sisters open the shop for the last time."/>
       <Text>SCENE 1</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -48,7 +49,7 @@
       <Text>(A shop bell. Nobody has come in. They both look at the door anyway. Lights fade.)</Text>
     </Paragraph>
     <Paragraph Alignment="Center" Type="Scene Heading">
-      <SceneProperties Length="1 6/8" Page="3" Title="" Summary="An offer for the building; Philippa wants to take it."/>
+      <SceneProperties Title="" Summary="An offer for the building; Philippa wants to take it."/>
       <Text>SCENE 2</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -143,22 +144,10 @@
     </Content>
   </TitlePage>
 
-  <ElementSettings Type="New Act">
-    <FontSpec Font="Courier Final Draft" Size="12" Style="Underline+AllCaps"/>
-    <ParagraphSpec Alignment="Center" LeftIndent="1.50" RightIndent="7.50" SpaceBefore="0" StartsNewPage="Yes"/>
-    <Behavior PaginateAs="Scene Heading" ReturnKey="Scene Heading" Shortcut="8"/>
-  </ElementSettings>
-  <ElementSettings Type="End of Act">
-    <FontSpec Font="Courier Final Draft" Size="12" Style="Underline+AllCaps"/>
-    <ParagraphSpec Alignment="Center" LeftIndent="1.50" RightIndent="7.50" SpaceBefore="24"/>
-    <Behavior PaginateAs="Scene Heading" ReturnKey="New Act" Shortcut="9"/>
-  </ElementSettings>
   <ElementSettings Type="Action">
-    <FontSpec Font="Courier Final Draft" Size="12" Style=""/>
-    <ParagraphSpec Alignment="Left" LeftIndent="3.75" RightIndent="7.50" SpaceBefore="12"/>
-    <Behavior PaginateAs="Action" ReturnKey="Character" Shortcut="2"/>
+    <FontSpec Color="#000000" Font="Courier" Size="12"/>
   </ElementSettings>
-  <PageLayout BottomMargin="72" FooterMargin="36" HeaderMargin="36" TopMargin="72"/>
+  <PageLayout BottomMargin="1.00" TopMargin="1.00"/>
   <SmartType>
     <Characters>
       <Character>PHILIPPA</Character>

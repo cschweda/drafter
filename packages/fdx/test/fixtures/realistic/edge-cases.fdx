@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<!-- Synthetic test file: original text, written for Drafter. -->
+<!-- Synthetic test file: written by hand for Drafter, with original text and invented values; not made in Final Draft. -->
 <FinalDraft DocumentType="Script" Template="No" Version="5">
   <Content>
     <Paragraph Number="1" Type="Scene Heading">
-      <SceneProperties Length="2/8" Page="1" Title="" Summary="Accents &amp; astral characters: café, niño, “quotes”, &#x1F511;."/>
+      <SceneProperties Title="" Summary="Accents &amp; astral characters: café, niño, “quotes”, &#x1F511;."/>
       <Text>INT. CAFÉ NIÑO — DÍA</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -39,6 +39,9 @@
     </Paragraph>
 
     <Paragraph Number="2" Type="Scene Heading">
+      <SceneProperties Title="" Summary="">
+        <Mood>Damp, and quieter than it should be.</Mood>
+      </SceneProperties>
       <Text>EXT. ALLEY BEHIND THE CAFÉ - NIGHT</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -111,13 +114,14 @@
     <Paragraph Type="Lyrics">
       <Text>Lights out, lights out, who will find the fuse</Text>
     </Paragraph>
-    <Paragraph Type="Outline 1">
+    <Paragraph Type="Chorus Line">
       <Text>The blackout</Text>
     </Paragraph>
-    <Paragraph Type="Outline Body">
+    <Paragraph Type="Memo">
       <Text>Everyone gets to know each other in the dark.</Text>
     </Paragraph>
     <Paragraph Type="End of Act"/>
+    <Divider>Half-time, in the dark.</Divider>
 
     <Paragraph Number="12 A" Type="Scene Heading">
       <Text>INT. STOREROOM - CONTINUOUS</Text>
@@ -127,7 +131,8 @@
       <Text>a <Highlight Color="#FFFF00">yellow</Highlight> word, and </Text>
       <Text Style="Bold">bold <Text Style="Italic">inner</Text> text</Text>
       <Text>.</Text>
-      <ScriptNoteMarker ID="3"/>
+      <Marker ID="3"/>
+      <Aside>The hinge squeaks here.</Aside>
     </Paragraph>
     <Paragraph Type="Action">
       <Text Style="Bold"> </Text>
@@ -136,8 +141,8 @@
       <Text Style="Underline"> </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text Style="Strikeout">A struck line.</Text>
-      <Text Style="AllCaps"> shouted in small letters</Text>
+      <Text Style="Wavy">A struck line.</Text>
+      <Text Style="Shout"> shouted in small letters</Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Minute 1: In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. Minute 2: Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. Minute 3: Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. Minute 4: The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Minute 5: A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Minute 6: In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. Minute 7: Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. Minute 8: Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. Minute 9: The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Minute 10: A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Minute 11: In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. Minute 12: Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. Minute 13: Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. Minute 14: The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Minute 15: A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Minute 16: In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. Minute 17: Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. Minute 18: Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. Minute 19: The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Minute 20: A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Minute 21: In the dark the café becomes a different room. Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. Minute 22: Chairs that were in the way are now obstacles with opinions. Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. Minute 23: Somebody's phone torch sweeps the ceiling and finds a water stain shaped like a hare. The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. Minute 24: The fridge stops humming, and the silence is so sudden that two strangers apologise to each other for nothing. A child counts the seconds out loud, and nobody tells her to stop. In the dark the café becomes a different room.</Text>
@@ -153,6 +158,7 @@
         <Paragraph Type="Dialogue">
           <Text>Found it!</Text>
         </Paragraph>
+        Both at once, over each other.
         <Paragraph Type="Character">
           <Text>mrs. okafor</Text>
         </Paragraph>
@@ -175,6 +181,7 @@
     </Paragraph>
   </Content>
   <TitlePage>
+    <Stamp>Reading copy</Stamp>
     <Content>
       <Paragraph Alignment="Center">
         <Text Style="Bold">Lights Out at Café Niño</Text>
@@ -191,7 +198,7 @@
     </Content>
   </TitlePage>
   <ElementSettings Type="Action">
-    <FontSpec Font="Courier Final Draft" Size="12" Style=""/>
+    <FontSpec Color="#000000" Font="Courier" Size="12"/>
   </ElementSettings>
-  <PageLayout BottomMargin="72" TopMargin="72"/>
+  <PageLayout BottomMargin="1.00" TopMargin="1.00"/>
 </FinalDraft>

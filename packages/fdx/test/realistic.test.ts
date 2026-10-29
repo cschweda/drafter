@@ -6,8 +6,9 @@ import { describe, expect, it } from 'vitest';
 import { type FdxImport, fromFdx, IGNORED, readXml, toFdx, type XmlElement } from '../src';
 import { makeFeature } from './fixtures/realistic/make-feature';
 
-// Synthetic files shaped like Final Draft saves (all their text is original, and none was made in
-// Final Draft), standing in until real files can be tested. See fixtures/realistic/.
+// Synthetic files in the shape of a Final Draft file, written by hand with original text and
+// invented values from the element names the technical design documents (none was made in Final
+// Draft, or checked against a real file), standing in until real files can be tested.
 
 const path = (name: string) =>
   fileURLToPath(new URL(`./fixtures/realistic/${name}`, import.meta.url));
@@ -17,44 +18,68 @@ const FILES = ['short-film.fdx', 'edge-cases.fdx', 'revisions.fdx', 'stage-play.
 
 const elements = (node: XmlElement) =>
   node.children.filter((c): c is XmlElement => typeof c !== 'string');
-const child = (node: XmlElement, name: string) => elements(node).find((c) => c.name === name);
 const textOf = (node: XmlElement): string =>
   node.children.map((c) => (typeof c === 'string' ? c : textOf(c))).join('');
 
+/** The text directly in an element, outside its children. */
+const ownText = (node: XmlElement) => node.children.filter((c) => typeof c === 'string').join('');
+
+/** The marker a scene number has to fit to be written as one (as import's rule); else it is a note. */
+const sceneNumber = (n: string) =>
+  /^[\p{L}\p{N}.-]+$/u.test(n.trim()) ? `#${n.trim()}#` : `Number ${n}`;
+
 /**
- * Every piece of writing in a file, as import must keep it: each innermost paragraph's text (its
- * runs and anything nested in them, or text of its own), a scene's Title and Summary, a scene
- * number, the title page's paragraphs, and the text of every element under the root that isn't
- * one of the settings `IGNORED` names. Blank ones are left out.
+ * Every piece of writing in a file, as import must keep it: each innermost paragraph's runs (and
+ * anything nested in them) and its own text, its other child elements, a scene's Title, Summary,
+ * and number, what a SceneProperties holds, stray text and elements inside a DualDialogue, the
+ * title page's paragraphs and its other children, elements in a Content that aren't paragraphs,
+ * and every element under the root that isn't one of the settings `IGNORED` names. Elements
+ * `IGNORED` names are skipped wherever they are. Blank pieces are left out.
  */
 function writing(root: XmlElement): string[] {
   const out: string[] = [];
+  const element = (e: XmlElement) => {
+    if (!IGNORED.has(e.name)) out.push(textOf(e));
+  };
   const paragraph = (p: XmlElement) => {
-    const dual = child(p, 'DualDialogue');
-    if (dual) {
-      for (const inner of elements(dual)) inner.name === 'Paragraph' && paragraph(inner);
+    out.push(
+      elements(p)
+        .filter((c) => c.name === 'Text')
+        .map(textOf)
+        .join(''),
+      ownText(p),
+    );
+    if (p.attrs.Number) out.push(sceneNumber(p.attrs.Number));
+    for (const c of elements(p)) {
+      if (c.name === 'Text') continue;
+      if (c.name === 'DualDialogue') {
+        out.push(ownText(c));
+        for (const inner of elements(c))
+          inner.name === 'Paragraph' ? paragraph(inner) : element(inner);
+      } else if (c.name === 'SceneProperties') {
+        out.push(c.attrs.Title ?? '', c.attrs.Summary ?? '', ownText(c));
+        elements(c).forEach(element);
+      } else element(c);
     }
-    const own = p.children.filter((c) => typeof c === 'string').join('');
-    const runs = elements(p)
-      .filter((c) => c.name === 'Text')
-      .map(textOf)
-      .join('');
-    out.push(runs, own);
-    const props = child(p, 'SceneProperties');
-    if (props) out.push(props.attrs.Title ?? '', props.attrs.Summary ?? '');
-    if (p.attrs.Number) out.push(p.attrs.Number);
+  };
+  const content = (c: XmlElement) => {
+    for (const p of elements(c)) p.name === 'Paragraph' ? paragraph(p) : element(p);
   };
   for (const top of elements(root)) {
-    if (top.name === 'Content') {
-      for (const p of elements(top)) if (p.name === 'Paragraph') paragraph(p);
-    } else if (top.name === 'TitlePage') {
-      const content = child(top, 'Content');
-      for (const p of content ? elements(content) : []) paragraph(p);
-    } else if (!IGNORED.has(top.name)) {
-      out.push(textOf(top));
-    }
+    if (top.name === 'Content') content(top);
+    else if (top.name === 'TitlePage') {
+      for (const c of elements(top)) c.name === 'Content' ? content(c) : element(c);
+    } else element(top);
   }
   return out.filter((t) => t.trim() !== '');
+}
+
+/** How many times `piece` occurs in `text`, without overlaps. */
+function occurrences(text: string, piece: string): number {
+  let count = 0;
+  for (let at = text.indexOf(piece); at !== -1; at = text.indexOf(piece, at + piece.length))
+    count++;
+  return count;
 }
 
 /**
@@ -81,9 +106,14 @@ describe.each(FILES)('%s', (name) => {
 
   it('drops nothing silently: every piece of writing is in the script or a note', () => {
     const { text, doc, root } = imported(name);
+    // Counted, not just found: a dropped cue or a short scene number whose text also appears
+    // elsewhere still shows up as one fewer than the file holds.
     const found = squash(text);
-    const missing = writing(root).filter((piece) => !found.includes(squash(piece)));
-    expect(missing).toEqual([]);
+    const needed = new Map<string, number>();
+    for (const piece of writing(root))
+      needed.set(squash(piece), (needed.get(squash(piece)) ?? 0) + 1);
+    const short = [...needed].filter(([piece, n]) => occurrences(found, piece) < n);
+    expect(short).toEqual([]);
     // Nothing is hidden in a boneyard, which would keep the text but never print or list it.
     expect(doc.regions.filter((r) => r.kind !== 'note')).toEqual([]);
   });
@@ -162,7 +192,7 @@ describe('short-film.fdx', () => {
       { type: 'ScriptNotes', count: 1 },
     ]);
     expect(film.ignored).toContain('TagData');
-    expect(film.text).not.toContain('0c9a77d2');
+    expect(film.text).not.toContain('tag-ref-0001');
   });
 });
 
@@ -230,18 +260,24 @@ describe('edge-cases.fdx', () => {
     ).toBe('action');
   });
 
-  it('notes the paragraph types Drafter has no element for', () => {
+  it('notes the paragraph types and elements Drafter has no element for', () => {
     expect(edge.mapped).toEqual([
+      { type: 'Mood', count: 1 },
       { type: 'Dialogue', count: 1 },
       { type: 'New Act', count: 1 },
       { type: 'Cast List', count: 1 },
       { type: 'Lyrics', count: 1 },
-      { type: 'Outline 1', count: 1 },
-      { type: 'Outline Body', count: 1 },
+      { type: 'Chorus Line', count: 1 },
+      { type: 'Memo', count: 1 },
       { type: 'End of Act', count: 1 },
+      { type: 'Divider', count: 1 },
       { type: 'Number', count: 1 },
+      { type: 'Aside', count: 1 },
+      { type: 'DualDialogue text', count: 1 },
       { type: 'Scene Heading', count: 1 },
+      { type: 'Stamp', count: 1 },
     ]);
+    expect(edge.text).toContain('Both at once, over each other. [[fdx: DualDialogue text]]');
     expect(edge.text).toContain('INT. STOREROOM - CONTINUOUS [[fdx: Number 12 A]]');
   });
 
@@ -272,9 +308,7 @@ describe('revisions.fdx', () => {
 
   it('reads revised text as text, and the revision sets as settings', () => {
     expect(rev.text).toContain('Forty sacks out. *Thirty-one* paid for.');
-    expect(rev.ignored).toEqual(
-      expect.arrayContaining(['Revisions', 'LockedPages', 'HeaderAndFooter', 'SceneNumberOptions']),
-    );
+    expect(rev.ignored).toEqual(expect.arrayContaining(['Revisions', 'HeaderAndFooter']));
     expect(rev.mapped).toEqual([{ type: 'ScriptNotes', count: 1 }]);
   });
 });
@@ -313,4 +347,16 @@ describe('a feature-length file', () => {
     expect(doc.blocks.filter((b) => b.kind === 'scene_heading')).toHaveLength(140);
     expect(result.mapped).toEqual([]);
   });
+});
+
+describe('the samples', () => {
+  it.each(['short-film.fdx', 'stage-play.fdx'])(
+    'samples/fdx/%s is the fixture, byte for byte',
+    (name) => {
+      const sample = readFileSync(
+        fileURLToPath(new URL(`../../../samples/fdx/${name}`, import.meta.url)),
+      );
+      expect(sample.equals(readFileSync(path(name)))).toBe(true);
+    },
+  );
 });
