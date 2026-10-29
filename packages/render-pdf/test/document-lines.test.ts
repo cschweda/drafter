@@ -24,6 +24,7 @@ const block = (runs: Run[], over: Partial<DocBlock> = {}): DocBlock => ({
   level: null,
   indent: 0,
   quoteBars: [],
+  quotes: [],
   marker: null,
   runs,
   size: 10,

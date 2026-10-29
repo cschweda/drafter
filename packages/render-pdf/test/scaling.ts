@@ -1,4 +1,4 @@
-// Copied from packages/fdx/test/scaling.ts (Call 33), unchanged below this line.
+// Copied from packages/fdx/test/scaling.ts (Call 33), unchanged below this line but for `scalingAsync` at the end.
 // Linear-time checks that don't depend on how fast the machine is. The same work is timed on an
 // input of size n and of size 4n, after a warm-up, taking the best of a few runs of each (a busy
 // machine only ever makes a run slower, so the best is the closest to the real cost). Linear work
@@ -59,6 +59,42 @@ export function scaling<T>(
       if (large > HANG_MS) return { small, large, growth: large / Math.max(small, 0.1) };
     }
     // A run too quick to time (under a tenth of a millisecond) counts as a tenth.
+    const growth = large / Math.max(small, 0.1);
+    if (growth < best.growth) best = { small, large, growth };
+    if (best.growth < MAX_GROWTH) break;
+  }
+  return best;
+}
+
+/** `scaling` for work that finishes later: the same procedure, timing until `run`'s promise settles. */
+export async function scalingAsync<T>(
+  make: (n: number) => T,
+  run: (input: T) => Promise<unknown>,
+  n: number,
+  tries = 5,
+  attempts = 3,
+): Promise<Scaling> {
+  const smallInput = make(n);
+  const largeInput = make(4 * n);
+  const time = async (input: T) => {
+    const start = performance.now();
+    await run(input);
+    return performance.now() - start;
+  };
+  await time(smallInput); // warm-up
+  let best: Scaling = {
+    small: 0,
+    large: Number.POSITIVE_INFINITY,
+    growth: Number.POSITIVE_INFINITY,
+  };
+  for (let a = 0; a < attempts; a++) {
+    let small = Number.POSITIVE_INFINITY;
+    let large = Number.POSITIVE_INFINITY;
+    for (let k = 0; k < tries; k++) {
+      small = Math.min(small, await time(smallInput));
+      large = Math.min(large, await time(largeInput));
+      if (large > HANG_MS) return { small, large, growth: large / Math.max(small, 0.1) };
+    }
     const growth = large / Math.max(small, 0.1);
     if (growth < best.growth) best = { small, large, growth };
     if (best.growth < MAX_GROWTH) break;

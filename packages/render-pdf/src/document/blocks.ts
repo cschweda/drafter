@@ -22,6 +22,8 @@ export interface DocBlock {
   indent: number;
   /** The x of the centre of each enclosing quote's bar, points from the left margin, outermost first. */
   quoteBars: number[];
+  /** Which quote each of `quoteBars` belongs to, numbered in reading order, so two quotes side by side keep two bars. */
+  quotes: number[];
   /** A list item's first block: "•" or "3.", right-aligned to `indent − 6`. */
   marker: Run | null;
   /** A hard break is a Run with text '\n'. */
@@ -69,6 +71,7 @@ interface InlineStyle {
 interface Place {
   indent: number;
   quoteBars: number[];
+  quotes: number[];
   lists: number;
 }
 
@@ -161,6 +164,8 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
   const blocks: DocBlock[] = [];
   /** A list item's marker, waiting for the item's first block. */
   let marker: Run | null = null;
+  /** The quotes with a bar so far. */
+  let quoteCount = 0;
 
   const deeper = (indent: number, step: number) =>
     indent + step <= maxIndent ? indent + step : indent;
@@ -186,6 +191,7 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
       level,
       indent: place.indent,
       quoteBars: [...place.quoteBars],
+      quotes: [...place.quotes],
       marker,
       runs: block.runs,
       size: block.size,
@@ -340,10 +346,11 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
       case 'blockquote': {
         const indent = deeper(place.indent, STYLE.quoteIndent);
         // A quote too deep to indent draws no bar of its own, which would cross its text.
-        const quoteBars =
-          indent === place.indent
-            ? place.quoteBars
-            : [...place.quoteBars, place.indent + STYLE.quoteBar / 2];
+        const barred = indent !== place.indent;
+        const quoteBars = barred
+          ? [...place.quoteBars, place.indent + STYLE.quoteBar / 2]
+          : place.quoteBars;
+        const quotes = barred ? [...place.quotes, quoteCount++] : place.quotes;
         // A marker goes outside the quote's bar, on a line of its own.
         if (flushMarker(place, space)) space = STYLE.between;
         stack.push({
@@ -351,7 +358,7 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
           nodes: node.children ?? [],
           next: 0,
           walking: null,
-          place: { ...place, indent, quoteBars },
+          place: { ...place, indent, quoteBars, quotes },
           space,
         });
         break;
@@ -406,7 +413,7 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
     nodes: tree.children ?? [],
     next: 0,
     walking: null,
-    place: { indent: 0, quoteBars: [], lists: 0 },
+    place: { indent: 0, quoteBars: [], quotes: [], lists: 0 },
     space: STYLE.between,
   });
   for (let frame = stack.at(-1); frame; frame = stack.at(-1)) {
