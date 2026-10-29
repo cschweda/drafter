@@ -88,6 +88,22 @@ test.describe('the Script pane on a desktop', () => {
     await expect(last).toBeInViewport();
   });
 
+  // At the text's end (the empty line after the last line) the Script keeps the last line in view,
+  // not the blank lower half of the last page, even in a short window; and typing at the end of
+  // the last line keeps it there too.
+  test('follows the cursor to the end in a short window', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    const last = lineOf(page, 'END OF SAMPLE');
+    await expect(last).not.toBeInViewport();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect(last).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('End');
+    await page.keyboard.insertText(' ZZ');
+    await expect(lineOf(page, 'ZZ')).toBeInViewport({ ratio: 1 });
+  });
+
   test('shows the current page in the slim bar and the status bar', async ({ page }) => {
     // A first visit starts on the first scene heading, which is on page 1 (not the title page).
     await expect(slim(page).filter({ hasText: 'Page 1 of 2' })).toBeVisible();

@@ -437,7 +437,7 @@ const nameOfRow = (row: Row) =>
   <div class="outline">
     <p v-if="markdown" class="empty">Not available for Markdown documents.</p>
     <template v-else>
-      <div class="tools">
+      <div class="tools" data-pane-bar>
         <label class="filter">
           <span>Filter</span>
           <input

@@ -35,6 +35,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/fdx`: **a title page's blank lines separate its blocks.** A blank line written as a paragraph with an empty `<Text>` (likely how Final Draft writes one, though no real file has confirmed it) was taken by import as a line of the block before it, so a centered source line after the author ("Based on the story…") came in as a second line of the Author instead of under Notes. A paragraph holding only spaces is now a gap, like an empty one.
 - `@drafter/fdx`: **breakdown tags (`TagData`) are listed as ignored**, not brought in as a `[[fdx: TagData]]` note full of tag ids at the end of the script.
 - `@drafter/fdx`: **text written directly inside a `DualDialogue`**, between its speeches, was dropped silently; it now comes in as a `[[fdx: DualDialogue text]]` note in its place, as an element there already did.
+- `apps/web`: with two panes side by side, the first line of text in each now starts at the same height, whatever each pane shows.
+- `apps/web`: with sync scrolling on, writing at the end of a script in a short window keeps your line in view in the Script pane; it used to scroll to the blank bottom of the last page.
 
 ## [0.13.0] - 2026-10-29
 

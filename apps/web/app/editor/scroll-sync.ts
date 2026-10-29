@@ -141,7 +141,19 @@ export function domPane(
       const { anchors, end } = measure();
       let target = topForOffset(anchors, offset, end);
       if (keep !== undefined) {
-        target = keepInView(target, topForOffset(anchors, keep, end), scroller.clientHeight);
+        // The cursor past the last line (the empty line a script ends with) is at that line's
+        // bottom, not at the bottom of the scroller's content, which is the last page's blank
+        // lower half: keeping that in view left the writer's line above the pane in a short window.
+        const last = elements().at(-1);
+        const keepEnd = last
+          ? {
+              from: end.from,
+              top:
+                last.getBoundingClientRect().bottom -
+                (scroller.getBoundingClientRect().top - scroller.scrollTop),
+            }
+          : end;
+        target = keepInView(target, topForOffset(anchors, keep, keepEnd), scroller.clientHeight);
       }
       const max = scroller.scrollHeight - scroller.clientHeight;
       const top = Math.round(Math.max(0, Math.min(max, target)));

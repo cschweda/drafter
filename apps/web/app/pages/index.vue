@@ -266,6 +266,13 @@ onBeforeUnmount(() => {
 }
 .panes.wide {
   grid-template-columns: calc(var(--split) * 100%) 6px minmax(0, 1fr);
+  /* The tab row, the slim bar, a second bar (the element bar, the Outline's filter), and the text.
+     Each pane takes all four rows as its own (AppPane.vue), so a row is as tall as the taller
+     pane's part: the first lines of text in the two panes start at the same height. */
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.panes.wide > :deep(*) {
+  grid-row: 1 / -1;
 }
 /* The Source alone: the text is a column 64 characters wide (the lines carry 24px of padding of their
    own), centered, with no gutters, and room under the last line for the marker. */

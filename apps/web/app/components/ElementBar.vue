@@ -12,7 +12,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { isApple } from '~/commands/keys';
 import { commandById } from '~/commands/registry';
-import { useFocusMode } from '~/composables/useFocusMode';
+import { useElementBarShown } from '~/composables/useElementBarShown';
 import {
   type BarButton,
   barFor,
@@ -26,7 +26,6 @@ import { elementNotice, sayElement } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
 import { markdownElement } from '~/markdown/commands';
 import { useSettings } from '~/settings/settings';
-import { useGuard } from '~/storage/guard';
 import { scrollbarsFloat } from '~/utils/scrollbars';
 
 // The element bar (docs/drafter-element-bar-design.md): a row of buttons over the Source that
@@ -37,14 +36,12 @@ import { scrollbarsFloat } from '~/utils/scrollbars';
 // doesn't take focus from the editor, so a phone's keyboard stays up. It goes in focus mode, in a
 // tab that only shows the script, and when Settings turns it off.
 const editor = useEditor();
-const focus = useFocusMode();
-const { readOnly } = useGuard();
 const { settings, set } = useSettings();
 const apple = isApple();
 /** A tooltip is a sentence or two, so it wraps, within the width of a phone. */
 const TIP_UI = { content: 'h-auto max-w-80 py-1.5', text: 'whitespace-normal' };
 
-const shown = computed(() => settings.value.elementBar && !focus.on.value && !readOnly.value);
+const shown = useElementBarShown();
 const markdown = computed(() => editor.kind.value === 'markdown');
 /** The script's structure by its template: a stage play has acts, `##` scenes, and stage directions. */
 const structure = computed(() => structureOf(editor.template.value));
@@ -253,6 +250,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
     class="element-bar"
     :class="{ 'no-scrollbar': floatingScrollbar }"
     data-element-bar
+    data-pane-bar
     @keydown="onKeydown"
     @focusin="onFocusin"
   >
