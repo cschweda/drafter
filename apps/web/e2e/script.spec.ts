@@ -81,6 +81,10 @@ test.describe('the Script pane on a desktop', () => {
   });
 
   test('follows the cursor', async ({ page }) => {
+    // At the text's end (the empty line after the last one) the Script shows the end of the last
+    // page, with the last line about a pane's height above it: in WebKit's 1280×720 window, with
+    // the panes' bars level, that is just above the pane's top. A taller window shows it.
+    await page.setViewportSize({ width: 1280, height: 800 });
     const last = lineOf(page, 'END OF SAMPLE');
     await expect(last).not.toBeInViewport();
     await page.locator('.cm-content').click();

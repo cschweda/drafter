@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- With two panes side by side, the first line of text in each now starts at the same height, and the Source no longer starts with an empty band above a title page.
+
 ## [0.13.0] - 2026-10-29
 
 **History and Compare.** Drafter now keeps earlier versions of your script as you work: one every 10 minutes of writing, one each time you save or open a file, and one before anything that changes a lot at once (Expand outline, Fix all, Revert to Saved, reloading a changed file, a Final Draft import). **History** lists them; restore any one in one undo (Drafter keeps what you had first), label it, save it as its own file, or delete it. Older snapshots are thinned out over time, and labeled ones are always kept. **Compare** shows what changed between two versions as script pages, with each changed line marked and markers where lines were removed; a Changes list and **N** and **Shift+N** take you from change to change. Snapshots live in your browser and never change your file or your printed pages. Also fixed: in Safari, typing just after clicking a tab or a toolbar or status bar button could go into the script.
