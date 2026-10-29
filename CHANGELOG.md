@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-28
+
+**The Outline.** Phase 2 starts with an **Outline** tab: your script's sections and scenes as a tree, each scene with its number, heading, synopsis, color, page, length, and who speaks. Move a scene or a whole section by dragging it, with Alt+Up and Alt+Down, or with Move to…, and one undo puts it back. Write a synopsis in place, give a scene a color (written into the script as a note, so it never prints), condense the script to its outline, export a treatment as Markdown, and turn an outline of `=` lines or a Markdown list into scene stubs.
+
 ### Added
 
 - `@drafter/outline`, a new package: the scene index of a script (Phase 2 design §5.1). It lists the scenes in order, in either template (a screenplay's headings, a play's `##` scenes inside its acts), with the sections that hold them, each scene's synopses, color note, speakers, words, and, from a layout of the same text, its page and length in eighths.
@@ -562,7 +566,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/cschweda/drafter/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/cschweda/drafter/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/cschweda/drafter/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/cschweda/drafter/compare/v0.6.1...v0.7.0
