@@ -97,6 +97,8 @@ class Exporter {
   /** The speech still taking parentheticals and dialogue, or null once anything else is written. */
   private open: { paragraphs: XmlElement[]; speech: boolean; dual: boolean } | null = null;
   private pageBreak = false;
+  /** The synopses a scene heading has taken into its properties (a heading comes before them). */
+  private readonly collected = new Set<number>();
 
   constructor(
     private readonly doc: Doc,
@@ -220,12 +222,14 @@ class Exporter {
     for (let i = index + 1; i < this.doc.blocks.length; i++) {
       const block = this.doc.blocks[i] as Block;
       if (block.kind === 'section' || block.kind === 'scene_heading') break;
-      if (block.kind === 'synopsis')
+      if (block.kind === 'synopsis') {
+        this.collected.add(i);
         parts.push(
           this.blockPieces(block)
             .map((p) => p.text)
             .join(''),
         );
+      }
     }
     return parts.join('\n');
   }
@@ -261,7 +265,15 @@ class Exporter {
         case 'page_break':
           this.pageBreak = true;
           return;
-        case 'synopsis': // Carried on its scene's heading; one under no scene has nowhere to go.
+        case 'synopsis':
+          // One a scene took is already in its properties; any other has no scene to ride on, so
+          // it is a General paragraph in its place, marked so import can write it back as `=`.
+          if (!this.collected.has(index)) {
+            this.push([
+              this.paragraph('General', { DrafterSynopsis: 'Yes' }, this.blockPieces(block)),
+            ]);
+          }
+          return;
         case 'boneyard':
           return;
         case 'scene_heading':

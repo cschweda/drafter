@@ -207,6 +207,65 @@ describe('toFdx', () => {
     }
   });
 
+  it('exports a synopsis no scene collects as a General paragraph, in document order', () => {
+    const syn = (text: string) => P('General', { DrafterSynopsis: 'Yes' }, T(text));
+    expect(content('= Before any scene.\n\nINT. A - DAY\n')).toEqual([
+      syn('Before any scene.'),
+      P('Scene Heading', {}, T('INT. A - DAY')),
+    ]);
+    expect(content('# Act\n\n= About the act.\n\nINT. A - DAY\n\n= Of the scene.\n')).toEqual([
+      P('General', { DrafterSection: '1' }, T('Act')),
+      syn('About the act.'),
+      P(
+        'Scene Heading',
+        {},
+        el('SceneProperties', { Title: '', Summary: 'Of the scene.' }),
+        T('INT. A - DAY'),
+      ),
+    ]);
+    expect(content('# Act\n\n= Act synopsis.\n\n## Scene 1\n\n= Scene synopsis.\n', play)).toEqual([
+      P('General', { DrafterSection: '1' }, T('Act')),
+      syn('Act synopsis.'),
+      P(
+        'Scene Heading',
+        { DrafterSection: '2' },
+        el('SceneProperties', { Title: '', Summary: 'Scene synopsis.' }),
+        T('Scene 1'),
+      ),
+    ]);
+  });
+
+  it('puts a pending page break on a synopsis nothing collects', () => {
+    expect(content('One.\n\n===\n\n= Loose.\n')).toEqual([
+      P('Action', {}, T('One.')),
+      P('General', { DrafterSynopsis: 'Yes', StartsNewPage: 'Yes' }, T('Loose.')),
+    ]);
+  });
+
+  it('puts a page break on the second speaker of a dual pair', () => {
+    expect(content('BOB\nHi.\n\n===\n\nAMY ^\nHello.\n')).toEqual([
+      el(
+        'Paragraph',
+        {},
+        el(
+          'DualDialogue',
+          {},
+          P('Character', {}, T('BOB')),
+          P('Dialogue', {}, T('Hi.')),
+          P('Character', { StartsNewPage: 'Yes' }, T('AMY')),
+          P('Dialogue', {}, T('Hello.')),
+        ),
+      ),
+    ]);
+  });
+
+  it('keeps a note that spans lines inside dialogue', () => {
+    expect(content('BOB\nHi [[a\nb]] there.\n')).toEqual([
+      P('Character', {}, T('BOB')),
+      P('Dialogue', {}, T('Hi[[a\nb]]there.')),
+    ]);
+  });
+
   it('never throws, and always writes a document the reader accepts', () => {
     const piece = fc.constantFrom(
       'INT. A - DAY',
