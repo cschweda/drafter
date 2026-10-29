@@ -34,6 +34,8 @@ watch(aboutOpen, async (open) => {
 
 function onClose() {
   aboutOpen.value = false;
+  // Its contents (and their status line) leave the page with it.
+  info.value = null;
 }
 
 /** The text on the clipboard: the async API, else the browser's own Copy of a selected field. */
