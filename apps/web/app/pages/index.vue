@@ -184,6 +184,7 @@ onBeforeUnmount(() => {
     <LazyFolderModuleRunners v-if="desktopBuild" />
     <CommandPalette />
     <OutlineAnnouncer />
+    <SpellMenu />
     <TreatmentDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />

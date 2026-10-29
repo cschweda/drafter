@@ -9,13 +9,16 @@ import {
   type CursorElement,
   fountain,
   invertSceneMoves,
+  invertSpellMarks,
   parsedDoc,
   relint as relintView,
   sceneIds,
   spellMarks,
 } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
+import { commandById } from '../commands/registry';
 import type { DocumentKind } from '../markdown/kind';
+import { onSpellContextMenu } from '../spell/menu';
 import { theme } from './theme';
 import { typewriterScrolling } from './typewriter';
 
@@ -150,6 +153,23 @@ export function languageExtension(
 /** Undo and redo carry a moved scene's id back and forth (Phase 2 design §5.2). */
 export const sceneMoveHistory: Extension = invertedEffects.of(invertSceneMoves);
 
+/** Undo puts back the marks Add to this script's dictionary took off, and redo takes them off again. */
+export const spellMarkHistory: Extension = invertedEffects.of(invertSpellMarks);
+
+/**
+ * A key that runs a registered command (the spelling keys: Plan D, Call 11), when it's on. A key
+ * whose command is off (spellcheck is off) is left to the browser.
+ */
+const commandKey = (key: string, id: string) => ({
+  key,
+  run: () => {
+    const command = commandById(id);
+    if (!command || (command.enabled && !command.enabled())) return false;
+    void command.run();
+    return true;
+  },
+});
+
 export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fountain'): Extension {
   return [
     remember,
@@ -159,6 +179,7 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     // Each scene's and section's identity for the visit (Phase 2 design §5.2), after the parse it reads.
     sceneIds,
     sceneMoveHistory,
+    spellMarkHistory,
     language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),
@@ -168,14 +189,20 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     // A dropped file is the page's to open (`DropZone.vue`), not CodeMirror's to paste in: its own
     // drop handler reads a file's text into the script at the pointer. Returning true stops that
     // handler (and its default), and the event goes on to the window. Dragged text still drops in.
+    // A right-click on a marked word opens the spelling menu, not the browser's; anywhere else the
+    // browser's (or the desktop app's) menu is untouched (Call 12).
     EditorView.domEventHandlers({
       drop: (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files'),
+      contextmenu: (event, view) => onSpellContextMenu(event, view),
     }),
     // Save, Save As, Open, and New are the page's: the command registry binds their keys on the
-    // window, before the editor sees them. These two commands' keys are the editor's own.
+    // window, before the editor sees them. These commands' keys are the editor's own.
     keymap.of([
       { key: 'Shift-F8', run: previousDiagnostic },
       { key: 'Mod-Shift-z', run: redo, preventDefault: true },
+      commandKey('Mod-.', 'spelling-suggestions'),
+      commandKey('Mod-;', 'next-misspelling'),
+      commandKey('Mod-Shift-;', 'previous-misspelling'),
     ]),
     // Below fountain()'s own keys, which sit at Prec.high.
     keymap.of([

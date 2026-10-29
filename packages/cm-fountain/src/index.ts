@@ -46,7 +46,9 @@ export {
 } from './scene-ids';
 export {
   ignoreHere,
+  invertSpellMarks,
   mapSpellMarks,
+  restoreSpellMarks,
   type SpellMark,
   setSpellMarks,
   spellMarkAt,

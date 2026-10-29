@@ -32,6 +32,8 @@ export interface OutlineSession {
   itemById(id: string): OutlineItem | undefined;
   /** Why nothing can be changed from the Outline now, or null when it can. */
   readOnly: ComputedRef<string | null>;
+  /** Why this tab can't edit the script at all now (another tab has it, or its file is being checked), or null. */
+  locked: ComputedRef<string | null>;
   /** Applies a view's changes as one transaction (one undo). False when nothing could change. */
   apply(changes: readonly TextChange[], options?: ApplyOptions): boolean;
   setSynopsis(scene: Scene, text: string): boolean;
@@ -59,9 +61,13 @@ function create(): OutlineSession {
     });
     const idOf = (item: OutlineItem) => ids.value.get(item.span.from) ?? `block-${item.block}`;
     const itemById = (id: string) => index.value.items.find((item) => idOf(item) === id);
-    const readOnly = computed(() => {
+    const locked = computed(() => {
       if (editor.locked.value) return 'This script is open for editing in another tab.';
       if (script.fileLocked.value) return 'Drafter is checking this script’s file first.';
+      return null;
+    });
+    const readOnly = computed(() => {
+      if (locked.value) return locked.value;
       if (hasStrayBoneyard(editor.doc.value)) {
         return 'A /* in this script isn’t closed by its own */, so the outline changes nothing until it is.';
       }
@@ -74,6 +80,7 @@ function create(): OutlineSession {
       idOf,
       itemById,
       readOnly,
+      locked,
       apply,
       setSynopsis: (scene, text) => apply(setSynopsis(editor.doc.value, scene, text)),
       setColor: (scene, color) => {

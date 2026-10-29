@@ -132,6 +132,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'go-to-line', title: 'Go to line…', group: 'Go' },
   { id: 'next-problem', title: 'Next problem', group: 'Go', keys: 'F8' },
   { id: 'previous-problem', title: 'Previous problem', group: 'Go', keys: 'Shift-F8' },
+  // The spellcheck's (Plan D, Call 11): F7, the usual key, turns on caret browsing in Firefox.
+  { id: 'next-misspelling', title: 'Next misspelling', group: 'Go', keys: 'Mod-;' },
+  { id: 'previous-misspelling', title: 'Previous misspelling', group: 'Go', keys: 'Mod-Shift-;' },
 
   // View
   { id: 'show-source', title: 'Show Source', group: 'View' },
@@ -195,6 +198,15 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
+  // The spelling menu's (Plan D): the last three act on the misspelled word at the cursor.
+  { id: 'spelling-suggestions', title: 'Spelling suggestions', group: 'Edit', keys: 'Mod-.' },
+  {
+    id: 'add-to-script-dictionary',
+    title: 'Add word to this script’s dictionary',
+    group: 'Edit',
+  },
+  { id: 'add-to-my-dictionary', title: 'Add word to my dictionary', group: 'Edit' },
+  { id: 'ignore-misspelling', title: 'Ignore misspelling here', group: 'Edit' },
 
   // Edit, the element bar's commands (docs/drafter-element-bar-design.md §4): natural Fountain,
   // with a forcing mark only where a line needs one, on Mod-Alt-1…7 (decided 2026-10-27). Dual

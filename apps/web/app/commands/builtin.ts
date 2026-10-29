@@ -13,6 +13,8 @@ import {
   insertPageBreak,
   MARK_REFUSED,
   makeElement,
+  type SpellMark,
+  spellMarkAt,
   structureOf,
   toggleDual,
   withCompletion,
@@ -44,6 +46,9 @@ import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
 import { useSnapshots } from '~/snapshots/use-snapshots';
+import { addToMine, ignoreWordHere, stepMisspelling, tryAddToScript } from '~/spell/actions';
+import { openSpellMenu } from '~/spell/menu';
+import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
@@ -198,6 +203,34 @@ export function registerBuiltinCommands(): void {
     },
   });
 
+  // ---- The spellcheck's commands (Plan D) ---------------------------------------------------
+
+  const spellOn = () => settings.value.spellcheck;
+  const spellWhy = () => (spellOn() ? undefined : SPELLCHECK_OFF);
+  /**
+   * On the misspelled word at the cursor, with the Source showing and the editor focused first;
+   * said, when there is none.
+   */
+  const onMisspelling = (act: (mark: SpellMark) => unknown): Behavior => ({
+    enabled: spellOn,
+    why: spellWhy,
+    run: onEditor((v) => {
+      const mark = spellMarkAt(v.state, v.state.selection.main.head);
+      if (mark) act(mark);
+      else void saySpell(NO_MARK_HERE);
+    }),
+  });
+  /** Next or Previous misspelling: selects the word, and says it with its first suggestion. */
+  const stepSpelling = (direction: 1 | -1): Behavior => ({
+    enabled: spellOn,
+    why: spellWhy,
+    run: onEditor((v) => {
+      void stepMisspelling(v, direction).then((moved) => {
+        if (!moved) void saySpell(NO_MARKS);
+      });
+    }),
+  });
+
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
   // them without an editor); this is the rest, by id, in the same order.
@@ -348,6 +381,8 @@ export function registerBuiltinCommands(): void {
     'go-to-line': { run: () => openPalette('line') },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
+    'next-misspelling': stepSpelling(1),
+    'previous-misspelling': stepSpelling(-1),
     'next-change': { enabled: comparing, run: stepChange(1) },
     'previous-change': { enabled: comparing, run: stepChange(-1) },
 
@@ -484,6 +519,23 @@ export function registerBuiltinCommands(): void {
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
+    'spelling-suggestions': {
+      enabled: spellOn,
+      why: spellWhy,
+      run: onEditor((v) => {
+        if (!openSpellMenu(v)) void saySpell(NO_MARK_HERE);
+      }),
+    },
+    // A suggestion and the script's dictionary edit the file; My dictionary and Ignore here don't,
+    // so a read-only tab can use them (Call 19).
+    'add-to-script-dictionary': onMisspelling((mark) =>
+      tryAddToScript(view, mark.word, editor.kind.value, useOutline().locked.value),
+    ),
+    'add-to-my-dictionary': onMisspelling((mark) => void addToMine(view, mark.word)),
+    'ignore-misspelling': onMisspelling((mark) => {
+      ignoreWordHere(view, mark);
+      void saySpell(`Ignored “${mark.word}” here.`);
+    }),
     // Expand outline (design §6.5): the selection's outline lines as scene stubs.
     'expand-outline': {
       enabled: () => canEdit() && isFountain(),

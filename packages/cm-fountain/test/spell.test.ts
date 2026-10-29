@@ -2,7 +2,9 @@ import { ChangeSet, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import {
   ignoreHere,
+  invertSpellMarks,
   mapSpellMarks,
+  restoreSpellMarks,
   type SpellMark,
   setSpellMarks,
   spellMarkAt,
@@ -179,5 +181,60 @@ describe('spellMarks', () => {
     }
     expect(spellMarksOf(state)).toHaveLength(5000);
     expect(best).toBeLessThan(5);
+  });
+});
+
+describe('a word added to a dictionary', () => {
+  test('a reply in flight when the word was unmarked does not mark it again', () => {
+    const marks = marksOf(TEXT, 'phnoe');
+    let state = stateWith(TEXT, marks);
+    state = state.update({ effects: unmarkWord.of('phnoe') }).state;
+    expect(spellMarksOf(state)).toEqual([]);
+    // The reply to the check sent before the word was added still has it.
+    state = state.update({ effects: setSpellMarks.of(marks) }).state;
+    expect(spellMarksOf(state)).toEqual([]);
+    // The next one is the checker's own answer again.
+    state = state.update({ effects: setSpellMarks.of(marks.slice(0, 1)) }).state;
+    expect(spellMarksOf(state).map((m) => m.word)).toEqual(['phnoe']);
+  });
+
+  test('undo puts back the marks an edit unmarked, and redo takes them off again', () => {
+    const marks = marksOf(TEXT, 'phnoe');
+    const start = stateWith(TEXT, marks);
+    const add = start.update({
+      changes: { from: TEXT.length, insert: '/* drafter */\n' },
+      effects: unmarkWord.of('Phnoe'),
+    });
+    expect(spellMarksOf(add.state)).toEqual([]);
+    const undo = invertSpellMarks(add);
+    expect(undo).toHaveLength(1);
+    // Applied with the undone edit, in the text as it was.
+    const undone = add.state.update({
+      changes: add.changes.invert(start.doc),
+      effects: undo,
+    });
+    expect(spellMarksOf(undone.state)).toEqual(marks);
+    const redo = invertSpellMarks(undone);
+    const redone = undone.state.update({ changes: add.changes, effects: redo });
+    expect(spellMarksOf(redone.state)).toEqual([]);
+  });
+
+  test('an unmark with no edit has nothing to undo', () => {
+    const tr = stateWith(TEXT, marksOf(TEXT, 'phnoe')).update({ effects: unmarkWord.of('phnoe') });
+    expect(invertSpellMarks(tr)).toEqual([]);
+  });
+
+  test('restored marks map through the edits made since, and skip an ignored one', () => {
+    const marks = marksOf(TEXT, 'phnoe');
+    let state = stateWith(TEXT, []);
+    state = state.update({ effects: ignoreHere.of(marks[1] as SpellMark) }).state;
+    const effect = restoreSpellMarks.of(marks);
+    const edit = state.update({ changes: { from: 0, insert: 'So ' } });
+    const mapped = effect.map(edit.changes);
+    state = edit.state.update({ effects: mapped ? [mapped] : [] }).state;
+    expect(spellMarksOf(state).map((m) => [m.from, m.word])).toEqual([
+      [(marks[0] as SpellMark).from + 3, 'phnoe'],
+      [(marks[2] as SpellMark).from + 3, 'PHNOE'],
+    ]);
   });
 });

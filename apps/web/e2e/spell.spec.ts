@@ -175,6 +175,161 @@ test.describe('spellcheck', () => {
   });
 });
 
+const menu = (page: Page) => page.getByRole('menu', { name: 'Spelling suggestions' });
+const announcer = (page: Page) => page.locator('.outline-announcer');
+/** The editor has focus, with the selection it had. */
+const editorFocused = (page: Page) =>
+  page.evaluate(() => !!document.activeElement?.closest('.cm-content'));
+/** The text the selection holds. */
+const selected = (page: Page) => page.evaluate(() => getSelection()?.toString() ?? '');
+
+const WORDS = 'INT. HALL - DAY\n\nThe phnoe rings. A phnoe again. Then the drowr shuts.\n';
+
+test.describe('the spelling menu', () => {
+  test.beforeEach(async ({ page }) => {
+    await start(page);
+  });
+
+  test('right-click on a misspelling opens the menu, and a suggestion replaces it', async ({
+    page,
+  }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    await marks(page).last().click({ button: 'right' });
+    await expect(menu(page)).toBeVisible();
+    await expect(menu(page).getByRole('menuitem', { name: 'Ignore here' })).toBeVisible();
+    await menu(page).getByRole('menuitem', { name: 'drown', exact: true }).click();
+    await expect(menu(page)).toBeHidden();
+    await expect(editor(page)).toContainText('Then the drown shuts.');
+    await expectMarks(page, ['phnoe', 'phnoe']);
+    // Focus is back in the editor, after the word.
+    expect(await editorFocused(page)).toBe(true);
+    await page.keyboard.type('!');
+    await expect(editor(page)).toContainText('Then the drown! shuts.');
+  });
+
+  test('right-click elsewhere leaves the browser’s menu', async ({ page }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    await page.evaluate(() => {
+      const w = window as unknown as { menus: boolean[] };
+      w.menus = [];
+      window.addEventListener('contextmenu', (event) => w.menus.push(event.defaultPrevented));
+    });
+    await editor(page).getByText('INT. HALL - DAY').click({ button: 'right' });
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { menus: boolean[] }).menus))
+      .toEqual([false]);
+    await expect(menu(page)).toHaveCount(0);
+    await marks(page).first().click({ button: 'right' });
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { menus: boolean[] }).menus))
+      .toEqual([false, true]);
+    await expect(menu(page)).toBeVisible();
+  });
+
+  test('Mod-. opens the menu at the cursor, and Escape gives the editor focus back', async ({
+    page,
+  }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    // Nothing to open on a word that is spelled right; it says so.
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.press('ControlOrMeta+Period');
+    await expect(announcer(page)).toHaveText('No misspelled word at the cursor.');
+    await expect(menu(page)).toHaveCount(0);
+    // The cursor in "drowr".
+    const at = WORDS.indexOf('drowr') + 2;
+    await page.keyboard.press('ControlOrMeta+End');
+    for (let i = WORDS.length; i > at; i--) await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ControlOrMeta+Period');
+    await expect(menu(page)).toBeVisible();
+    await expect(menu(page).getByRole('menuitem', { name: 'drown', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect.poll(() => editorFocused(page)).toBe(true);
+    // The cursor is where it was.
+    await page.keyboard.type('Z');
+    await expect(editor(page)).toContainText('drZowr');
+  });
+
+  test('Add to this script’s dictionary unflags every occurrence at once and Undo brings them back', async ({
+    page,
+  }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    // How many marks are drawn when the metadata block first is: the edit's own transaction.
+    await page.evaluate(() => {
+      const w = window as unknown as { marksWithBlock: number | null };
+      w.marksWithBlock = null;
+      const content = document.querySelector('.cm-content') as HTMLElement;
+      new MutationObserver(() => {
+        if (w.marksWithBlock === null && content.textContent?.includes('/* drafter')) {
+          w.marksWithBlock = content.querySelectorAll('.cm-misspelled').length;
+        }
+      }).observe(content, { childList: true, subtree: true, characterData: true });
+    });
+    await marks(page).first().click({ button: 'right' });
+    await menu(page).getByRole('menuitem', { name: 'Add to this script’s dictionary' }).click();
+    await expect(editor(page)).toContainText('"dictionary":["phnoe"]');
+    expect(
+      await page.evaluate(() => (window as unknown as { marksWithBlock: number }).marksWithBlock),
+    ).toBe(1);
+    await expectMarks(page, ['drowr']);
+    await expect(announcer(page)).toHaveText('Added “phnoe” to this script’s dictionary.');
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(editor(page)).not.toContainText('/* drafter');
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+  });
+
+  test('Add to my dictionary unflags the word in another script too', async ({ page }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    await marks(page).last().click({ button: 'right' });
+    await menu(page).getByRole('menuitem', { name: 'Add to my dictionary' }).click();
+    await expectMarks(page, ['phnoe', 'phnoe']);
+    // Not in the file.
+    await expect(editor(page)).not.toContainText('/* drafter');
+    await page.keyboard.press('ControlOrMeta+Alt+n');
+    await expect(editor(page)).toContainText('Untitled Screenplay');
+    await setText(page, 'INT. YARD - DAY\n\nThe drowr and the wuold.\n');
+    await expectMarks(page, ['wuold']);
+  });
+
+  test('Ignore here unflags one occurrence', async ({ page }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    await marks(page).first().click({ button: 'right' });
+    await menu(page).getByRole('menuitem', { name: 'Ignore here' }).click();
+    await expectMarks(page, ['phnoe', 'drowr']);
+    // The one left is the second.
+    const left = await marks(page)
+      .first()
+      .evaluate((el) => el.closest('.cm-line')?.textContent?.indexOf('A phnoe'));
+    expect(left).toBeGreaterThan(0);
+    await expect(editor(page)).not.toContainText('/* drafter');
+  });
+
+  test('Next and Previous misspelling move the cursor and say the word', async ({ page }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.press('ControlOrMeta+Semicolon');
+    await expect(announcer(page)).toHaveText('phnoe. Suggestion: phone.');
+    expect(await selected(page)).toBe('phnoe');
+    await page.keyboard.press('ControlOrMeta+Semicolon');
+    await page.keyboard.press('ControlOrMeta+Semicolon');
+    await expect(announcer(page)).toHaveText('drowr. Suggestion: drown.');
+    expect(await selected(page)).toBe('drowr');
+    // Wrapping past the end, and back.
+    await page.keyboard.press('ControlOrMeta+Semicolon');
+    await expect(announcer(page)).toHaveText('phnoe. Suggestion: phone.');
+    await page.keyboard.press('ControlOrMeta+Shift+Semicolon');
+    await expect(announcer(page)).toHaveText(/^drowr\./);
+    expect(await selected(page)).toBe('drowr');
+  });
+});
+
 test.describe('a dictionary that can’t load', () => {
   test('says once that the dictionary couldn’t load, and types on', async ({ page, context }) => {
     let asked = 0;
