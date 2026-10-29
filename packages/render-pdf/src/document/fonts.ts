@@ -18,3 +18,11 @@ export const DOCUMENT_FONT_FILES: Readonly<Record<Face, string>> = Object.freeze
   textBoldItalic: 'inter-tight/InterTight-SemiBoldItalic.ttf',
   code: 'CourierPrime-Regular.ttf',
 });
+
+/**
+ * The OpenType features a document's text is laid out with: none asked for, so each font's own
+ * defaults (its ligatures and contextual alternates). `fontMeasure` lays strings out with these and
+ * the renderer embeds the fonts with them, so what the layout measures is what pdf-lib draws;
+ * `document-render.test.ts` checks the drawn widths against the measured ones.
+ */
+export const LAYOUT_FEATURES = undefined;
