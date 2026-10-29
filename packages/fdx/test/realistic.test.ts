@@ -21,17 +21,22 @@ const FILES = [
   'revisions.fdx',
   'stage-play.fdx',
   'fd13-shapes.fdx',
+  'fd13-shooting-shapes.fdx',
 ] as const;
 
 const elements = (node: XmlElement) =>
   node.children.filter((c): c is XmlElement => typeof c !== 'string');
 // What a setting or an image holds is never the script's text, wherever it sits (as import reads it).
-const textOf = (node: XmlElement): string =>
-  node.children
+// A run styled `AllCaps` prints in capitals, so it comes in that way.
+const textOf = (node: XmlElement): string => {
+  const text = node.children
     .map((c) =>
       typeof c === 'string' ? c : IGNORED.has(c.name) || c.name === 'Picture' ? '' : textOf(c),
     )
     .join('');
+  const caps = node.name === 'Text' && (node.attrs.Style ?? '').split('+').includes('AllCaps');
+  return caps ? text.toUpperCase() : text;
+};
 
 /** The text directly in an element, outside its children. */
 const ownText = (node: XmlElement) => node.children.filter((c) => typeof c === 'string').join('');
@@ -50,7 +55,7 @@ const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
  * anything nested in them) and its own text, its other child elements, a scene's Title, Summary,
  * and number, what a SceneProperties holds (a styled title that differs from the Title, each arc
  * beat's character and text), a paragraph's alternates that differ from its text, stray text and
- * elements inside a DualDialogue, the title page's paragraphs and its other children, elements in
+ * elements inside a DualDialogue (and an OmittedScene's paragraphs, read as any other), the title page's paragraphs and its other children, elements in
  * a Content that aren't paragraphs, each beat card's title and text, each script note's writer and
  * text, the alternates no paragraph names, and every other element under the root that isn't one
  * of the settings `IGNORED` names. Elements `IGNORED` names are skipped wherever they are. Blank
@@ -67,15 +72,18 @@ function writing(root: XmlElement): string[] {
     if (!IGNORED.has(e.name)) out.push(textOf(e));
   };
   const paragraph = (p: XmlElement) => {
-    const runs = elements(p)
-      .filter((c) => c.name === 'Text')
+    // A hidden run is a note of its own in the line, so it is looked for apart from the others.
+    const hidden = (c: XmlElement) => (c.attrs.Style ?? '').split('+').includes('HiddenText');
+    const texts = elements(p).filter((c) => c.name === 'Text');
+    const runs = texts
+      .filter((c) => !hidden(c))
       .map(textOf)
       .join('');
-    out.push(runs, ownText(p));
+    out.push(runs, ...texts.filter(hidden).map(textOf), ownText(p));
     if (p.attrs.Number) out.push(sceneNumber(p.attrs.Number));
     for (const c of elements(p)) {
       if (c.name === 'Text' || c.name === 'Picture') continue;
-      if (c.name === 'DualDialogue') {
+      if (c.name === 'DualDialogue' || c.name === 'OmittedScene') {
         out.push(ownText(c));
         for (const inner of elements(c))
           inner.name === 'Paragraph' ? paragraph(inner) : element(inner);
@@ -87,8 +95,11 @@ function writing(root: XmlElement): string[] {
             if (oneLine(text) !== oneLine(c.attrs.Title ?? '')) out.push(text);
           } else if (d.name === 'SceneArcBeats') {
             out.push(ownText(d));
-            for (const beat of elements(d))
-              out.push(beat.attrs.Name ?? '', ...paragraphTexts(beat));
+            // An arc beat with no text is left out, its character's name with it.
+            for (const beat of elements(d)) {
+              const texts = paragraphTexts(beat);
+              if (texts.some((t) => t.trim() !== '')) out.push(beat.attrs.Name ?? '', ...texts);
+            }
           } else element(d);
         }
       } else if (c.name === 'Alts') {
@@ -467,6 +478,63 @@ describe('fd13-shapes.fdx', () => {
     );
     expect(fd.text.match(/Fog on the water/g)).toHaveLength(1);
     expect(fd.text.match(/cargo that won't keep/g)).toHaveLength(1);
+  });
+});
+
+describe('fd13-shooting-shapes.fdx', () => {
+  const fd = imported('fd13-shooting-shapes.fdx');
+  const { doc } = fd;
+
+  it('keeps an action line whole when its runs carry breakdown tags and revisions', () => {
+    expect(kindOf(doc, 'Ilse lifts a ladder off the cart, careful of the blossom.')).toBe('action');
+  });
+
+  it('keeps the scene numbers, and the omitted scene as a numbered OMITTED heading', () => {
+    const numbers = doc.blocks.flatMap((b) =>
+      b.kind === 'scene_heading' ? [[blockText(b), b.sem.number]] : [],
+    );
+    expect(numbers).toEqual([
+      ['EXT. PEAR ORCHARD - DAWN', '7'],
+      ['OMITTED', '8'],
+      ['EXT. TOWN SQUARE - DAY (1952)', '9'],
+    ]);
+  });
+
+  it('brings an omitted scene in as notes after its OMITTED heading, none of it printing', () => {
+    const omitted = [
+      'INT. PACKING SHED - DAY',
+      'Ilse counts crates by the door, losing her place twice.',
+      'ILSE\nForty. No. Forty-one.',
+      'CUT TO:',
+      '# Part Two: The Market',
+      '= The pears go to town, and so does the quarrel.',
+    ].map((block) => `[[fdx: Omitted: ${block}]]`);
+    expect(fd.text).toContain(`.OMITTED #8#\n\n${omitted.join('\n\n')}\n\nEXT. TOWN SQUARE`);
+    // The omitted outline item and summary are not the script's structure.
+    const sections = doc.blocks.flatMap((b) => (b.kind === 'section' ? [blockText(b)] : []));
+    expect(sections).toEqual(['Part One: The Orchard']);
+    expect(doc.blocks.filter((b) => b.kind === 'transition').map(blockText)).toEqual(['CUT TO:']);
+    expect(fd.mapped).toEqual([{ type: 'Omitted', count: 6 }]);
+  });
+
+  it('keeps a scene title after its heading, and an empty arc beat out', () => {
+    expect(fd.text).toContain(
+      'EXT. TOWN SQUARE - DAY (1952) #9#\n\n= Market day\n\nStalls in rows.',
+    );
+  });
+
+  it('writes a run styled AllCaps in capitals, as Final Draft prints it', () => {
+    expect(kindOf(doc, 'A shout from the gate: YOUNG PETR, running.')).toBe('action');
+  });
+
+  it('brings hidden text in as a note in its place, so it never prints', () => {
+    expect(fd.text).toContain("The cart's axle creaks.[[Sound team: a dry, wooden creak.]]\n");
+    expect(kindOf(doc, "The cart's axle creaks.")).toBe('action');
+  });
+
+  it('keeps struck-out text as text, and reads the revision marks as settings', () => {
+    expect(kindOf(doc, 'Frost on the grass.')).toBe('action');
+    expect(fd.ignored).toEqual(expect.arrayContaining(['Revisions', 'DeletedText', 'LockedPages']));
   });
 });
 

@@ -179,7 +179,8 @@ describe('fromFdx: the elements', () => {
         `<Paragraph Type="Action"><Text Style="Bold">a </Text><Text Style="Bold+Italic">b</Text><Text Style="Bold"> c</Text><Text> and </Text><Text Style="Bold+Italic+Underline">all</Text><Text Style="AllCaps"> d</Text></Paragraph>`,
       ),
     ).text;
-    expect(text).toBe('**a *b* c** and _***all***_ d\n');
+    // A run styled AllCaps prints in capitals.
+    expect(text).toBe('**a *b* c** and _***all***_ D\n');
     const runs = parse(text).blocks[0]?.lines[0]?.inline ?? [];
     expect(runs.map((r) => [r.text, r.bold, r.italic, r.underline])).toEqual([
       ['a ', true, false, false],
@@ -187,7 +188,7 @@ describe('fromFdx: the elements', () => {
       [' c', true, false, false],
       [' and ', false, false, false],
       ['all', true, true, true],
-      [' d', false, false, false],
+      [' D', false, false, false],
     ]);
   });
 
@@ -344,6 +345,15 @@ describe('fromFdx: unmapped content', () => {
     expect(result.text).toBe('The sea.\n');
     expect(result.mapped).toEqual([]);
     expect(result.ignored).toEqual(['TagData']);
+  });
+
+  it('ignores the places revisions deleted text, whatever they hold: deleted is not writing', () => {
+    const deleted =
+      '<DeletedText><DeletedTextLocation Offset="9" RevisionID="2">the lamp goes out</DeletedTextLocation></DeletedText>';
+    const result = fromFdx(fdx(P('Action', 'The sea.'), deleted));
+    expect(result.text).toBe('The sea.\n');
+    expect(result.mapped).toEqual([]);
+    expect(result.ignored).toEqual(['DeletedText']);
   });
 
   it('forces an unknown type whose text would read as another kind', () => {
@@ -1342,4 +1352,96 @@ describe('fromFdx: nothing loose is dropped', () => {
     expect(arc.text).toContain('arc words [[fdx: SceneArcBeats text]]');
     expect(arc.text).toContain('alts words [[fdx: Alts text]]');
   });
+});
+
+describe('fromFdx: shooting scripts', () => {
+  const omittedHeading = (number: string, inner: string) =>
+    `<Paragraph Number="${number}" Type="Scene Heading"><Text>OMITTED</Text><OmittedScene>${inner}</OmittedScene></Paragraph>`;
+
+  it('reads an omitted scene outside its heading as it does inside one', () => {
+    const text = fromFdx(
+      fdx(`${P('Action', 'Before.')}<OmittedScene>${P('Action', 'Gone for now.')}</OmittedScene>`),
+    ).text;
+    expect(text).toBe('Before.\n\n[[fdx: Omitted: Gone for now.]]\n');
+  });
+
+  it('reads an omitted scene inside another as part of it: no note inside a note', () => {
+    const inner = `${P('Action', 'Outer.')}<OmittedScene>${P('Action', 'Inner.')}</OmittedScene>`;
+    const result = fromFdx(fdx(omittedHeading('3', inner) + P('Action', 'After.')));
+    expect(result.text).toBe(
+      '.OMITTED #3#\n\n[[fdx: Omitted: Outer.]]\n\n[[fdx: Omitted: Inner.]]\n\nAfter.\n',
+    );
+  });
+
+  it("drops an omitted scene's page breaks, and keeps one waiting before it", () => {
+    const inner = P('Action', 'One.') + P('Action', 'Two.', ' StartsNewPage="Yes"');
+    const text = fromFdx(
+      fdx(P('Action', 'Page.', ' StartsNewPage="Yes"') + omittedHeading('4', inner)),
+    ).text;
+    expect(text).toBe(
+      '===\n\nPage.\n\n.OMITTED #4#\n\n[[fdx: Omitted: One.]]\n\n[[fdx: Omitted: Two.]]\n',
+    );
+  });
+
+  it("can't be closed early by its own text", () => {
+    const text = fromFdx(fdx(omittedHeading('5', P('Note', 'odd ]] text]')))).text;
+    expect(text).toBe('.OMITTED #5#\n\n[[fdx: Omitted: [[odd ] ] text] ] ] ]]\n');
+    expect(parse(text).blocks.map((b) => b.kind)).toEqual(['scene_heading', 'note']);
+  });
+
+  it('ends an open speech before the omitted scene, and one inside it at its end', () => {
+    const inner = P('Character', 'ADA') + P('Dialogue', 'Hush.');
+    const text = fromFdx(
+      fdx(`${P('Character', 'BO') + P('Dialogue', 'Look.')}<OmittedScene>${inner}</OmittedScene>`),
+    ).text;
+    expect(text).toBe('BO\nLook.\n\n[[fdx: Omitted: ADA\nHush.]]\n');
+  });
+
+  it('makes hidden runs one note in their place, and drops a blank one', () => {
+    const p =
+      '<Paragraph Type="Action"><Text>A door</Text><Text Style="HiddenText"> (prop: </Text>' +
+      '<Text Style="Bold+HiddenText">brass]]</Text><Text Style="HiddenText">)</Text>' +
+      '<Text> opens.</Text><Text Style="HiddenText">   </Text></Paragraph>';
+    const result = fromFdx(fdx(p));
+    expect(result.text).toBe('A door[[ (prop: brass] ])]] opens.\n');
+    expect(parse(result.text).blocks.map((b) => b.kind)).toEqual(['action']);
+  });
+
+  it('keeps hidden text as the text of a kind that never prints', () => {
+    const hidden = (type: string, text: string) =>
+      `<Paragraph Type="${type}"><Text Style="Italic+HiddenText">${text}</Text></Paragraph>`;
+    const text = fromFdx(
+      fdx(hidden('Outline 2', 'The long night') + hidden('Summary', 'Nobody sleeps.')),
+    ).text;
+    expect(text).toBe('## The long night\n\n= Nobody sleeps.\n');
+  });
+
+  it('writes a run styled AllCaps in capitals, in any kind', () => {
+    const text = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><Text Style="AllCaps">int. mill - night</Text></Paragraph>' +
+          '<Paragraph Type="Action"><Text>Then </Text><Text Style="Bold+AllCaps">straße</Text></Paragraph>',
+      ),
+    ).text;
+    expect(text).toBe('INT. MILL - NIGHT\n\nThen **STRASSE**\n');
+  });
+
+  it(
+    'reads omitted scenes and hidden runs in linear time',
+    () => {
+      const make = (n: number) => {
+        const scenes: string[] = [];
+        for (let k = 0; k < n; k++) {
+          const runs = '<Text>seen </Text><Text Style="HiddenText">hid </Text>'.repeat(20);
+          const inner = `${P('Action', `Scene ${k}.`)}<Paragraph Type="Action">${runs}</Paragraph>`;
+          scenes.push(omittedHeading(String(k + 1), inner));
+        }
+        return fdx(scenes.join(''));
+      };
+      const { growth, large } = scaling(make, fromFdx, 500);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
 });

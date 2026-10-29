@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **Final Draft shooting scripts import cleanly.** A scene the shooting script omits (its heading reads OMITTED) no longer pours its hidden text into the script as one block, with its lines broken at every tagged word: the OMITTED heading keeps its scene number, and the omitted scene's own lines come in after it as notes (`[[fdx: Omitted: …]]`), so nothing of it prints and nothing of it joins your outline, and you can restore it by taking the note marks off. Text Final Draft shows in capitals (All Caps) now comes in in capitals, hidden text comes in as a note in its place so it still doesn't print, and the places a revision deleted text are left out.
+
 ## [0.15.0] - 2026-10-29
 
 **The Structure strip.** Your whole script at a glance: a band across the top of the window shows your acts, sequences, and scenes as blocks as wide as their share of the pages, colored as you've colored them, with a page ruler that marks where the Script pane is. Click a block to go there. Turn it on from the toolbar's new Structure button, Ctrl+Alt+O (⌘⌥O on a Mac), the palette, or Settings; it's off until you do. Also fixed: AltGr letters on Windows are no longer taken by Ctrl+Alt shortcuts, and the toolbar keeps to one row at 1024 px.
