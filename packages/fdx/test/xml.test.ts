@@ -121,6 +121,8 @@ describe('readXml refuses', () => {
     ['a declaration that is not first', '<!-- c --><?xml version="1.0"?><a/>'],
     ['a control character', '<a>\u0001</a>'],
     ['a lone surrogate', '<a>\uD800</a>'],
+    ['a lone surrogate in a name', '<a\uD800/>'],
+    ['U+FFFF in a name', '<a\uFFFF/>'],
     ['a ]]> in text', '<a>x]]>y</a>'],
     ['a -- in a comment', '<a><!-- a -- b --></a>'],
     ['a CDATA section outside the root', '<![CDATA[x]]><a/>'],
@@ -132,6 +134,8 @@ describe('readXml refuses', () => {
     const nest = (d: number) => '<a>'.repeat(d) + '</a>'.repeat(d);
     expect(readXml(nest(64)).name).toBe('a');
     refuses(nest(65));
+    expect(readXml(`${'<a>'.repeat(63)}<b/>${'</a>'.repeat(63)}`).name).toBe('a');
+    refuses(`${'<a>'.repeat(64)}<b/>${'</a>'.repeat(64)}`);
   });
 
   it('input over 5 MB', () => {

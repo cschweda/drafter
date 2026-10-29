@@ -30,8 +30,9 @@ export const MAX_XML_CHARS = 5 * 1024 * 1024;
 /** The deepest nesting the reader allows, the root being depth 1. */
 export const MAX_XML_DEPTH = 64;
 
-const NAME_START = /[A-Za-z_:À-￿]/;
-const NAME_CHAR = /[A-Za-z0-9_:.\-·À-￿]/;
+// Name characters stop short of the surrogates and U+FFFE/U+FFFF, which XML never allows.
+const NAME_START = /[A-Za-z_:\u00C0-\uD7FF\uE000-\uFFFD]/;
+const NAME_CHAR = /[A-Za-z0-9_:.\-\u00B7\u00C0-\uD7FF\uE000-\uFFFD]/;
 
 const isSpace = (c: string) => c === ' ' || c === '\t' || c === '\n' || c === '\r';
 
@@ -236,6 +237,8 @@ export function readXml(text: string): XmlElement {
         if (src[i] !== '>') fail('Expected > after /');
       }
       i++;
+      // An element sits one level below everything open, a self-closing one included.
+      if (stack.length >= MAX_XML_DEPTH) fail(`Elements nest deeper than ${MAX_XML_DEPTH}`);
       const parent = stack[stack.length - 1];
       if (parent) parent.children.push(el);
       if (selfClosing) {
@@ -244,7 +247,6 @@ export function readXml(text: string): XmlElement {
           seenRoot = true;
         }
       } else {
-        if (stack.length >= MAX_XML_DEPTH) fail(`Elements nest deeper than ${MAX_XML_DEPTH}`);
         stack.push(el);
       }
     }
