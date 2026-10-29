@@ -2,13 +2,15 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
+import { fileNameFor } from '../app/storage/text';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
-// pdf-lib is render-pdf's, so it is found from there.
-const { PDFDocument } = createRequire(`${ROOT}/packages/render-pdf/package.json`)(
+// pdf-lib and pdfjs are render-pdf's, so they are found from there.
+const renderPdfRequire = createRequire(`${ROOT}/packages/render-pdf/package.json`);
+const { PDFArray, PDFDict, PDFDocument, PDFName, PDFHexString, PDFString } = renderPdfRequire(
   'pdf-lib',
 ) as typeof import('pdf-lib');
 const CLI = `${ROOT}/packages/cli/dist/index.js`;
@@ -24,6 +26,87 @@ const ready = (page: Page) => toast(page).filter({ hasText: 'Exported' });
 async function start(page: Page) {
   await page.goto('/');
   await expect(editor(page)).toContainText('The Call');
+}
+
+/** The text of every page of a PDF, as pdfjs reads it, joined. */
+async function pdfText(bytes: Uint8Array): Promise<string> {
+  const pdfjs = (await import(
+    pathToFileURL(renderPdfRequire.resolve('pdfjs-dist/legacy/build/pdf.mjs')).href
+  )) as typeof import('pdfjs-dist');
+  // pdfjs wants a plain Uint8Array (not a Node Buffer), and takes ownership of it: a copy.
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes), verbosity: 0 }).promise;
+  const parts: string[] = [];
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const content = await (await pdf.getPage(n)).getTextContent();
+    for (const item of content.items) if ('str' in item) parts.push(item.str);
+  }
+  return parts.join(' ');
+}
+
+/** The address of each link annotation on each page. */
+function linkAddresses(pdf: import('pdf-lib').PDFDocument): string[] {
+  const addresses: string[] = [];
+  for (const page of pdf.getPages()) {
+    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+    for (let i = 0; i < (annots?.size() ?? 0); i++) {
+      const action = annots?.lookup(i, PDFDict).lookupMaybe(PDFName.of('A'), PDFDict);
+      const uri = action?.lookup(PDFName.of('URI'));
+      if (uri instanceof PDFHexString || uri instanceof PDFString) addresses.push(uri.decodeText());
+    }
+  }
+  return addresses;
+}
+
+const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
+
+/** Runs a command from the palette, by its title. */
+async function runCommand(page: Page, title: string) {
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(palette(page)).toBeVisible();
+  await page.keyboard.type(title);
+  await palette(page).getByRole('option', { name: title }).first().click();
+  await expect(palette(page)).toBeHidden();
+}
+
+/** Help → Sample scripts → Markdown, which opens the sample as a new document. */
+async function openMarkdownSample(page: Page) {
+  await runCommand(page, 'Sample script: Markdown');
+  await expect(editor(page)).toContainText('# Sample: Markdown');
+}
+
+/** Exports the open document as a PDF, from the Export menu, and answers the downloaded bytes. */
+async function downloadPdf(page: Page): Promise<{ name: string; bytes: Buffer }> {
+  await exportButton(page).click();
+  const download = page.waitForEvent('download');
+  await pdfItem(page).click();
+  const file = await download;
+  return { name: file.suggestedFilename(), bytes: await readFile(await file.path()) };
+}
+
+/**
+ * About 190 sections of invented words (so no text comes from anywhere else): headings,
+ * paragraphs, a list, a quote, and code, a little under half a page each.
+ */
+function longDocument(): string {
+  const words = ['vorn', 'taleb', 'quisp', 'marrowy', 'ost', 'plenk', 'dravish', 'ulm', 'senner'];
+  let seed = 7;
+  const pick = (count: number) =>
+    Array.from({ length: count }, () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return words[Math.floor((seed / 2147483648) * words.length)];
+    }).join(' ');
+  const sections = ['# The Long Document'];
+  for (let s = 0; s < 190; s++) {
+    sections.push(
+      `## ${pick(4)} ${s}`,
+      pick(70),
+      `${pick(30)} *${pick(4)}* and **${pick(3)}**.`,
+      `- ${pick(12)}\n- ${pick(16)}\n  - ${pick(8)}`,
+      `> ${pick(24)}`,
+      `\`\`\`\n${pick(8)}\n  ${pick(12)}\n\`\`\``,
+    );
+  }
+  return `${sections.join('\n\n')}\n`;
 }
 
 /** `drafter build --txt`'s output for the sample, which the browser's export must equal. */
@@ -163,6 +246,98 @@ test.describe('exporting where the browser downloads', () => {
     expect(
       await page.evaluate(() => (window as unknown as { __violations: string[] }).__violations),
     ).toEqual([]);
+  });
+});
+
+test.describe('a Markdown document’s PDF', () => {
+  test.beforeEach(async ({ page }) => {
+    await removePickers(page);
+  });
+
+  test('exports the sample Markdown document as a PDF', async ({ page }) => {
+    await start(page);
+    await openMarkdownSample(page);
+    const name = fileNameFor('Sample: Markdown', '.pdf');
+    const { name: downloaded, bytes } = await downloadPdf(page);
+    expect(downloaded).toBe(name);
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBe(1);
+    const { width, height } = pdf.getPage(0).getSize();
+    expect([width, height]).toEqual([612, 792]);
+    expect(pdf.getTitle()).toBe('Sample: Markdown');
+    const text = await pdfText(bytes);
+    expect(text).toContain('Sample: Markdown');
+    expect(text).toContain('Pancake, the cat');
+    expect(linkAddresses(pdf)).toEqual(['https://drafter.dev/']);
+    await expect(ready(page)).toHaveText(`Exported ${name}.`);
+  });
+
+  test('exports on A4 when Settings says so', async ({ page }) => {
+    await start(page);
+    await page.keyboard.press('ControlOrMeta+,');
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    await settings.getByLabel('Paper for Markdown PDFs').selectOption('a4');
+    await settings.getByRole('button', { name: 'Done' }).click();
+    await expect(settings).toBeHidden();
+    await openMarkdownSample(page);
+    const { bytes } = await downloadPdf(page);
+    const { width, height } = (await PDFDocument.load(bytes)).getPage(0).getSize();
+    expect([width, height]).toEqual([595.28, 841.89]);
+    // A screenplay's PDF keeps its template's paper.
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New screenplay' })
+      .click();
+    await expect(editor(page)).not.toContainText('Sample: Markdown');
+    await editor(page).click();
+    await page.keyboard.insertText('INT. HALL - DAY\n\nA door.\n');
+    const script = await downloadPdf(page);
+    const size = (await PDFDocument.load(script.bytes)).getPage(0).getSize();
+    expect([size.width, size.height]).toEqual([612, 792]);
+  });
+
+  test('says which characters print as ?', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'typing into the editor is covered on the desktop');
+    await start(page);
+    await runCommand(page, 'New Markdown document');
+    await expect(editor(page)).toContainText('# Untitled');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.insertText('\nThe sign says 漢字.\n');
+    const { name, bytes } = await downloadPdf(page);
+    expect(name).toBe('Untitled.pdf');
+    expect(await pdfText(bytes)).toContain('The sign says ??.');
+    await expect(ready(page)).toHaveText(
+      'Exported Untitled.pdf. Some characters aren’t in Drafter’s fonts and print as ?: 漢, 字.',
+    );
+  });
+
+  test('exports a 100-page document in the worker', async ({ page, browserName, isMobile }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, 'the budget is measured in Chromium');
+    // The export itself fails only past 20 s (a hang guard; the budget is 3 s on the maintainer's
+    // machine, Markdown PDF design §8); the rest of the test has time for the paste.
+    test.setTimeout(60_000);
+    await start(page);
+    await runCommand(page, 'New Markdown document');
+    await expect(editor(page)).toContainText('# Untitled');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText(longDocument());
+    // The editor draws only what is on screen; the window's title is the first heading.
+    await expect(page).toHaveTitle(/The Long Document — Drafter$/);
+    await exportButton(page).click();
+    const download = page.waitForEvent('download', { timeout: 20_000 });
+    const started = Date.now();
+    await pdfItem(page).click();
+    const file = await download;
+    const ms = Date.now() - started;
+    const pages = (await PDFDocument.load(await readFile(await file.path()))).getPageCount();
+    console.log(`A ${pages}-page Markdown PDF exported in the Chromium worker in ${ms} ms.`);
+    test.info().annotations.push({ type: 'timing', description: `${pages} pages, ${ms} ms` });
+    expect(pages).toBeGreaterThanOrEqual(100);
+    expect(ms).toBeLessThan(20_000);
+    await expect(ready(page)).toHaveText('Exported The Long Document.pdf.');
   });
 });
 

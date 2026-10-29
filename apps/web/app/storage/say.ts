@@ -15,13 +15,18 @@ export async function say(target: Ref<string>, message: string): Promise<void> {
 
 /**
  * Like `say`, for a toast: the message is set the same way, and empties after `ms`. Returns the
- * function that sets it; a newer message restarts the wait.
+ * function that sets it; a newer message restarts the wait. With `keep`, the message stays until
+ * the next one (an export under way, which says when it is done).
  */
-export function timedSay(target: Ref<string>, ms: number): (message: string) => Promise<void> {
+export function timedSay(
+  target: Ref<string>,
+  ms: number,
+): (message: string, options?: { keep?: boolean }) => Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  return async (message) => {
+  return async (message, options) => {
     clearTimeout(timer);
     await say(target, message);
+    if (options?.keep) return;
     timer = setTimeout(() => {
       target.value = '';
     }, ms);

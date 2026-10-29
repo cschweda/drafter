@@ -38,8 +38,23 @@ vi.mock('../app/storage/script', async () => {
   return { useScript: () => ({ busy, project: { value: shown.project } }) };
 });
 
+const preferences = vi.hoisted(() => ({
+  markdownPaper: 'letter' as 'letter' | 'a4',
+  spellLanguage: 'en-US' as 'en-US' | 'en-GB',
+}));
+vi.mock('../app/settings/settings', () => ({
+  useSettings: () => ({ settings: { value: preferences } }),
+}));
+
+// The worker's answer: the file, and the characters its fonts lack. A test gives the file.
 const render = vi.fn();
-vi.mock('../app/storage/export-client', () => ({ renderExport: render }));
+const missing = vi.hoisted(() => ({ list: [] as string[] }));
+vi.mock('../app/storage/export-client', () => ({
+  renderExport: async (...args: unknown[]) => ({
+    data: await render(...args),
+    missing: missing.list,
+  }),
+}));
 
 /** What a FileAccess did, in order. */
 function recorder(options: { inPlace: boolean }) {
@@ -75,6 +90,9 @@ async function load(options: { inPlace: boolean }) {
   shown.text = TEXT;
   shown.kind = 'fountain';
   shown.project = null;
+  preferences.markdownPaper = 'letter';
+  preferences.spellLanguage = 'en-US';
+  missing.list = [];
   render.mockReset();
   render.mockImplementation(async () => {
     return 'text';
@@ -186,13 +204,98 @@ describe('exporting', () => {
     expect(t.log[0]).toBe('pick notes.md markdown');
   });
 
-  test('says a PDF of a Markdown document isn’t available, before any picker', async () => {
+  test('exports a Markdown document as a PDF, on the paper in Settings and in the spelling language', async () => {
     const t = await load({ inPlace: true });
-    shown.text = '# The Treatment\n';
+    shown.text = '# The Treatment\n\nWords.\n';
     shown.kind = 'markdown';
-    expect(await t.exportScript('pdf')).toBe('cancelled');
-    expect(t.exportError.value).toMatch(/PDF of a Markdown document/);
-    expect(t.log).toEqual([]);
+    preferences.markdownPaper = 'a4';
+    preferences.spellLanguage = 'en-GB';
+    render.mockImplementation(async () => {
+      t.log.push('render');
+      return new Uint8Array([1]);
+    });
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.log).toEqual(['pick The Treatment.pdf pdf', 'render', 'write']);
+    expect(render).toHaveBeenCalledWith({
+      kind: 'markdown-pdf',
+      source: shown.text,
+      paper: 'a4',
+      title: 'The Treatment',
+      lang: 'en-GB',
+    });
+    expect(t.written[0]?.data).toEqual(new Uint8Array([1]));
+    expect(t.exportNotice.value).toBe('Exported The Treatment.pdf.');
+  });
+
+  test('names the PDF after the first heading, as the other exports', async () => {
+    const t = await load({ inPlace: false });
+    render.mockResolvedValue(new Uint8Array([1]));
+    shown.kind = 'markdown';
+    shown.text = 'A few words first.\n\n# Field: *Notes*\n\n## Later\n';
+    expect(await t.exportScript('pdf')).toBe('saved');
+    // No heading: the file's name, as Export as Markdown calls it.
+    shown.text = 'Just words.\n';
+    shown.project = { fileName: 'notes.md' };
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.log).toEqual([
+      'download Field Notes.pdf application/pdf',
+      'download notes.pdf application/pdf',
+    ]);
+    expect(render.mock.calls.map(([request]) => request.title)).toEqual(['Field: Notes', 'notes']);
+  });
+
+  test('says which characters print as ?, up to five', async () => {
+    const t = await load({ inPlace: true });
+    render.mockResolvedValue(new Uint8Array([1]));
+    shown.kind = 'markdown';
+    shown.text = '# The Treatment\n\nWords.\n';
+    missing.list = ['漢', '字', '🐦', '港', '湾', '町'];
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.exportNotice.value).toBe(
+      `Exported The Treatment.pdf. ${t.MISSING_GLYPHS}漢, 字, 🐦, 港, 湾.`,
+    );
+    expect(t.MISSING_GLYPHS).toBe('Some characters aren’t in Drafter’s fonts and print as ?: ');
+    missing.list = ['漢'];
+    await t.exportScript('pdf');
+    expect(t.exportNotice.value).toBe(`Exported The Treatment.pdf. ${t.MISSING_GLYPHS}漢.`);
+  });
+
+  test('says an export is under way when it takes a while, until it is done', async () => {
+    const t = await load({ inPlace: true });
+    let release: (() => void) | undefined;
+    render.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(new Uint8Array([1]));
+        }),
+    );
+    const done = t.exportScript('pdf');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    // A quick export says nothing until it's done.
+    expect(t.exportNotice.value).toBe('');
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(t.exportNotice.value).toBe('Exporting The Call Part 1.pdf…');
+    release?.();
+    expect(await done).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
+  });
+
+  test('takes the progress away when a slow export fails', async () => {
+    const t = await load({ inPlace: true });
+    let fail: (() => void) | undefined;
+    render.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          fail = () => reject(new Error('boom'));
+        }),
+    );
+    const done = t.exportScript('pdf');
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(t.exportNotice.value).toBe('Exporting The Call Part 1.pdf…');
+    fail?.();
+    expect(await done).toBe('cancelled');
+    expect(t.exportNotice.value).toBe('');
+    expect(t.exportError.value).toBe('Couldn’t export The Call Part 1.pdf: boom');
   });
 
   test('does nothing when the picker is cancelled', async () => {

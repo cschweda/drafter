@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import {
   answerDialogs,
+  chooseMenuItem,
   dialogsAsked,
   editor,
   expect,
@@ -257,6 +258,28 @@ test('exports a PDF to a chosen path', async ({ desktop, profile }) => {
   expect(readFileSync(path).subarray(0, 5).toString('latin1')).toBe('%PDF-');
   expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.pdf' });
   expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.pdf$/);
+});
+
+test('exports a Markdown document’s PDF to a chosen path', async ({ desktop, profile }) => {
+  const path = join(folder(profile, 'Exports'), 'Harbour Notes (draft).pdf');
+  const app = await desktop();
+  const { page } = app;
+  // A first Markdown document opens with its sample; the text is replaced anyway.
+  await chooseMenuItem(app.app, ['File', 'New Markdown document']);
+  await expect(editor(page)).toHaveAttribute('data-language', 'markdown');
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
+  await editor(page).click();
+  await page.keyboard.press(`${MOD}+A`);
+  await page.keyboard.insertText('# Harbour Notes\n\nThe keeper climbs the stair at *dusk*.\n');
+  answerDialogs(profile, [path]);
+  // File → Export → PDF (the palette's Export as PDF), which is on for a Markdown document too.
+  await chooseMenuItem(app.app, ['File', 'Export', 'PDF']);
+  await expect(page.locator('.toast [role="status"]').filter({ hasText: 'Exported' })).toHaveText(
+    'Exported Harbour Notes (draft).pdf.',
+  );
+  expect(readFileSync(path).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.pdf' });
+  expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/Harbour Notes\.pdf$/);
 });
 
 test('opens a dropped file', async ({ desktop, profile }) => {

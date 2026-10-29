@@ -1,4 +1,4 @@
-// Renders a PDF, plain text, or a Final Draft file off the main thread, so a long script never stops the editor.
+// Renders a PDF, plain text, or a Final Draft file (and a Markdown document's PDF) off the main thread, so a long script never stops the editor.
 import { createExporter, type ExportRequest } from './export-compute';
 
 const exporter = createExporter();

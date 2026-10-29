@@ -181,6 +181,26 @@ test.describe('offline', () => {
     expect((await download).suggestedFilename()).toBe('The Call.pdf');
   });
 
+  test('exports a Markdown PDF offline: its fonts are cached', async ({ page, context }) => {
+    await removePickers(page);
+    await start(page);
+    await context.setOffline(true);
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    // A first Markdown PDF, with no network: the parser and the five document fonts come from the cache.
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New Markdown document' })
+      .click();
+    await expect(editor(page)).toContainText('# Untitled');
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name: 'PDF' }).click();
+    expect((await download).suggestedFilename()).toBe('Untitled.pdf');
+    await expect(page.locator('.toast [role="status"]')).toHaveText('Exported Untitled.pdf.');
+  });
+
   test('does not answer a request for a file with the app', async ({ page, context }) => {
     await start(page);
     await context.setOffline(true);
@@ -262,7 +282,15 @@ test.describe('offline', () => {
     for (const worker of ['layout.worker', 'export.worker', 'markdown.worker', 'spell.worker']) {
       expect(stored.urls.some((u) => u.includes(worker))).toBe(true);
     }
-    expect(stored.urls.filter((u) => u.includes('InterTight'))).toHaveLength(2);
+    // Inter Tight: the interface's two files, and the four styles a Markdown document's PDF embeds.
+    expect(stored.urls.filter((u) => /^\/_nuxt\/InterTight/.test(u))).toHaveLength(2);
+    expect(
+      stored.urls.filter((u) => /^\/fonts\/inter-tight\/InterTight-.+\.ttf$/.test(u)).sort(),
+    ).toEqual(
+      ['Italic', 'Regular', 'SemiBold', 'SemiBoldItalic'].map(
+        (style) => `/fonts/inter-tight/InterTight-${style}.ttf`,
+      ),
+    );
     // Courier Prime's four files and its licence.
     expect(stored.urls.filter((u) => u.startsWith('/fonts/courier-prime/'))).toHaveLength(5);
     for (const icon of ['/icon-192.png', '/icon-512.png', '/icon-maskable-512.png']) {

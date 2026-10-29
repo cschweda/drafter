@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useEditor } from '../editor/session';
 import { markdownTitle } from '../markdown/title';
+import { useSettings } from '../settings/settings';
 import { renderExport } from './export-client';
 import { useFiles } from './files';
 import { timedSay } from './say';
@@ -9,7 +10,8 @@ import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './t
 import { whenIdle } from './turn';
 
 /**
- * Export to PDF, plain text, or Final Draft (Phase 1 design §9.7; Phase 2 design §22). The text
+ * Export to PDF, plain text, or Final Draft (Phase 1 design §9.7; Phase 2 design §22), and a
+ * Markdown document to PDF (Markdown PDF design). The text
  * is laid out and drawn in a worker, and saved only through `useFiles()`: where the browser has a
  * save picker it asks where, else the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
  * Export menu, the app menu, and the palette run them.
@@ -17,10 +19,28 @@ import { whenIdle } from './turn';
 
 /**
  * `pdf`, `txt`, and `fdx` (a Final Draft file) are a screenplay's or a stage play's; a Markdown
- * document's are `md` (the Markdown file) and `txt` (the same text, as a plain text file). PDF for
- * Markdown is deferred.
+ * document's are `pdf` (drawn in Inter Tight, Markdown PDF design), `md` (the Markdown file), and
+ * `txt` (the same text, as a plain text file).
  */
 export type ExportKind = 'pdf' | 'txt' | 'md' | 'fdx';
+
+/** What each kind of document exports, in the order the menus list them: the PDF first in both. */
+export const EXPORTS: Readonly<Record<'fountain' | 'markdown', readonly ExportKind[]>> = {
+  fountain: ['pdf', 'txt', 'fdx'],
+  markdown: ['pdf', 'md', 'txt'],
+};
+
+/** Whether a document of `documentKind` exports as `kind`: the menus and the commands ask this. */
+export function exportApplies(kind: ExportKind, documentKind: 'fountain' | 'markdown'): boolean {
+  return EXPORTS[documentKind].includes(kind);
+}
+
+/** The toast's sentence after "Exported Notes.pdf." when the fonts lack some of its characters. */
+export const MISSING_GLYPHS = 'Some characters aren’t in Drafter’s fonts and print as ?: ';
+/** How many of the missing characters the toast names. */
+const MISSING_SHOWN = 5;
+/** How long an export runs before the toast says it is under way, so a quick one doesn't flash. */
+const SLOW_MS = 500;
 
 /**
  * "Exported The Call.pdf.": a toast, and a live region. Empty after a few seconds. An import says
@@ -45,9 +65,6 @@ const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md', fdx: '.fdx' } as const;
 
 /** Why a kind of export doesn't apply to the open script, or null when it does. */
 function notFor(kind: ExportKind, markdown: boolean): string | null {
-  if (markdown && kind === 'pdf') {
-    return 'A PDF of a Markdown document isn’t available yet. Export the Markdown file or plain text.';
-  }
   if (markdown && kind === 'fdx') {
     return 'Only a screenplay or a stage play exports as a Final Draft file.';
   }
@@ -73,6 +90,8 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   const name = fileNameFor(title, EXTENSION[kind]);
   exportNotice.value = '';
   exportError.value = '';
+  let slow: ReturnType<typeof setTimeout> | undefined;
+  let progress = '';
   try {
     // The menu offers only what applies; a command or a stale menu can still ask for the other.
     const refusal = notFor(kind, markdown);
@@ -91,20 +110,45 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
       target = await files.pickToSave(name, kind === 'md' ? 'markdown' : kind);
       if (!target) return 'cancelled';
     }
-    // A Markdown document is already text: both of its exports are the text as it stands, written
-    // as Save writes it (the file's line breaks, and its byte order mark if it had one).
-    const data = markdown
-      ? encodeFile(
-          source,
-          script.project.value?.lineBreak ?? '\n',
-          script.project.value?.bom ?? false,
-        )
-      : await renderExport({ kind: kind as 'pdf' | 'txt' | 'fdx', source, template });
+    let data: Uint8Array | string;
+    let missing: string[] = [];
+    if (markdown && kind !== 'pdf') {
+      // A Markdown document is already text: its Markdown and plain text exports are the text as
+      // it stands, written as Save writes it (the file's line breaks, and its byte order mark).
+      data = encodeFile(
+        source,
+        script.project.value?.lineBreak ?? '\n',
+        script.project.value?.bom ?? false,
+      );
+    } else {
+      const { settings } = useSettings();
+      // A Markdown PDF carries the title the file is named by, and the spellcheck's language.
+      const request = markdown
+        ? {
+            kind: 'markdown-pdf' as const,
+            source,
+            paper: settings.value.markdownPaper,
+            title,
+            lang: settings.value.spellLanguage,
+          }
+        : { kind: kind as 'pdf' | 'txt' | 'fdx', source, template };
+      // A long document takes a while (some 20 ms a page): the toast says it is under way.
+      slow = setTimeout(() => {
+        progress = `Exporting ${target?.name ?? name}…`;
+        void announceReady(progress, { keep: true });
+      }, SLOW_MS);
+      ({ data, missing } = await renderExport(request));
+      clearTimeout(slow);
+    }
     if (target) await files.write(target, data);
     else files.download(name, data, MIME[kind]);
-    await announceReady(`Exported ${target?.name ?? name}.`);
+    const lacking =
+      missing.length > 0 ? ` ${MISSING_GLYPHS}${missing.slice(0, MISSING_SHOWN).join(', ')}.` : '';
+    await announceReady(`Exported ${target?.name ?? name}.${lacking}`);
     return 'saved';
   } catch (error) {
+    clearTimeout(slow);
+    if (progress && exportNotice.value === progress) exportNotice.value = '';
     const why = error instanceof Error && error.message ? `: ${error.message}` : '.';
     await announceError(`Couldn’t export ${name}${why}`);
     return 'cancelled';

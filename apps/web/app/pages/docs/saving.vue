@@ -97,7 +97,10 @@ useDocsHead({
             <td>Yes</td>
           </tr>
           <tr>
-            <th scope="row">Export as PDF, plain text, or Final Draft</th>
+            <th scope="row">
+              Export as PDF, plain text, or Final Draft (a Markdown document: PDF, its Markdown
+              file, or plain text)
+            </th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>

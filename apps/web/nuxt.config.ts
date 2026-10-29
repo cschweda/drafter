@@ -135,6 +135,33 @@ export default defineNuxtConfig({
         },
       },
     ],
+    worker: {
+      plugins: () => [
+        {
+          // The Markdown parser decodes character references (`&amp;`) with the package
+          // `decode-named-character-reference`, whose browser build asks the DOM (`document`),
+          // which a worker hasn't got. In a worker it takes the package's own table instead, so
+          // the export worker can parse a Markdown document (and so can the Preview's worker).
+          name: 'drafter-worker-entities',
+          enforce: 'pre' as const,
+          async resolveId(
+            this: {
+              resolve(
+                id: string,
+                importer?: string,
+                options?: { skipSelf?: boolean },
+              ): Promise<{ id: string } | null>;
+            },
+            id: string,
+            importer?: string,
+          ) {
+            if (id !== 'decode-named-character-reference') return null;
+            const found = await this.resolve(id, importer, { skipSelf: true });
+            return found ? found.id.replace(/index\.dom\.js$/, 'index.js') : null;
+          },
+        },
+      ],
+    },
     resolve: {
       alias: [
         {

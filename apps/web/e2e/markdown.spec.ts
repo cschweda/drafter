@@ -242,7 +242,7 @@ test.describe('a Markdown document', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('offers the Markdown file and plain text to export, and writes them', async ({
+  test('offers the PDF, the Markdown file, and plain text to export, and writes the text ones', async ({
     page,
     browserName,
     isMobile,
@@ -254,7 +254,11 @@ test.describe('a Markdown document', () => {
     await typeAtEnd(page, 'Body text.');
     await page.getByRole('button', { name: 'Export' }).click();
     const menu = page.getByRole('group', { name: 'Export' });
-    await expect(menu.getByRole('button')).toHaveText(['Markdown (.md)', 'Plain text (.txt)']);
+    await expect(menu.getByRole('button')).toHaveText([
+      'PDF',
+      'Markdown (.md)',
+      'Plain text (.txt)',
+    ]);
     await menu.getByRole('button', { name: 'Markdown (.md)' }).click();
     await expect.poll(() => files(page)).toContain('Untitled.md');
     expect(await textOf(page, 'Untitled.md')).toBe('# Untitled\n\nBody text.');
