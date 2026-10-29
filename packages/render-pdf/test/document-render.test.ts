@@ -10,7 +10,8 @@ import {
 import type { Paper } from '@drafter/templates';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, PDFName, PDFString } from 'pdf-lib';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { layoutFeatures } from '../src/document/fonts';
 import { md } from './document-helpers';
 import {
   annotations,
@@ -341,6 +342,51 @@ describe('renderDocumentPdf', () => {
           original.getGlyph(id).path.toSVG(),
         );
         expect(glyph.advanceWidth).toBe(original.getGlyph(id).advanceWidth);
+      });
+    }
+  });
+
+  it('falls back to embedding a face whole when it can’t pad the subset', async () => {
+    // Simulate a pdf-lib whose subset isn't the shape the padding knows.
+    const embed = PDFDocument.prototype.embedFont;
+    const spy = vi.spyOn(PDFDocument.prototype, 'embedFont').mockImplementation(async function (
+      this: PDFDocument,
+      ...args
+    ) {
+      const font = await embed.apply(this, args);
+      const embedder = (font as unknown as { embedder: { subset?: object } }).embedder;
+      if (embedder.subset) embedder.subset = {};
+      return font;
+    });
+    try {
+      const source = 'Harbour notes: the keeper climbs *quietly*.';
+      const { bytes } = await render(source);
+      const programs = await fontPrograms(bytes);
+      // Whole font files, so every glyph is the font's own.
+      expect(programs.get('/InterTight-Regular')).toEqual(documentFonts.text);
+      expect(programs.get('/InterTight-Italic')).toEqual(documentFonts.textItalic);
+      const [page] = await extract(bytes, { spaces: true });
+      expect(page?.items.map((item) => item.str).join('')).toBe(
+        'Harbour notes: the keeper climbs quietly.',
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('draws what the writer typed: fractions and dates stay as typed, and nothing is kerned', async () => {
+    // Three glyphs each for "1/2", five for "10/12", ten for "29/10/2026": no fraction glyphs.
+    const { bytes } = await render('1/2\n\n10/12\n\n29/10/2026');
+    const shown = [...(await operators(bytes, 0)).matchAll(/<([0-9A-F]*)> Tj/gi)].map(
+      (m) => (m[1] as string).length / 4,
+    );
+    expect(shown).toEqual([3, 5, 10]);
+    // No kerning: each glyph advances by its own width, as pdf-lib draws it.
+    for (const face of ['text', 'code'] as Face[]) {
+      const font = fontkit.create(documentFonts[face]);
+      const run = font.layout('AVATAR, To Yo. Wave', layoutFeatures());
+      run.glyphs.forEach((glyph, i) => {
+        expect(run.positions[i]?.xAdvance).toBe(glyph.advanceWidth);
       });
     }
   });

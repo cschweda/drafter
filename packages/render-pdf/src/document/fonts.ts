@@ -20,9 +20,16 @@ export const DOCUMENT_FONT_FILES: Readonly<Record<Face, string>> = Object.freeze
 });
 
 /**
- * The OpenType features a document's text is laid out with: none asked for, so each font's own
- * defaults (its ligatures and contextual alternates). `fontMeasure` lays strings out with these and
- * the renderer embeds the fonts with them, so what the layout measures is what pdf-lib draws;
- * `document-render.test.ts` checks the drawn widths against the measured ones.
+ * The OpenType features a document's text is laid out with: each font's defaults (ligatures such
+ * as fi, contextual alternates), less kerning (`kern: false`). pdf-lib draws each glyph at its own
+ * advance and never the kerning positions, and the measure sums the same advances, so kerning is
+ * only work: turning it off changes no glyph and no width. The defaults leave typed fractions and
+ * dates (1/2, 29/10/2026) as typed; only a fraction slash (U+2044) makes fraction glyphs, which is
+ * what it is for. `fontMeasure` lays strings out with these and the renderer embeds the fonts with
+ * them, so what the layout measures is what pdf-lib draws; `document-render.test.ts` checks the
+ * drawn widths against the measured ones. A new object each time, since fontkit writes the
+ * features it applied back into the object it is given.
  */
-export const LAYOUT_FEATURES = undefined;
+export function layoutFeatures(): Record<string, boolean> {
+  return { kern: false };
+}

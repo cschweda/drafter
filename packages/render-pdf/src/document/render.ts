@@ -12,7 +12,7 @@ import {
   rgb,
 } from 'pdf-lib';
 import { safeLink } from './blocks';
-import { DOCUMENT_FONT_FILES, type DocumentFontSet, type Face, LAYOUT_FEATURES } from './fonts';
+import { DOCUMENT_FONT_FILES, type DocumentFontSet, type Face, layoutFeatures } from './fonts';
 import { type DocItem, layoutDocument } from './layout';
 import { fontMeasure } from './measure';
 import { STYLE } from './style';
@@ -60,29 +60,43 @@ interface GlyfSubset {
  * the short format, which stores offsets halved, without padding the glyphs, so after the first
  * glyph of odd length every offset is wrong and a viewer draws blanks. Inter Tight has hundreds of
  * odd-length glyphs (Courier Prime has none, so its subset is unchanged). The padding is a zero
- * byte after the glyph's data, which the format allows. `document-render.test.ts` reads each
- * embedded subset back and compares its glyphs with the font's.
+ * byte after the glyph's data, which the format allows. This reaches into pdf-lib's private
+ * embedder (pdf-lib and fontkit are pinned for it), so it never throws: it returns false when the
+ * subset isn't the shape it knows, and the caller embeds the face whole instead.
+ * `document-render.test.ts` reads each embedded subset back and compares its glyphs with the font's.
  */
-function evenGlyphs(font: PDFFont): void {
+function evenGlyphs(font: PDFFont): boolean {
   const subset = (font as unknown as { embedder?: { subset?: GlyfSubset } }).embedder?.subset;
-  if (typeof subset?._addGlyph !== 'function') {
-    throw new Error('pdf-lib’s font subset is not the one renderDocumentPdf knows how to pad');
-  }
+  if (typeof subset?._addGlyph !== 'function') return false;
   const add = subset._addGlyph;
   subset._addGlyph = function (this: GlyfSubset, gid: number) {
     const index = add.call(this, gid);
-    const data = this.glyf[index] as Uint8Array;
-    if (data.length % 2 === 1) {
-      // fontkit's own Buffer class, which its encoder checks for; `alloc` fills with zeros.
-      const padded = (data.constructor as unknown as { alloc(size: number): Uint8Array }).alloc(
-        data.length + 1,
-      );
+    const data = this.glyf?.[index];
+    // fontkit's own Buffer class, which its encoder checks for; `alloc` fills with zeros.
+    const kind = data?.constructor as unknown as { alloc?: (size: number) => Uint8Array };
+    if (data && data.length % 2 === 1 && typeof kind?.alloc === 'function') {
+      const padded = kind.alloc(data.length + 1);
       padded.set(data);
       this.glyf[index] = padded;
       this.offset += 1;
     }
     return index;
   };
+  return true;
+}
+
+/**
+ * Whether this pdf-lib's subsets of `bytes` can be padded, found on a scratch document that is
+ * never saved, so a font that can't be padded is never left in the real one.
+ */
+async function canPad(bytes: Uint8Array): Promise<boolean> {
+  try {
+    const scratch = await PDFDocument.create({ updateMetadata: false });
+    scratch.registerFontkit(fontkit);
+    return evenGlyphs(await scratch.embedFont(bytes, { subset: true }));
+  } catch {
+    return false;
+  }
 }
 
 type LinkItem = Extract<DocItem, { kind: 'link' }>;
@@ -127,7 +141,7 @@ function linkRects(items: readonly DocItem[]): LinkItem[] {
  * text item with one text operator at its baseline, code panels under their text, rules, quote
  * bars, and underlines, and each link a `/Link` annotation to its address. Reads no files: the five
  * font files come in `fonts`; only the faces used are embedded, as subsets, with the same OpenType
- * features the layout measured with (`LAYOUT_FEATURES`). No dates or random IDs, so the same tree,
+ * features the layout measured with (`layoutFeatures`). No dates or random IDs, so the same tree,
  * paper, title, and language give the same bytes.
  */
 export async function renderDocumentPdf(
@@ -154,12 +168,15 @@ export async function renderDocumentPdf(
   const fontFor = async (face: Face) => {
     let font = embedded.get(face);
     if (!font) {
+      // A subset, padded; or, if this pdf-lib can't be padded, the whole font: a bigger file,
+      // never blank letters.
+      const subset = await canPad(fonts[face]);
       font = await doc.embedFont(fonts[face], {
-        subset: true,
+        subset,
         customName: FONT_NAMES[face],
-        features: LAYOUT_FEATURES,
+        features: layoutFeatures(),
       });
-      evenGlyphs(font);
+      if (subset) evenGlyphs(font);
       embedded.set(face, font);
     }
     return font;

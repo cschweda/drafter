@@ -1,5 +1,5 @@
 import fontkit from '@pdf-lib/fontkit';
-import { DOCUMENT_FONT_FILES, type DocumentFontSet, type Face, LAYOUT_FEATURES } from './fonts';
+import { DOCUMENT_FONT_FILES, type DocumentFontSet, type Face, layoutFeatures } from './fonts';
 
 /** Text widths and glyph coverage for a document's faces. */
 export interface Measure {
@@ -31,7 +31,7 @@ export function fontMeasure(fonts: DocumentFontSet): Measure {
         units = 0;
         // pdf-lib's widthOfTextAtSize: the glyphs' own advances after layout
         // (so ligatures count as one glyph), without kerning.
-        for (const glyph of font.layout(text, LAYOUT_FEATURES).glyphs) units += glyph.advanceWidth;
+        for (const glyph of font.layout(text, layoutFeatures()).glyphs) units += glyph.advanceWidth;
         advances[face].set(text, units);
       }
       return (units * size) / font.unitsPerEm;
