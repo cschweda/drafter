@@ -28,7 +28,8 @@ const EPS = 1e-6;
  * next page unless what must follow it fits under it: the next block's first `MIN_LINES` lines, or
  * all of it when it is too short to split (Call 16). When a rule can't be kept (a heading and what
  * must follow it taller than a page, a block too short to split taller than a page), the lines fill
- * the page as they come (Call 17). Every page but an empty document's holds at least one line, so
+ * the page as they come (Call 17): a chain's headings, and the block after them on the page it shares
+ * with the last heading only; on later pages that block splits by the usual rule. Every page but an empty document's holds at least one line, so
  * the walk always ends; it visits each line a bounded number of times, so it is linear.
  */
 export function paginate(blocks: readonly PageBlock[], pageHeight: number): PageSlice[][] {
@@ -49,7 +50,7 @@ export function paginate(blocks: readonly PageBlock[], pageHeight: number): Page
 
   /** Headings up to this block have had their chain checked. */
   let checkedThrough = -1;
-  /** Blocks up to this one fill the page as they come: their chain couldn't be kept. */
+  /** Blocks before this one fill the page as they come, and this one on its first page: their chain couldn't be kept. */
   let fillThrough = -1;
 
   for (let b = 0; b < blocks.length; b++) {
@@ -94,8 +95,12 @@ export function paginate(blocks: readonly PageBlock[], pageHeight: number): Page
         fitHeight += h;
         fit++;
       }
+      // A chain that can't be kept fills as it comes, and so does the first slice of what follows
+      // it, on the page it shares with the chain's last heading; after that page, the usual rules.
       const fill =
-        b <= fillThrough || (left < 2 * MIN_LINES && height(lines, from, n) > pageHeight + EPS);
+        b < fillThrough ||
+        (b === fillThrough && from === 0 && !empty) ||
+        (left < 2 * MIN_LINES && height(lines, from, n) > pageHeight + EPS);
       let take: number;
       if (fit === left) take = left;
       else if (fill) take = fit > 0 ? fit : empty ? 1 : 0;

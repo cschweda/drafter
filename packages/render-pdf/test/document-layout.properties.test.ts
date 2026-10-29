@@ -3,8 +3,8 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { documentBlocks } from '../src/document/blocks';
 import { type DocItem, type DocLayout, layoutDocument } from '../src/document/layout';
-import { wrapBlock } from '../src/document/lines';
-import { MIN_LINES, paginate } from '../src/document/paginate';
+import { type DocLine, wrapBlock } from '../src/document/lines';
+import { MIN_LINES, type PageSlice, paginate } from '../src/document/paginate';
 import { STYLE } from '../src/document/style';
 import { fixedMeasure, md } from './document-helpers';
 
@@ -79,6 +79,34 @@ const arbDocument = fc
 const arbPaper = fc.constantFrom<Paper>('letter', 'a4');
 
 const RUNS = { numRuns: 80 };
+const RAW_RUNS = { numRuns: 400 };
+/**
+ * Pagination's input straight, on a page of 100: headings and blocks of lines from 5 to 45 pt, so
+ * chains taller than a page, and blocks that can't keep their rules, come up often (and any two
+ * lines fit an empty page, as in a real document).
+ */
+const arbPageBlocks: fc.Arbitrary<Placement> = fc
+  .array(
+    fc.record({
+      heights: fc.array(fc.integer({ min: 5, max: 45 }), { minLength: 1, maxLength: 9 }),
+      spaceBefore: fc.integer({ min: 0, max: 12 }),
+      keepWithNext: fc.boolean(),
+    }),
+    { maxLength: 14 },
+  )
+  .map((specs) => {
+    const blocks = specs.map((spec) => ({
+      lines: spec.heights.map((height): DocLine => ({ fragments: [], height, ascent: 0 })),
+      spaceBefore: spec.spaceBefore,
+      keepWithNext: spec.keepWithNext,
+    }));
+    return {
+      blocks,
+      lines: blocks.map((block) => block.lines),
+      pages: paginate(blocks, 100),
+      pageHeight: 100,
+    };
+  });
 const EPS = 1e-6;
 
 const area = (paper: Paper) => {
@@ -87,8 +115,16 @@ const area = (paper: Paper) => {
   return { width, height, left: m, right: width - m, bottom: m, top: height - m };
 };
 
+/** What pagination was given and what it gave back. */
+interface Placement {
+  blocks: readonly { spaceBefore: number; keepWithNext: boolean }[];
+  lines: readonly (readonly DocLine[])[];
+  pages: PageSlice[][];
+  pageHeight: number;
+}
+
 /** The page's blocks, lines, and slices, as `layoutDocument` computes them. */
-function placement(source: string, paper: Paper) {
+function placement(source: string, paper: Paper): Placement {
   const { width, height } = PAPER_POINTS[paper];
   const textWidth = width - 2 * STYLE.margin;
   const blocks = documentBlocks(md(source), textWidth);
@@ -103,6 +139,30 @@ function placement(source: string, paper: Paper) {
     pageHeight,
   );
   return { blocks, lines, pages, pageHeight };
+}
+
+/**
+ * The chain of headings that block `b` is in (design §4: a heading, with any headings directly
+ * under it), the block after it, and whether the chain with what must follow it (the next block's
+ * first 2 lines, or all of it when it has 3 or fewer) is taller than a page. Undefined when `b`
+ * isn't a heading.
+ */
+function chainOf(p: Placement, b: number) {
+  const { blocks, lines, pageHeight } = p;
+  if (!blocks[b]?.keepWithNext) return undefined;
+  const height = (i: number, count = Number.POSITIVE_INFINITY) =>
+    (lines[i] ?? []).slice(0, count).reduce((sum, line) => sum + line.height, 0);
+  let start = b;
+  while (start > 0 && blocks[start - 1]?.keepWithNext) start--;
+  let total = 0;
+  let e = start;
+  for (; e < blocks.length && blocks[e]?.keepWithNext; e++)
+    total += (e > start ? (blocks[e]?.spaceBefore ?? 0) : 0) + height(e);
+  if (e < blocks.length) {
+    const n = lines[e]?.length ?? 0;
+    total += (blocks[e]?.spaceBefore ?? 0) + height(e, n < 2 * MIN_LINES ? n : MIN_LINES);
+  }
+  return { follower: e < blocks.length ? e : undefined, tooTall: total > pageHeight + EPS };
 }
 
 /** Page numbers are the only text in the bottom margin. */
@@ -160,27 +220,71 @@ describe('layoutDocument, over random documents', () => {
   it('no page ends with a heading unless the document does', () => {
     fc.assert(
       fc.property(arbDocument, arbPaper, (source, paper) => {
-        const { blocks, lines, pages, pageHeight } = placement(source, paper);
-        const height = (i: number, count = Number.POSITIVE_INFINITY) =>
-          (lines[i] ?? []).slice(0, count).reduce((sum, line) => sum + line.height, 0);
-        for (const page of pages.slice(0, -1)) {
+        const p = placement(source, paper);
+        for (const page of p.pages.slice(0, -1)) {
           const last = page.at(-1);
-          if (!last || !blocks[last.block]?.keepWithNext) continue;
-          // Allowed only when the heading's chain and what must follow it can't fit on any page.
-          let start = last.block;
-          while (start > 0 && blocks[start - 1]?.keepWithNext) start--;
-          let total = 0;
-          let e = start;
-          for (; e < blocks.length && blocks[e]?.keepWithNext; e++)
-            total += (e > start ? (blocks[e]?.spaceBefore ?? 0) : 0) + height(e);
-          if (e < blocks.length) {
-            const n = lines[e]?.length ?? 0;
-            total += (blocks[e]?.spaceBefore ?? 0) + height(e, n < 2 * MIN_LINES ? n : MIN_LINES);
-          }
-          expect(total).toBeGreaterThan(pageHeight);
+          if (!last || !p.blocks[last.block]?.keepWithNext) continue;
+          // Design §4: a heading never ends a page unless it is the document's last block, or its
+          // rule can't be kept, which is when it is part of a chain taller than a page.
+          expect(chainOf(p, last.block)?.tooTall).toBe(true);
         }
       }),
       RUNS,
+    );
+  });
+
+  it('no page is empty, and none starts with space', () => {
+    const check = (p: Placement) => {
+      if (p.lines.every((l) => l.length === 0)) {
+        expect(p.pages).toEqual([[]]);
+        return;
+      }
+      for (const page of p.pages) {
+        expect(page.length).toBeGreaterThan(0);
+        // Call 14: a block's space before is dropped at the top of a page.
+        expect(page[0]?.top).toBe(0);
+      }
+    };
+    fc.assert(
+      fc.property(arbDocument, arbPaper, (source, paper) => check(placement(source, paper))),
+      RUNS,
+    );
+    fc.assert(
+      fc.property(arbPageBlocks, (p) => check(p)),
+      RAW_RUNS,
+    );
+  });
+
+  it('a split leaves at least two lines on each page unless its rule can’t be kept', () => {
+    const check = (p: Placement) => {
+      const slices = p.pages.flat();
+      for (let i = 0; i + 1 < slices.length; i++) {
+        const before = slices[i] as PageSlice;
+        const after = slices[i + 1] as PageSlice;
+        if (before.block !== after.block) continue;
+        const b = before.block;
+        const blockLines = p.lines[b] ?? [];
+        // Design §4 and Call 17: the rules give way only when they can't be kept, and then only
+        // (a) for a heading in a chain taller than a page,
+        if (p.blocks[b]?.keepWithNext && chainOf(p, b)?.tooTall) continue;
+        // (b) for the block after such a chain, on the page it shares with the chain's last heading,
+        const chain = chainOf(p, b - 1);
+        if (chain?.follower === b && chain.tooTall && before.from === 0) continue;
+        // (c) and for a block with too few lines left to split that is taller than a page.
+        const rest = blockLines.slice(before.from);
+        const restHeight = rest.reduce((sum, line) => sum + line.height, 0);
+        if (rest.length < 2 * MIN_LINES && restHeight > p.pageHeight + EPS) continue;
+        expect(before.to - before.from, JSON.stringify(slices)).toBeGreaterThanOrEqual(MIN_LINES);
+        expect(blockLines.length - after.from).toBeGreaterThanOrEqual(MIN_LINES);
+      }
+    };
+    fc.assert(
+      fc.property(arbDocument, arbPaper, (source, paper) => check(placement(source, paper))),
+      RUNS,
+    );
+    fc.assert(
+      fc.property(arbPageBlocks, (p) => check(p)),
+      RAW_RUNS,
     );
   });
 

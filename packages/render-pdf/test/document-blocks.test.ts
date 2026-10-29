@@ -125,6 +125,19 @@ describe('documentBlocks', () => {
     expect(blocks.map((block) => block.spaceBefore)).toEqual([8, 8, 8, 8, 8]);
   });
 
+  it('numbers each quote, so two quotes side by side keep two bars', () => {
+    const blocks = blocksOf(
+      '> Low tide.\n>\n> Wet sand.\n\n> High tide.\n>\n> > Spray.\n\nDry land.',
+    );
+    expect(blocks.map((block) => [textOf(block), block.quotes])).toEqual([
+      ['Low tide.', [0]],
+      ['Wet sand.', [0]],
+      ['High tide.', [1]],
+      ['Spray.', [1, 2]],
+      ['Dry land.', []],
+    ]);
+  });
+
   it("a quote's text keeps its own styles", () => {
     const [quote] = blocksOf('> Plain and *slanted* and **heavy**.');
     expect(runWith(quote, 'Plain')?.face).toBe('text');

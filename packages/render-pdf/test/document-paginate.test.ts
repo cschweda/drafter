@@ -173,6 +173,19 @@ describe('paginate', () => {
     ]);
   });
 
+  it('relaxes the rules only on the page a block shares with a heading it can’t keep', () => {
+    // 60 + two lines of 25 is past 100: the block fills the heading's page with one line, then
+    // splits by the usual rule, leaving two lines for the last page rather than one.
+    expect(paginate([heading(60), block(lines(6, 25))], 100)).toEqual([
+      [
+        { block: 0, from: 0, to: 1, top: 0 },
+        { block: 1, from: 0, to: 1, top: 60 },
+      ],
+      [{ block: 1, from: 1, to: 4, top: 0 }],
+      [{ block: 1, from: 4, to: 6, top: 0 }],
+    ]);
+  });
+
   it('an empty document is one empty page', () => {
     expect(paginate([], 100)).toEqual([[]]);
   });
