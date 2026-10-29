@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-29
+
+**Final Draft files.** Open a Final Draft (`.fdx`) file, from Open, by dropping it, or on the desktop from your file manager, and Drafter brings it in as a new Fountain script. The `.fdx` itself is never changed, and Save asks where to keep your `.fountain`. Anything Drafter can't map comes in as a `[[fdx: …]]` note, and Problems lists each one, so nothing is lost silently. **Export as Final Draft (.fdx)** writes your script for anyone who works in Final Draft: scene headings and numbers, action, speeches and dual dialogue, emphasis, notes, synopses, sections, and the title page. Import and export are built from the file format's structure and hand-made test files; testing against real Final Draft files is still to come.
+
 ### Added
 
 - `@drafter/fdx`, a new package for Final Draft (`.fdx`) files: export and import (below), on an XML reader and writer of its own with no dependency. The reader treats a file as untrusted: it refuses a DOCTYPE, any entity beyond the five built-in ones and valid numeric references, processing instructions other than a leading XML declaration, mismatched tags, duplicate attributes, unclosed elements, text after the root, nesting deeper than 64, and files over 5 MB, and it reads in a single pass. The writer produces an indented document with its text escaped; reading what it writes gives the same tree (property-tested).
@@ -576,7 +580,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/cschweda/drafter/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/cschweda/drafter/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/cschweda/drafter/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/cschweda/drafter/compare/v0.7.0...v0.8.0

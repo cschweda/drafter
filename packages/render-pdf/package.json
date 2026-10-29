@@ -1,6 +1,6 @@
 {
   "name": "@drafter/render-pdf",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "PDF output for Drafter: draws laid-out pages with Courier Prime embedded.",
   "license": "MIT",
   "type": "module",
