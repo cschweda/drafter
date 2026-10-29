@@ -4,6 +4,7 @@ import { type Doc, parse, print } from '@drafter/fountain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { FdxError, fromFdx, XmlError } from '../src';
+import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const fixture = (name: string) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
@@ -558,6 +559,7 @@ describe("fromFdx: values Drafter can't trust", () => {
     const section = (depth: string) =>
       `<Paragraph Type="General" DrafterSection="${depth}"><Text>Part</Text></Paragraph>`;
     expect(fromFdx(fdx(section('6'))).text).toBe('###### Part\n');
+    // The text check below is what proves a huge depth isn't repeated; the clock only guards a hang.
     const start = performance.now();
     const result = fromFdx(
       fdx(
@@ -569,7 +571,7 @@ describe("fromFdx: values Drafter can't trust", () => {
           section('2.5'),
       ),
     );
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(HANG_MS);
     expect(result.text).toBe(`${Array(6).fill('Part [[fdx: General]]').join('\n\n')}\n`);
     expect(result.mapped).toEqual([{ type: 'General', count: 6 }]);
     const heading = fromFdx(
@@ -627,24 +629,35 @@ describe('fromFdx: text outside its elements', () => {
 });
 
 describe('fromFdx on a large file', () => {
-  const big = (paragraph: (text: string) => string, unit: string) => {
-    const shell = fdx(paragraph(''));
-    return fdx(paragraph(unit.repeat(Math.floor((5_000_000 - shell.length) / unit.length))));
-  };
+  // A file of about `chars` characters, one paragraph of `unit` repeated.
+  const big = (paragraph: (text: string) => string, unit: string) => (chars: number) =>
+    fdx(paragraph(unit.repeat(Math.floor(chars / unit.length))));
 
-  it('reads 5 MB of unclosed note openers in action in linear time', () => {
-    const xml = big((t) => P('Action', t), '[[');
-    const start = performance.now();
-    fromFdx(xml);
-    expect(performance.now() - start).toBeLessThan(3000);
-  });
+  // Linear, not a wall-clock budget (scaling.ts): a quadratic search for each `[[`'s `]]` grows
+  // about 16 times from 250 KB to 1 MB. The whole 5 MB file is still read once, as a hang guard.
+  it(
+    'reads unclosed note openers in action in linear time',
+    () => {
+      const make = big((t) => P('Action', t), '[[');
+      const { growth, large } = scaling(make, fromFdx, 250_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      expect(() => fromFdx(make(4_990_000))).not.toThrow();
+    },
+    SCALING_TIMEOUT,
+  );
 
-  it('reads 5 MB of unclosed note openers in dialogue in linear time', () => {
-    const xml = big((t) => P('Character', 'BOB') + P('Dialogue', t), 'a [[ ');
-    const start = performance.now();
-    fromFdx(xml);
-    expect(performance.now() - start).toBeLessThan(3000);
-  });
+  it(
+    'reads unclosed note openers in dialogue in linear time',
+    () => {
+      const make = big((t) => P('Character', 'BOB') + P('Dialogue', t), 'a [[ ');
+      const { growth, large } = scaling(make, fromFdx, 250_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      expect(() => fromFdx(make(4_990_000))).not.toThrow();
+    },
+    SCALING_TIMEOUT,
+  );
 });
 
 describe('fromFdx: refusals', () => {

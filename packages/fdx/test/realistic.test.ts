@@ -5,6 +5,7 @@ import { builtins } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { type FdxImport, fromFdx, IGNORED, readXml, toFdx, type XmlElement } from '../src';
 import { makeFeature } from './fixtures/realistic/make-feature';
+import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 // Synthetic files in the shape of a Final Draft file, written by hand with original text and
 // invented values from the element names the technical design documents (none was made in Final
@@ -334,19 +335,26 @@ describe('stage-play.fdx', () => {
 });
 
 describe('a feature-length file', () => {
-  it('imports in well under the time budget', () => {
-    const xml = makeFeature();
-    const start = performance.now();
-    const result = fromFdx(xml);
-    const ms = performance.now() - start;
-    console.info(
-      `feature-length .fdx (${(xml.length / 1024).toFixed(0)} KB) imported in ${ms.toFixed(0)} ms`,
-    );
-    expect(ms).toBeLessThan(3000);
-    const doc = parse(result.text);
-    expect(doc.blocks.filter((b) => b.kind === 'scene_heading')).toHaveLength(140);
-    expect(result.mapped).toEqual([]);
-  });
+  it(
+    'imports in linear time',
+    () => {
+      // Linear, not a wall-clock budget (scaling.ts): 35 scenes, then 140 (about 120 pages).
+      const { growth, large } = scaling(makeFeature, fromFdx, 35);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      const xml = makeFeature();
+      const start = performance.now();
+      const result = fromFdx(xml);
+      const ms = performance.now() - start;
+      console.info(
+        `feature-length .fdx (${(xml.length / 1024).toFixed(0)} KB) imported in ${ms.toFixed(0)} ms`,
+      );
+      const doc = parse(result.text);
+      expect(doc.blocks.filter((b) => b.kind === 'scene_heading')).toHaveLength(140);
+      expect(result.mapped).toEqual([]);
+    },
+    SCALING_TIMEOUT,
+  );
 });
 
 describe('the samples', () => {
