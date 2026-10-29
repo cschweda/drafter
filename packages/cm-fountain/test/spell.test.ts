@@ -9,6 +9,7 @@ import {
   setSpellMarks,
   spellMarkAt,
   spellMarks,
+  spellMarksKey,
   spellMarksOf,
   stepSpellMark,
   unmarkWord,
@@ -152,6 +153,20 @@ describe('spellMarks', () => {
     const none = EditorState.create({ doc: TEXT, extensions: spellMarks() });
     expect(stepSpellMark(none, 0, 1)).toBeNull();
     expect(stepSpellMark(none, 0, -1)).toBeNull();
+  });
+
+  test('spellMarksKey stays the same until the marks may have changed', () => {
+    const state = stateWith(TEXT, marksOf(TEXT, 'phnoe'));
+    const key = spellMarksKey(state);
+    expect(key).not.toBeNull();
+    // A move, or an effect of another kind, leaves the marks as they are.
+    const moved = state.update({ selection: { anchor: 4 } }).state;
+    expect(spellMarksKey(moved)).toBe(key);
+    // New marks, an unmark, and an edit change it.
+    expect(spellMarksKey(moved.update({ effects: setSpellMarks.of([]) }).state)).not.toBe(key);
+    expect(spellMarksKey(moved.update({ effects: unmarkWord.of('phnoe') }).state)).not.toBe(key);
+    expect(spellMarksKey(moved.update({ changes: { from: 0, insert: 'A ' } }).state)).not.toBe(key);
+    expect(spellMarksKey(EditorState.create({ doc: TEXT }))).toBeNull();
   });
 
   test('a state without the extension has no marks', () => {

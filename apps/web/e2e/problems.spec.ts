@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 import { expectNewestThenCompare, listedReasons, newScreenplay } from './bulk-snapshot';
 import { runCommand } from './modules';
@@ -466,6 +466,43 @@ test.describe('the Spelling group', () => {
     await expect(page.getByRole('menu', { name: 'Spelling suggestions' })).toBeVisible();
   });
 
+  test('Check spelling while the dictionary loads says it is checking, then the count', async ({
+    page,
+    context,
+  }) => {
+    const release = holdDictionary(context);
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await setText(page, MISSPELT);
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText('Checking spelling…');
+    // A second one while the first waits changes nothing.
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText('Checking spelling…');
+    release();
+    await expect(announcer(page)).toHaveText('3 misspelled words.', { timeout: 10_000 });
+    await expect(spellingHeading(page)).toBeFocused();
+    await expect(spellingHeading(page)).toHaveText('Spelling: 3 words');
+  });
+
+  test('Check spelling with the dictionary loading after 10 s says so, not none found', async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(45_000);
+    holdDictionary(context);
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await setText(page, MISSPELT);
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText(
+      'Still checking spelling. Problems will list the words when it’s done.',
+      { timeout: 15_000 },
+    );
+    await expect(spellingHeading(page)).toBeFocused();
+    await expect(spellingHeading(page)).toHaveText('Spelling: checking…');
+  });
+
   test('Check spelling with spellcheck off says so', async ({ page }) => {
     await page.keyboard.press('ControlOrMeta+,');
     const dialog = page.getByRole('dialog', { name: 'Settings' });
@@ -486,3 +523,16 @@ test.describe('the Spelling group', () => {
     await expect(marks(page)).toHaveCount(0);
   });
 });
+
+/** Holds every request for a `.dic` until the returned function is called. */
+function holdDictionary(context: BrowserContext): () => void {
+  let release: () => void = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  void context.route('**/dictionaries/**/*.dic', async (route) => {
+    await released;
+    await route.continue();
+  });
+  return release;
+}

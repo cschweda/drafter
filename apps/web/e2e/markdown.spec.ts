@@ -193,9 +193,12 @@ test.describe('a Markdown document', () => {
     await newMarkdown(page);
     await typeAtEnd(page, 'INT. HOUSE\n\n');
     await showTab(page, 'Problems');
+    // Spellcheck is on (the default), and a Markdown document is checked: its Spelling group
+    // follows.
     await expect(page.locator('#panel-problems')).toContainText(
-      'No checks for Markdown documents.',
+      'No script checks for Markdown documents.',
     );
+    await expect(page.locator('#panel-problems')).toContainText(/Spelling: /);
     // Fountain's lint would flag this scene heading, in the gutter and the list.
     await page.waitForTimeout(800);
     await showTab(page, 'Source');

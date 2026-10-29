@@ -193,6 +193,15 @@ function spellMarksIn(marks: DecorationSet): SpellMark[] {
   return out;
 }
 
+/**
+ * A value that stays the same object while the marks do, and is another once they may have
+ * changed (new marks, an unmark, an edit), for a reader that keeps what it made of them. Null
+ * without the extension.
+ */
+export function spellMarksKey(state: EditorState): object | null {
+  return marksIn(state);
+}
+
 /** The marks, in order (the ignored ones are left out). */
 export function spellMarksOf(state: EditorState): readonly SpellMark[] {
   const marks = marksIn(state);

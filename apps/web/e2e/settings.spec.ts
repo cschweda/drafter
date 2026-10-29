@@ -117,8 +117,8 @@ test.describe('the dialog', () => {
     expect(await inside()).toBe(true);
     await expect(textSize(page)).toBeFocused();
     // Tab goes through the dialog's controls (the text size, the switches, the spelling language,
-    // the licences link, a switch for each module, Done) without leaving it. (WebKit's Tab skips buttons and checkboxes unless the system asks
-    // otherwise.)
+    // the licences link, a switch for each module, Done) without leaving it. (WebKit's Tab skips
+    // buttons and checkboxes unless the system asks otherwise.)
     if (browserName !== 'webkit') {
       const controls = await dialog(page)
         .locator('select, input[type="checkbox"], button, a[href]')

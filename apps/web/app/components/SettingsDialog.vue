@@ -190,7 +190,11 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
       <div class="text">
         <label for="settings-spell-language" class="name">Spelling language</label>
         <p id="settings-spell-language-why" class="why">
-          The dictionary Spellcheck uses. Both are built into Drafter.
+          The dictionary Spellcheck uses. Both are built into Drafter; their licences are on the
+          <a v-if="licences" :href="helpHref(licences)" target="_blank" rel="noopener">{{
+            licences.title
+          }}</a>
+          page.
         </p>
       </div>
       <select
@@ -207,16 +211,16 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
     </div>
     <div v-if="item.key === 'spellNotes'" class="dictionary">
       <h3 id="settings-my-dictionary" class="name">
-        My dictionary<span v-if="mine.length > LONG_LIST" class="count">: {{ mine.length }} words</span>
+        My dictionary<span v-if="mine.length > LONG_LIST" class="count"
+          >: {{ mine.length }} words</span
+        >
       </h3>
       <p class="why">
         The words you add with Add to my dictionary, known in every script in this browser and
-        never saved in a file. The dictionaries’ own licences are on the
-        <a v-if="licences" :href="helpHref(licences)" target="_blank" rel="noopener">{{ licences.title }}</a>
-        page.
+        never saved in a file.
       </p>
       <ul v-if="mine.length > 0" id="settings-my-words" class="words" aria-label="My dictionary">
-        <li v-for="(word, index) in mine" :key="word" class="word">
+        <li v-for="(word, index) in mine" :key="index" class="word">
           <span class="entry">{{ word }}</span>
           <button
             type="button"
@@ -347,7 +351,7 @@ h2 {
   color: var(--muted);
   font-weight: 400;
 }
-.dictionary a {
+.why a {
   color: var(--heading);
   /* Told apart from the words around it by more than its color. */
   text-decoration: underline;

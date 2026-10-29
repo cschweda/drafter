@@ -4,6 +4,7 @@ import { effectScope, type Ref, readonly, ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
 import { useSettings } from '../settings/settings';
 import { useScript } from '../storage/script';
+import { SPELL_FAILED } from './notice';
 import {
   createSpellClient,
   SPELL_DEBOUNCE_MS,
@@ -32,9 +33,6 @@ export interface SpellSessionApp {
    */
   settled(): Promise<void>;
 }
-
-export const FAILED =
-  'Spellcheck couldn’t load its dictionary, so no words are marked. Everything else works.';
 
 let shared: SpellSessionApp | undefined;
 
@@ -91,7 +89,7 @@ function create(): SpellSessionApp {
       settle();
       if (!said) {
         said = true;
-        problem.value = FAILED;
+        problem.value = SPELL_FAILED;
       }
     } else if (next === 'ready') {
       problem.value = '';

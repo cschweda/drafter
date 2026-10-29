@@ -365,7 +365,9 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
           {{ SPELLING_BUTTON.label }}
         </button>
       </UTooltip>
-      <span :id="descId(SPELLING_BUTTON)" class="sr-only">{{ tipFor(SPELLING_BUTTON, apple) }}</span>
+      <span :id="descId(SPELLING_BUTTON)" class="sr-only">
+        {{ tipFor(SPELLING_BUTTON, apple) }}
+      </span>
     </template>
     <MenuButton v-if="!markdown" :items="more" :content="{ align: 'start', onCloseAutoFocus }">
       <button

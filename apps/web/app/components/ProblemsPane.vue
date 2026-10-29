@@ -3,12 +3,14 @@ import { type ModuleRow, type Problem, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { useSettings } from '~/settings/settings';
 import { SPELLING_HEADING_ID, spellingHeading } from '~/spell/rows';
+import { useSpell } from '~/spell/use-spell';
 
 // What the Source pane's gutter marks, as a list the writer can read, jump from, and fix from.
 // The spellcheck's marks follow, under a Spelling heading of their own (Plan D, Calls 13 and 14):
 // they aren't problems, and aren't counted with them.
 const { problems, moduleProblems, spelling, locked } = useProblems();
 const { settings } = useSettings();
+const spell = useSpell();
 // What script modules found follows the editor's own, each labelled with its module's name.
 const rows = computed<ReadonlyArray<Problem | ModuleRow>>(() => [
   ...problems.value,
@@ -71,7 +73,11 @@ onBeforeUnmount(disarm);
 <template>
   <div ref="root">
     <p v-if="kind === 'markdown' && rows.length === 0" class="empty">
-      No checks for Markdown documents.
+      {{
+        settings.spellcheck
+          ? 'No script checks for Markdown documents.'
+          : 'No checks for Markdown documents.'
+      }}
     </p>
     <p v-else-if="rows.length === 0" class="empty">No problems found.</p>
     <ul v-else class="problems problem-list">
@@ -104,7 +110,7 @@ onBeforeUnmount(disarm);
     </ul>
     <template v-if="settings.spellcheck">
       <h2 :id="SPELLING_HEADING_ID" class="spelling-title" tabindex="-1">
-        {{ spellingHeading(spelling.length) }}
+        {{ spellingHeading(spelling.length, spell.state.value) }}
       </h2>
       <ul v-if="spelling.length > 0" class="problems" aria-label="Spelling">
         <li v-for="row in spelling" :key="row.key" class="problem spelling">

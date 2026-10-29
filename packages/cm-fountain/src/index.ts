@@ -53,6 +53,7 @@ export {
   setSpellMarks,
   spellMarkAt,
   spellMarks,
+  spellMarksKey,
   spellMarksOf,
   stepSpellMark,
   unmarkWord,

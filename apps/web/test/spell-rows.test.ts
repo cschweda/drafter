@@ -1,7 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { setSpellMarks, spellMarks } from '@drafter/cm-fountain';
 import { describe, expect, test } from 'vitest';
-import { spellingCount, spellingHeading, spellingRows } from '../app/spell/rows';
+import { spellingCount, spellingHeading, spellingReader, spellingRows } from '../app/spell/rows';
 
 // Problems' Spelling group (Plan D, Calls 13 and 14): one row per marked occurrence, keyed so a
 // row keeps its key (and its list item, and focus in it) while text above it changes.
@@ -56,10 +56,29 @@ describe('the Spelling rows', () => {
     expect(after.map((row) => row.from)).toEqual(before.map((row) => row.from + 19));
   });
 
+  test('reads the rows again only when the marks or the text changed', () => {
+    const read = spellingReader();
+    const state = withMarks(TEXT, ['phnoe', 'phnoe', 'drowr']);
+    const rows = read(state);
+    expect(rows).toEqual(spellingRows(state));
+    // A move: the same list, not read again.
+    const moved = state.update({ selection: { anchor: 3 } }).state;
+    expect(read(moved)).toBe(rows);
+    // New marks, and an edit, are read.
+    const fewer = moved.update({ effects: setSpellMarks.of([]) }).state;
+    expect(read(fewer)).toEqual([]);
+    const edited = state.update({ changes: { from: 0, insert: 'A\n' } }).state;
+    expect(read(edited).map((row) => row.line)).toEqual([4, 6, 6]);
+  });
+
   test('names the heading by count', () => {
     expect(spellingHeading(0)).toBe('Spelling: none found');
     expect(spellingHeading(1)).toBe('Spelling: 1 word');
     expect(spellingHeading(3)).toBe('Spelling: 3 words');
+    expect(spellingHeading(3, 'ready')).toBe('Spelling: 3 words');
+    // While the dictionary loads, or after it couldn't, no count is a finding.
+    expect(spellingHeading(0, 'loading')).toBe('Spelling: checking…');
+    expect(spellingHeading(0, 'failed')).toBe('Spelling: the dictionary couldn’t load');
     // What Check spelling says.
     expect(spellingCount(0)).toBe('No misspelled words.');
     expect(spellingCount(1)).toBe('1 misspelled word.');

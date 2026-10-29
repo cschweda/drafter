@@ -137,9 +137,7 @@ describe('the element bar', () => {
     expect(COMMAND_DATA.find((c) => c.id === SPELLING_BUTTON.command)?.title).toBe(
       'Spelling suggestions',
     );
-    expect(tipFor(SPELLING_BUTTON, false)).toBe(
-      'Suggestions for the misspelled word at the cursor, and adding it to a dictionary. Shortcut: Ctrl+..',
-    );
+    expect(tipFor(SPELLING_BUTTON, false)).toBe(`${SPELLING_BUTTON.tip} Shortcut: Ctrl+..`);
   });
 
   test('names where the cursor is', () => {

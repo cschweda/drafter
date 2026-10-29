@@ -48,16 +48,11 @@ import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
 import { useSnapshots } from '~/snapshots/use-snapshots';
 import { addToMine, ignoreWordHere, stepMisspelling, tryAddToScript } from '~/spell/actions';
+import { makeCheckSpelling } from '~/spell/check';
 import { openSpellMenu } from '~/spell/menu';
-import {
-  CHECK_SPELLING_OFF,
-  NO_MARK_HERE,
-  NO_MARKS,
-  SPELLCHECK_OFF,
-  saySpell,
-} from '~/spell/notice';
-import { SPELLING_HEADING_ID, spellingCount } from '~/spell/rows';
-import { FAILED, useSpell } from '~/spell/use-spell';
+import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
+import { SPELLING_HEADING_ID } from '~/spell/rows';
+import { useSpell } from '~/spell/use-spell';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
@@ -229,35 +224,25 @@ export function registerBuiltinCommands(): void {
       else void saySpell(NO_MARK_HERE);
     }),
   });
-  /** How long Check spelling waits for a check under way: a dictionary still loading may take a while. */
-  const CHECK_WAIT_MS = 10_000;
   /**
-   * Check spelling (Call 13): once the check under way has come back, Problems shows with focus on
-   * its Spelling heading, and the count is said. With spellcheck off it says so and changes nothing.
+   * Check spelling (Call 13): once the check under way has come back, Problems shows with focus
+   * on its Spelling heading, and the count is said. With spellcheck off it says so and changes
+   * nothing.
    */
-  async function checkSpelling() {
-    if (!spellOn()) {
-      void saySpell(CHECK_SPELLING_OFF);
-      return;
-    }
-    const spell = useSpell();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    await Promise.race([
-      spell.settled(),
-      new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, CHECK_WAIT_MS);
-      }),
-    ]);
-    clearTimeout(timer);
-    showTab('problems');
-    // After showTab's own focus (the panel), once the pane has drawn the group.
-    await nextTick();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    document.getElementById(SPELLING_HEADING_ID)?.focus();
-    void saySpell(
-      spell.state.value === 'failed' ? FAILED : spellingCount(spellMarksOf(view.state).length),
-    );
-  }
+  const checkSpelling = makeCheckSpelling({
+    on: spellOn,
+    settled: () => useSpell().settled(),
+    state: () => useSpell().state.value,
+    count: () => spellMarksOf(view.state).length,
+    show: async () => {
+      showTab('problems');
+      // After showTab's own focus (the panel), once the pane has drawn the group.
+      await nextTick();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      document.getElementById(SPELLING_HEADING_ID)?.focus();
+    },
+    say: (message) => void saySpell(message),
+  });
   /** Next or Previous misspelling: selects the word, and says it with its first suggestion. */
   const stepSpelling = (direction: 1 | -1): Behavior => ({
     enabled: spellOn,

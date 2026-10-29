@@ -9,7 +9,7 @@ import { moduleProblems } from '../modules/problems';
 import { reportModuleFailure } from '../modules/registry';
 import { useSettings } from '../settings/settings';
 import { useSnapshots } from '../snapshots/use-snapshots';
-import { type SpellingRow, spellingRows } from '../spell/rows';
+import { type SpellingRow, spellingReader } from '../spell/rows';
 import { applyTextChanges } from './apply-changes';
 import { relint } from './extensions';
 import { useEditor } from './session';
@@ -124,10 +124,11 @@ const sameRows = (a: readonly SpellingRow[], b: readonly SpellingRow[]) =>
     return r.key === q.key && r.from === q.from && r.to === q.to && r.line === q.line;
   });
 
-/** Reads the lint state (and the spelling marks) of the one editor into the list, after every update. */
+/** Reads the lint state and the spelling marks of the one editor, after every update. */
 function start() {
   started = true;
   const { view, onUpdate, locked } = useEditor();
+  const readSpelling = spellingReader();
 
   function read(state: EditorState) {
     const found: Omit<Problem, 'key'>[] = [];
@@ -158,7 +159,7 @@ function start() {
     const keys = occurrenceKeys(found.map((p) => p.ruleId));
     const keyed = found.map((p, i) => ({ ...p, key: keys[i] as string }));
     if (!same(problems.value, keyed)) problems.value = keyed;
-    const rows = spellingRows(state);
+    const rows = readSpelling(state);
     if (!sameRows(marked.value, rows)) marked.value = rows;
   }
 
@@ -176,7 +177,7 @@ export function useProblems(): {
   problems: Readonly<ShallowRef<readonly Problem[]>>;
   /** What script modules found. Not in `problems`, and not in `count`. */
   moduleProblems: Readonly<ComputedRef<readonly ModuleRow[]>>;
-  /** The spellcheck's marks, one row per occurrence: empty while spellcheck is off. Never counted. */
+  /** The spellcheck's marks, a row per occurrence: empty while spellcheck is off; never counted. */
   spelling: Readonly<ComputedRef<readonly SpellingRow[]>>;
   /** Errors and warnings; info isn't counted (it's advice, not a fault). */
   count: Readonly<ComputedRef<number>>;
