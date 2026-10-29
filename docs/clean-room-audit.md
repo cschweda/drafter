@@ -1,6 +1,6 @@
 # Clean-room audit, 27 October 2026
 
-The full record behind the README's [clean-room verification](../README.md#clean-room-verification). Two findings were fixed straight after it: a film catchphrase in one fixture and two tests was replaced with original lines, and one sentence in the architecture document was reworded to match the permitted sources. Notes on the licence housekeeping it recommended are in `docs/DEFERRED.md`.
+The full record behind the [clean-room verification](clean-room.md#clean-room-verification). Two findings were fixed straight after it: a film catchphrase in one fixture and two tests was replaced with original lines, and one sentence in the architecture document was reworded to match the permitted sources. Notes on the licence housekeeping it recommended are in `docs/DEFERRED.md`.
 
 
 **Date:** 2026-10-27
