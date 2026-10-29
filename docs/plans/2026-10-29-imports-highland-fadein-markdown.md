@@ -248,3 +248,13 @@ For the maintainer to review; each gets a DECISIONS line when it lands. **Depart
 16. **`.highland` and `.fadein` are offered in Open with, never the default:** macOS `Viewer`/`Alternate`, Windows `OpenWithProgids`, Linux MIME types `application/x-highland` and `application/x-fadein` declared by the `.deb` (Task 4).
 17. **The help stays on Saving and your browser,** as one Files from other apps section with Final Draft, Highland and Fade In, and Markdown (Task 5).
 18. ◆ **Highland and Fade In leave Phase 3;** Phase 3 keeps Celtx (Task 6).
+
+## Maintainer request (2026-10-29): Open as screenplay
+
+The maintainer asked for a choice to open a Markdown file as a screenplay: "yes please add that choice". A `.md` or `.markdown` file still opens as a Markdown document by default. The new choice opens the same file as a Fountain script instead, for a screenplay someone typed in a Markdown file. Its text is kept exactly as it is, and Fountain reads it as it would any `.fountain` file.
+
+This adds one task to this plan:
+- **Where the choice appears:** an **Open as screenplay…** command in the palette and the app menu's Open section, and in the desktop app's File menu. A drop of a `.md` file onto the window opens as a document, as now.
+- **What it opens:** a new script with the Fountain kind. Save asks where to put it as `.fountain`; the `.md` file is never overwritten as Fountain.
+- **Where it's described:** the CHANGELOG and README.
+- **Tests:** the same file opens as each kind; the choice is off in a tab that can't open scripts; the desktop menu item is present.
