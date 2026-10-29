@@ -37,8 +37,6 @@ export interface DocBlock {
   panel: boolean;
 }
 
-/** US Letter's text width (612 pt less two margins), the default paper's. */
-const LETTER_TEXT_WIDTH = 612 - 2 * STYLE.margin;
 /** Bullets by list depth, the last for every level below it (Call 6: Inter Tight has all three). */
 const BULLETS = ['•', '◦', '▪'] as const;
 /** How far a marker's right edge stands from the item's text. */
@@ -73,6 +71,26 @@ interface Place {
   quoteBars: number[];
   lists: number;
 }
+
+/**
+ * A container being walked, on the walk's own stack rather than the call stack, so no depth of
+ * nesting can overflow it. `walking` is the block count before its current child, until that child's
+ * blocks are all in.
+ */
+type Frame = { next: number; walking: number | null } & (
+  | { kind: 'blocks'; nodes: DocNode[]; place: Place; space: number }
+  | {
+      kind: 'list';
+      nodes: DocNode[];
+      ordered: boolean;
+      bullet: string;
+      number: number;
+      inner: Place;
+      between: number;
+      space: number;
+    }
+  | { kind: 'item'; nodes: DocNode[]; inner: Place; between: number; space: number; first: boolean }
+);
 
 const textFace = (bold: boolean, italic: boolean): Face =>
   bold ? (italic ? 'textBoldItalic' : 'textBold') : italic ? 'textItalic' : 'text';
@@ -116,7 +134,8 @@ function codeRuns(value: string, size: number): Run[] {
 /** Every definition's address, by identifier; the first of a label wins, as CommonMark has it. */
 function definitions(tree: DocNode): Map<string, string> {
   const found = new Map<string, string>();
-  const visit = (node: DocNode) => {
+  const stack = [tree];
+  for (let node = stack.pop(); node; node = stack.pop()) {
     if (
       node.type === 'definition' &&
       node.identifier !== undefined &&
@@ -124,18 +143,19 @@ function definitions(tree: DocNode): Map<string, string> {
     ) {
       found.set(node.identifier, node.url ?? '');
     }
-    for (const child of node.children ?? []) visit(child);
-  };
-  visit(tree);
+    // Reversed, so the stack gives them back in document order.
+    for (const child of [...(node.children ?? [])].reverse()) stack.push(child);
+  }
   return found;
 }
 
 /**
  * The blocks of a document, in reading order. Link reference definitions are resolved and print
- * nothing. `textWidth` (US Letter's by default) bounds the indent: it stops growing once the text
- * would be narrower than a quarter of it (Call 31).
+ * nothing. `textWidth`, the paper's, bounds the indent: it stops growing once the text would be
+ * narrower than a quarter of it (Call 31). The walk keeps its own stack, so any depth of nesting is
+ * read.
  */
-export function documentBlocks(tree: DocNode, textWidth: number = LETTER_TEXT_WIDTH): DocBlock[] {
+export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
   const addresses = definitions(tree);
   const maxIndent = textWidth * 0.75;
   const blocks: DocBlock[] = [];
@@ -189,77 +209,78 @@ export function documentBlocks(tree: DocNode, textWidth: number = LETTER_TEXT_WI
     return true;
   };
 
-  const inlines = (nodes: DocNode[] | undefined, style: InlineStyle, runs: Run[]) => {
-    for (const node of nodes ?? []) inline(node, style, runs);
-  };
-
-  const inline = (node: DocNode, style: InlineStyle, runs: Run[]): void => {
-    const linked = typeof style.link === 'string';
-    const run = (text: string, face: Face, size: number, color: Run['color']) =>
-      push(runs, {
-        text,
-        face,
-        size,
-        color: linked ? 'link' : color,
-        underline: linked,
-        link: linked ? (style.link as string) : null,
-      });
-    switch (node.type) {
-      case 'text':
-      case 'html': // inline HTML is the writer's text, as typed
-        run(flat(node.value ?? ''), textFace(style.bold, style.italic), style.size, style.color);
-        return;
-      case 'inlineCode':
-        run(
-          flat(node.value ?? ''),
-          'code',
-          (style.size * STYLE.inlineCodeSize) / STYLE.textSize,
-          style.color,
-        );
-        return;
-      case 'break':
-        run('\n', textFace(style.bold, style.italic), style.size, style.color);
-        return;
-      case 'emphasis':
-        inlines(node.children, { ...style, italic: true }, runs);
-        return;
-      case 'strong':
-        inlines(node.children, { ...style, bold: true }, runs);
-        return;
-      case 'image':
-      case 'imageReference':
-        run(
-          `[Image: ${node.alt || 'no description'}]`,
-          textFace(style.bold, true),
-          style.size,
-          'muted',
-        );
-        return;
-      case 'link':
-        inlines(
-          node.children,
-          { ...style, link: style.link === undefined ? safeLink(node.url) : style.link },
-          runs,
-        );
-        return;
-      case 'linkReference': {
-        const url = node.identifier === undefined ? undefined : addresses.get(node.identifier);
-        // The parser makes a reference only when its definition exists; any other prints its text, plain.
-        const link =
-          style.link === undefined ? (url === undefined ? undefined : safeLink(url)) : style.link;
-        inlines(node.children, { ...style, link }, runs);
-        return;
-      }
-      default:
-        if (node.children) inlines(node.children, style, runs);
-        else if (node.value)
-          run(flat(node.value), textFace(style.bold, style.italic), style.size, style.color);
-    }
-  };
-
-  const textRuns = (nodes: DocNode[] | undefined, style: InlineStyle) => {
+  /** The runs of inline nodes, walked on a stack of their own: each mark gives its children its style. */
+  const textRuns = (nodes: DocNode[] | undefined, outer: InlineStyle): Run[] => {
     const runs: Run[] = [];
-    inlines(nodes, style, runs);
+    const stack: { node: DocNode; style: InlineStyle }[] = [];
+    const within = (children: DocNode[] | undefined, style: InlineStyle) => {
+      // Reversed, so the stack gives them back in reading order.
+      for (const node of [...(children ?? [])].reverse()) stack.push({ node, style });
+    };
+    within(nodes, outer);
+    for (let top = stack.pop(); top; top = stack.pop()) {
+      const { node, style } = top;
+      const linked = typeof style.link === 'string';
+      const run = (text: string, face: Face, size: number, color: Run['color']) =>
+        push(runs, {
+          text,
+          face,
+          size,
+          color: linked ? 'link' : color,
+          underline: linked,
+          link: linked ? (style.link as string) : null,
+        });
+      switch (node.type) {
+        case 'text':
+        case 'html': // inline HTML is the writer's text, as typed
+          run(flat(node.value ?? ''), textFace(style.bold, style.italic), style.size, style.color);
+          break;
+        case 'inlineCode':
+          run(
+            flat(node.value ?? ''),
+            'code',
+            (style.size * STYLE.inlineCodeSize) / STYLE.textSize,
+            style.color,
+          );
+          break;
+        case 'break':
+          run('\n', textFace(style.bold, style.italic), style.size, style.color);
+          break;
+        case 'emphasis':
+          within(node.children, { ...style, italic: true });
+          break;
+        case 'strong':
+          within(node.children, { ...style, bold: true });
+          break;
+        case 'image':
+        case 'imageReference':
+          run(
+            `[Image: ${node.alt || 'no description'}]`,
+            textFace(style.bold, true),
+            style.size,
+            'muted',
+          );
+          break;
+        case 'link':
+          within(node.children, {
+            ...style,
+            link: style.link === undefined ? safeLink(node.url) : style.link,
+          });
+          break;
+        case 'linkReference': {
+          const url = node.identifier === undefined ? undefined : addresses.get(node.identifier);
+          // The parser makes a reference only when its definition exists; any other prints its text, plain.
+          const link =
+            style.link === undefined ? (url === undefined ? undefined : safeLink(url)) : style.link;
+          within(node.children, { ...style, link });
+          break;
+        }
+        default:
+          if (node.children) within(node.children, style);
+          else if (node.value)
+            run(flat(node.value), textFace(style.bold, style.italic), style.size, style.color);
+      }
+    }
     return runs;
   };
 
@@ -271,16 +292,10 @@ export function documentBlocks(tree: DocNode, textWidth: number = LETTER_TEXT_WI
     link: undefined,
   };
 
-  /** Walks a run of sibling blocks: the first has `space` before it, the rest the space between blocks. */
-  const children = (nodes: DocNode[] | undefined, place: Place, space: number) => {
-    for (const node of nodes ?? []) {
-      if (block(node, place, space)) space = STYLE.between;
-    }
-  };
+  const stack: Frame[] = [];
 
-  /** Adds a node's blocks; false when it prints nothing. */
-  const block = (node: DocNode, place: Place, space: number): boolean => {
-    const before = blocks.length;
+  /** Adds a leaf node's blocks, or puts a container on the stack to walk its children. */
+  const open = (node: DocNode, place: Place, space: number): void => {
     switch (node.type) {
       case 'heading': {
         const level = Math.min(6, Math.max(1, node.depth ?? 1));
@@ -331,17 +346,51 @@ export function documentBlocks(tree: DocNode, textWidth: number = LETTER_TEXT_WI
             : [...place.quoteBars, place.indent + STYLE.quoteBar / 2];
         // A marker goes outside the quote's bar, on a line of its own.
         if (flushMarker(place, space)) space = STYLE.between;
-        children(node.children, { ...place, indent, quoteBars }, space);
+        stack.push({
+          kind: 'blocks',
+          nodes: node.children ?? [],
+          next: 0,
+          walking: null,
+          place: { ...place, indent, quoteBars },
+          space,
+        });
         break;
       }
-      case 'list':
-        list(node, place, space);
+      case 'list': {
+        const between = node.spread ? STYLE.looseItem : 0;
+        // A list that is its item's first block: the item's marker gets a line of its own.
+        if (flushMarker(place, space)) space = between;
+        stack.push({
+          kind: 'list',
+          nodes: node.children ?? [],
+          next: 0,
+          walking: null,
+          ordered: node.ordered === true,
+          bullet: BULLETS[Math.min(place.lists, BULLETS.length - 1)] as string,
+          number: typeof node.start === 'number' ? node.start : 1,
+          inner: {
+            ...place,
+            indent: deeper(place.indent, STYLE.listIndent),
+            lists: place.lists + 1,
+          },
+          between,
+          space,
+        });
         break;
+      }
       case 'definition':
         break;
       default:
-        if (node.children) children(node.children, place, space);
-        else if (node.value) {
+        if (node.children) {
+          stack.push({
+            kind: 'blocks',
+            nodes: node.children,
+            next: 0,
+            walking: null,
+            place,
+            space,
+          });
+        } else if (node.value) {
           emit(place, space, {
             kind: 'text',
             runs: textRuns([{ type: 'text', value: node.value }], plain),
@@ -350,42 +399,69 @@ export function documentBlocks(tree: DocNode, textWidth: number = LETTER_TEXT_WI
           });
         }
     }
-    return blocks.length > before;
   };
 
-  const list = (node: DocNode, place: Place, space: number) => {
-    const between = node.spread ? STYLE.looseItem : 0;
-    const bullet = BULLETS[Math.min(place.lists, BULLETS.length - 1)] as string;
-    let number = typeof node.start === 'number' ? node.start : 1;
-    const inner: Place = {
-      ...place,
-      indent: deeper(place.indent, STYLE.listIndent),
-      lists: place.lists + 1,
-    };
-    // A list that is its item's first block: the item's marker gets a line of its own.
-    if (flushMarker(place, space)) space = between;
-    for (const item of node.children ?? []) {
+  stack.push({
+    kind: 'blocks',
+    nodes: tree.children ?? [],
+    next: 0,
+    walking: null,
+    place: { indent: 0, quoteBars: [], lists: 0 },
+    space: STYLE.between,
+  });
+  for (let frame = stack.at(-1); frame; frame = stack.at(-1)) {
+    // The child walked last is done: whether it printed anything sets the space after it.
+    if (frame.walking !== null) {
+      const printed = blocks.length > frame.walking;
+      frame.walking = null;
+      if (frame.kind === 'blocks') {
+        // A run of sibling blocks: the first has `space` before it, the rest the space between blocks.
+        if (printed) frame.space = STYLE.between;
+      } else if (frame.kind === 'item') {
+        if (printed) frame.first = false;
+      } else {
+        // An empty item still prints its marker.
+        flushMarker(frame.inner, frame.space);
+        frame.space = frame.between;
+      }
+    }
+    const node = frame.nodes[frame.next];
+    if (!node) {
+      stack.pop();
+      continue;
+    }
+    frame.next++;
+    frame.walking = blocks.length;
+    if (frame.kind === 'blocks') open(node, frame.place, frame.space);
+    else if (frame.kind === 'item') {
+      // A list later in the item sits as close as this list's items do.
+      const space = frame.first
+        ? frame.space
+        : node.type === 'list'
+          ? frame.between
+          : STYLE.between;
+      open(node, frame.inner, space);
+    } else {
       marker = {
-        text: node.ordered ? `${number}.` : bullet,
+        text: frame.ordered ? `${frame.number}.` : frame.bullet,
         face: 'text',
         size: STYLE.textSize,
         color: 'text',
         underline: false,
         link: null,
       };
-      number++;
-      let first = true;
-      for (const child of item.children ?? []) {
-        // A list later in the item sits as close as this list's items do.
-        const childSpace = first ? space : child.type === 'list' ? between : STYLE.between;
-        if (block(child, inner, childSpace)) first = false;
-      }
-      // An empty item still prints its marker.
-      flushMarker(inner, space);
-      space = between;
+      frame.number++;
+      stack.push({
+        kind: 'item',
+        nodes: node.children ?? [],
+        next: 0,
+        walking: null,
+        inner: frame.inner,
+        between: frame.between,
+        space: frame.space,
+        first: true,
+      });
     }
-  };
-
-  children(tree.children, { indent: 0, quoteBars: [], lists: 0 }, STYLE.between);
+  }
   return blocks;
 }

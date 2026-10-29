@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { type DocBlock, documentBlocks, type Run, safeLink } from '../src/document/blocks';
 import { STYLE } from '../src/document/style';
+import type { DocNode } from '../src/document/tree';
 import { md } from './document-helpers';
 
-const blocksOf = (source: string, textWidth?: number) => documentBlocks(md(source), textWidth);
+/** US Letter's text width, 612 pt less two 72 pt margins. */
+const LETTER = 468;
+const blocksOf = (source: string, textWidth = LETTER) => documentBlocks(md(source), textWidth);
 const textOf = (block: DocBlock | undefined) => (block?.runs ?? []).map((run) => run.text).join('');
 /** The runs of a block whose text includes `part`. */
 const runWith = (block: DocBlock | undefined, part: string): Run | undefined =>
@@ -253,6 +256,19 @@ describe('documentBlocks', () => {
     expect(textOf(ref)).toBe('[Image: the quay]');
   });
 
+  it('an image inside a safe link is part of the link: blue, underlined, with its address', () => {
+    const [para] = blocksOf('[![a map](m.png)](https://drafter.dev/)');
+    expect(para?.runs).toMatchObject([
+      {
+        text: '[Image: a map]',
+        face: 'textItalic',
+        color: 'link',
+        underline: true,
+        link: 'https://drafter.dev/',
+      },
+    ]);
+  });
+
   it('a thematic break is a rule', () => {
     const blocks = blocksOf('Above.\n\n---\n\nBelow.\n\n# Next part');
     expect(blocks.map((block) => block.kind)).toEqual(['text', 'rule', 'text', 'heading']);
@@ -298,7 +314,7 @@ describe('documentBlocks', () => {
         },
       ],
     };
-    const [orphan] = documentBlocks(tree);
+    const [orphan] = documentBlocks(tree, LETTER);
     expect(orphan?.runs).toMatchObject([
       { text: 'gone', color: 'text', underline: false, link: null },
     ]);
@@ -362,9 +378,77 @@ describe('documentBlocks', () => {
       expect(Math.max(...indents)).toBeGreaterThan(width * 0.75 - 18);
       expect(blocks.at(-1)?.quoteBars).toEqual([1, 17, 33, 49, 65]);
     }
-    // The default width is US Letter's text width.
     const deep = blocksOf(Array.from({ length: 40 }, (_, i) => `${'  '.repeat(i)}- x`).join('\n'));
-    expect(Math.max(...deep.map((block) => block.indent))).toBeLessThanOrEqual(468 * 0.75);
+    expect(Math.max(...deep.map((block) => block.indent))).toBeLessThanOrEqual(LETTER * 0.75);
+    // The width has no default: the layout always passes the paper's.
+    // @ts-expect-error textWidth is required
+    expect(() => documentBlocks(md('x'))).not.toThrow();
+  });
+
+  it('no depth of nesting overflows the stack', () => {
+    const DEEP = 10_000;
+    /** `inner` wrapped `depth` times by `wrap`, built without recursion. */
+    const nest = (depth: number, inner: DocNode, wrap: (child: DocNode) => DocNode) => {
+      let node = inner;
+      for (let i = 0; i < depth; i++) node = wrap(node);
+      return node;
+    };
+    const para = (...children: DocNode[]): DocNode => ({ type: 'paragraph', children });
+    const text = (value: string): DocNode => ({ type: 'text', value });
+    const root = (...children: DocNode[]): DocNode => ({ type: 'root', children });
+    const started = Date.now();
+
+    const quoted = documentBlocks(
+      root(
+        nest(DEEP, para(text('Bottom.')), (child) => ({ type: 'blockquote', children: [child] })),
+      ),
+      LETTER,
+    );
+    expect(quoted.map(textOf)).toEqual(['Bottom.']);
+    expect(quoted[0]?.indent).toBeLessThanOrEqual(LETTER * 0.75);
+
+    const listed = documentBlocks(
+      root(
+        nest(DEEP, para(text('Bottom.')), (child) => ({
+          type: 'list',
+          children: [{ type: 'listItem', children: [child] }],
+        })),
+      ),
+      LETTER,
+    );
+    expect(listed).toHaveLength(DEEP); // every marker but the last on a line of its own
+    expect(textOf(listed.at(-1))).toBe('Bottom.');
+    expect(listed.at(-1)?.marker?.text).toBe('▪');
+
+    const slanted = documentBlocks(
+      root(para(nest(DEEP, text('Bottom.'), (child) => ({ type: 'emphasis', children: [child] })))),
+      LETTER,
+    );
+    expect(slanted[0]?.runs).toMatchObject([{ text: 'Bottom.', face: 'textItalic' }]);
+
+    // A definition far down still gives its address.
+    const [linked] = documentBlocks(
+      root(
+        para({
+          type: 'linkReference',
+          identifier: 'deep',
+          children: [text('the well')],
+        }),
+        nest(
+          DEEP,
+          { type: 'definition', identifier: 'deep', url: 'https://drafter.dev/well' },
+          (child) => ({ type: 'blockquote', children: [child] }),
+        ),
+      ),
+      LETTER,
+    );
+    expect(runWith(linked, 'the well')?.link).toBe('https://drafter.dev/well');
+
+    // And through the parser.
+    expect(blocksOf(`${'>'.repeat(5000)} x`).map(textOf)).toEqual(['x']);
+    expect(textOf(blocksOf(`${'- '.repeat(1000)}x`).at(-1))).toBe('x');
+    expect(blocksOf(`${'*'.repeat(5000)}x${'*'.repeat(5000)}`).map(textOf)).toEqual(['x']);
+    expect(Date.now() - started).toBeLessThan(5000);
   });
 
   it('a document of only definitions prints nothing', () => {
