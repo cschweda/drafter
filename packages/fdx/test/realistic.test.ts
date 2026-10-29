@@ -86,11 +86,14 @@ function writing(root: XmlElement): string[] {
             const text = paragraphTexts(d).join(' ');
             if (oneLine(text) !== oneLine(c.attrs.Title ?? '')) out.push(text);
           } else if (d.name === 'SceneArcBeats') {
+            out.push(ownText(d));
             for (const beat of elements(d))
               out.push(beat.attrs.Name ?? '', ...paragraphTexts(beat));
           } else element(d);
         }
       } else if (c.name === 'Alts') {
+        out.push(ownText(c));
+        for (const a of elements(c)) if (a.name !== 'AltId') element(a);
         for (const id of elements(c).map((a) => textOf(a).trim())) {
           used.add(id);
           const text = alts.get(id) ?? '';
@@ -100,21 +103,28 @@ function writing(root: XmlElement): string[] {
     }
   };
   const content = (c: XmlElement) => {
+    out.push(ownText(c));
     for (const p of elements(c)) p.name === 'Paragraph' ? paragraph(p) : element(p);
   };
+  out.push(ownText(root));
   for (const top of elements(root)) {
     if (top.name === 'Content') content(top);
     else if (top.name === 'TitlePage') {
+      out.push(ownText(top));
       for (const c of elements(top)) c.name === 'Content' ? content(c) : element(c);
     } else if (top.name === 'ListItems') {
+      out.push(ownText(top));
       for (const item of elements(top)) {
         const body = elements(item).find((c) => c.name === 'Content');
         out.push(item.attrs.Title ?? '', ...(body ? paragraphTexts(body) : []));
       }
     } else if (top.name === 'ScriptNotes') {
+      out.push(ownText(top));
       for (const note of elements(top))
         out.push(note.attrs.WriterName ?? '', ...paragraphTexts(note));
     } else if (top.name === 'AltCollection') {
+      out.push(ownText(top));
+      for (const alt of elements(top)) if (alt.name !== 'Alt') element(alt);
       for (const alt of elements(top))
         if (!used.has(alt.attrs.Id ?? '')) out.push(...paragraphTexts(alt));
     } else element(top);
@@ -436,7 +446,9 @@ describe('fd13-shapes.fdx', () => {
       { type: 'End of Act', count: 1 },
       { type: 'Beat', count: 2 },
       { type: 'Script note', count: 2 },
+      { type: 'ScriptNotes text', count: 1 },
     ]);
+    expect(fd.text).toContain('Written loose, between two notes. [[fdx: ScriptNotes text]]');
     expect(fd.text).toContain(
       '[[fdx: Arc beat, ODA: Decides to open the gates against the rules.]]',
     );

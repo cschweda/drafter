@@ -304,10 +304,14 @@ class Exporter {
           return;
         }
         case 'note': {
-          const notes = this.regions.filter(
-            (r) =>
-              r.kind === 'note' && r.span.from >= block.span.from && r.span.to <= block.span.to,
-          );
+          // Only the regions from the block's start on, as `blockPieces` walks them: a filter of
+          // every region for each note block took time in the square of the notes.
+          const notes: Region[] = [];
+          for (let r = firstFrom(this.regions, block.span.from); r < this.regions.length; r++) {
+            const region = this.regions[r] as Region;
+            if (region.span.from >= block.span.to) break;
+            if (region.kind === 'note' && region.span.to <= block.span.to) notes.push(region);
+          }
           this.push(
             notes.map((r) =>
               this.paragraph('General', { DrafterNote: 'Yes' }, [

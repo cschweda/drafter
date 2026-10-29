@@ -1290,3 +1290,56 @@ describe('fromFdx: title pages and alternates, the edges', () => {
     expect(result.mapped).toEqual([{ type: 'Alternate', count: 2 }]);
   });
 });
+
+describe('fromFdx: nothing loose is dropped', () => {
+  it('brings in an element other than Alt inside an AltCollection, and inside Alts', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a</AltId><Memo>alts memo</Memo></Alts><Text>Now.</Text></Paragraph>',
+        '<AltCollection><Alt Id="a"><Paragraph><Text>Then.</Text></Paragraph></Alt><Memo>collection memo</Memo></AltCollection>',
+      ),
+    );
+    expect(result.text).toContain('alts memo [[fdx: Memo]]');
+    expect(result.text).toContain('collection memo [[fdx: Memo]]');
+    expect(result.mapped).toEqual([
+      { type: 'Alternate', count: 1 },
+      { type: 'Memo', count: 2 },
+    ]);
+  });
+
+  it('brings in text written loose in a container as a note in its place', () => {
+    const result = fromFdx(
+      '<?xml version="1.0"?><FinalDraft DocumentType="Script" Template="No" Version="6">\n  root words\n' +
+        `<Content>\n  ${P('Action', 'First.')} content words ${P('Action', 'Second.')}\n</Content>` +
+        '<TitlePage> title page words <Content> title content words ' +
+        '<Paragraph Alignment="Center"><Text>T</Text></Paragraph></Content></TitlePage>' +
+        `<AltCollection> alt collection words </AltCollection>` +
+        `<ScriptNotes> script notes words </ScriptNotes>` +
+        `<ListItems> list items words </ListItems>` +
+        '</FinalDraft>',
+    );
+    for (const [words, where] of [
+      ['root words', 'FinalDraft'],
+      ['content words', 'Content'],
+      ['title page words', 'TitlePage'],
+      ['title content words', 'Content'],
+      ['alt collection words', 'AltCollection'],
+      ['script notes words', 'ScriptNotes'],
+      ['list items words', 'ListItems'],
+    ]) {
+      expect(result.text).toContain(`${words} [[fdx: ${where} text]]`);
+    }
+    // In place: the loose text in the script's Content sits between its paragraphs.
+    expect(result.text).toContain('First.\n\ncontent words [[fdx: Content text]]\n\nSecond.');
+    const arc = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title=""><SceneArcBeats> arc words ' +
+          '<CharacterArcBeat Name="ODA"><Paragraph><Text>Beat.</Text></Paragraph></CharacterArcBeat>' +
+          '</SceneArcBeats></SceneProperties><Text>INT. A - DAY</Text></Paragraph>' +
+          '<Paragraph Type="Action"><Alts> alts words <AltId>b</AltId></Alts><Text>x</Text></Paragraph>',
+      ),
+    );
+    expect(arc.text).toContain('arc words [[fdx: SceneArcBeats text]]');
+    expect(arc.text).toContain('alts words [[fdx: Alts text]]');
+  });
+});

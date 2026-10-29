@@ -471,7 +471,11 @@ class Importer {
     this.content(content);
     let titlePage: { text: string; title: string | null } | null = null;
     for (const child of root.children) {
-      if (typeof child === 'string' || child === content) continue;
+      if (typeof child === 'string') {
+        this.loose(child, root.name);
+        continue;
+      }
+      if (child === content) continue;
       if (child.name === 'TitlePage' && !titlePage) titlePage = this.titlePage(child);
       else if (child.name === 'AltCollection') this.unusedAlts(child);
       else if (child.name === 'ListItems') this.listItems(child);
@@ -489,6 +493,16 @@ class Importer {
       ignored: [...this.ignoredNames].slice(0, MAX_IGNORED),
       ignoredCount: this.ignoredNames.size,
     };
+  }
+
+  /**
+   * Text written loose in a container (between its elements, not in one) comes in as a note in
+   * its place, `[[fdx: Name text]]`; whitespace between elements is indentation, skipped.
+   */
+  private loose(text: string, container: string) {
+    if (text.trim() === '') return;
+    this.flushSpeech();
+    this.action(fromPlain(text.trim()), `${container} text`);
   }
 
   /** Pushes a block where it belongs: after the open speech, which can't be broken, or now. */
@@ -521,7 +535,14 @@ class Importer {
    */
   private alternates(alts: XmlElement, shown: () => string) {
     for (const child of alts.children) {
-      if (typeof child === 'string' || child.name !== 'AltId') continue;
+      if (typeof child === 'string') {
+        this.loose(child, 'Alts');
+        continue;
+      }
+      if (child.name !== 'AltId') {
+        this.other(child);
+        continue;
+      }
       const id = textOf(child).trim();
       // Each alternate comes in once, at its first reference: a file naming one large alternate
       // from many places would otherwise make a script far larger than the file.
@@ -541,7 +562,14 @@ class Importer {
    */
   private unusedAlts(collection: XmlElement) {
     for (const alt of collection.children) {
-      if (typeof alt === 'string' || alt.name !== 'Alt') continue;
+      if (typeof alt === 'string') {
+        this.loose(alt, 'AltCollection');
+        continue;
+      }
+      if (alt.name !== 'Alt') {
+        this.other(alt);
+        continue;
+      }
       const id = alt.attrs.Id;
       const text = paragraphsText(alt);
       if (text === '') continue;
@@ -563,7 +591,10 @@ class Importer {
   /** Beat cards (`ListItem Type="Beat"`), one note each, after the script, with their titles. */
   private listItems(items: XmlElement) {
     for (const item of items.children) {
-      if (typeof item === 'string') continue;
+      if (typeof item === 'string') {
+        this.loose(item, 'ListItems');
+        continue;
+      }
       if (item.name !== 'ListItem' || item.attrs.Type !== 'Beat') {
         this.other(item);
         continue;
@@ -592,7 +623,10 @@ class Importer {
    */
   private scriptNotes(notes: XmlElement) {
     for (const note of notes.children) {
-      if (typeof note === 'string') continue;
+      if (typeof note === 'string') {
+        this.loose(note, 'ScriptNotes');
+        continue;
+      }
       if (note.name !== 'ScriptNote') {
         this.other(note);
         continue;
@@ -628,7 +662,10 @@ class Importer {
 
   private content(content: XmlElement) {
     for (const child of content.children) {
-      if (typeof child === 'string') continue;
+      if (typeof child === 'string') {
+        this.loose(child, content.name);
+        continue;
+      }
       if (child.name === 'Paragraph') this.paragraph(child);
       else this.other(child);
     }
@@ -830,7 +867,10 @@ class Importer {
   /** A scene's character arc beats, one note each after its heading, named for the character. */
   private arcBeats(beats: XmlElement) {
     for (const beat of beats.children) {
-      if (typeof beat === 'string') continue;
+      if (typeof beat === 'string') {
+        this.loose(beat, 'SceneArcBeats');
+        continue;
+      }
       if (beat.name !== 'CharacterArcBeat') {
         this.other(beat);
         continue;
@@ -1097,11 +1137,13 @@ class Importer {
     );
     // What the title page holds outside its paragraphs comes in as notes after the script.
     for (const child of titlePage.children) {
-      if (typeof child === 'string') continue;
-      if (child !== content) this.other(child);
+      if (typeof child === 'string') this.loose(child, titlePage.name);
+      else if (child !== content) this.other(child);
       else
-        for (const c of child.children)
-          if (typeof c !== 'string' && c.name !== 'Paragraph') this.other(c);
+        for (const c of child.children) {
+          if (typeof c === 'string') this.loose(c, child.name);
+          else if (c.name !== 'Paragraph') this.other(c);
+        }
     }
     const paragraphs = (content?.children ?? []).filter(
       (c): c is XmlElement => typeof c !== 'string' && c.name === 'Paragraph',
