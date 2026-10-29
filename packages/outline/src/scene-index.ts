@@ -1,6 +1,6 @@
-import type { Block, Doc, Span } from '@drafter/fountain';
+import type { Block, Doc, Region, Span } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
-import { bodyEnd, contentEnd, readKeyedNote } from '@drafter/notes';
+import { bodyEnd, contentEnd, normalizeLabel, readKeyedNote, readNote } from '@drafter/notes';
 import { resolveRole, type Template } from '@drafter/templates';
 import type { OutlineItem, OutlineNode, Scene, SceneIndex, Section, Synopsis } from './types';
 
@@ -40,6 +40,35 @@ function headingText(block: Block): string {
   if (block.kind === 'scene_heading') return block.sem.text || (block.lines[0]?.raw.trim() ?? '');
   if (block.kind === 'section') return block.sem.text;
   return block.lines[0]?.raw.trim() ?? '';
+}
+
+/** What a scene's notes say (`regions` are the ones inside it, in order): its fields, storylines, and marks. */
+export function sceneNotes(
+  source: string,
+  regions: readonly Region[],
+): Pick<Scene, 'fields' | 'storylines' | 'marks'> {
+  const fields: Scene['fields'] = {};
+  const storylines: string[] = [];
+  const seen = new Set<string>();
+  const marks: Scene['marks'] = [];
+  for (const region of regions) {
+    if (region.kind !== 'note' || !region.closed) continue;
+    const note = readNote(source.slice(region.span.from + 2, region.span.to - 2));
+    const head = note.head;
+    if (head?.kind === 'mark' && note.body !== '') {
+      marks.push({ key: head.key, label: note.body, span: { ...region.span } });
+    }
+    if (head?.kind !== 'field' || note.body === '') continue;
+    fields[head.key] ??= { body: note.body, span: { ...region.span } };
+    if (head.key !== 'storyline') continue;
+    for (const part of note.body.split(',')) {
+      const label = part.trim();
+      if (label === '' || seen.has(normalizeLabel(label))) continue;
+      seen.add(normalizeLabel(label));
+      storylines.push(label);
+    }
+  }
+  return { fields, storylines, marks };
 }
 
 /** Where each block starts on the pages, in lines from the top of the first page; null without a matching layout. */
@@ -133,12 +162,13 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
         }
         words += printedWords(b);
       }
-      // The first color note inside the scene. Regions are in source order, as scenes are.
+      // The notes inside the scene. Regions are in source order, as scenes are.
       while (region < regions.length && (regions[region]?.span.from ?? 0) < span.from) region++;
+      let past = region;
+      while (past < regions.length && (regions[past]?.span.from ?? 0) < span.to) past++;
+      const inside = regions.slice(region, past);
       let color: Scene['color'] = null;
-      for (let r = region; r < regions.length; r++) {
-        const found = regions[r];
-        if (!found || found.span.from >= span.to) break;
+      for (const found of inside) {
         if (found.kind !== 'note' || !found.closed || color) continue;
         const keyed = readKeyedNote(source.slice(found.span.from + 2, found.span.to - 2));
         if (keyed?.key === 'color' && keyed.body !== '') {
@@ -168,6 +198,7 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
         sections: open.map((o) => o.section.block),
         synopses,
         color,
+        ...sceneNotes(source, inside),
         speakers: [...speakers.values()],
         words,
         pages: scenePages,

@@ -144,6 +144,57 @@ describe('sceneIndex', () => {
     expect(doc.source.slice(a?.color?.span.from, a?.color?.span.to)).toBe('[[color :  Blue ]]');
   });
 
+  test('reads every field in any case, anywhere in the scene', () => {
+    const source =
+      'INT. A - DAY\n\n= Syn.\n[[color: Blue]]\n[[GOAL: Win the bet.]]\n\nShe waits. [[conflict :  The clock. ]]\n\n[[Outcome: She loses.]] [[shift: hope → dread]]\n[[Storyline: A]]\n\nINT. B - DAY\n\nNone. [[Goal:]]\n';
+    const { doc, index } = indexOf(source);
+    const [a, b] = index.scenes;
+    const read = Object.fromEntries(
+      Object.entries(a?.fields ?? {}).map(([key, field]) => [
+        key,
+        [field.body, doc.source.slice(field.span.from, field.span.to)],
+      ]),
+    );
+    expect(read).toEqual({
+      color: ['Blue', '[[color: Blue]]'],
+      goal: ['Win the bet.', '[[GOAL: Win the bet.]]'],
+      conflict: ['The clock.', '[[conflict :  The clock. ]]'],
+      outcome: ['She loses.', '[[Outcome: She loses.]]'],
+      shift: ['hope → dread', '[[shift: hope → dread]]'],
+      storyline: ['A', '[[Storyline: A]]'],
+    });
+    // An empty field is no field, as an empty color is no color.
+    expect(b?.fields).toEqual({});
+    expect(a?.color?.value).toBe('blue');
+  });
+
+  test('the first of two Goals wins', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\nAction. [[Goal: First.]]\n\n[[goal: Second.]]\n\nINT. B - DAY\n\n[[Goal: Third.]]\n',
+    );
+    expect(index.scenes.map((s) => s.fields.goal?.body)).toEqual(['First.', 'Third.']);
+  });
+
+  test('reads storylines from every Storyline note', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\n[[Storyline: A, B]]\n\nAction. [[storyline :  b , C,, ]]\n\n[[Storyline:]]\n\nINT. B - DAY\n\nNone.\n',
+    );
+    expect(index.scenes.map((s) => s.storylines)).toEqual([['A', 'B', 'C'], []]);
+    expect(index.scenes[0]?.fields.storyline?.body).toBe('A, B');
+  });
+
+  test('lists setups and payoffs as marks', () => {
+    const source =
+      'INT. A - DAY\n\nA letter sticks out. [[Setup: the letter]] [[Setup:]]\n\nShe reads it. [[PAYOFF :  The Letter ]]\n\nINT. B - DAY\n\nNone.\n';
+    const { doc, index } = indexOf(source);
+    const marks = index.scenes[0]?.marks ?? [];
+    expect(marks.map((m) => [m.key, m.label, doc.source.slice(m.span.from, m.span.to)])).toEqual([
+      ['setup', 'the letter', '[[Setup: the letter]]'],
+      ['payoff', 'The Letter', '[[PAYOFF :  The Letter ]]'],
+    ]);
+    expect(index.scenes[1]?.marks).toEqual([]);
+  });
+
   test('lists who speaks, once each, in order', () => {
     const { index } = indexOf(
       'INT. A - DAY\n\nANN\nHi.\n\nBEN (V.O.)\nYo.\n\nann\n\nANN\nAgain.\n\nINT. B - DAY\n\nQuiet.\n',

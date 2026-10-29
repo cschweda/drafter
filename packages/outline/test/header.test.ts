@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'vitest';
-import { downTarget, moveItem, type SceneColor, setColor, setSynopsis } from '../src';
+import {
+  downTarget,
+  moveItem,
+  type SceneColor,
+  type SceneDetails,
+  setColor,
+  setSceneDetails,
+  setSynopsis,
+} from '../src';
 import { apply, indexOf } from './helpers';
 
 /** The script after `edit` on its scene number `n` (1-based). */
@@ -17,6 +25,16 @@ const synopsis = (source: string, text: string, n = 1) =>
   edited(source, n, (doc, scene) => setSynopsis(doc, scene, text));
 const color = (source: string, value: SceneColor | null, n = 1) =>
   edited(source, n, (doc, scene) => setColor(doc, scene, value));
+
+/** The changes, checked to be sorted and apart, as one editor transaction takes them. */
+function apart<T extends { from: number; to: number }>(changes: T[]): T[] {
+  for (let i = 1; i < changes.length; i++) {
+    expect((changes[i] as T).from).toBeGreaterThan((changes[i - 1] as T).to);
+  }
+  return changes;
+}
+const details = (source: string, value: SceneDetails, n = 1) =>
+  edited(source, n, (doc, scene) => apart(setSceneDetails(doc, scene, value)));
 
 describe('setSynopsis', () => {
   test('edits the first synopsis in place', () => {
@@ -132,6 +150,178 @@ describe('setColor', () => {
   });
 });
 
+describe('setSceneDetails', () => {
+  test('writes all four goal fields in the header order', () => {
+    expect(
+      details('INT. A - DAY\n\nAction.\n', {
+        shift: 'hope → dread',
+        outcome: 'He leaves.',
+        conflict: 'Tom jokes.',
+        goal: 'Make Tom admit it.',
+      }),
+    ).toBe(
+      'INT. A - DAY\n\n[[Goal: Make Tom admit it.]]\n[[Conflict: Tom jokes.]]\n[[Outcome: He leaves.]]\n[[Shift: hope → dread]]\n\nAction.\n',
+    );
+    // The design's whole header (§5.4), given in any order.
+    expect(
+      details('INT. KITCHEN - NIGHT\n\nMARGARET sits at the table, not eating.\n', {
+        shift: 'hope → dread',
+        storyline: 'A',
+        outcome: "He won't. He leaves.",
+        color: 'blue',
+        conflict: 'Tom keeps making jokes.',
+        synopsis: "Margaret waits for a call that won't come.",
+        goal: 'Margaret wants Tom to admit he lied.',
+      }),
+    ).toBe(
+      "INT. KITCHEN - NIGHT\n\n= Margaret waits for a call that won't come.\n[[Color: blue]]\n[[Storyline: A]]\n[[Goal: Margaret wants Tom to admit he lied.]]\n[[Conflict: Tom keeps making jokes.]]\n[[Outcome: He won't. He leaves.]]\n[[Shift: hope → dread]]\n\nMARGARET sits at the table, not eating.\n",
+    );
+  });
+
+  test('adds a field between the ones before and after it', () => {
+    expect(
+      details('INT. A - DAY\n\n= Syn.\n[[Color: blue]]\n[[Outcome: Lost.]]\n\nAction.\n', {
+        goal: 'Win.',
+      }),
+    ).toBe(
+      'INT. A - DAY\n\n= Syn.\n[[Color: blue]]\n[[Goal: Win.]]\n[[Outcome: Lost.]]\n\nAction.\n',
+    );
+    // Before the first field after it, with no field before it.
+    expect(details('INT. A - DAY\n\n[[Shift: + → −]]\n\nAction.\n', { storyline: 'B' })).toBe(
+      'INT. A - DAY\n\n[[Storyline: B]]\n[[Shift: + → −]]\n\nAction.\n',
+    );
+    // After the fields before it, and before the writer's other notes.
+    expect(
+      details('INT. A - DAY\n\n[[Color: red]]\n[[TODO: tighten]]\n\nAction.\n', { goal: 'Win.' }),
+    ).toBe('INT. A - DAY\n\n[[Color: red]]\n[[Goal: Win.]]\n[[TODO: tighten]]\n\nAction.\n');
+    // A field typed by hand lower in the scene stays there; the header gets only what's new.
+    expect(
+      details('INT. A - DAY\n\n= Syn.\n\nShe waits. [[Goal: Win.]]\n', {
+        goal: 'Lose.',
+        color: 'teal',
+      }),
+    ).toBe('INT. A - DAY\n\n= Syn.\n[[Color: teal]]\n\nShe waits. [[Goal: Lose.]]\n');
+  });
+
+  test('clears a field and its line', () => {
+    const header =
+      'INT. A - DAY\n\n[[Color: blue]]\n[[Goal: Win.]]\n[[Conflict: Rain.]]\n\nAction.\n';
+    expect(details(header, { goal: '', conflict: '' })).toBe(
+      'INT. A - DAY\n\n[[Color: blue]]\n\nAction.\n',
+    );
+    expect(details(header, { color: null, goal: '  ', conflict: '' })).toBe(
+      'INT. A - DAY\n\nAction.\n',
+    );
+    // A field cleared and another added in its place.
+    expect(details(header, { color: null, storyline: 'A' })).toBe(
+      'INT. A - DAY\n\n[[Storyline: A]]\n[[Goal: Win.]]\n[[Conflict: Rain.]]\n\nAction.\n',
+    );
+    expect(details(header, { conflict: '', outcome: 'Wet.' })).toBe(
+      'INT. A - DAY\n\n[[Color: blue]]\n[[Goal: Win.]]\n[[Outcome: Wet.]]\n\nAction.\n',
+    );
+    expect(
+      details('INT. A - DAY\n\n= Syn.\n[[Goal: Win.]]\n\nAction.\n', {
+        synopsis: '',
+        goal: '',
+        shift: 'up',
+      }),
+    ).toBe('INT. A - DAY\n\n[[Shift: up]]\n\nAction.\n');
+    // Two hand-typed fields on lines of their own, side by side, go together.
+    expect(
+      details('INT. A - DAY\n\nAction.\n[[Goal: Win.]]\n[[Conflict: Rain.]]\n\nMore.\n', {
+        goal: '',
+        conflict: '',
+      }),
+    ).toBe('INT. A - DAY\n\nAction.\n\nMore.\n');
+    // Clearing a field that isn't there changes nothing.
+    expect(details('INT. A - DAY\n\nAction.\n', { goal: '' })).toBe('INT. A - DAY\n\nAction.\n');
+  });
+
+  test('edits a hand-typed field where it is', () => {
+    expect(details('INT. A - DAY\n\nShe waits. [[goal :  win ]]\n', { goal: 'Lose.' })).toBe(
+      'INT. A - DAY\n\nShe waits. [[Goal: Lose.]]\n',
+    );
+    // Taken out of a line it shares, the spaces around it stay.
+    expect(details('INT. A - DAY\n\nShe waits [[Goal: win]] by.\n', { goal: '' })).toBe(
+      'INT. A - DAY\n\nShe waits  by.\n',
+    );
+    // A second Goal is left alone (lint's duplicate-field lists it).
+    expect(
+      details('INT. A - DAY\n\n[[Goal: One.]]\n\nAction. [[Goal: Two.]]\n', { goal: 'Three.' }),
+    ).toBe('INT. A - DAY\n\n[[Goal: Three.]]\n\nAction. [[Goal: Two.]]\n');
+  });
+
+  test('writes a synopsis and fields together under a bare heading', () => {
+    expect(details('INT. A - DAY\n', { goal: 'G.', color: 'red', synopsis: 'S.' })).toBe(
+      'INT. A - DAY\n\n= S.\n[[Color: red]]\n[[Goal: G.]]\n',
+    );
+    expect(details('INT. A - DAY\n\nINT. B - DAY\n', { synopsis: 'S.', storyline: 'A, B' })).toBe(
+      'INT. A - DAY\n\n= S.\n[[Storyline: A, B]]\n\nINT. B - DAY\n',
+    );
+    // A synopsis replaced while a field goes in under it.
+    expect(
+      details('INT. A - DAY\n\n= Old.\n[[Goal: G.]]\n\nAction.\n', {
+        synopsis: 'New.',
+        color: 'gray',
+      }),
+    ).toBe('INT. A - DAY\n\n= New.\n[[Color: gray]]\n[[Goal: G.]]\n\nAction.\n');
+    // A new synopsis goes above a header of notes.
+    expect(
+      details('INT. A - DAY\n\n[[Goal: G.]]\n\nAction.\n', { synopsis: 'S.', goal: 'H.' }),
+    ).toBe('INT. A - DAY\n\n= S.\n[[Goal: H.]]\n\nAction.\n');
+  });
+
+  test("writes a play's ## scene header", () => {
+    const meta = '/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n';
+    expect(
+      details(`# Act\n\n## Scene 1\n\nWords.\n\n## Scene 2\n\nMore.\n\n${meta}`, {
+        synopsis: 'S.',
+        conflict: 'C.',
+      }),
+    ).toBe(
+      `# Act\n\n## Scene 1\n\n= S.\n[[Conflict: C.]]\n\nWords.\n\n## Scene 2\n\nMore.\n\n${meta}`,
+    );
+    expect(details(`# Act\n\n## Scene 1\n\n${meta}`, { goal: 'G.' }, 1)).toBe(
+      `# Act\n\n## Scene 1\n\n[[Goal: G.]]\n\n${meta}`,
+    );
+  });
+
+  test('changes nothing when nothing changed', () => {
+    const source =
+      'INT. A - DAY\n\n= Syn.\n[[Color: blue]]\n[[Goal: Win.]]\n\nAction. [[Shift: up]]\n';
+    const { doc, index } = indexOf(source);
+    const scene = index.scenes[0];
+    if (!scene) throw new Error('no scene');
+    expect(setSceneDetails(doc, scene, {})).toEqual([]);
+    expect(
+      setSceneDetails(doc, scene, {
+        synopsis: 'Syn.',
+        color: 'blue',
+        goal: 'Win.',
+        shift: 'up',
+        conflict: '',
+        outcome: '',
+      }),
+    ).toEqual([]);
+  });
+
+  test("writes the writer's words on one line, closing nothing", () => {
+    expect(details('INT. A - DAY\n', { goal: 'Two\nlines ]] /* x' })).toBe(
+      'INT. A - DAY\n\n[[Goal: Two / lines ] ] / * x]]\n',
+    );
+  });
+
+  test('keeps a CRLF line break style', () => {
+    expect(
+      details('INT. A - DAY\r\n\r\n[[Color: blue]]\r\n[[Shift: up]]\r\n\r\nAction.\r\n', {
+        synopsis: 'S.',
+        goal: 'G.',
+        shift: '',
+      }),
+    ).toBe('INT. A - DAY\r\n\r\n= S.\r\n[[Color: blue]]\r\n[[Goal: G.]]\r\n\r\nAction.\r\n');
+  });
+});
+
 describe('a script with an unclosed /*', () => {
   const OPEN = 'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
   test('gets no synopsis or color changes', () => {
@@ -140,6 +330,7 @@ describe('a script with an unclosed /*', () => {
     if (!scene) throw new Error('no scene');
     expect(setSynopsis(doc, scene, 'New.')).toEqual([]);
     expect(setColor(doc, scene, 'blue')).toEqual([]);
+    expect(setSceneDetails(doc, scene, { goal: 'Win.' })).toEqual([]);
   });
 });
 

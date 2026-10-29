@@ -8,13 +8,14 @@ export {
   type SceneColor,
 } from '@drafter/notes';
 export { expandOutline, STAGE_STUB, STUB_HEADING, scriptFromMarkdown } from './expand';
-export { setColor, setSynopsis } from './header';
+export { type SceneDetails, setColor, setSceneDetails, setSynopsis } from './header';
 export {
   downTarget,
   type Move,
   type MoveTarget,
   moveItem,
   targetAfterRow,
+  targetBefore,
   upTarget,
 } from './move';
 export { sceneIndex, startsScene } from './scene-index';

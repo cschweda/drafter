@@ -1,4 +1,5 @@
 import type { Span } from '@drafter/fountain';
+import type { FieldKey, MarkKey } from '@drafter/notes';
 
 /** Where a scene sits in the pages, from a layout that matches the parse. */
 export interface ScenePages {
@@ -34,6 +35,15 @@ export interface Scene {
   synopses: Synopsis[];
   /** The scene's first `[[Color: …]]` note: its value, lowercased, and the note's span. */
   color: { value: string; span: Span } | null;
+  /**
+   * The first note of each field key anywhere in the scene (`[[Goal: …]]` in any case and
+   * spacing), with its body trimmed; an empty one is no field, as an empty color is no color.
+   */
+  fields: Partial<Record<FieldKey, { body: string; span: Span }>>;
+  /** Every Storyline note's comma-separated labels, once each (case folded), as first typed, in order. */
+  storylines: string[];
+  /** Every Setup and Payoff note with a label, in order (design §10). */
+  marks: Array<{ key: MarkKey; label: string; span: Span }>;
   /** The names that speak in it, as first typed, once each, in order. */
   speakers: string[];
   /** Printed words: action, dialogue, and the rest that prints. */
