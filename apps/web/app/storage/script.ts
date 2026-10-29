@@ -200,11 +200,28 @@ export interface ScriptSession {
   /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
   unbindFile(id: string): Promise<void>;
   /**
+   * Calls `listener` after a save is recorded (`saved`, on the script it was recorded on, with the
+   * text written, whose hash is that script's `savedHash`) and after `openedFile` opens a file as
+   * a new script (`opened`). The snapshots hear of them (`snapshots/use-snapshots.ts`). A listener
+   * that throws costs nothing: the save has happened. Returns a function that removes it.
+   */
+  onRecorded(listener: (event: Recorded) => void): () => void;
+  /**
    * Removes script `id` from this browser (never its file). Removing the open script opens the most
    * recent other one, or the screenplay sample. A script another tab has open is not removed:
    * the answer is `'held'`.
    */
   remove(id: string): Promise<'removed' | 'held'>;
+}
+
+/** A save recorded, or a file opened as a script: what `onRecorded` hears. */
+export interface Recorded {
+  kind: 'saved' | 'opened';
+  /** The script it was recorded on (a sample's save is the new script's). */
+  id: string;
+  /** The text written to the file, or read from it. */
+  text: string;
+  fileName: string;
 }
 
 /** A file's contents as `openedFile` and `replaceWith` take them: `text` has `\n` line breaks. */
@@ -746,6 +763,17 @@ function create(): ScriptSession {
 
   // ---- Saving to a file --------------------------------------------------------------------
 
+  const recordedListeners = new Set<(event: Recorded) => void>();
+  function recorded(event: Recorded) {
+    for (const listener of recordedListeners) {
+      try {
+        listener(event);
+      } catch {
+        // The file has the text; a listener's failure is its own.
+      }
+    }
+  }
+
   /** Changes the open script's stored fields and the copy held here together. */
   function patch(id: string, fields: Partial<Project>): Promise<void> {
     return exclusive(async () => {
@@ -800,6 +828,7 @@ function create(): ScriptSession {
         const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
         // The sample stays as it was; a script of the writer's own takes the text.
         let moved = false;
+        let made: string | undefined;
         await switchTo(
           async () => {
             // Another switch ran first (this one waited its turn), and a different script is
@@ -818,6 +847,7 @@ function create(): ScriptSession {
               ...(handleId ? { fsHandleId: handleId } : {}),
             });
             await setSavedText(created.id, savedText);
+            made = created.id;
             return created;
           },
           { keep: true, wait: true },
@@ -827,7 +857,7 @@ function create(): ScriptSession {
         if (moved) {
           if (handleId) await db.handles.delete(handleId).catch(() => {});
           await savedElsewhere(current.id, savedText, fileName, ref);
-        }
+        } else if (made) recorded({ kind: 'saved', id: made, text: savedText, fileName });
         return;
       }
       const fsHandleId = ref
@@ -841,6 +871,7 @@ function create(): ScriptSession {
         ...format,
         ...(fsHandleId ? { fsHandleId } : {}),
       });
+      recorded({ kind: 'saved', id: current.id, text: savedText, fileName });
     } catch {
       // The file was written; the recovery copy's state says if the database is the problem.
     }
@@ -856,10 +887,10 @@ function create(): ScriptSession {
     try {
       const hash = await hashText(savedText);
       const savedAt = Date.now();
-      await exclusive(async () => {
+      const on = await exclusive(async (): Promise<string | null> => {
         const stored = await getProject(id);
         // Removed meanwhile: the file has the text, and there is no record to make.
-        if (!stored) return;
+        if (!stored) return null;
         if (stored.sample) {
           // The sample stays as it was; a script of the writer's own takes the text, without being opened.
           const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
@@ -871,7 +902,7 @@ function create(): ScriptSession {
             ...(handleId ? { fsHandleId: handleId } : {}),
           });
           await setSavedText(created.id, savedText);
-          return;
+          return created.id;
         }
         const fsHandleId = ref
           ? await putHandle(stored.fsHandleId ?? crypto.randomUUID(), ref)
@@ -883,7 +914,9 @@ function create(): ScriptSession {
           fileName,
           ...(fsHandleId ? { fsHandleId } : {}),
         });
+        return id;
       });
+      if (on !== null) recorded({ kind: 'saved', id: on, text: savedText, fileName });
     } catch {
       // The file was written; the recovery copy's state says if the database is the problem.
     }
@@ -891,7 +924,8 @@ function create(): ScriptSession {
 
   async function openedFile(file: OpenedFile): Promise<boolean> {
     const hash = await hashText(file.text);
-    return switchTo(async () => {
+    let made: string | undefined;
+    const opened = await switchTo(async () => {
       const handleId = file.ref ? await putHandle(crypto.randomUUID(), file.ref) : undefined;
       try {
         const created = await createProject({
@@ -906,12 +940,18 @@ function create(): ScriptSession {
           ...(handleId ? { fsHandleId: handleId } : {}),
         });
         await setSavedText(created.id, file.text);
+        made = created.id;
         return created;
       } catch (error) {
         if (handleId) await db.handles.delete(handleId).catch(() => {});
         throw error;
       }
     });
+    // The opened text is the saved text, so History starts at the file as it opened (Call 3).
+    if (opened && made) {
+      recorded({ kind: 'opened', id: made, text: file.text, fileName: file.fileName });
+    }
+    return opened;
   }
 
   function openImported(text: string, importedFrom: string): Promise<boolean> {
@@ -1098,6 +1138,10 @@ function create(): ScriptSession {
     addScript,
     unbindFile,
     remove,
+    onRecorded(listener) {
+      recordedListeners.add(listener);
+      return () => recordedListeners.delete(listener);
+    },
   };
 }
 

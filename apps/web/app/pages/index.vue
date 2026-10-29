@@ -11,6 +11,7 @@ import { markdownTitle } from '~/markdown/title';
 import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
+import { useSnapshots } from '~/snapshots/use-snapshots';
 import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
@@ -68,6 +69,8 @@ const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
 const { settings } = useSettings();
+// Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
+useSnapshots();
 
 /** The script's title, as its kind reads it. */
 function pageTitle(): string {

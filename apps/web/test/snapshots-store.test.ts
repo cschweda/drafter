@@ -4,7 +4,13 @@ import { DAY_MS } from '../app/snapshots/retention';
 import { db } from '../app/storage/db';
 import { gunzip } from '../app/storage/gzip';
 import { hashText } from '../app/storage/hash';
-import { createProject, getSavedText, setSavedText, updateProject } from '../app/storage/projects';
+import {
+  createProject,
+  getSavedText,
+  removeProject,
+  setSavedText,
+  updateProject,
+} from '../app/storage/projects';
 import {
   deleteSnapshot,
   listSnapshots,
@@ -189,6 +195,18 @@ describe('the snapshot store', () => {
     await setSnapshotLabel(`saved:${p.id}`, 'Mine');
     await deleteSnapshot(`saved:${p.id}`);
     expect(await db.snapshots.get(`saved:${p.id}`)).toMatchObject({ label: 'Saved' });
+  });
+
+  test('a take racing the script’s removal leaves no row behind', async () => {
+    const p = await createProject({ source: 'x' });
+    // The take reads, hashes, and compresses before it writes; the removal lands in between.
+    const [result] = await Promise.all([takeSnapshot(p.id, 'words', 'timed'), removeProject(p.id)]);
+    expect(await db.snapshots.where('projectId').equals(p.id).count()).toBe(0);
+    // Nothing to keep, which is no failure of storage.
+    expect(result).toBe('same');
+    // A script that was never there: nothing either.
+    expect(await takeSnapshot('gone', 'words', 'timed')).toBe('same');
+    expect(await db.snapshots.where('projectId').equals('gone').count()).toBe(0);
   });
 
   test('a failed write resolves ‘failed’ and never throws', async () => {

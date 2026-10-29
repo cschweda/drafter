@@ -6,6 +6,7 @@ import { useEditor } from '~/editor/session';
 import { templateIdOf, typeNameOf, unknownTemplateOf } from '~/editor/template';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { snapshotProblem } from '~/snapshots/use-snapshots';
 import { statsOpen } from '~/stats/dialog';
 import { progressLabel, useGoal } from '~/stats/goal';
 import { timeTodayLabel, wordsTodayLabel } from '~/stats/history';
@@ -134,6 +135,7 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</span>
     <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
     <span v-if="blankError" role="alert" class="failed">{{ blankError }}</span>
+    <span v-if="snapshotProblem" role="alert" class="failed">{{ snapshotProblem }}</span>
     <!-- The page item opens the counts. A Markdown document has words, no pages, and no checks. -->
     <span ref="countsWrap" class="counts-wrap" @focusout="onFocusOut">
       <button

@@ -85,9 +85,11 @@ async function take(
     ? { gz: await gzip(text) }
     : { source: text };
   const label = extra.label?.trim();
-  // The check again and the write in one transaction, so a take from another tab can't come between.
+  // The check again and the write in one transaction, so a take from another tab can't come between,
+  // and with the project read, so a script removed meanwhile gets no row back: there is nothing to keep.
   const write = (): Promise<TakeResult> =>
-    db.transaction('rw', db.snapshots, async () => {
+    db.transaction('rw', db.snapshots, db.projects, async () => {
+      if (!(await db.projects.get(projectId))) return 'same';
       const newest = newestOf(await historyOf(projectId));
       if (newest?.hash === hash) return 'same';
       const now = Date.now();
@@ -115,7 +117,7 @@ async function take(
   }
 }
 
-/** Adds a history snapshot unless `text` hashes to the newest one's; one take per project at a time; never throws. Thins after a take. */
+/** Adds a history snapshot unless `text` hashes to the newest one's ('same', as for a script that is gone); one take per project at a time; never throws. Thins after a take. */
 export async function takeSnapshot(
   projectId: string,
   text: string,
