@@ -49,7 +49,8 @@ export function formatKeys(keys: string, apple: boolean): string {
  * Whether `event` is the key `keys` names: its modifiers are exactly those named, and its key is
  * the one named. With Alt held a letter or digit is read from the physical key (`code`), because
  * Option on a Mac types another character (Option+N is a dead key). Off a Mac, Ctrl+Alt is also
- * AltGr, so when it types some other character (ó on a Polish layout) the key is left to type it.
+ * AltGr, so there the character it types must be the bound one (ó on a Polish layout, or } on a
+ * Hungarian one, is left to type), unless it is a letter of a script other than Latin.
  */
 export function matchesKey(event: KeyboardEvent, keys: string, apple: boolean): boolean {
   const { modifiers, key } = parse(keys);
@@ -61,10 +62,10 @@ export function matchesKey(event: KeyboardEvent, keys: string, apple: boolean): 
   if (event.altKey && /^[a-z0-9]$/i.test(key)) {
     if (!apple && event.ctrlKey) {
       if (event.getModifierState?.('AltGraph')) return false;
-      // Only a Latin letter: on a Cyrillic or Greek layout Ctrl+Alt+O is the shortcut, not AltGr.
-      if (/^\p{Script=Latin}$/u.test(event.key) && event.key.toLowerCase() !== key.toLowerCase()) {
-        return false;
-      }
+      // The key it types decides (Dvorak's o is on KeyS); only a letter of another script, as on a
+      // Cyrillic or Greek layout, falls back to the physical key. Anything else is AltGr typing.
+      if (event.key.toLowerCase() === key.toLowerCase()) return true;
+      if (!/^(?!\p{Script=Latin})\p{L}$/u.test(event.key)) return false;
     }
     return event.code === (/^[0-9]$/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`);
   }

@@ -72,6 +72,12 @@ describe('matchesKey', () => {
     // A layout whose letters aren't Latin keeps the shortcut: Ctrl+Alt+O there reports щ.
     expect(matchesKey(altGr('щ', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
     expect(matchesKey(altGr('ο', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
+    // AltGr punctuation and dead keys are typed, not taken.
+    expect(matchesKey(altGr('}', 'KeyN'), 'Mod-Alt-n', false)).toBe(false);
+    expect(matchesKey(altGr('Dead', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
+    // On Dvorak the key that types o is KeyS, and KeyO types r.
+    expect(matchesKey(altGr('o', 'KeyS'), 'Mod-Alt-o', false)).toBe(true);
+    expect(matchesKey(altGr('r', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
     // A browser that reports AltGr itself is believed, whatever the key says.
     const reported = altGr('o', 'KeyO');
     Object.defineProperty(reported, 'getModifierState', {

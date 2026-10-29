@@ -161,6 +161,7 @@ const ACTIONS = [
         type="button"
         class="chip template"
         :aria-label="chipLabel"
+        :title="templateName"
         data-tour="template"
       >
         <span class="name">{{ templateName }}</span>
