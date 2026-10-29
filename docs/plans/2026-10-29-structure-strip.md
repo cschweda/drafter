@@ -15,7 +15,7 @@
 
 ## Global Constraints
 
-- Branch `structure-strip` (worktree `scratchpad/drafter-ss`), from `main` at v0.13.0 (`f7114ed`). **Before Task 1:** merge `main` once Plan D (v0.14.0) is on it, then `pnpm install` and `pnpm -r build`; Plan D's Settings and command changes come first, and this plan's edits go on top of them.
+- Branch `strip` (worktree `scratchpad/drafter-st`), from `main` at v0.14.0 (`c8bf4a9`), with this plan cherry-picked onto it — Plan D is already in, so no merge is needed before Task 1.
 - **Clean room:** no code, text, layout, colors, row names, icons, or assets from any screenwriting app. The strip is drawn from Drafter's scene index in Drafter's own theme tokens (`--chrome-2`, `--line`, `--heading`, `--text`, `--page`) and its own swatches (`SWATCH`, `outline/labels.ts`); the rows are named by the Fountain marks. Every label and message is Drafter's own words, as the design gives them.
 - **No new dependencies.** `@drafter/outline` already depends on `@drafter/layout` (types) and has `fast-check` through the workspace. No canvas or charting library.
 - **The strip edits nothing.** No `TextChange`, no transaction except the cursor move that `editor.goto` makes. The printed pages, the `.fountain` file, undo, and the recovery copy are untouched.
