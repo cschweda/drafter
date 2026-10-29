@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-29
+
+**Final Draft shooting scripts import cleanly.** An omitted scene's lines come in as notes after its OMITTED heading instead of spilling into the script, hidden text comes in as a note, and All Caps text comes in in capitals, checked against Final Draft 13's own Outline, Script, and Shooting Script samples.
+
 ### Fixed
 
 - **Final Draft shooting scripts import cleanly.** A scene the shooting script omits (its heading reads OMITTED) no longer pours its hidden text into the script as one block, with its lines broken at every tagged word: the OMITTED heading keeps its scene number, and the omitted scene's own lines come in after it as notes (`[[fdx: Omitted: …]]`), so nothing of it prints and nothing of it joins your outline, and you can restore it by taking the note marks off. Text Final Draft shows in capitals (All Caps) now comes in in capitals, the script's title too (it is the script's name in Drafter). Hidden text comes in as a note in its place (`[[fdx: Hidden: …]]`), so it still doesn't print, and the import counts it among the items Problems lists; a heading, cue, or line of dialogue whose text is all hidden keeps its place and its kind (a heading its scene number), printing, with a note after it that says Final Draft hid it.
@@ -716,7 +720,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/cschweda/drafter/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/cschweda/drafter/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/cschweda/drafter/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/cschweda/drafter/compare/v0.13.0...v0.13.1
