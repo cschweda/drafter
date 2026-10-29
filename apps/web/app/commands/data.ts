@@ -131,10 +131,6 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'go-to-line', title: 'Go to line…', group: 'Go' },
   { id: 'next-problem', title: 'Next problem', group: 'Go', keys: 'F8' },
   { id: 'previous-problem', title: 'Previous problem', group: 'Go', keys: 'Shift-F8' },
-  // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
-  // registry key; from anywhere else these, while a comparison is open.
-  { id: 'next-change', title: 'Next change', group: 'Go' },
-  { id: 'previous-change', title: 'Previous change', group: 'Go' },
 
   // View
   { id: 'show-source', title: 'Show Source', group: 'View' },
@@ -144,6 +140,11 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
   { id: 'show-cards', title: 'Show Cards', group: 'View' },
   { id: 'show-notes', title: 'Show Notes', group: 'View' },
+  // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
+  // registry key; from anywhere else these, while a comparison is open. They sit in View with
+  // Close comparison, the desktop menu's home for Compare.
+  { id: 'next-change', title: 'Next change', group: 'View' },
+  { id: 'previous-change', title: 'Previous change', group: 'View' },
   { id: 'close-compare', title: 'Close comparison', group: 'View' },
   {
     id: 'focus-mode',
