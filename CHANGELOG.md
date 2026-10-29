@@ -18,12 +18,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Paper for Markdown PDFs** in Settings: **US Letter** (the default) or **A4**, kept on this device. Screenplays and stage plays still use their template's paper.
 - `apps/web`: the export worker draws a Markdown document's PDF (`kind: 'markdown-pdf'`, with the paper, title, and language), parsing the text with the app's own parser, loaded on the first one, and fetching Inter Tight's four styles from `/fonts/inter-tight/` and Courier Prime Regular, once; the four styles are copied into the build, required by its check, and precached (about 1.2 MB) for offline use. A slow export of any kind says "Exporting <name>…" in the toast after half a second. `@drafter/render-pdf`'s `renderPdf` and `renderDocumentPdf` take an `onProgress` that hears each stage (`layout` by blocks, `draw` by pages, `save`), and `layoutDocument` one for its blocks; the export worker turns them into one weighted fraction, sent to the page at most ten times a second and always ending at 1.
 
+### Changed
+
+- README: "proof mode" is gone from Phase 4's roadmap row. It was the early name for Reader notes, which Phase 2 already plans (Plan G).
+- `docs`: **the README is about half as long (9,166 words to about 5,100) and easier to scan, with nothing taken out of the repository.** Reference detail moved to the documents made for it, and the README keeps a summary and a link:
+  - **Install and update steps** for Linux, Windows, and the Mac are in `docs/desktop-install-linux.md`, `docs/desktop-install-windows.md`, and `docs/desktop-install-macos.md`. The README keeps the download names, a one-line install, and the link. The Linux guide gains the package table, starting with a script open, removing each package, and the AppImage's file types; the Windows guide gains building the installers yourself.
+  - **The web and desktop comparison table** is in a new `docs/web-and-desktop.md`, linked from the README and both install guides.
+  - **The roadmap's per-phase lists** are in the architecture document's §13, which now has the full lists with what has shipped and in which version (merged with what §13 already said). The README keeps one table: what shipped, in which version, and what's next.
+  - **The full clean-room statement** is in a new `docs/clean-room.md`, word for word. The README keeps a short statement of the rule, what's permitted and excluded, and a summary of the audit, under the same two headings. `DEPENDENCIES.md`, `final-draft-comparison.md`, and `clean-room-audit.md` link to the new document.
+  - **The top of the README** is a short status line and a list of what you can do today. Long paragraphs became lists, and facts said twice now live in one place.
+  - **Corrected on the way:** Final Draft files are a Phase 2 feature, not Phase 1; screen-reader testing comes last, not in Phase 2; offline dictionaries already ship (v0.14.0); import has been checked against Final Draft 13's Outline, Script, and Shooting Script samples, not one (the architecture document had said not yet against any); the repository layout shows what's there now (`apps/desktop`, `modules`, `brand`; `templates/` is still planned); `@drafter/stats` is marked planned; and the package README list includes `notes`, `compare`, `outline`, `spell`, and `fdx`.
+
 ### Fixed
 
 - `apps/web`: **a long Markdown document's Preview is parsed off the main thread again.** In every build the Preview's worker stopped as it started (its parser's character-reference decoder asked for the page's `document`, which a worker hasn't got), so a long document was parsed on the main thread instead. The page and its workers now take the decoder's own table, in development too.
 - `apps/web`: **exporting another script's PDF while one is under way gives that script its own PDF.** It used to get the first script's, since any export of the same kind was joined; now only the same export (the same kind, script, text, template, paper, and language) is.
 - `apps/web`: **the Preview says so when it can't show a document,** instead of breaking: a quote nested thousands deep shows "This document is nested too deeply to preview. Your text is safe in the Source." One text the Preview's worker can't parse no longer stops it for the rest of the visit, and a worker that fails is started again.
 - `@drafter/render-pdf`: a face whose subset can't be padded is embedded whole in two more cases: when the glyph data has no way to be padded, when the document's own subset turns out a different shape from the check's, and when pdf-lib's list of fonts couldn't give an unpaddable subset back.
+
+## [0.15.1] - 2026-10-29
+
+**Final Draft shooting scripts import cleanly.** An omitted scene's lines come in as notes after its OMITTED heading instead of spilling into the script, hidden text comes in as a note, and All Caps text comes in in capitals, checked against Final Draft 13's own Outline, Script, and Shooting Script samples.
+
+### Fixed
+
+- **Final Draft shooting scripts import cleanly.** A scene the shooting script omits (its heading reads OMITTED) no longer pours its hidden text into the script as one block, with its lines broken at every tagged word: the OMITTED heading keeps its scene number, and the omitted scene's own lines come in after it as notes (`[[fdx: Omitted: …]]`), so nothing of it prints and nothing of it joins your outline, and you can restore it by taking the note marks off. Text Final Draft shows in capitals (All Caps) now comes in in capitals, the script's title too (it is the script's name in Drafter). Hidden text comes in as a note in its place (`[[fdx: Hidden: …]]`), so it still doesn't print, and the import counts it among the items Problems lists; a heading, cue, or line of dialogue whose text is all hidden keeps its place and its kind (a heading its scene number), printing, with a note after it that says Final Draft hid it.
 
 ## [0.15.0] - 2026-10-29
 
@@ -731,7 +750,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/cschweda/drafter/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/cschweda/drafter/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/cschweda/drafter/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/cschweda/drafter/compare/v0.13.0...v0.13.1
