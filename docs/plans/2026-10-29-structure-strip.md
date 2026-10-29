@@ -2,13 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the Structure strip (v0.15.0): a band across the top of the window, above both panes, with one row per section depth the script uses (`#`, `##`, `###`), a row of every scene, and a page ruler, each block placed and sized by its pages, a scene colored by its `[[Color: …]]`. Clicking a block, or Enter on it, goes there; the cursor's scene and its sections are marked, and the Script pane's top page is marked on the ruler. It is one Tab stop with roving arrow keys. It is turned on and off by one setting (`structureStrip`, off by default) from a toolbar button, a palette command on Mod+., and a Settings switch.
+**Goal:** Ship the Structure strip (v0.15.0): a band across the top of the window, above both panes, with one row per section depth the script uses (`#`, `##`, `###`), a row of every scene, and a page ruler, each block placed and sized by its pages, a scene colored by its `[[Color: …]]`. Clicking a block, or Enter on it, goes there; the cursor's scene and its sections are marked, and the Script pane's top page is marked on the ruler. It is one Tab stop with roving arrow keys. It is turned on and off by one setting (`structureStrip`, off by default) from a toolbar button, a palette command on Mod+Alt+O, and a Settings switch.
 
 **Architecture:** The geometry is a pure function in `@drafter/outline` (`packages/outline/src/strip.ts`: `structureStrip`, `linesPerPage`, `rulerMarks`) over the scene index the Outline already builds, so there is no extra parse or layout, and the package's random-script arbitraries property-test it. `apps/web/app/strip/` holds the session (`use-strip.ts`: the strip of `useOutline().index`, kept while the layout catches up, block → session id, the current blocks, going there), the names (`labels.ts`), the keys (`keys.ts`), and the Script pane's top page (`in-view.ts`). `StructureStrip.vue` draws it as DOM (percentage-positioned buttons keyed by id) inside the shell's `.top` block in `pages/index.vue`.
 
 **Tech Stack:** TypeScript, Vue 3.5 / Nuxt 4 / Nuxt UI 4, CodeMirror 6, Vitest 5 with fast-check, Playwright 1.64. No new dependencies.
 
 **Spec:** [`docs/drafter-structure-strip-design.md`](../drafter-structure-strip-design.md) (all of it; its Calls are binding). Context: [`docs/drafter-phase2-design.md`](../drafter-phase2-design.md) §5.1 (the scene index), §5.7 (rules every view follows), §6.1 (the Outline's go-to), §13–§15 (Timeline, script map, pacing view, which reuse this geometry later), §22 (the plan list, which shifts by one minor). Plans A, FD, B, C, and D's decisions in `docs/DECISIONS.md` still hold.
+
+
+> **Controller ruling (2026-10-29):** the strip's key is **Mod+Alt+O**, not Mod+. — Plan D (spellcheck, merged first) already gives Mod+. to Spelling suggestions. Before using it, the implementer checks Mod+Alt+O is free in the command registry and is not a default shortcut in Chrome, Edge, Firefox, Safari, or Electron on macOS, Windows, or Linux; if it is taken, pick another free key, record it in DECISIONS, and update this plan's Call.
 
 ## Global Constraints
 
@@ -31,7 +34,7 @@
 2. **Odd structures:** scenes before the first section, a section with no scenes, `#` then `###` with no `##`, a `####` section, a script of sections and no scenes. Task 1's fixtures and its property `no number is NaN or infinite, and every block lies on the axis`.
 3. **The layout worker failed** (blocked workers, or a crash before the first layout): the strip sizes by words, hides the ruler, and goes to scenes as usual. Task 1's `sizes by words without pages` and Task 2's `takes a words strip when the layout has failed`.
 4. **A block whose scene has gone** (the strip kept from before the layout caught up, and the scene was deleted): going there moves nothing and says so. Task 3's `go says so when the scene is gone`.
-5. **The strip going away with focus in it** (the document turned to Markdown, focus mode, a narrowed window, Mod+.): focus goes to the editor, never to the page's body. Task 4's e2e `puts focus in the editor when the strip goes with focus in it`.
+5. **The strip going away with focus in it** (the document turned to Markdown, focus mode, a narrowed window, Mod+Alt+O): focus goes to the editor, never to the page's body. Task 4's e2e `puts focus in the editor when the strip goes with focus in it`.
 
 ---
 
@@ -162,7 +165,7 @@ export const scriptTopPage: ShallowRef<number | null>;
 **Interfaces (Consumes):** `useSettings().set('structureStrip', …)` (Task 2's key); `useFocusMode`, `useWideScreen`, `useEditor().kind`. **(Produces):**
 ```ts
 // commands/data.ts, in View after the element bar's pair
-{ id: 'toggle-structure-strip', title: 'Toggle the structure strip', group: 'View', icon: 'i-lucide-panel-top', keys: 'Mod-.', global: true }
+{ id: 'toggle-structure-strip', title: 'Toggle the structure strip', group: 'View', icon: 'i-lucide-panel-top', keys: 'Mod-Alt-o', global: true }
 // builtin.ts: enabled only for a Fountain document on a wide screen (WIDE_QUERY); run flips the setting
 // labels.ts (Task 2's file) gains
 export const NOT_FOR_MARKDOWN = 'A Markdown document has no scenes.';
@@ -170,10 +173,10 @@ export const NOT_FOR_MARKDOWN = 'A Markdown document has no scenes.';
 
 - The toolbar (Call 14): a fifth action after Focus, `{ label: 'Structure', icon: 'i-lucide-panel-top', kind: 'structure' }`, a `<button>` with `aria-pressed` from the setting, running the command; its round is `#b7a6e6`. In a Markdown document it is `aria-disabled="true"` with `NOT_FOR_MARKDOWN` as its `title` and does nothing. Below 1024 px it is `display: none` (Call 16).
 - Settings: a switch after Element bar, `{ key: 'structureStrip', label: 'Structure strip', why: 'Show your script’s sections and scenes as a band of blocks above the panes, each as wide as it is long. Click one to go there.' }`.
-- **Call:** Mod+. is matched on `event.key === '.'`, so on a keyboard where `.` needs Shift the key does nothing and the button, palette, and Settings still work; a builder who finds Mod+. taken in a supported browser picks another unbound key and records it in DECISIONS.
+- **Call:** Mod+Alt+O is matched on `event.key === '.'`, so on a keyboard where `.` needs Shift the key does nothing and the button, palette, and Settings still work; a builder who finds Mod+Alt+O taken in a supported browser picks another unbound key and records it in DECISIONS.
 - The desktop View menu lists the command by itself (`menuCommands` takes every View command); the test pins it.
 
-- [ ] **Step 1: Write the failing tests.** `command-data.test.ts` stays as it is and must pass with the new key (no key twice). `desktop-menu.test.ts`: `puts Toggle the structure strip in View, with Mod+.`. `strip.spec.ts`: `the toolbar button, Mod+., the palette, and Settings turn the same strip on and off, and it is remembered after a reload`, `the toolbar button is pressed while the strip shows`, `is not shown for a Markdown document, and the button and command say why`, `focus mode hides it, and it is back after`, `is not shown on a phone, and neither is its button` (320 × 640, as `phone.spec.ts`), `puts focus in the editor when the strip goes with focus in it` (Mod+. and a switch to Markdown, each with a block focused). `script.spec.ts`, in Chromium: `types into a 120-page script with the structure strip on without a long task` (the existing test's steps, with the setting stored). `settings.spec.ts`: `shows the defaults` lists the Structure strip switch, off.
+- [ ] **Step 1: Write the failing tests.** `command-data.test.ts` stays as it is and must pass with the new key (no key twice). `desktop-menu.test.ts`: `puts Toggle the structure strip in View, with Mod+Alt+O`. `strip.spec.ts`: `the toolbar button, Mod+Alt+O, the palette, and Settings turn the same strip on and off, and it is remembered after a reload`, `the toolbar button is pressed while the strip shows`, `is not shown for a Markdown document, and the button and command say why`, `focus mode hides it, and it is back after`, `is not shown on a phone, and neither is its button` (320 × 640, as `phone.spec.ts`), `puts focus in the editor when the strip goes with focus in it` (Mod+Alt+O and a switch to Markdown, each with a block focused). `script.spec.ts`, in Chromium: `types into a 120-page script with the structure strip on without a long task` (the existing test's steps, with the setting stored). `settings.spec.ts`: `shows the defaults` lists the Structure strip switch, off.
 - [ ] **Step 2: Run them.** → FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run them again,** plus `palette.spec.ts`, `keyboard.spec.ts`, `markdown.spec.ts`, `phone.spec.ts`, `icons.spec.ts`, and `a11y.spec.ts` (unchanged and green). → PASS.
@@ -207,5 +210,5 @@ The design's 22 Calls (its §12) are binding and get their DECISIONS lines as th
 28. **Focus enters on the last block focused this visit, else the cursor's scene, else the first scene** (Task 3).
 29. **The in-view marker is the Script pane's top page,** published by `ScriptPane.vue` at most once a frame; none while the Script pane isn't showing (Task 3).
 30. **The toolbar's Structure button** is the fifth round action, `#b7a6e6`, `i-lucide-panel-top`, hidden below 1024 px (Task 4).
-31. **Mod+.** is matched on the `.` key itself; where `.` needs Shift, the other three controls do the job (Task 4).
+31. **Mod+Alt+O** is matched on the `.` key itself; where `.` needs Shift, the other three controls do the job (Task 4).
 32. **When the strip goes with focus in it, focus goes to the editor** (Task 4).

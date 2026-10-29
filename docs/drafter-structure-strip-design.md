@@ -62,7 +62,7 @@ The scene index has pages only when the layout matches the parse. While typing a
 - **Call:** one setting, `structureStrip` in `settings.ts`, **off by default** (as the script map, §14 of the Phase 2 design, keeps the writing screen calm for a newcomer), remembered on this device like every setting.
 - Three controls set it:
   - a **Structure** round button in the toolbar, after Focus, pressed while the strip shows (`aria-pressed`), with its own pastel circle;
-  - **Toggle the structure strip** in the palette, the View group, the Keyboard shortcuts page, and the desktop app's View menu, on **Mod+.** (Call: a key next to Mod+, for Settings, unused by CodeMirror's keymaps and the major browsers; bound on the window, so it works with focus anywhere);
+  - **Toggle the structure strip** in the palette, the View group, the Keyboard shortcuts page, and the desktop app's View menu, on **Mod+Alt+O** (Call: a key next to Mod+, for Settings, unused by CodeMirror's keymaps and the major browsers; bound on the window, so it works with focus anywhere);
   - a **Structure strip** switch in Settings: "Show your script's sections and scenes as a band of blocks above the panes, each as wide as it is long. Click one to go there."
 - **Markdown documents** have no scenes, so the strip never shows for one. The button and the command stay where they are, disabled with the reason ("A Markdown document has no scenes."), and the setting is kept for the next Fountain script.
 - **Focus mode** hides it (it sits in `.top`, which focus mode removes).
@@ -130,7 +130,7 @@ A zoom that scrolls; dragging to reorder; storyline rows and "color by"; a phone
 11. One hover-and-focus card, `aria-hidden`; each block's name says the same (§4).
 12. One Tab stop, roving focus: Left and Right in a row, Up and Down to the overlapping block, Home and End, Enter and Space (§4).
 13. No dragging or editing in v1 (§4).
-14. One setting `structureStrip`, off by default, per device; a toolbar button, a palette command on Mod+., and a Settings switch (§5).
+14. One setting `structureStrip`, off by default, per device; a toolbar button, a palette command on Mod+Alt+O, and a Settings switch (§5).
 15. Never for Markdown (controls disabled with the reason); hidden in focus mode (§5).
 16. Hidden on phones, and its toolbar button with it (§5).
 17. A script with no scenes shows one line instead of rows (§5).
