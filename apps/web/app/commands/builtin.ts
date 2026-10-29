@@ -64,6 +64,7 @@ import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { requestTour } from '~/tour/state';
 import { updateCheckOpen } from '~/update/use-check';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
@@ -535,6 +536,13 @@ export function registerBuiltinCommands(): void {
     'hide-element-bar': {
       enabled: () => settings.value.elementBar,
       run: () => void set('elementBar', false),
+    },
+    // The Structure strip (structure strip design §5): the toolbar's Structure button and Settings
+    // set the same row. A Fountain script on a wide screen only: a phone never draws it (Call 16).
+    'toggle-structure-strip': {
+      enabled: () => isFountain() && window.matchMedia(WIDE_QUERY).matches,
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => void set('structureStrip', !settings.value.structureStrip),
     },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },

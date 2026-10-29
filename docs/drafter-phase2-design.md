@@ -385,7 +385,7 @@ Tag a scene with the plots it carries: `[[Storyline: A]]`, or `A, B`, or names (
 - **Renaming** a storyline (in Stats → Storylines, or the Storylines dialog) rewrites every note that uses it, as one change.
 - **Shown:**
   - on Outline rows and cards, as labeled chips;
-  - in the Outline's **Timeline** view: one lane per storyline along the page timeline, each scene a block placed at its page and sized by its length, a scene with two storylines in both lanes. The lanes are drawn with the same component as the script map (§14);
+  - in the Outline's **Timeline** view: one lane per storyline along the page timeline, each scene a block placed at its page and sized by its length, a scene with two storylines in both lanes. The lanes are drawn with the same component as the script map (§14), and reuse the Structure strip's geometry (`structureStrip` in `@drafter/outline`: a lane is a strip row filtered to one storyline's scenes, on the same page axis);
   - in the Script pane's margin, as a thin colored bar with the label beside each scene, turned on from the pane's slim bar. Call: off by default, so the pages stay clean. The margin marks are hidden from screen readers and never printed; the Outline says the same thing in text;
   - on the Beat Board, as the cards' storyline chips, with **Arrange by storyline** (§17).
 - **Timeline keyboard:** the blocks are a grid with one tab stop, one row per lane; Left and Right move along a lane, Up and Down between lanes, and Enter goes to the scene. A block's name reads "Scene 12, INT. KITCHEN, storyline A, page 12, 1 3/8 pages". On a phone, Timeline is a list grouped by storyline.
@@ -401,6 +401,7 @@ A slim column beside the Source pane: every scene as a block, top to bottom, its
 - Call: off by default, turned on from the Source pane's slim bar or the View menu, and remembered. Reason: Phase 1 keeps the writing screen calm, and a newcomer turns it on when they want it.
 - **Phone:** not shown; the Outline's Timeline does the job there.
 - Not shown in focus mode.
+- **Since v0.15.0** the Structure strip ([its design](drafter-structure-strip-design.md)) shows every scene sized by length above the panes; the map reuses `structureStrip`'s geometry, and whether it is still wanted beside the strip, or becomes the strip with a "color by" choice and storyline rows, is Plan E's to decide (strip design §10).
 
 ## 15. The pacing view
 
@@ -534,7 +535,7 @@ Each plan is a shippable minor release with its own plan document, tag, GitHub R
 
 **Decided (2026-10-28): Final Draft files come right after Plan A,** as Plan FD (v0.11.0), moved up from Phase 3; the plans after it each take the next minor. Plan FD keeps its own name so the letters the rest of this document uses for B to H stay as they are.
 
-**Decided (2026-10-29): after Plan D, the Structure strip (v0.15.0: the outline as a band above the script, turned on and off), then PDF export for Markdown documents, then Highland, Fade In, and Markdown imports come next,** each its own minor, so Plans E to H each move down by those releases and take later versions than their headings below give; their letters and scope are unchanged.
+**Decided (2026-10-29): after Plan D, the Structure strip (v0.15.0: the outline as a band above the script, turned on and off), then PDF export for Markdown documents, then Highland, Fade In, and Markdown imports come next,** each its own minor. The strip took v0.15.0, so the headings below give Plans E to H as v0.16.0 to v0.19.0 and their letters stay; the Markdown PDF and import releases will move them down again, by one minor each, when they land. Their scope is unchanged.
 
 The order is otherwise the suggested one with two changes, both Calls: **setups and payoffs move into Plan B**, because they are keyed notes listed in the Notes tab B builds, and **snapshots come before spellcheck**, because the browser's spellcheck already works while history does not exist, and Plans A and B make large structural edits that a writer drafting for the first time should be able to go back on.
 
@@ -606,7 +607,15 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 - The dependencies have their DEPENDENCIES.md rows and notices.
 - axe passes with misspellings on screen and the menu open.
 
-### Plan E — v0.15.0: Seeing the script
+### Structure strip — v0.15.0
+
+**Status:** built (2026-10-29), except that an axe check of the strip in both themes waits for the final accessibility steps; see `docs/DEFERRED.md`.
+
+**Design:** [the Structure strip design](drafter-structure-strip-design.md), with its own plan in `docs/plans/2026-10-29-structure-strip.md`. A band above both panes, off by default: a row for each section depth from 1 to 3 the script uses, a row of every scene, and a page ruler, each block sized by its pages and tinted by its scene color; clicking a block, or Enter on it, goes there as the Outline does. Its geometry (`structureStrip`, `linesPerPage`, `rulerMarks` in `@drafter/outline`) is what Plan E's Timeline, script map, and pacing view build on.
+
+The strip took v0.15.0, so Plans E to H each moved down one minor; their letters stay.
+
+### Plan E — v0.16.0: Seeing the script
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15).
 
@@ -618,7 +627,7 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 - The grid meets its time budget.
 - axe passes on every Stats section, the map, and the Timeline, in both themes at both widths.
 
-### Plan F — v0.16.0: The Beat Board
+### Plan F — v0.17.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -629,7 +638,7 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.17.0: Reader notes
+### Plan G — v0.18.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -640,7 +649,7 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.18.0: Reference
+### Plan H — v0.19.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 
@@ -714,3 +723,7 @@ Made with Plan A (2026-10-28):
 - **Technical design §7:** colors and stubs as in §5.4 and §6.5; the scene index and identity as in §5.1–5.2. **§8.4:** the snapshot schedule as in §11.1. **§8.6:** the metadata block's Phase 2 keys. **§13:** NVDA and VoiceOver come last.
 - **README and architecture §13 (Final Draft, decided 2026-10-28):** `.fdx` import and export is listed under Phase 2 (Plan FD, v0.11.0), not Phase 3, and `@drafter/fdx` is a Phase 2 package.
 - **Phase 1 design §14:** the Beat Board's positions, colors, and links live in the Beat Board block, not the metadata block, and storylines are header notes with their colors in the metadata block.
+
+Made with the Structure strip (2026-10-29):
+
+- **This design, §13, §14, and §22:** the Structure strip ships as v0.15.0 between Plans D and E, with [its own design](drafter-structure-strip-design.md); Plans E to H become v0.16.0 to v0.19.0, their letters unchanged; the Timeline's lanes and the script map reuse its geometry, and Plan E decides whether the map is still wanted beside it. **README:** the strip is in the status line, the Phase 2 roadmap, and the views table, and `@drafter/outline` lists its geometry.

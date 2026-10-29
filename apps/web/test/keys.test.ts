@@ -60,6 +60,43 @@ describe('matchesKey', () => {
     ).toBe(true);
   });
 
+  test('lets AltGr type its letter instead of taking Ctrl+Alt off a Mac', () => {
+    // On Windows AltGr is Ctrl+Alt, so AltGr+O on a Polish layout types ó with both held.
+    const altGr = (key: string, code: string, extra: KeyboardEventInit = {}) =>
+      press({ key, code, ctrlKey: true, altKey: true, ...extra });
+    expect(matchesKey(altGr('ó', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
+    expect(matchesKey(altGr('ń', 'KeyN'), 'Mod-Alt-n', false)).toBe(false);
+    expect(matchesKey(altGr('o', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
+    expect(matchesKey(altGr('O', 'KeyO', { shiftKey: true }), 'Mod-Alt-Shift-o', false)).toBe(true);
+    expect(matchesKey(altGr('1', 'Digit1'), 'Mod-Alt-1', false)).toBe(true);
+    // A layout whose letters aren't Latin keeps the shortcut: Ctrl+Alt+O there reports щ.
+    expect(matchesKey(altGr('щ', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
+    expect(matchesKey(altGr('ο', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
+    // AltGr punctuation and dead keys are typed, not taken.
+    expect(matchesKey(altGr('}', 'KeyN'), 'Mod-Alt-n', false)).toBe(false);
+    expect(matchesKey(altGr('Dead', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
+    // On Dvorak the key that types o is KeyS, and KeyO types r.
+    expect(matchesKey(altGr('o', 'KeyS'), 'Mod-Alt-o', false)).toBe(true);
+    expect(matchesKey(altGr('r', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
+    // A browser that reports AltGr is believed for a letter of another script, but a plain o is
+    // still the shortcut (Chromium may report AltGr for left Ctrl+Alt on an AltGr layout).
+    const plain = altGr('o', 'KeyO');
+    Object.defineProperty(plain, 'getModifierState', {
+      value: (name: string) => name === 'AltGraph',
+    });
+    expect(matchesKey(plain, 'Mod-Alt-o', false)).toBe(true);
+    const reported = altGr('щ', 'KeyO');
+    Object.defineProperty(reported, 'getModifierState', {
+      value: (name: string) => name === 'AltGraph',
+    });
+    expect(matchesKey(reported, 'Mod-Alt-o', false)).toBe(false);
+  });
+
+  test('still reads Option+O on a Mac by its physical key', () => {
+    const event = press({ key: 'ø', code: 'KeyO', metaKey: true, altKey: true });
+    expect(matchesKey(event, 'Mod-Alt-o', true)).toBe(true);
+  });
+
   test('matches a key with no modifier', () => {
     expect(matchesKey(press({ key: 'F8' }), 'F8', false)).toBe(true);
     expect(matchesKey(press({ key: 'F8', shiftKey: true }), 'F8', false)).toBe(false);

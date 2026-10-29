@@ -27,7 +27,25 @@ describe('settings', () => {
       spellLanguage: 'en-US',
       spellNotes: false,
       personalDictionary: [],
+      structureStrip: false,
     });
+  });
+
+  test('the structure strip is off by default, and a stored true is kept', async () => {
+    const first = createSettings();
+    await first.ready;
+    expect(first.settings.value.structureStrip).toBe(false);
+    await first.set('structureStrip', true);
+    expect(await db.settings.get('structureStrip')).toEqual({
+      key: 'structureStrip',
+      value: true,
+    });
+    const second = createSettings();
+    await second.ready;
+    expect(second.settings.value.structureStrip).toBe(true);
+    // A value it can't hold changes nothing.
+    await second.set('structureStrip', 'yes' as never);
+    expect(second.settings.value.structureStrip).toBe(true);
   });
 
   test('keeps the language, the notes setting, and My dictionary', async () => {

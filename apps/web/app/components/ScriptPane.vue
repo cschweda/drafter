@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { parsedDoc } from '@drafter/cm-fountain';
 import { createScriptView, GOTO_EVENT, type ScriptView } from '@drafter/render-html';
 import '@drafter/render-html/style.css';
 import { useLayout } from '~/editor/layout';
+import { blockIndexAt, pageOf } from '~/editor/pages';
 import { domPane, type SyncPane } from '~/editor/scroll-sync';
 import { useEditor } from '~/editor/session';
 import { useScrollSync } from '~/editor/use-scroll-sync';
 import { useSettings } from '~/settings/settings';
+import { scriptTopPage } from '~/strip/in-view';
 
 const { goto, view: editorView } = useEditor();
 const sync = useScrollSync();
@@ -32,6 +35,23 @@ let observer: ResizeObserver | undefined;
 /** The pages as scroll sync reads them: each line's source offset and where it stands. */
 let syncPane: (SyncPane & { invalidate(): void }) | undefined;
 let detachSync: (() => void) | undefined;
+
+/**
+ * Publishes the page at the pane's top for the Structure strip's in-view marker (Call 29), once a
+ * frame at most: the source offset at the top, its block, and that block's page. Nothing while the
+ * strip is off (and the page is cleared); it publishes once when the strip is turned on.
+ */
+let topFrame = 0;
+function publishTop() {
+  if (topFrame || !settings.value.structureStrip) return;
+  topFrame = requestAnimationFrame(() => {
+    topFrame = 0;
+    const offset = syncPane?.offsetAtTop() ?? null;
+    const doc = editorView.state.field(parsedDoc, false);
+    const block = offset === null || !doc ? null : blockIndexAt(doc, offset);
+    scriptTopPage.value = block === null ? null : (pageOf(layout.value, block)?.current ?? null);
+  });
+}
 
 function fontsReady(): Promise<unknown> {
   const wait = new Promise((resolve) => setTimeout(resolve, FONT_WAIT_MS));
@@ -73,6 +93,7 @@ async function draw() {
   // phone, where the Source was); after that a drawing follows the cursor, which sync keeps in view.
   if (!(settling && sync.placeView())) current.reveal(cursorBlock.value);
   if (settled === undefined) settled = setTimeout(() => (settling = false), SETTLE_MS);
+  publishTop();
 }
 
 onMounted(() => {
@@ -88,10 +109,15 @@ onMounted(() => {
   if (probe.value) observer.observe(probe.value);
   syncPane = domPane(host.value, '.drafter-line[data-from]', () => editorView.state.doc.length);
   detachSync = sync.attachView(syncPane);
+  host.value.addEventListener('scroll', publishTop, { passive: true });
   void draw();
 });
 
 onBeforeUnmount(() => {
+  cancelAnimationFrame(topFrame);
+  topFrame = 0;
+  scriptTopPage.value = null;
+  host.value?.removeEventListener('scroll', publishTop);
   detachSync?.();
   clearTimeout(settled);
   observer?.disconnect();
@@ -100,6 +126,19 @@ onBeforeUnmount(() => {
 });
 
 watch([layout, layoutTemplate], draw);
+watch(
+  () => settings.value.structureStrip,
+  (on) => {
+    if (on) {
+      publishTop();
+      return;
+    }
+    // Off, the marker is forgotten, so turning the strip on again never shows a stale page.
+    cancelAnimationFrame(topFrame);
+    topFrame = 0;
+    scriptTopPage.value = null;
+  },
+);
 watch([zoom, () => settings.value.textSize], () => applyZoom());
 watch(cursorBlock, (block) => {
   // The title page is block -1, which no layout line belongs to: it is the top.

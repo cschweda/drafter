@@ -1,6 +1,6 @@
 # @drafter/outline
 
-Structure for [Drafter](https://github.com/cschweda/drafter): the scene index of a parsed Fountain script, and the edits that work on its structure (moving scenes and sections, synopses, scene colors and the rest of a scene's header, treatments, and outlines turned into scene stubs), each returned as text changes. It reads a parsed document, a template, and a layout when there is one, and touches no file and no DOM, so it runs in Node, in a browser, and in a worker.
+Structure for [Drafter](https://github.com/cschweda/drafter): the scene index of a parsed Fountain script, and the edits that work on its structure (moving scenes and sections, synopses, scene colors and the rest of a scene's header, treatments, and outlines turned into scene stubs), each returned as text changes, and the geometry of the Structure strip, the band of sections and scenes Drafter draws above its panes. It reads a parsed document, a template, and a layout when there is one, and touches no file and no DOM, so it runs in Node, in a browser, and in a worker.
 
 ```ts
 import { parse } from '@drafter/fountain';
@@ -35,6 +35,23 @@ const changes = setSceneDetails(doc, index.scenes[0], {
 ```
 
 Everything Drafter writes is ordinary Fountain: synopses (`= …`), sections, and notes (`[[Color: blue]]`), which never print. See the [Phase 2 design](../../docs/drafter-phase2-design.md), §5, §6, §9, and §10.
+
+## The Structure strip
+
+`structureStrip` turns the scene index into the geometry of Drafter's Structure strip: a row for each section depth from 1 to 3 the script uses (`STRIP_DEPTHS`), then a row of every scene, each block placed along one axis of pages. A scene starts at its page and line and ends where the next one starts (the last one by its eighths), so the scenes tile the axis; a section spans its scenes, and a section with no scenes is a tick. Without a layout the blocks are sized by printed words. `rulerMarks` gives the page ruler's marks for a width in pixels.
+
+```ts
+import { paginate } from '@drafter/layout';
+import { linesPerPage, rulerMarks, sceneIndex, structureStrip } from '@drafter/outline';
+
+const layout = paginate(doc, template);
+const strip = structureStrip(sceneIndex(doc, template, layout), linesPerPage(layout));
+strip.rows.map((row) => row.depth); // a script with # and ### sections: [1, 3, null]
+strip.rows.at(-1)?.blocks[0]; // { kind: 'scene', block, from, to, label: '1 INT. HALL - DAY', color: 'blue' }
+rulerMarks(strip, 1200); // 120 pages: page 1, then every 5th numbered, and a tick at every page
+```
+
+See the [Structure strip design](../../docs/drafter-structure-strip-design.md).
 
 ## License
 

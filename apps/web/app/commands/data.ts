@@ -190,6 +190,16 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
   { id: 'show-element-bar', title: 'Show the element bar', group: 'View' },
   { id: 'hide-element-bar', title: 'Hide the element bar', group: 'View' },
+  // The Structure strip (structure strip design §5, Call 31): Mod+Alt+O, read from the physical
+  // key with Alt held (`matchesKey`), so Option's character on a Mac doesn't matter.
+  {
+    id: 'toggle-structure-strip',
+    title: 'Toggle the structure strip',
+    group: 'View',
+    icon: 'i-lucide-panel-top',
+    keys: 'Mod-Alt-o',
+    global: true,
+  },
   { id: 'fold-all', title: 'Fold all', group: 'View', keys: 'Ctrl-Alt-[' },
   { id: 'unfold-all', title: 'Unfold all', group: 'View', keys: 'Ctrl-Alt-]' },
   // Condense and expand (Phase 2 design §6.4): the names a writer looks for, for folding.

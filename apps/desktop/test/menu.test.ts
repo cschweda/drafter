@@ -102,6 +102,34 @@ describe('menuTemplate', () => {
     expect(ids('Go')).toEqual(expect.arrayContaining(['next-misspelling', 'previous-misspelling']));
   });
 
+  test('puts Toggle the structure strip in View after the element bar’s pair, on CmdOrCtrl+Alt+O', () => {
+    const view = [
+      cmd('show-element-bar', 'View', 'Show the element bar'),
+      cmd('hide-element-bar', 'View', 'Hide the element bar'),
+      cmd('toggle-structure-strip', 'View', 'Toggle the structure strip', { keys: ['Mod-Alt-o'] }),
+      cmd('fold-all', 'View', 'Fold all', { keys: ['Ctrl-Alt-['] }),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...view], () => {}, { platform: 'linux' }));
+    const ids = submenu(m.View).map((i) => i.id ?? i.type);
+    const at = ids.indexOf('toggle-structure-strip');
+    expect(ids.slice(at - 2, at + 2)).toEqual([
+      'show-element-bar',
+      'hide-element-bar',
+      'toggle-structure-strip',
+      'separator',
+    ]);
+    expect(
+      named(
+        menuTemplate(view, () => {}, { platform: 'linux' }),
+        'toggle-structure-strip',
+      ),
+    ).toMatchObject({
+      label: 'Toggle the structure strip',
+      accelerator: 'CmdOrCtrl+Alt+O',
+      registerAccelerator: false,
+    });
+  });
+
   test('on Windows, as on Linux: Alt opens each menu by its underlined letter, and Quit ends File', () => {
     const template = menuTemplate(COMMANDS, () => {}, { platform: 'win32' });
     expect(template.map((item) => item.label)).toEqual(['&File', '&Edit', '&View', '&Go', '&Help']);

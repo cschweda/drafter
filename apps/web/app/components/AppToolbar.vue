@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
+import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
 import { useTemplateMenu } from '~/editor/template-menu';
+import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
+import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 
 const colorMode = useColorMode();
 const focus = useFocusMode();
 const { readOnly } = useGuard();
 const editor = useEditor();
+const { settings } = useSettings();
 // A choice puts focus in the editor, where Mod+Z undoes it; Escape, or leaving the menu, returns it to the chip as usual.
 let chosen = false;
 function onCloseAutoFocus(event: Event) {
@@ -44,12 +48,26 @@ function toggleTheme() {
   colorMode.preference = dark.value ? 'light' : 'dark';
 }
 
-// Open is the scripts menu, Save saves, Export is the export menu, and Focus is focus mode.
+// The Structure button (structure strip design §5, Call 30) runs the palette's command, so the
+// two and the Settings switch are one setting. A Markdown document has no scenes: the button is
+// off and says why. It is pressed while the strip shows, which needs a Fountain script.
+const structureOff = computed(() => editor.kind.value === 'markdown');
+const structurePressed = computed(
+  () => settings.value.structureStrip && editor.kind.value === 'fountain',
+);
+function toggleStructure() {
+  const command = commandById('toggle-structure-strip');
+  if (command && (!command.enabled || command.enabled())) void command.run();
+}
+
+// Open is the scripts menu, Save saves, Export is the export menu, Focus is focus mode, and
+// Structure is the Structure strip.
 const ACTIONS = [
   { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
   { label: 'Save', icon: 'i-lucide-save', kind: 'save', tour: 'save' },
   { label: 'Export', icon: 'i-lucide-file-output', kind: 'export', tour: 'export' },
   { label: 'Focus', icon: 'i-lucide-scan', kind: 'focus', tour: 'focus' },
+  { label: 'Structure', icon: 'i-lucide-panel-top', kind: 'structure', tour: undefined },
 ];
 </script>
 
@@ -114,6 +132,18 @@ const ACTIONS = [
           <span class="label">{{ action.label }}</span>
         </button>
         <button
+          v-else-if="action.kind === 'structure'"
+          type="button"
+          class="act structure"
+          :aria-pressed="structurePressed ? 'true' : 'false'"
+          :aria-disabled="structureOff ? 'true' : undefined"
+          :title="structureOff ? NOT_FOR_MARKDOWN : undefined"
+          @click="toggleStructure"
+        >
+          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
+          <span class="label">{{ action.label }}</span>
+        </button>
+        <button
           v-else
           type="button"
           class="act"
@@ -131,9 +161,10 @@ const ACTIONS = [
         type="button"
         class="chip template"
         :aria-label="chipLabel"
+        :title="templateName"
         data-tour="template"
       >
-        {{ templateName }}
+        <span class="name">{{ templateName }}</span>
       </button>
     </MenuButton>
     <span class="spacer" />
@@ -221,6 +252,9 @@ const ACTIONS = [
 .round.focus {
   background: #f5a9c0;
 }
+.round.structure {
+  background: #b7a6e6;
+}
 .icon {
   width: 13px;
   height: 13px;
@@ -238,6 +272,16 @@ const ACTIONS = [
   white-space: nowrap;
   cursor: pointer;
 }
+/* The chip gives way first when the toolbar is short of room, cut short on screen; its name is whole. */
+.chip.template {
+  min-width: 0;
+}
+.chip.template .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .chip[aria-disabled="true"] {
   color: var(--muted);
   cursor: not-allowed;
@@ -250,6 +294,14 @@ kbd {
 }
 .spacer {
   flex: 1;
+}
+
+/* Five actions and a long chip need a little less space between them until 1200px. */
+@media (max-width: 1199.98px) {
+  .toolbar,
+  .actions {
+    gap: 10px;
+  }
 }
 
 /* One pane, and a toolbar of icons, below 1024px. */
@@ -275,7 +327,9 @@ kbd {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* A phone draws no Structure strip, so it has no button (Call 16). */
   .template,
+  .act.structure,
   kbd {
     display: none;
   }

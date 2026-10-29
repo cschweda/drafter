@@ -70,6 +70,11 @@ const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
 const { settings } = useSettings();
+// The Structure strip: when it is turned on, on a wide screen, for a Fountain script (structure
+// strip design §5). It sits in `.top`, which focus mode takes away.
+const stripShown = computed(
+  () => settings.value.structureStrip && wide.value && kind.value === 'fountain',
+);
 // Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
 useSnapshots();
 // Starts the spellcheck, which makes its worker once the settings are read and the first script is
@@ -173,6 +178,7 @@ onBeforeUnmount(() => {
       <StartBlankBar />
       <!-- Its region has no height; the offer itself is fixed in place. In the shell's grid it would be a row. -->
       <UpdatePrompt />
+      <StructureStrip v-if="stripShown" />
     </div>
     <DropZone />
     <SameTitleDialog />

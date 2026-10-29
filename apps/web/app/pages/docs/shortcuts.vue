@@ -84,6 +84,14 @@ const groups = shortcutGroups(COMMAND_DATA);
           <kbd>Alt+↓</kbd> move it a row up or down (<kbd>⌥</kbd> on a Mac).
         </li>
         <li>
+          In the Structure strip (Toggle the structure strip, <kbd>⌘⌥O</kbd> on a Mac and
+          <kbd>Ctrl+Alt+O</kbd> elsewhere), <kbd>Tab</kbd> enters on the block you last focused, or
+          the cursor’s scene. <kbd>←</kbd> and <kbd>→</kbd> move along a row, <kbd>↑</kbd> and
+          <kbd>↓</kbd> to the block above or below, and <kbd>Home</kbd> and <kbd>End</kbd> to a
+          row’s ends. <kbd>Enter</kbd> or <kbd>Space</kbd> goes to the scene or section in the
+          Source.
+        </li>
+        <li>
           In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and
           <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. On a note, <kbd>Enter</kbd>
           goes to it in the Source, <kbd>E</kbd> edits it in place (<kbd>Enter</kbd> saves,

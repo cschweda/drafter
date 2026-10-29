@@ -31,6 +31,8 @@ export interface Settings {
   spellNotes: boolean;
   /** My dictionary: words never marked in any script in this browser, kept as typed (technical design §10; Plan D, Call 9). */
   personalDictionary: readonly string[];
+  /** The Structure strip above the panes; off by default, to keep the writing screen calm (structure strip design §5). */
+  structureStrip: boolean;
 }
 
 export type CardSize = 'small' | 'medium' | 'large';
@@ -52,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   spellLanguage: 'en-US',
   spellNotes: false,
   personalDictionary: [],
+  structureStrip: false,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
