@@ -177,6 +177,10 @@
   </AltCollection>
 
   <ListItems>
+    <TableColumnSettings>
+      <Column Name="Heading" Width="140">Heading</Column>
+      <Column Name="Words" Width="60">Words</Column>
+    </TableColumnSettings>
     <ListItem Color="#336699" Id="beat-01" Title="The boat that shouldn't exist" Type="Beat">
       <SubordinateTo Id="beat-00"/>
       <Content>

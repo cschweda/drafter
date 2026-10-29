@@ -442,7 +442,9 @@ describe('fd13-shapes.fdx', () => {
     );
     expect(fd.text).toContain('[[S. Lindqvist: Is the fog doing too much work here?]]');
     expect(fd.text).not.toContain('aW52');
-    expect(fd.ignored).toEqual(expect.arrayContaining(['Images', 'AttributedTitle']));
+    expect(fd.ignored).toEqual(
+      expect.arrayContaining(['Images', 'AttributedTitle', 'TableColumnSettings']),
+    );
     // The current text of each paragraph with alternates is the script's text; the alternate that
     // repeats it is not noted again.
     expect(kindOf(doc, 'Fog on the water. A diesel engine coughs somewhere upstream.')).toBe(

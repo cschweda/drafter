@@ -69,6 +69,8 @@ export const IGNORED: ReadonlySet<string> = new Set([
   'Outlines',
   'TargetScriptLength',
   'Characters',
+  // A display setting: the columns of a list view (the beat board's, among others).
+  'TableColumnSettings',
 ]);
 
 /** An `Outline N (label)` paragraph type: a section of depth N. */
