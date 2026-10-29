@@ -449,7 +449,13 @@ class Importer {
       }
       let speakers = 0;
       for (const child of dual.children) {
-        if (typeof child === 'string') continue;
+        if (typeof child === 'string') {
+          // Text written straight into the pair, between its speeches, is kept as a note there.
+          if (child.trim() === '') continue;
+          this.flushSpeech();
+          this.action(fromPlain(child.trim()), 'DualDialogue text');
+          continue;
+        }
         if (child.name !== 'Paragraph') {
           this.other(child);
           continue;
@@ -855,8 +861,9 @@ function byKey(paragraphs: readonly XmlElement[]): Field[] {
 /**
  * Fields by order, for a title page Final Draft wrote: the first centered block is the Title; a
  * centered "by" or "written by" is the Credit, and the centered block after it the Author; every
- * other line goes into one Notes field. Empty paragraphs, and ones holding only spaces (Final
- * Draft writes a blank line as an empty `<Text>`), only separate blocks.
+ * other line goes into one Notes field. Empty paragraphs, and ones holding only spaces (a blank
+ * line is likely written as an empty `<Text>`, though no real file has confirmed it), only
+ * separate blocks.
  */
 function byOrder(paragraphs: readonly XmlElement[]): Field[] {
   const fields: Field[] = [];

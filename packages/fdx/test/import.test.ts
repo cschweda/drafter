@@ -510,6 +510,27 @@ describe('fromFdx: content in unexpected places', () => {
     ]);
   });
 
+  it('keeps text written directly inside a DualDialogue, as a note in its place', () => {
+    const result = fromFdx(
+      fdx(
+        `<Paragraph><DualDialogue>${P('Character', 'ODILE')}${P('Dialogue', 'Now.')} Both at once. ${P('Character', 'THEO')}${P('Dialogue', 'Later.')}</DualDialogue></Paragraph>`,
+      ),
+    );
+    expect(result.text).toBe(
+      [
+        'ODILE',
+        'Now.',
+        '',
+        'Both at once. [[fdx: DualDialogue text]]',
+        '',
+        'THEO ^',
+        'Later.',
+        '',
+      ].join('\n'),
+    );
+    expect(result.mapped).toEqual([{ type: 'DualDialogue text', count: 1 }]);
+  });
+
   it('keeps a scene property summary on a paragraph inside a speech, after the speech', () => {
     const text = fromFdx(
       fdx(
