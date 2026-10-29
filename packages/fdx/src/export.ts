@@ -192,7 +192,8 @@ class Exporter {
         out.push({ ...(last ?? plain('')), text: '\n' });
       }
       first = false;
-      out.push(...pieces);
+      // One at a time: a line can hold hundreds of thousands of pieces, too many for a spread.
+      for (const piece of pieces) out.push(piece);
       for (let r = firstFrom(this.regions, line.span.from); r < this.regions.length; r++) {
         const region = this.regions[r] as Region;
         if (region.span.from >= line.span.to) break;

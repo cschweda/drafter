@@ -1219,3 +1219,74 @@ describe('fromFdx: stored text is read once, however often it is compared', () =
     expect(result.text).toContain('[[fdx: Script note: Two runs. A paragraph. Afterwards.]]');
   });
 });
+
+describe('fromFdx: title pages and alternates, the edges', () => {
+  const tp = (paragraphs: string) =>
+    fdx(P('Action', 'x'), `<TitlePage><Content>${paragraphs}</Content></TitlePage>`);
+  const para = (align: string, text: string, key = '') =>
+    `<Paragraph Alignment="${align}"${key}><Text>${text}</Text></Paragraph>`;
+
+  it(
+    'reads a title page of many credits and notes in linear time',
+    () => {
+      // Each credit and author adds two fields; a search of them all for the Notes or the Title
+      // field, at each later paragraph, would grow about 16 times from n to 4n.
+      const make = (n: number) =>
+        tp(
+          para('Center', 'TITLE') +
+            `${para('Center', 'by')}${para('Center', 'A. Writer')}`.repeat(n) +
+            para('Left', 'contact') +
+            `${para('Left', 'line')}<Paragraph/>${para('Center', 'centered after a gap')}`.repeat(
+              n,
+            ),
+        );
+      const { growth, large } = scaling(make, fromFdx, 2_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('imports a title-page paragraph of a million lines without overflowing the stack', () => {
+    const many = 'x\n'.repeat(1_000_000);
+    for (const xml of [
+      tp(para('Center', 'TITLE') + para('Center', many)), // joins the Title
+      tp(para('Center', 'by') + para('Center', 'A') + para('Center', many)), // joins the Author
+      tp(para('Left', 'a') + para('Left', many)), // joins the Notes
+      tp(para('Left', 'a', ' DrafterKey="Contact"') + para('Left', many)), // continues a keyed field
+    ]) {
+      let error: unknown;
+      try {
+        fromFdx(xml);
+      } catch (e) {
+        error = e;
+      }
+      if (error !== undefined) expect(error).toBeInstanceOf(FdxError);
+    }
+  }, 60_000);
+
+  it('keeps a later Alt when the first with its id is empty', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a</AltId></Alts><Text>Now.</Text></Paragraph>',
+        '<AltCollection><Alt Id="a"/><Alt Id="a"><Paragraph><Text>Second text.</Text></Paragraph></Alt></AltCollection>',
+      ),
+    );
+    expect(result.text).toBe('Now.\n\n[[fdx: Alternate: Second text.]]\n');
+  });
+
+  it('keeps an Alt in a second collection that reuses an id with other text', () => {
+    const coll = (text: string) =>
+      `<AltCollection><Alt Id="a"><Paragraph><Text>${text}</Text></Paragraph></Alt></AltCollection>`;
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a</AltId></Alts><Text>Now.</Text></Paragraph>',
+        coll('First text.') + coll('Other text.') + coll('First text.'),
+      ),
+    );
+    expect(result.text).toBe(
+      'Now.\n\n[[fdx: Alternate: First text.]]\n\n[[fdx: Alternate: Other text.]]\n',
+    );
+    expect(result.mapped).toEqual([{ type: 'Alternate', count: 2 }]);
+  });
+});

@@ -117,6 +117,14 @@ function paragraphsText(element: XmlElement): string {
   return lines.join('\n');
 }
 
+/**
+ * Adds every item of `items` to `to`. A spread into `push` passes each item as an argument, and an
+ * array of hundreds of thousands (the lines of a huge paragraph) overflows the call stack.
+ */
+function append<T>(to: T[], items: readonly T[]): void {
+  for (const item of items) to.push(item);
+}
+
 /** Text with its runs of whitespace made one space, for comparing what reads the same. */
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
 
@@ -444,8 +452,10 @@ class Importer {
   private afterSpeech: string[] = [];
   /** The alternates of the file's `AltCollection`, by id, and the ids a paragraph has used. */
   private readonly alts = new Map<string, string>();
-  /** Each first alternate's text on one line, made once, to compare later ones with. */
+  /** Each stored alternate's text on one line, made once, to compare later ones with. */
   private readonly altLines = new Map<string, string>();
+  /** The `Alt` element whose text is stored for each id. */
+  private readonly storedAlts = new Map<string, XmlElement>();
   private readonly usedAlts = new Set<string>();
 
   run(root: XmlElement): FdxImport {
@@ -492,10 +502,15 @@ class Importer {
     for (const alt of collection.children) {
       if (typeof alt === 'string' || alt.name !== 'Alt') continue;
       const id = alt.attrs.Id;
-      if (id === undefined || this.alts.has(id)) continue;
+      if (id === undefined) continue;
+      // The stored text for an id is its first `Alt` that holds any, in any collection.
+      const stored = this.alts.get(id);
+      if (stored !== undefined && stored !== '') continue;
       const text = paragraphsText(alt);
+      if (stored !== undefined && text === '') continue;
       this.alts.set(id, text);
       this.altLines.set(id, oneLine(text));
+      this.storedAlts.set(id, alt);
     }
   }
 
@@ -520,23 +535,24 @@ class Importer {
   }
 
   /**
-   * The alternates no paragraph named come in as notes, after the script; the rest are used. A
-   * later `Alt` with an id already seen (only the first is looked up) comes in too, unless its text
-   * is the first's.
+   * The alternates no paragraph named come in as notes, after the script; the rest are used. Any
+   * other `Alt` with a stored id (only the stored one is looked up), in any collection, comes in
+   * too, unless its text is the stored one's.
    */
   private unusedAlts(collection: XmlElement) {
-    const seen = new Set<string>();
     for (const alt of collection.children) {
       if (typeof alt === 'string' || alt.name !== 'Alt') continue;
       const id = alt.attrs.Id;
       const text = paragraphsText(alt);
       if (text === '') continue;
       if (id !== undefined) {
-        const first = !seen.has(id);
-        seen.add(id);
-        // A duplicate is compared with the first's text as `collectAlts` made it, once, not again.
-        if (first ? this.usedAlts.has(id) : oneLine(text) === this.altLines.get(id)) continue;
-        this.usedAlts.add(id);
+        // The stored `Alt` comes in unless a paragraph brought it in; any other with its id, in
+        // this collection or another, unless its text is the stored one (compared as
+        // `collectAlts` made it, once, not again).
+        if (this.storedAlts.get(id) === alt) {
+          if (this.usedAlts.has(id)) continue;
+          this.usedAlts.add(id);
+        } else if (oneLine(text) === this.altLines.get(id)) continue;
       }
       this.flushSpeech();
       this.count('Alternate');
@@ -1123,7 +1139,7 @@ function byKey(paragraphs: readonly XmlElement[]): Field[] {
     const lines = linesOf(paragraph);
     const current = fields[fields.length - 1];
     if (key !== undefined && TITLE_KEY.test(key)) fields.push({ key, lines });
-    else if (current) current.lines.push(...lines);
+    else if (current) append(current.lines, lines);
     else fields.push({ key: 'Notes', lines });
   }
   return fields;
@@ -1140,9 +1156,14 @@ function byOrder(paragraphs: readonly XmlElement[]): Field[] {
   const fields: Field[] = [];
   let gap = false;
   let current: Field | null = null;
+  // The Title and Notes fields are kept at hand: a page of many credits has many fields, and
+  // searching them all at each paragraph would take time in the product of the two.
+  let title: Field | null = null;
+  let notes: Field | null = null;
   const add = (key: string, lines: Tok[][]) => {
     current = { key, lines };
     fields.push(current);
+    return current;
   };
   for (const paragraph of paragraphs) {
     const lines = trimBlank(linesOf(paragraph));
@@ -1154,15 +1175,12 @@ function byOrder(paragraphs: readonly XmlElement[]): Field[] {
     const words = visible(lines).join(' ').trim();
     const last = current as Field | null;
     if (centered && /^(?:written\s+)?by$/i.test(words)) add('Credit', lines);
-    else if (centered && last?.key === 'Author' && !gap) last.lines.push(...lines);
+    else if (centered && last?.key === 'Author' && !gap) append(last.lines, lines);
     else if (centered && last?.key === 'Credit') add('Author', lines);
-    else if (centered && last?.key === 'Title' && !gap) last.lines.push(...lines);
-    else if (centered && !fields.some((f) => f.key === 'Title')) add('Title', lines);
-    else {
-      const notes = fields.find((f) => f.key === 'Notes');
-      if (notes) notes.lines.push(...lines);
-      else add('Notes', lines);
-    }
+    else if (centered && last?.key === 'Title' && !gap) append(last.lines, lines);
+    else if (centered && !title) title = add('Title', lines);
+    else if (notes) append((notes as Field).lines, lines);
+    else notes = add('Notes', lines);
     gap = false;
   }
   return fields;

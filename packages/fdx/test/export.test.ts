@@ -317,3 +317,11 @@ describe('toFdx', () => {
     );
   });
 });
+
+describe('toFdx on a line of very many styled runs', () => {
+  it('exports it without overflowing the stack', () => {
+    const doc = parse(`${'*a* b '.repeat(250_000)}\n`);
+    const xml = toFdx(doc, builtins['us-screenplay']);
+    expect(xml).toContain('<Text Style="Italic">a</Text>');
+  });
+});
