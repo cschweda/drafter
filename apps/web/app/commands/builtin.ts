@@ -33,6 +33,7 @@ import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
+import { openSceneDetails } from '~/outline/scene-details';
 import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
@@ -469,6 +470,14 @@ export function registerBuiltinCommands(): void {
     },
     'move-scene-up': moveScene('up'),
     'move-scene-down': moveScene('down'),
+    'scene-details': {
+      enabled: () => canEdit() && isFountain() && !!sceneAtCursor() && !useOutline().readOnly.value,
+      why: () => useOutline().readOnly.value ?? undefined,
+      run: () => {
+        const scene = sceneAtCursor();
+        if (scene) openSceneDetails(useOutline().idOf(scene));
+      },
+    },
 
     // Edit, the element bar's commands
     // On a stage play Scene writes a `##` section and Action is a stage direction (the template's

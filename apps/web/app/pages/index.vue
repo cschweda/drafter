@@ -173,6 +173,7 @@ onBeforeUnmount(() => {
     <CommandPalette />
     <OutlineAnnouncer />
     <TreatmentDialog />
+    <SceneDetailsDialog />
     <SettingsDialog />
     <StatsDialog />
     <AppTour />

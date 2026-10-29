@@ -5,8 +5,6 @@ import {
   type MoveTarget,
   type OutlineItem,
   type OutlineNode,
-  SCENE_COLORS,
-  type SceneColor,
   targetAfterRow,
   upTarget,
 } from '@drafter/outline';
@@ -21,6 +19,8 @@ import {
   swatchOf,
 } from '~/outline/labels';
 import { runMove } from '~/outline/move';
+import { goalLine } from '~/outline/scene-details';
+import { sceneMenuItems } from '~/outline/scene-menu';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
 import { useOutline } from '~/outline/use-outline';
 
@@ -82,6 +82,7 @@ const rows = computed<Row[]>(() => {
               item.heading,
               item.color?.value,
               item.synopses[0]?.text,
+              goalLine(item),
               item.speakers,
               item.pages,
             ]
@@ -252,7 +253,7 @@ function setMenu(id: string, open: boolean) {
 }
 
 /** Runs `act` once the menu has closed and given focus back. */
-const then = (act: () => void) => () => {
+const afterClosing = (act: () => void) => {
   afterMenu = act;
 };
 
@@ -275,71 +276,31 @@ function onMenuCloseAutoFocus(event: Event) {
 const MENU_CONTENT = { align: 'end' as const, onCloseAutoFocus: onMenuCloseAutoFocus };
 const NO_ITEMS: DropdownMenuItem[][] = [];
 
+/**
+ * The row's menu (`scene-menu.ts`, which cards share). Its actions run once the menu has closed
+ * and given focus back, on the item as it is then, if it is still there.
+ */
 function menuItems(row: Row): DropdownMenuItem[][] {
-  const off = readOnly.value !== null;
-  const { id, item } = row;
-  const what = item.kind === 'scene' ? 'scene' : 'section';
-  /** Runs `act` on the item as it is when the menu has closed, if it is still there. */
-  const withItem = (act: (current: OutlineItem) => void) =>
-    then(() => {
+  const withItem = (act: (current: OutlineItem) => void) => (id: string) =>
+    afterClosing(() => {
       const current = now(id);
       if (current) act(current);
     });
-  const groups: DropdownMenuItem[][] = [];
-  if (readOnly.value) groups.push([{ type: 'label', label: readOnly.value }]);
-  groups.push([{ label: 'Go to', icon: 'i-lucide-arrow-right', onSelect: withItem(go) }]);
-  groups.push([
-    {
-      label: `Move ${what} up`,
-      icon: 'i-lucide-arrow-up',
-      disabled: off || upTarget(index.value, item.block) === null,
-      onSelect: withItem((current) => void moveUp(current)),
-    },
-    {
-      label: `Move ${what} down`,
-      icon: 'i-lucide-arrow-down',
-      disabled: off || downTarget(index.value, item.block) === null,
-      onSelect: withItem((current) => void moveDown(current)),
-    },
-    {
-      label: `Move ${what} to…`,
-      icon: 'i-lucide-move',
-      disabled: off,
-      onSelect: then(() => {
+  return sceneMenuItems(row.id, row.item, {
+    go: withItem(go),
+    edit: (id) =>
+      afterClosing(() => {
+        const found = rowById(id);
+        if (found) void startEditing(found);
+      }),
+    moveUp: withItem((current) => void moveUp(current)),
+    moveDown: withItem((current) => void moveDown(current)),
+    moveTo: (id) =>
+      afterClosing(() => {
         movingToId.value = id;
       }),
-    },
-  ]);
-  if (item.kind === 'scene') {
-    const current = item.color?.value ?? null;
-    const pick = (color: SceneColor | null): DropdownMenuItem => ({
-      type: 'checkbox',
-      label: color ?? 'No color',
-      checked: current === color,
-      onSelect: withItem((scene) => {
-        if (scene.kind === 'scene') outline.setColor(scene, color);
-        void focusRow(id);
-      }),
-    });
-    groups.push([
-      {
-        label: 'Edit synopsis',
-        icon: 'i-lucide-pencil',
-        disabled: off,
-        onSelect: then(() => {
-          const found = rows.value.find((r) => r.id === id);
-          if (found) void startEditing(found);
-        }),
-      },
-      {
-        label: 'Color…',
-        icon: 'i-lucide-palette',
-        disabled: off,
-        children: [SCENE_COLORS.map(pick), [pick(null)]],
-      },
-    ]);
-  }
-  return groups;
+    focus: (id) => void focusRow(id),
+  });
 }
 
 // ---- Edit synopsis in place --------------------------------------------------------------
@@ -464,9 +425,10 @@ const sectionSummary = (row: Row) => {
   const count = `${scenes} ${scenes === 1 ? 'scene' : 'scenes'}`;
   return eighths === null ? count : `${count} · ${lengthLabel(eighths)}`;
 };
-/** A scene row's synopsis or speakers, shown under it and read as its description. */
+/** A scene row's synopsis, goal, or speakers, shown under it and read as its description. */
 const hasDetails = (row: Row) =>
-  row.item.kind === 'scene' && (row.item.synopses.length > 0 || row.item.speakers.length > 0);
+  row.item.kind === 'scene' &&
+  (row.item.synopses.length > 0 || goalLine(row.item) !== null || row.item.speakers.length > 0);
 const nameOfRow = (row: Row) =>
   row.item.kind === 'scene' ? sceneName(row.item) : sectionName(row.item);
 </script>
@@ -596,6 +558,7 @@ const nameOfRow = (row: Row) =>
             <span v-if="editing !== row.id && row.item.synopses[0]" class="synopsis">{{
               row.item.synopses[0].text
             }}</span>
+            <span v-if="goalLine(row.item)" class="goal">Goal: {{ goalLine(row.item) }}</span>
             <span v-if="row.item.speakers.length > 0" class="who"
               ><span class="sr-only">Speaking: </span>{{ row.item.speakers.join(', ') }}</span
             >
@@ -749,6 +712,9 @@ const nameOfRow = (row: Row) =>
   display: none;
 }
 .synopsis {
+  color: var(--text);
+}
+.goal {
   color: var(--text);
 }
 .synopsis-field {

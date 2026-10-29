@@ -5,9 +5,11 @@ import {
   type OutlineItem,
   type Scene,
   type SceneColor,
+  type SceneDetails,
   type SceneIndex,
   sceneIndex,
   setColor,
+  setSceneDetails,
   setSynopsis,
 } from '@drafter/outline';
 import { type ComputedRef, computed, effectScope } from 'vue';
@@ -34,6 +36,8 @@ export interface OutlineSession {
   apply(changes: readonly TextChange[], options?: ApplyOptions): boolean;
   setSynopsis(scene: Scene, text: string): boolean;
   setColor(scene: Scene, color: SceneColor | null): boolean;
+  /** Scene details: writes the header's changed fields in one undo, and says so. */
+  setDetails(scene: Scene, details: SceneDetails): boolean;
 }
 
 let session: OutlineSession | undefined;
@@ -80,6 +84,12 @@ function create(): OutlineSession {
           );
         }
         return done;
+      },
+      setDetails: (scene, details) => {
+        const changes = setSceneDetails(editor.doc.value, scene, details);
+        if (changes.length === 0 || !apply(changes)) return false;
+        void sayOutline(`Saved the details of ${scene.heading || 'the untitled scene'}.`);
+        return true;
       },
     } satisfies OutlineSession;
   }) as OutlineSession;

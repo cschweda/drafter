@@ -177,6 +177,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // The Outline's moves, for the scene holding the cursor (Phase 2 design §6.2).
   { id: 'move-scene-up', title: 'Move scene up', group: 'Edit' },
   { id: 'move-scene-down', title: 'Move scene down', group: 'Edit' },
+  // Scene details (Phase 2 design §9), for the scene holding the cursor.
+  { id: 'scene-details', title: 'Scene details…', group: 'Edit' },
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
