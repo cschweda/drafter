@@ -92,6 +92,21 @@ describe('findEntry', () => {
     const changed = SCRIPT.replace('Slow this down.', 'Speed this up.');
     expect(findEntry(noteEntries(parse(changed)), before[1] as (typeof before)[number])).toBe(null);
   });
+
+  test('findEntry takes no far-away twin of a note that is gone', () => {
+    const filler = 'Tom waits by the door.\n\n'.repeat(40);
+    const source = `A. [[same]]\n\n${filler}B. [[same]]\n`;
+    const was = noteEntries(parse(source))[0] as NonNullable<ReturnType<typeof findEntry>>;
+    const gone = source.replace('A. [[same]]', 'A.');
+    const entries = noteEntries(parse(gone));
+    expect(findEntry(entries, was)).toBeNull();
+    // Told how much the script grew or shrank since, it reaches that much further.
+    const moved = `${filler}${source}`;
+    expect(findEntry(noteEntries(parse(moved)), was)).toBeNull();
+    expect(findEntry(noteEntries(parse(moved)), was, filler.length)?.span.from).toBe(
+      was.span.from + filler.length,
+    );
+  });
 });
 
 describe('nestReplies', () => {

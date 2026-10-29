@@ -57,6 +57,9 @@ describe('setupsAndPayoffs', () => {
       ['the coat', false],
       ['a door', false],
     ]);
+    const door = threads(source).find((t) => t.label === 'a door');
+    expect(door?.early.map((e) => e.text)).toEqual(['Payoff: a door']);
+    expect(threads(source).find((t) => t.label === 'the coat')?.early).toEqual([]);
   });
 });
 

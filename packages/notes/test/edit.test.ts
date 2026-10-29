@@ -73,6 +73,25 @@ describe('status and tags', () => {
     }
   });
 
+  test('takes out a tag that starts or fills a line of a note over several lines', () => {
+    const cases: Array<[string, string[], string]> = [
+      ['[[a\n#story b]]\n', [], '[[a\nb]]\n'],
+      ['[[a\n  #story b]]\n', [], '[[a\n  b]]\n'],
+      ['[[a\n#story\nb]]\n', [], '[[a\nb]]\n'],
+      ['[[a\r\n#story\r\nb]]\r\n', [], '[[a\r\nb]]\r\n'],
+    ];
+    for (const [source, tags, expected] of cases) {
+      const doc = parse(source);
+      const entry = noteEntries(doc)[0] as NoteEntry;
+      expect(apply(source, setTags(doc, entry, tags))).toBe(expected);
+    }
+    const source = '[[a\n#resolved]]\n';
+    const doc = parse(source);
+    expect(apply(source, setResolved(doc, noteEntries(doc)[0] as NoteEntry, false))).toBe(
+      '[[a]]\n',
+    );
+  });
+
   test('adds and removes a tag, keeping the rest exactly', () => {
     const source = '[[Ann:  Cut  #Pacing this #story line. #resolved]]\n';
     const { doc, entry } = entryOf(source, 'Ann:  Cut  #Pacing this #story line. #resolved');
@@ -126,6 +145,27 @@ describe('deleting', () => {
       expect(after.length).toBe(source.length - text.length - 4);
       expect(printed(after)).toEqual(printed(source));
     }
+  });
+
+  test('deleting a note over several lines keeps its line breaks', () => {
+    const cases: Array<[string, string, string]> = [
+      ['Tom sits. [[a\nlong note]] He waits.\n', 'a\nlong note', 'Tom sits. \n He waits.\n'],
+      ['Tom sits /* a\nb */ by the door.\n', ' a\nb ', 'Tom sits \n by the door.\n'],
+      ['SAM\nHello [[a\nb]] there.\n', 'a\nb', 'SAM\nHello \n there.\n'],
+      ['Tom sits [[a\r\nb]] down.\r\n', 'a\r\nb', 'Tom sits \r\n down.\r\n'],
+    ];
+    for (const [source, text, expected] of cases) {
+      const { doc, entry } = entryOf(source, text);
+      const after = apply(source, deleteEntry(doc, entry));
+      expect(after).toBe(expected);
+      expect(printed(after)).toEqual(printed(source));
+    }
+  });
+
+  test('refuses to delete a boneyard whose line breaks would split a paragraph', () => {
+    const source = 'Tom sits /* a\n\nb */ by the door.\n';
+    const { doc, entry } = entryOf(source, ' a\n\nb ');
+    expect(deleteEntry(doc, entry)).toEqual([]);
   });
 
   test('refuses to delete where a two-space line would join its neighbours', () => {

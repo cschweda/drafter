@@ -44,15 +44,25 @@ function merge(changes: readonly TextChange[]): TextChange[] {
 }
 
 /**
- * The range of `inner` that takes out the tag at `[from, to)` (inner offsets) with the spaces
- * before it; or, for a tag that starts a body with more after it, the spaces after it, so the head's
- * colon keeps its space.
+ * The range of `inner` that takes out the tag at `[from, to)` (inner offsets), so no stray space or
+ * empty line is left: a tag that starts a line (or the body) with more after it goes with the
+ * spaces after it, so the head's colon and the line's indent keep theirs; a tag alone on a later
+ * line goes with that line and the break before it; any other tag goes with the spaces before it.
  */
 function tagRemoval(inner: string, start: number, from: number, to: number): TextChange {
-  if (from === start && inner.slice(to).trim() !== '') {
-    let end = to;
-    while (isBlankChar(inner[end])) end++;
-    return { from, to: end, insert: '' };
+  let after = to;
+  while (isBlankChar(inner[after])) after++;
+  const newline = inner.indexOf('\n', to);
+  const restOfLine = inner.slice(to, newline < 0 ? inner.length : newline);
+  const lineStart = inner.lastIndexOf('\n', from - 1) + 1;
+  const startsLine = inner.slice(lineStart, from).trim() === '';
+  if (startsLine && lineStart > 0 && restOfLine.trim() === '') {
+    // Alone on its line: the line goes, with the break before it (a CRLF's `\r` too).
+    const breakAt = lineStart - (inner[lineStart - 2] === '\r' ? 2 : 1);
+    return { from: breakAt, to: after, insert: '' };
+  }
+  if ((startsLine || from === start) && restOfLine.trim() !== '') {
+    return { from, to: after, insert: '' };
   }
   let begin = from;
   while (begin > 0 && isBlankChar(inner[begin - 1])) begin--;
@@ -163,15 +173,30 @@ export function rewriteNote(
   return doc.source.slice(from, to) === written ? [] : [{ from, to, insert: written }];
 }
 
+/** What a parse prints: each block's kind and its printing lines' text. */
+const printedOf = (doc: Doc) =>
+  JSON.stringify(
+    doc.blocks.map((b) => [
+      b.kind,
+      b.lines.filter((l) => !l.transparent).map((l) => l.inline.map((r) => r.text).join('')),
+    ]),
+  );
+
 /**
- * Delete a note or boneyard: its line (or lines) when it is alone there (`removeLine`), else the
- * region only, which leaves the line printing as it did. [] where taking the line out would join
- * printing lines (a two-space line beside it).
+ * Delete a note or boneyard: its line (or lines) when it is alone there (`removeLine`). One that
+ * shares its line is replaced by the line breaks inside it, so the lines around it print as they
+ * did; checked by parsing, and [] when they wouldn't (a boneyard holding a blank line between two
+ * printing lines would split their paragraph). [] where taking a line out would join printing
+ * lines (a two-space line beside it).
  */
 export function deleteEntry(doc: Doc, entry: NoteEntry): TextChange[] {
   if (hasStrayBoneyard(doc)) return [];
   const { from, to } = entry.span;
-  if (!entry.alone) return [{ from, to, insert: '' }];
+  if (!entry.alone) {
+    const insert = (doc.source.slice(from, to).match(/\r?\n/g) ?? []).join('');
+    const after = doc.source.slice(0, from) + insert + doc.source.slice(to);
+    return printedOf(parse(after)) === printedOf(doc) ? [{ from, to, insert }] : [];
+  }
   const block = doc.blocks[entry.block];
   if (!block || to > block.span.to) return [];
   const { lines } = block;

@@ -58,21 +58,26 @@ export function noteEntries(doc: Doc): NoteEntry[] {
   return entries;
 }
 
+/** How far from its old offset `findEntry` looks for a note, beyond the script's change in length. */
+const FIND_REACH = 200;
+
 /**
  * The entry that is still `was` in a newer parse: the one with the same text at its offset, or at
- * the nearest offset (the earlier one on a tie). Null when no entry has that text any more, so a stale
- * action changes nothing (Call 16).
+ * the nearest offset (the earlier one on a tie), no further away than 200 characters plus
+ * `lengthChange` (how much the script grew or shrank since, either way). Null when there is none, so
+ * a stale action changes nothing (Call 16) and never lands on a far-away twin of a note that's gone.
  */
 export function findEntry(
   entries: readonly NoteEntry[],
   was: Pick<NoteEntry, 'span' | 'text'>,
+  lengthChange = 0,
 ): NoteEntry | null {
   let best: NoteEntry | null = null;
-  let distance = Number.POSITIVE_INFINITY;
+  let distance = FIND_REACH + Math.abs(lengthChange);
   for (const entry of entries) {
     if (entry.text !== was.text) continue;
     const d = Math.abs(entry.span.from - was.span.from);
-    if (d < distance) {
+    if (best === null ? d <= distance : d < distance) {
       best = entry;
       distance = d;
     }
