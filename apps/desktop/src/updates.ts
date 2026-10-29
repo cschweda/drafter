@@ -149,6 +149,8 @@ export class Updates {
   private download: { cancel(): void } | null = null;
   /** The version being downloaded, while it is. */
   private downloading: string | null = null;
+  /** The download under way was started by a check the writer asked for: the setting doesn't stop it. */
+  private downloadAsked = false;
   /** The writer asked for a check (Help → Check for updates): it may offer with the setting off. */
   private asked = false;
   private updaterReady: Promise<UpdaterLike> | null = null;
@@ -171,9 +173,10 @@ export class Updates {
   /** The page says whether Check for updates is on (when it has read the setting, and when it changes). */
   setEnabled(on: boolean): void {
     this.enabled = on === true;
-    // Turned off: a download under way stops, and nothing more is offered (until the writer asks).
-    if (!this.enabled) this.asked = false;
-    if (!this.enabled && this.download) {
+    // Turned off: a download the start began stops, and the start offers nothing more. A check the
+    // writer asked for (Help → Check for updates) goes on: the page says the setting at every
+    // start, and the dialog has already said Drafter will offer to restart.
+    if (!this.enabled && this.download && !this.downloadAsked) {
       this.download.cancel();
       this.download = null;
       this.downloading = null;
@@ -234,13 +237,15 @@ export class Updates {
   async checkNow(): Promise<CheckResult> {
     if (this.deps.mode === 'off') return { status: 'off' };
     this.asked = true;
-    this.began = true;
     try {
       await this.runCheck();
     } catch (error) {
+      // The start's own check still happens: a failed one is no check.
       this.deps.log(`update: ${errorText(error)}`);
       return { status: 'error' };
     }
+    // It worked, so it is the start's check too (one request a session, unless asked for again).
+    this.began = true;
     if (this.offer) return { status: 'found', version: this.offer.version, how: this.offer.how };
     if (this.downloading) return { status: 'downloading', version: this.downloading };
     return { status: 'latest' };
@@ -296,11 +301,13 @@ export class Updates {
           const token = this.deps.newCancellation();
           this.download = token;
           this.downloading = info.version;
+          this.downloadAsked = this.asked;
           updater.downloadUpdate(token).catch((error) => {
             this.deps.log(`update: ${errorText(error)}`);
             if (this.download === token) {
               this.download = null;
               this.downloading = null;
+              this.downloadAsked = false;
             }
           });
           return;

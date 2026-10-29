@@ -835,3 +835,62 @@ describe('a check the writer asks for (Help → Check for updates)', () => {
     vi.useRealTimers();
   });
 });
+
+describe('a check the writer asked for, and the setting', () => {
+  test('a download the writer asked for is not cancelled when the page says the setting is off', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.setEnabled(false);
+    expect(await r.updates.checkNow()).toEqual({ status: 'downloading', version: '0.9.0' });
+    // The page starts again (a reload, a Mac window opened again) and says the setting is off.
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(0);
+    r.created[0]?.emit('update-downloaded', { version: '0.9.0' });
+    r.updates.listen();
+    expect(r.published).toEqual([{ version: '0.9.0', how: 'restart' }]);
+    vi.useRealTimers();
+  });
+
+  test('a download the start began is still cancelled when the setting is turned off', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(1);
+    vi.useRealTimers();
+  });
+
+  test('a failed check the writer asked for doesn’t take the place of the start’s check', async () => {
+    let fail = true;
+    const r = rig({
+      script: () => {
+        if (fail) throw new Error('offline');
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    expect(await r.updates.checkNow()).toEqual({ status: 'error' });
+    fail = false;
+    await r.advance(5000);
+    expect(r.created[0]?.checks).toBe(2);
+    vi.useRealTimers();
+  });
+
+  test('a check the writer asked for that worked is the start’s check', async () => {
+    const r = rig({ script: () => {} });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    expect(await r.updates.checkNow()).toEqual({ status: 'latest' });
+    await r.advance(60_000);
+    expect(r.created[0]?.checks).toBe(1);
+    vi.useRealTimers();
+  });
+});
