@@ -349,6 +349,32 @@ describe('exporting', () => {
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
   });
 
+  test('says a quarter for a moment, and none beside the end', async () => {
+    const t = await load({ inPlace: true });
+    let release: (() => void) | undefined;
+    let progress: ((fraction: number | null) => void) | undefined;
+    render.mockImplementationOnce(
+      (_request: unknown, onProgress: (fraction: number | null) => void) =>
+        new Promise((resolve) => {
+          progress = onProgress;
+          release = () => resolve(new Uint8Array([1]));
+        }),
+    );
+    const done = t.exportScript('pdf');
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    progress?.(0.3);
+    expect(t.exportMilestone.value).toBe('Export 25% done.');
+    // Once said, the hidden text goes, so no stale quarter sits in the toast.
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    expect(t.exportMilestone.value).toBe('');
+    // The end isn't a quarter: "Exported …" says it, without "75% done" beside it.
+    progress?.(1);
+    expect(t.exportMilestone.value).toBe('');
+    release?.();
+    expect(await done).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
+  });
+
   test('takes the bar away when a slow export fails', async () => {
     const t = await load({ inPlace: true });
     let fail: (() => void) | undefined;

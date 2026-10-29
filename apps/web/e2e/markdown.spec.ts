@@ -197,8 +197,11 @@ test.describe('a Markdown document', () => {
   test('says calmly when a document is nested too deeply to preview', async ({
     page,
     browserName,
+    isMobile,
   }) => {
-    // Five thousand quote marks on one line are slow for the editor, in every browser.
+    // Five thousand quote marks on one line are slow for the editor, in every browser, and slower
+    // still on a phone, whose Preview is the same code the desktop projects check.
+    test.skip(!!isMobile, 'the desktop projects check the same Preview, faster');
     test.setTimeout(90_000);
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));

@@ -213,7 +213,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   height: 6px;
   min-width: 8rem;
   overflow: hidden;
-  border-radius: 3px;
+  border: 1px solid var(--faint);
+  border-radius: 4px;
   background: var(--chrome);
 }
 .fill {
@@ -251,14 +252,15 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   clip-path: inset(50%);
   white-space: nowrap;
 }
-/* No motion: the bar fills in steps, and an unknown stage is the whole bar, faint and still. */
+/* No motion: the bar fills in steps, and an unknown stage is the whole bar, still, in the muted
+   gray (3:1 on the track, test/tokens.test.ts) rather than the gold of a known amount. */
 @media (prefers-reduced-motion: reduce) {
   .fill {
     transition: none;
   }
   .bar.unknown .fill {
     width: 100%;
-    opacity: 0.45;
+    background: var(--muted);
     animation: none;
   }
 }

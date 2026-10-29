@@ -393,9 +393,10 @@ describe('documentBlocks', () => {
     }
     const deep = blocksOf(Array.from({ length: 40 }, (_, i) => `${'  '.repeat(i)}- x`).join('\n'));
     expect(Math.max(...deep.map((block) => block.indent))).toBeLessThanOrEqual(LETTER * 0.75);
-    // The width has no default: the layout always passes the paper's.
+    // The width has no default: the layout always passes the paper's. A check for the type
+    // checker alone, never called.
     // @ts-expect-error textWidth is required
-    expect(() => documentBlocks(md('x'))).not.toThrow();
+    void (() => documentBlocks(md('x')));
   });
 
   it('no depth of nesting overflows the stack', () => {

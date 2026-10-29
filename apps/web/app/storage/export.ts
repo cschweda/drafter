@@ -62,6 +62,8 @@ export const exportProgress = ref<{ name: string; fraction: number | null } | nu
 export const exportMilestone = ref('');
 
 const TOAST_MS = 8000;
+/** How long a quarter's "Export 50% done." stays in its live region: time to be said, then gone. */
+const MILESTONE_MS = 2000;
 
 const announceReady = timedSay(exportNotice, TOAST_MS);
 const announceError = timedSay(exportError, TOAST_MS);
@@ -108,17 +110,25 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
   let fraction: number | null = null;
   /** The last quarter said (1 to 3), or passed before the bar showed. */
   let quarter = 0;
+  let said: ReturnType<typeof setTimeout> | undefined;
   const onProgress = (next: number | null) => {
     fraction = next;
     if (!exportProgress.value) return;
     exportProgress.value = { ...exportProgress.value, fraction: next };
-    const passed = next === null ? quarter : Math.min(3, Math.floor(next * 4));
+    // The end is no quarter: "Exported …" says it, so "75% done" isn't said beside it.
+    const passed = next === null || next === 1 ? quarter : Math.min(3, Math.floor(next * 4));
     if (passed > quarter) {
       quarter = passed;
       exportMilestone.value = `Export ${passed * 25}% done.`;
+      // Once it has been said, the hidden text goes, so no stale quarter stays in the toast.
+      clearTimeout(said);
+      said = setTimeout(() => {
+        exportMilestone.value = '';
+      }, MILESTONE_MS);
     }
   };
   const endProgress = () => {
+    clearTimeout(said);
     exportProgress.value = null;
     exportMilestone.value = '';
   };
