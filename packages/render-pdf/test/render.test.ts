@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
-import { type FontSet, renderPdf } from '@drafter/render-pdf';
+import { type FontSet, type RenderProgress, renderPdf } from '@drafter/render-pdf';
 import { builtins, loadTemplate, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { embeddedFonts, extract, fonts, itemAt, operators, rowText, textOf } from './helpers';
@@ -129,6 +129,24 @@ describe('pages', () => {
     const { PDFDocument } = await import('pdf-lib');
     const doc = await PDFDocument.load(bytes, { updateMetadata: false });
     expect([doc.getCreationDate(), doc.getModificationDate()]).toEqual([undefined, undefined]);
+  });
+});
+
+describe('progress', () => {
+  it('reports each page drawn, then the saving, ending at the last', async () => {
+    const template = screenplay;
+    const layout = paginate(parse(`INT. HALL - DAY\n\n${filler(150)}\n`), template);
+    const seen: RenderProgress[] = [];
+    await renderPdf(layout, template, { fonts, onProgress: (p) => seen.push({ ...p }) });
+    const pages = layout.pages.length;
+    expect(pages).toBeGreaterThan(2);
+    expect(seen.filter((p) => p.stage === 'draw')).toEqual(
+      Array.from({ length: pages + 1 }, (_, done) => ({ stage: 'draw', done, total: pages })),
+    );
+    expect(seen.slice(-2)).toEqual([
+      { stage: 'save', done: 0, total: 1 },
+      { stage: 'save', done: 1, total: 1 },
+    ]);
   });
 });
 

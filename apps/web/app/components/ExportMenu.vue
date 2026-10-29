@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
-import { type ExportKind, exportError, exportNotice } from '~/storage/export';
+import {
+  type ExportKind,
+  exportError,
+  exportMilestone,
+  exportNotice,
+  exportProgress,
+} from '~/storage/export';
 
 // A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10).
 const { kind } = useEditor();
@@ -10,6 +16,13 @@ const { kind } = useEditor();
 // Export button, drawn by the toolbar and given through the slot. Each item runs the export's
 // command (`commands/builtin.ts`), as the app menu and the palette do. The toast says when the file is ready, or why it isn't.
 const open = ref(false);
+// A slow export's bar (Markdown PDF design §8, the maintainer's request of 2026-10-29): how far it
+// is, as a whole percent (never 100 until the file is there), or null while the worker can't say,
+// when the bar moves without a number.
+const percent = computed(() => {
+  const fraction = exportProgress.value?.fraction;
+  return fraction === null || fraction === undefined ? null : Math.floor(fraction * 100);
+});
 const root = ref<HTMLElement>();
 const place = reactive({ top: 0, left: 0 });
 let trigger: HTMLElement | null = null;
@@ -103,6 +116,24 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
     </div>
     <div class="toast" :class="{ shown: exportNotice || exportError }">
       <span role="status">{{ exportNotice }}</span>
+      <!-- The bar's value is read when it is asked for, never said at each step; the quarters are
+           said once each, below. The percent beside it is the bar's own, drawn. -->
+      <div v-if="exportProgress && exportNotice" class="progress">
+        <div
+          class="bar"
+          :class="{ unknown: percent === null }"
+          role="progressbar"
+          :aria-label="`Exporting ${exportProgress.name}`"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-valuenow="percent ?? undefined"
+          :aria-valuetext="percent === null ? 'Under way' : `${percent}%`"
+        >
+          <div class="fill" :style="percent === null ? undefined : { width: `${percent}%` }" />
+        </div>
+        <span class="percent" aria-hidden="true">{{ percent === null ? '' : `${percent}%` }}</span>
+      </div>
+      <span class="milestone" aria-live="polite">{{ exportMilestone }}</span>
       <span v-if="exportError" role="alert" class="failed">{{ exportError }}</span>
     </div>
   </div>
@@ -168,6 +199,76 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   color: var(--text);
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+/* A slow export's bar, under its "Exporting …", with the percent beside it. */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.bar {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  min-width: 8rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--chrome);
+}
+.fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--heading);
+  transition: width 0.2s linear;
+}
+/* A stage that can't say how far it is: a short piece of the bar sweeps across. */
+.bar.unknown .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  animation: export-sweep 1.2s ease-in-out infinite;
+}
+@keyframes export-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.percent {
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Said to a screen reader, never drawn. */
+.milestone {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* No motion: the bar fills in steps, and an unknown stage is the whole bar, faint and still. */
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+  .bar.unknown .fill {
+    width: 100%;
+    opacity: 0.45;
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .bar {
+    border: 1px solid CanvasText;
+  }
+  .fill {
+    background: Highlight;
+  }
 }
 /* The regions stay in the page, so a screen reader hears their text change; the box is drawn only with text. */
 .toast:not(.shown) {

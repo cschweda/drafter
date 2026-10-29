@@ -11,6 +11,7 @@ import {
   type RGB,
   rgb,
 } from 'pdf-lib';
+import type { RenderProgress } from '../progress';
 import { safeLink } from './blocks';
 import { DOCUMENT_FONT_FILES, type DocumentFontSet, type Face, layoutFeatures } from './fonts';
 import { type DocItem, layoutDocument } from './layout';
@@ -173,7 +174,14 @@ function linkRects(items: readonly DocItem[]): LinkItem[] {
  */
 export async function renderDocumentPdf(
   tree: DocNode,
-  opts: { fonts: DocumentFontSet; paper: Paper; title?: string; lang?: string },
+  opts: {
+    fonts: DocumentFontSet;
+    paper: Paper;
+    title?: string;
+    lang?: string;
+    /** Told how far the render is: the blocks laid out, the pages drawn, the file saved. */
+    onProgress?: (progress: RenderProgress) => void;
+  },
 ): Promise<DocumentPdf> {
   const absent = FACES.filter((face) => !(opts?.fonts?.[face] instanceof Uint8Array));
   if (absent.length > 0) {
@@ -182,7 +190,13 @@ export async function renderDocumentPdf(
     );
   }
   const { fonts } = opts;
-  const layout = layoutDocument(tree, { paper: opts.paper, measure: fontMeasure(fonts) });
+  const report = (stage: RenderProgress['stage'], done: number, total: number) =>
+    opts.onProgress?.({ stage, done, total });
+  const layout = layoutDocument(tree, {
+    paper: opts.paper,
+    measure: fontMeasure(fonts),
+    onProgress: (done, total) => report('layout', done, total),
+  });
 
   const doc = await PDFDocument.create({ updateMetadata: false });
   doc.registerFontkit(fontkit);
@@ -227,7 +241,8 @@ export async function renderDocumentPdf(
     pdfPage.node.addAnnot(doc.context.register(annotation));
   };
 
-  for (const page of layout.pages) {
+  report('draw', 0, layout.pages.length);
+  for (const [index, page] of layout.pages.entries()) {
     const pdfPage = doc.addPage([layout.width, layout.height]);
     // One resource name for each face a page uses. (`PDFPage.drawText` with a font adds a new
     // name to the page's resources at every call, and these pages make thousands of calls.)
@@ -278,6 +293,10 @@ export async function renderDocumentPdf(
       }
     }
     for (const link of linkRects(page.items)) addLink(pdfPage, link);
+    report('draw', index + 1, layout.pages.length);
   }
-  return { bytes: await doc.save(), missing: layout.missing };
+  report('save', 0, 1);
+  const bytes = await doc.save();
+  report('save', 1, 1);
+  return { bytes, missing: layout.missing };
 }

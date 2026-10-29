@@ -117,6 +117,66 @@ describe('the export worker', () => {
   });
 });
 
+describe('the export worker’s progress', () => {
+  const { createExporter } = compute;
+  /** Every fraction the export sent, and its reply. */
+  async function watch(request: Parameters<ReturnType<typeof createExporter>>[0]) {
+    const exporter = createExporter(realFonts, realDocumentFonts);
+    const sent: Array<number | null> = [];
+    const reply = await exporter(request, (fraction) => sent.push(fraction));
+    return { sent, reply };
+  }
+  /** Rising: each known fraction at least the one before it. */
+  const rising = (sent: Array<number | null>) => {
+    const known = sent.filter((f): f is number => f !== null);
+    return known.every((f, i) => i === 0 || f >= (known[i - 1] as number));
+  };
+  const LONG_SCRIPT = `Title: The Long Night\n\n${Array.from(
+    { length: 400 },
+    (_, i) =>
+      `INT. ROOM ${i} - NIGHT\n\nThe lamp gutters and the keeper waits.\n\nMARA\nStill here.\n`,
+  ).join('\n')}`;
+  const LONG_DOCUMENT = Array.from(
+    { length: 200 },
+    (_, i) => `## Part ${i}\n\nThe keeper climbs the stair and counts the lamps, one by one.`,
+  ).join('\n\n');
+
+  test('a script’s PDF starts unknown, rises as it draws, and ends at 1', async () => {
+    const { sent, reply } = await watch({ kind: 'pdf', source: LONG_SCRIPT, template });
+    expect(bytesOf(reply).length).toBeGreaterThan(0);
+    expect(sent[0]).toBeNull();
+    expect(sent.at(-1)).toBe(1);
+    expect(sent.some((f) => f !== null && f > 0 && f < 1)).toBe(true);
+    expect(rising(sent)).toBe(true);
+  });
+
+  test('a Markdown document’s PDF starts unknown, rises, and ends at 1', async () => {
+    const { sent, reply } = await watch(markdownPdf(LONG_DOCUMENT));
+    expect(bytesOf(reply).length).toBeGreaterThan(0);
+    expect(sent[0]).toBeNull();
+    expect(sent.at(-1)).toBe(1);
+    expect(sent.some((f) => f !== null && f > 0 && f < 1)).toBe(true);
+    expect(rising(sent)).toBe(true);
+  });
+
+  test('plain text and Final Draft say they are under way, and end at 1', async () => {
+    for (const kind of ['txt', 'fdx'] as const) {
+      const { sent } = await watch({ kind, source: SOURCE, template });
+      expect(sent, kind).toEqual([null, 1]);
+    }
+  });
+
+  test('a failed export sends no 1', async () => {
+    const exporter = createExporter(async () => {
+      throw new Error('no fonts');
+    });
+    const sent: Array<number | null> = [];
+    const reply = await exporter({ kind: 'pdf', source: SOURCE, template }, (f) => sent.push(f));
+    expect(reply).toEqual({ error: 'no fonts' });
+    expect(sent).not.toContain(1);
+  });
+});
+
 describe('the export worker, for a Markdown document', () => {
   // A fresh worker module each time, so each test sees whether it imports the parser.
   // It counts the worker's loads of the Markdown parser, which it imports on the first Markdown PDF.

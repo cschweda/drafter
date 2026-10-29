@@ -213,7 +213,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - The Script tab, with live pagination in a Web Worker.
 - The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
 - Saving like a desktop app: Save and Save As to a `.fountain` file, a warning before leaving with unsaved changes, and an always-on recovery copy in the browser, with a warning when the browser may clear it.
-- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF, plain text, and Final Draft (`.fdx`), which Open also reads. On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
+- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF, plain text, and Final Draft (`.fdx`), which Open also reads; a long export shows a progress bar with a percentage. On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
 - A template switcher for screenplay and stage play, and a sample script for each.
 - Phones and tablets, with one pane at a time on a phone.
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.

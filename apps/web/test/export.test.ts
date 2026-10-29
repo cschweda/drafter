@@ -119,11 +119,14 @@ describe('exporting', () => {
     // The colon is not allowed in a file name.
     expect(t.log).toEqual(['pick The Call Part 1.pdf pdf', 'render', 'write']);
     expect(t.written[0]?.data).toEqual(new Uint8Array([1]));
-    expect(render).toHaveBeenCalledWith({
-      kind: 'pdf',
-      source: TEXT,
-      template: builtins['us-screenplay'],
-    });
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'pdf',
+        source: TEXT,
+        template: builtins['us-screenplay'],
+      },
+      expect.any(Function),
+    );
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
   });
 
@@ -140,11 +143,14 @@ describe('exporting', () => {
     expect(await t.exportScript('fdx')).toBe('saved');
     expect(t.log).toEqual(['pick The Call Part 1.fdx fdx', 'write']);
     expect(t.written[0]?.data).toBe('<FinalDraft/>');
-    expect(render).toHaveBeenCalledWith({
-      kind: 'fdx',
-      source: TEXT,
-      template: builtins['us-screenplay'],
-    });
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'fdx',
+        source: TEXT,
+        template: builtins['us-screenplay'],
+      },
+      expect.any(Function),
+    );
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.fdx.');
   });
 
@@ -216,13 +222,16 @@ describe('exporting', () => {
     });
     expect(await t.exportScript('pdf')).toBe('saved');
     expect(t.log).toEqual(['pick The Treatment.pdf pdf', 'render', 'write']);
-    expect(render).toHaveBeenCalledWith({
-      kind: 'markdown-pdf',
-      source: shown.text,
-      paper: 'a4',
-      title: 'The Treatment',
-      lang: 'en-GB',
-    });
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'markdown-pdf',
+        source: shown.text,
+        paper: 'a4',
+        title: 'The Treatment',
+        lang: 'en-GB',
+      },
+      expect.any(Function),
+    );
     expect(t.written[0]?.data).toEqual(new Uint8Array([1]));
     expect(t.exportNotice.value).toBe('Exported The Treatment.pdf.');
   });
@@ -298,6 +307,67 @@ describe('exporting', () => {
     expect(t.exportError.value).toBe('Couldn’t export The Call Part 1.pdf: boom');
   });
 
+  test('shows how far a slow export is, and says each quarter it passes, once', async () => {
+    const t = await load({ inPlace: true });
+    let release: (() => void) | undefined;
+    let progress: ((fraction: number | null) => void) | undefined;
+    render.mockImplementationOnce(
+      (_request: unknown, onProgress: (fraction: number | null) => void) =>
+        new Promise((resolve) => {
+          progress = onProgress;
+          release = () => resolve(new Uint8Array([1]));
+        }),
+    );
+    const done = t.exportScript('pdf');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    progress?.(null);
+    progress?.(0.3);
+    // A quick export shows no bar.
+    expect(t.exportProgress.value).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(t.exportNotice.value).toBe('Exporting The Call Part 1.pdf…');
+    expect(t.exportProgress.value).toEqual({ name: 'The Call Part 1.pdf', fraction: 0.3 });
+    // The quarter it had passed before the bar showed isn't said.
+    expect(t.exportMilestone.value).toBe('');
+    progress?.(0.45);
+    expect(t.exportProgress.value?.fraction).toBe(0.45);
+    expect(t.exportMilestone.value).toBe('');
+    progress?.(0.52);
+    expect(t.exportMilestone.value).toBe('Export 50% done.');
+    // A stage that can't say how far it is: the bar moves without a number.
+    progress?.(null);
+    expect(t.exportProgress.value?.fraction).toBeNull();
+    progress?.(0.6);
+    expect(t.exportMilestone.value).toBe('Export 50% done.');
+    progress?.(0.9);
+    expect(t.exportMilestone.value).toBe('Export 75% done.');
+    progress?.(1);
+    release?.();
+    expect(await done).toBe('saved');
+    expect(t.exportProgress.value).toBeNull();
+    expect(t.exportMilestone.value).toBe('');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
+  });
+
+  test('takes the bar away when a slow export fails', async () => {
+    const t = await load({ inPlace: true });
+    let fail: (() => void) | undefined;
+    render.mockImplementationOnce(
+      (_request: unknown, onProgress: (fraction: number | null) => void) =>
+        new Promise((_, reject) => {
+          onProgress(0.6);
+          fail = () => reject(new Error('boom'));
+        }),
+    );
+    const done = t.exportScript('pdf');
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(t.exportProgress.value).toEqual({ name: 'The Call Part 1.pdf', fraction: 0.6 });
+    fail?.();
+    expect(await done).toBe('cancelled');
+    expect(t.exportProgress.value).toBeNull();
+    expect(t.exportMilestone.value).toBe('');
+  });
+
   test('does nothing when the picker is cancelled', async () => {
     const t = await load({ inPlace: true });
     t.control.cancel = true;
@@ -354,6 +424,51 @@ describe('exporting', () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
+  test('gives another script’s PDF its own export, after the one under way', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { fileName: 'The Call.fountain' };
+    let release: (() => void) | undefined;
+    render.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(new Uint8Array([1]));
+        }),
+    );
+    const first = t.exportScript('pdf');
+    await vi.waitFor(() => expect(release).toBeDefined());
+    // Another script is opened, and exported as a PDF too, while the first is drawn.
+    shown.text = OTHER;
+    shown.project = { fileName: 'The Crossing.fountain' };
+    const second = t.exportScript('pdf');
+    expect(second).not.toBe(first);
+    release?.();
+    expect(await first).toBe('saved');
+    expect(await second).toBe('saved');
+    expect(render).toHaveBeenCalledTimes(2);
+    expect(render.mock.calls.map(([request]) => (request as { source: string }).source)).toEqual([
+      TEXT,
+      OTHER,
+    ]);
+    expect(t.written.map((w) => w.name)).toEqual(['The Call Part 1.pdf', 'The Crossing.pdf']);
+  });
+
+  test('gives a Markdown PDF on other paper its own export', async () => {
+    const t = await load({ inPlace: true });
+    shown.kind = 'markdown';
+    shown.text = '# Notes\n\nWords.\n';
+    const letter = t.exportScript('pdf');
+    expect(t.exportScript('pdf')).toBe(letter);
+    preferences.markdownPaper = 'a4';
+    const a4 = t.exportScript('pdf');
+    expect(a4).not.toBe(letter);
+    await letter;
+    await a4;
+    expect(render.mock.calls.map(([request]) => (request as { paper: string }).paper)).toEqual([
+      'letter',
+      'a4',
+    ]);
+  });
+
   for (const kind of ['pdf', 'txt', 'fdx'] as const) {
     for (const [what, text] of [
       ['empty', ''],
@@ -385,7 +500,10 @@ describe('exporting', () => {
     busy.value = false;
     expect(await done).toBe('saved');
     expect(t.log[0]).toBe('pick The Crossing.txt txt');
-    expect(render).toHaveBeenCalledWith(expect.objectContaining({ source: OTHER }));
+    expect(render).toHaveBeenCalledWith(
+      expect.objectContaining({ source: OTHER }),
+      expect.any(Function),
+    );
     expect(t.exportNotice.value).toBe('Exported The Crossing.txt.');
   });
 
@@ -398,7 +516,10 @@ describe('exporting', () => {
     };
     await t.exportScript('txt');
     expect(t.log[0]).toBe('pick The Call Part 1.txt txt');
-    expect(render).toHaveBeenCalledWith(expect.objectContaining({ source: TEXT }));
+    expect(render).toHaveBeenCalledWith(
+      expect.objectContaining({ source: TEXT }),
+      expect.any(Function),
+    );
   });
 
   test('queues a different kind after the one under way, and produces both', async () => {

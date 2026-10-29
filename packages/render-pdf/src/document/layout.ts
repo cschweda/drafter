@@ -59,7 +59,15 @@ interface Bar {
  * bottom of its last. A link's fragment gives a link rectangle its line's height and an underline.
  * Pages are numbered at the foot (Call 18) when there are two or more.
  */
-export function layoutDocument(tree: DocNode, opts: { paper: Paper; measure: Measure }): DocLayout {
+export function layoutDocument(
+  tree: DocNode,
+  opts: {
+    paper: Paper;
+    measure: Measure;
+    /** Called with the blocks broken into lines so far, of all of them: 0 first, the total last. */
+    onProgress?: (done: number, total: number) => void;
+  },
+): DocLayout {
   const { width, height } = PAPER_POINTS[opts.paper];
   const margin = STYLE.margin;
   const textWidth = width - 2 * margin;
@@ -68,7 +76,12 @@ export function layoutDocument(tree: DocNode, opts: { paper: Paper; measure: Mea
 
   const blocks = documentBlocks(tree, textWidth);
   const missing = new Set<string>();
-  const lines = blocks.map((block) => wrapBlock(block, textWidth, opts.measure, missing));
+  opts.onProgress?.(0, blocks.length);
+  const lines = blocks.map((block, i) => {
+    const wrapped = wrapBlock(block, textWidth, opts.measure, missing);
+    opts.onProgress?.(i + 1, blocks.length);
+    return wrapped;
+  });
   const placed = paginate(
     blocks.map((block, i) => ({
       lines: lines[i] as DocLine[],

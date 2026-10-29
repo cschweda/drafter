@@ -5,6 +5,7 @@ import {
   type Face,
   fontMeasure,
   layoutDocument,
+  type RenderProgress,
   renderDocumentPdf,
 } from '@drafter/render-pdf';
 import type { Paper } from '@drafter/templates';
@@ -32,8 +33,15 @@ const FONT_NAMES: Record<Face, string> = {
   textBoldItalic: 'InterTight-SemiBoldItalic',
   code: 'CourierPrime-Regular',
 };
-const render = (source: string, opts: { paper?: Paper; title?: string; lang?: string } = {}) =>
-  renderDocumentPdf(md(source), { fonts: documentFonts, paper: 'letter', ...opts });
+const render = (
+  source: string,
+  opts: {
+    paper?: Paper;
+    title?: string;
+    lang?: string;
+    onProgress?: (progress: RenderProgress) => void;
+  } = {},
+) => renderDocumentPdf(md(source), { fonts: documentFonts, paper: 'letter', ...opts });
 const layout = (source: string, paper: Paper = 'letter') =>
   layoutDocument(md(source), { paper, measure });
 type TextDocItem = Extract<DocItem, { kind: 'text' }>;
@@ -463,6 +471,34 @@ describe('renderDocumentPdf', () => {
         expect(run.positions[i]?.xAdvance).toBe(glyph.advanceWidth);
       });
     }
+  });
+
+  it('reports its progress: the blocks laid out, the pages drawn, then the saving', async () => {
+    const source = Array.from(
+      { length: 120 },
+      (_, i) =>
+        `## Part ${i}\n\nThe keeper climbs the stair and counts the lamps, one by one, again.`,
+    ).join('\n\n');
+    const seen: RenderProgress[] = [];
+    const { bytes } = await render(source, { onProgress: (p) => seen.push({ ...p }) });
+    const pages = (await PDFDocument.load(bytes)).getPageCount();
+    expect(pages).toBeGreaterThan(2);
+    // The stages come in order, each counting up from 0 to its total.
+    const stages = seen.map((p) => p.stage).filter((s, i, all) => s !== all[i - 1]);
+    expect(stages).toEqual(['layout', 'draw', 'save']);
+    for (const stage of stages) {
+      const of = seen.filter((p) => p.stage === stage);
+      expect(of[0]?.done, stage).toBe(0);
+      expect(of.at(-1)?.done, stage).toBe(of[0]?.total);
+      expect(
+        of.every((p, i) => i === 0 || p.done >= (of[i - 1]?.done ?? 0)),
+        stage,
+      ).toBe(true);
+    }
+    // Layout by blocks (two a section), drawing by pages.
+    expect(seen.find((p) => p.stage === 'layout')?.total).toBe(240);
+    expect(seen.find((p) => p.stage === 'draw')?.total).toBe(pages);
+    expect(seen.at(-1)).toEqual({ stage: 'save', done: 1, total: 1 });
   });
 
   it('reports the characters its fonts lack', async () => {

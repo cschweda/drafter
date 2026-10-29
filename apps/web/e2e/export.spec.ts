@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -107,6 +107,52 @@ function longDocument(): string {
     );
   }
   return `${sections.join('\n\n')}\n`;
+}
+
+/** The screenplay sample, which `start` opens. */
+const SAMPLE = readFileSync(
+  new URL('../../../samples/screenplay.fountain', import.meta.url),
+  'utf8',
+);
+
+const progressBar = (page: Page) => page.locator('.toast').getByRole('progressbar');
+
+/**
+ * Records every value the export toast's bar takes (its `aria-valuenow`, or null while it can't
+ * say), from now on; `values()` answers them.
+ */
+async function recordProgress(page: Page) {
+  await page.evaluate(() => {
+    const seen: Array<string | null> = [];
+    (window as unknown as { __progress: typeof seen }).__progress = seen;
+    const note = () => {
+      const bar = document.querySelector('.toast [role="progressbar"]');
+      if (!bar) return;
+      const value = bar.getAttribute('aria-valuenow');
+      if (seen.at(-1) !== value) seen.push(value);
+    };
+    new MutationObserver(note).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['aria-valuenow'],
+    });
+  });
+  return {
+    values: () =>
+      page.evaluate(() => (window as unknown as { __progress: Array<string | null> }).__progress),
+  };
+}
+
+/** The numbers among `values`, which rise (never fall) and are more than one. */
+function expectRising(values: Array<string | null>) {
+  const numbers = values.filter((v): v is string => v !== null).map(Number);
+  expect(numbers.length, JSON.stringify(values)).toBeGreaterThan(1);
+  numbers.forEach((n, i) => {
+    expect(n).toBeGreaterThanOrEqual(i === 0 ? 0 : (numbers[i - 1] as number));
+  });
+  expect(numbers.at(-1) as number).toBeGreaterThan(numbers[0] as number);
+  expect(numbers.every((n) => n >= 0 && n <= 100)).toBe(true);
 }
 
 /** `drafter build --txt`'s output for the sample, which the browser's export must equal. */
@@ -327,9 +373,12 @@ test.describe('a Markdown document’s PDF', () => {
     // The editor draws only what is on screen; the window's title is the first heading.
     await expect(page).toHaveTitle(/The Long Document — Drafter$/);
     await exportButton(page).click();
+    const progress = await recordProgress(page);
     const download = page.waitForEvent('download', { timeout: 20_000 });
     const started = Date.now();
     await pdfItem(page).click();
+    // The toast says it's under way, with a bar named for the file.
+    await expect(progressBar(page)).toHaveAccessibleName('Exporting The Long Document.pdf');
     const file = await download;
     const ms = Date.now() - started;
     const pages = (await PDFDocument.load(await readFile(await file.path()))).getPageCount();
@@ -338,6 +387,56 @@ test.describe('a Markdown document’s PDF', () => {
     expect(pages).toBeGreaterThanOrEqual(100);
     expect(ms).toBeLessThan(20_000);
     await expect(ready(page)).toHaveText('Exported The Long Document.pdf.');
+    // The bar rose as the export went, and went with it.
+    expectRising(await progress.values());
+    await expect(progressBar(page)).toHaveCount(0);
+  });
+
+  test('shows a long screenplay’s export rising, with no motion when the writer asks for none', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, 'a long export is checked in Chromium');
+    test.setTimeout(60_000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await start(page);
+    // The sample, with its body forty times over: some 60 pages.
+    const body = SAMPLE.slice(SAMPLE.indexOf('# Act One'));
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText(`${SAMPLE}\n${`${body}\n`.repeat(40)}`);
+    // The fonts come slowly, as on a slow connection: the export's first stage can't say how far
+    // it is, and lasts long enough to watch.
+    await page.route('**/fonts/courier-prime/*.ttf', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      await route.continue();
+    });
+    await exportButton(page).click();
+    const progress = await recordProgress(page);
+    const download = page.waitForEvent('download', { timeout: 30_000 });
+    await pdfItem(page).click();
+    const bar = progressBar(page);
+    await expect(bar).toHaveAccessibleName('Exporting The Call.pdf');
+    await expect(bar).toHaveAttribute('aria-valuemin', '0');
+    await expect(bar).toHaveAttribute('aria-valuemax', '100');
+    // While the fonts come, the bar can't say how far it is: no number, and (reduced motion)
+    // nothing sweeps or slides; the bar only fills.
+    await expect(bar).not.toHaveAttribute('aria-valuenow', /./);
+    await expect(bar).toHaveAttribute('aria-valuetext', 'Under way');
+    const motion = await bar.evaluate((el) => {
+      const fill = getComputedStyle(el.firstElementChild as Element);
+      return { animation: fill.animationName, transition: fill.transitionDuration };
+    });
+    expect(motion).toEqual({ animation: 'none', transition: '0s' });
+    const file = await download;
+    const pages = (await PDFDocument.load(await readFile(await file.path()))).getPageCount();
+    expect(pages).toBeGreaterThan(50);
+    await expect(ready(page)).toHaveText('Exported The Call.pdf.');
+    const values = await progress.values();
+    expect(values[0]).toBeNull();
+    expectRising(values);
+    expect(values.at(-1)).toBe('100');
   });
 });
 

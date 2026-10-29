@@ -2,6 +2,7 @@ import type { Layout, LayoutRun, Page } from '@drafter/layout';
 import { CHAR_WIDTH_PT, LINE_HEIGHT_PT, PAPER_POINTS, type Template } from '@drafter/templates';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
+import type { RenderProgress } from './progress';
 import { drawable } from './text';
 
 /** Courier Prime's four styles, as font file bytes. */
@@ -54,7 +55,11 @@ const columns = (s: string) => {
 export async function renderPdf(
   layout: Layout,
   template: Template,
-  opts: { fonts: FontSet },
+  opts: {
+    fonts: FontSet;
+    /** Told how far the render is: the pages drawn, then the file saved. */
+    onProgress?: (progress: RenderProgress) => void;
+  },
 ): Promise<Uint8Array> {
   const missing = STYLES.filter((style) => !(opts?.fonts?.[style] instanceof Uint8Array));
   if (missing.length > 0) {
@@ -139,7 +144,10 @@ export async function renderPdf(
     layout.pages.length > 0
       ? layout.pages
       : [{ number: 1, lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
-  for (const page of pages) {
+  const report = (stage: RenderProgress['stage'], done: number, total: number) =>
+    opts.onProgress?.({ stage, done, total });
+  report('draw', 0, pages.length);
+  for (const [index, page] of pages.entries()) {
     const pdfPage = doc.addPage([paper.width, paper.height]);
     for (const [k, row] of page.lines.entries()) {
       for (const part of row.right ? [row, row.right] : [row]) {
@@ -161,6 +169,10 @@ export async function renderPdf(
     if (page.footer) {
       await drawText(pdfPage, plain(page.footer), 0, spec.height - 1 - spec.numbering.line);
     }
+    report('draw', index + 1, pages.length);
   }
-  return doc.save();
+  report('save', 0, 1);
+  const bytes = await doc.save();
+  report('save', 1, 1);
+  return bytes;
 }
