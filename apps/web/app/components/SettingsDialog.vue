@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { DICTIONARIES, SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
+import { HELP_PAGES, helpHref } from '~/commands/data';
 import { desktop } from '~/desktop';
 import { settingsOpen } from '~/settings/dialog';
 import { type Settings, TEXT_SIZES, useSettings } from '~/settings/settings';
@@ -47,6 +49,11 @@ const SWITCHES: Switch[] = [
     key: 'spellcheck',
     label: 'Spellcheck',
     why: 'Underline misspelled words in the Source pane, with Drafter’s own dictionary, which works offline.',
+  },
+  {
+    key: 'spellNotes',
+    label: 'Check notes and boneyard',
+    why: 'Check the spelling in notes and in the boneyard too. They never print, so Spellcheck skips them unless this is on.',
   },
   {
     key: 'strict',
@@ -108,6 +115,35 @@ const percent = (size: number) => `${Math.round(size * 100)}%`;
 function onSize(event: Event) {
   void set('textSize', Number((event.target as HTMLSelectElement).value));
 }
+
+// ---- Spelling (Plan D, Calls 3, 8, and 9) ----------------------------------------------------
+
+function onLanguage(event: Event) {
+  void set('spellLanguage', (event.target as HTMLSelectElement).value as SpellLanguage);
+}
+
+/** More words than this, and the heading says how many. */
+const LONG_LIST = 10;
+const mine = computed(() => settings.value.personalDictionary);
+
+/**
+ * Takes a word out of My dictionary; the spellcheck checks again at once, so it is marked again
+ * where it is misspelled. Focus goes to the Remove that takes its place, or the one before it, or
+ * to the line that says the list is empty.
+ */
+async function remove(index: number) {
+  await set(
+    'personalDictionary',
+    mine.value.filter((_, i) => i !== index),
+  );
+  await nextTick();
+  // In the switches' loop, where a template ref would be a list: found by id.
+  const buttons = dialog.value?.querySelectorAll<HTMLElement>('#settings-my-words button') ?? [];
+  const next = buttons[Math.min(index, buttons.length - 1)];
+  (next ?? dialog.value?.querySelector<HTMLElement>('#settings-no-words'))?.focus();
+}
+
+const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
 </script>
 
 <template>
@@ -134,7 +170,8 @@ function onSize(event: Event) {
         </option>
       </select>
     </div>
-    <div v-for="item in shown" :key="item.key" class="row">
+    <template v-for="item in shown" :key="item.key">
+    <div class="row">
       <div class="text">
         <label :for="`settings-${item.key}`" class="name">{{ item.label }}</label>
         <p :id="`settings-${item.key}-why`" class="why">{{ item.why }}</p>
@@ -149,6 +186,53 @@ function onSize(event: Event) {
         @change="set(item.key, ($event.target as HTMLInputElement).checked)"
       >
     </div>
+    <div v-if="item.key === 'spellcheck'" class="row">
+      <div class="text">
+        <label for="settings-spell-language" class="name">Spelling language</label>
+        <p id="settings-spell-language-why" class="why">
+          The dictionary Spellcheck uses. Both are built into Drafter.
+        </p>
+      </div>
+      <select
+        id="settings-spell-language"
+        class="size"
+        aria-describedby="settings-spell-language-why"
+        :value="settings.spellLanguage"
+        @change="onLanguage"
+      >
+        <option v-for="language in SPELL_LANGUAGES" :key="language" :value="language">
+          {{ DICTIONARIES[language].label }}
+        </option>
+      </select>
+    </div>
+    <div v-if="item.key === 'spellNotes'" class="dictionary">
+      <h3 id="settings-my-dictionary" class="name">
+        My dictionary<span v-if="mine.length > LONG_LIST" class="count">: {{ mine.length }} words</span>
+      </h3>
+      <p class="why">
+        The words you add with Add to my dictionary, known in every script in this browser and
+        never saved in a file. The dictionaries’ own licences are on the
+        <a v-if="licences" :href="helpHref(licences)" target="_blank" rel="noopener">{{ licences.title }}</a>
+        page.
+      </p>
+      <ul v-if="mine.length > 0" id="settings-my-words" class="words" aria-label="My dictionary">
+        <li v-for="(word, index) in mine" :key="word" class="word">
+          <span class="entry">{{ word }}</span>
+          <button
+            type="button"
+            class="btn"
+            :aria-label="`Remove ${word}`"
+            @click="remove(index)"
+          >
+            Remove
+          </button>
+        </li>
+      </ul>
+      <p v-else id="settings-no-words" class="why" tabindex="-1">
+        No words yet. A misspelled word’s menu has Add to my dictionary.
+      </p>
+    </div>
+    </template>
     <ModulesSettings />
     <div class="buttons">
       <button type="button" class="btn" @click="settingsOpen = false">Done</button>
@@ -250,6 +334,41 @@ h2 {
   .switch::after {
     background: CanvasText;
   }
+}
+.dictionary {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.dictionary h3 {
+  margin: 0;
+  font-size: inherit;
+}
+.count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.dictionary a {
+  color: var(--heading);
+  /* Told apart from the words around it by more than its color. */
+  text-decoration: underline;
+}
+.words {
+  max-height: 12rem;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.word {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+.entry {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .buttons {
   display: flex;

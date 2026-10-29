@@ -25,9 +25,15 @@ export interface SpellSessionApp {
   suggest(word: string): Promise<string[]>;
   /** The status bar's line after a failed load, once per visit. */
   problem: Readonly<Ref<string>>;
+  /**
+   * Resolves once the marks are for the text as it is now: a check waiting out its pause is sent
+   * at once, and the newest check's reply is awaited. At once while spellcheck is off or halted
+   * after a failed load, and when the newest check has its reply already.
+   */
+  settled(): Promise<void>;
 }
 
-const FAILED =
+export const FAILED =
   'Spellcheck couldn’t load its dictionary, so no words are marked. Everything else works.';
 
 let shared: SpellSessionApp | undefined;
@@ -49,6 +55,20 @@ function create(): SpellSessionApp {
   /** Whether this visit has said the dictionary failed: it says so once. */
   let said = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  /** A check is waiting out its pause. */
+  let queued = false;
+  /** The newest request whose reply has come (or never will: a failure, or the worker ended). */
+  let answered = 0;
+  /** Who is waiting for `settled`. */
+  let waiters: Array<() => void> = [];
+
+  /** Everyone waiting for the marks is told they are as settled as they'll be. */
+  function settle() {
+    answered = wanted;
+    const waiting = waiters;
+    waiters = [];
+    for (const resolve of waiting) resolve();
+  }
 
   function clearMarks() {
     const { view } = editor;
@@ -56,8 +76,9 @@ function create(): SpellSessionApp {
   }
 
   function onMarks(marks: Parameters<typeof mapSpellMarks>[0], seq: number) {
-    if (seq !== wanted || !since) return;
-    editor.view.dispatch({ effects: setSpellMarks.of(mapSpellMarks(marks, since)) });
+    if (seq !== wanted) return;
+    if (since) editor.view.dispatch({ effects: setSpellMarks.of(mapSpellMarks(marks, since)) });
+    settle();
   }
 
   function onState(next: SpellState) {
@@ -65,7 +86,9 @@ function create(): SpellSessionApp {
     if (next === 'failed') {
       halted = true;
       clearTimeout(timer);
+      queued = false;
       clearMarks();
+      settle();
       if (!said) {
         said = true;
         problem.value = FAILED;
@@ -78,6 +101,7 @@ function create(): SpellSessionApp {
   /** Sends the text as it is now (the client, made with no delay, posts it at once: the pause was taken here). */
   function request() {
     clearTimeout(timer);
+    queued = false;
     if (!client || halted) return;
     const { state: now } = editor.view;
     since = ChangeSet.empty(now.doc.length).desc;
@@ -110,10 +134,12 @@ function create(): SpellSessionApp {
   /** Ends the worker; the next `start` makes another. */
   function end() {
     clearTimeout(timer);
+    queued = false;
     client?.destroy();
     client = null;
     since = null;
     wanted = 0;
+    settle();
   }
 
   function stop() {
@@ -156,8 +182,16 @@ function create(): SpellSessionApp {
     if (since) since = since.composeDesc(changes.desc);
     if (halted) return;
     clearTimeout(timer);
+    queued = true;
     timer = setTimeout(request, SPELL_DEBOUNCE_MS);
   });
+
+  function settled(): Promise<void> {
+    if (!client || halted) return Promise.resolve();
+    if (queued) request();
+    if (answered === wanted) return Promise.resolve();
+    return new Promise((resolve) => waiters.push(resolve));
+  }
 
   void ready.then(() => {
     // The session lives for the visit, so its watchers belong to no component.
@@ -191,6 +225,7 @@ function create(): SpellSessionApp {
     state: readonly(state),
     suggest: (word) => client?.suggest(word) ?? Promise.resolve([]),
     problem: readonly(problem),
+    settled,
   };
 }
 

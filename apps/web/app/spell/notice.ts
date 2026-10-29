@@ -6,6 +6,8 @@ import { sayOutline } from '../outline/notice';
 export const NO_MARK_HERE = 'No misspelled word at the cursor.';
 export const NO_MARKS = 'No misspelled words.';
 export const SPELLCHECK_OFF = 'Spellcheck is off in Settings.';
+/** Check spelling with the setting off: it says so, and changes no setting. */
+export const CHECK_SPELLING_OFF = 'Spellcheck is off. Turn it on in Settings.';
 
 /** Says `message` once, politely. */
 export const saySpell = (message: string): Promise<void> => sayOutline(message);

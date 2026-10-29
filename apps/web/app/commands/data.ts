@@ -199,6 +199,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
   // The spelling menu's (Plan D): the last three act on the misspelled word at the cursor.
+  // Check spelling shows Problems on its Spelling group (Plan D, Call 13).
+  { id: 'check-spelling', title: 'Check spelling', group: 'Edit' },
   { id: 'spelling-suggestions', title: 'Spelling suggestions', group: 'Edit', keys: 'Mod-.' },
   {
     id: 'add-to-script-dictionary',

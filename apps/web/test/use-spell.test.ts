@@ -182,6 +182,52 @@ afterEach(() => {
 });
 
 describe('useSpell', () => {
+  test('settled sends a waiting check at once and waits for its reply', async () => {
+    const { useSpell, settings } = await modules();
+    const spell = useSpell();
+    await load(TEXT);
+    await settle(0);
+    const worker = FakeWorker.made[0] as FakeWorker;
+    worker.reply({ type: 'checked', seq: worker.checks()[0]?.seq, marks: [] });
+    // Answered: nothing to wait for.
+    let done = false;
+    void spell.settled().then(() => {
+      done = true;
+    });
+    await settle(0);
+    expect(done).toBe(true);
+
+    // An edit waits out its pause; settled doesn't: the text goes now.
+    editor.view.dispatch({ changes: { from: TEXT.length, insert: 'The dgo barks.\n' } });
+    const sent = worker.checks().length;
+    done = false;
+    void spell.settled().then(() => {
+      done = true;
+    });
+    await settle(0);
+    expect(worker.checks()).toHaveLength(sent + 1);
+    expect(done).toBe(false);
+    const text = editor.view.state.doc.toString();
+    worker.reply({
+      type: 'checked',
+      seq: worker.checks().at(-1)?.seq,
+      marks: marksIn(text, 'dgo'),
+    });
+    await settle(0);
+    expect(done).toBe(true);
+    expect(spellMarksOf(editor.view.state).map((m) => m.word)).toEqual(['dgo']);
+
+    // Off, it doesn't wait.
+    settings.value = { ...settings.value, spellcheck: false };
+    await settle(0);
+    done = false;
+    void spell.settled().then(() => {
+      done = true;
+    });
+    await settle(0);
+    expect(done).toBe(true);
+  });
+
   test('maps a late reply through the edits since', async () => {
     const { useSpell } = await modules();
     const spell = useSpell();

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
-import { setText } from './modules';
+import { setText, showSource } from './modules';
 
 // Phone sizes (Phase 1 design §12): the toolbar is icons below 1024px, and the template chip does not
 // fit among them, so the app menu holds the template choice. The icon toolbar plus the app menu is
@@ -308,4 +308,67 @@ test.describe('a template name that is long or hostile', () => {
       expect(dialogs).toEqual([]);
     });
   }
+});
+
+// The phone's Spelling button (Plan D, Call 15): on a narrow screen, where there is no right-click
+// and no Mod-., the element bar offers the spelling menu while the cursor is on a misspelled word.
+test.describe('the Spelling button', () => {
+  const bar = (page: Page) => page.getByRole('toolbar', { name: 'Element bar' });
+  const spelling = (page: Page) => bar(page).getByRole('button', { name: 'Spelling', exact: true });
+  const marks = (page: Page) => page.locator('.cm-misspelled');
+  const menu = (page: Page) => page.getByRole('menu', { name: 'Spelling suggestions' });
+  const MISSPELT = 'INT. HALL - DAY\n\nThe phnoe rings.\n';
+
+  test('the element bar shows Spelling on a misspelled word, and it opens the menu', async ({
+    page,
+  }) => {
+    await setText(page, MISSPELT);
+    await expect(marks(page)).toHaveText(['phnoe'], { timeout: 10_000 });
+    await expect(spelling(page)).toHaveCount(0);
+    await marks(page).first().click();
+    await expect(spelling(page)).toBeVisible();
+    // After the element buttons, before More.
+    const items = await bar(page)
+      .locator('[data-bar-item]')
+      .evaluateAll((all) => all.map((el) => (el as HTMLElement).dataset.barItem));
+    expect(items.slice(items.indexOf('element-transition'), items.indexOf('more') + 1)).toEqual([
+      'element-transition',
+      'spelling-suggestions',
+      'more',
+    ]);
+    await expect(spelling(page)).toHaveAccessibleDescription(
+      /^Suggestions for the misspelled word at the cursor, and adding it to a dictionary\./,
+    );
+    await spelling(page).click();
+    await expect(menu(page)).toBeVisible();
+    // By the button: the menu opens below it.
+    const [button, box] = await Promise.all([
+      spelling(page).boundingBox(),
+      menu(page).boundingBox(),
+    ]);
+    expect(box?.y).toBeGreaterThanOrEqual((button?.y ?? 0) + (button?.height ?? 0) - 1);
+    await menu(page).getByRole('menuitem', { name: 'phone', exact: true }).click();
+    await expect(menu(page)).toBeHidden();
+    await expect(editor(page)).toContainText('The phone rings.');
+    await expect(editor(page)).toBeFocused();
+    await expect(spelling(page)).toHaveCount(0);
+  });
+
+  test('no Spelling button on a correct word or on a wide screen', async ({ page }) => {
+    await setText(page, MISSPELT);
+    await expect(marks(page)).toHaveText(['phnoe'], { timeout: 10_000 });
+    await editor(page)
+      .getByText('The phnoe rings.')
+      .click({ position: { x: 2, y: 4 } });
+    await expect(bar(page)).toBeVisible();
+    await expect(spelling(page)).toHaveCount(0);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await showSource(page);
+    await marks(page).first().click();
+    await expect(bar(page)).toBeVisible();
+    await expect(spelling(page)).toHaveCount(0);
+    // The cursor is on the word: the keyboard's way to the menu is there instead.
+    await page.keyboard.press('ControlOrMeta+Period');
+    await expect(menu(page)).toBeVisible();
+  });
 });
