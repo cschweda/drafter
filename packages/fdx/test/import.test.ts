@@ -1169,3 +1169,53 @@ describe('fromFdx: review fixes for the Final Draft 13 shapes', () => {
     for (const n of [1, 2, 3, 4]) expect(result.text).toContain(`more words ${n}`);
   });
 });
+
+describe('fromFdx: stored text is read once, however often it is compared', () => {
+  // In each, the stored text and the number of things compared with it grow together, so reading
+  // the stored text again for each one would grow about 16 times from n to 4n.
+  it(
+    'compares duplicate Alt ids with the first in linear time',
+    () => {
+      const make = (n: number) =>
+        fdx(
+          P('Action', 'x'),
+          `<AltCollection><Alt Id="a"><Paragraph><Text>${'word '.repeat(n)}</Text></Paragraph></Alt>` +
+            `${'<Alt Id="a"/><Alt Id="a"><Text>w</Text></Alt>'.repeat(n / 10)}</AltCollection>`,
+        );
+      const { growth, large } = scaling(make, fromFdx, 20_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it(
+    "compares a scene's styled titles with its Title in linear time",
+    () => {
+      const make = (n: number) =>
+        fdx(
+          `<Paragraph Type="Scene Heading"><SceneProperties Title="${'word '.repeat(n)}">` +
+            `${'<AttributedTitle><Text>x</Text></AttributedTitle>'.repeat(n / 10)}</SceneProperties><Text>INT. A - DAY</Text></Paragraph>`,
+        );
+      const { growth, large } = scaling(make, fromFdx, 20_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('reads runs directly under an element as one line, and paragraphs as lines', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title="Hello there">' +
+          '<AttributedTitle>\n  <Text>Hel</Text>\n  <Text Style="Bold">lo</Text><Text> there</Text>\n</AttributedTitle>' +
+          '</SceneProperties><Text>INT. A - DAY</Text></Paragraph>',
+        '<ScriptNotes><ScriptNote Id="n1"><Text>Two </Text><Text>runs.</Text>' +
+          '<Paragraph><Text>A paragraph.</Text></Paragraph><Text>After</Text><Text>wards.</Text></ScriptNote></ScriptNotes>',
+      ),
+    );
+    expect(result.ignored).toContain('AttributedTitle');
+    expect(result.mapped).toEqual([{ type: 'Script note', count: 1 }]);
+    expect(result.text).toContain('[[fdx: Script note: Two runs. A paragraph. Afterwards.]]');
+  });
+});

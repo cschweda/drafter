@@ -92,15 +92,29 @@ const skipped = (name: string) => IGNORED.has(name) || name === 'Picture';
 const OUTLINE = /^Outline ([1-9])(?:\s|$)/;
 
 /**
- * All the text inside an element, each child on its own line: its paragraphs, and anything else it
- * holds beside them, so nothing in a note, an alternate, or a beat is left out.
+ * All the text inside an element, each paragraph on its own line, and what it holds beside its
+ * paragraphs (runs, other elements, text) kept too: what sits between two paragraphs is one line,
+ * its runs joined as they are, so nothing in a note, an alternate, or a beat is left out.
+ * Whitespace-only text between elements is indentation, not writing.
  */
 function paragraphsText(element: XmlElement): string {
-  return element.children
-    .map((c) => (typeof c === 'string' ? c : skipped(c.name) ? '' : textOf(c)))
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .join('\n');
+  const lines: string[] = [];
+  let line = '';
+  const end = () => {
+    if (line.trim() !== '') lines.push(line.trim());
+    line = '';
+  };
+  for (const c of element.children) {
+    if (typeof c === 'string') {
+      if (c.trim() !== '') line += c;
+    } else if (c.name === 'Paragraph') {
+      end();
+      line = textOf(c);
+      end();
+    } else if (!skipped(c.name)) line += textOf(c);
+  }
+  end();
+  return lines.join('\n');
 }
 
 /** Text with its runs of whitespace made one space, for comparing what reads the same. */
@@ -430,6 +444,8 @@ class Importer {
   private afterSpeech: string[] = [];
   /** The alternates of the file's `AltCollection`, by id, and the ids a paragraph has used. */
   private readonly alts = new Map<string, string>();
+  /** Each first alternate's text on one line, made once, to compare later ones with. */
+  private readonly altLines = new Map<string, string>();
   private readonly usedAlts = new Set<string>();
 
   run(root: XmlElement): FdxImport {
@@ -476,7 +492,10 @@ class Importer {
     for (const alt of collection.children) {
       if (typeof alt === 'string' || alt.name !== 'Alt') continue;
       const id = alt.attrs.Id;
-      if (id !== undefined && !this.alts.has(id)) this.alts.set(id, paragraphsText(alt));
+      if (id === undefined || this.alts.has(id)) continue;
+      const text = paragraphsText(alt);
+      this.alts.set(id, text);
+      this.altLines.set(id, oneLine(text));
     }
   }
 
@@ -494,7 +513,7 @@ class Importer {
       if (this.usedAlts.has(id)) continue;
       const text = this.alts.get(id);
       this.usedAlts.add(id);
-      if (text === undefined || text === '' || oneLine(text) === shown()) continue;
+      if (text === undefined || text === '' || this.altLines.get(id) === shown()) continue;
       this.count('Alternate');
       this.place(fdxNote(`Alternate: ${text}`));
     }
@@ -511,14 +530,14 @@ class Importer {
       if (typeof alt === 'string' || alt.name !== 'Alt') continue;
       const id = alt.attrs.Id;
       const text = paragraphsText(alt);
+      if (text === '') continue;
       if (id !== undefined) {
         const first = !seen.has(id);
         seen.add(id);
-        if (first ? this.usedAlts.has(id) : oneLine(text) === oneLine(this.alts.get(id) ?? ''))
-          continue;
+        // A duplicate is compared with the first's text as `collectAlts` made it, once, not again.
+        if (first ? this.usedAlts.has(id) : oneLine(text) === this.altLines.get(id)) continue;
         this.usedAlts.add(id);
       }
-      if (text === '') continue;
       this.flushSpeech();
       this.count('Alternate');
       this.push(fdxNote(`Alternate: ${text}`));
@@ -771,12 +790,15 @@ class Importer {
 
   /** What a `SceneProperties` holds besides its attributes has no place, so it comes in as notes. */
   private propertiesContent(properties: XmlElement) {
+    // The `Title` on one line, made once however many styled titles are compared with it.
+    let title: string | undefined;
     for (const child of properties.children) {
       if (typeof child === 'string') continue;
       if (child.name === 'AttributedTitle') {
         // The scene's title again, styled: nothing new when it reads as the `Title` (a synopsis).
         const text = oneLine(paragraphsText(child));
-        if (text === '' || text === oneLine(properties.attrs.Title ?? '')) this.ignore(child.name);
+        title ??= oneLine(properties.attrs.Title ?? '');
+        if (text === '' || text === title) this.ignore(child.name);
         else this.other(child);
       } else if (child.name === 'SceneArcBeats') {
         this.arcBeats(child);
