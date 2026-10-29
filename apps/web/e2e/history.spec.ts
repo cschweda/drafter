@@ -212,6 +212,54 @@ test.describe('History', () => {
     expect(await snapshotRows(page)).toEqual([]);
   });
 
+  for (const action of ['label', 'delete'] as const) {
+    test(`says so when a snapshot can’t be changed (${action})`, async ({ page }) => {
+      // Once `__breakSnapshots` is set, changing a snapshot's row fails as broken storage would.
+      await page.addInitScript(() => {
+        const broken = (store: IDBObjectStore) =>
+          store.name === 'snapshots' && (window as { __breakSnapshots?: boolean }).__breakSnapshots;
+        const { put, delete: remove } = IDBObjectStore.prototype;
+        IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args: [unknown]) {
+          if (broken(this)) throw new DOMException('The storage broke.', 'UnknownError');
+          return put.apply(this, args);
+        };
+        IDBObjectStore.prototype.delete = function (this: IDBObjectStore, ...args: [IDBValidKey]) {
+          if (broken(this)) throw new DOMException('The storage broke.', 'UnknownError');
+          return remove.apply(this, args);
+        };
+      });
+      const errors: Error[] = [];
+      page.on('pageerror', (error) => errors.push(error));
+      await start(page);
+      await newScreenplay(page);
+      await takeSnapshot(page);
+      await focusFirstRow(page);
+      await page.evaluate(() => {
+        (window as { __breakSnapshots?: boolean }).__breakSnapshots = true;
+      });
+      if (action === 'label') {
+        await page.keyboard.press('l');
+        const dialog = page.getByRole('dialog', { name: /^Label the snapshot from / });
+        await expect(dialog).toBeVisible();
+        await page.keyboard.insertText('Draft for Sam');
+        await page.keyboard.press('Enter');
+        await expect(dialog).toBeHidden();
+      } else {
+        await page.keyboard.press('Delete');
+        const ask = page.getByRole('dialog', { name: /^Delete the snapshot from .+\?$/ });
+        await expect(ask).toBeVisible();
+        await ask.getByRole('button', { name: 'Delete' }).click();
+        await expect(ask).toBeHidden();
+      }
+      await expect(said(page)).toHaveText('Couldn’t change the snapshot.');
+      // The list is read again: the snapshot is there, as it was.
+      await expect(options(page)).toHaveCount(1);
+      await expect(options(page).first()).toHaveAccessibleName(/, Taken by you, /);
+      await expect(options(page).first()).toBeFocused();
+      expect(errors).toEqual([]);
+    });
+  }
+
   test('restores a snapshot in one undo, after a snapshot of now', async ({ page }) => {
     await start(page);
     await newScreenplay(page);

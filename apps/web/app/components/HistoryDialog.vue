@@ -185,6 +185,8 @@ async function focusAfter(id: string, was: number) {
 // ---- Actions -----------------------------------------------------------------------------------
 
 const UNREADABLE = 'This snapshot can’t be read. It can only be deleted.';
+/** A label or a delete that the browser's storage didn't take. */
+const UNCHANGED = 'Couldn’t change the snapshot.';
 
 /** Says `message`, which the dialog's own status line shows too: the page behind is inert. */
 const tell = (message: string) => void sayOutline(message);
@@ -287,17 +289,21 @@ async function onLabelSave(typed: string) {
   const was = labelFor.value;
   if (!was) return;
   const when = snapshotTime(was.createdAt);
-  if (!(await snapshotNow(was.id))) {
-    tell(GONE);
-  } else if (historyReadOnly()) {
-    tell(historyReadOnly() as string);
-  } else {
-    await setSnapshotLabel(was.id, typed === '' ? null : typed);
-    tell(
-      typed === ''
-        ? `Took the label off the snapshot from ${when}.`
-        : `Labeled the snapshot from ${when} “${typed}”.`,
-    );
+  try {
+    if (!(await snapshotNow(was.id))) {
+      tell(GONE);
+    } else if (historyReadOnly()) {
+      tell(historyReadOnly() as string);
+    } else {
+      await setSnapshotLabel(was.id, typed === '' ? null : typed);
+      tell(
+        typed === ''
+          ? `Took the label off the snapshot from ${when}.`
+          : `Labeled the snapshot from ${when} “${typed}”.`,
+      );
+    }
+  } catch {
+    tell(UNCHANGED);
   }
   await load();
 }
@@ -359,17 +365,24 @@ async function confirmDelete() {
   askDialog.value?.close();
   if (!was) return;
   const when = snapshotTime(was.createdAt);
-  if (!(await snapshotNow(was.id))) tell(GONE);
-  else if (historyReadOnly()) tell(historyReadOnly() as string);
-  else {
-    await deleteSnapshot(was.id);
-    tell(`Deleted the snapshot from ${when}.`);
+  try {
+    if (!(await snapshotNow(was.id))) tell(GONE);
+    else if (historyReadOnly()) tell(historyReadOnly() as string);
+    else {
+      await deleteSnapshot(was.id);
+      tell(`Deleted the snapshot from ${when}.`);
+    }
+  } catch {
+    tell(UNCHANGED);
   }
   await load();
   await focusRow(askAt);
 }
 
 function onAskClose() {
+  // A dialog's close event comes a moment after it closes. By then it may be open again (Cancel,
+  // then Delete again at once), and that event is the earlier close's: the question stays.
+  if (askDialog.value?.open) return;
   const was = asking.value;
   asking.value = null;
   // Cancel, or Escape: back to the row.
