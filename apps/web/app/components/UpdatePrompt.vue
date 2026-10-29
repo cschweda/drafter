@@ -10,7 +10,8 @@ import {
   unsavedMessage,
 } from '~/update/flow';
 import { clear, later, useUpdateFlow } from '~/update/prompt';
-import { applyUpdate, installError, needRefresh, updateKind } from '~/update/state';
+import { installError, needRefresh, updateKind } from '~/update/state';
+import { takeUpdate } from '~/update/use-check';
 
 // "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload (Restart on the desktop app, Get it for a .deb), shown when the
 // service worker has a newer version waiting. It never reloads by itself. With changes that aren't
@@ -37,8 +38,7 @@ onBeforeUnmount(() => clearTimeout(timer));
 
 // A .deb only opens the release page: nothing to save first.
 function choose() {
-  if (updateKind.value === 'get') void applyUpdate();
-  else void flow.reload();
+  takeUpdate();
 }
 
 function putOff() {
@@ -51,6 +51,14 @@ const shown = computed(() => needRefresh.value && clear.value && !later.value);
 
 const reloadButton = ref<HTMLButtonElement>();
 const saveButton = ref<HTMLButtonElement>();
+
+// Reload chosen in Help → Check for updates, with changes unsaved: the question is what appears,
+// once that dialog has closed, and its first choice gets focus then.
+watch(shown, async (now) => {
+  if (!now || flow.stage.value !== 'confirm') return;
+  await nextTick();
+  saveButton.value?.focus();
+});
 
 // The question replaces the toast's buttons, so focus goes to its first choice; Cancel puts it
 // back on Reload.

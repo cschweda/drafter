@@ -24,11 +24,14 @@ import {
 } from '@drafter/cm-fountain';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
+import { aboutOpen } from '~/about/dialog';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
+import { firstSceneStart } from '~/editor/first-scene';
+import { SAMPLE_SCRIPTS } from '~/editor/sample-scripts';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
@@ -53,6 +56,7 @@ import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { requestTour } from '~/tour/state';
+import { updateCheckOpen } from '~/update/use-check';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { COMMAND_DATA, HELP_PAGES, helpHref, MARKDOWN_ACTIONS } from './data';
 import { openPalette, togglePalette } from './palette';
@@ -305,6 +309,38 @@ export function registerBuiltinCommands(): void {
         { run: () => void window.open(helpHref(page), '_blank') },
       ]),
     ),
+    // Help → Sample scripts: a tiny sample of each kind, as a new script of the writer's own with no file, opened
+    // unchanged (its text is where "changed" is measured from). The script that was open is kept, as for any switch.
+    ...Object.fromEntries(
+      SAMPLE_SCRIPTS.map((sample): [string, Behavior] => [
+        `sample-script-${sample.kind}`,
+        {
+          enabled: canStart,
+          run: quietly(async () => {
+            const made = await script.addScript(sample.text, {
+              kind: sample.kind === 'markdown' ? 'markdown' : 'fountain',
+              baseline: sample.text,
+              sampleScript: sample.kind,
+            });
+            await script.open(made.id);
+            // A screenplay starts where the story does, as the first visit does; the others at the top.
+            editor.goto(sample.kind === 'screenplay' ? firstSceneStart(sample.text) : 0);
+          }),
+        },
+      ]),
+    ),
+    // Help → Check for updates (the service worker's check on the web, the updater's in the desktop app), and
+    // About Drafter (the version, for a bug report, and the links). The desktop app's About Drafter runs this too.
+    'check-for-updates': {
+      run: () => {
+        updateCheckOpen.value = true;
+      },
+    },
+    'about-drafter': {
+      run: () => {
+        aboutOpen.value = true;
+      },
+    },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF, plain text, or a Final Draft file; a Markdown document as its Markdown file or plain text (a PDF of
     // one is deferred).

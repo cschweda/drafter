@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
 import { TOUR_ICONS } from './scripts/tour-icons.mjs';
+import { buildCommit, drafterVersion } from './scripts/version.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 /** The workspace packages, at the repository root. */
@@ -17,6 +18,10 @@ const TEST_MODULES = process.env.DRAFTER_TEST_MODULES === '1';
 // the desktop app's bridge. drafter.dev's build is unchanged.
 const DESKTOP = process.env.DRAFTER_DESKTOP === '1';
 const moduleIcons = await moduleIconNames(MODULES);
+// About Drafter (Help): the version (the desktop app's, which Electron reports there too) and the
+// commit being built, when git can say (scripts/version.mjs).
+const VERSION = drafterVersion();
+const COMMIT = buildCommit();
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
@@ -108,6 +113,9 @@ export default defineNuxtConfig({
     define: {
       __DRAFTER_TEST_MODULES__: JSON.stringify(TEST_MODULES),
       __DRAFTER_DESKTOP__: JSON.stringify(DESKTOP),
+      __DRAFTER_VERSION__: JSON.stringify(VERSION),
+      __DRAFTER_COMMIT__: JSON.stringify(COMMIT?.commit ?? ''),
+      __DRAFTER_COMMIT_DATE__: JSON.stringify(COMMIT?.date ?? ''),
     },
     plugins: [
       {

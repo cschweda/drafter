@@ -294,7 +294,8 @@ useDocsHead({
       <li>You can open a script by double-clicking a <code>.fountain</code> file.</li>
       <li>It has a menu bar.</li>
       <li>
-        Drafter checks for a new version when it starts (you can turn this off) and never installs
+        Drafter checks for a new version when it starts (you can turn this off), and whenever you
+        choose <strong>Help → Check for Updates…</strong>, and never installs
         it by itself: it offers <strong>Restart</strong> once the new version is downloaded, or
         <strong>Get it</strong>, the release page, where it can’t update itself.
       </li>

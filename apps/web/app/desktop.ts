@@ -108,6 +108,20 @@ export interface DesktopUpdatesBridge {
   openReleasePage(): void;
   /** Tells the desktop app whether Check for updates is on; it makes no request until it is. */
   setEnabled(on: boolean): void;
+  /**
+   * Help → Check for updates: checks now, whether or not the setting is on, and says what it
+   * found (`latest`; `found`, which is offered through `onAvailable` too; `downloading`, offered
+   * once it has downloaded; `off`, a build that can't check; `error`). Never rejects for a
+   * failed check: that is `error`.
+   */
+  check(): Promise<DesktopUpdateCheck>;
+}
+
+/** What a check the writer asked for found (apps/desktop/src/updates.ts `CheckResult`). */
+export interface DesktopUpdateCheck {
+  status: 'latest' | 'found' | 'downloading' | 'off' | 'error';
+  version?: string;
+  how?: 'restart' | 'get';
 }
 
 /** A module from the desktop app's modules folder, as its module.json describes it. */
@@ -142,6 +156,8 @@ export interface DesktopBridge {
   version: string;
   /** The operating system. */
   platform: DesktopPlatform;
+  /** The processor and the runtime, for About Drafter (`process.arch`, `process.versions`). */
+  runtime: { arch: string; electron: string; chrome: string };
   /** Files: the OS's dialogs, and reading and writing by path. */
   files: DesktopFilesBridge;
   /** The menu bar. */

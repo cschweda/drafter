@@ -196,7 +196,15 @@ export interface ScriptSession {
    */
   addScript(
     source: string,
-    format?: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind },
+    format?: {
+      lineBreak?: LineBreak;
+      bom?: boolean;
+      kind?: DocumentKind;
+      /** What "changed" is measured from until it has a file (so it can open unchanged). */
+      baseline?: string;
+      /** Made from one of Help's sample scripts (`Project.sampleScript`). */
+      sampleScript?: SampleKind;
+    },
   ): Promise<Project>;
   /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
   unbindFile(id: string): Promise<void>;
@@ -980,11 +988,19 @@ function create(): ScriptSession {
 
   async function addScript(
     source: string,
-    format: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind } = {},
+    format: {
+      lineBreak?: LineBreak;
+      bom?: boolean;
+      kind?: DocumentKind;
+      baseline?: string;
+      sampleScript?: SampleKind;
+    } = {},
   ): Promise<Project> {
     return createProject({
       source,
       ...(format.kind === undefined ? {} : { kind: format.kind }),
+      ...(format.baseline === undefined ? {} : { baseline: format.baseline }),
+      ...(format.sampleScript === undefined ? {} : { sampleScript: format.sampleScript }),
       ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
       ...(format.bom === undefined ? {} : { bom: format.bom }),
     });
