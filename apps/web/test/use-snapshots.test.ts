@@ -84,6 +84,8 @@ async function visit(options: { sample?: boolean } = {}) {
     session,
     taken,
     snapshotProblem: snapshots.snapshotProblem,
+    script,
+    createProject,
     readOnly: (useGuard() as unknown as { readOnly: { value: boolean } }).readOnly,
   };
 }
@@ -215,7 +217,10 @@ describe('the snapshot session', () => {
 
   test('says a failed snapshot once per visit', async () => {
     const { session, db, snapshotProblem } = await visit();
-    const put = vi.spyOn(db.snapshots, 'put').mockRejectedValue(new Error('IndexedDB is down'));
+    const full = () => Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+    const put = vi
+      .spyOn(db.snapshots, 'put')
+      .mockImplementation(() => Promise.reject(full()) as never);
     expect(snapshotProblem.value).toBe('');
     expect(await session.take()).toBe('failed');
     expect(snapshotProblem.value).toBe(
@@ -233,6 +238,34 @@ describe('the snapshot session', () => {
     expect(snapshotProblem.value).toBe('');
   });
 
+  test('says storage is full only when it is', async () => {
+    const { session, db, snapshotProblem } = await visit();
+    vi.spyOn(db.snapshots, 'put').mockRejectedValue(new Error('IndexedDB is down'));
+    expect(await session.take()).toBe('failed');
+    expect(snapshotProblem.value).toBe(
+      'Couldn’t keep a snapshot in this browser. Your script is safe, and saving still works.',
+    );
+  });
+
+  test('a script’s minutes of writing carry over when the writer switches away and back', async () => {
+    const { script, createProject, p, store } = await visit();
+    const b = await createProject({ source: 'EXT. YARD - NIGHT\n' });
+    // Six minutes on A, six on B, then four more on A: A's ten minutes are up, and B's aren't.
+    writeFor(0, 6 * MIN);
+    script.project.value = b;
+    writeFor(7 * MIN, 13 * MIN);
+    script.project.value = p;
+    writeFor(14 * MIN, 17 * MIN + 30 * SEC);
+    await settle();
+    expect(await store.listSnapshots(p.id)).toEqual([]);
+    vi.setSystemTime(T0 + 18 * MIN);
+    type('x');
+    await vi.waitFor(async () =>
+      expect((await store.listSnapshots(p.id)).map((s) => s.reason)).toEqual(['timed']),
+    );
+    expect(await store.listSnapshots(b.id)).toEqual([]);
+  });
+
   test('a failed snapshot never throws into the save', async () => {
     const { db, p, snapshotProblem } = await visit();
     vi.spyOn(db.snapshots, 'put').mockRejectedValue(new Error('IndexedDB is down'));
@@ -242,6 +275,10 @@ describe('the snapshot session', () => {
     expect(() =>
       record({ kind: 'saved', id: p.id, text: 'saved text', fileName: 'a.fountain' }),
     ).not.toThrow();
-    await vi.waitFor(() => expect(snapshotProblem.value).toMatch(/^Couldn’t keep a snapshot/));
+    await vi.waitFor(() =>
+      expect(snapshotProblem.value).toBe(
+        'Couldn’t keep a snapshot in this browser. Your script is safe, and saving still works.',
+      ),
+    );
   });
 });

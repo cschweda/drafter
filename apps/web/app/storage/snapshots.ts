@@ -117,6 +117,32 @@ async function take(
   }
 }
 
+/** What a take did, and for a failure, whether it was storage being full (Ruling 1: the status bar says which). */
+export interface TakeOutcome {
+  result: TakeResult;
+  /** The write failed with `QuotaExceededError`, also after thinning. */
+  full: boolean;
+}
+
+/** `takeSnapshot`, telling a full disk from any other failure. Never throws. */
+export async function keepSnapshot(
+  projectId: string,
+  text: string,
+  reason: SnapshotReason,
+  extra: { label?: string; detail?: string } = {},
+): Promise<TakeOutcome> {
+  try {
+    const result = await queued(projectId, async () => {
+      const result = await take(projectId, text, reason, extra);
+      if (result === 'taken') await thinSnapshots(projectId).catch(() => undefined);
+      return result;
+    });
+    return { result, full: false };
+  } catch (error) {
+    return { result: 'failed', full: isQuotaError(error) };
+  }
+}
+
 /** Adds a history snapshot unless `text` hashes to the newest one's ('same', as for a script that is gone); one take per project at a time; never throws. Thins after a take. */
 export async function takeSnapshot(
   projectId: string,
@@ -124,15 +150,7 @@ export async function takeSnapshot(
   reason: SnapshotReason,
   extra: { label?: string; detail?: string } = {},
 ): Promise<TakeResult> {
-  try {
-    return await queued(projectId, async () => {
-      const result = await take(projectId, text, reason, extra);
-      if (result === 'taken') await thinSnapshots(projectId).catch(() => undefined);
-      return result;
-    });
-  } catch {
-    return 'failed';
-  }
+  return (await keepSnapshot(projectId, text, reason, extra)).result;
 }
 
 function readable(row: Snapshot): boolean {

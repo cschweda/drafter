@@ -13,6 +13,7 @@ import {
 } from '../app/storage/projects';
 import {
   deleteSnapshot,
+  keepSnapshot,
   listSnapshots,
   setSnapshotLabel,
   snapshotText,
@@ -253,6 +254,19 @@ describe('the snapshot store', () => {
     spy.mockImplementation(() => Promise.reject(full()) as never);
     expect(await takeSnapshot(p.id, 'newer', 'timed')).toBe('failed');
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  test('says whether a failed take was storage being full', async () => {
+    const p = await createProject({ source: 'x' });
+    const full = () => Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+    const spy = vi
+      .spyOn(db.snapshots, 'put')
+      .mockImplementation(() => Promise.reject(full()) as never);
+    expect(await keepSnapshot(p.id, 'one', 'timed')).toEqual({ result: 'failed', full: true });
+    spy.mockImplementation(() => Promise.reject(new Error('IndexedDB is down')) as never);
+    expect(await keepSnapshot(p.id, 'two', 'timed')).toEqual({ result: 'failed', full: false });
+    spy.mockRestore();
+    expect(await keepSnapshot(p.id, 'three', 'timed')).toEqual({ result: 'taken', full: false });
   });
 
   test('thinning keeps the snapshot of the last save', async () => {

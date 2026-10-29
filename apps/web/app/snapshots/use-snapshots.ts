@@ -3,8 +3,8 @@ import { useEditor } from '../editor/session';
 import { writersEdit } from '../stats/writing';
 import { useGuard } from '../storage/guard';
 import { useScript } from '../storage/script';
-import { type SnapshotReason, type TakeResult, takeSnapshot } from '../storage/snapshots';
-import { createSnapshotSchedule } from './schedule';
+import { keepSnapshot, type SnapshotReason, type TakeResult } from '../storage/snapshots';
+import { createSnapshotSchedule, type SnapshotSchedule } from './schedule';
 
 // Taking snapshots as the writer works (Phase 2 design §11.1, technical design §8.4): every 10
 // minutes of active writing (Call 7), on every save to a file, on opening a file (Call 3), on Take
@@ -27,8 +27,10 @@ export interface SnapshotSession {
 /** The status bar's line after a failed write, once per visit; empty after a take works. */
 export const snapshotProblem: Ref<string> = ref('');
 
-const PROBLEM =
+const FULL =
   'Couldn’t keep a snapshot: this browser’s storage is full. Your script is safe, and saving still works.';
+const FAILED =
+  'Couldn’t keep a snapshot in this browser. Your script is safe, and saving still works.';
 const NO_SCRIPT = 'No script is open yet.';
 const SAMPLE =
   'Snapshots aren’t kept for a sample. Save it to a file, and it becomes a script of your own that keeps them.';
@@ -43,8 +45,16 @@ function create(): SnapshotSession {
   const script = useScript();
   const guard = useGuard();
   const version = shallowRef(0);
-  /** The open script's schedule: a switch of script starts the count again. */
-  let schedule = createSnapshotSchedule();
+  /** Each script's schedule, kept for the visit, so minutes written on it carry over a switch away and back. */
+  const schedules = new Map<string, SnapshotSchedule>();
+  const scheduleOf = (id: string) => {
+    let schedule = schedules.get(id);
+    if (!schedule) {
+      schedule = createSnapshotSchedule();
+      schedules.set(id, schedule);
+    }
+    return schedule;
+  };
 
   const notKept = computed(() => {
     const open = script.project.value;
@@ -64,13 +74,14 @@ function create(): SnapshotSession {
     reason: SnapshotReason,
     extra: { label?: string; detail?: string } = {},
   ): Promise<TakeResult> {
-    // Any snapshot of the open script starts the count again, so no timed one follows a save.
-    if (id === script.project.value?.id) schedule.taken();
-    return takeSnapshot(id, captured, reason, extra)
-      .catch((): TakeResult => 'failed')
-      .then((result) => {
+    // Any snapshot of a script starts its count again, so no timed one follows a save.
+    scheduleOf(id).taken();
+    return keepSnapshot(id, captured, reason, extra)
+      .catch(() => ({ result: 'failed' as const, full: false }))
+      .then(({ result, full }) => {
         if (result === 'failed') {
-          if (!said) snapshotProblem.value = PROBLEM;
+          // Storage full only when it is (Ruling 1).
+          if (!said) snapshotProblem.value = full ? FULL : FAILED;
           said = true;
         } else if (result === 'taken') snapshotProblem.value = '';
         version.value++;
@@ -83,6 +94,7 @@ function create(): SnapshotSession {
     if (!transactions.some(writersEdit)) return;
     const id = kept();
     if (id === null) return;
+    const schedule = scheduleOf(id);
     schedule.edit(Date.now());
     if (schedule.due()) void keep(id, text(), 'timed');
   });
@@ -103,20 +115,24 @@ function create(): SnapshotSession {
   effectScope(true).run(() => {
     watch(
       () => script.project.value?.id,
-      () => {
-        schedule.end();
-        schedule = createSnapshotSchedule();
+      (_, last) => {
+        // The stretch on the script left ends; its minutes wait there for the writer's return.
+        if (last) schedules.get(last)?.end();
         version.value++;
       },
       { flush: 'sync' },
     );
   });
   // Hiding or closing the page ends the stretch at its last edit.
+  const endOpen = () => {
+    const id = script.project.value?.id;
+    if (id) schedules.get(id)?.end();
+  };
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) schedule.end();
+      if (document.hidden) endOpen();
     });
-    window.addEventListener('pagehide', () => schedule.end());
+    window.addEventListener('pagehide', endOpen);
   }
 
   return {
