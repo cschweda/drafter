@@ -116,6 +116,38 @@ describe('exporting', () => {
     expect(t.written[0]?.data).toBe('text');
   });
 
+  test('exports a Final Draft file under an .fdx name, rendered in the worker', async () => {
+    const t = await load({ inPlace: true });
+    render.mockResolvedValue('<FinalDraft/>');
+    expect(await t.exportScript('fdx')).toBe('saved');
+    expect(t.log).toEqual(['pick The Call Part 1.fdx fdx', 'write']);
+    expect(t.written[0]?.data).toBe('<FinalDraft/>');
+    expect(render).toHaveBeenCalledWith({
+      kind: 'fdx',
+      source: TEXT,
+      template: builtins['us-screenplay'],
+    });
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.fdx.');
+  });
+
+  test('downloads a Final Draft file as XML where the browser has no picker', async () => {
+    const t = await load({ inPlace: false });
+    expect(await t.exportScript('fdx')).toBe('saved');
+    expect(t.log).toEqual(['download The Call Part 1.fdx application/xml']);
+  });
+
+  test('says only a screenplay or a stage play exports as Final Draft, before any picker', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = '# The Treatment\n';
+    shown.kind = 'markdown';
+    expect(await t.exportScript('fdx')).toBe('cancelled');
+    expect(t.exportError.value).toBe(
+      'Only a screenplay or a stage play exports as a Final Draft file.',
+    );
+    expect(t.log).toEqual([]);
+    expect(render).not.toHaveBeenCalled();
+  });
+
   test('exports a Markdown document as its own text, as .md or .txt, with no rendering', async () => {
     const t = await load({ inPlace: true });
     shown.text = '# The Treatment\n\nWords.\n';
@@ -219,7 +251,7 @@ describe('exporting', () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
-  for (const kind of ['pdf', 'txt'] as const) {
+  for (const kind of ['pdf', 'txt', 'fdx'] as const) {
     for (const [what, text] of [
       ['empty', ''],
       ['only blank lines', '\n\n  \n\n'],

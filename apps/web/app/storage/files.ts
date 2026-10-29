@@ -43,7 +43,7 @@ export class FileProblemError extends Error {
   }
 }
 
-export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'txt';
+export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'txt' | 'fdx';
 
 export interface FileAccess {
   /** Save writes back to the file it came from (Chromium's API; a desktop version: always). */
@@ -101,6 +101,7 @@ const TYPES: Record<FileKind, PickerOptions['types']> = {
   ],
   txt: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }],
   pdf: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
+  fdx: [{ description: 'Final Draft file', accept: { 'application/xml': ['.fdx'] } }],
 };
 
 const isAbort = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
@@ -122,7 +123,7 @@ function pickWithInput(): Promise<PickedFile | null> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.fountain,.txt,.md,.markdown,text/plain,text/markdown';
+    input.accept = '.fountain,.txt,.md,.markdown,.fdx,text/plain,text/markdown';
     input.hidden = true;
     const done = () => input.remove();
     input.addEventListener('change', () => {
@@ -155,8 +156,13 @@ export const browserFiles: FileAccess = {
       const [handle] = await show.call(window, {
         types: [
           {
-            description: 'Fountain script, Markdown document, or text',
-            accept: { 'text/plain': ['.fountain', '.txt'], 'text/markdown': ['.md', '.markdown'] },
+            description: 'Fountain script, Markdown document, text, or Final Draft file',
+            accept: {
+              'text/plain': ['.fountain', '.txt'],
+              'text/markdown': ['.md', '.markdown'],
+              // Imported as a new script (storage/open.ts), never saved back to.
+              'application/xml': ['.fdx'],
+            },
           },
         ],
       });

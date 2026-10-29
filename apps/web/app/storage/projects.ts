@@ -6,7 +6,7 @@ import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
 import { db } from './db';
 import type { FileRef } from './files';
-import { fileBaseName, titleOf } from './text';
+import { fileBaseName, titleFileOf, titleOf } from './text';
 
 export interface Project {
   id: string; // crypto.randomUUID()
@@ -44,6 +44,12 @@ export interface Project {
   baseline?: string;
   /** The file's name, for the Source pane's slim bar. */
   fileName?: string;
+  /**
+   * The Final Draft file a script was imported from (`The Call.fdx`): a script with no title is
+   * called after it until it has a file of its own. Never written to, and not the script's file.
+   * Unindexed, so it needed no new version.
+   */
+  importedFrom?: string;
   fsHandleId?: string;
 }
 
@@ -86,7 +92,7 @@ export async function createProject(
     lineBreak: '\n',
     kind: 'fountain',
     ...init,
-    ...derive(init.source, init.fileName, init.kind),
+    ...derive(init.source, titleFileOf(init), init.kind),
     id: crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
@@ -124,7 +130,7 @@ export async function updateProject(
         ? {}
         : derive(
             patch.source,
-            patch.fileName ?? current.fileName,
+            patch.fileName ?? titleFileOf(current),
             kindOf({ ...current, ...patch }),
           )),
       id,
@@ -153,7 +159,7 @@ export async function writeSource(
     const next: Project = {
       ...base,
       ...fields,
-      ...derive(source, base.fileName, kindOf(base)),
+      ...derive(source, titleFileOf(base), kindOf(base)),
       source,
       updatedAt: Date.now(),
     };

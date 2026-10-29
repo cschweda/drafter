@@ -1,3 +1,4 @@
+import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
@@ -5,7 +6,7 @@ import { renderText } from '@drafter/render-text';
 import type { Template } from '@drafter/templates';
 
 /** What the main thread sends the export worker: the whole text, and the template to lay it out with. */
-export type ExportRequest = { kind: 'pdf' | 'txt'; source: string; template: Template };
+export type ExportRequest = { kind: 'pdf' | 'txt' | 'fdx'; source: string; template: Template };
 export type ExportReply = { data: Uint8Array | string } | { error: string };
 
 /** Where the app serves Courier Prime (the same files the PDF embeds). */
@@ -28,9 +29,10 @@ export async function fetchFonts(
 }
 
 /**
- * Parses, paginates, and renders one request: what `drafter build --pdf` and `--txt` do. The
- * fonts are loaded by the first PDF and kept; a failed load is tried again next time. An error is
- * a reply, so the worker never throws.
+ * Parses, paginates, and renders one request: what `drafter build --pdf` and `--txt` do. A Final
+ * Draft file is the parsed script as `toFdx` writes it, with no pages. The fonts are loaded by the
+ * first PDF and kept; a failed load is tried again next time. An error is a reply, so the worker
+ * never throws.
  */
 export function createExporter(loadFonts: () => Promise<FontSet> = fetchFonts) {
   let fonts: Promise<FontSet> | undefined;
@@ -44,6 +46,7 @@ export function createExporter(loadFonts: () => Promise<FontSet> = fetchFonts) {
 
   return async ({ kind, source, template }: ExportRequest): Promise<ExportReply> => {
     try {
+      if (kind === 'fdx') return { data: toFdx(parse(source), template) };
       const layout = paginate(parse(source), template);
       if (kind === 'txt') return { data: renderText(layout, template) };
       return { data: await renderPdf(layout, template, { fonts: await fontsOnce() }) };

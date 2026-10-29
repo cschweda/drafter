@@ -93,16 +93,19 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
   });
 });
 
-// A Fountain script exports as a PDF or plain text; a Markdown document as its Markdown file or
-// plain text. (The PDF and Markdown commands are off in the other kind, and the palette hides
-// them; here the other kind's item is left out.)
+// A Fountain script exports as a PDF, plain text, or a Final Draft file; a Markdown document as its
+// Markdown file or plain text. (The PDF, Final Draft, and Markdown commands are off in the other
+// kind, and the palette hides them; here the other kind's items are left out.)
 const exportIds = computed(() =>
-  editor.kind.value === 'markdown' ? ['export-md', 'export-txt'] : ['export-pdf', 'export-txt'],
+  editor.kind.value === 'markdown'
+    ? ['export-md', 'export-txt']
+    : ['export-pdf', 'export-txt', 'export-fdx'],
 );
 const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',
   'export-md': 'i-lucide-file-output',
   'export-txt': 'i-lucide-file-type',
+  'export-fdx': 'i-lucide-file-code',
 };
 
 // Help: the group at the end of the menu. Take the tour is first (always on), then the help pages

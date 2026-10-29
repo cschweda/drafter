@@ -5,23 +5,27 @@ import { renderExport } from './export-client';
 import { useFiles } from './files';
 import { timedSay } from './say';
 import { useScript } from './script';
-import { encodeFile, fileBaseName, fileNameFor, titleOf } from './text';
+import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './text';
 import { whenIdle } from './turn';
 
 /**
- * Export to PDF or plain text (Phase 1 design §9.7). The text is laid out and drawn in a worker,
- * and saved only through `useFiles()`: where the browser has a save picker it asks where, else
- * the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
+ * Export to PDF, plain text, or Final Draft (Phase 1 design §9.7; Phase 2 design §22). The text
+ * is laid out and drawn in a worker, and saved only through `useFiles()`: where the browser has a
+ * save picker it asks where, else the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
  * Export menu, the app menu, and the palette run them.
  */
 
 /**
- * `pdf` and `txt` are a screenplay's or a stage play's; a Markdown document's are `md` (the
- * Markdown file) and `txt` (the same text, as a plain text file). PDF for Markdown is deferred.
+ * `pdf`, `txt`, and `fdx` (a Final Draft file) are a screenplay's or a stage play's; a Markdown
+ * document's are `md` (the Markdown file) and `txt` (the same text, as a plain text file). PDF for
+ * Markdown is deferred.
  */
-export type ExportKind = 'pdf' | 'txt' | 'md';
+export type ExportKind = 'pdf' | 'txt' | 'md' | 'fdx';
 
-/** "Exported The Call.pdf.": a toast, and a live region. Empty after a few seconds. */
+/**
+ * "Exported The Call.pdf.": a toast, and a live region. Empty after a few seconds. An import says
+ * what came in here too ("Imported “The Call.fdx”.", `storage/open.ts`).
+ */
 export const exportNotice = ref('');
 /** "Couldn’t export The Call.pdf: …": a toast, and an alert. Empty after a few seconds. */
 export const exportError = ref('');
@@ -35,8 +39,21 @@ const MIME: Record<ExportKind, string> = {
   pdf: 'application/pdf',
   txt: 'text/plain',
   md: 'text/markdown',
+  fdx: 'application/xml',
 };
-const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md' } as const;
+const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md', fdx: '.fdx' } as const;
+
+/** Why a kind of export doesn't apply to the open script, or null when it does. */
+function notFor(kind: ExportKind, markdown: boolean): string | null {
+  if (markdown && kind === 'pdf') {
+    return 'A PDF of a Markdown document isn’t available yet. Export the Markdown file or plain text.';
+  }
+  if (markdown && kind === 'fdx') {
+    return 'Only a screenplay or a stage play exports as a Final Draft file.';
+  }
+  if (!markdown && kind === 'md') return 'Only a Markdown document exports as a Markdown file.';
+  return null;
+}
 
 async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   const files = useFiles();
@@ -49,7 +66,7 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
   // A document with no title is called after its file, as the project's own title is.
-  const fallback = fileBaseName(script.project.value?.fileName);
+  const fallback = fileBaseName(titleFileOf(script.project.value));
   const title = markdown
     ? (markdownTitle(source) ?? fallback)
     : titleOf(editor.doc.value, fallback);
@@ -58,12 +75,9 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   exportError.value = '';
   try {
     // The menu offers only what applies; a command or a stale menu can still ask for the other.
-    if (markdown ? kind === 'pdf' : kind === 'md') {
-      await announceError(
-        markdown
-          ? 'A PDF of a Markdown document isn’t available yet. Export the Markdown file or plain text.'
-          : 'Only a Markdown document exports as a Markdown file.',
-      );
+    const refusal = notFor(kind, markdown);
+    if (refusal) {
+      await announceError(refusal);
       return 'cancelled';
     }
     // Nothing to put on a page: say so before a picker or a file.
@@ -85,7 +99,7 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
           script.project.value?.lineBreak ?? '\n',
           script.project.value?.bom ?? false,
         )
-      : await renderExport({ kind: kind as 'pdf' | 'txt', source, template });
+      : await renderExport({ kind: kind as 'pdf' | 'txt' | 'fdx', source, template });
     if (target) await files.write(target, data);
     else files.download(name, data, MIME[kind]);
     await announceReady(`Exported ${target?.name ?? name}.`);
@@ -95,6 +109,12 @@ async function run(kind: ExportKind): Promise<'saved' | 'cancelled'> {
     await announceError(`Couldn’t export ${name}${why}`);
     return 'cancelled';
   }
+}
+
+/** Says `message` in the Export toast, as a finished export does (an import's "Imported …"). */
+export function sayInToast(message: string): Promise<void> {
+  exportError.value = '';
+  return announceReady(message);
 }
 
 let last: { kind: ExportKind; done: Promise<'saved' | 'cancelled'> } | undefined;

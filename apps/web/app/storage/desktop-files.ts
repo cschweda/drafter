@@ -6,6 +6,7 @@
  * with no permission to ask for again. `files.ts` installs it when `desktop()` has a bridge.
  */
 import type { DesktopFilesBridge, DesktopSaveExtension } from '../desktop';
+import { isFinalDraftName } from '../markdown/kind';
 import {
   type FileAccess,
   FileGoneError,
@@ -25,6 +26,7 @@ const EXTENSION: Record<FileKind, DesktopSaveExtension> = {
   markdown: '.md',
   txt: '.txt',
   pdf: '.pdf',
+  fdx: '.fdx',
 };
 
 /**
@@ -117,7 +119,12 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
         ref: null,
         name: ref.name,
         ...file,
-        notice: `“${ref.name}” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.`,
+        // A Final Draft file is imported, and the import says what came in (storage/open.ts).
+        ...(isFinalDraftName(ref.name)
+          ? {}
+          : {
+              notice: `“${ref.name}” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.`,
+            }),
       };
     }
     return { ref, name: ref.name, ...file };

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, test } from 'vitest';
-import { kindOfFileName, NEW_MARKDOWN } from '../app/markdown/kind';
+import { isFinalDraftName, kindOfFileName, NEW_MARKDOWN } from '../app/markdown/kind';
 import { parseMarkdown } from '../app/markdown/parse';
 import { previewDelay } from '../app/markdown/preview';
 import { renderMarkdown } from '../app/markdown/render';
@@ -165,6 +165,14 @@ describe('documents and files', () => {
     expect(kindOfFileName('script.txt')).toBe('fountain');
     expect(kindOfFileName('md')).toBe('fountain');
     expect(kindOfFileName(undefined)).toBe('fountain');
+  });
+
+  test('knows a Final Draft file by its name: an import, not a kind of document', () => {
+    expect(isFinalDraftName('The Call.fdx')).toBe(true);
+    expect(isFinalDraftName('THE CALL.FDX')).toBe(true);
+    expect(isFinalDraftName('The Call.fdx.fountain')).toBe(false);
+    expect(isFinalDraftName('fdx')).toBe(false);
+    expect(isFinalDraftName(undefined)).toBe(false);
   });
 
   test('starts a new document with a title and a blank line', () => {

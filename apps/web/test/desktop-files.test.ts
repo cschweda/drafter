@@ -147,6 +147,22 @@ describe('desktopFiles', () => {
     expect(script?.notice).toBeUndefined();
   });
 
+  test('opens a Final Draft file unbound, with no notice: the import says what came in', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    put(fake, '/home/w/The Call.fdx', '<FinalDraft/>');
+    const picked = await files.fromPath?.('/home/w/The Call.fdx');
+    expect(picked).toMatchObject({ ref: null, name: 'The Call.fdx' });
+    expect(picked?.notice).toBeUndefined();
+    // Exported as one, through a Save dialog that offers .fdx.
+    fake.answers.push('/home/w/The Call.fdx');
+    expect(await files.pickToSave('The Call.fdx', 'fdx')).toEqual({
+      name: 'The Call.fdx',
+      path: '/home/w/The Call.fdx',
+    });
+    expect(fake.asked.save).toEqual([{ name: 'The Call.fdx', extension: '.fdx' }]);
+  });
+
   test('says whether it was reading or writing that was not allowed', async () => {
     const fake = fakeBridge();
     const files = desktopFiles(fake.bridge);

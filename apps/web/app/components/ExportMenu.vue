@@ -6,7 +6,7 @@ import { type ExportKind, exportError, exportNotice } from '~/storage/export';
 // A Markdown document exports as its Markdown file or as plain text; a PDF of one is deferred.
 const { kind } = useEditor();
 
-// The toolbar's Export menu (Phase 1 design §9.7): PDF and plain text (a Markdown document's are the Markdown file and plain text). The trigger is the toolbar's
+// The toolbar's Export menu (Phase 1 design §9.7): PDF, plain text, and Final Draft (a Markdown document's are the Markdown file and plain text). The trigger is the toolbar's
 // Export button, drawn by the toolbar and given through the slot. Each item runs the export's
 // command (`commands/builtin.ts`), as the app menu and the palette do. The toast says when the file is ready, or why it isn't.
 const open = ref(false);
@@ -93,6 +93,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       </button>
       <button type="button" class="item" @click="choose('txt')">
         <UIcon name="i-lucide-file-type" class="icon" />Plain text (.txt)
+      </button>
+      <button v-if="kind !== 'markdown'" type="button" class="item" @click="choose('fdx')">
+        <UIcon name="i-lucide-file-code" class="icon" />Final Draft (.fdx)
       </button>
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseTreatment">
         <UIcon name="i-lucide-list-tree" class="icon" />Treatment (.md)…
