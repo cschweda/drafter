@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-29
+
+**Final Draft files checked against a real one, a Help menu, and panes that line up.** Drafter's Final Draft import was checked against a real Final Draft 13 sample. A Final Draft outline now comes in as Drafter's own sections and synopses, its notes, alternates, arc beats, and beat cards as notes, and an embedded picture is no longer pasted in as junk; import is hardened against hostile files and drops nothing silently. A new **Help** menu has **About Drafter** (your version and links to the project), **Sample scripts** (tiny originals for a screenplay, a stage play, and Markdown), and **Check for updates…**. Side by side, both panes' text starts at the same height, and writing at the end of a script in a short window keeps your line in view in the Script pane.
+
 ### Added
 
 - Tests: `@drafter/fdx` has a synthetic Final Draft test set (`packages/fdx/test/fixtures/realistic/`), standing in for real files until the maintainer can supply them. Four files in the shape of a Final Draft file, written by hand with original text and invented values, from the element names the technical design documents, without consulting any real `.fdx` file, Final Draft, or converter: a short film (scene numbers, synopses and scene titles, styled runs with formatting attributes import should ignore, a page break, dual dialogue, shots, a title page, script notes, and a few settings blocks after the script); edge cases (a byte order mark, CRLF line endings, accented and astral characters, entities and character references, empty and blank paragraphs, lines that would read as another kind, markup characters in the text, paragraph types and elements Drafter has no element for, text in unexpected places, a 5,000-character paragraph, and markup nested inside a run); a revised draft (revision marks, revision sets, locked scene numbers such as 12A and A16, OMITTED scenes); and a stage play. `realistic.test.ts` checks that each imports and prints back exactly, that every piece of writing in the file is in the script or a `[[fdx: …]]` note as many times as the file holds it, that settings are listed as ignored and never noted, that the kinds, scene numbers, synopses, dual dialogue, and title page come through, that export, import, export is stable, and the short film's whole imported text; a generated 120-page feature imports in well under 3 seconds (well under a tenth of a second here). Byte-identical copies of the short film and the stage play are in `samples/fdx/` to try Open on. A fifth file, `fd13-shapes.fdx`, has the shapes a real Final Draft 13 file showed (outline paragraphs, summaries, notes, a picture and its image, alternates, arc beats, beat cards, script notes with writers, and the settings blocks), all with invented text; the nothing-dropped check counts beats, alternates, arc beats, and notes too.
@@ -663,7 +667,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/cschweda/drafter/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/cschweda/drafter/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/cschweda/drafter/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/cschweda/drafter/compare/v0.10.0...v0.11.0
