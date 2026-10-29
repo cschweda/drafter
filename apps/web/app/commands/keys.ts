@@ -48,7 +48,8 @@ export function formatKeys(keys: string, apple: boolean): string {
 /**
  * Whether `event` is the key `keys` names: its modifiers are exactly those named, and its key is
  * the one named. With Alt held a letter or digit is read from the physical key (`code`), because
- * Option on a Mac types another character (Option+N is a dead key).
+ * Option on a Mac types another character (Option+N is a dead key). Off a Mac, Ctrl+Alt is also
+ * AltGr, so when it types some other character (ó on a Polish layout) the key is left to type it.
  */
 export function matchesKey(event: KeyboardEvent, keys: string, apple: boolean): boolean {
   const { modifiers, key } = parse(keys);
@@ -58,6 +59,10 @@ export function matchesKey(event: KeyboardEvent, keys: string, apple: boolean): 
   if (event.altKey !== has('Alt')) return false;
   if (event.shiftKey !== has('Shift')) return false;
   if (event.altKey && /^[a-z0-9]$/i.test(key)) {
+    if (!apple && event.ctrlKey) {
+      if (event.getModifierState?.('AltGraph')) return false;
+      if (event.key.length === 1 && event.key.toLowerCase() !== key.toLowerCase()) return false;
+    }
     return event.code === (/^[0-9]$/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`);
   }
   return event.key.toLowerCase() === key.toLowerCase();

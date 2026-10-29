@@ -39,7 +39,7 @@ let detachSync: (() => void) | undefined;
 /**
  * Publishes the page at the pane's top for the Structure strip's in-view marker (Call 29), once a
  * frame at most: the source offset at the top, its block, and that block's page. Nothing while the
- * strip is off; it publishes once when the strip is turned on.
+ * strip is off (and the page is cleared); it publishes once when the strip is turned on.
  */
 let topFrame = 0;
 function publishTop() {
@@ -129,7 +129,14 @@ watch([layout, layoutTemplate], draw);
 watch(
   () => settings.value.structureStrip,
   (on) => {
-    if (on) publishTop();
+    if (on) {
+      publishTop();
+      return;
+    }
+    // Off, the marker is forgotten, so turning the strip on again never shows a stale page.
+    cancelAnimationFrame(topFrame);
+    topFrame = 0;
+    scriptTopPage.value = null;
   },
 );
 watch([zoom, () => settings.value.textSize], () => applyZoom());

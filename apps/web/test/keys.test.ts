@@ -60,6 +60,28 @@ describe('matchesKey', () => {
     ).toBe(true);
   });
 
+  test('lets AltGr type its letter instead of taking Ctrl+Alt off a Mac', () => {
+    // On Windows AltGr is Ctrl+Alt, so AltGr+O on a Polish layout types ó with both held.
+    const altGr = (key: string, code: string, extra: KeyboardEventInit = {}) =>
+      press({ key, code, ctrlKey: true, altKey: true, ...extra });
+    expect(matchesKey(altGr('ó', 'KeyO'), 'Mod-Alt-o', false)).toBe(false);
+    expect(matchesKey(altGr('ń', 'KeyN'), 'Mod-Alt-n', false)).toBe(false);
+    expect(matchesKey(altGr('o', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
+    expect(matchesKey(altGr('O', 'KeyO', { shiftKey: true }), 'Mod-Alt-Shift-o', false)).toBe(true);
+    expect(matchesKey(altGr('1', 'Digit1'), 'Mod-Alt-1', false)).toBe(true);
+    // A browser that reports AltGr itself is believed, whatever the key says.
+    const reported = altGr('o', 'KeyO');
+    Object.defineProperty(reported, 'getModifierState', {
+      value: (name: string) => name === 'AltGraph',
+    });
+    expect(matchesKey(reported, 'Mod-Alt-o', false)).toBe(false);
+  });
+
+  test('still reads Option+O on a Mac by its physical key', () => {
+    const event = press({ key: 'ø', code: 'KeyO', metaKey: true, altKey: true });
+    expect(matchesKey(event, 'Mod-Alt-o', true)).toBe(true);
+  });
+
   test('matches a key with no modifier', () => {
     expect(matchesKey(press({ key: 'F8' }), 'F8', false)).toBe(true);
     expect(matchesKey(press({ key: 'F8', shiftKey: true }), 'F8', false)).toBe(false);

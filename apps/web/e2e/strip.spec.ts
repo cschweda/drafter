@@ -679,10 +679,71 @@ test.describe('on a phone', () => {
     await start(page);
     await expect(editor(page)).toContainText('The Call');
     await expect(strip(page)).toHaveCount(0);
+    // The button is there, but the phone's styles hide it.
+    const button = page.getByRole('banner').locator('.act.structure');
+    await expect(button).toHaveCount(1);
+    await expect(button).toHaveCSS('display', 'none');
     await expect(structureButton(page)).toBeHidden();
     // The key does nothing there, and the setting stays as it was (Call 16).
     await pressToggle(page);
     await expect(strip(page)).toHaveCount(0);
     expect((await stored(page)).structureStrip).toBe(true);
+  });
+});
+
+// The Structure button is the fifth action, so at the narrowest wide screen the toolbar must still
+// fit one row: the template chip gives way first, cut short with an ellipsis.
+test.describe('the toolbar at 1024 px', () => {
+  test.beforeEach(() => {
+    test.skip(test.info().project.name.startsWith('phone'), 'a phone has the icon toolbar');
+  });
+
+  async function fitsOneRow(page: Page) {
+    const fit = await page.evaluate(() => {
+      const toolbar = document.querySelector('header.toolbar') as HTMLElement;
+      const controls = Array.from(toolbar.querySelectorAll<HTMLElement>('.act, .chip')).filter(
+        (el) => el.offsetParent !== null,
+      );
+      const boxes = controls.map((el) => el.getBoundingClientRect());
+      return {
+        page: document.documentElement.scrollWidth,
+        width: innerWidth,
+        toolbar: [toolbar.scrollWidth, toolbar.clientWidth],
+        right: Math.max(...boxes.map((b) => b.right)),
+        tallest: Math.max(...boxes.map((b) => b.height)),
+        tops: boxes.map((b) => Math.round(b.top + b.height / 2)),
+      };
+    });
+    expect(fit.page).toBeLessThanOrEqual(fit.width);
+    expect(fit.toolbar[0]).toBeLessThanOrEqual(fit.toolbar[1] as number);
+    expect(fit.right).toBeLessThanOrEqual(fit.width);
+    // One row: no control's label wraps, and every control sits on the same line.
+    expect(fit.tallest).toBeLessThanOrEqual(30);
+    expect(Math.max(...fit.tops) - Math.min(...fit.tops)).toBeLessThanOrEqual(2);
+  }
+
+  test('keeps the toolbar on one row in a Markdown document', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await start(page);
+    await newMarkdown(page);
+    await expect(structureButton(page)).toHaveAttribute('aria-disabled', 'true');
+    await fitsOneRow(page);
+    // The chip is cut short on screen, but its name is whole.
+    await expect(page.getByRole('banner').locator('.chip.template')).toHaveAccessibleName(
+      /^Document: /,
+    );
+  });
+
+  test('keeps the toolbar on one row for a fallback screenplay', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await start(page);
+    await setText(
+      page,
+      'INT. HALL - DAY\n\nShe waits.\n\n/* drafter\n{"v":1,"template":"my-own"}\n*/\n',
+    );
+    const chip = page.getByRole('banner').locator('.chip.template');
+    await expect(chip).toHaveText('Screenplay (fallback)');
+    await fitsOneRow(page);
+    await expect(chip).toHaveAccessibleName('Template: Screenplay (fallback)');
   });
 });

@@ -163,7 +163,7 @@ const ACTIONS = [
         :aria-label="chipLabel"
         data-tour="template"
       >
-        {{ templateName }}
+        <span class="name">{{ templateName }}</span>
       </button>
     </MenuButton>
     <span class="spacer" />
@@ -271,6 +271,16 @@ const ACTIONS = [
   white-space: nowrap;
   cursor: pointer;
 }
+/* The chip gives way first when the toolbar is short of room, cut short on screen; its name is whole. */
+.chip.template {
+  min-width: 0;
+}
+.chip.template .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .chip[aria-disabled="true"] {
   color: var(--muted);
   cursor: not-allowed;
@@ -283,6 +293,14 @@ kbd {
 }
 .spacer {
   flex: 1;
+}
+
+/* Five actions and a long chip need a little less space between them until 1200px. */
+@media (max-width: 1199.98px) {
+  .toolbar,
+  .actions {
+    gap: 10px;
+  }
 }
 
 /* One pane, and a toolbar of icons, below 1024px. */

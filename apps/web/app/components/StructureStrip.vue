@@ -178,7 +178,7 @@ const card = computed(() => {
   const block = rows.value.flatMap((row) => row.blocks).find((b) => b.id === id);
   if (!block) return null;
   const item = items.value.get(id);
-  return { id, lines: item ? cardLines(item) : [block.name] };
+  return { id, lines: item ? cardLines(item) : [block.name], style: block.style };
 });
 
 function showCard(id: string) {
@@ -199,10 +199,8 @@ function onBlur(id: string) {
 
 /** The card's block and where that block is: the card is measured only when one of them changes. */
 const cardPlace = computed(() => {
-  const id = cardFor.value;
-  if (!id || !card.value) return null;
-  const block = rows.value.flatMap((row) => row.blocks).find((b) => b.id === id);
-  return block ? `${id}|${block.style.left}|${block.style.width}` : null;
+  const shown = card.value;
+  return shown ? `${shown.id}|${shown.style.left}|${shown.style.width}` : null;
 });
 
 // Under its block, its left edge at the block's, moved in so it never passes the strip's edges.
