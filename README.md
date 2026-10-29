@@ -141,7 +141,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis and color edits | 2 |
 | `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
 | `@drafter/stats` | Script statistics | 2 |
-| `@drafter/fdx` | Final Draft (`.fdx`) import and export | 3 |
+| `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 |
 
 Planned repository layout:
 
@@ -157,17 +157,18 @@ drafter/
 
 ## Roadmap
 
-The ordering principle: the reasons to choose Drafter must be on screen at the first public release. That's why the Problems pane, the stage-play template, and accessibility come early, and Final Draft, radio, and TV formats come later.
+The ordering principle: the reasons to choose Drafter must be on screen at the first public release. That's why the Problems pane, the stage-play template, and accessibility come early, Final Draft files follow the outline, and radio and TV formats come later.
 
 | Phase | Theme | Status |
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev** (v0.9.0), with the desktop app for Linux and Windows; a signed macOS download comes later |
-| [2](#phase-2--structure) | Structure: outline, cards, beat board, storylines, snapshots, spellcheck, screen-reader testing | Planned |
-| [3](#phase-3--formats) | Formats: Final Draft and other imports; TV, radio, UK, and novel templates; user templates | Planned |
+| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | Planned |
+| [3](#phase-3--formats) | Formats: other apps' imports; TV, radio, UK, and novel templates; user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
 | [Later](#later) | Open from and save to Dropbox and Google Drive directly | Planned |
+| [Last](#last--testing-with-nvda-and-voiceover) | Testing with NVDA and VoiceOver, after every phase is built | Planned |
 
 ### Phase 0 — Engine (no UI)
 
@@ -210,22 +211,22 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
 - Deployment to drafter.dev.
 
-**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. Testing with NVDA and VoiceOver follows in Phase 2. The [Phase 1 design](docs/drafter-phase1-design.md) has the details.
+**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. Testing with NVDA and VoiceOver comes last, after every phase is built. The [Phase 1 design](docs/drafter-phase1-design.md) has the details.
 
 ### Phase 2 — Structure
 
 - Outline, Cards, and Notes tabs, where every change is an edit to the source.
+- Final Draft `.fdx` import and export (moved up from Phase 3), with nothing dropped silently on import.
 - A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
 - Condense to outline and expand from outline, plus scene reordering with a keyboard equivalent for every drag.
 - Snapshots with a retention schedule, and a Compare view that renders two snapshots as script pages with changed lines marked.
 - The Stats tab, including screen time per character and who shares scenes with whom.
-- Writing statistics by day, kept on your device.
+- Writing statistics by day, kept on your device (shipped in v0.5.0).
 - Spellcheck with nspell and a per-script dictionary that knows your character names.
 - The built-in Reference tab.
-- Testing with NVDA and VoiceOver.
 - A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there.
-- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three-act, Save the Cat, five-act) laid over it as suggestions, never rules.
+- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.
 - A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
 - Scene goals: optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes and shown on the cards and the map.
 - Setups and payoffs: mark a setup, link it to its payoff, and see the setups that never pay off.
@@ -234,7 +235,6 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 ### Phase 3 — Formats
 
-- Final Draft `.fdx` import and export.
 - Import from Highland, Fade In, and Celtx.
 - TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
 - User-added templates, dropped in as JSON, and template export.
@@ -268,6 +268,10 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 ### Later
 
 - Open from and save to Dropbox and Google Drive directly. You sign in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server.
+
+### Last — Testing with NVDA and VoiceOver
+
+After every phase is built, the whole app is tested with NVDA on Windows and VoiceOver. Until then every view is built for screen readers and checked automatically (axe, keyboard-only tests, and the accessibility tree), and Drafter claims no conformance with any standard. The [Phase 2 design](docs/drafter-phase2-design.md) (§20) has the reasoning.
 
 **Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
 
@@ -464,7 +468,7 @@ Drafter's permitted sources:
 | The [Fountain specification](https://fountain.io/syntax) | What each element of a script is, and how it's written in plain text |
 | Industry formatting conventions for screenplays and stage plays | Margins, indents, `(MORE)` and `(CONT'D)`, title pages, and the rest of what a page looks like |
 | General software engineering | Parsing, line breaking, pagination, and browser storage, all common knowledge |
-| `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 3) |
+| `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 2) |
 | Other applications, used as a writer uses them | Their documentation, and comparing their output with Drafter's |
 | [Courier Prime](https://fonts.google.com/specimen/Courier+Prime) | The typeface: a font under the SIL Open Font License, not code |
 
@@ -496,7 +500,7 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 - **Work from the specification, never from another implementation.** That includes a quick look at how another app splits dialogue or detects a title page. If you've studied another screenwriting application's source in the past, say so in your pull request, so a reviewer can take extra care, and write from the specification, not from memory.
 - **When the specification is silent, decide and write it down.** Add a dated entry to `docs/DECISIONS.md`, and a fixture or test that pins the behavior. Comparing Drafter's output with another app's is fine; reproducing its code or its test cases isn't.
 - **Expect small differences from other tools.** Where the specification is ambiguous, Drafter may read a file differently from another tool. That's a documented decision, not a bug to fix by imitation, and the file stays standard Fountain either way.
-- **Final Draft support comes from the files.** Phase 3's `.fdx` import and export will be built from the XML structure of files a user owns, not from another program's converter.
+- **Final Draft support comes from the files.** Phase 2's `.fdx` import and export will be built from the XML structure of files a user owns, not from another program's converter.
 - **Dependencies stay out of the domain.** No Fountain parsers and no screenwriting libraries, ever. A new dependency gets an entry in `docs/DEPENDENCIES.md` first, saying why it's needed and confirming it isn't screenwriting-related.
 - **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
 - **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.
@@ -541,6 +545,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Technical design](docs/drafter-technical-design.md): how each package works, from the parser and pagination to storage, linting, accessibility, security, and testing.
 - [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md): the self-contained brief for building the engine.
 - [Phase 1 design](docs/drafter-phase1-design.md): the first public release, from the first visit and its guided tour to the editor, saving, export, focus mode, and phones, with mockups in [`docs/phase1/`](docs/phase1/).
+- [Phase 2 design](docs/drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 

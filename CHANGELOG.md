@@ -6,6 +6,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/outline`, a new package: the scene index of a script (Phase 2 design §5.1). It lists the scenes in order, in either template (a screenplay's headings, a play's `##` scenes inside its acts), with the sections that hold them, each scene's synopses, color note, speakers, words, and, from a layout of the same text, its page and length in eighths.
+- `@drafter/outline`: moving a scene or a section (with its scenes and deeper sections) up, down, or after any other, as two text changes for one undo. The preamble, the metadata block, locked scene numbers, and a scene's closing transition stay as they should, and a move moved back restores the text exactly (property-tested).
+- `@drafter/outline`: a scene's synopsis and color, written in its header as `= …` and `[[Color: blue]]` (Phase 2 design §5.4). A color travels with its scene through renames and moves, and neither ever changes the printed pages (property-tested).
+- `@drafter/outline`: a treatment of the script as Markdown (sections, scene headings, synopses, and, as an option, each scene's first paragraph of action); Expand outline, which turns `=` lines and `- ` lists into scene stubs; and a screenplay made from a Markdown outline.
+- `@drafter/cm-fountain`: `sceneIds`, an id for each scene heading and section while the script is open, kept as the writer types and carried with a scene that Drafter moves (`sceneMoved`). Ids are never saved.
+- `@drafter/lint`: `stub-heading` (info) lists every scene still holding the stand-in heading that Expand outline writes, `INT. LOCATION - DAY` (in a play, `## New scene`).
+
+- `apps/web`: **the Outline tab.** Your script's sections and scenes as a tree, each scene with its number, heading, first synopsis, color, page and length, and who speaks. Filter it by heading, synopsis, or character; press Enter or click to go to a scene; edit a synopsis in place; give a scene a color, which is written into the scene as `[[Color: blue]]` and never prints. It works fully from the keyboard (arrow keys, Home and End, typing to jump), and a screen reader reads it as a tree.
+- `apps/web`: **moving scenes and sections.** Alt+Up and Alt+Down on an Outline row, its menu's Move up, Move down, and Move to…, dragging it, and **Move scene up** and **Move scene down** for the scene holding the cursor. The scene's whole text moves, notes and all; one undo puts it back; focus stays on the moved row, and a screen reader hears where it went.
+- `apps/web`: **Condense to outline** folds every scene to its heading and synopsis and shows the Outline beside the Source; **Expand all** unfolds them.
+- `apps/web`: **Export as treatment…** (Export menu, File menu, palette): the outline as a Markdown file, with each scene's first paragraph of action if you like, or opened as a new Markdown document.
+- `apps/web`: **Expand outline** turns the `=` lines and `- ` lists you've selected (or the whole script's) into scene stubs, `INT. LOCATION - DAY` with the line as its synopsis, in one undo; **New screenplay from this outline** does the same for a Markdown outline, as a new screenplay. Problems lists every stub still waiting for its real heading.
+- Tests: axe checks every state the Outline adds (the tree, a row's menu and colors, Move to…, the treatment dialog, the tabs' More menu, a read-only tab), in both themes, at desktop and phone width, on every run.
+
+### Fixed
+
+- `@drafter/outline`, `apps/web`: a `/*` closed only by the metadata block's `*/` (or not at all) could let a scene's span hold the metadata block, and a move carry it into the script. While a `/*` is stray the Outline changes nothing and says why. Moves leave alone a scene or section whose heading isn't set off by a blank line.
+- `apps/web`: **Expand outline** now works on the selection only, keeps a section's own synopsis as one, and keeps a line's notes and boneyard as they are.
+- `apps/web`: undoing a move from the Outline (Mod+Z works there now) keeps focus on the scene's row; the Outline's menus and Move to… act on the scene as it is when you choose, not as it was when they opened; typing a longer name to jump stays on the row it found; a `$` in a Markdown outline's title is kept in the new screenplay's title.
+- `apps/web`: typing with the Outline showing is about three times faster on a long script.
+- `@drafter/outline`: taking out a color typed inside a line leaves the spaces around it, so the line prints as before.
+- Tests: the element bar's hide test waits for the setting to be stored before it reloads, which it sometimes didn't (it failed about one run in twelve); a unit test for moving scenes closes the editors it makes, so they don't measure after the test has ended.
+
+### Changed
+
+- `apps/web`: each pane's tab row is Source, Script, Problems, and **Outline**, then one place for another tab (a module's), and a **More** menu for the rest, so the row never runs off a phone's screen. A tab chosen from More takes that place. A Markdown document has no Outline tab.
+- Docs: Final Draft `.fdx` import and export moves up from Phase 3 to Phase 2, as the release right after the Outline (v0.11.0); the Phase 2 design has its plan, the later plans each move up one minor version, and the README and architecture roadmaps list it under Phase 2 (decided 2026-10-28).
+- Docs: the Phase 2 design's one open question is decided (2026-10-28): a scene's color is a `[[Color: blue]]` line in the scene's header, not an entry in the metadata block. The README, the architecture, the technical design, and the Phase 1 design say so, and say that testing with NVDA and VoiceOver comes last, after every phase is built. The plan for Phase 2's first release, the Outline, is in `docs/plans/`.
+
 ## [0.9.0] - 2026-10-28
 
 **The accessibility pass.** Every major state of Drafter, from the first visit and the tour to each dialog, menu, and help page, is checked with axe in both themes at desktop and phone width, and those checks now run with every test run. What they found is fixed: text contrast, menus that hid the page from screen readers, Tab in an open menu, small targets on a phone, scrolling areas a keyboard couldn't reach, and links in help text told apart by colour alone. A **Skip to the editor** link is the first Tab stop. Testing with NVDA and VoiceOver comes later, and Drafter claims no conformance until it's done.

@@ -2,7 +2,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { COMMAND_DATA } from '../app/commands/data';
 import { installDesktopMenu, menuCommands } from '../app/commands/desktop-menu';
-import { type Command, clearCommands, registerCommands } from '../app/commands/registry';
+import {
+  type Command,
+  clearCommands,
+  registerCommands,
+  useCommands,
+} from '../app/commands/registry';
 import type { DesktopBridge, DesktopMenuCommand } from '../app/desktop';
 
 function command(id: string, extra: Partial<Command> = {}): Command {
@@ -178,5 +183,34 @@ describe('installDesktopMenu', () => {
     on = true;
     vi.advanceTimersByTime(3000);
     expect(t.sent).toHaveLength(1);
+  });
+});
+
+describe('the Outline in the desktop menus', () => {
+  test('puts the outline commands in the File, Edit, and View menus', () => {
+    const ids = [
+      'show-outline',
+      'condense',
+      'expand-all',
+      'move-scene-up',
+      'move-scene-down',
+      'expand-outline',
+      'export-treatment',
+      'screenplay-from-outline',
+    ];
+    registerCommands(ids.map((id) => command(id)));
+    const groups = Object.fromEntries(
+      menuCommands(useCommands().value).map((c) => [c.id, c.group]),
+    );
+    expect(groups).toEqual({
+      'show-outline': 'View',
+      condense: 'View',
+      'expand-all': 'View',
+      'move-scene-up': 'Edit',
+      'move-scene-down': 'Edit',
+      'expand-outline': 'Edit',
+      'export-treatment': 'File',
+      'screenplay-from-outline': 'File',
+    });
   });
 });

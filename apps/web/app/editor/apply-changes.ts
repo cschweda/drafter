@@ -1,7 +1,17 @@
 import { isolateHistory } from '@codemirror/commands';
+import type { Annotation, EditorSelection, StateEffect } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { TextChange } from '@drafter/fountain';
 import { appChange } from './typewriter';
+
+export interface ApplyOptions {
+  /** More annotations for the transaction, such as `sceneMoved` for a move. */
+  annotations?: readonly Annotation<unknown>[];
+  /** Effects for the transaction, such as `sceneMovedEffect`, which undo can invert. */
+  effects?: readonly StateEffect<unknown>[];
+  /** The selection after the change, in the new text's positions. */
+  selection?: EditorSelection | { anchor: number; head?: number };
+}
 
 /**
  * Applies `changes`, all positioned in the text as it is now, as one transaction: one undo step of
@@ -10,7 +20,11 @@ import { appChange } from './typewriter';
  * may be `\r\n`, so inserted breaks are converted. Returns false, changing nothing, when the editor
  * is read-only.
  */
-export function applyTextChanges(view: EditorView, changes: readonly TextChange[]): boolean {
+export function applyTextChanges(
+  view: EditorView,
+  changes: readonly TextChange[],
+  options: ApplyOptions = {},
+): boolean {
   if (view.state.readOnly) return false;
   const sorted = checkedChanges(changes, view.state.doc.length);
   if (sorted.length === 0) return true;
@@ -20,8 +34,10 @@ export function applyTextChanges(view: EditorView, changes: readonly TextChange[
       to: c.to,
       insert: String(c.insert).replace(/\r?\n/g, view.state.lineBreak),
     })),
+    ...(options.selection && { selection: options.selection }),
+    ...(options.effects && { effects: [...options.effects] }),
     userEvent: 'input',
-    annotations: [isolateHistory.of('full'), appChange.of(true)],
+    annotations: [isolateHistory.of('full'), appChange.of(true), ...(options.annotations ?? [])],
   });
   return true;
 }

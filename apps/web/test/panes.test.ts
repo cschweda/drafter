@@ -2,12 +2,15 @@ import { describe, expect, test } from 'vitest';
 import {
   chooseTab,
   clampSplit,
+  coreTabs,
   DEFAULT_TABS,
+  dropTab,
   otherPane,
   PHONE_DEFAULT_TAB,
   revealTab,
   SPLIT,
   TABS,
+  tabRow,
 } from '../app/utils/panes';
 
 describe('panes', () => {
@@ -15,12 +18,28 @@ describe('panes', () => {
     expect(DEFAULT_TABS).toEqual({ left: 'source', right: 'script' });
   });
 
-  test('lists Source, Script, and Problems, in that order', () => {
+  test('puts the four core tabs first: Source, Script, Problems, and Outline', () => {
     expect(TABS).toEqual([
       { id: 'source', label: 'Source' },
       { id: 'script', label: 'Script' },
       { id: 'problems', label: 'Problems' },
+      { id: 'outline', label: 'Outline' },
     ]);
+  });
+
+  test('has no Outline for a Markdown document', () => {
+    expect(coreTabs('fountain').map((t) => t.id)).toEqual([
+      'source',
+      'script',
+      'problems',
+      'outline',
+    ]);
+    expect(coreTabs('markdown').map((t) => t.id)).toEqual(['source', 'script', 'problems']);
+    // A pane showing it shows another core tab instead.
+    expect(dropTab({ left: 'source', right: 'outline' }, 'outline')).toEqual({
+      left: 'source',
+      right: 'script',
+    });
   });
 
   test('opens on the Script pane on a phone', () => {
@@ -73,5 +92,37 @@ describe('panes', () => {
 
   test('revealTab opens it on the left when no pane is asking', () => {
     expect(revealTab(DEFAULT_TABS, 'problems')).toEqual({ left: 'problems', right: 'script' });
+  });
+
+  describe('tabRow', () => {
+    const others = [
+      { id: 'module:a', label: 'Scenes' },
+      { id: 'module:b', label: 'Cast' },
+      { id: 'module:c', label: 'Notes' },
+    ];
+    const ids = (tabs: Array<{ id: string }>) => tabs.map((t) => t.id);
+
+    test('shows the first other tab in the slot and the rest under More', () => {
+      const { row, more } = tabRow(TABS, others, 'source', null);
+      expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline', 'module:a']);
+      expect(ids(more)).toEqual(['module:b', 'module:c']);
+    });
+
+    test('shows the last other tab chosen in the slot', () => {
+      const { row, more } = tabRow(TABS, others, 'source', 'module:c');
+      expect(ids(row).at(-1)).toBe('module:c');
+      expect(ids(more)).toEqual(['module:a', 'module:b']);
+    });
+
+    test("shows the pane's own tab in the slot", () => {
+      const { row, more } = tabRow(TABS, others, 'module:b', 'module:c');
+      expect(ids(row).at(-1)).toBe('module:b');
+      expect(ids(more)).toEqual(['module:a', 'module:c']);
+    });
+
+    test('has no More with one other tab, and no slot with none', () => {
+      expect(tabRow(TABS, others.slice(0, 1), 'source', null).more).toEqual([]);
+      expect(tabRow(TABS, [], 'source', 'module:a')).toEqual({ row: TABS, more: [] });
+    });
   });
 });

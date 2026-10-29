@@ -3,21 +3,51 @@
 // the other pane swaps the two, so there's always one editor, one Script
 // view, and one Problems list.
 
-/** A tab's id: one of the core three, or a script module's (`moduleTabId`). */
+/** A tab's id: one of the core four, or a script module's (`moduleTabId`). */
 export type TabId = string;
-export type CoreTabId = 'source' | 'script' | 'problems';
+export type CoreTabId = 'source' | 'script' | 'problems' | 'outline';
 export type PaneId = 'left' | 'right';
 export interface PaneTabs {
   left: TabId;
   right: TabId;
 }
 
-/** The core tabs. A module adds its own beside them while it is on. */
+export interface Tab {
+  id: TabId;
+  label: string;
+}
+
+/** The core tabs, always in the row (Phase 2 design §5.8). A module adds its own after them while it is on. */
 export const TABS: ReadonlyArray<{ id: CoreTabId; label: string }> = [
   { id: 'source', label: 'Source' },
   { id: 'script', label: 'Script' },
   { id: 'problems', label: 'Problems' },
+  { id: 'outline', label: 'Outline' },
 ];
+
+/** The core tabs a document of `kind` has: a Markdown document has no scenes, so no Outline. */
+export function coreTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
+  return kind === 'markdown' ? TABS.filter((tab) => tab.id !== 'outline') : TABS;
+}
+
+/**
+ * A pane's tab row (Phase 2 design §5.8): the core tabs, then one slot for another tab, then a
+ * More menu with the rest. The slot holds the pane's own tab when it shows another one, else the
+ * one chosen from More last (`last`), else the first; nine tabs never have to fit a pane's width.
+ */
+export function tabRow(
+  core: ReadonlyArray<Tab>,
+  others: ReadonlyArray<Tab>,
+  selected: TabId,
+  last: TabId | null,
+): { row: Tab[]; more: Tab[] } {
+  const slot =
+    others.find((tab) => tab.id === selected) ?? others.find((tab) => tab.id === last) ?? others[0];
+  return {
+    row: [...core, ...(slot ? [slot] : [])],
+    more: others.filter((tab) => tab !== slot),
+  };
+}
 
 export const DEFAULT_TABS: PaneTabs = { left: 'source', right: 'script' };
 
@@ -49,15 +79,16 @@ export function revealTab(tabs: PaneTabs, tab: TabId, from?: PaneId): PaneTabs {
 }
 
 /**
- * The tabs with `tab` taken away (its module was turned off): a pane that showed it shows the
- * first core tab, in the order Source, Script, Problems, that the other pane isn't showing.
+ * The tabs with `tab` taken away (its module was turned off, or a Markdown document has no
+ * Outline): a pane that showed it shows the first core tab, in the order Source, Script,
+ * Problems, that the other pane isn't showing.
  */
 export function dropTab(tabs: PaneTabs, tab: TabId): PaneTabs {
   const next = { ...tabs };
   for (const pane of ['left', 'right'] as const) {
     if (next[pane] !== tab) continue;
     const other = next[otherPane(pane)];
-    next[pane] = (TABS.find((t) => t.id !== other) as { id: TabId }).id;
+    next[pane] = (TABS.find((t) => t.id !== other && t.id !== tab) as { id: TabId }).id;
   }
   return next;
 }

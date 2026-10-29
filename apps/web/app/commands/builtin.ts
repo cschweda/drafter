@@ -1,5 +1,5 @@
 import { redo, undo } from '@codemirror/commands';
-import { foldAll, unfoldAll } from '@codemirror/language';
+import { foldAll, foldable, foldEffect, unfoldAll } from '@codemirror/language';
 import { nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
 import { openSearchPanel } from '@codemirror/search';
 import type { StateCommand } from '@codemirror/state';
@@ -20,21 +20,28 @@ import {
   wrapInNote,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
+import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
+import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
+import { runMove } from '~/outline/move';
+import { sayOutline } from '~/outline/notice';
+import { treatmentOpen } from '~/outline/treatment';
+import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
+import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
@@ -147,6 +154,25 @@ export function registerBuiltinCommands(): void {
   const structure = () => structureOf(editor.template.value);
   const isStage = () => !structure().headings;
 
+  /** The scene holding the cursor, in the Outline's index. */
+  const sceneAtCursor = () => {
+    const head = view.state.selection.main.head;
+    return useOutline().index.value.scenes.find((s) => head >= s.span.from && head <= s.span.to);
+  };
+  /** Move scene up or down (Phase 2 design §6.2): the cursor goes with the scene. */
+  const moveScene = (direction: 'up' | 'down'): Behavior => ({
+    enabled: () => canEdit() && isFountain() && !!sceneAtCursor(),
+    run: () => {
+      const scene = sceneAtCursor();
+      if (!scene) return;
+      const index = useOutline().index.value;
+      const target =
+        direction === 'up' ? upTarget(index, scene.block) : downTarget(index, scene.block);
+      runMove(scene.block, target, { keepCursor: true, direction });
+      editor.goto(view.state.selection.main.head);
+    },
+  });
+
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
   // them without an editor); this is the rest, by id, in the same order.
@@ -245,6 +271,25 @@ export function registerBuiltinCommands(): void {
     'export-pdf': { enabled: isFountain, run: () => void exportScript('pdf') },
     'export-md': { enabled: isMarkdown, run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },
+    'export-treatment': {
+      enabled: isFountain,
+      run: () => {
+        treatmentOpen.value = true;
+      },
+    },
+    // A Markdown outline as a new screenplay (design §6.5): its headings as sections, its items as stubs.
+    'screenplay-from-outline': {
+      enabled: () => isMarkdown() && canStart(),
+      run: quietly(async () => {
+        const text = screenplayFromOutline(view.state.doc.toString(), new Date());
+        const made = await script.addScript(text, { kind: 'fountain' });
+        await script.open(made.id);
+        const stubs = useOutline().index.value.scenes.length;
+        void sayOutline(
+          `Made a screenplay with ${stubs} scene ${stubs === 1 ? 'stub' : 'stubs'}. Problems lists them.`,
+        );
+      }),
+    },
     remove: {
       enabled: () => idle() && !script.project.value?.sample,
       run: () => {
@@ -269,6 +314,7 @@ export function registerBuiltinCommands(): void {
     // The Script tab is the Preview in a Markdown document.
     'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
     'show-problems': { run: () => showTab('problems') },
+    'show-outline': { enabled: isFountain, run: () => showTab('outline') },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
@@ -350,11 +396,77 @@ export function registerBuiltinCommands(): void {
     },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },
+    condense: {
+      enabled: isFountain,
+      run: () => {
+        // Every scene folds to its heading and synopsis; the sections stay open, so the Source
+        // reads as the outline does.
+        const effects = useOutline().index.value.scenes.flatMap((scene) => {
+          const line = view.state.doc.lineAt(scene.span.from);
+          const range = foldable(view.state, line.from, line.to);
+          return range ? [foldEffect.of(range)] : [];
+        });
+        if (effects.length > 0) view.dispatch({ effects });
+        focus.leave();
+        if (window.matchMedia(WIDE_QUERY).matches) {
+          // The Source in one pane (where it is, or the left) and the Outline in the other.
+          const source: PaneId = panes.tabs.value.right === 'source' ? 'right' : 'left';
+          panes.tabs.value = {
+            ...panes.tabs.value,
+            [source]: 'source',
+            [source === 'left' ? 'right' : 'left']: 'outline',
+          };
+        } else {
+          panes.phoneTab.value = 'outline';
+        }
+        void sayOutline(
+          'Condensed to the outline: every scene is folded to its heading and synopsis.',
+        );
+        void nextTick().then(() => document.getElementById('panel-outline')?.focus());
+      },
+    },
+    'expand-all': {
+      run: onEditor((v) => {
+        unfoldAll(v);
+        void sayOutline('Expanded every scene and section.');
+      }),
+    },
 
     // Edit
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
+    // Expand outline (design §6.5): the selection's outline lines as scene stubs.
+    'expand-outline': {
+      enabled: () => canEdit() && isFountain(),
+      run: () => {
+        const { from, to } = view.state.selection.main;
+        if (from === to) {
+          void sayOutline('Select the outline lines to expand first: = lines and - lists.');
+          return;
+        }
+        const blocked = useOutline().readOnly.value;
+        if (blocked) {
+          void sayOutline(blocked);
+          return;
+        }
+        const range = { from, to };
+        const before = useOutline().index.value.scenes.length;
+        const changes = expandOutline(editor.doc.value, editor.template.value, range);
+        if (changes.length === 0) {
+          void sayOutline('Nothing to expand: no = lines or - lists outside a scene.');
+          return;
+        }
+        applyTextChanges(view, changes);
+        const made = useOutline().index.value.scenes.length - before;
+        void sayOutline(
+          `Made ${made} scene ${made === 1 ? 'stub' : 'stubs'}. Problems lists them.`,
+        );
+        editor.goto(view.state.selection.main.head);
+      },
+    },
+    'move-scene-up': moveScene('up'),
+    'move-scene-down': moveScene('down'),
 
     // Edit, the element bar's commands
     // On a stage play Scene writes a `##` section and Action is a stage direction (the template's

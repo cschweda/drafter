@@ -1,0 +1,40 @@
+{
+  "name": "@drafter/outline",
+  "version": "0.8.0",
+  "description": "Structure for Drafter: the scene index of a Fountain script, and moves, synopses, colors, treatments, and outlines as text changes.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/outline"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "@drafter/layout": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/lint": "workspace:*",
+    "@drafter/render-text": "workspace:*"
+  }
+}

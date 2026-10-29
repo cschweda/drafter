@@ -145,7 +145,7 @@ type Element =
   | { kind: 'title_page'; fields: Record<string,string>; range }
 ```
 
-Inline emphasis (`*italic*`, `**bold**`, `_underline_`) is parsed within `text`. Scene colors, revision marks, and other non-prose state are **not** stored as inline notes (they'd litter the source and render as visible notes in other apps); they live in one metadata block at the end of the file (§5.3).
+Inline emphasis (`*italic*`, `**bold**`, `_underline_`) is parsed within `text`. What belongs to one scene (its color, storylines, goal) is a keyed note in the scene's own header, such as `[[Color: blue]]`, so it travels with the scene through reorders, renames, and other apps, and never prints ([Phase 2 design](drafter-phase2-design.md) §5.3–5.4; decided 2026-10-28). What belongs to the script as a whole (the template, the dictionary, revision state) lives in one metadata block at the end of the file (§5.3).
 
 **5.2 Round-trip is a hard requirement.** `print(parse(src)) === src` for *every* input, well-formed or not — guaranteed by the CST keeping raw text. Every edit triggers a full reparse (technical design §2.7), so there's one parsing path to trust. FDX gets its own invariant (export → import → export is stable on supported fields). This is what lets Outline, Cards, and Expand rewrite the source safely. The test corpus is original and synthetic fixtures written for this project: screenplays are almost never public domain, so no third-party scripts are included, and the spec's own examples aren't copied in.
 
@@ -154,12 +154,11 @@ Inline emphasis (`*italic*`, `**bold**`, `_underline_`) is parsed within `text`.
 ```
 /* drafter
 { "v": 1, "template": "us-screenplay",
-  "scenes": { "INT. KITCHEN - NIGHT#1": { "color": "blue" } },
   "dictionary": ["Margaret", "Keokuk"] }
 */
 ```
 
-The file stays valid and readable everywhere; the block never interrupts the prose.
+The file stays valid and readable everywhere; the block never interrupts the prose. The block holds only script-wide data; nothing in it is keyed by scene, so it never needs a scene identity. Scene colors are header notes instead (§5.1).
 
 ---
 
@@ -326,7 +325,7 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 3. **Templates as data, including stage plays.** Every other app hard-codes two or three formats. Playwrights are badly served; a proper Dramatists Guild template with a documented Fountain convention is a real gap.
 4. **Lossless outline ⇄ script.** Because outline structure lives in the source.
 5. **Runs everywhere, installs nowhere.** Beat is Apple-only; Trelby and Scrite are desktop installs; most web options want an account. Drafter is a URL that works on a Chromebook, a Linux box, or a Windows machine with zero sign-up, and works offline once installed. (On Safari and iPad it works, with the storage caveats in §6.1 — install it as an app.)
-6. **Accessibility as a first-class goal.** Screenwriting software is a wasteland for screen-reader users (and Final Draft's accessibility is weak). The source pane is the easy half; the real work is a rendered pane whose scene headings are real headings, so a screen-reader user navigates the script by structure, plus keyboard equivalents for every drag-and-drop. This is a feature in its own right and one you're unusually qualified to deliver. WCAG 2.2 AA from the first public release, with a11y work items in every phase (§13). Testing with NVDA and VoiceOver starts in Phase 2. Until it's done, Drafter is built and tested to WCAG 2.2 AA but claims no conformance.
+6. **Accessibility as a first-class goal.** Screenwriting software is a wasteland for screen-reader users (and Final Draft's accessibility is weak). The source pane is the easy half; the real work is a rendered pane whose scene headings are real headings, so a screen-reader user navigates the script by structure, plus keyboard equivalents for every drag-and-drop. This is a feature in its own right and one you're unusually qualified to deliver. WCAG 2.2 AA from the first public release, with a11y work items in every phase (§13). Testing with NVDA and VoiceOver comes last, after every phase is built (decided; Phase 2 design §20). Until it's done, Drafter is built and tested to WCAG 2.2 AA but claims no conformance.
 7. **Engine as a library.** `@drafter/layout` and `@drafter/fountain` on npm mean the pagination engine outlives the app and can power a CLI (`drafter build script.fountain --pdf`), CI checks, or other tools.
 8. **Table-read.** Web Speech API reads the script aloud, a different voice per character, action in a neutral voice, skipping parentheticals. Voice quality and offline availability depend on the OS; the UI says so.
 
@@ -348,11 +347,11 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 - **Templates:** a **template switcher with screenplay and stage play**, and a sample script for each.
 - **Reach:** works on phones, one pane at a time. Keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev.
 
-*A person can write a feature or a play in it, and the script is built for screen readers to read by its structure, checked by automated tests. Testing with NVDA and VoiceOver follows in Phase 2.* The details are in [the Phase 1 design](drafter-phase1-design.md).
+*A person can write a feature or a play in it, and the script is built for screen readers to read by its structure, checked by automated tests. Testing with NVDA and VoiceOver comes last, after every phase.* The details are in [the Phase 1 design](drafter-phase1-design.md).
 
-**Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; a Beat Board of idea cards kept in the file as Fountain; storylines (A, B, and C plots) shown as lanes on the outline, on the cards, and in the margin; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats, with screen time per character and who shares scenes; writing statistics by day, kept on the device; nspell with project dictionary; Reference tab; testing with NVDA and VoiceOver. To see and work through a script: a script map (scenes as blocks sized by length, colored by INT/EXT, day or night, or storyline); a pacing view (scene length and dialogue-to-action balance along the page timeline, with optional structure guides as suggestions); a character-by-scene grid with each character's dialogue share; scene goals (goal, conflict, outcome, value shift) kept as Fountain notes; setups and payoffs, with the setups never paid off listed. Reader notes with no account: a reader mode at drafter.dev where a reader comments on lines or selections (name, category and colour, replies) and sends the comments back in the `.fountain` as Fountain notes; the author merges them into the current draft by quote, context, and scene (a preview of matched, approximate, and unplaced; none dropped), and replies and resolves them in the margin. Note categories and status in the Notes tab.
+**Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; FDX import/export (moved up from Phase 3, decided 2026-10-28); a Beat Board of idea cards kept in the file as Fountain; storylines (A, B, and C plots) shown as lanes on the outline, on the cards, and in the margin; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats, with screen time per character and who shares scenes; writing statistics by day, kept on the device; nspell with project dictionary; Reference tab. To see and work through a script: a script map (scenes as blocks sized by length, colored by INT/EXT, day or night, or storyline); a pacing view (scene length and dialogue-to-action balance along the page timeline, with optional structure guides as suggestions); a character-by-scene grid with each character's dialogue share; scene goals (goal, conflict, outcome, value shift) kept as Fountain notes; setups and payoffs, with the setups never paid off listed. Reader notes with no account: a reader mode at drafter.dev where a reader comments on lines or selections (name, category and colour, replies) and sends the comments back in the `.fountain` as Fountain notes; the author merges them into the current draft by quote, context, and scene (a preview of matched, approximate, and unplaced; none dropped), and replies and resolves them in the margin. Note categories and status in the Notes tab.
 
-**Phase 3 — Formats.** FDX import/export; import from Highland, Fade In, and Celtx; TV single/multi-cam, radio, UK, and novel templates; user-added templates and template export; standalone `.html` export; PDF with notes in the margin or clean, with a watermark and header; a self-contained reader `.html` for commenting in any browser; for plays, French scenes, who is on stage (entrances and exits), and a doubling chart.
+**Phase 3 — Formats.** Import from Highland, Fade In, and Celtx; TV single/multi-cam, radio, UK, and novel templates; user-added templates and template export; standalone `.html` export; PDF with notes in the margin or clean, with a watermark and header; a self-contained reader `.html` for commenting in any browser; for plays, French scenes, who is on stage (entrances and exits), and a doubling chart.
 
 **Phase 4 — Craft.** Remaining lint rules; revision marks and colored-page PDF; production revisions (locked pages, OMITTED scenes, scene numbers that start anywhere); alternate versions of a line; "clean" display mode (markers hidden by decoration); table-read; a character pass (one character's lines alone); story order against script order for nonlinear scripts; a breakdown report (locations, time of day, cast per scene); accept or reject a co-writer's edited copy change by change; one character's dialogue exported for an actor; PWA install flow and offline dictionary caching.
 
@@ -360,15 +359,16 @@ The ordering principle: **the reasons to choose Drafter over Beat must be on scr
 
 **Phase 5 — Community.** Template gallery, docs site, `@drafter/*` on npm, `@drafter/cli`, VS Code extension; plugin API only if there's demand, worker-sandboxed per the technical design.
 
+**Last — Testing with NVDA and VoiceOver.** After every phase is built, on Windows and with VoiceOver (Phase 2 design §20).
+
 ---
 
 ## 14. Open questions
 
-Decided (see `drafter-technical-design.md` §17 for the full log): MIT license and no GPL code; one parser with decoration-driven highlighting; CST with lossless print; full reparse on every change; lenient readings backed by Strict Fountain lint rules; notes end at a blank line; role rules match exact names; nspell-only spellcheck; characters × lines as units; metadata in a trailing boneyard block; app-style saving with an always-on recovery copy; PDF import out of scope; no plugin API in v1.
+Decided (see `drafter-technical-design.md` §17 for the full log): MIT license and no GPL code; one parser with decoration-driven highlighting; CST with lossless print; full reparse on every change; lenient readings backed by Strict Fountain lint rules; scene identity kept in the editor's session, with per-scene data in the scene's own text, so colors survive renaming (Phase 2 design §5.2); notes end at a blank line; role rules match exact names; nspell-only spellcheck; characters × lines as units; metadata in a trailing boneyard block; app-style saving with an always-on recovery copy; PDF import out of scope; no plugin API in v1.
 
 Still open:
 
 - **FDX fidelity.** Which Final Draft features are worth round-tripping beyond elements, title page, and scene numbers (ScriptNotes, revisions, scene properties)? Start minimal; add as users ask.
 - **Proportional-font templates** (some stage formats use Times). Proportional layout will measure from the font file's own advance widths (technical design §5.2), but all v1 built-in templates are monospace. Decide whether to ship a Times-based play template in Phase 3.
-- **Scene identity for colors.** Scene ids are heading text + occurrence index, so colors survive reordering but not renaming. Good enough? (A `#id#` suffix on the heading isn't an option: at the end of a heading, `#…#` is Fountain's scene-number syntax, so every tool would print it as the scene number.)
 - **Multi-line parentheticals.** One of Drafter's lenient readings (technical design §2.5), with a Strict Fountain fix. Keep, or push for a Fountain spec amendment?

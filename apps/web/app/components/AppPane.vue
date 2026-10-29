@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
@@ -9,7 +10,7 @@ import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { TABS, type TabId } from '~/utils/panes';
+import { coreTabs, TABS, type Tab, type TabId, tabRow } from '~/utils/panes';
 
 const props = defineProps<{
   /** `left`, `right`, or `phone`; it names the tabs' ids. */
@@ -36,12 +37,28 @@ function onFixAll() {
   document.getElementById('panel-problems')?.focus();
 }
 const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
-// The core three tabs, then the tabs of the modules that are on.
+// The core tabs (no Outline in a Markdown document), then one slot for another tab (a module's),
+// then More with the rest (Phase 2 design §5.8).
 const moduleTabs = useModuleTabs();
-const allTabs = computed<Array<{ id: TabId; label: string }>>(() => [
-  ...TABS,
-  ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
-]);
+const last = useTabSlot();
+const core = computed(() => {
+  const tabs = coreTabs(kind.value);
+  // A pane still showing a tab the document has no more of keeps its button until it moves on.
+  const own = TABS.find((tab) => tab.id === props.selected);
+  return own && !tabs.includes(own) ? [...tabs, own] : tabs;
+});
+const others = computed<Tab[]>(() => moduleTabs.value.map(({ id, label }) => ({ id, label })));
+const row = computed(() => tabRow(core.value, others.value, props.selected, last.value));
+const allTabs = computed(() => row.value.row);
+const moreTabs = computed(() => row.value.more);
+// A tab other than the core ones that this pane shows keeps the slot when the pane moves on.
+watch(
+  () => props.selected,
+  (tab) => {
+    if (others.value.some((other) => other.id === tab)) last.value = tab;
+  },
+  { immediate: true },
+);
 const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
 const SLIM = computed<Record<'source' | 'problems', string>>(() => ({
   source: project.value?.fileName ?? project.value?.title ?? '',
@@ -65,6 +82,27 @@ const ZOOMS = [
 
 const tabButtons = ref<HTMLButtonElement[]>([]);
 
+// More: a menu of the tabs that aren't in the row (MenuButton, as every menu is). Choosing one shows
+// it here, in the slot, and focus goes to its tab rather than back to More.
+const moreItems = computed<DropdownMenuItem[]>(() =>
+  moreTabs.value.map((tab) => ({ label: tab.label, onSelect: () => chooseMore(tab.id) })),
+);
+let chosenTab: TabId | null = null;
+
+function chooseMore(tab: TabId) {
+  last.value = tab;
+  chosenTab = tab;
+  emit('choose', tab);
+}
+
+function onMoreCloseAutoFocus(event: Event) {
+  const tab = chosenTab;
+  chosenTab = null;
+  if (!tab) return;
+  event.preventDefault();
+  requestAnimationFrame(() => document.getElementById(`tab-${props.pane}-${tab}`)?.focus());
+}
+
 // Manual activation: arrow keys move focus along the tabs, and Enter or Space
 // chooses one, so arrowing past a tab open in the other pane never swaps them.
 function onKeydown(event: KeyboardEvent, index: number) {
@@ -84,7 +122,8 @@ function onKeydown(event: KeyboardEvent, index: number) {
 
 <template>
   <section class="pane" :data-pane="props.pane">
-    <div role="tablist" :aria-label="props.label" class="tabs">
+    <div class="tabs">
+    <div role="tablist" :aria-label="props.label" class="tablist">
       <button
         v-for="(tab, index) in allTabs"
         :id="`tab-${props.pane}-${tab.id}`"
@@ -103,6 +142,17 @@ function onKeydown(event: KeyboardEvent, index: number) {
         {{ labelOf(tab) }}
         <span v-if="tab.id === 'problems' && count > 0" class="badge">{{ count }}</span>
       </button>
+    </div>
+    <MenuButton
+      v-if="moreTabs.length > 0"
+      :items="moreItems"
+      :content="{ align: 'start', onCloseAutoFocus: onMoreCloseAutoFocus }"
+    >
+      <button type="button" class="tab more-button">
+        More<span class="sr-only"> tabs</span>
+        <UIcon name="i-lucide-chevron-down" class="chevron" aria-hidden="true" />
+      </button>
+    </MenuButton>
     </div>
     <div class="slim">
       <template v-if="props.selected === 'script' && markdown">
@@ -128,6 +178,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </template>
       <template v-else-if="moduleTab">
         {{ moduleTab.module.name }}
+      </template>
+      <template v-else-if="props.selected === 'outline'">
+        <OutlineSlim />
       </template>
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
@@ -188,6 +241,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </ModuleBoundary>
       <MarkdownPane v-else-if="props.selected === 'script' && markdown" />
       <ScriptPane v-else-if="props.selected === 'script'" />
+      <OutlinePane v-else-if="props.selected === 'outline'" />
       <ProblemsPane v-else />
     </div>
   </section>
@@ -203,11 +257,25 @@ function onKeydown(event: KeyboardEvent, index: number) {
 }
 .tabs {
   display: flex;
+  align-items: flex-end;
   gap: 2px;
   padding: 7px 10px 0;
   overflow-x: auto;
   background: var(--chrome);
   border-bottom: 1px solid var(--line);
+}
+.tablist {
+  display: flex;
+  gap: 2px;
+}
+.more-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chevron {
+  width: 12px;
+  height: 12px;
 }
 .tab {
   padding: 7px 10px 9px;

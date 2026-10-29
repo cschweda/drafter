@@ -46,6 +46,12 @@ function choose(kind: ExportKind) {
   close(true);
 }
 
+/** The treatment asks a question first, in its own dialog (Phase 2 design §6.4). */
+function chooseTreatment() {
+  close(false);
+  commandById('export-treatment')?.run();
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && open.value) {
     event.stopPropagation();
@@ -87,6 +93,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       </button>
       <button type="button" class="item" @click="choose('txt')">
         <UIcon name="i-lucide-file-type" class="icon" />Plain text (.txt)
+      </button>
+      <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseTreatment">
+        <UIcon name="i-lucide-list-tree" class="icon" />Treatment (.md)…
       </button>
     </div>
     <div class="toast" :class="{ shown: exportNotice || exportError }">

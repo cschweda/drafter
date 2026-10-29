@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  chooseTab,
   closeSettings,
   editor,
   lastPane,
@@ -302,8 +303,9 @@ test.describe('sample modules', () => {
     for (const name of ['Scenes', 'Cast']) {
       // On the emulated phone WebKit a tap on a tab is now and then ignored (about 1 in 10, under
       // investigation; see the Plan 4 deferred list), so tap again until the tab is chosen.
+      // With two modules on, one of their tabs is under More (Phase 2 design §5.8).
       await expect(async () => {
-        await moduleTab(page, name).first().click();
+        await chooseTab(page, name);
         await expect(moduleTab(page, name).first()).toHaveAttribute('aria-selected', 'true', {
           timeout: 1000,
         });

@@ -10,6 +10,7 @@ import {
   multilineParenthetical,
   unclosedRegion,
 } from './rules/parse';
+import { stubHeading } from './rules/stub';
 import { transitionNotLast } from './rules/transition';
 import type { LintDiagnostic, LintOptions, Rule, RuleContext } from './types';
 
@@ -22,6 +23,7 @@ export const rules: readonly Rule[] = [
   characterWithoutDialogue,
   manualContd,
   headingNoTime,
+  stubHeading,
   transitionNotLast,
   similarNames,
 ];

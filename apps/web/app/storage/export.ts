@@ -117,3 +117,32 @@ export function exportScript(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   });
   return entry.done;
 }
+
+/**
+ * Saves `text`, a Markdown file Drafter made (a treatment), as `name`: where the browser has a save
+ * picker it asks where, else the file downloads. The Export toast says how it went. Never throws.
+ */
+export async function exportMarkdownFile(
+  name: string,
+  text: string,
+): Promise<'saved' | 'cancelled'> {
+  const files = useFiles();
+  exportNotice.value = '';
+  exportError.value = '';
+  try {
+    let target: Awaited<ReturnType<typeof files.pickToSave>> = null;
+    if (files.canSaveInPlace) {
+      target = await files.pickToSave(name, 'markdown');
+      if (!target) return 'cancelled';
+    }
+    const data = encodeFile(text, '\n', false);
+    if (target) await files.write(target, data);
+    else files.download(name, data, MIME.md);
+    await announceReady(`Exported ${target?.name ?? name}.`);
+    return 'saved';
+  } catch (error) {
+    const why = error instanceof Error && error.message ? `: ${error.message}` : '.';
+    await announceError(`Couldn’t export ${name}${why}`);
+    return 'cancelled';
+  }
+}
