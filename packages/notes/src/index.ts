@@ -1,4 +1,14 @@
+export { categoryColors, setCategoryColor } from './categories';
 export { SCENE_COLORS, type SceneColor } from './colors';
+export {
+  deleteEntry,
+  insertNote,
+  resolveAll,
+  rewriteNote,
+  setResolved,
+  setTags,
+} from './edit';
+export { findEntry, type NoteEntry, nestReplies, noteEntries } from './entries';
 export {
   categoriesOf,
   FIELD_ORDER,
@@ -15,6 +25,7 @@ export {
   safeLine,
   writeNote,
 } from './keyed';
+export { markLabels, type SetupThread, setupsAndPayoffs } from './setups';
 export {
   bodyEnd,
   contentEnd,

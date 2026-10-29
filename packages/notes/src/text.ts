@@ -76,22 +76,31 @@ export function isPlainGap(gap: string): boolean {
 const endOf = (doc: Doc, block: Block) => contentEnd(doc.source, block.span.to);
 
 /**
- * The change that removes line `line` of block `index` along with one line break, so the lines
- * around it close up: the break after it inside a header, or the gap before it otherwise. Null when
- * two-space lines join it to what's around it, which would then join each other.
+ * The change that removes lines `line` to `last` of block `index` along with one line break, so the
+ * lines around them close up: the break after them inside a block, or the gap before them
+ * otherwise. Null when two-space lines join them to what's around them, which would then join each
+ * other.
  */
-export function removeLine(doc: Doc, index: number, line: number): TextChange | null {
+export function removeLine(
+  doc: Doc,
+  index: number,
+  line: number,
+  last: number = line,
+): TextChange | null {
   const block = doc.blocks[index] as Block;
   const lines = block.lines;
   const here = lines[line];
-  if (!here) throw new RangeError(`No line ${line} in block ${index}.`);
-  const nextLine = lines[line + 1];
+  const end = lines[last];
+  if (!here || !end || last < line) {
+    throw new RangeError(`No lines ${line} to ${last} in block ${index}.`);
+  }
+  const nextLine = lines[last + 1];
   if (nextLine) return { from: here.span.from, to: nextLine.span.from, insert: '' };
   const previousLine = lines[line - 1];
   if (previousLine) {
     return {
       from: contentEnd(doc.source, previousLine.span.to),
-      to: contentEnd(doc.source, here.span.to),
+      to: contentEnd(doc.source, end.span.to),
       insert: '',
     };
   }

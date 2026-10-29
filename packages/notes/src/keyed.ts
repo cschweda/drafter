@@ -146,12 +146,23 @@ function headOf(text: string, open: boolean): Head | null {
 const openAfter = (text: string, colon: number) =>
   colon + 1 >= text.length || /\s/u.test(text[colon + 1] as string);
 
+/** Every `#word` in `body` where it is: the tag lowercased, and the `#` to the word's end. */
+export function tagRuns(body: string): Array<{ tag: string; from: number; to: number }> {
+  return [...body.matchAll(TAG)].map((match) => ({
+    tag: (match[1] as string).toLowerCase(),
+    from: match.index,
+    to: match.index + match[0].length,
+  }));
+}
+
+/** Whether `tag` (without its `#`) reads as a whole tag. */
+export const isTagWord = (tag: string) => /^\p{L}[\p{L}\p{M}\p{N}-]*$/u.test(tag);
+
 /** The `#word` tags in `body`, lowercased, once each; and whether one is `#resolved`. */
 function tagsOf(body: string): { tags: string[]; resolved: boolean } {
   const tags: string[] = [];
   let resolved = false;
-  for (const match of body.matchAll(TAG)) {
-    const tag = (match[1] as string).toLowerCase();
+  for (const { tag } of tagRuns(body)) {
     if (tag === 'resolved') resolved = true;
     else if (!tags.includes(tag)) tags.push(tag);
   }
