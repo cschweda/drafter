@@ -3,6 +3,7 @@ import type { LayoutLine } from '@drafter/layout';
 import { FONT_FILES, type FontSet } from '@drafter/render-pdf';
 import { decodePDFRawStream, PDFArray, PDFDocument, PDFName, PDFRawStream } from 'pdf-lib';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { DOCUMENT_FONT_FILES, type DocumentFontSet } from '../src/document/fonts';
 
 /** Courier Prime, read from the package's `fonts/` folder the way the CLI reads it. */
 export const fonts = Object.fromEntries(
@@ -11,6 +12,14 @@ export const fonts = Object.fromEntries(
     new Uint8Array(readFileSync(new URL(`../fonts/${file}`, import.meta.url))),
   ]),
 ) as unknown as FontSet;
+
+/** Inter Tight's four styles and Courier Prime Regular, read from `fonts/` the way the CLI reads Courier Prime. */
+export const documentFonts = Object.fromEntries(
+  Object.entries(DOCUMENT_FONT_FILES).map(([face, file]) => [
+    face,
+    new Uint8Array(readFileSync(new URL(`../fonts/${file}`, import.meta.url))),
+  ]),
+) as unknown as DocumentFontSet;
 
 export interface TextItem {
   str: string;

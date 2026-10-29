@@ -37,6 +37,7 @@
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
-    "@drafter/fountain": "workspace:*"
+    "@drafter/fountain": "workspace:*",
+    "mdast-util-from-markdown": "^2.1.0"
   }
 }

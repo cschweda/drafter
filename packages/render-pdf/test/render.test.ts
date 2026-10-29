@@ -191,8 +191,13 @@ describe('text', () => {
 describe('portability', () => {
   it('reads no files and needs no Node built-ins at runtime', () => {
     const src = new URL('../src/', import.meta.url);
-    for (const file of readdirSync(src)) {
-      const code = readFileSync(new URL(file, src), 'utf8');
+    const files = readdirSync(src, { recursive: true, withFileTypes: true }).filter((entry) =>
+      entry.isFile(),
+    );
+    expect(files.map((entry) => entry.name)).toContain('measure.ts');
+    for (const entry of files) {
+      const file = `${entry.parentPath}/${entry.name}`;
+      const code = readFileSync(file, 'utf8');
       expect(code, file).not.toMatch(/from ['"](node:|fs['"]|path['"])/);
     }
   });

@@ -329,6 +329,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      mdast-util-from-markdown:
+        specifier: ^2.1.0
+        version: 2.1.0
 
   packages/render-text:
     dependencies:

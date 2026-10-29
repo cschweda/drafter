@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/render-pdf`: **Inter Tight for Markdown PDFs, and a font measure for documents** (Markdown PDF design §2.2, Calls 2 and 36). Inter Tight's static Regular, Italic, SemiBold, and SemiBold Italic (version 3.004, SIL Open Font License 1.1, from Google Fonts, unmodified; SemiBold is the brand's own file) are in `fonts/inter-tight/`, with their license and checksums. `DOCUMENT_FONT_FILES` names a document's five faces (the four Inter Tight styles, and Courier Prime Regular for code), and `fontMeasure` gives each string's width in points exactly as pdf-lib will draw it, and whether a face has a character. Nothing prints with them yet.
+
 ## [0.15.0] - 2026-10-29
 
 **The Structure strip.** Your whole script at a glance: a band across the top of the window shows your acts, sequences, and scenes as blocks as wide as their share of the pages, colored as you've colored them, with a page ruler that marks where the Script pane is. Click a block to go there. Turn it on from the toolbar's new Structure button, Ctrl+Alt+O (⌘⌥O on a Mac), the palette, or Settings; it's off until you do. Also fixed: AltGr letters on Windows are no longer taken by Ctrl+Alt shortcuts, and the toolbar keeps to one row at 1024 px.
