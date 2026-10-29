@@ -136,6 +136,20 @@ describe('createSpellClient', () => {
     expect(await pending).toEqual([]);
   });
 
+  test('reports every failure, even one after another', () => {
+    const worker = fakeWorker();
+    const states: SpellState[] = [];
+    createSpellClient(
+      worker,
+      () => {},
+      (state) => states.push(state),
+    );
+    worker.reply({ type: 'failed', message: 'offline' });
+    worker.reply({ type: 'failed', message: 'offline' });
+    // The second failure is a retry's: whoever stops on a failure hears of it.
+    expect(states).toEqual(['failed', 'failed']);
+  });
+
   test('a dead worker is failed, not thrown', async () => {
     const worker = fakeWorker();
     const states: SpellState[] = [];

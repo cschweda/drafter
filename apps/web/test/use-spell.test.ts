@@ -140,10 +140,12 @@ async function modules() {
 }
 
 /** A script loaded into the editor, as `load` does it. */
-async function load(text: string) {
+async function load(text: string, kind?: 'fountain' | 'markdown') {
   const { session } = await modules();
-  editor.view.setState(makeState(text));
+  // All at once, as `load` does it: the count, the kind, the text, then the listeners hear null.
   session.loaded.value++;
+  if (kind) session.kind.value = kind;
+  editor.view.setState(makeState(text));
   for (const listener of editor.listeners) listener(null);
   // The first one opened makes the script session ready.
   editor.ready.value = true;
@@ -337,14 +339,97 @@ describe('useSpell', () => {
     expect(worker.checks()).toHaveLength(sent);
     await load(TEXT);
     await settle(300);
-    expect(worker.checks()).toHaveLength(sent + 1);
-    const again = worker.checks().at(-1);
-    worker.reply({ type: 'checked', seq: again?.seq, marks: [] });
+    // The retry is a fresh worker's.
+    expect(worker.checks()).toHaveLength(sent);
+    const fresh = FakeWorker.made.at(-1) as FakeWorker;
+    expect(fresh).not.toBe(worker);
+    const again = fresh.checks().at(-1);
+    fresh.reply({ type: 'checked', seq: again?.seq, marks: [] });
     expect(spell.state.value).toBe('ready');
     expect(spell.problem.value).toBe('');
     // A second failure in the visit isn't said again.
-    worker.reply({ type: 'failed', message: 'offline' });
+    fresh.reply({ type: 'failed', message: 'offline' });
     expect(spell.state.value).toBe('failed');
     expect(spell.problem.value).toBe('');
+  });
+
+  test('a retry that fails again stops again, with a fresh worker each time', async () => {
+    const { session, useSpell } = await modules();
+    const spell = useSpell();
+    await load(TEXT);
+    await settle(300);
+    const first = FakeWorker.made[0] as FakeWorker;
+    first.reply({ type: 'failed', message: 'offline' });
+    // Retries: a new script, a change of kind. Each fails again, and each stops the checks again.
+    for (const retry of [
+      () => load(TEXT),
+      async () => {
+        session.kind.value = session.kind.value === 'fountain' ? 'markdown' : 'fountain';
+      },
+    ]) {
+      const before = FakeWorker.made.length;
+      await retry();
+      await settle(300);
+      // The worker that failed is ended and another made, in case it was the worker that died.
+      expect(FakeWorker.made).toHaveLength(before + 1);
+      expect(FakeWorker.made.at(-2)?.terminated).toBe(true);
+      const worker = FakeWorker.made.at(-1) as FakeWorker;
+      expect(worker.checks()).toHaveLength(1);
+      worker.reply({ type: 'failed', message: 'offline' });
+      expect(spell.state.value).toBe('failed');
+      for (const letter of 'abc') {
+        editor.view.dispatch({ changes: { from: 0, insert: letter } });
+        await settle(400);
+      }
+      expect(worker.checks()).toHaveLength(1);
+    }
+    // Said once in all of it.
+    expect(spell.problem.value).toMatch(/dictionary/);
+  });
+
+  test('a worker that dies is replaced on the retry', async () => {
+    const { useSpell } = await modules();
+    const spell = useSpell();
+    await load(TEXT);
+    await settle(300);
+    const dead = FakeWorker.made[0] as FakeWorker;
+    for (const listener of dead.listeners.get('error') ?? []) listener({});
+    expect(spell.state.value).toBe('failed');
+    await load(TEXT);
+    await settle(300);
+    expect(dead.terminated).toBe(true);
+    const fresh = FakeWorker.made[1] as FakeWorker;
+    expect(fresh.checks().map((c) => c.source)).toEqual([TEXT]);
+    fresh.reply({ type: 'checked', seq: fresh.checks()[0]?.seq, marks: marksIn(TEXT, 'phnoe') });
+    expect(spell.state.value).toBe('ready');
+    expect(spellMarksOf(editor.view.state).map((m) => m.word)).toEqual(['phnoe']);
+  });
+
+  test('a failure after Spellcheck is turned off and on again is said again', async () => {
+    const { settings, useSpell } = await modules();
+    const spell = useSpell();
+    await load(TEXT);
+    await settle(300);
+    (FakeWorker.made[0] as FakeWorker).reply({ type: 'failed', message: 'offline' });
+    expect(spell.problem.value).toMatch(/dictionary/);
+    settings.value = { ...settings.value, spellcheck: false };
+    await settle();
+    expect(spell.problem.value).toBe('');
+    settings.value = { ...settings.value, spellcheck: true };
+    await settle(300);
+    (FakeWorker.made.at(-1) as FakeWorker).reply({ type: 'failed', message: 'offline' });
+    expect(spell.problem.value).toMatch(/dictionary/);
+  });
+
+  test('a script of another kind is checked once, not again for the kind', async () => {
+    const { session, useSpell } = await modules();
+    useSpell();
+    await load(TEXT);
+    await settle(300);
+    const worker = FakeWorker.made[0] as FakeWorker;
+    await load('# A draft\n\nThe secnod act.\n', 'markdown');
+    expect(session.kind.value).toBe('markdown');
+    await settle(300);
+    expect(worker.checks().map((c) => c.kind)).toEqual(['fountain', 'markdown']);
   });
 });

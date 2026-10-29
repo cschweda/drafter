@@ -177,21 +177,45 @@ test.describe('spellcheck', () => {
 
 test.describe('a dictionary that can’t load', () => {
   test('says once that the dictionary couldn’t load, and types on', async ({ page, context }) => {
-    await context.route('**/dictionaries/**', (route) => route.abort());
+    let asked = 0;
+    await context.route('**/dictionaries/**', (route) => {
+      asked++;
+      return route.abort();
+    });
     await start(page);
     await expect(status(page).getByRole('alert').filter({ hasText: FAILED })).toHaveCount(1);
-    await showSource(page);
-    await editor(page).focus();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.insertText(SCRIPT);
+    await typeOver(page, SCRIPT);
     await page.keyboard.type(' More words, one wuold.');
     await expect(editor(page)).toContainText('More words, one wuold.');
     await page.waitForTimeout(1000);
     await expect(marks(page)).toHaveCount(0);
-    // Said once, and still once after the typing.
+    // Said once, and still once after the typing; and the typing fetched nothing.
+    await expect(status(page).getByRole('alert').filter({ hasText: FAILED })).toHaveCount(1);
+    const first = asked;
+    expect(first).toBeGreaterThan(0);
+
+    // Another script tries again, once; it fails again, and typing fetches nothing more.
+    await page.keyboard.press('ControlOrMeta+Alt+n');
+    await expect(editor(page)).toContainText('Untitled Screenplay');
+    await expect.poll(() => asked).toBeGreaterThan(first);
+    await page.waitForTimeout(1000);
+    const retried = asked;
+    await typeOver(page, SCRIPT);
+    await page.keyboard.type(' Still more, one wuold.');
+    await page.waitForTimeout(1500);
+    expect(asked).toBe(retried);
+    await expect(marks(page)).toHaveCount(0);
     await expect(status(page).getByRole('alert').filter({ hasText: FAILED })).toHaveCount(1);
   });
 });
+
+/** Replaces the text, focusing the editor rather than clicking it: on a small phone the status bar's alert can cover it. */
+async function typeOver(page: Page, text: string) {
+  await showSource(page);
+  await editor(page).focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText(text);
+}
 
 /** Counts the long tasks (over 50 ms) from now on, in `window.longTasks`. */
 async function watchLongTasks(page: Page) {

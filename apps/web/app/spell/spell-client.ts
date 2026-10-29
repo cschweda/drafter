@@ -40,7 +40,8 @@ export function createSpellClient(
   const asked = new Map<number, (suggestions: string[]) => void>();
 
   const tell = (next: SpellState) => {
-    if (destroyed || next === state) return;
+    // Every failure is told, even one after another: a retry's failure must stop the caller again.
+    if (destroyed || (next === state && next !== 'failed')) return;
     state = next;
     onState(next);
   };

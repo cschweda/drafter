@@ -236,7 +236,7 @@ test.describe('offline', () => {
     expect(stored.urls).toContain('/');
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.js$/.test(u))).toBe(true);
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.css$/.test(u))).toBe(true);
-    for (const worker of ['layout.worker', 'export.worker', 'markdown.worker']) {
+    for (const worker of ['layout.worker', 'export.worker', 'markdown.worker', 'spell.worker']) {
       expect(stored.urls.some((u) => u.includes(worker))).toBe(true);
     }
     expect(stored.urls.filter((u) => u.includes('InterTight'))).toHaveLength(2);

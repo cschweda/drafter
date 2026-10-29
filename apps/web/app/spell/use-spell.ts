@@ -44,7 +44,7 @@ function create(): SpellSessionApp {
   let since: ChangeDesc | null = null;
   /** The newest request's number: only its reply is shown. */
   let wanted = 0;
-  /** A load failed: nothing more is sent until the next script, language, or setting change. */
+  /** A load failed: nothing more is sent until the next script, kind, language, or setting change retries. */
   let halted = false;
   /** Whether this visit has said the dictionary failed: it says so once. */
   let said = false;
@@ -107,30 +107,50 @@ function create(): SpellSessionApp {
     request();
   }
 
-  function stop() {
+  /** Ends the worker; the next `start` makes another. */
+  function end() {
     clearTimeout(timer);
     client?.destroy();
     client = null;
     since = null;
     wanted = 0;
+  }
+
+  function stop() {
+    end();
     state.value = 'off';
     problem.value = '';
+    // Turned on again, a failure is news again.
+    said = false;
+  }
+
+  /**
+   * Checks again now. After a failure, with a fresh worker: the old one may be the thing that
+   * failed (it died), and a fresh one loads the dictionary again. Each retry that fails stops
+   * the checks again (`onState`).
+   */
+  function retry() {
+    if (!client) return;
+    if (halted) {
+      end();
+      start();
+    } else {
+      request();
+    }
   }
 
   /** Starts over: the marks go, and the text is checked again now. */
   function again() {
     if (!client) return;
-    halted = false;
     clearMarks();
-    request();
+    retry();
   }
 
   editor.onChange((changes) => {
     if (!client) return;
     // Another script (`load`): its state is new, so it has no marks; check it now.
     if (changes === null) {
-      halted = false;
-      request();
+      retry();
       return;
     }
     if (since) since = since.composeDesc(changes.desc);
@@ -154,16 +174,16 @@ function create(): SpellSessionApp {
         () => settings.value.spellLanguage,
         (language) => {
           if (!client) return;
-          client.language(language);
+          // A fresh worker (after a failure) loads the language it's started with.
+          if (!halted) client.language(language);
           again();
         },
       );
-      watch(editor.kind, again);
-      watch([() => settings.value.spellNotes, () => settings.value.personalDictionary], () => {
-        if (!client) return;
-        halted = false;
-        request();
+      // A load changes the kind too, and its `onChange(null)` has checked already.
+      watch([editor.kind, editor.loaded], ([, loaded], [, before]) => {
+        if (loaded === before) again();
       });
+      watch([() => settings.value.spellNotes, () => settings.value.personalDictionary], retry);
     });
   });
 
