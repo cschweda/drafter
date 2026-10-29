@@ -336,3 +336,16 @@ test.describe('a menu and Tab', () => {
     await tabLeaves(page, modules, 'Shift+Tab');
   });
 });
+
+test('the shortcuts page lists the spelling keys', async ({ page }) => {
+  await page.goto('/docs/shortcuts');
+  const row = (name: string) => page.getByRole('row').filter({ hasText: name });
+  for (const [title, mac, other] of [
+    ['Spelling suggestions', '⌘.', 'Ctrl+.'],
+    ['Next misspelling', '⌘;', 'Ctrl+;'],
+    ['Previous misspelling', '⌘⇧;', 'Ctrl+Shift+;'],
+  ] as const) {
+    await expect(row(title)).toContainText(mac);
+    await expect(row(title)).toContainText(other);
+  }
+});

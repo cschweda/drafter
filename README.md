@@ -5,7 +5,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.13.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Built so far: an **Outline** tab (your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export); **Cards** and **Notes** (an index card for every scene, moved by drag or keys; every note and boneyard in one list, with categories, readers' names, and open or resolved status; scene goals; setups and payoffs); **Final Draft files** (open an `.fdx` as a new script, or export your script as one); **History** (earlier versions of your script, kept as you write and save, each one restorable in one undo); and **Compare** (what changed between two versions, as script pages with the changes marked). The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and a Help menu with help pages, About Drafter (your version, and links to the project on GitHub), tiny sample scripts, and Check for updates, with **About Drafter** (the version, for a bug report, and the links), **Sample scripts** (a tiny screenplay, stage play, and Markdown document, each opened as a new script), and **Check for updates**, in the Help section of the menu. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: spellcheck; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+> **Status: v0.13.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Built so far: an **Outline** tab (your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export); **Cards** and **Notes** (an index card for every scene, moved by drag or keys; every note and boneyard in one list, with categories, readers' names, and open or resolved status; scene goals; setups and payoffs); **Final Draft files** (open an `.fdx` as a new script, or export your script as one); **History** (earlier versions of your script, kept as you write and save, each one restorable in one undo); **Compare** (what changed between two versions, as script pages with the changes marked); and **spellcheck** (Drafter's own, offline, in US or British English, with a dictionary of your own and one for each script). The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and a Help menu with help pages, About Drafter (your version, and links to the project on GitHub), tiny sample scripts, and Check for updates, with **About Drafter** (the version, for a bug report, and the links), **Sample scripts** (a tiny screenplay, stage play, and Markdown document, each opened as a new script), and **Check for updates**, in the Help section of the menu. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: a Structure strip above the script, PDF export for Markdown, and Highland and Fade In imports; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
 
 **Drafter for Linux and Windows.** Drafter also comes as a desktop app. See [Drafter for Linux](#drafter-for-linux) and [Drafter for Windows](#drafter-for-windows) for the downloads, how to install and start it, and how it differs from drafter.dev. **On a Mac**, you can [build the same app yourself](#drafter-on-a-mac) with one command until a signed download is ready.
 
@@ -141,7 +141,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
 | `@drafter/compare` | The line diff behind Compare: what changed between two versions of a script, and where it sits in the newer one | 2 (built in Plan C) |
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits | 2 (built in Plans A and B) |
-| `@drafter/spell` | Offline spellcheck (nspell) with a per-script dictionary | 2 |
+| `@drafter/spell` | Offline spellcheck (nspell): the words worth checking, the two bundled English dictionaries, and a per-script dictionary | 2 (built in Plan D) |
 | `@drafter/stats` | Script statistics | 2 |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built in Plan FD) |
 
@@ -165,7 +165,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|
 | [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
 | [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev**, with the desktop app for Linux and Windows; a signed macOS download comes later |
-| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline, Final Draft import and export, Cards and Notes, and History and Compare are built |
+| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline, Final Draft import and export, Cards and Notes, History and Compare, and Spellcheck are built |
 | [3](#phase-3--formats) | Formats: other apps' imports; TV, radio, UK, and novel templates; user templates | Planned |
 | [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
 | [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
@@ -225,8 +225,9 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 - Snapshots with a retention schedule, and a Compare view that renders two snapshots as script pages with changed lines marked (built in v0.13.0).
 - The Stats tab, including screen time per character and who shares scenes with whom.
 - Writing statistics by day, kept on your device (shipped in v0.5.0).
-- Spellcheck with nspell and a per-script dictionary that knows your character names.
+- Spellcheck with nspell and a per-script dictionary that knows your character names (built in v0.14.0): offline, in US or British English, with a right-click menu, a dictionary of your own, and a Spelling list in Problems.
 - The built-in Reference tab.
+- Next, after spellcheck: a Structure strip, the script's outline as a band above the script that you turn on and off; PDF export for Markdown documents; and import from Highland and Fade In (moved up from Phase 3).
 - A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there.
 - A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.
 - A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
@@ -237,7 +238,7 @@ The engine as standalone packages, with no UI at all. The phase ends when a CLI 
 
 ### Phase 3 — Formats
 
-- Import from Highland, Fade In, and Celtx.
+- Import from Celtx (Highland and Fade In imports moved up to Phase 2).
 - TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
 - User-added templates, dropped in as JSON, and template export.
 - For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
@@ -369,7 +370,7 @@ The editor, the pages, export, the Problems pane, templates, Markdown documents,
 | Working offline | After the first visit, through the browser's service worker. | Always: everything is in the app. |
 | Updates | A new version is offered when you next open the site, with **Reload**; **Help → Check for updates…** asks the browser to look now. | Checked once when Drafter starts (you can turn it off), and whenever you choose **Help → Check for Updates…**. The AppImage and the Windows app install it only when you choose **Restart**; the `.deb` offers **Get it**, the release page. |
 | Network | Loads the site from drafter.dev; after that, only the browser's check for a new version. | None, apart from the update check (or none at all with it off, unless you choose Check for Updates). |
-| Spellcheck | Your browser's. | A built-in English dictionary, so it works offline. |
+| Spellcheck | Drafter's own in the script, offline. Other text fields use your browser's. | The same in the script. Other text fields use the app's own English dictionary, so they work offline too. |
 | Installing as an app | Chrome and Edge can install the site as an app; Safari can add it to the Dock or Home Screen. | It is an app. |
 
 ## Drafter for Windows

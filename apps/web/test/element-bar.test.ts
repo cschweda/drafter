@@ -12,6 +12,7 @@ import {
   hereLabel,
   MARKDOWN_BUTTONS,
   reasonFor,
+  SPELLING_BUTTON,
   tipFor,
 } from '../app/editor/element-bar';
 import { ELEMENT_NAMES } from '../app/editor/element-names';
@@ -124,6 +125,19 @@ describe('the element bar', () => {
     expect(reasonFor(null, false, 'speech')).toBe(
       'the line under a character name: what you type here is their dialogue',
     );
+  });
+
+  test('the Spelling button runs Spelling suggestions', () => {
+    expect(SPELLING_BUTTON).toEqual({
+      label: 'Spelling',
+      mark: '',
+      command: 'spelling-suggestions',
+      tip: 'Suggestions for the misspelled word at the cursor, and adding it to a dictionary.',
+    });
+    expect(COMMAND_DATA.find((c) => c.id === SPELLING_BUTTON.command)?.title).toBe(
+      'Spelling suggestions',
+    );
+    expect(tipFor(SPELLING_BUTTON, false)).toBe(`${SPELLING_BUTTON.tip} Shortcut: Ctrl+..`);
   });
 
   test('names where the cursor is', () => {

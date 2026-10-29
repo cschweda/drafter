@@ -424,9 +424,14 @@ test.describe('script modules', () => {
     const panel = page.getByRole('tabpanel', { name: 'Fixture' });
     await expect(panel).toContainText('Untitled');
     await countScenes(page).click();
+    // With spellcheck off there are no checks at all for a Markdown document.
+    await openSettings(page);
+    await settingsDialog(page).getByRole('switch', { name: 'Spellcheck', exact: true }).uncheck();
+    await closeSettings(page);
     await showProblems(page);
     await expect(problemsList(page)).toContainText('No checks for Markdown documents.');
-    await expect(problemsList(page).getByRole('button')).toHaveCount(0);
+    await expect(problemsList(page)).not.toContainText('Spelling');
+    await expect(problemsList(page).locator('.problem-list button')).toHaveCount(0);
   });
 
   test('fits the toolbar at 320px with a module on', async ({ page }) => {

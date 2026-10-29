@@ -28,6 +28,15 @@ dialog:modal {
   outline-offset: 2px;
 }
 
+/* A misspelled word in the Source pane (Plan D, Call 17): a dotted 2 px underline in --spelling,
+   3:1 against the background in both themes (test/tokens.test.ts). The word keeps its own color,
+   and an underline of its own (Fountain's _underline_) is drawn as well: decorations add up. */
+.cm-misspelled {
+  text-decoration: underline dotted 2px var(--spelling);
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+}
+
 /* Inter Tight, the interface face: one variable font, weights 400 to 800,
    split by character set as Google's stylesheet splits it (see the README
    beside the files). */

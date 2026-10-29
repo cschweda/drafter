@@ -1,8 +1,15 @@
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { DICTIONARIES } from '@drafter/spell';
 import { describe, expect, test } from 'vitest';
-import { checkBuild, FIXTURE_MARKERS, iconNamesIn } from '../scripts/check-build.mjs';
+import {
+  checkBuild,
+  FIXTURE_MARKERS,
+  iconNamesIn,
+  LICENCE_FILES,
+  REQUIRED_FILES,
+} from '../scripts/check-build.mjs';
 
 async function site(files: Record<string, string>) {
   const dir = await mkdtemp(join(tmpdir(), 'drafter-build-'));
@@ -143,6 +150,54 @@ describe('checking the service worker’s precache', () => {
     expect(await check(none)).toMatch(/sw\.js/);
   });
 
+  // The dictionaries are fetched by the spellchecker's worker, so offline they must be precached.
+  test('reports a dictionary missing from the precache', async () => {
+    const files = {
+      ...FILES,
+      'dictionaries/en-US/index.aff': 'x',
+      'dictionaries/en-US/index.dic': 'x',
+    };
+    expect(await check(await worker(files, [...ALL, 'dictionaries/en-US/index.aff']))).toBe(
+      'The service worker does not cache dictionaries/en-US/index.dic, so it would be missing offline.',
+    );
+    expect(
+      await check(
+        await worker(files, [
+          ...ALL,
+          'dictionaries/en-US/index.aff',
+          'dictionaries/en-US/index.dic',
+        ]),
+      ),
+    ).toBe('');
+  });
+
+  // The Third-party licences page links each licence file, so offline they must be precached too;
+  // any other text file is not the app's.
+  test('reports a licence file missing from the precache, and ignores other text files', async () => {
+    const files = {
+      ...FILES,
+      'licenses/nspell.txt': 'x',
+      'fonts/inter-tight/OFL.txt': 'x',
+      'robots.txt': 'x',
+    };
+    expect(await check(await worker(files, [...ALL, 'licenses/nspell.txt']))).toBe(
+      'The service worker does not cache fonts/inter-tight/OFL.txt, so it would be missing offline.',
+    );
+    expect(
+      await check(
+        await worker(files, [...ALL, 'licenses/nspell.txt', 'fonts/inter-tight/OFL.txt']),
+      ),
+    ).toBe('');
+    expect(LICENCE_FILES).toEqual([
+      'licenses/nspell.txt',
+      'licenses/is-buffer.txt',
+      'licenses/dictionary-en.txt',
+      'licenses/dictionary-en-gb.txt',
+      'fonts/courier-prime/OFL.txt',
+      'fonts/inter-tight/OFL.txt',
+    ]);
+  });
+
   // The help pages are prerendered at /docs/<name>/index.html. The worker has no shell fallback for
   // /docs (nuxt.config.ts), so a page it didn't cache under the address used is a network error
   // offline: each must be cached with and without the trailing slash.
@@ -168,6 +223,55 @@ describe('checking the service worker’s precache', () => {
       expect(none).toMatch(/“docs\/saving”/);
       expect(none).toMatch(/“docs\/privacy\/”/);
     });
+  });
+});
+
+// The spellchecker's files, which `scripts/sync-assets.mjs` copies in: a build without one would
+// have no dictionary, or would ship a dictionary without the notice its licence requires.
+describe('checking the files the build must have', () => {
+  async function built(names: readonly string[]) {
+    const dir = await site({ 'a.js': 'x' });
+    for (const name of names) {
+      await mkdir(dirname(join(dir, name)), { recursive: true });
+      await writeFile(join(dir, name), 'x');
+    }
+    return dir;
+  }
+  const check = async (dir: string) =>
+    (await checkBuild(dir, { fixture: false, icons: [], files: REQUIRED_FILES })).problems.join(
+      '\n',
+    );
+
+  test('names both dictionaries and the four licence files', () => {
+    for (const info of Object.values(DICTIONARIES)) {
+      expect(REQUIRED_FILES).toContain(`${info.folder.slice(1)}index.aff`);
+      expect(REQUIRED_FILES).toContain(`${info.folder.slice(1)}index.dic`);
+      expect(REQUIRED_FILES).toContain(info.licenceFile.slice(1));
+    }
+    expect(REQUIRED_FILES).toContain('licenses/nspell.txt');
+    expect(REQUIRED_FILES).toContain('licenses/is-buffer.txt');
+    // Both typefaces' licences, which the OFL asks to travel with the fonts.
+    expect(REQUIRED_FILES).toContain('fonts/courier-prime/OFL.txt');
+    expect(REQUIRED_FILES).toContain('fonts/inter-tight/OFL.txt');
+    expect(REQUIRED_FILES).toHaveLength(10);
+  });
+
+  test('passes when every one is there', async () => {
+    expect(await check(await built(REQUIRED_FILES))).toBe('');
+  });
+
+  test('reports a missing licence file', async () => {
+    const problems = await check(
+      await built(REQUIRED_FILES.filter((name) => name !== 'licenses/dictionary-en-gb.txt')),
+    );
+    expect(problems).toBe('The build has no licenses/dictionary-en-gb.txt.');
+  });
+
+  test('reports a missing dictionary file', async () => {
+    const problems = await check(
+      await built(REQUIRED_FILES.filter((name) => name !== 'dictionaries/en-US/index.dic')),
+    );
+    expect(problems).toBe('The build has no dictionaries/en-US/index.dic.');
   });
 });
 

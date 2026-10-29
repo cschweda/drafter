@@ -9,8 +9,10 @@ import { useSettings } from './settings';
  * settings table has been read, so the first paint is not undone by the defaults. Call it from
  * the page's setup; it returns the function that stops it.
  *
- * - Spellcheck, line numbers, typewriter scrolling, and Strict Fountain's lint go to the editor (`applyEditorSettings`;
- *   `load` does the same for a script that is opened).
+ * - Spellcheck (the spelling marks), line numbers, typewriter scrolling, and Strict Fountain's lint
+ *   go to the editor (`applyEditorSettings`; `load` does the same for a script that is opened). The
+ *   spellcheck's language, Check notes and boneyard, and My dictionary are the spellcheck's own to
+ *   watch (`spell/use-spell.ts`): each one checks the text again in its worker.
  * - The text size is `--text-scale` on the root, which the Source pane's theme and the Script
  *   pane's 100% zoom multiply by.
  * - Match system appearance sets the color mode's preference to `system`, and turning it off

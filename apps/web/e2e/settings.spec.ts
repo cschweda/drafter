@@ -116,11 +116,13 @@ test.describe('the dialog', () => {
     const inside = () => dialog(page).evaluate((d) => d.contains(document.activeElement));
     expect(await inside()).toBe(true);
     await expect(textSize(page)).toBeFocused();
-    // Tab goes through the dialog's controls (the text size, the switches, a switch for each module,
-    // Done) without leaving it. (WebKit's Tab skips buttons and checkboxes unless the system asks
-    // otherwise.)
+    // Tab goes through the dialog's controls (the text size, the switches, the spelling language,
+    // the licences link, a switch for each module, Done) without leaving it. (WebKit's Tab skips
+    // buttons and checkboxes unless the system asks otherwise.)
     if (browserName !== 'webkit') {
-      const controls = await dialog(page).locator('select, input[type="checkbox"], button').count();
+      const controls = await dialog(page)
+        .locator('select, input[type="checkbox"], button, a[href]')
+        .count();
       for (let i = 1; i < controls; i++) {
         await page.keyboard.press('Tab');
         expect(await inside()).toBe(true);
@@ -190,13 +192,25 @@ test('remembers settings after a reload', async ({ page }) => {
   await expect(textSize(page)).toHaveValue('1.3');
 });
 
-test("turns the browser's spellcheck off in the Source pane", async ({ page }) => {
-  await expect(editor(page)).toHaveAttribute('spellcheck', 'true');
+test("the browser's spellcheck stays off in the Source pane, and the switch turns Drafter's on and off", async ({
+  page,
+}) => {
+  // Drafter's own spellcheck replaces the browser's there (Plan D, Call 18).
+  await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+  await setText(page, 'INT. HALL - DAY\n\nThe phnoe rings.\n');
+  await expect(page.locator('.cm-misspelled')).toHaveText('phnoe');
   await openSettings(page);
+  await expect(
+    dialog(page).getByText(
+      'Underline misspelled words in the Source pane, with Drafter’s own dictionary, which works offline.',
+    ),
+  ).toBeVisible();
   await toggle(page, 'spellcheck').uncheck();
+  await expect(page.locator('.cm-misspelled')).toHaveCount(0);
   await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
   await toggle(page, 'spellcheck').check();
-  await expect(editor(page)).toHaveAttribute('spellcheck', 'true');
+  await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+  await expect(page.locator('.cm-misspelled')).toHaveText('phnoe');
   await toggle(page, 'spellcheck').uncheck();
   await closeSettings(page);
   await page.reload();
@@ -457,5 +471,88 @@ test.describe('reopening at once', () => {
       await dialog(page).getByRole('button', { name: 'Done' }).click();
       await expect(dialog(page)).toBeHidden();
     }
+  });
+});
+
+// The spellcheck's settings (Plan D, Calls 3, 8, and 9): the language, notes and boneyard, My
+// dictionary, and where the dictionaries' licences are.
+test.describe('spelling', () => {
+  const marks = (page: Page) => page.locator('.cm-misspelled');
+  const expectMarks = (page: Page, words: string[]) =>
+    expect.poll(() => marks(page).allTextContents(), { timeout: 10_000 }).toEqual(words);
+  const myDictionary = (page: Page) => dialog(page).getByRole('list', { name: 'My dictionary' });
+
+  /** Keeps a setting in Drafter's settings table, as Settings would, and loads the page again. */
+  async function withSetting(page: Page, key: string, value: unknown) {
+    await page.evaluate(
+      ([key, value]) =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('drafter');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const db = open.result;
+            const tx = db.transaction('settings', 'readwrite');
+            tx.objectStore('settings').put({ key, value });
+            tx.oncomplete = () => {
+              db.close();
+              resolve();
+            };
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+      [key, value] as const,
+    );
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await showSource(page);
+  }
+
+  test('chooses British English', async ({ page }) => {
+    await setText(page, 'INT. HALL - DAY\n\nThe colour of the color.\n');
+    await expectMarks(page, ['colour']);
+    await openSettings(page);
+    const language = dialog(page).getByLabel('Spelling language');
+    await expect(language).toHaveValue('en-US');
+    await expect(language.locator('option')).toHaveText(['US English', 'British English']);
+    await language.selectOption({ label: 'British English' });
+    await expect.poll(async () => (await stored(page)).spellLanguage).toBe('en-GB');
+    await closeSettings(page);
+    await expectMarks(page, ['color']);
+    // Check notes and boneyard is off, and here.
+    await openSettings(page);
+    await expect(
+      dialog(page).getByRole('switch', { name: 'Check notes and boneyard' }),
+    ).not.toBeChecked();
+  });
+
+  test('removes a word from My dictionary and it is marked again', async ({ page }) => {
+    await withSetting(page, 'personalDictionary', ['Quorravel', 'phnoe']);
+    await setText(page, 'INT. HALL - DAY\n\nThe phnoe and the drowr in Quorravel.\n');
+    await expectMarks(page, ['drowr']);
+    await openSettings(page);
+    await expect(myDictionary(page).getByRole('listitem')).toHaveText([
+      /^Quorravel\s*Remove\s*$/,
+      /^phnoe\s*Remove\s*$/,
+    ]);
+    await myDictionary(page).getByRole('button', { name: 'Remove phnoe' }).click();
+    await expect(myDictionary(page).getByRole('listitem')).toHaveText([/^Quorravel\s*Remove\s*$/]);
+    await expect.poll(async () => (await stored(page)).personalDictionary).toEqual(['Quorravel']);
+    // Checked again at once, with the dialog still open.
+    await expectMarks(page, ['phnoe', 'drowr']);
+    // Focus doesn't drop to the page: it goes to the next Remove, or the list's place.
+    await expect(
+      myDictionary(page).getByRole('button', { name: 'Remove Quorravel' }),
+    ).toBeFocused();
+    await myDictionary(page).getByRole('button', { name: 'Remove Quorravel' }).click();
+    await expect(dialog(page).getByText('No words yet.', { exact: false })).toBeVisible();
+    await expectMarks(page, ['phnoe', 'drowr', 'Quorravel']);
+  });
+
+  test('links to the licences page', async ({ page }) => {
+    await openSettings(page);
+    await expect(dialog(page).getByRole('link', { name: 'Third-party licences' })).toHaveAttribute(
+      'href',
+      '/docs/licences/',
+    );
   });
 });

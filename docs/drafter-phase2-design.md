@@ -534,6 +534,8 @@ Each plan is a shippable minor release with its own plan document, tag, GitHub R
 
 **Decided (2026-10-28): Final Draft files come right after Plan A,** as Plan FD (v0.11.0), moved up from Phase 3; the plans after it each take the next minor. Plan FD keeps its own name so the letters the rest of this document uses for B to H stay as they are.
 
+**Decided (2026-10-29): after Plan D, the Structure strip (v0.15.0: the outline as a band above the script, turned on and off), then PDF export for Markdown documents, then Highland, Fade In, and Markdown imports come next,** each its own minor, so Plans E to H each move down by those releases and take later versions than their headings below give; their letters and scope are unchanged.
+
 The order is otherwise the suggested one with two changes, both Calls: **setups and payoffs move into Plan B**, because they are keyed notes listed in the Notes tab B builds, and **snapshots come before spellcheck**, because the browser's spellcheck already works while history does not exist, and Plans A and B make large structural edits that a writer drafting for the first time should be able to go back on.
 
 ### Plan A — v0.10.0: The outline
@@ -591,6 +593,8 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 - axe passes on History and Compare, in both themes at both widths.
 
 ### Plan D — v0.14.0: Spellcheck
+
+**Status:** built (2026-10-29), except that axe with misspellings on screen and the menu open waits for the final accessibility steps; see `docs/DEFERRED.md`. Downloadable dictionary packs are not built (Phase 4).
 
 **Scope:** `@drafter/spell`, the worker, the two dictionaries (§12), the menus and commands, the script's and the writer's dictionaries, the phone's Spelling button, and the Spelling group in Problems. The browser's spellcheck is turned off.
 

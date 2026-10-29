@@ -24,6 +24,7 @@
   --trans: #f5a9c0;
   --note: #9bd3a0;
   --title: #f49c84;
+  --spelling: #ff6b6b;
 }
 
 .light {
@@ -46,4 +47,5 @@
   --trans: #b23a68;
   --note: #2e7d4f;
   --title: #b5502f;
+  --spelling: #c62828;
 }

@@ -110,4 +110,21 @@ describe('createStaticServer', () => {
       expect((await fetch(`${base}/b.ttf`)).headers.get('content-type')).toBe('font/ttf');
     });
   });
+
+  test("lets a _headers rule's Content-Type name a file's type, as Netlify does", async () => {
+    await withServer(
+      {
+        _headers: '/dictionaries/*\n  Content-Type: text/plain; charset=utf-8\n',
+        'dictionaries/en-US/index.dic': 'kettle',
+        'other.dic': 'kettle',
+      },
+      async (base) => {
+        const dic = await fetch(`${base}/dictionaries/en-US/index.dic`);
+        expect(dic.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+        expect((await fetch(`${base}/other.dic`)).headers.get('content-type')).toBe(
+          'application/octet-stream',
+        );
+      },
+    );
+  });
 });

@@ -1,3 +1,4 @@
+import { SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
 import { type Ref, readonly, shallowRef } from 'vue';
 import { db } from '../storage/db';
 
@@ -6,6 +7,7 @@ export interface Settings {
   matchSystem: boolean;
   /** Scales both panes evenly: 0.9, 1, 1.15, 1.3, or 1.5. */
   textSize: number;
+  /** Drafter's spellcheck in the Source pane, with its own dictionary; on by default (Plan D). The browser's is always off there. */
   spellcheck: boolean;
   /** Strict Fountain (§5.6). */
   strict: boolean;
@@ -23,6 +25,12 @@ export interface Settings {
   elementBar: boolean;
   /** How big the Cards tab draws its cards, chosen on its slim bar; medium by default (Phase 2 design §7). */
   cardSize: CardSize;
+  /** The spellcheck's dictionary: US English by default (Plan D, Call 8). */
+  spellLanguage: SpellLanguage;
+  /** Check notes and boneyard as well; off by default (Plan D, Call 7). */
+  spellNotes: boolean;
+  /** My dictionary: words never marked in any script in this browser, kept as typed (technical design §10; Plan D, Call 9). */
+  personalDictionary: readonly string[];
 }
 
 export type CardSize = 'small' | 'medium' | 'large';
@@ -41,6 +49,9 @@ export const DEFAULT_SETTINGS: Settings = {
   scrollSync: true,
   elementBar: true,
   cardSize: 'medium',
+  spellLanguage: 'en-US',
+  spellNotes: false,
+  personalDictionary: [],
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -54,6 +65,11 @@ function isKey(key: string): key is keyof Settings {
 function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
   if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
+  if (key === 'spellLanguage') return (SPELL_LANGUAGES as readonly unknown[]).includes(value);
+  if (key === 'personalDictionary') {
+    // Each entry one word: a non-empty string with no whitespace.
+    return Array.isArray(value) && value.every((w) => typeof w === 'string' && /^\S+$/u.test(w));
+  }
   return typeof value === 'boolean';
 }
 
@@ -100,9 +116,12 @@ export function createSettings(): SettingsStore {
   async function set<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {
     if (!isKey(key) || !isValid(key, value)) return;
     changed.add(key);
-    state.value = { ...state.value, [key]: value };
+    // A list is copied: one read from the settings themselves is a Vue proxy, which IndexedDB
+    // (and a worker) can't clone.
+    const kept = Array.isArray(value) ? [...value] : value;
+    state.value = { ...state.value, [key]: kept };
     try {
-      await db.settings.put({ key, value });
+      await db.settings.put({ key, value: kept });
     } catch {
       // Held for this visit.
     }

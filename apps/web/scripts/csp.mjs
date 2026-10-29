@@ -56,8 +56,8 @@ export function contentSecurityPolicy(scriptHashes) {
 
 /**
  * The `_headers` file: the policy and the other security headers for every
- * path, long caching for the fingerprinted build assets and the fonts, and none for the service
- * worker and the manifest.
+ * path, long caching for the fingerprinted build assets and the fonts, the dictionaries' type
+ * (text, so Netlify compresses them), and no caching for the service worker and the manifest.
  * @param {string[]} scriptHashes
  * @returns {string}
  */
@@ -73,6 +73,11 @@ export function headersFile(scriptHashes) {
     '  Cache-Control: public, max-age=31536000, immutable',
     '/fonts/*',
     '  Cache-Control: public, max-age=604800',
+    // The spelling dictionaries (`index.aff`, `index.dic`) are text. Netlify compresses a file by
+    // its type, and doesn't know these extensions, so they are named as text: about 1.1 MB as
+    // files, much less over the wire.
+    '/dictionaries/*',
+    '  Content-Type: text/plain; charset=utf-8',
     // The service worker and the manifest are never kept for long: a browser that asks for
     // `sw.js` and is told "no-cache" checks with the server each time, which is how it finds a
     // new version (the worker's own bytes change with the files it precaches).

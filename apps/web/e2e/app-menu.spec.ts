@@ -85,13 +85,14 @@ test.describe('the app menu', () => {
     await expect(menu(page)).toBeVisible();
     await page.keyboard.press('End');
     // The last item is Help's About Drafter; above it Check for updates…, Reset sample (a sample is
-    // open), the Sample scripts submenu, the four help pages, then Take the tour, and above that
+    // open), the Sample scripts submenu, the five help pages, then Take the tour, and above that
     // Settings….
     await expect(item(page, /^About Drafter/)).toBeFocused();
     for (const name of [
       /^Check for updates…/,
       /^Reset sample/,
       /^Sample scripts/,
+      /^Third-party licences/,
       /^Privacy/,
       /^Keyboard shortcuts/,
       /^Saving and your browser/,

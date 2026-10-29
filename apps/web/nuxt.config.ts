@@ -60,14 +60,22 @@ export default defineNuxtConfig({
     workbox: {
       // Every file the app needs, by extension: the shell (HTML), scripts and styles (the lazy and
       // worker chunks are in `_nuxt/` with the rest), Inter Tight and Courier Prime, the icons,
-      // (the manifest is added by the plugin itself, once). A page added under /docs/ later (Task 8) is matched by `**/*.html`.
-      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico}'],
+      // and the spelling dictionaries (`dictionaries/<language>/index.{aff,dic}`, about 1.1 MB,
+      // each well under Workbox's 2 MiB limit) (the manifest is added by the plugin itself, once).
+      // The licence files the Third-party licences page links (`licenses/*.txt` and the fonts'
+      // `OFL.txt`, about 42 KB) are cached too, so its links work offline; no other `.txt` is. A
+      // page added under /docs/ is matched by `**/*.html`.
+      globPatterns: [
+        '**/*.{js,css,html,woff2,ttf,png,svg,ico,aff,dic}',
+        'licenses/*.txt',
+        'fonts/*/OFL.txt',
+      ],
       // Not part of the app: the social-sharing image, and the hosting fallbacks (200.html is the
       // shell again; 404.html is for a link that matches nothing).
       globIgnores: ['og-image.png', '200.html', '404.html'],
       // A navigation the worker has no page for gets the app's shell, so a reload works offline at
       // any address the app is used at. Not for a path that names a file (`/og-image.png`,
-      // `/fonts/courier-prime/OFL.txt`, `/404.html`): those are files, not the app. The
+      // `/404.html`): those are files, not the app. The
       // documentation pages are their own pages (`/docs/...`, precached by `**/*.html`), not the app.
       navigateFallback: '/',
       navigateFallbackDenylist: [/\/[^/?]+\.[^/]+$/, /^\/docs(\/|$)/],
@@ -130,7 +138,7 @@ export default defineNuxtConfig({
     resolve: {
       alias: [
         {
-          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|templates)$/,
+          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

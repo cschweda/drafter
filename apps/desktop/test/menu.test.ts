@@ -36,6 +36,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('help-shortcuts', 'Help', 'Open the page: Keyboard shortcuts'),
   cmd('help-saving', 'Help', 'Open the page: Saving and your browser'),
   cmd('help-privacy', 'Help', 'Open the page: Privacy'),
+  cmd('help-licences', 'Help', 'Open the page: Third-party licences'),
   cmd('go-to-scene', 'Go', 'Go to scene…'),
   cmd('next-problem', 'Go', 'Next problem', { keys: ['F8'] }),
   cmd('previous-problem', 'Go', 'Previous problem', { keys: ['Shift-F8'] }),
@@ -88,6 +89,19 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('puts the spelling commands in Edit and Go', () => {
+    const spelling = [
+      cmd('check-spelling', 'Edit', 'Check spelling'),
+      cmd('spelling-suggestions', 'Edit', 'Spelling suggestions', { keys: ['Mod-.'] }),
+      cmd('next-misspelling', 'Go', 'Next misspelling', { keys: ['Mod-;'] }),
+      cmd('previous-misspelling', 'Go', 'Previous misspelling', { keys: ['Mod-Shift-;'] }),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...spelling], () => {}, { platform: 'linux' }));
+    const ids = (menu: string) => walk(submenu(m[menu])).map((i) => i.id);
+    expect(ids('Edit')).toEqual(expect.arrayContaining(['check-spelling', 'spelling-suggestions']));
+    expect(ids('Go')).toEqual(expect.arrayContaining(['next-misspelling', 'previous-misspelling']));
+  });
+
   test('on Windows, as on Linux: Alt opens each menu by its underlined letter, and Quit ends File', () => {
     const template = menuTemplate(COMMANDS, () => {}, { platform: 'win32' });
     expect(template.map((item) => item.label)).toEqual(['&File', '&Edit', '&View', '&Go', '&Help']);
@@ -109,6 +123,7 @@ describe('menuTemplate', () => {
       'help-shortcuts',
       'help-saving',
       'help-privacy',
+      'help-licences',
       'take-the-tour',
       'modules-folder',
       'releases',
@@ -154,6 +169,7 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');
     expect(named(t, 'help-saving')?.label).toBe('Saving');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
+    expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
 
   test('sends the command’s id when an item is chosen', () => {
@@ -369,6 +385,7 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       'help-shortcuts',
       'help-saving',
       'help-privacy',
+      'help-licences',
       'take-the-tour',
       'check-for-updates',
       'modules-folder',

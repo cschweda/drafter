@@ -12,6 +12,7 @@ import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
 import { useSnapshots } from '~/snapshots/use-snapshots';
+import { useSpell } from '~/spell/use-spell';
 import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
@@ -71,6 +72,9 @@ const { dirty, project } = useScript();
 const { settings } = useSettings();
 // Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
 useSnapshots();
+// Starts the spellcheck, which makes its worker once the settings are read and the first script is
+// open (Plan D): the Source pane's spelling marks.
+useSpell();
 
 /** The script's title, as its kind reads it. */
 function pageTitle(): string {
@@ -180,6 +184,7 @@ onBeforeUnmount(() => {
     <LazyFolderModuleRunners v-if="desktopBuild" />
     <CommandPalette />
     <OutlineAnnouncer />
+    <SpellMenu />
     <TreatmentDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />

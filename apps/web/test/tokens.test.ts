@@ -59,6 +59,8 @@ const TEXT_PAIRS: Array<[string, string, number]> = [
   ['--ink', '--page', 4.5],
   ['--ink-muted', '--page', 4.5],
   ['--heading', '--chrome', 3],
+  // The spelling mark's dotted underline is a graphic, not text (Plan D, Call 17).
+  ['--spelling', '--bg', 3],
 ];
 
 describe('design tokens', () => {
@@ -67,9 +69,9 @@ describe('design tokens', () => {
     expect(contrast('#777777', '#FFFFFF')).toBeCloseTo(4.48, 2);
   });
 
-  test('both themes define the same nineteen tokens', () => {
+  test('both themes define the same twenty tokens', () => {
     const dark = Object.keys(theme('dark')).sort();
-    expect(dark).toHaveLength(19);
+    expect(dark).toHaveLength(20);
     expect(Object.keys(theme('light')).sort()).toEqual(dark);
   });
 

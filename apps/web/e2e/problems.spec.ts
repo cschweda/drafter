@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 import { expectNewestThenCompare, listedReasons, newScreenplay } from './bulk-snapshot';
+import { runCommand } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 
@@ -402,3 +403,136 @@ test.describe('in a read-only tab', () => {
     expect(await text(other)).toBe(STRICT);
   });
 });
+
+// The Spelling group (Plan D, Calls 13 and 14): the spellcheck's marks, listed after the problems
+// and never counted with them. Every misspelling here is invented.
+test.describe('the Spelling group', () => {
+  const MISSPELT = 'INT. HALL\n\nThe phnoe rings.\n\nA phnoe again. Then the drowr shuts.\n';
+  const spellingHeading = (page: Page) => list(page).getByRole('heading', { name: /^Spelling/ });
+  const spellingRows = (page: Page) =>
+    list(page).getByRole('list', { name: 'Spelling' }).getByRole('button');
+  const announcer = (page: Page) => page.locator('.outline-announcer');
+  const marks = (page: Page) => page.locator('.cm-misspelled');
+
+  test('lists misspellings under Spelling, outside the problem count', async ({ page }) => {
+    await setText(page, MISSPELT);
+    await showProblems(page);
+    await expect(spellingHeading(page)).toHaveText('Spelling: 3 words', { timeout: 10_000 });
+    await expect(spellingRows(page)).toHaveText([
+      /^phnoe\s*Line 3$/,
+      /^phnoe\s*Line 5$/,
+      /^drowr\s*Line 5$/,
+    ]);
+    await expect(spellingRows(page).first()).toHaveAccessibleName('phnoe Line 3');
+    // Only the heading's missing time is a problem: the misspellings aren't counted.
+    await expect(problemButton(page, HEADING_NO_TIME)).toBeVisible();
+    await expect(problemsTab(page)).toHaveText(/^Problems\s+1$/);
+    await expect(page.locator('footer')).toContainText('1 problem');
+    // Mended, a word leaves the group.
+    await showSource(page);
+    await marks(page).last().dblclick();
+    await page.keyboard.type('drawer');
+    await showProblems(page);
+    await expect(spellingHeading(page)).toHaveText('Spelling: 2 words', { timeout: 10_000 });
+  });
+
+  test('Check spelling shows Problems with the Spelling heading focused', async ({ page }) => {
+    await setText(page, MISSPELT);
+    // At once, before the check after the pause has come back: it waits for it.
+    await runCommand(page, 'Check spelling');
+    await expect(list(page)).toBeVisible();
+    await expect(spellingHeading(page)).toBeFocused();
+    await expect(spellingHeading(page)).toHaveText('Spelling: 3 words');
+    await expect(announcer(page)).toHaveText('3 misspelled words.');
+  });
+
+  test('a Spelling row goes to its word and selects it', async ({ page }) => {
+    await setText(page, MISSPELT);
+    await showProblems(page);
+    await expect(spellingRows(page)).toHaveCount(3, { timeout: 10_000 });
+    await spellingRows(page).nth(1).click();
+    await expect(editor(page)).toBeFocused();
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('phnoe');
+    // It is the second phnoe that is selected.
+    await page.keyboard.type('phone');
+    await expect.poll(() => text(page)).toContain('A phone again.');
+    expect(await text(page)).toContain('The phnoe rings.');
+    // From a row, Spelling suggestions opens the word's menu.
+    await showProblems(page);
+    await expect(spellingRows(page)).toHaveCount(2, { timeout: 10_000 });
+    await spellingRows(page).first().click();
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+Period');
+    await expect(page.getByRole('menu', { name: 'Spelling suggestions' })).toBeVisible();
+  });
+
+  test('Check spelling while the dictionary loads says it is checking, then the count', async ({
+    page,
+    context,
+  }) => {
+    const release = holdDictionary(context);
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await setText(page, MISSPELT);
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText('Checking spelling…');
+    // A second one while the first waits changes nothing.
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText('Checking spelling…');
+    release();
+    await expect(announcer(page)).toHaveText('3 misspelled words.', { timeout: 10_000 });
+    await expect(spellingHeading(page)).toBeFocused();
+    await expect(spellingHeading(page)).toHaveText('Spelling: 3 words');
+  });
+
+  test('Check spelling with the dictionary loading after 10 s says so, not none found', async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(45_000);
+    holdDictionary(context);
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await setText(page, MISSPELT);
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText(
+      'Still checking spelling. Problems will list the words when it’s done.',
+      { timeout: 15_000 },
+    );
+    await expect(spellingHeading(page)).toBeFocused();
+    await expect(spellingHeading(page)).toHaveText('Spelling: checking…');
+  });
+
+  test('Check spelling with spellcheck off says so', async ({ page }) => {
+    await page.keyboard.press('ControlOrMeta+,');
+    const dialog = page.getByRole('dialog', { name: 'Settings' });
+    const spellcheck = dialog.getByRole('switch', { name: 'Spellcheck', exact: true });
+    await spellcheck.uncheck();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+    await setText(page, MISSPELT);
+    await runCommand(page, 'Check spelling');
+    await expect(announcer(page)).toHaveText('Spellcheck is off. Turn it on in Settings.');
+    // No setting is changed, and Problems has no Spelling group.
+    await page.keyboard.press('ControlOrMeta+,');
+    await expect(spellcheck).not.toBeChecked();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await showProblems(page);
+    await expect(problemButton(page, HEADING_NO_TIME)).toBeVisible();
+    await expect(spellingHeading(page)).toHaveCount(0);
+    await expect(marks(page)).toHaveCount(0);
+  });
+});
+
+/** Holds every request for a `.dic` until the returned function is called. */
+function holdDictionary(context: BrowserContext): () => void {
+  let release: () => void = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  void context.route('**/dictionaries/**/*.dic', async (route) => {
+    await released;
+    await route.continue();
+  });
+  return release;
+}
