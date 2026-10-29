@@ -4,17 +4,38 @@ import { changesOf } from '../src';
 describe('changesOf', () => {
   test('pairs a removed run and an added run into one changed', () => {
     expect(changesOf('a\nb\nc\nd', 'a\nB\nC\nd')).toEqual([
-      { kind: 'changed', old: [1, 3], new: [1, 3], span: { from: 2, to: 5 }, removed: ['b', 'c'] },
+      {
+        kind: 'changed',
+        old: [1, 3],
+        new: [1, 3],
+        span: { from: 2, to: 5 },
+        removed: ['b', 'c'],
+        added: ['B', 'C'],
+      },
     ]);
   });
 
   test('a removal sits before the line that follows it', () => {
     expect(changesOf('a\nb\nc', 'a\nc')).toEqual([
-      { kind: 'removed', old: [1, 2], new: [1, 1], span: { from: 2, to: 2 }, removed: ['b'] },
+      {
+        kind: 'removed',
+        old: [1, 2],
+        new: [1, 1],
+        span: { from: 2, to: 2 },
+        removed: ['b'],
+        added: [],
+      },
     ]);
     // Removed from the end: it sits at the end of the newer text.
     expect(changesOf('a\nb', 'a')).toEqual([
-      { kind: 'removed', old: [1, 2], new: [1, 1], span: { from: 1, to: 1 }, removed: ['b'] },
+      {
+        kind: 'removed',
+        old: [1, 2],
+        new: [1, 1],
+        span: { from: 1, to: 1 },
+        removed: ['b'],
+        added: [],
+      },
     ]);
   });
 
@@ -27,6 +48,7 @@ describe('changesOf', () => {
       new: [1, 2],
       span: { from: 5, to: 8 },
       removed: [],
+      added: ['two'],
     });
     expect(newer.slice(change.span.from, change.span.to)).toBe('two');
   });
@@ -60,6 +82,7 @@ describe('changesOf', () => {
         new: [0, 3],
         span: { from: 0, to: 32 },
         removed: ['Sam waits.', 'Ann leaves.'],
+        added: ['EXT. ROOF - NIGHT', 'Rain.', 'Thunder.'],
       },
     ]);
   });

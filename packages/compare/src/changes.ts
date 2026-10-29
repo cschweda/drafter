@@ -14,6 +14,8 @@ export interface Change {
   span: Span;
   /** The older lines it took out, as they were. */
   removed: string[];
+  /** The newer lines it put in, as they are. */
+  added: string[];
 }
 
 /** The changes from `older` to `newer`, in order, by lines; `\r\n` and `\n` read the same. */
@@ -35,20 +37,30 @@ export function changesOf(older: string, newer: string): Change[] {
         new: [...run.new],
         span: { from: at, to: at },
         removed: a.slice(run.old[0], run.old[1]),
+        added: [],
       };
       changes.push(pending);
       continue;
     }
     const last = run.new[1] - 1;
     const span = { from: starts[run.new[0]], to: starts[last] + b[last].length };
+    const added = b.slice(run.new[0], run.new[1]);
     if (pending) {
       // An addition right after a removal replaces it.
       pending.kind = 'changed';
       pending.new = [...run.new];
       pending.span = span;
+      pending.added = added;
       pending = null;
     } else {
-      changes.push({ kind: 'added', old: [...run.old], new: [...run.new], span, removed: [] });
+      changes.push({
+        kind: 'added',
+        old: [...run.old],
+        new: [...run.new],
+        span,
+        removed: [],
+        added,
+      });
     }
   }
   return changes;

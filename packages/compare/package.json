@@ -1,7 +1,7 @@
 {
   "name": "@drafter/compare",
   "version": "0.12.0",
-  "description": "Compare for Drafter: a line diff of two versions of a script, and the changes it makes, with their place in the newer text.",
+  "description": "Compare for Drafter: a line diff of two versions of a script, the changes it makes, and where they fall on the newer version's pages.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -29,6 +29,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@drafter/fountain": "workspace:*"
+    "@drafter/fountain": "workspace:*",
+    "@drafter/layout": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/templates": "workspace:*"
   }
 }
