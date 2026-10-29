@@ -131,6 +131,15 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['undo', 'redo'] },
     { fixed: [{ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { pick: ['find'] },
+    {
+      pick: [
+        'check-spelling',
+        'spelling-suggestions',
+        'add-to-script-dictionary',
+        'add-to-my-dictionary',
+        'ignore-misspelling',
+      ],
+    },
     { pick: prefix('element-'), submenu: 'Element', strip: /^Element: / },
     { pick: prefix('emphasis-'), submenu: 'Emphasis', strip: /^Emphasis: / },
     { pick: prefix('make-'), submenu: 'Force', strip: /^Force / },
@@ -159,6 +168,7 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['palette'] },
     { pick: ['go-to-scene', 'go-to-line'] },
     { pick: ['next-problem', 'previous-problem'] },
+    { pick: ['next-misspelling', 'previous-misspelling'] },
   ],
   Help: [
     { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy'] },

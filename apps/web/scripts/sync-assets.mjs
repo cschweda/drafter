@@ -32,6 +32,8 @@ export const ASSETS = [
     to: `fonts/courier-prime/CourierPrime-${style}.ttf`,
   })),
   { from: 'packages/render-pdf/fonts/OFL.txt', to: 'fonts/courier-prime/OFL.txt' },
+  // Inter Tight's own licence, served verbatim (the font itself is a Vite asset, hashed).
+  { from: 'apps/web/app/assets/fonts/inter-tight/OFL.txt', to: 'fonts/inter-tight/OFL.txt' },
   ...BRAND.map((name) => ({ from: `brand/${name}`, to: name })),
 ];
 

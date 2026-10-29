@@ -88,6 +88,19 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('puts the spelling commands in Edit and Go', () => {
+    const spelling = [
+      cmd('check-spelling', 'Edit', 'Check spelling'),
+      cmd('spelling-suggestions', 'Edit', 'Spelling suggestions', { keys: ['Mod-.'] }),
+      cmd('next-misspelling', 'Go', 'Next misspelling', { keys: ['Mod-;'] }),
+      cmd('previous-misspelling', 'Go', 'Previous misspelling', { keys: ['Mod-Shift-;'] }),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...spelling], () => {}, { platform: 'linux' }));
+    const ids = (menu: string) => walk(submenu(m[menu])).map((i) => i.id);
+    expect(ids('Edit')).toEqual(expect.arrayContaining(['check-spelling', 'spelling-suggestions']));
+    expect(ids('Go')).toEqual(expect.arrayContaining(['next-misspelling', 'previous-misspelling']));
+  });
+
   test('on Windows, as on Linux: Alt opens each menu by its underlined letter, and Quit ends File', () => {
     const template = menuTemplate(COMMANDS, () => {}, { platform: 'win32' });
     expect(template.map((item) => item.label)).toEqual(['&File', '&Edit', '&View', '&Go', '&Help']);

@@ -592,6 +592,8 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 
 ### Plan D — v0.14.0: Spellcheck
 
+**Status:** built (2026-10-29), except that axe with misspellings on screen and the menu open waits for the final accessibility steps; see `docs/DEFERRED.md`. Downloadable dictionary packs are not built (Phase 4).
+
 **Scope:** `@drafter/spell`, the worker, the two dictionaries (§12), the menus and commands, the script's and the writer's dictionaries, the phone's Spelling button, and the Spelling group in Problems. The browser's spellcheck is turned off.
 
 **Done when:**

@@ -106,6 +106,7 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
       <p>
         Terms: the same as Courier Prime’s: use, embed, and share it freely; it may not be sold by
         itself, and a changed version must take another name.
+        <a href="/fonts/inter-tight/OFL.txt">Inter Tight’s licence (full text)</a>
       </p>
     </section>
   </article>

@@ -229,7 +229,7 @@ test('reports a malformed module, naming its folder, and starts the rest', async
     'Drafter skipped the folder “my-notes”: it uses the id “notes”, which a module built into Drafter has.',
   );
   // Only the built-in Notes has a switch of that name.
-  await expect(settings(page).getByRole('switch', { name: 'Notes' })).toHaveCount(1);
+  await expect(settings(page).getByRole('switch', { name: 'Notes', exact: true })).toHaveCount(1);
   await expect(settings(page).getByRole('switch', { name: 'Tidy' })).toBeVisible();
 
   // One whose code loads but exports the wrong id says so when it is turned on.

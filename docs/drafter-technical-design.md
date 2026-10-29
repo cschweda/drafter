@@ -638,13 +638,15 @@ Every rule has fixtures that assert both hits and *non*-hits.
 
 **Engine: nspell only.** One checker, one dictionary set, one set of squiggles. Native browser spellcheck is explicitly disabled on the editor (`spellcheck="false"`) to avoid conflicting underlines.
 
-Until nspell arrives in Phase 2, Phase 1 turns on the browser's own spellcheck in the Source pane, with a setting to turn it off (Phase 1 design §5.3).
+Built in Phase 2, Plan D (v0.14.0). Until then, Phase 1 turned on the browser's own spellcheck in the Source pane; now the Spellcheck setting turns Drafter's own on and off, and the browser's is off in the Source pane either way. Other text fields keep the browser's (the desktop app's bundled Chromium dictionary).
 
-- Bundled: `en_US` (SCOWL-derived Hunspell dictionary, permissive license). Other languages are downloadable dictionary packs the user adds; each pack ships its own license file and the UI shows it. This keeps the MIT app free of GPL dictionary data.
-- Checking runs in its own worker (nspell is pure JS, and its suggestions are slow enough to delay layout if they shared one) on the changed blocks only, skipping: character names (every `sem.name`), every token in a scene heading's location, words in the project dictionary, all-caps tokens of ≤ 3 letters, and anything inside `[[ ]]` or boneyard by default (toggle).
+- Bundled: `en_US` and `en_GB` (SCOWL-derived Hunspell dictionaries, permissive license), as static files the service worker precaches. **As built (Plan D, Call 2):** the downloadable packs are not built, so other languages wait for Phase 4; `DictionaryInfo` in `@drafter/spell` is the shape a pack will take, and each pack will ship its own license file and the UI will show it. This keeps the MIT app free of GPL dictionary data. The Third-party licences help page serves each license file verbatim.
+- Checking runs in its own worker (nspell is pure JS, and its suggestions are slow enough to delay layout if they shared one) on the changed blocks only. **As built (Plan D, Call 5):** the worker gets the whole text after a 300 ms pause and its session caches tokens per block and verdicts per word, which is "changed blocks only"; the main thread only posts and maps. It skips skipping: character names (every `sem.name`), every token in a scene heading's location, words in the project dictionary, all-caps tokens of ≤ 3 letters, and anything inside `[[ ]]` or boneyard by default (toggle).
+- **As built (Plan D, Call 9):** the writer's personal dictionary is `personalDictionary` in the settings table, managed in Settings with Remove, and applies to every script in this browser; it never goes in a file.
 - Project dictionary = `meta.dictionary` (persisted in the file) ∪ harvested names/locations (not persisted; recomputed). "Add to dictionary" writes to `meta.dictionary`. "Add to personal dictionary" writes to IndexedDB `settings.personalDictionary`, which applies across projects.
 - Suggestions come from nspell; the quick-fix menu lists up to 5.
-- Full-document check is a command that runs every block and lists results in the Problems tab under a "Spelling" group.
+- Full-document check is a command that runs every block and lists results in the Problems tab under a "Spelling" group. **As built (Plan D, Call 13):** the group is the app's, drawn from the marks, not a `@drafter/lint` rule, because spelling marks are not lint diagnostics (Phase 2 design §12).
+- **As built (Plan D, Call 18):** the Source pane's browser spellcheck is off whether Drafter's is on or off.
 
 ---
 

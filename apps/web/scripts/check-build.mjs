@@ -45,6 +45,8 @@ export const REQUIRED_FILES = [
   'licenses/is-buffer.txt',
   'licenses/dictionary-en.txt',
   'licenses/dictionary-en-gb.txt',
+  'fonts/courier-prime/OFL.txt',
+  'fonts/inter-tight/OFL.txt',
 ];
 
 /**

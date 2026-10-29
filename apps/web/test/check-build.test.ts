@@ -224,7 +224,10 @@ describe('checking the files the build must have', () => {
     }
     expect(REQUIRED_FILES).toContain('licenses/nspell.txt');
     expect(REQUIRED_FILES).toContain('licenses/is-buffer.txt');
-    expect(REQUIRED_FILES).toHaveLength(8);
+    // Both typefaces' licences, which the OFL asks to travel with the fonts.
+    expect(REQUIRED_FILES).toContain('fonts/courier-prime/OFL.txt');
+    expect(REQUIRED_FILES).toContain('fonts/inter-tight/OFL.txt');
+    expect(REQUIRED_FILES).toHaveLength(10);
   });
 
   test('passes when every one is there', async () => {

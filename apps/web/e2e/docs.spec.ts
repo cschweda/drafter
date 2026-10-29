@@ -187,6 +187,16 @@ test.describe('without JavaScript', () => {
       'href',
       '/fonts/courier-prime/OFL.txt',
     );
+    // Inter Tight's own licence, linked and served verbatim (the OFL's second condition).
+    await expect(page.getByRole('link', { name: /Inter Tight.*licence/i })).toHaveAttribute(
+      'href',
+      '/fonts/inter-tight/OFL.txt',
+    );
+    const ofl = await page.request.get('/fonts/inter-tight/OFL.txt');
+    expect(ofl.ok()).toBe(true);
+    expect(await ofl.text()).toBe(
+      readFileSync(new URL('../app/assets/fonts/inter-tight/OFL.txt', import.meta.url), 'utf8'),
+    );
   });
 
   test('says on the Privacy page that nothing leaves the device', async ({ page }) => {

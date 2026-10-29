@@ -256,3 +256,31 @@ describe('Snapshots and Compare in the desktop menus', () => {
     });
   });
 });
+
+describe('Spellcheck in the desktop menus', () => {
+  test('puts Check spelling, Spelling suggestions, Next misspelling, and Previous misspelling in the menus', () => {
+    const ids = [
+      'check-spelling',
+      'spelling-suggestions',
+      'add-to-script-dictionary',
+      'add-to-my-dictionary',
+      'ignore-misspelling',
+      'next-misspelling',
+      'previous-misspelling',
+    ];
+    registerCommands(ids.map((id) => command(id)));
+    const list = menuCommands(useCommands().value);
+    const groups = Object.fromEntries(list.map((c) => [c.id, c.group]));
+    // Next and Previous misspelling go with Next and Previous problem, in Go.
+    expect(groups).toEqual({
+      'check-spelling': 'Edit',
+      'spelling-suggestions': 'Edit',
+      'add-to-script-dictionary': 'Edit',
+      'add-to-my-dictionary': 'Edit',
+      'ignore-misspelling': 'Edit',
+      'next-misspelling': 'Go',
+      'previous-misspelling': 'Go',
+    });
+    expect(list.find((c) => c.id === 'spelling-suggestions')?.keys).toEqual(['Mod-.']);
+  });
+});

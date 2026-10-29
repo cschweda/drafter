@@ -11,13 +11,14 @@ const spell = join(repoRoot, 'packages/spell/package.json');
 const ALL = ASSETS.length + PACKAGE_ASSETS.length;
 
 describe('syncAssets', () => {
-  test('lists the four Courier Prime styles, their license, and the brand files', () => {
+  test('lists the four Courier Prime styles, both fonts’ licenses, and the brand files', () => {
     expect(ASSETS.map(({ to }) => to)).toEqual([
       'fonts/courier-prime/CourierPrime-Regular.ttf',
       'fonts/courier-prime/CourierPrime-Bold.ttf',
       'fonts/courier-prime/CourierPrime-Italic.ttf',
       'fonts/courier-prime/CourierPrime-BoldItalic.ttf',
       'fonts/courier-prime/OFL.txt',
+      'fonts/inter-tight/OFL.txt',
       'favicon.svg',
       'favicon.ico',
       'apple-touch-icon.png',

@@ -279,7 +279,7 @@ The regression suite is hand-counted position fixtures (frozen once verified) pl
 
 **One checker: nspell** (Hunspell dictionaries in JS), offline, running in its own worker on changed blocks. Browser-native spellcheck is **disabled** on the editor — two checkers that disagree about "Keokuk" is worse than either alone.
 
-- `en_US` is bundled (SCOWL-derived, permissive license). Other languages are opt-in dictionary packs the user adds; each shows its license, which keeps GPL-licensed dictionary data out of the MIT app bundle.
+- `en_US` and `en_GB` are bundled (SCOWL-derived, permissive license), as static files that are precached for offline use. Other languages are opt-in dictionary packs the user adds, in Phase 4; each will show its license, which keeps GPL-licensed dictionary data out of the MIT app bundle. Built in Phase 2, Plan D (v0.14.0).
 - Character names and slugline locations are auto-harvested from the CST and never flagged. "Add to dictionary" writes to the file's metadata block so it travels with the script; "Add to personal dictionary" applies across all projects.
 - A full-script check on demand lists results in the Problems tab under "Spelling."
 
