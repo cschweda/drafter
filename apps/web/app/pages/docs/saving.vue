@@ -248,8 +248,8 @@ useDocsHead({
       not taken again.
     </p>
     <p>
-      Open <strong>History…</strong> from the File menu, the command palette, or the save item in
-      the status bar. Each snapshot can be restored (one undo takes the restore back, after a
+      Open <strong>History…</strong> from the app menu (File, in the desktop app), the command palette,
+      or the save item in the status bar. Each snapshot can be restored (one undo takes the restore back, after a
       snapshot of what it replaced), labeled, saved as a file, deleted, or compared with the script
       as it is now or with another snapshot. <strong>Take snapshot…</strong> keeps one on request,
       with a label if you like. Snapshots are thinned as they age: every labeled one stays, all of
