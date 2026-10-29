@@ -3,7 +3,6 @@ import {
   ignoreHere,
   parsedDoc,
   type SpellMark,
-  spellMarkAt,
   stepSpellMark,
   unmarkWord,
 } from '@drafter/cm-fountain';
@@ -12,6 +11,7 @@ import { addToScriptDictionary } from '@drafter/spell';
 import { applyTextChanges } from '../editor/apply-changes';
 import type { DocumentKind } from '../markdown/kind';
 import { useSettings } from '../settings/settings';
+import { isCurrentMark } from './menu';
 import { saySpell } from './notice';
 import { useSpell } from './use-spell';
 
@@ -32,21 +32,59 @@ const dictionaryForm = (word: string) => {
 /** Unmarks the word and its possessive: both are known once the word is in a dictionary. */
 const unmarkEffects = (entry: string) => [unmarkWord.of(entry), unmarkWord.of(`${entry}'s`)];
 
-/** Whether `mark` is still a mark, where it was. */
-function isCurrent(view: EditorView, mark: SpellMark): boolean {
-  const now = spellMarkAt(view.state, mark.from);
-  return !!now && now.from === mark.from && now.to === mark.to;
+/**
+ * The change that turns the marked word into `suggestion` by its differing middle only: the
+ * letters both share at the start and the end stay as they are in the source, with any emphasis
+ * `*` and curly ’ among them. Offsets in `mark.word` (the source less its `*`s, ’ read as ', one
+ * character for one) are mapped back onto the source, stepping over the `*`s. A `*` inside the
+ * changed letters goes to their start; letters added between two that stay go after the first.
+ */
+export function replacement(
+  source: string,
+  word: string,
+  suggestion: string,
+): { from: number; to: number; insert: string } {
+  // Where each of the word's characters is in the source.
+  const at: number[] = [];
+  for (let i = 0; i < source.length; i++) if (source[i] !== '*') at.push(i);
+  if (at.length !== word.length) return { from: 0, to: source.length, insert: suggestion };
+  const most = Math.min(word.length, suggestion.length);
+  let start = 0;
+  while (start < most && word[start] === suggestion[start]) start++;
+  let end = 0;
+  while (
+    end < most - start &&
+    word[word.length - 1 - end] === suggestion[suggestion.length - 1 - end]
+  ) {
+    end++;
+  }
+  const middle = suggestion.slice(start, suggestion.length - end);
+  const last = word.length - end;
+  if (start === last) {
+    // Nothing of the word changes, letters are only added: after the letter before them.
+    const offset = start === 0 ? (at[0] as number) : (at[start - 1] as number) + 1;
+    return { from: offset, to: offset, insert: middle };
+  }
+  const from = at[start] as number;
+  const to = (at[last - 1] as number) + 1;
+  const stars = source.slice(from, to).replace(/[^*]/g, '');
+  return { from, to, insert: stars + middle };
 }
 
 /**
- * Puts `suggestion` in place of the marked word, the whole of it (a `*` inside the word too), as
- * one undo step; the cursor goes after it. The edit drops the word's mark. False, changing
- * nothing, in a read-only tab or when the mark has gone.
+ * Puts `suggestion` in place of the marked word, changing only the letters that differ (so the
+ * word's emphasis and a curly ’ are kept), as one undo step; the cursor goes after the word. The
+ * edit drops the word's mark. False, changing nothing, in a read-only tab or when the mark has gone.
  */
 export function replaceWord(view: EditorView, mark: SpellMark, suggestion: string): boolean {
-  if (suggestion === '' || !isCurrent(view, mark)) return false;
-  return applyTextChanges(view, [{ from: mark.from, to: mark.to, insert: suggestion }], {
-    selection: { anchor: mark.from + suggestion.length },
+  if (suggestion === '' || !isCurrentMark(view, mark)) return false;
+  const source = view.state.doc.sliceString(mark.from, mark.to);
+  const change = replacement(source, mark.word, suggestion);
+  const from = mark.from + change.from;
+  const to = mark.from + change.to;
+  const end = mark.to + change.insert.length - (to - from);
+  return applyTextChanges(view, [{ from, to, insert: change.insert }], {
+    selection: { anchor: end },
   });
 }
 

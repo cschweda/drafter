@@ -126,16 +126,40 @@ describe('the spelling actions', () => {
     expect(view.state.doc.toString()).toBe(TEXT);
   });
 
-  test('replaces a word with a * inside it whole, and changes nothing for a mark that has gone', () => {
+  test('replaces only the letters that differ, so emphasis and a curly ’ survive', () => {
+    const cases: Array<[source: string, word: string, suggestion: string, after: string]> = [
+      ['un*believ*eable', 'unbelieveable', 'unbelievable', 'un*believ*able'],
+      ['**reciev**ed', 'recieved', 'received', '**receiv**ed'],
+      ['Brannik’s', "Brannik's", "Brannick's", 'Brannick’s'],
+      ['phnoe', 'phnoe', 'phone', 'phone'],
+      // A marker inside the letters that change goes to their start.
+      ['reci*e*ved', 'recieved', 'received', 'rec*ei*ved'],
+      // Letters added between two that stay go after the first.
+      ['re*ci*ve', 'recive', 'receive', 're*cei*ve'],
+      ['teh', 'teh', 'the', 'the'],
+    ];
+    for (const [source, word, suggestion, after] of cases) {
+      const text = `INT. HALL - DAY\n\nIt was ${source} today.\n`;
+      const from = text.indexOf(source);
+      const mark = { from, to: from + source.length, word };
+      const { view } = viewOf(text, [mark]);
+      expect(replaceWord(view, mark, suggestion), source).toBe(true);
+      expect(view.state.doc.toString(), source).toBe(text.replace(source, after));
+      // The cursor is after the word, as it now ends.
+      expect(view.state.selection.main.head, source).toBe(from + after.length);
+      expect(undoDepth(view.state)).toBe(1);
+    }
+  });
+
+  test('changes nothing for a mark that has gone', () => {
     const text = 'INT. HALL - DAY\n\nIt was un*believ*eable.\n';
     const [mark] = marksOf(text, 'un*believ*eable') as [SpellMark];
     expect(mark.word).toBe('unbelieveable');
     const { view } = viewOf(text, [mark]);
     expect(replaceWord(view, mark, 'unbelievable')).toBe(true);
-    expect(view.state.doc.toString()).toBe('INT. HALL - DAY\n\nIt was unbelievable.\n');
-    // The mark went with the word.
+    const done = view.state.doc.toString();
     expect(replaceWord(view, mark, 'unbelievable')).toBe(false);
-    expect(view.state.doc.toString()).toBe('INT. HALL - DAY\n\nIt was unbelievable.\n');
+    expect(view.state.doc.toString()).toBe(done);
   });
 
   test('adds a word to the script’s dictionary in one undo, unflagged at once', () => {

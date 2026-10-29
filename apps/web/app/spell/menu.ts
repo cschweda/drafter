@@ -24,6 +24,12 @@ function placeOf(view: EditorView, mark: SpellMark): { left: number; top: number
   return { left: box.left, top: box.top };
 }
 
+/** Whether `mark` is still a mark, where it was (the word hasn't been edited since). */
+export function isCurrentMark(view: EditorView, mark: SpellMark): boolean {
+  const now = spellMarkAt(view.state, mark.from);
+  return !!now && now.from === mark.from && now.to === mark.to;
+}
+
 /** Opens the menu on `mark`. */
 export function openSpellMenuOn(
   view: EditorView,
@@ -46,9 +52,10 @@ export function openSpellMenu(view: EditorView, at?: { left: number; top: number
  * anywhere else nothing happens here, and the browser's (or the desktop app's) menu opens as it
  * always has. True when it opened Drafter's (or will, below).
  *
- * Where the menu comes with the button still down (macOS and Linux; Windows waits for its release),
- * it opens once the button is let go: a menu that opened under the pointer would otherwise take
- * the release for a choice of the item there.
+ * Where the menu comes with a button still down (macOS and Linux, and a Mac's Ctrl+click; Windows
+ * waits for the release), it opens once the button is let go, if the word is still there: a menu
+ * that opened under the pointer would otherwise take the release for a choice of the item there.
+ * One right-click waits at a time, and a key cancels it.
  */
 export function onSpellContextMenu(event: MouseEvent, view: EditorView): boolean {
   const target = event.target instanceof Element ? event.target : null;
@@ -57,16 +64,31 @@ export function onSpellContextMenu(event: MouseEvent, view: EditorView): boolean
   const mark = spellMarkAt(view.state, view.posAtDOM(drawn, 0));
   if (!mark) return false;
   event.preventDefault();
-  if ((event.buttons & 2) === 0) {
+  cancelRelease();
+  // Any button still down (Ctrl+click on a Mac holds the main one).
+  if (event.buttons === 0) {
     openSpellMenuOn(view, mark);
     return true;
   }
   const released = () => {
-    window.removeEventListener('pointerup', released, true);
-    window.removeEventListener('pointercancel', released, true);
-    openSpellMenuOn(view, mark);
+    cancelRelease();
+    if (isCurrentMark(view, mark)) openSpellMenuOn(view, mark);
   };
   window.addEventListener('pointerup', released, true);
   window.addEventListener('pointercancel', released, true);
+  window.addEventListener('keydown', cancelRelease, true);
+  pending = released;
   return true;
+}
+
+/** The one right-click waiting for its release, if any. */
+let pending: (() => void) | null = null;
+
+/** Forgets the right-click waiting for its release: another came, or a key was pressed. */
+function cancelRelease(): void {
+  if (!pending) return;
+  window.removeEventListener('pointerup', pending, true);
+  window.removeEventListener('pointercancel', pending, true);
+  window.removeEventListener('keydown', cancelRelease, true);
+  pending = null;
 }

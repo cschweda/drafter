@@ -4,6 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { parsedDoc, type SpellMark, setSpellMarks, spellMarks } from '@drafter/cm-fountain';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { watch } from 'vue';
 import { onSpellContextMenu, openSpellMenu, spellMenu } from '../app/spell/menu';
 import { type SpellMenuHooks, spellMenuItems } from '../app/spell/menu-items';
 
@@ -102,14 +103,43 @@ describe('the spelling menu', () => {
     expect(released.event.defaultPrevented).toBe(true);
     expect(spellMenu.value?.mark).toEqual(MARK);
 
-    // Still held (macOS, Linux): it opens on the release, not under the pointer before it.
-    spellMenu.value = null;
-    const held = click(word, 2);
-    expect(held.event.defaultPrevented).toBe(true);
-    expect(spellMenu.value).toBeNull();
+    // Still held (macOS, Linux; Ctrl+click on a Mac is the main button): it opens on the
+    // release, not under the pointer before it.
+    for (const buttons of [2, 1]) {
+      spellMenu.value = null;
+      const held = click(word, buttons);
+      expect(held.event.defaultPrevented).toBe(true);
+      expect(spellMenu.value).toBeNull();
+      window.dispatchEvent(new Event('pointerup'));
+      expect(spellMenu.value?.mark).toEqual(MARK);
+      spellMenu.value = null;
+      window.dispatchEvent(new Event('pointerup'));
+      expect(spellMenu.value).toBeNull();
+    }
+
+    // One wait at a time: a second right-click replaces the first's.
+    const other: SpellMark = { from: 12, to: 15, word: 'DAY' };
+    view.dispatch({ effects: setSpellMarks.of([other, MARK]) });
+    const day = view.contentDOM.querySelectorAll('.cm-misspelled')[0] as Element;
+    const phnoe = view.contentDOM.querySelectorAll('.cm-misspelled')[1] as Element;
+    click(day, 2);
+    click(phnoe, 2);
+    const seen: unknown[] = [];
+    const stop = watch(spellMenu, (now) => seen.push(now?.mark.word), { flush: 'sync' });
     window.dispatchEvent(new Event('pointerup'));
-    expect(spellMenu.value?.mark).toEqual(MARK);
+    expect(seen).toEqual(['phnoe']);
+    stop();
+
+    // A key before the release cancels it.
     spellMenu.value = null;
+    click(word, 2);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    window.dispatchEvent(new Event('pointerup'));
+    expect(spellMenu.value).toBeNull();
+
+    // The word edited before the release: nothing opens.
+    click(word, 2);
+    view.dispatch({ changes: { from: MARK.from, insert: 'x' } });
     window.dispatchEvent(new Event('pointerup'));
     expect(spellMenu.value).toBeNull();
   });

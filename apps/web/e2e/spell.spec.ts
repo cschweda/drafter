@@ -253,6 +253,25 @@ test.describe('the spelling menu', () => {
     await expect(editor(page)).toContainText('drZowr');
   });
 
+  test('Tab closes the menu, and the editor gets focus back with the menu gone', async ({
+    page,
+  }) => {
+    await setText(page, WORDS);
+    await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.press('ArrowLeft');
+    for (let i = 0; i < ' shuts.'.length; i++) await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ControlOrMeta+Period');
+    await expect(menu(page)).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(menu(page)).toHaveCount(0);
+    await expect.poll(() => editorFocused(page)).toBe(true);
+    // Nothing of the menu is left in the page, its trigger included.
+    await expect(page.getByRole('button', { name: 'Spelling suggestions' })).toHaveCount(0);
+    await page.keyboard.type('Z');
+    await expect(editor(page)).toContainText('drowrZ shuts.');
+  });
+
   test('Add to this script’s dictionary unflags every occurrence at once and Undo brings them back', async ({
     page,
   }) => {

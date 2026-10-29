@@ -4,7 +4,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
 import { useOutline } from '~/outline/use-outline';
 import { addToMine, ignoreWordHere, replaceWord, tryAddToScript } from '~/spell/actions';
-import { type SpellMenuRequest, spellMenu } from '~/spell/menu';
+import { isCurrentMark, type SpellMenuRequest, spellMenu } from '~/spell/menu';
 import { spellMenuItems } from '~/spell/menu-items';
 import { saySpell } from '~/spell/notice';
 import { useSpell } from '~/spell/use-spell';
@@ -20,7 +20,7 @@ const spell = useSpell();
 const outline = useOutline();
 
 const open = ref(false);
-/** The request the menu is for; kept after it closes, so the trigger stays where it was. */
+/** The request the menu is for, until it has closed: the trigger is in the page only while it is. */
 const current = shallowRef<SpellMenuRequest | null>(null);
 /** The word's suggestions, or null while they are coming. */
 const suggestions = shallowRef<readonly string[] | null>(null);
@@ -41,24 +41,34 @@ watch(spellMenu, async (request) => {
   if (current.value === request) suggestions.value = found;
 });
 
-/** Runs `act` on the word once the menu has closed and given focus back. */
+const GONE = 'Nothing was changed: the word isn’t there now.';
+
+/** Runs `act` on the word once the menu has closed and given focus back, if it's still there. */
 const later = (act: (mark: SpellMark) => void) => {
   const mark = current.value?.mark;
-  if (mark) after = () => act(mark);
+  if (!mark) return;
+  after = () => {
+    if (isCurrentMark(editor.view, mark)) act(mark);
+    else void saySpell(GONE);
+  };
 };
 
 const hooks = {
   replace: (suggestion: string) =>
     later((mark) => {
       if (!replaceWord(editor.view, mark, suggestion)) {
-        void saySpell('Nothing was changed: the word isn’t there now, or this tab can’t edit it.');
+        void saySpell('Nothing was changed: this tab can’t edit the script now.');
       }
     }),
   addToScript: () =>
     later((mark) =>
       tryAddToScript(editor.view, mark.word, editor.kind.value, outline.locked.value),
     ),
-  addToMine: () => later((mark) => void addToMine(editor.view, mark.word)),
+  // My dictionary takes the word, wherever it is now.
+  addToMine: () => {
+    const mark = current.value?.mark;
+    if (mark) after = () => void addToMine(editor.view, mark.word);
+  },
   ignore: () => later((mark) => ignoreWordHere(editor.view, mark)),
 };
 
@@ -71,12 +81,15 @@ const items = computed<DropdownMenuItem[][]>(() =>
 function onCloseAutoFocus(event: Event) {
   event.preventDefault();
   const act = after;
+  const closed = current.value;
   after = null;
   requestAnimationFrame(() => {
     act?.();
     // Not when the menu closed because something else was clicked: focus is that thing's.
     const active = document.activeElement;
     if (act || !active || active === document.body) editor.view.focus();
+    // The trigger goes too, unless another word's menu has opened since.
+    if (current.value === closed && !open.value) current.value = null;
   });
 }
 
