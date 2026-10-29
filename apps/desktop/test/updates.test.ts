@@ -868,6 +868,23 @@ describe('a check the writer asked for, and the setting', () => {
     vi.useRealTimers();
   });
 
+  test('a download the start began becomes the writer’s when they ask: the setting no longer stops it', async () => {
+    const r = rig({
+      script: (u) => {
+        u.emit('update-available', { version: '0.9.0' });
+      },
+    });
+    r.updates.start();
+    r.updates.setEnabled(true);
+    await r.advance(5000);
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    expect(await r.updates.checkNow()).toEqual({ status: 'downloading', version: '0.9.0' });
+    r.updates.setEnabled(false);
+    expect(r.cancels()).toBe(0);
+    expect(r.created[0]?.downloads).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
   test('a failed check the writer asked for doesn’t take the place of the start’s check', async () => {
     let fail = true;
     const r = rig({

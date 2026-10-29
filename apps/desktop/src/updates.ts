@@ -294,8 +294,12 @@ export class Updates {
       });
       updater.on('update-available', (info) => {
         if (downloads) {
-          // Found again by a later check: it is downloaded, or downloading, already.
-          if (this.downloaded || this.download) return;
+          // Found again by a later check: it is downloaded, or downloading, already. A download
+          // the start began is the writer's too once they have asked: the setting no longer stops it.
+          if (this.downloaded || this.download) {
+            this.downloadAsked ||= this.asked;
+            return;
+          }
           this.deps.log(`update: ${info.version} found, downloading`);
           if (!this.allowed()) return;
           const token = this.deps.newCancellation();
