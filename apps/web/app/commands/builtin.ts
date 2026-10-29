@@ -471,8 +471,8 @@ export function registerBuiltinCommands(): void {
     'move-scene-up': moveScene('up'),
     'move-scene-down': moveScene('down'),
     'scene-details': {
-      enabled: () => canEdit() && isFountain() && !!sceneAtCursor() && !useOutline().readOnly.value,
-      why: () => useOutline().readOnly.value ?? undefined,
+      // On in a read-only tab too: the form opens read-only (Save says why).
+      enabled: () => isFountain() && !!sceneAtCursor(),
       run: () => {
         const scene = sceneAtCursor();
         if (scene) openSceneDetails(useOutline().idOf(scene));

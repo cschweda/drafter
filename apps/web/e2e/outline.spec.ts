@@ -514,23 +514,70 @@ test.describe('Scene details', () => {
     await expect(car(page)).not.toHaveAttribute('aria-describedby', /./);
   });
 
-  test('offers Scene details disabled in a read-only tab, and says why', async ({
+  test('opens Scene details read-only in a read-only tab, and says why', async ({
     context,
     isMobile,
   }) => {
     test.skip(!!isMobile, 'two browser tabs are the same on a phone');
+    const why = 'This script is open for editing in another tab.';
     const first = await context.newPage();
     await start(first);
     const second = await context.newPage();
     await second.goto('/');
-    await expect(second.getByText('This script is open for editing in another tab.')).toBeVisible();
+    await expect(second.getByText(why)).toBeVisible();
     await showOutline(second);
-    await menuFor(second, row(second, /^Scene 1, INT\. KITCHEN - NIGHT/));
-    await expect(rowMenu(second).getByRole('menuitem', { name: 'Scene details…' })).toHaveAttribute(
+    const before = await textOf(second);
+    const kitchen = row(second, /^Scene 1, INT\. KITCHEN - NIGHT/);
+    await menuFor(second, kitchen);
+    const item = rowMenu(second).getByRole('menuitem', { name: 'Scene details…' });
+    await expect(item).not.toHaveAttribute('aria-disabled', 'true');
+    await item.click();
+    const dialog = detailsOf(second, 'INT. KITCHEN - NIGHT');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(why);
+    const save = dialog.getByRole('button', { name: 'Save' });
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await expect(save).toHaveAccessibleDescription(why);
+    // Playwright won't click an aria-disabled button, so Save is pressed from the keyboard.
+    await save.focus();
+    await second.keyboard.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(announcer(second)).toHaveText(why);
+    expect(await textOf(second)).toBe(before);
+    await second.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(kitchen).toBeFocused();
+  });
+
+  test('shows Scene details read-only while a /* is stray, with its fields', async ({ page }) => {
+    const stray =
+      'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\n= Bee.\n[[Goal: Win.]]\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
+    const why =
+      'A /* in this script isn’t closed by its own */, so the outline changes nothing until it is.';
+    await openWith(page, stray);
+    const dialog = await openDetails(page, row(page, /^Scene 2, INT\. B - DAY/), 'INT. B - DAY');
+    await expect(dialog.getByRole('textbox', { name: 'Synopsis' })).toHaveValue('Bee.');
+    await expect(dialog.getByRole('textbox', { name: 'Goal' })).toHaveValue('Win.');
+    await expect(dialog.getByRole('button', { name: 'Save' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
-    await expect(rowMenu(second)).toContainText('This script is open for editing in another tab.');
+    await page.keyboard.press('Enter');
+    await expect(announcer(page)).toHaveText(why);
+    await expect(dialog).toBeVisible();
+    expect(await textOf(page)).toBe(stray);
+  });
+
+  test('says so when Scene details can change nothing', async ({ page }) => {
+    // Clearing this synopsis would leave a line of notes that joins the lines around it.
+    const joined = 'INT. A - DAY\n\n!LOUD NOISE.\nThe walls shake.\n= [[a note]] the.\n> the. <\n';
+    await openWith(page, joined);
+    const dialog = await openDetails(page, row(page, /^Scene 1, INT\. A - DAY/), 'INT. A - DAY');
+    await dialog.getByRole('textbox', { name: 'Synopsis' }).fill('');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(announcer(page)).toHaveText(/^Nothing was changed: /);
+    expect(await textOf(page)).toBe(joined);
   });
 });
 

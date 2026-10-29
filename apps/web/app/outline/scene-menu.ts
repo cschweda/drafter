@@ -85,9 +85,9 @@ export function sceneMenuItems(
         children: [SCENE_COLORS.map(pick), [pick(null)]],
       },
       {
+        // In a read-only tab it opens read-only: everything shows, and Save says why it can't.
         label: 'Scene details…',
         icon: 'i-lucide-notebook-pen',
-        disabled: off,
         onSelect: () => openSceneDetails(id, () => hooks.focus(id)),
       },
     ]);

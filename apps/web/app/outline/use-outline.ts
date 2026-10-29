@@ -86,8 +86,24 @@ function create(): OutlineSession {
         return done;
       },
       setDetails: (scene, details) => {
+        if (Object.keys(details).length === 0) return false;
+        if (readOnly.value) {
+          void sayOutline(readOnly.value);
+          return false;
+        }
         const changes = setSceneDetails(editor.doc.value, scene, details);
-        if (changes.length === 0 || !apply(changes)) return false;
+        // A change refused because the script would print differently (a synopsis cleared from
+        // a line of notes that would join the lines around it), or a tab that can't edit.
+        if (changes.length === 0) {
+          void sayOutline(
+            'Nothing was changed: saving these details would change how the script prints.',
+          );
+          return false;
+        }
+        if (!apply(changes)) {
+          void sayOutline('Nothing was changed: this tab can’t edit the script now.');
+          return false;
+        }
         void sayOutline(`Saved the details of ${scene.heading || 'the untitled scene'}.`);
         return true;
       },

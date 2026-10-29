@@ -25,6 +25,8 @@ const scene = computed(() => {
   return item?.kind === 'scene' ? item : null;
 });
 const heading = ref('');
+/** Read-only (another tab, the file being checked, a stray `/*`): the form shows, Save says why. */
+const readOnly = computed(() => outline.readOnly.value !== null);
 const draft = ref<Required<SceneDetails>>(emptyDraft());
 /** Where focus was when the dialog opened, given back when it closes (as in Stats). */
 let opener: HTMLElement | null = null;
@@ -78,7 +80,12 @@ watch(sceneDetailsFor, async (id) => {
 
 function save() {
   const id = sceneDetailsFor.value;
-  if (!id || outline.readOnly.value) return;
+  if (!id) return;
+  // Read-only, the form only shows the scene: Save says why and the form stays open.
+  if (outline.readOnly.value) {
+    void sayOutline(outline.readOnly.value);
+    return;
+  }
   const now = outline.itemById(id);
   dialog.value?.close();
   if (now?.kind !== 'scene') {
@@ -112,14 +119,22 @@ function onClose() {
   >
     <form v-if="sceneDetailsFor" @submit="onSubmit">
       <h2 id="scene-details-title">Scene details for {{ heading }}</h2>
-      <p v-if="outline.readOnly.value" class="why">{{ outline.readOnly.value }}</p>
+      <p v-if="readOnly" id="scene-details-why" class="why">
+        {{ outline.readOnly.value }}
+      </p>
       <label class="field">
         <span>Synopsis</span>
-        <input v-model="draft.synopsis" type="text" autocomplete="off" autofocus />
+        <input
+          v-model="draft.synopsis"
+          type="text"
+          autocomplete="off"
+          autofocus
+          :readonly="readOnly"
+        />
       </label>
       <label class="field">
         <span>Color</span>
-        <select v-model="draft.color">
+        <select v-model="draft.color" :disabled="readOnly">
           <option v-for="color in SCENE_COLORS" :key="color" :value="color">{{ color }}</option>
           <option v-if="otherColor" :value="otherColor">{{ otherColor }}</option>
           <option :value="null">No color</option>
@@ -132,6 +147,7 @@ function onClose() {
           type="text"
           autocomplete="off"
           :placeholder="field.hint"
+          :readonly="readOnly"
         />
       </label>
       <div class="buttons">
@@ -139,7 +155,8 @@ function onClose() {
         <button
           type="submit"
           class="btn primary"
-          :aria-disabled="outline.readOnly.value ? 'true' : undefined"
+          :aria-disabled="readOnly ? 'true' : undefined"
+          :aria-describedby="readOnly ? 'scene-details-why' : undefined"
         >
           Save
         </button>
