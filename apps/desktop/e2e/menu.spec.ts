@@ -376,17 +376,25 @@ test('rebuilds the menu when a good list arrives, and drops what is no longer th
 }) => {
   const { app, page } = await desktop();
   await expect.poll(async () => (await menuItems(app)).some((i) => i.id === 'save')).toBe(true);
+  // The page sends its list again as its commands settle (the dictionary loading, the window's
+  // width), which would replace the list sent here: wait for that first.
+  await settledMenu(app);
   await page.evaluate(() => {
     window.drafterDesktop?.menu.setCommands([
       { id: 'only-one', title: 'Only one', group: 'View', enabled: false },
     ]);
   });
+  // One reading of the menu answers all three questions.
   await expect
-    .poll(async () => (await menuItems(app)).map((i) => i.id).includes('only-one'))
-    .toBe(true);
-  const items = await menuItems(app);
-  expect(items.find((i) => i.id === 'only-one')?.enabled).toBe(false);
-  expect(items.some((i) => i.id === 'save')).toBe(false);
+    .poll(async () => {
+      const items = await menuItems(app);
+      return {
+        there: items.some((i) => i.id === 'only-one'),
+        enabled: items.find((i) => i.id === 'only-one')?.enabled,
+        save: items.some((i) => i.id === 'save'),
+      };
+    })
+    .toEqual({ there: true, enabled: false, save: false });
   // The page sends its own list again when something changes: a reload starts it afresh.
   await page.reload();
   await expect.poll(async () => (await menuItems(app)).some((i) => i.id === 'save')).toBe(true);
