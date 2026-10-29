@@ -19,6 +19,16 @@ export {
   upTarget,
 } from './move';
 export { sceneIndex, startsScene } from './scene-index';
+export {
+  linesPerPage,
+  type RulerMark,
+  rulerMarks,
+  STRIP_DEPTHS,
+  type Strip,
+  type StripBlock,
+  type StripRow,
+  structureStrip,
+} from './strip';
 export { markdownText, treatment } from './treatment';
 export type {
   OutlineItem,
