@@ -225,9 +225,12 @@ describe('the packages’ names (electron-builder.config.cjs)', () => {
   test('each system names its own file types (electron-builder adds a platform’s to the top level’s)', () => {
     expect(config.fileAssociations).toBeUndefined();
     const exts = (list: { ext: string }[]) => list.map((type) => type.ext);
-    expect(exts(config.linux.fileAssociations)).toEqual(['fountain', 'md', 'markdown']);
-    expect(exts(config.mac.fileAssociations)).toEqual(['fountain', 'md', 'markdown']);
-    // Markdown is only offered on Windows (installer/windows.nsh), never taken.
+    expect(exts(config.linux.fileAssociations)).toEqual(['fountain', 'md', 'markdown', 'fdx']);
+    expect(exts(config.mac.fileAssociations)).toEqual(['fountain', 'md', 'markdown', 'fdx']);
+    // A Final Draft file is only offered (an import), never Drafter's by default.
+    const fdx = config.mac.fileAssociations.find((type: { ext: string }) => type.ext === 'fdx');
+    expect(fdx).toMatchObject({ rank: 'Alternate', role: 'Viewer' });
+    // Markdown and Final Draft are only offered on Windows (installer/windows.nsh), never taken.
     expect(config.win.fileAssociations).toEqual([
       { ext: 'fountain', name: 'Drafter.fountain', description: 'Fountain screenplay' },
     ]);

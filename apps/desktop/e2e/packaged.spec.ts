@@ -400,6 +400,7 @@ test('installs a desktop entry, an icon, and an AppArmor profile', async () => {
   expect(entry).toContain('Categories=Office;TextEditor;');
   expect(entry).toMatch(/MimeType=.*text\/x-fountain;/);
   expect(entry).toMatch(/MimeType=.*text\/markdown;/);
+  expect(entry).toMatch(/MimeType=.*application\/x-fdx;/);
   // %F: the files' paths, which the app opens (Exec takes no other arguments).
   expect(entry).toMatch(/^Exec=\/opt\/Drafter\/drafterdev %F$/m);
   expect(entry).not.toContain('--no-sandbox');
@@ -408,6 +409,7 @@ test('installs a desktop entry, an icon, and an AppArmor profile', async () => {
   const mime = readFileSync('/usr/share/mime/packages/drafterdev.xml', 'utf8');
   expect(mime).toContain('<glob pattern="*.fountain"/>');
   expect(mime).toContain('<glob pattern="*.md"/>');
+  expect(mime).toContain('<glob pattern="*.fdx"/>');
   expect(mime).not.toMatch(/pattern="[^"]*,/);
   // And the system's MIME database (rebuilt by the .deb's post-install) now types a .fountain file
   // text/x-fountain, so a file manager offers Drafter for it. (xdg-mime can't say: with no desktop
@@ -415,6 +417,7 @@ test('installs a desktop entry, an icon, and an AppArmor profile', async () => {
   const globs = readFileSync('/usr/share/mime/globs2', 'utf8');
   expect(globs).toMatch(/^\d+:text\/x-fountain:\*\.fountain$/m);
   expect(globs).toMatch(/^\d+:text\/markdown:\*\.md$/m);
+  expect(globs).toMatch(/^\d+:application\/x-fdx:\*\.fdx$/m);
   expect(existsSync('/usr/share/icons/hicolor/512x512/apps/drafterdev.png')).toBe(true);
   expect(existsSync('/usr/bin/drafterdev')).toBe(true);
   const profile = readFileSync('/etc/apparmor.d/drafterdev', 'utf8');

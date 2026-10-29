@@ -22,12 +22,13 @@ const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
   '.md': { name: 'Markdown document', extensions: ['md', 'markdown'] },
   '.txt': { name: 'Plain text', extensions: ['txt'] },
   '.pdf': { name: 'PDF', extensions: ['pdf'] },
+  '.fdx': { name: 'Final Draft file', extensions: ['fdx'] },
 };
 const ALL_FILES: FileFilter = { name: 'All files', extensions: ['*'] };
 const OPEN_FILTERS: FileFilter[] = [
   {
-    name: 'Fountain script, Markdown document, or text',
-    extensions: ['fountain', 'md', 'markdown', 'txt'],
+    name: 'Fountain script, Markdown document, text, or Final Draft file',
+    extensions: ['fountain', 'md', 'markdown', 'txt', 'fdx'],
   },
   ALL_FILES,
 ];
@@ -40,7 +41,7 @@ export interface FileAccessMain {
   /**
    * Grants an existing script the writer named outside the page (the command line, a second
    * launch, a file double-clicked): the page may then open and save it. Rejects anything that
-   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`).
+   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`) or Final Draft file (`.fdx`).
    */
   grant(path: string): Promise<string>;
 }

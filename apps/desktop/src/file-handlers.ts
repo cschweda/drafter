@@ -5,7 +5,8 @@
 //
 // Every argument is checked before anything touches the disk, and every path must have been
 // granted (grants.ts): chosen in a dialog, dropped, or named on the command line. A write also
-// goes only to a regular file with a script's or an export's extension.
+// goes only to a regular file with a script's or an export's extension, and a Final Draft file
+// only where the writer chose one in a Save dialog (an export, never an imported file).
 import { dirname, join } from 'node:path';
 import {
   checkBytes,
@@ -14,10 +15,11 @@ import {
   FileError,
   fileErrorOf,
   hasExtension,
+  IMPORT_EXTENSIONS,
   nextDialogAnswer,
+  OPEN_EXTENSIONS,
   readFileAt,
   rememberFolder,
-  SCRIPT_EXTENSIONS,
   saveTarget,
   startFolder,
   targetOf,
@@ -29,8 +31,8 @@ import type { Grants } from './grants';
 
 export { dialogHook };
 
-export type SaveExtension = '.fountain' | '.md' | '.txt' | '.pdf';
-const SAVE_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.txt', '.pdf'];
+export type SaveExtension = '.fountain' | '.md' | '.txt' | '.pdf' | '.fdx';
+const SAVE_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.txt', '.pdf', '.fdx'];
 const isExtension = (value: unknown): value is SaveExtension =>
   typeof value === 'string' && SAVE_EXTENSIONS.includes(value);
 
@@ -100,19 +102,26 @@ export function fileHandlers(deps: FileHandlerDeps) {
   const remember = (path: string) =>
     rememberFolder(deps.settingsFile, dirname(path)).catch(() => {});
 
-  /** Grants an existing script by its path (a drop's, the command line's); refuses anything else. */
+  /**
+   * Grants an existing script, or a Final Draft file to import, by its path (a drop's, the command
+   * line's); refuses anything else.
+   */
   async function grantScript(path: unknown): Promise<string> {
     const file = checkPath(path);
-    if (!hasExtension(file, SCRIPT_EXTENSIONS)) throw new FileError('not-allowed', 'not a script');
+    if (!hasExtension(file, OPEN_EXTENSIONS)) throw new FileError('not-allowed', 'not a script');
     // By where it leads, too: a link named `x.md` to a private key is not a script. (`grant`
     // checks the real path again as it records it, so a swap in between is caught.)
-    if (!hasExtension(await targetOf(file), SCRIPT_EXTENSIONS)) {
+    if (!hasExtension(await targetOf(file), OPEN_EXTENSIONS)) {
       throw new FileError('not-allowed', 'not a script');
     }
     // Read once to be sure it is a regular file the writer can read (not a folder, a FIFO).
     await readFileAt(file);
-    return grants.grant(file, SCRIPT_EXTENSIONS);
+    return grants.grant(file, OPEN_EXTENSIONS);
   }
+
+  // The Final Draft files the writer chose in a Save dialog for one (an export), by real path. Any
+  // other `.fdx` was opened to be imported, and is never written: the import saves as a .fountain.
+  const exportsChosen = new Set<string>();
 
   // Watches, by page: each stops when the page asks, reloads, or goes.
   const watches = new Map<FileSender, Map<number, () => void>>();
@@ -162,6 +171,7 @@ export function fileHandlers(deps: FileHandlerDeps) {
           : await deps.showSaveDialog(event, defaultPath, extension);
         if (chosen === null) return null;
         const path = await grants.grant(saveTarget(checkPath(chosen), extension));
+        if (extension === '.fdx') exportsChosen.add(await grants.allowed(path));
         await remember(path);
         return path;
       }),
@@ -182,6 +192,9 @@ export function fileHandlers(deps: FileHandlerDeps) {
         // Only what the app makes: a script, or an export. (writeAtomic refuses a non-file.)
         if (!hasExtension(real, WRITE_EXTENSIONS)) {
           throw new FileError('not-allowed', 'not a script');
+        }
+        if (hasExtension(real, IMPORT_EXTENSIONS) && !exportsChosen.has(real)) {
+          throw new FileError('not-allowed', 'an imported file');
         }
         // The real path as just worked out, so a link put in place after the file was chosen
         // can't redirect the write. (A swap in the instant between this check and the rename is

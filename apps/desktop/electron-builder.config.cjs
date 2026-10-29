@@ -41,6 +41,18 @@ const SCRIPT_TYPES = [
     role: 'Editor',
     rank: 'Alternate',
   },
+  // Final Draft files are imported (a new script, saved as a .fountain), never edited in place: a
+  // Viewer, offered as Markdown is. macOS: in Open With, never the default. Linux has no rank: the
+  // desktop entry lists the type, and an app the system already opens .fdx files with keeps them.
+  // No MIME type is registered for .fdx, so the .deb's MIME file gives it one under `x-`.
+  {
+    ext: 'fdx',
+    name: 'Final Draft document',
+    description: 'Final Draft document',
+    mimeType: 'application/x-fdx',
+    role: 'Viewer',
+    rank: 'Alternate',
+  },
 ];
 
 /** @type {import('electron-builder').Configuration} */
@@ -138,7 +150,8 @@ module.exports = {
     // Drafter.exe, and its files' icons in Explorer are all this one.
     icon: path.resolve(__dirname, '../../brand/icon-windows.ico'),
     // On Windows the association's name is its ProgID, so it gets one of Drafter's own. Only
-    // `.fountain` is taken: Markdown is offered in Open with, never made Drafter's (installer/windows.nsh).
+    // `.fountain` is taken: Markdown and Final Draft files are offered in Open with, never made
+    // Drafter's (installer/windows.nsh).
     fileAssociations: [
       { ext: 'fountain', name: 'Drafter.fountain', description: 'Fountain screenplay' },
     ],
@@ -174,7 +187,7 @@ module.exports = {
     differentialPackage: false,
     // Only a per-machine install needs elevate.exe, and this one never is.
     packElevateHelper: false,
-    // `.md` and `.markdown` in Open with, and a clean uninstall of `.fountain`.
+    // `.md`, `.markdown`, and `.fdx` in Open with, and a clean uninstall of `.fountain`.
     include: path.resolve(__dirname, 'installer/windows.nsh'),
   },
   linux: {
