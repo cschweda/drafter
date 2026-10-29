@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- `apps/web`: in Safari, a click on the lower half of an element bar button could do nothing when the bar had just scrolled sideways. Safari's scrollbar floats over the row while it shows, covers the lower half of the buttons, and takes the click. Where scrollbars float, the bar's is hidden now. The bar still scrolls by swipe, trackpad, and the arrow keys, and a browser whose scrollbar takes room below the row keeps it.
+- `apps/web`: the Markdown chip test takes the mouse off the chip's menu, and waits for the menu to finish closing, before its keyboard steps. Until then the closing menu could take focus, so WebKit sometimes failed it.
+
 ## [0.11.0] - 2026-10-29
 
 **Final Draft files.** Open a Final Draft (`.fdx`) file, from Open, by dropping it, or on the desktop from your file manager, and Drafter brings it in as a new Fountain script. The `.fdx` itself is never changed, and Save asks where to keep your `.fountain`. Anything Drafter can't map comes in as a `[[fdx: …]]` note, and Problems lists each one, so nothing is lost silently. **Export as Final Draft (.fdx)** writes your script for anyone who works in Final Draft: scene headings and numbers, action, speeches and dual dialogue, emphasis, notes, synopses, sections, and the title page. Import and export are built from the file format's structure and hand-made test files; testing against real Final Draft files is still to come.
