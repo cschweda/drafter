@@ -433,6 +433,87 @@ describe('fromFdx: the title page', () => {
   });
 });
 
+describe('fromFdx: content in unexpected places', () => {
+  it('keeps every piece of text, as a note where it has no place', () => {
+    const result = fromFdx(fixture('stray-content.fdx'));
+    expect(result.text).toBe(
+      [
+        'Title: THE NETS',
+        '',
+        'INT. BOATHOUSE - DAWN [[fdx: Number 12 A]]',
+        '',
+        'Gulls circle the mast.',
+        '',
+        '= Ropes everywhere.',
+        '',
+        'Beside the pair. [[fdx: Text]]',
+        '',
+        'ODILE',
+        'Now.',
+        '',
+        'Spoken low. [[fdx: Aside]]',
+        '',
+        'THEO ^',
+        'Later.',
+        '',
+        'Harbour Films [[fdx: Logo]]',
+        '',
+        'Draft only [[fdx: Stamp]]',
+        '',
+      ].join('\n'),
+    );
+    expect(result.mapped).toEqual([
+      { type: 'Number', count: 1 },
+      { type: 'Text', count: 1 },
+      { type: 'Aside', count: 1 },
+      { type: 'Logo', count: 1 },
+      { type: 'Stamp', count: 1 },
+    ]);
+  });
+
+  it('keeps a scene property summary on a paragraph inside a speech, after the speech', () => {
+    const text = fromFdx(
+      fdx(
+        `${P('Character', 'THEO')}<Paragraph Type="Dialogue"><SceneProperties Summary="He lies."/><Text>Hi.</Text></Paragraph>`,
+      ),
+    ).text;
+    expect(text).toBe('THEO\nHi.\n\n= He lies.\n');
+  });
+
+  it('writes a speech no marker can hold as action with a note', () => {
+    // The second speaker's cue has a `(` that never closes, so no `^` can make it dual.
+    const result = fromFdx(
+      fdx(
+        `<Paragraph><DualDialogue>${P('Character', 'ODILE')}${P('Dialogue', 'Now.')}${P('Character', 'THEO (low')}${P('Dialogue', 'Later.')}</DualDialogue></Paragraph>`,
+      ),
+    );
+    expect(result.text).toBe('ODILE\nNow.\n\nTHEO (low\nLater. [[fdx: Character]]\n');
+    expect(result.mapped).toEqual([{ type: 'Character', count: 1 }]);
+    expect(kinds(parse(result.text))).toEqual(['character', 'dialogue', 'action']);
+  });
+});
+
+describe('fromFdx on a large file', () => {
+  const big = (paragraph: (text: string) => string, unit: string) => {
+    const shell = fdx(paragraph(''));
+    return fdx(paragraph(unit.repeat(Math.floor((5_000_000 - shell.length) / unit.length))));
+  };
+
+  it('reads 5 MB of unclosed note openers in action in linear time', () => {
+    const xml = big((t) => P('Action', t), '[[');
+    const start = performance.now();
+    fromFdx(xml);
+    expect(performance.now() - start).toBeLessThan(3000);
+  });
+
+  it('reads 5 MB of unclosed note openers in dialogue in linear time', () => {
+    const xml = big((t) => P('Character', 'BOB') + P('Dialogue', t), 'a [[ ');
+    const start = performance.now();
+    fromFdx(xml);
+    expect(performance.now() - start).toBeLessThan(3000);
+  });
+});
+
 describe('fromFdx: refusals', () => {
   it('refuses XML the reader refuses, wrapping its error', () => {
     let caught: unknown;

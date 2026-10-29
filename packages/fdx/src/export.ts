@@ -158,8 +158,10 @@ class Exporter {
       cursor = region.span.to;
     }
     cuts.push(source.slice(cursor, run.span.to));
-    // In a kind with emphasis the run's text has its escapes taken out (`\*` is `*`), so the cuts
-    // are compared that way too; an escape a note splits stays unequal, and the run stays whole.
+    // When the cuts differ from the run's text, it may be that the parser read escapes in them
+    // (`\*` is `*`, in kinds with emphasis), so they are compared again with escapes taken out. In
+    // other kinds the first comparison already matches; an escape a note splits stays unequal,
+    // and the run stays whole.
     if (cuts.join('') !== run.text) cuts = cuts.map(unescaped);
     if (cuts.join('') !== run.text) {
       return [{ ...style, text: run.text }, ...notes.map((n) => plain(this.noteText(n)))];

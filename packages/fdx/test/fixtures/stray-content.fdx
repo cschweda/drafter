@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Scene Heading" Number="12 A">
+      <Text>INT. BOATHOUSE - DAWN</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <SceneProperties Title="" Summary="Ropes everywhere."/>
+      <Text>Gulls </Text>
+      <Text>circle <Mark>the mast</Mark>.</Text>
+    </Paragraph>
+    <Paragraph>
+      <Text>Beside the pair.</Text>
+      <DualDialogue>
+        <Paragraph Type="Character"><Text>ODILE</Text></Paragraph>
+        <Paragraph Type="Dialogue"><Text>Now.</Text></Paragraph>
+        <Aside>Spoken low.</Aside>
+        <Paragraph Type="Character"><Text>THEO</Text></Paragraph>
+        <Paragraph Type="Dialogue"><Text>Later.</Text></Paragraph>
+      </DualDialogue>
+    </Paragraph>
+  </Content>
+  <TitlePage>
+    <Logo>Harbour Films</Logo>
+    <Content>
+      <Paragraph Alignment="Center" Type="Action"><Text>THE NETS</Text></Paragraph>
+      <Stamp>Draft only</Stamp>
+    </Content>
+  </TitlePage>
+</FinalDraft>

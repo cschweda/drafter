@@ -92,6 +92,14 @@ const noteText = (text: string) =>
     .map((line, k) => (k > 0 && /^\s*$/.test(line) ? '  ' : line))
     .join('\n');
 
+/** All the text inside an element, an element inside it included (`<Text>a<B>b</B></Text>`). */
+function textOf(element: XmlElement): string {
+  return element.children.map((c) => (typeof c === 'string' ? c : textOf(c))).join('');
+}
+
+/** A `[[fdx: …]]` note naming what Drafter couldn't map; a `]]` inside can't end it early. */
+const fdxNote = (label: string) => `[[fdx: ${label.replace(/\s+/g, ' ').replaceAll(']]', '] ]')}]]`;
+
 /** The paragraph's `<Text>` runs, as lines of styled characters and notes. */
 function linesOf(paragraph: XmlElement): Tok[][] {
   let plain = '';
@@ -104,7 +112,7 @@ function linesOf(paragraph: XmlElement): Tok[][] {
       italic: parts.includes('Italic'),
       underline: parts.includes('Underline'),
     };
-    const text = normalize(child.children.filter((c) => typeof c === 'string').join(''));
+    const text = normalize(textOf(child));
     plain += text;
     for (let k = 0; k < text.length; k++) styles.push(style);
   }
@@ -114,11 +122,15 @@ function linesOf(paragraph: XmlElement): Tok[][] {
 /** Cuts styled text into lines, keeping each `[[…]]` whole: notes stay notes (controller ruling 2). */
 function splitLines(plain: string, styles: readonly Style[]): Tok[][] {
   const lines: Tok[][] = [[]];
+  // Once a search for `]]` fails, none follows, so later `[[` aren't searched for again: a text
+  // full of unclosed openers is read in one pass rather than one pass per opener.
+  let closes = true;
   let i = 0;
   while (i < plain.length) {
     const line = lines[lines.length - 1] as Tok[];
-    if (plain.startsWith('[[', i)) {
+    if (closes && plain.startsWith('[[', i)) {
       const close = plain.indexOf(']]', i + 2);
+      if (close === -1) closes = false;
       if (close !== -1) {
         line.push({ note: noteText(plain.slice(i, close + 2)) });
         i = close + 2;
@@ -333,6 +345,8 @@ class Importer {
   private speech: Speech | null = null;
   /** The cue being read is the second speaker of a `DualDialogue`. */
   private dualCue = false;
+  /** Synopses from paragraphs inside the open speech, written once it is. */
+  private afterSpeech: string[] = [];
 
   run(root: XmlElement): FdxImport {
     const content = root.children.find(
@@ -414,9 +428,17 @@ class Importer {
     );
     if (dual) {
       this.flushSpeech();
+      // Anything beside the pair in its paragraph, or between its speeches, has no place there.
+      for (const child of paragraph.children) {
+        if (typeof child !== 'string' && child !== dual) this.other(child);
+      }
       let speakers = 0;
       for (const child of dual.children) {
-        if (typeof child === 'string' || child.name !== 'Paragraph') continue;
+        if (typeof child === 'string') continue;
+        if (child.name !== 'Paragraph') {
+          this.other(child);
+          continue;
+        }
         if (child.attrs.Type === 'Character') speakers++;
         this.dualCue = speakers === 2 && child.attrs.Type === 'Character';
         this.paragraph(child);
@@ -440,16 +462,15 @@ class Importer {
     if (!inSpeech) this.flushSpeech();
 
     const section = Number.parseInt(attrs.DrafterSection ?? '', 10);
-    if ((type === 'General' || type === 'Scene Heading') && section >= 1) {
+    const isSection = (type === 'General' || type === 'Scene Heading') && section >= 1;
+    if (isSection) {
       this.push(`${'#'.repeat(section)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
-      this.synopses(paragraph);
     } else if (type === 'General' && attrs.DrafterNote === 'Yes') {
       this.note(lines);
     } else if (type === 'General' && attrs.DrafterSynopsis === 'Yes') {
       if (lines.length > 0) this.push(this.synopsisLines(lines));
     } else if (type === 'Scene Heading' || type === 'Shot') {
       if (lines.length > 0) this.heading(lines, type, attrs.Number);
-      this.synopses(paragraph);
     } else if (type === 'Action' && attrs.Alignment === 'Center') {
       if (lines.length > 0) this.centered(lines);
     } else if (type === 'Action') {
@@ -464,6 +485,15 @@ class Importer {
       if (lines.length > 0) this.transition(lines);
     } else {
       this.action(lines, type);
+    }
+
+    // A summary belongs on a heading, but one on any other paragraph is kept as a synopsis after
+    // it (after its speech, inside one, since a speech can't be broken).
+    const summary = this.synopses(paragraph);
+    if (summary !== null) {
+      const heading = isSection || type === 'Scene Heading' || type === 'Shot';
+      if (!heading && this.speech) this.afterSpeech.push(summary);
+      else this.push(summary);
     }
 
     for (const child of paragraph.children) {
@@ -486,25 +516,32 @@ class Importer {
     return lines.map((line) => `= ${plainLine(line)}`.trimEnd()).join('\n');
   }
 
-  /** A scene's summary, one `=` line for each of its lines. */
-  private synopses(paragraph: XmlElement) {
+  /** A scene's summary, one `=` line for each of its lines, or null when there is none. */
+  private synopses(paragraph: XmlElement): string | null {
     const properties = paragraph.children.find(
       (c): c is XmlElement => typeof c !== 'string' && c.name === 'SceneProperties',
     );
-    if (!properties) return;
+    if (!properties) return null;
     // A scene title is Final Draft's short description of the scene: a synopsis, first.
     const text = [properties.attrs.Title, properties.attrs.Summary]
       .filter((part): part is string => !!part && part.trim() !== '')
       .join('\n');
-    if (text === '') return;
     const lines = fromPlain(text);
-    if (lines.length > 0) this.push(this.synopsisLines(lines));
+    return lines.length > 0 ? this.synopsisLines(lines) : null;
   }
 
-  private heading(lines: Tok[][], type: string, numberAttr: string | undefined) {
-    const text = lines.map(plainLine).join(' ').trim();
+  private heading(source: Tok[][], type: string, numberAttr: string | undefined) {
     const number = numberAttr?.trim() ?? '';
-    const suffix = SCENE_NUMBER.test(number) ? ` #${number}#` : '';
+    const valid = SCENE_NUMBER.test(number);
+    let lines = source;
+    if (number !== '' && !valid) {
+      // A number the parser can't read as one (`12 A`) is kept in a note on the heading.
+      this.count('Number');
+      const last = [...(lines[lines.length - 1] ?? []), { ch: ' ', style: plainStyle }];
+      lines = [...lines.slice(0, -1), [...last, { note: fdxNote(`Number ${number}`) }]];
+    }
+    const text = lines.map(plainLine).join(' ').trim();
+    const suffix = valid ? ` #${number}#` : '';
     // A shot is forced even when it reads as a heading: Fountain has no shot, and a forced
     // heading prints like one.
     const candidates = type === 'Shot' ? [`.${text}`] : [text, `.${text}`];
@@ -560,7 +597,7 @@ class Importer {
     let note = '';
     if (type !== undefined) {
       this.count(type);
-      note = `[[fdx: ${type.replace(/\s+/g, ' ').replaceAll(']]', '] ]')}]]`;
+      note = fdxNote(type);
       if (lines.every(blank)) {
         // Nothing to carry: the note alone says the paragraph was there.
         this.push(note);
@@ -689,22 +726,25 @@ class Importer {
       [`@${cue}`, true, false],
       [`@${cue}`, true, true],
     ] as const;
-    let text = '';
-    for (const [line, joined, flat] of attempts) {
-      text = [line, ...body(joined, flat)].join('\n');
-      const read = readAs(text);
-      const first = read?.doc.blocks[0];
-      if (
-        read &&
-        same(read.kinds, expected) &&
-        first?.kind === 'character' &&
-        first.sem.dual === speech.dual
-      ) {
-        break;
-      }
-    }
-    this.push(text);
+    const text = attempts
+      .map(([line, joined, flat]) => [line, ...body(joined, flat)].join('\n'))
+      .find((candidate) => {
+        const read = readAs(candidate);
+        const first = read?.doc.blocks[0];
+        return (
+          !!read &&
+          same(read.kinds, expected) &&
+          first?.kind === 'character' &&
+          first.sem.dual === speech.dual
+        );
+      });
+    if (text !== undefined) this.push(text);
+    // No marker holds it (a dual cue whose `(` never closes can't take its `^`): the speech's
+    // lines come in as action, with a note.
+    else this.action([...speech.cue, ...parts.flatMap((p) => p.lines)], 'Character');
     for (const part of speech.parts.slice(cut)) this.push(this.lyricLines(part.lines));
+    for (const summary of this.afterSpeech) this.push(summary);
+    this.afterSpeech = [];
   }
 
   /** The title page: by Drafter's keys when the file has them, else by order and wording. */
@@ -712,6 +752,14 @@ class Importer {
     const content = titlePage.children.find(
       (c): c is XmlElement => typeof c !== 'string' && c.name === 'Content',
     );
+    // What the title page holds outside its paragraphs comes in as notes after the script.
+    for (const child of titlePage.children) {
+      if (typeof child === 'string') continue;
+      if (child !== content) this.other(child);
+      else
+        for (const c of child.children)
+          if (typeof c !== 'string' && c.name !== 'Paragraph') this.other(c);
+    }
     const paragraphs = (content?.children ?? []).filter(
       (c): c is XmlElement => typeof c !== 'string' && c.name === 'Paragraph',
     );
