@@ -182,9 +182,20 @@ export function wrapBlock(
         i++;
         continue;
       }
-      let j = i + 1;
-      while (j < n && kind[j] === CHAR && !breakAfter[j - 1]) j++;
-      const w = wordWidth(i, j);
+      // The word's characters, summed only until they pass the room left by a quarter line (drawn
+      // whole, a word may come out narrower than its characters): a word too wide for that is
+      // never measured whole, so no line measures more than about a line and a quarter of text.
+      const room = right - x - spaces + (right - left) / 4;
+      let sum = 0;
+      let j = i;
+      for (; j < n && kind[j] === CHAR && (j === i || !breakAfter[j - 1]); j++) {
+        sum += charWidth(j);
+        if (sum > room) {
+          j++;
+          break;
+        }
+      }
+      const w = sum > room ? Number.POSITIVE_INFINITY : wordWidth(i, j);
       if (x + spaces + w > right) {
         if (lastWord >= 0) return lastWord;
         // A word wider than the line: it breaks at the character that overflows it.

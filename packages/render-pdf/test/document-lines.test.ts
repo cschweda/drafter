@@ -7,6 +7,7 @@ import { fontMeasure } from '../src/document/measure';
 import { STYLE } from '../src/document/style';
 import { fixedMeasure, md } from './document-helpers';
 import { documentFonts } from './helpers';
+import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 /** At 10 pt, `fixedMeasure` makes every character 5 pt wide: a 50 pt line holds ten. */
 const run = (text: string, over: Partial<Run> = {}): Run => ({
@@ -247,6 +248,24 @@ describe('wrapBlock', () => {
     }
   });
 
+  // Linear, not a wall-clock budget (scaling.ts): measuring the rest of a long word whole on every
+  // line it breaks over grows about 16 times from 12,500 characters to 50,000, and fills the
+  // width cache with every suffix. Each run gets a fresh measure, so no run finds the last's cache.
+  it(
+    'wraps a word of 50,000 characters in linear time',
+    () => {
+      const word = (chars: number) => block([run('x'.repeat(chars), { size: 11 })]);
+      const wrapFresh = (b: DocBlock) => wrap(b, 468, fontMeasure(documentFonts));
+      const { growth, large } = scaling(word, wrapFresh, 12_500);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      const { lines } = wrapFresh(word(50_000));
+      expectWithin(lines, 468);
+      expect(lines.map(textOf).join('')).toBe('x'.repeat(50_000));
+    },
+    SCALING_TIMEOUT,
+  );
+
   it("checks the fonts' characters: control, lone surrogate, emoji, soft hyphen", () => {
     const measure = fontMeasure(documentFonts);
     expect(measure.has(0x1f600, 'text')).toBe(false);
@@ -305,8 +324,9 @@ const arbBlock = fc
   .map(({ runs, kind, width, depth }) => ({
     width,
     block: block(
-      runs.flatMap((r) =>
-        r.text.split('\n').flatMap((text, i) => [
+      // Each '\n' a run of its own, a hard break (the style's other fields, not its text).
+      runs.flatMap(({ text: all, ...r }) =>
+        all.split('\n').flatMap((text, i) => [
           ...(i > 0 ? [run('\n', r)] : []),
           run(text, {
             ...r,
@@ -354,8 +374,32 @@ describe('wrapBlock, properties', () => {
 
   it("the text of the lines is the block's text", () => {
     fc.assert(
-      fc.property(arbBlock, ({ block: b, width }) => {
-        const { lines } = wrap(b, width);
+      fc.property(arbBlock, fc.constantFrom(fixedMeasure, contextualMeasure), (arb, measure) => {
+        const { block: b, width } = arb;
+        const { lines } = wrap(b, width, measure);
+        // Every character keeps its run's face and size.
+        const styled = (pairs: [string, Run['face'], number][]) =>
+          pairs.filter(([ch]) => ch !== ' ' && ch !== '\n' && ch !== '­' && ch !== '​');
+        const drawn = lines.flatMap((line) =>
+          line.fragments.flatMap((f) =>
+            [...f.text].map((ch): [string, Run['face'], number] => [ch, f.face, f.size]),
+          ),
+        );
+        const given = b.runs.flatMap((r) =>
+          [...r.text.replace(/漢/g, '?')].map((ch): [string, Run['face'], number] => [
+            ch,
+            r.face,
+            r.size,
+          ]),
+        );
+        expect(styled(drawn)).toEqual(styled(given));
+        // Code keeps every space.
+        if (b.kind === 'code' || b.kind === 'raw') {
+          const spaces = (s: string) => s.split(' ').length - 1;
+          expect(spaces(lines.map(textOf).join(''))).toBe(
+            spaces(b.runs.map((r) => r.text).join('')),
+          );
+        }
         const expected = expectedText(b).replace(/漢/g, '?');
         // Each line's text, then a space or nothing (a broken word, or a zero-width space).
         let at = 0;
