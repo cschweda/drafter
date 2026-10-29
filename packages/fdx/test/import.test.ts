@@ -334,6 +334,17 @@ describe('fromFdx: unmapped content', () => {
     ]);
   });
 
+  it("ignores Final Draft's breakdown tags, which hold ids rather than writing", () => {
+    const tags =
+      '<TagData><TagCategories><TagCategory Id="c1" Name="Props" Number="1"/></TagCategories>' +
+      '<TagDefinitions><TagDefinition CatId="c1" Id="d1" Label="lantern" Number="1"/></TagDefinitions>' +
+      '<Tags><Tag Number="1"><DefId>d1</DefId></Tag></Tags></TagData>';
+    const result = fromFdx(fdx(P('Action', 'The sea.'), tags));
+    expect(result.text).toBe('The sea.\n');
+    expect(result.mapped).toEqual([]);
+    expect(result.ignored).toEqual(['TagData']);
+  });
+
   it('forces an unknown type whose text would read as another kind', () => {
     const text = fromFdx(fdx(P('Cast List', 'ODILE') + P('Cast List', 'INT. NOT A SCENE'))).text;
     expect(kinds(parse(text))).toEqual(['action', 'action']);
@@ -418,6 +429,39 @@ describe('fromFdx: the title page', () => {
       'Author',
       'Notes',
     ]);
+  });
+
+  it('takes a paragraph with an empty Text run as a gap between blocks, as an empty paragraph', () => {
+    // Final Draft writes a title page's blank lines as `<Text></Text>`, not as empty paragraphs.
+    const centered = (text: string) =>
+      `<Paragraph Alignment="Center"><Text>${text}</Text></Paragraph>`;
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        `<TitlePage><Content>${[
+          'THE NETS',
+          '',
+          'by',
+          '   ',
+          'Imogen Vale',
+          '',
+          'Based on a story by Ada Quill',
+        ]
+          .map(centered)
+          .join('')}</Content></TitlePage>`,
+      ),
+    );
+    expect(result.text).toBe(
+      [
+        'Title: THE NETS',
+        'Credit: by',
+        'Author: Imogen Vale',
+        'Notes: Based on a story by Ada Quill',
+        '',
+        'The sea.',
+        '',
+      ].join('\n'),
+    );
   });
 
   it('forces a first paragraph that would read as a title page', () => {

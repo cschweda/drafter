@@ -50,6 +50,8 @@ export const IGNORED: ReadonlySet<string> = new Set([
   'Watermarking',
   'DisplayBoards',
   'FontSpec',
+  // Breakdown tags: categories, and ids naming stretches of the script's own text.
+  'TagData',
 ]);
 
 interface Style {
@@ -853,7 +855,8 @@ function byKey(paragraphs: readonly XmlElement[]): Field[] {
 /**
  * Fields by order, for a title page Final Draft wrote: the first centered block is the Title; a
  * centered "by" or "written by" is the Credit, and the centered block after it the Author; every
- * other line goes into one Notes field. Empty paragraphs only separate blocks.
+ * other line goes into one Notes field. Empty paragraphs, and ones holding only spaces (Final
+ * Draft writes a blank line as an empty `<Text>`), only separate blocks.
  */
 function byOrder(paragraphs: readonly XmlElement[]): Field[] {
   const fields: Field[] = [];
@@ -864,7 +867,7 @@ function byOrder(paragraphs: readonly XmlElement[]): Field[] {
     fields.push(current);
   };
   for (const paragraph of paragraphs) {
-    const lines = linesOf(paragraph);
+    const lines = trimBlank(linesOf(paragraph));
     if (lines.length === 0) {
       gap = true;
       continue;
