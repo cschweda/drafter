@@ -276,3 +276,12 @@ The design's 29 Calls (its §14) are binding and get their DECISIONS lines as th
 34. **The 100-page budget is logged, not asserted,** by a Node test and a Chromium e2e test; the Node test fails only past `HANG_MS` (30 s, as `scaling.ts` has it), the e2e test past 20 s (Tasks 5, 6).
 35. **The request is its own kind, `markdown-pdf`,** carrying paper, title, and language instead of a template, and the reply carries `missing` (Task 6).
 36. **If Google Fonts no longer serves Inter Tight v9's static styles**, the implementer stops and reports rather than taking another version or instancing the variable font (Task 1).
+
+## Controller rulings (2026-10-29)
+
+- **Call 20 (paper):** accepted. A `markdownPaper` setting, US Letter by default, A4 the other choice.
+- **Call 2 (weights):** accepted. SemiBold for strong text and headings, because it reuses the brand's own file. Inter proper is not added.
+- **Call 22 (precache):** accepted. About 1.2 MB, about the same size as the dictionaries, so Markdown PDF works offline like the rest of the app.
+- **Call 28 (tagged PDF, bookmarks):** both stay deferred. Bookmarks from headings are cheap, so they are the first item in DEFERRED's Markdown PDF group, ready to be picked up next.
+- **Call 12 (missing characters):** accepted. The PDF prints `?` and the toast names the characters, because silently changing the writer's text would be worse than a slightly longer toast.
+- **Call 36 (fonts):** accepted. Inter Tight is OFL. Take the static styles from the font's upstream release, or from Google Fonts, record the source and version in DEPENDENCIES before adding the files, and stop and report if the static styles aren't available.
