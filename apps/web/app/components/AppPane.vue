@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { useCompare } from '~/compare/use-compare';
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
@@ -12,7 +13,7 @@ import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
+import { COMPARE_TAB, coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
 
 const props = defineProps<{
   /** `left`, `right`, or `phone`; it names the tabs' ids. */
@@ -52,7 +53,11 @@ const core = computed(() => {
 // The Notes tab's badge is the open notes in My notes and Readers (Call 15), named "Notes, 3 open".
 const { entries: noteEntries } = useNotes();
 const openNotes = computed(() => openCount(noteEntries.value));
+// Compare exists only while a comparison is open, first among the others then, so it takes the slot
+// of the pane it opens in (Phase 2 design §5.8, Call 16).
+const { current: comparison } = useCompare();
 const others = computed<Tab[]>(() => [
+  ...(comparison.value ? [COMPARE_TAB] : []),
   ...viewTabs(kind.value).map((tab) =>
     tab.id === 'notes' && openNotes.value > 0
       ? { ...tab, badge: String(openNotes.value), badgeName: `${openNotes.value} open` }
@@ -211,6 +216,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <template v-else-if="props.selected === 'notes'">
         <NotesSlim />
       </template>
+      <template v-else-if="props.selected === 'compare'">
+        <CompareSlim />
+      </template>
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
         <template v-if="props.selected === 'source'">
@@ -254,7 +262,12 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :aria-labelledby="`tab-${props.pane}-${props.selected}`"
       tabindex="0"
       class="panel"
-      :class="{ editing: props.selected === 'source' || props.selected === 'script' }"
+      :class="{
+        editing:
+          props.selected === 'source' ||
+          props.selected === 'script' ||
+          props.selected === 'compare',
+      }"
       :data-tour="props.selected"
     >
       <SourcePane v-if="props.selected === 'source'" />
@@ -273,6 +286,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <OutlinePane v-else-if="props.selected === 'outline'" />
       <CardsPane v-else-if="props.selected === 'cards'" />
       <NotesPane v-else-if="props.selected === 'notes'" />
+      <ComparePane v-else-if="props.selected === 'compare'" />
       <ProblemsPane v-else />
     </div>
   </section>
@@ -396,7 +410,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
   min-height: 0;
   overflow: auto;
 }
-/* The editor and the Script view scroll themselves. */
+/* The editor, the Script view, and Compare scroll themselves. */
 .panel.editing {
   overflow: hidden;
 }

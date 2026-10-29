@@ -239,3 +239,20 @@ describe('Cards and notes in the desktop menus', () => {
     });
   });
 });
+
+describe('Snapshots and Compare in the desktop menus', () => {
+  test('puts History… and Take snapshot… in File, and Next change, Previous change, and Close comparison in View', () => {
+    const ids = ['history', 'take-snapshot', 'next-change', 'previous-change', 'close-compare'];
+    registerCommands(ids.map((id) => command(id)));
+    const groups = Object.fromEntries(
+      menuCommands(useCommands().value).map((c) => [c.id, c.group]),
+    );
+    expect(groups).toEqual({
+      history: 'File',
+      'take-snapshot': 'File',
+      'next-change': 'View',
+      'previous-change': 'View',
+      'close-compare': 'View',
+    });
+  });
+});

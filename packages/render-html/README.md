@@ -26,6 +26,7 @@ view.destroy();
 | `createScriptView(container, options?)` | Appends the Script region, `<section class="drafter-script" aria-label="Script">`, to `container` and returns a `ScriptView`. `options` takes `fontsReady`, a promise that resolves when Courier Prime is ready, and `now`, the clock for the scroll guard, in milliseconds (`performance.now()` by default). |
 | `ScriptView` | `element`, the region; `update(layout, template)`, which draws a layout into it; `reveal(blockIndex)`, which scrolls to where a block starts; and `destroy()`, which removes the region and its listeners. |
 | `GOTO_EVENT` | `'drafter:goto'`, the name of the `CustomEvent<{ offset: number }>` that a click on a line of the script dispatches from the region, bubbling, with the line's source offset for the editor to select. |
+| `buildPage(doc, page, template, roles?)` | One page as the view draws it, a detached `div.drafter-page`, for a view of its own (the app's Compare). Each printed line carries its source span as `data-from` and `data-to`. `roles` defaults to `speechRoles(template)`. |
 | `speechRoles(template)` | `{ cue, speech }`, two sets of role names read from the template's role map: the roles that open a speech, and the roles that carry it on. |
 | `@drafter/render-html/style.css` | The stylesheet, described below. |
 

@@ -102,6 +102,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save', title: 'Save', group: 'File', keys: 'Mod-s', global: true },
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
+  { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
+  { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
   ...SAMPLES.map(
     (sample): CommandData => ({
       id: `open-sample-${sample.kind}`,
@@ -138,6 +140,12 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
   { id: 'show-cards', title: 'Show Cards', group: 'View' },
   { id: 'show-notes', title: 'Show Notes', group: 'View' },
+  // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
+  // registry key; from anywhere else these, while a comparison is open. They sit in View with
+  // Close comparison, the desktop menu's home for Compare.
+  { id: 'next-change', title: 'Next change', group: 'View' },
+  { id: 'previous-change', title: 'Previous change', group: 'View' },
+  { id: 'close-compare', title: 'Close comparison', group: 'View' },
   {
     id: 'focus-mode',
     title: 'Toggle focus mode',

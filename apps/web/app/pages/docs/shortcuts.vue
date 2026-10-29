@@ -92,6 +92,20 @@ const groups = shortcutGroups(COMMAND_DATA);
           or <kbd>Shift+F10</kbd> opens the note’s menu.
         </li>
         <li>
+          In History (the app menu’s History…, or the save item in the status bar),
+          <kbd>↑</kbd> and <kbd>↓</kbd> move between the snapshots, and <kbd>Home</kbd> and
+          <kbd>End</kbd> go to the first and last. On a snapshot, <kbd>Enter</kbd> compares it with
+          now, <kbd>C</kbd> compares it with another, <kbd>R</kbd> restores it, <kbd>L</kbd> labels
+          it, <kbd>S</kbd> saves it as a file, and <kbd>Delete</kbd> (or <kbd>Backspace</kbd>)
+          deletes it, after asking. The context-menu key or <kbd>Shift+F10</kbd> opens the
+          snapshot’s menu.
+        </li>
+        <li>
+          In the Compare tab, <kbd>N</kbd> goes to the next change and <kbd>Shift+N</kbd> to the
+          previous one, and says what changed; the palette’s Next change and Previous change do the
+          same from anywhere while a comparison is open.
+        </li>
+        <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>

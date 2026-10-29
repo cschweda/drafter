@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { expectNewestThenCompare, newScreenplay } from './bulk-snapshot';
 import { removePickers } from './fs-stub';
 import {
   editor,
@@ -673,6 +674,19 @@ test.describe('condense, expand, and treatments', () => {
     await expect(problems.getByText(/still has the stand-in heading/)).toHaveCount(2);
     await undo(page);
     await expect.poll(() => textOf(page)).toBe(outline);
+  });
+
+  test('takes a snapshot before Expand outline', async ({ page }) => {
+    const outline = 'Title: Plan\n\n# Act One\n\n= The setup.\n\n- Margaret waits.\n';
+    await start(page);
+    await newScreenplay(page);
+    await setText(page, outline);
+    await editor(page).focus();
+    await page.keyboard.press('ControlOrMeta+a');
+    await runCommand(page, 'Expand outline');
+    await expect.poll(() => textOf(page)).toContain('INT. LOCATION - DAY');
+    // The snapshot holds the outline as it was, and Compare with now shows the stubs.
+    await expectNewestThenCompare(page, 'Before expand');
   });
 
   test('makes a screenplay from a Markdown outline', async ({ page }) => {

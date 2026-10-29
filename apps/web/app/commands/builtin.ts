@@ -24,6 +24,7 @@ import {
 } from '@drafter/cm-fountain';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
+import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { applyTextChanges } from '~/editor/apply-changes';
@@ -41,6 +42,8 @@ import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
+import { historyOpen } from '~/snapshots/history';
+import { useSnapshots } from '~/snapshots/use-snapshots';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { exportScript } from '~/storage/export';
@@ -85,6 +88,13 @@ export function registerBuiltinCommands(): void {
   const template = useTemplate();
   const sprint = useSprint();
   const sprintOn = () => sprint.state.value.status !== 'idle';
+  const compare = useCompare();
+  const comparing = () => compare.current.value !== null;
+  /** Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus. */
+  const stepChange = (direction: 1 | -1) => () => {
+    compare.show(false);
+    compare.step(direction);
+  };
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -245,6 +255,20 @@ export function registerBuiltinCommands(): void {
         editor.goto(view.state.selection.main.head);
       },
     },
+    // History (§11.1): the script's snapshots, opened from here, the app menu, and the status bar's save item.
+    // Take snapshot… opens it on its label field (Call 13); a read-only tab's says why it can't take one.
+    history: {
+      enabled: hasScript,
+      run: () => {
+        historyOpen.value = { focusLabel: false };
+      },
+    },
+    'take-snapshot': {
+      enabled: hasScript,
+      run: () => {
+        historyOpen.value = { focusLabel: true };
+      },
+    },
     // The samples (the Scripts menu lists them too).
     ...Object.fromEntries(
       SAMPLES.map((sample): [string, Behavior] => [
@@ -324,6 +348,8 @@ export function registerBuiltinCommands(): void {
     'go-to-line': { run: () => openPalette('line') },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
+    'next-change': { enabled: comparing, run: stepChange(1) },
+    'previous-change': { enabled: comparing, run: stepChange(-1) },
 
     // View
     'show-source': { run: () => showTab('source') },
@@ -335,6 +361,8 @@ export function registerBuiltinCommands(): void {
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
+    // Compare's tab goes with the comparison (Call 16).
+    'close-compare': { enabled: comparing, run: () => compare.close() },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
@@ -477,6 +505,7 @@ export function registerBuiltinCommands(): void {
           void sayOutline('Nothing to expand: no = lines or - lists outside a scene.');
           return;
         }
+        useSnapshots().before('before-expand');
         applyTextChanges(view, changes);
         const made = useOutline().index.value.scenes.length - before;
         void sayOutline(

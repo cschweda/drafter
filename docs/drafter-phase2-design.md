@@ -579,6 +579,8 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 
 ### Plan C — v0.13.0: Snapshots and Compare
 
+**Status:** built (2026-10-29), except that axe on History and Compare, in both themes at both widths, waits for the final accessibility steps; see `docs/DEFERRED.md`.
+
 **Scope:** the snapshot schedule, retention, and compression (§11.1); the History dialog; `@drafter/compare`; the Compare tab (§11.2); snapshots before bulk operations.
 
 **Done when:**

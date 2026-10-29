@@ -560,6 +560,8 @@ Private windows can't always be detected, so the warning says the browser *may* 
 
 A snapshot is the full source (a feature is ~150–250 KB), stored gzip-compressed with the browser's `CompressionStream`. Created: every 10 minutes of active writing, on every save to file, on explicit "Take snapshot" (with optional label), and before a bulk operation (expand, a reader merge, Fix all, Revert to Saved, restoring a snapshot) and FDX import; a single scene move is not one, since undo covers it (Phase 2 design §11.1). A snapshot equal to the newest is not taken. Retention: keep all labeled snapshots; keep all unlabeled from the last 24 hours; thin to one per hour for 7 days; one per day for 90 days; then delete. The snapshot of the last save is always kept. Compare view diffs two snapshots at the line level (Myers diff on lines), renders both as pages, and marks changed lines; this is also the input to revision-mode PDF.
 
+Built in Plan C (v0.13.0), in four places that go beyond or sharpen the above (`docs/DECISIONS.md`, Plan C). The saved row `saved:<id>` stays Phase 1's, uncompressed and unlisted, and each save also takes a "Saved" history snapshot, which is how thinning keeps the snapshot of the last save (Call 2). Opening a file takes an "Opened" snapshot (Call 3), and loading a changed file over the script takes a "Before reloading" snapshot (Call 5); both are additions to Phase 2 design §11.1's list. Thinning keeps the last snapshot of each hour and each day by local time and always keeps the newest, so a writer back after 90 days keeps their last one rather than losing it to "then delete" (Call 8).
+
 ### 8.5 Files on disk
 
 | Capability | Chrome, Edge, and other Chromium browsers | Firefox | Safari |

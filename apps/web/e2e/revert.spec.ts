@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { expectNewestThenCompare } from './bulk-snapshot';
 import {
   countFileAccess,
   fileAccess,
@@ -78,7 +79,8 @@ test.describe('Revert to Saved (Chromium)', () => {
     // Nothing was written: the file is as it was.
     expect(await textOf(page, 'The Call.fountain')).toBe(saved);
 
-    // Focus is in the editor, and one undo brings every change back.
+    // Focus is in the editor once the menu has gone, and one undo brings every change back.
+    await expect(menu(page)).toHaveCount(0);
     await expect(editor(page)).toBeFocused();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).toContainText('MORE WORDS');
@@ -86,6 +88,20 @@ test.describe('Revert to Saved (Chromium)', () => {
     // Redo reverts again.
     await page.keyboard.press('ControlOrMeta+Shift+z');
     await expect(editor(page)).not.toContainText('MORE WORDS');
+  });
+
+  test('takes a snapshot before Revert to Saved', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('FADE IN:');
+    await nextFileName(page, 'The Call.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(status(page)).toContainText('Saved just now');
+    await typeAtEnd(page, ' MORE WORDS');
+    await openMenu(page);
+    await revert(page).click();
+    await expect(editor(page)).not.toContainText('MORE WORDS');
+    await expectNewestThenCompare(page, 'Before Revert to Saved');
   });
 
   test('is a command in the palette while there are changes to revert', async ({ page }) => {
@@ -312,6 +328,10 @@ test.describe('Revert to Saved where Save downloads', () => {
     await expect(editor(page)).toContainText('FADE IN:');
     await expect(notice(page)).toHaveText(MESSAGE(file.suggestedFilename()));
     await expect(status(page)).not.toContainText('Unsaved changes');
+    // Focus is back in the editor once the menu has gone (while it closes, focus can pass through
+    // it), and one undo brings the change back.
+    await expect(menu(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).toContainText('MORE');
   });

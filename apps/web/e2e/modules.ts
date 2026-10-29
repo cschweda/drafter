@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 // Helpers for the specs that try the module host. `pnpm e2e` builds with the test module, the
 // Fixture, which has a button ("Count scenes"), a tab ("Fixture"), a command ("Fixture: add a
@@ -175,4 +175,46 @@ export function stored(page: Page): Promise<Record<string, unknown>> {
         };
       }),
   );
+}
+
+/**
+ * The script's whole text, from the editor's state: `textOf` reads the lines drawn, and CodeMirror
+ * draws only those near the view. Reads CodeMirror's own link from its content element (`cmTile`, `cmView` before 6.40).
+ */
+export const wholeText = (page: Page) =>
+  page.evaluate(() => {
+    type Linked = { view?: { state: { doc: { toString(): string } } } };
+    const content = document.querySelector('.cm-content') as
+      | (Element & { cmTile?: Linked; cmView?: Linked })
+      | null;
+    return (content?.cmTile ?? content?.cmView)?.view?.state.doc.toString() ?? null;
+  });
+
+/**
+ * Expects keys typed with focus in `panel` (a tab that isn't the editor) to leave the script as it
+ * was, and the cursor to be where it was when the editor has focus again. Safari would otherwise
+ * type into the editor, whose selection is still in the page (decided 2026-10-29). The cursor is put
+ * at the script's end first.
+ */
+export async function expectTypingLeavesScript(page: Page, panel: Locator) {
+  await showSource(page);
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  const before = await wholeText(page);
+  await panel.focus();
+  // A tab may hand its focus on to its list (Cards does).
+  const inPanel = () => panel.evaluate((el) => el.contains(document.activeElement));
+  await expect.poll(inPanel).toBe(true);
+  await page.keyboard.type('xyz');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('n');
+  // Backspace doesn't take the page back, as WebKit's Backspace can.
+  expect(new URL(page.url()).pathname).toBe('/');
+  expect(await wholeText(page)).toBe(before);
+  // Focus stays in the tab (Compare's N moves it to a change there).
+  expect(await inPanel()).toBe(true);
+  // Back in the editor, the cursor is where it was: at the end.
+  await editor(page).focus();
+  await page.keyboard.type('Q');
+  await expect.poll(() => wholeText(page)).toBe(`${before}Q`);
 }

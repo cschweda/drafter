@@ -1,0 +1,38 @@
+{
+  "name": "@drafter/compare",
+  "version": "0.12.0",
+  "description": "Compare for Drafter: a line diff of two versions of a script, the changes it makes, and where they fall on the newer version's pages.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/compare"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "@drafter/layout": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/templates": "workspace:*"
+  }
+}

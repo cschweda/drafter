@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
 import { isFinalDraftName, kindOfFileName } from '../markdown/kind';
+import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
 import { FileGoneError, FileProblemError, type PickedFile, useFiles } from './files';
@@ -95,6 +96,7 @@ async function importFinalDraft(name: string, xml: string): Promise<void> {
     await say(openError, MESSAGES.busy);
     return;
   }
+  useSnapshots().afterImport(imported.text, name);
   useEditor().view.focus();
   await sayInToast(importedMessage(name, imported.mapped));
 }

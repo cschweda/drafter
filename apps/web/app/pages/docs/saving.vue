@@ -238,6 +238,26 @@ useDocsHead({
       one copy you control.
     </p>
 
+    <h2 id="history">History and snapshots</h2>
+    <p>
+      Besides the recovery copy, Drafter keeps earlier versions of each script in this browser,
+      called snapshots, so you can go back to one. It takes one after every 10 minutes of active
+      writing, every time you save to a file, and when you open a file. It also takes one before
+      Expand outline, Fix all, Revert to Saved, or loading a changed file over the script, and when
+      you import a Final Draft file. Samples keep none, and a snapshot that matches the newest is
+      not taken again.
+    </p>
+    <p>
+      Open <strong>History…</strong> from the app menu (File, in the desktop app), the command palette,
+      or the save item in the status bar. Each snapshot can be restored (one undo takes the restore back, after a
+      snapshot of what it replaced), labeled, saved as a file, deleted, or compared with the script
+      as it is now or with another snapshot. <strong>Take snapshot…</strong> keeps one on request,
+      with a label if you like. Snapshots are thinned as they age: every labeled one stays, all of
+      the last 24 hours stay, then one an hour for a week and one a day for 90 days, and the newest
+      and the one from your last save always stay. They live in the same storage as the recovery
+      copy, so they have the same limits, and they are not in your <code>.fountain</code> file.
+    </p>
+
     <h2 id="installing">Installing Drafter as an app</h2>
     <p>
       Installing gives Drafter a window and an icon of its own, and it opens without the browser’s

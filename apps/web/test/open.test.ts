@@ -5,6 +5,17 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { FileAccess, FileRef, PickedFile } from '../app/storage/files';
 
+// The snapshot session, which needs the whole editor session: a recorder of what it is asked.
+const snapshots = vi.hoisted(() => ({
+  calls: [] as unknown[][],
+}));
+vi.mock('../app/snapshots/use-snapshots', () => ({
+  useSnapshots: () => ({
+    before: (...args: unknown[]) => snapshots.calls.push(['before', ...args]),
+    afterImport: (...args: unknown[]) => snapshots.calls.push(['afterImport', ...args]),
+  }),
+}));
+
 // The editor session without Nuxt's aliases: a state that `dispatch`es and tells its listeners.
 vi.mock('../app/editor/samples', () => {
   const screenplay = 'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n';
@@ -120,6 +131,7 @@ function memoryFiles(options: { inPlace?: boolean } = {}) {
 }
 
 async function fresh(options: { inPlace?: boolean } = {}) {
+  snapshots.calls.length = 0;
   vi.resetModules();
   vi.stubGlobal('crypto', webcrypto);
   const { setFiles } = await import('../app/storage/files');
@@ -408,6 +420,8 @@ describe('a file with the same title as a script in the browser', () => {
     expect(row?.savedHash).toBe(await t.hashText(OTHER));
     expect(await t.projects.getSavedText(first)).toBe(OTHER);
     expect(t.script.dirty.value).toBe(false);
+    // The text it replaced was kept first (Plan C, Call 5).
+    expect(snapshots.calls).toEqual([['before', 'before-reload']]);
     // The whole text changed in one transaction, so one undo brings the old text back.
     const changes = spy.mock.calls.filter(([spec]) => (spec as { changes?: unknown }).changes);
     expect(changes).toHaveLength(1);
@@ -427,7 +441,9 @@ describe('a file with the same title as a script in the browser', () => {
     expect(canRevert()).toBe(true);
     const spy = vi.spyOn(t.editor.view, 'dispatch');
     const state = t.editor.view.state;
+    snapshots.calls.length = 0;
     revertToSaved();
+    expect(snapshots.calls).toEqual([['before', 'before-revert']]);
     expect(t.shown()).toBe(SCRIPT);
     const { writersEdit } = await import('../app/stats/writing');
     expect(writersEdit(state.update(spy.mock.calls[0]?.[0] as never))).toBe(false);
@@ -555,6 +571,8 @@ describe('importing a Final Draft file', () => {
     expect(row?.savedHash).toBeUndefined();
     expect(t.script.dirty.value).toBe(true);
     expect(t.exportNotice.value).toBe('Imported “lamp.fdx”.');
+    // A snapshot of the text that came in, labeled with the file's name (Call 4).
+    expect(snapshots.calls).toEqual([['afterImport', t.shown(), 'lamp.fdx']]);
     // The .fdx is never written.
     expect(t.writes).toEqual([]);
   });

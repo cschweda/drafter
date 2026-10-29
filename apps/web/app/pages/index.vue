@@ -11,13 +11,14 @@ import { markdownTitle } from '~/markdown/title';
 import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
+import { useSnapshots } from '~/snapshots/use-snapshots';
 import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
 import { installDesktopUpdates } from '~/update/desktop-source';
-import { leavesOnEscape } from '~/utils/focus';
+import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
 import { dropTab, otherPane, type PaneId, PHONE_DEFAULT_TAB } from '~/utils/panes';
 
 const desktopBuild = isDesktopBuild();
@@ -68,6 +69,8 @@ const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
 const { settings } = useSettings();
+// Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
+useSnapshots();
 
 /** The script's title, as its kind reads it. */
 function pageTitle(): string {
@@ -96,6 +99,7 @@ let removeSystemOpen: (() => void) | undefined;
 let removeDesktopMenu: (() => void) | undefined;
 let removeDesktopClose: (() => void) | undefined;
 let removeDesktopUpdates: (() => void) | undefined;
+let removeSelectionGuard: (() => void) | undefined;
 
 // Focus mode swaps the layout for the Source alone. Entering puts the cursor in the editor; leaving
 // puts it back there if the editor is showing, else on the button that entered.
@@ -131,6 +135,8 @@ onMounted(() => {
   removeDesktopMenu = installDesktopMenu();
   removeDesktopClose = installDesktopClose();
   removeDesktopUpdates = installDesktopUpdates(useSettings());
+  // Safari would type into the script with focus anywhere else (decided 2026-10-29).
+  removeSelectionGuard = guardEditorSelection(view.contentDOM);
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -145,6 +151,7 @@ onBeforeUnmount(() => {
   removeDesktopMenu?.();
   removeDesktopClose?.();
   removeDesktopUpdates?.();
+  removeSelectionGuard?.();
 });
 </script>
 
@@ -178,6 +185,7 @@ onBeforeUnmount(() => {
     <NewNoteDialog />
     <SettingsDialog />
     <StatsDialog />
+    <HistoryDialog />
     <AppTour />
     <SprintNotice />
     <!-- Focus mode: the Source alone, in a column, with the marker in the corner. -->

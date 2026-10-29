@@ -1,9 +1,9 @@
-import { isolateHistory } from '@codemirror/commands';
 import { ref, watch } from 'vue';
+import { replaceText } from '../editor/replace-text';
 import { useEditor } from '../editor/session';
-import { appChange } from '../editor/typewriter';
 import { kindOfFileName } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
+import { useSnapshots } from '../snapshots/use-snapshots';
 import { CheckUnsettledError, useFileCheck } from './check';
 import { FileGoneError, FileProblemError, type FileRef, useFiles } from './files';
 import { useGuard } from './guard';
@@ -244,24 +244,10 @@ export function revertToSaved(): void {
   const { view } = useEditor();
   const target = script.savedText.value as string;
   const file = script.project.value?.fileName as string;
-  const current = view.state.doc.toString();
-  // Only the part that differs is replaced, so the cursor, the folds, and the scroll stay where they are.
-  let from = 0;
-  const shortest = Math.min(current.length, target.length);
-  while (from < shortest && current.charCodeAt(from) === target.charCodeAt(from)) from++;
-  let end = 0;
-  while (
-    end < shortest - from &&
-    current.charCodeAt(current.length - 1 - end) === target.charCodeAt(target.length - 1 - end)
-  ) {
-    end++;
-  }
-  view.dispatch({
-    changes: { from, to: current.length - end, insert: target.slice(from, target.length - end) },
-    // Its own undo step, not joined to the typing before it.
-    // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-    annotations: [isolateHistory.of('full'), appChange.of(true)],
-    userEvent: 'input.replace',
-  });
+  // Only the part that differs is replaced, so the cursor, the folds, and the scroll stay where they
+  // are; its own undo step, and Drafter's change, not the writer's (no writing time for it).
+  if (view.state.readOnly) return;
+  useSnapshots().before('before-revert');
+  if (!replaceText(view, target)) return;
   void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);
 }

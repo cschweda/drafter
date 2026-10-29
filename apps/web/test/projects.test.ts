@@ -11,6 +11,7 @@ import {
   updateProject,
   writeSource,
 } from '../app/storage/projects';
+import { listSnapshots, takeSnapshot } from '../app/storage/snapshots';
 
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -142,6 +143,20 @@ describe('projects', () => {
     expect(await db.handles.get('keep-handle')).toBeDefined();
     // Removing it again is harmless.
     await removeProject(p.id);
+  });
+
+  test('removing a script removes its history snapshots', async () => {
+    const keep = await createProject({ source: 'keep' });
+    const p = await createProject({ source: 'gone' });
+    await setSavedText(p.id, 'gone saved');
+    expect(await takeSnapshot(p.id, 'one', 'timed')).toBe('taken');
+    vi.setSystemTime(2_000);
+    expect(await takeSnapshot(p.id, 'two', 'manual', { label: 'Kept' })).toBe('taken');
+    expect(await takeSnapshot(keep.id, 'mine', 'timed')).toBe('taken');
+    await removeProject(p.id);
+    expect(await db.snapshots.where('projectId').equals(p.id).count()).toBe(0);
+    expect(await listSnapshots(p.id)).toEqual([]);
+    expect(await listSnapshots(keep.id)).toHaveLength(1);
   });
 
   test('keeps the file’s byte-order mark, with no index and no new version', async () => {

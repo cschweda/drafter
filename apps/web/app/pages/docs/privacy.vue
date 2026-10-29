@@ -48,7 +48,8 @@ useDocsHead({
       </li>
       <li>
         <strong>In your settings.</strong> Your settings, each script’s daily goal, and its
-        writing stats are in the same IndexedDB. The stats are, for each day you write, the time
+        writing stats are in the same IndexedDB, as are the earlier versions of each script that
+        History keeps (snapshots), which removing a script removes too. The stats are, for each day you write, the time
         you spent editing the script and how many words and pages it grew; nothing about what you
         typed, and nothing for a sample. Removing a script removes them. The theme you chose, and whether you have seen the tour, are in the
         browser’s localStorage, a small store for a website’s own notes. So, for a moment while a

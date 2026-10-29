@@ -6,6 +6,17 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { FileAccess, FileRef } from '../app/storage/files';
 
+// The snapshot session, which needs the whole editor session: a recorder of what it is asked.
+const snapshots = vi.hoisted(() => ({
+  calls: [] as unknown[][],
+}));
+vi.mock('../app/snapshots/use-snapshots', () => ({
+  useSnapshots: () => ({
+    before: (...args: unknown[]) => snapshots.calls.push(['before', ...args]),
+    afterImport: (...args: unknown[]) => snapshots.calls.push(['afterImport', ...args]),
+  }),
+}));
+
 // The editor session without Nuxt's aliases: a state that `dispatch`es and tells its listeners.
 vi.mock('../app/editor/samples', () => {
   const screenplay = 'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n';
