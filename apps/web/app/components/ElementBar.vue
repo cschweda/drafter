@@ -27,6 +27,7 @@ import { useEditor } from '~/editor/session';
 import { markdownElement } from '~/markdown/commands';
 import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
+import { scrollbarsFloat } from '~/utils/scrollbars';
 
 // The element bar (docs/drafter-element-bar-design.md): a row of buttons over the Source that
 // writes Fountain's marks, and teaches them, for a writer who doesn't know them yet. Each button
@@ -74,7 +75,10 @@ function followTree(state: EditorState) {
   if (markdown.value) markdownHere.value = markdownElement(state);
 }
 const stops: Array<() => void> = [];
+/** A floating scrollbar would cover the buttons' lower half (utils/scrollbars.ts), so it's hidden. */
+const floatingScrollbar = ref(false);
 onMounted(() => {
+  floatingScrollbar.value = scrollbarsFloat();
   follow(editor.view.state);
   stops.push(editor.onState(follow), editor.onUpdate(followTree));
 });
@@ -247,6 +251,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
     role="toolbar"
     :aria-label="markdown ? 'Markdown bar' : 'Element bar'"
     class="element-bar"
+    :class="{ 'no-scrollbar': floatingScrollbar }"
     data-element-bar
     @keydown="onKeydown"
     @focusin="onFocusin"
@@ -364,6 +369,13 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
+}
+/* Where scrollbars float, the row still scrolls by swipe, trackpad, and the arrow keys. */
+.element-bar.no-scrollbar {
+  scrollbar-width: none;
+}
+.element-bar.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 .here {
   flex: none;
