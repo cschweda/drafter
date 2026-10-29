@@ -417,6 +417,37 @@ describe('renderDocumentPdf', () => {
     expect(programs.size).toBe(1);
   });
 
+  it('embeds every face whole when it couldn’t take back a subset', async () => {
+    // A pdf-lib whose private list of fonts to write isn't an array: a subset found unpaddable
+    // could not be taken out of it, so no face is subset at all.
+    class FontList {
+      length = 0;
+      [index: number]: unknown;
+      push(font: unknown) {
+        this[this.length++] = font;
+        return this.length;
+      }
+    }
+    const create = PDFDocument.create.bind(PDFDocument);
+    const spy = vi.spyOn(PDFDocument, 'create').mockImplementation(async (...args) => {
+      const doc = await create(...args);
+      (doc as unknown as { fonts: unknown }).fonts = new FontList();
+      return doc;
+    });
+    try {
+      const { bytes } = await render('Harbour notes: the keeper climbs *quietly*.');
+      const programs = await fontPrograms(bytes);
+      expect(programs.get('/InterTight-Regular')).toEqual(documentFonts.text);
+      expect(programs.get('/InterTight-Italic')).toEqual(documentFonts.textItalic);
+      const [page] = await extract(bytes, { spaces: true });
+      expect(page?.items.map((item) => item.str).join('')).toBe(
+        'Harbour notes: the keeper climbs quietly.',
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('draws what the writer typed: fractions and dates stay as typed, and nothing is kerned', async () => {
     // Three glyphs each for "1/2", five for "10/12", ten for "29/10/2026": no fraction glyphs.
     const { bytes } = await render('1/2\n\n10/12\n\n29/10/2026');

@@ -19,8 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- `apps/web`: **a long Markdown document's Preview is parsed off the main thread again.** In every build the Preview's worker stopped as it started (its parser's character-reference decoder asked for the page's `document`, which a worker hasn't got), so a long document was parsed on the main thread instead. Workers now take the decoder's own table.
-- `@drafter/render-pdf`: a face whose subset can't be padded is embedded whole in two more cases: when the glyph data has no way to be padded, and when the document's own subset turns out a different shape from the check's.
+- `apps/web`: **a long Markdown document's Preview is parsed off the main thread again.** In every build the Preview's worker stopped as it started (its parser's character-reference decoder asked for the page's `document`, which a worker hasn't got), so a long document was parsed on the main thread instead. The page and its workers now take the decoder's own table, in development too.
+- `apps/web`: **the Preview says so when it can't show a document,** instead of breaking: a quote nested thousands deep shows "This document is nested too deeply to preview. Your text is safe in the Source." One text the Preview's worker can't parse no longer stops it for the rest of the visit, and a worker that fails is started again.
+- `@drafter/render-pdf`: a face whose subset can't be padded is embedded whole in two more cases: when the glyph data has no way to be padded, when the document's own subset turns out a different shape from the check's, and when pdf-lib's list of fonts couldn't give an unpaddable subset back.
 
 ## [0.15.0] - 2026-10-29
 

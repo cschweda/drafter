@@ -10,12 +10,14 @@ export interface MarkdownClient {
 
 /**
  * The talk with the Markdown worker, like the layout worker's: one request per pause in typing, an
- * older reply never replaces a newer one, and a worker that fails is reported once.
+ * older reply never replaces a newer one, and an error is reported: one text the parser couldn't
+ * read, or the worker itself failing.
  */
 export function createMarkdownClient(
   worker: Pick<Worker, 'postMessage' | 'addEventListener' | 'terminate'>,
   onTree: (tree: MdNode, words: number, seq: number) => void,
-  onError: (message: string, seq: number) => void,
+  /** `failed` is true when the worker itself failed, false when it couldn't parse that one text. */
+  onError: (message: string, seq: number, failed: boolean) => void,
   delay = PREVIEW_DELAY_MS,
 ): MarkdownClient {
   let seq = 0;
@@ -27,7 +29,7 @@ export function createMarkdownClient(
     if (destroyed) return;
     const reply = (event as MessageEvent<MarkdownReply>).data;
     if ('error' in reply) {
-      onError(reply.error, reply.seq);
+      onError(reply.error, reply.seq, false);
       return;
     }
     if (reply.seq <= shown) return;
@@ -35,7 +37,7 @@ export function createMarkdownClient(
     onTree(reply.tree, reply.words, reply.seq);
   });
   const failed = (message: string) => () => {
-    if (!destroyed) onError(message, seq);
+    if (!destroyed) onError(message, seq, true);
   };
   worker.addEventListener('error', failed('The Markdown worker failed.'));
   worker.addEventListener(

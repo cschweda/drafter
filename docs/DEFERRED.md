@@ -112,4 +112,5 @@ What the Structure strip (v0.15.0, strip design §11) leaves for later.
 What the Markdown PDF release (v0.16.0) left for later.
 
 - **Cancel a long export** (when asked for). An 850-page document takes some 20 seconds in the worker; the toast says "Exporting…" and the editor stays usable, but the export can't be stopped (it would mean ending and remaking the worker, and the fonts it keeps).
+- **The editor on a line of thousands of Markdown marks** (when it bites). A line of five thousand `>` takes the editor seconds per click or key (CodeMirror measuring the marks' layout, in every browser); the Preview now says such a document is nested too deeply, but the Source stays slow on it. Found in the Task 6 review; it was there before.
 - **The Markdown parser in a chunk of its own** (when the workers move to `worker.format: 'es'`). The export worker is one file, so the parser's code (some 80 KB of its 1.3 MB) comes with it though only a Markdown PDF runs it.

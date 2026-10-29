@@ -95,13 +95,19 @@ function evenGlyphs(font: PDFFont): boolean {
   return true;
 }
 
+/** pdf-lib's private list of the fonts it writes at `save`, which `unembed` takes a font out of. */
+const fontList = (doc: PDFDocument): unknown => (doc as unknown as { fonts?: unknown }).fonts;
+
 /**
  * Whether this pdf-lib's subsets of `bytes` can be padded, found on a scratch document that is
- * never saved, so a font that can't be padded is never left in the real one.
+ * never saved, so a font that can't be padded is never left in the real one. Not when its list of
+ * fonts isn't an array: a subset that turned out unpaddable in the real document couldn't be
+ * taken back out of it (`unembed`), so the face is embedded whole from the start.
  */
 async function canPad(bytes: Uint8Array): Promise<boolean> {
   try {
     const scratch = await PDFDocument.create({ updateMetadata: false });
+    if (!Array.isArray(fontList(scratch))) return false;
     scratch.registerFontkit(fontkit);
     return evenGlyphs(await scratch.embedFont(bytes, { subset: true }));
   } catch {
@@ -114,7 +120,7 @@ async function canPad(bytes: Uint8Array): Promise<boolean> {
  * that couldn't be padded never reaches the file. Nothing refers to it yet: it has drawn nothing.
  */
 function unembed(doc: PDFDocument, font: PDFFont): void {
-  const list = (doc as unknown as { fonts?: unknown }).fonts;
+  const list = fontList(doc);
   if (!Array.isArray(list)) return;
   const at = list.indexOf(font);
   if (at >= 0) list.splice(at, 1);

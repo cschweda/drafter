@@ -302,8 +302,10 @@ describe('The structure strip in the desktop menus', () => {
 });
 
 describe('Export in the desktop menus', () => {
-  test('File’s Export as PDF is on for a Markdown document', () => {
-    // Each export command applies as `exportApplies` says for the open kind, as the app registers it.
+  test('the menu carries each export’s enabled from exportApplies: PDF on for both kinds', () => {
+    // The commands are registered here with `enabled` from `exportApplies`, as builtin.ts does
+    // (the real builtins need Nuxt's auto-imports). The desktop e2e chooses File → Export → PDF
+    // for a Markdown document against the real ones.
     const ids = ['export-pdf', 'export-md', 'export-txt', 'export-fdx'] as const;
     const menuFor = (kind: 'fountain' | 'markdown') => {
       clearCommands();

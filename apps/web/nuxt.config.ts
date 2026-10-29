@@ -1,3 +1,6 @@
+import { realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
@@ -7,6 +10,18 @@ import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 /** The workspace packages, at the repository root. */
 const PACKAGES = fileURLToPath(new URL('../../packages', import.meta.url));
+/**
+ * `decode-named-character-reference`'s plain build (`index.js`, not its `browser` one), found
+ * from the Markdown parser that depends on it (the alias below says why).
+ */
+const ENTITIES = join(
+  dirname(
+    createRequire(
+      `${realpathSync(fileURLToPath(new URL('node_modules/mdast-util-from-markdown', import.meta.url)))}/`,
+    ).resolve('decode-named-character-reference'),
+  ),
+  'index.js',
+);
 /** The script modules, at the repository root: a folder each, with an `index.ts` (modules/README.md). */
 const MODULES = fileURLToPath(new URL('../../modules', import.meta.url));
 // The icons the modules name: the icon bundle is built from the app's own files, and the modules
@@ -135,35 +150,15 @@ export default defineNuxtConfig({
         },
       },
     ],
-    worker: {
-      plugins: () => [
-        {
-          // The Markdown parser decodes character references (`&amp;`) with the package
-          // `decode-named-character-reference`, whose browser build asks the DOM (`document`),
-          // which a worker hasn't got. In a worker it takes the package's own table instead, so
-          // the export worker can parse a Markdown document (and so can the Preview's worker).
-          name: 'drafter-worker-entities',
-          enforce: 'pre' as const,
-          async resolveId(
-            this: {
-              resolve(
-                id: string,
-                importer?: string,
-                options?: { skipSelf?: boolean },
-              ): Promise<{ id: string } | null>;
-            },
-            id: string,
-            importer?: string,
-          ) {
-            if (id !== 'decode-named-character-reference') return null;
-            const found = await this.resolve(id, importer, { skipSelf: true });
-            return found ? found.id.replace(/index\.dom\.js$/, 'index.js') : null;
-          },
-        },
-      ],
-    },
     resolve: {
       alias: [
+        // The Markdown parser decodes character references (`&amp;`) with the package
+        // `decode-named-character-reference`, whose `browser` build asks the DOM (`document`) at
+        // load, which a worker hasn't got: the export worker and the Preview's worker failed with
+        // it, in every build and under `nuxt dev`. Everywhere (the page, the workers, dev, the
+        // build, the desktop app) it takes the package's own table (`index.js`) instead, the same
+        // decoding without the DOM (about 29 KB more in the lazy parser chunk).
+        { find: /^decode-named-character-reference$/, replacement: ENTITIES },
         {
           find: /^@drafter\/(cm-fountain|compare|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
