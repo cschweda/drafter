@@ -78,6 +78,9 @@ function outerRegions(doc: Doc): Region[] {
   return outer;
 }
 
+/** Source text with its emphasis escapes read: a backslash before `*`, `_`, or `\\` goes. */
+const unescaped = (text: string) => text.replace(/\\([*_\\])/g, '$1');
+
 /** Index of the first region that starts at or after `offset` (regions are in source order). */
 function firstFrom(regions: readonly Region[], offset: number): number {
   let lo = 0;
@@ -148,13 +151,16 @@ class Exporter {
     const notes = inside.filter((region) => region.kind === 'note');
     if (inside.length === 0) return [{ ...style, text: run.text }];
 
-    const cuts: string[] = [];
+    let cuts: string[] = [];
     let cursor = run.span.from;
     for (const region of inside) {
       cuts.push(source.slice(cursor, region.span.from));
       cursor = region.span.to;
     }
     cuts.push(source.slice(cursor, run.span.to));
+    // In a kind with emphasis the run's text has its escapes taken out (`\*` is `*`), so the cuts
+    // are compared that way too; an escape a note splits stays unequal, and the run stays whole.
+    if (cuts.join('') !== run.text) cuts = cuts.map(unescaped);
     if (cuts.join('') !== run.text) {
       return [{ ...style, text: run.text }, ...notes.map((n) => plain(this.noteText(n)))];
     }

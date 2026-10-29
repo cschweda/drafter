@@ -121,6 +121,10 @@ describe('toFdx', () => {
     ]);
   });
 
+  it('keeps a note in its place in a line that holds an escape', () => {
+    expect(content('He \\*x\\* [[n]] goes.\n')).toEqual([P('Action', {}, T('He *x* [[n]] goes.'))]);
+  });
+
   it('keeps a note that runs over two lines of an action', () => {
     expect(content('One [[a\nb]] two.\n')).toEqual([P('Action', {}, T('One[[a\nb]] two.'))]);
   });
