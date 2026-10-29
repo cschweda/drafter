@@ -1,6 +1,6 @@
 {
   "name": "@drafter/spell",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Spellcheck for Drafter: the bundled English dictionaries, and the words of a script worth checking.",
   "license": "MIT",
   "type": "module",
