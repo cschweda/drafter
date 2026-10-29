@@ -12,6 +12,7 @@ const SWITCHES = {
   strict: 'Strict Fountain',
   lineNumbers: 'Line numbers',
   typewriter: 'Typewriter scrolling',
+  structureStrip: 'Structure strip',
   sprintSound: 'Sprint sound',
 } as const;
 const toggle = (page: Page, name: keyof typeof SWITCHES) =>
@@ -84,6 +85,7 @@ test.describe('the dialog', () => {
     await expect(toggle(page, 'spellcheck')).toBeChecked();
     await expect(toggle(page, 'strict')).not.toBeChecked();
     await expect(toggle(page, 'lineNumbers')).not.toBeChecked();
+    await expect(toggle(page, 'structureStrip')).not.toBeChecked();
     await expect(textSize(page)).toHaveValue('1');
     await expect(textSize(page).locator('option')).toHaveText([
       '90%',

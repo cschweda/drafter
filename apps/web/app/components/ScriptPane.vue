@@ -38,11 +38,12 @@ let detachSync: (() => void) | undefined;
 
 /**
  * Publishes the page at the pane's top for the Structure strip's in-view marker (Call 29), once a
- * frame at most: the source offset at the top, its block, and that block's page.
+ * frame at most: the source offset at the top, its block, and that block's page. Nothing while the
+ * strip is off; it publishes once when the strip is turned on.
  */
 let topFrame = 0;
 function publishTop() {
-  if (topFrame) return;
+  if (topFrame || !settings.value.structureStrip) return;
   topFrame = requestAnimationFrame(() => {
     topFrame = 0;
     const offset = syncPane?.offsetAtTop() ?? null;
@@ -125,6 +126,12 @@ onBeforeUnmount(() => {
 });
 
 watch([layout, layoutTemplate], draw);
+watch(
+  () => settings.value.structureStrip,
+  (on) => {
+    if (on) publishTop();
+  },
+);
 watch([zoom, () => settings.value.textSize], () => applyZoom());
 watch(cursorBlock, (block) => {
   // The title page is block -1, which no layout line belongs to: it is the top.

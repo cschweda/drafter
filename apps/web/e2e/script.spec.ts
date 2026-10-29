@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { drafterDatabase, sampleSeenRows } from './seed';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const SAMPLE = readFileSync(
@@ -25,6 +26,59 @@ const status = (page: Page) => page.locator('[data-tour="status"]');
 async function useLightTheme(page: Page) {
   await page.getByRole('button', { name: 'Switch to light theme' }).click();
   await expect(page.locator('html')).toHaveClass(/\blight\b/);
+}
+
+/**
+ * Types a phrase, a letter at a time, at the start of a 120-page script, and expects no long task
+ * (Chromium's API). The observer is proved first with a task of its own.
+ */
+async function typesWithoutLongTask(page: Page) {
+  test.setTimeout(90_000);
+  const body = SAMPLE.slice(SAMPLE.indexOf('# Act One'));
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText(`${body}\n`.repeat(85));
+  await expect.poll(() => pages(page).count(), { timeout: 30_000 }).toBeGreaterThan(110);
+  // Settled: nothing is still updating.
+  await expect(slim(page)).not.toContainText('Updating');
+
+  await page.evaluate(() => {
+    const long: number[] = [];
+    (window as unknown as { longTasks: number[] }).longTasks = long;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) long.push(entry.duration);
+    }).observe({ type: 'longtask', buffered: false });
+  });
+  const longTasks = () =>
+    page.evaluate(() => (window as unknown as { longTasks: number[] }).longTasks);
+  // Proof the observer sees what it should: a task of about 80 ms is reported once. Then the
+  // list is emptied, so only the typing is judged below.
+  // (A timer's task: the long-task API doesn't count the evaluation itself.)
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          const end = performance.now() + 80;
+          while (performance.now() < end);
+          resolve();
+        }),
+      ),
+  );
+  await expect.poll(async () => (await longTasks()).length).toBe(1);
+  await page.evaluate(() => {
+    (window as unknown as { longTasks: number[] }).longTasks.length = 0;
+  });
+
+  // The start of the script is the worst place to type: every later offset moves.
+  const phrase = 'Typing into a long script, one letter at a time.';
+  await page.keyboard.press('ControlOrMeta+Home');
+  await page.keyboard.type(phrase, { delay: 60 });
+  await expect(slim(page)).not.toContainText('Updating');
+  // Layout kept up: the first page shows what was typed.
+  await expect(pages(page).first().locator('.drafter-line', { hasText: phrase })).toBeVisible();
+  // Let any task still queued run before reading the observer.
+  await page.waitForTimeout(500);
+  expect(await longTasks()).toEqual([]);
 }
 
 test.describe('the Script pane on a desktop', () => {
@@ -175,52 +229,38 @@ test.describe('the Script pane on a desktop', () => {
     test.skip(({ browserName }) => browserName !== 'chromium', 'long tasks are a Chromium API');
 
     test('types into a 120-page script without a long task', async ({ page }) => {
-      test.setTimeout(90_000);
-      const body = SAMPLE.slice(SAMPLE.indexOf('# Act One'));
-      await page.locator('.cm-content').click();
-      await page.keyboard.press('ControlOrMeta+A');
-      await page.keyboard.insertText(`${body}\n`.repeat(85));
-      await expect.poll(() => pages(page).count(), { timeout: 30_000 }).toBeGreaterThan(110);
-      // Settled: nothing is still updating.
-      await expect(slim(page)).not.toContainText('Updating');
+      await typesWithoutLongTask(page);
+    });
 
-      await page.evaluate(() => {
-        const long: number[] = [];
-        (window as unknown as { longTasks: number[] }).longTasks = long;
-        new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) long.push(entry.duration);
-        }).observe({ type: 'longtask', buffered: false });
-      });
-      const longTasks = () =>
-        page.evaluate(() => (window as unknown as { longTasks: number[] }).longTasks);
-      // Proof the observer sees what it should: a task of about 80 ms is reported once. Then the
-      // list is emptied, so only the typing is judged below.
-      // (A timer's task: the long-task API doesn't count the evaluation itself.)
-      await page.evaluate(
-        () =>
-          new Promise<void>((resolve) =>
-            setTimeout(() => {
-              const end = performance.now() + 80;
-              while (performance.now() < end);
-              resolve();
-            }),
-          ),
-      );
-      await expect.poll(async () => (await longTasks()).length).toBe(1);
-      await page.evaluate(() => {
-        (window as unknown as { longTasks: number[] }).longTasks.length = 0;
+    test.describe('with the structure strip on', () => {
+      test.use({
+        storageState: {
+          cookies: [],
+          origins: [
+            {
+              origin: `http://localhost:${Number(process.env.E2E_PORT ?? 4173)}`,
+              localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+              indexedDB: [
+                drafterDatabase([...sampleSeenRows, { key: 'structureStrip', value: true }]),
+              ],
+            },
+          ],
+        },
       });
 
-      // The start of the script is the worst place to type: every later offset moves.
-      const phrase = 'Typing into a long script, one letter at a time.';
-      await page.keyboard.press('ControlOrMeta+Home');
-      await page.keyboard.type(phrase, { delay: 60 });
-      await expect(slim(page)).not.toContainText('Updating');
-      // Layout kept up: the first page shows what was typed.
-      await expect(pages(page).first().locator('.drafter-line', { hasText: phrase })).toBeVisible();
-      // Let any task still queued run before reading the observer.
-      await page.waitForTimeout(500);
-      expect(await longTasks()).toEqual([]);
+      test('types into a 120-page script with the structure strip on without a long task', async ({
+        page,
+      }) => {
+        await expect(page.getByRole('group', { name: 'Structure strip' })).toBeVisible();
+        await typesWithoutLongTask(page);
+        // The strip kept up: one block a scene.
+        await expect(
+          page
+            .getByRole('group', { name: 'Structure strip' })
+            .getByRole('group', { name: 'Scenes', exact: true })
+            .getByRole('button'),
+        ).toHaveCount(85 * 2);
+      });
     });
   });
 

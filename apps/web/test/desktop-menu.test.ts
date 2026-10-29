@@ -284,3 +284,18 @@ describe('Spellcheck in the desktop menus', () => {
     expect(list.find((c) => c.id === 'spelling-suggestions')?.keys).toEqual(['Mod-.']);
   });
 });
+
+describe('The structure strip in the desktop menus', () => {
+  test('puts Toggle the structure strip in View, with Mod+Alt+O', () => {
+    registerCommands([command('toggle-structure-strip')]);
+    expect(menuCommands(useCommands().value)).toEqual([
+      {
+        id: 'toggle-structure-strip',
+        title: 'Toggle the structure strip',
+        group: 'View',
+        keys: ['Mod-Alt-o'],
+        enabled: true,
+      },
+    ]);
+  });
+});

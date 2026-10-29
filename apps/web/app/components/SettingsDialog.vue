@@ -81,6 +81,11 @@ const SWITCHES: Switch[] = [
     why: 'Show a row of buttons above the Source that writes Fountain’s marks for you, and names the element you’re in.',
   },
   {
+    key: 'structureStrip',
+    label: 'Structure strip',
+    why: 'Show your script’s sections and scenes as a band of blocks above the panes, each as wide as it is long. Click one to go there.',
+  },
+  {
     key: 'sprintSound',
     label: 'Sprint sound',
     why: 'Play a short tone when a sprint ends. Drafter makes no sound unless you turn this on.',

@@ -1,6 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { editor, setText, start, textOf } from './modules';
+import {
+  closeSettings,
+  editor,
+  openSettings,
+  palette,
+  runCommand,
+  setText,
+  settingsDialog,
+  start,
+  stored,
+  textOf,
+  wholeText,
+} from './modules';
 import { drafterDatabase, sampleSeenRows } from './seed';
 
 // The Structure strip (docs/drafter-structure-strip-design.md): a band above both panes with a row
@@ -295,6 +307,11 @@ test.describe('going there, and where you are', () => {
     await page.keyboard.press('ControlOrMeta+Home');
     await expect(tabStop(page)).toHaveCount(1);
     await expect(tabStop(page)).toHaveAccessibleName(/^Scene 1/);
+    const scrolls = () =>
+      page.evaluate(() =>
+        ['.cm-scroller', '.script-host'].map((s) => document.querySelector(s)?.scrollTop ?? null),
+      );
+    const before = await scrolls();
     await tabStop(page).focus();
     expect(await focusedName(page)).toMatch(/^Scene 1, INT\. KITCHEN/);
     await page.keyboard.press('ArrowRight');
@@ -313,9 +330,9 @@ test.describe('going there, and where you are', () => {
     await page.keyboard.press('ArrowUp');
     expect(await focusedName(page)).toMatch(/^Act One/);
     await page.keyboard.press('ArrowDown');
-    expect(await focusedName(page)).toMatch(/^Scene \d/);
-    // The arrows don't scroll the page or move anything else.
-    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    expect(await focusedName(page)).toMatch(/^Scene 1, INT\. KITCHEN/);
+    // The arrows don't scroll the panes or move anything else.
+    expect(await scrolls()).toEqual(before);
     // Tab leaves the strip, and Shift+Tab comes back to the block last focused.
     const last = await focusedName(page);
     await page.keyboard.press('Tab');
@@ -335,7 +352,11 @@ test.describe('going there, and where you are', () => {
     await page.keyboard.press('Enter');
     await expect(editor(page)).toBeFocused();
     await page.keyboard.insertText('X');
-    expect(await textOf(page)).toContain('XEXT. BACK PORCH - LATER');
+    // Exactly the X: the Enter that went there typed nothing.
+    const sample = await readFile(SAMPLE, 'utf8');
+    expect(await wholeText(page)).toBe(
+      sample.replace('EXT. BACK PORCH - LATER', 'XEXT. BACK PORCH - LATER'),
+    );
     await stripRow(page, 'Sections marked #').getByRole('button').focus();
     await page.keyboard.press(' ');
     await expect(editor(page)).toBeFocused();
@@ -431,6 +452,11 @@ test.describe('going there, and where you are', () => {
     expect((after.c?.x ?? 0) + (after.c?.width ?? 0)).toBeLessThanOrEqual(
       (after.s?.x ?? 0) + (after.s?.width ?? 0) + 0.5,
     );
+    // Hovering another block shows its card; leaving it shows the focused block's again.
+    await kitchen.hover();
+    await expect(card).toContainText('Scene 1, INT. KITCHEN - NIGHT');
+    await page.mouse.move(5, 400);
+    await expect(card).toContainText('Scene 2, EXT. BACK PORCH - LATER');
     // A section's card: its title and its scenes.
     await page.keyboard.press('ArrowUp');
     await expect(card).toContainText('Act One');
@@ -463,4 +489,200 @@ test('is not shown until it is turned on', async ({ page }) => {
   await expect(editor(page)).toContainText('Ann waits.');
   await expect(page.locator('.top')).toBeVisible();
   await expect(strip(page)).toHaveCount(0);
+});
+
+// ---- Turning it on and off (structure strip design §5, Calls 14–16, 30–32) -------------------
+
+const structureButton = (page: Page) =>
+  page.getByRole('banner').getByRole('button', { name: 'Structure', exact: true });
+const stripSwitch = (page: Page) =>
+  settingsDialog(page).getByRole('switch', { name: 'Structure strip', exact: true });
+const TOGGLE = 'Toggle the structure strip';
+const NOT_FOR_MARKDOWN = 'A Markdown document has no scenes.';
+/** Mod+Alt+O, the strip's key (Call 31). */
+const pressToggle = (page: Page) => page.keyboard.press('ControlOrMeta+Alt+o');
+const inStrip = (page: Page) =>
+  page.evaluate(() => Boolean(document.activeElement?.closest('[aria-label="Structure strip"]')));
+
+async function newMarkdown(page: Page) {
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page
+    .getByRole('group', { name: 'Scripts', exact: true })
+    .getByRole('button', { name: 'New Markdown document' })
+    .click();
+  await expect(editor(page)).toContainText('# Untitled');
+}
+
+test.describe('turning it on and off', () => {
+  test.beforeEach(() => {
+    test.skip(test.info().project.name.startsWith('phone'), 'a phone shows no strip');
+  });
+
+  test('the toolbar button, Mod+Alt+O, the palette, and Settings turn the same strip on and off, and it is remembered after a reload', async ({
+    page,
+  }) => {
+    await start(page);
+    await setText(page, await readFile(SAMPLE, 'utf8'));
+    await expect(strip(page)).toHaveCount(0);
+    // The toolbar button.
+    await structureButton(page).click();
+    await expect(scenes(page)).toHaveCount(2);
+    await expect.poll(async () => (await stored(page)).structureStrip).toBe(true);
+    // The key, with focus in the editor.
+    await editor(page).click();
+    await pressToggle(page);
+    await expect(strip(page)).toHaveCount(0);
+    await expect.poll(async () => (await stored(page)).structureStrip).toBe(false);
+    // The palette, which shows the key.
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette(page).locator('input').fill(TOGGLE);
+    const row = palette(page).getByRole('option', { name: new RegExp(`^${TOGGLE}`) });
+    await expect(row).toContainText(/Ctrl\+Alt\+O|⌘⌥O/);
+    await row.click();
+    await expect(scenes(page)).toHaveCount(2);
+    // Settings, which shows what the others set.
+    await openSettings(page);
+    await expect(stripSwitch(page)).toBeChecked();
+    await stripSwitch(page).click();
+    await expect(stripSwitch(page)).not.toBeChecked();
+    await expect(strip(page)).toHaveCount(0);
+    await stripSwitch(page).click();
+    await expect(stripSwitch(page)).toBeChecked();
+    await closeSettings(page);
+    await expect(scenes(page)).toHaveCount(2);
+    // Remembered.
+    await page.reload();
+    await expect(scenes(page)).toHaveCount(2);
+    await expect(structureButton(page)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('the toolbar button is pressed while the strip shows', async ({ page }) => {
+    await start(page);
+    const button = structureButton(page);
+    await expect(button).toBeVisible();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    // The fifth round action, after Focus, in its own color (Call 30).
+    const labels = await page.getByRole('banner').locator('.actions .act .label').allTextContents();
+    expect(labels.slice(0, 5)).toEqual(['Open', 'Save', 'Export', 'Focus', 'Structure']);
+    await expect(button.locator('.round')).toHaveCSS('background-color', 'rgb(183, 166, 230)');
+    await button.click();
+    await expect(strip(page)).toBeVisible();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await button.click();
+    await expect(strip(page)).toHaveCount(0);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('is not shown for a Markdown document, and the button and command say why', async ({
+    page,
+  }) => {
+    await start(page);
+    await structureButton(page).click();
+    await expect(strip(page)).toBeVisible();
+    await newMarkdown(page);
+    await expect(strip(page)).toHaveCount(0);
+    const button = structureButton(page);
+    await expect(button).toHaveAttribute('aria-disabled', 'true');
+    await expect(button).toHaveAttribute('title', NOT_FOR_MARKDOWN);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    // Neither the button nor the key does anything: the setting stays on.
+    await button.click({ force: true });
+    await editor(page).click();
+    await pressToggle(page);
+    await expect(strip(page)).toHaveCount(0);
+    expect((await stored(page)).structureStrip).toBe(true);
+    // The palette doesn't offer it.
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette(page).locator('input').fill(TOGGLE);
+    await expect(palette(page).getByRole('option', { name: new RegExp(TOGGLE) })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    // Back in a screenplay, the strip is back.
+    await page.keyboard.press('ControlOrMeta+Alt+n');
+    await expect(strip(page)).toBeVisible();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(button).not.toHaveAttribute('title', /./);
+  });
+
+  test('turned on after the Script pane has scrolled, the marker shows where it is', async ({
+    page,
+  }) => {
+    await start(page);
+    await setText(page, longScript(40));
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect(scriptHost(page).locator('.drafter-page').nth(10)).toBeAttached();
+    await wheel(page, '.script-host', 8000);
+    await structureButton(page).click();
+    await paged(page);
+    const marker = strip(page).locator('.ruler .in-view');
+    await expect(marker).toBeVisible();
+    const [at, track] = await Promise.all([
+      marker.evaluate((el) => el.getBoundingClientRect().left),
+      strip(page)
+        .locator('.track')
+        .evaluate((el) => el.getBoundingClientRect().left),
+    ]);
+    expect(at - track).toBeGreaterThan(50);
+  });
+});
+
+test.describe('turning it on and off, with the strip on', () => {
+  test.use(withStrip);
+  test.beforeEach(() => {
+    test.skip(test.info().project.name.startsWith('phone'), 'a phone shows no strip');
+  });
+
+  test('focus mode hides it, and it is back after', async ({ page }) => {
+    await start(page);
+    await setText(page, await readFile(SAMPLE, 'utf8'));
+    await expect(scenes(page)).toHaveCount(2);
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await expect(page.getByRole('button', { name: 'Leave focus mode' })).toBeVisible();
+    await expect(strip(page)).toHaveCount(0);
+    await expect(structureButton(page)).toHaveCount(0);
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await expect(scenes(page)).toHaveCount(2);
+    await expect(structureButton(page)).toHaveAttribute('aria-pressed', 'true');
+    // Entered with a block focused, focus goes to the editor.
+    await scenes(page).first().focus();
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await expect(strip(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+  });
+
+  test('puts focus in the editor when the strip goes with focus in it', async ({ page }) => {
+    await start(page);
+    await setText(page, await readFile(SAMPLE, 'utf8'));
+    // Mod+Alt+O with a block focused.
+    await scenes(page).nth(1).focus();
+    expect(await inStrip(page)).toBe(true);
+    await pressToggle(page);
+    await expect(strip(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
+    // A switch to Markdown with a block focused: the palette gives focus back to the block, and
+    // the new document takes the strip away.
+    await pressToggle(page);
+    await expect(scenes(page)).toHaveCount(2);
+    await scenes(page).first().focus();
+    await runCommand(page, 'New Markdown document');
+    await expect(editor(page)).toContainText('# Untitled');
+    await expect(strip(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
+  });
+});
+
+test.describe('on a phone', () => {
+  test.use(withStrip);
+
+  test('is not shown on a phone, and neither is its button', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await start(page);
+    await expect(editor(page)).toContainText('The Call');
+    await expect(strip(page)).toHaveCount(0);
+    await expect(structureButton(page)).toBeHidden();
+    // The key does nothing there, and the setting stays as it was (Call 16).
+    await pressToggle(page);
+    await expect(strip(page)).toHaveCount(0);
+    expect((await stored(page)).structureStrip).toBe(true);
+  });
 });

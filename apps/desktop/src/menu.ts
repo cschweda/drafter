@@ -160,6 +160,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'turn-off-typewriter',
         'show-element-bar',
         'hide-element-bar',
+        'toggle-structure-strip',
       ],
     },
     { pick: ['fold-all', 'unfold-all'] },

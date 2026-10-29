@@ -7,6 +7,7 @@ const lastFocused = shallowRef<string | null>(null);
 
 <script setup lang="ts">
 import { type OutlineItem, rulerMarks, type StripBlock } from '@drafter/outline';
+import { useEditor } from '~/editor/session';
 import { useOutline } from '~/outline/use-outline';
 import { scriptTopPage } from '~/strip/in-view';
 import { stripKey } from '~/strip/keys';
@@ -30,6 +31,7 @@ import { useStrip } from '~/strip/use-strip';
 
 const { view, current, go } = useStrip();
 const outline = useOutline();
+const editor = useEditor();
 
 /** The live items by id, so a block kept from before the layout caught up is named as it is now. */
 const items = computed(() => {
@@ -60,7 +62,14 @@ onMounted(() => {
     { immediate: true },
   );
 });
-onBeforeUnmount(() => observer?.disconnect());
+onBeforeUnmount(() => {
+  observer?.disconnect();
+  // The strip going with focus in it (turned off, a Markdown document, a narrow window) would leave
+  // focus nowhere: it goes to the editor, at the cursor, instead (Call 32).
+  if (root.value?.contains(document.activeElement)) {
+    editor.goto(editor.view.state.selection.main.head);
+  }
+});
 
 const pct = (n: number) => `${n * 100}%`;
 
@@ -153,8 +162,13 @@ async function onKeydown(event: KeyboardEvent, row: number, index: number) {
 
 // ---- The card -------------------------------------------------------------------------------
 
-/** The block whose card shows: the one last hovered or focused, until the pointer leaves or focus goes. */
+/**
+ * The block whose card shows: the one last hovered or focused. When the pointer leaves a block the
+ * focused block's card comes back (none if no block has focus); when focus goes, the card goes.
+ */
 const cardFor = shallowRef<string | null>(null);
+/** The block that has focus, if one has. */
+const focusedBlock = shallowRef<string | null>(null);
 const cardLeft = shallowRef(0);
 const cardEl = ref<HTMLElement | null>(null);
 
@@ -170,22 +184,36 @@ const card = computed(() => {
 function showCard(id: string) {
   cardFor.value = id;
 }
-function hideCard(id: string) {
-  if (cardFor.value === id) cardFor.value = null;
+function onPointerleave(id: string) {
+  if (cardFor.value === id) cardFor.value = focusedBlock.value;
 }
 function onFocus(id: string) {
   lastFocused.value = id;
+  focusedBlock.value = id;
   showCard(id);
 }
+function onBlur(id: string) {
+  if (focusedBlock.value === id) focusedBlock.value = null;
+  if (cardFor.value === id) cardFor.value = null;
+}
+
+/** The card's block and where that block is: the card is measured only when one of them changes. */
+const cardPlace = computed(() => {
+  const id = cardFor.value;
+  if (!id || !card.value) return null;
+  const block = rows.value.flatMap((row) => row.blocks).find((b) => b.id === id);
+  return block ? `${id}|${block.style.left}|${block.style.width}` : null;
+});
 
 // Under its block, its left edge at the block's, moved in so it never passes the strip's edges.
 watch(
-  card,
+  cardPlace,
   async (now) => {
-    if (!now) return;
+    const id = cardFor.value;
+    if (!now || !id) return;
     await nextTick();
     const el = cardEl.value;
-    const block = blockEl(now.id);
+    const block = blockEl(id);
     const band = root.value;
     if (!el || !block || !band) return;
     const box = band.getBoundingClientRect();
@@ -225,9 +253,9 @@ watch(
             @click="go(block.id)"
             @keydown="onKeydown($event, r, b)"
             @focus="onFocus(block.id)"
-            @blur="hideCard(block.id)"
+            @blur="onBlur(block.id)"
             @pointerenter="showCard(block.id)"
-            @pointerleave="hideCard(block.id)"
+            @pointerleave="onPointerleave(block.id)"
           >
             {{ block.label }}
           </button>
@@ -272,8 +300,9 @@ watch(
 /* 18 px a row and 14 px of ruler, at most four rows and the ruler (Call 27). */
 .strip {
   position: relative;
-  /* Above the panes, so the card can sit over them. */
-  z-index: 20;
+  /* Above the panes, so the card can sit over them, and below the toolbar's menus (20), which open
+     over the strip. */
+  z-index: 10;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   min-height: 18px;

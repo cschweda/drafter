@@ -17,6 +17,9 @@ export const LABEL_MIN_PX = 28;
 /** The strip's one line while the script has no scenes (Call 17). */
 export const NO_SCENES = 'No scenes yet. Each scene heading you write shows here.';
 
+/** Why the strip, its toolbar button, and its command are off in a Markdown document (§5). */
+export const NOT_FOR_MARKDOWN = 'A Markdown document has no scenes.';
+
 /** What going to a block says when its scene has gone since the strip was drawn (§3.2). */
 export const GONE = 'That scene isn’t in the script any more.';
 
