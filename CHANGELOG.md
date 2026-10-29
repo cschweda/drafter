@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-29
+
+**Cards and notes.** A **Cards** tab shows your scenes as index cards, grouped by section, with each scene's heading, synopsis, color, length, and goal. Edit a synopsis on its card, and move cards by dragging them, with Alt and the arrow keys, or with Move to…, each in one undo. A **Notes** tab lists every note in your script, filed by who wrote it or what it's about (`[[Sam: …]]`, `[[TODO: …]]`, `#story`), with filters, and resolve, reopen, edit, set category, and delete, each one undo; its tab shows how many are open. **Scene details** writes a scene's goal, conflict, outcome, and shift into its header, and the Outline shows each scene's goal. **Setup** and **Payoff** on the element bar mark the threads you plant and pay off, the Notes tab lists them, and Problems says when a setup is never paid off or a field is written twice. None of it changes your printed pages. Also: in Safari, a click on the lower half of an element bar button no longer goes missing.
+
 ### Added
 
 - `@drafter/notes`, a new package for keyed notes (Phase 2 design §5.3). `readNote` reads `[[Head: body]]` into a typed head (a scene field such as `Goal`, a `Setup` or `Payoff` mark, `Card`, an all-capitals category such as `TODO`, or a person: `Sam`, `Sam on “the words”`, `Sam re Ann`), the body, its `#tags`, and whether it is `#resolved`; reading takes any case and spacing, and a URL, a time, or a sentence with a colon (`Note to self: …`) is never a head. `writeNote` and `fieldNote` write `[[Key: body]]` exactly, in title case with one space, the body on one line, and never closing the note or opening a boneyard; writing and reading any body gives it back (property-tested, and the parser reads what is written as one note). It also holds the scene palette and the text helpers `@drafter/outline` used for its edits, which moved here; `@drafter/outline` exports everything it did.
@@ -602,7 +606,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/cschweda/drafter/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/cschweda/drafter/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/cschweda/drafter/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/cschweda/drafter/compare/v0.8.0...v0.9.0
