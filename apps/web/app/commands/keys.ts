@@ -61,7 +61,10 @@ export function matchesKey(event: KeyboardEvent, keys: string, apple: boolean): 
   if (event.altKey && /^[a-z0-9]$/i.test(key)) {
     if (!apple && event.ctrlKey) {
       if (event.getModifierState?.('AltGraph')) return false;
-      if (event.key.length === 1 && event.key.toLowerCase() !== key.toLowerCase()) return false;
+      // Only a Latin letter: on a Cyrillic or Greek layout Ctrl+Alt+O is the shortcut, not AltGr.
+      if (/^\p{Script=Latin}$/u.test(event.key) && event.key.toLowerCase() !== key.toLowerCase()) {
+        return false;
+      }
     }
     return event.code === (/^[0-9]$/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`);
   }

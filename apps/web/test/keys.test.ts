@@ -69,6 +69,9 @@ describe('matchesKey', () => {
     expect(matchesKey(altGr('o', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
     expect(matchesKey(altGr('O', 'KeyO', { shiftKey: true }), 'Mod-Alt-Shift-o', false)).toBe(true);
     expect(matchesKey(altGr('1', 'Digit1'), 'Mod-Alt-1', false)).toBe(true);
+    // A layout whose letters aren't Latin keeps the shortcut: Ctrl+Alt+O there reports щ.
+    expect(matchesKey(altGr('щ', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
+    expect(matchesKey(altGr('ο', 'KeyO'), 'Mod-Alt-o', false)).toBe(true);
     // A browser that reports AltGr itself is believed, whatever the key says.
     const reported = altGr('o', 'KeyO');
     Object.defineProperty(reported, 'getModifierState', {
