@@ -35,7 +35,7 @@ export function coreTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
 
 /**
  * Cards and Notes (design §5.8): not core, so they share the slot and More with module tabs, first
- * in More, in the design's order. None for Markdown: a Markdown document has no scenes or notes.
+ * in More, in the design's order, until one is chosen. None for Markdown: a Markdown document has no scenes or notes.
  */
 export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
   { id: 'cards', label: 'Cards' },
@@ -50,7 +50,8 @@ export function viewTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
 /**
  * A pane's tab row (Phase 2 design §5.8): the core tabs, then one slot for another tab, then a
  * More menu with the rest. The slot holds the pane's own tab when it shows another one, else the
- * one chosen from More last (`last`), else the first; nine tabs never have to fit a pane's width.
+ * one chosen last (`last`), else nothing (controller ruling 4: never a tab nobody chose), at any
+ * width; nine tabs never have to fit a pane's width.
  */
 export function tabRow(
   core: ReadonlyArray<Tab>,
@@ -58,8 +59,7 @@ export function tabRow(
   selected: TabId,
   last: TabId | null,
 ): { row: Tab[]; more: Tab[] } {
-  const slot =
-    others.find((tab) => tab.id === selected) ?? others.find((tab) => tab.id === last) ?? others[0];
+  const slot = others.find((tab) => tab.id === selected) ?? others.find((tab) => tab.id === last);
   return {
     row: [...core, ...(slot ? [slot] : [])],
     more: others.filter((tab) => tab !== slot),

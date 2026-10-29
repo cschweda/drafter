@@ -35,3 +35,10 @@ What Plan FD (v0.11.0) left for later. Final Draft's own anchored notes are the 
 - **A shorter `import.ts`.** The importer is about 800 lines; the emphasis writer could move into its own file.
 - **The `.deb` file association.** The Linux package installs a system-wide `*.fdx` glob, which may compete with another application's for Open with. Drafter never asks to be the default, but where nothing else claims `.fdx` a file manager may open it in Drafter; `docs/desktop-install-linux.md` says how to change that.
 - **Tests.** The round-trip property test runs under the default 5 second limit, which could be tight on a slow CI machine. The import property checks kinds only when nothing was mapped to a note. The phone-width WebKit accessibility specs time out when six workers run at once (the pages have no axe violations); run fewer workers.
+
+## Plan B: Cards and notes
+
+What Plan B (v0.12.0) leaves for later. Its last task adds the rest of the list.
+
+- **The synopsis field inside a card** (the final accessibility pass). Enter on a card opens an `<input>` inside the card's `role="option"` (`SceneCard.vue`), as the Outline puts one inside its `treeitem`. ARIA doesn't allow interactive content inside an option, so screen readers may announce it differently. Check it with NVDA and VoiceOver, and move the field out of the option if they stumble.
+- **Timing tests under load** (when it costs a release). A few unit tests time work against a wall clock ("in under a second", "in linear time"), such as parsing, layout, and lint on large inputs. They fail when the machine is busy, for example while an e2e run shares it, and pass on a quiet machine. Run `pnpm test` on its own before trusting such a failure; giving them budgets in CPU time, or a separate suite, would make them steadier.

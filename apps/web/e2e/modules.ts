@@ -128,8 +128,8 @@ export async function chooseTab(page: Page, name: string) {
 }
 
 /**
- * Expects the first pane to offer the tab called `name`: in its tab row, or under More (Cards
- * holds the slot until another tab is chosen). The More menu is closed again.
+ * Expects the first pane to offer the tab called `name`: in its tab row, or under More (a tab
+ * that isn't core takes the slot only once it is chosen). The More menu is closed again.
  */
 export async function expectTabOffered(page: Page, name: string) {
   const pane = page.locator('[data-pane]').first();

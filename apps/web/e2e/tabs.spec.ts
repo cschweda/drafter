@@ -448,29 +448,21 @@ test.describe('the tab row’s slot', () => {
         if (!(await menu.isVisible())) await more.click();
         await expect(menu).toBeVisible({ timeout: 1000 });
       }).toPass();
-    await expect(row.getByRole('tab')).toHaveText([
-      'Source',
-      'Script',
-      /^Problems/,
-      'Outline',
-      'Cards',
-    ]);
-    // Notes from More takes the slot; Cards goes to More.
+    // No tab in the slot yet: Cards and Notes are first in More (controller ruling 4).
+    await expect(row.getByRole('tab')).toHaveText(['Source', 'Script', /^Problems/, 'Outline']);
     await openMore();
-    await expect(menu.getByRole('menuitem')).toHaveText(['Notes']);
-    await menu.getByRole('menuitem', { name: 'Notes' }).click();
-    await expect(menu).toBeHidden();
-    await expect(row.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
-    await expect(row.getByRole('tab', { name: 'Cards' })).toHaveCount(0);
-    // Then Cards from More: it takes the slot, and focus goes to its tab.
-    await openMore();
-    await expect(menu.getByRole('menuitem')).toHaveText(['Cards']);
+    await expect(menu.getByRole('menuitem')).toHaveText(['Cards', 'Notes']);
+    // Cards from More: it takes the slot, and focus goes to its tab.
     await menu.getByRole('menuitem', { name: 'Cards' }).click();
     await expect(menu).toBeHidden();
     const cards = row.getByRole('tab', { name: 'Cards' });
     await expect(cards).toHaveAttribute('aria-selected', 'true');
     await expect(cards).toBeFocused();
     await expect(page.getByRole('listbox', { name: 'Cards' })).toBeVisible();
+    await openMore();
+    await expect(menu.getByRole('menuitem')).toHaveText(['Notes']);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
     // Back to a core tab: Cards keeps the slot.
     await row.getByRole('tab', { name: 'Outline' }).click();
     await expect(row.getByRole('tab').last()).toHaveText('Cards');

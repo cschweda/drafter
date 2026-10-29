@@ -73,7 +73,7 @@ test.describe('script modules', () => {
 
     // Its parts: the button, the tab, and the command.
     await expect(countScenes(page)).toBeVisible();
-    // Offered in the tab row, under More while Cards holds the slot (Phase 2 design §5.8).
+    // Offered in the tab row, under More until it is chosen (Phase 2 design §5.8).
     await expectTabOffered(page, 'Fixture');
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();
@@ -101,9 +101,10 @@ test.describe('script modules', () => {
     await closeSettings(page);
     await expect(countScenes(page)).toHaveCount(0);
     await expect(fixtureTab(page)).toHaveCount(0);
-    // Nor under More, which has only Notes now.
+    // Nor under More, which has only Cards and Notes now.
     await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
+      'Cards',
       'Notes',
     ]);
     await page.keyboard.press('Escape');
@@ -261,7 +262,7 @@ test.describe('script modules', () => {
       problemsList(page).getByRole('button', { name: 'Fixture Info: Scene 1 Line 1' }),
     ).toBeVisible();
 
-    // The tab: More, after the tab row, offers it (Cards holds the slot); the arrow keys reach
+    // The tab: More, after the tab row, offers it (no tab is in the slot yet); the arrow keys reach
     // it there, and Enter chooses it, with focus on its tab.
     await lastPane(page).getByRole('tab', { selected: true }).focus();
     // WebKit's Tab skips buttons unless Alt is held, as Safari's does by default.
@@ -419,7 +420,7 @@ test.describe('script modules', () => {
     await runCommand(page, 'New Markdown document');
     await expect(page.getByRole('tab', { name: 'Preview' }).first()).toBeVisible();
     // The module's tab reads the title (the first heading); its button finds no Fountain scenes.
-    await fixtureTab(page).first().click();
+    await chooseTab(page, 'Fixture');
     const panel = page.getByRole('tabpanel', { name: 'Fixture' });
     await expect(panel).toContainText('Untitled');
     await countScenes(page).click();

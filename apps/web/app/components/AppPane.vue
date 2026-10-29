@@ -156,7 +156,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       :content="{ align: 'start', onCloseAutoFocus: onMoreCloseAutoFocus }"
     >
       <button type="button" class="tab more-button">
-        More<span class="sr-only"> tabs</span>
+        <span class="more-word">More</span><span class="sr-only"> tabs</span>
         <UIcon name="i-lucide-chevron-down" class="chevron" aria-hidden="true" />
       </button>
     </MenuButton>
@@ -293,6 +293,21 @@ function onKeydown(event: KeyboardEvent, index: number) {
 .chevron {
   width: 12px;
   height: 12px;
+}
+/* A narrow phone: the row holds four tabs, the slot, and More at 375px (controller ruling 4), so
+   More is its chevron alone, still named "More tabs", and the tabs sit closer. */
+@media (max-width: 479.98px) {
+  .tabs .tab {
+    padding-inline: 7px;
+  }
+  .more-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 .tab {
   padding: 7px 10px 9px;
