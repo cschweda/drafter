@@ -92,11 +92,15 @@ export function tokenize(text: string, offset = 0): Token[] {
   return tokens;
 }
 
+/** The endings a plural takes `es` after. */
+const SIBILANT = /(?:s|x|z|ch|sh)$/;
+
 /**
  * The lowercased forms a known-words set is asked about: the word; without a final 's (or ’s), or a
- * plural possessive's final ' (`Halvorsens'` as `halvorsens`); then that as a plural, without a
- * final `s`, or `es` both ways (`Halvorsens` as `halvorsen`, `Velloxes` as `velloxe` and `vellox`).
- * A word of three letters or fewer is only itself.
+ * plural possessive's final ' (`Halvorsens'` as `halvorsens`); then that as a plural: without a
+ * final `es` where what remains ends in s, x, z, ch, or sh (`Velloxes` as `vellox`), else without a
+ * final `s` (`Halvorsens` as `halvorsen`, but `Halvorsenes` only as `halvorsene`). A word of three
+ * letters or fewer is only itself.
  */
 export function lookupForms(word: string): string[] {
   const lower = word.toLowerCase().replaceAll('’', "'");
@@ -107,7 +111,7 @@ export function lookupForms(word: string): string[] {
   else if (base.endsWith("s'")) base = base.slice(0, -1);
   if (base !== lower) forms.push(base);
   if (base.length <= 3) return forms;
-  if (base.endsWith('es')) forms.push(base.slice(0, -1), base.slice(0, -2));
+  if (base.endsWith('es') && SIBILANT.test(base.slice(0, -2))) forms.push(base.slice(0, -2));
   else if (base.endsWith('s')) forms.push(base.slice(0, -1));
   return forms;
 }

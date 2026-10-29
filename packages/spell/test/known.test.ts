@@ -74,6 +74,11 @@ describe('harvested words', () => {
       'odalys',
     ]);
     expect(isKnown('Halvorsenz', known)).toBe(false);
+    // `es` is a plural only after s, x, z, ch, or sh.
+    expect(isKnown('Halvorsenes', known)).toBe(false);
+    const box = knownSet(harvestedWords(parse('INT. DOCK - DAY\n\nBOX\nAhoy.\n\nBIRCH\nAhoy.\n')));
+    for (const word of ['Boxes', "Boxes'", 'Birches']) expect(isKnown(word, box)).toBe(true);
+    expect(isKnown('Kitchenes', knownSet(['kitchen']))).toBe(false);
   });
 });
 

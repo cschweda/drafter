@@ -75,7 +75,11 @@ describe('tokenize', () => {
     expect(lookupForms('Halvorsens')).toEqual(['halvorsens', 'halvorsen']);
     expect(lookupForms("Halvorsens'")).toEqual(["halvorsens'", 'halvorsens', 'halvorsen']);
     expect(lookupForms('Halvorsens’')).toEqual(["halvorsens'", 'halvorsens', 'halvorsen']);
-    expect(lookupForms('Velloxes')).toEqual(['velloxes', 'velloxe', 'vellox']);
+    // `es` only after s, x, z, ch, or sh; otherwise only the `s`.
+    expect(lookupForms('Velloxes')).toEqual(['velloxes', 'vellox']);
+    expect(lookupForms('Marchbankses')).toEqual(['marchbankses', 'marchbanks']);
+    expect(lookupForms('Halvorsenes')).toEqual(['halvorsenes', 'halvorsene']);
+    expect(lookupForms('Janes')).toEqual(['janes', 'jane']);
     // Three letters or fewer are never cut.
     expect(lookupForms('bus')).toEqual(['bus']);
   });
