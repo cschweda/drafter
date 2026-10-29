@@ -110,7 +110,7 @@ People will find drafter.dev through search and shared links, many of them on ph
 
 ### 4.4 The guided tour
 
-**Decided.** The tour is built with ICJIA's [`nuxt-guided-tour`](https://github.com/icjia/nuxt-guided-tour) module: MIT-licensed, on npm, written by Drafter's maintainer, and the module behind the tour on markdown.icjia.cloud. Its parts map onto the tour like this:
+**Decided.** The tour is built with the [`nuxt-guided-tour`](https://www.npmjs.com/package/nuxt-guided-tour) module: MIT-licensed, on npm, and written by Drafter's maintainer. Its parts map onto the tour like this:
 
 | Module part | Use in Drafter |
 |---|---|
@@ -142,7 +142,7 @@ What reading the module (v0.5.1) showed, for the build:
 - **Color.** The highlight is Drafter's goldenrod, `#E5B04A`, set with the module's `highlightColor` option or its `--tour-*` CSS variables.
 - **Hidden targets.** On a phone, a step can point at a pane that isn't showing. Drafter watches the tour's current step and switches panes first; the module highlights its target after Vue's next tick, by which time the pane is there. Builder: a per-step "before" hook in the module would be tidier, but isn't required.
 - **Remembering.** The module stores "tour seen" in localStorage under a versioned key. Raise the version when the tour changes enough to show it again.
-- **The step card** sits in the middle of the screen while the target glows, as on markdown.icjia.cloud, not beside the target as in the mockup. That also suits a phone better.
+- **The step card** sits in the middle of the screen while the target glows, as in the module's own tours, not beside the target as in the mockup. That also suits a phone better.
 
 ### 4.5 What search engines and link previews see
 

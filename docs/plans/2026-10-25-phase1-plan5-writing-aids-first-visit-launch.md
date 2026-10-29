@@ -15,7 +15,7 @@
 - **Counts** are a pure function of the parsed script and its layout.
 - **The daily goal** keeps each day's starting counts per script.
 - **Sprints** keep their timer in memory.
-- **The tour** is ICJIA's `nuxt-guided-tour`, configured with Drafter's ten steps.
+- **The tour** is `nuxt-guided-tour`, configured with Drafter's ten steps.
 - **The service worker** comes from `@vite-pwa/nuxt`, registered so an update waits for the writer to choose to reload.
 
 **Tech Stack:** Nuxt 4.6, Nuxt UI 4.12, CodeMirror 6, `nuxt-guided-tour` 0.5, `@vueuse/core`, `@iconify-json/heroicons`, `@vite-pwa/nuxt`, Vitest 5, Playwright 1.64 with `@axe-core/playwright`.
