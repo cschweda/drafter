@@ -22,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- `apps/desktop`: the desktop end-to-end specs for a folder module's tab now choose it from More, since a module's tab takes the tab row's slot only once it is chosen.
 - `apps/web`: in the Cards tab, Up from a section holding only one card went to the last card above, not the one in the same column; the row is now counted as wide as it is drawn.
 - `apps/web`: on a 320px phone with a module's tab under More, the More button's hidden words widened the page past the screen. They stay inside the tab row now.
 - `apps/web`: in Safari, a click on the lower half of an element bar button could do nothing when the bar had just scrolled sideways. Safari's scrollbar floats over the row while it shows, covers the lower half of the buttons, and takes the click. Where scrollbars float, the bar's is hidden now. The bar still scrolls by swipe, trackpad, and the arrow keys, and a browser whose scrollbar takes room below the row keeps it.

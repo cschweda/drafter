@@ -164,6 +164,23 @@ export interface Launched {
 /** The editor's text area. */
 export const editor = (page: Page) => page.locator('.cm-content');
 
+/**
+ * Chooses the tab called `name` in the last pane (beside the Source): from the tab row, or from More when it isn't in
+ * the row (a module's tab takes the slot only once it is chosen).
+ */
+export async function chooseTab(page: Page, name: string) {
+  const pane = page.locator('[data-pane]').last();
+  const tab = pane.getByRole('tab', { name, exact: true });
+  if ((await tab.count()) === 0) {
+    await pane.getByRole('button', { name: 'More tabs' }).click();
+    await page
+      .getByRole('menu', { name: 'More tabs' })
+      .getByRole('menuitem', { name, exact: true })
+      .click();
+  } else await tab.click();
+  await expect(pane.getByRole('tab', { name, exact: true })).toBeFocused();
+}
+
 /** The text in the editor, as far as the editor has drawn it (a long script is drawn in part). */
 export const editorText = (page: Page) => editor(page).evaluate((el) => el.textContent ?? '');
 

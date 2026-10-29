@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
-import { editor, expect, type Profile, test } from './helpers';
+import { chooseTab, editor, expect, type Profile, test } from './helpers';
 
 // axe on what only the desktop app draws (Phase 1 design §1 item 5; the web app's states are
 // apps/web/e2e/a11y.spec.ts): the modules folder in Settings, with a folder module's question about
@@ -118,7 +118,7 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(
       page.getByRole('status').filter({ hasText: '2 lines end in spaces.' }),
     ).toBeVisible();
-    await page.getByRole('tab', { name: 'Tidy' }).last().click();
+    await chooseTab(page, 'Tidy');
     await expect(page.getByRole('tabpanel', { name: 'Tidy' })).toBeVisible();
     await clean(page, "a folder module's button and tab");
   });
