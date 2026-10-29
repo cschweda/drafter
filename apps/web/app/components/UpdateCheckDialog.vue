@@ -18,10 +18,17 @@ const message = computed(() => checkMessage(state.value, about.version, app));
 const ready = computed(() => state.value.status === 'ready' && !!state.value.how);
 const busy = computed(() => state.value.status === 'checking');
 const action = ref<HTMLButtonElement>();
+/**
+ * The dialog's contents are in the page only while it is open, so its status line is never a
+ * second page-level status region (the read-only bar's is the one that is always there).
+ */
+const shown = ref(false);
 
 watch(updateCheckOpen, async (open) => {
   await nextTick();
   if (open && dialog.value && !dialog.value.open) {
+    shown.value = true;
+    await nextTick();
     dialog.value.showModal();
     await runUpdateCheck();
     // The choice it found gets focus; otherwise Close keeps it.
@@ -34,6 +41,7 @@ watch(updateCheckOpen, async (open) => {
 });
 
 function onClose() {
+  shown.value = false;
   updateCheckOpen.value = false;
 }
 
@@ -56,25 +64,27 @@ async function again() {
     data-update-check
     @close="onClose"
   >
-    <h2 id="check-title">Check for updates</h2>
-    <p id="check-what" role="status" aria-live="polite" data-update-check-message>{{ message }}</p>
-    <div class="buttons">
-      <button
-        v-if="state.status === 'error'"
-        type="button"
-        class="btn"
-        :disabled="busy"
-        @click="again"
-      >
-        Try again
-      </button>
-      <button v-if="ready" ref="action" type="button" class="btn primary" @click="take">
-        {{ actionLabel(state.how ?? 'reload') }}
-      </button>
-      <button type="button" class="btn" :class="{ primary: !ready }" autofocus @click="dialog?.close()">
-        Close
-      </button>
-    </div>
+    <template v-if="shown">
+      <h2 id="check-title">Check for updates</h2>
+      <p id="check-what" role="status" aria-live="polite" data-update-check-message>{{ message }}</p>
+      <div class="buttons">
+        <button
+          v-if="state.status === 'error'"
+          type="button"
+          class="btn"
+          :disabled="busy"
+          @click="again"
+        >
+          Try again
+        </button>
+        <button v-if="ready" ref="action" type="button" class="btn primary" @click="take">
+          {{ actionLabel(state.how ?? 'reload') }}
+        </button>
+        <button type="button" class="btn" :class="{ primary: !ready }" autofocus @click="dialog?.close()">
+          Close
+        </button>
+      </div>
+    </template>
   </dialog>
 </template>
 
