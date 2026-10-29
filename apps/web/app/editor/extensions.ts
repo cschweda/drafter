@@ -12,6 +12,7 @@ import {
   parsedDoc,
   relint as relintView,
   sceneIds,
+  spellMarks,
 } from '@drafter/cm-fountain';
 import type { Template } from '@drafter/templates';
 import type { DocumentKind } from '../markdown/kind';
@@ -19,20 +20,24 @@ import { theme } from './theme';
 import { typewriterScrolling } from './typewriter';
 
 /**
- * The browser's spellcheck in the Source pane (Phase 1 design §5.3): on to start with, and a
- * setting turns it off. Phase 2's nspell replaces it.
+ * Drafter's spellcheck in the Source pane (Plan D): the spelling marks (`spellMarks()`, which
+ * `useSpell` fills from its worker) when the setting is on, nothing when it is off. The browser's
+ * own spellcheck is off there either way (Call 18): its underlines would be a second, different
+ * opinion on the same words. Other text fields keep the browser's.
  */
 export const spellcheck = new Compartment();
 
-const SPELLCHECK_ON = EditorView.contentAttributes.of({ spellcheck: 'true' });
-const SPELLCHECK_OFF = EditorView.contentAttributes.of({ spellcheck: 'false' });
+const NOTHING: Extension = [];
+
+const SPELL_MARKS = spellMarks();
+const BROWSER_SPELLCHECK_OFF = EditorView.contentAttributes.of({ spellcheck: 'false' });
 
 /**
- * `spellcheck.reconfigure(spellcheckAttribute(on))` switches it. The same extension comes back
+ * `spellcheck.reconfigure(spellcheckExtension(on))` switches it. The same extension comes back
  * for the same answer, so `applyEditorSettings` can tell that nothing changed.
  */
-export function spellcheckAttribute(on: boolean): Extension {
-  return on ? SPELLCHECK_ON : SPELLCHECK_OFF;
+export function spellcheckExtension(on: boolean): Extension {
+  return on ? SPELL_MARKS : NOTHING;
 }
 
 /**
@@ -53,7 +58,6 @@ export const typewriter = new Compartment();
  * and a long script's scroll position with it.
  */
 const TYPEWRITER = typewriterScrolling();
-const NOTHING: Extension = [];
 
 export function typewriterExtension(on: boolean): Extension {
   return on ? TYPEWRITER : NOTHING;
@@ -185,7 +189,8 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     // The explicit tabindex is for axe, which doesn't count a contenteditable as focusable
     // content of the scroller (`scrollable-region-focusable`); the text is a tab stop anyway.
     EditorView.contentAttributes.of({ 'aria-label': 'Source', tabindex: '0' }),
-    spellcheck.of(spellcheckAttribute(true)),
+    BROWSER_SPELLCHECK_OFF,
+    spellcheck.of(spellcheckExtension(true)),
     readOnly.of(readOnlyExtension(false)),
     theme,
   ];

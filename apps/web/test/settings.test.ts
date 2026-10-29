@@ -24,7 +24,56 @@ describe('settings', () => {
       scrollSync: true,
       elementBar: true,
       cardSize: 'medium',
+      spellLanguage: 'en-US',
+      spellNotes: false,
+      personalDictionary: [],
     });
+  });
+
+  test('keeps the language, the notes setting, and My dictionary', async () => {
+    const first = createSettings();
+    await first.ready;
+    await first.set('spellLanguage', 'en-GB');
+    await first.set('spellNotes', true);
+    await first.set('personalDictionary', ['Zephyrine', 'Ormsby']);
+    expect(await db.settings.get('personalDictionary')).toEqual({
+      key: 'personalDictionary',
+      value: ['Zephyrine', 'Ormsby'],
+    });
+    const second = createSettings();
+    await second.ready;
+    expect(second.settings.value).toMatchObject({
+      spellLanguage: 'en-GB',
+      spellNotes: true,
+      personalDictionary: ['Zephyrine', 'Ormsby'],
+    });
+    // A language Drafter doesn't have changes nothing.
+    await second.set('spellLanguage', 'fr-FR' as never);
+    expect(second.settings.value.spellLanguage).toBe('en-GB');
+  });
+
+  test('ignores a damaged personal dictionary', async () => {
+    for (const value of [
+      'Zephyrine',
+      ['Zephyrine', 4],
+      ['Zephyrine', ''],
+      ['two words'],
+      [' Zephyrine'],
+      { 0: 'Zephyrine' },
+      null,
+    ]) {
+      await db.settings.clear();
+      await db.settings.bulkPut([
+        { key: 'personalDictionary', value },
+        { key: 'spellLanguage', value: 'en-AU' },
+        { key: 'spellNotes', value: 'yes' },
+      ]);
+      const store = createSettings();
+      await store.ready;
+      expect(store.settings.value, JSON.stringify(value)).toEqual(DEFAULT_SETTINGS);
+      await store.set('personalDictionary', value as never);
+      expect(store.settings.value.personalDictionary).toEqual([]);
+    }
   });
 
   test('cardSize defaults to medium', async () => {

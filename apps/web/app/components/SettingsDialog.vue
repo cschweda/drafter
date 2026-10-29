@@ -28,7 +28,8 @@ function onClose() {
 }
 
 interface Switch {
-  key: Exclude<keyof Settings, 'textSize' | 'cardSize'>;
+  /** A setting that is on or off. */
+  key: { [K in keyof Settings]: Settings[K] extends boolean ? K : never }[keyof Settings];
   label: string;
   why: string;
   /** Shown only in the desktop app. */
@@ -45,7 +46,7 @@ const SWITCHES: Switch[] = [
   {
     key: 'spellcheck',
     label: 'Spellcheck',
-    why: 'Underline misspelled words in the Source pane, using your browser’s spellcheck.',
+    why: 'Underline misspelled words in the Source pane, with Drafter’s own dictionary, which works offline.',
   },
   {
     key: 'strict',

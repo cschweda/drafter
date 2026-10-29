@@ -44,4 +44,15 @@ export {
   sceneMoved,
   sceneMovedEffect,
 } from './scene-ids';
+export {
+  ignoreHere,
+  mapSpellMarks,
+  type SpellMark,
+  setSpellMarks,
+  spellMarkAt,
+  spellMarks,
+  spellMarksOf,
+  stepSpellMark,
+  unmarkWord,
+} from './spell';
 export { parsedDoc } from './state';

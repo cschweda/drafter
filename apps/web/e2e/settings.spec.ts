@@ -190,13 +190,25 @@ test('remembers settings after a reload', async ({ page }) => {
   await expect(textSize(page)).toHaveValue('1.3');
 });
 
-test("turns the browser's spellcheck off in the Source pane", async ({ page }) => {
-  await expect(editor(page)).toHaveAttribute('spellcheck', 'true');
+test("the browser's spellcheck stays off in the Source pane, and the switch turns Drafter's on and off", async ({
+  page,
+}) => {
+  // Drafter's own spellcheck replaces the browser's there (Plan D, Call 18).
+  await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+  await setText(page, 'INT. HALL - DAY\n\nThe phnoe rings.\n');
+  await expect(page.locator('.cm-misspelled')).toHaveText('phnoe');
   await openSettings(page);
+  await expect(
+    dialog(page).getByText(
+      'Underline misspelled words in the Source pane, with Drafter’s own dictionary, which works offline.',
+    ),
+  ).toBeVisible();
   await toggle(page, 'spellcheck').uncheck();
+  await expect(page.locator('.cm-misspelled')).toHaveCount(0);
   await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
   await toggle(page, 'spellcheck').check();
-  await expect(editor(page)).toHaveAttribute('spellcheck', 'true');
+  await expect(editor(page)).toHaveAttribute('spellcheck', 'false');
+  await expect(page.locator('.cm-misspelled')).toHaveText('phnoe');
   await toggle(page, 'spellcheck').uncheck();
   await closeSettings(page);
   await page.reload();

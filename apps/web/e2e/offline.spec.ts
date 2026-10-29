@@ -136,6 +136,15 @@ test.describe('offline', () => {
     expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
   });
 
+  test('spellchecks offline: the dictionaries are cached', async ({ page, context }) => {
+    await start(page);
+    await context.setOffline(true);
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    await typeAtEnd(page, '\nThe phnoe rings.\n');
+    await expect(page.locator('.cm-misspelled')).toHaveText('phnoe', { timeout: 10_000 });
+  });
+
   test('works offline at a Markdown document, whose parser loads on demand', async ({
     page,
     context,

@@ -6,14 +6,14 @@ import {
   lineNumbersGutter,
   relint,
   spellcheck,
-  spellcheckAttribute,
+  spellcheckExtension,
   typewriter,
   typewriterExtension,
 } from './extensions';
 
 /**
- * Puts the settings that live in the editor's compartments into the editor: spellcheck, line
- * numbers, and typewriter scrolling, and a new lint for Strict Fountain (the lint reads the option on each run). `load`
+ * Puts the settings that live in the editor's compartments into the editor: spellcheck (the
+ * spelling marks), line numbers, and typewriter scrolling, and a new lint for Strict Fountain (the lint reads the option on each run). `load`
  * gives the editor a fresh state with every compartment at its first value, so this runs after
  * each one as well as after each change.
  */
@@ -24,7 +24,7 @@ export function applyEditorSettings(view: EditorView, settings: Settings): void 
   const set = (compartment: Compartment, next: Extension) => {
     if (compartment.get(view.state) !== next) effects.push(compartment.reconfigure(next));
   };
-  set(spellcheck, spellcheckAttribute(settings.spellcheck));
+  set(spellcheck, spellcheckExtension(settings.spellcheck));
   set(lineNumbersGutter, lineNumbersExtension(settings.lineNumbers));
   set(typewriter, typewriterExtension(settings.typewriter));
   if (effects.length > 0) view.dispatch({ effects });

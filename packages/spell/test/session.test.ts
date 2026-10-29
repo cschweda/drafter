@@ -70,6 +70,20 @@ describe('createSpellSession', () => {
     expect(session.work()).toEqual({ units: 0, words: 0 });
   });
 
+  test('a word added to the script’s dictionary is unflagged without checking again', () => {
+    const session = createSpellSession(checker);
+    expect(session.check(input(script)).map((m) => m.word)).toEqual(['phnoe', 'wuold']);
+    session.work();
+    // The metadata block is never a unit, so adding it tokenizes nothing and asks nothing new.
+    // (`parse` reads the block only with its JSON on the lines after `/* drafter`, as setMeta writes it.)
+    const withBlock = `${script}\n/* drafter\n{"v":1,"dictionary":["phnoe"]}\n*/\n`;
+    expect(session.check(input(withBlock)).map((m) => m.word)).toEqual(['wuold']);
+    expect(session.work()).toEqual({ units: 0, words: 0 });
+    // The block taken out again, the word is marked again, from the cached verdict.
+    expect(session.check(input(script)).map((m) => m.word)).toEqual(['phnoe', 'wuold']);
+    expect(session.work()).toEqual({ units: 0, words: 0 });
+  });
+
   test('checks a Markdown document, skipping code', () => {
     const session = createSpellSession(checker);
     const source =
