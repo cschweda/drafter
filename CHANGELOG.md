@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- `docs`: **the README is shorter and easier to scan, with nothing taken out.** The status note is a short line, followed by a list of what you can do today; the Samples, Storage, AppImage, update, and Development notes are lists; Phase 2 of the roadmap is split into what's built, what's next, and what's to come; and "Not planned" sits with the roadmap table instead of under its last phase. Facts said in two places now live in one. Corrected on the way: Final Draft files are a Phase 2 feature, not Phase 1; screen-reader testing comes last, not in Phase 2; offline dictionaries already ship (v0.14.0), so Phase 4 no longer lists them; import has been checked against Final Draft 13's Outline, Script, and Shooting Script samples, not one; the repository layout shows what's there now (`apps/desktop`, `modules`, `brand`; `templates/` is still planned); `@drafter/stats` is marked planned; and the package README list includes `notes`, `compare`, `outline`, `spell`, and `fdx`.
+
 ## [0.15.1] - 2026-10-29
 
 **Final Draft shooting scripts import cleanly.** An omitted scene's lines come in as notes after its OMITTED heading instead of spilling into the script, hidden text comes in as a note, and All Caps text comes in in capitals, checked against Final Draft 13's own Outline, Script, and Shooting Script samples.
