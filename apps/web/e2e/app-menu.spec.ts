@@ -84,10 +84,11 @@ test.describe('the app menu', () => {
     await page.keyboard.press('ArrowDown');
     await expect(menu(page)).toBeVisible();
     await page.keyboard.press('End');
-    // The last item is Help's Reset sample (a sample is open); above it are the four help pages, then
+    // The last item is Help's Reset sample (a sample is open); above it are the five help pages, then
     // Take the tour, and above that Settings….
     await expect(item(page, /^Reset sample/)).toBeFocused();
     for (const name of [
+      /^Third-party licences/,
       /^Privacy/,
       /^Keyboard shortcuts/,
       /^Saving and your browser/,

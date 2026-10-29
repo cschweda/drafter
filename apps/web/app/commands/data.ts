@@ -34,6 +34,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
+  { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
 ];
 
 /** The address a link uses: the page's directory, which is where a static host serves it (no redirect). */

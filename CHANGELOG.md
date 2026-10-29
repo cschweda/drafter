@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/spell`, a new package for spellcheck (Phase 2 design §12). For now it names the two dictionaries Drafter bundles, US English (`dictionary-en` 4.0.0) and British English (`dictionary-en-gb` 3.0.0), with each one's version, licence, and where the app serves its files. Its dependencies are `nspell` 2.1.5 (MIT; it brings `is-buffer` 2.0.5, MIT) and the two dictionaries (`(MIT AND BSD)`, made from SCOWL), each pinned exactly and listed in `docs/DEPENDENCIES.md`; `@types/nspell` 2.1.6 is a development dependency. A test fails if an installed version or a declared licence changes, or if a dictionary's licence file mentions the GPL or LGPL.
+- `apps/web`: the dictionaries are served from `/dictionaries/en-US/` and `/dictionaries/en-GB/` and precached by the service worker, so spellcheck will work offline (about 1.1 MB, about 0.4 MB over the wire). The licence of nspell, is-buffer, and each dictionary is served as it came, at `/licenses/`. The build check fails a build without any of them, or a service worker that doesn't cache a dictionary.
+- Help pages: **Third-party licences**, listing nspell, is-buffer, both dictionaries (with the SCOWL, Ispell, UKACD, WordNet, and VarCon copyright lines), Courier Prime, and Inter Tight, each with its version, its licence in a line, and a link to its full text. It is in the app menu's Help, the palette, and the help pages' list.
+
 ## [0.13.0] - 2026-10-29
 
 **History and Compare.** Drafter now keeps earlier versions of your script as you work: one every 10 minutes of writing, one each time you save or open a file, and one before anything that changes a lot at once (Expand outline, Fix all, Revert to Saved, reloading a changed file, a Final Draft import). **History** lists them; restore any one in one undo (Drafter keeps what you had first), label it, save it as its own file, or delete it. Older snapshots are thinned out over time, and labeled ones are always kept. **Compare** shows what changed between two versions as script pages, with each changed line marked and markers where lines were removed; a Changes list and **N** and **Shift+N** take you from change to change. Snapshots live in your browser and never change your file or your printed pages. Also fixed: in Safari, typing just after clicking a tab or a toolbar or status bar button could go into the script.

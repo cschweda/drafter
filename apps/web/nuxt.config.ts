@@ -55,8 +55,11 @@ export default defineNuxtConfig({
     workbox: {
       // Every file the app needs, by extension: the shell (HTML), scripts and styles (the lazy and
       // worker chunks are in `_nuxt/` with the rest), Inter Tight and Courier Prime, the icons,
-      // (the manifest is added by the plugin itself, once). A page added under /docs/ later (Task 8) is matched by `**/*.html`.
-      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico}'],
+      // and the spelling dictionaries (`dictionaries/<language>/index.{aff,dic}`, about 1.1 MB,
+      // each well under Workbox's 2 MiB limit) (the manifest is added by the plugin itself, once).
+      // The licence files (`.txt`) are not the app, and are left out. A page added under /docs/
+      // is matched by `**/*.html`.
+      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico,aff,dic}'],
       // Not part of the app: the social-sharing image, and the hosting fallbacks (200.html is the
       // shell again; 404.html is for a link that matches nothing).
       globIgnores: ['og-image.png', '200.html', '404.html'],
@@ -122,7 +125,7 @@ export default defineNuxtConfig({
     resolve: {
       alias: [
         {
-          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|templates)$/,
+          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

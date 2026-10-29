@@ -11,6 +11,7 @@ const packages = [
   'lint',
   'notes',
   'compare',
+  'spell',
   'outline',
   'fdx',
   'cm-fountain',

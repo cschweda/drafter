@@ -26,12 +26,13 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the four help pages, in the Help group', () => {
+  test('has the five help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/fountain',
       '/docs/saving',
       '/docs/shortcuts',
       '/docs/privacy',
+      '/docs/licences',
     ]);
     for (const page of HELP_PAGES) {
       const command = COMMAND_DATA.find((c) => c.id === page.id);
@@ -47,6 +48,7 @@ describe('the command data', () => {
       '/docs/saving/',
       '/docs/shortcuts/',
       '/docs/privacy/',
+      '/docs/licences/',
     ]);
   });
 });

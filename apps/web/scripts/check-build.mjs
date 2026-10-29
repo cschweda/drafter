@@ -2,12 +2,13 @@
 // - the test module (the fixture) is in a build made with DRAFTER_TEST_MODULES=1 and in no other;
 // - every icon the app's own `.ts` files name is in the icon bundle (the bundle is made from a
 //   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so);
-// - the service worker precaches every script, style, worker, font, and icon the build made (so the
-//   app, a Markdown document, and a PDF export all work offline), caches nothing else, and has no
-//   runtime caching (Phase 1 design §11);
+// - the service worker precaches every script, style, worker, font, icon, and spelling dictionary
+//   the build made (so the app, a Markdown document, a PDF export, and spellcheck all work offline),
+//   caches nothing else, and has no runtime caching (Phase 1 design §11);
+// - the spellchecker's dictionaries and the licence files that go with them are in the build;
 // - a build for the desktop app (DRAFTER_DESKTOP=1) has no service worker and no manifest at all.
 // Run as `node scripts/check-build.mjs .output/public`.
-import { readdir, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TOUR_ICONS } from './tour-icons.mjs';
@@ -28,7 +29,23 @@ export function iconNamesIn(source) {
 export const NOT_PRECACHED = ['og-image.png', '200.html', '404.html'];
 
 /** What the worker caches by extension: the files the app runs on. */
-const PRECACHED = /\.(?:js|css|woff2|ttf|png|svg|ico|webmanifest)$/;
+const PRECACHED = /\.(?:js|css|woff2|ttf|png|svg|ico|webmanifest|aff|dic)$/;
+
+/**
+ * Files every build must have, copied in by `scripts/sync-assets.mjs`: each bundled dictionary
+ * (`DICTIONARIES` in `packages/spell/src/dictionaries.ts`) and the licence of each package the
+ * spellchecker uses, which the dictionaries' notice requires be shipped with them.
+ */
+export const REQUIRED_FILES = [
+  'dictionaries/en-US/index.aff',
+  'dictionaries/en-US/index.dic',
+  'dictionaries/en-GB/index.aff',
+  'dictionaries/en-GB/index.dic',
+  'licenses/nspell.txt',
+  'licenses/is-buffer.txt',
+  'licenses/dictionary-en.txt',
+  'licenses/dictionary-en-gb.txt',
+];
 
 /**
  * What is wrong with the service worker's precache, if anything.
@@ -133,10 +150,11 @@ async function filesUnder(dir, pattern) {
 
 /**
  * @param {string} siteDir the generated site (`.output/public`)
- * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean, desktop?: boolean }} expected whether the build is a
+ * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean, desktop?: boolean, files?: readonly string[] }} expected whether the build is a
  *   test build, the icon names (without `i-lucide-`) its bundle must have, and the Heroicons
  *   (without `heroicons:`) the guided tour draws, which the bundle must have in its Heroicons set;
- *   `precache` checks the service worker's precache, and `desktop` checks a desktop build has none
+ *   `precache` checks the service worker's precache, `desktop` checks a desktop build has none,
+ *   and `files` are paths (relative to `siteDir`) the build must have
  * @returns {Promise<{ problems: string[] }>}
  */
 export async function checkBuild(siteDir, expected) {
@@ -174,6 +192,14 @@ export async function checkBuild(siteDir, expected) {
     }
   }
 
+  for (const name of expected.files ?? []) {
+    try {
+      await access(join(siteDir, name));
+    } catch {
+      problems.push(`The build has no ${name}.`);
+    }
+  }
+
   if (expected.precache) problems.push(...(await precacheProblems(siteDir)));
   if (expected.desktop) problems.push(...(await desktopProblems(siteDir)));
   return { problems };
@@ -202,6 +228,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     // The desktop app's build (DRAFTER_DESKTOP=1) has no service worker to check, and must not.
     precache: process.env.DRAFTER_DESKTOP !== '1',
     desktop: process.env.DRAFTER_DESKTOP === '1',
+    files: REQUIRED_FILES,
   });
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);

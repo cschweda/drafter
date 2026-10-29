@@ -115,6 +115,7 @@ const HELP_ICONS: Record<string, string> = {
   'help-saving': 'i-lucide-save',
   'help-shortcuts': 'i-lucide-keyboard',
   'help-privacy': 'i-lucide-shield-check',
+  'help-licences': 'i-lucide-scale',
 };
 const helpItems = computed<DropdownMenuItem[]>(() => [
   { type: 'label', label: 'Help' },

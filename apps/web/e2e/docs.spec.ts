@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { expect, type Page, test } from '@playwright/test';
+import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
@@ -125,6 +128,65 @@ test.describe('without JavaScript', () => {
     const focus = row('Toggle focus mode');
     await expect(focus).toContainText('⌘⇧Enter');
     await expect(focus).toContainText('Ctrl+Shift+Enter');
+  });
+
+  test('the licences page lists every dependency and links its licence file', async ({ page }) => {
+    // The versions installed: nspell's from @drafter/spell, is-buffer's from nspell.
+    const spell = createRequire(new URL('../../../packages/spell/package.json', import.meta.url));
+    const nspellDir = spell.resolve('nspell').replace(/[/\\]lib[/\\]index\.js$/, '');
+    const version = (dir: string) =>
+      (JSON.parse(readFileSync(`${dir}/package.json`, 'utf8')) as { version: string }).version;
+    const isBufferDir = createRequire(`${nspellDir}/package.json`)
+      .resolve('is-buffer')
+      .replace(/[/\\]index\.js$/, '');
+    const packages = [
+      { name: 'nspell', version: version(nspellDir), licence: 'MIT', file: '/licenses/nspell.txt' },
+      {
+        name: 'is-buffer',
+        version: version(isBufferDir),
+        licence: 'MIT',
+        file: '/licenses/is-buffer.txt',
+      },
+      ...Object.values(DICTIONARIES).map((d) => ({
+        name: d.package,
+        version: d.version,
+        licence: d.licence,
+        file: d.licenceFile,
+      })),
+    ];
+    await page.goto('/docs/licences');
+    await expect(heading(page)).toHaveText('Third-party licences');
+    for (const { name, version, licence, file } of packages) {
+      const entry = page.locator('main section').filter({
+        has: page.getByRole('heading', { level: 3, name, exact: true }),
+      });
+      await expect(entry, name).toContainText(version);
+      await expect(entry, name).toContainText(licence);
+      const link = entry.getByRole('link', { name: /licence/i });
+      await expect(link, name).toHaveAttribute('href', file);
+      // The file is served, as the package ships it.
+      const response = await page.request.get(file);
+      expect(response.status(), file).toBe(200);
+      expect((await response.text()).length, file).toBeGreaterThan(500);
+    }
+    // The copyright lines the dictionaries' notices carry, UKACD's shown as it asks.
+    const text = await mainText(page);
+    for (const line of [
+      'Copyright 2000-2018 by Kevin Atkinson',
+      'Copyright 1993, Geoff Kuenning, Granada Hills, CA',
+      'Copyright (c) J Ross Beresford 1993-1999. All Rights Reserved.',
+      'Copyright (c) 2016 Titus Wormer',
+      'Copyright (c) Feross Aboukhadijeh',
+      'Courier Prime',
+      'Inter Tight',
+      'SIL Open Font License',
+    ]) {
+      expect(text, line).toContain(line);
+    }
+    await expect(page.getByRole('link', { name: /Courier Prime.*licence/i })).toHaveAttribute(
+      'href',
+      '/fonts/courier-prime/OFL.txt',
+    );
   });
 
   test('says on the Privacy page that nothing leaves the device', async ({ page }) => {
