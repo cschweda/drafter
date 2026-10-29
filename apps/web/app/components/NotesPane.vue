@@ -26,11 +26,10 @@ import {
   hasStatus,
   isOpen,
   type NoteGroup,
-  notesShown,
   peopleInUse,
 } from '~/notes/filter';
 import { type NoteAction, notesKey } from '~/notes/list-keys';
-import { notesFilter, openNewNote, useNotes } from '~/notes/use-notes';
+import { notesFilter, openNewNote, STALE, useNotes } from '~/notes/use-notes';
 import { sceneNumber, swatchOf } from '~/outline/labels';
 import { sayOutline } from '~/outline/notice';
 import { useOutline } from '~/outline/use-outline';
@@ -67,6 +66,11 @@ const sceneAt = (offset: number): Scene | null =>
   outline.index.value.scenes.find((s) => s.span.from <= offset && offset < s.span.to) ?? null;
 
 interface Item {
+  /**
+   * The row's identity through edits elsewhere: its kind and text, and which of the shown notes
+   * with that text it is. A row keeps it when a note goes in above; a note that changes is a new row.
+   */
+  key: string;
   entry: NoteEntry;
   scene: Scene | null;
   line: number;
@@ -80,7 +84,7 @@ interface Thread {
   items: Item[];
 }
 
-const rows = computed(() => notesShown(notes.entries.value, outline.index.value, filter, lineOf));
+const rows = notes.shown;
 
 /** Setups & payoffs: a group per label, never-paid-off ones first, each mark with its page. */
 const threads = computed<Thread[]>(() => {
@@ -91,6 +95,7 @@ const threads = computed<Thread[]>(() => {
     const marks = [...thread.setups, ...thread.payoffs].sort((a, b) => a.span.from - b.span.from);
     const items = marks.map(
       (entry): Item => ({
+        key: '',
         entry,
         scene: sceneAt(entry.span.from),
         line: lineOf(entry.span.from),
@@ -122,9 +127,22 @@ const threads = computed<Thread[]>(() => {
 });
 
 const items = computed<Item[]>(() => {
-  if (filter.group === 'setups') return threads.value.flatMap((t) => t.items);
+  const list: Item[] =
+    filter.group === 'setups' ? threads.value.flatMap((t) => t.items) : rowItems();
+  const seen = new Map<string, number>();
+  for (const item of list) {
+    const text = `${item.entry.kind}:${item.entry.text}`;
+    const n = seen.get(text) ?? 0;
+    seen.set(text, n + 1);
+    item.key = `${text}#${n}`;
+  }
+  return list;
+});
+
+function rowItems(): Item[] {
   return rows.value.flatMap((row) => [
     {
+      key: '',
       entry: row.entry,
       scene: row.scene,
       line: row.line,
@@ -133,6 +151,7 @@ const items = computed<Item[]>(() => {
     },
     ...row.replies.map(
       (reply): Item => ({
+        key: '',
         entry: reply,
         scene: sceneAt(reply.span.from),
         line: lineOf(reply.span.from),
@@ -141,9 +160,11 @@ const items = computed<Item[]>(() => {
       }),
     ),
   ]);
-});
-/** Each item's place in `items`, for the threads' groups. */
-const indexOf = (item: Item) => items.value.indexOf(item);
+}
+
+/** Each row's place in the list, by its key. */
+const places = computed(() => new Map(items.value.map((item, i) => [item.key, i])));
+const placeOf = (item: Item) => places.value.get(item.key) ?? -1;
 
 const categories = computed(() => categoriesInUse(notes.entries.value));
 const people = computed(() => peopleInUse(notes.entries.value));
@@ -165,14 +186,32 @@ const colors = computed(() => categoryColors(editor.doc.value));
 
 // ---- Focus: one tab stop, the row last focused ------------------------------------------------
 
-const active = ref(0);
-const current = computed(() => Math.min(active.value, Math.max(items.value.length - 1, 0)));
+/** The row last focused, by key; where it was, for when it is gone. */
+const active = ref<string | null>(null);
+let lastAt = 0;
+const current = computed(() => {
+  const at = active.value === null ? undefined : places.value.get(active.value);
+  return at ?? Math.min(lastAt, Math.max(items.value.length - 1, 0));
+});
 const domId = (i: number) => `note-row-${i}`;
 
+function setActive(item: Item) {
+  active.value = item.key;
+  lastAt = Math.max(placeOf(item), 0);
+}
+
 async function focusRow(i: number) {
-  active.value = Math.min(Math.max(i, 0), Math.max(items.value.length - 1, 0));
+  const item = items.value[Math.min(Math.max(i, 0), items.value.length - 1)];
+  if (item) setActive(item);
   await nextTick();
   document.getElementById(domId(current.value))?.focus();
+}
+
+/** After an action on `item`: its row if it is still there, else the row now where it was. */
+async function focusAfter(item: Item, was: number) {
+  await nextTick();
+  const at = places.value.get(item.key);
+  await focusRow(at ?? was);
 }
 
 // ---- Actions ----------------------------------------------------------------------------------
@@ -183,9 +222,11 @@ function go(item: Item) {
   editor.goto(item.entry.span.from);
 }
 
-function resolve(i: number) {
-  const item = items.value[i];
-  if (!item) return;
+// Each action is on the note the row was drawn for (`item.entry`), found again by `notes.act`: if it
+// changed since, nothing changes and the live region says so.
+
+function resolve(item: Item) {
+  const at = placeOf(item);
   const note = item.entry.note;
   if (!hasStatus(note)) {
     void sayOutline(NO_STATUS);
@@ -198,12 +239,11 @@ function resolve(i: number) {
     to ? 'Resolved the note.' : 'Reopened the note.',
     'Nothing was changed: the note would read differently.',
   );
-  void focusRow(i);
+  void focusAfter(item, at);
 }
 
-function remove(i: number) {
-  const item = items.value[i];
-  if (!item) return;
+function remove(item: Item) {
+  const at = placeOf(item);
   const what = item.entry.kind === 'boneyard' ? 'boneyard' : 'note';
   notes.act(
     item.entry,
@@ -211,12 +251,13 @@ function remove(i: number) {
     `Deleted the ${what}.`,
     `Nothing was deleted: taking the ${what} out would change how the script prints.`,
   );
-  void focusRow(i);
+  void focusAfter(item, at);
 }
 
 // Edit in place: the head and the text; Enter saves, Escape or leaving cancels.
-const editing = ref<number | null>(null);
-let editingEntry: NoteEntry | null = null;
+/** The row being edited, by key, and the note as it was when editing started. */
+const editing = ref<string | null>(null);
+let editingItem: Item | null = null;
 const draftHead = ref('');
 const draftBody = ref('');
 
@@ -229,9 +270,7 @@ function headText(entry: NoteEntry): string {
   return inner.slice(0, at).trim().replace(/:$/, '').trim();
 }
 
-async function startEditing(i: number) {
-  const item = items.value[i];
-  if (!item) return;
+async function startEditing(item: Item) {
   if (why.value) {
     void sayOutline(why.value);
     return;
@@ -240,20 +279,20 @@ async function startEditing(i: number) {
     void sayOutline('A boneyard is changed in the Source.');
     return;
   }
-  editingEntry = item.entry;
+  editingItem = item;
   draftHead.value = headText(item.entry);
   draftBody.value = item.entry.note.body;
-  editing.value = i;
+  editing.value = item.key;
   await nextTick();
-  const input = document.getElementById(`${domId(i)}-body`) as HTMLInputElement | null;
+  const input = document.getElementById(`${domId(placeOf(item))}-body`) as HTMLInputElement | null;
   input?.focus();
   input?.select();
 }
 
 function finishEditing(save: boolean) {
-  const i = editing.value;
-  const was = editingEntry;
-  if (i === null || !was) return;
+  const item = editingItem;
+  if (editing.value === null || !item) return;
+  const at = placeOf(item);
   const head = draftHead.value.trim() === '' ? null : draftHead.value;
   const body = draftBody.value;
   let written = '';
@@ -267,14 +306,14 @@ function finishEditing(save: boolean) {
     }
   }
   editing.value = null;
-  editingEntry = null;
+  editingItem = null;
   if (save) {
     // With no head, a body that starts `Word:` reads as that head, as it would typed (DECISIONS).
     const read = readNote(written.slice(2, -2));
     const gained = head === null && read.head !== null;
     const colon = written.indexOf(':');
     notes.act(
-      was,
+      item.entry,
       (doc, entry) => rewriteNote(doc, entry, head, body),
       gained
         ? `Saved the note. “${written.slice(2, colon + 1)}” at its start reads as its head.`
@@ -282,16 +321,25 @@ function finishEditing(save: boolean) {
       'The note is as it was.',
     );
   }
-  void focusRow(i);
+  void focusAfter(item, at);
 }
 
-// Set category…: a dialog on the note as it was when it opened.
-const categoryFor = ref<NoteEntry | null>(null);
-let categoryRow = 0;
+// A note that changes while it is edited leaves the list: the fields go with it, and nothing is saved.
+watch(places, (now) => {
+  if (editing.value !== null && !now.has(editing.value)) {
+    editing.value = null;
+    editingItem = null;
+    void sayOutline(STALE);
+  }
+});
 
-function openCategory(i: number) {
-  const item = items.value[i];
-  if (!item) return;
+// Set category…: a dialog on the note as it was when it opened.
+// A shallow ref, so the note is the one listed, not a reactive copy of it.
+const categoryFor = shallowRef<NoteEntry | null>(null);
+let categoryItem: Item | null = null;
+let categoryAt = 0;
+
+function openCategory(item: Item) {
   if (why.value) {
     void sayOutline(why.value);
     return;
@@ -300,7 +348,8 @@ function openCategory(i: number) {
     void sayOutline(NO_STATUS);
     return;
   }
-  categoryRow = i;
+  categoryItem = item;
+  categoryAt = placeOf(item);
   categoryFor.value = item.entry;
 }
 
@@ -319,7 +368,8 @@ function onCategorySave(tags: string[]) {
 
 function onCategoryClose() {
   categoryFor.value = null;
-  void focusRow(categoryRow);
+  if (categoryItem) void focusAfter(categoryItem, categoryAt);
+  categoryItem = null;
 }
 
 // A category's color, kept in the metadata block (design §5.5).
@@ -364,35 +414,37 @@ function chipItems(name: string): DropdownMenuItem[][] {
 
 // ---- The row's menu ---------------------------------------------------------------------------
 
-const menuFor = ref<number | null>(null);
-let menuRow: number | null = null;
+// The menu is built once, as it opens, for the note its row was drawn for: a note that goes in
+// above while it is open moves the rows, never what the menu acts on.
+const menuFor = ref<string | null>(null);
+const menuGroups = shallowRef<DropdownMenuItem[][]>([]);
+let menuItem: Item | null = null;
 let afterMenu: (() => void) | null = null;
 
-function setMenu(i: number, open: boolean) {
+function setMenu(item: Item, open: boolean) {
   if (open) {
-    active.value = i;
-    menuFor.value = i;
-    menuRow = i;
-  } else if (menuFor.value === i) menuFor.value = null;
+    setActive(item);
+    menuItem = item;
+    menuGroups.value = menuItems(item);
+    menuFor.value = item.key;
+  } else if (menuFor.value === item.key) menuFor.value = null;
 }
 
 function onMenuCloseAutoFocus(event: Event) {
   event.preventDefault();
   const act = afterMenu;
-  const i = menuRow;
+  const item = menuItem;
   afterMenu = null;
   requestAnimationFrame(() => {
     if (act) act();
-    else if (menuFor.value === null && i !== null) void focusRow(i);
+    else if (menuFor.value === null && item) void focusAfter(item, lastAt);
   });
 }
 
 const MENU_CONTENT = { align: 'end' as const, onCloseAutoFocus: onMenuCloseAutoFocus };
 const NO_ITEMS: DropdownMenuItem[][] = [];
 
-function menuItems(i: number): DropdownMenuItem[][] {
-  const item = items.value[i];
-  if (!item) return NO_ITEMS;
+function menuItems(item: Item): DropdownMenuItem[][] {
   const off = why.value !== null;
   const later = (act: () => void) => () => {
     afterMenu = act;
@@ -407,7 +459,7 @@ function menuItems(i: number): DropdownMenuItem[][] {
       label: note.resolved ? 'Reopen' : 'Resolve',
       icon: note.resolved ? 'i-lucide-rotate-ccw' : 'i-lucide-check',
       disabled: off,
-      onSelect: later(() => resolve(i)),
+      onSelect: later(() => resolve(item)),
     });
   }
   if (item.entry.kind === 'note') {
@@ -415,7 +467,7 @@ function menuItems(i: number): DropdownMenuItem[][] {
       label: 'Edit',
       icon: 'i-lucide-pencil',
       disabled: off,
-      onSelect: later(() => void startEditing(i)),
+      onSelect: later(() => void startEditing(item)),
     });
   }
   if (hasStatus(note)) {
@@ -423,7 +475,7 @@ function menuItems(i: number): DropdownMenuItem[][] {
       label: 'Set category…',
       icon: 'i-lucide-tag',
       disabled: off,
-      onSelect: later(() => openCategory(i)),
+      onSelect: later(() => openCategory(item)),
     });
   }
   if (edits.length > 0) groups.push(edits);
@@ -443,7 +495,7 @@ function menuItems(i: number): DropdownMenuItem[][] {
       label: 'Delete',
       icon: 'i-lucide-trash-2',
       disabled: off,
-      onSelect: later(() => remove(i)),
+      onSelect: later(() => remove(item)),
     },
   ]);
   return groups;
@@ -452,7 +504,7 @@ function menuItems(i: number): DropdownMenuItem[][] {
 // ---- Resolve all shown ------------------------------------------------------------------------
 
 const toResolve = computed(() => items.value.map((item) => item.entry).filter(isOpen));
-const asking = ref<NoteEntry[] | null>(null);
+const asking = shallowRef<NoteEntry[] | null>(null);
 const askDialog = ref<HTMLDialogElement>();
 const resolveButton = ref<HTMLButtonElement>();
 const notesWord = (n: number) => `${n} ${n === 1 ? 'note' : 'notes'}`;
@@ -509,18 +561,18 @@ const filtering = computed(
 
 // ---- Keys -------------------------------------------------------------------------------------
 
-function run(action: NoteAction, i: number) {
-  const item = items.value[i];
-  if (!item) return;
+function run(action: NoteAction, item: Item) {
   if (action === 'go') go(item);
-  else if (action === 'edit') void startEditing(i);
-  else if (action === 'resolve') resolve(i);
-  else if (action === 'category') openCategory(i);
-  else if (action === 'delete') remove(i);
-  else setMenu(i, true);
+  else if (action === 'edit') void startEditing(item);
+  else if (action === 'resolve') resolve(item);
+  else if (action === 'category') openCategory(item);
+  else if (action === 'delete') remove(item);
+  else setMenu(item, true);
 }
 
-function onKeydown(event: KeyboardEvent, i: number) {
+/** Keys on the row drawn for `item`: its actions are on that note, never on what is now in its place. */
+function onKeydown(event: KeyboardEvent, item: Item) {
+  const i = placeOf(item);
   // Only keys on the row itself: the edit fields have their own.
   if (event.target !== event.currentTarget) return;
   const key = event.key === 'F10' && event.shiftKey ? 'ContextMenu' : event.key;
@@ -541,7 +593,7 @@ function onKeydown(event: KeyboardEvent, i: number) {
   }
   event.preventDefault();
   if (next.focus !== undefined) void focusRow(next.focus);
-  else if (next.action) run(next.action, i);
+  else if (next.action) run(next.action, item);
 }
 
 // After a change, a row that went away hands the tab stop on.
@@ -559,7 +611,8 @@ watch(
 watch(
   () => filter.group,
   () => {
-    active.value = 0;
+    active.value = null;
+    lastAt = 0;
   },
 );
 </script>
@@ -639,29 +692,29 @@ watch(
             <div class="thread-title" aria-hidden="true">{{ thread.label }}</div>
             <NoteRow
               v-for="item in thread.items"
-              :key="indexOf(item)"
+              :key="item.key"
               :entry="item.entry"
               :scene="item.scene"
               :line="item.line"
               :page="item.page"
               :categories="item.categories"
               :swatches="swatches"
-              :dom-id="domId(indexOf(item))"
-              :current="indexOf(item) === current"
-              :editing="editing === indexOf(item)"
+              :dom-id="domId(placeOf(item))"
+              :current="placeOf(item) === current"
+              :editing="editing === item.key"
               :read-only="why"
-              :menu-open="menuFor === indexOf(item)"
-              :menu-items="menuFor === indexOf(item) ? menuItems(indexOf(item)) : NO_ITEMS"
+              :menu-open="menuFor === item.key"
+              :menu-items="menuFor === item.key ? menuGroups : NO_ITEMS"
               :menu-content="MENU_CONTENT"
               :chip-items="chipItems"
               v-model:draft-head="draftHead"
               v-model:draft-body="draftBody"
-              @update:menu-open="(open: boolean) => setMenu(indexOf(item), open)"
+              @update:menu-open="(open: boolean) => setMenu(item, open)"
               @edited="finishEditing"
-              @resolve="resolve(indexOf(item))"
-              @keydown="onKeydown($event, indexOf(item))"
-              @focus="active = indexOf(item)"
-              @click="active = indexOf(item)"
+              @resolve="resolve(item)"
+              @keydown="onKeydown($event, item)"
+              @focus="setActive(item)"
+              @click="setActive(item)"
               @dblclick="go(item)"
             />
           </div>
@@ -669,7 +722,7 @@ watch(
         <template v-else>
           <NoteRow
             v-for="(item, i) in items"
-            :key="i"
+            :key="item.key"
             v-model:draft-head="draftHead"
             v-model:draft-body="draftBody"
             :entry="item.entry"
@@ -680,18 +733,18 @@ watch(
             :swatches="swatches"
             :dom-id="domId(i)"
             :current="i === current"
-            :editing="editing === i"
+            :editing="editing === item.key"
             :read-only="why"
-            :menu-open="menuFor === i"
-            :menu-items="menuFor === i ? menuItems(i) : NO_ITEMS"
+            :menu-open="menuFor === item.key"
+            :menu-items="menuFor === item.key ? menuGroups : NO_ITEMS"
             :menu-content="MENU_CONTENT"
             :chip-items="chipItems"
-            @update:menu-open="(open: boolean) => setMenu(i, open)"
+            @update:menu-open="(open: boolean) => setMenu(item, open)"
             @edited="finishEditing"
-            @resolve="resolve(i)"
-            @keydown="onKeydown($event, i)"
-            @focus="active = i"
-            @click="active = i"
+            @resolve="resolve(item)"
+            @keydown="onKeydown($event, item)"
+            @focus="setActive(item)"
+            @click="setActive(item)"
             @dblclick="go(item)"
           />
         </template>

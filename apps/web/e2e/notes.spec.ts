@@ -352,6 +352,64 @@ test.describe('the Notes tab', () => {
     expect(await textOf(page)).toBe(changed);
   });
 
+  test("a row's menu acts on the note it was opened for, after a note goes in above", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'the source and the list side by side');
+    await start(page);
+    await turnOnFixture(page);
+    await setText(
+      page,
+      'INT. HALL - DAY\n\nAnn waits. [[Check the dates]]\n\nBob runs. [[Check the time]]',
+    );
+    // The cursor at the end of Ann's line, where the fixture puts its note after a pause: above Bob's.
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('End');
+    await showNotes(page);
+    const bob = row(page, /^Check the time, open/);
+    await bob.focus();
+    await runCommand(page, 'Fixture: add a note after a pause');
+    await bob.focus();
+    await page.keyboard.press('Shift+F10');
+    await expect(rowMenu(page)).toBeVisible();
+    // While the menu is open, a note goes in above Bob's: the list shifts under it.
+    await expect.poll(() => textOf(page)).toContain('[[Check the dates]][[later]]');
+    await expect(rows(page)).toHaveCount(3);
+    await rowMenu(page).getByRole('menuitem', { name: 'Delete' }).click();
+    await expect.poll(() => textOf(page)).not.toContain('Check the time');
+    await expect(announcer(page)).toHaveText('Deleted the note.');
+    // Bob's note, not the one that took its place in the list (deleteEntry keeps the space before it).
+    expect(await textOf(page)).toBe(
+      'INT. HALL - DAY\n\nAnn waits. [[Check the dates]][[later]]\n\nBob runs. ',
+    );
+  });
+
+  test('finds the note after the script grows a long way above it', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'the source and the list side by side');
+    await start(page);
+    await turnOnFixture(page);
+    await setText(page, 'INT. HALL - DAY\n\nAnn waits.\n\nBob runs. [[Check the time]]');
+    // The cursor at the end of Ann's line, far above the note once the fixture's long note is in.
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('End');
+    await showNotes(page);
+    const note = row(page, /^Check the time, open/);
+    await note.focus();
+    await runCommand(page, 'Fixture: put in a long note after a pause');
+    await note.focus();
+    await page.keyboard.press('c');
+    const dialog = page.getByRole('dialog', { name: 'Categories for this note' });
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => textOf(page)).toContain('A long note.');
+    await dialog.getByRole('checkbox', { name: 'story' }).check();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(announcer(page)).toHaveText('Set the note’s categories: story.');
+    expect(await textOf(page)).toContain('Bob runs. [[Check the time #story]]');
+  });
+
   test('works with the filters in a sheet on a phone', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'a wide screen has the filters in the tab');
     await openWith(page);

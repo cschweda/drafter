@@ -8,11 +8,11 @@ import {
   setupsAndPayoffs,
   writeNote,
 } from '@drafter/notes';
-import { type ComputedRef, computed, effectScope, reactive, ref } from 'vue';
+import { type ComputedRef, computed, effectScope, reactive, ref, toRaw } from 'vue';
 import { useEditor } from '../editor/session';
 import { sayOutline } from '../outline/notice';
 import { useOutline } from '../outline/use-outline';
-import { NO_FILTER, type NoteFilter } from './filter';
+import { NO_FILTER, type NoteFilter, type NoteRowModel, notesShown } from './filter';
 
 // The Notes tab's model (Phase 2 design §8): the script's notes and boneyards, its setups and
 // payoffs, and the edits the tab makes. Every edit finds its note again in the parse as it is now
@@ -22,6 +22,8 @@ import { NO_FILTER, type NoteFilter } from './filter';
 export interface NotesSession {
   entries: ComputedRef<NoteEntry[]>;
   threads: ComputedRef<SetupThread[]>;
+  /** The rows `notesFilter` shows (`notesShown`), for the tab and its slim bar. */
+  shown: ComputedRef<NoteRowModel[]>;
   /**
    * Re-finds `was` in the current parse (findEntry) and applies `edit`; says "That note has
    * changed since; the list is up to date now." when it is gone. `said` is spoken when the edit is
@@ -83,11 +85,20 @@ function create(): NotesSession {
       return list;
     });
     const threads = computed(() => setupsAndPayoffs(entries.value));
+    const lineOf = (offset: number) => {
+      const text = editor.view.state.doc;
+      return text.lineAt(Math.min(Math.max(offset, 0), text.length)).number;
+    };
+    const shown = computed(() =>
+      notesShown(entries.value, outline.index.value, notesFilter, lineOf),
+    );
 
     /** `was` in the parse as it is now, looked for as far as the script has grown or shrunk since. */
     const now = (was: NoteEntry) => {
       const length = editor.doc.value.source.length;
-      return findEntry(entries.value, was, length - (drawnAt.get(was) ?? length));
+      // `was` may come back through a ref as a reactive proxy, which the map doesn't know.
+      const drawn = drawnAt.get(toRaw(was)) ?? length;
+      return findEntry(entries.value, was, length - drawn);
     };
 
     const applied = (changes: TextChange[], said: string, refused: string) => {
@@ -159,7 +170,7 @@ function create(): NotesSession {
       return true;
     };
 
-    return { entries, threads, act, actAll, add } satisfies NotesSession;
+    return { entries, threads, shown, act, actAll, add } satisfies NotesSession;
   }) as NotesSession;
 }
 
