@@ -79,7 +79,8 @@ test.describe('Revert to Saved (Chromium)', () => {
     // Nothing was written: the file is as it was.
     expect(await textOf(page, 'The Call.fountain')).toBe(saved);
 
-    // Focus is in the editor, and one undo brings every change back.
+    // Focus is in the editor once the menu has gone, and one undo brings every change back.
+    await expect(menu(page)).toHaveCount(0);
     await expect(editor(page)).toBeFocused();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).toContainText('MORE WORDS');
@@ -327,6 +328,10 @@ test.describe('Revert to Saved where Save downloads', () => {
     await expect(editor(page)).toContainText('FADE IN:');
     await expect(notice(page)).toHaveText(MESSAGE(file.suggestedFilename()));
     await expect(status(page)).not.toContainText('Unsaved changes');
+    // Focus is back in the editor once the menu has gone (while it closes, focus can pass through
+    // it), and one undo brings the change back.
+    await expect(menu(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).toContainText('MORE');
   });

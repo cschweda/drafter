@@ -139,6 +139,8 @@ test.describe('saving to a file (Chromium)', () => {
     await saveButton(page).click();
     await expect(status(page)).toContainText('Saved just now');
     const saved = await mine(page);
+    // The Save button has focus: back to the editor to type.
+    await editor(page).focus();
     await page.keyboard.insertText(' TWO');
     await expect.poll(async () => (await mine(page))?.source).toContain('ONE TWO');
     const after = await mine(page);
@@ -174,6 +176,8 @@ test.describe('saving to a file (Chromium)', () => {
     // The first file keeps what it had, and the script follows the second.
     expect(await textOf(page, 'one.fountain')).toMatch(/ALPHA$/);
     expect((await mine(page))?.fileName).toBe('two.fountain');
+    // Focus went back to the Open button with the menu: back to the editor to type.
+    await editor(page).focus();
     await page.keyboard.insertText(' GAMMA');
     await page.keyboard.press('ControlOrMeta+s');
     await expect(status(page)).toContainText('Saved just now');

@@ -53,13 +53,43 @@ export function backspaceGoesBack(event: KeyboardEvent): boolean {
 /**
  * Lets go of the editor's selection in the page when focus goes to `target`, somewhere other than
  * the editor (decided 2026-10-29). Safari types into a contenteditable that holds the page's
- * selection even when focus is elsewhere, so keys pressed in the Outline, Cards, Notes, Problems,
- * or Compare tab would change the script. CodeMirror keeps its own selection and puts it back in
- * the page when the editor has focus again, so the cursor is where it was.
+ * selection even when focus is elsewhere, so keys pressed in a tab, on a tab in a tab row, on a
+ * button, or with nothing focused would change the script. CodeMirror keeps its own selection and
+ * puts it back in the page when the editor has focus again, so the cursor is where it was.
  */
 export function releaseEditorSelection(target: EventTarget | null, content: Element): void {
   if (target instanceof Node && content.contains(target)) return;
   const selection = target instanceof Node ? target.ownerDocument?.getSelection() : null;
   const anchor = selection?.anchorNode;
   if (selection && anchor && content.contains(anchor)) selection.removeAllRanges();
+}
+
+/**
+ * Keeps Safari from typing into the editor (`content`) when it doesn't have focus, wherever focus
+ * went: focus coming in anywhere else lets go of the editor's selection in the page, and so does
+ * the editor losing focus to nothing (a click on the page's background), a moment later if focus
+ * hasn't come back. With the selection let go, WebKit's Backspace outside a text field would take
+ * the page back, so that Backspace is kept from it; it reaches whatever wanted it first (the Notes
+ * tab deletes with it). Returns what removes the listeners.
+ */
+export function guardEditorSelection(content: HTMLElement): () => void {
+  const doc = content.ownerDocument;
+  const onFocusin = (event: FocusEvent) => releaseEditorSelection(event.target, content);
+  const onFocusout = (event: FocusEvent) => {
+    if (event.relatedTarget !== null) return;
+    setTimeout(() => {
+      if (!content.contains(doc.activeElement)) releaseEditorSelection(doc.body, content);
+    }, 0);
+  };
+  const onKeydown = (event: KeyboardEvent) => {
+    if (backspaceGoesBack(event)) event.preventDefault();
+  };
+  doc.addEventListener('focusin', onFocusin);
+  content.addEventListener('focusout', onFocusout);
+  doc.addEventListener('keydown', onKeydown);
+  return () => {
+    doc.removeEventListener('focusin', onFocusin);
+    content.removeEventListener('focusout', onFocusout);
+    doc.removeEventListener('keydown', onKeydown);
+  };
 }

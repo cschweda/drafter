@@ -18,7 +18,7 @@ import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { fileBaseName, titleOf } from '~/storage/text';
 import { installDesktopUpdates } from '~/update/desktop-source';
-import { leavesOnEscape } from '~/utils/focus';
+import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
 import { dropTab, otherPane, type PaneId, PHONE_DEFAULT_TAB } from '~/utils/panes';
 
 const desktopBuild = isDesktopBuild();
@@ -99,6 +99,7 @@ let removeSystemOpen: (() => void) | undefined;
 let removeDesktopMenu: (() => void) | undefined;
 let removeDesktopClose: (() => void) | undefined;
 let removeDesktopUpdates: (() => void) | undefined;
+let removeSelectionGuard: (() => void) | undefined;
 
 // Focus mode swaps the layout for the Source alone. Entering puts the cursor in the editor; leaving
 // puts it back there if the editor is showing, else on the button that entered.
@@ -134,6 +135,8 @@ onMounted(() => {
   removeDesktopMenu = installDesktopMenu();
   removeDesktopClose = installDesktopClose();
   removeDesktopUpdates = installDesktopUpdates(useSettings());
+  // Safari would type into the script with focus anywhere else (decided 2026-10-29).
+  removeSelectionGuard = guardEditorSelection(view.contentDOM);
   if (!view.dom.isConnected) holder.value?.append(view.dom);
 });
 onBeforeUnmount(() => {
@@ -148,6 +151,7 @@ onBeforeUnmount(() => {
   removeDesktopMenu?.();
   removeDesktopClose?.();
   removeDesktopUpdates?.();
+  removeSelectionGuard?.();
 });
 </script>
 

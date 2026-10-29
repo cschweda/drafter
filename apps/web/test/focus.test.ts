@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { backspaceGoesBack, leavesOnEscape, releaseEditorSelection } from '../app/utils/focus';
+import {
+  backspaceGoesBack,
+  guardEditorSelection,
+  leavesOnEscape,
+  releaseEditorSelection,
+} from '../app/utils/focus';
 
 /** Dispatches a keydown on `target` and returns what a window listener saw of it. */
 function seen(target: Element, init: KeyboardEventInit = { key: 'Escape' }, prevent = false) {
@@ -135,5 +140,74 @@ describe('backspaceGoesBack', () => {
     expect(key(byId('p'))).toBe(false);
     expect(key(byId('panel'), { key: 'Backspace', metaKey: true })).toBe(false);
     expect(key(byId('panel'), { key: 'Delete' })).toBe(false);
+  });
+});
+
+describe('guardEditorSelection', () => {
+  function setup() {
+    document.body.innerHTML =
+      '<div class="cm-content" contenteditable="true"><div class="cm-line">She waits.</div></div><button id="tab">Outline</button><div id="notes" tabindex="0"></div>';
+    const content = document.querySelector('.cm-content') as HTMLElement;
+    const line = content.firstElementChild?.firstChild as Text;
+    const selection = document.getSelection() as Selection;
+    selection.collapse(line, 3);
+    const remove = guardEditorSelection(content);
+    return {
+      content,
+      selection,
+      remove,
+      byId: (id: string) => document.getElementById(id) as HTMLElement,
+    };
+  }
+  const inEditor = (selection: Selection, content: Element) =>
+    !!selection.anchorNode && content.contains(selection.anchorNode);
+
+  test('lets go of the selection when focus goes anywhere in the page but the editor', () => {
+    const { selection, remove, byId } = setup();
+    byId('tab').dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    expect(selection.rangeCount).toBe(0);
+    remove();
+  });
+
+  test('lets go of it a moment after the editor loses focus to nothing', async () => {
+    const { content, selection, remove } = setup();
+    content.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    expect(inEditor(selection, content)).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(selection.rangeCount).toBe(0);
+    remove();
+  });
+
+  test('keeps it when focus is back in the editor by then', async () => {
+    const { content, selection, remove } = setup();
+    content.focus();
+    content.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(inEditor(selection, content)).toBe(true);
+    remove();
+  });
+
+  test('keeps a Backspace outside a text field from going back, and leaves others alone', () => {
+    const { content, remove, byId } = setup();
+    const press = (target: Element) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Backspace',
+        bubbles: true,
+        cancelable: true,
+      });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(press(byId('tab'))).toBe(true);
+    expect(press(content)).toBe(false);
+    // A tab's own Backspace (Notes deletes) still has it first.
+    let seenByNotes = false;
+    byId('notes').addEventListener('keydown', () => {
+      seenByNotes = true;
+    });
+    expect(press(byId('notes'))).toBe(true);
+    expect(seenByNotes).toBe(true);
+    remove();
+    expect(press(byId('tab'))).toBe(false);
   });
 });
