@@ -456,3 +456,16 @@ The design's 45 Calls (its §16) are binding once ruled on. This plan adds:
 ## Controller rulings
 
 _None yet._
+
+- **Call 1 (two releases):** accepted. Part 1 ships as v0.20.0 (Scaffold, the Stats tab, the character grid) and Part 2 as v0.21.0 (storylines, the Timeline, margin marks, the map, pacing). Plans F–H move to v0.22.0–v0.24.0, and Task 8's docs say so.
+- **Call 23 (Scaffold as a tab):** accepted. Drafter's panes show any tab, so Scaffold sits beside the Source in the other pane. That is the "panel beside the script" the maintainer asked for, without a third column.
+- **Calls 5 and 7 (a mention counts; the dictionary loads for this check):** accepted. The dictionaries are local and cached for offline use, so loading one costs no network use and asks nothing of the writer.
+- **Call 9 (Words and Scenes change meaning):** accepted. The changelog says so plainly, and the new Speaks in column keeps the old Scenes figure.
+- **Call 38 (the map as the strip's Color by):** accepted. It reuses the Structure strip the writer already has. The Phase 2 design's §14 and §22 are updated in Task 16.
+- **Call 41 (fifteen guide labels):** overruled. A fifteen-mark guide at fixed positions reads as a well-known commercial beat sheet, however it is renamed. Drafter's pacing guides are its own and generic instead:
+  - **Thirds and quarters**, marks at 25%, 50% and 75%.
+  - **Three acts**, with breaks at 25% and 75% and a midpoint.
+  - **Your own marks**, at page numbers the writer sets, kept in the metadata block.
+  
+  No named beat set is shipped. Task 15 and the design's pacing section change to match.
+- **All other Calls:** accepted as recommended.
