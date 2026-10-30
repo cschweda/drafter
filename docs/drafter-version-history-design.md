@@ -1,6 +1,6 @@
 # Version history — Design
 
-**Status:** designed 2026-10-30, to ship as v0.18.0, after v0.17.0 (guided starters, export options, running time, and a Technical details page) and before the imports release (Highland, Fade In, and Markdown). The plan is [`docs/plans/2026-10-30-version-history.md`](plans/2026-10-30-version-history.md).
+**Status:** designed 2026-10-30, to ship as v0.18.0, after v0.17.0 (guided starters, export options, running time, and a Technical details page) and before the imports release (Highland, Fade In, and Markdown). The plan is [`docs/plans/2026-10-30-version-history.md`](plans/2026-10-30-version-history.md). Built 2026-10-30; the controller's rulings at the end of the plan overruled two Calls, and the text below says where: Compare's Pages view keeps its asterisks (Call 19, §5.1), and axe runs on every new view now (Call 36, §12).
 
 **Asked for (maintainer, 2026-10-29):** "version control for deleted scenes like this? … it's possible to go back to a version to find a specific scene -- or to see all the deleted scenes in a toggle-able command -- 'show all versions' -- where you can see the deletions and additions." Then "sort of like github diffs", and "i like the idea of how github displays diffs -- red for deletions, green for additions. Does something like this work?" It does, and four things were promised:
 
@@ -164,7 +164,7 @@ The marks go on the pages the view has drawn, after each draw (`decorate`, §11)
 
 ### 5.1 Two views
 
-The Compare tab's slim bar gains a two-button group, **Changes | Pages**. **Call:** **Changes**, the Fountain-text diff, is the default, and the writer's last choice is remembered on the device (`compareView`). **Pages** is today's script-page view, restyled to the marks of §4.3 (the asterisk retires from the screen; Phase 4's printed revision marks bring it back). A Markdown document has only Changes (its line view, `CompareLines`, gives way to it); a script whose layout failed has Changes, and Pages says the layout failed.
+The Compare tab's slim bar gains a two-button group, **Changes | Pages**. **Call:** **Changes**, the Fountain-text diff, is the default, and the writer's last choice is remembered on the device (`compareView`). **Pages** is today's script-page view, unchanged: it keeps v0.13.0's asterisk in the margin and its "N lines removed" markers (**Call 19, overruled by the controller, 2026-10-30:** the design had restyled Pages to the marks of §4.3 and retired the asterisk from the screen; an asterisk is the production convention for a revised line and is what Phase 4's printed revision marks will use, so each view keeps one visual language of its own, and the + and − in red and green, or blue and orange, belong to Changes and to Show changes). A Markdown document has only Changes (its line view, `CompareLines`, gives way to it); a script whose layout failed has Changes, and Pages says the layout failed.
 
 In Changes, a second group, **Unified | Side by side**, remembered on the device (`diffLayout`). **Call:** side by side needs a Compare pane at least 720 px wide; narrower (a phone, a narrow pane), the group is hidden and the view is unified.
 
@@ -274,7 +274,7 @@ As the rest of Drafter (WCAG 2.2 AA):
 - **Not color alone:** + and − signs, underlined and struck-through words, the Deleted and New scene tags, and the hidden "added, ", "removed, ", "changed, " words.
 - **Screen readers:** groups are headings; side by side is a table with column headers; a fold's button says how many lines it holds; scanning progress is a `progress` with a polite status at each quarter; Put back and Use this version announce what they did.
 - **Both themes and phones:** every token has a dark value; on a phone, the diff is unified, the Deleted scenes tab and the Scene history dialog fill the screen, and touch targets are at least 24 px.
-- **Call:** **the new colors' contrast is tested now** (§7's unit test), and **axe on the new views waits for the final accessibility steps,** as every Phase 2 plan's has (maintainer, 2026-10-28); the existing axe tests stay green. Listed in `docs/DEFERRED.md`.
+- **Call:** **the new colors' contrast is tested now** (§7's unit test), and **axe on the new views waits for the final accessibility steps,** as every Phase 2 plan's has (maintainer, 2026-10-28); the existing axe tests stay green. Listed in `docs/DEFERRED.md`. **Overruled by the controller (2026-10-30):** axe has run by default for every new view since v0.9.0, so the Changes view, Show changes, the Deleted scenes tab, and History of this scene each have axe checks in both themes; only the screen-reader listening pass waits for the final steps (`docs/DEFERRED.md`).
 
 ## 13. Not in v1
 
@@ -304,7 +304,7 @@ This release is v0.18.0, as Phase 2 design §22 already says, and changes no pla
 16. Show changes is off for Markdown documents (§4.1).
 17. Show changes' marks are computed in the layout worker, as a second reply after the layout (§4.2).
 18. Line level only on the pages (§4.3).
-19. Compare opens on Changes, remembered; Pages takes the same +/− marks and the asterisk retires from the screen (§5.1).
+19. Compare opens on Changes, remembered; Pages takes the same +/− marks and the asterisk retires from the screen (§5.1). **Overruled:** Pages keeps its asterisks.
 20. Side by side needs a 720 px pane, else unified (§5.1).
 21. Markdown groups at headings 1 to 3 (§5.2).
 22. Compare stays read-only (§5.2).
@@ -321,4 +321,4 @@ This release is v0.18.0, as Phase 2 design §22 already says, and changes no pla
 33. No new default keys (§8).
 34. Deleted scenes is a tab that exists only while open (§9).
 35. A new package, `@drafter/history` (§11).
-36. Contrast tested now; axe on the new views with the final accessibility steps (§12).
+36. Contrast tested now; axe on the new views with the final accessibility steps (§12). **Overruled:** axe on every new view now.

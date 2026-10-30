@@ -277,6 +277,47 @@ useDocsHead({
       and the one from your last save always stay. They live in the same storage as the recovery
       copy, so they have the same limits, and they are not in your <code>.fountain</code> file.
     </p>
+    <h3 id="compare">Compare</h3>
+    <p>
+      Compare, from a snapshot in History, shows what changed between two versions. It opens on
+      <strong>Changes</strong>: the script’s text, grouped under each scene’s heading, with an added
+      line marked <strong>+</strong> in green and a removed one <strong>−</strong> in red, and the
+      words you changed within a line underlined or struck through. Unchanged stretches fold away
+      behind “Show 40 unchanged lines”. Where there is room, <strong>Side by side</strong> shows the
+      two versions in columns. <strong>Pages</strong> shows the newer version as script pages, with an
+      asterisk in the margin by each changed line. If red and green are hard to tell apart, choose
+      <strong>Blue and orange</strong> under <strong>Colors for changes</strong> in Settings.
+    </p>
+
+    <h3 id="deleted-scenes">Deleted scenes</h3>
+    <p>
+      <strong>Deleted scenes</strong> (in the app menu after History…, in History, or in the command
+      palette) lists every scene that is in one of your snapshots but not in the script now, the most
+      recently cut first, with when it was last there and its first lines.
+      <strong>Put back</strong> puts a scene back where it was, after the scene that came before it;
+      one undo takes it out again. It reads your snapshots in the background, and keeps a note of each
+      scene in them in this browser, so the next look is quick.
+    </p>
+
+    <h3 id="show-changes">Show changes</h3>
+    <p>
+      The <strong>Changes</strong> button on the Script tab’s bar marks the pages with what you have
+      changed since you last saved: a changed or added line gets a colored band and a
+      <strong>+</strong>, and where lines were taken out a thin rule with a button shows them. To
+      compare with a snapshot instead, choose it from <strong>since</strong>, or use
+      <strong>Show changes since this</strong> in History. The marks are only on the screen: they
+      never print or export, and Show changes is off each time you open Drafter.
+    </p>
+
+    <h3 id="scene-history">History of this scene</h3>
+    <p>
+      <strong>History of this scene</strong> (a scene’s menu in the Outline or the Cards, the
+      Structure strip’s menu on a scene, the command palette for the scene your cursor is in, or
+      Deleted scenes) lists every different version of one scene in your snapshots, newest first,
+      and shows what changed against now or against the version before.
+      <strong>Use this version</strong> puts the scene back as it was, after keeping a snapshot
+      called “Before restoring a scene”; one undo brings back what it replaced.
+    </p>
 
     <h2 id="installing">Installing Drafter as an app</h2>
     <p>

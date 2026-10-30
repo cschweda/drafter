@@ -146,3 +146,21 @@ What v0.17.0 (out-the-door design §7) leaves for later.
 - **Guided starters for the other templates and for Markdown.** There are two, a first screenplay and a first stage play; one for TV, radio, or a Markdown document waits for those templates (Phase 3) or for a writer to ask.
 - **Mermaid drawn on the page.** The Technical details page draws its diagrams as HTML lists, and `docs/technical-details.md` carries them as Mermaid for GitHub; drawing Mermaid in the app would need the Mermaid library (some hundreds of KB), which no help page is worth (Calls 20 and 21).
 - **Export options that follow the writer's tab.** A tab that only shows a script (another tab has it open) exports with the options the script had when it opened there; a choice made in the writer's tab afterward reaches it on its next reload. Watching the record for changes, as the text is watched, is for when two tabs of one script are a common way to work.
+
+## Version history
+
+What version history (v0.18.0, version-history design §13, and its reviews) leaves for later.
+
+- **Dismissing a deleted scene** (Call 8). Every scene cut stays in Deleted scenes while a snapshot holds it; a Dismiss that hides one for good, kept per script, is for when a long list is a problem.
+- **Show changes on the Source pane and the Markdown Preview.** The marks are on the Script pane's pages only; a gutter of + and − beside the Fountain source, and marks on a Markdown document's Preview, would follow the same baseline.
+- **Word marks on the pages** (Call 18). Show changes marks whole lines; the changed words are marked only in Compare's Changes view and History of this scene.
+- **Move detection** (Phase 4). A moved scene reads as deleted where it was and new where it is, in Compare and in Show changes; Deleted scenes does not list it, since it is still in the script.
+- **Printed marks and revision colors** (Phase 4). Show changes never prints; the asterisk in the margin and the colored pages of a production draft come with revision marks, which is what Compare's Pages view keeps its asterisk for.
+- **Comparing two scenes picked by hand.** History of this scene compares a scene's version with now or with the version before; any two scenes, or one scene in two scripts, is for when asked.
+- **A lint for a repeated locked scene number.** Two scenes with `#12#` are both shown with it; Problems doesn't say so yet.
+- **Deleted scenes for Markdown sections.** A Markdown document has no scenes (Call 3); a list of its deleted sections, by heading, would need its own matching.
+- **A fold that opens 20 lines at a time from either side.** A fold opens whole, or 200 lines at a time when longer (Call 26).
+- **Merging a deleted scene's lines into an existing scene.** Put back puts back a whole scene; taking a few of its lines into another scene is copy and paste for now (Copy text).
+- **The screen-reader listening pass** (the final accessibility steps). Axe runs on the Changes view, Show changes, the Deleted scenes tab, and History of this scene in both themes on every project (the controller's ruling on Call 36); listening to them with NVDA and VoiceOver, for the hidden "added, " and "removed, " words, the progress said at each quarter, the group headings, and what Put back and Use this version say, waits for the final steps with the rest.
+- **Known limits, measured and accepted.** A short scene merged into a long one can read as a new scene now and then (a 15-word scene into 400 words: 172 times in 200), and is then listed as deleted though its words are in the script; a bigger sketch would cost every scene. Firefox's matching again takes about 53 ms, just over the 50 ms budget. Listing the snapshots walks every script's snapshot keys, which a per-script index would avoid once there are many scripts.
+- **Smaller edges, found in review.** In History of this scene opened on a deleted scene, the diff's Go to scene only says the scene isn't in the script now; it could offer Put back. A listing read again while History of this scene is open shows the rows it had until the whole new listing is in, so a slow cold read (rare: the scene's versions are cached by then) shows no progress on the list.

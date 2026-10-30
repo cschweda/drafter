@@ -19,7 +19,8 @@ changesOf('Sam waits.\nAnn leaves.\n', 'Sam waits.\nAnn stays.\n');
 const { lines, gaps, stops } = markPages(layout, changesOf(older, newer));
 // lines: each printed line a change added or changed, by page and span
 // gaps:  removed lines, and new lines that don't print, by page and the line they sit before
-// stops: one per change, in order, for a Changes list
+// stops: one per change, in order, for a Changes list: its kind, page, block, and how many
+//        lines with text it holds (or, with blank: true, how many blank lines)
 stepChange(stops, null, 1); // 0: the first change; wraps at either end
 ```
 
