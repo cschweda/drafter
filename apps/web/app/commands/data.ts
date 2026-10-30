@@ -109,6 +109,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
     }),
   ),
   { id: 'open', title: 'Open…', group: 'File', keys: 'Mod-o', global: true },
+  // Open's picker, but a .md or .markdown comes in as a new screenplay (Call 23).
+  { id: 'open-as-screenplay', title: 'Open as screenplay…', group: 'File' },
   { id: 'save', title: 'Save', group: 'File', keys: 'Mod-s', global: true },
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },

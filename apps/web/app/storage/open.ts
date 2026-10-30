@@ -104,13 +104,21 @@ async function importScript(
     await say(openError, MESSAGES.importTooBig);
     return;
   }
-  if (!(await useScript().openImported(imported.text, name))) {
+  await openAsNewScript(imported.text, name, importedMessage(name, imported.mapped));
+}
+
+/**
+ * Opens `text`, from the file `name`, as a new Fountain script with no file (`openImported`): not
+ * matched to any script, unsaved, with an `imported` snapshot, and `message` in the toast.
+ */
+async function openAsNewScript(text: string, name: string, message: string): Promise<void> {
+  if (!(await useScript().openImported(text, name))) {
     await say(openError, MESSAGES.busy);
     return;
   }
-  useSnapshots().afterImport(imported.text, name);
+  useSnapshots().afterImport(text, name);
   useEditor().view.focus();
-  await sayInToast(importedMessage(name, imported.mapped));
+  await sayInToast(message);
 }
 
 /** The script already open for this file, if it came from the same file on disk. */
@@ -139,10 +147,19 @@ function ready(): Promise<void> {
 }
 
 /**
+ * How to open a file. `as: 'fountain'` (Open as screenplay…): a `.md` or `.markdown` file comes in
+ * as a new Fountain script, for a screenplay someone typed in a Markdown file; any other file opens
+ * as Open opens it.
+ */
+export interface OpenAs {
+  as?: 'fountain';
+}
+
+/**
  * Opens a picked file (from `useFiles().pickToOpen`, `fromDrop`, or a file input) as a script.
  * Never rejects: a file that can't be opened leaves the open script alone and sets `openError`.
  */
-export async function openFile(file: PickedFile): Promise<void> {
+export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void> {
   openError.value = '';
   try {
     // A tab that only shows a script may show old text, and opening replaces what it shows.
@@ -187,8 +204,14 @@ export async function openFile(file: PickedFile): Promise<void> {
       await importScript(file.name, () => fromFdx(text));
       return;
     }
-    const script = useScript();
     const kind = kindOfFileName(file.name);
+    // Open as screenplay: the Markdown file's text, exactly as it is, as a new script that is never
+    // the file's, so Save asks for a .fountain and the .md is never written as Fountain.
+    if (how.as === 'fountain' && kind === 'markdown') {
+      await openAsNewScript(decoded.text, file.name, `Opened “${file.name}” as a screenplay.`);
+      return;
+    }
+    const script = useScript();
     const opened = { ...decoded, fileName: file.name, ref: file.ref, kind };
 
     // The same file on disk is the same script.
@@ -231,7 +254,7 @@ export async function openFile(file: PickedFile): Promise<void> {
 }
 
 /** Opens the file the writer picks, with the picker where the browser has one, else a file input. */
-export async function pickAndOpen(): Promise<void> {
+export async function pickAndOpen(how: OpenAs = {}): Promise<void> {
   // Ask before the picker: a read-only tab opens nothing, so don't make the writer choose a file for it.
   if (useGuard().readOnly.value) {
     await say(readOnlyHint, READ_ONLY_HINT);
@@ -244,7 +267,12 @@ export async function pickAndOpen(): Promise<void> {
     await say(openError, MESSAGES.failed);
     return;
   }
-  if (file) await openFile(file);
+  if (file) await openFile(file, how);
+}
+
+/** Open as screenplay…: the same picker as Open; a .md or .markdown comes in as a new Fountain script. */
+export async function pickAndOpenAs(as: 'fountain'): Promise<void> {
+  await pickAndOpen({ as });
 }
 
 /** Why a file the system named couldn't be read, said after "Drafter can’t open “x”: ". */

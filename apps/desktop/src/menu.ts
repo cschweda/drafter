@@ -119,7 +119,7 @@ const prefix =
 const LAYOUT: Record<Group, Section[]> = {
   File: [
     { pick: prefix('new-') },
-    { pick: ['open'] },
+    { pick: ['open', 'open-as-screenplay'] },
     { pick: prefix('open-sample-'), submenu: 'Open Sample', strip: /^Open sample: / },
     { pick: ['reset-sample'] },
     {
@@ -201,7 +201,10 @@ const LAYOUT: Record<Group, Section[]> = {
   ],
 };
 
-/** The help pages are called what a desktop would call them: there is no browser to speak of. */
+/**
+ * Titles as a desktop menu writes them: the help pages without a browser to speak of, and the
+ * commands named in Title Case.
+ */
 const LABELS: Record<string, string> = {
   'help-fountain': 'Fountain Cheat Sheet',
   'help-shortcuts': 'Keyboard Shortcuts',
@@ -210,6 +213,7 @@ const LABELS: Record<string, string> = {
   'help-licences': 'Third-party Licences',
   'help-technical': 'Technical Details',
   'check-for-updates': 'Check for Updates…',
+  'open-as-screenplay': 'Open as Screenplay…',
 };
 
 /**
@@ -240,9 +244,16 @@ export interface MenuActions {
   reopen?: (id: string) => void;
 }
 
-/** The commands a Mac's menu keeps on with no window: New (every kind), Open…, Open Recent, Settings…. */
+/**
+ * The commands a Mac's menu keeps on with no window: New (every kind), Open…, Open as Screenplay…,
+ * Open Recent, Settings….
+ */
 export const opensWindow = (id: string): boolean =>
-  id.startsWith('new-') || id === 'open' || id === 'open-recent' || id === 'settings';
+  id.startsWith('new-') ||
+  id === 'open' ||
+  id === 'open-as-screenplay' ||
+  id === 'open-recent' ||
+  id === 'settings';
 
 /**
  * The command chosen with no window, waiting for the window's page: `take` gives it, once, to the

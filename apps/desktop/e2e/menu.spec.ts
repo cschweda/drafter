@@ -49,6 +49,16 @@ test('has File, Edit, View, Go, and Help, with an item for every command', async
   expect(errors).toEqual([]);
 });
 
+test('the File menu has Open as Screenplay…', async ({ desktop }) => {
+  const { app } = await desktop();
+  // On once the first script has opened, as Open is.
+  const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;
+  await expect.poll(() => state('open-as-screenplay'), { timeout: 15_000 }).toBe(true);
+  const items = await menuItems(app);
+  const at = items.findIndex((i) => i.id === 'open');
+  expect(items[at + 1]).toMatchObject({ id: 'open-as-screenplay', label: 'Open as Screenplay…' });
+});
+
 test('runs a command from the menu', async ({ desktop }) => {
   const { app, page } = await desktop();
   await expect

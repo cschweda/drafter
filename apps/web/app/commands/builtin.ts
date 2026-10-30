@@ -66,7 +66,7 @@ import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
 import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
-import { pickAndOpen } from '~/storage/open';
+import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
@@ -327,6 +327,10 @@ export function registerBuiltinCommands(): void {
       // A tab that only shows a script says why it can't open one, so this isn't `canStart`.
       enabled: idle,
       run: quietly(pickAndOpen),
+    },
+    'open-as-screenplay': {
+      enabled: idle,
+      run: quietly(() => pickAndOpenAs('fountain')),
     },
     // A tab that can't save says so when it's asked to.
     save: { run: quietly(save) },

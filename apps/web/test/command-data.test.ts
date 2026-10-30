@@ -92,6 +92,17 @@ describe('the command data', () => {
     ]);
   });
 
+  test('Open as screenplay… is a File command after Open', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('open-as-screenplay')).toBe(ids.indexOf('open') + 1);
+    // No key of its own: Open's picker, then a .md comes in as a screenplay.
+    expect(COMMAND_DATA.find((c) => c.id === 'open-as-screenplay')).toEqual({
+      id: 'open-as-screenplay',
+      title: 'Open as screenplay…',
+      group: 'File',
+    });
+  });
+
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
       '/docs/fountain/',

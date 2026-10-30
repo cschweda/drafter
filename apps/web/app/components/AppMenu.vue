@@ -160,6 +160,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
     ...STARTER_KINDS.flatMap((starter) => entry(starter.command, 'i-lucide-graduation-cap', true)),
     ...entry('open', 'i-lucide-folder-open'),
+    ...entry('open-as-screenplay', 'i-lucide-clapperboard'),
   ],
   templateSection.value,
   [{ type: 'label', label: 'Recent scripts' }, ...recentItems.value],

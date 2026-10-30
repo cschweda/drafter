@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { files, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
+import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -497,6 +497,48 @@ test.describe('Markdown files', () => {
         ]),
       );
     await expect(tabs(page, 'Script').first()).toBeVisible();
+  });
+});
+
+test.describe('Open as screenplay', () => {
+  const TYPED = 'Title: The Night Train\n\nINT. TRAIN - NIGHT\n\nRain on the glass.\n';
+
+  test('Open as screenplay from the palette opens a .md as a screenplay, and Save asks for a .fountain and the .md is unchanged', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'the stand-in file system is Chromium’s');
+    await stubPickers(page);
+    await start(page);
+    await putFile(page, 'train.md', TYPED);
+    await nextFileName(page, 'train.md');
+    await command(page, 'Open as screenplay…');
+    await expect(editor(page)).toContainText('INT. TRAIN - NIGHT');
+    await expect(page.locator('.toast [role="status"]')).toHaveText(
+      'Opened “train.md” as a screenplay.',
+    );
+    // A Fountain script: the Script tab, not the Preview.
+    await expect(tabs(page, 'Script').first()).toBeVisible();
+    await expect
+      .poll(async () => (await stored(page)).filter((p) => !p.sample))
+      .toEqual([expect.objectContaining({ kind: 'fountain', title: 'The Night Train' })]);
+    expect((await stored(page)).find((p) => !p.sample)?.fileName).toBeUndefined();
+
+    // Save asks for a .fountain, and never writes the .md.
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect.poll(() => picks(page)).toContain('The Night Train.fountain');
+    await expect.poll(() => textOf(page, 'The Night Train.fountain')).toBe(TYPED);
+    expect(await textOf(page, 'train.md')).toBe(TYPED);
+  });
+
+  test('the app menu lists Open as screenplay after Open', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'Drafter menu' }).click();
+    const menu = page.getByRole('menu', { name: 'Drafter menu' });
+    await expect(menu).toBeVisible();
+    const shown = (await menu.getByRole('menuitem').allTextContents()).map((n) => n.trim());
+    const at = (label: string) => shown.findIndex((n) => n.startsWith(label));
+    expect(at('Open as screenplay…')).toBe(at('Open…') + 1);
   });
 });
 

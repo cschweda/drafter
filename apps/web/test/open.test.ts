@@ -825,6 +825,111 @@ describe('importing a Highland or Fade In file', () => {
   });
 });
 
+/** A screenplay someone typed in a Markdown file. */
+const TYPED =
+  'Title: The Night Train\n\nINT. TRAIN - NIGHT\n\nRain on the glass.\n\nMAYA\n# Not a heading here.\n';
+
+describe('opening a Markdown file as a screenplay', () => {
+  test('the same .md opens as Markdown with Open and as Fountain with Open as screenplay', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('train.md', TYPED, 31));
+    expect(t.editor.kind.value).toBe('markdown');
+    expect(t.script.project.value?.kind).toBe('markdown');
+    await t.openFile(t.picked('train.md', TYPED, 31), { as: 'fountain' });
+    expect(t.openError.value).toBe('');
+    expect(t.editor.kind.value).toBe('fountain');
+    expect(t.script.project.value?.kind).toBe('fountain');
+    // Never the Markdown document's script, though it came from the same file.
+    expect(await t.mine()).toHaveLength(2);
+    // .markdown too.
+    await t.openFile(t.picked('train.markdown', TYPED), { as: 'fountain' });
+    expect(t.script.project.value?.kind).toBe('fountain');
+    expect(await t.mine()).toHaveLength(3);
+  });
+
+  test('opens it as a new, unsaved Fountain script with its text exactly as it was', async () => {
+    const t = await fresh();
+    const asked: string[] = [];
+    t.access.pickToSave = async (name, kind) => {
+      asked.push(`${name} ${kind}`);
+      return { id: 32, name } as unknown as FileRef;
+    };
+    await t.openFile(t.picked('train.md', TYPED, 31), { as: 'fountain' });
+    expect(t.shown()).toBe(TYPED);
+    const row = t.script.project.value;
+    expect(row?.title).toBe('The Night Train');
+    expect(row?.fileName).toBeUndefined();
+    expect(row?.fsHandleId).toBeUndefined();
+    expect(row?.savedHash).toBeUndefined();
+    expect(t.script.dirty.value).toBe(true);
+    // Save asks for a .fountain named after its title, and the .md is never written.
+    expect(await t.save()).toBe('saved');
+    expect(asked).toEqual(['The Night Train.fountain fountain']);
+    expect(t.writes.map((w) => w.ref.id)).toEqual([32]);
+    expect(t.stored.get(31)).toEqual(new TextEncoder().encode(TYPED));
+  });
+
+  test('takes an imported snapshot and says so in the toast', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('notes.md', TYPED), { as: 'fountain' });
+    expect(snapshots.calls).toEqual([['afterImport', TYPED, 'notes.md']]);
+    expect(t.exportNotice.value).toBe('Opened “notes.md” as a screenplay.');
+  });
+
+  test('opens a .fountain as Open does', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Door.fountain', SCRIPT, 33), { as: 'fountain' });
+    expect(t.openError.value).toBe('');
+    expect(t.script.project.value?.fileName).toBe('Door.fountain');
+    expect(t.script.dirty.value).toBe(false);
+    expect(snapshots.calls).toEqual([]);
+    // Again: the same file is the same script.
+    await t.openFile(t.picked('Door.fountain', SCRIPT, 33), { as: 'fountain' });
+    expect(await t.mine()).toHaveLength(1);
+  });
+
+  test('still refuses a .docx', async () => {
+    const t = await fresh();
+    const docx = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0, 0, 0, 8, 0]);
+    await t.openFile(t.picked('Notes.docx', docx), { as: 'fountain' });
+    expect(t.openError.value).toMatch(/^Drafter can’t open a Word document \(Notes\.docx\)\. /);
+    expect(await t.mine()).toHaveLength(0);
+    // And a .md that isn't text, or isn't UTF-8, as Open would.
+    await t.openFile(t.picked('bin.md', new Uint8Array([0x23, 0, 0x41])), { as: 'fountain' });
+    expect(t.openError.value).toMatch(/holds more than text/);
+    await t.openFile(t.picked('cafe.md', new Uint8Array([0x63, 0x61, 0x66, 0xe9])), {
+      as: 'fountain',
+    });
+    expect(t.openError.value).toMatch(/isn’t UTF-8 text/);
+    expect(await t.mine()).toHaveLength(0);
+    expect(snapshots.calls).toEqual([]);
+  });
+
+  test('says the read-only hint and shows no picker in a read-only tab', async () => {
+    const t = await fresh();
+    const { useGuard } = await import('../app/storage/guard');
+    const { readOnlyHint, READ_ONLY_HINT } = await import('../app/storage/save');
+    (useGuard().readOnly as { value: boolean }).value = true;
+    let picked = 0;
+    t.access.pickToOpen = async () => {
+      picked += 1;
+      return t.picked('train.md', TYPED);
+    };
+    await t.pickAndOpenAs('fountain');
+    expect(picked).toBe(0);
+    expect(readOnlyHint.value).toBe(READ_ONLY_HINT);
+    expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('opens what the picker gives, as a screenplay', async () => {
+    const t = await fresh();
+    t.access.pickToOpen = async () => t.picked('train.md', TYPED, 31);
+    await t.pickAndOpenAs('fountain');
+    expect(t.script.project.value?.kind).toBe('fountain');
+    expect(t.shown()).toBe(TYPED);
+  });
+});
+
 describe('a file that isn’t a script', () => {
   test('refuses a .docx, says it is a Word document, and leaves the open script alone', async () => {
     const t = await fresh();

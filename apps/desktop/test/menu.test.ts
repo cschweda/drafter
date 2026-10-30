@@ -26,6 +26,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('template-screenplay', 'File', 'Template: Screenplay'),
   cmd('document-markdown', 'File', 'Document: Markdown'),
   cmd('open', 'File', 'Open…', { keys: ['Mod-o'] }),
+  cmd('open-as-screenplay', 'File', 'Open as screenplay…'),
   cmd('save', 'File', 'Save', { keys: ['Mod-s'] }),
   cmd('save-as', 'File', 'Save As…', { keys: ['Mod-Shift-s'] }),
   cmd('open-sample-screenplay', 'File', 'Open sample: Screenplay'),
@@ -87,6 +88,14 @@ describe('menuTemplate', () => {
       .map((i) => i.id)
       .filter((id): id is string => !!id && COMMANDS.some((c) => c.id === id));
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
+  });
+
+  test('File lists Open as Screenplay… after Open', () => {
+    const m = menus(menuTemplate(COMMANDS, () => {}, { platform: 'linux' }));
+    const file = submenu(m.File);
+    const at = file.findIndex((i) => i.id === 'open');
+    expect(file[at + 1]?.id).toBe('open-as-screenplay');
+    expect(labelOf(file[at + 1] as MenuItemConstructorOptions)).toBe('Open as Screenplay…');
   });
 
   test('puts Export options… last in File → Export, by its whole name', () => {
@@ -534,11 +543,17 @@ describe('with no window (a Mac)', () => {
   /** The commands as menu-main.ts keeps them once the editor's page is gone: all off. */
   const gone = COMMANDS.map((c) => ({ ...c, enabled: false }));
 
-  test('New, Open…, and Settings… stay on, with their keys, and open a window to run in', () => {
+  test('New, Open…, Open as Screenplay…, and Settings… stay on, with their keys, and open a window to run in', () => {
     const reopen = vi.fn();
     const run = vi.fn();
     const t = menuTemplate(gone, run, { platform: 'darwin', reopen });
-    for (const id of ['new-screenplay', 'new-stage-play', 'open', 'settings']) {
+    for (const id of [
+      'new-screenplay',
+      'new-stage-play',
+      'open',
+      'open-as-screenplay',
+      'settings',
+    ]) {
       const item = named(t, id);
       expect(item?.enabled, id).toBe(true);
       // Registered: there is no page to take the key, so the menu must.
@@ -549,6 +564,7 @@ describe('with no window (a Mac)', () => {
       ['new-screenplay'],
       ['new-stage-play'],
       ['open'],
+      ['open-as-screenplay'],
       ['settings'],
     ]);
     expect(run).not.toHaveBeenCalled();
@@ -575,12 +591,13 @@ describe('with no window (a Mac)', () => {
     expect(run).toHaveBeenCalledWith('open');
   });
 
-  test('opensWindow names New (every kind), Open…, Open Recent, and Settings…', () => {
+  test('opensWindow names New (every kind), Open…, Open as Screenplay…, Open Recent, and Settings…', () => {
     for (const id of [
       'new-screenplay',
       'new-stage-play',
       'new-markdown',
       'open',
+      'open-as-screenplay',
       'open-recent',
       'settings',
     ]) {

@@ -253,6 +253,16 @@ describe('The guided starters in the desktop menus', () => {
   });
 });
 
+describe('Open as screenplay in the desktop menus', () => {
+  test('File lists Open as Screenplay… after Open', () => {
+    registerCommands(['open', 'open-as-screenplay'].map((id) => command(id)));
+    expect(menuCommands(useCommands().value)).toEqual([
+      { id: 'open', title: 'Open…', group: 'File', keys: ['Mod-o'], enabled: true },
+      { id: 'open-as-screenplay', title: 'Open as screenplay…', group: 'File', enabled: true },
+    ]);
+  });
+});
+
 describe('Snapshots and Compare in the desktop menus', () => {
   test('puts History… and Take snapshot… in File, and Next change, Previous change, and Close comparison in View', () => {
     const ids = ['history', 'take-snapshot', 'next-change', 'previous-change', 'close-compare'];
