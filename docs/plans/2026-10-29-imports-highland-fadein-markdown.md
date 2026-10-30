@@ -999,3 +999,10 @@ For the maintainer to review; each gets a DECISIONS line when it lands.
 
 ## Controller rulings
 
+
+- **Call 12 (no real files yet):** accepted. v0.19.0 ships built from the formats' public descriptions and synthetic fixtures. DEFERRED gets a line asking the maintainer for one real `.highland` and one real `.fadein` file, and the test harness is ready for them.
+- **Call 22 (Technical details wording):** widen the test so "Highland" and "Fade In" are allowed as the names of file formats Drafter reads, as "Final Draft" already is. The ban still applies to describing or comparing those apps.
+- **Call 28 (Notes in Markdown):** accepted. It is a third export option for each script, off by default, with no database version change.
+- **Call 32 (underline):** use `<u>…</u>`, not `_…_`. Markdown has no underline, and most viewers, AI chats included, read `_x_` as italics, which changes what the writer wrote. `<u>` keeps the meaning wherever HTML is allowed, and shows as plain tags where it isn't. DECISIONS says so.
+- **Call 21 (unknown formats):** accepted as listed. Any other UTF-8 text still opens as Fountain.
+- **All other Calls:** accepted as recommended.
