@@ -254,7 +254,7 @@ describe('The guided starters in the desktop menus', () => {
 });
 
 describe('Open as screenplay in the desktop menus', () => {
-  test('File lists Open as Screenplay… after Open', () => {
+  test('hands the menu Open as screenplay… in File, after Open, with no key', () => {
     registerCommands(['open', 'open-as-screenplay'].map((id) => command(id)));
     expect(menuCommands(useCommands().value)).toEqual([
       { id: 'open', title: 'Open…', group: 'File', keys: ['Mod-o'], enabled: true },

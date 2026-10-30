@@ -869,6 +869,36 @@ describe('opening a Markdown file as a screenplay', () => {
     expect(t.stored.get(31)).toEqual(new TextEncoder().encode(TYPED));
   });
 
+  test('keeps the file’s CRLF line breaks and BOM, so Save writes them as the .md had them', async () => {
+    const t = await fresh();
+    t.access.pickToSave = async (name) => ({ id: 34, name }) as unknown as FileRef;
+    const crlf = TYPED.replace(/\n/g, '\r\n');
+    const bytes = new TextEncoder().encode(`\uFEFF${crlf}`);
+    await t.openFile(t.picked('train.md', bytes, 31), { as: 'fountain' });
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toBe(TYPED);
+    expect(t.script.project.value?.lineBreak).toBe('\r\n');
+    expect(t.script.project.value?.bom).toBe(true);
+    expect(await t.save()).toBe('saved');
+    expect(t.writes.map((w) => w.ref.id)).toEqual([34]);
+    expect(t.stored.get(34)).toEqual(bytes);
+    expect(t.stored.get(31)).toEqual(bytes);
+  });
+
+  test('a .md with no Title: is called after its file, and Save suggests that name', async () => {
+    const t = await fresh();
+    const asked: string[] = [];
+    t.access.pickToSave = async (name, kind) => {
+      asked.push(`${name} ${kind}`);
+      return { id: 35, name } as unknown as FileRef;
+    };
+    const untitled = 'INT. TRAIN - NIGHT\n\nRain on the glass.\n';
+    await t.openFile(t.picked('night train.md', untitled, 31), { as: 'fountain' });
+    expect(t.script.project.value?.title).toBe('night train');
+    expect(await t.save()).toBe('saved');
+    expect(asked).toEqual(['night train.fountain fountain']);
+  });
+
   test('takes an imported snapshot and says so in the toast', async () => {
     const t = await fresh();
     await t.openFile(t.picked('notes.md', TYPED), { as: 'fountain' });

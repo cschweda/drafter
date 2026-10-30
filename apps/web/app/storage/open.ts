@@ -14,7 +14,7 @@ import { getHandle, kindOf, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';
 import { say } from './say';
 import { useScript } from './script';
-import { decodeFile, fileBaseName, NotUtf8Error, titleFor } from './text';
+import { decodeFile, fileBaseName, type LineBreak, NotUtf8Error, titleFor } from './text';
 
 /** Bigger than this isn't a script (a feature film is well under 1 MB). */
 export const MAX_BYTES = 5 * 1024 * 1024;
@@ -109,10 +109,16 @@ async function importScript(
 
 /**
  * Opens `text`, from the file `name`, as a new Fountain script with no file (`openImported`): not
- * matched to any script, unsaved, with an `imported` snapshot, and `message` in the toast.
+ * matched to any script, unsaved, with an `imported` snapshot, and `message` in the toast. `format`
+ * is a text file's line break and BOM, kept for Save.
  */
-async function openAsNewScript(text: string, name: string, message: string): Promise<void> {
-  if (!(await useScript().openImported(text, name))) {
+async function openAsNewScript(
+  text: string,
+  name: string,
+  message: string,
+  format: { lineBreak?: LineBreak; bom?: boolean } = {},
+): Promise<void> {
+  if (!(await useScript().openImported(text, name, format))) {
     await say(openError, MESSAGES.busy);
     return;
   }
@@ -222,10 +228,14 @@ export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void
     if (!decoded) return;
     await ready();
     const kind = kindOfFileName(file.name);
-    // Open as screenplay: the Markdown file's text, exactly as it is, as a new script that is never
-    // the file's, so Save asks for a .fountain and the .md is never written as Fountain.
+    // Open as screenplay: the Markdown file's text, exactly as it is (its line break and BOM
+    // too), as a new script that is never the file's, so Save asks for a .fountain and the .md is
+    // never written as Fountain.
     if (how.as === 'fountain' && kind === 'markdown') {
-      await openAsNewScript(decoded.text, file.name, `Opened “${file.name}” as a screenplay.`);
+      await openAsNewScript(decoded.text, file.name, `Opened “${file.name}” as a screenplay.`, {
+        lineBreak: decoded.lineBreak,
+        bom: decoded.bom,
+      });
       return;
     }
     const script = useScript();
