@@ -12,12 +12,12 @@ import { useEditor } from '../editor/session';
 import { createMarkdownClient, type MarkdownClient } from './client';
 import { PREVIEW_DELAY_MS, type PreviewProblem, previewDelay, previewProblem } from './preview';
 import type { MdNode } from './render';
-import { countWords } from './words';
+import { countWords, wordsIn } from './words';
 
 export interface MarkdownSession {
   /** The parse of the document, a moment behind a long one; null when the document is not Markdown, or before the first parse of a long one. */
   tree: Readonly<ShallowRef<MdNode | null>>;
-  /** The words in `tree`. */
+  /** The words in `tree`; for a document too deep to parse, the words of its plain text. */
   words: Readonly<ComputedRef<number>>;
   /** A long document's newest text has not come back from the worker yet. */
   updating: Readonly<Ref<boolean>>;
@@ -78,7 +78,7 @@ function create(): MarkdownSession {
           if (!failed && previewProblem(message) === 'deep') {
             wanted = null;
             tree.value = null;
-            counted.value = 0;
+            counted.value = wordsIn(view.state.doc.toString());
             problem.value = 'deep';
             updating.value = false;
             return;
@@ -100,15 +100,17 @@ function create(): MarkdownSession {
     const mine = generation;
     const draw = (parse: (source: string) => MdNode) => {
       // A text the parser can't read (nested thousands deep, say) is said so in the pane, never thrown.
+      const text = view.state.doc.toString();
       try {
-        const next = parse(view.state.doc.toString());
+        const next = parse(text);
         tree.value = next;
         counted.value = countWords(next);
         problem.value = null;
       } catch (error) {
         tree.value = null;
-        counted.value = 0;
         problem.value = previewProblem(error);
+        // A document too deep to parse still has words: its plain text's.
+        counted.value = problem.value === 'deep' ? wordsIn(text) : 0;
       }
       updating.value = false;
     };

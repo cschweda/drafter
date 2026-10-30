@@ -196,7 +196,6 @@ test.describe('a Markdown document', () => {
 
   test('says calmly when a document is nested too deeply to preview', async ({
     page,
-    browserName,
     isMobile,
   }) => {
     // Five thousand quote marks on one line are slow for the editor, in every browser, and slower
@@ -214,19 +213,13 @@ test.describe('a Markdown document', () => {
     await page.keyboard.insertText(`${'>'.repeat(5_000)} x`);
     await expect(editor(page)).not.toContainText('Untitled');
     await showTab(page, 'Preview');
-    const deep = preview(page).getByRole('status');
-    if (browserName === 'chromium') {
-      // Chromium runs out of stack drawing it: the pane says so.
-      await expect(deep).toHaveText(
-        'This document is nested too deeply to preview. Your text is safe in the Source.',
-        { timeout: 15_000 },
-      );
-    } else {
-      // Firefox and WebKit have the stack for it, and draw it; either way, nothing breaks.
-      await expect(deep.or(preview(page).locator('blockquote').first())).toBeAttached({
-        timeout: 15_000,
-      });
-    }
+    // Deeper than a document may nest (MAX_NESTING), it isn't parsed: every browser says so at once.
+    await expect(preview(page).getByRole('status')).toHaveText(
+      'This document is nested too deeply to preview. Your text is safe in the Source.',
+      { timeout: 15_000 },
+    );
+    // Its words are counted as plain text: the five thousand marks are one, and x another.
+    await expect(status(page)).toContainText('2 words');
     // A document that can be drawn is drawn again. (Focused, not clicked: the editor finds a
     // click's place slowly on a line of five thousand marks.)
     await showTab(page, 'Source');
@@ -261,6 +254,32 @@ test.describe('a Markdown document', () => {
     // Give any error handler its time.
     await page.waitForTimeout(500);
     expect(dialogs).toEqual([]);
+  });
+
+  test('numbers footnotes, lists them at the end, and goes from a reference to its note and back', async ({
+    page,
+  }) => {
+    await start(page);
+    await newMarkdown(page);
+    await typeAtEnd(
+      page,
+      'One[^later] and two[^1], and one again[^later].\n\n[^1]: The second note.\n[^later]: The first note.\n',
+    );
+    // The Source marks each reference and label quietly.
+    await expect(page.locator('.cm-md-footnote').first()).toHaveText('[^later]');
+    await showTab(page, 'Preview');
+    const refs = preview(page).locator('sup.md-fnref button');
+    await expect(refs).toHaveText(['1', '2', '1']);
+    await expect(refs.nth(1)).toHaveAccessibleName('Footnote 2');
+    const notes = preview(page).getByRole('region', { name: 'Notes' });
+    await expect(notes.getByRole('heading', { name: 'Notes' })).toBeVisible();
+    await expect(notes.locator('li')).toHaveText([/The first note\./, /The second note\./]);
+    await refs.nth(1).click();
+    await expect(notes.locator('li').nth(1)).toBeFocused();
+    await notes.getByRole('button', { name: 'Back to footnote 2’s reference' }).click();
+    await expect(refs.nth(1)).toBeFocused();
+    // Untitled, the six words of the paragraph (a reference's mark is no word), and the notes' six.
+    await expect(status(page)).toContainText('13 words');
   });
 
   test('says there are no checks, and lists no problems', async ({ page }) => {

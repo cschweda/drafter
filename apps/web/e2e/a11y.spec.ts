@@ -142,10 +142,15 @@ for (const theme of THEMES) {
       await newFromMenu(page, 'New Markdown document');
       await expect(editor(page)).toContainText('# Untitled');
       await expect(page.getByRole('toolbar', { name: 'Markdown bar' })).toBeVisible();
-      await setText(page, '# Notes\n\nSome *words* and a [link](https://example.com).\n\n- one\n');
+      await setText(
+        page,
+        '# Notes\n\nSome *words* and a [link](https://example.com).[^1]\n\n- one\n\n[^1]: A footnote.\n',
+      );
       await clean(page, 'a Markdown document, in the Source');
       await showTab(page, 'Preview');
       await expect(page.getByRole('article', { name: 'Preview' })).toContainText('Some words');
+      // Its footnote's reference and the notes at the end are checked too.
+      await expect(page.getByRole('region', { name: 'Notes' })).toContainText('A footnote.');
       await clean(page, 'a Markdown document, in the Preview');
       // Its Export menu, with Export options… off and the reason under it.
       await page.getByRole('button', { name: 'Export', exact: true }).click();

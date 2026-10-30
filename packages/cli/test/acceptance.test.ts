@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { builtins, type Template } from '@drafter/templates';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { makeZip } from '../../archive/test/make-zip';
 import { extract } from '../../render-pdf/test/helpers';
 import { repo, root, tempDir } from './helpers';
 
@@ -55,6 +56,23 @@ describe('pnpm drafter, from the repository root', () => {
     expect(pnpmDrafter('check', 'samples/stage-play.fountain').stdout).toContain(
       '(stage-play-standard)',
     );
+  });
+
+  it('converts a Final Draft file and a Highland file to Fountain', () => {
+    const fdx = join(dir(), 'Call.fdx');
+    writeFileSync(
+      fdx,
+      '<?xml version="1.0"?><FinalDraft DocumentType="Script" Version="5"><Content><Paragraph Type="Scene Heading"><Text>INT. DOCK - DAY</Text></Paragraph></Content></FinalDraft>',
+    );
+    writeFileSync(
+      join(dir(), 'Tide.highland'),
+      makeZip([{ name: 'Tide.textbundle/text.fountain', data: 'EXT. PIER - NIGHT\n' }]),
+    );
+    const result = pnpmDrafter('convert', dir());
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(readFileSync(join(dir(), 'Call.fountain'), 'utf8')).toBe('INT. DOCK - DAY\n');
+    expect(readFileSync(join(dir(), 'Tide.fountain'), 'utf8')).toBe('EXT. PIER - NIGHT\n');
+    expect(result.stdout).toMatch(/^2 converted$/m);
   });
 
   it('produces a PDF whose page count and text match the fixture ("Done means")', async () => {

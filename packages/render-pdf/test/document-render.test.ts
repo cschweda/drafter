@@ -160,6 +160,22 @@ describe('renderDocumentPdf', () => {
     );
   });
 
+  it('prints a footnote at the foot of its page, numbered as its raised reference', async () => {
+    const source =
+      'The ferry leaves at seven.[^ferry] The gulls follow it.\n\n[^ferry]: In summer; at eight in winter.\n';
+    const [page] = await extract((await render(source)).bytes, { spaces: true });
+    const items = page?.items ?? [];
+    const note = items.find((item) => item.str.includes('In summer'));
+    const marker = items.find((item) => item.str === '1.');
+    const sup = items.find((item) => item.str === '1');
+    const body = items.find((item) => item.str.startsWith('The ferry'));
+    // The note sits near the bottom margin, under the text; the reference is raised above its line.
+    expect(note?.y).toBeLessThan(200);
+    expect(note?.y).toBeGreaterThanOrEqual(72);
+    expect(marker?.y).toBeCloseTo(note?.y ?? 0, 1);
+    expect(sup?.y).toBeGreaterThan(body?.y ?? 0);
+  });
+
   it('a link is an annotation to its address', async () => {
     const source = 'Check [the tide tables](https://drafter.dev/tides) before sailing.';
     const { bytes } = await render(source);

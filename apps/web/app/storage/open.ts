@@ -1,4 +1,12 @@
-import { ArchiveError, fromFadeIn, fromHighland } from '@drafter/archive';
+import {
+  ArchiveError,
+  fromFadeIn,
+  fromHighland,
+  MAX_SCRIPT_BYTES as MAX_BYTES,
+  notAScript,
+  refusalMessage,
+  SNIFF_BYTES,
+} from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
@@ -8,18 +16,12 @@ import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
 import { FileGoneError, FileProblemError, type PickedFile, useFiles } from './files';
-import { notAScript, refusalMessage } from './formats';
 import { useGuard } from './guard';
 import { getHandle, kindOf, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';
 import { say } from './say';
 import { useScript } from './script';
 import { decodeFile, fileBaseName, type LineBreak, NotUtf8Error, titleFor } from './text';
-
-/** Bigger than this isn't a script (a feature film is well under 1 MB). */
-export const MAX_BYTES = 5 * 1024 * 1024;
-/** A NUL byte in this many leading bytes means the file is not text. */
-const SNIFF_BYTES = 8 * 1024;
 
 /** Why the last file wasn't opened, for the status bar; empty after one that was. */
 export const openError = ref('');

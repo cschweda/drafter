@@ -391,24 +391,31 @@ test('opens the releases page in the browser, not the app', async ({ desktop, pr
 
 test('quits through app.quit(), where Task 5 can stop it', async ({ desktop }) => {
   const { app } = await desktop();
+  // Held on every quit, not once: the app's own close flow asks, finds nothing unsaved, and
+  // quits again, which a one-time hook would let through.
   await app.evaluate(({ app: electron }) => {
-    const g = globalThis as unknown as { beforeQuit: number };
+    type Held = { beforeQuit: number; holdQuit: (event: { preventDefault(): void }) => void };
+    const g = globalThis as unknown as Held;
     g.beforeQuit = 0;
-    electron.once('before-quit', (event) => {
+    g.holdQuit = (event) => {
       g.beforeQuit++;
       event.preventDefault();
-    });
+    };
+    electron.on('before-quit', g.holdQuit);
   });
   await chooseMenuItem(app, QUIT_PATH);
   await expect
     .poll(() => app.evaluate(() => (globalThis as unknown as { beforeQuit: number }).beforeQuit))
-    .toBe(1);
-  // The hook stopped it: the app is still there.
-  expect(app.windows()).toHaveLength(1);
+    .toBeGreaterThanOrEqual(1);
   // Read again until it answers: on Windows the stopped quit can still be settling.
   await expect
     .poll(async () => (await menuItems(app)).some((i) => i.id === 'quit' || i.label === 'Quit'))
     .toBe(true);
+  // The hook stopped it: the app is still there.
+  expect(app.windows()).toHaveLength(1);
+  await app.evaluate(({ app: electron }) => {
+    electron.off('before-quit', (globalThis as unknown as { holdQuit: () => void }).holdQuit);
+  });
 });
 
 test('keeps its menu when the page sends nonsense, and ignores a page that isn’t the app’s', async ({

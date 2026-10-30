@@ -46,6 +46,8 @@
     "@vueuse/core": "^14.4.0",
     "dexie": "^4.4.7",
     "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-gfm-footnote": "^2.1.0",
+    "micromark-extension-gfm-footnote": "2.1.0",
     "nuxt": "^4.6.2",
     "nuxt-guided-tour": "0.5.1",
     "tailwindcss": "^4.3.3",

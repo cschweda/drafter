@@ -73,6 +73,16 @@ describe('expandOutline', () => {
 });
 
 describe('scriptFromMarkdown', () => {
+  test('keeps a footnote’s marks as text, and makes its note a synopsis like any paragraph', () => {
+    const { title, body } = scriptFromMarkdown(
+      '# The Call\n\n- Margaret waits up[^1]\n\n[^1]: Since nine.\n',
+    );
+    expect(title).toBe('The Call');
+    expect(body).toBe(
+      `${scriptFromMarkdown('- Margaret waits up[^1]\n').body}\n= [^1]: Since nine.\n`,
+    );
+  });
+
   test('makes a screenplay from a Markdown outline', () => {
     const markdown = [
       '# The Call',

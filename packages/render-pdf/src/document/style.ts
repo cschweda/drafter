@@ -31,5 +31,13 @@ export const STYLE = {
   ruleClear: 12,
   underline: { thickness: 0.5, drop: 1.5 },
   pageNumber: { size: 9, baselineFromBottom: 36 },
+  /**
+   * Footnotes, at the foot of the page their reference prints on: set at `size` (everything in a
+   * note in proportion to the text's 11), under a rule `ruleWidth` long, in a foot that starts
+   * `ruleSpace` above the first note's top (the rule halfway); `between` is the space between notes.
+   */
+  notes: { size: 9, ruleWidth: 72, ruleSpace: 14, between: 4 },
+  /** A footnote's reference: its number at `scale` of the text's size, its baseline raised `rise` of it. */
+  superscript: { scale: 0.65, rise: 0.33 },
   colors: { text: '#000000', muted: '#555555', link: '#1f4e9a', panel: '#f3f3f3', rule: '#9a9a9a' },
 } as const;

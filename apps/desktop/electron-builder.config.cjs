@@ -220,14 +220,15 @@ module.exports = {
     // One icon, 512 x 512, from the brand folder; the packagers place it in the icon theme.
     icon: path.resolve(__dirname, '../../brand/icon-512.png'),
     maintainer: 'Christopher Schweda <cschweda@gmail.com>',
-    synopsis: 'Write screenplays and stage plays in plain text',
+    synopsis: 'Fountain-first writing for screenplays, stage plays, and novels',
     description:
-      'Drafter is a screenplay and stage-play editor for the Fountain format. ' +
-      'Your scripts stay in plain-text files on your computer.',
+      'Drafter is a Fountain-first editor for screenplays and stage plays, with Markdown ' +
+      'for novels and treatments. It exports PDF, Final Draft, Markdown, and plain text, ' +
+      'and your work stays in plain-text files on your computer.',
     // The desktop file is drafter.desktop (package.json `desktopName`), matching the window class.
     syncDesktopName: true,
     // StartupWMClass etc. come from electron-builder. No `--no-sandbox` anywhere (see below).
-    desktop: { entry: { Keywords: 'screenplay;fountain;writing;script;' } },
+    desktop: { entry: { Keywords: 'screenplay;fountain;writing;script;play;novel;markdown;' } },
   },
   appImage: {
     // One name for every version (Drafter-x86_64.AppImage), and latest-linux.yml names it so.

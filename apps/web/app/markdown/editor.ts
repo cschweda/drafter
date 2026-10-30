@@ -25,6 +25,14 @@ const MARKER = mark('cm-md-marker');
 const LINK = mark('cm-md-link');
 const URL = mark('cm-md-url');
 const HTML = mark('cm-md-html');
+const FOOTNOTE = mark('cm-md-footnote');
+
+/**
+ * A footnote's reference or a definition's label, `[^label]`: CommonMark's grammar reads it as a
+ * link, so it is told apart by its text (a label holds no space or bracket; a link with an address
+ * after it is a link).
+ */
+const FOOTNOTE_MARK = /^\[\^[^\s[\]]+\]$/;
 
 /** The decoration for a node of the Markdown grammar, or none. */
 const BY_NODE: Record<string, Decoration> = {
@@ -65,6 +73,14 @@ function decorations(view: EditorView): DecorationSet {
       from,
       to,
       enter(node) {
+        if (
+          node.name === 'Link' &&
+          node.to - node.from <= 1_003 &&
+          FOOTNOTE_MARK.test(view.state.doc.sliceString(node.from, node.to))
+        ) {
+          out.push(FOOTNOTE.range(node.from, node.to));
+          return;
+        }
         const decoration = BY_NODE[node.name];
         if (decoration && node.to > node.from) out.push(decoration.range(node.from, node.to));
       },

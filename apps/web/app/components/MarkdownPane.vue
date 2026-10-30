@@ -7,7 +7,7 @@ import { renderMarkdown } from '~/markdown/render';
 import { useMarkdown } from '~/markdown/use-markdown';
 
 // The Preview (Plan 4 Task 6): the Markdown document as headings, paragraphs, emphasis, lists,
-// quotes, and code, in one column. It is built as DOM from the parsed tree by `renderMarkdown`,
+// quotes, and code, in one column, with its footnotes listed at the end. It is built as DOM from the parsed tree by `renderMarkdown`,
 // which makes elements and sets text and nothing else: no HTML string is ever parsed.
 const { tree, updating, problem } = useMarkdown();
 const content = ref<HTMLElement>();
@@ -124,6 +124,8 @@ watch(tree, draw);
 }
 .body :deep(:is(ul, ol)) {
   padding-left: 1.6em;
+  /* The app's base styles take lists' marks off; a document's lists keep theirs. */
+  list-style: revert;
 }
 .body :deep(blockquote) {
   padding-left: 1em;
@@ -155,6 +157,66 @@ watch(tree, draw);
 .body :deep(.md-image) {
   color: var(--ink-muted);
   font-style: italic;
+}
+/* A footnote's reference: its number, raised, a button that goes to the note. */
+.body :deep(.md-fnref) {
+  line-height: 0;
+}
+.body :deep(:is(.md-fnref-button, .md-note-back)) {
+  padding: 0 0.15em;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--heading);
+  font: inherit;
+  /* The raised number keeps its line's height (the sup has none), but the button needs its own. */
+  line-height: 1;
+  cursor: pointer;
+}
+.body :deep(:is(.md-fnref-button, .md-note-back):focus) {
+  outline: 2px solid var(--heading);
+  outline-offset: 1px;
+}
+/* The notes at the end, smaller, after a short rule. */
+.body :deep(.md-notes) {
+  margin-top: 2em;
+  font-size: 0.9em;
+}
+.body :deep(.md-notes-rule) {
+  width: 6em;
+  margin: 0 0 0.75em;
+}
+.body :deep(.md-notes-heading) {
+  margin: 0 0 0.5em;
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.body :deep(.md-notes li) {
+  border-radius: 3px;
+}
+/* Where a click on a reference or a note's button took focus: outlined, and lit for a moment
+   (the code panel's background, which the text reads on in both themes). */
+.body :deep(.md-notes li:focus) {
+  outline: 2px solid var(--heading);
+  outline-offset: 2px;
+}
+.body :deep(:is(.md-notes li, .md-fnref-button):focus) {
+  animation: md-arrived 1.2s ease-out;
+}
+@keyframes md-arrived {
+  from {
+    background: var(--desk);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .body :deep(:is(.md-notes li, .md-fnref-button):focus) {
+    animation: none;
+  }
+}
+.body :deep(.md-note-text > :last-child) {
+  margin-bottom: 0.5em;
 }
 @media (forced-colors: active) {
   .body :deep(blockquote) {

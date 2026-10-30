@@ -97,7 +97,7 @@ describe('layoutDocument', () => {
 
   it('numbers pages only when there are two or more', () => {
     expect(layout('Ost.').pages[0]?.items.filter((i) => i.kind === 'text')).toHaveLength(1);
-    expect(layout('').pages).toEqual([{ items: [] }]);
+    expect(layout('').pages).toEqual([{ items: [], footTop: null }]);
     const long = Array.from({ length: 40 }, () => 'Vorn ost ulm plenk.').join('\n\n');
     const { pages } = layout(long);
     expect(pages.length).toBe(2);

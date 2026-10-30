@@ -1,21 +1,23 @@
-![Drafter: screenplays and stage plays, written in plain text](brand/og-image.svg)
+![Drafter: Fountain first, for screenplays, stage plays, and novels](brand/og-image.svg)
 
 # Drafter
 
-**An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
+**An open-source, local-first, zero-login writing app, Fountain first: screenplays and stage plays in plain-text [Fountain](https://fountain.io), and novels and treatments in Markdown.** Write on the left; see the paginated, industry-formatted pages on the right, updating as you type.
+
+**Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, and plain text, so it can go wherever it needs to go. See [Formats](#formats).
 
 > [!NOTE]
-> **Status: v0.19.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way, now with version history (deleted scenes you can put back, your changes marked on the pages, and GitHub-style diffs), Highland and Fade In imports, Open as screenplay, and Export as Markdown. Next: Plan E, "Seeing the script", with Scaffold (v0.20.0), then Plans F to H (v0.21.0 to v0.23.0); a signed macOS download follows. See the [roadmap](#roadmap).
+> **Status: v0.20.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way, now with version history (deleted scenes you can put back, your changes marked on the pages, and GitHub-style diffs), Highland and Fade In imports, Open as screenplay, Export as Markdown, footnotes in Markdown documents, and `drafter convert`. Next: Plan E, "Seeing the script", with Scaffold (v0.21.0, and its second part as v0.23.0), Export as HTML (v0.22.0), then Plans F to H (v0.24.0 to v0.26.0); a signed macOS download follows. See the [roadmap](#roadmap).
 
 **What you can do today**
 
-- **Write:** the editor and its live pages; an element bar that writes Fountain for you, with a cheat sheet; Screenplay and Stage play templates, and plain Markdown documents; the command palette, settings, the Problems pane, and optional script modules.
+- **Write:** the editor and its live pages; an element bar that writes Fountain for you, with a cheat sheet; Screenplay and Stage play templates, and plain Markdown documents, with footnotes; the command palette, settings, the Problems pane, and optional script modules.
 - **Shape the story:** **Outline** (scenes and sections as a tree, with synopses, colors, each one's running time, and a treatment export) and **Cards** (an index card for every scene), both rearranged by drag or keys; **Notes** (every note and boneyard in one list, with categories, readers' names, and open or resolved status); scene goals; setups and payoffs; and the [**Structure strip**](#the-idea), a band of blocks above the panes to click and go.
 - **Look back:** **History** (earlier versions, kept as you write and save, each restorable in one undo); **Compare**, with a **Changes** view like a GitHub diff (grouped by scene, + and − in red and green or blue and orange, the changed words marked) beside the script's **Pages**; **Deleted scenes**, every scene you cut, with **Put back**; **Show changes**, what you've changed since your last save, marked on the pages; and **History of this scene**, every version of one scene.
 - **Check spelling:** Drafter's own spellcheck, offline, in US or British English, with a dictionary of your own and one for each script.
 - **Keep going:** focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats.
 - **Time it:** the running time at your own minutes a page and an estimate from the dialogue, set per script in Stats, with each scene's and act's time in the Outline and the Structure strip.
-- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; export to PDF, plain text, and **Markdown** (the whole script, with your notes if you ask), with a progress bar and a percentage on a long export; a Markdown document's PDF too, with links you can click, on US Letter or A4; **Final Draft files** (open an `.fdx` as a new script, or export your script as one); **Highland and Fade In files** (open a `.highland` or `.fadein` as a new script, and the file is never changed); **Open as screenplay**, for a script typed in a Markdown file; and a clear refusal, saying what to do, for a file that isn't a script, such as a Word document, an RTF file, or a PDF. **Export options**, per script, for scene numbers (none, as written, or every scene), how much of the title page prints, and whether a Markdown export carries your notes.
+- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; every main format in and out, from Final Draft to Markdown, and `drafter convert` for a folder at once (see [Formats](#formats)); a progress bar on a long export; and **export options** per script for scene numbers, the title page, and notes.
 - **Get started:** a welcome and a guided tour on a first visit; a **guided first screenplay** and **stage play** (File → New guided screenplay) that teach each element as you read; offline use and installing as an app; help pages, among them **Technical details** (how Drafter is built, with diagrams); and, under Help in the menu, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
 - **On the desktop:** an app for Linux (an AppImage or a `.deb`) and Windows (an installer) that always saves in place and loads script modules from a folder. It builds on a Mac with one command.
 
@@ -32,6 +34,7 @@
 - [Principles](#principles)
 - [What makes it different](#what-makes-it-different)
 - [How it works](#how-it-works)
+- [Formats](#formats)
 - [Samples](#samples)
 - [Packages](#packages)
 - [Roadmap](#roadmap)
@@ -119,6 +122,51 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 - **Pagination is a pure function.** Screenplays use 12-point Courier: 10 characters and 6 lines to the inch. Layout works in characters and lines rather than pixels, so it runs anywhere (a Web Worker in the app, Node in the CLI), and the screen and the PDF come from the same page model.
 - **Templates drive the format.** A template sets the page size and margins; each element's indent, width, case, and spacing; dialogue-splitting rules (`(MORE)` and `(CONT'D)`); and a *role map* that assigns roles such as stage direction, act heading, or sound cue to standard Fountain elements, so no new syntax is needed.
 
+## Formats
+
+Fountain is where you write. Everything else is a door in or a door out.
+
+### In: opening a file
+
+| File | What Drafter does |
+|---|---|
+| Fountain (`.fountain`, `.txt`) | Opens it as it is. Save writes it back. |
+| Final Draft (`.fdx`) | Opens a copy as a new script: scenes, dialogue, dual dialogue, transitions, the title page, scene numbers, and notes. |
+| Highland (`.highland`) | Opens the script inside as a new script. |
+| Fade In (`.fadein`) | Opens a copy as a new script, read from its Open Screenplay Format. |
+| Markdown (`.md`) | Opens as a Markdown document (a treatment, notes, or a novel), or, with **Open as screenplay…**, as a script typed in Fountain. |
+| Anything else (Word, RTF, PDF, an image) | Refused, with a sentence saying what to do instead. |
+
+The file you open is never changed. Text that Fountain has no element for (hidden text, an omitted scene, a paragraph style of the writer's own) comes in as a note, such as `[[fdx: …]]` or `[[osf: …]]`, listed in Problems, so no words go missing silently. Formatting with no place in Fountain, such as fonts and revision colors, is left behind.
+
+### Out: exporting
+
+| Export | What you get |
+|---|---|
+| **PDF** | The pages exactly as the Script tab shows them, in Courier Prime 12 pt, on US Letter or A4. |
+| **Final Draft** (`.fdx`) | A file that Final Draft, Fade In, WriterDuet, and most other screenwriting apps open. |
+| **Markdown** | The whole script as readable Markdown, with your notes if you ask, or the Outline's treatment. Good for sharing, for a wiki, and for AI tools. |
+| **Plain text** | The laid-out pages as text, to paste anywhere. |
+| **Fountain** | Save. Highland, Beat, Slugline, and any text editor read it. |
+| **A Markdown document's PDF** | A typeset document: headings, lists, links you can click, and footnotes at the foot of the page. |
+
+Export options, per script, set the scene numbers (none, as written, or every scene), how much of the title page prints, and whether a Markdown export carries your notes. Drafter doesn't write Highland or Fade In files: Highland opens Fountain directly, and Fade In opens Final Draft.
+
+### From the command line
+
+The same code runs in a terminal ([Development](#development) shows how to build it):
+
+```sh
+drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text
+drafter convert MyScript.fdx                      # MyScript.fountain, beside it
+drafter convert ~/Scripts                         # every .fdx, .highland, and .fadein in the folder
+drafter convert ~/Scripts --recursive             # and in its subfolders
+drafter convert ~/Scripts --out ~/Fountain        # into another folder
+drafter convert ~/Scripts --force                 # replace .fountain files that are there already
+```
+
+`convert` uses the app's own import code, so each `.fountain` is what opening the file in Drafter and saving it would give. It never changes the originals, skips a `.fountain` that is already there unless you add `--force`, writes each file whole or not at all (on a drive with no hard links, such as FAT or exFAT, a crash mid-copy can still leave a short file), prints a line for each file and a summary, and exits 1 if any file was refused.
+
 ## Samples
 
 [`samples/`](samples/) has three sets:
@@ -150,7 +198,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
 | `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight | 0 (Markdown documents in 2) |
-| `@drafter/cli` | `drafter build` and `drafter check` | 0 (published in 5) |
+| `@drafter/cli` | `drafter build`, `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
@@ -188,7 +236,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|---|
 | 0 | Engine: parser, templates, pagination, PDF, CLI | **Done** | |
 | 1 | Minimum IDE: the first public release | **Live at drafter.dev**; the desktop app for Linux (v0.4.0) and Windows (v0.8.0), and a Mac build (v0.7.0) | A signed macOS download |
-| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0); guided starters, export options, running times by scene, and a Technical details page (v0.17.0); version history with deleted scenes, Show changes, and GitHub-style diffs (v0.18.0); Highland, Fade In, and Markdown imports, Open as screenplay, and Export as Markdown (v0.19.0) | **Next:** Plans E to H (v0.20.0 to v0.23.0), starting with Plan E, "Seeing the script": the Beat Board, storylines, the Stats and Reference tabs, Scaffold (who is in each scene, with a page for each character and location), a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
+| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0); guided starters, export options, running times by scene, and a Technical details page (v0.17.0); version history with deleted scenes, Show changes, and GitHub-style diffs (v0.18.0); Highland, Fade In, and Markdown imports, Open as screenplay, and Export as Markdown (v0.19.0); `drafter convert` and footnotes in Markdown documents (v0.20.0) | **Next:** Export as HTML (v0.22.0) and Plans E to H (v0.21.0, v0.23.0, and v0.24.0 to v0.26.0), starting with Plan E, "Seeing the script": the Beat Board, storylines, the Stats and Reference tabs, Scaffold (who is in each scene, with a page for each character and location), a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
 | 3 | Formats | Planned | Celtx import; TV, radio, UK/BBC, and novel templates; user templates; French scenes and doubling charts for plays; `.html` export; PDF with notes in the margin or a watermark; a self-contained reader file |
 | 4 | Craft | Planned | Revision marks and production pages, alternate lines, a clean display mode, table read, a character pass, story order, a breakdown report, accepting a co-writer's changes, one character's dialogue for an actor, the remaining lint rules, a PWA install flow |
 | 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
@@ -303,6 +351,7 @@ After a build, the CLI runs from the repository root:
 pnpm drafter build samples/screenplay.fountain                 # writes samples/screenplay.pdf
 pnpm drafter build samples/stage-play.fountain --txt -         # fixed-width text to the terminal
 pnpm drafter check samples/stage-play.fountain                 # diagnostics; exits 1 on any error
+pnpm drafter convert ~/scripts --out ~/fountain                # every .fdx, .highland, .fadein to .fountain
 ```
 
 The stage play picks its own template from the metadata block at the end of the file; `--template` overrides it. The [CLI's README](packages/cli/README.md) has every option.

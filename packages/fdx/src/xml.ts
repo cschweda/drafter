@@ -222,7 +222,7 @@ export function readXml(text: string): XmlElement {
         skipSpace();
         const q = src[i];
         if (q !== '"' && q !== "'") fail('Expected a quoted attribute value');
-        const close = src.indexOf(q, i + 1);
+        const close = src.indexOf(q as string, i + 1);
         if (close < 0) fail('An attribute value is not closed');
         if (Object.hasOwn(el.attrs, attr)) fail(`The attribute ${short(attr)} appears twice`);
         // defineProperty keeps an attribute named `__proto__` an ordinary key instead of a prototype.

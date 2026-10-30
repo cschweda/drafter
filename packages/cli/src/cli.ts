@@ -8,6 +8,7 @@ import { renderText } from '@drafter/render-text';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
 import { Command, CommanderError } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
+import { ConvertError, type ConvertOptions, convert, reason } from './convert';
 
 /** Where the CLI reads and writes: the process's own streams, or a test's. */
 export interface IO {
@@ -78,6 +79,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
       } catch (error) {
         if (
           !(error instanceof CliError) &&
+          !(error instanceof ConvertError) &&
           !(error instanceof TemplateError) &&
           !(error instanceof UnsupportedTemplateError)
         ) {
@@ -90,7 +92,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   const program = new Command('drafter')
     .description(
-      'Lays out Fountain screenplays and stage plays, and writes them as PDF, text, or JSON.',
+      'Lays out Fountain screenplays and stage plays, and writes them as PDF, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
     )
     .version(pkg.version)
     .exitOverride()
@@ -116,6 +118,24 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
     .argument('<input>', 'the .fountain file')
     .option('--template <id|file>', templateHelp)
     .action(handle((input: string, options: BuildOptions) => check(input, options, io)));
+
+  program
+    .command('convert')
+    .description(
+      'Convert Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files to Fountain, as the app imports them. Exits 1 if any is refused.',
+    )
+    .argument(
+      '<path...>',
+      'files, or folders whose .fdx, .highland, and .fadein files are converted',
+    )
+    .option('--out <dir>', 'write the .fountain files here (made if missing), not beside each file')
+    .option('--force', 'replace a .fountain that is already there')
+    .option('--recursive', "convert the scripts in a folder's subfolders too")
+    .addHelpText(
+      'after',
+      '\nEach file becomes <name>.fountain. A .fountain already there is skipped, unless --force.\nThe file converted is never written.',
+    )
+    .action(handle((paths: string[], options: ConvertOptions) => convert(paths, options, io)));
 
   try {
     await program.parseAsync([...argv], { from: 'user' });
@@ -268,14 +288,6 @@ async function emit(target: string, data: string | Uint8Array, io: IO) {
 /** `script.fountain` → `script.pdf`; any other name gets `.pdf` added, so it never matches the input. */
 const defaultPdf = (input: string) =>
   `${extname(input).toLowerCase() === '.fountain' ? input.slice(0, -'.fountain'.length) : input}.pdf`;
-
-function reason(error: unknown): string {
-  const code = (error as { code?: string }).code;
-  if (code === 'ENOENT') return 'no such file';
-  if (code === 'EISDIR') return "it's a folder";
-  if (code === 'EACCES') return 'permission denied';
-  return (error as Error).message;
-}
 
 const pages = (layout: Layout) =>
   `${layout.pages.length} ${layout.pages.length === 1 ? 'page' : 'pages'}`;

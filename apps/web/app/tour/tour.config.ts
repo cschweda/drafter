@@ -10,7 +10,8 @@ export const TOUR_STORAGE_PREFIX = 'drafter-tour';
 
 export const WELCOME = {
   title: 'Welcome to Drafter',
-  description: 'A screenplay editor that runs in your browser. Want a two-minute tour?',
+  description:
+    'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
   subdescription: 'Your scripts stay on this device.',
   startLabel: 'Take the tour',
   skipLabel: "No thanks, I'll look around.",
@@ -22,6 +23,7 @@ export const INTRO_SLIDES: IntroSlide[] = [
     icon: 'i-heroicons-pencil-square',
     content: [
       'A Drafter script is plain text, written in a simple format called Fountain. Type it like this, and Drafter lays out the page.',
+      'Fountain is the heart of Drafter. You write in it, and the script goes out in the formats the industry uses.',
     ],
     examples: [
       { label: 'Scene heading', syntax: 'INT. KITCHEN - NIGHT', result: 'A scene heading' },
@@ -105,8 +107,9 @@ export function buildSteps(wide: boolean): TourStep[] {
     {
       id: 'export',
       target: target('export'),
-      title: 'Export',
-      content: 'A PDF to send, or plain text to paste anywhere.',
+      title: 'Export, and open almost anything',
+      content:
+        'Export a PDF, a Final Draft file (.fdx), Markdown, or plain text. Open, in the Drafter menu, reads Final Draft, Highland, Fade In, Markdown, and plain text, so a script can come from the apps people use and go back to them.',
     },
     {
       id: 'focus',

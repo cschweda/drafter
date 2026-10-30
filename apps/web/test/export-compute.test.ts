@@ -434,6 +434,16 @@ describe('the export worker, for a Markdown document', () => {
     bytesOf(await exporter(markdownPdf()));
     expect(load).toHaveBeenCalledTimes(2);
   });
+
+  test('refuses a document nested too deeply at once, in words the export says plainly', async () => {
+    const exporter = createExporter(realFonts, realDocumentFonts);
+    const start = performance.now();
+    const reply = await exporter(markdownPdf(`${'- '.repeat(2_400)}x`));
+    expect(performance.now() - start).toBeLessThan(2_000);
+    expect(reply).toEqual({
+      error: 'This document is nested too deeply to read: more than 48 levels.',
+    });
+  });
 });
 
 describe('fetching the document fonts', () => {

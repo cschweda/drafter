@@ -27,7 +27,7 @@ function plan(isWide: boolean) {
     ['Screenplay or stage play', isWide ? 'template' : 'menu'],
     ['Save', 'save'],
     ['The status bar', 'status'],
-    ['Export', 'export'],
+    ['Export, and open almost anything', 'export'],
     ['Focus', 'focus'],
     ['Go anywhere', 'palette'],
   ] as const;

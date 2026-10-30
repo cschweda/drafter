@@ -404,7 +404,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 
 **Next:**
 
-- Plans E to H (v0.20.0 to v0.23.0, Phase 2 design §22), starting with Plan E, "Seeing the script", with Scaffold.
+- Plans E to H (v0.21.0 and v0.23.0 for Plan E's two parts, then v0.24.0 to v0.26.0; Phase 2 design §22), starting with Plan E, "Seeing the script", with Scaffold; Export as HTML is v0.22.0 ([its design](drafter-html-export-design.md)).
 
 **To come**
 

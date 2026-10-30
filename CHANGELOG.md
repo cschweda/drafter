@@ -24,6 +24,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **The Stats window**, which the Stats tab replaces with everything it showed.
 
+## [0.20.0] - 2026-10-30
+
+**Formats: Fountain first, every main format out.** `drafter convert` turns Final Draft, Highland, and Fade In files into Fountain, a whole folder at once; Markdown documents get footnotes, at the end of the Preview and at the foot of the PDF's pages; the welcome, the tour, the share image, and the README say Drafter is Fountain-first, for screenplays, stage plays, and novels; and a Markdown document nested hundreds of levels deep, or with a hostile heading, can no longer hold up the app.
+
+### Added
+
+- **Footnotes in Markdown documents.** Write `text[^1]` where a note belongs and `[^1]: The note.` on a line of its own anywhere in the document, as on GitHub; a label can be a word (`[^source]`), and a note can run to more paragraphs, each indented four spaces. Notes are numbered 1, 2, 3 in the order you first refer to them, whatever their labels, and a note you refer to twice keeps its number. In the Preview a reference is a small raised number you can click (or press) to go to its note, and the notes are listed at the end under **Notes**, each with a button back. In the PDF each note prints at the foot of the page its reference is on, under a short rule, in smaller type: if a note won't fit under its line, the line moves to the next page with it, and a note longer than the room left goes on at the foot of the next page. A note's words count toward the document's; a note nothing refers to isn't printed or counted, and a reference with no note stays as you typed it. The Source pane shows `[^1]` in a quieter color, and the sample Markdown document has a short section on footnotes.
+- **Convert many files to Fountain at once, from the command line.** `drafter convert` turns Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) files into `.fountain` files, exactly as opening each one in Drafter and saving it would. Name files or whole folders (`--recursive` goes into subfolders); each `.fountain` is written beside its file, or into the folder `--out` names. A `.fountain` that is already there is left alone unless you add `--force`, and the file you convert is never changed. Each file gets a line saying what happened (converted, and how many items came in as notes; skipped; or refused, and why), and a summary follows; it exits 1 if any file was refused. A file that isn't a script, or that the importer turns away, is refused with the app's own words, such as "Drafter can’t open a Word document"; a Final Draft file that is too big or isn't UTF-8 text gets a short reason of the command's own. Each `.fountain` is written in full before it appears, so a full disk never leaves half a file behind (on a drive with no hard links, such as FAT or exFAT, it is copied into place instead, and a copy cut off by a crash can still be short). Run it as `pnpm drafter convert …` after a build.
+
+### Changed
+
+- **The welcome and the tour say Drafter is Fountain-first.** The welcome calls Drafter a Fountain-first writing app, for screenplays and stage plays in Fountain and anything else, from a treatment to a novel, in Markdown. The Fountain card adds that the script goes out in the formats the industry uses, and the Export step, now **Export, and open almost anything**, lists what Drafter exports (PDF, Final Draft, Markdown, plain text) and what Open reads (Final Draft, Highland, Fade In, Markdown, plain text). The tour isn't shown again to anyone who has seen it.
+- **Drafter says it is Fountain-first, and for novelists too.** The share image, the site's title and description, and the Linux package's summary now say Fountain first, for screenplays, stage plays, and novels (written as Markdown documents), with the formats a script goes out in.
+- `notAScript` and `refusalMessage` (the table of files that aren't scripts), `importKindOf`, and Open's limits (`MAX_SCRIPT_BYTES`, `SNIFF_BYTES`) moved from the web app into `@drafter/archive`, so the app's Open and `drafter convert` take in and refuse the same files with the same words. `@drafter/cli` now depends on `@drafter/fdx` and `@drafter/archive`. The command line's own reasons for a file it can't read or write are clearer too, for `build` as for `convert`: "permission denied" for a file the system won't allow, and plain words for a path that isn't a folder and for a full disk.
+
+### Fixed
+
+- **The tour's first card can be scrolled from the keyboard.** When its text is taller than the card allows (a short window, or a longer card), the text gets a tab stop, as a scrolling region must; it has none when it fits.
+- **A Markdown document nested hundreds of levels deep is shown as "nested too deeply" at once.** Only a hostile or broken file nests like that (a line of hundreds of list marks, or footnotes defined one inside another), and it froze the app for seconds while the Preview, the word count, or the PDF read it. Drafter now checks first: deeper than 48 levels, the Preview says "This document is nested too deeply to preview. Your text is safe in the Source.", the PDF export says the document is nested too deeply to lay out, and the word count counts the plain text. Real documents never come near it.
+- **A Markdown document with one very long heading no longer holds up typing.** Finding the document's title (for the window and the file's name) read a heading with patterns that slowed by far more than its length: a heading of tens of thousands of spaces or brackets took seconds, on every key. It is now read in one pass, and every ordinary heading gives the same title as before; a heading of nothing but closing `#`s is empty, as Markdown has it.
+- **The Preview's lists show their bullets and numbers again.** The app's base styles took list marks off everywhere, the Preview's lists too; a Markdown document's lists, and its notes, are now marked as in the PDF.
+- **The desktop quit test holds every quit, not only the first.** The app's own close flow asks, finds nothing unsaved and quits again, so a one-time hook in the test could let the app close on a fast Linux runner. Test only; the app is unchanged.
+
 ## [0.19.1] - 2026-10-30
 
 **Two rare Markdown export lines kept as written, and Stats reads every heading at once.** A `<` before a bold or italic word starting with `@`, and a centered line with no text, now export as they should; a heading with a very long run of spaces no longer slows the Stats window.
@@ -845,7 +868,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/cschweda/drafter/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/cschweda/drafter/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/cschweda/drafter/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/cschweda/drafter/compare/v0.17.0...v0.18.0

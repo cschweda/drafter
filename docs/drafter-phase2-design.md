@@ -653,7 +653,9 @@ This release is v0.18.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 to v0.23.0, where v0.17.0 put them.
 
-### Plan E — v0.20.0: Seeing the script
+**Decided (2026-10-30, with the formats release): v0.20.0 is the formats release** (`drafter convert`, footnotes in Markdown documents, the tour's Fountain-first wording, and the README's Formats section), ahead of Plan E. Plan E ships in two parts, v0.21.0 (Scaffold, the Stats tab, and the character grid) and v0.23.0 (storylines, the Timeline, the map, and pacing), with **Export as HTML** ([its design](drafter-html-export-design.md)) as v0.22.0 between them. Plans F to H move to v0.24.0 to v0.26.0, their letters unchanged. Plan F, the Beat Board, is expected to become the **Workbook** the maintainer asked for (a story bible and scene cards beside the script), with its own design.
+
+### Plan E — v0.21.0 and v0.23.0: Seeing the script
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15); and **Scaffold** (below).
 
@@ -673,7 +675,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Scaffold's figures match the Stats tab's and the scene index's on fixtures, and its panel and its character and location pages work fully by keyboard.
 - axe passes on every Stats section, the map, the Timeline, and Scaffold, in both themes at both widths.
 
-### Plan F — v0.21.0: The Beat Board
+### Plan F — v0.24.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -684,7 +686,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.22.0: Reader notes
+### Plan G — v0.25.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -695,7 +697,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.23.0: Reference
+### Plan H — v0.26.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 

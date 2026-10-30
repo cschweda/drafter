@@ -1,3 +1,4 @@
+import { footnotes } from './notes';
 import type { MdNode } from './render';
 
 /**
@@ -7,7 +8,7 @@ import type { MdNode } from './render';
  * medium mathematical space, the ideographic space, and the byte-order mark. A comparison per
  * character, where a regular expression per character cost more than the reparse on a long script.
  */
-function isSpace(code: number): boolean {
+export function isSpace(code: number): boolean {
   if (code <= 0x20) return code === 0x20 || (code >= 0x09 && code <= 0x0d);
   if (code < 0xa0) return false;
   return (
@@ -46,6 +47,7 @@ const INLINE = new Set([
   'imageReference',
   'html',
   'delete',
+  'footnoteReference',
 ]);
 
 /**
@@ -53,10 +55,16 @@ const INLINE = new Set([
  * text and not its address, an image its description, code and raw HTML their text; a rule or a
  * mark counts nothing. A word is a run of characters between spaces, so `four` and the `.` after
  * it in `*four*.` are one word; a paragraph, a heading, or a list item ends a word.
+ *
+ * Footnotes are read too, so a note's text counts with the document's, once, as it prints: a
+ * reference's mark counts nothing (and joins the words either side of it), and a definition
+ * that nothing references, which prints nothing, counts nothing.
  */
 export function countWords(tree: MdNode): number {
   let text = '';
   const visit = (node: MdNode) => {
+    // A note is counted from the list of notes that print, below.
+    if (node.type === 'footnoteDefinition') return;
     if (node.type === 'image' || node.type === 'imageReference') text += node.alt ?? '';
     else if (node.value !== undefined) text += node.value;
     for (const child of node.children ?? []) visit(child);
@@ -64,5 +72,9 @@ export function countWords(tree: MdNode): number {
     if (!INLINE.has(node.type)) text += ' ';
   };
   visit(tree);
+  for (const note of footnotes(tree).notes) {
+    for (const child of note.children ?? []) visit(child);
+    text += ' ';
+  }
   return wordsIn(text);
 }

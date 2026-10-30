@@ -1,7 +1,7 @@
 {
   "name": "@drafter/cli",
-  "version": "0.19.1",
-  "description": "The Drafter command line: lays out Fountain scripts and writes them as PDF, text, or JSON.",
+  "version": "0.20.0",
+  "description": "The Drafter command line: lays out Fountain scripts and writes them as PDF, text, or JSON, and converts Final Draft, Highland, and Fade In files to Fountain.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -31,6 +31,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@drafter/archive": "workspace:*",
+    "@drafter/fdx": "workspace:*",
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
     "@drafter/render-pdf": "workspace:*",
