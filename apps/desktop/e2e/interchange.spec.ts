@@ -248,7 +248,8 @@ async function webPage(route: 'picker' | 'download') {
   if (route === 'picker') await stubPickers(page);
   else await removePickers(page);
   await page.goto(base);
-  await expect(page.locator('.cm-content')).toBeVisible({ timeout: 30_000 });
+  // A fresh browser loads the whole app; a slow Windows runner has taken more than 30 s.
+  await expect(page.locator('.cm-content')).toBeVisible({ timeout: 90_000 });
   await expect
     .poll(async () => (await stored(page)).length, { timeout: 30_000 })
     .toBeGreaterThan(0);

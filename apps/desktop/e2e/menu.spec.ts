@@ -375,8 +375,10 @@ test('quits through app.quit(), where Task 5 can stop it', async ({ desktop }) =
     .toBe(1);
   // The hook stopped it: the app is still there.
   expect(app.windows()).toHaveLength(1);
-  const item = (await menuItems(app)).find((i) => i.id === 'quit' || i.label === 'Quit');
-  expect(item).toBeDefined();
+  // Read again until it answers: on Windows the stopped quit can still be settling.
+  await expect
+    .poll(async () => (await menuItems(app)).some((i) => i.id === 'quit' || i.label === 'Quit'))
+    .toBe(true);
 });
 
 test('keeps its menu when the page sends nonsense, and ignores a page that isn’t the app’s', async ({
