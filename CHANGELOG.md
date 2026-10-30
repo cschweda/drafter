@@ -6,8 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Footnotes in Markdown documents.** Write `text[^1]` where a note belongs and `[^1]: The note.` on a line of its own anywhere in the document, as on GitHub; a label can be a word (`[^source]`), and a note can run to more paragraphs, each indented four spaces. Notes are numbered 1, 2, 3 in the order you first refer to them, whatever their labels, and a note you refer to twice keeps its number. In the Preview a reference is a small raised number you can click (or press) to go to its note, and the notes are listed at the end under **Notes**, each with a button back. In the PDF each note prints at the foot of the page its reference is on, under a short rule, in smaller type: if a note won't fit under its line, the line moves to the next page with it, and a note longer than the room left goes on at the foot of the next page. A note's words count toward the document's; a note nothing refers to isn't printed or counted, and a reference with no note stays as you typed it. The Source pane shows `[^1]` in a quieter color, and the sample Markdown document has a short section on footnotes.
+
 ### Fixed
 
+- **The desktop menu test is formatted as Biome writes it**, so `pnpm check` passes again. Test only.
 - **The desktop quit test holds every quit, not only the first.** The app's own close flow asks, finds nothing unsaved and quits again, so a one-time hook in the test could let the app close on a fast Linux runner. Test only; the app is unchanged.
 
 ## [0.19.1] - 2026-10-30
