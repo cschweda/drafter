@@ -93,6 +93,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../../packages/fountain
+      '@drafter/history':
+        specifier: workspace:*
+        version: link:../../packages/history
       '@drafter/layout':
         specifier: workspace:*
         version: link:../../packages/layout

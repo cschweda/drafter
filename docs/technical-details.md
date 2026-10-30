@@ -54,7 +54,7 @@ flowchart BT
   cm_fountain --> web
   compare --> web
   fdx --> web
-  outline --> web
+  history --> web
   render_html --> web
   render_pdf --> web
   render_text --> web

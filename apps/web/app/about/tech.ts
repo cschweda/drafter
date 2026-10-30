@@ -61,6 +61,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/compare',
       '@drafter/fdx',
       '@drafter/fountain',
+      '@drafter/history',
       '@drafter/layout',
       '@drafter/lint',
       '@drafter/notes',
