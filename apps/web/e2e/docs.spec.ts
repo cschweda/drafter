@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
+import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
 import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
@@ -208,6 +209,73 @@ test.describe('without JavaScript', () => {
     );
     await page.goto('/docs');
     expect(await mainText(page)).toContain('a guided first screenplay and stage play');
+  });
+
+  test('the Technical details page has its parts, its diagrams as lists, and every dependency', async ({
+    page,
+  }) => {
+    await page.goto('/docs/technical');
+    await expect(heading(page)).toHaveText('Technical details');
+    // A contents list of the ten parts, each a link to its heading.
+    const contents = page.getByRole('navigation', { name: 'Contents' });
+    for (const { id, title } of TECH_SECTIONS) {
+      await expect(contents.getByRole('link', { name: title, exact: true }), id).toHaveAttribute(
+        'href',
+        `#${id}`,
+      );
+      await expect(
+        page.getByRole('heading', { level: 2, name: title, exact: true }),
+        id,
+      ).toHaveAttribute('id', id);
+    }
+    // Five diagrams, each a figure with a caption and its boxes as a list a screen reader reads.
+    const figures = page.locator('main figure');
+    await expect(figures).toHaveCount(5);
+    for (const figure of await figures.all()) {
+      await expect(figure.locator('figcaption')).not.toBeEmpty();
+      expect(await figure.locator('ol > li').count()).toBeGreaterThanOrEqual(2);
+      // The arrows are drawn, not read.
+      for (const arrow of await figure.locator('.tech-arrow').all()) {
+        await expect(arrow).toHaveAttribute('aria-hidden', 'true');
+      }
+    }
+    // The package diagram says what each box uses, in words.
+    const packages = page.locator('figure[data-diagram="packages"]');
+    await expect(packages).toContainText('@drafter/fountain');
+    await expect(packages).toContainText('uses @drafter/fountain');
+    // Every third-party runtime dependency, by name, with its line.
+    const list = page.locator('main dl');
+    for (const [name, line] of Object.entries(DEPENDENCY_NOTES)) {
+      await expect(list.locator('dt').getByText(name, { exact: true }), name).toHaveCount(1);
+      expect(await mainText(page), name).toContain(line);
+    }
+    await expect(page.getByRole('link', { name: /DEPENDENCIES\.md/ })).toHaveAttribute(
+      'href',
+      'https://github.com/cschweda/drafter/blob/main/docs/DEPENDENCIES.md',
+    );
+    await expect(
+      page.locator('main').getByRole('link', { name: 'Third-party licences', exact: true }),
+    ).toHaveAttribute('href', '/docs/licences/');
+    await expect(page.getByRole('link', { name: /clean-room statement/i })).toHaveAttribute(
+      'href',
+      /^https:\/\/github\.com\/cschweda\/drafter\/blob\/main\//,
+    );
+    expect(await mainText(page)).not.toMatch(/ICJIA/i);
+  });
+
+  test('the Technical details page has no script or style from another origin', async ({
+    page,
+  }) => {
+    await page.goto('/docs/technical');
+    await expect(heading(page)).toHaveText('Technical details');
+    const sources = await page.evaluate(() => [
+      ...[...document.querySelectorAll('script[src]')].map((el) => (el as HTMLScriptElement).src),
+      ...[...document.querySelectorAll('link[rel="stylesheet"], link[rel="modulepreload"]')].map(
+        (el) => (el as HTMLLinkElement).href,
+      ),
+    ]);
+    const origin = new URL(page.url()).origin;
+    for (const source of sources) expect(new URL(source).origin, source).toBe(origin);
   });
 
   test('says on the Privacy page that nothing leaves the device', async ({ page }) => {

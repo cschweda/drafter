@@ -353,6 +353,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Phase 2 design](docs/drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
 - [Structure strip design](docs/drafter-structure-strip-design.md): the band of sections and scenes above the panes, its rows, sizes, keys, and how Phase 2's script map and Timeline build on it.
 - [Markdown PDF design](docs/drafter-markdown-pdf-design.md): a Markdown document as a printable PDF: what prints, line and page breaks, paper, and page numbers.
+- [Technical details](docs/technical-details.md): how Drafter is put together, in plain words first, with diagrams: the packages, from a keystroke to the page, storage, export, offline use, the desktop app, the clean-room rule, releases, and every dependency. The same page is in the app, under Help.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 

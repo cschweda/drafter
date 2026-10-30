@@ -221,6 +221,22 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
 
+  test('puts Technical Details in Help, after Third-party Licences', () => {
+    const t = menuTemplate(
+      [...COMMANDS, cmd('help-technical', 'Help', 'Open the page: Technical details')],
+      () => {},
+      { platform: 'linux' },
+    );
+    const ids = submenu(menus(t).Help)
+      .map((i) => i.id)
+      .filter(Boolean);
+    expect(ids.slice(ids.indexOf('help-licences'), ids.indexOf('help-licences') + 2)).toEqual([
+      'help-licences',
+      'help-technical',
+    ]);
+    expect(named(t, 'help-technical')?.label).toBe('Technical Details');
+  });
+
   test('sends the command’s id when an item is chosen', () => {
     const run = vi.fn();
     const t = menuTemplate(COMMANDS, run, { platform: 'linux' });

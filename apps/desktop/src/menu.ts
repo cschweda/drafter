@@ -177,7 +177,16 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['next-misspelling', 'previous-misspelling'] },
   ],
   Help: [
-    { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy', 'help-licences'] },
+    {
+      pick: [
+        'help-fountain',
+        'help-shortcuts',
+        'help-saving',
+        'help-privacy',
+        'help-licences',
+        'help-technical',
+      ],
+    },
     { pick: ['take-the-tour'] },
     {
       pick: prefix('sample-script-'),
@@ -199,6 +208,7 @@ const LABELS: Record<string, string> = {
   'help-saving': 'Saving',
   'help-privacy': 'Privacy',
   'help-licences': 'Third-party Licences',
+  'help-technical': 'Technical Details',
   'check-for-updates': 'Check for Updates…',
 };
 

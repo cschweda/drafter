@@ -367,6 +367,7 @@ for (const theme of THEMES) {
       '/docs/saving/',
       '/docs/privacy/',
       '/docs/shortcuts/',
+      '/docs/technical/',
     ]) {
       test(`has no accessibility violations on ${path} (${theme})`, async ({ page }) => {
         await useTheme(page, theme);

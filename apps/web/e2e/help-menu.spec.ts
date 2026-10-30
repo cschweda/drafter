@@ -88,6 +88,10 @@ test.describe('About Drafter', () => {
       await expect(link).toHaveAttribute('target', '_blank');
     }
     await expect(dialog.getByRole('link', { name: 'Keyboard shortcuts' })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Technical details' })).toHaveAttribute(
+      'href',
+      '/docs/technical/',
+    );
     // Escape closes it, as every dialog's does.
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -112,6 +116,24 @@ test.describe('About Drafter', () => {
       expect(copied).toContain('App: web app (drafter.dev)');
       expect(copied).toMatch(/Browser: \w+/);
     }
+  });
+});
+
+test.describe('Technical details', () => {
+  test('Help → Technical details opens the page in a new tab', async ({ page }) => {
+    await start(page);
+    await mark(page).click();
+    await expect(menu(page)).toBeVisible();
+    const opened = page.context().waitForEvent('page');
+    await item(page, /^Technical details/).click();
+    const tab = await opened;
+    await expect(tab).toHaveURL(/\/docs\/technical\/?$/);
+    await expect(tab.getByRole('heading', { level: 1 })).toHaveText('Technical details');
+    await expect(tab.locator('main figure')).toHaveCount(5);
+    await tab.close();
+    // The editor is as it was: the page is never on the writing screen.
+    await expect(editor(page)).toContainText('The Call');
+    await expect(page.locator('figure[data-diagram]')).toHaveCount(0);
   });
 });
 

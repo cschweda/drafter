@@ -6,7 +6,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, and third-party licences. Plain pages that read without JavaScript.',
+    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, licences, and technical details. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -19,13 +19,15 @@ const about: Record<string, string> = {
   'help-privacy': 'No account, no analytics, no telemetry: your script never leaves your device.',
   'help-licences':
     'The spellchecker, its dictionaries, and the fonts inside Drafter, each with its licence.',
+  'help-technical':
+    'How Drafter is put together, for the curious: its packages, workers, storage, offline use, the desktop app, releases, and dependencies, with diagrams.',
 };
 </script>
 
 <template>
   <article>
     <h1>Help</h1>
-    <p class="docs-lead">Five short pages about writing in Fountain and how Drafter works.</p>
+    <p class="docs-lead">Six short pages about writing in Fountain and how Drafter works.</p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
         <a :href="helpHref(page)">{{ page.title }}</a>: {{ about[page.id] }}
