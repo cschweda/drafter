@@ -101,11 +101,13 @@ test.describe('script modules', () => {
     await closeSettings(page);
     await expect(countScenes(page)).toHaveCount(0);
     await expect(fixtureTab(page)).toHaveCount(0);
-    // Nor under More, which has only Cards and Notes now.
+    // Nor under More, which has only Cards, Notes, Stats, and Scaffold now.
     await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
       'Cards',
       /^Notes, \d+ open$/,
+      'Stats',
+      'Scaffold',
     ]);
     await page.keyboard.press('Escape');
     await expect(page.getByText('Fixture Info:')).toHaveCount(0);

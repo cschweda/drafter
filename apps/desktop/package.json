@@ -1,6 +1,6 @@
 {
   "name": "@drafter/desktop",
-  "version": "0.20.0",
+  "version": "0.21.1",
   "private": true,
   "productName": "Drafter",
   "description": "Drafter for the desktop: the drafter.dev app in an Electron window, from its own files.",

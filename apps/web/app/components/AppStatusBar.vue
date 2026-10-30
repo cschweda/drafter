@@ -9,9 +9,9 @@ import { useMarkdown } from '~/markdown/use-markdown';
 import { historyOpen } from '~/snapshots/history';
 import { snapshotProblem } from '~/snapshots/use-snapshots';
 import { useSpell } from '~/spell/use-spell';
-import { statsOpen } from '~/stats/dialog';
 import { progressLabel, useGoal } from '~/stats/goal';
 import { timeTodayLabel, wordsTodayLabel } from '~/stats/history';
+import { showStats } from '~/stats/tab';
 import { useWritingStats } from '~/stats/writing';
 import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
@@ -109,10 +109,10 @@ function closeCounts(refocus = true) {
   if (refocus) countsButton.value?.focus();
 }
 
-/** The panel's Stats… button: the panel closes (focus back on its button), and the window opens. */
+/** The panel's Stats… button: the panel closes, and the Stats tab opens with focus on its heading. */
 function openStats() {
-  closeCounts();
-  statsOpen.value = true;
+  closeCounts(false);
+  showStats();
 }
 
 function onPointerDown(event: PointerEvent) {

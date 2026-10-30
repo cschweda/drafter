@@ -24,11 +24,13 @@ export interface SceneMenuHooks {
   focus(id: string): void;
   /** History of this scene…, once the menu has closed (the row or card is the dialog's opener). */
   history(id: string): void;
+  /** Scaffold for this scene, once the menu has closed: the Scaffold tab, on this scene, pinned. */
+  scaffold(id: string): void;
 }
 
 /**
  * The menu for the item with this id: Go to; the moves; for a scene, its synopsis, color, details,
- * and History of this scene….
+ * History of this scene…, and Scaffold for this scene (seeing-the-script design §5.6).
  */
 export function sceneMenuItems(
   id: string,
@@ -100,6 +102,11 @@ export function sceneMenuItems(
         label: 'History of this scene…',
         icon: 'i-lucide-history',
         onSelect: () => hooks.history(id),
+      },
+      {
+        label: 'Scaffold for this scene',
+        icon: 'i-lucide-users',
+        onSelect: () => hooks.scaffold(id),
       },
     ]);
   }

@@ -176,6 +176,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
     icon: 'i-lucide-history',
     keywords: ['versions of this scene', 'scene versions'],
   },
+  // Scaffold for this scene (§5.6): the cursor's scene, pinned.
+  { id: 'scaffold-scene', title: 'Scaffold for this scene', group: 'Go', icon: 'i-lucide-users' },
   { id: 'next-problem', title: 'Next problem', group: 'Go', keys: 'F8' },
   { id: 'previous-problem', title: 'Previous problem', group: 'Go', keys: 'Shift-F8' },
   // The spellcheck's (Plan D, Call 11): F7, the usual key, turns on caret browsing in Firefox.
@@ -223,6 +225,30 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'sprint-hide', title: 'Hide sprint countdown', group: 'View' },
   { id: 'sprint-show', title: 'Show sprint countdown', group: 'View' },
   { id: 'show-stats', title: 'Show stats', group: 'View' },
+  // Scaffold (seeing-the-script design §5.6): a tab beside the Source showing who is in the
+  // cursor's scene. No key of its own; the palette finds it by these words too.
+  {
+    id: 'show-scaffold',
+    title: 'Show Scaffold',
+    group: 'View',
+    icon: 'i-lucide-users',
+    keywords: ['cast', 'characters', 'who is in this scene', 'locations'],
+  },
+  // Scaffold's lists (§5.5, §9): every character, and every place, each a link to its page.
+  {
+    id: 'scaffold-cast',
+    title: 'Show the cast',
+    group: 'View',
+    icon: 'i-lucide-users',
+    keywords: ['characters', 'Scaffold'],
+  },
+  {
+    id: 'scaffold-places',
+    title: 'Show the places',
+    group: 'View',
+    icon: 'i-lucide-map-pin',
+    keywords: ['locations', 'Scaffold'],
+  },
   { id: 'switch-theme', title: 'Switch theme', group: 'View' },
   { id: 'show-line-numbers', title: 'Show line numbers', group: 'View' },
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },

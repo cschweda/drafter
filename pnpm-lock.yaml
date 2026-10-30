@@ -84,6 +84,9 @@ importers:
       '@drafter/archive':
         specifier: workspace:*
         version: link:../../packages/archive
+      '@drafter/cast':
+        specifier: workspace:*
+        version: link:../../packages/cast
       '@drafter/cm-fountain':
         specifier: workspace:*
         version: link:../../packages/cm-fountain
@@ -188,6 +191,22 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+
+  packages/cast:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+    devDependencies:
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
 
   packages/cli:
     dependencies:

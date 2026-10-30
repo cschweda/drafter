@@ -25,6 +25,7 @@ import { goalLine } from '~/outline/scene-details';
 import { sceneMenuItems } from '~/outline/scene-menu';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
 import { useOutline } from '~/outline/use-outline';
+import { showScaffold } from '~/scaffold/show';
 import { useRates } from '~/stats/timing';
 
 // The Outline tab (Phase 2 design §6.1–6.2): the script's sections holding its scenes, as an
@@ -306,6 +307,7 @@ function menuItems(row: Row): DropdownMenuItem[][] {
       }),
     focus: (id) => void focusRow(id),
     history: (id) => afterClosing(() => openHistoryOf(id)),
+    scaffold: (id) => afterClosing(() => showScaffold({ kind: 'scene', pinned: id })),
   });
 }
 

@@ -197,3 +197,22 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 
 - **Reading order is written twice**: `@drafter/render-html-file`'s Pages view reads a page as the Script tab does (dual dialogue's left speech first, a title page by field), with `readingOrder` and `titleOrder` ported from `@drafter/render-html`'s `page.ts` rather than shared. Moving them into `@drafter/layout` (or a small DOM-free export of `render-html`) would keep the two from drifting; the Task 3 review chose to leave it for now.
 - **A document's own `#heading` links**: `[x](#heading)` in a Markdown document exports as its text, because the file's heading ids are its own (`h-<n>`, never from the words). Matching a writer's anchor to its heading (GitHub's slugs, or the Preview's if it gains them) and pointing the link at that heading's `h-<n>` would make them work; the Task 5 review chose text for now.
+
+## Seeing the script
+
+What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character grid) leaves for later. The design's §14 has the reasons.
+
+- **Silent-only characters.** Someone who never has a cue isn't in the cast, however often the action names them. A `[[Cast: …]]` note could list them.
+- **Aliases and merged names.** TOM and THOMAS are two rows (Call 3); a way to say they are one character waits until asked for.
+- **Marking a mention as not present.** A name in the action always counts (Call 5), even in "She thinks of TOM". A note to say "not here" would fix a scene by hand.
+- **Grouping sub-locations.** HOUSE - KITCHEN and HOUSE - HALL are two locations (Call 15); the Places list sorts them together but adds nothing up.
+- **Sorting the Characters table** (Call 19). It keeps the cast's order (most speeches first); sorting by a column, as a table's header buttons would, comes later.
+- **Exporting the Stats tab's tables** (Characters, the grid's List, Long absences), as CSV or Markdown.
+- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.25.0) adds storylines without either.
+- **A per-scene history link from Scaffold.** History of this scene is in the scene menus already.
+- **The Stats tab opening over its budget in Firefox and WebKit** (243 to 502 ms against 300 ms, which the design sets for Chromium; DECISIONS has the profile). Most of WebKit's time is the tab switch itself; mounting the Overview later, or drawing the tab's shell first, would bring it under.
+- **The spare words worker retries every 5 seconds** (`SPARE_RETRY_MS`) while a dictionary fails to load with spellcheck off, or at once for another language. A dictionary that never loads (a broken download) is asked again every 5 s while a view holds the cast; a longer wait after each failure would cost less, if it ever shows. (The spare itself ends 30 s after no view needs the cast.)
+- **Go to a line's cue after an edit in its scene** lands at the start of the line as far into the scene as the cue was when the cast was worked out (within about 300 ms of the last pause), so text typed above the cue in that scene can land it a few lines early, never outside the scene. Following the cue by its block, through the edits since, would make it exact.
+- **A `^` cue at the start of a section's own stretch** is counted as a speech of its own there, in full, since tallies never run across a section, while the layout pairs it with the speech before. Rare, and the words are counted once either way.
+- **Smaller edges, found in review:** one shared `isWide()` helper for the three places that ask the same media query (`stats/tab.ts`, `compare/use-compare.ts`, `history/deleted.ts`); one generator of invented words for the cast's tests (`names.test.ts`, the cast budget, `scaling`); a test for `whenIdle`'s `setTimeout` fallback; and the scene page's own table (In this scene) doesn't yet move focus to its heading when a focused row leaves, as the other Scaffold tables do.
+- **The screen-reader listening pass** (the final accessibility steps). Axe runs on every Stats section, the grid and its List, Scaffold's pages, and the Cast and Places, in both themes at both widths on every project.

@@ -90,7 +90,22 @@ const groups = shortcutGroups(COMMAND_DATA);
           <kbd>↓</kbd> to the block above or below, and <kbd>Home</kbd> and <kbd>End</kbd> to a
           row’s ends. <kbd>Enter</kbd> or <kbd>Space</kbd> goes to the scene or section in the
           Source. The context-menu key or <kbd>Shift+F10</kbd> (or a right-click) opens the block’s
-          menu: Go to and, on a scene, History of this scene.
+          menu: Go to and, on a scene, History of this scene and Scaffold for this scene.
+        </li>
+        <li>
+          In the Stats tab’s Character by scene, <kbd>Tab</kbd> enters the grid on the cell you
+          last focused. The arrow keys move from cell to cell, <kbd>Home</kbd> and <kbd>End</kbd>
+          go to the ends of a character’s row, <kbd>Ctrl+Home</kbd> and <kbd>Ctrl+End</kbd> to the
+          first and last cells (<kbd>⌘</kbd> on a Mac), and <kbd>Page Up</kbd> and
+          <kbd>Page Down</kbd> move ten scenes. <kbd>Enter</kbd> goes to the character’s first cue
+          in that scene, or, where they’re there without speaking, to the first time the action
+          names them. The context-menu key or <kbd>Shift+F10</kbd> (or a right-click) opens the
+          cell’s menu: Go to, Scaffold for this character, and Scaffold for this scene.
+        </li>
+        <li>
+          In Scaffold, <kbd>Alt+←</kbd> (<kbd>⌥←</kbd> on a Mac) goes back to the page before, as
+          the Back button on its bar does, while focus is anywhere in the tab except a filter field,
+          where it moves by a word.
         </li>
         <li>
           In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and

@@ -207,7 +207,14 @@ test.describe('the Cards tab', () => {
     await expect(cards(page)).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Cards' })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Notes' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'More tabs' })).toHaveCount(0);
+    // Its one view tab is Stats, under More.
+    await expect(page.getByRole('tab', { name: 'Stats' })).toHaveCount(0);
+    const more = page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' });
+    await more.click();
+    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
+      'Stats',
+    ]);
+    await page.keyboard.press('Escape');
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();
     await page.keyboard.insertText('Show Cards');

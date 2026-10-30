@@ -45,7 +45,8 @@ watch(exportOptionsOpen, async (open) => {
   await nextTick();
   if (open) failed.value = false;
   if (open && dialog.value && !dialog.value.open) {
-    // A menu's item is never the opener: the menu is closing (as in the Stats window).
+    // A menu's item is never the opener: the menu is closing, though its fade can keep the item on
+    // the page.
     const active = document.activeElement;
     opener = active instanceof HTMLElement && !active.closest('[role="menu"]') ? active : null;
     dialog.value.showModal();

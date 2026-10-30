@@ -25,6 +25,35 @@ describe('the command data', () => {
     expect(deleted?.keywords).toEqual(expect.arrayContaining(['show all versions', 'versions']));
   });
 
+  test('has Show Scaffold after Show stats, found by its words, and Scaffold for this scene in Go', () => {
+    // Seeing-the-script design §5.6, §9: no new keys (as in v0.18.0); the palette finds it by
+    // "cast", "characters", "who is in this scene", and "locations".
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('show-scaffold')).toBe(ids.indexOf('show-stats') + 1);
+    const show = COMMAND_DATA.find((c) => c.id === 'show-scaffold');
+    expect(show).toMatchObject({ title: 'Show Scaffold', group: 'View' });
+    expect(show?.keys).toBeUndefined();
+    expect(show?.keywords).toEqual(['cast', 'characters', 'who is in this scene', 'locations']);
+    const scene = COMMAND_DATA.find((c) => c.id === 'scaffold-scene');
+    expect(scene).toMatchObject({ title: 'Scaffold for this scene', group: 'Go' });
+    expect(scene?.keys).toBeUndefined();
+    // The name is Scaffold, never another product's word for it.
+    expect(JSON.stringify(COMMAND_DATA)).not.toMatch(/x-?ray/i);
+  });
+
+  test('has Show the cast and Show the places in View, after Show Scaffold, with no keys', () => {
+    // Seeing-the-script design §5.5, §9.
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('scaffold-cast')).toBe(ids.indexOf('show-scaffold') + 1);
+    expect(ids.indexOf('scaffold-places')).toBe(ids.indexOf('show-scaffold') + 2);
+    const cast = COMMAND_DATA.find((c) => c.id === 'scaffold-cast');
+    const places = COMMAND_DATA.find((c) => c.id === 'scaffold-places');
+    expect(cast).toMatchObject({ title: 'Show the cast', group: 'View' });
+    expect(places).toMatchObject({ title: 'Show the places', group: 'View' });
+    expect(cast?.keys).toBeUndefined();
+    expect(places?.keys).toBeUndefined();
+  });
+
   test('has no key twice, and no key it cannot format', () => {
     const keys = COMMAND_DATA.flatMap((c) => (c.keys ? [c.keys.toLowerCase()] : []));
     expect(new Set(keys).size).toBe(keys.length);

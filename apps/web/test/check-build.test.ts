@@ -8,6 +8,7 @@ import {
   FIXTURE_MARKERS,
   iconNamesIn,
   LICENCE_FILES,
+  MARKDOWN_MARKERS,
   REQUIRED_FILES,
 } from '../scripts/check-build.mjs';
 
@@ -308,5 +309,38 @@ describe('checking the desktop build', () => {
     expect(problems).toMatch(/sw\.js/);
     expect(problems).toMatch(/workbox-1a2b\.js/);
     expect(problems).toMatch(/manifest\.webmanifest/);
+  });
+});
+
+// The app's shell names scripts for the browser to fetch early (`modulepreload` and `prefetch`).
+// A Fountain script never needs the Markdown worker, mode, or parser, so the shell names none of
+// them: a hint is a download all the same (Firefox fetches every prefetch).
+describe('checking what the app’s shell fetches early', () => {
+  async function shell(links: string[], files: Record<string, string>) {
+    const dir = await site(files);
+    const hints = links.map((href) => `<link rel="prefetch" as="script" href="/_nuxt/${href}">`);
+    await writeFile(join(dir, 'index.html'), `<html><head>${hints.join('')}</head></html>`);
+    return dir;
+  }
+  const check = async (dir: string) =>
+    (await checkBuild(dir, { fixture: false, icons: [] })).problems.join('\n');
+
+  test('passes when no hint names Markdown code', async () => {
+    expect(await check(await shell(['a.js'], { 'a.js': 'x', 'b.js': MARKDOWN_MARKERS[0] }))).toBe(
+      '',
+    );
+  });
+
+  test('finds the Markdown worker, or a chunk with the Markdown mode or parser, named early', async () => {
+    const problems = await check(
+      await shell(['markdown.worker-AbC1.js', 'c.js', 'd.js'], {
+        'markdown.worker-AbC1.js': 'x',
+        'c.js': `let a = "${MARKDOWN_MARKERS[0]}"`,
+        'd.js': `let b = "${MARKDOWN_MARKERS.at(-1)}"`,
+      }),
+    );
+    expect(problems).toMatch(/markdown\.worker-AbC1\.js/);
+    expect(problems).toMatch(/c\.js/);
+    expect(problems).toMatch(/d\.js/);
   });
 });

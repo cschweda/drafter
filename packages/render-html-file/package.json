@@ -1,6 +1,6 @@
 {
   "name": "@drafter/render-html-file",
-  "version": "0.20.0",
+  "version": "0.21.1",
   "description": "Drafter's HTML export: a script or a Markdown document as one self-contained, offline .html file, dark by default, with a light switch.",
   "license": "MIT",
   "type": "module",

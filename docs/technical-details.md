@@ -41,6 +41,7 @@ flowchart BT
   outline["@drafter/outline"]
   compare["@drafter/compare"]
   history["@drafter/history"]
+  cast["@drafter/cast"]
   render_pdf["@drafter/render-pdf"]
   render_html["@drafter/render-html"]
   render_html_file["@drafter/render-html-file"]
@@ -54,6 +55,7 @@ flowchart BT
   spell["@drafter/spell"]
   markdown["@drafter/markdown"]
   fountain["@drafter/fountain"]
+  cast --> web
   cm_fountain --> web
   compare --> web
   history --> web
@@ -70,6 +72,7 @@ flowchart BT
   notes --> outline
   layout --> compare
   outline --> history
+  outline --> cast
   layout --> render_pdf
   markdown --> render_pdf
   layout --> render_html
@@ -110,7 +113,8 @@ flowchart TD
 
 - **The editor** is CodeMirror 6. `@drafter/cm-fountain` keeps the parse in the editor’s state: `parse` once, then `reparse` on every change, which parses the full text again.
 - **The parse** is `@drafter/fountain`, a lossless parser: printing the tree gives back exactly the text it read, spaces and mistakes included. There is no second grammar for highlighting; the colors come from the same parse, drawn for the part of the script on screen.
-- **The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time.
+- **The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time, and lists every speech once, with its words.
+- **The cast** is `@drafter/cast`’s: who is in each scene and where it is, from the scene index, the parse, and the spelling dictionary’s answer to which names are ordinary words. It is worked out only while the Stats tab or Scaffold is shown, 300 ms after you stop typing, so the two always agree and a long script types as smoothly as before.
 - **The layout** is `@drafter/layout`, in a Web Worker (`layout.worker.ts`): 50 ms after you stop typing, the text goes to the worker, which parses it and paginates it by the template. A slower, older layout never replaces a newer one.
 - **The Script pane** is `@drafter/render-html`, which draws those pages as positioned HTML a screen reader can follow.
 - A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `@drafter/markdown` (`mdast-util-from-markdown` underneath), footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.

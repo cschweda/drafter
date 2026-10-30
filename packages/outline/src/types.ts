@@ -18,6 +18,16 @@ export interface Synopsis {
   span: Span;
 }
 
+/** One speech: a cue and the parts after it, as `TimingTally` groups them (seeing-the-script design §3.4). */
+export interface Speech {
+  /** The speaker's name as its unit's `speakers` (or the opening's or section's `spokenBy`) gives it. */
+  name: string;
+  /** The cue's block. */
+  block: number;
+  /** Its words spoken: both sides of a dual pair in full; a cue with only a parenthetical has 0. */
+  words: number;
+}
+
 /** One scene (Phase 2 design §5.1). */
 export interface Scene {
   kind: 'scene';
@@ -59,6 +69,8 @@ export interface Scene {
    * only a parenthetical has 0); both sides of a dual pair in full. Kept for a per-character view.
    */
   spokenBy: Record<string, number>;
+  /** One per cue in the scene, in order; a name's `words` add up to its `spokenBy`. */
+  speeches: Speech[];
   /** Null until a layout that matches the parse is given. */
   pages: ScenePages | null;
 }
@@ -81,6 +93,28 @@ export interface Section {
   eighths: number | null;
   /** The sum of its scenes' timing; nothing for a section with no scenes. */
   timing: Timing;
+  /**
+   * The speeches in its own stretch, from its heading up to its first child (a scene or a
+   * subsection) or the next section, up to `introEnd`: a cold open under an act's heading. A
+   * speech in one of its scenes is that scene's, not the section's.
+   */
+  speeches: Speech[];
+  /** The words each speaker says in its own stretch, by the name as first typed there. */
+  spokenBy: Record<string, number>;
+  /** Its own stretch's timing, tallied as a scene's is (not in `timing`, which is its scenes'). */
+  introTiming: Timing;
+}
+
+/**
+ * What is said in the preamble, before the first scene or section (a cold open with no act's
+ * heading over it), tallied as a scene's blocks are. With each section's and each scene's
+ * `speeches`, it holds every speech in the script once.
+ */
+export interface Opening {
+  speeches: Speech[];
+  /** By the name as first typed in the opening, as a scene's `spokenBy`. */
+  spokenBy: Record<string, number>;
+  timing: Timing;
 }
 
 export type OutlineItem = Scene | Section;
@@ -96,4 +130,6 @@ export interface SceneIndex {
   sections: Section[];
   /** Sections holding scenes and deeper sections. */
   tree: OutlineNode[];
+  /** The speeches before the first scene or section; null when no speech is there. */
+  opening: Opening | null;
 }

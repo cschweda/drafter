@@ -14,6 +14,7 @@ const packages = [
   'markdown',
   'compare',
   'history',
+  'cast',
   'archive',
   'spell',
   'outline',

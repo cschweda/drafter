@@ -93,6 +93,36 @@ test('runs a Markdown document’s commands only when the page says they apply',
   expect((await stored(page)).length).toBe(before);
 });
 
+test('View › Show stats opens the Stats tab beside the script', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  await expect
+    .poll(async () => (await menuItems(app)).some((i) => i.id === 'show-stats'))
+    .toBe(true);
+  await chooseMenuItem(app, ['View', 'Show stats']);
+  // A tab, not a window, in the pane not showing Source, with focus on its first heading.
+  const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+  await expect(stats).toBeVisible();
+  await expect(stats.getByRole('heading', { name: 'Overview', level: 2 })).toBeFocused();
+  await expect(page.getByRole('dialog', { name: 'Stats' })).toHaveCount(0);
+});
+
+test('View › Show Scaffold opens Scaffold beside the script', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  await expect
+    .poll(async () => (await menuItems(app)).some((i) => i.id === 'show-scaffold'))
+    .toBe(true);
+  // Go has Scaffold for this scene too, for the cursor's scene.
+  expect((await menuItems(app)).some((i) => i.id === 'scaffold-scene')).toBe(true);
+  await chooseMenuItem(app, ['View', 'Show Scaffold']);
+  // A tab in the pane not showing the Source, with focus on its page's heading.
+  const scaffold = page.getByRole('tabpanel', { name: 'Scaffold', exact: true });
+  await expect(scaffold).toBeVisible();
+  await expect(scaffold.getByRole('heading', { level: 2 })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Follow the cursor', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('follows what the page can do: undo, saving, and sprints', async ({ desktop }) => {
   const { app, page } = await desktop();
   const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;

@@ -7,7 +7,7 @@ import { DEFAULT_RATES, type Rates } from './time-format';
 /**
  * Running time (out-the-door design §3): where a script's two rates are kept, and how they are
  * set. The rates are the script's own, kept on its project in this browser (Call 9, as the export
- * options are), never in the text; the Stats window sets them, and every time shown reads them.
+ * options are), never in the text; the Stats tab sets them, and every time shown reads them.
  * How a time reads is `stats/time-format.ts`; the counting itself is `@drafter/outline`'s
  * (`TimingTally`, `estimateSeconds`).
  */

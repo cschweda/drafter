@@ -402,6 +402,7 @@ A slim column beside the Source pane: every scene as a block, top to bottom, its
 - **Phone:** not shown; the Outline's Timeline does the job there.
 - Not shown in focus mode.
 - **Since v0.15.0** the Structure strip ([its design](drafter-structure-strip-design.md)) shows every scene sized by length above the panes; the map reuses `structureStrip`'s geometry, and whether it is still wanted beside the strip, or becomes the strip with a "color by" choice and storyline rows, is Plan E's to decide (strip design §10).
+- **Since v0.21.0** (decided with Plan E's design, Call 38): there is no separate map. It becomes the Structure strip's **Color by** (INT/EXT, day or night, storyline, or scene color), built in Plan E's second part (v0.25.0); see the [seeing-the-script design §7](drafter-seeing-the-script-design.md#7-the-script-map-v0250).
 
 ## 15. The pacing view
 
@@ -435,6 +436,8 @@ A heading starts each section, and a short list of links at the top of the tab g
 - A grid of 120 scenes and 30 characters must open in under 200 ms on a mid-range laptop. Builder: draw only what's visible if it doesn't.
 
 **Running time (since v0.17.0).** The Stats window already gives the running time at each script's own **minutes a page** and an **estimate from the dialogue** at its own **spoken words a minute** (the [out-the-door design](drafter-out-the-door-design.md) §3), both rates kept per script on its project record. The tab keeps both figures and both rate fields as they are, and screen time can be given in minutes at the script's page rate as well as in pages. The scene index's `timing` and `spokenBy` (each scene's words spoken, by speaker) are what dialogue share and Scaffold's per-character figures read, so nothing is counted twice.
+
+**Since v0.21.0 (built in Plan E's first part).** The scene index lists each scene's **`speeches`** (who, the cue's block, and the words, a dual pair's sides in full and lyrics counted), with an **`opening`** for what's said before the first scene or section and each section's own stretch, so every speech has one owner and is counted once. The Stats window's own **`characterTable`** pass is retired: the tab's Characters table, the grid, and Scaffold all read one `Cast` from `@drafter/cast`. Two figures change meaning, as the changelog says: Words now count lyrics, and Scenes count every scene a character is in, speaking or silent, with the new **Speaks in** column keeping the old figure. Details are in the [seeing-the-script design](drafter-seeing-the-script-design.md) §3 and §4.
 
 ## 17. The Beat Board
 
@@ -655,11 +658,15 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 **Decided (2026-10-30, with the formats release): v0.20.0 is the formats release** (`drafter convert`, footnotes in Markdown documents, the tour's Fountain-first wording, and the README's Formats section), ahead of Plan E. Plan E ships in two parts, v0.21.0 (Scaffold, the Stats tab, and the character grid) and v0.23.0 (storylines, the Timeline, the map, and pacing), with **Export as HTML** ([its design](drafter-html-export-design.md)) as v0.22.0 between them. Plans F to H move to v0.24.0 to v0.26.0, their letters unchanged. Plan F, the Beat Board, is expected to become the **Workbook** the maintainer asked for (a story bible and scene cards beside the script), with its own design.
 
-### Plan E — v0.21.0 and v0.23.0: Seeing the script
+**Decided (2026-10-30, with Plan E's first part; the controller's ruling on the seeing-the-script design's Call 1, renumbered after the formats release): Plan E ships in two parts, with Drafts and Cuts and Novel between them** (the maintainer's order). **v0.21.0** is Plan E part 1 (Scaffold, the Stats tab, and the character grid); **v0.22.0** is Export as HTML, and EPUB, for reading a draft on an e-reader ([its design](drafter-html-export-design.md)); **v0.23.0** is **Drafts and Cuts**, numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind, to be designed; **v0.24.0** is **Novel**, a choice beside Screenplay and Stage play for drafting a novel in Markdown (chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release), to be designed; **v0.25.0** is Plan E part 2 (storylines, the strip's Color by, and pacing); and Plans F to H move to **v0.26.0 to v0.28.0**, their letters unchanged, F still expected to become the Workbook. The script map is the strip's **Color by** (Call 38), not a column of its own.
 
-**Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15); and **Scaffold** (below).
+### Plan E, part 1 — v0.21.0: Scaffold and the Stats tab
 
-**Scaffold** (named by the maintainer, 2026-10-29): who is in the script, and where, at a glance, in the spirit of an X-ray view of a film, in Drafter's own design and words.
+**Status:** built (2026-10-30). Axe checks every new view (each Stats section, the grid and its List, Scaffold's scene, character, and location pages, and the Cast and Places) in both themes at both widths on every project (Call 45, the v0.18.0 ruling carried forward); the screen-reader listening pass waits for the final steps. See `docs/DEFERRED.md`.
+
+**Design:** [the seeing-the-script design](drafter-seeing-the-script-design.md), with its plan in [`docs/plans/2026-10-30-seeing-the-script.md`](plans/2026-10-30-seeing-the-script.md) and its Calls in `docs/DECISIONS.md`. **Scope:** who is in each scene (§16's rule, with the spell dictionary), in a new package, `@drafter/cast`; the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, and the character grid with its long absences; and **Scaffold** (below), with its scene page, character and location pages, and the Cast and Places.
+
+**Scaffold** (named by the maintainer, 2026-10-29): who is in the script, and where, at a glance, in Drafter's own design and words.
 
 - **The panel**, beside the script, follows the cursor's scene: its characters (speaking or silent, by §16's rule for who is in a scene), each one's words and share of the scene's time, the location and time of day, the scene's pages and estimated minutes, anyone first seen here, and a link to each character's other scenes.
 - **A character page:** every scene they are in, their screen time in pages and in minutes at the script's rate, their dialogue share, their first and last appearance, their longest absence, the characters they share scenes with, the locations they visit, and every line they speak, each a link to its place.
@@ -668,14 +675,22 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 **Done when:**
 
-- Storylines can be tagged, renamed (one undo across every note), colored, and seen in the Outline, cards, Timeline, margin, and map.
-- The map, the Timeline, the grid, and the pacing table work fully by keyboard, and each chart has its table.
 - Presence and screen time match fixtures, including "Will" and "Hope".
-- The grid meets its time budget.
+- The grid meets its time budget, and it and its List work fully by keyboard.
 - Scaffold's figures match the Stats tab's and the scene index's on fixtures, and its panel and its character and location pages work fully by keyboard.
-- axe passes on every Stats section, the map, the Timeline, and Scaffold, in both themes at both widths.
+- axe passes on every Stats section, the grid, and Scaffold, in both themes at both widths.
 
-### Plan F — v0.24.0: The Beat Board
+### Plan E, part 2 — v0.25.0: Storylines, the map, and pacing
+
+**Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14), as the Structure strip's **Color by** (Call 38); the pacing view and its guides (§15), Drafter's own and generic (the controller overruled a fifteen-mark guide); and the Stats tab's Storylines and Pacing sections (§16).
+
+**Done when:**
+
+- Storylines can be tagged, renamed (one undo across every note), colored, and seen in the Outline, cards, Timeline, margin, and the strip's Color by.
+- The strip's Color by, the Timeline, and the pacing table work fully by keyboard, and each chart has its table.
+- axe passes on the Storylines and Pacing sections, the Timeline, the margin marks, and the strip's Color by, in both themes at both widths.
+
+### Plan F — v0.26.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -686,7 +701,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.25.0: Reader notes
+### Plan G — v0.27.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -697,7 +712,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.26.0: Reference
+### Plan H — v0.28.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 
@@ -791,3 +806,7 @@ Made with version history (2026-10-30):
 Made with the imports and Markdown out (2026-10-30):
 
 - **This design, §22:** the imports release is listed as built, as v0.19.0 after version history, with its own plan; Plans E to H stay v0.20.0 to v0.23.0. **Architecture §13 and the README:** Highland and Fade In import, Open as screenplay, and Export as Markdown among what's built (the status line, What you can do today, the Phase 2 roadmap, and the Packages table with `@drafter/archive`), and "Next" names Plan E, "Seeing the script", with Scaffold (v0.20.0), then Plans F to H. **Phase 1 design:** its Phase 3 line keeps Celtx only. **Technical design §6.3 and §14:** OSF read through the Final Draft tree, and the zip rules. **Clean room:** the public descriptions of the `.highland` and `.fadein` packages and the published OSF specification join the permitted sources. **Technical details:** `@drafter/archive`, and Markdown among the exports.
+
+Made with Plan E, part 1 (2026-10-30):
+
+- **This design, §14, §16, and §22:** §14 notes that the map becomes the Structure strip's Color by (Call 38); §16 notes the scene index's `speeches` and `opening` and the retired `characterTable`; §22 splits Plan E into part 1 (v0.21.0, built) and part 2 (v0.25.0), with the done-when divided between them, and a "Decided" paragraph puts Export as HTML (v0.22.0), **Drafts and Cuts** (v0.23.0), and **Novel** (v0.24.0) between the parts and Plans F to H at v0.26.0 to v0.28.0. **Architecture §13 and the README:** Scaffold, the Stats tab, and the character grid among what's built (the status line, What you can do today, the Phase 2 roadmap, the Packages table with `@drafter/cast`, and Design documents), and "Next" names Export as HTML, Drafts and Cuts, Novel, Plan E part 2, then Plans F to H. **Technical details:** `@drafter/cast`. **The seeing-the-script design and plan:** renumbered the same way, with a note saying so.

@@ -165,7 +165,7 @@ export default defineNuxtConfig({
           replacement: `${PACKAGES}/markdown/src/$1.ts`,
         },
         {
-          find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|outline|render-html|render-html-file|render-pdf|render-text|spell|templates)$/,
+          find: /^@drafter\/(archive|cast|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|outline|render-html|render-html-file|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

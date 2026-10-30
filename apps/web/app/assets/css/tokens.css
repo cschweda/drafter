@@ -97,3 +97,23 @@
   --diff-del-sign: #8f4700;
   --diff-fold-bg: #eef1f5;
 }
+
+/* The Stats tab's charts: the character-by-scene grid's shades and the text on them (seeing-the-
+   script design §8.2). The values are app/stats/chart-colors.ts's CHART_TOKENS, which
+   test/chart-colors.test.ts checks for contrast and checks these against. */
+:root,
+.dark {
+  --grid-shade-1: #6fa8c8;
+  --grid-shade-2: #8cc0dc;
+  --grid-shade-3: #acd6ec;
+  --grid-shade-4: #d3ecf8;
+  --grid-ink: #0f1013;
+}
+
+.light {
+  --grid-shade-1: #3f7a9e;
+  --grid-shade-2: #2c6489;
+  --grid-shade-3: #1d4c6e;
+  --grid-shade-4: #123650;
+  --grid-ink: #ffffff;
+}

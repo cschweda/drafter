@@ -46,6 +46,44 @@ describe('sceneIds', () => {
     expect(idOf(state, 'INT. C')).toBe(c);
   });
 
+  it('leaves the id with its heading when a heading is pasted at its start', () => {
+    let state = stateOf(SCRIPT);
+    const known = new Set(state.field(sceneIds).values());
+    const b = idOf(state, 'INT. B');
+    // A whole scene pasted at the first character of INT. B: the new heading is the one at that
+    // place now, and it is new; INT. B, moved on, is still itself.
+    state = step(state, {
+      changes: { from: at(state, 'INT. B'), insert: 'INT. NEW - DAY\n\nNew.\n\n' },
+    });
+    expect(idOf(state, 'INT. B')).toBe(b);
+    const fresh = idOf(state, 'INT. NEW');
+    expect(fresh).toBeDefined();
+    expect(known.has(fresh as string)).toBe(false);
+  });
+
+  it('leaves the id with its heading when a scene is pasted at the end of the line before', () => {
+    let state = stateOf(SCRIPT);
+    const a = idOf(state, 'INT. A');
+    const b = idOf(state, 'INT. B');
+    state = step(state, {
+      changes: { from: at(state, 'One.') + 'One.'.length, insert: '\n\nINT. NEW - DAY\n\nNew.' },
+    });
+    expect(idOf(state, 'INT. A')).toBe(a);
+    expect(idOf(state, 'INT. B')).toBe(b);
+    expect([a, b]).not.toContain(idOf(state, 'INT. NEW'));
+  });
+
+  it('keeps two identical headings apart', () => {
+    let state = stateOf('INT. A - DAY\n\nOne.\n\nINT. A - DAY\n\nTwo.\n');
+    const first = sceneIdAt(state, 0);
+    const second = sceneIdAt(state, at(state, 'One.') + 'One.\n\n'.length);
+    expect(first).not.toBe(second);
+    state = step(state, { changes: { from: at(state, 'Two.'), insert: 'Still ' } });
+    state = step(state, { changes: { from: 0, insert: 'INT. Z - DAY\n\nZed.\n\n' } });
+    expect(sceneIdAt(state, at(state, 'INT. A'))).toBe(first);
+    expect(sceneIdAt(state, at(state, 'One.') + 'One.\n\n'.length)).toBe(second);
+  });
+
   it("keeps a renamed heading's id", () => {
     let state = stateOf(SCRIPT);
     const a = idOf(state, 'INT. A');

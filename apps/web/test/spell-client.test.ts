@@ -136,6 +136,41 @@ describe('createSpellClient', () => {
     expect(await pending).toEqual([]);
   });
 
+  test('asks which names are words, and a failed or ended worker answers null', async () => {
+    const worker = fakeWorker();
+    const client = createSpellClient(
+      worker,
+      () => {},
+      () => {},
+    );
+    const asked = client.words(['WILL', 'ZORBLAX'], 'en-GB');
+    const request = worker.posted.at(-1);
+    expect(request).toMatchObject({ type: 'words', names: ['WILL', 'ZORBLAX'], language: 'en-GB' });
+    const seq = request?.type === 'words' ? request.seq : 0;
+    // Another request's answer isn't this one's.
+    worker.reply({ type: 'words', seq: seq + 100, words: [] });
+    worker.reply({ type: 'words', seq, words: ['WILL'] });
+    expect(await asked).toEqual(['WILL']);
+
+    const pending = client.words(['HOPE'], 'en-US');
+    worker.reply({ type: 'failed', message: 'offline' });
+    expect(await pending).toBeNull();
+    // Failed: answered at once, with nothing posted.
+    const count = worker.posted.length;
+    expect(await client.words(['HOPE'], 'en-US')).toBeNull();
+    expect(worker.posted).toHaveLength(count);
+
+    const other = createSpellClient(
+      fakeWorker(),
+      () => {},
+      () => {},
+    );
+    const waiting = other.words(['HOPE'], 'en-US');
+    other.destroy();
+    expect(await waiting).toBeNull();
+    expect(await other.words(['HOPE'], 'en-US')).toBeNull();
+  });
+
   test('reports every failure, even one after another', () => {
     const worker = fakeWorker();
     const states: SpellState[] = [];

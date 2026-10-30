@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { EditorView } from '@codemirror/view';
+import { installTestCastProbe } from '~/cast/probe-hook';
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
@@ -54,9 +55,9 @@ function onEscape(event: KeyboardEvent) {
 // The editor is parked here whenever the Source tab isn't showing.
 const { view, doc, kind } = useEditor();
 
-// A Markdown document has no scenes or notes, so no Outline, Cards, or Notes tab (Phase 2 design
-// §5.7): a pane showing one shows another tab.
-const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes'];
+// A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
+// design §5.7; seeing-the-script design §10): a pane showing one shows another tab.
+const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes', 'scaffold'];
 watch(
   kind,
   (now) => {
@@ -147,6 +148,7 @@ onMounted(() => {
   // Safari would type into the script with focus anywhere else (decided 2026-10-29).
   removeSelectionGuard = guardEditorSelection(view.contentDOM);
   if (!view.dom.isConnected) holder.value?.append(view.dom);
+  installTestCastProbe();
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
@@ -196,7 +198,6 @@ onBeforeUnmount(() => {
     <SceneDetailsDialog />
     <NewNoteDialog />
     <SettingsDialog />
-    <StatsDialog />
     <HistoryDialog />
     <SceneHistoryDialog />
     <AboutDialog />

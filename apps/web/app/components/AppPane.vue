@@ -12,6 +12,8 @@ import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
+import { isBackKey } from '~/scaffold/keys';
+import { scaffoldBack } from '~/scaffold/show';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import {
@@ -51,7 +53,8 @@ function onFixAll() {
 }
 const suggestions = computed(() => problems.value.filter((p) => p.severity === 'info').length);
 // The core tabs (no Outline in a Markdown document), then one slot for another tab (Cards, Notes,
-// or a module's), then More with the rest, Cards and Notes first (Phase 2 design §5.8).
+// Stats, Scaffold, or a module's), then More with the rest, Cards, Notes, Stats, and Scaffold first
+// (Phase 2 design §5.8). A Markdown document's only view tab is Stats.
 const moduleTabs = useModuleTabs();
 const last = useTabSlot();
 const core = computed(() => {
@@ -116,6 +119,13 @@ const barred = computed(
  * that scroll a focused panel (F6 puts focus there) scroll the tree, as they scrolled the panel.
  */
 function onPanelKeydown(event: KeyboardEvent) {
+  // Scaffold's Back key, heard anywhere in its panel, the panel itself too (design §5.1). Alt+Left
+  // is the browser's Back as well: the page stays where it is.
+  if (props.selected === 'scaffold' && !event.defaultPrevented && isBackKey(event)) {
+    event.preventDefault();
+    scaffoldBack();
+    return;
+  }
   if (!barred.value || event.target !== event.currentTarget || event.defaultPrevented) return;
   if (event.altKey || event.ctrlKey || event.metaKey) return;
   const panel = event.currentTarget as HTMLElement;
@@ -270,6 +280,12 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <template v-else-if="props.selected === 'notes'">
         <NotesSlim />
       </template>
+      <template v-else-if="props.selected === 'stats'">
+        <StatsSlim />
+      </template>
+      <template v-else-if="props.selected === 'scaffold'">
+        <ScaffoldSlim />
+      </template>
       <template v-else-if="props.selected === 'compare'">
         <CompareSlim />
       </template>
@@ -344,6 +360,8 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <OutlinePane v-else-if="props.selected === 'outline'" />
       <CardsPane v-else-if="props.selected === 'cards'" />
       <NotesPane v-else-if="props.selected === 'notes'" />
+      <StatsPane v-else-if="props.selected === 'stats'" />
+      <ScaffoldPane v-else-if="props.selected === 'scaffold'" />
       <ComparePane v-else-if="props.selected === 'compare'" />
       <DeletedPane v-else-if="props.selected === 'deleted'" />
       <ProblemsPane v-else />

@@ -44,7 +44,7 @@ describe('the Compare tab', () => {
     // The pane showing it has it in its slot, and More has the rest.
     const showing = tabRow(TABS, open, 'compare', 'cards');
     expect(ids(showing.row).at(-1)).toBe('compare');
-    expect(ids(showing.more)).toEqual(['cards', 'notes']);
+    expect(ids(showing.more)).toEqual(['cards', 'notes', 'stats', 'scaffold']);
     // Closed: it is in no row and no More, and the pane that showed it shows a core tab.
     const closed = tabRow(TABS, viewTabs('fountain'), 'source', 'compare');
     expect(ids(closed.row)).not.toContain('compare');

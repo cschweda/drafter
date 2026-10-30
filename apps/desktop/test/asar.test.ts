@@ -10,6 +10,7 @@ const GOOD = [
   '/web',
   '/web/index.html',
   '/web/_headers',
+  '/web/icon-512.png',
   '/web/_nuxt/entry.abc.js',
   '/web/docs/saving/index.html',
 ];

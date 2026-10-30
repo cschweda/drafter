@@ -80,11 +80,13 @@ export const sceneIds: StateField<ReadonlyMap<number, string>> = StateField.defi
       if (id) claim(to, id);
     }
     const { changes } = transaction;
-    // First every heading whose first character is still there; then those retyped from the start.
+    // First every heading whose first character is still there, mapped forward, so text inserted at
+    // a heading's start (a whole heading pasted there) goes before it and the heading keeps its id;
+    // then those retyped from the start.
     const waiting: Array<[number, string]> = [];
     for (const [offset, id] of ids) {
       if (movedFrom.has(offset)) continue;
-      if (!claim(changes.mapPos(offset, -1, MapMode.TrackAfter), id)) waiting.push([offset, id]);
+      if (!claim(changes.mapPos(offset, 1, MapMode.TrackAfter), id)) waiting.push([offset, id]);
     }
     for (const [offset, id] of waiting) {
       if (!claim(changes.mapPos(offset, -1, MapMode.TrackDel), id)) {

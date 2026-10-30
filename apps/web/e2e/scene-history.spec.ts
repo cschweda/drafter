@@ -373,6 +373,7 @@ test.describe("the strip's block menu", () => {
     await expect(openMenu(page).getByRole('menuitem')).toHaveText([
       'Go to',
       'History of this scene…',
+      'Scaffold for this scene',
     ]);
     await page.keyboard.press('Escape');
     await expect(openMenu(page)).toHaveCount(0);

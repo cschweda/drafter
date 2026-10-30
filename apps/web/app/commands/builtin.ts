@@ -50,6 +50,7 @@ import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
 import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
+import { showScaffold } from '~/scaffold/show';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
@@ -60,8 +61,8 @@ import { openSpellMenu } from '~/spell/menu';
 import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
 import { SPELLING_HEADING_ID } from '~/spell/rows';
 import { useSpell } from '~/spell/use-spell';
-import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
+import { showStats } from '~/stats/tab';
 import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
 import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
@@ -533,6 +534,20 @@ export function registerBuiltinCommands(): void {
         });
       },
     },
+    // Scaffold for this scene (§5.6): the cursor's scene, pinned, so it stays as the cursor moves.
+    'scaffold-scene': {
+      enabled: () => hasScript() && isFountain() && !!sceneAtCursor(),
+      why: () =>
+        isMarkdown()
+          ? NOT_FOR_MARKDOWN
+          : !sceneAtCursor()
+            ? 'The cursor isn’t in a scene.'
+            : undefined,
+      run: () => {
+        const scene = sceneAtCursor();
+        if (scene) showScaffold({ kind: 'scene', pinned: useOutline().idOf(scene) });
+      },
+    },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
     'next-misspelling': stepSpelling(1),
@@ -611,11 +626,28 @@ export function registerBuiltinCommands(): void {
         sprint.hidden.value = false;
       },
     },
-    // Writing stats (docs/drafter-stats-design.md §4): the Counts panel and the Drafter menu open it too.
+    // The Stats tab (seeing-the-script design §4.1), beside the Source: the Counts panel's Stats…
+    // and the Drafter menu open it too.
     'show-stats': {
-      run: () => {
-        statsOpen.value = true;
-      },
+      run: () => showStats(),
+    },
+    // Scaffold (seeing-the-script design §5.6), beside the Source too. A Markdown document has no
+    // scenes, so no Scaffold.
+    'show-scaffold': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => showScaffold(),
+    },
+    // Scaffold's Cast and Places (§5.5), from the palette.
+    'scaffold-cast': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => showScaffold({ kind: 'cast' }),
+    },
+    'scaffold-places': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => showScaffold({ kind: 'places' }),
     },
     'switch-theme': {
       run: () => {

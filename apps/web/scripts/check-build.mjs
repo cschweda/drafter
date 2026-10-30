@@ -1,5 +1,5 @@
 // Checks the generated site after a build, so a mistake in the build fails it rather than shipping:
-// - the test module (the fixture) and the history probe are in a build made with
+// - the test module (the fixture) and the history and cast probes are in a build made with
 //   DRAFTER_TEST_MODULES=1 and in no other;
 // - every icon the app's own `.ts` files name is in the icon bundle (the bundle is made from a
 //   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so);
@@ -8,15 +8,23 @@
 //   and the licence files the Third-party licences page links (so its links work offline too),
 //   caches nothing else, and has no runtime caching (Phase 1 design §11);
 // - the spellchecker's dictionaries and the licence files that go with them are in the build;
-// - a build for the desktop app (DRAFTER_DESKTOP=1) has no service worker and no manifest at all.
+// - a build for the desktop app (DRAFTER_DESKTOP=1) has no service worker and no manifest at all;
+// - the app's shell names no Markdown code for the browser to fetch early, since a Fountain script
+//   never needs it (a test probe imported from a plugin once put the editor's chunk, and with it
+//   the Markdown worker, among the shell's prefetch hints).
 // Run as `node scripts/check-build.mjs .output/public`.
 import { access, readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TOUR_ICONS } from './tour-icons.mjs';
 
-/** Text that is in a test build alone: the fixture's toolbar button and its command, and the history probe (`app/history/probe.ts`). */
-export const FIXTURE_MARKERS = ['Count scenes', 'Fixture: add a note', 'drafterHistoryProbe'];
+/** Text that is in a test build alone: the fixture's toolbar button and its command, and the history and cast probes (`app/history/probe.ts`, `app/cast/probe.ts`). */
+export const FIXTURE_MARKERS = [
+  'Count scenes',
+  'Fixture: add a note',
+  'drafterHistoryProbe',
+  'drafterCastProbe',
+];
 
 /**
  * The names of the `i-lucide-*` icons in `source`, without the prefix.
@@ -26,6 +34,12 @@ export const FIXTURE_MARKERS = ['Count scenes', 'Fixture: add a note', 'drafterH
 export function iconNamesIn(source) {
   return [...source.matchAll(/\bi-lucide-([a-z0-9-]+)/g)].map((match) => match[1]);
 }
+
+/**
+ * Text that is in the Markdown mode (`ATXHeading`, `KeyframeList`) or the Markdown parser
+ * (`codeFenced`, `htmlFlow`) alone; e2e/markdown.spec.ts looks for the same words in what a page loads.
+ */
+export const MARKDOWN_MARKERS = ['ATXHeading', 'KeyframeList', 'codeFenced', 'htmlFlow'];
 
 /** Files in the site the service worker leaves out: the social image, and the hosting fallbacks. */
 export const NOT_PRECACHED = ['og-image.png', '200.html', '404.html'];
@@ -116,6 +130,40 @@ async function precacheProblems(siteDir) {
     problems.push(
       'The service worker has runtime caching: it should cache only what it precaches.',
     );
+  }
+  return problems;
+}
+
+/**
+ * The scripts the app's shell (`index.html`) tells the browser to fetch early that are Markdown
+ * code: the Markdown worker, or a chunk with the Markdown mode or parser in it.
+ * @param {string} siteDir
+ * @returns {Promise<string[]>}
+ */
+async function shellProblems(siteDir) {
+  let shell;
+  try {
+    shell = await readFile(join(siteDir, 'index.html'), 'utf8');
+  } catch {
+    return [];
+  }
+  const problems = [];
+  for (const [tag] of shell.matchAll(/<link\b[^>]*>/g)) {
+    if (!/\brel="(?:modulepreload|prefetch|preload)"/.test(tag)) continue;
+    const href = /\bhref="\/([^"]+\.js)"/.exec(tag)?.[1];
+    if (!href) continue;
+    let text = '';
+    try {
+      text = await readFile(join(siteDir, href), 'utf8');
+    } catch {}
+    if (
+      /(?:^|\/)markdown\.worker-[^/]*\.js$/.test(href) ||
+      MARKDOWN_MARKERS.some((m) => text.includes(m))
+    ) {
+      problems.push(
+        `The app’s shell fetches ${href} early, which is Markdown code a Fountain script never needs.`,
+      );
+    }
   }
   return problems;
 }
@@ -216,6 +264,7 @@ export async function checkBuild(siteDir, expected) {
     }
   }
 
+  problems.push(...(await shellProblems(siteDir)));
   if (expected.precache) problems.push(...(await precacheProblems(siteDir)));
   if (expected.desktop) problems.push(...(await desktopProblems(siteDir)));
   return { problems };

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
-import { setText, showSource } from './modules';
+import { runCommand, setText, showSource } from './modules';
 
 // Phone sizes (Phase 1 design §12): the toolbar is icons below 1024px, and the template chip does not
 // fit among them, so the app menu holds the template choice. The icon toolbar plus the app menu is
@@ -370,5 +370,30 @@ test.describe('the Spelling button', () => {
     // The cursor is on the word: the keyboard's way to the menu is there instead.
     await page.keyboard.press('ControlOrMeta+Period');
     await expect(menu(page)).toBeVisible();
+  });
+});
+
+// The Stats tab (seeing-the-script design §4.1) at 320px: the one pane's tab, its Characters table
+// scrolling sideways in its own region, so the page itself never does.
+test.describe('the Stats tab at 320px', () => {
+  test('fits, with the Characters table scrolling in its own region', async ({ page }) => {
+    await runCommand(page, 'Show stats');
+    const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+    await expect(stats.getByRole('heading', { name: 'Overview', level: 2 })).toBeFocused();
+    const table = stats.getByRole('table', { name: /^Characters/ });
+    await expect(table).toBeVisible();
+    // The table's own region, which holds it.
+    const region = table.locator('xpath=..');
+    await expect(region).toHaveAttribute('role', 'region');
+    const fit = await region.evaluate((el) => ({
+      page: document.documentElement.scrollWidth,
+      right: el.getBoundingClientRect().right,
+      scrolls: el.scrollWidth > el.clientWidth,
+      focusable: el.tabIndex === 0,
+    }));
+    expect(fit.page).toBeLessThanOrEqual(320);
+    expect(fit.right).toBeLessThanOrEqual(320);
+    expect(fit.scrolls).toBe(true);
+    expect(fit.focusable).toBe(true);
   });
 });
