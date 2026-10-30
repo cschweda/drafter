@@ -112,4 +112,29 @@ describe('Scaffold’s session', () => {
     // The oldest went first: the first page left is the eleventh opened.
     expect(scaffold.page.value).toEqual({ kind: 'character', key: 'C9' });
   });
+
+  test('before the first scene, Follow the cursor stays on: there is nothing to pin', () => {
+    const { scaffold, followed } = session(null);
+    scaffold.follow.value = false;
+    expect(scaffold.follow.value).toBe(true);
+    expect(scaffold.page.value).toEqual({ kind: 'scene', pinned: null });
+    // So the cursor moving into a scene is still followed.
+    followed.value = 's2';
+    expect(heading(scaffold.sceneShown.value)).toBe('EXT. QUAY - NIGHT');
+  });
+
+  test('opening the scene page unpinned always follows the cursor', () => {
+    const { scaffold, followed } = session('s1');
+    scaffold.open({ kind: 'scene', pinned: 's3' });
+    expect(scaffold.follow.value).toBe(false);
+    // Show Scaffold: back to following, the cursor's scene.
+    scaffold.open({ kind: 'scene', pinned: null });
+    expect(scaffold.follow.value).toBe(true);
+    expect(heading(scaffold.sceneShown.value)).toBe('INT. CUSTOMS SHED - DAY');
+    // On the same page already, it stays on.
+    scaffold.open({ kind: 'scene', pinned: null });
+    expect(scaffold.follow.value).toBe(true);
+    followed.value = 's3';
+    expect(heading(scaffold.sceneShown.value)).toBe('INT. NET LOFT - NIGHT');
+  });
 });

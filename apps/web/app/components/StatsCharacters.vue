@@ -22,12 +22,13 @@ const scrolls = useScrollsSideways(region);
     <p v-if="!rows" class="note">Counting…</p>
     <p v-else-if="rows.length === 0" class="note">No one speaks yet. A character’s cue starts their row.</p>
     <template v-else>
-      <!-- Its own scrolling region on a narrow screen, which the keyboard can scroll too. -->
+      <!-- Its own scrolling region on a narrow screen, which the keyboard can scroll too; a named
+           region only while it scrolls. -->
       <div
         ref="region"
         class="scroll"
-        role="region"
-        aria-labelledby="stats-characters-caption"
+        :role="scrolls ? 'region' : undefined"
+        :aria-labelledby="scrolls ? 'stats-characters-caption' : undefined"
         :tabindex="scrolls ? 0 : undefined"
       >
         <table class="tally">

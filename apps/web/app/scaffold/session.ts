@@ -55,7 +55,9 @@ export function createScaffold(sources: ScaffoldSources): ScaffoldSession {
   const follow = ref(true);
   const history = shallowRef<ScaffoldPage[]>([]);
   return effectScope(true).run(() => {
-    // Off, the scene page keeps the scene it shows; on, it shows the cursor's again.
+    // Off, the scene page keeps the scene it shows; on, it shows the cursor's again. Before the
+    // first scene there is nothing to keep, so following stays on (off, the page would be stuck
+    // with no scene).
     watch(
       follow,
       (on) => {
@@ -63,13 +65,19 @@ export function createScaffold(sources: ScaffoldSources): ScaffoldSession {
         if (now.kind !== 'scene') return;
         if (on && now.pinned !== null) page.value = { kind: 'scene', pinned: null };
         if (!on && now.pinned === null) {
-          page.value = { kind: 'scene', pinned: sources.followed.value };
+          const shown = sources.followed.value;
+          if (shown === null) follow.value = true;
+          else page.value = { kind: 'scene', pinned: shown };
         }
       },
       { flush: 'sync' },
     );
     const open = (next: ScaffoldPage) => {
-      if (samePage(next, page.value)) return;
+      if (samePage(next, page.value)) {
+        // Show Scaffold on the scene page it already shows: following, whatever it was.
+        if (next.kind === 'scene') follow.value = next.pinned === null;
+        return;
+      }
       // The first page opened (Show Scaffold's return to following, a pinned scene) goes on the
       // list too, so Back returns to the page shown before it.
       history.value = [...history.value, page.value].slice(-BACK_LIMIT);

@@ -80,6 +80,27 @@ async function showFerry(page: Page) {
   await expect(scaffold(page)).toBeVisible();
 }
 
+/**
+ * Replaces the script's text from the first `from` up to the first `to` (or inserts at `from`, with
+ * no `to`), through the editor itself (CodeMirror's link from its content to its view, which
+ * `EditorView.findFromDOM` reads), so focus stays where it is, as another edit would leave it.
+ */
+async function editScript(page: Page, from: string, to: string, insert: string) {
+  await page.evaluate(
+    ([a, b, text]) => {
+      type View = { state: { doc: { toString(): string } }; dispatch(spec: unknown): void };
+      const content = document.querySelector('.cm-content') as unknown as {
+        cmTile: { root: { view: View } };
+      };
+      const view = content.cmTile.root.view;
+      const doc = view.state.doc.toString();
+      const start = doc.indexOf(a);
+      view.dispatch({ changes: { from: start, to: b ? doc.indexOf(b) : start, insert: text } });
+    },
+    [from, to, insert] as const,
+  );
+}
+
 /** The text of the line holding the cursor, once the editor has focus (it keeps its selection). */
 async function cursorLine(page: Page) {
   await editor(page).focus();
@@ -258,26 +279,66 @@ test.describe('Scaffold', () => {
       const go = scaffold(page).getByRole('button', { name: 'Go to scene 2' });
       await go.focus();
       // The deck scene goes, from outside Scaffold (as another edit would), focus staying on Go to.
-      await page.evaluate(() => {
-        type View = {
-          state: { doc: { toString(): string } };
-          dispatch(spec: unknown): void;
-        };
-        // CodeMirror's own link from its content to its view (what `EditorView.findFromDOM` reads).
-        const content = document.querySelector('.cm-content') as unknown as {
-          cmTile: { root: { view: View } };
-        };
-        const view = content.cmTile.root.view;
-        const text = view.state.doc.toString();
-        const from = text.indexOf('EXT. FERRY DECK');
-        const to = text.indexOf('INT. HARBOUR OFFICE');
-        view.dispatch({ changes: { from, to } });
-      });
+      await editScript(page, 'EXT. FERRY DECK', 'INT. HARBOUR OFFICE', '');
       await expect(
         scaffold(page).getByText('That scene isn’t in the script any more.'),
       ).toBeVisible();
       await expect(go).toHaveCount(0);
       await expect(heading(page)).toBeFocused();
+    });
+
+    test('a heading pasted above the shown scene never shows another scene’s people', async ({
+      page,
+    }) => {
+      await showFerry(page);
+      await cursorOn(page, 'The horn sounds.');
+      await runCommand(page, 'Scaffold for this scene');
+      await expect(heading(page)).toHaveText(DECK);
+      await expect(people(page).getByRole('rowheader')).toHaveText(['BRAM']);
+      // Every frame for a second and a half, from before the paste, while the cast catches up.
+      const seen = page.evaluate(
+        () =>
+          new Promise<Array<[string, string]>>((resolve) => {
+            const out: Array<[string, string]> = [];
+            const end = performance.now() + 1500;
+            const look = () => {
+              const panel = document.getElementById('panel-scaffold');
+              const h2 = panel?.querySelector('h2')?.textContent ?? '';
+              const names = [...(panel?.querySelectorAll('tbody th') ?? [])]
+                .map((th) => th.textContent?.trim() ?? '')
+                .join('|');
+              out.push([h2, names]);
+              if (performance.now() < end) requestAnimationFrame(look);
+              else resolve(out);
+            };
+            look();
+          }),
+      );
+      // A whole scene pasted at the deck's first character.
+      await editScript(page, 'EXT. FERRY DECK', '', 'INT. ATTIC - DAY\n\nDust on the trunks.\n\n');
+      const frames = await seen;
+      expect(frames.length).toBeGreaterThan(10);
+      // The page keeps the deck, and no frame puts the deck's people under another heading.
+      for (const [h2, names] of frames) {
+        if (!h2.includes('FERRY DECK')) expect(names).not.toContain('BRAM');
+      }
+      await expect(heading(page)).toHaveText('Scene 3 · EXT. FERRY DECK - NIGHT');
+      await expect(people(page).getByRole('rowheader')).toHaveText(['BRAM']);
+    });
+
+    test('Follow the cursor stays on before the first scene, and Show Scaffold follows', async ({
+      page,
+    }) => {
+      await showFerry(page);
+      await cursorOn(page, 'A gull cries over the mud.');
+      await expect(scaffold(page).getByText('The cursor is before the first scene.')).toBeVisible();
+      // Nothing to keep: following stays on.
+      await followButton(page).click();
+      await expect(followButton(page)).toHaveAttribute('aria-pressed', 'true');
+      await runCommand(page, 'Show Scaffold');
+      await expect(followButton(page)).toHaveAttribute('aria-pressed', 'true');
+      await cursorOn(page, 'Are we nearly there?');
+      await expect(heading(page)).toHaveText(CABIN);
     });
 
     test('Scaffold for this scene from the palette pins the cursor’s scene', async ({ page }) => {
