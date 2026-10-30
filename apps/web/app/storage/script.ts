@@ -143,7 +143,7 @@ export interface ScriptSession {
    * open.
    */
   keepOnProject(
-    change: (project: Project) => Pick<Partial<Project>, 'exportOptions'>,
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing'>,
   ): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
@@ -745,7 +745,7 @@ function create(): ScriptSession {
   }
 
   async function keepOnProject(
-    change: (project: Project) => Pick<Partial<Project>, 'exportOptions'>,
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing'>,
   ) {
     const current = project.value;
     if (!current || guard.readOnly.value) return;
@@ -885,8 +885,9 @@ function create(): ScriptSession {
               moved = true;
               throw new MovedOn();
             }
-            // The export options chosen on the sample are the writer's choices: they go with the text.
-            const { exportOptions } = project.value;
+            // The export options and rates chosen on the sample are the writer's choices: they go
+            // with the text.
+            const { exportOptions, timing } = project.value;
             const created = await createProject({
               source: savedText,
               fileName,
@@ -895,6 +896,7 @@ function create(): ScriptSession {
               ...format,
               ...(handleId ? { fsHandleId: handleId } : {}),
               ...(exportOptions ? { exportOptions } : {}),
+              ...(timing ? { timing } : {}),
             });
             await setSavedText(created.id, savedText);
             made = created.id;
@@ -951,6 +953,7 @@ function create(): ScriptSession {
             savedAt,
             ...(handleId ? { fsHandleId: handleId } : {}),
             ...(stored.exportOptions ? { exportOptions: stored.exportOptions } : {}),
+            ...(stored.timing ? { timing: stored.timing } : {}),
           });
           await setSavedText(created.id, savedText);
           return created.id;

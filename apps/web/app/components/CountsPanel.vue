@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { estimateSeconds } from '@drafter/outline';
 import { useEditor } from '~/editor/session';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
@@ -10,6 +11,8 @@ import {
   SPRINT_MINUTES,
   useSprint,
 } from '~/stats/sprint';
+import { ESTIMATE_LABEL, pageRatePhrase, ratesOf } from '~/stats/timing';
+import { useScript } from '~/storage/script';
 
 defineProps<{ id: string }>();
 const emit = defineEmits<{ close: []; stats: [] }>();
@@ -19,6 +22,8 @@ const { counts, known } = useCounts();
 const { goal, progress, canSet, locked, setGoal } = useGoal();
 
 const markdown = computed(() => kind.value === 'markdown');
+const { project } = useScript();
+const rates = computed(() => ratesOf(project.value));
 const root = ref<HTMLElement>();
 onMounted(() => root.value?.focus());
 
@@ -125,10 +130,14 @@ function onKeydown(event: KeyboardEvent) {
         <dt>Words</dt>
         <dd>{{ counts.words.toLocaleString('en-US') }}</dd>
         <dt>Running time</dt>
-        <dd>{{ known.pages === null ? 'Counting…' : runningTime(counts.minutes) }}</dd>
+        <dd>{{ known.pages === null ? 'Counting…' : runningTime(Math.round(counts.pages * rates.minutesPerPage)) }}</dd>
+        <dt>{{ ESTIMATE_LABEL }}</dt>
+        <dd>{{ runningTime(Math.round(estimateSeconds(counts.timing, rates.wordsPerMinute) / 60)) }}</dd>
       </template>
     </dl>
-    <p v-if="!markdown" class="note">Pages leave out the title page. Running time is a page a minute.</p>
+    <p v-if="!markdown" class="note">
+      Pages leave out the title page. Running time is at {{ pageRatePhrase(rates.minutesPerPage) }}. Set the rates in Stats.
+    </p>
 
     <section class="goal" aria-labelledby="counts-goal-title">
       <h3 id="counts-goal-title">Daily goal</h3>

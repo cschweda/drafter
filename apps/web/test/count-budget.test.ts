@@ -15,10 +15,13 @@ vi.mock('../app/editor/session', async () => {
   const { shallowRef } = await import('vue');
   const doc = shallowRef<Doc>(undefined as unknown as Doc);
   const kind = shallowRef<'fountain' | 'markdown'>('fountain');
+  const { builtins } = await import('@drafter/templates');
+  const template = shallowRef(builtins['us-screenplay']);
   return {
     useEditor: () => ({
       doc,
       kind,
+      template,
       onChange: (listener: (changes: ChangeSet | null) => void) => {
         editor.listeners.add(listener);
         return () => editor.listeners.delete(listener);

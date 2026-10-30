@@ -7,7 +7,7 @@ import type { KnownCounts } from './goal';
 
 export interface CountsSession {
   /**
-   * The open script's counts: pages, scenes, words, and minutes for a screenplay; null for a
+   * The open script's counts: pages, scenes, words, and timing for a screenplay; null for a
    * Markdown document, which has words only (`words`).
    */
   counts: Readonly<ComputedRef<Counts | null>>;
@@ -57,7 +57,11 @@ function create(): CountsSession {
 
   const counts = computed<Counts | null>(() => {
     if (editor.kind.value === 'markdown') return null;
-    return countScript(editor.doc.value, pagesKnown.value ? layout.layout.value : null);
+    return countScript(
+      editor.doc.value,
+      pagesKnown.value ? layout.layout.value : null,
+      editor.template.value,
+    );
   });
 
   // The same object while the counts are the same, so what watches them hears of a change only.

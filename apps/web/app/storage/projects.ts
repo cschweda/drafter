@@ -5,6 +5,7 @@ import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
+import type { Rates } from '../stats/timing';
 import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';
@@ -71,6 +72,12 @@ export interface Project {
    * unknown value is its default (`exportOptionsOf`). Unindexed, so it needed no new version.
    */
   exportOptions?: Partial<ExportOptions>;
+  /**
+   * The rates this script's running time and estimate from the dialogue are figured at: set in
+   * the Stats window, kept here and never in the script (Call 9). A missing or out-of-range value
+   * is its default (`ratesOf`). Unindexed, so it needed no new version.
+   */
+  timing?: Partial<Rates>;
 }
 
 /** The kind a project is: Fountain unless it says it is Markdown. */

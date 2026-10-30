@@ -29,6 +29,14 @@ export {
   type StripRow,
   structureStrip,
 } from './strip';
+export {
+  ACTION_SECONDS_PER_LINE,
+  addTiming,
+  blockTiming,
+  DEFAULT_WORDS_PER_MINUTE,
+  estimateSeconds,
+  type Timing,
+} from './timing';
 export { markdownText, treatment } from './treatment';
 export type {
   OutlineItem,

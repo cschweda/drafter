@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { estimateSeconds } from '@drafter/outline';
 import { useEditor } from '~/editor/session';
 import { templateIdOf } from '~/editor/template';
 import { useMarkdown } from '~/markdown/use-markdown';
@@ -18,6 +19,16 @@ import {
   signed,
 } from '~/stats/history';
 import { characterTable, headingCount, headingSplit, readingMinutes } from '~/stats/script-stats';
+import {
+  ESTIMATE_LABEL,
+  estimateNote,
+  pageRatePhrase,
+  parseRate,
+  RATES_READ_ONLY,
+  type Rates,
+  ratesOf,
+  setRate,
+} from '~/stats/timing';
 import { useWritingStats } from '~/stats/writing';
 import { useGuard } from '~/storage/guard';
 import { useScript } from '~/storage/script';
@@ -105,6 +116,48 @@ const splitRows = computed(() => {
 });
 const headings = computed(() => headingCount(tree.value));
 
+// ---- The rates -------------------------------------------------------------------------------
+const rates = computed(() => ratesOf(project.value));
+/** The running time at the script's page rate, in whole minutes. */
+const runMinutes = computed(() =>
+  counts.value ? Math.round(counts.value.pages * rates.value.minutesPerPage) : 0,
+);
+/** The estimate from the dialogue at the script's pace, in whole minutes. */
+const estimateMinutes = computed(() =>
+  counts.value
+    ? Math.round(estimateSeconds(counts.value.timing, rates.value.wordsPerMinute) / 60)
+    : 0,
+);
+/** What each rate field holds, and what it says is wrong with it. */
+const rateText = reactive<Record<keyof Rates, string>>({ minutesPerPage: '', wordsPerMinute: '' });
+const rateProblem = reactive<Record<keyof Rates, string>>({
+  minutesPerPage: '',
+  wordsPerMinute: '',
+});
+function showRates() {
+  for (const key of ['minutesPerPage', 'wordsPerMinute'] as const) {
+    rateText[key] = String(rates.value[key]);
+    rateProblem[key] = '';
+  }
+}
+// The fields show the stored rates when the window opens, and when another script's are read.
+watch([statsOpen, () => project.value?.id], showRates, { immediate: true });
+/** A rate typed and left: kept when it is one, or the field says why not and the last good one stays. */
+async function onRate(key: keyof Rates) {
+  const parsed = parseRate(key, rateText[key]);
+  if (typeof parsed !== 'number') {
+    rateProblem[key] = parsed.problem;
+    return;
+  }
+  rateProblem[key] = '';
+  rateText[key] = String(parsed);
+  await setRate(key, parsed);
+}
+/** The ids that describe a rate field: its hint, and its problem when it has one. */
+const describedBy = (key: keyof Rates, hint?: string) =>
+  [hint, rateProblem[key] ? `stats-rate-${key}-problem` : undefined].filter(Boolean).join(' ') ||
+  undefined;
+
 const DATE = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 const SHORT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
 /** A `YYYY-MM-DD` as a local date. */
@@ -190,7 +243,9 @@ function dayLabel(day: DayFigure): string {
           <dt>Words</dt>
           <dd>{{ counts.words.toLocaleString('en-US') }}</dd>
           <dt>Running time</dt>
-          <dd>{{ known.pages === null ? 'Counting…' : runningTime(counts.minutes) }}</dd>
+          <dd>{{ known.pages === null ? 'Counting…' : `${runningTime(runMinutes)}, at ${pageRatePhrase(rates.minutesPerPage)}` }}</dd>
+          <dt>{{ ESTIMATE_LABEL }}</dt>
+          <dd>{{ runningTime(estimateMinutes) }}</dd>
           <dt>Characters</dt>
           <dd>{{ characters.length }}</dd>
         </template>
@@ -204,7 +259,45 @@ function dayLabel(day: DayFigure): string {
         </template>
       </dl>
       <p v-if="markdown" class="note">Reading time is 230 words a minute.</p>
-      <p v-else class="note">Running time is a page a minute. A character is counted once, whatever the extension, such as (V.O.).</p>
+      <template v-else>
+        <form class="rates" aria-labelledby="stats-rates-title" @submit.prevent>
+          <h4 id="stats-rates-title" class="sr-only">Rates</h4>
+          <p v-if="readOnly" class="note">{{ RATES_READ_ONLY }}</p>
+          <fieldset :disabled="readOnly" class="bare">
+            <div class="rate">
+              <label for="stats-rate-minutesPerPage">Minutes a page</label>
+              <input
+                id="stats-rate-minutesPerPage"
+                v-model="rateText.minutesPerPage"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                :aria-invalid="rateProblem.minutesPerPage ? 'true' : 'false'"
+                :aria-describedby="describedBy('minutesPerPage', 'stats-rate-minutesPerPage-hint')"
+                @change="onRate('minutesPerPage')"
+              >
+              <p id="stats-rate-minutesPerPage-hint" class="hint">Plays often run longer than a minute a page.</p>
+              <p v-if="rateProblem.minutesPerPage" id="stats-rate-minutesPerPage-problem" class="problem" role="alert">{{ rateProblem.minutesPerPage }}</p>
+            </div>
+            <div class="rate">
+              <label for="stats-rate-wordsPerMinute">Spoken words a minute</label>
+              <input
+                id="stats-rate-wordsPerMinute"
+                v-model="rateText.wordsPerMinute"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                :aria-invalid="rateProblem.wordsPerMinute ? 'true' : 'false'"
+                :aria-describedby="describedBy('wordsPerMinute')"
+                @change="onRate('wordsPerMinute')"
+              >
+              <p v-if="rateProblem.wordsPerMinute" id="stats-rate-wordsPerMinute-problem" class="problem" role="alert">{{ rateProblem.wordsPerMinute }}</p>
+            </div>
+          </fieldset>
+        </form>
+        <p class="note">{{ estimateNote(rates) }}</p>
+        <p class="note">A character is counted once, whatever the extension, such as (V.O.).</p>
+      </template>
 
       <table v-if="shownCharacters.length > 0" class="tally">
         <caption>Characters</caption>
@@ -414,6 +507,50 @@ h3 {
   margin: 2px 0 8px;
   color: var(--muted);
   font-size: 11px;
+}
+.rates {
+  margin-top: 10px;
+}
+.bare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 8px 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.rate label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+.rate input {
+  box-sizing: border-box;
+  width: 6rem;
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--muted);
+  border-radius: 5px;
+  background: var(--chrome);
+  color: var(--text);
+  font: inherit;
+}
+.rate input:focus-visible {
+  outline: 2px solid var(--heading);
+  outline-offset: 2px;
+}
+.rate input:disabled {
+  opacity: 0.6;
+}
+.hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.problem {
+  margin: 6px 0 0;
+  padding-left: 8px;
+  box-shadow: inset 3px 0 0 var(--heading);
 }
 .buttons {
   display: flex;
