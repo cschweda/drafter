@@ -13,6 +13,9 @@ import {
   insertPageBreak,
   MARK_REFUSED,
   makeElement,
+  type SpellMark,
+  spellMarkAt,
+  spellMarksOf,
   structureOf,
   toggleDual,
   withCompletion,
@@ -24,15 +27,22 @@ import {
 } from '@drafter/cm-fountain';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
+import { aboutOpen } from '~/about/dialog';
+import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
+import { firstSceneStart } from '~/editor/first-scene';
+import { SAMPLE_SCRIPTS } from '~/editor/sample-scripts';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
+import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
+import { useDeleted } from '~/history/deleted';
+import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
 import { runMove } from '~/outline/move';
@@ -44,15 +54,24 @@ import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
 import { useSnapshots } from '~/snapshots/use-snapshots';
+import { addToMine, ignoreWordHere, stepMisspelling, tryAddToScript } from '~/spell/actions';
+import { makeCheckSpelling } from '~/spell/check';
+import { openSpellMenu } from '~/spell/menu';
+import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
+import { SPELLING_HEADING_ID } from '~/spell/rows';
+import { useSpell } from '~/spell/use-spell';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
-import { exportScript } from '~/storage/export';
+import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
+import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { requestTour } from '~/tour/state';
+import { updateCheckOpen } from '~/update/use-check';
 import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { COMMAND_DATA, HELP_PAGES, helpHref, MARKDOWN_ACTIONS } from './data';
 import { openPalette, togglePalette } from './palette';
@@ -90,11 +109,27 @@ export function registerBuiltinCommands(): void {
   const sprintOn = () => sprint.state.value.status !== 'idle';
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
-  /** Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus. */
+  const showChanges = useShowChanges();
+  const deleted = useDeleted();
+  /** Whether a pane shows the Deleted scenes tab. */
+  const deletedShown = () =>
+    window.matchMedia(WIDE_QUERY).matches
+      ? panes.tabs.value.left === 'deleted' || panes.tabs.value.right === 'deleted'
+      : panes.phoneTab.value === 'deleted';
+  /**
+   * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
+   * no comparison open, Show changes' marks on the Script pane, which shows.
+   */
   const stepChange = (direction: 1 | -1) => () => {
-    compare.show(false);
-    compare.step(direction);
+    if (comparing()) {
+      compare.show(false);
+      compare.step(direction);
+      return;
+    }
+    showTab('script', false);
+    showChanges.step(direction);
   };
+  const stepsChanges = () => comparing() || (showChanges.on.value && isFountain());
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -106,10 +141,12 @@ export function registerBuiltinCommands(): void {
   /** Fountain's own commands, checks, and scenes mean nothing in a Markdown document. */
   const isFountain = () => editor.kind.value === 'fountain';
   const isMarkdown = () => editor.kind.value === 'markdown';
+  const exportsHere = (kind: ExportKind) => exportApplies(kind, editor.kind.value);
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
-  function showTab(tab: TabId) {
+  /** Shows `tab`; `focusPanel` false leaves focus to the caller (Next change puts it on a mark). */
+  function showTab(tab: TabId, focusPanel = true) {
     // Focus mode shows only the Source: any other tab is for the writer to see.
     if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
@@ -119,6 +156,7 @@ export function registerBuiltinCommands(): void {
     } else {
       panes.phoneTab.value = tab;
     }
+    if (!focusPanel) return;
     void nextTick().then(() => {
       if (tab === 'source') view.focus();
       else document.getElementById(`panel-${tab}`)?.focus();
@@ -198,6 +236,53 @@ export function registerBuiltinCommands(): void {
     },
   });
 
+  // ---- The spellcheck's commands (Plan D) ---------------------------------------------------
+
+  const spellOn = () => settings.value.spellcheck;
+  const spellWhy = () => (spellOn() ? undefined : SPELLCHECK_OFF);
+  /**
+   * On the misspelled word at the cursor, with the Source showing and the editor focused first;
+   * said, when there is none.
+   */
+  const onMisspelling = (act: (mark: SpellMark) => unknown): Behavior => ({
+    enabled: spellOn,
+    why: spellWhy,
+    run: onEditor((v) => {
+      const mark = spellMarkAt(v.state, v.state.selection.main.head);
+      if (mark) act(mark);
+      else void saySpell(NO_MARK_HERE);
+    }),
+  });
+  /**
+   * Check spelling (Call 13): once the check under way has come back, Problems shows with focus
+   * on its Spelling heading, and the count is said. With spellcheck off it says so and changes
+   * nothing.
+   */
+  const checkSpelling = makeCheckSpelling({
+    on: spellOn,
+    settled: () => useSpell().settled(),
+    state: () => useSpell().state.value,
+    count: () => spellMarksOf(view.state).length,
+    show: async () => {
+      showTab('problems');
+      // After showTab's own focus (the panel), once the pane has drawn the group.
+      await nextTick();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      document.getElementById(SPELLING_HEADING_ID)?.focus();
+    },
+    say: (message) => void saySpell(message),
+  });
+  /** Next or Previous misspelling: selects the word, and says it with its first suggestion. */
+  const stepSpelling = (direction: 1 | -1): Behavior => ({
+    enabled: spellOn,
+    why: spellWhy,
+    run: onEditor((v) => {
+      void stepMisspelling(v, direction).then((moved) => {
+        if (!moved) void saySpell(NO_MARKS);
+      });
+    }),
+  });
+
   // ---- What the commands do ---------------------------------------------------------------
   // Each command's id, title, group, and keys are in `data.ts` (the Keyboard shortcuts page reads
   // them without an editor); this is the rest, by id, in the same order.
@@ -263,6 +348,17 @@ export function registerBuiltinCommands(): void {
         historyOpen.value = { focusLabel: false };
       },
     },
+    // Deleted scenes (version-history design §8, §9): opens the tab, or shows it; shown, it closes.
+    'deleted-scenes': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      liveTitle: () =>
+        deleted.isOpen.value && deletedShown() ? 'Close Deleted scenes' : 'Deleted scenes',
+      run: () => {
+        if (deleted.isOpen.value && deletedShown()) deleted.close(true);
+        else deleted.open();
+      },
+    },
     'take-snapshot': {
       enabled: hasScript,
       run: () => {
@@ -305,17 +401,81 @@ export function registerBuiltinCommands(): void {
         { run: () => void window.open(helpHref(page), '_blank') },
       ]),
     ),
+    // Help → Sample scripts: a tiny sample of each kind, as a new script of the writer's own with no file, opened
+    // unchanged (its text is where "changed" is measured from). The script that was open is kept, as for any switch.
+    ...Object.fromEntries(
+      SAMPLE_SCRIPTS.map((sample): [string, Behavior] => [
+        `sample-script-${sample.kind}`,
+        {
+          enabled: canStart,
+          run: quietly(async () => {
+            const made = await script.addScript(sample.text, {
+              kind: sample.kind === 'markdown' ? 'markdown' : 'fountain',
+              baseline: sample.text,
+              sampleScript: sample.kind,
+            });
+            await script.open(made.id);
+            // A screenplay starts where the story does, as the first visit does; the others at the top.
+            editor.goto(sample.kind === 'screenplay' ? firstSceneStart(sample.text) : 0);
+          }),
+        },
+      ]),
+    ),
+    // The guided starters (out-the-door design §1.5), from File's New items and Help → Sample scripts:
+    // as a sample script is, a new script of the writer's own with no file, opened unchanged. Each
+    // starts at the top, on its title page, where the lesson does.
+    ...Object.fromEntries(
+      STARTERS.map((starter): [string, Behavior] => [
+        starter.command,
+        {
+          enabled: canStart,
+          run: quietly(async () => {
+            const made = await script.addScript(starter.text, {
+              kind: 'fountain',
+              baseline: starter.text,
+              starter: starter.kind,
+            });
+            await script.open(made.id);
+            editor.goto(0);
+          }),
+        },
+      ]),
+    ),
+    // Help → Check for updates (the service worker's check on the web, the updater's in the desktop app), and
+    // About Drafter (the version, for a bug report, and the links). The desktop app's About Drafter runs this too.
+    'check-for-updates': {
+      run: () => {
+        updateCheckOpen.value = true;
+      },
+    },
+    'about-drafter': {
+      run: () => {
+        aboutOpen.value = true;
+      },
+    },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF, plain text, or a Final Draft file; a Markdown document as its Markdown file or plain text (a PDF of
     // one is deferred).
-    'export-pdf': { enabled: isFountain, run: () => void exportScript('pdf') },
-    'export-fdx': { enabled: isFountain, run: () => void exportScript('fdx') },
-    'export-md': { enabled: isMarkdown, run: () => void exportScript('md') },
+    // What the open kind exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter
+    // Tight (Markdown PDF design §10); Final Draft for a script, the Markdown file for a document.
+    'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
+    'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
+    'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },
     'export-treatment': {
       enabled: isFountain,
       run: () => {
         treatmentOpen.value = true;
+      },
+    },
+    // How the open script's PDF and plain text print its scene numbers and title page (out-the-door
+    // design §2.4): at the end of the Export menu. On in a read-only tab, whose dialog shows the
+    // choices it can't change; off for a Markdown document, which has neither.
+    'export-options': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? OPTIONS_NOT_FOR_MARKDOWN : undefined),
+      run: () => {
+        exportOptionsOpen.value = true;
       },
     },
     // A Markdown outline as a new screenplay (design §6.5): its headings as sections, its items as stubs.
@@ -346,10 +506,32 @@ export function registerBuiltinCommands(): void {
     // Go
     'go-to-scene': { enabled: isFountain, run: () => openPalette('scene') },
     'go-to-line': { run: () => openPalette('line') },
+    // History of this scene (version-history design §6): the scene holding the cursor.
+    'scene-history': {
+      enabled: () => hasScript() && isFountain() && !!sceneAtCursor(),
+      why: () =>
+        isMarkdown()
+          ? NOT_FOR_MARKDOWN
+          : !sceneAtCursor()
+            ? 'The cursor isn’t in a scene.'
+            : undefined,
+      run: () => {
+        const scene = sceneAtCursor();
+        if (!scene) return;
+        openSceneHistory({
+          id: useOutline().idOf(scene),
+          from: scene.span.from,
+          to: scene.span.to,
+          heading: scene.heading,
+        });
+      },
+    },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
-    'next-change': { enabled: comparing, run: stepChange(1) },
-    'previous-change': { enabled: comparing, run: stepChange(-1) },
+    'next-misspelling': stepSpelling(1),
+    'previous-misspelling': stepSpelling(-1),
+    'next-change': { enabled: stepsChanges, run: stepChange(1) },
+    'previous-change': { enabled: stepsChanges, run: stepChange(-1) },
 
     // View
     'show-source': { run: () => showTab('source') },
@@ -361,7 +543,32 @@ export function registerBuiltinCommands(): void {
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
+    // Show changes (version-history design §4.1): the Script pane shows, marked or clean.
+    'show-changes': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? MARKDOWN_WHY : undefined),
+      liveTitle: () => (showChanges.on.value ? 'Hide changes' : 'Show changes'),
+      run: () => {
+        showChanges.toggle();
+        if (showChanges.on.value) showTab('script', false);
+      },
+    },
     // Compare's tab goes with the comparison (Call 16).
+    'compare-changes-view': {
+      enabled: comparing,
+      run: () => {
+        compare.setView('changes');
+        compare.show();
+      },
+    },
+    // A Markdown document has only the Changes view.
+    'compare-pages-view': {
+      enabled: () => comparing() && compare.hasPages.value,
+      run: () => {
+        compare.setView('pages');
+        compare.show();
+      },
+    },
     'close-compare': { enabled: comparing, run: () => compare.close() },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.
@@ -442,6 +649,13 @@ export function registerBuiltinCommands(): void {
       enabled: () => settings.value.elementBar,
       run: () => void set('elementBar', false),
     },
+    // The Structure strip (structure strip design §5): the toolbar's Structure button and Settings
+    // set the same row. A Fountain script on a wide screen only: a phone never draws it (Call 16).
+    'toggle-structure-strip': {
+      enabled: () => isFountain() && window.matchMedia(WIDE_QUERY).matches,
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => void set('structureStrip', !settings.value.structureStrip),
+    },
     'fold-all': { run: onEditor((v) => foldAll(v)) },
     'unfold-all': { run: onEditor((v) => unfoldAll(v)) },
     condense: {
@@ -484,6 +698,25 @@ export function registerBuiltinCommands(): void {
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
+    // On with spellcheck off too, so that it can say so.
+    'check-spelling': { run: checkSpelling },
+    'spelling-suggestions': {
+      enabled: spellOn,
+      why: spellWhy,
+      run: onEditor((v) => {
+        if (!openSpellMenu(v)) void saySpell(NO_MARK_HERE);
+      }),
+    },
+    // A suggestion and the script's dictionary edit the file; My dictionary and Ignore here don't,
+    // so a read-only tab can use them (Call 19).
+    'add-to-script-dictionary': onMisspelling((mark) =>
+      tryAddToScript(view, mark.word, editor.kind.value, useOutline().locked.value),
+    ),
+    'add-to-my-dictionary': onMisspelling((mark) => void addToMine(view, mark.word)),
+    'ignore-misspelling': onMisspelling((mark) => {
+      ignoreWordHere(view, mark);
+      void saySpell(`Ignored “${mark.word}” here.`);
+    }),
     // Expand outline (design §6.5): the selection's outline lines as scene stubs.
     'expand-outline': {
       enabled: () => canEdit() && isFountain(),

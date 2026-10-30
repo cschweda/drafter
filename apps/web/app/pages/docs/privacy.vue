@@ -49,7 +49,10 @@ useDocsHead({
       <li>
         <strong>In your settings.</strong> Your settings, each script’s daily goal, and its
         writing stats are in the same IndexedDB, as are the earlier versions of each script that
-        History keeps (snapshots), which removing a script removes too. The stats are, for each day you write, the time
+        History keeps (snapshots), which removing a script removes too. To find a scene in those
+        versions quickly, Drafter keeps a note of each scene in them (its heading, its first lines,
+        and a fingerprint of its wording) in a second IndexedDB database, <code>drafter-cache</code>;
+        removing the script removes its notes there too. The stats are, for each day you write, the time
         you spent editing the script and how many words and pages it grew; nothing about what you
         typed, and nothing for a sample. Removing a script removes them. The theme you chose, and whether you have seen the tour, are in the
         browser’s localStorage, a small store for a website’s own notes. So, for a moment while a
@@ -69,7 +72,9 @@ useDocsHead({
       icons) and nothing else. It doesn’t save your scripts. The one thing your browser does on its
       own is this: when Drafter opens, the browser asks drafter.dev for the worker’s file
       (<code>/sw.js</code>) to see whether there is a new version, and downloads the new files when
-      there is one. That request carries nothing from your scripts. When a new version is ready,
+      there is one. <strong>Help → Check for updates…</strong> makes that same request when you
+      choose it, and nothing else. That request carries nothing from your scripts. When a new
+      version is ready,
       Drafter says so and waits for you to choose Reload; it never reloads on its own. You can
       remove the saved files, along with the worker, by clearing this site’s data.
     </p>
@@ -82,7 +87,9 @@ useDocsHead({
       says a new version is ready (the AppImage and the Windows app, which wait for you to choose
       Restart) or available (a <code>.deb</code>, or
       the app built on a Mac, which offers a link to the release page) and waits for your choice. Turn off
-      <strong>Check for updates</strong> in Settings and it makes no network request at all.
+      <strong>Check for updates</strong> in Settings and it makes no network request at all, unless
+      you choose <strong>Help → Check for Updates…</strong>, which makes the same requests once, then
+      and there.
     </p>
 
     <h2 id="modules">Script modules</h2>

@@ -11,6 +11,9 @@ const stats = (page: Page) => page.getByRole('dialog', { name: 'Stats' });
 const wordsToday = (page: Page) => status(page).locator('[data-stat="words-today"]');
 const timeToday = (page: Page) => status(page).locator('[data-stat="time-today"]');
 
+const minutesField = (page: Page) => stats(page).getByLabel('Minutes a page');
+const wordsField = (page: Page) => stats(page).getByLabel('Spoken words a minute');
+
 /** What the window says for a figure: its definition, by the term, in a section. */
 const figure = (page: Page, section: string, term: string) =>
   stats(page)
@@ -268,6 +271,138 @@ test.describe('writing stats', () => {
     // Past the moment the last write would have come.
     await page.waitForTimeout(6000);
     expect(await statsKeys(page)).toEqual([]);
+  });
+
+  test("shows the running time at the script's rate and the estimate from the dialogue", async ({
+    page,
+  }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
+    // The sample: 1.4 pages at a minute a page; 70 words spoken at 150 a minute (28 s; the shorter
+    // speech of its dual pair is said at the same time as the longer) and 20 lines of action at
+    // 1.5 s (30 s), about a minute.
+    await expect(figure(page, 'This script', 'Running time')).toHaveText(
+      'About 1 min, at 1 minute a page',
+    );
+    await expect(figure(page, 'This script', 'Estimate from the dialogue')).toHaveText(
+      'About 1 min',
+    );
+    await expect(minutesField(page)).toHaveValue('1');
+    await expect(wordsField(page)).toHaveValue('150');
+    await expect(stats(page)).toContainText('Plays often run longer than a minute a page.');
+    await expect(stats(page)).toContainText(
+      'The words spoken, at 150 words a minute, plus 1.5 seconds for each line of action. A rough guide, not a timing.',
+    );
+    // 1.4 pages at 3 minutes a page is 4.2 minutes.
+    await minutesField(page).fill('3');
+    await minutesField(page).blur();
+    await expect(figure(page, 'This script', 'Running time')).toHaveText(
+      'About 4 min, at 3 minutes a page',
+    );
+  });
+
+  test('a rate set in Stats is kept for that script only, after a reload', async ({ page }) => {
+    await newScript(page, 'New screenplay');
+    await typeAtEnd(page, SCENES);
+    const title = await page.title();
+    await runCommand(page, 'Show stats');
+    await minutesField(page).fill('1.5');
+    await minutesField(page).blur();
+    await wordsField(page).fill('180');
+    await wordsField(page).blur();
+    await expect(figure(page, 'This script', 'Running time')).toContainText(
+      'at 1.5 minutes a page',
+    );
+    await expect(stats(page)).toContainText('at 180 words a minute');
+    // Nothing in the script changed.
+    await expect(page).toHaveTitle(title);
+    await page.keyboard.press('Escape');
+
+    await page.reload();
+    await expect(editor(page)).toContainText('EXT. YARD - NIGHT');
+    await runCommand(page, 'Show stats');
+    await expect(minutesField(page)).toHaveValue('1.5');
+    await expect(wordsField(page)).toHaveValue('180');
+    await expect(figure(page, 'This script', 'Running time')).toContainText(
+      'at 1.5 minutes a page',
+    );
+    await page.keyboard.press('Escape');
+
+    // Another script has rates of its own.
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New screenplay' })
+      .click();
+    await runCommand(page, 'Show stats');
+    await expect(minutesField(page)).toHaveValue('1');
+    await expect(wordsField(page)).toHaveValue('150');
+  });
+
+  test('a rate out of range is refused and the last good one kept', async ({ page }) => {
+    await newScript(page, 'New screenplay');
+    await runCommand(page, 'Show stats');
+    await minutesField(page).fill('1.2');
+    await minutesField(page).blur();
+    await expect(figure(page, 'This script', 'Running time')).toContainText(
+      'at 1.2 minutes a page',
+    );
+    for (const typed of ['10', '0', 'abc', '1,2', '0.55']) {
+      await minutesField(page).fill(typed);
+      await minutesField(page).blur();
+      await expect(stats(page).getByRole('alert')).toHaveText(
+        'Enter a number from 0.5 to 3, in tenths, such as 1.2.',
+      );
+      await expect(minutesField(page)).toHaveAttribute('aria-invalid', 'true');
+      await expect(minutesField(page)).toHaveAccessibleDescription(
+        'Plays often run longer than a minute a page. Enter a number from 0.5 to 3, in tenths, such as 1.2.',
+      );
+      await expect(figure(page, 'This script', 'Running time')).toContainText(
+        'at 1.2 minutes a page',
+      );
+    }
+    await wordsField(page).fill('152');
+    await wordsField(page).blur();
+    await expect(wordsField(page)).toHaveAttribute('aria-invalid', 'true');
+    await expect(wordsField(page)).toHaveAccessibleDescription(
+      'Enter a whole number from 100 to 220, in steps of 5.',
+    );
+    await expect(stats(page)).toContainText('at 150 words a minute');
+    // A good one clears the problem.
+    await minutesField(page).fill('2');
+    await minutesField(page).blur();
+    await expect(minutesField(page)).toHaveAttribute('aria-invalid', 'false');
+    await expect(figure(page, 'This script', 'Running time')).toContainText('at 2 minutes a page');
+  });
+
+  test('in a read-only tab the rates are disabled and say why', async ({
+    page,
+    context,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'two tabs are the same on a phone');
+    await newScript(page, 'New screenplay');
+    await runCommand(page, 'Show stats');
+    await minutesField(page).fill('1.5');
+    await minutesField(page).blur();
+    await expect(figure(page, 'This script', 'Running time')).toContainText(
+      'at 1.5 minutes a page',
+    );
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect(other.getByRole('button', { name: 'Edit here instead' })).toBeVisible();
+    await runCommand(other, 'Show stats');
+    await expect(stats(other)).toContainText(
+      'Another tab has this script open, so its rates can’t be changed here.',
+    );
+    await expect(minutesField(other)).toBeDisabled();
+    await expect(wordsField(other)).toBeDisabled();
+    // The stored rate shows, and the times read at it.
+    await expect(minutesField(other)).toHaveValue('1.5');
+    await expect(figure(other, 'This script', 'Running time')).toContainText(
+      'at 1.5 minutes a page',
+    );
+    await expect(figure(other, 'This script', 'Estimate from the dialogue')).toBeVisible();
   });
 
   test('a tab that only shows the script says the editing tab keeps its stats, and shows them', async ({

@@ -1,6 +1,13 @@
 # Installing Drafter on Linux
 
-Drafter for Linux comes as an **AppImage** and a **`.deb`**, built for 64-bit Intel and AMD (x64) and published with each release on GitHub: <https://github.com/cschweda/drafter/releases>. The command is `drafterdev`.
+Drafter for Linux comes as an **AppImage** and a **`.deb`**, built for 64-bit Intel and AMD (x64) and published with each release on GitHub: <https://github.com/cschweda/drafter/releases>. Each is about 100 to 130 MB. The command is `drafterdev`.
+
+| Package | Use it on | File |
+|---|---|---|
+| `.deb` | Ubuntu, Debian, Linux Mint, Pop!_OS, and other Debian-based systems. **The one to use on Ubuntu 24.04 and later.** | `Drafter-<version>-linux-amd64.deb` |
+| AppImage | Any other distribution (Fedora, Arch, openSUSE, and so on). Nothing to install; it runs from where you put it. | `Drafter-x86_64.AppImage` (the same name for every version, so an update replaces it in place) |
+
+How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
 
 Drafter runs its pages in Chromium's **sandbox**, which keeps a page that went wrong away from your files. The sandbox needs the system to let a program make a user namespace. Most systems do. **Ubuntu 24.04 and later restrict that by default** (an AppArmor setting), and that decides which package to use.
 
@@ -12,7 +19,14 @@ On Ubuntu 24.04 and later, **use the `.deb`**. It works with the sandbox on, wit
 sudo apt install ./Drafter-<version>-linux-amd64.deb
 ```
 
-It adds Drafter to your applications (under Office), registers `.fountain`, `.md`, and Final Draft `.fdx` files, and installs an AppArmor profile that lets Drafter, and only Drafter, use the sandbox. Start it from the menu, or with `drafterdev`, or open a file with it.
+It adds Drafter to your applications (under Office), registers `.fountain`, `.md`, and Final Draft `.fdx` files, and installs an AppArmor profile that lets Drafter, and only Drafter, use the sandbox. Start it from the menu, or with `drafterdev`, or open a file with it. A `.fountain` file opens in Drafter when you double-click it; for a `.md` file, Drafter is offered under **Open With** (or make it the default there). From a terminal:
+
+```sh
+drafterdev                      # start Drafter
+drafterdev "My Script.fountain" # start it with a script open
+```
+
+To remove it: `sudo apt remove drafterdev`. Your scripts are files you saved and aren't touched; Drafter's settings and recovery copies are in `~/.config/Drafter`.
 
 Drafter only imports a `.fdx` (as a new script you save as a `.fountain`), but where no other app claims `.fdx` files your file manager may open them in Drafter by default; to change that, choose another app in the file's Open With (or Properties) dialog, or run `xdg-mime default other-app.desktop application/x-fdx`.
 
@@ -21,7 +35,10 @@ Drafter only imports a `.fdx` (as a new script you save as a `.fountain`), but w
 ```sh
 chmod +x Drafter-x86_64.AppImage
 ./Drafter-x86_64.AppImage
+./Drafter-x86_64.AppImage "My Script.fountain"   # with a script open
 ```
+
+An AppImage doesn't add itself to your applications menu or file types, so double-clicking a script won't open it in Drafter until a tool such as Gear Lever or AppImageLauncher adds it; from a terminal, name the script as above. To remove it, delete the file.
 
 The AppImage has the same name, `Drafter-x86_64.AppImage`, in every release, so an update replaces the file where it is (see Updating, below).
 
@@ -59,7 +76,7 @@ Turning the restriction off for the whole system (`kernel.apparmor_restrict_unpr
 
 ## Updating
 
-A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**. Restart asks about unsaved changes first, then replaces the AppImage in place (the same file at the same path, so a launcher, an AppImage tool's menu entry, or the AppArmor profile above still points at it) and starts the new version. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all.
+A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**. Restart asks about unsaved changes first, then replaces the AppImage in place (the same file at the same path, so a launcher, an AppImage tool's menu entry, or the AppArmor profile above still points at it) and starts the new version. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version.
 
 If an AppImage update fails partway through replacing the file (the disk fills, the power goes), the AppImage may be missing or won't start: download `Drafter-x86_64.AppImage` from the [latest release](https://github.com/cschweda/drafter/releases/latest) again and put it where the old one was. Your scripts are files of their own and aren't affected, and Drafter's settings and recovery copy are in `~/.config/Drafter`.
 

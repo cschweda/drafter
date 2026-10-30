@@ -15,6 +15,7 @@ import { desktop } from '../desktop';
 import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
+import type { StarterKind } from '../editor/starter-kinds';
 import type { NewKind } from '../editor/template';
 import { appChange } from '../editor/typewriter';
 import type { DocumentKind } from '../markdown/kind';
@@ -133,6 +134,17 @@ export interface ScriptSession {
    * kind already.
    */
   setKind(kind: DocumentKind): Promise<void>;
+  /**
+   * Keeps the fields `change` makes from the project, the open script's own settings that are not
+   * its text (its export options), on its project: the copy held here and the stored one together.
+   * `change` runs in its turn among the session's other writes, on the copy as it is then, so two
+   * quick changes can't undo each other. Nothing in the text changes, so the script isn't changed
+   * and Undo has nothing new. Does nothing in a tab that only shows the script, or with no script
+   * open.
+   */
+  keepOnProject(
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing'>,
+  ): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
   /** A sample is open and the editor can change it: Reset sample would do something. */
@@ -196,7 +208,17 @@ export interface ScriptSession {
    */
   addScript(
     source: string,
-    format?: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind },
+    format?: {
+      lineBreak?: LineBreak;
+      bom?: boolean;
+      kind?: DocumentKind;
+      /** What "changed" is measured from until it has a file (so it can open unchanged). */
+      baseline?: string;
+      /** Made from one of Help's sample scripts (`Project.sampleScript`). */
+      sampleScript?: SampleKind;
+      /** Made from one of the guided starters (`Project.starter`). */
+      starter?: StarterKind;
+    },
   ): Promise<Project>;
   /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
   unbindFile(id: string): Promise<void>;
@@ -722,6 +744,14 @@ function create(): ScriptSession {
     }
   }
 
+  async function keepOnProject(
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing'>,
+  ) {
+    const current = project.value;
+    if (!current || guard.readOnly.value) return;
+    await patch(current.id, change);
+  }
+
   async function sampleProject(kind: SampleKind): Promise<Project> {
     const existing = (await listProjects()).find((p) => p.sample === kind);
     return (
@@ -775,10 +805,26 @@ function create(): ScriptSession {
     }
   }
 
-  /** Changes the open script's stored fields and the copy held here together. */
-  function patch(id: string, fields: Partial<Project>): Promise<void> {
+  /**
+   * Changes the open script's stored fields and the copy held here together. `fields` can be made
+   * from the held copy in this change's turn, so it starts from the writes before it.
+   */
+  function patch(
+    id: string,
+    change: Partial<Project> | ((held: Project) => Partial<Project>),
+  ): Promise<void> {
     return exclusive(async () => {
       const held = project.value;
+      let fields: Partial<Project>;
+      if (typeof change !== 'function') fields = change;
+      else if (held?.id === id) fields = change(held);
+      else {
+        // Another script opened while this write waited its turn: the choice is still kept, made
+        // from the stored copy.
+        const stored = await getProject(id);
+        if (!stored) return;
+        fields = change(stored);
+      }
       if (held?.id === id && writer && !guard.readOnly.value) {
         // This tab writes the script, and the copy it holds is the stored one.
         const next: Project = { ...held, ...fields, updatedAt: Date.now() };
@@ -839,6 +885,9 @@ function create(): ScriptSession {
               moved = true;
               throw new MovedOn();
             }
+            // The export options and rates chosen on the sample are the writer's choices: they go
+            // with the text.
+            const { exportOptions, timing } = project.value;
             const created = await createProject({
               source: savedText,
               fileName,
@@ -846,6 +895,8 @@ function create(): ScriptSession {
               savedAt,
               ...format,
               ...(handleId ? { fsHandleId: handleId } : {}),
+              ...(exportOptions ? { exportOptions } : {}),
+              ...(timing ? { timing } : {}),
             });
             await setSavedText(created.id, savedText);
             made = created.id;
@@ -901,6 +952,8 @@ function create(): ScriptSession {
             savedHash: hash,
             savedAt,
             ...(handleId ? { fsHandleId: handleId } : {}),
+            ...(stored.exportOptions ? { exportOptions: stored.exportOptions } : {}),
+            ...(stored.timing ? { timing: stored.timing } : {}),
           });
           await setSavedText(created.id, savedText);
           return created.id;
@@ -980,11 +1033,21 @@ function create(): ScriptSession {
 
   async function addScript(
     source: string,
-    format: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind } = {},
+    format: {
+      lineBreak?: LineBreak;
+      bom?: boolean;
+      kind?: DocumentKind;
+      baseline?: string;
+      sampleScript?: SampleKind;
+      starter?: StarterKind;
+    } = {},
   ): Promise<Project> {
     return createProject({
       source,
       ...(format.kind === undefined ? {} : { kind: format.kind }),
+      ...(format.baseline === undefined ? {} : { baseline: format.baseline }),
+      ...(format.sampleScript === undefined ? {} : { sampleScript: format.sampleScript }),
+      ...(format.starter === undefined ? {} : { starter: format.starter }),
       ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
       ...(format.bom === undefined ? {} : { bom: format.bom }),
     });
@@ -1123,6 +1186,7 @@ function create(): ScriptSession {
     forgetBlank,
     startBlank,
     setKind,
+    keepOnProject,
     openSample,
     canResetSample,
     resetSample,

@@ -258,6 +258,61 @@ describe('the first New of a kind', () => {
   });
 });
 
+describe('Help’s sample scripts', () => {
+  test('one opened as a new script is not a meeting with the annotated sample, nor the writer’s own of that kind', async () => {
+    const t = await visit();
+    const text =
+      'Title: Sample: Stage play\n\n## Scene 1\n\nA bench.\n\n/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/\n';
+    const made = await t.session.addScript(text, {
+      kind: 'fountain',
+      baseline: text,
+      sampleScript: 'stage-play',
+    });
+    await t.session.open(made.id);
+    expect(t.text()).toBe(text);
+    expect(t.session.project.value?.sampleScript).toBe('stage-play');
+    expect(t.session.project.value?.sample).toBeUndefined();
+    // Opened unchanged, with no file.
+    expect(t.session.dirty.value).toBe(false);
+    await t.session.newScript('stage-play');
+    expect(t.text()).toBe(t.SAMPLE_STAGE_PLAY);
+  });
+});
+
+describe('the guided starters', () => {
+  test('a starter doesn’t count as meeting that kind’s sample', async () => {
+    const t = await visit();
+    for (const [kind, text] of [
+      ['screenplay', 'Title: Your Title Here\n\nINT. BAKERY - DAY\n\nFlour.\n'],
+      [
+        'stage-play',
+        'Title: Your Title Here\n\n## Scene 1\n\nA ward.\n\n/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/\n',
+      ],
+    ] as const) {
+      const made = await t.session.addScript(text, {
+        kind: 'fountain',
+        baseline: text,
+        starter: kind,
+      });
+      await t.session.open(made.id);
+      expect(t.text()).toBe(text);
+      expect(t.session.project.value?.starter).toBe(kind);
+      expect(t.session.project.value?.sampleScript).toBeUndefined();
+      expect(t.session.dirty.value).toBe(false);
+    }
+    // The first visit's screenplay sample was met already; the stage play's wasn't, starter or no.
+    await t.session.newScript('stage-play');
+    expect(t.text()).toBe(t.SAMPLE_STAGE_PLAY);
+    const { metSample } = await import('../app/storage/first-samples');
+    const { listProjects } = await import('../app/storage/projects');
+    await t.db.settings.clear();
+    const starters = (await listProjects()).filter((p) => p.starter);
+    expect(starters).toHaveLength(2);
+    expect(await metSample('screenplay', starters)).toBe(false);
+    expect(await metSample('stage-play', starters)).toBe(false);
+  });
+});
+
 describe('the Markdown sample', () => {
   test('opens as a Markdown sample, and Reset sample puts it back', async () => {
     const t = await visit();

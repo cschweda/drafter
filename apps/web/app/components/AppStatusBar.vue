@@ -8,6 +8,7 @@ import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { historyOpen } from '~/snapshots/history';
 import { snapshotProblem } from '~/snapshots/use-snapshots';
+import { useSpell } from '~/spell/use-spell';
 import { statsOpen } from '~/stats/dialog';
 import { progressLabel, useGoal } from '~/stats/goal';
 import { timeTodayLabel, wordsTodayLabel } from '~/stats/history';
@@ -21,6 +22,8 @@ const { words } = useMarkdown();
 const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
 const { count } = useProblems();
+// A dictionary that couldn't load, said once per visit (Plan D, Call 20).
+const { problem: spellProblem } = useSpell();
 const { progress, goal } = useGoal();
 // Words and time today (docs/drafter-stats-design.md §3): from the day's first edit, never for a
 // sample or in a read-only tab (`today` is null there). A goal in words already says the words.
@@ -151,6 +154,7 @@ function onKeydown(event: KeyboardEvent) {
     <span v-if="kindError" role="alert" class="failed">{{ kindError }}</span>
     <span v-if="blankError" role="alert" class="failed">{{ blankError }}</span>
     <span v-if="snapshotProblem" role="alert" class="failed">{{ snapshotProblem }}</span>
+    <span v-if="spellProblem" role="alert" class="failed">{{ spellProblem }}</span>
     <!-- The page item opens the counts. A Markdown document has words, no pages, and no checks. -->
     <span ref="countsWrap" class="counts-wrap" @focusout="onFocusOut">
       <button

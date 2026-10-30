@@ -1,4 +1,7 @@
+import { SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
+import type { Paper } from '@drafter/templates';
 import { type Ref, readonly, shallowRef } from 'vue';
+import { DIFF_COLORS, type DiffColors } from '../compare/colors';
 import { db } from '../storage/db';
 
 export interface Settings {
@@ -6,6 +9,7 @@ export interface Settings {
   matchSystem: boolean;
   /** Scales both panes evenly: 0.9, 1, 1.15, 1.3, or 1.5. */
   textSize: number;
+  /** Drafter's spellcheck in the Source pane, with its own dictionary; on by default (Plan D). The browser's is always off there. */
   spellcheck: boolean;
   /** Strict Fountain (§5.6). */
   strict: boolean;
@@ -23,11 +27,34 @@ export interface Settings {
   elementBar: boolean;
   /** How big the Cards tab draws its cards, chosen on its slim bar; medium by default (Phase 2 design §7). */
   cardSize: CardSize;
+  /** The spellcheck's dictionary: US English by default (Plan D, Call 8). */
+  spellLanguage: SpellLanguage;
+  /** Check notes and boneyard as well; off by default (Plan D, Call 7). */
+  spellNotes: boolean;
+  /** My dictionary: words never marked in any script in this browser, kept as typed (technical design §10; Plan D, Call 9). */
+  personalDictionary: readonly string[];
+  /** The Structure strip above the panes; off by default, to keep the writing screen calm (structure strip design §5). */
+  structureStrip: boolean;
+  /** The paper of a Markdown document's PDF: US Letter by default (Markdown PDF design §6, Call 20). A script's PDF uses its template's. */
+  markdownPaper: Paper;
+  /** Colors for changes in Compare's Changes view: red and green, or blue and orange (version-history design §7). */
+  diffColors: DiffColors;
+  /** Compare's view, the last chosen on its slim bar: the Changes view by default (version-history design §5.1). */
+  compareView: CompareView;
+  /** The Changes view's layout, the last chosen: unified by default; side by side where the pane is wide enough. */
+  diffLayout: DiffLayout;
 }
+
+export type CompareView = 'changes' | 'pages';
+export type DiffLayout = 'unified' | 'split';
+export const COMPARE_VIEWS: readonly CompareView[] = ['changes', 'pages'];
+export const DIFF_LAYOUTS: readonly DiffLayout[] = ['unified', 'split'];
 
 export type CardSize = 'small' | 'medium' | 'large';
 /** The card sizes, smallest first. */
 export const CARD_SIZES: readonly CardSize[] = ['small', 'medium', 'large'];
+/** The papers a Markdown document's PDF can be on, as Settings lists them. */
+export const PAPERS: readonly Paper[] = ['letter', 'a4'];
 
 export const DEFAULT_SETTINGS: Settings = {
   matchSystem: false,
@@ -41,6 +68,14 @@ export const DEFAULT_SETTINGS: Settings = {
   scrollSync: true,
   elementBar: true,
   cardSize: 'medium',
+  spellLanguage: 'en-US',
+  spellNotes: false,
+  personalDictionary: [],
+  structureStrip: false,
+  markdownPaper: 'letter',
+  diffColors: 'red-green',
+  compareView: 'changes',
+  diffLayout: 'unified',
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -54,6 +89,15 @@ function isKey(key: string): key is keyof Settings {
 function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
   if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
+  if (key === 'markdownPaper') return (PAPERS as readonly unknown[]).includes(value);
+  if (key === 'diffColors') return (DIFF_COLORS as readonly unknown[]).includes(value);
+  if (key === 'compareView') return (COMPARE_VIEWS as readonly unknown[]).includes(value);
+  if (key === 'diffLayout') return (DIFF_LAYOUTS as readonly unknown[]).includes(value);
+  if (key === 'spellLanguage') return (SPELL_LANGUAGES as readonly unknown[]).includes(value);
+  if (key === 'personalDictionary') {
+    // Each entry one word: a non-empty string with no whitespace.
+    return Array.isArray(value) && value.every((w) => typeof w === 'string' && /^\S+$/u.test(w));
+  }
   return typeof value === 'boolean';
 }
 
@@ -100,9 +144,12 @@ export function createSettings(): SettingsStore {
   async function set<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {
     if (!isKey(key) || !isValid(key, value)) return;
     changed.add(key);
-    state.value = { ...state.value, [key]: value };
+    // A list is copied: one read from the settings themselves is a Vue proxy, which IndexedDB
+    // (and a worker) can't clone.
+    const kept = Array.isArray(value) ? [...value] : value;
+    state.value = { ...state.value, [key]: kept };
     try {
-      await db.settings.put({ key, value });
+      await db.settings.put({ key, value: kept });
     } catch {
       // Held for this visit.
     }

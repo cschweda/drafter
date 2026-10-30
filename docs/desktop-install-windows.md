@@ -7,7 +7,7 @@ Drafter for Windows is an installer, published with each release on GitHub: <htt
 | Most PCs: 64-bit Intel or AMD | `Drafter-<version>-windows-x64-setup.exe` |
 | Windows on Arm: a Snapdragon laptop, or Windows 11 in a virtual machine on an Apple silicon Mac (Parallels, VMware Fusion, UTM) | `Drafter-<version>-windows-arm64-setup.exe` |
 
-Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor". Windows 10 and 11 are supported.
+Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor". Windows 10 and 11 are supported. How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
 
 ## Install
 
@@ -53,7 +53,7 @@ From a terminal, `"%LOCALAPPDATA%\Programs\drafter\Drafter.exe" "My Script.fount
 
 ## Updating
 
-A few seconds after it starts, Drafter checks GitHub once for a new version. If there is one, it downloads the installer for your PC's processor in the background, then says *"A new version of Drafter is ready"* with **Restart** and **Later**. It never installs or restarts by itself. **Restart** asks about unsaved changes first, then closes Drafter, runs the new installer (a progress bar shows for a few seconds), and starts the new version. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all. You can also update by hand at any time: download the new installer and run it over the old one.
+A few seconds after it starts, Drafter checks GitHub once for a new version. If there is one, it downloads the installer for your PC's processor in the background, then says *"A new version of Drafter is ready"* with **Restart** and **Later**. It never installs or restarts by itself. **Restart** asks about unsaved changes first, then closes Drafter, runs the new installer (a progress bar shows for a few seconds), and starts the new version. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version. You can also update by hand at any time: download the new installer and run it over the old one.
 
 ### What an update is checked for
 
@@ -74,6 +74,10 @@ A script module from the folder is code nobody at Drafter has reviewed, so Draft
 - Keep modules in `%APPDATA%\Drafter\modules` itself. A modules folder that is a link (a junction) to a folder somewhere else is skipped, and so is a module with a link out of its own folder or a hard-linked file. (A link one level up, `%APPDATA%\Drafter` itself made a junction, isn't noticed; only you could make one.)
 - Don't share the modules folder, or give other accounts on the PC access to it.
 - Administrators can change anything on the PC, and so can any program you run; that holds on every system.
+
+## Building the installers yourself
+
+On a Windows PC with Node 22.13 or later and pnpm 10, in a clone of the repository: `pnpm install`, then `pnpm desktop:win`. The installers land in `apps/desktop/release/`.
 
 ## If something goes wrong
 

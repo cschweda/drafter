@@ -93,6 +93,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../../packages/fountain
+      '@drafter/history':
+        specifier: workspace:*
+        version: link:../../packages/history
       '@drafter/layout':
         specifier: workspace:*
         version: link:../../packages/layout
@@ -114,6 +117,9 @@ importers:
       '@drafter/render-text':
         specifier: workspace:*
         version: link:../../packages/render-text
+      '@drafter/spell':
+        specifier: workspace:*
+        version: link:../../packages/spell
       '@drafter/templates':
         specifier: workspace:*
         version: link:../../packages/templates
@@ -242,6 +248,18 @@ importers:
 
   packages/fountain: {}
 
+  packages/history:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+
   packages/layout:
     dependencies:
       '@drafter/fountain':
@@ -317,15 +335,18 @@ importers:
         specifier: workspace:*
         version: link:../templates
       '@pdf-lib/fontkit':
-        specifier: ^1.1.1
+        specifier: 1.1.1
         version: 1.1.1
       pdf-lib:
-        specifier: ^1.17.1
+        specifier: 1.17.1
         version: 1.17.1
     devDependencies:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      mdast-util-from-markdown:
+        specifier: ^2.1.0
+        version: 2.1.0
 
   packages/render-text:
     dependencies:
@@ -339,6 +360,25 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+
+  packages/spell:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      dictionary-en:
+        specifier: 4.0.0
+        version: 4.0.0
+      dictionary-en-gb:
+        specifier: 3.0.0
+        version: 3.0.0
+      nspell:
+        specifier: 2.1.5
+        version: 2.1.5
+    devDependencies:
+      '@types/nspell':
+        specifier: 2.1.6
+        version: 2.1.6
 
   packages/templates:
     dependencies:
@@ -2647,6 +2687,9 @@ packages:
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
 
+  '@types/nspell@2.1.6':
+    resolution: {integrity: sha512-PnWYqrBZhkKAreX2kIZDJcBeigZJzXC8VmSuNiXeILUNreczBZHLxGEv/pRT+zL8rsXLxT5bRbiIF9wuh6cGgg==}
+
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
 
@@ -3604,6 +3647,12 @@ packages:
   dexie@4.4.7:
     resolution: {integrity: sha512-wemFiCl3DTCnfzyqepUTX1ugbYbkTrw3aEZOG7YjAOUoEQB5g5PrEywPzk5JpbX/SxqQ9IvjUpxCDIEjoOWEfA==}
 
+  dictionary-en-gb@3.0.0:
+    resolution: {integrity: sha512-gU/dwC9xGYPh/0CCcmGNXO8OwSgOySAqevcSXxADCsgUD+tr6OJ52u7XaC7No7dNssvdUSfVjkzcqLrRZq3kPA==}
+
+  dictionary-en@4.0.0:
+    resolution: {integrity: sha512-3NHnE1uq33ZE/CIwaZ6gqxa4BnglHnxeAcTM0GJ7cmtRGcvX9InMK/IqLtYcUMFCUpUNgybH+DzkqdgAo3F1zg==}
+
   diff@9.0.0:
     resolution: {integrity: sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==}
     engines: {node: '>=0.3.1'}
@@ -4302,6 +4351,10 @@ packages:
   is-boolean-object@1.2.2:
     resolution: {integrity: sha512-wa56o2/ElJMYqjCjGkXri7it5FbebW5usLw/nPmCMs5DeZ7eziSYZhSmPRn0txqeW4LnAmQQU7FgqLpsEFKM4A==}
     engines: {node: '>= 0.4'}
+
+  is-buffer@2.0.5:
+    resolution: {integrity: sha512-i2R6zNFDwgEHJyQUtJEk0XFi1i0dPFn/oqjK3/vPCcDeJvW5NQ83V8QbicfF1SupOaB0h8ntgBC2YiE7dfyctQ==}
+    engines: {node: '>=4'}
 
   is-callable@1.2.7:
     resolution: {integrity: sha512-1BC0BVFhS/p0qtw6enp8e+8OD0UrK0oFLztSjNzhcKA3WDuJxxAPXzPuPtKkjEY9UUoEWlX/8fgKeu2S8i9JTA==}
@@ -5081,6 +5134,9 @@ packages:
   npm-run-path@6.0.0:
     resolution: {integrity: sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA==}
     engines: {node: '>=18'}
+
+  nspell@2.1.5:
+    resolution: {integrity: sha512-PSStyugKMiD9mHmqI/CR5xXrSIGejUXPlo88FBRq5Og1kO5QwQ5Ilu8D8O5I/SHpoS+mibpw6uKA8rd3vXd2Sg==}
 
   nuxt-guided-tour@0.5.1:
     resolution: {integrity: sha512-VD88rb01jOro/kMyhPGTACd5yshgTxjK8naNEN10dwYOfNpy9WRzZTIlyoT186tv9PvJlslmutx4a6TuTnqduw==}
@@ -9545,6 +9601,10 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
+  '@types/nspell@2.1.6':
+    dependencies:
+      '@types/node': 22.20.5
+
   '@types/resolve@1.20.2': {}
 
   '@types/responselike@1.0.3':
@@ -10517,6 +10577,10 @@ snapshots:
 
   dexie@4.4.7: {}
 
+  dictionary-en-gb@3.0.0: {}
+
+  dictionary-en@4.0.0: {}
+
   diff@9.0.0: {}
 
   dir-compare@4.2.0:
@@ -11431,6 +11495,8 @@ snapshots:
       call-bound: 1.0.4
       has-tostringtag: 1.0.2
 
+  is-buffer@2.0.5: {}
+
   is-callable@1.2.7: {}
 
   is-core-module@2.17.0:
@@ -12303,6 +12369,10 @@ snapshots:
     dependencies:
       path-key: 4.0.0
       unicorn-magic: 0.3.0
+
+  nspell@2.1.5:
+    dependencies:
+      is-buffer: 2.0.5
 
   nuxt-guided-tour@0.5.1(2095c6df0e205a824866981a75fe0959):
     dependencies:

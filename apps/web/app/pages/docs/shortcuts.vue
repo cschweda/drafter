@@ -84,6 +84,15 @@ const groups = shortcutGroups(COMMAND_DATA);
           <kbd>Alt+↓</kbd> move it a row up or down (<kbd>⌥</kbd> on a Mac).
         </li>
         <li>
+          In the Structure strip (Toggle the structure strip, <kbd>⌘⌥O</kbd> on a Mac and
+          <kbd>Ctrl+Alt+O</kbd> elsewhere), <kbd>Tab</kbd> enters on the block you last focused, or
+          the cursor’s scene. <kbd>←</kbd> and <kbd>→</kbd> move along a row, <kbd>↑</kbd> and
+          <kbd>↓</kbd> to the block above or below, and <kbd>Home</kbd> and <kbd>End</kbd> to a
+          row’s ends. <kbd>Enter</kbd> or <kbd>Space</kbd> goes to the scene or section in the
+          Source. The context-menu key or <kbd>Shift+F10</kbd> (or a right-click) opens the block’s
+          menu: Go to and, on a scene, History of this scene.
+        </li>
+        <li>
           In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and
           <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. On a note, <kbd>Enter</kbd>
           goes to it in the Source, <kbd>E</kbd> edits it in place (<kbd>Enter</kbd> saves,
@@ -101,9 +110,30 @@ const groups = shortcutGroups(COMMAND_DATA);
           snapshot’s menu.
         </li>
         <li>
+          In the Deleted scenes tab (File’s Deleted scenes, or History’s Deleted scenes button),
+          <kbd>↑</kbd> and <kbd>↓</kbd> move between the scenes, and <kbd>Home</kbd> and
+          <kbd>End</kbd> go to the first and last. On a scene, <kbd>Enter</kbd> shows or hides its
+          text, <kbd>P</kbd> puts it back where it was, and <kbd>H</kbd> opens History of this
+          scene. The context-menu key or <kbd>Shift+F10</kbd> opens the scene’s menu, which compares
+          that version with now or copies its text.
+        </li>
+        <li>
+          In History of this scene (a scene’s menu in the Outline, the Cards, or the Structure
+          strip, or the palette for the scene holding the cursor), <kbd>↑</kbd> and <kbd>↓</kbd>
+          move between the scene’s versions, and <kbd>Home</kbd> and <kbd>End</kbd> go to the first
+          and last. On a version, <kbd>Enter</kbd> compares it with now and <kbd>U</kbd> uses it in
+          place of the scene now (Undo brings back what it replaced). The context-menu key or
+          <kbd>Shift+F10</kbd> opens the version’s menu.
+        </li>
+        <li>
           In the Compare tab, <kbd>N</kbd> goes to the next change and <kbd>Shift+N</kbd> to the
           previous one, and says what changed; the palette’s Next change and Previous change do the
           same from anywhere while a comparison is open.
+        </li>
+        <li>
+          In the Script tab, while Show changes is on, <kbd>N</kbd> goes to the next marked change
+          and <kbd>Shift+N</kbd> to the previous one, and says where it is; with no comparison open,
+          the palette’s Next change and Previous change go through these marks.
         </li>
         <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { createSettings, DEFAULT_SETTINGS, TEXT_SIZES } from '../app/settings/settings';
+import { createSettings, DEFAULT_SETTINGS, PAPERS, TEXT_SIZES } from '../app/settings/settings';
 import { db } from '../app/storage/db';
 
 beforeEach(async () => {
@@ -24,7 +24,127 @@ describe('settings', () => {
       scrollSync: true,
       elementBar: true,
       cardSize: 'medium',
+      spellLanguage: 'en-US',
+      spellNotes: false,
+      personalDictionary: [],
+      structureStrip: false,
+      markdownPaper: 'letter',
+      diffColors: 'red-green',
+      compareView: 'changes',
+      diffLayout: 'unified',
     });
+  });
+
+  test.each([
+    ['diffColors', 'red-green', 'blue-orange', ['blue', 'red', true, null]],
+    ['compareView', 'changes', 'pages', ['lines', 'Pages', 1, null]],
+    ['diffLayout', 'unified', 'split', ['side-by-side', 'Split', false, null]],
+  ] as const)(
+    '%s is %s by default, and a stored %s is kept, and anything else isn’t',
+    async (key, byDefault, other, wrong) => {
+      const first = createSettings();
+      await first.ready;
+      expect(first.settings.value[key]).toBe(byDefault);
+      await first.set(key, other as never);
+      expect(await db.settings.get(key)).toEqual({ key, value: other });
+      const second = createSettings();
+      await second.ready;
+      expect(second.settings.value[key]).toBe(other);
+      await second.set(key, wrong[0] as never);
+      expect(second.settings.value[key]).toBe(other);
+      for (const value of wrong) {
+        await db.settings.clear();
+        await db.settings.put({ key, value });
+        const store = createSettings();
+        await store.ready;
+        expect(store.settings.value[key], String(value)).toBe(byDefault);
+      }
+    },
+  );
+
+  test('paper for Markdown PDFs is US Letter by default, and a stored a4 is kept, and anything else isn’t', async () => {
+    expect(PAPERS).toEqual(['letter', 'a4']);
+    const first = createSettings();
+    await first.ready;
+    expect(first.settings.value.markdownPaper).toBe('letter');
+    await first.set('markdownPaper', 'a4');
+    expect(await db.settings.get('markdownPaper')).toEqual({ key: 'markdownPaper', value: 'a4' });
+    const second = createSettings();
+    await second.ready;
+    expect(second.settings.value.markdownPaper).toBe('a4');
+    // A paper Drafter doesn't have changes nothing, set or stored.
+    await second.set('markdownPaper', 'legal' as never);
+    expect(second.settings.value.markdownPaper).toBe('a4');
+    for (const value of ['legal', 'A4', true, null]) {
+      await db.settings.clear();
+      await db.settings.put({ key: 'markdownPaper', value });
+      const store = createSettings();
+      await store.ready;
+      expect(store.settings.value.markdownPaper, String(value)).toBe('letter');
+    }
+  });
+
+  test('the structure strip is off by default, and a stored true is kept', async () => {
+    const first = createSettings();
+    await first.ready;
+    expect(first.settings.value.structureStrip).toBe(false);
+    await first.set('structureStrip', true);
+    expect(await db.settings.get('structureStrip')).toEqual({
+      key: 'structureStrip',
+      value: true,
+    });
+    const second = createSettings();
+    await second.ready;
+    expect(second.settings.value.structureStrip).toBe(true);
+    // A value it can't hold changes nothing.
+    await second.set('structureStrip', 'yes' as never);
+    expect(second.settings.value.structureStrip).toBe(true);
+  });
+
+  test('keeps the language, the notes setting, and My dictionary', async () => {
+    const first = createSettings();
+    await first.ready;
+    await first.set('spellLanguage', 'en-GB');
+    await first.set('spellNotes', true);
+    await first.set('personalDictionary', ['Zephyrine', 'Ormsby']);
+    expect(await db.settings.get('personalDictionary')).toEqual({
+      key: 'personalDictionary',
+      value: ['Zephyrine', 'Ormsby'],
+    });
+    const second = createSettings();
+    await second.ready;
+    expect(second.settings.value).toMatchObject({
+      spellLanguage: 'en-GB',
+      spellNotes: true,
+      personalDictionary: ['Zephyrine', 'Ormsby'],
+    });
+    // A language Drafter doesn't have changes nothing.
+    await second.set('spellLanguage', 'fr-FR' as never);
+    expect(second.settings.value.spellLanguage).toBe('en-GB');
+  });
+
+  test('ignores a damaged personal dictionary', async () => {
+    for (const value of [
+      'Zephyrine',
+      ['Zephyrine', 4],
+      ['Zephyrine', ''],
+      ['two words'],
+      [' Zephyrine'],
+      { 0: 'Zephyrine' },
+      null,
+    ]) {
+      await db.settings.clear();
+      await db.settings.bulkPut([
+        { key: 'personalDictionary', value },
+        { key: 'spellLanguage', value: 'en-AU' },
+        { key: 'spellNotes', value: 'yes' },
+      ]);
+      const store = createSettings();
+      await store.ready;
+      expect(store.settings.value, JSON.stringify(value)).toEqual(DEFAULT_SETTINGS);
+      await store.set('personalDictionary', value as never);
+      expect(store.settings.value.personalDictionary).toEqual([]);
+    }
   });
 
   test('cardSize defaults to medium', async () => {

@@ -12,6 +12,7 @@ import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
 import { useSnapshots } from '~/snapshots/use-snapshots';
+import { useSpell } from '~/spell/use-spell';
 import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
@@ -69,8 +70,16 @@ const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty, project } = useScript();
 const { settings } = useSettings();
+// The Structure strip: when it is turned on, on a wide screen, for a Fountain script (structure
+// strip design §5). It sits in `.top`, which focus mode takes away.
+const stripShown = computed(
+  () => settings.value.structureStrip && wide.value && kind.value === 'fountain',
+);
 // Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
 useSnapshots();
+// Starts the spellcheck, which makes its worker once the settings are read and the first script is
+// open (Plan D): the Source pane's spelling marks.
+useSpell();
 
 /** The script's title, as its kind reads it. */
 function pageTitle(): string {
@@ -169,6 +178,7 @@ onBeforeUnmount(() => {
       <StartBlankBar />
       <!-- Its region has no height; the offer itself is fixed in place. In the shell's grid it would be a row. -->
       <UpdatePrompt />
+      <StructureStrip v-if="stripShown" />
     </div>
     <DropZone />
     <SameTitleDialog />
@@ -180,12 +190,17 @@ onBeforeUnmount(() => {
     <LazyFolderModuleRunners v-if="desktopBuild" />
     <CommandPalette />
     <OutlineAnnouncer />
+    <SpellMenu />
     <TreatmentDialog />
+    <ExportOptionsDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />
     <SettingsDialog />
     <StatsDialog />
     <HistoryDialog />
+    <SceneHistoryDialog />
+    <AboutDialog />
+    <UpdateCheckDialog />
     <AppTour />
     <SprintNotice />
     <!-- Focus mode: the Source alone, in a column, with the marker in the corner. -->
@@ -264,6 +279,13 @@ onBeforeUnmount(() => {
 }
 .panes.wide {
   grid-template-columns: calc(var(--split) * 100%) 6px minmax(0, 1fr);
+  /* The tab row, the slim bar, a second bar (the element bar, the Outline's filter), and the text.
+     Each pane takes all four rows as its own (AppPane.vue), so a row is as tall as the taller
+     pane's part: the first lines of text in the two panes start at the same height. */
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.panes.wide > :deep(*) {
+  grid-row: 1 / -1;
 }
 /* The Source alone: the text is a column 64 characters wide (the lines carry 24px of padding of their
    own), centered, with no gutters, and room under the last line for the marker. */

@@ -36,6 +36,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('help-shortcuts', 'Help', 'Open the page: Keyboard shortcuts'),
   cmd('help-saving', 'Help', 'Open the page: Saving and your browser'),
   cmd('help-privacy', 'Help', 'Open the page: Privacy'),
+  cmd('help-licences', 'Help', 'Open the page: Third-party licences'),
   cmd('go-to-scene', 'Go', 'Go to scene…'),
   cmd('next-problem', 'Go', 'Next problem', { keys: ['F8'] }),
   cmd('previous-problem', 'Go', 'Previous problem', { keys: ['Shift-F8'] }),
@@ -88,6 +89,68 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('puts Export options… last in File → Export, by its whole name', () => {
+    const exports = [
+      cmd('export-txt', 'File', 'Export as plain text'),
+      cmd('export-fdx', 'File', 'Export as Final Draft (.fdx)'),
+      cmd('export-treatment', 'File', 'Export as treatment…'),
+      cmd('export-options', 'File', 'Export options…'),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...exports], () => {}, { platform: 'linux' }));
+    const exportMenu = submenu(m.File).find((i) => labelOf(i) === 'Export');
+    const items = submenu(exportMenu).filter((i) => i.type !== 'separator');
+    expect(items.map((i) => i.id)).toEqual([
+      'export-pdf',
+      'export-txt',
+      'export-fdx',
+      'export-treatment',
+      'export-options',
+    ]);
+    // Only "Export as " is cut from a title, so this one keeps its own.
+    expect(labelOf(items.at(-1) as MenuItemConstructorOptions)).toBe('Export options…');
+  });
+
+  test('puts the spelling commands in Edit and Go', () => {
+    const spelling = [
+      cmd('check-spelling', 'Edit', 'Check spelling'),
+      cmd('spelling-suggestions', 'Edit', 'Spelling suggestions', { keys: ['Mod-.'] }),
+      cmd('next-misspelling', 'Go', 'Next misspelling', { keys: ['Mod-;'] }),
+      cmd('previous-misspelling', 'Go', 'Previous misspelling', { keys: ['Mod-Shift-;'] }),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...spelling], () => {}, { platform: 'linux' }));
+    const ids = (menu: string) => walk(submenu(m[menu])).map((i) => i.id);
+    expect(ids('Edit')).toEqual(expect.arrayContaining(['check-spelling', 'spelling-suggestions']));
+    expect(ids('Go')).toEqual(expect.arrayContaining(['next-misspelling', 'previous-misspelling']));
+  });
+
+  test('puts Toggle the structure strip in View after the element bar’s pair, on CmdOrCtrl+Alt+O', () => {
+    const view = [
+      cmd('show-element-bar', 'View', 'Show the element bar'),
+      cmd('hide-element-bar', 'View', 'Hide the element bar'),
+      cmd('toggle-structure-strip', 'View', 'Toggle the structure strip', { keys: ['Mod-Alt-o'] }),
+      cmd('fold-all', 'View', 'Fold all', { keys: ['Ctrl-Alt-['] }),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...view], () => {}, { platform: 'linux' }));
+    const ids = submenu(m.View).map((i) => i.id ?? i.type);
+    const at = ids.indexOf('toggle-structure-strip');
+    expect(ids.slice(at - 2, at + 2)).toEqual([
+      'show-element-bar',
+      'hide-element-bar',
+      'toggle-structure-strip',
+      'separator',
+    ]);
+    expect(
+      named(
+        menuTemplate(view, () => {}, { platform: 'linux' }),
+        'toggle-structure-strip',
+      ),
+    ).toMatchObject({
+      label: 'Toggle the structure strip',
+      accelerator: 'CmdOrCtrl+Alt+O',
+      registerAccelerator: false,
+    });
+  });
+
   test('on Windows, as on Linux: Alt opens each menu by its underlined letter, and Quit ends File', () => {
     const template = menuTemplate(COMMANDS, () => {}, { platform: 'win32' });
     expect(template.map((item) => item.label)).toEqual(['&File', '&Edit', '&View', '&Go', '&Help']);
@@ -109,6 +172,7 @@ describe('menuTemplate', () => {
       'help-shortcuts',
       'help-saving',
       'help-privacy',
+      'help-licences',
       'take-the-tour',
       'modules-folder',
       'releases',
@@ -154,6 +218,23 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');
     expect(named(t, 'help-saving')?.label).toBe('Saving');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
+    expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
+  });
+
+  test('puts Technical Details in Help, after Third-party Licences', () => {
+    const t = menuTemplate(
+      [...COMMANDS, cmd('help-technical', 'Help', 'Open the page: Technical details')],
+      () => {},
+      { platform: 'linux' },
+    );
+    const ids = submenu(menus(t).Help)
+      .map((i) => i.id)
+      .filter(Boolean);
+    expect(ids.slice(ids.indexOf('help-licences'), ids.indexOf('help-licences') + 2)).toEqual([
+      'help-licences',
+      'help-technical',
+    ]);
+    expect(named(t, 'help-technical')?.label).toBe('Technical Details');
   });
 
   test('sends the command’s id when an item is chosen', () => {
@@ -344,6 +425,108 @@ describe('menuTemplate', () => {
       [about, releases, modulesFolder, quit].map((action) => action.mock.calls.length),
     ).toEqual([1, 1, 1, 1]);
     expect(RELEASES_URL).toBe('https://github.com/cschweda/drafter/releases');
+  });
+});
+
+describe('Help’s About, sample scripts, and Check for updates', () => {
+  const HELP = [
+    ...COMMANDS,
+    cmd('sample-script-screenplay', 'Help', 'Sample script: Screenplay'),
+    cmd('sample-script-stage-play', 'Help', 'Sample script: Stage play'),
+    cmd('sample-script-markdown', 'Help', 'Sample script: Markdown'),
+    cmd('check-for-updates', 'Help', 'Check for updates…'),
+    cmd('about-drafter', 'Help', 'About Drafter'),
+  ];
+
+  test('puts the sample scripts in a submenu, then Check for updates, then the app’s own items', () => {
+    const help = submenu(menus(menuTemplate(HELP, () => {}, { platform: 'linux' })).Help);
+    const samples = help.find((i) => i.label === 'Sample Scripts');
+    expect(submenu(samples).map((i) => [i.id, i.label])).toEqual([
+      ['sample-script-screenplay', 'Screenplay'],
+      ['sample-script-stage-play', 'Stage play'],
+      ['sample-script-markdown', 'Markdown'],
+    ]);
+    expect(help.map((i) => i.id).filter(Boolean)).toEqual([
+      'help-shortcuts',
+      'help-saving',
+      'help-privacy',
+      'help-licences',
+      'take-the-tour',
+      'check-for-updates',
+      'modules-folder',
+      'releases',
+      'about-drafter',
+    ]);
+    expect(help.find((i) => i.id === 'check-for-updates')?.label).toBe('Check for Updates…');
+  });
+
+  test('lists New guided screenplay and New guided stage play in File, after New stage play, and in Help → Sample Scripts', () => {
+    const run = vi.fn();
+    const list = [
+      ...HELP.slice(0, 3),
+      cmd('new-markdown', 'File', 'New Markdown document'),
+      cmd('new-guided-screenplay', 'File', 'New guided screenplay'),
+      cmd('new-guided-stage-play', 'File', 'New guided stage play'),
+      ...HELP.slice(3),
+    ];
+    const template = menus(menuTemplate(list, run, { platform: 'linux' }));
+    const file = submenu(template.File);
+    expect(file.slice(0, 5).map((i) => [i.id, i.label])).toEqual([
+      ['new-screenplay', 'New screenplay'],
+      ['new-stage-play', 'New stage play'],
+      ['new-markdown', 'New Markdown document'],
+      ['new-guided-screenplay', 'New guided screenplay'],
+      ['new-guided-stage-play', 'New guided stage play'],
+    ]);
+    const samples = submenu(submenu(template.Help).find((i) => i.label === 'Sample Scripts'));
+    expect(samples.map((i) => [i.id, i.label])).toEqual([
+      ['sample-script-screenplay', 'Screenplay'],
+      ['sample-script-stage-play', 'Stage play'],
+      ['sample-script-markdown', 'Markdown'],
+      ['new-guided-screenplay:also', 'Guided first screenplay'],
+      ['new-guided-stage-play:also', 'Guided first stage play'],
+    ]);
+    // Either item runs the command.
+    (samples[3] as { click: () => void }).click();
+    (file[4] as { click: () => void }).click();
+    expect(run.mock.calls).toEqual([['new-guided-screenplay'], ['new-guided-stage-play']]);
+    // Each is in File once, and nowhere else in Help.
+    expect(
+      walk(template.File ? [template.File] : []).filter((i) => i.id === 'new-guided-screenplay'),
+    ).toHaveLength(1);
+    expect(
+      walk(submenu(template.Help)).filter((i) => i.id === 'new-guided-screenplay:also'),
+    ).toHaveLength(1);
+    // Every id in the menu names one item.
+    const ids = walk(Object.values(template)).flatMap((i) => (i.id ? [i.id] : []));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('About Drafter is the page’s dialog while the page is there, once, where About goes', () => {
+    const run = vi.fn();
+    const about = vi.fn();
+    const linux = menuTemplate(HELP, run, { platform: 'linux', about });
+    expect(walk(linux).filter((i) => i.label === 'About Drafter')).toHaveLength(1);
+    expect(named(linux, 'about')).toBeUndefined();
+    choose(linux, 'about-drafter');
+    expect(run).toHaveBeenCalledWith('about-drafter');
+    expect(about).not.toHaveBeenCalled();
+
+    const mac = menuTemplate(HELP, run, { platform: 'darwin', about });
+    expect(submenu(mac[0])[0]).toMatchObject({ id: 'about-drafter', label: 'About Drafter' });
+    expect(walk(mac).filter((i) => i.label === 'About Drafter')).toHaveLength(1);
+  });
+
+  test('with no page to show it (the command is off), About Drafter is the app’s own box', () => {
+    const about = vi.fn();
+    const off = HELP.map((c) => (c.id === 'about-drafter' ? { ...c, enabled: false } : c));
+    for (const platform of ['linux', 'darwin'] as const) {
+      const t = menuTemplate(off, () => {}, { platform, about });
+      expect(named(t, 'about-drafter')).toBeUndefined();
+      expect(walk(t).filter((i) => i.label === 'About Drafter')).toHaveLength(1);
+      choose(t, 'about');
+    }
+    expect(about).toHaveBeenCalledTimes(2);
   });
 });
 

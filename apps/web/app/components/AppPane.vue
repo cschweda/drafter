@@ -5,6 +5,7 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
+import { useDeleted } from '~/history/deleted';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { contextGeneration } from '~/modules/context';
@@ -13,7 +14,16 @@ import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { COMPARE_TAB, coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
+import {
+  COMPARE_TAB,
+  coreTabs,
+  DELETED_TAB,
+  TABS,
+  type Tab,
+  type TabId,
+  tabRow,
+  viewTabs,
+} from '~/utils/panes';
 
 const props = defineProps<{
   /** `left`, `right`, or `phone`; it names the tabs' ids. */
@@ -56,8 +66,11 @@ const openNotes = computed(() => openCount(noteEntries.value));
 // Compare exists only while a comparison is open, first among the others then, so it takes the slot
 // of the pane it opens in (Phase 2 design §5.8, Call 16).
 const { current: comparison } = useCompare();
+// Deleted scenes, too, exists only while it is open (version-history design §9, Call 34).
+const { isOpen: deletedOpen } = useDeleted();
 const others = computed<Tab[]>(() => [
   ...(comparison.value ? [COMPARE_TAB] : []),
+  ...(deletedOpen.value ? [DELETED_TAB] : []),
   ...viewTabs(kind.value).map((tab) =>
     tab.id === 'notes' && openNotes.value > 0
       ? { ...tab, badge: String(openNotes.value), badgeName: `${openNotes.value} open` }
@@ -89,6 +102,42 @@ const SLIM = computed<Record<'source' | 'problems', string>>(() => ({
         : ''),
 }));
 const { settings, set } = useSettings();
+// Side by side, a tab with a bar of its own under the slim bar (the Source's element bar, the
+// Outline's filter) puts it in the row the panes share for it, and its text under it (index.vue).
+const barShown = useElementBarShown();
+const barred = computed(
+  () =>
+    (props.selected === 'source' && barShown.value) ||
+    (props.selected === 'outline' && !markdown.value),
+);
+
+/**
+ * Side by side, the Outline's tree scrolls under its filter rather than the panel, so the keys
+ * that scroll a focused panel (F6 puts focus there) scroll the tree, as they scrolled the panel.
+ */
+function onPanelKeydown(event: KeyboardEvent) {
+  if (!barred.value || event.target !== event.currentTarget || event.defaultPrevented) return;
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  const panel = event.currentTarget as HTMLElement;
+  const area = [...panel.querySelectorAll<HTMLElement>(':scope > * > :not([data-pane-bar])')].find(
+    (el) => el.scrollHeight > el.clientHeight,
+  );
+  if (!area) return;
+  const page = area.clientHeight * 0.875;
+  const by: Record<string, number> = {
+    ArrowDown: 40,
+    ArrowUp: -40,
+    PageDown: page,
+    PageUp: -page,
+    ' ': event.shiftKey ? -page : page,
+    Home: -area.scrollHeight,
+    End: area.scrollHeight,
+  };
+  const delta = by[event.key];
+  if (delta === undefined) return;
+  event.preventDefault();
+  area.scrollBy({ top: delta });
+}
 
 const { page, updating } = useLayout();
 const zoom = useScriptZoom();
@@ -147,7 +196,11 @@ function onKeydown(event: KeyboardEvent, index: number) {
 </script>
 
 <template>
-  <section class="pane" :data-pane="props.pane">
+  <section
+    class="pane"
+    :class="{ side: props.pane !== 'phone', barred }"
+    :data-pane="props.pane"
+  >
     <div class="tabs">
     <div role="tablist" :aria-label="props.label" class="tablist">
       <button
@@ -189,6 +242,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </template>
       <template v-else-if="props.selected === 'script'">
         <span class="page">{{ pageLabel(page) }}</span>
+        <ChangesToggle />
         <span v-if="updating" class="updating">Updating…</span>
         <span class="spacer" />
         <div role="group" aria-label="Zoom" class="zoom">
@@ -218,6 +272,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </template>
       <template v-else-if="props.selected === 'compare'">
         <CompareSlim />
+      </template>
+      <template v-else-if="props.selected === 'deleted'">
+        <DeletedSlim />
       </template>
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
@@ -269,6 +326,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
           props.selected === 'compare',
       }"
       :data-tour="props.selected"
+      @keydown="onPanelKeydown"
     >
       <SourcePane v-if="props.selected === 'source'" />
       <!-- Keyed by the script as well: a tab keeps the context it is drawn with, so another
@@ -287,6 +345,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <CardsPane v-else-if="props.selected === 'cards'" />
       <NotesPane v-else-if="props.selected === 'notes'" />
       <ComparePane v-else-if="props.selected === 'compare'" />
+      <DeletedPane v-else-if="props.selected === 'deleted'" />
       <ProblemsPane v-else />
     </div>
   </section>
@@ -439,6 +498,83 @@ function onKeydown(event: KeyboardEvent, index: number) {
 @media (forced-colors: active) {
   .badge {
     border: 1px solid CanvasText;
+  }
+}
+</style>
+
+<style>
+/* Side by side, the two panes share the rows of index.vue's grid (tabs, slim bar, second bar, text),
+   so the first lines of text in both start at the same height (decided 2026-10-29). A pane without
+   a second bar lets its slim bar take that row too, its background carried down and its words at
+   the top; a pane with one (the Source's element bar, the Outline's filter) puts it in that row,
+   and the part under it scrolls itself. Unscoped, to reach into the tabs' panes; a phone's one pane
+   keeps the layout above. */
+@supports (grid-template-rows: subgrid) {
+  .panes.wide > .pane.side {
+    grid-template-rows: subgrid;
+  }
+  /* WebKit sizes a subgrid's row by a bar's min-height instead of its content (so the slim bar was
+     24px with its 35px of buttons), and the bars' content is taller than their minimum anyway. */
+  .pane.side > .slim,
+  .pane.side.barred > .panel > * > [data-pane-bar] {
+    min-height: auto;
+  }
+  .pane.side > .slim {
+    grid-row: 2 / span 2;
+    align-content: flex-start;
+  }
+  .pane.side > .panel {
+    grid-row: 4;
+  }
+  .pane.side.barred > .slim {
+    grid-row: 2;
+  }
+  .pane.side.barred > .panel {
+    display: grid;
+    grid-row: 3 / span 2;
+    grid-template-rows: subgrid;
+    overflow: hidden;
+  }
+  .pane.side.barred > .panel > * {
+    display: grid;
+    grid-row: 1 / -1;
+    grid-template-rows: subgrid;
+    height: auto;
+    min-height: 0;
+  }
+  .pane.side.barred > .panel > * > [data-pane-bar] {
+    grid-row: 1;
+  }
+  .pane.side.barred > .panel > * > :not([data-pane-bar]) {
+    grid-row: 2;
+    min-height: 0;
+  }
+  /* The editor scrolls itself already; the Outline's tree does here, under its filter. */
+  .pane.side.barred > .panel > .outline > :not([data-pane-bar]) {
+    overflow: auto;
+  }
+  /* Under the bars, the Source's first line has the editor's 12px of padding over it and half its
+     line's leading inside it. The other panes' first text stands level with that: the Script's
+     page and Compare's first box (a page's margin above its first line belongs to the page), the
+     Preview's first line (its sheet starts at the top), and the first row or words of the rest. */
+  .pane.side :is(.script-host, .compare-host) {
+    padding-top: calc(12px + 2px * var(--text-scale, 1));
+  }
+  .pane.side .preview {
+    padding-top: 0;
+  }
+  .pane.side .preview .sheet {
+    padding-top: calc(11px + 2px * var(--text-scale, 1));
+  }
+  .pane.side .panel > * > .empty:first-child {
+    padding-top: 12px;
+  }
+  .pane.side .problems > .problem:first-child {
+    padding-top: 7px;
+  }
+  /* As tall as the element bar, so neither stretches the other. */
+  .pane.side .outline > .tools {
+    padding-block: 0;
   }
 }
 </style>

@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { type ModuleRow, type Problem, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
+import { useSettings } from '~/settings/settings';
+import { SPELLING_HEADING_ID, spellingHeading } from '~/spell/rows';
+import { useSpell } from '~/spell/use-spell';
 
 // What the Source pane's gutter marks, as a list the writer can read, jump from, and fix from.
-const { problems, moduleProblems, locked } = useProblems();
+// The spellcheck's marks follow, under a Spelling heading of their own (Plan D, Calls 13 and 14):
+// they aren't problems, and aren't counted with them.
+const { problems, moduleProblems, spelling, locked } = useProblems();
+const { settings } = useSettings();
+const spell = useSpell();
 // What script modules found follows the editor's own, each labelled with its module's name.
 const rows = computed<ReadonlyArray<Problem | ModuleRow>>(() => [
   ...problems.value,
@@ -55,7 +62,7 @@ watch([problems, moduleSignature], async () => {
   const active = document.activeElement;
   const inPane = !active || active === document.body || !!root.value?.contains(active);
   if (!inPane) return;
-  const jumps = root.value?.querySelectorAll<HTMLElement>('.jump');
+  const jumps = root.value?.querySelectorAll<HTMLElement>('.problem-list .jump');
   const target = jumps?.[Math.min(index, jumps.length - 1)];
   (target ?? root.value?.closest<HTMLElement>('[role="tabpanel"]'))?.focus();
 });
@@ -66,10 +73,14 @@ onBeforeUnmount(disarm);
 <template>
   <div ref="root">
     <p v-if="kind === 'markdown' && rows.length === 0" class="empty">
-      No checks for Markdown documents.
+      {{
+        settings.spellcheck
+          ? 'No script checks for Markdown documents.'
+          : 'No checks for Markdown documents.'
+      }}
     </p>
     <p v-else-if="rows.length === 0" class="empty">No problems found.</p>
-    <ul v-else class="problems">
+    <ul v-else class="problems problem-list">
       <li
         v-for="(problem, index) in rows"
         :key="problem.key"
@@ -97,6 +108,23 @@ onBeforeUnmount(disarm);
         </button>
       </li>
     </ul>
+    <template v-if="settings.spellcheck">
+      <h2 :id="SPELLING_HEADING_ID" class="spelling-title" tabindex="-1">
+        {{ spellingHeading(spelling.length, spell.state.value) }}
+      </h2>
+      <ul v-if="spelling.length > 0" class="problems" aria-label="Spelling">
+        <li v-for="row in spelling" :key="row.key" class="problem spelling">
+          <button
+            type="button"
+            class="jump"
+            @click="goto(row.from, { select: { from: row.from, to: row.to } })"
+          >
+            <span class="message">{{ row.word }}</span>
+            <span class="line">Line {{ row.line }}</span>
+          </button>
+        </li>
+      </ul>
+    </template>
   </div>
 </template>
 
@@ -125,6 +153,21 @@ onBeforeUnmount(disarm);
 }
 .problem[data-severity='info'] {
   box-shadow: inset 3px 0 0 var(--line);
+}
+/* A misspelling: the mark's own color, as the Source pane underlines it. */
+.problem.spelling {
+  box-shadow: inset 3px 0 0 var(--spelling);
+}
+.spelling-title {
+  margin: 0;
+  padding: 12px 16px 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+.spelling-title:focus-visible {
+  outline: 2px solid var(--heading);
+  outline-offset: -2px;
 }
 .jump {
   display: flex;

@@ -27,14 +27,17 @@ test.describe('the app menu', () => {
     await start(page);
     await openMenu(page);
 
-    // The New items are the document types, in the Scripts menu's order; then the rest.
+    // The New items are the document types, in the Scripts menu's order, then the guided starters;
+    // then the rest.
     const names = await menu(page).getByRole('menuitem').allTextContents();
     const shown = names.map((n) => n.trim());
     const at = (label: string) => shown.findIndex((n) => n.startsWith(label));
     expect(at('New screenplay')).toBe(0);
     expect(at('New stage play')).toBe(1);
     expect(at('New Markdown document')).toBe(2);
-    expect(at('Open…')).toBe(3);
+    expect(at('New guided screenplay')).toBe(3);
+    expect(at('New guided stage play')).toBe(4);
+    expect(at('Open…')).toBe(5);
     for (const label of [
       'Save',
       'Save As…',
@@ -43,7 +46,7 @@ test.describe('the app menu', () => {
       'Export as plain text',
       'Settings…',
     ]) {
-      expect(at(label), label).toBeGreaterThan(3);
+      expect(at(label), label).toBeGreaterThan(5);
     }
     // A Fountain script exports as PDF or text; the Markdown file is a Markdown document's.
     expect(at('Export as Markdown')).toBe(-1);
@@ -84,10 +87,16 @@ test.describe('the app menu', () => {
     await page.keyboard.press('ArrowDown');
     await expect(menu(page)).toBeVisible();
     await page.keyboard.press('End');
-    // The last item is Help's Reset sample (a sample is open); above it are the four help pages, then
-    // Take the tour, and above that Settings….
-    await expect(item(page, /^Reset sample/)).toBeFocused();
+    // The last item is Help's About Drafter; above it Check for updates…, Reset sample (a sample is
+    // open), the Sample scripts submenu, the six help pages, then Take the tour, and above that
+    // Settings….
+    await expect(item(page, /^About Drafter/)).toBeFocused();
     for (const name of [
+      /^Check for updates…/,
+      /^Reset sample/,
+      /^Sample scripts/,
+      /^Technical details/,
+      /^Third-party licences/,
       /^Privacy/,
       /^Keyboard shortcuts/,
       /^Saving and your browser/,
@@ -187,7 +196,7 @@ test.describe('the app menu', () => {
     await expect(palette.getByRole('option', { name: /^Export as Markdown/ })).toHaveCount(0);
   });
 
-  test('offers a Markdown document the Markdown file and plain text, not a PDF', async ({
+  test('offers a Markdown document the PDF, the Markdown file, and plain text', async ({
     page,
   }) => {
     await start(page);
@@ -195,9 +204,22 @@ test.describe('the app menu', () => {
     await item(page, /^New Markdown document/).click();
     await expect.poll(() => text(page)).toContain('# Untitled');
     await openMenu(page);
-    await expect(item(page, /^Export as Markdown/)).toBeVisible();
-    await expect(item(page, /^Export as plain text/)).toBeVisible();
-    await expect(item(page, /^Export as PDF/)).toHaveCount(0);
+    // The PDF first, as for a script.
+    const exports = page.getByRole('menuitem', { name: /^Export as/ });
+    await expect(exports).toHaveText([
+      /^Export as PDF/,
+      /^Export as Markdown/,
+      /^Export as plain text/,
+    ]);
+    await expect(item(page, /^Export as PDF/)).not.toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+    // The palette shows Export as PDF in one too.
+    await page.keyboard.press('ControlOrMeta+k');
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    await palette.locator('input').fill('Export as');
+    await expect(palette.getByRole('option', { name: /^Export as PDF/ })).toBeVisible();
+    await expect(palette.getByRole('option', { name: /^Export as Markdown/ })).toBeVisible();
+    await expect(palette.getByRole('option', { name: /^Export as Final Draft/ })).toHaveCount(0);
   });
 
   test('shows an item disabled when its command is off', async ({ page }) => {

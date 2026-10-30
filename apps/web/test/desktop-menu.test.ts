@@ -9,6 +9,7 @@ import {
   useCommands,
 } from '../app/commands/registry';
 import type { DesktopBridge, DesktopMenuCommand } from '../app/desktop';
+import { exportApplies } from '../app/storage/export';
 
 function command(id: string, extra: Partial<Command> = {}): Command {
   const data = COMMAND_DATA.find((c) => c.id === id);
@@ -240,6 +241,18 @@ describe('Cards and notes in the desktop menus', () => {
   });
 });
 
+describe('The guided starters in the desktop menus', () => {
+  test('puts New guided screenplay and New guided stage play in File', () => {
+    const ids = ['new-guided-screenplay', 'new-guided-stage-play'];
+    registerCommands(ids.map((id) => command(id)));
+    const sent = menuCommands(useCommands().value).map((c) => [c.id, c.title, c.group]);
+    expect(sent).toEqual([
+      ['new-guided-screenplay', 'New guided screenplay', 'File'],
+      ['new-guided-stage-play', 'New guided stage play', 'File'],
+    ]);
+  });
+});
+
 describe('Snapshots and Compare in the desktop menus', () => {
   test('puts History… and Take snapshot… in File, and Next change, Previous change, and Close comparison in View', () => {
     const ids = ['history', 'take-snapshot', 'next-change', 'previous-change', 'close-compare'];
@@ -254,5 +267,97 @@ describe('Snapshots and Compare in the desktop menus', () => {
       'previous-change': 'View',
       'close-compare': 'View',
     });
+  });
+});
+
+describe('Spellcheck in the desktop menus', () => {
+  test('puts Check spelling, Spelling suggestions, Next misspelling, and Previous misspelling in the menus', () => {
+    const ids = [
+      'check-spelling',
+      'spelling-suggestions',
+      'add-to-script-dictionary',
+      'add-to-my-dictionary',
+      'ignore-misspelling',
+      'next-misspelling',
+      'previous-misspelling',
+    ];
+    registerCommands(ids.map((id) => command(id)));
+    const list = menuCommands(useCommands().value);
+    const groups = Object.fromEntries(list.map((c) => [c.id, c.group]));
+    // Next and Previous misspelling go with Next and Previous problem, in Go.
+    expect(groups).toEqual({
+      'check-spelling': 'Edit',
+      'spelling-suggestions': 'Edit',
+      'add-to-script-dictionary': 'Edit',
+      'add-to-my-dictionary': 'Edit',
+      'ignore-misspelling': 'Edit',
+      'next-misspelling': 'Go',
+      'previous-misspelling': 'Go',
+    });
+    expect(list.find((c) => c.id === 'spelling-suggestions')?.keys).toEqual(['Mod-.']);
+  });
+});
+
+describe('The structure strip in the desktop menus', () => {
+  test('puts Toggle the structure strip in View, with Mod+Alt+O', () => {
+    registerCommands([command('toggle-structure-strip')]);
+    expect(menuCommands(useCommands().value)).toEqual([
+      {
+        id: 'toggle-structure-strip',
+        title: 'Toggle the structure strip',
+        group: 'View',
+        keys: ['Mod-Alt-o'],
+        enabled: true,
+      },
+    ]);
+  });
+});
+
+describe('Export in the desktop menus', () => {
+  test('the menu carries each export’s enabled from exportApplies: PDF on for both kinds', () => {
+    // The commands are registered here with `enabled` from `exportApplies`, as builtin.ts does
+    // (the real builtins need Nuxt's auto-imports). The desktop e2e chooses File → Export → PDF
+    // for a Markdown document against the real ones.
+    const ids = ['export-pdf', 'export-md', 'export-txt', 'export-fdx'] as const;
+    const menuFor = (kind: 'fountain' | 'markdown') => {
+      clearCommands();
+      registerCommands(
+        ids.map((id) =>
+          command(id, { enabled: () => exportApplies(id.slice('export-'.length) as never, kind) }),
+        ),
+      );
+      return menuCommands(useCommands().value);
+    };
+    expect(menuFor('markdown')).toEqual([
+      { id: 'export-pdf', title: 'Export as PDF', group: 'File', enabled: true },
+      expect.objectContaining({ id: 'export-md', group: 'File', enabled: true }),
+      expect.objectContaining({ id: 'export-txt', group: 'File', enabled: true }),
+      expect.objectContaining({ id: 'export-fdx', group: 'File', enabled: false }),
+    ]);
+    expect(menuFor('fountain').map((c) => [c.id, c.enabled])).toEqual([
+      ['export-pdf', true],
+      ['export-md', false],
+      ['export-txt', true],
+      ['export-fdx', true],
+    ]);
+  });
+});
+
+describe('Export options in the desktop menus', () => {
+  test('puts Export options… in File → Export, last', () => {
+    // Every export command, in the order the registry has them: the desktop app's File → Export
+    // submenu picks them by their `export-` prefix, in this order.
+    const ids = COMMAND_DATA.filter((c) => c.id.startsWith('export-')).map((c) => c.id);
+    registerCommands(ids.map((id) => command(id)));
+    const sent = menuCommands(useCommands().value).filter((c) => c.id.startsWith('export-'));
+    expect(sent.map((c) => c.id)).toEqual([
+      'export-pdf',
+      'export-md',
+      'export-txt',
+      'export-fdx',
+      'export-treatment',
+      'export-options',
+    ]);
+    expect(sent.at(-1)).toMatchObject({ title: 'Export options…', group: 'File' });
   });
 });

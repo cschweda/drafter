@@ -54,8 +54,14 @@ describe('Compare labels', () => {
     expect(stopLabel({ change: 0, kind: 'changed', line: 40, lines: 2 }, null)).toBe(
       'Line 40: 2 lines changed',
     );
-    expect(stopLabel({ change: 1, kind: 'removed', line: 7, lines: 1 }, 'ignored')).toBe(
+    expect(stopLabel({ change: 1, kind: 'removed', line: 7, lines: 1 }, null)).toBe(
       'Line 7: 1 line removed',
+    );
+  });
+
+  test('names a stop in the Changes view by its heading, which has no page', () => {
+    expect(stopLabel({ change: 1, kind: 'removed', line: 7, lines: 1 }, 'INT. HALL')).toBe(
+      'INT. HALL: 1 line removed',
     );
   });
 
@@ -65,5 +71,23 @@ describe('Compare labels', () => {
     expect(gapName(gap({ kind: 'unprinted', lines: ['[[A note.]]'] }))).toBe(
       '1 line changed that doesn’t print',
     );
+  });
+
+  test('a gap counts the lines with text, and says so when it holds only blank lines', () => {
+    expect(gapName(gap({ lines: ['', 'Nobody answers it.', ''] }))).toBe('1 line removed');
+    expect(gapName(gap({ lines: ['One.', '', 'Two.'] }))).toBe('2 lines removed');
+    expect(gapName(gap({ lines: [''] }))).toBe('a blank line removed');
+    expect(gapName(gap({ lines: ['', '  '] }))).toBe('2 blank lines removed');
+    expect(gapName(gap({ kind: 'unprinted', lines: [''] }))).toBe('a blank line added');
+  });
+
+  test('a stop of blank lines only is named as its marker is', () => {
+    // The Changes list, Next change, and the marker's button say the same words.
+    const one = stop({ kind: 'removed', page: 5, lines: 1, blank: true });
+    expect(stopLabel(one, 'INT. HALL')).toBe('Page 5, INT. HALL: a blank line removed');
+    expect(stopLabel(one, 'INT. HALL')).toContain(gapName(gap({ lines: [''] })));
+    const two = stop({ kind: 'unprinted', page: 1, lines: 2, blank: true });
+    expect(stopLabel(two, null)).toBe('Page 1: 2 blank lines added');
+    expect(stopLabel(two, null)).toContain(gapName(gap({ kind: 'unprinted', lines: ['', ''] })));
   });
 });

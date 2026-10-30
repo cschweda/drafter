@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { expect, type Page, test } from '@playwright/test';
+import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
+import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
 import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
@@ -127,6 +131,160 @@ test.describe('without JavaScript', () => {
     await expect(focus).toContainText('Ctrl+Shift+Enter');
   });
 
+  test('the licences page lists every dependency and links its licence file', async ({ page }) => {
+    // The versions installed: nspell's from @drafter/spell, is-buffer's from nspell.
+    const spell = createRequire(new URL('../../../packages/spell/package.json', import.meta.url));
+    const nspellDir = spell.resolve('nspell').replace(/[/\\]lib[/\\]index\.js$/, '');
+    const version = (dir: string) =>
+      (JSON.parse(readFileSync(`${dir}/package.json`, 'utf8')) as { version: string }).version;
+    const isBufferDir = createRequire(`${nspellDir}/package.json`)
+      .resolve('is-buffer')
+      .replace(/[/\\]index\.js$/, '');
+    const packages = [
+      { name: 'nspell', version: version(nspellDir), licence: 'MIT', file: '/licenses/nspell.txt' },
+      {
+        name: 'is-buffer',
+        version: version(isBufferDir),
+        licence: 'MIT',
+        file: '/licenses/is-buffer.txt',
+      },
+      ...Object.values(DICTIONARIES).map((d) => ({
+        name: d.package,
+        version: d.version,
+        licence: d.licence,
+        file: d.licenceFile,
+      })),
+    ];
+    await page.goto('/docs/licences');
+    await expect(heading(page)).toHaveText('Third-party licences');
+    for (const { name, version, licence, file } of packages) {
+      const entry = page.locator('main section').filter({
+        has: page.getByRole('heading', { level: 3, name, exact: true }),
+      });
+      await expect(entry, name).toContainText(version);
+      await expect(entry, name).toContainText(licence);
+      const link = entry.getByRole('link', { name: /licence/i });
+      await expect(link, name).toHaveAttribute('href', file);
+      // The file is served, as the package ships it.
+      const response = await page.request.get(file);
+      expect(response.status(), file).toBe(200);
+      expect((await response.text()).length, file).toBeGreaterThan(500);
+    }
+    // The copyright lines the dictionaries' notices carry, UKACD's shown as it asks.
+    const text = await mainText(page);
+    for (const line of [
+      'Copyright 2000-2018 by Kevin Atkinson',
+      'Copyright 1993, Geoff Kuenning, Granada Hills, CA',
+      'Copyright (c) J Ross Beresford 1993-1999. All Rights Reserved.',
+      'Copyright (c) 2016 Titus Wormer',
+      'Copyright (c) Feross Aboukhadijeh',
+      'Courier Prime',
+      'Inter Tight',
+      'SIL Open Font License',
+    ]) {
+      expect(text, line).toContain(line);
+    }
+    await expect(page.getByRole('link', { name: /Courier Prime.*licence/i })).toHaveAttribute(
+      'href',
+      '/fonts/courier-prime/OFL.txt',
+    );
+    // Inter Tight's own licence, linked and served verbatim (the OFL's second condition).
+    await expect(page.getByRole('link', { name: /Inter Tight.*licence/i })).toHaveAttribute(
+      'href',
+      '/fonts/inter-tight/OFL.txt',
+    );
+    const ofl = await page.request.get('/fonts/inter-tight/OFL.txt');
+    expect(ofl.ok()).toBe(true);
+    expect(await ofl.text()).toBe(
+      readFileSync(new URL('../app/assets/fonts/inter-tight/OFL.txt', import.meta.url), 'utf8'),
+    );
+  });
+
+  test('points a newcomer to the guided screenplay from the cheat sheet and the help index', async ({
+    page,
+  }) => {
+    await page.goto('/docs/fountain');
+    expect(await mainText(page)).toContain(
+      'New to Fountain? File → New guided screenplay and New guided stage play walk you through a first script.',
+    );
+    await page.goto('/docs');
+    expect(await mainText(page)).toContain('a guided first screenplay and stage play');
+  });
+
+  test('the Technical details page has its parts, its diagrams as lists, and every dependency', async ({
+    page,
+  }) => {
+    await page.goto('/docs/technical');
+    await expect(heading(page)).toHaveText('Technical details');
+    // A contents list of the ten parts, each a link to its heading.
+    const contents = page.getByRole('navigation', { name: 'Contents' });
+    for (const { id, title } of TECH_SECTIONS) {
+      await expect(contents.getByRole('link', { name: title, exact: true }), id).toHaveAttribute(
+        'href',
+        `#${id}`,
+      );
+      await expect(
+        page.getByRole('heading', { level: 2, name: title, exact: true }),
+        id,
+      ).toHaveAttribute('id', id);
+    }
+    // Five diagrams, each a figure with a caption and its boxes as a list a screen reader reads.
+    const figures = page.locator('main figure');
+    await expect(figures).toHaveCount(5);
+    for (const figure of await figures.all()) {
+      await expect(figure.locator('figcaption')).not.toBeEmpty();
+      expect(await figure.locator('ol > li').count()).toBeGreaterThanOrEqual(2);
+      // The arrows are drawn, not read.
+      for (const arrow of await figure.locator('.tech-arrow').all()) {
+        await expect(arrow).toHaveAttribute('aria-hidden', 'true');
+      }
+    }
+    // The package diagram says what each box uses directly, in words a reader can see.
+    const packages = page.locator('figure[data-diagram="packages"]');
+    await expect(packages).toContainText('@drafter/fountain');
+    await expect(packages).toContainText('uses @drafter/fountain');
+    await expect(
+      packages.getByText('uses @drafter/fountain', { exact: true }).first(),
+    ).toBeVisible();
+    // Storage isn't a chain: the editor's text goes three ways, side by side after one arrow.
+    const storage = page.locator('main figure').nth(2);
+    await expect(storage.locator('ol > li')).toHaveCount(2);
+    await expect(storage.locator('ul > li')).toHaveCount(3);
+    // Every third-party runtime dependency, by name, with its line.
+    const list = page.locator('main dl');
+    for (const [name, line] of Object.entries(DEPENDENCY_NOTES)) {
+      await expect(list.locator('dt').getByText(name, { exact: true }), name).toHaveCount(1);
+      expect(await mainText(page), name).toContain(line);
+    }
+    await expect(page.getByRole('link', { name: /DEPENDENCIES\.md/ })).toHaveAttribute(
+      'href',
+      'https://github.com/cschweda/drafter/blob/main/docs/DEPENDENCIES.md',
+    );
+    await expect(
+      page.locator('main').getByRole('link', { name: 'Third-party licences', exact: true }),
+    ).toHaveAttribute('href', '/docs/licences/');
+    await expect(page.getByRole('link', { name: /clean-room statement/i })).toHaveAttribute(
+      'href',
+      /^https:\/\/github\.com\/cschweda\/drafter\/blob\/main\//,
+    );
+    expect(await mainText(page)).not.toMatch(/ICJIA/i);
+  });
+
+  test('the Technical details page has no script or style from another origin', async ({
+    page,
+  }) => {
+    await page.goto('/docs/technical');
+    await expect(heading(page)).toHaveText('Technical details');
+    const sources = await page.evaluate(() => [
+      ...[...document.querySelectorAll('script[src]')].map((el) => (el as HTMLScriptElement).src),
+      ...[...document.querySelectorAll('link[rel="stylesheet"], link[rel="modulepreload"]')].map(
+        (el) => (el as HTMLLinkElement).href,
+      ),
+    ]);
+    const origin = new URL(page.url()).origin;
+    for (const source of sources) expect(new URL(source).origin, source).toBe(origin);
+  });
+
   test('says on the Privacy page that nothing leaves the device', async ({ page }) => {
     await page.goto('/docs/privacy');
     const text = (await mainText(page)).toLowerCase();
@@ -141,6 +299,7 @@ test.describe('without JavaScript', () => {
       'indexeddb',
       'localstorage',
       'writing stats',
+      'drafter-cache',
     ]) {
       expect(text, phrase).toContain(phrase);
     }

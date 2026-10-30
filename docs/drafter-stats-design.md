@@ -32,7 +32,7 @@ A dialog (same look as Settings), opened from **Stats…** at the foot of the Co
 **Today** — words added, pages added (not for Markdown), writing time, and the goal's progress if one is set.
 
 **This script** (by kind):
-- Screenplay and stage play: pages, scenes, words, running time (≈ a page a minute), **characters** (the number of distinct speaking characters, ignoring extensions like `(V.O.)`/`(CONT'D)`), and a **character table**: name, scenes they speak in, speeches, words of dialogue, sorted by speeches (top 20, then "and N more"). Screenplay only: interior/exterior and day/night split of scene headings (counts and %, from the heading's prefix and its time of day; anything else is "other").
+- Screenplay and stage play: pages, scenes, words, running time (≈ a page a minute; since v0.17.0, at each script's own minutes a page, with an estimate from the dialogue at its own words a minute), **characters** (the number of distinct speaking characters, ignoring extensions like `(V.O.)`/`(CONT'D)`), and a **character table**: name, scenes they speak in, speeches, words of dialogue, sorted by speeches (top 20, then "and N more"). Screenplay only: interior/exterior and day/night split of scene headings (counts and %, from the heading's prefix and its time of day; anything else is "other").
 - Markdown: words, headings, reading time (**Call:** 230 words a minute).
 - All kinds: **total writing time** on this script, **days written**, and the first day written.
 

@@ -97,7 +97,10 @@ useDocsHead({
             <td>Yes</td>
           </tr>
           <tr>
-            <th scope="row">Export as PDF, plain text, or Final Draft</th>
+            <th scope="row">
+              Export as PDF, plain text, or Final Draft (a Markdown document: PDF, its Markdown
+              file, or plain text)
+            </th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
@@ -215,6 +218,23 @@ useDocsHead({
       in Drafter again brings them back.
     </p>
 
+    <h2 id="export-options">Export options</h2>
+    <p>
+      <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF and
+      plain text print. <strong>Scene numbers</strong>: None (the usual), As written (only the
+      numbers you’ve written in the script, like <code>#12A#</code>), or Number every scene (a scene
+      with a written number keeps it, and the rest are numbered by their place, so two scenes can
+      share a number). <strong>Title page</strong>: Full, Title and author only (the title, the
+      credit, the authors, and the source, without your contact details or the date), or None.
+    </p>
+    <p>
+      Each script keeps its own choices, in this browser, and the script itself never changes: they
+      aren’t in its file, so another browser or computer starts with the usual ones. The export’s
+      message names any choice that isn’t the usual one. A Final Draft file gets the title page you
+      choose, and always keeps the scene numbers written in the script, since Final Draft decides
+      whether to print them. A Markdown document has neither, so its Export options is off.
+    </p>
+
     <h2 id="recovery-copy">The recovery copy</h2>
     <p>
       Drafter keeps a copy of every script in this browser’s own storage, whether or not the script
@@ -257,6 +277,47 @@ useDocsHead({
       and the one from your last save always stay. They live in the same storage as the recovery
       copy, so they have the same limits, and they are not in your <code>.fountain</code> file.
     </p>
+    <h3 id="compare">Compare</h3>
+    <p>
+      Compare, from a snapshot in History, shows what changed between two versions. It opens on
+      <strong>Changes</strong>: the script’s text, grouped under each scene’s heading, with an added
+      line marked <strong>+</strong> in green and a removed one <strong>−</strong> in red, and the
+      words you changed within a line underlined or struck through. Unchanged stretches fold away
+      behind “Show 40 unchanged lines”. Where there is room, <strong>Side by side</strong> shows the
+      two versions in columns. <strong>Pages</strong> shows the newer version as script pages, with an
+      asterisk in the margin by each changed line. If red and green are hard to tell apart, choose
+      <strong>Blue and orange</strong> under <strong>Colors for changes</strong> in Settings.
+    </p>
+
+    <h3 id="deleted-scenes">Deleted scenes</h3>
+    <p>
+      <strong>Deleted scenes</strong> (in the app menu after History…, in History, or in the command
+      palette) lists every scene that is in one of your snapshots but not in the script now, the most
+      recently cut first, with when it was last there and its first lines.
+      <strong>Put back</strong> puts a scene back where it was, after the scene that came before it;
+      one undo takes it out again. It reads your snapshots in the background, and keeps a note of each
+      scene in them in this browser, so the next look is quick.
+    </p>
+
+    <h3 id="show-changes">Show changes</h3>
+    <p>
+      The <strong>Changes</strong> button on the Script tab’s bar marks the pages with what you have
+      changed since you last saved: a changed or added line gets a colored band and a
+      <strong>+</strong>, and where lines were taken out a thin rule with a button shows them. To
+      compare with a snapshot instead, choose it from <strong>since</strong>, or use
+      <strong>Show changes since this</strong> in History. The marks are only on the screen: they
+      never print or export, and Show changes is off each time you open Drafter.
+    </p>
+
+    <h3 id="scene-history">History of this scene</h3>
+    <p>
+      <strong>History of this scene</strong> (a scene’s menu in the Outline or the Cards, the
+      Structure strip’s menu on a scene, the command palette for the scene your cursor is in, or
+      Deleted scenes) lists every different version of one scene in your snapshots, newest first,
+      and shows what changed against now or against the version before.
+      <strong>Use this version</strong> puts the scene back as it was, after keeping a snapshot
+      called “Before restoring a scene”; one undo brings back what it replaced.
+    </p>
 
     <h2 id="installing">Installing Drafter as an app</h2>
     <p>
@@ -294,7 +355,8 @@ useDocsHead({
       <li>You can open a script by double-clicking a <code>.fountain</code> file.</li>
       <li>It has a menu bar.</li>
       <li>
-        Drafter checks for a new version when it starts (you can turn this off) and never installs
+        Drafter checks for a new version when it starts (you can turn this off), and whenever you
+        choose <strong>Help → Check for Updates…</strong>, and never installs
         it by itself: it offers <strong>Restart</strong> once the new version is downloaded, or
         <strong>Get it</strong>, the release page, where it can’t update itself.
       </li>

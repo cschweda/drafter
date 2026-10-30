@@ -253,6 +253,17 @@ export const MARKDOWN_BUTTONS: readonly BarButton[] = [
   },
 ];
 
+/**
+ * The phone's Spelling button (Plan D, Call 15): after the element buttons, on a narrow screen
+ * only, while the cursor is on a misspelled word. It opens the spelling menu by the button.
+ */
+export const SPELLING_BUTTON: BarButton = {
+  label: 'Spelling',
+  mark: '',
+  command: 'spelling-suggestions',
+  tip: 'Suggestions for the misspelled word at the cursor, and adding it to a dictionary.',
+};
+
 /** The tooltip, and the button's description: its sentence, and its key for this keyboard. */
 export function tipFor(button: BarButton, apple: boolean): string {
   const keys = COMMAND_DATA.find((c) => c.id === button.command)?.keys;

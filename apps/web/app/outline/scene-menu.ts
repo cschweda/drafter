@@ -22,9 +22,14 @@ export interface SceneMenuHooks {
   moveTo(id: string): void;
   /** Focus back on the item's row or card: after a color, and when Scene details closes. */
   focus(id: string): void;
+  /** History of this scene…, once the menu has closed (the row or card is the dialog's opener). */
+  history(id: string): void;
 }
 
-/** The menu for the item with this id: Go to; the moves; for a scene, its synopsis, color, and details. */
+/**
+ * The menu for the item with this id: Go to; the moves; for a scene, its synopsis, color, details,
+ * and History of this scene….
+ */
 export function sceneMenuItems(
   id: string,
   item: OutlineItem,
@@ -89,6 +94,12 @@ export function sceneMenuItems(
         label: 'Scene details…',
         icon: 'i-lucide-notebook-pen',
         onSelect: () => openSceneDetails(id, () => hooks.focus(id)),
+      },
+      {
+        // Read-only too: versions are listed and compared, and Use this version says why it is off.
+        label: 'History of this scene…',
+        icon: 'i-lucide-history',
+        onSelect: () => hooks.history(id),
       },
     ]);
   }

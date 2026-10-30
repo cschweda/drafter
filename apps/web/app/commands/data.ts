@@ -5,6 +5,7 @@
 // here. This file imports only plain data, by relative paths, so a test outside the app can read it.
 
 import { SAMPLES } from '../editor/sample-kinds';
+import { STARTER_KINDS } from '../editor/starter-kinds';
 import { DOCUMENT_TYPES } from '../editor/template';
 import { SPRINT_MINUTES } from '../stats/sprint-minutes';
 import type { CommandGroup } from './registry';
@@ -19,6 +20,8 @@ export interface CommandData {
   keys?: string;
   /** The registry binds `keys` on the whole page (see `Command.global`). */
   global?: boolean;
+  /** More words the palette's search finds it by, beside its title (Call 39). */
+  keywords?: readonly string[];
 }
 
 export interface HelpPage {
@@ -34,6 +37,8 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
+  { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
+  { id: 'help-technical', path: '/docs/technical', title: 'Technical details' },
 ];
 
 /** The address a link uses: the page's directory, which is where a static host serves it (no redirect). */
@@ -83,6 +88,11 @@ export const COMMAND_DATA: readonly CommandData[] = [
       ...(type.newKeys && { keys: type.newKeys, global: true }),
     }),
   ),
+  // The guided starters (out-the-door design §1.5): a first screenplay and stage play that teach
+  // themselves, after the New items. No key: they are used once or twice.
+  ...STARTER_KINDS.map(
+    (starter): CommandData => ({ id: starter.command, title: starter.title, group: 'File' }),
+  ),
   // The Fountain templates, then Markdown as a kind of document.
   ...DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map(
     (type): CommandData => ({
@@ -103,6 +113,15 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
   { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
+  // Deleted scenes (version-history design §3.3, §8, §9): a tab, opened and closed from here. The
+  // maintainer looks for it as "show all versions".
+  {
+    id: 'deleted-scenes',
+    title: 'Deleted scenes',
+    group: 'File',
+    icon: 'i-lucide-archive-restore',
+    keywords: ['show all versions', 'versions', 'deleted', 'cut scenes', 'put back'],
+  },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
   ...SAMPLES.map(
     (sample): CommandData => ({
@@ -117,11 +136,22 @@ export const COMMAND_DATA: readonly CommandData[] = [
   ...HELP_PAGES.map(
     (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
   ),
+  // Help → Sample scripts: a tiny sample of each kind, opened as a new script of the writer's own.
+  ...SAMPLES.map(
+    (sample): CommandData => ({
+      id: `sample-script-${sample.kind}`,
+      title: `Sample script: ${sample.name}`,
+      group: 'Help',
+    }),
+  ),
+  { id: 'check-for-updates', title: 'Check for updates…', group: 'Help' },
+  { id: 'about-drafter', title: 'About Drafter', group: 'Help', icon: 'i-lucide-info' },
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },
   { id: 'export-md', title: 'Export as Markdown file', group: 'File' },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },
   { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },
+  { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },
   { id: 'settings', title: 'Settings…', group: 'File', keys: 'Mod-,', global: true },
@@ -129,8 +159,19 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Go
   { id: 'go-to-scene', title: 'Go to scene…', group: 'Go' },
   { id: 'go-to-line', title: 'Go to line…', group: 'Go' },
+  // History of this scene (version-history design §6, §8): the scene holding the cursor.
+  {
+    id: 'scene-history',
+    title: 'History of this scene…',
+    group: 'Go',
+    icon: 'i-lucide-history',
+    keywords: ['versions of this scene', 'scene versions'],
+  },
   { id: 'next-problem', title: 'Next problem', group: 'Go', keys: 'F8' },
   { id: 'previous-problem', title: 'Previous problem', group: 'Go', keys: 'Shift-F8' },
+  // The spellcheck's (Plan D, Call 11): F7, the usual key, turns on caret browsing in Firefox.
+  { id: 'next-misspelling', title: 'Next misspelling', group: 'Go', keys: 'Mod-;' },
+  { id: 'previous-misspelling', title: 'Previous misspelling', group: 'Go', keys: 'Mod-Shift-;' },
 
   // View
   { id: 'show-source', title: 'Show Source', group: 'View' },
@@ -143,8 +184,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
   // registry key; from anywhere else these, while a comparison is open. They sit in View with
   // Close comparison, the desktop menu's home for Compare.
+  // Show changes on the Script pane (version-history design §4.1): its title says Hide changes
+  // while it is on. Next change and Previous change go through its marks with no comparison open.
+  { id: 'show-changes', title: 'Show changes', group: 'View', icon: 'i-lucide-diff' },
   { id: 'next-change', title: 'Next change', group: 'View' },
   { id: 'previous-change', title: 'Previous change', group: 'View' },
+  // Compare's two views (version-history design §5.1, §8), while a comparison is open.
+  { id: 'compare-changes-view', title: 'Compare’s Changes view', group: 'View' },
+  { id: 'compare-pages-view', title: 'Compare’s Pages view', group: 'View' },
   { id: 'close-compare', title: 'Close comparison', group: 'View' },
   {
     id: 'focus-mode',
@@ -176,6 +223,16 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
   { id: 'show-element-bar', title: 'Show the element bar', group: 'View' },
   { id: 'hide-element-bar', title: 'Hide the element bar', group: 'View' },
+  // The Structure strip (structure strip design §5, Call 31): Mod+Alt+O, read from the physical
+  // key with Alt held (`matchesKey`), so Option's character on a Mac doesn't matter.
+  {
+    id: 'toggle-structure-strip',
+    title: 'Toggle the structure strip',
+    group: 'View',
+    icon: 'i-lucide-panel-top',
+    keys: 'Mod-Alt-o',
+    global: true,
+  },
   { id: 'fold-all', title: 'Fold all', group: 'View', keys: 'Ctrl-Alt-[' },
   { id: 'unfold-all', title: 'Unfold all', group: 'View', keys: 'Ctrl-Alt-]' },
   // Condense and expand (Phase 2 design §6.4): the names a writer looks for, for folding.
@@ -194,6 +251,17 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
+  // Check spelling shows Problems on its Spelling group (Plan D, Call 13).
+  { id: 'check-spelling', title: 'Check spelling', group: 'Edit' },
+  // The spelling menu's (Plan D): the last three act on the misspelled word at the cursor.
+  { id: 'spelling-suggestions', title: 'Spelling suggestions', group: 'Edit', keys: 'Mod-.' },
+  {
+    id: 'add-to-script-dictionary',
+    title: 'Add word to this script’s dictionary',
+    group: 'Edit',
+  },
+  { id: 'add-to-my-dictionary', title: 'Add word to my dictionary', group: 'Edit' },
+  { id: 'ignore-misspelling', title: 'Ignore misspelling here', group: 'Edit' },
 
   // Edit, the element bar's commands (docs/drafter-element-bar-design.md §4): natural Fountain,
   // with a forcing mark only where a line needs one, on Mod-Alt-1…7 (decided 2026-10-27). Dual

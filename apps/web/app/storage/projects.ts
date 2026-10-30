@@ -1,9 +1,13 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
 import type { SampleKind } from '../editor/sample-kinds';
+import type { StarterKind } from '../editor/starter-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
+import { clearProjectCache } from '../history/cache';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
+import type { Rates } from '../stats/time-format';
+import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';
 import { fileBaseName, titleFileOf, titleOf } from './text';
@@ -24,6 +28,18 @@ export interface Project {
   meta: DrafterMeta | null;
   /** Set on the samples (Phase 1 design §4.2): the screenplay, the stage play, and the Markdown document. */
   sample?: SampleKind;
+  /**
+   * Set on a document made from one of Help's sample scripts (`editor/sample-scripts.ts`): the
+   * writer's own document, but not one that says they have met that kind's annotated sample
+   * (`storage/first-samples.ts`). Unindexed, so it needed no new version.
+   */
+  sampleScript?: SampleKind;
+  /**
+   * Set on a document made from one of the guided starters (`editor/starters.ts`): like a sample
+   * script, the writer's own, but not a meeting with that kind's annotated sample. Unindexed, so it
+   * needed no new version.
+   */
+  starter?: StarterKind;
   /**
    * Set on a document that opened with a sample's text because it was the writer's first of its
    * kind: the new-document text Start blank puts in instead, and where the cursor goes in it.
@@ -51,6 +67,18 @@ export interface Project {
    */
   importedFrom?: string;
   fsHandleId?: string;
+  /**
+   * How this script exports (scene numbers, the title page): set in the Export options dialog,
+   * kept here and never in the script, so choosing one never changes the text. A missing or
+   * unknown value is its default (`exportOptionsOf`). Unindexed, so it needed no new version.
+   */
+  exportOptions?: Partial<ExportOptions>;
+  /**
+   * The rates this script's running time and estimate from the dialogue are figured at: set in
+   * the Stats window, kept here and never in the script (Call 9). A missing or out-of-range value
+   * is its default (`ratesOf`). Unindexed, so it needed no new version.
+   */
+  timing?: Partial<Rates>;
 }
 
 /** The kind a project is: Fountain unless it says it is Markdown. */
@@ -168,7 +196,7 @@ export async function writeSource(
   });
 }
 
-/** Also deletes its snapshot, its file handle, its goal, its days' counts, and its writing time; never touches the file. */
+/** Also deletes its snapshots, its file handle, its goal, its days’ counts, its writing time, and its rows in the prints cache; never touches the file. */
 export async function removeProject(id: string): Promise<void> {
   await db.transaction('rw', db.projects, db.snapshots, db.handles, db.settings, async () => {
     await db.settings.delete(goalKey(id));
@@ -185,6 +213,10 @@ export async function removeProject(id: string): Promise<void> {
     await db.snapshots.where('projectId').equals(id).delete();
     await db.projects.delete(id);
   });
+  // The prints cache is another database, so it's cleared after (version-history design §3.6): it
+  // holds the script's scene headings and previews, which must not outlive it. A failure here
+  // leaves rows nothing reads, and doesn't undo the removal.
+  await clearProjectCache(id).catch(() => undefined);
 }
 
 // The text as last saved to its file (technical design §8.4): one snapshot a

@@ -1,5 +1,8 @@
-# Copied in by scripts/sync-assets.mjs from brand/ and packages/render-pdf/fonts/.
+# Copied in by scripts/sync-assets.mjs from brand/, packages/render-pdf/fonts/, and the
+# spellchecker's packages (its dictionaries and the licences).
 public/fonts/
+public/dictionaries/
+public/licenses/
 public/favicon.svg
 public/favicon.ico
 public/apple-touch-icon.png

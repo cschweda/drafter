@@ -43,6 +43,8 @@ export const CHANNELS = {
   backToEditor: 'drafter:back-to-editor',
   /** preload → main: whether Check for updates is on. */
   updateEnabled: 'drafter:update:enabled',
+  /** preload → main: Help → Check for updates, now, whatever the setting (invoke; a `CheckResult`). */
+  updateCheck: 'drafter:update:check',
   /** The modules folder (module-folder.ts). preload → main: the modules read at start, and what was skipped (invoke). */
   modulesList: 'drafter:modules:list',
   /** preload → main: `(id, origins)`: the network origins the writer agreed to for a module (invoke). */

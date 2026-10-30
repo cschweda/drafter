@@ -56,9 +56,21 @@ export interface Layout {
   diagnostics: LayoutDiagnostic[];
 }
 
+/**
+ * Which scene headings print a number: none; only those with a number written in the script
+ * (`#12A#`); or every one, a written number kept and the rest counted by position.
+ */
+export type SceneNumbering = 'none' | 'written' | 'all';
+
+/** What a title page keeps: everything, only its title, credit, author, and source, or nothing. */
+export type TitlePageMode = 'full' | 'title-author' | 'none';
+
 export interface PaginateOptions {
-  /** Overrides `template.sceneNumbers.enabled`. */
-  sceneNumbers?: boolean;
+  /**
+   * Overrides `template.sceneNumbers.enabled`: `true` is `'all'`, `false` is `'none'`, and
+   * absent is the template's (enabled is `'all'`).
+   */
+  sceneNumbers?: boolean | SceneNumbering;
 }
 
 /** A template this version can't lay out: Phase 0 supports 12 pt monospace fonts only. */

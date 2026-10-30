@@ -1,11 +1,27 @@
+import { realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
 import { TOUR_ICONS } from './scripts/tour-icons.mjs';
+import { buildCommit, drafterVersion } from './scripts/version.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 
 /** The workspace packages, at the repository root. */
 const PACKAGES = fileURLToPath(new URL('../../packages', import.meta.url));
+/**
+ * `decode-named-character-reference`'s plain build (`index.js`, not its `browser` one), found
+ * from the Markdown parser that depends on it (the alias below says why).
+ */
+const ENTITIES = join(
+  dirname(
+    createRequire(
+      `${realpathSync(fileURLToPath(new URL('node_modules/mdast-util-from-markdown', import.meta.url)))}/`,
+    ).resolve('decode-named-character-reference'),
+  ),
+  'index.js',
+);
 /** The script modules, at the repository root: a folder each, with an `index.ts` (modules/README.md). */
 const MODULES = fileURLToPath(new URL('../../modules', import.meta.url));
 // The icons the modules name: the icon bundle is built from the app's own files, and the modules
@@ -17,6 +33,10 @@ const TEST_MODULES = process.env.DRAFTER_TEST_MODULES === '1';
 // the desktop app's bridge. drafter.dev's build is unchanged.
 const DESKTOP = process.env.DRAFTER_DESKTOP === '1';
 const moduleIcons = await moduleIconNames(MODULES);
+// About Drafter (Help): the version (the desktop app's, which Electron reports there too) and the
+// commit being built, when git can say (scripts/version.mjs).
+const VERSION = drafterVersion();
+const COMMIT = buildCommit();
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
@@ -55,14 +75,22 @@ export default defineNuxtConfig({
     workbox: {
       // Every file the app needs, by extension: the shell (HTML), scripts and styles (the lazy and
       // worker chunks are in `_nuxt/` with the rest), Inter Tight and Courier Prime, the icons,
-      // (the manifest is added by the plugin itself, once). A page added under /docs/ later (Task 8) is matched by `**/*.html`.
-      globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,ico}'],
+      // and the spelling dictionaries (`dictionaries/<language>/index.{aff,dic}`, about 1.1 MB,
+      // each well under Workbox's 2 MiB limit) (the manifest is added by the plugin itself, once).
+      // The licence files the Third-party licences page links (`licenses/*.txt` and the fonts'
+      // `OFL.txt`, about 42 KB) are cached too, so its links work offline; no other `.txt` is. A
+      // page added under /docs/ is matched by `**/*.html`.
+      globPatterns: [
+        '**/*.{js,css,html,woff2,ttf,png,svg,ico,aff,dic}',
+        'licenses/*.txt',
+        'fonts/*/OFL.txt',
+      ],
       // Not part of the app: the social-sharing image, and the hosting fallbacks (200.html is the
       // shell again; 404.html is for a link that matches nothing).
       globIgnores: ['og-image.png', '200.html', '404.html'],
       // A navigation the worker has no page for gets the app's shell, so a reload works offline at
       // any address the app is used at. Not for a path that names a file (`/og-image.png`,
-      // `/fonts/courier-prime/OFL.txt`, `/404.html`): those are files, not the app. The
+      // `/404.html`): those are files, not the app. The
       // documentation pages are their own pages (`/docs/...`, precached by `**/*.html`), not the app.
       navigateFallback: '/',
       navigateFallbackDenylist: [/\/[^/?]+\.[^/]+$/, /^\/docs(\/|$)/],
@@ -108,6 +136,9 @@ export default defineNuxtConfig({
     define: {
       __DRAFTER_TEST_MODULES__: JSON.stringify(TEST_MODULES),
       __DRAFTER_DESKTOP__: JSON.stringify(DESKTOP),
+      __DRAFTER_VERSION__: JSON.stringify(VERSION),
+      __DRAFTER_COMMIT__: JSON.stringify(COMMIT?.commit ?? ''),
+      __DRAFTER_COMMIT_DATE__: JSON.stringify(COMMIT?.date ?? ''),
     },
     plugins: [
       {
@@ -121,8 +152,15 @@ export default defineNuxtConfig({
     ],
     resolve: {
       alias: [
+        // The Markdown parser decodes character references (`&amp;`) with the package
+        // `decode-named-character-reference`, whose `browser` build asks the DOM (`document`) at
+        // load, which a worker hasn't got: the export worker and the Preview's worker failed with
+        // it, in every build and under `nuxt dev`. Everywhere (the page, the workers, dev, the
+        // build, the desktop app) it takes the package's own table (`index.js`) instead, the same
+        // decoding without the DOM (about 29 KB more in the lazy parser chunk).
+        { find: /^decode-named-character-reference$/, replacement: ENTITIES },
         {
-          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|layout|lint|notes|outline|render-html|render-pdf|render-text|templates)$/,
+          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|history|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

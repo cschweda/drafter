@@ -136,6 +136,15 @@ test.describe('offline', () => {
     expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
   });
 
+  test('spellchecks offline: the dictionaries are cached', async ({ page, context }) => {
+    await start(page);
+    await context.setOffline(true);
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    await typeAtEnd(page, '\nThe phnoe rings.\n');
+    await expect(page.locator('.cm-misspelled')).toHaveText('phnoe', { timeout: 10_000 });
+  });
+
   test('works offline at a Markdown document, whose parser loads on demand', async ({
     page,
     context,
@@ -172,11 +181,31 @@ test.describe('offline', () => {
     expect((await download).suggestedFilename()).toBe('The Call.pdf');
   });
 
+  test('exports a Markdown PDF offline: its fonts are cached', async ({ page, context }) => {
+    await removePickers(page);
+    await start(page);
+    await context.setOffline(true);
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    // A first Markdown PDF, with no network: the parser and the five document fonts come from the cache.
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New Markdown document' })
+      .click();
+    await expect(editor(page)).toContainText('# Untitled');
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name: 'PDF' }).click();
+    expect((await download).suggestedFilename()).toBe('Untitled.pdf');
+    await expect(page.locator('.toast [role="status"]')).toHaveText('Exported Untitled.pdf.');
+  });
+
   test('does not answer a request for a file with the app', async ({ page, context }) => {
     await start(page);
     await context.setOffline(true);
     // A file that isn't cached is a network error offline, not the app's shell in its place.
-    for (const path of ['/og-image.png', '/fonts/courier-prime/OFL.txt', '/404.html']) {
+    for (const path of ['/og-image.png', '/404.html']) {
       await page.goto(path).catch(() => null);
       await expect(editor(page)).toHaveCount(0);
     }
@@ -208,6 +237,29 @@ test.describe('offline', () => {
     await expect(editor(page)).toContainText('The Call');
   });
 
+  test('opens the licence files the Third-party licences page links, offline', async ({
+    page,
+    context,
+  }) => {
+    await start(page);
+    await context.setOffline(true);
+    await page.goto('/docs/licences/');
+    const links = page.locator('main a[href$=".txt"]');
+    const hrefs = await links.evaluateAll((all) => all.map((a) => a.getAttribute('href') ?? ''));
+    expect([...new Set(hrefs)].sort()).toEqual([
+      '/fonts/courier-prime/OFL.txt',
+      '/fonts/inter-tight/OFL.txt',
+      '/licenses/dictionary-en-gb.txt',
+      '/licenses/dictionary-en.txt',
+      '/licenses/is-buffer.txt',
+      '/licenses/nspell.txt',
+    ]);
+    for (const href of hrefs) {
+      const text = await page.evaluate(async (url) => (await fetch(url)).text(), href);
+      expect(text, href).toMatch(/licen[cs]e|copyright/i);
+    }
+  });
+
   test('caches nothing but the app’s own files', async ({ page }) => {
     await start(page);
     const stored = await page.evaluate(async () => {
@@ -227,11 +279,27 @@ test.describe('offline', () => {
     expect(stored.urls).toContain('/');
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.js$/.test(u))).toBe(true);
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.css$/.test(u))).toBe(true);
-    for (const worker of ['layout.worker', 'export.worker', 'markdown.worker']) {
+    // The history worker too: Deleted scenes and History of this scene read the snapshots in it.
+    for (const worker of [
+      'layout.worker',
+      'export.worker',
+      'markdown.worker',
+      'spell.worker',
+      'history.worker',
+    ]) {
       expect(stored.urls.some((u) => u.includes(worker))).toBe(true);
     }
-    expect(stored.urls.filter((u) => u.includes('InterTight'))).toHaveLength(2);
-    expect(stored.urls.filter((u) => u.startsWith('/fonts/courier-prime/'))).toHaveLength(4);
+    // Inter Tight: the interface's two files, and the four styles a Markdown document's PDF embeds.
+    expect(stored.urls.filter((u) => /^\/_nuxt\/InterTight/.test(u))).toHaveLength(2);
+    expect(
+      stored.urls.filter((u) => /^\/fonts\/inter-tight\/InterTight-.+\.ttf$/.test(u)).sort(),
+    ).toEqual(
+      ['Italic', 'Regular', 'SemiBold', 'SemiBoldItalic'].map(
+        (style) => `/fonts/inter-tight/InterTight-${style}.ttf`,
+      ),
+    );
+    // Courier Prime's four files and its licence.
+    expect(stored.urls.filter((u) => u.startsWith('/fonts/courier-prime/'))).toHaveLength(5);
     for (const icon of ['/icon-192.png', '/icon-512.png', '/icon-maskable-512.png']) {
       expect(stored.urls).toContain(icon);
     }

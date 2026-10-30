@@ -179,6 +179,10 @@ export function setUpUpdates(
     if (!fromEditor(event, contents())) return;
     updates.openReleasePage();
   });
+  ipcMain.handle(CHANNELS.updateCheck, async (event) => {
+    if (!fromEditor(event, contents())) throw new Error('not allowed');
+    return updates.checkNow();
+  });
   ipcMain.handle(CHANNELS.updateInstall, async (event) => {
     if (!fromEditor(event, contents())) throw new Error('not allowed');
     const result = await updates.install();

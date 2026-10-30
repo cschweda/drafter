@@ -5,8 +5,10 @@ import { formatKeys, isApple } from '~/commands/keys';
 import { type Command, useCommands } from '~/commands/registry';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
+import { STARTER_KINDS } from '~/editor/starter-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useTemplateMenu } from '~/editor/template-menu';
+import { EXPORTS } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { kindOf, type Project } from '~/storage/projects';
 import { revertNotice } from '~/storage/save';
@@ -93,13 +95,13 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
   });
 });
 
-// A Fountain script exports as a PDF, plain text, or a Final Draft file; a Markdown document as its
-// Markdown file or plain text. (The PDF, Final Draft, and Markdown commands are off in the other
-// kind, and the palette hides them; here the other kind's items are left out.)
+// A Fountain script exports as a PDF, plain text, or a Final Draft file; a Markdown document as a
+// PDF, its Markdown file, or plain text (`EXPORTS`). (The Final Draft and Markdown commands are off
+// in the other kind, and the palette hides them; here the other kind's items are left out.)
 const exportIds = computed(() =>
-  editor.kind.value === 'markdown'
-    ? ['export-md', 'export-txt']
-    : ['export-pdf', 'export-txt', 'export-fdx'],
+  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].map(
+    (kind) => `export-${kind}`,
+  ),
 );
 const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',
@@ -109,12 +111,16 @@ const EXPORT_ICONS: Record<string, string> = {
 };
 
 // Help: the group at the end of the menu. Take the tour is first (always on), then the help pages
-// (each opens in a new tab, and is named by the page's title under the Help label); Reset sample is last (off unless a sample is open).
+// (each opens in a new tab, and is named by the page's title under the Help label), the Sample
+// scripts submenu (a tiny sample of each kind, then the guided starters, each opened as a new
+// script), Reset sample (off unless a sample is open), Check for updates…, and About Drafter last.
 const HELP_ICONS: Record<string, string> = {
   'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
   'help-shortcuts': 'i-lucide-keyboard',
   'help-privacy': 'i-lucide-shield-check',
+  'help-licences': 'i-lucide-scale',
+  'help-technical': 'i-lucide-cpu',
 };
 const helpItems = computed<DropdownMenuItem[]>(() => [
   { type: 'label', label: 'Help' },
@@ -125,12 +131,34 @@ const helpItems = computed<DropdownMenuItem[]>(() => [
       label: page.title,
     })),
   ),
+  {
+    label: 'Sample scripts',
+    icon: 'i-lucide-files',
+    children: [
+      SAMPLES.flatMap((sample) =>
+        entry(`sample-script-${sample.kind}`, 'i-lucide-file-text', true).map((item) => ({
+          ...item,
+          label: sample.name,
+        })),
+      ),
+      // The guided starters, under the tiny samples, by the names a lesson goes by.
+      STARTER_KINDS.flatMap((starter) =>
+        entry(starter.command, 'i-lucide-graduation-cap', true).map((item) => ({
+          ...item,
+          label: starter.menuLabel,
+        })),
+      ),
+    ],
+  },
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
+  ...entry('check-for-updates', 'i-lucide-refresh-cw'),
+  ...entry('about-drafter', 'i-lucide-info'),
 ]);
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
+    ...STARTER_KINDS.flatMap((starter) => entry(starter.command, 'i-lucide-graduation-cap', true)),
     ...entry('open', 'i-lucide-folder-open'),
   ],
   templateSection.value,
@@ -144,10 +172,17 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...entry('save-as', 'i-lucide-save-all'),
     ...entry('revert-to-saved', 'i-lucide-undo-2', true),
     ...entry('history', 'i-lucide-history'),
+    ...entry('deleted-scenes', 'i-lucide-archive-restore'),
     // File, as in the palette: Start blank only while a first document still has its sample's untouched text.
     ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],
-  exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
+  [
+    ...exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
+    // Export options… ends the section, after a line (out-the-door design §2.4); off, with the
+    // reason, for a Markdown document.
+    { type: 'separator' },
+    ...entry('export-options', 'i-lucide-sliders-horizontal'),
+  ],
   [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
   helpItems.value,
 ]);

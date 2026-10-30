@@ -17,7 +17,8 @@ export type SnapshotReason =
   | 'before-fix-all'
   | 'before-revert'
   | 'before-restore'
-  | 'before-reload'; // 'before-merge' arrives with Plan G
+  | 'before-reload'
+  | 'before-scene-restore'; // 'before-merge' arrives with Plan G
 
 export interface SnapshotInfo {
   id: string;

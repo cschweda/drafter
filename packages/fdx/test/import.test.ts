@@ -4,6 +4,7 @@ import { type Doc, parse, print } from '@drafter/fountain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { FdxError, fromFdx, XmlError } from '../src';
+import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const fixture = (name: string) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
@@ -15,6 +16,7 @@ const P = (type: string, text: string, attrs = '') =>
   `<Paragraph Type="${type}"${attrs}><Text>${text}</Text></Paragraph>`;
 
 const kinds = (doc: Doc) => doc.blocks.map((b) => b.kind);
+const squashed = (text: string) => text.replace(/\s+/g, '');
 /** Each block's kind and printable text, the way the round trip compares them. */
 const printed = (doc: Doc) =>
   doc.blocks.map((b) => [
@@ -178,7 +180,8 @@ describe('fromFdx: the elements', () => {
         `<Paragraph Type="Action"><Text Style="Bold">a </Text><Text Style="Bold+Italic">b</Text><Text Style="Bold"> c</Text><Text> and </Text><Text Style="Bold+Italic+Underline">all</Text><Text Style="AllCaps"> d</Text></Paragraph>`,
       ),
     ).text;
-    expect(text).toBe('**a *b* c** and _***all***_ d\n');
+    // A run styled AllCaps prints in capitals.
+    expect(text).toBe('**a *b* c** and _***all***_ D\n');
     const runs = parse(text).blocks[0]?.lines[0]?.inline ?? [];
     expect(runs.map((r) => [r.text, r.bold, r.italic, r.underline])).toEqual([
       ['a ', true, false, false],
@@ -186,7 +189,7 @@ describe('fromFdx: the elements', () => {
       [' c', true, false, false],
       [' and ', false, false, false],
       ['all', true, true, true],
-      [' d', false, false, false],
+      [' D', false, false, false],
     ]);
   });
 
@@ -334,6 +337,26 @@ describe('fromFdx: unmapped content', () => {
     ]);
   });
 
+  it("ignores Final Draft's breakdown tags, which hold ids rather than writing", () => {
+    const tags =
+      '<TagData><TagCategories><TagCategory Id="c1" Name="Props" Number="1"/></TagCategories>' +
+      '<TagDefinitions><TagDefinition CatId="c1" Id="d1" Label="lantern" Number="1"/></TagDefinitions>' +
+      '<Tags><Tag Number="1"><DefId>d1</DefId></Tag></Tags></TagData>';
+    const result = fromFdx(fdx(P('Action', 'The sea.'), tags));
+    expect(result.text).toBe('The sea.\n');
+    expect(result.mapped).toEqual([]);
+    expect(result.ignored).toEqual(['TagData']);
+  });
+
+  it('ignores the places revisions deleted text, whatever they hold: deleted is not writing', () => {
+    const deleted =
+      '<DeletedText><DeletedTextLocation Offset="9" RevisionID="2">the lamp goes out</DeletedTextLocation></DeletedText>';
+    const result = fromFdx(fdx(P('Action', 'The sea.'), deleted));
+    expect(result.text).toBe('The sea.\n');
+    expect(result.mapped).toEqual([]);
+    expect(result.ignored).toEqual(['DeletedText']);
+  });
+
   it('forces an unknown type whose text would read as another kind', () => {
     const text = fromFdx(fdx(P('Cast List', 'ODILE') + P('Cast List', 'INT. NOT A SCENE'))).text;
     expect(kinds(parse(text))).toEqual(['action', 'action']);
@@ -420,6 +443,39 @@ describe('fromFdx: the title page', () => {
     ]);
   });
 
+  it('takes a paragraph with an empty Text run as a gap between blocks, as an empty paragraph', () => {
+    // Final Draft writes a title page's blank lines as `<Text></Text>`, not as empty paragraphs.
+    const centered = (text: string) =>
+      `<Paragraph Alignment="Center"><Text>${text}</Text></Paragraph>`;
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        `<TitlePage><Content>${[
+          'THE NETS',
+          '',
+          'by',
+          '   ',
+          'Imogen Vale',
+          '',
+          'Based on a story by Ada Quill',
+        ]
+          .map(centered)
+          .join('')}</Content></TitlePage>`,
+      ),
+    );
+    expect(result.text).toBe(
+      [
+        'Title: THE NETS',
+        'Credit: by',
+        'Author: Imogen Vale',
+        'Notes: Based on a story by Ada Quill',
+        '',
+        'The sea.',
+        '',
+      ].join('\n'),
+    );
+  });
+
   it('forces a first paragraph that would read as a title page', () => {
     const text = fromFdx(fdx(P('Action', 'Title: not really'))).text;
     const doc = parse(text);
@@ -466,6 +522,27 @@ describe('fromFdx: content in unexpected places', () => {
     ]);
   });
 
+  it('keeps text written directly inside a DualDialogue, as a note in its place', () => {
+    const result = fromFdx(
+      fdx(
+        `<Paragraph><DualDialogue>${P('Character', 'ODILE')}${P('Dialogue', 'Now.')} Both at once. ${P('Character', 'THEO')}${P('Dialogue', 'Later.')}</DualDialogue></Paragraph>`,
+      ),
+    );
+    expect(result.text).toBe(
+      [
+        'ODILE',
+        'Now.',
+        '',
+        'Both at once. [[fdx: DualDialogue text]]',
+        '',
+        'THEO ^',
+        'Later.',
+        '',
+      ].join('\n'),
+    );
+    expect(result.mapped).toEqual([{ type: 'DualDialogue text', count: 1 }]);
+  });
+
   it('keeps a scene property summary on a paragraph inside a speech, after the speech', () => {
     const text = fromFdx(
       fdx(
@@ -493,6 +570,7 @@ describe("fromFdx: values Drafter can't trust", () => {
     const section = (depth: string) =>
       `<Paragraph Type="General" DrafterSection="${depth}"><Text>Part</Text></Paragraph>`;
     expect(fromFdx(fdx(section('6'))).text).toBe('###### Part\n');
+    // The text check below is what proves a huge depth isn't repeated; the clock only guards a hang.
     const start = performance.now();
     const result = fromFdx(
       fdx(
@@ -504,7 +582,7 @@ describe("fromFdx: values Drafter can't trust", () => {
           section('2.5'),
       ),
     );
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(HANG_MS);
     expect(result.text).toBe(`${Array(6).fill('Part [[fdx: General]]').join('\n\n')}\n`);
     expect(result.mapped).toEqual([{ type: 'General', count: 6 }]);
     const heading = fromFdx(
@@ -562,24 +640,35 @@ describe('fromFdx: text outside its elements', () => {
 });
 
 describe('fromFdx on a large file', () => {
-  const big = (paragraph: (text: string) => string, unit: string) => {
-    const shell = fdx(paragraph(''));
-    return fdx(paragraph(unit.repeat(Math.floor((5_000_000 - shell.length) / unit.length))));
-  };
+  // A file of about `chars` characters, one paragraph of `unit` repeated.
+  const big = (paragraph: (text: string) => string, unit: string) => (chars: number) =>
+    fdx(paragraph(unit.repeat(Math.floor(chars / unit.length))));
 
-  it('reads 5 MB of unclosed note openers in action in linear time', () => {
-    const xml = big((t) => P('Action', t), '[[');
-    const start = performance.now();
-    fromFdx(xml);
-    expect(performance.now() - start).toBeLessThan(3000);
-  });
+  // Linear, not a wall-clock budget (scaling.ts): a quadratic search for each `[[`'s `]]` grows
+  // about 16 times from 250 KB to 1 MB. The whole 5 MB file is still read once, as a hang guard.
+  it(
+    'reads unclosed note openers in action in linear time',
+    () => {
+      const make = big((t) => P('Action', t), '[[');
+      const { growth, large } = scaling(make, fromFdx, 250_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      expect(() => fromFdx(make(4_990_000))).not.toThrow();
+    },
+    SCALING_TIMEOUT,
+  );
 
-  it('reads 5 MB of unclosed note openers in dialogue in linear time', () => {
-    const xml = big((t) => P('Character', 'BOB') + P('Dialogue', t), 'a [[ ');
-    const start = performance.now();
-    fromFdx(xml);
-    expect(performance.now() - start).toBeLessThan(3000);
-  });
+  it(
+    'reads unclosed note openers in dialogue in linear time',
+    () => {
+      const make = big((t) => P('Character', 'BOB') + P('Dialogue', t), 'a [[ ');
+      const { growth, large } = scaling(make, fromFdx, 250_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      expect(() => fromFdx(make(4_990_000))).not.toThrow();
+    },
+    SCALING_TIMEOUT,
+  );
 });
 
 describe('fromFdx: refusals', () => {
@@ -608,6 +697,7 @@ describe('fromFdx: refusals', () => {
       title: null,
       mapped: [],
       ignored: [],
+      ignoredCount: 0,
     });
   });
 });
@@ -712,4 +802,753 @@ describe('fromFdx: the round trip through Fountain', () => {
       expect(print(parse(text))).toBe(text);
     }
   });
+});
+
+// Shapes a Final Draft 13 file showed (element and attribute names only; every text and value
+// here is invented).
+describe('fromFdx: Final Draft 13 shapes', () => {
+  const lines = (...parts: string[]) => `${parts.join('\n')}\n`;
+
+  it('accepts a root of Version 6', () => {
+    const xml =
+      '<?xml version="1.0"?><FinalDraft DocumentType="Script" Template="No" Version="6"><Content>' +
+      `${P('Action', 'The sea.')}</Content></FinalDraft>`;
+    expect(fromFdx(xml).text).toBe('The sea.\n');
+  });
+
+  it('ignores an image and puts a short note where a paragraph holds a picture', () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'A map on the wall.') +
+          '<Paragraph Type="Action"><Picture Id="p1" Width="100" Height="80"/></Paragraph>' +
+          '<Paragraph Type="Action"><Text>See below:</Text><Picture Id="p1" Width="10" Height="8"/></Paragraph>',
+        '<Images><Image Id="p1" Length="24" Path="map.png">ZmFrZSBpbWFnZSBieXRlcw==</Image></Images>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines('A map on the wall.', '', '[[fdx: Picture]]', '', 'See below:', '', '[[fdx: Picture]]'),
+    );
+    expect(result.text).not.toContain('ZmFr');
+    expect(result.mapped).toEqual([{ type: 'Picture', count: 2 }]);
+    expect(result.ignored).toEqual(['Images']);
+  });
+
+  it('maps outline paragraphs to sections, Summary to a synopsis in place, and Note to a note', () => {
+    const result = fromFdx(
+      fdx(
+        P('Outline 1 (Acts)', 'The Flood') +
+          P('Outline 2 (Sequences)', 'Rising water') +
+          P('Outline 9 (Custom)', 'Sandbags', ' OutlineLevel="3"') +
+          P('Summary', 'The river wins.') +
+          P('Note', 'Check the tide tables') +
+          P('Scene Heading', 'INT. CELLAR - NIGHT') +
+          P('Action', 'Water at the steps.') +
+          P('Summary', 'Everyone moves upstairs.') +
+          P('Outline 3 (Scenes)', 'Upstairs', ' OutlineLevel="2"'),
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        '# The Flood',
+        '',
+        '## Rising water',
+        '',
+        '### Sandbags',
+        '',
+        '= The river wins.',
+        '',
+        '[[Check the tide tables]]',
+        '',
+        'INT. CELLAR - NIGHT',
+        '',
+        'Water at the steps.',
+        '',
+        '= Everyone moves upstairs.',
+        '',
+        '## Upstairs',
+      ),
+    );
+    expect(kinds(parse(result.text))).toEqual([
+      'section',
+      'section',
+      'section',
+      'synopsis',
+      'note',
+      'scene_heading',
+      'action',
+      'synopsis',
+      'section',
+    ]);
+    expect(result.mapped).toEqual([]);
+  });
+
+  it('reads a scene title written again as a child, and keeps arc beats as notes', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title="The cellar">' +
+          '<AttributedTitle><Paragraph><Text>The cellar</Text></Paragraph></AttributedTitle>' +
+          '<SceneArcBeats><CharacterArcBeat Name="MOIRA"><Paragraph><Text>Stops pretending.</Text></Paragraph></CharacterArcBeat>' +
+          '<CharacterArcBeat Name="TOMAS"/></SceneArcBeats>' +
+          '</SceneProperties><Text>INT. CELLAR - NIGHT</Text></Paragraph>' +
+          '<Paragraph Type="Scene Heading"><SceneProperties Title="">' +
+          '<AttributedTitle><Paragraph><Text>A different title</Text></Paragraph></AttributedTitle>' +
+          '</SceneProperties><Text>INT. STAIRS - NIGHT</Text></Paragraph>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'INT. CELLAR - NIGHT',
+        '',
+        '= The cellar',
+        '',
+        '[[fdx: Arc beat, MOIRA: Stops pretending.]]',
+        '',
+        'INT. STAIRS - NIGHT',
+        '',
+        'A different title [[fdx: AttributedTitle]]',
+      ),
+    );
+    expect(result.mapped).toEqual([
+      { type: 'Arc beat', count: 1 },
+      { type: 'AttributedTitle', count: 1 },
+    ]);
+    expect(result.ignored).toEqual(['AttributedTitle', 'CharacterArcBeat']);
+  });
+
+  it('keeps the current text of a paragraph with alternates, and the others as notes after it', () => {
+    const alt = (id: string, type: string, text: string) =>
+      `<Alt Id="${id}"><Paragraph Type="${type}"><Text>${text}</Text></Paragraph></Alt>`;
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a1</AltId><AltId>a2</AltId></Alts><Text>The door sticks.</Text></Paragraph>' +
+          P('Character', 'MOIRA') +
+          '<Paragraph Type="Dialogue"><Alts Current="1"><AltId>a3</AltId><AltId>a4</AltId></Alts><Text>Push harder.</Text></Paragraph>' +
+          P('Action', 'After.'),
+        `<AltCollection>${alt('a1', 'Action', 'The door sticks.')}${alt('a2', 'Action', 'The door will not budge.')}${alt('a3', 'Dialogue', 'Push harder.')}${alt('a4', 'Dialogue', 'Use your shoulder.')}${alt('a9', 'Action', 'An orphan line.')}</AltCollection>`,
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'The door sticks.',
+        '',
+        '[[fdx: Alternate: The door will not budge.]]',
+        '',
+        'MOIRA',
+        'Push harder.',
+        '',
+        '[[fdx: Alternate: Use your shoulder.]]',
+        '',
+        'After.',
+        '',
+        '[[fdx: Alternate: An orphan line.]]',
+      ),
+    );
+    expect(result.mapped).toEqual([{ type: 'Alternate', count: 3 }]);
+  });
+
+  it('brings each alternate in once, however many paragraphs name it', () => {
+    // A hostile file could name one large alternate from thousands of places; output must stay
+    // near the size of what the file holds, not grow with the number of references.
+    const altText = 'The lantern swings and goes out. '.repeat(31); // about 1 KB
+    const collection = `<AltCollection><Alt Id="a1"><Paragraph Type="Action"><Text>${altText}</Text></Paragraph></Alt></AltCollection>`;
+    const ids = (n: number) => '<AltId>a1</AltId>'.repeat(n);
+    const one = (n: number) =>
+      fdx(
+        `<Paragraph Type="Action"><Alts Current="0">${ids(n)}</Alts><Text>Dark.</Text></Paragraph>`,
+        collection,
+      );
+    const many = (n: number) =>
+      fdx(
+        `<Paragraph Type="Action"><Alts Current="0">${ids(1)}</Alts><Text>Dark.</Text></Paragraph>`.repeat(
+          n,
+        ),
+        collection,
+      );
+    const base = fromFdx(one(1)).text.length;
+    expect(base).toBeGreaterThan(altText.length);
+    expect(fromFdx(one(10_000)).text.length).toBe(base);
+    const spread = fromFdx(many(10_000));
+    // 10,000 paragraphs of "Dark." and one alternate: about 7 characters a paragraph, not 1 KB.
+    expect(spread.text.length).toBeLessThan(10_000 * 8 + altText.length + 2_000);
+    expect(spread.mapped).toEqual([{ type: 'Alternate', count: 1 }]);
+  });
+
+  it(
+    'reads many references to one alternate in linear time',
+    () => {
+      const collection = `<AltCollection><Alt Id="a1"><Paragraph><Text>${'x'.repeat(1000)}</Text></Paragraph></Alt></AltCollection>`;
+      const make = (n: number) =>
+        fdx(
+          `<Paragraph Type="Action"><Alts Current="0">${'<AltId>a1</AltId>'.repeat(n)}</Alts><Text>Dark.</Text></Paragraph>`,
+          collection,
+        );
+      const { growth, large } = scaling(make, fromFdx, 50_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('brings beat cards in as notes after the script, one per beat, with their titles', () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        '<ListItems>' +
+          '<ListItem Color="#000000" Id="b1" Title="The flood" Type="Beat"><SubordinateTo Id="x"/><Content>' +
+          '<Paragraph><Text>Water comes in.</Text></Paragraph><Paragraph><Text>Nobody leaves.</Text></Paragraph></Content></ListItem>' +
+          '<ListItem Id="b2" Title="" Type="Beat"><Content><Paragraph><Text>An untitled beat.</Text></Paragraph></Content></ListItem>' +
+          '<ListItem Id="b3" Title="Empty" Type="Beat"/>' +
+          '<ListItem Id="b4" Title="" Type="Beat"/>' +
+          '</ListItems>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'The sea.',
+        '',
+        '[[fdx: Beat, The flood: Water comes in. Nobody leaves.]]',
+        '',
+        '[[fdx: Beat: An untitled beat.]]',
+        '',
+        '[[fdx: Beat, Empty]]',
+      ),
+    );
+    expect(result.mapped).toEqual([{ type: 'Beat', count: 3 }]);
+    expect(result.ignored).toEqual(['ListItem']);
+  });
+
+  it("keeps each script note, headed by its writer's name where it has one", () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        '<ScriptNotes>' +
+          '<ScriptNote Id="n1" Range="10,24" WriterName="Ada Quill"><Paragraph><Text>Too long?</Text></Paragraph><Paragraph><Text>Cut a line.</Text></Paragraph></ScriptNote>' +
+          '<ScriptNote Id="n2" Range="40,52"><Paragraph><Text>Check this ]] here.</Text></Paragraph></ScriptNote>' +
+          '<ScriptNote Id="n3" Range="60,61" WriterName="Ada Quill"/>' +
+          '</ScriptNotes>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines(
+        'The sea.',
+        '',
+        '[[Ada Quill: Too long? Cut a line.]]',
+        '',
+        '[[fdx: Script note: Check this ] ] here.]]',
+      ),
+    );
+    expect(result.mapped).toEqual([{ type: 'Script note', count: 2 }]);
+    expect(kinds(parse(result.text))).toEqual(['action', 'note', 'note']);
+  });
+
+  it('lists the settings and data blocks a Final Draft 13 file carries as ignored', () => {
+    const names = [
+      'DocumentRef',
+      'Actors',
+      'Cast',
+      'CastList',
+      'CharacterHighlighting',
+      'ScriptNavigatorPreferences',
+      'Writers',
+      'WriterMarkup',
+      'Navigator',
+      'Outlines',
+      'TargetScriptLength',
+      'Characters',
+    ];
+    const result = fromFdx(
+      fdx(
+        `${P('Action', 'The sea.')}<Paragraph><DualDialogue>${P('Character', 'A')}${P('Dialogue', 'Hi.')}` +
+          `<SpellCheckIgnoreLists><IgnoredWord>zzz</IgnoredWord></SpellCheckIgnoreLists>${P('Character', 'B')}${P('Dialogue', 'Bye.')}</DualDialogue></Paragraph>`,
+        names.map((n) => `<${n} Id="x1"><Item Label="y">invented text ${n}</Item></${n}>`).join(''),
+      ),
+    );
+    expect(result.mapped).toEqual([]);
+    expect(result.ignored).toEqual(['SpellCheckIgnoreLists', ...names]);
+    expect(result.text).toBe(lines('The sea.', '', 'A', 'Hi.', '', 'B ^', 'Bye.'));
+  });
+});
+
+describe('fromFdx: review fixes for the Final Draft 13 shapes', () => {
+  const lines = (...parts: string[]) => `${parts.join('\n')}\n`;
+
+  it(
+    'reads a long paragraph with many Alts in linear time',
+    () => {
+      // The paragraph grows with n and so does its number of `<Alts/>`: reading the paragraph
+      // again for each one would grow about 16 times from n to 4n.
+      const make = (n: number) =>
+        fdx(
+          `<Paragraph Type="Action"><Text>${'w '.repeat(n)}</Text>${'<Alts/>'.repeat(n / 10)}</Paragraph>`,
+        );
+      const { growth, large } = scaling(make, fromFdx, 5_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it(
+    'lists ignored names in linear time, and at most 50 of them',
+    () => {
+      const make = (n: number) =>
+        fdx(P('Action', 'x') + Array.from({ length: n }, (_, k) => `<Empty${k}/>`).join(''));
+      const { growth, large } = scaling(make, fromFdx, 5_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      const result = fromFdx(make(200));
+      expect(result.ignored).toHaveLength(50);
+      expect(result.ignored[0]).toBe('Empty0');
+      expect(result.ignoredCount).toBe(200);
+      expect(fromFdx(make(3)).ignoredCount).toBe(3);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('never brings an image or a picture payload into the script, wherever it sits', () => {
+    const result = fromFdx(
+      fdx(
+        P('Action', 'x'),
+        '<Wrapper><Images><Image Id="i1">QUFBQUJCQkI=</Image></Images><Label>kept words</Label></Wrapper>' +
+          '<ListItems><ListItem Id="b1" Title="T" Type="Beat"><Content><Paragraph><Text>Beat words.</Text>' +
+          '<Picture Id="p1">Q0NDQ0REREQ=</Picture></Paragraph></Content></ListItem></ListItems>',
+      ),
+    );
+    expect(result.text).toContain('kept words');
+    expect(result.text).toContain('[[fdx: Beat, T: Beat words.]]');
+    expect(result.text).not.toContain('QUFB');
+    expect(result.text).not.toContain('Q0ND');
+  });
+
+  it('keeps a note whose text ends in ] or holds runs of ], as a note', () => {
+    const result = fromFdx(
+      fdx(P('Note', 'ends with ]') + P('Note', 'x ]]] y') + P('Note', '] ]') + P('Action', 'y]')),
+    );
+    expect(result.text).toBe(
+      lines('[[ends with ] ]]', '', '[[x ] ] ] y]]', '', '[[] ] ]]', '', 'y]'),
+    );
+    expect(kinds(parse(result.text))).toEqual(['note', 'note', 'note', 'action']);
+    const label = fromFdx(fdx(P('Kind]', 'z')));
+    expect(label.text).toBe('z [[fdx: Kind] ]]\n');
+    expect(parse(label.text).regions.filter((r) => r.kind === 'note')).toHaveLength(1);
+  });
+
+  it('keeps a second Alt with the same id and other text, as a note', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a1</AltId></Alts><Text>Now.</Text></Paragraph>',
+        '<AltCollection>' +
+          '<Alt Id="a1"><Paragraph><Text>First take.</Text></Paragraph></Alt>' +
+          '<Alt Id="a1"><Paragraph><Text>Second take.</Text></Paragraph></Alt>' +
+          '<Alt Id="a1"><Paragraph><Text>First take.</Text></Paragraph></Alt>' +
+          '</AltCollection>',
+      ),
+    );
+    expect(result.text).toBe(
+      lines('Now.', '', '[[fdx: Alternate: First take.]]', '', '[[fdx: Alternate: Second take.]]'),
+    );
+    expect(result.mapped).toEqual([{ type: 'Alternate', count: 2 }]);
+  });
+
+  it('keeps a speech whole when a Summary or a Note paragraph sits inside it', () => {
+    const result = fromFdx(
+      fdx(
+        P('Character', 'BOB') +
+          P('Summary', 'He lies.') +
+          P('Dialogue', 'Hi.') +
+          P('Note', 'too short') +
+          P('Dialogue', 'Bye.'),
+      ),
+    );
+    expect(result.text).toBe(lines('BOB', 'Hi.', 'Bye.', '', '= He lies.', '', '[[too short]]'));
+    expect(kinds(parse(result.text))).toEqual(['character', 'dialogue', 'synopsis', 'note']);
+    expect(result.mapped).toEqual([]);
+  });
+
+  it('keeps what a note, an alternate, a beat, or an arc beat holds beside its paragraphs', () => {
+    const extra = (n: number) => `<Extra>more words ${n}</Extra>`;
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title=""><SceneArcBeats>' +
+          `<CharacterArcBeat Name="ODA"><Paragraph><Text>Arc.</Text></Paragraph>${extra(1)}</CharacterArcBeat>` +
+          '</SceneArcBeats></SceneProperties><Text>INT. HUT - DAY</Text></Paragraph>',
+        `<AltCollection><Alt Id="a9"><Paragraph><Text>Alt.</Text></Paragraph>${extra(2)}</Alt></AltCollection>` +
+          `<ListItems><ListItem Id="b1" Title="T" Type="Beat"><Content><Paragraph><Text>Beat.</Text></Paragraph>${extra(3)}</Content></ListItem></ListItems>` +
+          `<ScriptNotes><ScriptNote Id="n1"><Paragraph><Text>Note.</Text></Paragraph>${extra(4)}</ScriptNote></ScriptNotes>`,
+      ),
+    );
+    for (const n of [1, 2, 3, 4]) expect(result.text).toContain(`more words ${n}`);
+  });
+});
+
+describe('fromFdx: stored text is read once, however often it is compared', () => {
+  // In each, the stored text and the number of things compared with it grow together, so reading
+  // the stored text again for each one would grow about 16 times from n to 4n.
+  it(
+    'compares duplicate Alt ids with the first in linear time',
+    () => {
+      const make = (n: number) =>
+        fdx(
+          P('Action', 'x'),
+          `<AltCollection><Alt Id="a"><Paragraph><Text>${'word '.repeat(n)}</Text></Paragraph></Alt>` +
+            `${'<Alt Id="a"/><Alt Id="a"><Text>w</Text></Alt>'.repeat(n / 10)}</AltCollection>`,
+        );
+      const { growth, large } = scaling(make, fromFdx, 20_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it(
+    "compares a scene's styled titles with its Title in linear time",
+    () => {
+      const make = (n: number) =>
+        fdx(
+          `<Paragraph Type="Scene Heading"><SceneProperties Title="${'word '.repeat(n)}">` +
+            `${'<AttributedTitle><Text>x</Text></AttributedTitle>'.repeat(n / 10)}</SceneProperties><Text>INT. A - DAY</Text></Paragraph>`,
+        );
+      const { growth, large } = scaling(make, fromFdx, 20_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('reads runs directly under an element as one line, and paragraphs as lines', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title="Hello there">' +
+          '<AttributedTitle>\n  <Text>Hel</Text>\n  <Text Style="Bold">lo</Text><Text> there</Text>\n</AttributedTitle>' +
+          '</SceneProperties><Text>INT. A - DAY</Text></Paragraph>',
+        '<ScriptNotes><ScriptNote Id="n1"><Text>Two </Text><Text>runs.</Text>' +
+          '<Paragraph><Text>A paragraph.</Text></Paragraph><Text>After</Text><Text>wards.</Text></ScriptNote></ScriptNotes>',
+      ),
+    );
+    expect(result.ignored).toContain('AttributedTitle');
+    expect(result.mapped).toEqual([{ type: 'Script note', count: 1 }]);
+    expect(result.text).toContain('[[fdx: Script note: Two runs. A paragraph. Afterwards.]]');
+  });
+});
+
+describe('fromFdx: title pages and alternates, the edges', () => {
+  const tp = (paragraphs: string) =>
+    fdx(P('Action', 'x'), `<TitlePage><Content>${paragraphs}</Content></TitlePage>`);
+  const para = (align: string, text: string, key = '') =>
+    `<Paragraph Alignment="${align}"${key}><Text>${text}</Text></Paragraph>`;
+
+  it(
+    'reads a title page of many credits and notes in linear time',
+    () => {
+      // Each credit and author adds two fields; a search of them all for the Notes or the Title
+      // field, at each later paragraph, would grow about 16 times from n to 4n.
+      const make = (n: number) =>
+        tp(
+          para('Center', 'TITLE') +
+            `${para('Center', 'by')}${para('Center', 'A. Writer')}`.repeat(n) +
+            para('Left', 'contact') +
+            `${para('Left', 'line')}<Paragraph/>${para('Center', 'centered after a gap')}`.repeat(
+              n,
+            ),
+        );
+      const { growth, large } = scaling(make, fromFdx, 2_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it('imports a title-page paragraph of a million lines without overflowing the stack', () => {
+    const many = 'x\n'.repeat(1_000_000);
+    for (const xml of [
+      tp(para('Center', 'TITLE') + para('Center', many)), // joins the Title
+      tp(para('Center', 'by') + para('Center', 'A') + para('Center', many)), // joins the Author
+      tp(para('Left', 'a') + para('Left', many)), // joins the Notes
+      tp(para('Left', 'a', ' DrafterKey="Contact"') + para('Left', many)), // continues a keyed field
+    ]) {
+      let error: unknown;
+      try {
+        fromFdx(xml);
+      } catch (e) {
+        error = e;
+      }
+      if (error !== undefined) expect(error).toBeInstanceOf(FdxError);
+    }
+  }, 60_000);
+
+  it('keeps a later Alt when the first with its id is empty', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a</AltId></Alts><Text>Now.</Text></Paragraph>',
+        '<AltCollection><Alt Id="a"/><Alt Id="a"><Paragraph><Text>Second text.</Text></Paragraph></Alt></AltCollection>',
+      ),
+    );
+    expect(result.text).toBe('Now.\n\n[[fdx: Alternate: Second text.]]\n');
+  });
+
+  it('keeps an Alt in a second collection that reuses an id with other text', () => {
+    const coll = (text: string) =>
+      `<AltCollection><Alt Id="a"><Paragraph><Text>${text}</Text></Paragraph></Alt></AltCollection>`;
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a</AltId></Alts><Text>Now.</Text></Paragraph>',
+        coll('First text.') + coll('Other text.') + coll('First text.'),
+      ),
+    );
+    expect(result.text).toBe(
+      'Now.\n\n[[fdx: Alternate: First text.]]\n\n[[fdx: Alternate: Other text.]]\n',
+    );
+    expect(result.mapped).toEqual([{ type: 'Alternate', count: 2 }]);
+  });
+});
+
+describe('fromFdx: nothing loose is dropped', () => {
+  it('brings in an element other than Alt inside an AltCollection, and inside Alts', () => {
+    const result = fromFdx(
+      fdx(
+        '<Paragraph Type="Action"><Alts Current="0"><AltId>a</AltId><Memo>alts memo</Memo></Alts><Text>Now.</Text></Paragraph>',
+        '<AltCollection><Alt Id="a"><Paragraph><Text>Then.</Text></Paragraph></Alt><Memo>collection memo</Memo></AltCollection>',
+      ),
+    );
+    expect(result.text).toContain('alts memo [[fdx: Memo]]');
+    expect(result.text).toContain('collection memo [[fdx: Memo]]');
+    expect(result.mapped).toEqual([
+      { type: 'Alternate', count: 1 },
+      { type: 'Memo', count: 2 },
+    ]);
+  });
+
+  it('brings in text written loose in a container as a note in its place', () => {
+    const result = fromFdx(
+      '<?xml version="1.0"?><FinalDraft DocumentType="Script" Template="No" Version="6">\n  root words\n' +
+        `<Content>\n  ${P('Action', 'First.')} content words ${P('Action', 'Second.')}\n</Content>` +
+        '<TitlePage> title page words <Content> title content words ' +
+        '<Paragraph Alignment="Center"><Text>T</Text></Paragraph></Content></TitlePage>' +
+        `<AltCollection> alt collection words </AltCollection>` +
+        `<ScriptNotes> script notes words </ScriptNotes>` +
+        `<ListItems> list items words </ListItems>` +
+        '</FinalDraft>',
+    );
+    for (const [words, where] of [
+      ['root words', 'FinalDraft'],
+      ['content words', 'Content'],
+      ['title page words', 'TitlePage'],
+      ['title content words', 'Content'],
+      ['alt collection words', 'AltCollection'],
+      ['script notes words', 'ScriptNotes'],
+      ['list items words', 'ListItems'],
+    ]) {
+      expect(result.text).toContain(`${words} [[fdx: ${where} text]]`);
+    }
+    // In place: the loose text in the script's Content sits between its paragraphs.
+    expect(result.text).toContain('First.\n\ncontent words [[fdx: Content text]]\n\nSecond.');
+    const arc = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><SceneProperties Title=""><SceneArcBeats> arc words ' +
+          '<CharacterArcBeat Name="ODA"><Paragraph><Text>Beat.</Text></Paragraph></CharacterArcBeat>' +
+          '</SceneArcBeats></SceneProperties><Text>INT. A - DAY</Text></Paragraph>' +
+          '<Paragraph Type="Action"><Alts> alts words <AltId>b</AltId></Alts><Text>x</Text></Paragraph>',
+      ),
+    );
+    expect(arc.text).toContain('arc words [[fdx: SceneArcBeats text]]');
+    expect(arc.text).toContain('alts words [[fdx: Alts text]]');
+  });
+});
+
+describe('fromFdx: shooting scripts', () => {
+  const omittedHeading = (number: string, inner: string) =>
+    `<Paragraph Number="${number}" Type="Scene Heading"><Text>OMITTED</Text><OmittedScene>${inner}</OmittedScene></Paragraph>`;
+
+  it('reads an omitted scene outside its heading as it does inside one', () => {
+    const text = fromFdx(
+      fdx(`${P('Action', 'Before.')}<OmittedScene>${P('Action', 'Gone for now.')}</OmittedScene>`),
+    ).text;
+    expect(text).toBe('Before.\n\n[[fdx: Omitted: Gone for now.]]\n');
+  });
+
+  it('reads an omitted scene inside another as part of it: no note inside a note', () => {
+    const inner = `${P('Action', 'Outer.')}<OmittedScene>${P('Action', 'Inner.')}</OmittedScene>`;
+    const result = fromFdx(fdx(omittedHeading('3', inner) + P('Action', 'After.')));
+    expect(result.text).toBe(
+      '.OMITTED #3#\n\n[[fdx: Omitted: Outer.]]\n\n[[fdx: Omitted: Inner.]]\n\nAfter.\n',
+    );
+  });
+
+  it("drops an omitted scene's page breaks, and keeps one waiting before it", () => {
+    const inner = P('Action', 'One.') + P('Action', 'Two.', ' StartsNewPage="Yes"');
+    const text = fromFdx(
+      fdx(P('Action', 'Page.', ' StartsNewPage="Yes"') + omittedHeading('4', inner)),
+    ).text;
+    expect(text).toBe(
+      '===\n\nPage.\n\n.OMITTED #4#\n\n[[fdx: Omitted: One.]]\n\n[[fdx: Omitted: Two.]]\n',
+    );
+  });
+
+  it("can't be closed early by its own text", () => {
+    const text = fromFdx(fdx(omittedHeading('5', P('Note', 'odd ]] text]')))).text;
+    expect(text).toBe('.OMITTED #5#\n\n[[fdx: Omitted: [[odd ] ] text] ] ] ]]\n');
+    expect(parse(text).blocks.map((b) => b.kind)).toEqual(['scene_heading', 'note']);
+  });
+
+  it('ends an open speech before the omitted scene, and one inside it at its end', () => {
+    const inner = P('Character', 'ADA') + P('Dialogue', 'Hush.');
+    const text = fromFdx(
+      fdx(`${P('Character', 'BO') + P('Dialogue', 'Look.')}<OmittedScene>${inner}</OmittedScene>`),
+    ).text;
+    expect(text).toBe('BO\nLook.\n\n[[fdx: Omitted: ADA\nHush.]]\n');
+  });
+
+  it('makes hidden runs one note in their place, and drops a blank one', () => {
+    const p =
+      '<Paragraph Type="Action"><Text>A door</Text><Text Style="HiddenText"> (prop: </Text>' +
+      '<Text Style="Bold+HiddenText">brass]]</Text><Text Style="HiddenText">)</Text>' +
+      '<Text> opens.</Text><Text Style="HiddenText">   </Text></Paragraph>';
+    const result = fromFdx(fdx(p));
+    expect(result.text).toBe('A door[[fdx: Hidden: (prop: brass] ])]] opens.\n');
+    expect(parse(result.text).blocks.map((b) => b.kind)).toEqual(['action']);
+    // Each note is counted, so the import says text came in as notes.
+    expect(result.mapped).toEqual([{ type: 'Hidden', count: 1 }]);
+  });
+
+  it('keeps a stray [[ before a hidden run from joining its note: the visible text all prints', () => {
+    const runs = '<Text>a [[ b </Text><Text Style="HiddenText">h</Text><Text> c</Text>';
+    const text = fromFdx(
+      fdx(
+        `<Paragraph Type="Action">${runs}</Paragraph>` +
+          `<Paragraph Type="Scene Heading">${runs.replace('a [[', 'INT. A [[')}</Paragraph>` +
+          P('Character', 'ADA') +
+          `<Paragraph Type="Dialogue">${runs}</Paragraph>`,
+      ),
+    ).text;
+    const doc = parse(text);
+    expect(kinds(doc)).toEqual(['action', 'scene_heading', 'character', 'dialogue']);
+    const shown = printed(doc).map(([, t]) => squashed(t as string));
+    expect(shown).toEqual(['a[\\[bc', 'INT.A[\\[bc', 'ADA', 'a[\\[bc']);
+    expect(text).toContain('[[fdx: Hidden: h]]');
+  });
+
+  it('keeps a paragraph all of whose text is hidden as its kind, a heading its number', () => {
+    const hid = (type: string, text: string, attrs = '') =>
+      `<Paragraph${attrs} Type="${type}"><Text Style="HiddenText">${text}</Text></Paragraph>`;
+    const result = fromFdx(
+      fdx(
+        `<Paragraph Number="7" Type="Scene Heading"><Text Style="HiddenText">INT. BARN - NIGHT</Text><SceneProperties Summary="Dark."/></Paragraph>` +
+          hid('Character', 'ADA') +
+          P('Dialogue', 'One.') +
+          P('Character', 'BO') +
+          hid('Parenthetical', '(soft)') +
+          hid('Dialogue', 'Two.') +
+          hid('Transition', 'CUT TO:') +
+          hid('Action', 'Unseen.'),
+      ),
+    );
+    const doc = parse(result.text);
+    const written = doc.blocks.filter((b) => b.kind !== 'note');
+    expect(written.map((b) => b.kind)).toEqual([
+      'scene_heading',
+      'synopsis',
+      'character',
+      'dialogue',
+      'character',
+      'parenthetical',
+      'dialogue',
+      'transition',
+    ]);
+    const heading = written[0];
+    expect(heading?.kind === 'scene_heading' && heading.sem.number).toBe('7');
+    expect(printed(doc).filter(([k]) => k !== 'note')).toEqual([
+      ['scene_heading', 'INT. BARN - NIGHT'],
+      ['synopsis', 'Dark.'],
+      ['character', 'ADA'],
+      ['dialogue', 'One.'],
+      ['character', 'BO'],
+      ['parenthetical', '(soft)'],
+      ['dialogue', 'Two.'],
+      ['transition', 'CUT TO:'],
+    ]);
+    // Each says, in a note after it (after its summary, and after its speech inside one), that
+    // Final Draft hid it; an
+    // action all hidden is its note alone, which doesn't print either.
+    expect(result.text).toBe(
+      [
+        'INT. BARN - NIGHT #7#\n\n= Dark.',
+        '[[fdx: Hidden paragraph: INT. BARN - NIGHT]]',
+        'ADA\nOne.',
+        '[[fdx: Hidden paragraph: ADA]]',
+        'BO\n(soft)\nTwo.',
+        '[[fdx: Hidden paragraph: (soft)]]\n\n[[fdx: Hidden paragraph: Two.]]',
+        'CUT TO:',
+        '[[fdx: Hidden paragraph: CUT TO:]]',
+        '[[fdx: Hidden: Unseen.]]\n',
+      ].join('\n\n'),
+    );
+    expect(result.mapped).toEqual([{ type: 'Hidden', count: 6 }]);
+  });
+
+  it('keeps hidden text as text inside an omitted scene, which never prints anyway', () => {
+    const inner =
+      '<Paragraph Type="Action"><Text>Seen </Text><Text Style="HiddenText">hid</Text></Paragraph>';
+    const result = fromFdx(fdx(omittedHeading('6', inner)));
+    expect(result.text).toBe('.OMITTED #6#\n\n[[fdx: Omitted: Seen hid]]\n');
+    expect(result.mapped).toEqual([{ type: 'Omitted', count: 1 }]);
+  });
+
+  it('reads an omitted scene inside a dual dialogue, or beside one, as an omitted scene', () => {
+    const omitted = `<OmittedScene>${P('Action', 'Gone.')}</OmittedScene>`;
+    const text = fromFdx(
+      fdx(
+        `<Paragraph><DualDialogue>${P('Character', 'ODILE')}${P('Dialogue', 'Now.')}${P('Character', 'THEO')}${P('Dialogue', 'Later.')}${omitted}</DualDialogue>${omitted}</Paragraph>`,
+      ),
+    ).text;
+    expect(text).not.toContain('[[fdx: OmittedScene]]');
+    expect(text.match(/\[\[fdx: Omitted: Gone\.\]\]/g)).toHaveLength(2);
+  });
+
+  it('leaves no double space in the title where a hidden run was', () => {
+    const title = fromFdx(
+      fdx(
+        P('Action', 'x'),
+        '<TitlePage><Content><Paragraph Alignment="Center"><Text>The </Text><Text Style="HiddenText">working</Text><Text> Pear</Text></Paragraph></Content></TitlePage>',
+      ),
+    ).title;
+    expect(title).toBe('The Pear');
+  });
+
+  it('keeps hidden text as the text of a kind that never prints', () => {
+    const hidden = (type: string, text: string) =>
+      `<Paragraph Type="${type}"><Text Style="Italic+HiddenText">${text}</Text></Paragraph>`;
+    const text = fromFdx(
+      fdx(hidden('Outline 2', 'The long night') + hidden('Summary', 'Nobody sleeps.')),
+    ).text;
+    expect(text).toBe('## The long night\n\n= Nobody sleeps.\n');
+  });
+
+  it('writes a run styled AllCaps in capitals, in any kind', () => {
+    const text = fromFdx(
+      fdx(
+        '<Paragraph Type="Scene Heading"><Text Style="AllCaps">int. mill - night</Text></Paragraph>' +
+          '<Paragraph Type="Action"><Text>Then </Text><Text Style="Bold+AllCaps">straße</Text></Paragraph>',
+      ),
+    ).text;
+    expect(text).toBe('INT. MILL - NIGHT\n\nThen **STRASSE**\n');
+  });
+
+  it(
+    'reads omitted scenes and hidden runs in linear time',
+    () => {
+      const make = (n: number) => {
+        const scenes: string[] = [];
+        for (let k = 0; k < n; k++) {
+          const runs = '<Text>seen </Text><Text Style="HiddenText">hid </Text>'.repeat(20);
+          const inner = `${P('Action', `Scene ${k}.`)}<Paragraph Type="Action">${runs}</Paragraph>`;
+          scenes.push(omittedHeading(String(k + 1), inner));
+        }
+        return fdx(scenes.join(''));
+      };
+      const { growth, large } = scaling(make, fromFdx, 500);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+    },
+    SCALING_TIMEOUT,
+  );
 });

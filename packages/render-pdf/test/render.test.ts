@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
-import { type FontSet, renderPdf } from '@drafter/render-pdf';
+import { type FontSet, type RenderProgress, renderPdf } from '@drafter/render-pdf';
 import { builtins, loadTemplate, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { embeddedFonts, extract, fonts, itemAt, operators, rowText, textOf } from './helpers';
@@ -132,6 +132,24 @@ describe('pages', () => {
   });
 });
 
+describe('progress', () => {
+  it('reports each page drawn, then the saving, ending at the last', async () => {
+    const template = screenplay;
+    const layout = paginate(parse(`INT. HALL - DAY\n\n${filler(150)}\n`), template);
+    const seen: RenderProgress[] = [];
+    await renderPdf(layout, template, { fonts, onProgress: (p) => seen.push({ ...p }) });
+    const pages = layout.pages.length;
+    expect(pages).toBeGreaterThan(2);
+    expect(seen.filter((p) => p.stage === 'draw')).toEqual(
+      Array.from({ length: pages + 1 }, (_, done) => ({ stage: 'draw', done, total: pages })),
+    );
+    expect(seen.slice(-2)).toEqual([
+      { stage: 'save', done: 0, total: 1 },
+      { stage: 'save', done: 1, total: 1 },
+    ]);
+  });
+});
+
 describe('text', () => {
   it('uses a font for each style and embeds only the styles it uses', async () => {
     const bytes = await render('Plain *italic* **bold** ***both*** _under_.');
@@ -191,8 +209,13 @@ describe('text', () => {
 describe('portability', () => {
   it('reads no files and needs no Node built-ins at runtime', () => {
     const src = new URL('../src/', import.meta.url);
-    for (const file of readdirSync(src)) {
-      const code = readFileSync(new URL(file, src), 'utf8');
+    const files = readdirSync(src, { recursive: true, withFileTypes: true }).filter((entry) =>
+      entry.isFile(),
+    );
+    expect(files.map((entry) => entry.name)).toContain('measure.ts');
+    for (const entry of files) {
+      const file = `${entry.parentPath}/${entry.name}`;
+      const code = readFileSync(file, 'utf8');
       expect(code, file).not.toMatch(/from ['"](node:|fs['"]|path['"])/);
     }
   });

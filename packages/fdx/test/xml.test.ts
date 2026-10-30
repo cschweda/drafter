@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { MAX_XML_CHARS, readXml, writeXml, type XmlElement, XmlError, type XmlNode } from '../src';
+import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const el = (name: string, attrs: Record<string, string> = {}, ...children: XmlNode[]) => ({
   name,
@@ -167,23 +168,42 @@ describe('readXml error messages', () => {
 });
 
 describe('readXml on a large file', () => {
-  it('reads 5 MB in under 3 seconds', () => {
-    const row = '<Paragraph Type="Action"><Text>Some words &amp; more.</Text></Paragraph>\n';
-    const text = `<Doc>\n${row.repeat(Math.floor((MAX_XML_CHARS - 20) / row.length))}</Doc>`;
-    expect(text.length).toBeLessThanOrEqual(MAX_XML_CHARS);
-    expect(text.length).toBeGreaterThan(5_000_000);
-    const start = performance.now();
-    const root = readXml(text);
-    expect(performance.now() - start).toBeLessThan(3000);
-    expect(root.children.length).toBeGreaterThan(50_000);
-  });
+  // Linear, not a wall-clock budget (scaling.ts): time grows about 4 times from n to 4n.
+  const rows = (count: number) =>
+    `<Doc>\n${'<Paragraph Type="Action"><Text>Some words &amp; more.</Text></Paragraph>\n'.repeat(count)}</Doc>`;
 
-  it('reads many attributes and many entities in linear time', () => {
-    const text = `<a ${Array.from({ length: 20000 }, (_, k) => `x${k}="&amp;"`).join(' ')}>${'&lt;'.repeat(1_000_000)}</a>`;
-    const start = performance.now();
-    readXml(text);
-    expect(performance.now() - start).toBeLessThan(3000);
-  });
+  it(
+    'reads rows in linear time, up to 5 MB',
+    () => {
+      const { growth, large } = scaling(rows, readXml, 15_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+      expect(large).toBeLessThan(HANG_MS);
+      const row = rows(1).length - rows(0).length;
+      const text = rows(Math.floor((MAX_XML_CHARS - 20) / row));
+      expect(text.length).toBeLessThanOrEqual(MAX_XML_CHARS);
+      expect(text.length).toBeGreaterThan(5_000_000);
+      expect(readXml(text).children.length).toBeGreaterThan(50_000);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  it(
+    'reads many attributes and many entities in linear time',
+    () => {
+      const attributes = (n: number) =>
+        `<a ${Array.from({ length: n }, (_, k) => `x${k}="&amp;"`).join(' ')}/>`;
+      const entities = (n: number) => `<a>${'&lt;'.repeat(n)}</a>`;
+      for (const [make, n] of [
+        [attributes, 40_000],
+        [entities, 250_000],
+      ] as const) {
+        const { growth, large } = scaling(make, readXml, n);
+        expect(growth).toBeLessThan(MAX_GROWTH);
+        expect(large).toBeLessThan(HANG_MS);
+      }
+    },
+    SCALING_TIMEOUT,
+  );
 });
 
 // Text of XML characters: the markup characters, whitespace, and astral characters among them.

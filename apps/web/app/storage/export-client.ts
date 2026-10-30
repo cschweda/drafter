@@ -1,4 +1,4 @@
-import type { ExportReply, ExportRequest } from '../workers/export-compute';
+import type { ExportProgress, ExportReply, ExportRequest } from '../workers/export-compute';
 
 export type { ExportRequest } from '../workers/export-compute';
 
@@ -13,10 +13,15 @@ function workerOf(): Worker {
 }
 
 /**
- * Renders `request` in the worker. Rejects with the worker's message if the export failed, or if
- * the worker could not be made or died (it is made again next time).
+ * Renders `request` in the worker: the file, and the characters its fonts lack (only a Markdown
+ * PDF names any). Rejects with the worker's message if the export failed, or if the worker could
+ * not be made or died (it is made again next time). `onProgress` hears how far it is as it goes
+ * (0 to 1, or null while the worker can't say), before the reply.
  */
-export function renderExport(request: ExportRequest): Promise<Uint8Array | string> {
+export function renderExport(
+  request: ExportRequest,
+  onProgress?: (fraction: number | null) => void,
+): Promise<{ data: Uint8Array | string; missing: string[] }> {
   return new Promise((resolve, reject) => {
     let own: Worker;
     try {
@@ -30,10 +35,14 @@ export function renderExport(request: ExportRequest): Promise<Uint8Array | strin
       own.removeEventListener('error', onFailure);
       own.removeEventListener('messageerror', onFailure);
     };
-    const onMessage = (event: MessageEvent<ExportReply>) => {
+    const onMessage = (event: MessageEvent<ExportReply | ExportProgress>) => {
+      if ('progress' in event.data) {
+        onProgress?.(event.data.progress);
+        return;
+      }
       finish();
       if ('error' in event.data) reject(new Error(event.data.error));
-      else resolve(event.data.data);
+      else resolve({ data: event.data.data, missing: event.data.missing ?? [] });
     };
     const onFailure = () => {
       finish();

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { setSpellMarks, spellMarksOf } from '@drafter/cm-fountain';
 import { builtins } from '@drafter/templates';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { applyEditorSettings } from '../app/editor/apply-settings';
@@ -67,6 +68,23 @@ describe('applyEditorSettings', () => {
     expect(typewriter.get(view.state)).not.toBe(on);
     applyEditorSettings(view, { ...DEFAULT_SETTINGS, typewriter: true });
     expect(typewriter.get(view.state)).toBe(on);
+  });
+
+  test('the Source pane’s browser spellcheck is off with the setting on and off', () => {
+    const view = make();
+    // Drafter's own marks are there with the setting on, and gone with it off; the browser's
+    // spellcheck is off either way (Plan D, Call 18).
+    expect(view.contentDOM.getAttribute('spellcheck')).toBe('false');
+    applyEditorSettings(view, { ...DEFAULT_SETTINGS, spellcheck: false });
+    expect(view.contentDOM.getAttribute('spellcheck')).toBe('false');
+    expect(spellMarksOf(view.state)).toEqual([]);
+    view.dispatch({ effects: setSpellMarks.of([{ from: 0, to: 3, word: 'One' }]) });
+    expect(spellMarksOf(view.state)).toEqual([]);
+    applyEditorSettings(view, { ...DEFAULT_SETTINGS, spellcheck: true });
+    expect(view.contentDOM.getAttribute('spellcheck')).toBe('false');
+    view.dispatch({ effects: setSpellMarks.of([{ from: 0, to: 3, word: 'One' }]) });
+    expect(spellMarksOf(view.state)).toEqual([{ from: 0, to: 3, word: 'One' }]);
+    expect(view.contentDOM.querySelector('.cm-misspelled')?.textContent).toBe('One');
   });
 
   test('puts every setting back after a fresh state is loaded', () => {

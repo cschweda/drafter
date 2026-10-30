@@ -374,6 +374,49 @@ describe('saving through a FileAccess', () => {
     expect((await t.projects.getProject(sample?.id ?? ''))?.source).not.toContain('MORE');
   });
 
+  test('a saved sample’s export options and rates go with it into the writer’s own script', async () => {
+    const t = await fresh();
+    const sample = t.script.project.value;
+    expect(sample?.sample).toBe('screenplay');
+    const { setExportOption, exportOptionsOf } = await import('../app/storage/export-options');
+    await setExportOption('sceneNumbers', 'all');
+    await setExportOption('titlePage', 'title-author');
+    const { setRate, ratesOf } = await import('../app/stats/timing');
+    await setRate('minutesPerPage', 1.5);
+    t.type('EDIT\n');
+    expect(await t.save()).toBe('saved');
+    const mine = t.script.project.value;
+    expect(mine?.id).not.toBe(sample?.id);
+    // Exports read the open script's project: the choices made on the sample still hold.
+    const chosen = { sceneNumbers: 'all', titlePage: 'title-author' };
+    expect(exportOptionsOf(mine)).toEqual(chosen);
+    expect(exportOptionsOf(await t.projects.getProject(mine?.id ?? ''))).toEqual(chosen);
+    // And so do its rates.
+    expect(ratesOf(await t.projects.getProject(mine?.id ?? ''))).toEqual({
+      minutesPerPage: 1.5,
+      wordsPerMinute: 150,
+    });
+  });
+
+  test('a sample saved while the writer moves on gives its export options and rates to the new script', async () => {
+    const t = await fresh();
+    const sample = t.script.project.value;
+    const { setExportOption, exportOptionsOf } = await import('../app/storage/export-options');
+    await setExportOption('titlePage', 'none');
+    const { setRate, ratesOf } = await import('../app/stats/timing');
+    await setRate('wordsPerMinute', 180);
+    t.type('EDIT\n');
+    // The writer opens another script while the file is being written.
+    t.control.duringWrite = () => t.script.newScript('stage-play');
+    expect(await t.save()).toBe('saved');
+    const rows = await t.projects.listProjects();
+    const made = rows.find((p) => p.fileName === 'The Call.fountain');
+    expect(made).toBeTruthy();
+    expect(made?.id).not.toBe(sample?.id);
+    expect(exportOptionsOf(made)).toEqual({ sceneNumbers: 'none', titlePage: 'none' });
+    expect(ratesOf(made)).toEqual({ minutesPerPage: 1, wordsPerMinute: 180 });
+  });
+
   test('asks where to save when the file is gone', async () => {
     const t = await fresh();
     await t.script.newScript('screenplay');

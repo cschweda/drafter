@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- Synthetic test file: written by hand for Drafter, with original text and invented values; not made in Final Draft. -->
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+
+  <Content>
+    <Paragraph Number="12" Type="Scene Heading">
+      <SceneProperties Title="" Summary="Tamsin finds the ledger is missing a page."/>
+      <Text RevisionID="0">INT. SALT WORKS - COUNTING HOUSE - DAY</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text RevisionID="0">Dust in the light. </Text>
+      <Text RevisionID="2">TAMSIN REYE (30s, ink on her cuffs)</Text>
+      <Text RevisionID="0"> runs a finger down a column of figures and stops.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text RevisionID="0">TAMSIN</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text RevisionID="1">(to herself)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text RevisionID="0">Forty sacks out. </Text>
+      <Text RevisionID="1" Style="Italic">Thirty-one</Text>
+      <Text RevisionID="0"> paid for.</Text>
+    </Paragraph>
+
+    <Paragraph Number="12A" Type="Scene Heading">
+      <SceneProperties Title="" Summary="New scene: the foreman watches her from the yard."/>
+      <Text RevisionID="1">EXT. SALT WORKS - YARD - CONTINUOUS</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text RevisionID="1">Through the window, </Text>
+      <Text RevisionID="1" Style="Bold">GALLOWAY</Text>
+      <Text RevisionID="1"> (50s, foreman, a pencil behind each ear) watches her read. He does not look away when she looks up.</Text>
+    </Paragraph>
+
+    <Paragraph Number="13" Type="Scene Heading">
+      <Text>OMITTED</Text>
+    </Paragraph>
+
+    <Paragraph Number="14" Type="Scene Heading">
+      <Text RevisionID="2">OMITTED</Text>
+    </Paragraph>
+
+    <Paragraph Number="15" Type="Scene Heading">
+      <SceneProperties Title="" Summary="Galloway offers a deal; Tamsin counts it out loud."/>
+      <Text RevisionID="0">INT. COUNTING HOUSE - LATER</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text RevisionID="0">GALLOWAY</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text RevisionID="0">Nine sacks is a rounding error.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text RevisionID="0">TAMSIN</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text RevisionID="2">Nine sacks is a winter for a family on Pell Street. I can name them, if you like.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text RevisionID="2">She does. All six names. He stops smiling at the fourth.</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text RevisionID="0">CUT TO:</Text>
+    </Paragraph>
+
+    <Paragraph Number="A16" Type="Scene Heading">
+      <SceneProperties Title=""/>
+      <Text RevisionID="2">EXT. PELL STREET - DUSK</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text RevisionID="2">Lamps coming on, one door at a time.</Text>
+    </Paragraph>
+
+    <Paragraph Number="16" Type="Scene Heading">
+      <SceneProperties Title="" Summary="The missing page turns up in the wrong pocket."/>
+      <Text RevisionID="0">INT. TAMSIN'S ROOM - NIGHT</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text RevisionID="0">She empties her coat on the bed: string, a stub of candle, and a folded page torn clean from the ledger. </Text>
+      <Text RevisionID="2" Style="Underline">It was never missing.</Text>
+    </Paragraph>
+  </Content>
+
+  <TitlePage>
+    <Content>
+      <Paragraph Alignment="Center">
+        <Text>SALT ROAD</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>written by</Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Center">
+        <Text>Idris Penhallow</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left">
+        <Text></Text>
+      </Paragraph>
+      <Paragraph Alignment="Left">
+        <Text RevisionID="1">Blue Revised Pages, 28 September 2026</Text>
+      </Paragraph>
+      <Paragraph Alignment="Left">
+        <Text RevisionID="2">Pink Revised Pages, 12 October 2026</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+
+  <HeaderAndFooter Visible="Yes">
+    <Header>
+      <Paragraph Type="Header">
+        <Text>Salt Road - second set of changes</Text>
+      </Paragraph>
+    </Header>
+  </HeaderAndFooter>
+
+  <Revisions Current="2">
+    <Revision Color="#000000" ID="0" Name="Set 0"/>
+    <Revision Color="#0000FF" ID="1" Name="Set 1"/>
+    <Revision Color="#FF00FF" ID="2" Name="Set 2"/>
+  </Revisions>
+
+  <ScriptNotes>
+    <ScriptNote ID="1">
+      <Paragraph Type="General">
+        <Text>Production: is the yard practical, or a set?</Text>
+      </Paragraph>
+    </ScriptNote>
+  </ScriptNotes>
+</FinalDraft>

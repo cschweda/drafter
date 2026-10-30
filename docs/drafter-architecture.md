@@ -279,7 +279,7 @@ The regression suite is hand-counted position fixtures (frozen once verified) pl
 
 **One checker: nspell** (Hunspell dictionaries in JS), offline, running in its own worker on changed blocks. Browser-native spellcheck is **disabled** on the editor — two checkers that disagree about "Keokuk" is worse than either alone.
 
-- `en_US` is bundled (SCOWL-derived, permissive license). Other languages are opt-in dictionary packs the user adds; each shows its license, which keeps GPL-licensed dictionary data out of the MIT app bundle.
+- `en_US` and `en_GB` are bundled (SCOWL-derived, permissive license), as static files that are precached for offline use. Other languages are opt-in dictionary packs the user adds, in Phase 4; each will show its license, which keeps GPL-licensed dictionary data out of the MIT app bundle. Built in Phase 2, Plan D (v0.14.0).
 - Character names and slugline locations are auto-harvested from the CST and never flagged. "Add to dictionary" writes to the file's metadata block so it travels with the script; "Add to personal dictionary" applies across all projects.
 - A full-script check on demand lists results in the Problems tab under "Spelling."
 
@@ -290,7 +290,7 @@ The regression suite is hand-counted position fixtures (frozen once verified) pl
 This is the feature to get right, because no app does it losslessly. The trick is that in Fountain the outline is *already in the file*: `#` sections, `=` synopses, scene headings. So:
 
 - **Condense.** Fold every scene to its heading + synopsis (and sections to their title). What you're looking at is still the source — just folded. Export it as Markdown or a treatment document. Reorder scenes in this view and the full scene text moves with it.
-- **Expand.** Start from an outline — a list of `#` sections, sluglines, and `=` synopses typed in the source or pasted as Markdown — and the editor scaffolds each into a scene stub. Writing fills in the stubs; the synopsis stays attached as the scene's summary in the Outline and Cards panes.
+- **Expand.** Start from an outline — a list of `#` sections, sluglines, and `=` synopses typed in the source or pasted as Markdown — and the editor turns each into a scene stub. Writing fills in the stubs; the synopsis stays attached as the scene's summary in the Outline and Cards panes.
 - **Synopsis sync.** Because synopses are real source lines, editing one in the Cards view is a text edit at a known range. No second document model to drift.
 - **Treatment export.** Section titles + synopses + (optionally) the first action paragraph of each scene → a readable prose treatment. Final Draft can't do this.
 
@@ -333,33 +333,133 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 
 ## 13. Phased plan
 
-The ordering principle: **the reasons to choose Drafter over Beat must be on screen at the first public release.** That means the Problems pane, the stage-play template, and accessibility move up, and FDX/radio/TV move down.
+The ordering principle: **the reasons to choose Drafter over Beat must be on screen at the first public release.** That means the Problems pane, the stage-play template, and accessibility move up, Final Draft files follow the outline, and radio and TV formats come later. The [README's roadmap](../README.md#roadmap) has the summary, with what has shipped.
 
-**Phase 0 — Engine (no UI).** `@drafter/fountain` CST parser with lossless round-trip and fast full reparse; `@drafter/templates` schema + `us-screenplay` + `stage-play-standard`; `@drafter/layout` pagination; `@drafter/render-pdf`. A CLI that turns a `.fountain` into a correct PDF. Full test suite. *If this phase is right, everything else is UI.*
+**Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6). PDF import is out of scope through Phase 4.
 
-**Phase 1 — Minimum IDE (first public release).**
-- **Layout:** a Nuxt shell laid out like Inform 7's, with two facing panes that can each show any tab. Dark by default, with a light theme.
-- **First visit:** opens on the sample screenplay, with a welcome dialog and an optional guided tour.
-- **Source pane:** CodeMirror with decoration-driven highlighting, keymap, autocomplete for characters and locations, and folding.
-- **Writing sessions:** focus mode, typewriter scrolling, a sprint timer, a daily goal, and counts of pages, scenes, words, and running time.
-- **Script and Problems:** a Script tab with live pagination, and a **Problems tab with the starter lint rules and Strict Fountain checks**.
-- **Saving:** app-style per §6.2 (Save and Save As, an unsaved-changes warning, and an always-on recovery copy in IndexedDB with `storage.persist()` and honest warnings). Open and save `.fountain` (in place on Chromium, which syncs through synced folders, and by download elsewhere). Export PDF and `.txt`.
-- **Templates:** a **template switcher with screenplay and stage play**, and a sample script for each.
-- **Reach:** works on phones, one pane at a time. Keyboard-complete, heading-navigable rendered pane, axe-clean. Deploy to drafter.dev.
+### Phase 0 — Engine (no UI)
 
-*A person can write a feature or a play in it, and the script is built for screen readers to read by its structure, checked by automated tests. Testing with NVDA and VoiceOver comes last, after every phase.* The details are in [the Phase 1 design](drafter-phase1-design.md).
+The engine as standalone packages, with no UI. The phase ends when a CLI turns a `.fountain` file into a correctly paginated PDF and the full test suite passes. If this phase is right, everything after it is UI.
 
-**Phase 2 — Structure.** Outline, Cards, Notes tabs as source transactions; FDX import/export (moved up from Phase 3, decided 2026-10-28; built in v0.11.0, Plan FD, and not yet tested against real Final Draft files); Outline built in v0.10.0 and Cards and Notes in v0.12.0 (Plan B); snapshots, History, and Compare built in v0.13.0 (Plan C); a Beat Board of idea cards kept in the file as Fountain; storylines (A, B, and C plots) shown as lanes on the outline, on the cards, and in the margin; condense/expand; scene reordering with keyboard equivalents; snapshots, retention, and Compare; Stats, with screen time per character and who shares scenes; writing statistics by day, kept on the device; nspell with project dictionary; Reference tab. To see and work through a script: a script map (scenes as blocks sized by length, colored by INT/EXT, day or night, or storyline); a pacing view (scene length and dialogue-to-action balance along the page timeline, with optional structure guides as suggestions); a character-by-scene grid with each character's dialogue share; scene goals (goal, conflict, outcome, value shift) kept as Fountain notes; setups and payoffs, with the setups never paid off listed. Reader notes with no account: a reader mode at drafter.dev where a reader comments on lines or selections (name, category and colour, replies) and sends the comments back in the `.fountain` as Fountain notes; the author merges them into the current draft by quote, context, and scene (a preview of matched, approximate, and unplaced; none dropped), and replies and resolves them in the margin. Note categories and status in the Notes tab.
+**Builds**
 
-**Phase 3 — Formats.** Import from Highland, Fade In, and Celtx; TV single/multi-cam, radio, UK, and novel templates; user-added templates and template export; standalone `.html` export; PDF with notes in the margin or clean, with a watermark and header; a self-contained reader `.html` for commenting in any browser; for plays, French scenes, who is on stage (entrances and exits), and a doubling chart.
+- `@drafter/fountain`: a concrete-syntax-tree parser and printer that reparses in full on every change. Every block keeps its raw text, so printing is lossless. Where the spec's strict reading would garble a common mistake, the parser reads leniently and flags the spot.
+- `@drafter/templates`: the template schema and loader (validation, `extends`, inch-to-character conversion) and two built-in templates, **US Screenplay (Feature)** and **Stage Play (Dramatists Guild standard)** (`us-screenplay` and `stage-play-standard`).
+- `@drafter/layout`: `paginate(doc, template)`, covering word wrap, keep-with-next, dialogue splitting with `(MORE)` and `(CONT'D)`, dual dialogue, scene numbers, forced page breaks, and the title page.
+- `@drafter/render-pdf`: PDF output with Courier Prime embedded. It runs in Node and in a browser worker.
+- `@drafter/cli`: `drafter build <file> [--pdf] [--txt] [--json] [--template] [--scene-numbers]` and `drafter check <file>`.
 
-**Phase 4 — Craft.** Remaining lint rules; revision marks and colored-page PDF; production revisions (locked pages, OMITTED scenes, scene numbers that start anywhere); alternate versions of a line; "clean" display mode (markers hidden by decoration); table-read; a character pass (one character's lines alone); story order against script order for nonlinear scripts; a breakdown report (locations, time of day, cast per scene); accept or reject a co-writer's edited copy change by change; one character's dialogue exported for an actor; PWA install flow and offline dictionary caching.
+**Done when**
 
-**Later.** Direct Open and Save for Dropbox and Google Drive, signed in with those services, never with Drafter (§6).
+- Printing a parse reproduces the input exactly, for 10,000 random strings and every fixture.
+- Reparsing after multi-range edits matches a fresh parse across 1,000 random edit sequences.
+- Every classification fixture matches its expected element sequence.
+- Layout property tests pass: no overfull page, no page that starts blank, no character cue stranded at the bottom of a page, and every line maps back to its source.
+- Hand-checked position fixtures match, the PDF's text and page count match the layout, and pagination is deterministic.
+- Malformed templates are rejected with a complete list of errors and are never partially applied.
+- The CLI writes PDF, text, and JSON output, and `drafter check` fails on an unclosed boneyard.
+- Build, tests, and lint are clean from a fresh clone.
 
-**Phase 5 — Community.** Template gallery, docs site, `@drafter/*` on npm, `@drafter/cli`, VS Code extension; plugin API only if there's demand, worker-sandboxed per the technical design.
+The exact criteria are in the [Phase 0 kickoff prompt](drafter-phase0-kickoff-prompt.md).
 
-**Last — Testing with NVDA and VoiceOver.** After every phase is built, on Windows and with VoiceOver (Phase 2 design §20).
+### Phase 1 — Minimum IDE (first public release)
+
+**Builds**
+
+- The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs, laid out like the Inform 7 IDE: two facing panes that can each show any tab, a toolbar of round buttons, and a status bar. Dark by default, with a light theme.
+- A first visit that opens on a sample screenplay, with a welcome dialog, an optional two-minute guided tour, and New screenplay, New stage play, and Open a file one click away.
+- The CodeMirror 6 source pane: highlighting driven by the one parser, Tab and Enter conveniences that insert plain Fountain, autocomplete for characters, locations, transitions, and sections, and folding by scene and section.
+- Focus mode, which leaves only the page you're writing on, and typewriter scrolling, which keeps the line you're typing in the middle of the screen.
+- A sprint timer, a daily goal, and a count of pages, scenes, words, and running time.
+- The Script tab, with live pagination in a Web Worker.
+- The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
+- Saving like a desktop app: Open, Save, and Save As for `.fountain` files (in place on Chromium, by download elsewhere), a warning before leaving with unsaved changes, and an always-on recovery copy in the browser, with a warning when the browser may clear it (per §6.2: the recovery copy is in IndexedDB, with `storage.persist()` and honest warnings). On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
+- Export to PDF and plain text.
+- A template switcher for screenplay and stage play, and a sample script for each.
+- Phones and tablets, with one pane at a time on a phone.
+- Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
+- Deployment to drafter.dev.
+
+**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. The [Phase 1 design](drafter-phase1-design.md) has the details.
+
+### Phase 2 — Structure
+
+Every change in the Outline, Cards, and Notes tabs is an edit to the source.
+
+**Built**
+
+- The Outline: condense to outline and expand from outline, and scene reordering with a keyboard equivalent for every drag (v0.10.0).
+- Final Draft `.fdx` import and export (v0.11.0, Plan FD; moved up from Phase 3, decided 2026-10-28), with nothing dropped silently on import: an import comes in as a new, unsaved script, anything Drafter has no element for becomes a `[[fdx: …]]` note that Problems lists, and the `.fdx` itself is never changed. Import has been checked against Final Draft 13's own Outline, Script, and Shooting Script samples; a round trip through Final Draft itself is still to come.
+- Cards and Notes, with Scene details (v0.12.0, Plan B). Notes has categories and status (open, resolved).
+- Scene goals (v0.12.0): optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes. Scene details writes and edits them, and the Outline and the cards show the goal; the script map will too.
+- Setups and payoffs (v0.12.0): mark a setup, link it to its payoff, and see the setups that never pay off.
+- Snapshots with a retention schedule, and a Compare view that renders two snapshots as script pages with changed lines marked, and History (v0.13.0, Plan C).
+- Writing statistics by day, kept on your device (v0.5.0).
+- Spellcheck with nspell and a per-script dictionary that knows your character names (v0.14.0, Plan D): offline, in US or British English, with a right-click menu, a dictionary of your own, and a Spelling list in Problems.
+- The Structure strip (v0.15.0), described in the [README](../README.md#the-idea) and the [Structure strip design](drafter-structure-strip-design.md).
+- PDF export for Markdown documents (v0.16.0, the [Markdown PDF design](drafter-markdown-pdf-design.md)): headings, lists, quotes, code, and clickable links on numbered US Letter or A4 pages, in Inter Tight with Courier Prime for code, drawn in the export worker and working offline. The PDF isn't tagged yet, and has no bookmarks; both wait for the final accessibility steps.
+- Getting a script out the door (v0.17.0, the [out-the-door design](drafter-out-the-door-design.md)): a guided first screenplay and first stage play that teach each element as you read; export options for scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), kept per script; the running time at a rate set per script, with an estimate from the dialogue, and each scene's and act's time in the Outline and the Structure strip; and a Technical details help page.
+- Version history (v0.18.0, the [version-history design](drafter-version-history-design.md)): **Deleted scenes**, every scene in a snapshot that is in no scene of the script now, with **Put back** to its old place in one undo; **Show changes**, the Script pane's pages marked against the last save or a chosen snapshot, never printed; a **Changes** view in Compare, a GitHub-style diff of the Fountain text grouped by scene, with + and −, the changed words marked, folds, and side by side, in red and green or blue and orange (Compare's Pages view keeps its asterisks); and **History of this scene**, every version of one scene, with **Use this version**. The scenes are matched across versions by `@drafter/history` in a worker of its own, with its notes cached in a second database, `drafter-cache`.
+
+**Next:**
+
+- v0.19.0: import from Highland and Fade In (moved up from Phase 3), with `.md` listed among the imports.
+- Then Plans E to H (v0.20.0 to v0.23.0, Phase 2 design §22), Plan E with Scaffold.
+
+**To come**
+
+- A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
+- Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
+- The Stats tab, including screen time per character and who shares scenes with whom.
+- Scaffold (Plan E, named by the maintainer): a panel beside the script that shows who is in the current scene (speaking or silent, with each one's words and share of its time), where it is, and how long it runs; a page for each character (their scenes, screen time, dialogue share, absences, and lines) and for each location. Built on the Stats tab and v0.17.0's per-scene timing.
+- The built-in Reference tab.
+- A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there. It builds on the Structure strip's geometry, and Plan E decides whether it is still wanted beside the strip.
+- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.
+- A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
+- Reader notes, with no account and nothing passing through a server:
+  - A reader opens your script at drafter.dev in a reader mode, adds comments to lines or selections (their name, a category and color, replies), and sends them back as a file: the `.fountain` itself, with the comments kept as Fountain notes any Fountain tool can show.
+  - You add a reader's file to your current draft, even after you kept writing. Each comment finds its place by its quote, its context, and its scene; a preview says how many matched, how many matched approximately, and how many found no place, and none is ever dropped. Notes typed by hand (`[[Name: comment]]`) merge too.
+  - You reply and resolve them in the margin, filter by reader or category, and send your replies back the same way.
+
+### Phase 3 — Formats
+
+- Import from Celtx (Highland and Fade In imports moved up to Phase 2).
+- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
+- User-added templates, dropped in as JSON, and template export.
+- For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
+- Standalone `.html` export.
+- PDF export with notes in the margin, or a clean copy, and a watermark and header for drafts you send out (for example "CONFIDENTIAL" or the reader's name).
+- A self-contained reader file: one `.html` a reader opens in any browser to read and comment, for readers who won't visit a site.
+
+### Phase 4 — Craft
+
+- The remaining lint rules.
+- Revision marks and colored-page PDF.
+- Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
+- Alternate versions of a line, switchable in place.
+- A "clean" display mode that hides Fountain markers without changing the file.
+- Table read, using speech synthesis with a different voice per character.
+- A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
+- Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
+- A breakdown report: locations, time of day, and cast for each scene, to export for production.
+- Accept or reject a co-writer's edited copy change by change, from Compare.
+- One character's dialogue, exported for an actor.
+- A PWA install flow. (Offline dictionary caching, planned here, shipped early with spellcheck in v0.14.0.)
+
+### Phase 5 — Community
+
+- A template gallery and a docs site.
+- The `@drafter/*` packages and `@drafter/cli` published on npm, so `npx @drafter/cli build script.fountain` works without the app.
+- A VS Code extension.
+- A plugin API, only if there's demand, sandboxed in a Web Worker per the technical design.
+
+### Later
+
+- Open from and save to Dropbox and Google Drive directly. You sign in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server (§6).
+
+### Last — Testing with NVDA and VoiceOver
+
+After every phase is built, the whole app is tested with NVDA on Windows and VoiceOver. Until then every view is built for screen readers and checked automatically (axe, keyboard-only tests, and the accessibility tree), and Drafter claims no conformance with any standard. The [Phase 2 design](drafter-phase2-design.md) (§20) has the reasoning.
 
 ---
 

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { commandById } from '~/commands/registry';
+import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import { useEditor } from '~/editor/session';
-import { outlineNotice, sayOutline } from '~/outline/notice';
+import { useDeleted } from '~/history/deleted';
+import { noticeWhileOpen, sayOutline } from '~/outline/notice';
 import {
   type HistoryAction,
   type HistoryRow,
@@ -33,6 +36,9 @@ import { encodeFile, fileBaseName, titleFileOf, titleFor } from '~/storage/text'
 // read again as it is acted on. In a read-only tab everything is listed, compared, and saved, and
 // Restore, Label…, Delete, and Take snapshot say why they are off (Call 25). On a phone it fills
 // the screen.
+
+/** The status line: only what is said while this dialog is open. */
+const notice = noticeWhileOpen(() => historyOpen.value !== null);
 
 const DIALOG_ID = 'history-dialog';
 const dialog = ref<HTMLDialogElement>();
@@ -217,6 +223,38 @@ function startCompare(a: Version, b: Version) {
   comparing.open(a, b);
 }
 
+// Show changes since this (version-history design §4.1): the Script pane, marked against the row.
+const showChanges = useShowChanges();
+
+/** What the baseline menu calls a snapshot with no label: its time, with its day if not today. */
+function sinceLabel(row: HistoryRow): string {
+  if (row.label) return row.label;
+  const at = new Date(row.createdAt);
+  if (at.toDateString() === new Date().toDateString()) return snapshotTime(row.createdAt);
+  return `${at.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${snapshotTime(row.createdAt)}`;
+}
+
+async function showChangesSince(row: HistoryRow) {
+  if (!row.readable) return tell(UNREADABLE);
+  if (showChanges.why.value) return tell(showChanges.why.value);
+  if ((await snapshotText(row.id)) === null) {
+    tell((await snapshotNow(row.id)) ? UNREADABLE : GONE);
+    return;
+  }
+  keepFocus = true;
+  close();
+  showChanges.since({ kind: 'snapshot', id: row.id, label: sinceLabel(row) });
+  void commandById('show-script')?.run();
+}
+
+// Deleted scenes (version-history design §8): History closes, and the tab opens beside the script.
+const deleted = useDeleted();
+function openDeleted() {
+  keepFocus = true;
+  close();
+  deleted.open();
+}
+
 async function compareNow(row: HistoryRow) {
   if (!row.readable) return tell(UNREADABLE);
   const version = await versionOf(row);
@@ -371,6 +409,8 @@ async function confirmDelete() {
     else {
       await deleteSnapshot(was.id);
       tell(`Deleted the snapshot from ${when}.`);
+      // Show changes since this snapshot falls back to the last save, and says so.
+      showChanges.check();
     }
   } catch {
     tell(UNCHANGED);
@@ -477,6 +517,15 @@ function menuItems(row: HistoryRow): DropdownMenuItem[][] {
         icon: 'i-lucide-git-compare-arrows',
         onSelect: later(() => void compareWith(row)),
       },
+      ...(editor.kind.value === 'fountain'
+        ? [
+            {
+              label: 'Show changes since this',
+              icon: 'i-lucide-diff',
+              onSelect: later(() => void showChangesSince(row)),
+            },
+          ]
+        : []),
     ]);
     groups.push([
       {
@@ -556,7 +605,17 @@ const nameOf = (row: HistoryRow) =>
     <template v-if="historyOpen">
       <div class="head">
         <h2 id="history-title">History</h2>
-        <button type="button" class="btn" @click="close">Close</button>
+        <span class="head-buttons">
+          <button
+            v-if="editor.kind.value === 'fountain'"
+            type="button"
+            class="btn"
+            @click="openDeleted"
+          >
+            Deleted scenes
+          </button>
+          <button type="button" class="btn" @click="close">Close</button>
+        </span>
       </div>
       <p class="help">
         Snapshots of this script, kept in this browser. They aren’t part of the file.
@@ -672,7 +731,7 @@ const nameOf = (row: HistoryRow) =>
         </div>
       </div>
       <!-- The page behind a modal dialog is inert, so what History's actions say is said here too. -->
-      <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ outlineNotice }}</p>
+      <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ notice }}</p>
     </template>
     <dialog
       ref="askDialog"
@@ -723,6 +782,10 @@ const nameOf = (row: HistoryRow) =>
     border: 0;
     border-radius: 0;
   }
+}
+.head-buttons {
+  display: flex;
+  gap: 8px;
 }
 .head {
   display: flex;

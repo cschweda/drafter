@@ -5,6 +5,7 @@ import {
   elementHint,
   PARENTHETICAL_HINT,
   readsAsName,
+  spellMarkAt,
   structureOf,
 } from '@drafter/cm-fountain';
 import { resolveRole } from '@drafter/templates';
@@ -12,7 +13,8 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { isApple } from '~/commands/keys';
 import { commandById } from '~/commands/registry';
-import { useFocusMode } from '~/composables/useFocusMode';
+import { useElementBarShown } from '~/composables/useElementBarShown';
+import { useWideScreen } from '~/composables/useWideScreen';
 import {
   type BarButton,
   barFor,
@@ -20,13 +22,15 @@ import {
   hereLabel,
   MARKDOWN_BUTTONS,
   reasonFor,
+  SPELLING_BUTTON,
   tipFor,
 } from '~/editor/element-bar';
 import { elementNotice, sayElement } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
 import { markdownElement } from '~/markdown/commands';
 import { useSettings } from '~/settings/settings';
-import { useGuard } from '~/storage/guard';
+import { openSpellMenu } from '~/spell/menu';
+import { NO_MARK_HERE, saySpell } from '~/spell/notice';
 import { scrollbarsFloat } from '~/utils/scrollbars';
 
 // The element bar (docs/drafter-element-bar-design.md): a row of buttons over the Source that
@@ -37,14 +41,12 @@ import { scrollbarsFloat } from '~/utils/scrollbars';
 // doesn't take focus from the editor, so a phone's keyboard stays up. It goes in focus mode, in a
 // tab that only shows the script, and when Settings turns it off.
 const editor = useEditor();
-const focus = useFocusMode();
-const { readOnly } = useGuard();
 const { settings, set } = useSettings();
 const apple = isApple();
 /** A tooltip is a sentence or two, so it wraps, within the width of a phone. */
 const TIP_UI = { content: 'h-auto max-w-80 py-1.5', text: 'whitespace-normal' };
 
-const shown = computed(() => settings.value.elementBar && !focus.on.value && !readOnly.value);
+const shown = useElementBarShown();
 const markdown = computed(() => editor.kind.value === 'markdown');
 /** The script's structure by its template: a stage play has acts, `##` scenes, and stage directions. */
 const structure = computed(() => structureOf(editor.template.value));
@@ -74,13 +76,24 @@ function follow(state: EditorState) {
 function followTree(state: EditorState) {
   if (markdown.value) markdownHere.value = markdownElement(state);
 }
+/** The cursor is on a misspelled word: the marks come with an effect, and move with the cursor. */
+const onMark = ref(false);
+function followMark(state: EditorState) {
+  onMark.value = spellMarkAt(state, state.selection.main.head) !== null;
+}
 const stops: Array<() => void> = [];
 /** A floating scrollbar would cover the buttons' lower half (utils/scrollbars.ts), so it's hidden. */
 const floatingScrollbar = ref(false);
 onMounted(() => {
   floatingScrollbar.value = scrollbarsFloat();
   follow(editor.view.state);
-  stops.push(editor.onState(follow), editor.onUpdate(followTree));
+  followMark(editor.view.state);
+  stops.push(
+    editor.onState(follow),
+    editor.onUpdate(followTree),
+    editor.onState(followMark),
+    editor.onUpdate(followMark),
+  );
 });
 onBeforeUnmount(() => {
   for (const stop of stops.splice(0)) stop();
@@ -166,6 +179,22 @@ function onCloseAutoFocus(event: Event) {
   requestAnimationFrame(() => editor.view.focus());
 }
 
+// ---- The phone's Spelling button (Plan D, Call 15) -----------------------------------------
+
+const wide = useWideScreen();
+/** Only on a narrow screen, where there is no right-click or Mod-., and only on a marked word. */
+const spellingShown = computed(() => !wide.value && settings.value.spellcheck && onMark.value);
+
+/** Opens the spelling menu under the button; the editor keeps focus until the menu takes it. */
+function pressSpelling(event: MouseEvent) {
+  if (longPressed) {
+    longPressed = false;
+    return;
+  }
+  const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  if (!openSpellMenu(editor.view, { left: box.left, top: box.bottom })) void saySpell(NO_MARK_HERE);
+}
+
 // ---- Hiding it -----------------------------------------------------------------------------
 
 const options = computed<DropdownMenuItem[]>(() => [
@@ -214,6 +243,7 @@ const items = () => [...(toolbar.value?.querySelectorAll<HTMLElement>('[data-bar
 const order = computed(() => [
   ...(markdown.value ? [] : ['here']),
   ...buttons.value.map((button) => button.command),
+  ...(spellingShown.value ? [SPELLING_BUTTON.command] : []),
   ...(markdown.value ? [] : ['more', 'help']),
   'options',
 ]);
@@ -253,6 +283,7 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
     class="element-bar"
     :class="{ 'no-scrollbar': floatingScrollbar }"
     data-element-bar
+    data-pane-bar
     @keydown="onKeydown"
     @focusin="onFocusin"
   >
@@ -309,6 +340,33 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
       </button>
     </UTooltip>
     <span v-for="button in buttons" :id="descId(button)" :key="`d-${button.command}`" class="sr-only">{{ tip(button) }}</span>
+    <template v-if="spellingShown">
+      <UTooltip
+        :text="tipFor(SPELLING_BUTTON, apple)"
+        :open="openTip === SPELLING_BUTTON.command"
+        :delay-duration="400"
+        :ui="TIP_UI"
+        @update:open="setTip(SPELLING_BUTTON.command, $event)"
+      >
+        <button
+          type="button"
+          class="button"
+          :data-bar-item="SPELLING_BUTTON.command"
+          :tabindex="stopOf(SPELLING_BUTTON.command)"
+          :aria-describedby="descId(SPELLING_BUTTON)"
+          @mousedown.prevent
+          @pointerdown="onPointerDown($event, SPELLING_BUTTON.command)"
+          @pointerup="onPointerEnd"
+          @pointercancel="onPointerEnd"
+          @click="pressSpelling"
+        >
+          {{ SPELLING_BUTTON.label }}
+        </button>
+      </UTooltip>
+      <span :id="descId(SPELLING_BUTTON)" class="sr-only">
+        {{ tipFor(SPELLING_BUTTON, apple) }}
+      </span>
+    </template>
     <MenuButton v-if="!markdown" :items="more" :content="{ align: 'start', onCloseAutoFocus }">
       <button
         type="button"

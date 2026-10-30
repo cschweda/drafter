@@ -104,6 +104,11 @@ interface Section {
   strip?: RegExp;
   /** Items that aren't commands (roles). */
   fixed?: readonly Item[];
+  /**
+   * Commands of another menu listed here too, after the picked ones, by these labels (Help →
+   * Sample Scripts lists File's guided starters). They stay in their own menu as well.
+   */
+  also?: Readonly<Record<string, string>>;
 }
 
 const prefix =
@@ -131,6 +136,15 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['undo', 'redo'] },
     { fixed: [{ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { pick: ['find'] },
+    {
+      pick: [
+        'check-spelling',
+        'spelling-suggestions',
+        'add-to-script-dictionary',
+        'add-to-my-dictionary',
+        'ignore-misspelling',
+      ],
+    },
     { pick: prefix('element-'), submenu: 'Element', strip: /^Element: / },
     { pick: prefix('emphasis-'), submenu: 'Emphasis', strip: /^Emphasis: / },
     { pick: prefix('make-'), submenu: 'Force', strip: /^Force / },
@@ -151,6 +165,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'turn-off-typewriter',
         'show-element-bar',
         'hide-element-bar',
+        'toggle-structure-strip',
       ],
     },
     { pick: ['fold-all', 'unfold-all'] },
@@ -159,10 +174,30 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['palette'] },
     { pick: ['go-to-scene', 'go-to-line'] },
     { pick: ['next-problem', 'previous-problem'] },
+    { pick: ['next-misspelling', 'previous-misspelling'] },
   ],
   Help: [
-    { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy'] },
+    {
+      pick: [
+        'help-fountain',
+        'help-shortcuts',
+        'help-saving',
+        'help-privacy',
+        'help-licences',
+        'help-technical',
+      ],
+    },
     { pick: ['take-the-tour'] },
+    {
+      pick: prefix('sample-script-'),
+      submenu: 'Sample Scripts',
+      strip: /^Sample script: /,
+      also: {
+        'new-guided-screenplay': 'Guided first screenplay',
+        'new-guided-stage-play': 'Guided first stage play',
+      },
+    },
+    { pick: ['check-for-updates'] },
   ],
 };
 
@@ -172,7 +207,17 @@ const LABELS: Record<string, string> = {
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-privacy': 'Privacy',
+  'help-licences': 'Third-party Licences',
+  'help-technical': 'Technical Details',
+  'check-for-updates': 'Check for Updates…',
 };
+
+/**
+ * The page's About Drafter command: its dialog (the version, Electron's and Chromium's, the links,
+ * Copy version info). The menu's About Drafter runs it while the page can; with no page to show it
+ * (none yet, or a Mac with no window), About is the app's own box (`MenuActions.about`).
+ */
+export const ABOUT_COMMAND = 'about-drafter';
 
 /** A title as a menu label: `&` would set a mnemonic on Linux and Windows, so it is doubled. */
 const label = (text: string) => text.replaceAll('&', '&&');
@@ -270,9 +315,17 @@ export function menuTemplate(
 
   // On a Mac, Settings… is in the app's own menu (as every Mac app has it), not in File.
   const inAppMenu = (c: MenuCommand) => apple && c.id === 'settings';
+  // About Drafter, once: the page's dialog while the page can show it, else the app's own box.
+  const aboutCommand = commands.find((c) => c.id === ABOUT_COMMAND && c.enabled);
+  const aboutItem = (): Item =>
+    aboutCommand
+      ? { ...itemFor(aboutCommand), label: 'About Drafter' }
+      : { id: 'about', label: 'About Drafter', click: about };
 
   const build = (group: Group): Item[] => {
-    const mine = commands.filter((c) => c.group === group && !inAppMenu(c));
+    const mine = commands.filter(
+      (c) => c.group === group && !inAppMenu(c) && c.id !== ABOUT_COMMAND,
+    );
     const placed = new Set<string>();
     const sections: Item[][] = [];
     for (const section of LAYOUT[group]) {
@@ -283,7 +336,13 @@ export function menuTemplate(
             ? (section.pick as readonly string[]).flatMap((id) => mine.filter((c) => c.id === id))
             : mine.filter((c) => (section.pick as (id: string) => boolean)(c.id));
       for (const c of picked) placed.add(c.id);
-      const items = picked.map((c) => itemFor(c, section.strip));
+      const also = Object.entries(section.also ?? {}).flatMap(([id, title]) =>
+        commands
+          .filter((c) => c.id === id)
+          // Its own id: an id names one item in the menu, and the command keeps its own in File.
+          .map((c) => ({ ...itemFor(c), id: `${c.id}:also`, label: label(title) })),
+      );
+      const items = [...picked.map((c) => itemFor(c, section.strip)), ...also];
       if (section.submenu) {
         if (items.length > 0) sections.push([{ label: section.submenu, submenu: items }]);
         if (section.fixed) sections.push([...section.fixed]);
@@ -299,7 +358,7 @@ export function menuTemplate(
       sections.push([
         { id: 'modules-folder', label: 'Open Modules Folder', click: modulesFolder },
         { id: 'releases', label: 'Open the Releases Page', click: releases },
-        ...(apple ? [] : [{ id: 'about', label: 'About Drafter', click: about }]),
+        ...(apple ? [] : [aboutItem()]),
       ]);
     }
     if (group === 'File' && !apple) {
@@ -323,7 +382,7 @@ export function menuTemplate(
     bar.unshift({
       label: 'Drafter',
       submenu: [
-        { id: 'about', label: 'About Drafter', click: about },
+        aboutItem(),
         { type: 'separator' },
         ...(settings.length > 0 ? [...settings, { type: 'separator' as const }] : []),
         { role: 'services' },

@@ -9,6 +9,7 @@ import { moduleProblems } from '../modules/problems';
 import { reportModuleFailure } from '../modules/registry';
 import { useSettings } from '../settings/settings';
 import { useSnapshots } from '../snapshots/use-snapshots';
+import { type SpellingRow, spellingReader } from '../spell/rows';
 import { applyTextChanges } from './apply-changes';
 import { relint } from './extensions';
 import { useEditor } from './session';
@@ -96,6 +97,8 @@ export function problemsLabel(count: number): string {
 }
 
 const problems = shallowRef<readonly Problem[]>([]);
+/** The spellcheck's marks as rows, read with the problems (Plan D, Call 13). */
+const marked = shallowRef<readonly SpellingRow[]>([]);
 let started = false;
 
 const same = (a: readonly Problem[], b: readonly Problem[]) =>
@@ -114,10 +117,18 @@ const same = (a: readonly Problem[], b: readonly Problem[]) =>
     );
   });
 
-/** Reads the lint state of the one editor into the list, after every update. */
+const sameRows = (a: readonly SpellingRow[], b: readonly SpellingRow[]) =>
+  a.length === b.length &&
+  a.every((r, i) => {
+    const q = b[i] as SpellingRow;
+    return r.key === q.key && r.from === q.from && r.to === q.to && r.line === q.line;
+  });
+
+/** Reads the lint state and the spelling marks of the one editor, after every update. */
 function start() {
   started = true;
   const { view, onUpdate, locked } = useEditor();
+  const readSpelling = spellingReader();
 
   function read(state: EditorState) {
     const found: Omit<Problem, 'key'>[] = [];
@@ -148,6 +159,8 @@ function start() {
     const keys = occurrenceKeys(found.map((p) => p.ruleId));
     const keyed = found.map((p, i) => ({ ...p, key: keys[i] as string }));
     if (!same(problems.value, keyed)) problems.value = keyed;
+    const rows = readSpelling(state);
+    if (!sameRows(marked.value, rows)) marked.value = rows;
   }
 
   read(view.state);
@@ -157,12 +170,15 @@ function start() {
 }
 
 let moduleRows: ComputedRef<readonly ModuleRow[]> | undefined;
+let spelling: ComputedRef<readonly SpellingRow[]> | undefined;
 
 /** The problems in the editor, as its gutter shows them (technical design §9). */
 export function useProblems(): {
   problems: Readonly<ShallowRef<readonly Problem[]>>;
   /** What script modules found. Not in `problems`, and not in `count`. */
   moduleProblems: Readonly<ComputedRef<readonly ModuleRow[]>>;
+  /** The spellcheck's marks, a row per occurrence: empty while spellcheck is off; never counted. */
+  spelling: Readonly<ComputedRef<readonly SpellingRow[]>>;
   /** Errors and warnings; info isn't counted (it's advice, not a fault). */
   count: Readonly<ComputedRef<number>>;
   /** Whether editing is off (another tab has the script, or a switch is under way): no fix applies. */
@@ -209,6 +225,7 @@ export function useProblems(): {
     });
   });
 
+  spelling ??= computed(() => (settings.value.spellcheck ? marked.value : []));
   const count = computed(() => problems.value.filter((p) => p.severity !== 'info').length);
   const canFixAll = computed(
     () =>
@@ -238,5 +255,5 @@ export function useProblems(): {
     relint();
   }
 
-  return { problems, moduleProblems: moduleRows, count, locked, canFixAll, fixAll };
+  return { problems, moduleProblems: moduleRows, spelling, count, locked, canFixAll, fixAll };
 }

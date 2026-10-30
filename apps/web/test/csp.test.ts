@@ -59,6 +59,10 @@ describe('headersFile', () => {
         '  Cache-Control: public, max-age=31536000, immutable',
         '/fonts/*',
         '  Cache-Control: public, max-age=604800',
+        // The spelling dictionaries are text: named so, Netlify compresses them (about 1.1 MB as
+        // files, much less over the wire).
+        '/dictionaries/*',
+        '  Content-Type: text/plain; charset=utf-8',
         '/sw.js',
         '  Cache-Control: no-cache',
         '/manifest.webmanifest',

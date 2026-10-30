@@ -100,6 +100,12 @@ ipcRenderer.on(CHANNELS.closeRequest, async (_event, id: unknown, kind: unknown)
 const bridge: DesktopBridge = {
   version,
   platform: process.platform,
+  // For About Drafter: the processor, and the Electron and Chromium this is.
+  runtime: {
+    arch: process.arch,
+    electron: process.versions.electron ?? '',
+    chrome: process.versions.chrome ?? '',
+  },
   files,
   // The menu bar: the page sends its commands (which of them apply, and their keys), main builds
   // the menu from them, and the id of a chosen item comes back for the page to run.
@@ -132,8 +138,9 @@ const bridge: DesktopBridge = {
   backToEditor() {
     ipcRenderer.send(CHANNELS.backToEditor);
   },
-  // Updates: main finds a newer version once, when the app starts (if the setting is on), and says
-  // so; Restart and Get it are the writer's choices, sent back. Nothing installs by itself.
+  // Updates: main finds a newer version once, when the app starts (if the setting is on), or when
+  // the writer asks (Help → Check for updates), and says so; Restart and Get it are the writer's
+  // choices, sent back. Nothing installs by itself.
   updates: {
     onAvailable(cb) {
       const listener = (_event: unknown, version: unknown, how: unknown) => {
@@ -153,6 +160,8 @@ const bridge: DesktopBridge = {
     setEnabled(on) {
       ipcRenderer.send(CHANNELS.updateEnabled, on === true);
     },
+    // Help → Check for updates: a check now, answered with what it found (plain data).
+    check: () => invoke(CHANNELS.updateCheck),
   },
   // The modules folder: what main read at start, and the origins the writer agreed to for a module
   // (main keeps only those its module.json declares, and lets only that module's frames reach them).

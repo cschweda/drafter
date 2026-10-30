@@ -16,6 +16,14 @@ describe('the command data', () => {
     }
   });
 
+  test('Deleted scenes is in File, after History, and found by "show all versions"', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('deleted-scenes')).toBe(ids.indexOf('history') + 1);
+    const deleted = COMMAND_DATA.find((c) => c.id === 'deleted-scenes');
+    expect(deleted).toMatchObject({ title: 'Deleted scenes', group: 'File' });
+    expect(deleted?.keywords).toEqual(expect.arrayContaining(['show all versions', 'versions']));
+  });
+
   test('has no key twice, and no key it cannot format', () => {
     const keys = COMMAND_DATA.flatMap((c) => (c.keys ? [c.keys.toLowerCase()] : []));
     expect(new Set(keys).size).toBe(keys.length);
@@ -26,12 +34,14 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the four help pages, in the Help group', () => {
+  test('has the six help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/fountain',
       '/docs/saving',
       '/docs/shortcuts',
       '/docs/privacy',
+      '/docs/licences',
+      '/docs/technical',
     ]);
     for (const page of HELP_PAGES) {
       const command = COMMAND_DATA.find((c) => c.id === page.id);
@@ -41,12 +51,39 @@ describe('the command data', () => {
     }
   });
 
+  test('has About Drafter, Check for updates, and a sample script of each kind in Help', () => {
+    const help = COMMAND_DATA.filter((c) => c.group === 'Help').map((c) => [c.id, c.title]);
+    expect(help).toEqual(
+      expect.arrayContaining([
+        ['about-drafter', 'About Drafter'],
+        ['check-for-updates', 'Check for updates…'],
+        ['sample-script-screenplay', 'Sample script: Screenplay'],
+        ['sample-script-stage-play', 'Sample script: Stage play'],
+        ['sample-script-markdown', 'Sample script: Markdown'],
+      ]),
+    );
+  });
+
+  test('has New guided screenplay and New guided stage play in File, after the New items, with no key', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    const guided = ['new-guided-screenplay', 'new-guided-stage-play'];
+    expect(ids.slice(ids.indexOf('new-markdown') + 1, ids.indexOf('new-markdown') + 3)).toEqual(
+      guided,
+    );
+    expect(COMMAND_DATA.filter((c) => guided.includes(c.id))).toEqual([
+      { id: 'new-guided-screenplay', title: 'New guided screenplay', group: 'File' },
+      { id: 'new-guided-stage-play', title: 'New guided stage play', group: 'File' },
+    ]);
+  });
+
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
       '/docs/fountain/',
       '/docs/saving/',
       '/docs/shortcuts/',
       '/docs/privacy/',
+      '/docs/licences/',
+      '/docs/technical/',
     ]);
   });
 });

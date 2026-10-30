@@ -24,6 +24,11 @@ export interface SnapshotSession {
   version: Readonly<Ref<number>>;
   /** Why snapshots aren't kept here, or null: a sample, a read-only tab. */
   notKept: Readonly<ComputedRef<string | null>>;
+  /**
+   * Why no snapshots are read here, or null: no script, or a sample. A read-only tab keeps none but
+   * reads the ones the editing tab keeps (Deleted scenes, History of this scene: design §10).
+   */
+  notRead: Readonly<ComputedRef<string | null>>;
 }
 
 /** The status bar's line after a failed write, once per visit; empty after a take works. */
@@ -65,6 +70,7 @@ function create(): SnapshotSession {
     if (guard.readOnly.value) return READ_ONLY;
     return null;
   });
+  const notRead = computed(() => (notKept.value === READ_ONLY ? null : notKept.value));
   /** The open script's id, when this tab keeps its snapshots. */
   const kept = () => (notKept.value === null ? (script.project.value?.id ?? null) : null);
   const text = () => editor.view.state.doc.toString();
@@ -154,6 +160,7 @@ function create(): SnapshotSession {
     },
     version,
     notKept,
+    notRead,
   };
 }
 

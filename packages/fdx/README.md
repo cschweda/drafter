@@ -28,9 +28,9 @@ try {
 
 `fromFdx(xml)` returns:
 
-- `text`: the script as Fountain text, never a parsed document, so it is parsed and checked like any other script. Each block is read back by the Fountain parser and gets a forced marker (`!`, `@`, `.`, `>`) where its plain text would read as another element, and markup in the text is escaped.
+- `text`: the script as Fountain text, never a parsed document, so it is parsed and checked like any other script. Each block is read back by the Fountain parser and gets a forced marker (`!`, `@`, `.`, `>`) where its plain text would read as another element, and markup in the text is escaped. Text styled All Caps comes in in capitals; hidden text (`[[fdx: Hidden: …]]`), and the paragraphs of a scene a shooting script omits (`[[fdx: Omitted: …]]`), come in as notes, so they don't print. A heading, cue, parenthetical, dialogue, or transition whose text is all hidden keeps it as its text, so it keeps its kind (and a heading its number), with a `[[fdx: Hidden paragraph: …]]` note after it.
 - `title`: the title page's Title as plain text, or `null`.
-- `mapped`: what came in as `[[fdx: Type]]` notes, as `{ type, count }`. A paragraph type or element Drafter has no element for is brought in as action with that note, so nothing is dropped silently.
+- `mapped`: what came in as `[[fdx: Type]]` notes, as `{ type, count }` (hidden text is `Hidden`, an omitted scene's blocks `Omitted`). A paragraph type or element Drafter has no element for is brought in as action with that note, so nothing is dropped silently.
 - `ignored`: the formatting and settings elements of the file that were left out, each named once. `IGNORED` is the set of element names treated this way (page layout, element settings, header and footer, smart type, and the like).
 
 `FdxError` is thrown when the input isn't XML the reader accepts (the reader's `XmlError` is its `cause`) or isn't a Final Draft document.

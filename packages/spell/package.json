@@ -1,0 +1,40 @@
+{
+  "name": "@drafter/spell",
+  "version": "0.17.0",
+  "description": "Spellcheck for Drafter: the bundled English dictionaries, and the words of a script worth checking.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/spell"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "dictionary-en": "4.0.0",
+    "dictionary-en-gb": "3.0.0",
+    "nspell": "2.1.5"
+  },
+  "devDependencies": {
+    "@types/nspell": "2.1.6"
+  }
+}

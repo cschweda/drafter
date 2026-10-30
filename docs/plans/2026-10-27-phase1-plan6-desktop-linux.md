@@ -212,7 +212,7 @@ export function accelerator(key: string): string;
 **Files:**
 - Modify: `apps/web/app/pages/docs/saving.vue` (a **Download Drafter for Linux** section: the AppImage and the `.deb`, what each is for, that Windows and macOS follow, and how the desktop app saves), `README.md` (the desktop app and its releases), `docs/DECISIONS.md`, `CHANGELOG.md`
 
-- The links point at `https://github.com/cschweda/drafter/releases/latest`. No ICJIA anywhere.
+- The links point at `https://github.com/cschweda/drafter/releases/latest`. No employer names anywhere.
 
 - [ ] **Step 1: Write the failing test.** `apps/web/e2e/docs.spec.ts`: `links the Linux download from the Saving page`.
 - [ ] **Step 2–4:** run → FAIL, implement, run → PASS.

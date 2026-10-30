@@ -1,5 +1,6 @@
 import type { EditorState } from '@codemirror/state';
 import { parsedDoc } from '@drafter/cm-fountain';
+import type { PageMarks } from '@drafter/compare';
 import type { Layout } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
 import {
@@ -37,6 +38,14 @@ export interface LayoutSession {
   page: Readonly<ComputedRef<PagePosition | null>>;
   /** The block holding the cursor, or before it on a blank line; -1 for the title page. */
   cursorBlock: Readonly<ShallowRef<number>>;
+  /**
+   * Show changes' marks (version-history design §4.2): those of the layout shown (`seq` is
+   * `shownSeq`), which the worker answers after it; null while off. Marks of an older layout are
+   * never kept, so they always fit the pages drawn.
+   */
+  marks: Readonly<ShallowRef<{ seq: number; marks: PageMarks } | null>>;
+  /** Show changes' baseline, which every request carries while it is set; null turns the marks off. */
+  setBaseline(baseline: { id: number; text: string } | null): void;
 }
 
 let session: LayoutSession | undefined;
@@ -49,6 +58,8 @@ function create(): LayoutSession {
   const updating = ref(false);
   const failed = ref(false);
   const cursorBlock = shallowRef(-1);
+  const marks = shallowRef<{ seq: number; marks: PageMarks } | null>(null);
+  const baseline = shallowRef<{ id: number; text: string } | null>(null);
 
   // The template each pending request was made with, so a layout is drawn with its own.
   const templates = new Map<number, Template>();
@@ -73,6 +84,10 @@ function create(): LayoutSession {
           failed.value = true;
           if (seq >= newest) updating.value = false;
         },
+        (found, seq) => {
+          // Only the shown layout's, and only while Show changes is on.
+          if (seq === shownSeq.value && baseline.value) marks.value = { seq, marks: found };
+        },
       );
     } catch (error) {
       console.error(`Layout failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -85,11 +100,15 @@ function create(): LayoutSession {
   // The session lives for the visit, so its watchers belong to no component.
   effectScope(true).run(() => {
     watch(
-      [doc, template, kind],
+      [doc, template, kind, baseline],
       () => {
         // A Markdown document has no pages: the worker is left alone until it is Fountain again.
         if (!client || kind.value === 'markdown') return;
-        newest = client.request(view.state.doc.toString(), template.value);
+        newest = client.request(
+          view.state.doc.toString(),
+          template.value,
+          baseline.value ?? undefined,
+        );
         templates.set(newest, template.value);
         updating.value = true;
       },
@@ -114,6 +133,11 @@ function create(): LayoutSession {
     failed,
     cursorBlock,
     page: computed(() => pageOf(layout.value, cursorBlock.value)),
+    marks,
+    setBaseline(next) {
+      if (next === null) marks.value = null;
+      baseline.value = next;
+    },
   };
 }
 
