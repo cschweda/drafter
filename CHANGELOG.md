@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **Drafter says it is Fountain-first, and for novelists too.** The share image, the site's title and description, and the Linux package's summary now say Fountain first, for screenplays, stage plays, and novels (written as Markdown documents), with the formats a script goes out in.
+
 ### Fixed
 
 - **The desktop quit test holds every quit, not only the first.** The app's own close flow asks, finds nothing unsaved and quits again, so a one-time hook in the test could let the app close on a fast Linux runner. Test only; the app is unchanged.

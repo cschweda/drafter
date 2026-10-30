@@ -213,16 +213,29 @@ for (const [name, color] of [
         fill: '#FFFFFF',
         tracking: -5,
       }) +
-      text(FONTS.semiBold, 'Screenplays and stage plays,', {
+      // Fountain first, in the mark's colors; then who it's for, and where the work can go.
+      text(FONTS.extraBold, 'Fountain first.', { x: 76, y: 382, size: 36, fill: 'url(#g)' }) +
+      text(FONTS.semiBold, 'Screenplays, stage plays,', {
         x: 76,
-        y: 384,
-        size: 32,
+        y: 428,
+        size: 30,
         fill: '#AEB4C0',
       }) +
-      text(FONTS.semiBold, 'written in plain text.', { x: 76, y: 426, size: 32, fill: '#AEB4C0' }) +
+      text(FONTS.semiBold, 'and novels, in plain text.', {
+        x: 76,
+        y: 466,
+        size: 30,
+        fill: '#AEB4C0',
+      }) +
+      text(FONTS.semiBold, 'Out to PDF, Final Draft, and Markdown.', {
+        x: 76,
+        y: 506,
+        size: 21,
+        fill: '#7D8492',
+      }) +
       dots +
       text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 557, size: 24, fill: '#E8EAEE' }),
-    'Drafter: screenplays and stage plays, written in plain text',
+    'Drafter: Fountain first, for screenplays, stage plays, and novels',
   );
 }
 
