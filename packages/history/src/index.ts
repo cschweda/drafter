@@ -1,7 +1,7 @@
 export { type Anchor, sceneAnchors } from './anchors';
 export { type DeletedScene, deletedScenes, type PastSnapshot } from './deleted';
 export { hash53 } from './hash';
-export { MATCH, sameScene, similarity } from './match';
+export { coveredBy, MATCH, sameScene, similarity } from './match';
 export {
   headingKey,
   PRINT_VERSION,

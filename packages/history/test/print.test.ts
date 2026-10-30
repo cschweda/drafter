@@ -36,7 +36,7 @@ describe('scenePrints', () => {
     expect(play.prints.map((p) => p.heading)).toEqual(
       PLAY_SCENES.map((s) => s.split('\n')[0]?.slice(3)),
     );
-    expect(PRINT_VERSION).toBe(1);
+    expect(PRINT_VERSION).toBe(2);
   });
 
   test('a scene with more than 64 shingles keeps the 64 smallest', () => {
@@ -86,15 +86,19 @@ describe('scenePrints', () => {
     expect([...(a?.sketch ?? [])]).toEqual([...(b?.sketch ?? [])]);
   });
 
-  test('a scene under 3 words has its words and pairs as shingles, one under 5 its pairs', () => {
-    // "he nods", "he", "nods"; "nods"; "he nods twice", "he nods", "nods twice".
-    expect(now('INT. HALL - DAY\n\nHe nods.\n')[0]?.shingles).toBe(3);
+  test('a scene of one word is that word, one under 5 words adds its pairs', () => {
+    // "he nods"; "nods"; "he nods twice", "he nods", "nods twice".
+    expect(now('INT. HALL - DAY\n\nHe nods.\n')[0]?.shingles).toBe(1);
     expect(now('INT. HALL - DAY\n\nNods.\n')[0]?.shingles).toBe(1);
     expect(now('INT. HALL - DAY\n\nHe nods twice.\n')[0]?.shingles).toBe(3);
     // Four words: two threes and three pairs. Five: three threes, and no pairs.
     expect(now('INT. HALL - DAY\n\nHe nods twice, slowly.\n')[0]?.shingles).toBe(5);
     expect(now('INT. HALL - DAY\n\nHe nods twice, very slowly.\n')[0]?.shingles).toBe(3);
-    expect(now('INT. HALL - DAY\n\nNods. Nods.\n')[0]?.shingles).toBe(2);
+    // Two words make one pair, and no single words.
+    expect(now('INT. HALL - DAY\n\nNods. Nods.\n')[0]?.shingles).toBe(1);
+    expect([...(now('INT. HALL - DAY\n\nHe nods.\n')[0]?.sketch ?? [])]).not.toEqual([
+      ...(now('INT. HALL - DAY\n\nNods.\n')[0]?.sketch ?? []),
+    ]);
     const empty = now('INT. HALL - DAY\n\n[[Write this.]]\n')[0];
     expect(empty?.shingles).toBe(0);
     expect(empty?.sketch.length).toBe(0);

@@ -33,11 +33,19 @@ function generator(seed: number) {
   return { next, word, sentence };
 }
 
-/** A scene of invented words: about 90 printed words, a speech among the action. */
+/** How many headings the generated scripts use: a few dozen places, each come back to often. */
+const HEADINGS = 36;
+
+/**
+ * A scene of invented words: about 90 printed words, a speech among the action, under one of
+ * `HEADINGS` headings (a script of 150 scenes has each about four times, and a history of 1,200
+ * snapshots each about fifty times among its versions, so the heading index is timed full).
+ */
 function scene(g: ReturnType<typeof generator>, i: number): string {
-  const place = `${g.word().toUpperCase()} ${g.word().toUpperCase()} ${i + 1}`;
+  const h = i % HEADINGS;
+  const place = `PLACE ${String.fromCharCode(65 + (h % 12))}${Math.floor(h / 12) + 1}`;
   return [
-    `${i % 2 ? 'INT.' : 'EXT.'} ${place} - ${i % 3 ? 'DAY' : 'NIGHT'}`,
+    `${h % 2 ? 'INT.' : 'EXT.'} ${place} - ${h % 3 ? 'DAY' : 'NIGHT'}`,
     `${g.sentence(14)} ${g.sentence(10)}`,
     `${g.word().toUpperCase()}\n${g.sentence(12)} ${g.sentence(8)}`,
     `${g.sentence(16)} ${g.sentence(12)}`,
@@ -129,7 +137,9 @@ describe('scaling', () => {
         ({ snapshots, prints, current }) => deletedScenes(snapshots, prints, current),
         300,
       );
-      console.info(`deletedScenes growth 300 to 1,200 snapshots: ${result.growth.toFixed(1)}`);
+      console.info(
+        `deletedScenes, 300 to 1,200 snapshots, ${HEADINGS} headings: ${result.small.toFixed(1)} ms to ${result.large.toFixed(1)} ms, growth ${result.growth.toFixed(1)}`,
+      );
       expect(result.growth).toBeLessThan(MAX_GROWTH);
     },
     SCALING_TIMEOUT,
@@ -137,6 +147,7 @@ describe('scaling', () => {
 
   test('matching 150 scenes now against cached prints of 300 snapshots finishes', () => {
     const { snapshots, prints, current } = history(300);
+    expect(new Set(current.map((p) => p.headingKey)).size).toBe(HEADINGS);
     const start = performance.now();
     const found = deletedScenes(snapshots, prints, current);
     const elapsed = performance.now() - start;

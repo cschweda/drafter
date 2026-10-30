@@ -64,8 +64,32 @@ describe('deletedScenes', () => {
     const filled =
       'INT. BARN - DAY\n\nTobin feeds the goats and counts them twice, slowly.\n\nINT. HOUSE - DAY\n\nMara waits.\n';
     expect(deleted([bare], filled)).toEqual([]);
-    expect(deleted([filled], bare)).toEqual([]);
     expect(deleted([bare], 'INT. HOUSE - DAY\n\nMara waits.\n')).toEqual(['INT. BARN - DAY']);
+  });
+
+  test('an empty scene now does not cover a filled one cut under its heading', () => {
+    // Emptied to its heading: the words are gone, and Deleted scenes is where they are.
+    const bare = 'INT. BARN - DAY\n\nINT. HOUSE - DAY\n\nMara waits.\n';
+    const filled =
+      'INT. BARN - DAY\n\nTobin feeds the goats and counts them twice, slowly.\n\nINT. HOUSE - DAY\n\nMara waits.\n';
+    expect(deleted([filled], bare)).toEqual(['INT. BARN - DAY']);
+    // A ten-word car scene cut, with a bare car heading left in the script.
+    const past =
+      'EXT. ROAD - DAY\n\nA truck passes by slowly.\n\nINT. CAR - NIGHT\n\nThey kiss in the rain and the phone rings twice.\n';
+    expect(
+      deleted([past], 'EXT. ROAD - DAY\n\nA truck passes by slowly.\n\nINT. CAR - NIGHT\n'),
+    ).toEqual(['INT. CAR - NIGHT']);
+  });
+
+  test('two short scenes under one heading: the one cut is deleted', () => {
+    const past = 'INT. CAR - NIGHT\n\nThey drive.\n\nINT. CAR - NIGHT\n\nThey kiss.\n';
+    expect(deleted([past], 'INT. CAR - NIGHT\n\nThey drive.\n')).toEqual(['INT. CAR - NIGHT']);
+    expect(
+      deleted(
+        ['INT. CAR - NIGHT\n\nThey drive.\n'],
+        'INT. CAR - NIGHT\n\nThey drive in silence.\n',
+      ),
+    ).toEqual([]);
   });
 
   test('a moved scene is not deleted', () => {

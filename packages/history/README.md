@@ -6,6 +6,7 @@ Version history for [Drafter](https://github.com/cschweda/drafter): which scenes
 import {
   deletedScenes,
   putBackChanges,
+  coveredBy,
   putBackPlace,
   sameScene,
   sceneAnchors,
@@ -30,7 +31,7 @@ const changes = putBackChanges(nowText, place, sceneTextFromSnapshot); // one in
 sceneAnchors(text); // [{ line, title }]: each scene heading's line, for Compare's groups
 ```
 
-Two versions are the same scene when their hashes are equal; or their headings are the same and they share at least a quarter of the smaller one's wording (or either has none, as a heading written first); or they share at least half of all their wording; or most (three quarters) of the smaller one's wording is in the other, as in a merge or a split (`MATCH`). A scene is deleted when no scene now is the same scene. See the [version-history design](../../docs/drafter-version-history-design.md), §3.
+A scene's wording is its three-word shingles; one under five words adds its word pairs, and a scene of one word is that word. Two versions are the same scene (`sameScene`) when their hashes are equal; or their headings are the same and they share at least a quarter of the smaller one's wording and two shingles of it (all of it, for a one-shingle scene), or either has no words, as a heading written first; or they share at least half of all their wording; or most (three quarters) of the smaller one's wording is in the other, as in a merge or a split (`MATCH`). A scene is deleted when no scene now covers it (`coveredBy`): the same scene, except that a scene now with no words never covers one that had them, so a bare heading left behind doesn't hide a cut. `sceneVersions` and `putBackPlace` use `sameScene` both ways. Prints are made by `PRINT_VERSION` 2; a cache keeps it beside them and drops prints of another. See the [version-history design](../../docs/drafter-version-history-design.md), §3.
 
 ## License
 

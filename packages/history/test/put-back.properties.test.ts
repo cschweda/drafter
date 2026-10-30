@@ -70,11 +70,16 @@ describe('put back (properties)', () => {
         // What it inserts is the scene's text and line breaks, nothing else.
         expect(normalize(change?.insert.replace(/^(\r?\n)+/, '') ?? '')).toBe(normalize(sceneText));
         // Every scene now is still there, unchanged, and the scene put back is one more.
+        // The one put back is the scene that starts where the insertion's text does (not the
+        // first with its text: a scene can be a copy of another).
         const before = nowScenes(current).map((s) => normalize(current.slice(s.from, s.to)));
-        const afterScenes = nowScenes(after).map((s) => normalize(after.slice(s.from, s.to)));
-        expect(afterScenes).toHaveLength(before.length + 1);
-        const remaining = [...afterScenes];
-        remaining.splice(remaining.indexOf(normalize(sceneText)), 1);
+        const scenesAfter = nowScenes(after);
+        expect(scenesAfter).toHaveLength(before.length + 1);
+        const start = (change?.from ?? 0) + (change?.insert.match(/^(\r?\n)*/)?.[0].length ?? 0);
+        const at = scenesAfter.findIndex((s) => s.from === start);
+        expect(at).toBeGreaterThanOrEqual(0);
+        const remaining = scenesAfter.map((s) => normalize(after.slice(s.from, s.to)));
+        expect(remaining.splice(at, 1)).toEqual([normalize(sceneText)]);
         expect(remaining).toEqual(before);
       }),
       { numRuns: 300 },

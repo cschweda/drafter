@@ -1,4 +1,4 @@
-import { sameScene } from './match';
+import { coveredBy, sameScene } from './match';
 import type { ScenePrint, SceneSlot } from './print';
 
 // Deleted scenes (version-history design §3.1 and §3.3).
@@ -35,25 +35,30 @@ interface Building {
 
 /**
  * Items filed by what `sameScene` needs two versions to share before it can match them: the
- * hash, the heading key, or a value in both sketches. Every rule but the first two needs one
- * (J above 0 needs a hash in both sketches, as does C above 0), so the items filed with any of
- * a version's are every one it could match, and usually a handful.
+ * hash, a value in both sketches, or, when one of them is empty, the heading key. Every rule but
+ * the first two needs a value in both sketches (J above 0 does, as does C above 0), so the items
+ * filed with any of a version's are every one it could match, and usually a handful. A version
+ * with words is looked for under its heading among the empty ones only, so a heading the script
+ * comes back to often (`INT. CAR - NIGHT`) doesn't make every version under it a candidate.
  */
 class Candidates<T> {
   private readonly byHash = new Map<string, T[]>();
   private readonly byKey = new Map<string, T[]>();
+  private readonly emptyByKey = new Map<string, T[]>();
   private readonly bySketch = new Map<number, T[]>();
 
   add(print: ScenePrint, item: T): void {
     file(this.byHash, print.hash, item);
     file(this.byKey, print.headingKey, item);
+    if (print.shingles === 0) file(this.emptyByKey, print.headingKey, item);
     for (const value of print.sketch) file(this.bySketch, value, item);
   }
 
   /** Every item filed with one of `print`'s, once each. */
   of(print: ScenePrint): Set<T> {
     const out = new Set<T>(this.byHash.get(print.hash));
-    for (const item of this.byKey.get(print.headingKey) ?? []) out.add(item);
+    const byKey = print.shingles === 0 ? this.byKey : this.emptyByKey;
+    for (const item of byKey.get(print.headingKey) ?? []) out.add(item);
     for (const value of print.sketch)
       for (const item of this.bySketch.get(value) ?? []) out.add(item);
     return out;
@@ -67,7 +72,8 @@ function file<K, T>(map: Map<K, T[]>, key: K, item: T): void {
 }
 
 /**
- * Every scene in `snapshots` that matches no scene in `now` (Call 2: many to one), one entry
+ * Every scene in `snapshots` that no scene in `now` covers (`coveredBy`, Call 2: many to one): an
+ * empty scene now covers only an empty past one, so a bare heading never hides a cut. One entry
  * per scene however many versions held it, newest deleted first (Call 7). `snapshots` are
  * newest first; `prints` holds every hash their slots name.
  *
@@ -90,7 +96,7 @@ export function deletedScenes(
     if (found === undefined) {
       found = false;
       for (const p of nowCandidates.of(print)) {
-        if (p.hash === print.hash || sameScene(print, p)) {
+        if (coveredBy(print, p)) {
           found = true;
           break;
         }

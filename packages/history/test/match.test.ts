@@ -1,6 +1,14 @@
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { MATCH, type ScenePrint, SKETCH_K, sameScene, similarity, sketchOf } from '../src';
+import {
+  coveredBy,
+  MATCH,
+  type ScenePrint,
+  SKETCH_K,
+  sameScene,
+  similarity,
+  sketchOf,
+} from '../src';
 import { now, printOf } from './helpers';
 import {
   CABIN_SPLIT,
@@ -34,11 +42,11 @@ function made(words: readonly string[], heading = 'INT. ROOM - DAY'): ScenePrint
 
 /**
  * A scene's shingles, as strings, for the true Jaccard and containment: every three words in a
- * row; under five words (fewer than three of those), every two as well; under three, every word.
+ * row; under five words (fewer than three of those), every two as well; a single word, itself.
  */
 function shingleSet(words: readonly string[]): Set<string> {
   const out = new Set<string>();
-  const sizes = words.length < 3 ? [3, 2, 1] : words.length < 5 ? [3, 2] : [3];
+  const sizes = words.length === 1 ? [1] : words.length < 5 ? [3, 2] : [3];
   for (const size of sizes) {
     for (let i = 0; i + size <= words.length; i++) out.add(words.slice(i, i + size).join(' '));
   }
@@ -140,16 +148,50 @@ describe('sameScene (Call 6)', () => {
     expect(sameScene(one('INT. SHED - DAY'), filled)).toBe(false);
   });
 
-  test('a scene of under three words grown under its heading is the same', () => {
+  test('a short scene grown under its heading is the same; another short scene is not', () => {
     const short = one('INT. CAR - NIGHT\n\nThey drive.');
     const longer = one('INT. CAR - NIGHT\n\nThey drive in silence.');
     expect(sameScene(short, longer)).toBe(true);
     expect(sameScene(longer, short)).toBe(true);
-    expect(
-      sameScene(one('INT. CAR - NIGHT\n\nSilence.'), one('INT. CAR - NIGHT\n\nSilence falls.')),
-    ).toBe(true);
     // Under another heading, a word or two in common is not enough.
     expect(sameScene(short, one('INT. BUS - NIGHT\n\nThey drive in silence.'))).toBe(false);
+    // Two short scenes under one heading sharing a word, or a pair of three, are two scenes.
+    const different: Array<[string, string]> = [
+      ['They drive.', 'They kiss.'],
+      ['She waits.', 'She leaves.'],
+      ['The phone rings.', 'The phone stops.'],
+      ['He runs.', 'The door opens.'],
+      ['They drive in silence.', 'They sit in silence.'],
+    ];
+    for (const [x, y] of different) {
+      const a = one(`INT. CAR - NIGHT\n\n${x}`);
+      const b = one(`INT. CAR - NIGHT\n\n${y}`);
+      expect(sameScene(a, b), `${x} / ${y}`).toBe(false);
+      expect(sameScene(b, a), `${y} / ${x}`).toBe(false);
+    }
+    // One word is a shingle of its own, and shares none with a pair that starts with it.
+    expect(
+      sameScene(one('INT. CAR - NIGHT\n\nSilence.'), one('INT. CAR - NIGHT\n\nSilence falls.')),
+    ).toBe(false);
+    expect(
+      sameScene(one('INT. CAR - NIGHT\n\nSilence.'), one('INT. CAR - NIGHT\n\nSilence.\n\n[[x]]')),
+    ).toBe(true);
+    expect(
+      sameScene(
+        one('INT. CAR - NIGHT\n\nThe phone rings.'),
+        one('INT. CAR - NIGHT\n\nThe phone rings twice.'),
+      ),
+    ).toBe(true);
+  });
+
+  test('coveredBy: an empty past scene is covered by a filled one now, not the reverse', () => {
+    const bare = one('INT. BARN - DAY');
+    const filled = one('INT. BARN - DAY\n\nTobin feeds the goats and counts them twice, slowly.');
+    expect(coveredBy(bare, filled)).toBe(true);
+    expect(coveredBy(filled, bare)).toBe(false);
+    expect(coveredBy(bare, one('INT. BARN - DAY\n\n[[Later.]]'))).toBe(true);
+    expect(coveredBy(filled, filled)).toBe(true);
+    expect(coveredBy(one(S.cabin), one(CABIN_TRIMMED))).toBe(true);
   });
 
   test('the five car scenes share a heading key', () => {
