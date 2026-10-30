@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-30
+
+**Version history.** A Deleted scenes tab lists every scene that's in an earlier version but not in the script now, with Put back (one undo); Show changes marks additions and deletions on the live pages against the last save or a chosen version; Compare gains a GitHub-style Changes view (red and green, or blue and orange, with word-level highlights, folds, scenes, and side by side); and History of this scene shows every version of one scene, even through a renamed heading. Everything is read on your device, in the background.
+
 **Version history.** Drafter now remembers the scenes you cut and shows what you changed, the way a code review shows a diff. **Deleted scenes** lists every scene that was in one of your snapshots but isn't in the script now, and **Put back** puts one back where it was, in one undo. **Show changes** marks the pages with what you've changed since you last saved. Compare opens on a new **Changes** view: your text grouped by scene, + and − in red and green (or blue and orange), the changed words marked, side by side if you like; **Pages** keeps its asterisks. And **History of this scene** shows every version of one scene, with **Use this version** to go back to one. Nothing of it prints or changes your file.
 
 ### Added
@@ -789,7 +793,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/cschweda/drafter/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/cschweda/drafter/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/cschweda/drafter/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/cschweda/drafter/compare/v0.15.0...v0.15.1
