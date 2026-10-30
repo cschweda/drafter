@@ -1,3 +1,4 @@
+export { inlineRuns } from './inline';
 export { toJSON } from './json';
 export { setMeta } from './meta';
 export { parse } from './parse';

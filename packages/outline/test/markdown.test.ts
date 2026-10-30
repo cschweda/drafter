@@ -149,6 +149,14 @@ describe('scriptMarkdown: structure', () => {
     expect([...sceneNumbersFor(doc, screenplay, 'all').values()]).toEqual(['1', '4B', '3']);
   });
 
+  test("keeps a section's emphasis, as the script's other text keeps it", () => {
+    expect(md('# The *big* day\n\n## **Loud** and _marked_ [x]\n\nINT. A - DAY\n\nHi.\n')).toBe(
+      '## The *big* day\n\n### **Loud** and <u>marked</u> \\[x]\n\n#### INT. A - DAY\n\nHi.\n',
+    );
+    // Past level 6 the section is bold, its italics kept inside.
+    expect(md('###### Six *now*\n\nINT. A - DAY\n')).toContain('**Six** ***now***');
+  });
+
   test('writes a page break as a thematic break', () => {
     expect(md('INT. A - DAY\n\nOne.\n\n===\n\nTwo.\n')).toBe(
       '## INT. A - DAY\n\nOne.\n\n* * *\n\nTwo.\n',
@@ -165,7 +173,7 @@ describe('scriptMarkdown: elements', () => {
 
   test('marks the second speech of dual dialogue', () => {
     expect(md('JUNO\nNow!\n\nPELL ^\nNo, now!\n')).toBe(
-      '**JUNO**\\\nNow\\!\n\n**PELL** *(at the same time)*\\\nNo, now\\!\n',
+      '**JUNO**\\\nNow!\n\n**PELL** *(at the same time)*\\\nNo, now!\n',
     );
     // A ^ with no speech free to pair with marks nothing.
     expect(md('The rail.\n\nPELL ^\nNo.\n')).toBe('The rail.\n\n**PELL**\\\nNo.\n');
@@ -173,7 +181,7 @@ describe('scriptMarkdown: elements', () => {
 
   test('writes a transition in capitals, centered text between its marks, and lyrics in italics', () => {
     expect(md('Fog.\n\nCUT TO:\n\n>THE END<\n\n~Row, row\n~gently down\n')).toBe(
-      'Fog.\n\nCUT TO:\n\n\\>THE END\\<\n\n*Row, row*\\\n*gently down*\n',
+      'Fog.\n\nCUT TO:\n\n\\>THE END<\n\n*Row, row*\\\n*gently down*\n',
     );
   });
 
@@ -233,5 +241,34 @@ The end.
         'The end.\n',
       ].join('\n\n'),
     );
+  });
+
+  test("keys a note only when it has a head, as the app reads notes, and keeps the key's text", () => {
+    const note = (inner: string) =>
+      md(`INT. A - DAY\n\nFog. [[${inner}]]\n`, { notes: 'include' }).split('\n\n')[2]?.trimEnd();
+    // A colon that isn't a head's: a time, a link, a phrase.
+    expect(note('Call at 10:30 sharp')).toBe('> **Note:** Call at 10:30 sharp');
+    expect(note('(O.S.) means off screen: we hear him')).toBe(
+      '> **Note:** (O.S.) means off screen: we hear him',
+    );
+    expect(note('see http://example.com')).toBe('> **Note:** see http://example.com');
+    expect(note('Note to self: call Ann')).toBe('> **Note:** Note to self: call Ann');
+    // A head: a person, a category, a field, a reply, and a person on a quote, colon and all.
+    expect(note('Writer: fix the fog')).toBe('> **Note (Writer):** fix the fog');
+    expect(note('TODO: tighten')).toBe('> **Note (TODO):** tighten');
+    expect(note('goal:  get out')).toBe('> **Note (goal):** get out');
+    expect(note('Ann re Bob: agreed')).toBe('> **Note (Ann re Bob):** agreed');
+    expect(note('Sam on "10:30 *sharp*": too early')).toBe(
+      '> **Note (Sam on "10:30 \\*sharp\\*"):** too early',
+    );
+    expect(note('Sam on “the [words]”: cut')).toBe('> **Note (Sam on “the \\[words]”):** cut');
+  });
+
+  test("leaves the title page's notes out whatever the title page option", () => {
+    const source =
+      'Title: Night Ferry [[A title page note.]]\nAuthor: R. Okafor\n\nINT. A - DAY\n\nFog.\n';
+    for (const mode of ['full', 'title-author', 'none'] as const) {
+      expect(md(source, { notes: 'include' }, mode), mode).not.toContain('title page note');
+    }
   });
 });

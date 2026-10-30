@@ -1,4 +1,5 @@
-import { type Block, type Doc, parse } from '@drafter/fountain';
+import { type Block, type Doc, inlineRuns, parse } from '@drafter/fountain';
+import { paginate } from '@drafter/layout';
 import fc from 'fast-check';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { describe, expect, test } from 'vitest';
@@ -86,6 +87,14 @@ const printed = (block: Block, wrap = (line: string) => line): string[] =>
     .map((line) => trim(line.inline.map((run) => run.text).join('')))
     .map((line) => (line === '' ? '' : wrap(line)));
 
+/** A section's text read for emphasis, its marks taken off, trimmed. */
+const sectionText = (text: string) =>
+  trim(
+    inlineRuns(text)
+      .map((run) => run.text)
+      .join(''),
+  );
+
 const SPEECH_PARTS = ['parenthetical', 'dialogue', 'lyric'];
 
 /**
@@ -107,7 +116,7 @@ function expectedLines(doc: Doc): string[] {
       }
       out.push(...edges(lines));
     } else if (block.kind === 'section') {
-      const text = trim(block.sem.text);
+      const text = sectionText(block.sem.text);
       if (text !== '') out.push(text);
     } else if (block.kind === 'scene_heading') {
       const text = printed(block)
@@ -124,6 +133,8 @@ function expectedLines(doc: Doc): string[] {
 }
 
 const DUAL = ' (at the same time)';
+/** The same, as the Markdown writes it. */
+const DUAL_MARK = ' *(at the same time)*';
 
 /** The Markdown's lines, in order, from its headings and paragraphs. */
 function actualLines(tree: MdNode): string[] {
@@ -177,7 +188,7 @@ describe('scriptMarkdown, read back', () => {
         const kinds = (test: (block: Block) => boolean) => doc.blocks.filter(test).length;
         const headings = kinds(
           (b) =>
-            (b.kind === 'section' && trim(b.sem.text) !== '') ||
+            (b.kind === 'section' && sectionText(b.sem.text) !== '') ||
             (b.kind === 'scene_heading' &&
               template === screenplay &&
               printed(b).some((l: string) => l !== '')),
@@ -226,6 +237,51 @@ describe('scriptMarkdown, read back', () => {
         });
       }),
       { numRuns: 2000 },
+    );
+  });
+
+  test('what Markdown reads by what follows it is judged across emphasis runs, on the whole line', () => {
+    // Emphasis splits a line into runs, each written apart; a `<`, `&`, `|`, `>`, `#`, `-`, or
+    // list number in one run means something only by what the next one, or the line, holds.
+    const token = fc.constantFrom(
+      ...['*', '**', '***', '_', '__', ' ', '\t', '\u00a0', 'a', 'B', '1', '9', '.', ')', ':'],
+      ...['<', '/', '!', '?', 'div>', 'u>', '&', '#', 'amp;', '#42;', ';', '|', '-', '--', '>'],
+      ...['=', '+', '[', ']', '\\', '`', '~', '(', '"', 'é', '😀', '<!--', '| --- |', ':--'],
+    );
+    const line = fc.array(token, { minLength: 1, maxLength: 24 }).map((tokens) => tokens.join(''));
+    fc.assert(
+      fc.property(fc.array(line, { minLength: 1, maxLength: 3 }), (lines) => {
+        const { doc, tree } = of(`INT. A - DAY\n\n!${lines.join('\n')}\n`);
+        expect(actualLines(tree)).toEqual(expectedLines(doc));
+        walk(tree, (node) => {
+          expect([
+            'root',
+            'heading',
+            'paragraph',
+            'text',
+            'emphasis',
+            'strong',
+            'html',
+            'break',
+          ]).toContain(node.type);
+          if (node.type === 'html') expect(['<u>', '</u>']).toContain(node.value);
+        });
+      }),
+      { numRuns: 20_000 },
+    );
+  });
+
+  test('pairs dual dialogue exactly as paginate pairs it', () => {
+    fc.assert(
+      fc.property(script, templates, (source, template) => {
+        const { doc, markdown } = of(source, template);
+        const marked = doc.blocks.filter((b) => b.kind === 'character' && b.sem.dual).length;
+        const unpaired = paginate(doc, template).diagnostics.filter(
+          (d) => d.code === 'unpaired-dual',
+        ).length;
+        expect(markdown.split(DUAL_MARK).length - 1).toBe(marked - unpaired);
+      }),
+      { numRuns: 400 },
     );
   });
 

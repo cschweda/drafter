@@ -1,5 +1,5 @@
 import type { Block, Doc } from '@drafter/fountain';
-import { markdownText } from './escape';
+import { markdownHeading, markdownText } from './escape';
 import type { OutlineNode, Scene, SceneIndex } from './types';
 
 // The escaper is the script's Markdown's (Call 34); re-exported so the public name stays.
@@ -38,7 +38,7 @@ function titleOf(doc: Doc): string | null {
 }
 
 const heading = (level: number, text: string) =>
-  `${'#'.repeat(Math.min(6, level))} ${markdownText(text)}`;
+  `${'#'.repeat(Math.min(6, level))} ${markdownHeading(text)}`;
 
 export function treatment(
   doc: Doc,

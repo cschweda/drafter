@@ -1,7 +1,7 @@
 import { type Doc, parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { describe, expect, test } from 'vitest';
-import { type SceneIndex, sceneIndex, scriptMarkdown } from '../src';
+import { markdownText, type SceneIndex, sceneIndex, scriptMarkdown } from '../src';
 import { screenplay } from './helpers';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
@@ -58,6 +58,50 @@ describe('scriptMarkdown at length', () => {
           scriptMarkdown(doc, index, screenplay, { sceneNumbers: 'all', notes: 'include' }),
         n,
       );
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
+});
+
+describe('the escaper and the Markdown on a long line', () => {
+  // One line with n spaces inside it, plain and in italics: every scan of a line's ends and of a
+  // run's spaces must be one pass, not one per space.
+  const spaced = (n: number) => `a${' '.repeat(n)}b${' \t'.repeat(n)}`;
+
+  test(
+    'one line of n interior spaces and one of 4n export in linear time',
+    () => {
+      for (const line of [spaced, (n: number) => `*${spaced(n).trimEnd()}*`]) {
+        const { growth } = scaling(
+          (n) => {
+            const doc = parse(`INT. A - DAY\n\n${line(n)}\n`);
+            for (const block of doc.blocks) for (const l of block.lines) void l.inline;
+            return { doc, index: sceneIndex(doc, screenplay, null) };
+          },
+          ({ doc, index }) =>
+            scriptMarkdown(doc, index, screenplay, { sceneNumbers: 'none', notes: 'leave-out' }),
+          20_000,
+        );
+        expect(growth).toBeLessThan(MAX_GROWTH);
+      }
+    },
+    SCALING_TIMEOUT,
+  );
+
+  test(
+    'markdownText on one line of n interior spaces and one of 4n runs in linear time',
+    () => {
+      const { growth } = scaling(spaced, markdownText, 20_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  test(
+    'a line shaped almost like a table row, n long and 4n, escapes in linear time',
+    () => {
+      const { growth } = scaling((n) => `${'|'.repeat(n)}x`, markdownText, 20_000);
       expect(growth).toBeLessThan(MAX_GROWTH);
     },
     SCALING_TIMEOUT,

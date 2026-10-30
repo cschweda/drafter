@@ -10,6 +10,29 @@ const ALPHABET = [
   '\t',
   '\n',
   '\r\n',
+  '\r',
+  '\u00a0',
+  '\v',
+  '\f',
+  '<?',
+  '<![CDATA[',
+  '<div>',
+  '</p>',
+  '<a href=x>',
+  '| --- |',
+  ':--',
+  '|',
+  '&copy;',
+  '&#x2a;',
+  '&c',
+  'www.a.co',
+  '10) ',
+  '1234567890. ',
+  '####### ',
+  '###### ',
+  '- - -',
+  '===',
+  '[a]: b',
   '&amp;',
   '&#42;',
   '<u>',
@@ -70,7 +93,7 @@ describe('markdownText, read back', () => {
           expect(['text', 'break']).toContain(child.type);
         expect(plain(paragraph)).toBe(expected);
       }),
-      { numRuns: 2000 },
+      { numRuns: 20_000 },
     );
   });
 });

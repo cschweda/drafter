@@ -46,13 +46,19 @@ describe('treatment', () => {
 
   test("escapes Markdown in the writer's text", () => {
     expect(of('INT. A - DAY\n\n= 1. *Not* a [list] <b> # here_\n')).toBe(
-      '# Treatment\n\n## INT. A - DAY\n\n1\\. \\*Not\\* a \\[list\\] \\<b\\> # here\\_\n',
+      '# Treatment\n\n## INT. A - DAY\n\n1\\. \\*Not\\* a \\[list] \\<b> # here\\_\n',
     );
   });
 
   test("the treatment escapes as the script's Markdown does", () => {
     expect(of('INT. A - DAY\n\n= ---\n\n= Fish &amp; chips\n')).toBe(
       '# Treatment\n\n## INT. A - DAY\n\n\\---\n\nFish \\&amp; chips\n',
+    );
+  });
+
+  test('escapes headings without the guards a line start needs', () => {
+    expect(of('# 1. The *start* #\n\nINT. A - DAY\n')).toBe(
+      '# Treatment\n\n## 1. The \\*start\\* \\#\n\n### INT. A - DAY\n',
     );
   });
 

@@ -1,8 +1,14 @@
-import type { Block, Doc, InlineRun, TitlePage } from '@drafter/fountain';
+import {
+  type Block,
+  type Doc,
+  type InlineRun,
+  inlineRuns,
+  type TitlePage,
+} from '@drafter/fountain';
 import { type SceneNumbering, sceneNumbersFor, titleKeyPrints } from '@drafter/layout';
-import { readKeyedNote } from '@drafter/notes';
+import { type KeyedNote, readNote } from '@drafter/notes';
 import { type Role, resolveRole, type Template } from '@drafter/templates';
-import { escapeInline, guardLine, joinLines, markdownText } from './escape';
+import { escapeInline, guardLine, joinLines, markdownText, textEnd, textStart } from './escape';
 import type { SceneIndex } from './types';
 
 // Export as Markdown (Calls 25 to 34): the whole script as CommonMark, for any Markdown viewer, a
@@ -101,7 +107,7 @@ function lineMarkdown(runs: readonly Style[], inHeading = false): string {
   // Trim the line's ends across its runs.
   while (parts.length > 0) {
     const first = parts[0] as Style;
-    const text = first.text.replace(/^[ \t]+/, '');
+    const text = first.text.slice(textStart(first.text));
     if (text !== '') {
       parts[0] = { ...first, text };
       break;
@@ -110,7 +116,7 @@ function lineMarkdown(runs: readonly Style[], inHeading = false): string {
   }
   while (parts.length > 0) {
     const last = parts.at(-1) as Style;
-    const text = last.text.replace(/[ \t]+$/, '');
+    const text = last.text.slice(0, textEnd(last.text));
     if (text !== '') {
       parts[parts.length - 1] = { ...last, text };
       break;
@@ -118,20 +124,32 @@ function lineMarkdown(runs: readonly Style[], inHeading = false): string {
     parts.pop();
   }
 
+  // What a character means can hang on the next one, in this run or the next, so every run is
+  // escaped as a stretch of the whole line.
+  const line = parts.map((part) => part.text).join('');
   let out = '';
   /** The output so far ends with an emphasis closer of `*`. */
   let closedStars = false;
+  let at = 0;
   for (let i = 0; i < parts.length; i++) {
     const run = parts[i] as Style;
+    const from = at;
+    const to = from + run.text.length;
+    at = to;
     const stars = run.bold && run.italic ? '***' : run.bold ? '**' : run.italic ? '*' : '';
-    const [, lead = '', core = '', trail = ''] = /^(\s*)([\s\S]*?)(\s*)$/u.exec(run.text) ?? [];
-    if ((stars === '' && !run.underline) || core === '') {
-      out += escapeInline(run.text);
+    let coreFrom = from;
+    while (coreFrom < to && WHITESPACE.test(line[coreFrom] as string)) coreFrom++;
+    let coreTo = to;
+    while (coreTo > coreFrom && WHITESPACE.test(line[coreTo - 1] as string)) coreTo--;
+    if ((stars === '' && !run.underline) || coreFrom === coreTo) {
+      out += escapeInline(line, from, to);
       closedStars = false;
       continue;
     }
-    const text = escapeInline(core);
-    out += escapeInline(lead);
+    const lead = line.slice(from, coreFrom);
+    const trail = line.slice(coreTo, to);
+    const text = escapeInline(line, coreFrom, coreTo);
+    out += escapeInline(line, from, coreFrom);
     if (run.underline) out += '<u>';
     let useStars = stars !== '';
     if (useStars) {
@@ -149,13 +167,13 @@ function lineMarkdown(runs: readonly Style[], inHeading = false): string {
             ? null
             : next.underline && !/^\s/u.test(next.text)
               ? firstOf('<')
-              : firstOf(escapeInline(next.text));
+              : firstOf(escapeInline(line, to, Math.min(to + 2, line.length)));
       const closes = !punctuation(lastOf(text)) || spaceOrPunct(after);
       useStars = !touching && opens && closes;
     }
     out += useStars ? `${stars}${text}${stars}` : text;
     if (run.underline) out += '</u>';
-    out += escapeInline(trail);
+    out += escapeInline(line, coreTo, to);
     closedStars = useStars && !run.underline && trail === '';
   }
   return guardLine(out, inHeading);
@@ -232,13 +250,31 @@ function titleParts(tp: TitlePage): string[] {
   return parts;
 }
 
-/** A note as a quote, `> **Note:** text`, with its key when it has one (Call 28). */
+/**
+ * A note's head as the writer typed it: the text before the colon `readNote` read the head up to.
+ * `Sam on "10:30": …` has its colon after the quote, which may hold colons of its own.
+ */
+function headText(inner: string, note: KeyedNote): string {
+  let from = 0;
+  if (note.head?.kind === 'person' && note.head.on !== null) {
+    // The name holds no quote, so the first quote opens the head's, and the next one closes it.
+    const open = inner.search(/["“]/u);
+    from = open + 1 + inner.slice(open + 1).search(/["”]/u) + 1;
+  }
+  return inner.slice(0, inner.indexOf(':', from)).trim();
+}
+
+/**
+ * A note as a quote, `> **Note:** text`, with its head when it has one (Call 28): read as the app
+ * reads notes (Phase 2 design §5.3), so `[[Call at 10:30]]` has no head, and the head as typed.
+ */
 function noteMarkdown(inner: string): string {
-  const keyed = readKeyedNote(inner);
-  const body = markdownText(keyed ? keyed.body : inner);
+  const note = readNote(inner);
+  const body = markdownText(note.body);
   if (body === '') return '';
-  const key = keyed ? escapeInline(inner.slice(0, inner.indexOf(':')).trim()) : null;
-  return quote(`${key ? `**Note (${key}):**` : '**Note:**'} ${body}`);
+  if (note.head === null) return quote(`**Note:** ${body}`);
+  const head = headText(inner, note);
+  return quote(`**Note (${escapeInline(head)}):** ${body}`);
 }
 
 /**
@@ -292,6 +328,7 @@ export function scriptMarkdown(
       ? doc.regions.filter((region) => region.kind === 'note' && region.closed)
       : [];
   const boneyards = doc.regions.filter((region) => region.kind === 'boneyard');
+  const bodyFrom = blocks[0]?.span.from ?? Number.POSITIVE_INFINITY;
   let nextNote = 0;
   let nextBoneyard = 0;
   const notesUpTo = (to: number) => {
@@ -303,7 +340,8 @@ export function scriptMarkdown(
       }
       const boneyard = boneyards[nextBoneyard];
       if (boneyard && boneyard.span.from <= note.span.from) continue;
-      if (doc.titlePage && note.span.from < doc.titlePage.span.to) continue;
+      // A title page's notes, whatever is left of the title page, stand before the first block.
+      if (note.span.from < bodyFrom) continue;
       push(noteMarkdown(doc.source.slice(note.span.from + 2, note.span.to - 2)));
     }
   };
@@ -341,7 +379,8 @@ export function scriptMarkdown(
     if (block.kind === 'page_break') {
       push('* * *');
     } else if (block.kind === 'section') {
-      push(heading(1 + block.sem.depth, [plainRun(block.sem.text)]));
+      // A section is read for emphasis as the script's other text is.
+      push(heading(1 + block.sem.depth, inlineRuns(block.sem.text)));
     } else if (block.kind === 'synopsis') {
       if (options.notes === 'include') {
         const text = markdownText(block.sem.text);

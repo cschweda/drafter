@@ -2,29 +2,112 @@
 // app's own, `mdast-util-from-markdown`) reads back exactly that text, in the block it was written
 // as. Markdown can't hold a line's leading or trailing spaces (four leading spaces would even make
 // a code block), so they are taken off; everything else comes through.
+//
+// Only what a parser would misread where it stands is escaped, so the raw file reads well to a
+// writer and to an AI: `\`, `` ` ``, `*`, `_`, `[`, and `~` anywhere; `<` before what could start a
+// tag; `&` before what could be an entity; and at a line's start or end what would make a block.
+// What depends on the characters around it is judged on the whole line, never on a piece of it.
+// Every scan is one pass over the line, so a long line costs no more than its length.
 
-/** Characters that mean something anywhere in a line: emphasis, code, links, HTML, entities, tables, strikethrough. */
-const ANYWHERE = /[\\`*_[\]<>&!|~]/g;
+/** Characters that mean something wherever they stand: escapes, code, emphasis, links, strikethrough. */
+const ALWAYS = new Set(['\\', '`', '*', '_', '[', '~']);
 
-/** `text` with every character that means something anywhere in a line escaped. */
-export const escapeInline = (text: string): string => text.replace(ANYWHERE, (c) => `\\${c}`);
+/** What can follow `<` in a tag, a comment, a declaration, or an autolink. */
+const TAG_START = /[A-Za-z/!?]/;
 
-/** A line without the spaces and tabs at its ends, which Markdown can't hold. */
-const trimLine = (line: string): string => line.replace(/^[ \t]+|[ \t]+$/g, '');
+const isAlnum = (c: string | undefined) => c !== undefined && /[A-Za-z0-9]/.test(c);
+
+/** Whether `line` from `i` reads as an entity's name and its `;` (`#?[A-Za-z0-9]+;`). */
+function entityAt(line: string, i: number): boolean {
+  let j = line[i] === '#' ? i + 1 : i;
+  const from = j;
+  while (isAlnum(line[j])) j++;
+  return j > from && line[j] === ';';
+}
+
+/** Whether the character at `i` of `line` must be escaped, judged by the line around it. */
+function escapesAt(line: string, i: number): boolean {
+  const c = line[i] as string;
+  if (ALWAYS.has(c)) return true;
+  if (c === '<') return TAG_START.test(line[i + 1] ?? '');
+  if (c === '&') return entityAt(line, i + 1);
+  return false;
+}
 
 /**
- * A line of already escaped Markdown, made safe at its ends: at its start, what would begin a
- * heading, a list, a setext underline, or a thematic break (`#`, `+`, `-`, `=`, `1.`, `1)`), unless
- * the line is a heading's text, where none of those can start; at its end, a closing run of `#`
- * that a heading would drop.
+ * The characters `from` to `to` of `line` with what means something there escaped, judged on the
+ * whole line: a `<` or `&` in one piece may mean something only by what the next one holds.
+ */
+export function escapeInline(line: string, from = 0, to = line.length): string {
+  let out = '';
+  let start = from;
+  for (let i = from; i < to; i++) {
+    if (!escapesAt(line, i)) continue;
+    out += `${line.slice(start, i)}\\`;
+    start = i;
+  }
+  return out + line.slice(start, to);
+}
+
+const isSpaceOrTab = (c: string | undefined) => c === ' ' || c === '\t';
+
+/** Where a line's text starts once the spaces and tabs before it are taken off. */
+export function textStart(line: string): number {
+  let from = 0;
+  while (isSpaceOrTab(line[from])) from++;
+  return from;
+}
+
+/** Where a line's text ends once the spaces and tabs after it are taken off. */
+export function textEnd(line: string): number {
+  let to = line.length;
+  while (to > 0 && isSpaceOrTab(line[to - 1])) to--;
+  return to;
+}
+
+/** A line without the spaces and tabs at its ends, which Markdown can't hold. */
+const trimLine = (line: string): string => {
+  const from = textStart(line);
+  return from === line.length ? '' : line.slice(from, textEnd(line));
+};
+
+/** At a line's start: an ATX heading's `#`s, a bullet, a block quote, or a list's number. */
+const BLOCK_START = /^(?:#{1,6}(?:\s|$)|[+-](?:\s|$)|>)/u;
+/** A whole line that is a setext underline (`===`) or a thematic break or underline of `-`. */
+const UNDERLINE = /^(?:=+\s*|-[-\s]*)$/u;
+/** An ordered list's number and its `.` or `)`. */
+const ORDERED = /^(\d{1,9})([.)])(?=\s|$)/u;
+
+/** A line of only `|`, `:`, `-`, and whitespace, with a `|`: GFM would read it as a table's delimiter row. */
+function delimiterRow(line: string): boolean {
+  let pipe = false;
+  for (const c of line) {
+    if (c === '|') pipe = true;
+    else if (c !== ':' && c !== '-' && !/\s/u.test(c)) return false;
+  }
+  return pipe;
+}
+
+/**
+ * A line of already escaped Markdown, made safe as a whole: at its start, what would begin a
+ * heading, a list, a block quote, a setext underline, or a thematic break, and a line GFM would
+ * read as a table's delimiter row, unless the line is a heading's text, where none of those can
+ * start; at its end, a closing run of `#` that a heading would drop.
  */
 export function guardLine(line: string, inHeading = false): string {
   let out = line;
   if (!inHeading) {
-    if (/^[#+\-=]/.test(out)) out = `\\${out}`;
-    else out = out.replace(/^(\d+)([.)])/, '$1\\$2');
+    if (BLOCK_START.test(out) || UNDERLINE.test(out)) out = `\\${out}`;
+    else if (delimiterRow(out)) out = out.replaceAll('|', '\\|');
+    else out = out.replace(ORDERED, '$1\\$2');
   }
-  return out.replace(/(^|[ \t])(#+)$/, '$1\\$2');
+  // A run of `#` at the end, after a space or nothing, would close a heading.
+  let hashes = out.length;
+  while (hashes > 0 && out[hashes - 1] === '#') hashes--;
+  if (hashes < out.length && (hashes === 0 || isSpaceOrTab(out[hashes - 1]))) {
+    out = `${out.slice(0, hashes)}\\${out.slice(hashes)}`;
+  }
+  return out;
 }
 
 /**
@@ -45,4 +128,16 @@ export function joinLines(lines: readonly string[]): string {
  */
 export function markdownText(text: string): string {
   return joinLines(text.split(/\r\n|\r|\n/).map((line) => guardLine(escapeInline(trimLine(line)))));
+}
+
+/**
+ * The writer's text as a heading's text: its lines joined by spaces and escaped, without the
+ * guards a line's start needs, since after `## ` nothing can start a block.
+ */
+export function markdownHeading(text: string): string {
+  const lines = text
+    .split(/\r\n|\r|\n/)
+    .map(trimLine)
+    .filter((line) => line !== '');
+  return guardLine(escapeInline(lines.join(' ')), true);
 }
