@@ -162,14 +162,15 @@ interface Written {
   files: Map<string, string>;
 }
 
-const fileKey = (info: { dev: number; ino: number }) => `${info.dev}:${info.ino}`;
+// As bigints: a file id on NTFS can be past 2^53, where two numbers could round to one.
+const fileKey = (info: { dev: bigint; ino: bigint }) => `${info.dev}:${info.ino}`;
 
 /**
  * Converts `job`, unless its `.fountain` is one this run already wrote: the same path, or, however
  * the disk folds names, the same file. Records what it writes.
  */
 async function convertOnce(job: Job, force: boolean, written: Written): Promise<Outcome> {
-  const there = await lstat(job.target).catch(() => null);
+  const there = await lstat(job.target, { bigint: true }).catch(() => null);
   const earlier =
     written.paths.get(job.target) ?? (there ? written.files.get(fileKey(there)) : undefined);
   if (earlier !== undefined) {
@@ -181,7 +182,7 @@ async function convertOnce(job: Job, force: boolean, written: Written): Promise<
   const outcome = await convertOne(job, force);
   if (outcome.kind === 'converted') {
     written.paths.set(job.target, job.shown);
-    const made = await lstat(job.target).catch(() => null);
+    const made = await lstat(job.target, { bigint: true }).catch(() => null);
     if (made) written.files.set(fileKey(made), job.shown);
   }
   return outcome;
@@ -308,7 +309,7 @@ async function publish(target: string, text: string, force: boolean): Promise<bo
   try {
     if (force) {
       const old = await lstat(target).catch(() => null);
-      if (old?.isFile()) await chmod(temp, old.mode & 0o7777);
+      if (old?.isFile()) await chmod(temp, old.mode & 0o777);
       await rename(temp, target);
       return true;
     }
