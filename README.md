@@ -4,7 +4,7 @@
 
 **An open-source, local-first, zero-login writing app, Fountain first: screenplays and stage plays in plain-text [Fountain](https://fountain.io), and novels and treatments in Markdown.** Write on the left; see the paginated, industry-formatted pages on the right, updating as you type.
 
-**Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, and plain text, so it can go wherever it needs to go. See [Formats](#formats).
+**Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, plain text, a self-contained web page (HTML), and an e-book (EPUB), so it can go wherever it needs to go. See [Formats](#formats).
 
 > [!NOTE]
 > **Status: v0.21.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way, now with **Scaffold** (who is in the scene you're writing), the **Stats tab** with a character-by-scene grid, version history, Highland and Fade In imports, footnotes in Markdown documents, and `drafter convert`. Next: Export as HTML and EPUB (v0.22.0, this release), **a fresh look** (v0.23.0), **Drafts and Cuts** (v0.24.0), **Novel**, for drafting a novel in Markdown (v0.25.0), storylines and pacing (v0.26.0), the **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.27.0), an optional one-file `.drafter` project (v0.28.0, open spec), then Plans G and H (v0.29.0 and v0.30.0); a signed macOS download follows. See the [roadmap](#roadmap).
@@ -137,7 +137,7 @@ Fountain is where you write. Everything else is a door in or a door out.
 | Highland (`.highland`) | Opens the script inside as a new script. |
 | Fade In (`.fadein`) | Opens a copy as a new script, read from its Open Screenplay Format. |
 | Markdown (`.md`) | Opens as a Markdown document (a treatment, notes, or a novel), or, with **Open as screenplay…**, as a script typed in Fountain. |
-| Anything else (Word, RTF, PDF, an image) | Refused, with a sentence saying what to do instead. |
+| Anything else (Word, RTF, PDF, a web page, an e-book, an image) | Refused, with a sentence saying what to do instead. |
 
 The file you open is never changed. Text that Fountain has no element for (hidden text, an omitted scene, a paragraph style of the writer's own) comes in as a note, such as `[[fdx: …]]` or `[[osf: …]]`, listed in Problems, so no words go missing silently. Formatting with no place in Fountain, such as fonts and revision colors, is left behind.
 

@@ -1,8 +1,8 @@
 # Seeing the script — Design
 
-**Status:** designed 2026-10-30, as Phase 2's Plan E, after v0.19.0 (Highland, Fade In, and Markdown imports). The plan is [`docs/plans/2026-10-30-seeing-the-script.md`](plans/2026-10-30-seeing-the-script.md). This design recommends shipping Plan E as **two releases** (Call 1): **v0.21.0, Scaffold and the Stats tab** (§3 to §5), then **v0.25.0, storylines, the map, and pacing** (§6 to §8). Plans F to H then become v0.26.0 to v0.28.0, with their letters unchanged.
+**Status:** designed 2026-10-30, as Phase 2's Plan E, after v0.19.0 (Highland, Fade In, and Markdown imports). The plan is [`docs/plans/2026-10-30-seeing-the-script.md`](plans/2026-10-30-seeing-the-script.md). This design recommends shipping Plan E as **two releases** (Call 1): **v0.21.0, Scaffold and the Stats tab** (§3 to §5), then **v0.26.0, storylines, the map, and pacing** (§6 to §8). Plans F to H then become v0.26.0 to v0.28.0, with their letters unchanged.
 
-**Release numbers (decided 2026-10-30, after this design):** v0.20.0 went to the formats release (`drafter convert`, footnotes in Markdown documents), so Part 1 is **v0.21.0**; **Export as HTML** (and EPUB) is v0.22.0; **Drafts and Cuts** (numbered drafts and a permanent Cuts file beside each script, to be designed) v0.23.0; **Novel**, a template choice for drafting novels in Markdown, v0.24.0; Part 2 is **v0.25.0**; and Plans F to H are **v0.26.0 to v0.28.0**, their letters unchanged. The numbers below are the current ones; the Calls and the controller's rulings keep the numbers they were made with.
+**Release numbers (decided 2026-10-30, after this design):** v0.20.0 went to the formats release (`drafter convert`, footnotes in Markdown documents), so Part 1 is **v0.21.0**; **Export as HTML** (and EPUB) is v0.22.0; **a fresh look** (the UI refresh) v0.23.0; **Drafts and Cuts** v0.24.0; **Novel** v0.25.0; Part 2 is **v0.26.0**; Plan F, the Workbook, v0.27.0; the `.drafter` package v0.28.0; and Plans G and H v0.29.0 and v0.30.0, their letters unchanged. The numbers below are the current ones; the Calls and the controller's rulings keep the numbers they were made with.
 
 **Asked for.** Phase 2 design §22, Plan E: storylines (§13) with the Timeline view and margin marks; the script map (§14); the pacing view (§15); the Stats tab replacing the window, with screen time, dialogue share, most often with, the character-by-scene grid, and Storylines (§16); and **Scaffold**. The maintainer, 2026-10-29: "How about adding an x-ray feature like amazons x-ray for movies. Characters, scene time per character, etc etc". They named it **Scaffold**, and then said "Yes please keep going this sounds really cool". Scaffold, as Phase 2 design §22 writes it down:
 
@@ -35,14 +35,14 @@ Each choice open to the designer is marked **Call:**. All of them are listed in 
 | Release | Name | Scope |
 |---|---|---|
 | **v0.21.0** | Seeing the script: Scaffold and the Stats tab | Who is in a scene (§3); the Stats tab replacing the window, with Characters (screen time, dialogue share, most often with) and the character-by-scene grid with its gaps (§4); Scaffold, with its scene panel, character pages, location pages, and the cast and places lists (§5). |
-| **v0.25.0** | Seeing the script: storylines, the map, and pacing | Storylines (§6): tagging, names, colors, rename, chips, the Outline's Timeline, and the Script pane's margin marks; the script map, as the Structure strip's **Color by** (§7); the pacing view and its guides (§8); and the Stats tab's Storylines and Pacing sections. |
+| **v0.26.0** | Seeing the script: storylines, the map, and pacing | Storylines (§6): tagging, names, colors, rename, chips, the Outline's Timeline, and the Script pane's margin marks; the script map, as the Structure strip's **Color by** (§7); the pacing view and its guides (§8); and the Stats tab's Storylines and Pacing sections. |
 
 Reasons:
 
 - **Size.** One release would be about sixteen tasks. Version history, the largest release so far, was eight. Each half is about eight, so each review can hold the whole release in view.
 - **What the maintainer asked for first.** Scaffold is what they named and asked to keep going with. Scaffold needs the presence rule, the Stats tab, and the grid's data, and nothing from storylines or pacing.
-- **A clean seam.** The two halves share only the Stats tab's shell, which v0.21.0 builds and v0.25.0 adds two sections to, and the scene index, which both read. Storylines, Timeline, the margin marks, the map, and pacing all build on the strip's geometry and on each other.
-- Plans F to H move down, to v0.26.0, v0.27.0, and v0.28.0, with their letters unchanged (with the formats release, Export as HTML, Drafts and Cuts, and Novel ahead of them, §15). The docs tasks say so.
+- **A clean seam.** The two halves share only the Stats tab's shell, which v0.21.0 builds and v0.26.0 adds two sections to, and the scene index, which both read. Storylines, Timeline, the margin marks, the map, and pacing all build on the strip's geometry and on each other.
+- Plans F to H move down, to v0.27.0 (F), v0.29.0 (G), and v0.30.0 (H), with the `.drafter` package as v0.28.0 between F and G, their letters unchanged (with the formats release, Export as HTML, Drafts and Cuts, and Novel ahead of them, §15). The docs tasks say so.
 
 The plan covers both halves as **Part 1** and **Part 2**, each ending in its own docs task and release. If the controller rules for one release, Part 1's docs task is skipped and Part 2's covers both.
 
@@ -132,7 +132,7 @@ Matching names stays linear: each scene's action is split into words once, and a
 **Call (Phase 2 design §16, carried out):** **the Stats window becomes a Stats tab.** It is a view tab after Cards and Notes, in the slot and More. **Show stats** and the Counts panel's **Stats…** open it in the pane not showing Source (`openBeside`), and focus moves to its heading. `StatsDialog.vue` and `statsOpen` go. The Counts panel stays as it is.
 
 - **Call:** **a Markdown document has the Stats tab too,** with Overview only (words, headings, and reading time, as now), since the window served documents. `viewTabs('markdown')` returns `[Stats]`.
-- A short list of links at the top goes to each section: Overview, Characters, Character by scene, and in v0.25.0, Storylines and Pacing. Each section starts with a heading (`h2`).
+- A short list of links at the top goes to each section: Overview, Characters, Character by scene, and in v0.26.0, Storylines and Pacing. Each section starts with a heading (`h2`).
 
 ### 4.2 Overview
 
@@ -192,7 +192,7 @@ What it shows, top to bottom:
    - **Where:** KITCHEN (a link to its location page) · Inside.
    - **When:** NIGHT.
    - **Length:** 1 3/8 pages · page 12 · about 1 min 25 s. **Call:** the minutes are at the script's page rate when the pages are ready. Before that, the estimate from the dialogue is shown, labelled "(from the dialogue)".
-   - In v0.25.0, **Storylines**, as chips.
+   - In v0.26.0, **Storylines**, as chips.
 3. **In this scene (4)**, a table with one row per character present, speakers first in order of first speech, then the silent in order of first mention:
 
 | Column | Example |
@@ -245,7 +245,7 @@ Both lists have a filter field, which folds case and accents.
 
 Every link in Scaffold either opens another Scaffold page (and pushes Back) or goes to the script (**Go to**, as the Outline's Enter does: the cursor goes there and the Source pane scrolls to it, while focus stays in Scaffold). **Call:** **links are real links and buttons,** read in order. There is no custom widget, so a screen reader's link and heading lists work as they do on a web page. The tables are real `<table>`s with captions and headers.
 
-## 6. Storylines (v0.25.0)
+## 6. Storylines (v0.26.0)
 
 ### 6.1 Labels, names, and colors
 
@@ -266,7 +266,7 @@ From the Stats tab's Storylines section (§8.3), and a row menu in the Storyline
 - **Rename…** rewrites the label in every Storyline note in the script, and moves its metadata entry, as one transaction (one undo): "Renamed storyline A to Job in 12 scenes." **Call:** **renaming to a label already in use is a merge.** It asks first ("B is already a storyline. Merge A into it?"), and each note's list loses its repeat.
 - **Remove from every scene…** asks first and then takes the label out of every note, dropping a note that is left empty, and drops its metadata entry, in one undo.
 - In a read-only tab, these are disabled with the reason, as everywhere else.
-- **Call:** **the Beat Board block is left alone in v0.25.0.** It doesn't exist yet. Plan F's rename will cover cards.
+- **Call:** **the Beat Board block is left alone in v0.26.0.** It doesn't exist yet. Plan F's rename will cover cards.
 
 ### 6.4 Where storylines show
 
@@ -290,7 +290,7 @@ A **Storylines** toggle on the Script pane's slim bar (`aria-pressed`), also in 
 - Each scene's lines on each page get a 3 px bar in the left margin per storyline, side by side. Past three, the third becomes "+2". The label is written beside the bar at the scene's first line on the page. They are drawn with `decorate` (v0.18.0) from the layout's block positions.
 - **Hidden from screen readers** (`aria-hidden`), and **never printed or exported**. The Outline, the cards, and Scaffold carry the same facts as text. An e2e test checks that the PDF's bytes are the same with the marks on and off.
 
-## 7. The script map (v0.25.0)
+## 7. The script map (v0.26.0)
 
 Phase 2 design §14 and strip design §10 left it open whether the map is still wanted beside the Structure strip.
 
@@ -313,7 +313,7 @@ Reasons:
 
 **Show the script map** is not added as a command. Instead, **Show the Structure strip** gains the search words "script map" and "map", and **Color the strip by…** is a command (View). The Phase 2 design's §14 and §22 are changed to say so (§15).
 
-## 8. Pacing and the Stats tab's last sections (v0.25.0)
+## 8. Pacing and the Stats tab's last sections (v0.26.0)
 
 ### 8.1 The pacing view
 
@@ -343,17 +343,17 @@ A **Storylines** section: a table with Storyline (chip), Name, Scenes, Pages, an
 | `show-scaffold` **Show Scaffold** | View | palette, desktop View menu, More | v0.21.0 |
 | `scaffold-cast` **Show the cast**, `scaffold-places` **Show the places** | View | palette | v0.21.0 |
 | `scaffold-scene` **Scaffold for this scene** | Go | scene menus, the strip's block menu, the grid's menu, palette (the cursor's scene) | v0.21.0 |
-| `scene-storylines` **Storylines…** | Edit | scene menus, the Timeline's menu, palette | v0.25.0 |
-| `outline-timeline`, `outline-tree` | View | palette, the Outline's slim bar | v0.25.0 |
-| `storyline-marks` **Show storylines in the margin** / **Hide…** | View | palette, the Script pane's slim bar, desktop View menu | v0.25.0 |
-| `strip-color-by` **Color the strip by…** | View | palette, the strip's menu | v0.25.0 |
+| `scene-storylines` **Storylines…** | Edit | scene menus, the Timeline's menu, palette | v0.26.0 |
+| `outline-timeline`, `outline-tree` | View | palette, the Outline's slim bar | v0.26.0 |
+| `storyline-marks` **Show storylines in the margin** / **Hide…** | View | palette, the Script pane's slim bar, desktop View menu | v0.26.0 |
+| `strip-color-by` **Color the strip by…** | View | palette, the strip's menu | v0.26.0 |
 
 **Call:** **no new default keys,** as in v0.18.0. The grid and the Timeline have their own arrow keys, which the Keyboard shortcuts page lists under Other keys. Alt+Left in Scaffold is listed there too.
 
 ## 10. Markdown, read-only, and empty states
 
 - **Markdown documents:** the Stats tab has Overview only. Scaffold, the grid, the Timeline, the margin marks, and Color by are not offered, and their commands say "A Markdown document has no scenes." (Phase 2 design §5.7).
-- **Read-only:** everything in this design reads the script. The only edits are Storylines…, rename, merge, remove, colors and names, and the pacing guide (v0.25.0), which are `aria-disabled` with the reason shown and spoken (History's pattern).
+- **Read-only:** everything in this design reads the script. The only edits are Storylines…, rename, merge, remove, colors and names, and the pacing guide (v0.26.0), which are `aria-disabled` with the reason shown and spoken (History's pattern).
 - **No scenes:** "No scenes yet. Each scene heading you write shows here." (the strip's words). **No speeches:** Characters and the grid say "No one speaks yet. A character’s cue starts their row." **No storylines:** "No storylines yet. Add one from a scene’s menu: Storylines…".
 - **A sample** works fully. It is read like any script.
 
@@ -369,16 +369,16 @@ Chromium, on the maintainer's machine, for a 120-page script of about 150 scenes
 | The Stats tab, opened, with Characters and the grid drawn | 300 ms |
 | The grid of 120 scenes by 30 characters, first paint | 200 ms (§16); 300 by 60 stays under it by drawing visible columns |
 | Typing with the Stats tab or Scaffold shown | no long task (over 50 ms); the cast is worked out at most once per 300 ms pause |
-| v0.25.0: `storylineLanes` | 10 ms |
-| v0.25.0: `pacingSeries` | 20 ms |
-| v0.25.0: margin marks, per page drawn | 2 ms |
+| v0.26.0: `storylineLanes` | 10 ms |
+| v0.26.0: `pacingSeries` | 20 ms |
+| v0.26.0: margin marks, per page drawn | 2 ms |
 
 ## 12. Where the code goes
 
-- **`@drafter/outline`:** `Scene.speeches`, `SceneIndex.opening` (v0.21.0); `storylineLanes`, `pacingSeries`, and `GUIDES` (v0.25.0).
+- **`@drafter/outline`:** `Scene.speeches`, `SceneIndex.opening` (v0.21.0); `storylineLanes`, `pacingSeries`, and `GUIDES` (v0.26.0).
 - **Call:** **a new package, `@drafter/cast`** (v0.21.0), for who and where: `castOf(index, doc, isWord)`, `presence`, `placeOf` (location, inside or outside, time of day), `characterFigures`, `locationFigures`, `absences`, `sharedScenes`, `gridModel`. It is pure, depends on `@drafter/fountain`, `@drafter/outline`, and `@drafter/templates` only, and is tested with fixtures ("Will", "Hope", "ANN LEE", possessives) and the Outline's random-script arbitraries. Reasons: presence and the figures are the most rule-heavy code in the release and want Node tests, and the scene index stays the fast, always-on pass it is.
-- **`@drafter/notes`:** `storylineInfo`, `setStorylineInfo`, `renameStoryline`, `removeStoryline`, and `setSceneStorylines` (v0.25.0).
-- **`apps/web`:** `cast/` (the session: `useCast`, idle recomputation, the dictionary answers), `scaffold/` (pages, the Back list, labels), `stats/` (the tab's sections, the grid's keys and windowing), and in v0.25.0 `storylines/`, `timeline/`, `pacing/`, and the strip's Color by. The components are `StatsPane.vue`, `StatsSlim.vue`, `CharacterGrid.vue`, `ScaffoldPane.vue`, `ScaffoldSlim.vue`, `ScaffoldScene.vue`, `ScaffoldCharacter.vue`, `ScaffoldLocation.vue`, `ScaffoldLists.vue`, and in v0.25.0 `StorylinesDialog.vue`, `StorylineChip.vue`, `OutlineTimeline.vue`, and `PacingChart.vue`. The spell worker gets the `words` request.
+- **`@drafter/notes`:** `storylineInfo`, `setStorylineInfo`, `renameStoryline`, `removeStoryline`, and `setSceneStorylines` (v0.26.0).
+- **`apps/web`:** `cast/` (the session: `useCast`, idle recomputation, the dictionary answers), `scaffold/` (pages, the Back list, labels), `stats/` (the tab's sections, the grid's keys and windowing), and in v0.26.0 `storylines/`, `timeline/`, `pacing/`, and the strip's Color by. The components are `StatsPane.vue`, `StatsSlim.vue`, `CharacterGrid.vue`, `ScaffoldPane.vue`, `ScaffoldSlim.vue`, `ScaffoldScene.vue`, `ScaffoldCharacter.vue`, `ScaffoldLocation.vue`, `ScaffoldLists.vue`, and in v0.26.0 `StorylinesDialog.vue`, `StorylineChip.vue`, `OutlineTimeline.vue`, and `PacingChart.vue`. The spell worker gets the `words` request.
 - **No new third-party dependency.** The charts are plain SVG drawn by Drafter.
 
 ## 13. Accessibility
@@ -390,7 +390,7 @@ As the rest of Drafter (WCAG 2.2 AA):
 - **Not color alone:** numbers in grid cells, labels on chips, legends, the "silent" dot with hidden text, and outlined absences listed in text.
 - **Screen readers:** headings for every section and page; captions on tables; Scaffold's following is silent by design (§5.2), and its pages announce nothing until the writer acts. Rename and the other edits say what they did in the polite live region.
 - **Both themes and phones:** every token has a dark value. On a phone, the grid scrolls in its own region and has List, the Timeline is a list, and Scaffold is one column. Touch targets are at least 24 px.
-- **Call (the v0.18.0 ruling carried forward):** **axe runs on every new view now,** in both themes at both widths. In v0.21.0 that is the Stats tab (each section), the grid (and List), and Scaffold's four pages. In v0.25.0 it is the Timeline, the Storylines dialog, the margin marks on, the strip colored by each choice with its legend, and Pacing. Only the screen-reader listening pass waits for the final steps (§14).
+- **Call (the v0.18.0 ruling carried forward):** **axe runs on every new view now,** in both themes at both widths. In v0.21.0 that is the Stats tab (each section), the grid (and List), and Scaffold's four pages. In v0.26.0 it is the Timeline, the Storylines dialog, the margin marks on, the strip colored by each choice with its legend, and Pacing. Only the screen-reader listening pass waits for the final steps (§14).
 
 ## 14. Not in this release
 
@@ -403,7 +403,7 @@ As the rest of Drafter (WCAG 2.2 AA):
 
 ## 15. Version numbers
 
-With the split (Call 1), Plan E is **v0.21.0** (Scaffold and the Stats tab) and **v0.25.0** (storylines, the map, and pacing). Plans F, G, and H become **v0.26.0, v0.27.0, and v0.28.0**, with their letters unchanged. Part 1's docs task makes the change in the Phase 2 design §22 (two headings for Plan E, F to H renumbered, and §14 and §22's done-when changed for the map, Call 38), §26, the architecture's §13, and the README's status line and roadmap. Part 2's docs task marks v0.25.0 built.
+With the split (Call 1), Plan E is **v0.21.0** (Scaffold and the Stats tab) and **v0.26.0** (storylines, the map, and pacing). Plans F, G, and H become **v0.26.0, v0.27.0, and v0.28.0**, with their letters unchanged. Part 1's docs task makes the change in the Phase 2 design §22 (two headings for Plan E, F to H renumbered, and §14 and §22's done-when changed for the map, Call 38), §26, the architecture's §13, and the README's status line and roadmap. Part 2's docs task marks v0.26.0 built.
 
 This section was written with Part 1 as v0.20.0 and Part 2 as v0.21.0. On 2026-10-30 the formats release took v0.20.0, and Export as HTML (v0.22.0), Drafts and Cuts (v0.23.0), and Novel (v0.24.0) were put between the two parts, so the numbers above are the current ones; Part 1's docs task (Task 8) made the change everywhere.
 

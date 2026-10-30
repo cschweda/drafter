@@ -204,6 +204,10 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 - **Reading order is written twice**: `@drafter/render-html-file`'s Pages view reads a page as the Script tab does (dual dialogue's left speech first, a title page by field), with `readingOrder` and `titleOrder` ported from `@drafter/render-html`'s `page.ts` rather than shared. Moving them into `@drafter/layout` (or a small DOM-free export of `render-html`) would keep the two from drifting; the Task 3 review chose to leave it for now.
 - **A document's own `#heading` links**: `[x](#heading)` in a Markdown document exports as its text, because the file's heading ids are its own (`h-<n>`, never from the words). Matching a writer's anchor to its heading (GitHub's slugs, or the Preview's if it gains them) and pointing the link at that heading's `h-<n>` would make them work; the Task 5 review chose text for now.
 
+- **The kind line's helpers are written twice**: `@drafter/render-html-file`'s `runningTime`/filled pages and the app's `stats/count.ts`; a parity test keeps them in step. The app could import them from the package.
+- **The app imports `markdownTitle` and the footnote walk from `@drafter/markdown`'s root**, which re-exports the parser; tree-shaking keeps it out of the shell (and `check-build` guards it). `./title` and `./notes` subpaths would make that sturdier.
+- **An empty title becomes "Untitled" only in the EPUB**; the HTML shell would write an empty `<title>` (nothing reaches it today: the app and CLI always pass a title).
+- **Web-page detection by content** recognises `<!doctype html` and `<html` at the start only; a UTF-16 page or an `.xhtml` starting `<?xml` is caught by its name, not its content.
 ## Seeing the script
 
 What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character grid) leaves for later. The design's §14 has the reasons.
@@ -214,7 +218,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Grouping sub-locations.** HOUSE - KITCHEN and HOUSE - HALL are two locations (Call 15); the Places list sorts them together but adds nothing up.
 - **Sorting the Characters table** (Call 19). It keeps the cast's order (most speeches first); sorting by a column, as a table's header buttons would, comes later.
 - **Exporting the Stats tab's tables** (Characters, the grid's List, Long absences), as CSV or Markdown.
-- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.25.0) adds storylines without either.
+- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.26.0) adds storylines without either.
 - **A per-scene history link from Scaffold.** History of this scene is in the scene menus already.
 - **The Stats tab opening over its budget in Firefox and WebKit** (243 to 502 ms against 300 ms, which the design sets for Chromium; DECISIONS has the profile). Most of WebKit's time is the tab switch itself; mounting the Overview later, or drawing the tab's shell first, would bring it under.
 - **The spare words worker retries every 5 seconds** (`SPARE_RETRY_MS`) while a dictionary fails to load with spellcheck off, or at once for another language. A dictionary that never loads (a broken download) is asked again every 5 s while a view holds the cast; a longer wait after each failure would cost less, if it ever shows. (The spare itself ends 30 s after no view needs the cast.)

@@ -430,7 +430,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 3 — Formats
 
 - Import from Celtx (Highland and Fade In imports moved up to Phase 2).
-- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for graphic novels (Novel, for prose in Markdown, comes in Phase 2 as v0.24.0).
+- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for graphic novels (Novel, for prose in Markdown, comes in Phase 2 as v0.25.0).
 - User-added templates, dropped in as JSON, and template export.
 - For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
 - Standalone `.html` export (moved up to Phase 2 as v0.22.0, with EPUB).

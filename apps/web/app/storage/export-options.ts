@@ -68,7 +68,7 @@ export const EXPORT_OPTION_HINTS: {
   notes: {
     'leave-out': 'No notes or synopses, as in the PDF.',
     include:
-      'In Markdown, each note and synopsis as a quote, where it stands; in HTML and EPUB, each note beside its place in the Reading view, never on the pages. The boneyard is always left out.',
+      'In Markdown, each note and synopsis as a quote, where it stands, Drafter’s own scene notes (colour, goal, setups and payoffs) included; in HTML and EPUB, only your own notes, beside their place in the Reading view and never on the pages. The boneyard is always left out.',
   },
 };
 

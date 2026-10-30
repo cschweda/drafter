@@ -109,7 +109,7 @@ export function buildSteps(wide: boolean): TourStep[] {
       target: target('export'),
       title: 'Export, and open almost anything',
       content:
-        'Export a PDF, a Final Draft file (.fdx), Markdown, or plain text. Open, in the Drafter menu, reads Final Draft, Highland, Fade In, Markdown, and plain text, so a script can come from the apps people use and go back to them.',
+        'Export a PDF, a Final Draft file (.fdx), Markdown, plain text, a web page, or an e-book. Open, in the Drafter menu, reads Final Draft, Highland, Fade In, Markdown, and plain text, so a script can come from the apps people use and go back to them.',
     },
     {
       id: 'focus',

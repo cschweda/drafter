@@ -327,7 +327,9 @@ useDocsHead({
       Notes and synopses are left out, as in the PDF, unless <strong>Include notes</strong> is
       set to Include: then each note and synopsis is a quote where it stands, so a reader, or an AI,
       sees what you were thinking. The boneyard is always left out. Only the Markdown, HTML, and
-      EPUB exports carry notes; a PDF, plain text, or Final Draft file never prints them. A Markdown
+      EPUB exports carry notes, and not all the same ones: Markdown carries every note and
+      synopsis, Drafter’s own scene notes (colour, goal, setups and payoffs) included, while HTML
+      and EPUB carry only the notes you wrote yourself, beside their place in the Reading view; a PDF, plain text, or Final Draft file never prints them. A Markdown
       document’s Markdown export is its own text, as it is.
     </p>
 
