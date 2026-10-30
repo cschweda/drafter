@@ -1,7 +1,20 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFootnoteFromMarkdown } from 'mdast-util-gfm-footnote';
 import { gfmFootnote } from 'micromark-extension-gfm-footnote';
+import { containerDepth, MAX_NESTING } from './depth';
 import type { MdNode } from './render';
+
+/**
+ * A document nested deeper than `MAX_NESTING`, refused before it is parsed. A RangeError, as running
+ * out of stack is, and its message says "nested too deeply", so the Preview and the export say it as
+ * they say that (`previewProblem`), here or from a worker that sends only the message.
+ */
+export class NestedTooDeeply extends RangeError {
+  constructor() {
+    super(`This document is nested too deeply to read: more than ${MAX_NESTING} levels.`);
+    this.name = 'NestedTooDeeply';
+  }
+}
 
 /**
  * The labels of the footnote definitions read so far, as the footnote extension keeps them
@@ -55,9 +68,13 @@ const FOOTNOTES = footnoteSyntax();
 /**
  * Reads CommonMark into a syntax tree (`mdast-util-from-markdown`, which drives `micromark`), with
  * GFM's footnotes (`text[^1]` and `[^1]: The note.`) and nothing else of GFM. Raw HTML stays an
- * `html` node for the preview to show as text, and nothing in the text is ever run.
+ * `html` node for the preview to show as text, and nothing in the text is ever run. A document
+ * nested deeper than `MAX_NESTING` throws `NestedTooDeeply` at once, which only a broken or hostile
+ * file is: the parser's time grows with depth times length, and a few kilobytes of it held the page
+ * for seconds.
  */
 export function parseMarkdown(source: string): MdNode {
+  if (containerDepth(source, MAX_NESTING) > MAX_NESTING) throw new NestedTooDeeply();
   return fromMarkdown(source, {
     extensions: [FOOTNOTES],
     mdastExtensions: [gfmFootnoteFromMarkdown()],

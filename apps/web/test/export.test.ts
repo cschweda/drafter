@@ -444,8 +444,12 @@ describe('exporting', () => {
     const t = await load({ inPlace: true });
     shown.kind = 'markdown';
     shown.text = '# Deep\n\nText.\n';
-    // Chromium's and WebKit's words for it, then Firefox's.
-    for (const engine of ['Maximum call stack size exceeded', 'too much recursion']) {
+    // Chromium's and WebKit's words for it, then Firefox's, then the parse's own refusal.
+    for (const engine of [
+      'Maximum call stack size exceeded',
+      'too much recursion',
+      'This document is nested too deeply to read: more than 48 levels.',
+    ]) {
       render.mockRejectedValueOnce(new Error(engine));
       expect(await t.exportScript('pdf')).toBe('cancelled');
       expect(t.exportError.value).toBe(

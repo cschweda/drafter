@@ -4,8 +4,8 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { footnotes as pdfFootnotes } from '@drafter/render-pdf';
 import fc from 'fast-check';
-import { fromMarkdown } from 'mdast-util-from-markdown';
 import { describe, expect, test } from 'vitest';
+import { MAX_NESTING } from '../app/markdown/depth';
 import { markdownMode } from '../app/markdown/editor';
 import { footnotes } from '../app/markdown/notes';
 import { parseMarkdown } from '../app/markdown/parse';
@@ -181,7 +181,6 @@ describe('footnotes in a Markdown document', () => {
 });
 
 describe('the footnote parser on hostile input', () => {
-  const time = (source: string) => () => parseMarkdown(source);
   const linear = (name: string, make: (n: number) => string, n: number) => {
     const { small, large, growth } = scaling(make, (source) => parseMarkdown(source), n);
     console.log(
@@ -227,37 +226,22 @@ describe('the footnote parser on hostile input', () => {
   );
 
   test(
-    'reads nested definitions no slower than CommonMark’s own nested lists',
+    'reads definitions nested as deep as a document may in linear time, and refuses deeper at once',
     () => {
-      // Definitions nest, on one line (`[^a]: [^a]: x`) or a line each (each line, indented, opens a
-      // new one in the last, by the extension's container rules), and the parser checks every open
-      // container as it goes: worse than linear, as CommonMark's lists nested on one line
-      // (`- - - x`) already are, in the parser Drafter used before footnotes. Neither is linear;
-      // footnotes must add nothing slower.
-      const lines = 400;
-      const byLine = Array.from({ length: lines }, (_, i) => `${i ? '    ' : ''}[^a]: x`).join(
+      // Each line indented four columns carries on every open definition (the extension's
+      // container rules), so the parser's time is depth times length: bounded by MAX_NESTING.
+      const head = Array.from({ length: MAX_NESTING }, (_, i) => `${i ? '    ' : ''}[^a]: x`).join(
         '\n',
       );
-      const onOneLine = `${'[^a]: '.repeat(byLine.length / 6)}x`;
-      const lists = `${'- '.repeat(byLine.length / 2)}x`;
-      const best = (run: () => unknown, tries = 3) => {
-        let fastest = Number.POSITIVE_INFINITY;
-        for (let k = 0; k < tries; k++) {
-          const start = performance.now();
-          run();
-          fastest = Math.min(fastest, performance.now() - start);
-        }
-        return fastest;
-      };
-      time(byLine)(); // warm-up
-      const byLineTime = best(time(byLine));
-      const onOneLineTime = best(time(onOneLine));
-      const listTime = best(() => fromMarkdown(lists), 1);
-      console.log(
-        `Footnotes nested, ${byLine.length} characters: ${byLineTime.toFixed(1)} ms a line each, ${onOneLineTime.toFixed(1)} ms on one line; CommonMark's lists nested on one line, as long: ${listTime.toFixed(1)} ms.`,
+      linear(
+        'nested to the limit',
+        (n) => `${head}\n${'    more words of the note\n'.repeat(n)}`,
+        500,
       );
-      expect(byLineTime).toBeLessThan(listTime);
-      expect(onOneLineTime).toBeLessThan(listTime);
+      const deeper = `${head}\n    [^a]: x\n`;
+      const start = performance.now();
+      expect(() => parseMarkdown(deeper)).toThrow(RangeError);
+      expect(performance.now() - start).toBeLessThan(100);
     },
     SCALING_TIMEOUT,
   );

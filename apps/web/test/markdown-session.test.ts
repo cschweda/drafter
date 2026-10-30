@@ -166,7 +166,8 @@ describe('the Markdown session', () => {
     await vi.dynamicImportSettled();
     expect(md.problem.value).toBe('deep');
     expect(md.tree.value).toBeNull();
-    expect(md.words.value).toBe(0);
+    // Its words are counted as plain text, the `#` with them: 2 and the 2,500.
+    expect(md.words.value).toBe(2_502);
     expect(md.updating.value).toBe(false);
   });
 
@@ -198,6 +199,7 @@ describe('the Markdown session', () => {
     const md = useMarkdown();
     await vi.waitFor(() => expect(md.problem.value).toBe('deep'));
     expect(md.tree.value).toBeNull();
+    expect(md.words.value).toBe(1);
     expect(posted).toHaveLength(0);
   });
 });

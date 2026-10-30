@@ -196,7 +196,6 @@ test.describe('a Markdown document', () => {
 
   test('says calmly when a document is nested too deeply to preview', async ({
     page,
-    browserName,
     isMobile,
   }) => {
     // Five thousand quote marks on one line are slow for the editor, in every browser, and slower
@@ -214,19 +213,13 @@ test.describe('a Markdown document', () => {
     await page.keyboard.insertText(`${'>'.repeat(5_000)} x`);
     await expect(editor(page)).not.toContainText('Untitled');
     await showTab(page, 'Preview');
-    const deep = preview(page).getByRole('status');
-    if (browserName === 'chromium') {
-      // Chromium runs out of stack drawing it: the pane says so.
-      await expect(deep).toHaveText(
-        'This document is nested too deeply to preview. Your text is safe in the Source.',
-        { timeout: 15_000 },
-      );
-    } else {
-      // Firefox and WebKit have the stack for it, and draw it; either way, nothing breaks.
-      await expect(deep.or(preview(page).locator('blockquote').first())).toBeAttached({
-        timeout: 15_000,
-      });
-    }
+    // Deeper than a document may nest (MAX_NESTING), it isn't parsed: every browser says so at once.
+    await expect(preview(page).getByRole('status')).toHaveText(
+      'This document is nested too deeply to preview. Your text is safe in the Source.',
+      { timeout: 15_000 },
+    );
+    // Its words are counted as plain text: the five thousand marks are one, and x another.
+    await expect(status(page)).toContainText('2 words');
     // A document that can be drawn is drawn again. (Focused, not clicked: the editor finds a
     // click's place slowly on a line of five thousand marks.)
     await showTab(page, 'Source');

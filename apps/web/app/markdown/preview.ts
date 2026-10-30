@@ -23,12 +23,12 @@ export type PreviewProblem = 'deep' | 'other';
 /**
  * What went wrong, from the error a parse or a drawing threw (or the worker's message for it):
  * running out of stack is a document nested too deeply (a RangeError in Chromium and WebKit, "too
- * much recursion" in Firefox).
+ * much recursion" in Firefox), and so is the parse's own refusal of one (`NestedTooDeeply`).
  */
 export function previewProblem(error: unknown): PreviewProblem {
   if (error instanceof RangeError) return 'deep';
   const message = error instanceof Error ? error.message : String(error);
-  return /call stack|too much recursion/i.test(message) ? 'deep' : 'other';
+  return /call stack|too much recursion|nested too deeply/i.test(message) ? 'deep' : 'other';
 }
 
 /** What the Preview says in place of a document it can't show. */
