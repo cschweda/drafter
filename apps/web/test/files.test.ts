@@ -381,6 +381,7 @@ describe('saving through a FileAccess', () => {
     const { setExportOption, exportOptionsOf } = await import('../app/storage/export-options');
     await setExportOption('sceneNumbers', 'all');
     await setExportOption('titlePage', 'title-author');
+    await setExportOption('notes', 'include');
     const { setRate, ratesOf } = await import('../app/stats/timing');
     await setRate('minutesPerPage', 1.5);
     t.type('EDIT\n');
@@ -388,7 +389,7 @@ describe('saving through a FileAccess', () => {
     const mine = t.script.project.value;
     expect(mine?.id).not.toBe(sample?.id);
     // Exports read the open script's project: the choices made on the sample still hold.
-    const chosen = { sceneNumbers: 'all', titlePage: 'title-author' };
+    const chosen = { sceneNumbers: 'all', titlePage: 'title-author', notes: 'include' };
     expect(exportOptionsOf(mine)).toEqual(chosen);
     expect(exportOptionsOf(await t.projects.getProject(mine?.id ?? ''))).toEqual(chosen);
     // And so do its rates.
@@ -413,7 +414,11 @@ describe('saving through a FileAccess', () => {
     const made = rows.find((p) => p.fileName === 'The Call.fountain');
     expect(made).toBeTruthy();
     expect(made?.id).not.toBe(sample?.id);
-    expect(exportOptionsOf(made)).toEqual({ sceneNumbers: 'none', titlePage: 'none' });
+    expect(exportOptionsOf(made)).toEqual({
+      sceneNumbers: 'none',
+      titlePage: 'none',
+      notes: 'leave-out',
+    });
     expect(ratesOf(made)).toEqual({ minutesPerPage: 1, wordsPerMinute: 180 });
   });
 

@@ -13,23 +13,23 @@ import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './t
 import { whenIdle } from './turn';
 
 /**
- * Export to PDF, plain text, or Final Draft (Phase 1 design §9.7; Phase 2 design §22), and a
- * Markdown document to PDF (Markdown PDF design). The text
+ * Export to PDF, plain text, Final Draft, or Markdown (Phase 1 design §9.7; Phase 2 design §22;
+ * Imports plan Call 24), and a Markdown document to PDF (Markdown PDF design). The text
  * is laid out and drawn in a worker, and saved only through `useFiles()`: where the browser has a
  * save picker it asks where, else the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
  * Export menu, the app menu, and the palette run them.
  */
 
 /**
- * `pdf`, `txt`, and `fdx` (a Final Draft file) are a screenplay's or a stage play's; a Markdown
- * document's are `pdf` (drawn in Inter Tight, Markdown PDF design), `md` (the Markdown file), and
- * `txt` (the same text, as a plain text file).
+ * `pdf`, `txt`, `fdx` (a Final Draft file), and `md` (the whole script as Markdown, written in the
+ * worker) are a screenplay's or a stage play's; a Markdown document's are `pdf` (drawn in Inter
+ * Tight, Markdown PDF design), `md` (its own text), and `txt` (the same text, as a plain text file).
  */
 export type ExportKind = 'pdf' | 'txt' | 'md' | 'fdx';
 
 /** What each kind of document exports, in the order the menus list them: the PDF first in both. */
 export const EXPORTS: Readonly<Record<'fountain' | 'markdown', readonly ExportKind[]>> = {
-  fountain: ['pdf', 'txt', 'fdx'],
+  fountain: ['pdf', 'txt', 'fdx', 'md'],
   markdown: ['pdf', 'md', 'txt'],
 };
 
@@ -97,7 +97,6 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
   if (markdown && kind === 'fdx') {
     return 'Only a screenplay or a stage play exports as a Final Draft file.';
   }
-  if (!markdown && kind === 'md') return 'Only a Markdown document exports as a Markdown file.';
   return null;
 }
 
@@ -105,11 +104,17 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
  * ", with scene numbers as written and no title page" in "Exported The Call.pdf, ….", naming the
  * options that aren't the default (Call 11); nothing for the defaults or a Markdown document. A
  * Final Draft file keeps its written numbers whatever the option says (Call 8), so its toast
- * names only the title page.
+ * names only the title page; only a Markdown file carries notes (Call 28), so only its toast says
+ * "notes".
  */
 function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
   if (markdown) return '';
-  const phrase = optionsPhrase(kind === 'fdx' ? { ...options, sceneNumbers: 'none' } : options);
+  const honoured: ExportOptions = {
+    ...options,
+    sceneNumbers: kind === 'fdx' ? 'none' : options.sceneNumbers,
+    notes: kind === 'md' ? options.notes : 'leave-out',
+  };
+  const phrase = optionsPhrase(honoured);
   return phrase ? `, ${phrase}` : '';
 }
 
@@ -201,7 +206,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
             title,
             lang: asked.lang,
           }
-        : { kind: kind as 'pdf' | 'txt' | 'fdx', source, template, options };
+        : { kind, source, template, options };
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -247,6 +252,7 @@ interface Asked {
   template: unknown;
   sceneNumbers: ExportOptions['sceneNumbers'];
   titlePage: ExportOptions['titlePage'];
+  notes: ExportOptions['notes'];
   paper: Settings['markdownPaper'];
   lang: Settings['spellLanguage'];
 }
@@ -263,6 +269,7 @@ function askedFor(kind: ExportKind): Asked {
     template: editor.template.value,
     sceneNumbers: options.sceneNumbers,
     titlePage: options.titlePage,
+    notes: options.notes,
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
   };

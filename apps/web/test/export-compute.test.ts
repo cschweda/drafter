@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
-import { paginate } from '@drafter/layout';
+import { paginate, titlePageFor } from '@drafter/layout';
+import { sceneIndex, scriptMarkdown } from '@drafter/outline';
 import {
   DOCUMENT_FONT_FILES,
   type DocumentFontSet,
@@ -153,7 +154,48 @@ describe('the export worker’s options', () => {
   };
 
   test('the defaults print no scene numbers and the whole title page', () => {
-    expect(DEFAULT_EXPORT_OPTIONS).toEqual({ sceneNumbers: 'none', titlePage: 'full' });
+    expect(DEFAULT_EXPORT_OPTIONS).toEqual({
+      sceneNumbers: 'none',
+      titlePage: 'full',
+      notes: 'leave-out',
+    });
+  });
+
+  test('exports a script as Markdown with its options', async () => {
+    const exporter = createExporter(realFonts);
+    const source = `${LOCKED}\n[[A note to self.]]\n`;
+    const options = { sceneNumbers: 'all', titlePage: 'none', notes: 'include' } as const;
+    const reply = await exporter({ kind: 'md', source, template, options });
+    // What scriptMarkdown writes, with the title page cut first as the PDF's is.
+    const parsed = parse(source);
+    const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, 'none') };
+    expect(textOf(reply)).toBe(
+      scriptMarkdown(doc, sceneIndex(doc, template), template, {
+        sceneNumbers: 'all',
+        notes: 'include',
+      }),
+    );
+    const md = textOf(reply);
+    expect(md).not.toContain('# The Call');
+    expect(md).toContain('## 1. INT. A - DAY');
+    expect(md).toContain('## 12A. INT. B - DAY');
+    expect(md).toContain('> **Note:** A note to self.');
+    // The defaults: the title page, no numbers, and no notes.
+    const plain = textOf(await exporter({ kind: 'md', source, template }));
+    expect(plain.startsWith('# The Call\n')).toBe(true);
+    expect(plain).toContain('## INT. B - DAY');
+    expect(plain).not.toContain('Note');
+  });
+
+  test('an export with no options uses the defaults, notes left out', async () => {
+    const exporter = createExporter(realFonts);
+    const source = `${LOCKED}\n[[A note to self.]]\n`;
+    const none = textOf(await exporter({ kind: 'md', source, template }));
+    const defaults = textOf(
+      await exporter({ kind: 'md', source, template, options: DEFAULT_EXPORT_OPTIONS }),
+    );
+    expect(none).toBe(defaults);
+    expect(none).not.toContain('A note to self.');
   });
 
   test('a PDF with no title page has one page fewer', async () => {
@@ -165,7 +207,7 @@ describe('the export worker’s options', () => {
       kind: 'pdf',
       source: SOURCE,
       template,
-      options: { sceneNumbers: 'none', titlePage: 'none' },
+      options: { sceneNumbers: 'none', titlePage: 'none', notes: 'leave-out' },
     });
     expect(await count(full)).toBe(2);
     expect(await count(none)).toBe(1);
@@ -176,7 +218,7 @@ describe('the export worker’s options', () => {
       kind: 'txt',
       source: LOCKED,
       template,
-      options: { sceneNumbers: 'written', titlePage: 'full' },
+      options: { sceneNumbers: 'written', titlePage: 'full', notes: 'leave-out' },
     });
     const lines = textOf(reply).split('\n');
     const left = template.page.margin.left;
@@ -197,7 +239,7 @@ describe('the export worker’s options', () => {
         kind: 'fdx',
         source: LOCKED,
         template,
-        options: { sceneNumbers: 'none', titlePage: 'title-author' },
+        options: { sceneNumbers: 'none', titlePage: 'title-author', notes: 'leave-out' },
       }),
     );
     expect(full).toContain('DrafterKey="Contact"');
@@ -216,7 +258,7 @@ describe('the export worker’s options', () => {
         kind: 'fdx',
         source: LOCKED,
         template,
-        options: { sceneNumbers, titlePage: 'full' },
+        options: { sceneNumbers, titlePage: 'full', notes: 'leave-out' },
       });
       expect(textOf(reply), sceneNumbers).toBe(expected);
     }
@@ -291,6 +333,12 @@ describe('the export worker’s progress', () => {
     expect(sent.at(-1)).toBe(1);
     expect(sent.some((f) => f !== null && f > 0 && f < 1)).toBe(true);
     expect(rising(sent)).toBe(true);
+  });
+
+  test('reports unknown, then 1, for a Markdown export', async () => {
+    const { sent, reply } = await watch({ kind: 'md', source: LONG_SCRIPT, template });
+    expect(typeof ('data' in reply ? reply.data : null)).toBe('string');
+    expect(sent).toEqual([null, 1]);
   });
 
   test('plain text and Final Draft say they are under way, and end at 1', async () => {

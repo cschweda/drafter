@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { COMMAND_DATA, HELP_PAGES, helpCommandTitle, helpHref } from '../app/commands/data';
 import { formatKeys } from '../app/commands/keys';
 import { shortcutGroups } from '../app/commands/shortcuts';
+import { EXPORTS, exportApplies } from '../app/storage/export';
 
 // The commands' data (id, title, group, keys) is apart from what they run, so the Keyboard shortcuts
 // page, which is prerendered and has no editor, can list them (Phase 1 design §5.4).
@@ -28,6 +29,21 @@ describe('the command data', () => {
     const keys = COMMAND_DATA.flatMap((c) => (c.keys ? [c.keys.toLowerCase()] : []));
     expect(new Set(keys).size).toBe(keys.length);
     for (const k of keys) expect(formatKeys(k, false)).not.toBe('');
+  });
+
+  test('export-md is enabled for every kind', () => {
+    // One command for both kinds (Call 24), keeping its id and title: a script's whole text as
+    // Markdown, a Markdown document's own text. builtin.ts enables it by `exportApplies`.
+    expect(COMMAND_DATA.find((c) => c.id === 'export-md')).toMatchObject({
+      title: 'Export as Markdown file',
+      group: 'File',
+    });
+    for (const kind of ['fountain', 'markdown'] as const) {
+      expect(exportApplies('md', kind), kind).toBe(true);
+    }
+    // A script's list: PDF, plain text, Final Draft, then Markdown, beside the treatment.
+    expect(EXPORTS.fountain).toEqual(['pdf', 'txt', 'fdx', 'md']);
+    expect(EXPORTS.markdown).toEqual(['pdf', 'md', 'txt']);
   });
 
   test('gives each global command a key', () => {

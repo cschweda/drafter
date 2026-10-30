@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { fileNameFor } from '../app/storage/text';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
@@ -588,35 +589,39 @@ test.describe('exporting through the save picker (Chromium)', () => {
   });
 });
 
+const optionsDialog = (page: Page) => page.getByRole('dialog', { name: 'Export options' });
+const optionsItem = (page: Page) => menu(page).getByRole('button', { name: 'Export options…' });
+const sceneNumbers = (page: Page) =>
+  optionsDialog(page).getByRole('group', { name: 'Scene numbers' });
+const titlePage = (page: Page) => optionsDialog(page).getByRole('group', { name: 'Title page' });
+
+/** Opens Export options from the end of the toolbar's Export menu. */
+async function openOptions(page: Page) {
+  await exportButton(page).click();
+  await optionsItem(page).click();
+  await expect(optionsDialog(page)).toBeVisible();
+}
+
+/** Opens the dialog, chooses `label` in the `group`, and closes it with Done. */
+async function choose(
+  page: Page,
+  group: 'Scene numbers' | 'Title page' | 'Notes in Markdown',
+  label: string,
+) {
+  await openOptions(page);
+  const radio = optionsDialog(page)
+    .getByRole('group', { name: group })
+    .getByRole('radio', { name: label, exact: true });
+  await radio.check();
+  await expect(radio).toBeChecked();
+  await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+  await expect(optionsDialog(page)).toBeHidden();
+}
+
 test.describe('export options', () => {
   test.beforeEach(async ({ page }) => {
     await removePickers(page);
   });
-
-  const optionsDialog = (page: Page) => page.getByRole('dialog', { name: 'Export options' });
-  const optionsItem = (page: Page) => menu(page).getByRole('button', { name: 'Export options…' });
-  const sceneNumbers = (page: Page) =>
-    optionsDialog(page).getByRole('group', { name: 'Scene numbers' });
-  const titlePage = (page: Page) => optionsDialog(page).getByRole('group', { name: 'Title page' });
-
-  /** Opens Export options from the end of the toolbar's Export menu. */
-  async function openOptions(page: Page) {
-    await exportButton(page).click();
-    await optionsItem(page).click();
-    await expect(optionsDialog(page)).toBeVisible();
-  }
-
-  /** Opens the dialog, chooses `label` in the `group`, and closes it with Done. */
-  async function choose(page: Page, group: 'Scene numbers' | 'Title page', label: string) {
-    await openOptions(page);
-    const radio = optionsDialog(page)
-      .getByRole('group', { name: group })
-      .getByRole('radio', { name: label, exact: true });
-    await radio.check();
-    await expect(radio).toBeChecked();
-    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
-    await expect(optionsDialog(page)).toBeHidden();
-  }
 
   /** Exports the open script as plain text from the Export menu, and answers the text. */
   async function downloadText(page: Page): Promise<{ name: string; text: string }> {
@@ -648,6 +653,7 @@ test.describe('export options', () => {
       'PDF',
       'Plain text (.txt)',
       'Final Draft (.fdx)',
+      'Markdown (.md)',
       'Treatment (.md)…',
       'Export options…',
     ]);
@@ -873,5 +879,170 @@ test.describe('export options', () => {
       expect(await editor(page).evaluate((el) => el.textContent)).toBe(text);
       await expect(page).toHaveTitle('The Call — Drafter');
     }
+  });
+});
+
+test.describe('a script as Markdown', () => {
+  test.beforeEach(async ({ page }) => {
+    await removePickers(page);
+  });
+
+  const mdItem = (page: Page) => menu(page).getByRole('button', { name: 'Markdown (.md)' });
+  const appMenu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+
+  /** Runs `choose`, which starts a download, and answers the file's name and text. */
+  async function downloaded(
+    page: Page,
+    choose: () => Promise<void>,
+  ): Promise<{ name: string; text: string }> {
+    const download = page.waitForEvent('download');
+    await choose();
+    const file = await download;
+    return { name: file.suggestedFilename(), text: await readFile(await file.path(), 'utf8') };
+  }
+
+  /** Exports the open script as Markdown from the toolbar's Export menu. */
+  const downloadMarkdown = (page: Page) =>
+    downloaded(page, async () => {
+      await exportButton(page).click();
+      await mdItem(page).click();
+    });
+
+  test('exports the sample screenplay as Markdown from the Export menu, the palette, and the app menu', async ({
+    page,
+  }) => {
+    await start(page);
+    const fromMenu = await downloadMarkdown(page);
+    expect(fromMenu.name).toBe('The Call.md');
+    // The title page's title, its section, and its first scene, under it; no notes by default.
+    expect(fromMenu.text.startsWith('# The Call\n\nWritten by\n\nA. Writer\n')).toBe(true);
+    expect(fromMenu.text).toContain('\n## Act One\n');
+    expect(fromMenu.text).toContain('\n### INT. KITCHEN - NIGHT\n');
+    expect(fromMenu.text).toContain("**MARGARET**\\\n*(quietly)*\\\nYou said you'd call.");
+    expect(fromMenu.text).not.toContain('[[');
+    expect(fromMenu.text).not.toContain('Note');
+    expect(fromMenu.text.endsWith('\n')).toBe(true);
+    await expect(ready(page)).toHaveText('Exported The Call.md.');
+
+    const fromPalette = await downloaded(page, () => runCommand(page, 'Export as Markdown file'));
+    expect(fromPalette).toEqual(fromMenu);
+
+    const fromAppMenu = await downloaded(page, async () => {
+      await page.getByRole('button', { name: 'Drafter menu' }).click();
+      await appMenu(page)
+        .getByRole('menuitem', { name: /^Export as Markdown file/ })
+        .click();
+    });
+    expect(fromAppMenu).toEqual(fromMenu);
+  });
+
+  test('exports a stage play as Markdown with its acts and scenes as headings', async ({
+    page,
+  }) => {
+    await start(page);
+    await runCommand(page, 'Open sample: Stage play');
+    await expect(editor(page)).toContainText('A play in one act by');
+    const { name, text } = await downloadMarkdown(page);
+    expect(name).toBe('The Call.md');
+    expect(text.startsWith('# The Call\n\nA play in one act by\n')).toBe(true);
+    expect(text).toContain('\n## Act One\n\n### Scene 1\n');
+    // A stage direction is in italics; a speech is its name in bold, then its lines.
+    expect(text).toContain('*A kitchen, late at night.');
+    expect(text).toContain('**DANNY (offstage)**\\\nMom?');
+  });
+
+  test('exports Markdown with every scene numbered and no title page, and the toast says so', async ({
+    page,
+  }) => {
+    await start(page);
+    await choose(page, 'Scene numbers', 'Number every scene');
+    await choose(page, 'Title page', 'None');
+    const { text } = await downloadMarkdown(page);
+    expect(text).not.toContain('# The Call');
+    expect(text).not.toContain('writer@example.com');
+    expect(text.startsWith('## Act One\n')).toBe(true);
+    expect(text).toContain('\n### 1. INT. KITCHEN - NIGHT\n');
+    await expect(ready(page)).toHaveText(
+      'Exported The Call.md, with every scene numbered and no title page.',
+    );
+  });
+
+  test('includes notes when Notes in Markdown says Include, and the choice is remembered after a reload', async ({
+    page,
+  }) => {
+    await start(page);
+    await choose(page, 'Notes in Markdown', 'Include');
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    await openOptions(page);
+    const notes = optionsDialog(page).getByRole('group', { name: 'Notes in Markdown' });
+    await expect(notes.getByRole('radio', { name: 'Include', exact: true })).toBeChecked();
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    const { text } = await downloadMarkdown(page);
+    // Each note a quote where it stands, and the synopsis too.
+    expect(text).toContain('> **Note:** A scene heading starts with INT. or EXT.');
+    expect(text).toContain('\n> Margaret waits up for a call that never comes.\n');
+    await expect(ready(page)).toHaveText('Exported The Call.md, with notes.');
+    // A PDF never prints them, and its toast doesn't say so.
+    const { bytes } = await downloadPdf(page);
+    expect(await pdfText(bytes)).not.toContain('A scene heading starts with');
+    await expect(ready(page)).toHaveText('Exported The Call.pdf.');
+  });
+
+  test('Notes in Markdown is reached from the keyboard and the dialog passes axe in both themes', async ({
+    page,
+    isMobile,
+    browserName,
+  }) => {
+    for (const theme of ['dark', 'light'] as const) {
+      await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
+      await start(page);
+      await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
+      await openOptions(page);
+      const notes = optionsDialog(page).getByRole('group', { name: 'Notes in Markdown' });
+      await expect(notes).toContainText(
+        'Only a Markdown export carries notes; a PDF never prints them.',
+      );
+      const leaveOut = notes.getByRole('radio', { name: 'Leave out', exact: true });
+      const include = notes.getByRole('radio', { name: 'Include', exact: true });
+      await expect(leaveOut).toBeChecked();
+      await expect(include).toHaveAccessibleDescription(/Each note and synopsis as a quote/);
+      // The dialog's fades are waited out: axe measures the colors on the screen.
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
+      );
+      const { violations } = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+        .analyze();
+      expect(
+        violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`),
+        theme,
+      ).toEqual([]);
+      // Last, so the choice it makes is not the next pass's start.
+      if (!isMobile && theme === 'light') {
+        // Done has focus; one step back is the Notes in Markdown choice, and an arrow changes it.
+        await expect(optionsDialog(page).getByRole('button', { name: 'Done' })).toBeFocused();
+        // Safari's Tab skips form controls unless the user has turned that on: there, focus it.
+        if (browserName === 'webkit') await leaveOut.focus();
+        else await page.keyboard.press('Shift+Tab');
+        await expect(leaveOut).toBeFocused();
+        await page.keyboard.press('ArrowDown');
+        await expect(include).toBeChecked();
+        await expect(include).toBeFocused();
+      }
+      await page.keyboard.press('Escape');
+      await expect(optionsDialog(page)).toBeHidden();
+    }
+  });
+
+  test('the script is unchanged by exporting Markdown', async ({ page }) => {
+    await start(page);
+    await choose(page, 'Notes in Markdown', 'Include');
+    const before = await editor(page).evaluate((el) => el.textContent);
+    await downloadMarkdown(page);
+    await expect(ready(page)).toHaveText('Exported The Call.md, with notes.');
+    expect(await editor(page).evaluate((el) => el.textContent)).toBe(before);
+    // No changed dot in the title.
+    await expect(page).toHaveTitle('The Call — Drafter');
   });
 });
