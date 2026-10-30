@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/compare` lays a diff out as rows for a diff view. `diffRows` gives each unchanged line once and each change's removed lines then its added ones, numbered in both versions, and pairs a changed line with the line that replaced it when their words are alike (Dice ≥ 0.4), so the words that changed can be marked. `diffWords` splits two lines into words, spaces, and single characters, diffs them, and folds a space or a short run between two changes into one change, so "the cat sat" → "a dog stood" is one change, not three; a line of more than 2,000 tokens gets no word marks. `foldRows` folds unchanged stretches longer than six lines, keeping three lines next to each change, and `openFold` opens a long fold 200 lines at a time. `groupRows` cuts the rows at scene headings (or Markdown headings of levels 1 to 3, from `markdownAnchors`, which skips fenced code) into groups tagged new, deleted, renamed, or opening, with their counts. `pairRows` sets them side by side. `\r\n` and `\n` read the same, and the work grows linearly with the script.
+
 ## [0.17.0] - 2026-10-29
 
 **Getting a script out the door.** A guided first screenplay and stage play that teach themselves; export options kept for each script (scene numbers none, as written, or every scene; title page full, title and author only, or none); running time at a rate you set, with an estimate from the dialogue, and each scene's and act's time in the Outline and the Structure strip; and a Technical details help page on how Drafter is built.
