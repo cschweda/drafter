@@ -100,7 +100,12 @@ const groups = shortcutGroups(COMMAND_DATA);
           <kbd>Page Down</kbd> move ten scenes. <kbd>Enter</kbd> goes to the character’s first cue
           in that scene, or, where they’re there without speaking, to the first time the action
           names them. The context-menu key or <kbd>Shift+F10</kbd> (or a right-click) opens the
-          cell’s menu: Go to.
+          cell’s menu: Go to, Scaffold for this character, and Scaffold for this scene.
+        </li>
+        <li>
+          In Scaffold, <kbd>Alt+←</kbd> (<kbd>⌥←</kbd> on a Mac) goes back to the page before, as
+          the Back button on its bar does, while focus is anywhere in the tab except a filter field,
+          where it moves by a word.
         </li>
         <li>
           In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and

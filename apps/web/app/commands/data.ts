@@ -227,6 +227,21 @@ export const COMMAND_DATA: readonly CommandData[] = [
     icon: 'i-lucide-users',
     keywords: ['cast', 'characters', 'who is in this scene', 'locations'],
   },
+  // Scaffold's lists (§5.5, §9): every character, and every place, each a link to its page.
+  {
+    id: 'scaffold-cast',
+    title: 'Show the cast',
+    group: 'View',
+    icon: 'i-lucide-users',
+    keywords: ['characters', 'Scaffold'],
+  },
+  {
+    id: 'scaffold-places',
+    title: 'Show the places',
+    group: 'View',
+    icon: 'i-lucide-map-pin',
+    keywords: ['locations', 'Scaffold'],
+  },
   { id: 'switch-theme', title: 'Switch theme', group: 'View' },
   { id: 'show-line-numbers', title: 'Show line numbers', group: 'View' },
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },

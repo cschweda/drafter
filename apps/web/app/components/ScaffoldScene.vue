@@ -5,7 +5,7 @@ import { useEditor } from '~/editor/session';
 import { useOutline } from '~/outline/use-outline';
 import { rowsFor, sceneFacts, sceneTitle } from '~/scaffold/labels';
 import { useScaffold } from '~/scaffold/session';
-import { SCAFFOLD_HEADING_ID } from '~/scaffold/show';
+import { SCAFFOLD_HEADING_ID, SCAFFOLD_SCENES_ID } from '~/scaffold/show';
 import { useRates } from '~/stats/timing';
 import { GONE } from '~/strip/labels';
 
@@ -14,7 +14,9 @@ import { GONE } from '~/strip/labels';
 // cursor's scene quietly (no focus moves, nothing is announced), or keeps a pinned one. The heading
 // and the facts are the live scene's; the rows are the cast's for the same scene, found by its id
 // in the scenes the cast was worked out from, so a scene added above it never puts another scene's
-// people under its heading while the cast catches up (Counting… until it has the scene).
+// people under its heading while the cast catches up (Counting… until it has the scene). Each
+// name links to the character's page, "{n} more" to its Scenes, and the place to its page; before
+// the first scene, the Cast and Places lists are a link away.
 const editor = useEditor();
 const outline = useOutline();
 const { cast, basis } = useCast();
@@ -35,12 +37,13 @@ const region = ref<HTMLElement>();
 const scrolls = useScrollsSideways(region);
 const firsts = computed(() => rows.value?.filter((row) => row.first).map((row) => row.name) ?? []);
 const noScenes = computed(() => outline.index.value.scenes.length === 0);
+const BEFORE_FIRST = 'The cursor is before the first scene.';
 /** Why there is no scene to show: none yet, the cursor before the first, or a pinned one gone. */
 const why = computed(() => {
   if (scene.value) return null;
   if (noScenes.value) return 'No scenes yet. Each scene heading you write shows here.';
   if (!follow.value && page.value.kind === 'scene' && page.value.pinned !== null) return GONE;
-  return 'The cursor is before the first scene.';
+  return BEFORE_FIRST;
 });
 
 // A pinned scene deleted while focus is on Go to: the button goes, and focus goes to the page's
@@ -66,13 +69,27 @@ function goTo() {
         Go to<span class="sr-only"> scene {{ scene.number ?? scene.ordinal }}</span>
       </button>
     </div>
-    <p v-if="why" class="note">{{ why }}</p>
+    <template v-if="why">
+      <p class="note">{{ why }}</p>
+      <p v-if="why === BEFORE_FIRST" class="lists">
+        <ScaffoldLink :to="{ kind: 'cast' }">Cast</ScaffoldLink>
+        <ScaffoldLink :to="{ kind: 'places' }">Places</ScaffoldLink>
+      </p>
+    </template>
     <template v-else-if="scene">
       <dl class="facts">
         <div v-for="fact in facts" :key="fact.term" class="fact">
           <dt>{{ fact.term }}</dt>
           <dd>
-            <template v-if="fact.words">
+            <template v-if="fact.link">
+              <ScaffoldLink :to="fact.link.page">{{ fact.link.text }}</ScaffoldLink>
+              <template v-if="fact.words">
+                <span aria-hidden="true">{{ fact.value.slice(fact.link.text.length) }}</span>
+                <span class="sr-only">{{ fact.words.slice(fact.link.text.length) }}</span>
+              </template>
+              <template v-else>{{ fact.value.slice(fact.link.text.length) }}</template>
+            </template>
+            <template v-else-if="fact.words">
               <span aria-hidden="true">{{ fact.value }}</span>
               <span class="sr-only">{{ fact.words }}</span>
             </template>
@@ -113,7 +130,7 @@ function goTo() {
             <tbody>
               <tr v-for="row in rows" :key="row.key">
                 <th scope="row">
-                  {{ row.name }}<template v-if="row.first">
+                  <ScaffoldLink :to="{ kind: 'character', key: row.key }">{{ row.name }}</ScaffoldLink><template v-if="row.first">
                     <span class="sr-only">,</span> <span class="tag">First seen here</span>
                   </template>
                 </th>
@@ -129,7 +146,18 @@ function goTo() {
                     <span class="sr-only">Silent</span>
                   </template>
                 </td>
-                <td class="num">{{ row.more === 0 ? 'None' : `${row.more} more` }}</td>
+                <td class="num">
+                  <template v-if="row.more === 0">None</template>
+                  <ScaffoldLink
+                    v-else
+                    :to="{ kind: 'character', key: row.key }"
+                    :focus="SCAFFOLD_SCENES_ID"
+                  >
+                    {{ row.more }} more<span class="sr-only">{{
+                      ` ${row.more === 1 ? 'scene' : 'scenes'} with ${row.name}`
+                    }}</span>
+                  </ScaffoldLink>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -235,6 +263,11 @@ h3 {
   white-space: nowrap;
 }
 .firsts {
+  margin: 8px 0 0;
+}
+.lists {
+  display: flex;
+  gap: 12px;
   margin: 8px 0 0;
 }
 .note {

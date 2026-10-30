@@ -2,6 +2,7 @@ import type { Cast, Place } from '@drafter/cast';
 import { estimateSeconds, type Scene } from '@drafter/outline';
 import { lengthWords, sceneNumber } from '../outline/labels';
 import { pageSeconds, type Rates, shortTime, timeWords } from '../stats/time-format';
+import type { ScaffoldPage } from './session';
 
 // What Scaffold's scene page says (seeing-the-script design §5.2): its heading, the scene's facts
 // (where, when, how long), and a row for each character in it. Read from the cast and the scene
@@ -27,11 +28,15 @@ const INSIDE: Record<Place['inside'], string | null> = {
 const about = (seconds: number) =>
   seconds > 0 ? `about ${shortTime(seconds)}` : shortTime(seconds);
 
-/** A fact of the scene page's list: `words` is what a screen reader hears, when it differs. */
+/**
+ * A fact of the scene page's list: `words` is what a screen reader hears, when it differs; `link`,
+ * the start of `value` that is a link to another Scaffold page (the place, to its location page).
+ */
 export interface SceneFact {
   term: string;
   value: string;
   words?: string;
+  link?: { text: string; page: ScaffoldPage };
 }
 
 /**
@@ -45,14 +50,19 @@ export function sceneFacts(scene: Scene, place: Place, rates: Rates): SceneFact[
     facts.push({ term: 'Where', value: NO_PLACE });
   } else {
     const inside = INSIDE[place.inside];
+    const link =
+      place.key === null
+        ? {}
+        : { link: { text: place.location, page: { kind: 'location', key: place.key } as const } };
     facts.push(
       inside
         ? {
             term: 'Where',
             value: `${place.location} · ${inside}`,
             words: `${place.location}, ${inside.toLowerCase()}`,
+            ...link,
           }
-        : { term: 'Where', value: place.location },
+        : { term: 'Where', value: place.location, ...link },
     );
   }
   if (place.time) facts.push({ term: 'When', value: place.time });

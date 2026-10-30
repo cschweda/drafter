@@ -137,4 +137,36 @@ describe('Scaffold’s session', () => {
     followed.value = 's3';
     expect(heading(scaffold.sceneShown.value)).toBe('INT. NET LOFT - NIGHT');
   });
+
+  test('Back from the first page shown, a pinned scene, goes to the cursor’s scene, following', () => {
+    // Scaffold for this scene on a fresh visit: the following page is put on the Back list first.
+    const { scaffold, followed } = session('s1');
+    scaffold.open({ kind: 'scene', pinned: 's3' });
+    expect(scaffold.canGoBack.value).toBe(true);
+    expect(scaffold.back()).toBe(true);
+    expect(scaffold.page.value).toEqual({ kind: 'scene', pinned: null });
+    expect(scaffold.follow.value).toBe(true);
+    expect(heading(scaffold.sceneShown.value)).toBe('INT. CUSTOMS SHED - DAY');
+    // Following again: the cursor moving on moves the page.
+    followed.value = 's2';
+    expect(heading(scaffold.sceneShown.value)).toBe('EXT. QUAY - NIGHT');
+    expect(scaffold.canGoBack.value).toBe(false);
+  });
+
+  test('Back to a pinned scene keeps it pinned, and to a following one follows', () => {
+    const { scaffold, followed } = session('s1');
+    scaffold.open({ kind: 'scene', pinned: 's3' });
+    scaffold.open({ kind: 'character', key: 'PELL' });
+    followed.value = 's2';
+    expect(scaffold.back()).toBe(true);
+    expect(scaffold.follow.value).toBe(false);
+    expect(heading(scaffold.sceneShown.value)).toBe('INT. NET LOFT - NIGHT');
+    // Follow the cursor, on, then the cast, then Back: the cursor's scene again.
+    scaffold.follow.value = true;
+    scaffold.open({ kind: 'cast' });
+    followed.value = 's1';
+    expect(scaffold.back()).toBe(true);
+    expect(scaffold.follow.value).toBe(true);
+    expect(heading(scaffold.sceneShown.value)).toBe('INT. CUSTOMS SHED - DAY');
+  });
 });

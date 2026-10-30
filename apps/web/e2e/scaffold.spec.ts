@@ -161,9 +161,18 @@ test.describe('Scaffold', () => {
       ]);
       // Speakers in the order they first speak, then BRAM, asleep, silent.
       const rows = people(page).locator('tbody tr');
-      await expect(rows.nth(0)).toHaveText(/^INES.*2\s*6\s*about 5 s \(27%\).*1 more$/);
-      await expect(rows.nth(1)).toHaveText(/^KOLL.*2\s*9\s*about 5 s \(40%\).*1 more$/);
-      await expect(rows.nth(2)).toHaveText(/^BRAM.*Silent\s*0\s*—.*1 more$/);
+      await expect(rows.nth(0)).toHaveText(
+        /^INES.*2\s*6\s*about 5 s \(27%\).*1 more scene with INES$/,
+      );
+      await expect(rows.nth(1)).toHaveText(
+        /^KOLL.*2\s*9\s*about 5 s \(40%\).*1 more scene with KOLL$/,
+      );
+      await expect(rows.nth(2)).toHaveText(/^BRAM.*Silent\s*0\s*—.*1 more scene with BRAM$/);
+      // Each name is a link to the character's page, and "1 more" to their scenes there.
+      await expect(rows.nth(0).getByRole('link', { name: 'INES', exact: true })).toBeVisible();
+      await expect(
+        rows.nth(0).getByRole('link', { name: '1 more scene with INES', exact: true }),
+      ).toBeVisible();
       // A screen reader hears the time in words, and Silent where there is none.
       await expect(rows.nth(0).getByRole('cell').nth(2)).toHaveAccessibleName(
         'about 5 seconds, 27% of the scene',

@@ -58,7 +58,13 @@ describe('a scene’s facts', () => {
     const place = placeOf(scene, doc, screenplay);
     expect(sceneTitle(scene)).toBe('Scene 1 · INT. FERRY CABIN - NIGHT');
     expect(sceneFacts(scene, place, DEFAULT_RATES)).toEqual([
-      { term: 'Where', value: 'FERRY CABIN · Inside', words: 'FERRY CABIN, inside' },
+      {
+        term: 'Where',
+        value: 'FERRY CABIN · Inside',
+        words: 'FERRY CABIN, inside',
+        // The place is a link to its page, keyed by its name as the cast keys it.
+        link: { text: 'FERRY CABIN', page: { kind: 'location', key: 'FERRY CABIN' } },
+      },
       { term: 'When', value: 'NIGHT' },
       {
         term: 'Length',

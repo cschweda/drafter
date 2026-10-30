@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useCast } from '~/cast/use-cast';
+import { SCAFFOLD_HEADING_ID, showScaffold } from '~/scaffold/show';
 import { characterRows } from '~/stats/characters';
 import { pageRatePhrase } from '~/stats/time-format';
 import { useRates } from '~/stats/timing';
 
 // The Stats tab's Characters (seeing-the-script design §4.3): a row per speaking character, most
 // speeches first, from the cast the tab holds. Not sortable in v1 (a sortable table needs a keyboard
-// model of its own). Screen time waits for the pages; until then the column says "—".
+// model of its own). Screen time waits for the pages; until then the column says "—". Each name is
+// a link to the character's Scaffold page (design §5.6).
 const { cast } = useCast();
 const rates = useRates();
 const rows = computed(() => (cast.value ? characterRows(cast.value, rates.value) : null));
@@ -51,7 +53,15 @@ const scrolls = useScrollsSideways(region);
           </thead>
           <tbody>
             <tr v-for="row in rows" :key="row.key">
-              <th scope="row">{{ row.name }}</th>
+              <th scope="row">
+                <a
+                  :href="`#${SCAFFOLD_HEADING_ID}`"
+                  class="name-link"
+                  @click.prevent="showScaffold({ kind: 'character', key: row.key })"
+                >
+                  {{ row.name }}
+                </a>
+              </th>
               <td class="num">{{ row.speeches }}</td>
               <td class="num">{{ row.scenes }}</td>
               <td class="num">{{ row.speaksIn }}</td>
@@ -75,7 +85,8 @@ const scrolls = useScrollsSideways(region);
       <p class="note">
         Scenes counts every scene a character is in, speaking or not; Speaks in, the scenes they
         speak in. Words are their dialogue and lyrics, and the dialogue shares are of those words.
-        A character is counted once, whatever the extension, such as (V.O.).
+        A character is counted once, whatever the extension, such as (V.O.). Each name opens the
+        character’s page in Scaffold.
       </p>
     </template>
   </section>
@@ -126,6 +137,15 @@ const scrolls = useScrollsSideways(region);
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
+}
+.name-link {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.name-link:focus-visible {
+  outline: 2px solid var(--heading);
+  outline-offset: 2px;
 }
 .tally td:last-child {
   padding-left: 12px;

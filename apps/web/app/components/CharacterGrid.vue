@@ -171,7 +171,7 @@ function onKeydown(event: KeyboardEvent, row: number, column: number) {
   else void focusCell(next);
 }
 
-// ---- The menu: Go to, and Scaffold for this scene ------------------------------------------
+// ---- The menu: Go to, Scaffold for this character, and Scaffold for this scene --------------
 
 const menuFor = shallowRef<GridPlace | null>(null);
 const menuPlace = shallowRef({ left: '0px', top: '0px', width: '0px', height: '0px' });
@@ -232,6 +232,11 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
         onSelect: later(() => goToCell(props.view, at.row, at.column)),
       },
       {
+        label: 'Scaffold for this character',
+        icon: 'i-lucide-user',
+        onSelect: later(() => scaffoldForCharacter(at.row)),
+      },
+      {
         label: 'Scaffold for this scene',
         icon: 'i-lucide-users',
         onSelect: later(() => scaffoldFor(at.column)),
@@ -239,6 +244,12 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
     ],
   ];
 });
+
+/** Scaffold for this character: the row's character, by their key. */
+function scaffoldForCharacter(row: number) {
+  const key = props.view.cast.characters[row]?.key;
+  if (key) showScaffold({ kind: 'character', key });
+}
 
 /** Scaffold for this scene: the column's scene, by its id, pinned. */
 function scaffoldFor(column: number) {

@@ -635,6 +635,17 @@ export function registerBuiltinCommands(): void {
       why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
       run: () => showScaffold(),
     },
+    // Scaffold's Cast and Places (§5.5), from the palette.
+    'scaffold-cast': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => showScaffold({ kind: 'cast' }),
+    },
+    'scaffold-places': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => showScaffold({ kind: 'places' }),
+    },
     'switch-theme': {
       run: () => {
         colorMode.preference = colorMode.value === 'light' ? 'dark' : 'light';

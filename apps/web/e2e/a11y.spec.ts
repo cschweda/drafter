@@ -277,6 +277,59 @@ for (const theme of THEMES) {
       await clean(page, 'Scaffold, the scene page, not following');
     });
 
+    test(`has no accessibility violations in Scaffold: a character page, a location page, Cast, and Places (${theme})`, async ({
+      page,
+    }) => {
+      // Two keepers and a visitor, written for this test, across a lamp room and its gallery.
+      await setText(
+        page,
+        'INT. LAMP ROOM - NIGHT\n\nWREN trims the wick. A visitor, ODO, waits.\n\nWREN\n(quietly)\nYou came up all those stairs?\n\nEXT. GALLERY - DAWN\n\nODO\nShips.\n\nWREN\nNone today.\n',
+      );
+      await editor(page).locator('.cm-line', { hasText: 'You came up' }).click();
+      await runCommand(page, 'Show Scaffold');
+      const scaffold = page.getByRole('tabpanel', { name: 'Scaffold', exact: true });
+      const heading = scaffold.getByRole('heading', { level: 2 });
+      await expect(heading).toHaveText('Scene 1 · INT. LAMP ROOM - NIGHT');
+      // A character's page, its lines shown.
+      await scaffold.getByRole('link', { name: 'WREN', exact: true }).click();
+      await expect(heading).toHaveText('WREN');
+      await expect(scaffold.getByRole('table', { name: 'Scenes (2)' })).toBeVisible();
+      await expect(scaffold.getByRole('heading', { name: 'Lines (2)' })).toBeVisible();
+      await clean(page, 'Scaffold, a character page');
+      // A location's page.
+      await scaffold.getByRole('link', { name: 'LAMP ROOM', exact: true }).click();
+      await expect(heading).toHaveText('LAMP ROOM');
+      await expect(scaffold.getByRole('table', { name: 'Who appears here (2)' })).toBeVisible();
+      await clean(page, 'Scaffold, a location page');
+      // Cast, filtered.
+      await runCommand(page, 'Show the cast');
+      await expect(heading).toHaveText('Cast');
+      await expect(scaffold.getByRole('table', { name: /^Characters/ })).toBeVisible();
+      await clean(page, 'Scaffold, Cast');
+      await scaffold.getByRole('searchbox', { name: 'Filter the cast' }).fill('od');
+      await expect(scaffold.getByRole('status')).toHaveText('1 of 2 shown.');
+      await clean(page, 'Scaffold, Cast filtered');
+      // Places, and its menu open.
+      await runCommand(page, 'Show the places');
+      await expect(heading).toHaveText('Places');
+      await expect(scaffold.getByRole('table', { name: /^Locations/ })).toBeVisible();
+      await clean(page, 'Scaffold, Places');
+      await page.getByRole('button', { name: 'Pages', exact: true }).click();
+      await expect(page.getByRole('menuitem', { name: 'Cast', exact: true })).toBeVisible();
+      await clean(page, 'Scaffold, its Pages menu');
+      await page.keyboard.press('Escape');
+      // A page whose character has gone.
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await scaffold.getByRole('searchbox', { name: 'Filter the cast' }).fill('');
+      await scaffold.getByRole('link', { name: 'ODO', exact: true }).click();
+      await expect(heading).toHaveText('ODO');
+      await setText(page, 'INT. LAMP ROOM - NIGHT\n\nWREN\nAlone again.\n');
+      await runCommand(page, 'Show Scaffold');
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(scaffold.getByText('No longer in the script.')).toBeVisible();
+      await clean(page, 'Scaffold, a character no longer in the script');
+    });
+
     test(`has no accessibility violations in the Export options dialog (${theme})`, async ({
       page,
     }) => {

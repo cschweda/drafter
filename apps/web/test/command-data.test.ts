@@ -41,6 +41,19 @@ describe('the command data', () => {
     expect(JSON.stringify(COMMAND_DATA)).not.toMatch(/x-?ray/i);
   });
 
+  test('has Show the cast and Show the places in View, after Show Scaffold, with no keys', () => {
+    // Seeing-the-script design §5.5, §9.
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('scaffold-cast')).toBe(ids.indexOf('show-scaffold') + 1);
+    expect(ids.indexOf('scaffold-places')).toBe(ids.indexOf('show-scaffold') + 2);
+    const cast = COMMAND_DATA.find((c) => c.id === 'scaffold-cast');
+    const places = COMMAND_DATA.find((c) => c.id === 'scaffold-places');
+    expect(cast).toMatchObject({ title: 'Show the cast', group: 'View' });
+    expect(places).toMatchObject({ title: 'Show the places', group: 'View' });
+    expect(cast?.keys).toBeUndefined();
+    expect(places?.keys).toBeUndefined();
+  });
+
   test('has no key twice, and no key it cannot format', () => {
     const keys = COMMAND_DATA.flatMap((c) => (c.keys ? [c.keys.toLowerCase()] : []));
     expect(new Set(keys).size).toBe(keys.length);
