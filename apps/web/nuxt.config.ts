@@ -160,7 +160,7 @@ export default defineNuxtConfig({
         // decoding without the DOM (about 29 KB more in the lazy parser chunk).
         { find: /^decode-named-character-reference$/, replacement: ENTITIES },
         {
-          find: /^@drafter\/(cm-fountain|compare|fdx|fountain|history|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
+          find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

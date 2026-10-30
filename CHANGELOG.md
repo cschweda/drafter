@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/archive`, a new package for files from other screenwriting apps that come packed as a zip (the coming Highland and Fade In imports). It is Drafter's own strict, read-only zip reader, written from the zip format's published description: it lists an archive's files and reads one at a time, and refuses anything that could hurt (an archive too big or too full, zip64, split or encrypted archives, unsafe or repeated names, overlapping or damaged data, a zip bomb) with a plain reason, before unpacking anything. Nothing in a file it reads is ever written anywhere.
+
 ### Changed
 
 - **Open says what a file is when it isn't a script.** A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft file (`.fdr`), a Celtx project, or a zip is turned away with its kind named and what to do instead, for example "Drafter can’t open a Word document (Notes.docx). Save it as plain text or Fountain in the app that made it, then open that." An RTF or PDF is caught by what's inside it even when it's named `.txt`, so it no longer opens as a page of `{\rtf1…` codes. Nothing opens and the script you have open is left alone. Any other plain text still opens as Fountain, as before. This applies however the file arrives: Open, drop, or the desktop app's command line.

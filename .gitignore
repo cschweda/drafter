@@ -41,3 +41,7 @@ Thumbs.db
 
 # Brainstorming mockups (superpowers visual companion)
 .superpowers/
+
+# Other apps' files, which only the maintainer's local tests may read (DRAFTER_REAL_FILES)
+*.highland
+*.fadein

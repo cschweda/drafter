@@ -57,6 +57,7 @@ export const PACKAGES: readonly PackageNote[] = [
     name: '@drafter/web',
     does: 'The app itself, drafter.dev: the panes, menus, dialogs, storage, and workers.',
     uses: [
+      '@drafter/archive',
       '@drafter/cm-fountain',
       '@drafter/compare',
       '@drafter/fdx',
@@ -138,6 +139,11 @@ export const PACKAGES: readonly PackageNote[] = [
     name: '@drafter/fdx',
     does: 'Final Draft (.fdx) files: its own strict XML reader and writer, and the mapping to and from Fountain.',
     uses: ['@drafter/fountain', '@drafter/templates'],
+  },
+  {
+    name: '@drafter/archive',
+    does: 'Files from other screenwriting apps that come packed as a zip: its own strict read-only zip reader, and the script inside each.',
+    uses: [],
   },
   {
     name: '@drafter/templates',
