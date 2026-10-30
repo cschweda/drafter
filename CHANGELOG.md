@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-30
+
+**Seeing the script: Scaffold, the Stats tab, and who is in every scene.** Scaffold is a new tab that shows who is in the scene you're writing, with a page for every character and every place, the cast, and the places; Stats is now a tab, with each character's screen time, share of the dialogue, and who they are most often with; and Character by scene lays the whole script out as a grid of who is where, with long absences marked.
+
 ### Added
 
 - `@drafter/outline`: **each scene's speeches.** The scene index now lists every speech in a scene, in order: who says it, where its cue is, and how many words it has (both sides of a dual-dialogue pair in full, a lyric's words included, and a cue with only a parenthetical as a speech of no words). What's said before the first scene or section, such as a cold open, is the index's new `opening`, with its own speeches, words, and timing; what's said between a section's heading and its first scene (a cold open under `# Act One`) is that section's, with its own speeches, words, and timing too. A speech is counted once, in the opening, a section, or a scene, in the same pass as the timing, so the views coming next (Scaffold, the Stats tab, and the character grid) all read the same numbers.
@@ -874,7 +878,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/cschweda/drafter/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/cschweda/drafter/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/cschweda/drafter/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/cschweda/drafter/compare/v0.18.0...v0.19.0

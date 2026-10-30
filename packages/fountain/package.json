@@ -1,6 +1,6 @@
 {
   "name": "@drafter/fountain",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "A lossless Fountain parser and printer: the concrete syntax tree behind Drafter.",
   "license": "MIT",
   "type": "module",

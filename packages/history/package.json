@@ -1,6 +1,6 @@
 {
   "name": "@drafter/history",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "Version history for Drafter: scene prints, the scenes of past versions that are deleted now, one scene's versions, and where Put back goes.",
   "license": "MIT",
   "type": "module",
