@@ -61,12 +61,14 @@ describe('the scene index with speeches', () => {
         300,
       );
       expect(growth).toBeLessThan(MAX_GROWTH);
-      // For DECISIONS: the 1,200-scene script against the same script with no cues in it.
       const withSpeeches = make(1200);
       const index = sceneIndex(withSpeeches, screenplay);
       expect(index.scenes).toHaveLength(1200);
       expect(index.scenes[0]?.speeches).toHaveLength(4);
       expect(index.opening?.speeches).toHaveLength(1);
+      // For DECISIONS, with DRAFTER_TIMING set (and `--silent=false`): the 1,200-scene script
+      // against the same script with no cues in it.
+      if (!process.env.DRAFTER_TIMING) return;
       const timed = best(withSpeeches);
       const baseline = best(make(1200, false));
       console.log(

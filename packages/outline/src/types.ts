@@ -20,7 +20,7 @@ export interface Synopsis {
 
 /** One speech: a cue and the parts after it, as `TimingTally` groups them (seeing-the-script design §3.4). */
 export interface Speech {
-  /** The speaker's name as its unit's `speakers` (or the opening's `spokenBy`) gives it. */
+  /** The speaker's name as its unit's `speakers` (or the opening's or section's `spokenBy`) gives it. */
   name: string;
   /** The cue's block. */
   block: number;
@@ -93,12 +93,22 @@ export interface Section {
   eighths: number | null;
   /** The sum of its scenes' timing; nothing for a section with no scenes. */
   timing: Timing;
+  /**
+   * The speeches in its own stretch, from its heading up to its first child (a scene or a
+   * subsection) or the next section, up to `introEnd`: a cold open under an act's heading. A
+   * speech in one of its scenes is that scene's, not the section's.
+   */
+  speeches: Speech[];
+  /** The words each speaker says in its own stretch, by the name as first typed there. */
+  spokenBy: Record<string, number>;
+  /** Its own stretch's timing, tallied as a scene's is (not in `timing`, which is its scenes'). */
+  introTiming: Timing;
 }
 
 /**
- * What is said before the first scene (a cold open, under an act's heading or not), tallied as a
- * scene's blocks are. With the scenes' `speeches`, it holds every speech once, except one in a
- * section's opening after the first scene (between an act's heading and its first scene).
+ * What is said in the preamble, before the first scene or section (a cold open with no act's
+ * heading over it), tallied as a scene's blocks are. With each section's and each scene's
+ * `speeches`, it holds every speech in the script once.
  */
 export interface Opening {
   speeches: Speech[];
@@ -120,6 +130,6 @@ export interface SceneIndex {
   sections: Section[];
   /** Sections holding scenes and deeper sections. */
   tree: OutlineNode[];
-  /** The speeches before the first scene; null when no speech is there. */
+  /** The speeches before the first scene or section; null when no speech is there. */
   opening: Opening | null;
 }

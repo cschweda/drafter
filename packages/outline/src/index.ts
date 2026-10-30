@@ -36,6 +36,7 @@ export {
   blockTiming,
   DEFAULT_WORDS_PER_MINUTE,
   estimateSeconds,
+  type TalliedSpeech,
   type Timing,
   TimingTally,
 } from './timing';

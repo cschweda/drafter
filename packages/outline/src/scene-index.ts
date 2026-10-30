@@ -86,7 +86,7 @@ function noteSpeaker(names: Names, block: Block): void {
 }
 
 /** A unit's tally, named: its speeches and the words each speaker says, by `names`. */
-function spoken(tally: TimingTally, names: Names): Pick<Scene, 'speeches' | 'spokenBy'> {
+function spoken(tally: TimingTally, names: Names): Pick<Opening, 'speeches' | 'spokenBy'> {
   const speeches: Speech[] = tally
     .speeches()
     .map(({ key, block, words }) => ({ name: names.get(key) ?? key, block, words }));
@@ -132,24 +132,18 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
   const { blocks, source } = doc;
   const end = bodyEnd(doc);
   const structural: number[] = [];
-  // Before the first scene, the blocks are tallied as the opening's.
-  let opener: TimingTally | null = new TimingTally(template);
+  // Before the first scene or section (the preamble), the blocks are tallied as the opening's.
+  const opener = new TimingTally(template);
   const openerNames: Names = new Map();
-  let opening: Opening | null = null;
   for (let i = 0; i < end; i++) {
     const block = blocks[i] as Block;
-    const scene = startsScene(template, block);
-    if (scene || block.kind === 'section') structural.push(i);
-    if (!opener) continue;
-    if (scene) {
-      opening = openingOf(opener, openerNames);
-      opener = null;
-      continue;
+    if (startsScene(template, block) || block.kind === 'section') structural.push(i);
+    else if (structural.length === 0) {
+      noteSpeaker(openerNames, block);
+      opener.add(block, i);
     }
-    noteSpeaker(openerNames, block);
-    opener.add(block, i);
   }
-  if (opener) opening = openingOf(opener, openerNames);
+  const opening = openingOf(opener, openerNames);
 
   // The preamble: the title page and whatever comes before the first scene or section.
   const firstStructural = structural[0] ?? end;
@@ -265,6 +259,14 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
 
     if (block.kind !== 'section') return;
     close(block.sem.depth);
+    // Its own stretch: the heading and the blocks before its first child (or the next section).
+    const names: Names = new Map();
+    const tally = new TimingTally(template);
+    for (let i = index; i < next; i++) {
+      const b = blocks[i] as Block;
+      noteSpeaker(names, b);
+      tally.add(b, i);
+    }
     const section: Section = {
       kind: 'section',
       block: index,
@@ -276,6 +278,8 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
       scenes: 0,
       eighths: pages ? 0 : null,
       timing: { spoken: 0, actionLines: 0 },
+      ...spoken(tally, names),
+      introTiming: tally.timing(),
     };
     for (const o of open) o.section.span.to = unitEnd;
     const node = { item: section, children: [] as OutlineNode[] };

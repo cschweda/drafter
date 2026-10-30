@@ -48,7 +48,32 @@ const coldOpen = fc
     ([act, open, scenes]) =>
       `${[...(act ? ['# Act One'] : []), ...open, ...scenes].join('\n\n')}\n`,
   );
-const speechScript = fc.oneof(anyScript, lyricScript, coldOpen);
+/** A section with speeches before its first scene: a first one, scenes, then a second section, a speech, and a scene. */
+const laterSection = fc
+  .tuple(
+    fc.array(lyricScene, { minLength: 1, maxLength: 2 }),
+    fc.integer({ min: 1, max: 3 }),
+    fc.array(fc.oneof(speech, fc.constant('A door slams.')), { minLength: 1, maxLength: 3 }),
+    lyricScene,
+  )
+  .map(
+    ([first, depth, open, last]) =>
+      `${['# Act One', ...first, `${'#'.repeat(depth)} Act Two`, ...open, last].join('\n\n')}\n`,
+  );
+/** Sections, each with speeches or none, and no scene at all. */
+const sectionsOnly = fc
+  .array(
+    fc.tuple(
+      fc.integer({ min: 1, max: 3 }),
+      fc.array(fc.oneof(speech, fc.constant('A door slams.')), { maxLength: 3 }),
+    ),
+    { minLength: 1, maxLength: 4 },
+  )
+  .map((sections) =>
+    sections.map(([depth, parts]) => [`${'#'.repeat(depth)} Part`, ...parts].join('\n\n')),
+  )
+  .map((sections) => `${sections.join('\n\n')}\n`);
+const speechScript = fc.oneof(anyScript, lyricScript, coldOpen, laterSection, sectionsOnly);
 
 const SPEECH_PARTS = new Set<Block['kind']>(['parenthetical', 'dialogue', 'lyric']);
 
@@ -157,28 +182,35 @@ describe('timing properties', () => {
     );
   });
 
-  test('speeches add up to spokenBy for every scene and the opening', () => {
+  test('speeches add up to spokenBy for the opening, every section, and every scene', () => {
     fc.assert(
       fc.property(speechScript, (source) => {
         const doc = parse(source);
         const template = doc.meta?.template === 'stage-play-standard' ? stagePlay : screenplay;
         const index = sceneIndex(doc, template);
-        const units = [...(index.opening ? [index.opening] : []), ...index.scenes];
+        const units = [
+          ...(index.opening ? [index.opening] : []),
+          ...index.sections,
+          ...index.scenes,
+        ];
         for (const unit of units) {
           const sums: Record<string, number> = {};
           for (const s of unit.speeches) sums[s.name] = (sums[s.name] ?? 0) + s.words;
           expect(sums).toEqual(unit.spokenBy);
           for (const s of unit.speeches) expect(doc.blocks[s.block]?.kind).toBe('character');
         }
-        // Every cue is one speech, in the opening or a scene, once (these scripts put no speech
-        // in a section's opening after the first scene).
+        // Every cue is one speech, once: the opening's, a section's own, or a scene's, in order.
         const cues = doc.blocks.flatMap((b, i) =>
           b.kind === 'character' && i < bodyEnd(doc) ? [i] : [],
         );
-        expect(units.flatMap((u) => u.speeches.map((s) => s.block))).toEqual(cues);
-        expect(index.opening === null).toBe(
-          !cues.some((i) => i < (index.scenes[0]?.block ?? Number.POSITIVE_INFINITY)),
-        );
+        const counted = [
+          ...(index.opening?.speeches ?? []),
+          ...index.items.flatMap((item) => item.speeches),
+        ].map((s) => s.block);
+        expect(counted).toEqual(cues);
+        // The opening is what comes before the first scene or section.
+        const first = index.items[0]?.block ?? Number.POSITIVE_INFINITY;
+        expect(index.opening === null).toBe(!cues.some((i) => i < first));
       }),
     );
   });
@@ -207,8 +239,12 @@ describe('timing properties', () => {
           }
         }
         if (index.opening) {
-          const old = reference(0, Math.min(end, index.scenes[0]?.block ?? end));
+          const old = reference(0, Math.min(end, ...starts));
           expect(index.opening.timing).toEqual(old.timing());
+        }
+        for (const section of index.sections) {
+          const to = Math.min(end, ...starts.filter((b) => b > section.block));
+          expect(section.introTiming).toEqual(reference(section.block, to).timing());
         }
         const whole = new TimingTally(template);
         doc.blocks.forEach((b, i) => {

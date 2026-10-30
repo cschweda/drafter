@@ -223,7 +223,7 @@ describe('sceneIndex', () => {
     expect(index.opening).toBeNull();
   });
 
-  test('speeches before the first scene are the opening', () => {
+  test('speeches before the first scene or section are the opening', () => {
     const { index } = indexOf(
       'Title: Cold\n\nA phone rings.\n\n@Tess\nWho is this?\n\n@VOICE ^\nYou know who.\n\nINT. A - DAY\n\nTESS\nHello?\n',
     );
@@ -236,9 +236,32 @@ describe('sceneIndex', () => {
       timing: { spoken: 3, actionLines: 1 },
     });
     expect(index.scenes[0]?.speeches).toEqual([{ name: 'TESS', block: 6, words: 1 }]);
-    // A section before the first scene is still the opening: a cold open under an act's heading.
-    const act = indexOf('# Act One\n\nTESS\nWho is this?\n\nINT. A - DAY\n\nHe waits.\n');
-    expect(act.index.opening?.speeches).toEqual([{ name: 'TESS', block: 1, words: 3 }]);
+  });
+
+  test("speeches between a section's heading and its first scene are the section's", () => {
+    // A cold open under an act's heading is the act's, not the opening's.
+    const act = indexOf(
+      'ANN\nFirst.\n\n# Act One\n\nA phone rings.\n\n@Tess\nWho is this?\n\nINT. A - DAY\n\nHe waits.\n\n# Act Two\n\n## Part\n\nTESS\nAgain.\n\nINT. B - DAY\n\nBEN\nNo.\n',
+    );
+    expect(act.index.opening?.speeches).toEqual([{ name: 'ANN', block: 0, words: 1 }]);
+    const [one, two, part] = act.index.sections;
+    expect(one?.speeches).toEqual([{ name: 'Tess', block: 4, words: 3 }]);
+    expect(one?.spokenBy).toEqual({ Tess: 3 });
+    expect(one?.introTiming).toEqual({ spoken: 3, actionLines: 1 });
+    // A section's own stretch ends at its first child: here a subsection, which has the speech.
+    expect(two?.speeches).toEqual([]);
+    expect(two?.spokenBy).toEqual({});
+    expect(two?.introTiming).toEqual({ spoken: 0, actionLines: 0 });
+    expect(part?.speeches).toEqual([{ name: 'TESS', block: 10, words: 1 }]);
+    // The section's timing is still its scenes'.
+    expect(one?.timing).toEqual(act.index.scenes[0]?.timing);
+    // Sections and no scene: each section has its own stretch.
+    const bare = indexOf('# One\n\nANN\nHi.\n\n# Two\n\nBEN\nYo there.\n');
+    expect(bare.index.opening).toBeNull();
+    expect(bare.index.sections.map((s) => s.speeches)).toEqual([
+      [{ name: 'ANN', block: 1, words: 1 }],
+      [{ name: 'BEN', block: 4, words: 2 }],
+    ]);
   });
 
   test('no opening without a speech before the first scene', () => {

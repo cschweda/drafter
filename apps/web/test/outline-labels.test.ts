@@ -27,6 +27,7 @@ const scene = (more: Partial<Scene> = {}): Scene => ({
   words: 0,
   timing: { spoken: 0, actionLines: 0 },
   spokenBy: {},
+  speeches: [],
   pages: null,
   ...more,
 });
@@ -42,6 +43,9 @@ const section = (more: Partial<Section> = {}): Section => ({
   scenes: 5,
   eighths: 96,
   timing: { spoken: 0, actionLines: 0 },
+  speeches: [],
+  spokenBy: {},
+  introTiming: { spoken: 0, actionLines: 0 },
   ...more,
 });
 

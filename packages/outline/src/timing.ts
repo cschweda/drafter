@@ -174,7 +174,9 @@ export class TimingTally {
   /**
    * Every speech so far, in order, one per cue: its speaker (the cue's name in capitals), its
    * cue's block, and its words (both sides of a pair in full; a cue with only a parenthetical, 0).
-   * A speaker's speeches add up to what `spokenBy` gives them.
+   * A speaker's speeches add up to what `spokenBy` gives them. The array and its records are the
+   * tally's own and change as blocks are added (a speech's words grow as its parts come): live, so
+   * copy them to keep them.
    */
   speeches(): ReadonlyArray<Readonly<TalliedSpeech>> {
     return this.#speeches;
