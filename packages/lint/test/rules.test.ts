@@ -753,6 +753,17 @@ describe('highland-note', () => {
     miss('She waits. [[highland: Also in the file\n\nMore.\n');
   });
 
+  it('highland-note reads a note of 200,000 spaces at once', () => {
+    // A lazy match beside \s* would backtrack on this, once for every space.
+    const source = `[[highland:${' '.repeat(200_000)}x${' '.repeat(200_000)}]]\n`;
+    const started = performance.now();
+    const all = found(source);
+    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(all.map((d) => d.message)).toEqual([
+      'This came in from Highland as “x”. Check it, then delete the note.',
+    ]);
+  });
+
   it('fdx-note still lists only fdx notes, with its omitted and hidden advice', () => {
     const source =
       '[[highland: Also in the file, not brought in: a.png]]\n\n[[fdx: Omitted: Ilse counts crates.]]\n\nA door[[fdx: Hidden: brass]] opens.\n\nTHEO [[fdx: Cast List]]\n';

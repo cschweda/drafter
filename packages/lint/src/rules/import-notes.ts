@@ -16,7 +16,8 @@ export function importNote(
   app: string,
   extra?: (label: string) => string | null,
 ): Rule {
-  const note = new RegExp(`^\\[\\[${prefix}:\\s*([\\s\\S]*?)\\s*\\]\\]$`);
+  // Read by slicing, not a regex: a lazy match beside `\s*` backtracks on a long run of spaces.
+  const open = `[[${prefix}:`;
   const rule: Rule = {
     id,
     severity: 'info',
@@ -24,9 +25,13 @@ export function importNote(
       const found: LintDiagnostic[] = [];
       for (const region of doc.regions) {
         if (region.kind !== 'note' || !region.closed) continue;
-        const match = note.exec(doc.source.slice(region.span.from, region.span.to));
-        if (!match) continue;
-        const label = (match[1] ?? '').replace(/\s+/g, ' ');
+        const text = doc.source.slice(region.span.from, region.span.to);
+        if (!text.startsWith(open) || !text.endsWith(']]')) continue;
+        const label = text
+          .slice(open.length, -2)
+          .split(/\s+/)
+          .filter((word) => word !== '')
+          .join(' ');
         found.push({
           ruleId: rule.id,
           severity: rule.severity,
