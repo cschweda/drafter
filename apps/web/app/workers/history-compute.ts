@@ -46,6 +46,8 @@ export interface PrintStore {
     prints: readonly ScenePrint[],
   ): Promise<void>;
   sweep(projectId: string, liveIds: ReadonlySet<string>): Promise<void>;
+  /** Drops the rows of scripts that no longer exist (once per worker, after its first full scan). */
+  prune(): Promise<void>;
 }
 
 const SAVED_PREFIX = 'saved:';
@@ -114,8 +116,14 @@ export function createHistoryCompute(
     pending.length = 0;
   };
 
+  /** Whether this worker has pruned the cache of removed scripts yet. */
+  let pruned = false;
+
   function memoryOf(projectId: string): Promise<Memory> {
-    if (memory?.projectId === projectId) return memory.loaded.then(() => memory as Memory);
+    // The memory as it is now: by the time it has loaded, another script's request may have
+    // replaced `memory`, and this request must still get its own script's.
+    const current = memory;
+    if (current?.projectId === projectId) return current.loaded.then(() => current);
     const scenes = new Map<string, SceneSlot[]>();
     const prints = new Map<string, ScenePrint>();
     const from = cache;
@@ -194,7 +202,24 @@ export function createHistoryCompute(
     return (slot && now.prints.find((p) => p.hash === slot.hash)) ?? null;
   }
 
+  /**
+   * Runs `request` until done or stopped. A stopped scan stores what it read before it returns,
+   * so nothing of its script waits in `pending` for another script's scan to write (after, say,
+   * the script was removed).
+   */
   async function scan(request: Scan, post: (reply: HistoryReply) => void, live: () => boolean) {
+    try {
+      await scanToEnd(request, post, live);
+    } finally {
+      if (!live()) await flush();
+    }
+  }
+
+  async function scanToEnd(
+    request: Scan,
+    post: (reply: HistoryReply) => void,
+    live: () => boolean,
+  ) {
     const { seq, projectId } = request;
     const refs = await source.list(projectId);
     if (!live()) return;
@@ -242,6 +267,10 @@ export function createHistoryCompute(
     const liveIds = new Set(refs.map((ref) => ref.id));
     for (const id of m.scenes.keys()) if (!liveIds.has(id)) m.scenes.delete(id);
     if (cache) await cache.sweep(projectId, liveIds).catch(drop);
+    if (cache && !pruned) {
+      pruned = true;
+      await cache.prune().catch(drop);
+    }
   }
 
   return {

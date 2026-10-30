@@ -11,7 +11,11 @@ type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' }>;
 export type HistoryAsk = Scan extends infer R ? (R extends Scan ? Omit<R, 'seq'> : never) : never;
 
 export interface HistoryClient {
-  /** Sends a scan and returns its number; `on` hears its replies until the last (or an error). */
+  /**
+   * Sends a scan and returns its number; `on` hears its replies until the last (or an error).
+   * There is one listener per kind across every view of the worker: a newer request of a kind,
+   * from any view, stops the older (the worker's lane) and the older's `on` hears nothing more.
+   */
   request(ask: HistoryAsk, on: (reply: HistoryReply) => void): number;
   /** This view is done: its scans still running are cancelled, and the last view ends the worker. */
   release(): void;

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import type { DeletedScene, SceneVersion, VersionRow } from '@drafter/history';
 import { beforeEach, describe, expect, test } from 'vitest';
-import { cacheDb, cacheStore } from '../app/history/cache';
+import { cacheDb, cacheStore, clearProjectCache } from '../app/history/cache';
 import {
   type HistoryReply,
   type HistoryRequest,
@@ -10,6 +10,7 @@ import {
 } from '../app/history/protocol';
 import { db } from '../app/storage/db';
 import { gzip } from '../app/storage/gzip';
+import { createProject, removeProject } from '../app/storage/projects';
 import {
   createHistoryCompute,
   dexieSource,
@@ -42,6 +43,13 @@ beforeEach(async () => {
   await Promise.all(db.tables.map((table) => table.clear()));
   const cache = cacheDb();
   if (cache) await Promise.all(cache.tables.map((table) => table.clear()));
+  // The scripts 'p1' and 'p2' exist, so a scan's prune keeps their rows.
+  const made = await createProject({ source: '' });
+  await db.projects.bulkPut([
+    { ...made, id: 'p1' },
+    { ...made, id: 'p2' },
+  ]);
+  await db.projects.delete(made.id);
 });
 
 /** A history snapshot row, gzip-compressed as the app keeps them. */
@@ -365,6 +373,120 @@ describe('the history scan', () => {
     expect(shape(rowsOf(bySlot))).toEqual(['gap s1', 's2', 'gap s3']);
   });
 
+  /** The cache's rows of a script. */
+  const rowsOf = async (projectId: string) => {
+    const cache = cacheDb() as NonNullable<ReturnType<typeof cacheDb>>;
+    return {
+      scenes: await cache.snapshotScenes.where('projectId').equals(projectId).primaryKeys(),
+      prints: await cache.prints.where('projectId').equals(projectId).count(),
+    };
+  };
+
+  /** Scans `projectId` (four snapshots seeded) and cancels it while it reads the third. */
+  async function cancelledScan(projectId: string) {
+    for (let i = 0; i < 4; i++)
+      await seed(projectId, `${projectId}-${i}`, T0 - i * MIN, script(A, i % 2 ? B : C));
+    let compute: ReturnType<typeof createHistoryCompute> | null = null;
+    const inner = dexieSource();
+    const source: SnapshotSource = {
+      list: (id) => inner.list(id),
+      read: async (id) => {
+        if (id === `${projectId}-2`)
+          await compute?.handle({ seq: 1, kind: 'cancel' }, () => undefined);
+        return inner.read(id);
+      },
+    };
+    compute = createHistoryCompute(source, cacheStore());
+    const replies = await run(compute, { seq: 1, kind: 'deleted', projectId, now: script(A) });
+    expect(replies.some((r) => r.kind === 'deleted' && r.done)).toBe(false);
+    return compute;
+  }
+
+  test("a stopped scan's rows never reach the cache after the script is cleared", async () => {
+    const a = await createProject({ source: script(A) });
+    const b = await createProject({ source: script(A) });
+    await seed(b.id, 'b-0', T0, script(A, D));
+    const compute = await cancelledScan(a.id);
+    await clearProjectCache(a.id);
+    // Another script's scan, in the same worker, stores only its own.
+    await run(compute, { seq: 2, kind: 'deleted', projectId: b.id, now: script(A) });
+    expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
+    expect((await rowsOf(b.id)).scenes).toEqual(['b-0']);
+  });
+
+  test('scan A, cancel, removeProject(A), scan B: A has no rows', async () => {
+    const a = await createProject({ source: script(A) });
+    const b = await createProject({ source: script(A) });
+    await seed(b.id, 'b-0', T0, script(A, D));
+    const compute = await cancelledScan(a.id);
+    await removeProject(a.id);
+    await run(compute, { seq: 2, kind: 'deleted', projectId: b.id, now: script(A) });
+    expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
+  });
+
+  test('a scan drops the rows of scripts that no longer exist', async () => {
+    const b = await createProject({ source: script(A) });
+    await seed(b.id, 'b-0', T0, script(A, D));
+    // Rows left by a script removed while a worker was still writing for it.
+    const { slots, prints } = (await import('@drafter/history')).scenePrints(script(A, B));
+    await cacheStore()?.put('gone', [{ id: 'g-0', slots }], prints);
+    await run(createHistoryCompute(dexieSource(), cacheStore()), {
+      seq: 1,
+      kind: 'deleted',
+      projectId: b.id,
+      now: script(A),
+    });
+    expect(await rowsOf('gone')).toEqual({ scenes: [], prints: 0 });
+    expect((await rowsOf(b.id)).scenes).toEqual(['b-0']);
+  });
+
+  test("two requests for one script never take another script's memory", async () => {
+    const a = await createProject({ source: script(A) });
+    const b = await createProject({ source: script(A) });
+    await seed(a.id, 'a-0', T0, script(A, B));
+    await seed(b.id, 'b-0', T0, script(A, C));
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const asked: string[] = [];
+    const inner = cacheStore() as PrintStore;
+    // The cache's first read for A waits until B's scan has started.
+    const store: PrintStore = {
+      ...inner,
+      scenes: async (projectId) => {
+        asked.push(projectId);
+        if (projectId === a.id) await gate;
+        return inner.scenes(projectId);
+      },
+    };
+    const compute = createHistoryCompute(dexieSource(), store);
+    const nowA = script(A, B);
+    const first = compute.handle(
+      { seq: 1, kind: 'deleted', projectId: a.id, now: nowA },
+      () => undefined,
+    );
+    const versions: HistoryReply[] = [];
+    const second = compute.handle(
+      { seq: 2, kind: 'versions', projectId: a.id, now: nowA, scene: { snapshot: 'a-0', slot: 1 } },
+      (r) => versions.push(r),
+    );
+    while (!asked.includes(a.id)) await new Promise((resolve) => setTimeout(resolve, 0));
+    // B's scan stops A's deleted scan; A's versions scan goes on.
+    const third = compute.handle(
+      { seq: 3, kind: 'deleted', projectId: b.id, now: script(A) },
+      () => undefined,
+    );
+    while (!asked.includes(b.id)) await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await Promise.all([first, second, third]);
+    // A's snapshot is A's in the cache, never B's.
+    expect((await rowsOf(b.id)).scenes).toEqual(['b-0']);
+    expect((await rowsOf(a.id)).scenes).toEqual(['a-0']);
+    const final = versions.filter((r) => r.kind === 'versions').at(-1);
+    expect(final && 'rows' in final && final.rows.length).toBe(1);
+  });
+
   test("scans without a cache when it can't open, with the same results", async () => {
     await seed('p1', 's1', T0, script(A, B, E));
     await seed('p1', 's2', T0 - MIN, script(A, C, E));
@@ -377,6 +499,7 @@ describe('the history scan', () => {
       prints: () => Promise.reject(new Error('closed')),
       put: () => Promise.reject(new Error('closed')),
       sweep: () => Promise.reject(new Error('closed')),
+      prune: () => Promise.reject(new Error('closed')),
     };
     const cached = await finalOf(cacheStore());
     expect(cached.scenes).toHaveLength(3);

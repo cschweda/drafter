@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import {
   cacheDb,
   clearProjectCache,
+  prune,
   putScenes,
   readPrints,
   readScenes,
@@ -73,6 +74,35 @@ describe('the prints cache', () => {
     expect([...(await readScenes('p1')).keys()]).toEqual(['s2']);
     const headings = [...(await readPrints('p1')).values()].map((p) => p.heading).sort();
     expect(headings).toEqual(['EXT. SALT YARD - DAWN', 'INT. GLASS HALL - DAY']);
+  });
+
+  test('sweep drops rows of another PRINT_VERSION', async () => {
+    const one = scanned('s1', script(HALL, ROOF));
+    const two = scanned('s2', script(YARD));
+    await putScenes('p1', [one.row, two.row], [...one.prints, ...two.prints]);
+    await cache().snapshotScenes.update('s1', { version: PRINT_VERSION - 1 });
+    const roof = one.row.slots[1]?.hash as string;
+    await cache().prints.update(['p1', roof], { version: PRINT_VERSION - 1 });
+    await sweep('p1', new Set(['s1', 's2']));
+    expect(await cache().snapshotScenes.where('projectId').equals('p1').primaryKeys()).toEqual([
+      's2',
+    ]);
+    // Only the yard is named by a row of this version.
+    const left = await cache().prints.where('projectId').equals('p1').toArray();
+    expect(left.map((p) => p.heading)).toEqual(['EXT. SALT YARD - DAWN']);
+  });
+
+  test('prune drops the rows of scripts that no longer exist', async () => {
+    const mine = await createProject({ source: script(HALL) });
+    const one = scanned('s1', script(HALL));
+    const two = scanned('s2', script(ROOF));
+    await putScenes(mine.id, [one.row], one.prints);
+    await putScenes('gone', [two.row], two.prints);
+    await prune();
+    expect((await readScenes('gone')).size).toBe(0);
+    expect(await cache().prints.where('projectId').equals('gone').count()).toBe(0);
+    expect((await readScenes(mine.id)).size).toBe(1);
+    expect((await readPrints(mine.id)).size).toBe(1);
   });
 
   test('clearProjectCache leaves other scripts alone', async () => {

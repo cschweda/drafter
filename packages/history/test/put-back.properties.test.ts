@@ -82,7 +82,7 @@ describe('put back (properties)', () => {
         expect(remaining.splice(at, 1)).toEqual([normalize(sceneText)]);
         expect(remaining).toEqual(before);
       }),
-      { numRuns: 300 },
+      { numRuns: 300, seed: 20261030 },
     );
   });
 
@@ -94,7 +94,7 @@ describe('put back (properties)', () => {
         const deleted = deletedScenes(snapshots, prints, now(after));
         expect(deleted.some((d) => d.newest.print.hash === slot.hash)).toBe(false);
       }),
-      { numRuns: 300 },
+      { numRuns: 300, seed: 20261030 },
     );
   });
 });
