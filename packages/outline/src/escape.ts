@@ -43,7 +43,9 @@ function escapesAt(line: string, i: number, from: number, to: number): boolean {
   if (c === '_') {
     return !(i > from && i + 1 < to && isWordChar(line[i - 1]) && isWordChar(line[i + 1]));
   }
-  if (c === '<') return TAG_START.test(line[i + 1] ?? '');
+  // At the piece's end, emphasis marks may be written between this `<` and the next piece's `@`,
+  // and `<**@x>` is an email autolink: `*` is a character an address may hold.
+  if (c === '<') return TAG_START.test(line[i + 1] ?? '') || (i + 1 === to && line[to] === '@');
   if (c === '&') return entityAt(line, i + 1);
   return false;
 }
