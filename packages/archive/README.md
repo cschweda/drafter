@@ -25,6 +25,27 @@ try {
 
 A deflated entry is walked first, without inflating (`deflate.ts`, from RFC 1951), to count the bytes it gives and find the stream's end, so a zip bomb is refused before any output is made; then the platform's `DecompressionStream` inflates it, its output counted chunk by chunk and cut off past the declared size. The limits are `ZIP_LIMITS`, and each call takes smaller (or larger) ones.
 
+## Highland
+
+`fromHighland(bytes)` reads the script out of a `.highland` file. By the app maker's public description, the file is a zip of a TextBundle: `text.fountain` holds the script as Fountain, `info.json` and other JSON files hold the app's own settings and data, and `assets/` holds images. The script comes in exactly as Highland wrote it (a BOM taken off, line endings made `\n`), since it is already Fountain; every other entry, except the app's JSON (`HIGHLAND_METADATA`), `__MACOSX/`, and dot-files, is named, never read, in one note at the script's end:
+
+```fountain
+[[highland: Also in the file, not brought in: notes.txt, assets/cover.png]]
+```
+
+```ts
+import { ArchiveError, fromHighland } from '@drafter/archive';
+
+try {
+  const { text, mapped } = await fromHighland(bytes); // mapped: [{ type: 'Also in the file', count: 1 }]
+} catch (error) {
+  if (error instanceof ArchiveError) console.log(error.reason, error.message);
+  // e.g. 'no-script': "This isn’t a Highland file Drafter can read: it holds no script."
+}
+```
+
+The script is `text.fountain` when there is one, else the one `.fountain` entry, or the shallowest; none is `no-script`, and two at the same depth `many-scripts`. A script that isn't UTF-8 is `not-utf8`, and every `ZipError` comes back as an `ArchiveError` with the zip's reason. Only the script's entry is ever read. The result has the same shape as `@drafter/fdx`'s `FdxImport`, with `title` null, so the app titles the script from its title page.
+
 ## License
 
 MIT

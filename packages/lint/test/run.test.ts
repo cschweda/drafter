@@ -444,6 +444,21 @@ describe('the runner, with rules a test adds', () => {
   });
 });
 
+describe('highland-note', () => {
+  it('runs highland-note in both templates', () => {
+    const source =
+      'INT. LIGHTHOUSE - NIGHT\n\n[[highland: Also in the file, not brought in: notes.txt]]\n';
+    const stagePlay = builtins['stage-play-standard'] as Template;
+    for (const template of [screenplay, stagePlay]) {
+      const found = lint(parse(source), template).filter((d) => d.ruleId === 'highland-note');
+      expect(
+        found.map((d) => [d.severity, d.span.from]),
+        template.id,
+      ).toEqual([['info', source.indexOf('[[highland:')]]);
+    }
+  });
+});
+
 describe('rules', () => {
   it('lists each rule once, with the highest severity it reports', () => {
     expect(new Set(rules.map((r) => r.id)).size).toBe(rules.length);
@@ -458,6 +473,7 @@ describe('rules', () => {
       'heading-no-time': 'warning',
       'stub-heading': 'info',
       'fdx-note': 'info',
+      'highland-note': 'info',
       'setup-without-payoff': 'info',
       'payoff-without-setup': 'info',
       'duplicate-field': 'info',
@@ -475,6 +491,7 @@ describe('rules', () => {
       "MARGARET\nHi.\n\nMARGARET (CONT'D)\nHi.\n\nNARRATOR\n\n(quietly)\nOnce.\n\nINT. HALL\n\nCUT TO:\n\nShe waits.\n",
       'MARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGERET\nHi.\n',
       'INT. LOCATION - DAY\n\nTHEO, a keeper [[fdx: Cast List]]\n',
+      'INT. LOCATION - DAY\n\n[[highland: Also in the file, not brought in: a.png]]\n',
       'INT. A - DAY\n\n[[Setup: a]] [[Payoff: b]] [[Goal: x]] [[Goal: y]]\n',
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);

@@ -27,5 +27,11 @@
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fdx": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/fountain": "workspace:*"
   }
 }

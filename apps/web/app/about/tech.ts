@@ -143,7 +143,7 @@ export const PACKAGES: readonly PackageNote[] = [
   {
     name: '@drafter/archive',
     does: 'Files from other screenwriting apps that come packed as a zip: its own strict read-only zip reader, and the script inside each.',
-    uses: [],
+    uses: ['@drafter/fdx'],
   },
   {
     name: '@drafter/templates',

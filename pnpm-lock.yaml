@@ -176,7 +176,15 @@ importers:
         specifier: ^3.3.13
         version: 3.3.13(typescript@5.9.3)
 
-  packages/archive: {}
+  packages/archive:
+    dependencies:
+      '@drafter/fdx':
+        specifier: workspace:*
+        version: link:../fdx
+    devDependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
 
   packages/cli:
     dependencies:

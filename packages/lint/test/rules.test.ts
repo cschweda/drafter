@@ -735,6 +735,41 @@ describe('fdx-note', () => {
   });
 });
 
+describe('highland-note', () => {
+  const { found, miss } = forRule('highland-note');
+
+  it('highland-note lists every [[highland: …]] note, and none in a boneyard', () => {
+    const source =
+      'INT. LIGHTHOUSE - NIGHT\n\nShe waits. [[fdx: Cast List]] [[a note of my own]]\n\n[[highland: Also in the file, not brought in: notes.txt, cover.png]]\n\n/* [[highland: Also in the file, not brought in: old.png]] */\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from, d.span.to])).toEqual([
+      ['info', source.indexOf('[[highland:'), source.indexOf('png]]') + 5],
+    ]);
+    expect(all[0]?.message).toBe(
+      'This came in from Highland as “Also in the file, not brought in: notes.txt, cover.png”. Check it, then delete the note.',
+    );
+    expect(found(source, stagePlay)).toHaveLength(1);
+    miss('She waits. [[highland is a place]]\n');
+    miss('She waits. [[highland: Also in the file\n\nMore.\n');
+  });
+
+  it('fdx-note still lists only fdx notes, with its omitted and hidden advice', () => {
+    const source =
+      '[[highland: Also in the file, not brought in: a.png]]\n\n[[fdx: Omitted: Ilse counts crates.]]\n\nA door[[fdx: Hidden: brass]] opens.\n\nTHEO [[fdx: Cast List]]\n';
+    const fdx = lint(parse(source), screenplay).filter((d) => d.ruleId === 'fdx-note');
+    expect(fdx.map((d) => d.span.from)).toEqual([
+      source.indexOf('[[fdx: Omitted'),
+      source.indexOf('[[fdx: Hidden'),
+      source.indexOf('[[fdx: Cast'),
+    ]);
+    expect(fdx.map((d) => d.message)).toEqual([
+      "This is a scene Final Draft's shooting script omits, kept as a note so it doesn't print. To restore it, take off the note's marks, “[[fdx: Omitted:” and “]]”; to drop it, delete the note.",
+      "Final Draft hid this text, so it doesn't print. To print it, take off the note's marks, “[[fdx: Hidden:” and “]]”; to drop it, delete the note.",
+      'This came in from Final Draft as “Cast List”, which Drafter has no element for. Check it, then delete the note.',
+    ]);
+  });
+});
+
 describe('setup-without-payoff', () => {
   const { found, miss } = forRule('setup-without-payoff');
 

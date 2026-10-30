@@ -55,7 +55,6 @@ flowchart BT
   archive --> web
   cm_fountain --> web
   compare --> web
-  fdx --> web
   history --> web
   render_html --> web
   render_pdf --> web
@@ -75,6 +74,7 @@ flowchart BT
   notes --> lint
   templates --> lint
   templates --> fdx
+  fdx --> archive
   fountain --> templates
   fountain --> notes
   fountain --> spell
