@@ -10,7 +10,7 @@ import { hash32, hash53 } from './hash';
 export const SKETCH_K = 64;
 
 /** How prints are made; a cached print of another version is read as a miss (design §3.6). */
-export const PRINT_VERSION = 1;
+export const PRINT_VERSION = 2;
 
 export interface ScenePrint {
   /** `hash53` of the scene's source, normalized: the same hash is the same version. */
@@ -102,12 +102,13 @@ function normalized(source: string): string {
 /**
  * The shingle count and sketch of a run of words (lowercased already): every three in a row,
  * joined by a space. A scene too short to make three of those (under five words) adds every two
- * in a row, and one under three words every word, so a line or two grown longer under its heading
- * still shares shingles with what it was. None make none.
+ * in a row, so a line grown longer under its heading still shares a pair with what it was; a
+ * scene of one word is that word. Single words are never shingles beside pairs: two short lines
+ * sharing a word ("They drive." and "They kiss.") are two scenes. None make none.
  */
 export function sketchOf(words: readonly string[]): { shingles: number; sketch: Uint32Array } {
   if (words.length === 0) return { shingles: 0, sketch: new Uint32Array(0) };
-  const sizes = words.length < 3 ? [3, 2, 1] : words.length < 5 ? [3, 2] : [3];
+  const sizes = words.length === 1 ? [1] : words.length < 5 ? [3, 2] : [3];
   const hashes: number[] = [];
   for (const size of sizes) {
     for (let i = 0; i + size <= words.length; i++) {

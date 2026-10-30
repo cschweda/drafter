@@ -24,7 +24,9 @@ export type VersionRow = SceneVersion | { gap: true; snapshots: string[] };
  * else to `start`: the highest Jaccard, then the same heading, then the nearest place. Chaining
  * so follows a scene renamed and rewritten a little at a time (Call 28). A snapshot without a
  * match is a gap, and the walk goes on from the last version found. Consecutive snapshots with
- * the same version are one row (Call 29).
+ * the same version are one row (Call 29). Matching is `sameScene`, both ways, so an empty version
+ * of the scene (emptied, or a heading written first) is one of its versions; only Deleted scenes
+ * reads it one way (`coveredBy`).
  */
 export function sceneVersions(
   start: ScenePrint,
