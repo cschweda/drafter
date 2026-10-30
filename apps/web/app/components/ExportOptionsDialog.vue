@@ -7,6 +7,7 @@ import {
   exportOptionsOf,
   exportOptionsOpen,
   FDX_NOTE,
+  NOTES_ONLY_MARKDOWN,
   OPTIONS_NOT_FOR_MARKDOWN,
   OPTIONS_READ_ONLY,
   setExportOption,
@@ -16,8 +17,8 @@ import { useScript } from '~/storage/script';
 import type { ExportOptions } from '~/workers/export-compute';
 
 // Export options (out-the-door design §2.4): how the open script's exports print its scene numbers
-// and its title page. Each choice is kept the moment it is made, on the script's project, never in
-// its text; Done closes. Export as PDF still saves at once, with the options the script has.
+// and its title page, and whether its Markdown file carries its notes (Call 28). Each choice is
+// kept the moment it is made, on the script's project, never in its text; Done closes. Export as PDF still saves at once, with the options the script has.
 const dialog = ref<HTMLDialogElement>();
 const script = useScript();
 const { readOnly } = useGuard();
@@ -32,6 +33,7 @@ const failed = ref(false);
 
 const SCENE_CHOICES = Object.keys(EXPORT_OPTION_LABELS.sceneNumbers) as SceneNumbering[];
 const TITLE_CHOICES = Object.keys(EXPORT_OPTION_LABELS.titlePage) as TitlePageMode[];
+const NOTES_CHOICES = Object.keys(EXPORT_OPTION_LABELS.notes) as ExportOptions['notes'][];
 
 /** What had focus when the dialog opened: the Export menu's button, the palette's input, … */
 let opener: HTMLElement | null = null;
@@ -81,7 +83,7 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
   >
     <h2 id="export-options-title">Export options</h2>
     <p id="export-options-what">
-      How this script’s PDF and plain text print. The script itself doesn’t change.
+      How this script’s PDF, plain text, and Markdown print. The script itself doesn’t change.
     </p>
     <p v-if="why" class="why">{{ why }}</p>
     <fieldset :key="`scene-${drawn}`" :disabled="!!why">
@@ -120,6 +122,27 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
           <label :for="`export-title-${choice}`">{{ EXPORT_OPTION_LABELS.titlePage[choice] }}</label>
           <span :id="`export-title-${choice}-hint`" class="hint">{{
             EXPORT_OPTION_HINTS.titlePage[choice]
+          }}</span>
+        </div>
+      </div>
+    </fieldset>
+    <fieldset :key="`notes-${drawn}`" :disabled="!!why" aria-describedby="export-notes-what">
+      <legend>Notes in Markdown</legend>
+      <p id="export-notes-what" class="fieldset-note">{{ NOTES_ONLY_MARKDOWN }}</p>
+      <div v-for="choice in NOTES_CHOICES" :key="choice" class="choice">
+        <input
+          :id="`export-notes-${choice}`"
+          type="radio"
+          name="export-notes"
+          :value="choice"
+          :checked="options.notes === choice"
+          :aria-describedby="`export-notes-${choice}-hint`"
+          @change="choose('notes', choice)"
+        />
+        <div>
+          <label :for="`export-notes-${choice}`">{{ EXPORT_OPTION_LABELS.notes[choice] }}</label>
+          <span :id="`export-notes-${choice}-hint`" class="hint">{{
+            EXPORT_OPTION_HINTS.notes[choice]
           }}</span>
         </div>
       </div>
@@ -181,6 +204,10 @@ legend {
   width: 16px;
   height: 16px;
   margin: 1px 0 0;
+}
+.fieldset-note {
+  margin: 0 0 4px;
+  font-size: 12px;
 }
 .hint {
   display: block;

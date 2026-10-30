@@ -48,8 +48,9 @@ test.describe('the app menu', () => {
     ]) {
       expect(at(label), label).toBeGreaterThan(5);
     }
-    // A Fountain script exports as PDF or text; the Markdown file is a Markdown document's.
-    expect(at('Export as Markdown')).toBe(-1);
+    // A Fountain script exports as Markdown too (the whole script), with the same command a
+    // Markdown document's own text uses.
+    expect(at('Export as Markdown file')).toBeGreaterThan(at('Export as PDF'));
     expect(at('Save')).toBeLessThan(at('Save As…'));
     expect(at('Save')).toBe(shown.findIndex((n) => /^Save(?! As)/.test(n)));
     expect(at('Save As…')).toBeLessThan(at('Revert to Saved'));
@@ -193,7 +194,7 @@ test.describe('the app menu', () => {
     await palette.locator('input').fill('Export as');
     await expect(palette.getByRole('option', { name: /^Export as PDF/ })).toBeVisible();
     await expect(palette.getByRole('option', { name: /^Export as plain text/ })).toBeVisible();
-    await expect(palette.getByRole('option', { name: /^Export as Markdown/ })).toHaveCount(0);
+    await expect(palette.getByRole('option', { name: /^Export as Markdown file/ })).toBeVisible();
   });
 
   test('offers a Markdown document the PDF, the Markdown file, and plain text', async ({

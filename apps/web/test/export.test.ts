@@ -138,7 +138,7 @@ describe('exporting', () => {
         kind: 'pdf',
         source: TEXT,
         template: builtins['us-screenplay'],
-        options: { sceneNumbers: 'none', titlePage: 'full' },
+        options: { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' },
       },
       expect.any(Function),
     );
@@ -163,7 +163,7 @@ describe('exporting', () => {
         kind: 'fdx',
         source: TEXT,
         template: builtins['us-screenplay'],
-        options: { sceneNumbers: 'none', titlePage: 'full' },
+        options: { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' },
       },
       expect.any(Function),
     );
@@ -491,7 +491,7 @@ describe('exporting', () => {
         kind: 'pdf',
         source: TEXT,
         template: builtins['us-screenplay'],
-        options: { sceneNumbers: 'written', titlePage: 'title-author' },
+        options: { sceneNumbers: 'written', titlePage: 'title-author', notes: 'leave-out' },
       },
       expect.any(Function),
     );
@@ -504,7 +504,7 @@ describe('exporting', () => {
     expect(render).toHaveBeenLastCalledWith(
       expect.objectContaining({
         kind: 'fdx',
-        options: { sceneNumbers: 'written', titlePage: 'title-author' },
+        options: { sceneNumbers: 'written', titlePage: 'title-author', notes: 'leave-out' },
       }),
       expect.any(Function),
     );
@@ -515,7 +515,9 @@ describe('exporting', () => {
     shown.project = { exportOptions: { sceneNumbers: 'roman', titlePage: 'none' } };
     expect(await t.exportScript('txt')).toBe('saved');
     expect(render).toHaveBeenLastCalledWith(
-      expect.objectContaining({ options: { sceneNumbers: 'none', titlePage: 'none' } }),
+      expect.objectContaining({
+        options: { sceneNumbers: 'none', titlePage: 'none', notes: 'leave-out' },
+      }),
       expect.any(Function),
     );
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt, with no title page.');
@@ -544,9 +546,110 @@ describe('exporting', () => {
     expect(
       render.mock.calls.map(([request]) => (request as { options: { titlePage: string } }).options),
     ).toEqual([
-      { sceneNumbers: 'none', titlePage: 'full' },
-      { sceneNumbers: 'none', titlePage: 'none' },
+      { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' },
+      { sceneNumbers: 'none', titlePage: 'none', notes: 'leave-out' },
     ]);
+  });
+
+  test('a screenplay and a stage play export as md', async () => {
+    const STAGE = 'Title: The Lamp\n\n# ACT ONE\n\n## SCENE 1\n\nThe keeper waits.\n';
+    for (const [text, name] of [
+      [TEXT, 'The Call Part 1.md'],
+      [STAGE, 'The Lamp.md'],
+    ] as const) {
+      for (const inPlace of [true, false]) {
+        const t = await load({ inPlace });
+        shown.text = text;
+        render.mockResolvedValue('# Markdown\n');
+        expect(await t.exportScript('md')).toBe('saved');
+        // Rendered in the worker, with the script's template and options, as the PDF is.
+        expect(render).toHaveBeenCalledWith(
+          {
+            kind: 'md',
+            source: text,
+            template: builtins['us-screenplay'],
+            options: { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' },
+          },
+          expect.any(Function),
+        );
+        expect(t.log).toEqual(
+          inPlace ? [`pick ${name} markdown`, 'write'] : [`download ${name} text/markdown`],
+        );
+        expect(t.written[0]?.data).toBe('# Markdown\n');
+        expect(t.exportNotice.value).toBe(`Exported ${name}.`);
+      }
+    }
+  });
+
+  test('a Markdown document’s md export is still its own text', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = '# The Treatment\n\nWords [[not a note]].\n';
+    shown.kind = 'markdown';
+    // Its export options, if any were kept, change nothing: the file is the text.
+    shown.project = { exportOptions: { notes: 'include', sceneNumbers: 'all' } };
+    expect(await t.exportScript('md')).toBe('saved');
+    expect(render).not.toHaveBeenCalled();
+    expect(t.written[0]?.data).toBe(shown.text);
+    expect(t.exportNotice.value).toBe('Exported The Treatment.md.');
+  });
+
+  test('the toast names the Markdown export’s options', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { sceneNumbers: 'all', titlePage: 'none' } };
+    expect(await t.exportScript('md')).toBe('saved');
+    expect(t.exportNotice.value).toBe(
+      'Exported The Call Part 1.md, with every scene numbered and no title page.',
+    );
+    shown.project = {
+      exportOptions: { sceneNumbers: 'all', titlePage: 'none', notes: 'include' },
+    };
+    expect(await t.exportScript('md')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'md',
+        options: { sceneNumbers: 'all', titlePage: 'none', notes: 'include' },
+      }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe(
+      'Exported The Call Part 1.md, with every scene numbered, no title page, and notes.',
+    );
+    // Only a Markdown export carries notes: the PDF's, the text's, and Final Draft's toasts never say so.
+    shown.project = { exportOptions: { notes: 'include' } };
+    expect(await t.exportScript('md')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.md, with notes.');
+    for (const kind of ['pdf', 'txt', 'fdx'] as const) {
+      expect(await t.exportScript(kind)).toBe('saved');
+      expect(t.exportNotice.value).toBe(`Exported The Call Part 1.${kind}.`);
+    }
+  });
+
+  test('the same export asked twice is joined, and one with other notes is its own', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { notes: 'leave-out' } };
+    let release: (() => void) | undefined;
+    render.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve('# One\n');
+        }),
+    );
+    const first = t.exportScript('md');
+    expect(t.exportScript('md')).toBe(first);
+    await vi.waitFor(() => expect(release).toBeDefined());
+    // Notes in Markdown changes while the first is under way: not joined to it.
+    shown.project = { exportOptions: { notes: 'include' } };
+    const second = t.exportScript('md');
+    expect(second).not.toBe(first);
+    expect(t.exportScript('md')).toBe(second);
+    release?.();
+    expect(await first).toBe('saved');
+    expect(await second).toBe('saved');
+    expect(
+      render.mock.calls.map(
+        ([request]) => (request as { options: { notes: string } }).options.notes,
+      ),
+    ).toEqual(['leave-out', 'include']);
   });
 
   test('joins an export already under way', async () => {
@@ -639,7 +742,7 @@ describe('exporting', () => {
     expect(render).toHaveBeenCalledWith(
       expect.objectContaining({
         source: OTHER,
-        options: { sceneNumbers: 'all', titlePage: 'full' },
+        options: { sceneNumbers: 'all', titlePage: 'full', notes: 'leave-out' },
       }),
       expect.any(Function),
     );

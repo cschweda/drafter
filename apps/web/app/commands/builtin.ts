@@ -453,11 +453,10 @@ export function registerBuiltinCommands(): void {
         aboutOpen.value = true;
       },
     },
-    // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
-    // PDF, plain text, or a Final Draft file; a Markdown document as its Markdown file or plain text (a PDF of
-    // one is deferred).
-    // What the open kind exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter
-    // Tight (Markdown PDF design §10); Final Draft for a script, the Markdown file for a document.
+    // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind
+    // exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter Tight (Markdown PDF
+    // design §10); Final Draft for a script; and a Markdown file for both, a script's the whole script
+    // written in the export worker, a document's its own text (Call 24).
     'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
     'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
     'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },

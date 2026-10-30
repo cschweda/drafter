@@ -336,9 +336,18 @@ describe('Export in the desktop menus', () => {
     ]);
     expect(menuFor('fountain').map((c) => [c.id, c.enabled])).toEqual([
       ['export-pdf', true],
-      ['export-md', false],
+      ['export-md', true],
       ['export-txt', true],
       ['export-fdx', true],
+    ]);
+  });
+
+  test('File › Export lists Markdown file for a script', () => {
+    // A screenplay's or a stage play's Markdown export is the same command as a Markdown
+    // document's: the desktop app's File › Export submenu shows it, on, as "Markdown file".
+    registerCommands([command('export-md', { enabled: () => exportApplies('md', 'fountain') })]);
+    expect(menuCommands(useCommands().value)).toEqual([
+      { id: 'export-md', title: 'Export as Markdown file', group: 'File', enabled: true },
     ]);
   });
 });

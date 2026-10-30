@@ -230,6 +230,7 @@ for (const theme of THEMES) {
       const options = page.getByRole('dialog', { name: 'Export options' });
       await expect(options).toBeVisible();
       await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
+      await expect(options.getByRole('group', { name: 'Notes in Markdown' })).toBeVisible();
       await clean(page, 'the Export options dialog');
     });
 
