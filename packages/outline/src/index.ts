@@ -36,6 +36,7 @@ export {
   DEFAULT_WORDS_PER_MINUTE,
   estimateSeconds,
   type Timing,
+  TimingTally,
 } from './timing';
 export { markdownText, treatment } from './treatment';
 export type {

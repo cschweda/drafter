@@ -7,7 +7,7 @@ import { useScript } from '../storage/script';
  * Running time (out-the-door design §3): the two rates a script times itself at, and how its
  * times read. The rates are the script's own, kept on its project in this browser (Call 9, as the
  * export options are), never in the text; the Stats window sets them, and every time shown reads
- * them. The counting itself is `@drafter/outline`'s (`blockTiming`, `estimateSeconds`).
+ * them. The counting itself is `@drafter/outline`'s (`TimingTally`, `estimateSeconds`).
  */
 
 export interface Rates {
@@ -28,7 +28,7 @@ export const RATE_LIMITS = Object.freeze({
 } as const);
 
 const PROBLEMS: Record<keyof Rates, string> = {
-  minutesPerPage: 'Enter a number from 0.5 to 3.',
+  minutesPerPage: 'Enter a number from 0.5 to 3, in tenths, such as 1.2.',
   wordsPerMinute: 'Enter a whole number from 100 to 220, in steps of 5.',
 };
 
@@ -63,14 +63,20 @@ export function parseRate(key: keyof Rates, text: string): number | { problem: s
   return isRate(key, value) ? value : { problem: PROBLEMS[key] };
 }
 
-/** Keeps one rate on the open script's project (no-op in a read-only tab, or for a rate out of range). */
-export async function setRate(key: keyof Rates, value: number): Promise<void> {
+/**
+ * Keeps one rate on the open script's project (no-op in a read-only tab, or for a rate out of
+ * range), and gives back the open script's rates as they then are, for the field to show: what was
+ * kept, never a value that wasn't.
+ */
+export async function setRate(key: keyof Rates, value: number): Promise<Rates> {
   const script = useScript();
-  if (!script.project.value || useGuard().readOnly.value || !isRate(key, value)) return;
-  // Made from the project as it is when this write's turn comes, after any choice before it.
-  await script.keepOnProject((project) => ({
-    timing: { ...ratesOf(project), [key]: value },
-  }));
+  if (script.project.value && !useGuard().readOnly.value && isRate(key, value)) {
+    // Made from the project as it is when this write's turn comes, after any choice before it.
+    await script.keepOnProject((project) => ({
+      timing: { ...ratesOf(project), [key]: value },
+    }));
+  }
+  return ratesOf(script.project.value);
 }
 
 /** Seconds that `eighths` of a page take at `minutesPerPage`. */

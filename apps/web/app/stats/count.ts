@@ -1,6 +1,6 @@
 import type { Block, Doc } from '@drafter/fountain';
 import type { Layout, Page } from '@drafter/layout';
-import { addTiming, blockTiming, type Timing } from '@drafter/outline';
+import { type Timing, TimingTally } from '@drafter/outline';
 import type { Template } from '@drafter/templates';
 import { wordsIn } from '../markdown/words';
 import { sceneCount } from './script-stats';
@@ -16,7 +16,8 @@ export interface Counts {
   words: number;
   /**
    * The words spoken and the lines of action of the whole parse, the preamble included, for the
-   * estimate from the dialogue (`@drafter/outline`'s `blockTiming`). The running time is `pages`
+   * estimate from the dialogue (`@drafter/outline`'s `TimingTally`, which counts a dual-dialogue
+   * pair as its longer speech). The running time is `pages`
    * at the script's rate (`stats/timing.ts`).
    */
   timing: Timing;
@@ -57,8 +58,9 @@ function wordsOfDoc(doc: Doc): number {
 function timingOfDoc(doc: Doc, template: Template): Timing {
   const known = timed.get(doc);
   if (known?.template === template) return known.timing;
-  let timing: Timing = { spoken: 0, actionLines: 0 };
-  for (const block of doc.blocks) timing = addTiming(timing, blockTiming(block, template));
+  const tally = new TimingTally(template);
+  for (const block of doc.blocks) tally.add(block);
+  const timing = tally.timing();
   timed.set(doc, { template, timing });
   return timing;
 }

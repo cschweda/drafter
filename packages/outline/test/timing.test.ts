@@ -8,6 +8,7 @@ import {
   estimateSeconds,
   sceneIndex,
   type Timing,
+  TimingTally,
 } from '../src';
 import { screenplay, stagePlay } from './helpers';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
@@ -120,6 +121,82 @@ describe('blockTiming', () => {
     const index = sceneIndex(parse('INT. HALL - DAY\n\nEXT. YARD - NIGHT\n'), screenplay);
     expect(index.scenes.map((s) => s.timing)).toEqual([NONE, NONE]);
     expect(estimateSeconds(NONE, DEFAULT_WORDS_PER_MINUTE)).toBe(0);
+  });
+});
+
+/** The tally of every block of `source`: dual dialogue counted once. */
+function tally(source: string, template = screenplay): TimingTally {
+  const t = new TimingTally(template);
+  for (const block of parse(source).blocks) t.add(block);
+  return t;
+}
+
+describe('dual dialogue', () => {
+  test('a pair of speeches side by side takes as long as the longer one', () => {
+    const pair = 'ANN\nOne two three.\n\nBEN ^\nFour five.\n';
+    // Both are spoken, at the same time: the pair is the longer speech, not both.
+    expect(total(pair).spoken).toBe(5);
+    expect(tally(pair).timing()).toEqual({ spoken: 3, actionLines: 0 });
+    // Either side may be the longer.
+    expect(tally('ANN\nOne.\n\nBEN ^\nTwo three four five.\n').timing().spoken).toBe(4);
+    // A parenthetical and a second dialogue block are part of the speech.
+    expect(
+      tally('ANN\n(low)\nOne two.\n\nBEN ^\nThree.\n(beat)\nFour five six.\n').timing().spoken,
+    ).toBe(4);
+  });
+
+  test('a ^ with no speech free to pair with counts in full, as it prints on its own', () => {
+    // After action, at the top, and after a pair (a third ^ can't join it).
+    expect(tally('He runs.\n\nBEN ^\nFour five.\n').timing()).toEqual({
+      spoken: 2,
+      actionLines: 1,
+    });
+    expect(tally('BEN ^\nFour five.\n').timing().spoken).toBe(2);
+    expect(
+      tally('ANN\nOne two three.\n\nBEN ^\nFour five.\n\nCAL ^\nSix seven.\n').timing().spoken,
+    ).toBe(3 + 2);
+    // A note between them prints nothing, so they still pair; a page break or a section parts them.
+    expect(tally('ANN\nOne two three.\n\n[[a note]]\n\nBEN ^\nFour.\n').timing().spoken).toBe(3);
+    expect(tally('ANN\nOne two three.\n\n===\n\nBEN ^\nFour.\n').timing().spoken).toBe(4);
+    expect(tally('ANN\nOne two three.\n\n# Two\n\nBEN ^\nFour.\n').timing().spoken).toBe(4);
+  });
+
+  test('each speaker is credited with their own words, a pair included', () => {
+    const t = tally(
+      'ANN\nOne two three.\n\nBEN ^\nFour five.\n\nAnn sits.\n\n@Ann\nSix.\n\n@McCLANE\n(dry)\n',
+    );
+    // By the cue's name in capitals; a speaker with only a parenthetical has spoken nothing.
+    expect(Object.fromEntries(t.spokenBy())).toEqual({ ANN: 4, BEN: 2, MCCLANE: 0 });
+    expect(t.timing().spoken).toBe(4);
+    // A lyric with no cue before it is spoken, by no one.
+    const lyric = tally('~Happy birthday to you\n');
+    expect(lyric.timing().spoken).toBe(4);
+    expect(lyric.spokenBy().size).toBe(0);
+  });
+
+  test("the scene index counts a pair once, and keeps each speaker's words", () => {
+    const source = [
+      'INT. A - DAY',
+      '',
+      'ANN',
+      'One two three.',
+      '',
+      '@Ben ^',
+      'Four five.',
+      '',
+      'INT. B - DAY',
+      '',
+      'He runs.',
+      '',
+    ].join('\n');
+    const index = sceneIndex(parse(source), screenplay);
+    expect(index.scenes.map((s) => s.timing)).toEqual([
+      { spoken: 3, actionLines: 0 },
+      { spoken: 0, actionLines: 1 },
+    ]);
+    // Keyed by each speaker's name as `speakers` gives it.
+    expect(index.scenes.map((s) => s.spokenBy)).toEqual([{ ANN: 3, Ben: 2 }, {}]);
+    expect(index.scenes[0]?.speakers).toEqual(['ANN', 'Ben']);
   });
 });
 

@@ -151,7 +151,10 @@ async function onRate(key: keyof Rates) {
   }
   rateProblem[key] = '';
   rateText[key] = String(parsed);
-  await setRate(key, parsed);
+  // Then what was kept, so the field never shows a rate the script doesn't have (unless the
+  // writer has typed again meanwhile).
+  const kept = await setRate(key, parsed);
+  if (rateText[key] === String(parsed)) rateText[key] = String(kept[key]);
 }
 /** The ids that describe a rate field: its hint, and its problem when it has one. */
 const describedBy = (key: keyof Rates, hint?: string) =>

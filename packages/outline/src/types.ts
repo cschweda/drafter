@@ -49,8 +49,16 @@ export interface Scene {
   speakers: string[];
   /** Printed words: action, dialogue, and the rest that prints. */
   words: number;
-  /** Its words spoken and lines of action, for the estimate from the dialogue (`blockTiming`). */
+  /**
+   * Its words spoken and lines of action, for the estimate from the dialogue (`TimingTally`: a
+   * dual-dialogue pair counts as its longer speech).
+   */
   timing: Timing;
+  /**
+   * The words each speaker says in the scene, by the name as `speakers` gives it (a speaker with
+   * only a parenthetical has 0); both sides of a dual pair in full. Kept for a per-character view.
+   */
+  spokenBy: Record<string, number>;
   /** Null until a layout that matches the parse is given. */
   pages: ScenePages | null;
 }

@@ -38,16 +38,16 @@ Everything Drafter writes is ordinary Fountain: synopses (`= …`), sections, an
 
 ## Timing
 
-Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block, so a whole script's timing is the sum over its blocks, and `estimateSeconds` turns it into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`).
+Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block; `TimingTally` adds blocks up in order, counting a dual-dialogue pair (`^`) once, as its longer speech, since both are said at the same time. `estimateSeconds` turns a timing into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`). Each scene also has `spokenBy`, the words each of its speakers says.
 
 ```ts
-import { addTiming, blockTiming, estimateSeconds } from '@drafter/outline';
+import { estimateSeconds, TimingTally } from '@drafter/outline';
 
 index.scenes[0].timing; // { spoken: 42, actionLines: 6 }
-const script = doc.blocks
-  .map((block) => blockTiming(block, template))
-  .reduce(addTiming, { spoken: 0, actionLines: 0 });
-estimateSeconds(script, 150); // seconds, at 150 words a minute
+index.scenes[0].spokenBy; // { MARGARET: 30, DANNY: 12 }
+const tally = new TimingTally(template);
+for (const block of doc.blocks) tally.add(block);
+estimateSeconds(tally.timing(), 150); // seconds, at 150 words a minute
 ```
 
 See the [out-the-door design](../../docs/drafter-out-the-door-design.md), §3.

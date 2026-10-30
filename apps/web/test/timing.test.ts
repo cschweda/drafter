@@ -91,7 +91,7 @@ describe('ratesOf', () => {
 
 describe('parseRate', () => {
   test('parseRate accepts the range and refuses the rest', () => {
-    const minutes = { problem: 'Enter a number from 0.5 to 3.' };
+    const minutes = { problem: 'Enter a number from 0.5 to 3, in tenths, such as 1.2.' };
     const words = { problem: 'Enter a whole number from 100 to 220, in steps of 5.' };
     for (const text of [
       '',
@@ -202,19 +202,29 @@ describe('setRate', () => {
     await t.setRate('minutesPerPage', 1.2);
     expect(t.session.project.value?.timing).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 150 });
     expect(await stored()).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 150 });
-    await t.setRate('wordsPerMinute', 180);
+    expect(await t.setRate('wordsPerMinute', 180)).toEqual({
+      minutesPerPage: 1.2,
+      wordsPerMinute: 180,
+    });
     expect(await stored()).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 180 });
     expect(t.editor.view.state.doc.toString()).toBe(text);
     expect(t.session.dirty.value).toBe(false);
 
     // A rate out of range is never stored.
-    await t.setRate('wordsPerMinute', 152);
+    expect(await t.setRate('wordsPerMinute', 152)).toEqual({
+      minutesPerPage: 1.2,
+      wordsPerMinute: 180,
+    });
     await t.setRate('minutesPerPage', Number.NaN);
     expect(await stored()).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 180 });
 
     // A tab that only shows the script keeps nothing.
     const readOnly = vi.spyOn(t.guard.readOnly, 'value', 'get').mockReturnValue(true);
-    await t.setRate('minutesPerPage', 2);
+    // What's kept comes back, for the field to show, not the rate that was asked for.
+    expect(await t.setRate('minutesPerPage', 2)).toEqual({
+      minutesPerPage: 1.2,
+      wordsPerMinute: 180,
+    });
     expect(await stored()).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 180 });
     readOnly.mockRestore();
 

@@ -278,8 +278,9 @@ test.describe('writing stats', () => {
   }) => {
     await start(page);
     await runCommand(page, 'Show stats');
-    // The sample: 1.4 pages at a minute a page; 77 words spoken at 150 a minute (31 s) and 20
-    // lines of action at 1.5 s (30 s), about a minute.
+    // The sample: 1.4 pages at a minute a page; 70 words spoken at 150 a minute (28 s; the shorter
+    // speech of its dual pair is said at the same time as the longer) and 20 lines of action at
+    // 1.5 s (30 s), about a minute.
     await expect(figure(page, 'This script', 'Running time')).toHaveText(
       'About 1 min, at 1 minute a page',
     );
@@ -346,13 +347,15 @@ test.describe('writing stats', () => {
     await expect(figure(page, 'This script', 'Running time')).toContainText(
       'at 1.2 minutes a page',
     );
-    for (const typed of ['10', '0', 'abc', '1,2']) {
+    for (const typed of ['10', '0', 'abc', '1,2', '0.55']) {
       await minutesField(page).fill(typed);
       await minutesField(page).blur();
-      await expect(stats(page).getByRole('alert')).toHaveText('Enter a number from 0.5 to 3.');
+      await expect(stats(page).getByRole('alert')).toHaveText(
+        'Enter a number from 0.5 to 3, in tenths, such as 1.2.',
+      );
       await expect(minutesField(page)).toHaveAttribute('aria-invalid', 'true');
       await expect(minutesField(page)).toHaveAccessibleDescription(
-        'Plays often run longer than a minute a page. Enter a number from 0.5 to 3.',
+        'Plays often run longer than a minute a page. Enter a number from 0.5 to 3, in tenths, such as 1.2.',
       );
       await expect(figure(page, 'This script', 'Running time')).toContainText(
         'at 1.2 minutes a page',

@@ -13,12 +13,14 @@ const count = (source: string) => {
 };
 
 /**
- * The sample's timing, worked out by hand: its 11 speeches come to 77 spoken words (4, 7, 4, 19,
- * 7, 4, 4, 8, 7, 7, 6; the parenthetical and the cut speech in the boneyard add none), and its 11
+ * The sample's timing, worked out by hand: its 11 speeches come to 77 words (4, 7, 4, 19, 7, 4, 4,
+ * 8, 7, 7, 6; the parenthetical and the cut speech in the boneyard add none), less the 7 of
+ * Danny's ^ speech, which is said at the same time as Margaret's 8 and is the shorter, so 70
+ * spoken; and its 11
  * action blocks to 20 lines at 60 columns (73, 133, 86, 94, 81, 81, and 103 characters wrap to 2,
  * 3, 2, 2, 2, 2, and 2; "SILENCE." and "Just the clock." are a line each, and four short lines one).
  */
-const SAMPLE_TIMING = { spoken: 77, actionLines: 20 };
+const SAMPLE_TIMING = { spoken: 70, actionLines: 20 };
 
 describe('runningTime', () => {
   test('says it in minutes, and hours past 59', () => {
@@ -133,6 +135,11 @@ describe('countScript', () => {
     ].join('\n');
     const doc = parse(source);
     expect(countScript(doc, null, template).timing).toEqual({ spoken: 5, actionLines: 3 });
+  });
+
+  test('counts dual dialogue once, as the longer speech of the pair', () => {
+    const pair = 'INT. HALL - DAY\n\nANN\nOne two three.\n\nBEN ^\nFour five.\n';
+    expect(countScript(parse(pair), null, template).timing).toEqual({ spoken: 3, actionLines: 0 });
   });
 
   test('has no pages without a layout, and leaves a lone title page out', () => {
