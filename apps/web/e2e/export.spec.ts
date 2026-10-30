@@ -755,6 +755,81 @@ test.describe('export options', () => {
     await expect(palette(page).getByRole('option', { name: /^Export options/ })).toHaveCount(0);
   });
 
+  test('a Markdown document’s Export options… is reached from the keyboard and says why it is off', async ({
+    page,
+    isMobile,
+    browserName,
+  }) => {
+    test.skip(!!isMobile, 'there is no keyboard on a phone');
+    await start(page);
+    await openMarkdownSample(page);
+    await exportButton(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(pdfItem(page)).toBeFocused();
+    // Safari's Tab skips buttons unless the user has turned that on: there, focus it directly.
+    if (browserName === 'webkit') await optionsItem(page).focus();
+    else for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
+    await expect(optionsItem(page)).toBeFocused();
+    await expect(optionsItem(page)).toHaveAttribute('aria-disabled', 'true');
+    await expect(optionsItem(page)).toHaveAccessibleDescription(
+      'A Markdown document has no scene numbers or title page.',
+    );
+    // Choosing it does nothing: no dialog, and the menu stays.
+    await page.keyboard.press('Enter');
+    // A click too (Playwright's own waits for an enabled item, so the event is sent directly).
+    await optionsItem(page).dispatchEvent('click');
+    await expect(optionsDialog(page)).toBeHidden();
+    await expect(optionsItem(page)).toBeVisible();
+  });
+
+  test('gives focus back to the Export button, or to the script, when the dialog closes', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'there is no keyboard on a phone');
+    await start(page);
+    // From the Export menu: back to its button, after Escape and after Done.
+    await openOptions(page);
+    await page.keyboard.press('Escape');
+    await expect(optionsDialog(page)).toBeHidden();
+    await expect(exportButton(page)).toBeFocused();
+    await openOptions(page);
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    await expect(optionsDialog(page)).toBeHidden();
+    await expect(exportButton(page)).toBeFocused();
+    // From the palette, opened while writing: to the script.
+    await editor(page).click();
+    await runCommand(page, 'Export options…');
+    await expect(optionsDialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(optionsDialog(page)).toBeHidden();
+    await expect(editor(page)).toBeFocused();
+    await runCommand(page, 'Export options…');
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    await expect(optionsDialog(page)).toBeHidden();
+    await expect(editor(page)).toBeFocused();
+
+    // The treatment's dialog, the same way.
+    const treatment = page.getByRole('dialog', { name: 'Export as treatment' });
+    await exportButton(page).click();
+    await menu(page).getByRole('button', { name: 'Treatment (.md)…' }).click();
+    await expect(treatment).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(treatment).toBeHidden();
+    await expect(exportButton(page)).toBeFocused();
+    await exportButton(page).click();
+    await menu(page).getByRole('button', { name: 'Treatment (.md)…' }).click();
+    await treatment.getByRole('button', { name: 'Cancel' }).click();
+    await expect(treatment).toBeHidden();
+    await expect(exportButton(page)).toBeFocused();
+    await editor(page).click();
+    await runCommand(page, 'Export as treatment…');
+    await expect(treatment).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(treatment).toBeHidden();
+    await expect(editor(page)).toBeFocused();
+  });
+
   test('in a read-only tab the choices are disabled and say why, and exporting works', async ({
     context,
     page,

@@ -13,6 +13,7 @@ import {
 } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { useScript } from '~/storage/script';
+import type { ExportOptions } from '~/workers/export-compute';
 
 // Export options (out-the-door design §2.4): how the open script's exports print its scene numbers
 // and its title page. Each choice is kept the moment it is made, on the script's project, never in
@@ -20,7 +21,7 @@ import { useScript } from '~/storage/script';
 const dialog = ref<HTMLDialogElement>();
 const script = useScript();
 const { readOnly } = useGuard();
-const { kind } = useEditor();
+const { kind, view } = useEditor();
 const options = computed(() => exportOptionsOf(script.project.value));
 const markdown = computed(() => kind.value === 'markdown');
 /** Why the choices can't be changed here, or null when they can. */
@@ -32,24 +33,34 @@ const failed = ref(false);
 const SCENE_CHOICES = Object.keys(EXPORT_OPTION_LABELS.sceneNumbers) as SceneNumbering[];
 const TITLE_CHOICES = Object.keys(EXPORT_OPTION_LABELS.titlePage) as TitlePageMode[];
 
+/** What had focus when the dialog opened: the Export menu's button, the palette's input, … */
+let opener: HTMLElement | null = null;
+
 watch(exportOptionsOpen, async (open) => {
   await nextTick();
   if (open) failed.value = false;
-  if (open && dialog.value && !dialog.value.open) dialog.value.showModal();
+  if (open && dialog.value && !dialog.value.open) {
+    // A menu's item is never the opener: the menu is closing (as in the Stats window).
+    const active = document.activeElement;
+    opener = active instanceof HTMLElement && !active.closest('[role="menu"]') ? active : null;
+    dialog.value.showModal();
+  }
   if (!open && dialog.value?.open) dialog.value.close();
 });
 
 function onClose() {
   exportOptionsOpen.value = false;
+  // The browser gives focus back too, but not to an opener that has gone since (the palette's
+  // input, a menu's item): then the script has it, when the Source shows.
+  if (opener?.isConnected) opener.focus();
+  else if (view.dom.offsetParent !== null) view.focus();
+  opener = null;
 }
 
-async function choose<K extends 'sceneNumbers' | 'titlePage'>(
-  key: K,
-  value: K extends 'sceneNumbers' ? SceneNumbering : TitlePageMode,
-) {
+async function choose<K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) {
   failed.value = false;
   try {
-    await setExportOption(key, value as never);
+    await setExportOption(key, value);
   } catch {
     failed.value = true;
   }

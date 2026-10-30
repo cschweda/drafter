@@ -90,9 +90,11 @@ export async function setExportOption<K extends keyof ExportOptions>(
   value: ExportOptions[K],
 ): Promise<void> {
   const script = useScript();
-  const project = script.project.value;
-  if (!project || useGuard().readOnly.value) return;
-  await script.keepOnProject({ exportOptions: { ...exportOptionsOf(project), [key]: value } });
+  if (!script.project.value || useGuard().readOnly.value) return;
+  // Made from the project as it is when this write's turn comes, after any choice before it.
+  await script.keepOnProject((project) => ({
+    exportOptions: { ...exportOptionsOf(project), [key]: value },
+  }));
 }
 
 /** The Export options dialog is open. */

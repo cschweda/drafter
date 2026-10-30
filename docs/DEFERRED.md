@@ -139,3 +139,4 @@ What the Markdown PDF release (v0.16.0) left for later (Markdown PDF design §12
 What v0.17.0 (out-the-door design §7) leaves for later.
 
 - **Scene numbering that never repeats a written number.** Number every scene keeps a number written in the script (`#4#`) and numbers the rest by their place, so five scenes with `#4#` on the second print 1, 4, 3, 4, 5; the dialog says so. Numbering around the written ones, as a production draft does (12, 12A, 13), would need a rule for each case (a written number out of order, a letter after a letter) and is for when a writer asks.
+- **Export options that follow the writer's tab.** A tab that only shows a script (another tab has it open) exports with the options the script had when it opened there; a choice made in the writer's tab afterward reaches it on its next reload. Watching the record for changes, as the text is watched, is for when two tabs of one script are a common way to work.

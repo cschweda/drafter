@@ -135,12 +135,16 @@ export interface ScriptSession {
    */
   setKind(kind: DocumentKind): Promise<void>;
   /**
-   * Keeps `fields`, the open script's own settings that are not its text (its export options), on
-   * its project: the copy held here at once, and the stored one in turn. Nothing in the text
-   * changes, so the script isn't changed and Undo has nothing new. Does nothing in a tab that only
-   * shows the script, or with no script open.
+   * Keeps the fields `change` makes from the project, the open script's own settings that are not
+   * its text (its export options), on its project: the copy held here and the stored one together.
+   * `change` runs in its turn among the session's other writes, on the copy as it is then, so two
+   * quick changes can't undo each other. Nothing in the text changes, so the script isn't changed
+   * and Undo has nothing new. Does nothing in a tab that only shows the script, or with no script
+   * open.
    */
-  keepOnProject(fields: Pick<Partial<Project>, 'exportOptions'>): Promise<void>;
+  keepOnProject(
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions'>,
+  ): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
   /** A sample is open and the editor can change it: Reset sample would do something. */
@@ -740,10 +744,12 @@ function create(): ScriptSession {
     }
   }
 
-  async function keepOnProject(fields: Pick<Partial<Project>, 'exportOptions'>) {
+  async function keepOnProject(
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions'>,
+  ) {
     const current = project.value;
     if (!current || guard.readOnly.value) return;
-    await patch(current.id, fields);
+    await patch(current.id, change);
   }
 
   async function sampleProject(kind: SampleKind): Promise<Project> {
@@ -799,10 +805,18 @@ function create(): ScriptSession {
     }
   }
 
-  /** Changes the open script's stored fields and the copy held here together. */
-  function patch(id: string, fields: Partial<Project>): Promise<void> {
+  /**
+   * Changes the open script's stored fields and the copy held here together. `fields` can be made
+   * from the held copy in this change's turn, so it starts from the writes before it.
+   */
+  function patch(
+    id: string,
+    change: Partial<Project> | ((held: Project) => Partial<Project>),
+  ): Promise<void> {
     return exclusive(async () => {
       const held = project.value;
+      if (typeof change === 'function' && held?.id !== id) return;
+      const fields = typeof change === 'function' ? change(held as Project) : change;
       if (held?.id === id && writer && !guard.readOnly.value) {
         // This tab writes the script, and the copy it holds is the stored one.
         const next: Project = { ...held, ...fields, updatedAt: Date.now() };
@@ -863,6 +877,8 @@ function create(): ScriptSession {
               moved = true;
               throw new MovedOn();
             }
+            // The export options chosen on the sample are the writer's choices: they go with the text.
+            const { exportOptions } = project.value;
             const created = await createProject({
               source: savedText,
               fileName,
@@ -870,6 +886,7 @@ function create(): ScriptSession {
               savedAt,
               ...format,
               ...(handleId ? { fsHandleId: handleId } : {}),
+              ...(exportOptions ? { exportOptions } : {}),
             });
             await setSavedText(created.id, savedText);
             made = created.id;
@@ -925,6 +942,7 @@ function create(): ScriptSession {
             savedHash: hash,
             savedAt,
             ...(handleId ? { fsHandleId: handleId } : {}),
+            ...(stored.exportOptions ? { exportOptions: stored.exportOptions } : {}),
           });
           await setSavedText(created.id, savedText);
           return created.id;

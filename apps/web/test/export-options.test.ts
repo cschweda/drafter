@@ -153,4 +153,30 @@ describe('setExportOption', () => {
     await t.session.flush();
     expect(await stored()).toEqual({ sceneNumbers: 'written', titlePage: 'none' });
   });
+
+  test('two quick choices are both kept, though the first is still being written', async () => {
+    const t = await visit();
+    const id = t.session.project.value?.id as string;
+    // The first write to the database is slow: the second choice is made while it waits.
+    const put = t.db.projects.put.bind(t.db.projects);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let first = true;
+    vi.spyOn(t.db.projects, 'put').mockImplementation(async (...args) => {
+      if (first) {
+        first = false;
+        await held;
+      }
+      return put(...args);
+    });
+    const one = t.setExportOption('sceneNumbers', 'written');
+    const two = t.setExportOption('titlePage', 'none');
+    release();
+    await Promise.all([one, two]);
+    const both = { sceneNumbers: 'written', titlePage: 'none' };
+    expect(t.session.project.value?.exportOptions).toEqual(both);
+    expect((await t.db.projects.get(id))?.exportOptions).toEqual(both);
+  });
 });

@@ -146,6 +146,14 @@ for (const theme of THEMES) {
       await showTab(page, 'Preview');
       await expect(page.getByRole('article', { name: 'Preview' })).toContainText('Some words');
       await clean(page, 'a Markdown document, in the Preview');
+      // Its Export menu, with Export options… off and the reason under it.
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await expect(
+        page
+          .getByRole('group', { name: 'Export' })
+          .getByRole('button', { name: 'Export options…' }),
+      ).toHaveAttribute('aria-disabled', 'true');
+      await clean(page, 'a Markdown document’s Export menu');
     });
 
     test(`has no accessibility violations with the element bar's menus open (${theme})`, async ({

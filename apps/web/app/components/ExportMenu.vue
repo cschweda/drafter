@@ -74,13 +74,17 @@ function choose(kind: ExportKind) {
  */
 const optionsWhy = computed(() => (kind.value === 'markdown' ? OPTIONS_NOT_FOR_MARKDOWN : ''));
 function chooseOptions() {
-  close(false);
+  // Off, but still in the Tab order (aria-disabled), so the keyboard reaches it and hears why.
+  if (optionsWhy.value) return;
+  // The menu's button has focus as the dialog opens, so the dialog gives it back on closing: the
+  // item that opened it is gone by then.
+  close(true);
   commandById('export-options')?.run();
 }
 
 /** The treatment asks a question first, in its own dialog (Phase 2 design §6.4). */
 function chooseTreatment() {
-  close(false);
+  close(true);
   commandById('export-treatment')?.run();
 }
 
@@ -136,7 +140,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button
         type="button"
         class="item"
-        :disabled="!!optionsWhy"
+        :aria-disabled="optionsWhy ? 'true' : undefined"
         :aria-describedby="optionsWhy ? 'export-options-why' : undefined"
         @click="chooseOptions"
       >
@@ -206,10 +210,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   text-align: left;
   cursor: pointer;
 }
-.item:hover:not(:disabled) {
+.item:hover:not([aria-disabled='true']) {
   background: var(--chrome);
 }
-.item:disabled {
+.item[aria-disabled='true'] {
   color: var(--muted);
   cursor: default;
 }
