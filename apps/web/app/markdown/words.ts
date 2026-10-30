@@ -8,7 +8,7 @@ import type { MdNode } from './render';
  * medium mathematical space, the ideographic space, and the byte-order mark. A comparison per
  * character, where a regular expression per character cost more than the reparse on a long script.
  */
-function isSpace(code: number): boolean {
+export function isSpace(code: number): boolean {
   if (code <= 0x20) return code === 0x20 || (code >= 0x09 && code <= 0x0d);
   if (code < 0xa0) return false;
   return (

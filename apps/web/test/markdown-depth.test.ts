@@ -145,12 +145,19 @@ describe('a Markdown document’s nesting, scanned before it is parsed', () => {
       const small = make(MB / 8);
       const large = make(MB);
       best(() => containerDepth(small, Number.POSITIVE_INFINITY), 1);
-      const growth =
-        best(() => containerDepth(large, Number.POSITIVE_INFINITY)) /
-        Math.max(
-          best(() => containerDepth(small, Number.POSITIVE_INFINITY)),
-          0.1,
+      // A ratio that looks worse is measured again, up to three times, and the best kept: a busy
+      // machine only ever slows a run, while quadratic work looks quadratic every time.
+      let growth = Number.POSITIVE_INFINITY;
+      for (let attempt = 0; attempt < 3 && growth >= 20; attempt++) {
+        growth = Math.min(
+          growth,
+          best(() => containerDepth(large, Number.POSITIVE_INFINITY)) /
+            Math.max(
+              best(() => containerDepth(small, Number.POSITIVE_INFINITY)),
+              0.1,
+            ),
         );
+      }
       console.log(`Nesting scan, ${name}: ${growth.toFixed(1)}× from n to 8n.`);
       // Linear is 8×, quadratic 64×: 20 tells them apart with room for a busy machine.
       expect(growth, name).toBeLessThan(20);
