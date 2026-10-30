@@ -47,7 +47,7 @@ Each path is a file or a folder. A folder's `.fdx`, `.highland`, and `.fadein` f
 
 | Option | What it does |
 |---|---|
-| `--out <dir>` | Write the `.fountain` files here, made if it is missing, instead of beside each file. With `--recursive`, a file in a subfolder goes in the same subfolder under `--out`. |
+| `--out <dir>` | Write the `.fountain` files here, made if it is missing, instead of beside each file. With `--recursive`, a file in a subfolder goes in the same subfolder under `--out`. Files from several paths share it: two that would make the same `.fountain` there aren't both written, and the second is refused. |
 | `--force` | Replace a `.fountain` that is already there. Without it, that file is skipped and left as it is. |
 | `--recursive` | Convert the scripts in a folder's subfolders too (never following a link to a folder). |
 
