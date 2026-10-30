@@ -1,5 +1,6 @@
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { type Browser, expect, type Locator, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 import {
   chooseTab,
@@ -10,6 +11,7 @@ import {
   openSettings,
   palette,
   paletteInput,
+  runCommand,
   setText,
   settingsDialog,
   showSource,
@@ -235,7 +237,9 @@ for (const theme of THEMES) {
       const options = page.getByRole('dialog', { name: 'Export options' });
       await expect(options).toBeVisible();
       await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
-      await expect(options.getByRole('group', { name: 'Notes in Markdown' })).toBeVisible();
+      await expect(
+        options.getByRole('group', { name: 'Include notes (Markdown and HTML)' }),
+      ).toBeVisible();
       await clean(page, 'the Export options dialog');
     });
 
@@ -580,4 +584,78 @@ test.describe('the tour cards and the help pages', () => {
     expect(count).toBeGreaterThan(0);
     await expect(page.getByRole('group', { name: /example$/ })).toHaveCount(count);
   });
+});
+
+// An exported HTML file (HTML export design §9): axe on the file itself, opened as a reader opens
+// it, with nothing else answered, in each of its palettes: a screenplay's Pages and Reading views,
+// and a Markdown document.
+test.describe('an exported HTML file', () => {
+  const AT = 'http://exported.drafter.test/file.html';
+
+  /** Exports the open document as HTML from the Export menu, and answers its text. */
+  async function exportHtml(page: Page): Promise<string> {
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const download = page.waitForEvent('download');
+    await page
+      .getByRole('group', { name: 'Export' })
+      .getByRole('button', { name: 'HTML (.html)' })
+      .click();
+    const file = await download;
+    return await readFile(await file.path(), 'utf8');
+  }
+
+  /** Opens `html` in a new page with every other request refused, in `palette`. */
+  async function open(browser: Browser, html: string, palette: Theme) {
+    const context = await browser.newContext();
+    await context.route('**/*', (route) =>
+      route.request().url() === AT
+        ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html })
+        : route.abort(),
+    );
+    const file = await context.newPage();
+    await file.goto(AT);
+    await file.evaluate(() => document.fonts.ready);
+    if (palette === 'light') await file.getByRole('button', { name: 'Light' }).click();
+    await expect(file.locator('html')).toHaveAttribute('data-theme', palette);
+    return { file, context };
+  }
+
+  for (const palette of THEMES) {
+    test(`exported HTML has no accessibility violations (${palette} palette)`, async ({
+      page,
+      browser,
+    }) => {
+      await removePickers(page);
+      await start(page);
+      const screenplay = await exportHtml(page);
+      await runCommand(page, 'Sample script: Markdown');
+      await expect(editor(page)).toContainText('# Sample: Markdown');
+      // With a link and a footnote, and its back link, as well as the sample's lists and quote.
+      await setText(
+        page,
+        '# Harbour Notes\n\nSee [the guide](https://fountain.io/syntax).[^1]\n\n## Later\n\n> A quote.\n\n- One\n- Two\n\n`code`\n\n[^1]: A note.\n',
+      );
+      await expect(editor(page)).toContainText('[^1]: A note.');
+      const markdown = await exportHtml(page);
+
+      const script = await open(browser, screenplay, palette);
+      try {
+        await expect(script.file.locator('main .pages')).toBeVisible();
+        expect(await violations(script.file), `a screenplay's Pages (${palette})`).toEqual([]);
+        await script.file.getByRole('button', { name: 'Reading' }).click();
+        await expect(script.file.locator('main .reading')).toBeVisible();
+        expect(await violations(script.file), `a screenplay's Reading (${palette})`).toEqual([]);
+      } finally {
+        await script.context.close();
+      }
+
+      const document = await open(browser, markdown, palette);
+      try {
+        await expect(document.file.locator('main.document')).toBeVisible();
+        expect(await violations(document.file), `a Markdown document (${palette})`).toEqual([]);
+      } finally {
+        await document.context.close();
+      }
+    });
+  }
 });

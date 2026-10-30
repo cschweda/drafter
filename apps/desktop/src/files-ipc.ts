@@ -23,6 +23,7 @@ const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
   '.md': { name: 'Markdown file', extensions: ['md', 'markdown'] },
   '.txt': { name: 'Plain text', extensions: ['txt'] },
   '.pdf': { name: 'PDF', extensions: ['pdf'] },
+  '.html': { name: 'Web page', extensions: ['html'] },
   '.fdx': { name: 'Final Draft file', extensions: ['fdx'] },
 };
 const ALL_FILES: FileFilter = { name: 'All files', extensions: ['*'] };

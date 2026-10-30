@@ -16,6 +16,7 @@ const shown = vi.hoisted(() => ({
     lineBreak?: '\n' | '\r\n';
     bom?: boolean;
     exportOptions?: Record<string, string>;
+    timing?: { minutesPerPage?: number };
   },
 }));
 const switching = vi.hoisted(() => ({ busy: undefined as undefined | { value: boolean } }));
@@ -174,6 +175,102 @@ describe('exporting', () => {
     const t = await load({ inPlace: false });
     expect(await t.exportScript('fdx')).toBe('saved');
     expect(t.log).toEqual(['download The Call Part 1.fdx application/xml']);
+  });
+
+  test('html is an export for scripts and Markdown documents', async () => {
+    const t = await load({ inPlace: true });
+    expect(t.exportApplies('html', 'fountain')).toBe(true);
+    expect(t.exportApplies('html', 'markdown')).toBe(true);
+    // Second in each list, after the PDF: the other finished-looking file.
+    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'txt', 'fdx', 'md']);
+    expect(t.EXPORTS.markdown).toEqual(['pdf', 'html', 'md', 'txt']);
+  });
+
+  test('the HTML file is named like the others, ending .html', async () => {
+    for (const inPlace of [true, false]) {
+      const t = await load({ inPlace });
+      shown.project = { fileName: 'call.fountain', timing: { minutesPerPage: 1.5 } };
+      preferences.spellLanguage = 'en-GB';
+      render.mockResolvedValue('<!DOCTYPE html>\n<html></html>\n');
+      expect(await t.exportScript('html')).toBe('saved');
+      expect(t.log).toEqual(
+        inPlace
+          ? ['pick The Call Part 1.html html', 'write']
+          : ['download The Call Part 1.html text/html'],
+      );
+      expect(t.written[0]?.data).toBe('<!DOCTYPE html>\n<html></html>\n');
+      // The script's text, template, and options, as the PDF's; its title, the spelling
+      // language, the app's name, and the script's own page rate for the header's kind line.
+      expect(render).toHaveBeenCalledWith(
+        {
+          kind: 'html',
+          source: TEXT,
+          template: builtins['us-screenplay'],
+          options: { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' },
+          title: 'The Call: Part 1',
+          lang: 'en-GB',
+          generator: expect.stringMatching(/^Drafter\b/),
+          minutesPerPage: 1.5,
+        },
+        expect.any(Function),
+      );
+      expect(t.exportNotice.value).toBe('Exported The Call Part 1.html.');
+    }
+  });
+
+  test('a Markdown document exports HTML, rendered in the worker from its text', async () => {
+    const t = await load({ inPlace: false });
+    shown.text = '# The Treatment\n\nWords.\n';
+    shown.kind = 'markdown';
+    // Its kept options change nothing, and its toast names none.
+    shown.project = { exportOptions: { notes: 'include', sceneNumbers: 'all' } };
+    render.mockResolvedValue('<!DOCTYPE html>\n');
+    expect(await t.exportScript('html')).toBe('saved');
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'markdown-html',
+        source: shown.text,
+        title: 'The Treatment',
+        lang: 'en-US',
+        generator: expect.stringMatching(/^Drafter\b/),
+      },
+      expect.any(Function),
+    );
+    expect(t.log).toEqual(['download The Treatment.html text/html']);
+    expect(t.exportNotice.value).toBe('Exported The Treatment.html.');
+  });
+
+  test('notes travel to an html export when included', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { sceneNumbers: 'all', notes: 'include' } };
+    render.mockResolvedValue('<!DOCTYPE html>\n');
+    expect(await t.exportScript('html')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'html',
+        options: { sceneNumbers: 'all', titlePage: 'full', notes: 'include' },
+      }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe(
+      'Exported The Call Part 1.html, with every scene numbered and notes.',
+    );
+    // Still never a PDF's.
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf, with every scene numbered.');
+  });
+
+  test('says a Markdown document nested too deeply to export as HTML in words', async () => {
+    const t = await load({ inPlace: false });
+    shown.text = '# Deep\n';
+    shown.kind = 'markdown';
+    render.mockRejectedValue(
+      new Error('This document is nested too deeply to export: more than 1000 levels.'),
+    );
+    expect(await t.exportScript('html')).toBe('cancelled');
+    expect(t.exportError.value).toBe(
+      'Couldn’t export Deep.html: this document is nested too deeply to lay out.',
+    );
   });
 
   test('says only a screenplay or a stage play exports as Final Draft, before any picker', async () => {

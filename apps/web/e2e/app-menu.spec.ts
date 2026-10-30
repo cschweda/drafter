@@ -197,7 +197,7 @@ test.describe('the app menu', () => {
     await expect(palette.getByRole('option', { name: /^Export as Markdown file/ })).toBeVisible();
   });
 
-  test('offers a Markdown document the PDF, the Markdown file, and plain text', async ({
+  test('offers a Markdown document the PDF, the HTML page, the Markdown file, and plain text', async ({
     page,
   }) => {
     await start(page);
@@ -209,6 +209,7 @@ test.describe('the app menu', () => {
     const exports = page.getByRole('menuitem', { name: /^Export as/ });
     await expect(exports).toHaveText([
       /^Export as PDF/,
+      /^Export as HTML/,
       /^Export as Markdown/,
       /^Export as plain text/,
     ]);

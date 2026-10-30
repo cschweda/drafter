@@ -308,11 +308,20 @@ describe('what a page may read and write', () => {
     // … but never written.
     expect(await codeOf(handlers.write(event, config, bytes('X')))).toBe('not-allowed');
     expect(await readFile(config, 'utf8')).toBe('SETTING=1');
-    for (const name of ['a.fountain', 'a.md', 'a.markdown', 'a.txt', 'a.pdf', 'A.FOUNTAIN']) {
+    for (const name of [
+      'a.fountain',
+      'a.md',
+      'a.markdown',
+      'a.txt',
+      'a.pdf',
+      'a.html',
+      'A.FOUNTAIN',
+    ]) {
       const path = join(dir, name);
       const own = setUp([path]);
-      // Each saved as its own kind (an export as a .pdf; saveTarget keeps the kinds apart).
-      await own.handlers.showSave(own.event, name, name.endsWith('.pdf') ? '.pdf' : '.fountain');
+      // Each saved as its own kind (an export as a .pdf or .html; saveTarget keeps the kinds apart).
+      const kind = name.endsWith('.pdf') ? '.pdf' : name.endsWith('.html') ? '.html' : '.fountain';
+      await own.handlers.showSave(own.event, name, kind);
       await own.handlers.write(own.event, path, bytes(name));
       expect(await readFile(path, 'utf8')).toBe(name);
     }

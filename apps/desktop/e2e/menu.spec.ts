@@ -146,6 +146,28 @@ test('File › Export › Markdown file exports a script', async ({ desktop, pro
   expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.md$/);
 });
 
+test('File › Export › HTML saves a script as one .html page', async ({ desktop, profile }) => {
+  const { app, page } = await desktop();
+  const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;
+  await expect.poll(() => state('export-html')).toBe(true);
+  const folder = join(profile.home, 'Exports');
+  mkdirSync(folder, { recursive: true });
+  // Typed without its extension: the Save dialog's type adds it.
+  const target = join(folder, 'The Call page');
+  answerDialogs(profile, [target]);
+  await chooseMenuItem(app, ['File', 'Export', 'HTML']);
+  await expect(page.locator('.toast [role="status"]').filter({ hasText: 'Exported' })).toHaveText(
+    'Exported The Call page.html.',
+  );
+  const written = readFileSync(`${target}.html`, 'utf8');
+  expect(written.startsWith('<!DOCTYPE html>')).toBe(true);
+  expect(written).toContain('<h1 class="title">The Call</h1>');
+  expect(written).toContain('Screenplay · ');
+  expect(written).toMatch(/<meta name="generator" content="Drafter \d+\.\d+\.\d+" \/>/);
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.html' });
+  expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.html$/);
+});
+
 test('creates one script on Mod+Alt+N, and the editor’s Mod+Alt keys still work', async ({
   desktop,
 }) => {

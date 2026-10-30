@@ -117,6 +117,9 @@ importers:
       '@drafter/render-html':
         specifier: workspace:*
         version: link:../../packages/render-html
+      '@drafter/render-html-file':
+        specifier: workspace:*
+        version: link:../../packages/render-html-file
       '@drafter/render-pdf':
         specifier: workspace:*
         version: link:../../packages/render-pdf

@@ -372,6 +372,7 @@ describe('Export options in the desktop menus', () => {
     expect(sent.map((c) => c.id)).toEqual([
       'export-pdf',
       'export-md',
+      'export-html',
       'export-txt',
       'export-fdx',
       'export-treatment',

@@ -43,7 +43,7 @@ export class FileProblemError extends Error {
   }
 }
 
-export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'txt' | 'fdx';
+export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'html' | 'txt' | 'fdx';
 
 export interface FileAccess {
   /** Save writes back to the file it came from (Chromium's API; a desktop version: always). */
@@ -101,6 +101,7 @@ const TYPES: Record<FileKind, PickerOptions['types']> = {
   ],
   txt: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }],
   pdf: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
+  html: [{ description: 'Web page', accept: { 'text/html': ['.html'] } }],
   fdx: [{ description: 'Final Draft file', accept: { 'application/xml': ['.fdx'] } }],
 };
 

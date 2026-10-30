@@ -4,9 +4,15 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { parse } from '@drafter/fountain';
+import { paginate } from '@drafter/layout';
+import { renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
+import { FONT_FILES } from '@drafter/render-pdf';
+import { builtins, type Template } from '@drafter/templates';
+import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { fileNameFor } from '../app/storage/text';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
+import { setText } from './modules';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 // pdf-lib and pdfjs are render-pdf's, so they are found from there.
@@ -21,6 +27,7 @@ const exportButton = (page: Page) => page.getByRole('button', { name: 'Export', 
 const menu = (page: Page) => page.getByRole('group', { name: 'Export' });
 const pdfItem = (page: Page) => menu(page).getByRole('button', { name: 'PDF' });
 const txtItem = (page: Page) => menu(page).getByRole('button', { name: 'Plain text (.txt)' });
+const htmlItem = (page: Page) => menu(page).getByRole('button', { name: 'HTML (.html)' });
 const toast = (page: Page) => page.locator('.toast [role="status"]');
 const ready = (page: Page) => toast(page).filter({ hasText: 'Exported' });
 
@@ -241,7 +248,7 @@ test.describe('exporting where the browser downloads', () => {
     await page.keyboard.press('Delete');
     const downloads: string[] = [];
     page.on('download', (file) => downloads.push(file.suggestedFilename()));
-    for (const item of [pdfItem, txtItem]) {
+    for (const item of [pdfItem, htmlItem, txtItem]) {
       await exportButton(page).click();
       await item(page).click();
       await expect(
@@ -510,7 +517,7 @@ test.describe('the Export menu from the keyboard', () => {
     // Safari's Tab skips buttons unless the user has turned that on.
     if (browserName !== 'webkit') {
       await page.keyboard.press('Tab');
-      await expect(txtItem(page)).toBeFocused();
+      await expect(htmlItem(page)).toBeFocused();
     }
 
     await page.keyboard.press('Escape');
@@ -605,7 +612,7 @@ async function openOptions(page: Page) {
 /** Opens the dialog, chooses `label` in the `group`, and closes it with Done. */
 async function choose(
   page: Page,
-  group: 'Scene numbers' | 'Title page' | 'Notes in Markdown',
+  group: 'Scene numbers' | 'Title page' | 'Include notes (Markdown and HTML)',
   label: string,
 ) {
   await openOptions(page);
@@ -651,6 +658,7 @@ test.describe('export options', () => {
     await exportButton(page).click();
     await expect(menu(page).getByRole('button')).toHaveText([
       'PDF',
+      'HTML (.html)',
       'Plain text (.txt)',
       'Final Draft (.fdx)',
       'Markdown (.md)',
@@ -774,7 +782,7 @@ test.describe('export options', () => {
     await expect(pdfItem(page)).toBeFocused();
     // Safari's Tab skips buttons unless the user has turned that on: there, focus it directly.
     if (browserName === 'webkit') await optionsItem(page).focus();
-    else for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
+    else for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
     await expect(optionsItem(page)).toBeFocused();
     await expect(optionsItem(page)).toHaveAttribute('aria-disabled', 'true');
     await expect(optionsItem(page)).toHaveAccessibleDescription(
@@ -967,15 +975,17 @@ test.describe('a script as Markdown', () => {
     );
   });
 
-  test('includes notes when Notes in Markdown says Include, and the choice is remembered after a reload', async ({
+  test('includes notes when Include notes says Include, and the choice is remembered after a reload', async ({
     page,
   }) => {
     await start(page);
-    await choose(page, 'Notes in Markdown', 'Include');
+    await choose(page, 'Include notes (Markdown and HTML)', 'Include');
     await page.reload();
     await expect(editor(page)).toContainText('The Call');
     await openOptions(page);
-    const notes = optionsDialog(page).getByRole('group', { name: 'Notes in Markdown' });
+    const notes = optionsDialog(page).getByRole('group', {
+      name: 'Include notes (Markdown and HTML)',
+    });
     await expect(notes.getByRole('radio', { name: 'Include', exact: true })).toBeChecked();
     await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
     const { text } = await downloadMarkdown(page);
@@ -989,7 +999,7 @@ test.describe('a script as Markdown', () => {
     await expect(ready(page)).toHaveText('Exported The Call.pdf.');
   });
 
-  test('Notes in Markdown is reached from the keyboard and the dialog passes axe in both themes', async ({
+  test('Include notes is reached from the keyboard and the dialog passes axe in both themes', async ({
     page,
     isMobile,
     browserName,
@@ -999,14 +1009,16 @@ test.describe('a script as Markdown', () => {
       await start(page);
       await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
       await openOptions(page);
-      const notes = optionsDialog(page).getByRole('group', { name: 'Notes in Markdown' });
+      const notes = optionsDialog(page).getByRole('group', {
+        name: 'Include notes (Markdown and HTML)',
+      });
       await expect(notes).toContainText(
-        'Only a Markdown export carries notes; a PDF never prints them.',
+        'Only the Markdown and HTML exports carry notes; a PDF never prints them.',
       );
       const leaveOut = notes.getByRole('radio', { name: 'Leave out', exact: true });
       const include = notes.getByRole('radio', { name: 'Include', exact: true });
       await expect(leaveOut).toBeChecked();
-      await expect(include).toHaveAccessibleDescription(/Each note and synopsis as a quote/);
+      await expect(include).toHaveAccessibleDescription(/each note and synopsis as a quote/);
       // The dialog's fades are waited out: axe measures the colors on the screen.
       await page.evaluate(() =>
         Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
@@ -1020,7 +1032,7 @@ test.describe('a script as Markdown', () => {
       ).toEqual([]);
       // Last, so the choice it makes is not the next pass's start.
       if (!isMobile && theme === 'light') {
-        // Done has focus; one step back is the Notes in Markdown choice, and an arrow changes it.
+        // Done has focus; one step back is the Include notes choice, and an arrow changes it.
         await expect(optionsDialog(page).getByRole('button', { name: 'Done' })).toBeFocused();
         // Safari's Tab skips form controls unless the user has turned that on: there, focus it.
         if (browserName === 'webkit') await leaveOut.focus();
@@ -1037,12 +1049,255 @@ test.describe('a script as Markdown', () => {
 
   test('the script is unchanged by exporting Markdown', async ({ page }) => {
     await start(page);
-    await choose(page, 'Notes in Markdown', 'Include');
+    await choose(page, 'Include notes (Markdown and HTML)', 'Include');
     const before = await editor(page).evaluate((el) => el.textContent);
     await downloadMarkdown(page);
     await expect(ready(page)).toHaveText('Exported The Call.md, with notes.');
     expect(await editor(page).evaluate((el) => el.textContent)).toBe(before);
     // No changed dot in the title.
     await expect(page).toHaveTitle('The Call — Drafter');
+  });
+});
+
+/** Where an exported HTML file is opened: an address no server answers, which the test answers. */
+const OPENED_AT = 'http://exported.drafter.test/file.html';
+
+/**
+ * Opens `html` in a page of `context` as a reader would open the file, with every other request
+ * refused, and answers what was asked for besides the file (a `data:` font is in the file, and is
+ * no request).
+ */
+async function openExported(context: BrowserContext, html: string, { script = true } = {}) {
+  const asked: string[] = [];
+  context.on('request', (request) => {
+    if (!request.url().startsWith('data:')) asked.push(request.url());
+  });
+  await context.route('**/*', (route) =>
+    route.request().url() === OPENED_AT
+      ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html })
+      : route.abort(),
+  );
+  const page = await context.newPage();
+  await page.goto(OPENED_AT);
+  // With JavaScript off there is nothing to evaluate in (Firefox waits for ever).
+  if (script) await page.evaluate(() => document.fonts.ready);
+  return { page, others: () => asked.filter((url) => url !== OPENED_AT) };
+}
+
+test.describe('Export as HTML', () => {
+  test.beforeEach(async ({ page }) => {
+    await removePickers(page);
+  });
+
+  const appMenu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+
+  /** Runs `choose`, which starts a download, and answers the file's name and text. */
+  async function downloaded(
+    page: Page,
+    choose: () => Promise<void>,
+  ): Promise<{ name: string; text: string }> {
+    const download = page.waitForEvent('download');
+    await choose();
+    const file = await download;
+    return { name: file.suggestedFilename(), text: await readFile(await file.path(), 'utf8') };
+  }
+
+  const fromExportMenu = (page: Page) =>
+    downloaded(page, async () => {
+      await exportButton(page).click();
+      await htmlItem(page).click();
+    });
+
+  test('exports HTML from the Export menu, the app menu, and the palette', async ({ page }) => {
+    await start(page);
+    const fromMenu = await fromExportMenu(page);
+    expect(fromMenu.name).toBe('The Call.html');
+    expect(fromMenu.text.toLowerCase().startsWith('<!doctype html>')).toBe(true);
+    expect(fromMenu.text).toContain('<h1 class="title">The Call</h1>');
+    expect(fromMenu.text).toMatch(/<p class="kind">Screenplay · 2 pages · About \d+ min<\/p>/);
+    await expect(ready(page)).toHaveText('Exported The Call.html.');
+
+    const fromAppMenu = await downloaded(page, async () => {
+      await page.getByRole('button', { name: 'Drafter menu' }).click();
+      await appMenu(page)
+        .getByRole('menuitem', { name: /^Export as HTML/ })
+        .click();
+    });
+    expect(fromAppMenu).toEqual(fromMenu);
+
+    const fromPalette = await downloaded(page, () => runCommand(page, 'Export as HTML'));
+    expect(fromPalette).toEqual(fromMenu);
+  });
+
+  test('the exported file opens with every request blocked', async ({ page, browser }) => {
+    await start(page);
+    const { text } = await fromExportMenu(page);
+    const context = await browser.newContext();
+    try {
+      const opened = await openExported(context, text);
+      const file = opened.page;
+      // Pages first: the printed pages, the title page among them, and Reading hidden.
+      const pages = file.locator('main .pages');
+      await expect(pages).toBeVisible();
+      await expect(pages.locator('.page')).toHaveCount(3);
+      await expect(file.locator('main .reading')).toBeHidden();
+      await expect(file.locator('html')).toHaveAttribute('data-theme', 'dark');
+      // The switch shows Reading …
+      const reading = file.getByRole('button', { name: 'Reading' });
+      await expect(reading).toHaveAttribute('aria-pressed', 'false');
+      await reading.click();
+      await expect(reading).toHaveAttribute('aria-pressed', 'true');
+      await expect(file.locator('main .reading')).toBeVisible();
+      await expect(file.locator('main .reading')).toContainText('You said you');
+      await expect(pages).toBeHidden();
+      // … and the toggle turns it light.
+      const light = file.getByRole('button', { name: 'Light' });
+      await light.click();
+      await expect(light).toHaveAttribute('aria-pressed', 'true');
+      await expect(file.locator('html')).toHaveAttribute('data-theme', 'light');
+      // Nothing asked for but the file itself.
+      expect(opened.others()).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('with JavaScript off the file still shows the pages', async ({ page, browser }) => {
+    await start(page);
+    const { text } = await fromExportMenu(page);
+    // With no stored state: the config's seeds the app's IndexedDB, which takes script, and
+    // Firefox never finishes making the context when there is none.
+    const context = await browser.newContext({
+      javaScriptEnabled: false,
+      storageState: { cookies: [], origins: [] },
+    });
+    try {
+      const opened = await openExported(context, text, { script: false });
+      const file = opened.page;
+      await expect(file.locator('main .pages .page')).toHaveCount(3);
+      await expect(file.locator('main .pages')).toBeVisible();
+      await expect(file.locator('main .pages')).toContainText('INT. KITCHEN - NIGHT');
+      await expect(file.locator('html')).toHaveAttribute('data-theme', 'dark');
+      // The switches need the script, so they stay hidden.
+      await expect(file.getByRole('button', { name: 'Reading' })).toBeHidden();
+      expect(opened.others()).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('a Markdown document exports HTML with its links and footnotes', async ({
+    page,
+    browser,
+  }) => {
+    await start(page);
+    await openMarkdownSample(page);
+    await setText(
+      page,
+      [
+        '# Harbour Notes',
+        '',
+        'See [the Fountain syntax guide](https://fountain.io/syntax) first.[^1]',
+        '',
+        '## Later',
+        '',
+        `${'The keeper climbs the stair and counts the lamps. '.repeat(60)}`,
+        '',
+        '[^1]: Like this one, at the end.',
+        '',
+      ].join('\n'),
+    );
+    await expect(editor(page)).toContainText('[^1]: Like this one');
+    const { name, text } = await fromExportMenu(page);
+    expect(name).toBe('Harbour Notes.html');
+    expect(text).toMatch(/<p class="kind">Document · [\d,]+ words · \d+ min read<\/p>/);
+    const context = await browser.newContext();
+    try {
+      const opened = await openExported(context, text);
+      const file = opened.page;
+      // A writer's web link is a real link, to a new tab.
+      const link = file.getByRole('link', { name: 'the Fountain syntax guide' });
+      await expect(link).toHaveAttribute('href', 'https://fountain.io/syntax');
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      // A footnote's reference goes to its note, and the note back.
+      const reference = file.getByRole('link', { name: 'Footnote 1', exact: true });
+      await expect(reference).toHaveAttribute('href', '#fn-1');
+      const note = file.locator('section.footnotes li#fn-1');
+      await expect(note).toContainText('Like this one, at the end.');
+      await reference.click();
+      await expect(note).toBeInViewport();
+      await note.locator('a.back').click();
+      await expect(file.locator('#fnref-1')).toBeInViewport();
+      // No Reading switch for a document; the toggle still works.
+      await expect(file.getByRole('button', { name: 'Reading' })).toHaveCount(0);
+      await file.getByRole('button', { name: 'Light' }).click();
+      await expect(file.locator('html')).toHaveAttribute('data-theme', 'light');
+      expect(opened.others()).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('prints one sheet for each page, on Letter and on A4', async ({
+    page,
+    browser,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium', 'page.pdf is Chromium’s');
+    test.skip(!!isMobile, 'the same Chromium as the desktop project');
+    const letter = builtins['us-screenplay'];
+    const a4: Template = {
+      ...letter,
+      page: {
+        ...letter.page,
+        paper: 'a4',
+        width: 82,
+        height: 70,
+        margin: { ...letter.page.margin, right: 7 },
+      },
+    };
+    const pagesOf = (template: Template) => paginate(parse(SAMPLE), template).pages.length;
+    // Letter: the app's own export of the sample.
+    await start(page);
+    const { text: letterHtml } = await fromExportMenu(page);
+    // A4: the same generator, from the A4 page grid, as the command line and a template would.
+    const doc = parse(SAMPLE);
+    const layout = paginate(doc, a4);
+    const fonts = Object.fromEntries(
+      [...stylesUsed(layout)].map((style) => [
+        style,
+        new Uint8Array(readFileSync(`${ROOT}/packages/render-pdf/fonts/${FONT_FILES[style]}`)),
+      ]),
+    );
+    const a4Html = renderScriptHtml({
+      doc,
+      layout,
+      template: a4,
+      notes: 'leave-out',
+      fonts,
+      title: 'The Call',
+      lang: 'en',
+      generator: 'Drafter',
+      kindLine: 'Screenplay',
+    });
+    for (const [label, html, template, size] of [
+      ['Letter', letterHtml, letter, [612, 792]],
+      ['A4', a4Html, a4, [595.28, 841.89]],
+    ] as const) {
+      const context = await browser.newContext();
+      try {
+        const { page: file } = await openExported(context, html);
+        const pdf = await PDFDocument.load(await file.pdf({ preferCSSPageSize: true }));
+        expect(pdf.getPageCount(), label).toBe(pagesOf(template));
+        for (const sheet of pdf.getPages()) {
+          const { width, height } = sheet.getSize();
+          expect([Math.round(width), Math.round(height)], label).toEqual(size.map(Math.round));
+        }
+      } finally {
+        await context.close();
+      }
+    }
   });
 });

@@ -41,9 +41,21 @@ describe('the command data', () => {
     for (const kind of ['fountain', 'markdown'] as const) {
       expect(exportApplies('md', kind), kind).toBe(true);
     }
-    // A script's list: PDF, plain text, Final Draft, then Markdown, beside the treatment.
-    expect(EXPORTS.fountain).toEqual(['pdf', 'txt', 'fdx', 'md']);
-    expect(EXPORTS.markdown).toEqual(['pdf', 'md', 'txt']);
+    // A script's list: PDF, HTML, plain text, Final Draft, then Markdown, beside the treatment.
+    expect(EXPORTS.fountain).toEqual(['pdf', 'html', 'txt', 'fdx', 'md']);
+    expect(EXPORTS.markdown).toEqual(['pdf', 'html', 'md', 'txt']);
+  });
+
+  test('export-html follows export-md, in File, and applies to every kind', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('export-html')).toBe(ids.indexOf('export-md') + 1);
+    expect(COMMAND_DATA.find((c) => c.id === 'export-html')).toMatchObject({
+      title: 'Export as HTML',
+      group: 'File',
+    });
+    for (const kind of ['fountain', 'markdown'] as const) {
+      expect(exportApplies('html', kind), kind).toBe(true);
+    }
   });
 
   test('gives each global command a key', () => {

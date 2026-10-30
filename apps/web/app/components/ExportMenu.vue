@@ -124,6 +124,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button type="button" class="item" data-first @click="choose('pdf')">
         <UIcon name="i-lucide-file-text" class="icon" />PDF
       </button>
+      <!-- One page that opens in any browser, offline: second, as in the app menu (`EXPORTS`). -->
+      <button type="button" class="item" @click="choose('html')">
+        <UIcon name="i-lucide-globe" class="icon" />HTML (.html)
+      </button>
       <button v-if="kind === 'markdown'" type="button" class="item" @click="choose('md')">
         <UIcon name="i-lucide-file-text" class="icon" />Markdown (.md)
       </button>

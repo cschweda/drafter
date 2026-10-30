@@ -6,9 +6,10 @@ import type { Project } from './projects';
 import { useScript } from './script';
 
 /**
- * Export options (out-the-door design §2): how a script's PDF, plain text, and Markdown file print
- * its scene numbers and its title page, how much of the title page a Final Draft file carries,
- * and whether a Markdown file carries its notes (Call 28). They are
+ * Export options (out-the-door design §2): how a script's PDF, HTML, plain text, and Markdown file
+ * print its scene numbers and its title page, how much of the title page a Final Draft file
+ * carries, and whether a Markdown file and an HTML file carry its notes (Call 28; HTML export
+ * design §3.3). They are
  * the script's own, kept on its project in this browser (Call 9), never in the text; the Export
  * options dialog (`components/ExportOptionsDialog.vue`) sets them, and every export reads them.
  */
@@ -66,12 +67,19 @@ export const EXPORT_OPTION_HINTS: {
   },
   notes: {
     'leave-out': 'No notes or synopses, as in the PDF.',
-    include: 'Each note and synopsis as a quote, where it stands. The boneyard is always left out.',
+    include:
+      'In Markdown, each note and synopsis as a quote, where it stands; in HTML, each note beside its place in the Reading view, never on the pages. The boneyard is always left out.',
   },
 };
 
-/** Under the Notes in Markdown choices: the one export that reads them. */
-export const NOTES_ONLY_MARKDOWN = 'Only a Markdown export carries notes; a PDF never prints them.';
+/**
+ * The notes choice's name (HTML export design §3.3): the stored setting keeps its key (`notes`),
+ * and is shared by the two exports that read it.
+ */
+export const NOTES_LEGEND = 'Include notes (Markdown and HTML)';
+/** Under the Include notes choices: the exports that read them. */
+export const NOTES_ONLY_MARKDOWN =
+  'Only the Markdown and HTML exports carry notes; a PDF never prints them.';
 
 /** The words for each choice that isn't the default, in the toast's sentence. */
 const SCENE_PHRASE: Record<Exclude<SceneNumbering, 'none'>, string> = {

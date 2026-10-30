@@ -156,7 +156,7 @@ export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fade
 /** The extensions of the files the app opens: scripts, and the files it imports. */
 export const OPEN_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, ...IMPORT_EXTENSIONS];
 /** The extensions of the files the app writes: scripts, and the exports. */
-export const WRITE_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, '.pdf', '.fdx'];
+export const WRITE_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, '.pdf', '.html', '.fdx'];
 
 /** Whether `path`'s extension is one of `extensions` (in any case). */
 export const hasExtension = (path: string, extensions: readonly string[]) =>

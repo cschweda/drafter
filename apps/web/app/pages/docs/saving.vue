@@ -98,8 +98,8 @@ useDocsHead({
           </tr>
           <tr>
             <th scope="row">
-              Export as PDF, plain text, Final Draft, or Markdown (a Markdown document: PDF, its
-              Markdown file, or plain text)
+              Export as PDF, HTML, plain text, Final Draft, or Markdown (a Markdown document: PDF,
+              HTML, its Markdown file, or plain text)
             </th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
@@ -292,13 +292,14 @@ useDocsHead({
     <h2 id="export-options">Export options</h2>
     <p>
       <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF,
-      plain text, Final Draft file, and Markdown file come out. <strong>Scene numbers</strong>: None
+      HTML page, plain text, Final Draft file, and Markdown file come out. <strong>Scene numbers</strong>: None
       (the usual), As written (only the numbers you’ve written in the script, like
       <code>#12A#</code>), or Number every scene (a scene with a written number keeps it, and the
       rest are numbered by their place, so two scenes can share a number). <strong>Title
       page</strong>: Full, Title and author only (the title, the credit, the authors, and the
-      source, without your contact details or the date), or None. <strong>Notes in
-      Markdown</strong>: Leave out (the usual) or Include, for the Markdown export alone.
+      source, without your contact details or the date), or None. <strong>Include notes (Markdown
+      and HTML)</strong>: Leave out (the usual) or Include, for the Markdown and HTML exports
+      alone.
     </p>
     <p>
       Each script keeps its own choices, in this browser, and the script itself never changes: they
@@ -320,11 +321,30 @@ useDocsHead({
       as the PDF does.
     </p>
     <p>
-      Notes and synopses are left out, as in the PDF, unless <strong>Notes in Markdown</strong> is
+      Notes and synopses are left out, as in the PDF, unless <strong>Include notes</strong> is
       set to Include: then each note and synopsis is a quote where it stands, so a reader, or an AI,
-      sees what you were thinking. The boneyard is always left out. Only the Markdown export carries
-      notes; a PDF, plain text, or Final Draft file never prints them. A Markdown document’s Markdown
-      export is its own text, as it is.
+      sees what you were thinking. The boneyard is always left out. Only the Markdown and HTML
+      exports carry notes; a PDF, plain text, or Final Draft file never prints them. A Markdown
+      document’s Markdown export is its own text, as it is.
+    </p>
+
+    <h3 id="export-html">Export as HTML</h3>
+    <p>
+      Export, then <strong>HTML (.html)</strong>, saves one web page that you can send to anyone:
+      it opens in any current browser, from an email, a USB stick, or a shared folder, with no
+      internet connection, and it never fetches anything. Everything it needs, the Courier Prime
+      font included, is inside the file. It opens dark, with a switch for light, and prints in
+      light, one page to a sheet.
+    </p>
+    <p>
+      A screenplay’s or stage play’s page has two views, with a switch between them:
+      <strong>Pages</strong>, the printed pages exactly as the PDF has them, and
+      <strong>Reading</strong>, the same script reflowed for a screen, each character’s name in a
+      color of its own. A band across the top links to each act or scene. It follows your Scene
+      numbers and Title page choices, and with <strong>Include notes</strong> your notes appear in
+      Reading, beside the text, never on the pages. A Markdown document’s page is the document as
+      the Preview draws it, with its links working and its footnotes at the end. With JavaScript
+      turned off the page still shows the script or the document; only the switches need it.
     </p>
 
     <h2 id="recovery-copy">The recovery copy</h2>

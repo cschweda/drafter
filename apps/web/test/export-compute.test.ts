@@ -4,6 +4,7 @@ import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate, titlePageFor } from '@drafter/layout';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
+import { renderDocumentHtml, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
 import {
   DOCUMENT_FONT_FILES,
   type DocumentFontSet,
@@ -15,6 +16,8 @@ import { renderText } from '@drafter/render-text';
 import { builtins } from '@drafter/templates';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import sampleScreenplay from '#samples/screenplay.fountain?raw';
+import { parseMarkdown } from '../app/markdown/parse';
+import { countScript, runningTime } from '../app/stats/count';
 import * as compute from '../app/workers/export-compute';
 import {
   DEFAULT_EXPORT_OPTIONS,
@@ -293,6 +296,204 @@ describe('the export worker’s options', () => {
   });
 });
 
+describe('the export worker’s HTML', () => {
+  const { createExporter, scriptKindLine } = compute;
+  const SCRIPT = [
+    'Title: The Call',
+    'Author: A. Writer',
+    'Contact: A. Writer',
+    '    555-0100',
+    '',
+    'INT. A - DAY',
+    '',
+    'One. [[A note to self.]]',
+    '',
+    'INT. B - DAY #12A#',
+    '',
+    'MARA',
+    'Hello?',
+    '',
+  ].join('\n');
+  const html = (request: Partial<Extract<compute.ExportRequest, { kind: 'html' }>> = {}) =>
+    ({
+      kind: 'html',
+      source: SCRIPT,
+      template,
+      title: 'The Call',
+      lang: 'en-GB',
+      generator: 'Drafter 9.9.9',
+      minutesPerPage: 1,
+      ...request,
+    }) as const;
+  const textOf = (reply: ExportReply): string => {
+    if (!('data' in reply) || typeof reply.data !== 'string') {
+      throw new Error(`no text: ${JSON.stringify(reply)}`);
+    }
+    return reply.data;
+  };
+  /** The file renderScriptHtml writes for `source` with these options, as the worker should. */
+  async function expected(
+    source: string,
+    options: compute.ExportOptions,
+    kindLine: string,
+    tmpl = template,
+  ) {
+    const parsed = parse(source);
+    const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
+    const layout = paginate(doc, tmpl, { sceneNumbers: options.sceneNumbers });
+    const all = await realFonts();
+    const fonts = Object.fromEntries([...stylesUsed(layout)].map((s) => [s, all[s]]));
+    return renderScriptHtml({
+      doc,
+      layout,
+      template: tmpl,
+      notes: options.notes,
+      fonts,
+      title: 'The Call',
+      lang: 'en-GB',
+      generator: 'Drafter 9.9.9',
+      kindLine,
+    });
+  }
+
+  test('builds an html file from a script with the export options', async () => {
+    const exporter = createExporter(realFonts);
+    const plain = textOf(await exporter(html()));
+    expect(plain.startsWith('<!DOCTYPE html>')).toBe(true);
+    expect(plain).toBe(
+      await expected(SCRIPT, DEFAULT_EXPORT_OPTIONS, 'Screenplay · 1 page · Under a minute'),
+    );
+    expect(plain).toContain('<html lang="en-GB" data-theme="dark">');
+    expect(plain).toContain('<meta name="generator" content="Drafter 9.9.9" />');
+    // The defaults: no numbers, the whole title page, and no notes.
+    expect(plain).toContain('Title page');
+    expect(plain).not.toContain('class="note"');
+    expect(plain).not.toContain('A note to self.');
+
+    const options = { sceneNumbers: 'all', titlePage: 'none', notes: 'include' } as const;
+    const chosen = textOf(await exporter(html({ options })));
+    expect(chosen).toBe(await expected(SCRIPT, options, 'Screenplay · 1 page · Under a minute'));
+    expect(chosen).not.toContain('Title page');
+    expect(chosen).not.toContain('555-0100');
+    expect(chosen).toContain('12A');
+    expect(chosen).toContain('A note to self.');
+    // Numbers as written: B keeps its 12A, A has none.
+    const written = { ...DEFAULT_EXPORT_OPTIONS, sceneNumbers: 'written' } as const;
+    expect(textOf(await exporter(html({ options: written })))).toBe(
+      await expected(SCRIPT, written, 'Screenplay · 1 page · Under a minute'),
+    );
+  });
+
+  test('embeds only the styles of Courier Prime the pages use', async () => {
+    const exporter = createExporter(realFonts);
+    const faces = (text: string) => text.match(/@font-face/g)?.length ?? 0;
+    expect(faces(textOf(await exporter(html())))).toBe(1);
+    const bold = textOf(await exporter(html({ source: `${SCRIPT}\n**Bold** and *italic*.\n` })));
+    expect(faces(bold)).toBe(3);
+  });
+
+  test('the kind line names the template, the pages, and the time at the script’s rate', async () => {
+    const LONG = `Title: The Long Night\n\n${Array.from(
+      { length: 120 },
+      (_, i) =>
+        `INT. ROOM ${i} - NIGHT\n\nThe lamp gutters and the keeper waits.\n\nMARA\nStill here.\n`,
+    ).join('\n')}`;
+    const parsed = parse(LONG);
+    const layout = paginate(parsed, template);
+    const body = layout.pages.filter((p) => p.number > 0).length;
+    expect(body).toBeGreaterThan(2);
+    const exporter = createExporter(realFonts);
+    const at = async (minutesPerPage: number) =>
+      textOf(await exporter(html({ source: LONG, minutesPerPage })));
+    // As Stats shows it: the pages (to a tenth) at the rate, in whole minutes.
+    const { pages } = countScript(parsed, layout, template);
+    expect(await at(1)).toContain(
+      `<p class="kind">Screenplay · ${body} pages · ${runningTime(Math.round(pages))}</p>`,
+    );
+    expect(await at(2)).toContain(`· ${runningTime(Math.round(pages * 2))}</p>`);
+    const stage = builtins['stage-play-standard'];
+    const play = textOf(
+      await exporter(
+        html({
+          source: 'Title: The Lamp\n\n# ACT ONE\n\n## SCENE 1\n\nThe keeper waits.\n',
+          template: stage,
+        }),
+      ),
+    );
+    expect(play).toContain('<p class="kind">Stage play · 1 page · Under a minute</p>');
+  });
+
+  test('scriptKindLine counts one page, and many', () => {
+    expect(scriptKindLine(template, 1, 0.4, 1)).toBe('Screenplay · 1 page · Under a minute');
+    expect(scriptKindLine(builtins['stage-play-standard'], 94, 93.5, 1.2)).toBe(
+      'Stage play · 94 pages · About 1 h 52 min',
+    );
+  });
+
+  test('builds an html file from a Markdown document', async () => {
+    const exporter = createExporter(realFonts);
+    const source =
+      '# Harbour Notes\n\nSee [the map](https://example.com/map).[^1]\n\n[^1]: Drawn by hand.\n';
+    const reply = await exporter({
+      kind: 'markdown-html',
+      source,
+      title: 'Harbour Notes',
+      lang: 'en-GB',
+      generator: 'Drafter 9.9.9',
+    });
+    const text = textOf(reply);
+    expect(text).toBe(
+      renderDocumentHtml({
+        tree: parseMarkdown(source),
+        title: 'Harbour Notes',
+        lang: 'en-GB',
+        generator: 'Drafter 9.9.9',
+      }),
+    );
+    expect(text).toContain('href="https://example.com/map"');
+    expect(text).toContain('id="fn-1"');
+    expect(text).not.toContain('@font-face');
+  });
+
+  test('a Markdown document nested too deeply is an error the export says plainly', async () => {
+    const exporter = createExporter(realFonts);
+    const request = (source: string) =>
+      ({
+        kind: 'markdown-html',
+        source,
+        title: 'Deep',
+        lang: 'en',
+        generator: 'Drafter',
+      }) as const;
+    // Too deep for the parser, and too deep for the file (emphasis the parser nests as asked).
+    for (const source of [
+      `${'- '.repeat(2_400)}x`,
+      `${'*a '.repeat(1_500)}b${' a*'.repeat(1_500)}`,
+    ]) {
+      const reply = await exporter(request(source));
+      expect('error' in reply && reply.error).toMatch(/nested too deeply/);
+    }
+  });
+
+  test('says it is under way, then 1', async () => {
+    const exporter = createExporter(realFonts);
+    for (const request of [
+      html(),
+      {
+        kind: 'markdown-html',
+        source: '# A\n',
+        title: 'A',
+        lang: 'en',
+        generator: 'Drafter',
+      } as const,
+    ]) {
+      const sent: Array<number | null> = [];
+      textOf(await exporter(request, (f) => sent.push(f)));
+      expect(sent, request.kind).toEqual([null, 1]);
+    }
+  });
+});
+
 describe('the export worker’s progress', () => {
   const { createExporter } = compute;
   /** Every fraction the export sent, and its reply. */
@@ -411,6 +612,28 @@ describe('the export worker, for a Markdown document', () => {
     await exporter({ kind: 'txt', source: SOURCE, template });
     expect(documentFonts).not.toHaveBeenCalled();
     expect(parser.loads).toBe(0);
+  });
+
+  test('a script’s HTML never loads the parser, and a document’s HTML loads no fonts', async () => {
+    const scriptFonts = vi.fn(realFonts);
+    const documentFonts = vi.fn(realDocumentFonts);
+    const exporter = createExporter(scriptFonts, documentFonts);
+    const meta = { title: 'T', lang: 'en', generator: 'Drafter' };
+    const script = await exporter({
+      kind: 'html',
+      source: SOURCE,
+      template,
+      minutesPerPage: 1,
+      ...meta,
+    });
+    expect('data' in script).toBe(true);
+    expect(parser.loads).toBe(0);
+    expect(scriptFonts).toHaveBeenCalledTimes(1);
+    const document = await exporter({ kind: 'markdown-html', source: DOCUMENT, ...meta });
+    expect('data' in document).toBe(true);
+    expect(parser.loads).toBe(1);
+    expect(scriptFonts).toHaveBeenCalledTimes(1);
+    expect(documentFonts).not.toHaveBeenCalled();
   });
 
   test('answers the characters the fonts lack', async () => {

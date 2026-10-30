@@ -100,6 +100,7 @@ describe('menuTemplate', () => {
 
   test('puts Export options… last in File → Export, by its whole name', () => {
     const exports = [
+      cmd('export-html', 'File', 'Export as HTML'),
       cmd('export-txt', 'File', 'Export as plain text'),
       cmd('export-fdx', 'File', 'Export as Final Draft (.fdx)'),
       cmd('export-treatment', 'File', 'Export as treatment…'),
@@ -110,6 +111,7 @@ describe('menuTemplate', () => {
     const items = submenu(exportMenu).filter((i) => i.type !== 'separator');
     expect(items.map((i) => i.id)).toEqual([
       'export-pdf',
+      'export-html',
       'export-txt',
       'export-fdx',
       'export-treatment',

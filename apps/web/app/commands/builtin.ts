@@ -460,8 +460,10 @@ export function registerBuiltinCommands(): void {
     // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind
     // exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter Tight (Markdown PDF
     // design §10); Final Draft for a script; and a Markdown file for both, a script's the whole script
-    // written in the export worker, a document's its own text (Call 24).
+    // written in the export worker, a document's its own text (Call 24); and an HTML page for both
+    // (HTML export design §1).
     'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
+    'export-html': { enabled: () => exportsHere('html'), run: () => void exportScript('html') },
     'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
     'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },

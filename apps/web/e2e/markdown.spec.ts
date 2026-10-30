@@ -351,6 +351,7 @@ test.describe('a Markdown document', () => {
     // Export options… ends the menu, off for a Markdown document (export.spec.ts says why).
     await expect(menu.getByRole('button')).toHaveText([
       'PDF',
+      'HTML (.html)',
       'Markdown (.md)',
       'Plain text (.txt)',
       'Export options…',

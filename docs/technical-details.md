@@ -59,6 +59,7 @@ flowchart BT
   compare --> web
   history --> web
   render_html --> web
+  render_html_file --> web
   render_pdf --> web
   render_text --> web
   spell --> web

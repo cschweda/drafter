@@ -26,6 +26,7 @@ const EXTENSION: Record<FileKind, DesktopSaveExtension> = {
   markdown: '.md',
   txt: '.txt',
   pdf: '.pdf',
+  html: '.html',
   fdx: '.fdx',
 };
 

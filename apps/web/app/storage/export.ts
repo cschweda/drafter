@@ -1,9 +1,12 @@
+import type { Template } from '@drafter/templates';
 import { ref } from 'vue';
+import { buildInfo } from '../about/info';
 import { useEditor } from '../editor/session';
 import { previewProblem } from '../markdown/preview';
 import { markdownTitle } from '../markdown/title';
 import { type Settings, useSettings } from '../settings/settings';
-import type { ExportOptions } from '../workers/export-compute';
+import { ratesOf } from '../stats/timing';
+import type { ExportOptions, ExportRequest } from '../workers/export-compute';
 import { renderExport } from './export-client';
 import { exportOptionsOf, optionsPhrase } from './export-options';
 import { useFiles } from './files';
@@ -13,24 +16,30 @@ import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './t
 import { whenIdle } from './turn';
 
 /**
- * Export to PDF, plain text, Final Draft, or Markdown (Phase 1 design §9.7; Phase 2 design §22;
- * Imports plan Call 24), and a Markdown document to PDF (Markdown PDF design). The text
+ * Export to PDF, HTML, plain text, Final Draft, or Markdown (Phase 1 design §9.7; Phase 2 design
+ * §22; Imports plan Call 24; HTML export design §1), and a Markdown document to PDF (Markdown PDF
+ * design) and HTML. The text
  * is laid out and drawn in a worker, and saved only through `useFiles()`: where the browser has a
  * save picker it asks where, else the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
  * Export menu, the app menu, and the palette run them.
  */
 
 /**
- * `pdf`, `txt`, `fdx` (a Final Draft file), and `md` (the whole script as Markdown, written in the
- * worker) are a screenplay's or a stage play's; a Markdown document's are `pdf` (drawn in Inter
- * Tight, Markdown PDF design), `md` (its own text), and `txt` (the same text, as a plain text file).
+ * `pdf`, `html` (one self-contained page: the printed pages and a Reading view), `txt`, `fdx` (a
+ * Final Draft file), and `md` (the whole script as Markdown, written in the worker) are a
+ * screenplay's or a stage play's; a Markdown document's are `pdf` (drawn in Inter Tight, Markdown
+ * PDF design), `html` (the document as the Preview draws it, in one page), `md` (its own text),
+ * and `txt` (the same text, as a plain text file).
  */
-export type ExportKind = 'pdf' | 'txt' | 'md' | 'fdx';
+export type ExportKind = 'pdf' | 'html' | 'txt' | 'md' | 'fdx';
 
-/** What each kind of document exports, in the order the menus list them: the PDF first in both. */
+/**
+ * What each kind of document exports, in the order the menus list them: the PDF first in both,
+ * then the HTML page, the other file made to be read as it is.
+ */
 export const EXPORTS: Readonly<Record<'fountain' | 'markdown', readonly ExportKind[]>> = {
-  fountain: ['pdf', 'txt', 'fdx', 'md'],
-  markdown: ['pdf', 'md', 'txt'],
+  fountain: ['pdf', 'html', 'txt', 'fdx', 'md'],
+  markdown: ['pdf', 'html', 'md', 'txt'],
 };
 
 /** Whether a document of `documentKind` exports as `kind`: the menus and the commands ask this. */
@@ -73,11 +82,21 @@ const announceError = timedSay(exportError, TOAST_MS);
 
 const MIME: Record<ExportKind, string> = {
   pdf: 'application/pdf',
+  html: 'text/html',
   txt: 'text/plain',
   md: 'text/markdown',
   fdx: 'application/xml',
 };
-const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md', fdx: '.fdx' } as const;
+const EXTENSION = {
+  pdf: '.pdf',
+  html: '.html',
+  txt: '.txt',
+  md: '.md',
+  fdx: '.fdx',
+} as const satisfies Record<ExportKind, string>;
+
+/** "Drafter 0.22.0" for an HTML file's generator line; "Drafter" where the build named no version. */
+const generator = () => `Drafter ${buildInfo().version}`.trim();
 
 /**
  * The end of "Couldn’t export The Call.pdf…": the reason, in the writer's words. A document nested
@@ -104,18 +123,57 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
  * ", with scene numbers as written and no title page" in "Exported The Call.pdf, ….", naming the
  * options that aren't the default (Call 11); nothing for the defaults or a Markdown document. A
  * Final Draft file keeps its written numbers whatever the option says (Call 8), so its toast
- * names only the title page; only a Markdown file carries notes (Call 28), so only its toast says
- * "notes".
+ * names only the title page; only a Markdown file and an HTML file carry notes (Call 28; HTML
+ * export design §3.3), so only their toasts say "notes".
  */
 function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
   if (markdown) return '';
   const honoured: ExportOptions = {
     ...options,
     sceneNumbers: kind === 'fdx' ? 'none' : options.sceneNumbers,
-    notes: kind === 'md' ? options.notes : 'leave-out',
+    notes: kind === 'md' || kind === 'html' ? options.notes : 'leave-out',
   };
   const phrase = optionsPhrase(honoured);
   return phrase ? `, ${phrase}` : '';
+}
+
+/**
+ * What the worker is asked to make. A Markdown PDF carries the title the file is named by, and the
+ * spellcheck's language, with the paper, as they were when it was asked for; an HTML file carries
+ * the title and the language too, the app's name and version, and, for a script, its own page
+ * rate, for the kind line over its title.
+ */
+function requestFor(
+  asked: Asked,
+  open: {
+    source: string;
+    template: Template;
+    options: ExportOptions;
+    title: string;
+    markdown: boolean;
+  },
+): ExportRequest {
+  const { kind } = asked;
+  const { source, template, options, title, markdown } = open;
+  const lang = asked.lang;
+  if (markdown) {
+    return kind === 'html'
+      ? { kind: 'markdown-html', source, title, lang, generator: generator() }
+      : { kind: 'markdown-pdf', source, paper: asked.paper, title, lang };
+  }
+  if (kind === 'html') {
+    return {
+      kind,
+      source,
+      template,
+      options,
+      title,
+      lang,
+      generator: generator(),
+      minutesPerPage: asked.minutesPerPage,
+    };
+  }
+  return { kind, source, template, options };
 }
 
 async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
@@ -187,7 +245,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
     }
     let data: Uint8Array | string;
     let missing: string[] = [];
-    if (markdown && kind !== 'pdf') {
+    if (markdown && (kind === 'md' || kind === 'txt')) {
       // A Markdown document is already text: its Markdown and plain text exports are the text as
       // it stands, written as Save writes it (the file's line breaks, and its byte order mark).
       data = encodeFile(
@@ -196,17 +254,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
         script.project.value?.bom ?? false,
       );
     } else {
-      // A Markdown PDF carries the title the file is named by, and the spellcheck's language,
-      // with the paper, as they were when it was asked for.
-      const request = markdown
-        ? {
-            kind: 'markdown-pdf' as const,
-            source,
-            paper: asked.paper,
-            title,
-            lang: asked.lang,
-          }
-        : { kind, source, template, options };
+      const request = requestFor(asked, { source, template, options, title, markdown });
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -255,6 +303,8 @@ interface Asked {
   notes: ExportOptions['notes'];
   paper: Settings['markdownPaper'];
   lang: Settings['spellLanguage'];
+  /** The script's own page rate, for an HTML file's running time. */
+  minutesPerPage: number;
 }
 
 function askedFor(kind: ExportKind): Asked {
@@ -272,6 +322,7 @@ function askedFor(kind: ExportKind): Asked {
     notes: options.notes,
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
+    minutesPerPage: ratesOf(project).minutesPerPage,
   };
 }
 

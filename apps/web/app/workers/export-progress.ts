@@ -16,7 +16,8 @@ export type StageWeights = Readonly<Partial<Record<ExportStage, number>>>;
  * Each stage's share of a PDF export, from timings of long ones (2026-10-29, in Node): a 100-page
  * Markdown document spent about 4% parsing, 52% laying out, 43% drawing, and 1.5% saving; a
  * 600-page screenplay about 10% parsing and laying out (one step here, which can't say how far it
- * is), 69% drawing, and 21% saving.
+ * is), 69% drawing, and 21% saving. An HTML file takes its kind's (`markdown` for a Markdown
+ * document's, `script` for a script's): it says only that it is under way, then 1.
  */
 export const WEIGHTS = {
   markdown: { prepare: 5, layout: 50, draw: 40, save: 5 },
