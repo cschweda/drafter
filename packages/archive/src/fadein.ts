@@ -3,7 +3,7 @@
 // `@drafter/fdx`'s `fromOsf` reads with its strict XML reader. No public source names the entry,
 // so the document is the archive's one `.xml` entry at the shallowest depth, outside `__MACOSX/`
 // and dot-files; when several sit there, the one whose root element is `document` (OSF's root).
-// Only that entry is parsed; the others' first bytes are looked at, nothing more.
+// Only that entry is parsed; each other candidate is unpacked so its first bytes can be looked at.
 import { type FdxImport, fromOsf, OsfError } from '@drafter/fdx';
 import { ArchiveError } from './errors';
 import { candidates, scriptText, shallowest } from './text';

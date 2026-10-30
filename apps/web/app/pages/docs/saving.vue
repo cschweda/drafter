@@ -239,7 +239,7 @@ useDocsHead({
     <ul>
       <li>
         <strong>Highland</strong> already writes in Fountain, so its script comes in exactly as you
-        wrote it. Anything else in the file, such as pictures or notes, isn’t brought in, but one
+        wrote it. Anything else in the file, such as pictures, isn’t brought in, but one
         note at the end names it, like
         <code>[[highland: Also in the file, not brought in: cover.png]]</code>.
       </li>
