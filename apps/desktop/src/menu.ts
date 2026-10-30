@@ -327,7 +327,10 @@ export function menuTemplate(
             : mine.filter((c) => (section.pick as (id: string) => boolean)(c.id));
       for (const c of picked) placed.add(c.id);
       const also = Object.entries(section.also ?? {}).flatMap(([id, title]) =>
-        commands.filter((c) => c.id === id).map((c) => ({ ...itemFor(c), label: label(title) })),
+        commands
+          .filter((c) => c.id === id)
+          // Its own id: an id names one item in the menu, and the command keeps its own in File.
+          .map((c) => ({ ...itemFor(c), id: `${c.id}:also`, label: label(title) })),
       );
       const items = [...picked.map((c) => itemFor(c, section.strip)), ...also];
       if (section.submenu) {

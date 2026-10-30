@@ -467,8 +467,8 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       ['sample-script-screenplay', 'Screenplay'],
       ['sample-script-stage-play', 'Stage play'],
       ['sample-script-markdown', 'Markdown'],
-      ['new-guided-screenplay', 'Guided first screenplay'],
-      ['new-guided-stage-play', 'Guided first stage play'],
+      ['new-guided-screenplay:also', 'Guided first screenplay'],
+      ['new-guided-stage-play:also', 'Guided first stage play'],
     ]);
     // Either item runs the command.
     (samples[3] as { click: () => void }).click();
@@ -479,8 +479,11 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       walk(template.File ? [template.File] : []).filter((i) => i.id === 'new-guided-screenplay'),
     ).toHaveLength(1);
     expect(
-      walk(submenu(template.Help)).filter((i) => i.id === 'new-guided-screenplay'),
+      walk(submenu(template.Help)).filter((i) => i.id === 'new-guided-screenplay:also'),
     ).toHaveLength(1);
+    // Every id in the menu names one item.
+    const ids = walk(Object.values(template)).flatMap((i) => (i.id ? [i.id] : []));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   test('About Drafter is the page’s dialog while the page is there, once, where About goes', () => {
