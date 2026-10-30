@@ -173,7 +173,7 @@ watch(tree, draw);
   line-height: 1;
   cursor: pointer;
 }
-.body :deep(:is(.md-fnref-button, .md-note-back):focus-visible) {
+.body :deep(:is(.md-fnref-button, .md-note-back):focus) {
   outline: 2px solid var(--heading);
   outline-offset: 1px;
 }
@@ -196,9 +196,24 @@ watch(tree, draw);
 .body :deep(.md-notes li) {
   border-radius: 3px;
 }
-.body :deep(.md-notes li:focus-visible) {
+/* Where a click on a reference or a note's button took focus: outlined, and lit for a moment
+   (the code panel's background, which the text reads on in both themes). */
+.body :deep(.md-notes li:focus) {
   outline: 2px solid var(--heading);
   outline-offset: 2px;
+}
+.body :deep(:is(.md-notes li, .md-fnref-button):focus) {
+  animation: md-arrived 1.2s ease-out;
+}
+@keyframes md-arrived {
+  from {
+    background: var(--desk);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .body :deep(:is(.md-notes li, .md-fnref-button):focus) {
+    animation: none;
+  }
 }
 .body :deep(.md-note-text > :last-child) {
   margin-bottom: 0.5em;

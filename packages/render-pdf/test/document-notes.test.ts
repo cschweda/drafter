@@ -4,10 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { documentBlocks } from '../src/document/blocks';
 import { type DocItem, type DocLayout, layoutDocument } from '../src/document/layout';
 import type { DocLine } from '../src/document/lines';
+import { wrapBlock } from '../src/document/lines';
+import { fontMeasure } from '../src/document/measure';
 import { footnotes } from '../src/document/notes';
 import { paginate, paginateWithNotes } from '../src/document/paginate';
 import { STYLE } from '../src/document/style';
 import { fixedMeasure, md } from './document-helpers';
+import BREAKS from './fixtures/pagination-breaks.json';
+import { CORPUS } from './fixtures/pagination-corpus';
+import { documentFonts } from './helpers';
+import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 type Text = Extract<DocItem, { kind: 'text' }>;
 const layout = (source: string, paper: Paper = 'letter') =>
@@ -453,11 +459,109 @@ describe('footnotes, over random documents', { timeout: PROPERTY_TIMEOUT }, () =
           if (foot.slices.length > 0)
             expect(at + STYLE.notes.ruleSpace).toBeCloseTo(foot.height, 6);
         });
-        // With no notes, the pages are paginate's.
-        const bare = blocks.map(({ notes: _notes, ...rest }) => rest);
-        expect(paginateWithNotes(bare, H, []).pages).toEqual(paginate(bare, H));
       }),
       { numRuns: 400 },
     );
   });
+});
+
+describe('a document without notes', () => {
+  it('breaks its pages exactly as it did before footnotes', () => {
+    // Recorded from e6f93dd's pagination, run on these documents with the real fonts.
+    const measure = fontMeasure(documentFonts);
+    const recorded = BREAKS as Record<string, number[][][]>;
+    expect(Object.keys(recorded)).toHaveLength(Object.keys(CORPUS).length * 2);
+    for (const [name, source] of Object.entries(CORPUS)) {
+      for (const paper of ['letter', 'a4'] as Paper[]) {
+        const { width, height } = PAPER_POINTS[paper];
+        const textWidth = width - 2 * STYLE.margin;
+        const blocks = documentBlocks(md(source), textWidth);
+        const lines = blocks.map((b) => wrapBlock(b, textWidth, measure, new Set()));
+        const placed = blocks.map((b, i) => ({
+          lines: lines[i] ?? [],
+          spaceBefore: b.spaceBefore,
+          keepWithNext: b.keepWithNext,
+        }));
+        const pageHeight = height - 2 * STYLE.margin;
+        const breaks = (pages: ReturnType<typeof paginate>) =>
+          pages.map((page) =>
+            page.map((s) => [s.block, s.from, s.to, Math.round(s.top * 1000) / 1000]),
+          );
+        expect(breaks(paginate(placed, pageHeight)), `${name}, ${paper}`).toEqual(
+          recorded[`${name}/${paper}`],
+        );
+        const withNotes = paginateWithNotes(placed, pageHeight, []);
+        expect(breaks(withNotes.pages)).toEqual(recorded[`${name}/${paper}`]);
+        expect(withNotes.feet.every((foot) => foot.height === 0)).toBe(true);
+        expect(layoutDocument(md(source), { paper, measure }).pages).toHaveLength(
+          recorded[`${name}/${paper}`]?.length ?? 0,
+        );
+      }
+    }
+  });
+});
+
+describe('footnotes at the edges', () => {
+  const line = (height: number): DocLine => ({ fragments: [], height, ascent: 0 });
+  const lines = (count: number, height = 10) => Array.from({ length: count }, () => line(height));
+
+  it('moves a line off a page whose foot holds an earlier note’s tail when its own notes don’t all fit', () => {
+    // Page 1: a line and the first 7 lines of a 9-line note; page 2 holds the note's last two.
+    // The next line's 6-line note fits under it on a fresh page, but not under that tail.
+    const { pages, feet } = paginateWithNotes(
+      [
+        { lines: [line(10)], spaceBefore: 0, keepWithNext: false, notes: [[0]] },
+        { lines: [line(10)], spaceBefore: 0, keepWithNext: false, notes: [[1]] },
+      ],
+      100,
+      [[{ lines: lines(9), spaceBefore: 0 }], [{ lines: lines(6), spaceBefore: 0 }]],
+    );
+    expect(pages.map((page) => page.map((s) => s.block))).toEqual([[0], [], [1]]);
+    expect(feet.map((f) => f.slices.map((s) => [s.note, s.from, s.to]))).toEqual([
+      [[0, 0, 7]],
+      [[0, 7, 9]],
+      [[1, 0, 6]],
+    ]);
+  });
+
+  it('a page that holds only a note’s tail is still a page with something on it', () => {
+    const { pages, feet } = paginateWithNotes(
+      [{ lines: [line(10)], spaceBefore: 0, keepWithNext: false, notes: [[0]] }],
+      100,
+      [[{ lines: lines(25), spaceBefore: 0 }]],
+    );
+    expect(pages.length).toBe(feet.length);
+    // Some page holds only the note's tail, and every page holds something.
+    expect(pages.some((page) => page.length === 0)).toBe(true);
+    for (const [i, page] of pages.entries())
+      expect(page.length + (feet[i]?.slices.length ?? 0)).toBeGreaterThan(0);
+  });
+
+  const refs = (prefix: string, n: number) =>
+    Array.from({ length: n }, (_, i) => `[^${prefix}${i}]`).join('');
+  const defs = (prefix: string, n: number) =>
+    Array.from({ length: n }, (_, i) => `[^${prefix}${i}]: y`).join('\n');
+  const cases: [string, (n: number) => string][] = [
+    ['one line with every reference', (n) => `x${refs('n', n)}\n\n${defs('n', n)}\n`],
+    ['a heading with every reference', (n) => `# x${refs('n', n)}\n\nText.\n\n${defs('n', n)}\n`],
+    ['a note with every reference', (n) => `x[^a]\n\n[^a]: ${refs('m', n)}\n${defs('m', n)}\n`],
+  ];
+  for (const [name, make] of cases) {
+    it(
+      `lays out ${name} in linear time, 50,000 of them without throwing`,
+      () => {
+        const { small, large, growth } = scaling(
+          (n) => md(make(n)),
+          (tree) => layoutDocument(tree, { paper: 'letter', measure: fixedMeasure }),
+          12_500,
+          2,
+        );
+        console.log(
+          `Footnotes, ${name}: ${small.toFixed(0)} ms for 12,500, ${large.toFixed(0)} ms for 50,000 (growth ${growth.toFixed(1)}).`,
+        );
+        expect(growth).toBeLessThan(MAX_GROWTH);
+      },
+      SCALING_TIMEOUT,
+    );
+  }
 });

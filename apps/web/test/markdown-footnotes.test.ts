@@ -143,9 +143,31 @@ describe('footnotes in a Markdown document', () => {
     expect(countWords(parseMarkdown('word[^a]s\n\n[^a]: x\n'))).toBe(2);
   });
 
-  test('leaves a heading’s reference mark out of the title', () => {
+  test('leaves a heading’s reference mark out of the title, only when it is one', () => {
     expect(markdownTitle('# The Long Way[^1]\n\n[^1]: A working title.\n')).toBe('The Long Way');
+    // With its definition written above the heading.
+    expect(markdownTitle('[^n]: Note.\n\n# Shore[^n] Leave\n')).toBe('Shore Leave');
+    // No definition: the parser leaves it as text, and so does the title.
+    expect(markdownTitle('# The Long Way[^1]\n')).toBe('The Long Way[^1]');
+    // In a code span it is code, kept as written (the backticks go, as for any code span).
+    expect(markdownTitle('# Using `[^1]` marks\n\n[^1]: Note.\n')).toBe('Using [^1] marks');
+    // A definition in a code fence is no definition.
+    expect(markdownTitle('# Fence[^f]\n\n```\n[^f]: not one\n```\n')).toBe('Fence[^f]');
   });
+
+  test(
+    'reads a heading of many backticks and labels in linear time',
+    () => {
+      const { growth } = scaling(
+        (n) =>
+          `# ${'`'.repeat(n)} ${'``x'.repeat(n)} ${'[^a]'.repeat(n)} [^${'b'.repeat(n)}\n\n[^a]: y\n`,
+        (source) => markdownTitle(source),
+        20_000,
+      );
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 
   test('numbers notes as the PDF does', () => {
     const arbLabel = fc.constantFrom('a', 'b', 'c', 'note', '1');

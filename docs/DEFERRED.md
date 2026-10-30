@@ -187,3 +187,9 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 - **`drafter build --md`** in the CLI: the Markdown export is in the app only.
 - **Underline in Markdown** is `<u>…</u>` (Call 32, the controller's ruling), which shows as plain tags where HTML isn't allowed. If writers would rather have `_…_` (shown as italics in most viewers), it can become an option.
 - **End-to-end tests across the imports and Markdown out** (the final review): opening a Highland file then exporting it as Markdown with its notes, and opening a `.md` as a screenplay then exporting a PDF, are each covered in halves and by a package-level run, but not by one browser test each.
+
+## Footnotes in Markdown documents
+
+- **Long runs of one nested-list shape parse in quadratic time** (micromark, not Drafter): each time a nested container closes inside another, micromark's document tokenizer copies the whole event list (`EditMap.consume` in `micromark/lib/initialize/document.js`), so an outline of nothing but `- a` / `  - b` takes 0.27 s at 25 KB, 0.95 s at 50 KB, and 3.8 s at 100 KB (and `- - x` lines repeated, 8 s at 100 KB), at depth 2, where the nesting limit can't help. The maintainer's real 49 KB outline (and 4× it, 195 KB) parses in 41 to 91 ms, linearly, so no patch for now (the controller's ruling). The likely fix: splice only the end of the event list there (the exits go just after the last flow chunk, near the end), upstream or as a `pnpm patch`.
+- **A note's indent isn't scaled with its type**: a footnote in the PDF is set at 9 pt but keeps the text's 18 pt list indent (`scaled` in `document/layout.ts` scales sizes and spacing, not indents). Cosmetic.
+- **The footnote numbering walk is written twice**, in `apps/web/app/markdown/notes.ts` (the Preview) and `@drafter/render-pdf`'s `document/notes.ts` (the PDF), kept in step by a property test. It could be shared from a small `@drafter/markdown` package later, with the parser.

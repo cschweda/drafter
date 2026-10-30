@@ -53,8 +53,10 @@ const EPS = 1e-6;
  * all of it when it is too short to split (Call 16). When a rule can't be kept (a heading and what
  * must follow it taller than a page, a block too short to split taller than a page), the lines fill
  * the page as they come (Call 17): a chain's headings, and the block after them on the page it shares
- * with the last heading only; on later pages that block splits by the usual rule. Every page but an empty document's holds at least one line, so
- * the walk always ends; it visits each line a bounded number of times, so it is linear.
+ * with the last heading only; on later pages that block splits by the usual rule. Every page but an
+ * empty document's holds at least one line (with notes, a line of the text or of a note: a page may
+ * hold only the rest of a note), so the walk always ends; it visits each line a bounded number of
+ * times, so it is linear.
  */
 export function paginate(blocks: readonly PageBlock[], pageHeight: number): PageSlice[][] {
   return paginateWithNotes(blocks, pageHeight, []).pages;
@@ -64,12 +66,15 @@ export function paginate(blocks: readonly PageBlock[], pageHeight: number): Page
  * `paginate`, with footnotes at the foot of each page (DECISIONS, Footnotes). A line's notes go on
  * the page where the line prints, with every line of every note it carries: when they don't fit
  * under the lines already there, the line goes to the next page, and the usual rules take it from
- * there, each line now as tall as it is with its notes. Only a line that is first on its page and
- * still can't fit all its notes is placed anyway: as many of the notes' lines as fit go under it,
- * and the rest continue at the foot of the next page, before that page's own notes, and nothing
- * more goes on the page. A page's foot is `STYLE.notes.ruleSpace` (the rule's) and its notes, the
- * last note's bottom on the bottom margin, and the text above never reaches into it. A page may hold
- * only the rest of a note too long for a whole page. With no notes, every page is `paginate`'s.
+ * there, each line now as tall as it is with its notes. Only a line that is first on its page, on
+ * a page whose foot is empty, and still can't fit all its notes is placed anyway: as many of the
+ * notes' lines as fit go under it, and the rest continue at the foot of the next page, before that
+ * page's own notes, and nothing more goes on the page. (On a page whose foot holds the rest of an
+ * earlier note, such a line goes on to the next page instead, so its notes are cut only when they
+ * can't fit under it on a page of their own.) A page's foot is `STYLE.notes.ruleSpace` (the rule's)
+ * and its notes, the last note's bottom on the bottom margin, and the text above never reaches into
+ * it. A page may hold only the rest of a note. With no notes, every page is as `paginate` made it
+ * before footnotes (a recorded corpus checks it).
  */
 export function paginateWithNotes(
   blocks: readonly PageBlock[],
@@ -110,6 +115,8 @@ export function paginateWithNotes(
   let full = false;
   /** Notes waiting for room at a foot, in order: the first may be partly printed already. */
   const waiting: { note: number; line: number }[] = [];
+  /** The first of `waiting` not printed yet: a queue's head, so taking one off costs nothing. */
+  let head = 0;
 
   /** Puts a note's line in the foot, if the page has room for it (a page's first always fits). */
   const footLine = (note: number, index: number): boolean => {
@@ -133,14 +140,14 @@ export function paginateWithNotes(
   };
   /** Prints the notes waiting, as far as they fit. */
   const flush = () => {
-    while (waiting.length > 0) {
-      const next = waiting[0] as { note: number; line: number };
+    while (head < waiting.length) {
+      const next = waiting[head] as { note: number; line: number };
       if (!footLine(next.note, next.line)) {
         full = true;
         return;
       }
       next.line++;
-      if (next.line >= (noteLines[next.note]?.length ?? 0)) waiting.shift();
+      if (next.line >= (noteLines[next.note]?.length ?? 0)) head++;
     }
   };
   const newPage = () => {
@@ -175,7 +182,8 @@ export function paginateWithNotes(
       // with the notes its lines carry.
       const carried: number[] = [];
       const carry = (block: PageBlock, to: number) => {
-        for (let i = 0; i < to; i++) carried.push(...(block.notes?.[i] ?? []));
+        // One at a time: a spread of tens of thousands of arguments throws.
+        for (let i = 0; i < to; i++) for (const k of block.notes?.[i] ?? []) carried.push(k);
       };
       let chain = height(lines, 0, n);
       carry(current, n);
@@ -234,16 +242,9 @@ export function paginateWithNotes(
       else if (left < 2 * MIN_LINES || fit < MIN_LINES) take = empty ? Math.max(fit, 1) : 0;
       else take = Math.min(fit, left - MIN_LINES);
       // A line first on its page whose notes don't all fit: placed, unless the page's foot holds
-      // the rest of an earlier note (it goes on the next page, whose foot that note leaves free).
-      const forced = take > fit;
-      if (forced) {
-        const h = (lines[from] as DocLine).height;
-        const first = current.notes?.[from]?.[0];
-        const firstLine = first === undefined ? undefined : noteLines[first]?.[0];
-        const needs =
-          h + (firstLine ? foot + (foot === 0 ? ruleSpace : between) + firstLine.height : foot);
-        if (full || (foot > 0 && needs > pageHeight + EPS)) take = 0;
-      }
+      // the rest of an earlier note. Then it goes on the next page, whose foot that note leaves
+      // free, so its notes are cut only if they don't fit under it even there.
+      if (take > fit && foot > 0) take = 0;
 
       if (take > 0) {
         page.push({ block: b, from, to: from + take, top: used + space });
@@ -258,6 +259,6 @@ export function paginateWithNotes(
     }
   }
   // The rest of a note too long for its page's foot.
-  while (waiting.length > 0) newPage();
+  while (head < waiting.length) newPage();
   return { pages, feet };
 }

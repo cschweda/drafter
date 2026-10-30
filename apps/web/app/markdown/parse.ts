@@ -74,8 +74,11 @@ const FOOTNOTES = footnoteSyntax();
  * for seconds.
  */
 export function parseMarkdown(source: string): MdNode {
-  if (containerDepth(source, MAX_NESTING) > MAX_NESTING) throw new NestedTooDeeply();
-  return fromMarkdown(source, {
+  // One byte-order mark first is no text (the parser would skip it anyway, offsets and all): taken
+  // off here, so the nesting scan and the parser read exactly the same text.
+  const text = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
+  if (containerDepth(text, MAX_NESTING) > MAX_NESTING) throw new NestedTooDeeply();
+  return fromMarkdown(text, {
     extensions: [FOOTNOTES],
     mdastExtensions: [gfmFootnoteFromMarkdown()],
   }) as MdNode;

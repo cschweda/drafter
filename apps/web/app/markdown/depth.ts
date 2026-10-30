@@ -11,6 +11,7 @@ const SPACE = 32;
 const TAB = 9;
 const LF = 10;
 const CR = 13;
+const BOM = 0xfeff;
 
 const isLineEnd = (code: number) => code === LF || code === CR;
 /** What may follow a list's mark: a space, a tab, or the line's end (an empty item); NaN is the text's end. */
@@ -39,7 +40,13 @@ export function containerDepth(source: string, limit: number): number {
   /** The most containers open after a line so far, and of them, footnote definitions. */
   let depth = 0;
   let notes = 0;
+  // The parser skips a byte-order mark at the start (micromark's preprocess, and `parseMarkdown`
+  // before it, so two in all), so the first line starts after them. Every one is skipped here: one
+  // the parser keeps opens nothing there, so skipping it can only count more. The rest of what the
+  // parser changes first opens nothing either: NUL becomes U+FFFD, a character here too; `\r`,
+  // `\n`, and `\r\n` all end a line, as here; and a tab runs to the next multiple of 4 columns.
   let i = 0;
+  while (source.charCodeAt(i) === BOM) i++;
   while (i < n) {
     let column = 0;
     let indent = 0;

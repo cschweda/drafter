@@ -68,6 +68,8 @@ describe('a Markdown document’s nesting, scanned before it is parsed', () => {
     expect(containerDepth(NESTED_NOTES, Number.POSITIVE_INFINITY)).toBeGreaterThanOrEqual(5_000);
     // Indentation alone opens nothing.
     expect(containerDepth(' '.repeat(100_000), 100)).toBe(0);
+    // A byte-order mark first is skipped, as the parser skips it.
+    expect(containerDepth(`\uFEFF${LIST_LINE}`, Number.POSITIVE_INFINITY)).toBe(2_400);
   });
 
   test('stops as soon as it passes the limit', () => {
@@ -98,6 +100,9 @@ describe('a Markdown document’s nesting, scanned before it is parsed', () => {
         '[^a]: ',
         '[^b]:',
         '[^a\\]]: ',
+        '\0',
+        '\t\t',
+        '  \t',
       ),
       { maxLength: 10 },
     );
@@ -106,12 +111,15 @@ describe('a Markdown document’s nesting, scanned before it is parsed', () => {
       { weight: 1, arbitrary: fc.constant('') },
       { weight: 1, arbitrary: arbPrefix.map((parts) => parts.join('')) },
     );
+    // What the parser's reading skips or changes before it parses: a byte-order mark first, any
+    // line ending, tabs (to the next multiple of 4), and NUL (read as U+FFFD).
     const arbDoc = fc
       .tuple(
+        fc.constantFrom('', '\uFEFF', '\uFEFF\uFEFF', '\0'),
         fc.array(arbLine, { minLength: 1, maxLength: 40 }),
         fc.constantFrom('\n', '\r\n', '\r'),
       )
-      .map(([lines, eol]) => lines.join(eol));
+      .map(([start, lines, eol]) => start + lines.join(eol));
     fc.assert(
       fc.property(arbDoc, (source) => {
         expect(containerDepth(source, Number.POSITIVE_INFINITY)).toBeGreaterThanOrEqual(
@@ -151,7 +159,15 @@ describe('a Markdown document’s nesting, scanned before it is parsed', () => {
 
 describe('a document nested too deeply', () => {
   test('is said at once, as the Preview says a document too deep for its stack', () => {
-    for (const source of [NESTED_NOTES, LIST_LINE, `${'>'.repeat(5_000)} x`]) {
+    const hostile = [NESTED_NOTES, LIST_LINE, `${'>'.repeat(5_000)} x`];
+    // A byte-order mark, which the parser skips, or other line endings, change nothing.
+    const variants = hostile.flatMap((source) => [
+      source,
+      `\uFEFF${source}`,
+      source.replaceAll('\n', '\r\n'),
+      `\uFEFF${source.replaceAll('\n', '\r')}`,
+    ]);
+    for (const source of variants) {
       const error = deepError(source);
       expect(error).toBeInstanceOf(RangeError);
       expect(previewProblem(error)).toBe('deep');
