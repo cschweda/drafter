@@ -29,6 +29,10 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
       (<kbd>Ctrl+Alt+1</kbd> to <kbd>Ctrl+Alt+7</kbd> elsewhere): a scene heading, action, a
       character, a parenthetical, a transition, centered text, and a lyric.
     </p>
+    <p>
+      New to Fountain? <strong>File → New guided screenplay</strong> and
+      <strong>New guided stage play</strong> walk you through a first script.
+    </p>
 
     <section v-for="entry in common" :id="entry.id" :key="entry.id" class="entry">
       <h2>{{ entry.name }} <span class="mark">{{ entry.mark }}</span></h2>

@@ -3,7 +3,9 @@ import { useEditor } from '../editor/session';
 import { previewProblem } from '../markdown/preview';
 import { markdownTitle } from '../markdown/title';
 import { type Settings, useSettings } from '../settings/settings';
+import type { ExportOptions } from '../workers/export-compute';
 import { renderExport } from './export-client';
+import { exportOptionsOf, optionsPhrase } from './export-options';
 import { useFiles } from './files';
 import { timedSay } from './say';
 import { useScript } from './script';
@@ -99,6 +101,18 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
   return null;
 }
 
+/**
+ * ", with scene numbers as written and no title page" in "Exported The Call.pdf, ….", naming the
+ * options that aren't the default (Call 11); nothing for the defaults or a Markdown document. A
+ * Final Draft file keeps its written numbers whatever the option says (Call 8), so its toast
+ * names only the title page.
+ */
+function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
+  if (markdown) return '';
+  const phrase = optionsPhrase(kind === 'fdx' ? { ...options, sceneNumbers: 'none' } : options);
+  return phrase ? `, ${phrase}` : '';
+}
+
 async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
   const { kind } = asked;
   const files = useFiles();
@@ -106,10 +120,12 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
   const script = useScript();
   // A switch under way finishes first: the export is of the script that is open when it starts.
   await whenIdle(script.busy);
-  // The name, the text, and the template are taken together, here, so they are one script's.
+  // The name, the text, the template, and the export options are taken together, here, so they
+  // are one script's: never the options of the script that was open before a switch.
   const source = editor.view.state.doc.toString();
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
+  const options = exportOptionsOf(script.project.value);
   // A document with no title is called after its file, as the project's own title is.
   const fallback = fileBaseName(titleFileOf(script.project.value));
   const title = markdown
@@ -185,7 +201,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
             title,
             lang: asked.lang,
           }
-        : { kind: kind as 'pdf' | 'txt' | 'fdx', source, template };
+        : { kind: kind as 'pdf' | 'txt' | 'fdx', source, template, options };
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -201,7 +217,9 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
     else files.download(name, data, MIME[kind]);
     const lacking =
       missing.length > 0 ? ` ${MISSING_GLYPHS}${missing.slice(0, MISSING_SHOWN).join(', ')}.` : '';
-    await announceReady(`Exported ${target?.name ?? name}.${lacking}`);
+    await announceReady(
+      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options)}.${lacking}`,
+    );
     return 'saved';
   } catch (error) {
     clearTimeout(slow);
@@ -218,12 +236,17 @@ export function sayInToast(message: string): Promise<void> {
   return announceReady(message);
 }
 
-/** What an export was asked for: its kind, of which script and text, with which template and settings. */
+/**
+ * What an export was asked for: its kind, of which script and text, with which template, export
+ * options, and settings.
+ */
 interface Asked {
   kind: ExportKind;
   script: unknown;
   source: string;
   template: unknown;
+  sceneNumbers: ExportOptions['sceneNumbers'];
+  titlePage: ExportOptions['titlePage'];
   paper: Settings['markdownPaper'];
   lang: Settings['spellLanguage'];
 }
@@ -232,11 +255,14 @@ function askedFor(kind: ExportKind): Asked {
   const editor = useEditor();
   const project = useScript().project.value;
   const { settings } = useSettings();
+  const options = exportOptionsOf(project);
   return {
     kind,
     script: project?.id ?? project,
     source: editor.view.state.doc.toString(),
     template: editor.template.value,
+    sceneNumbers: options.sceneNumbers,
+    titlePage: options.titlePage,
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
   };
@@ -251,8 +277,9 @@ let last: { asked: Asked; done: Promise<'saved' | 'cancelled'> } | undefined;
  * Exports the open script. `'cancelled'`: the writer cancelled the picker, there was nothing to
  * export, or the export failed (the toast says so; this never throws). Exports run one at a time,
  * so the worker answers them in order: the same export as the last one asked for (its kind, of
- * the same script and text, with the same template and settings) is joined, not repeated, and any
- * other waits its turn, so another script's PDF is its own.
+ * the same script and text, with the same template, export options, and settings) is joined, not
+ * repeated, and any other waits its turn, so another script's PDF is its own (and an export asked
+ * for after the options changed is its own too).
  */
 export function exportScript(kind: ExportKind): Promise<'saved' | 'cancelled'> {
   const asked = askedFor(kind);

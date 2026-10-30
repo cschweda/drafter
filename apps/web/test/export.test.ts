@@ -11,7 +11,12 @@ const OTHER = 'Title: The Crossing\n\nINT. HALL - DAY\n\nHi.\n';
 const shown = vi.hoisted(() => ({
   text: '',
   kind: 'fountain' as 'fountain' | 'markdown',
-  project: null as null | { fileName?: string; lineBreak?: '\n' | '\r\n'; bom?: boolean },
+  project: null as null | {
+    fileName?: string;
+    lineBreak?: '\n' | '\r\n';
+    bom?: boolean;
+    exportOptions?: Record<string, string>;
+  },
 }));
 const switching = vi.hoisted(() => ({ busy: undefined as undefined | { value: boolean } }));
 vi.mock('../app/editor/session', async () => {
@@ -35,7 +40,16 @@ vi.mock('../app/storage/script', async () => {
   const { ref } = await import('vue');
   const busy = ref(false);
   switching.busy = busy;
-  return { useScript: () => ({ busy, project: { value: shown.project } }) };
+  return {
+    useScript: () => ({
+      busy,
+      project: {
+        get value() {
+          return shown.project;
+        },
+      },
+    }),
+  };
 });
 
 const preferences = vi.hoisted(() => ({
@@ -124,6 +138,7 @@ describe('exporting', () => {
         kind: 'pdf',
         source: TEXT,
         template: builtins['us-screenplay'],
+        options: { sceneNumbers: 'none', titlePage: 'full' },
       },
       expect.any(Function),
     );
@@ -148,6 +163,7 @@ describe('exporting', () => {
         kind: 'fdx',
         source: TEXT,
         template: builtins['us-screenplay'],
+        options: { sceneNumbers: 'none', titlePage: 'full' },
       },
       expect.any(Function),
     );
@@ -466,6 +482,73 @@ describe('exporting', () => {
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt.');
   });
 
+  test('sends the open script’s options with its text', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { sceneNumbers: 'written', titlePage: 'title-author' } };
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'pdf',
+        source: TEXT,
+        template: builtins['us-screenplay'],
+        options: { sceneNumbers: 'written', titlePage: 'title-author' },
+      },
+      expect.any(Function),
+    );
+    // The toast names what isn't the default, so a choice made long ago is no surprise.
+    expect(t.exportNotice.value).toBe(
+      'Exported The Call Part 1.pdf, with scene numbers as written and the title and author only.',
+    );
+    // A Final Draft file keeps its written numbers whatever the choice: its toast names the title page only.
+    expect(await t.exportScript('fdx')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'fdx',
+        options: { sceneNumbers: 'written', titlePage: 'title-author' },
+      }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe(
+      'Exported The Call Part 1.fdx, with the title and author only.',
+    );
+    // An option it doesn't know is read as the default.
+    shown.project = { exportOptions: { sceneNumbers: 'roman', titlePage: 'none' } };
+    expect(await t.exportScript('txt')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({ options: { sceneNumbers: 'none', titlePage: 'none' } }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt, with no title page.');
+  });
+
+  test('gives the same script’s export with other options its own export', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { titlePage: 'full' } };
+    let release: (() => void) | undefined;
+    render.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(new Uint8Array([1]));
+        }),
+    );
+    const full = t.exportScript('pdf');
+    expect(t.exportScript('pdf')).toBe(full);
+    await vi.waitFor(() => expect(release).toBeDefined());
+    // The options change (in the dialog) while the first is under way: not joined to it.
+    shown.project = { exportOptions: { titlePage: 'none' } };
+    const none = t.exportScript('pdf');
+    expect(none).not.toBe(full);
+    release?.();
+    await full;
+    await none;
+    expect(
+      render.mock.calls.map(([request]) => (request as { options: { titlePage: string } }).options),
+    ).toEqual([
+      { sceneNumbers: 'none', titlePage: 'full' },
+      { sceneNumbers: 'none', titlePage: 'none' },
+    ]);
+  });
+
   test('joins an export already under way', async () => {
     const t = await load({ inPlace: true });
     const first = t.exportScript('pdf');
@@ -548,14 +631,19 @@ describe('exporting', () => {
     expect(t.log).toEqual([]);
     // The switch ends: the editor shows the other script.
     shown.text = OTHER;
+    shown.project = { exportOptions: { sceneNumbers: 'all' } };
     busy.value = false;
     expect(await done).toBe('saved');
     expect(t.log[0]).toBe('pick The Crossing.txt txt');
+    // The options are the exported script's, read with its text.
     expect(render).toHaveBeenCalledWith(
-      expect.objectContaining({ source: OTHER }),
+      expect.objectContaining({
+        source: OTHER,
+        options: { sceneNumbers: 'all', titlePage: 'full' },
+      }),
       expect.any(Function),
     );
-    expect(t.exportNotice.value).toBe('Exported The Crossing.txt.');
+    expect(t.exportNotice.value).toBe('Exported The Crossing.txt, with every scene numbered.');
   });
 
   test('renders the text it named, even if the editor changes while the picker is open', async () => {

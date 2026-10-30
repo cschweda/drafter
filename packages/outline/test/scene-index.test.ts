@@ -232,6 +232,51 @@ describe('sceneIndex', () => {
     expect(index.sections.map((s) => [s.title, s.scenes, s.eighths])).toEqual([['Act One', 2, 11]]);
   });
 
+  test("each scene's timing sums its blocks, and each section's its scenes", () => {
+    const source = [
+      '# Act One',
+      '',
+      '## Arrival',
+      '',
+      'INT. A - DAY',
+      '',
+      'He runs.',
+      'She follows.',
+      '',
+      'ANN',
+      '(softly)',
+      'Not now, not tonight.',
+      '',
+      'INT. B - DAY',
+      '',
+      `${'x'.repeat(61)}`,
+      '',
+      '# Act Two',
+      '',
+      'INT. C - DAY',
+      '',
+      'BEN',
+      'Hi.',
+      '',
+    ].join('\n');
+    const { index } = indexOf(source);
+    expect(index.scenes.map((s) => s.timing)).toEqual([
+      { spoken: 4, actionLines: 2 },
+      { spoken: 0, actionLines: 2 },
+      { spoken: 1, actionLines: 0 },
+    ]);
+    expect(index.sections.map((s) => [s.title, s.timing])).toEqual([
+      ['Act One', { spoken: 4, actionLines: 4 }],
+      ['Arrival', { spoken: 4, actionLines: 4 }],
+      ['Act Two', { spoken: 1, actionLines: 0 }],
+    ]);
+    // A section with no scenes takes no time.
+    expect(indexOf('# Empty\n\nNothing here yet.\n').index.sections[0]?.timing).toEqual({
+      spoken: 0,
+      actionLines: 0,
+    });
+  });
+
   test('reads a play with its own template', () => {
     // A play read with the screenplay template has no scenes: its ## lines are sections there.
     const play = parse(SAMPLE_STAGE_PLAY);

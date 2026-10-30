@@ -1,9 +1,12 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
 import type { SampleKind } from '../editor/sample-kinds';
+import type { StarterKind } from '../editor/starter-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
+import type { Rates } from '../stats/time-format';
+import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';
 import { fileBaseName, titleFileOf, titleOf } from './text';
@@ -31,6 +34,12 @@ export interface Project {
    */
   sampleScript?: SampleKind;
   /**
+   * Set on a document made from one of the guided starters (`editor/starters.ts`): like a sample
+   * script, the writer's own, but not a meeting with that kind's annotated sample. Unindexed, so it
+   * needed no new version.
+   */
+  starter?: StarterKind;
+  /**
    * Set on a document that opened with a sample's text because it was the writer's first of its
    * kind: the new-document text Start blank puts in instead, and where the cursor goes in it.
    * Cleared once Start blank has been used. Unindexed, so it needed no new version.
@@ -57,6 +66,18 @@ export interface Project {
    */
   importedFrom?: string;
   fsHandleId?: string;
+  /**
+   * How this script exports (scene numbers, the title page): set in the Export options dialog,
+   * kept here and never in the script, so choosing one never changes the text. A missing or
+   * unknown value is its default (`exportOptionsOf`). Unindexed, so it needed no new version.
+   */
+  exportOptions?: Partial<ExportOptions>;
+  /**
+   * The rates this script's running time and estimate from the dialogue are figured at: set in
+   * the Stats window, kept here and never in the script (Call 9). A missing or out-of-range value
+   * is its default (`ratesOf`). Unindexed, so it needed no new version.
+   */
+  timing?: Partial<Rates>;
 }
 
 /** The kind a project is: Fountain unless it says it is Markdown. */

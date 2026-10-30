@@ -1,7 +1,7 @@
 import type { TitlePage } from '@drafter/fountain';
 import type { Template } from '@drafter/templates';
 import { blankLine, columns, isBlank, joined, spanOf } from './lines';
-import type { LayoutDiagnostic, LayoutLine, Page } from './types';
+import type { LayoutDiagnostic, LayoutLine, Page, TitlePageMode } from './types';
 import { wrap } from './wrap';
 
 /** The title's line, counted from the top edge of the paper. */
@@ -21,6 +21,21 @@ const SLOTS: Readonly<Record<string, Slot>> = {
 };
 
 const CENTERED: readonly Slot[] = ['title', 'credit', 'author', 'source'];
+
+/**
+ * The title page with only the fields `mode` keeps: for `'title-author'`, those the layout prints
+ * centered (title, credit, author or authors, and source, by the same names it reads), in their
+ * order; or null for `'none'`. `'full'` returns it as is. Never changes the one it is given.
+ */
+export function titlePageFor(tp: TitlePage | null, mode: TitlePageMode): TitlePage | null {
+  if (tp === null || mode === 'none') return null;
+  if (mode === 'full') return tp;
+  const fields = tp.fields.filter((field) => {
+    const slot = SLOTS[field.key.trim().toLowerCase()];
+    return slot !== undefined && CENTERED.includes(slot);
+  });
+  return { ...tp, fields };
+}
 
 export interface TitleResult {
   page: Page;

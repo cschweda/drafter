@@ -434,6 +434,8 @@ A heading starts each section, and a short list of links at the top of the tab g
 - **Phone:** the first column stays fixed and the grid scrolls sideways in its own region; a **List** toggle shows each character's scenes as text instead.
 - A grid of 120 scenes and 30 characters must open in under 200 ms on a mid-range laptop. Builder: draw only what's visible if it doesn't.
 
+**Running time (since v0.17.0).** The Stats window already gives the running time at each script's own **minutes a page** and an **estimate from the dialogue** at its own **spoken words a minute** (the [out-the-door design](drafter-out-the-door-design.md) §3), both rates kept per script on its project record. The tab keeps both figures and both rate fields as they are, and screen time can be given in minutes at the script's page rate as well as in pages. The scene index's `timing` and `spokenBy` (each scene's words spoken, by speaker) are what dialogue share and Scaffold's per-character figures read, so nothing is counted twice.
+
 ## 17. The Beat Board
 
 A free board of idea cards, like a corkboard, for ideas that aren't scenes yet. The cards live in the Beat Board block (§5.6).
@@ -539,6 +541,8 @@ Each plan is a shippable minor release with its own plan document, tag, GitHub R
 
 **Decided (2026-10-29, with the Markdown PDF): the Markdown PDF took v0.16.0, and two releases come next, ahead of Plan E:** v0.17.0 (guided first-script starters, export options, a better running time, and a Technical details page) and v0.18.0 (version history, with GitHub-style diffs). So the headings below give Plans E to H as v0.19.0 to v0.22.0, their letters unchanged; the imports release (Highland, Fade In, and Markdown) will move them down once more, by one minor, when it lands. Their scope is unchanged.
 
+**Decided (2026-10-29, with getting a script out the door): that release took v0.17.0, version history (with GitHub-style diffs) is v0.18.0, and the imports release (Highland, Fade In, and Markdown) takes v0.19.0, ahead of Plan E,** so the headings below give Plans E to H as v0.20.0 to v0.23.0, their letters unchanged. Plan E also takes **Scaffold**, the maintainer's cast-and-scene panel (named 2026-10-29); the other plans' scope is unchanged.
+
 The order is otherwise the suggested one with two changes, both Calls: **setups and payoffs move into Plan B**, because they are keyed notes listed in the Notes tab B builds, and **snapshots come before spellcheck**, because the browser's spellcheck already works while history does not exist, and Plans A and B make large structural edits that a writer drafting for the first time should be able to go back on.
 
 ### Plan A — v0.10.0: The outline
@@ -623,11 +627,26 @@ The strip took v0.15.0, so Plans E to H each moved down one minor; their letters
 
 **Design:** [the Markdown PDF design](drafter-markdown-pdf-design.md), with its own plan in `docs/plans/2026-10-29-markdown-pdf.md`. **Export as PDF** for a Markdown document: headings, paragraphs, emphasis, lists, quotes, code, rules, and clickable `http`, `https`, and `mailto` links on numbered US Letter or A4 pages (a **Paper for Markdown PDFs** setting), in Inter Tight with Courier Prime for code, laid out by `@drafter/render-pdf`'s `src/document/` and drawn in the export worker, offline. A long export of any kind shows a progress bar and a percentage in its toast.
 
-The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E, so Plans E to H each moved down three minors; their letters stay.
+The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E, so Plans E to H each moved down three minors at that point, and one more when the imports took v0.19.0; their letters stay, and they are now v0.20.0 to v0.23.0.
 
-### Plan E — v0.19.0: Seeing the script
+### Getting a script out the door — v0.17.0
 
-**Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15).
+**Status:** built (2026-10-29). Accessibility work beyond the existing axe checks waits for the final steps, as for the releases before it.
+
+**Design:** [the out-the-door design](drafter-out-the-door-design.md), with its own plan in `docs/plans/2026-10-29-out-the-door.md`. Four things the maintainer asked for: a **guided first screenplay and first stage play** whose notes teach each element, its element-bar button, and its Fountain mark; **Export options** for scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), kept per script; **running time** at a rate set per script, an **estimate from the dialogue**, and each scene's and act's time in the Outline and the Structure strip, counted in the scene index's own pass; and a **Technical details** help page with diagrams, generated as Mermaid into `docs/technical-details.md`. No new dependency.
+
+This release took v0.17.0, and version history (v0.18.0) and the imports (v0.19.0) come before Plan E, so Plans E to H are v0.20.0 to v0.23.0; their letters stay.
+
+### Plan E — v0.20.0: Seeing the script
+
+**Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15); and **Scaffold** (below).
+
+**Scaffold** (named by the maintainer, 2026-10-29): who is in the script, and where, at a glance, in the spirit of an X-ray view of a film, in Drafter's own design and words.
+
+- **The panel**, beside the script, follows the cursor's scene: its characters (speaking or silent, by §16's rule for who is in a scene), each one's words and share of the scene's time, the location and time of day, the scene's pages and estimated minutes, anyone first seen here, and a link to each character's other scenes.
+- **A character page:** every scene they are in, their screen time in pages and in minutes at the script's rate, their dialogue share, their first and last appearance, their longest absence, the characters they share scenes with, the locations they visit, and every line they speak, each a link to its place.
+- **A location page:** its scenes, the time spent there, and who appears there.
+- Built on the Stats tab's character data and grid (§16) and on v0.17.0's per-scene `timing` and `spokenBy` in the scene index, so it counts nothing again. Every figure is text a screen reader reads, and every view works by keyboard.
 
 **Done when:**
 
@@ -635,9 +654,10 @@ The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E,
 - The map, the Timeline, the grid, and the pacing table work fully by keyboard, and each chart has its table.
 - Presence and screen time match fixtures, including "Will" and "Hope".
 - The grid meets its time budget.
-- axe passes on every Stats section, the map, and the Timeline, in both themes at both widths.
+- Scaffold's figures match the Stats tab's and the scene index's on fixtures, and its panel and its character and location pages work fully by keyboard.
+- axe passes on every Stats section, the map, the Timeline, and Scaffold, in both themes at both widths.
 
-### Plan F — v0.20.0: The Beat Board
+### Plan F — v0.21.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -648,7 +668,7 @@ The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E,
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.21.0: Reader notes
+### Plan G — v0.22.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -659,7 +679,7 @@ The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E,
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.22.0: Reference
+### Plan H — v0.23.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 
@@ -741,3 +761,7 @@ Made with the Structure strip (2026-10-29):
 Made with the Markdown PDF (2026-10-29):
 
 - **This design, §22:** the Markdown PDF ships as v0.16.0 after the Structure strip, with [its own design](drafter-markdown-pdf-design.md); v0.17.0 (guided starters, export options, running time, and a Technical details page) and v0.18.0 (version history) come next, so Plans E to H become v0.19.0 to v0.22.0, their letters unchanged, and the imports release will move them once more. **README and architecture §13:** the Markdown PDF is in the status line, What you can do today, the Phase 2 roadmap (built in v0.16.0), the Packages and Stack tables, and Design documents; the "Next" lines name v0.17.0, version history, and the imports.
+
+Made with getting a script out the door (2026-10-29):
+
+- **This design, §16 and §22:** v0.17.0 is listed as built, after the Markdown PDF, with [its own design](drafter-out-the-door-design.md); version history is v0.18.0 and the imports v0.19.0, so Plans E to H become v0.20.0 to v0.23.0, their letters unchanged. Plan E takes Scaffold, the maintainer's cast-and-scene panel with a page for each character and location, built on §16 and v0.17.0's per-scene timing; §16 notes that the per-script rates and the estimate from the dialogue carry into the Stats tab. **Architecture §13 and the README:** the same order, v0.17.0 among what's built, and Scaffold in Phase 2's list. **Architecture §10 and technical design §7:** Expand from outline is no longer called scaffolding, so the word names only the new feature.

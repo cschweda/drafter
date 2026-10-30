@@ -1,5 +1,5 @@
 import { parse } from '@drafter/fountain';
-import { builtins } from '@drafter/templates';
+import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import type { MdNode } from '../app/markdown/render';
 import { countScript } from '../app/stats/count';
@@ -131,11 +131,11 @@ describe('the character table', () => {
       { name: 'DANNY', speeches: 1, scenes: 1, words: 2 },
     ]);
     // The scene count says the same.
-    expect(countScript(play, null).scenes).toBe(2);
+    expect(countScript(play, null, builtins['stage-play-standard'] as Template).scenes).toBe(2);
     // In a screenplay a ## section is only an outline marker.
     const screenplay = parse('## Part\n\nINT. A - DAY\n\nANN\nHi.\n');
     expect(characterTable(screenplay)[0]?.scenes).toBe(1);
-    expect(countScript(screenplay, null).scenes).toBe(1);
+    expect(countScript(screenplay, null, builtins['us-screenplay'] as Template).scenes).toBe(1);
     expect(builtins['stage-play-standard']).toBeDefined();
   });
 

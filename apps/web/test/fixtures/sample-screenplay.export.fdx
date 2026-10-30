@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>This is a short sample screenplay, not a finished script. The "Key: value" lines at the top make the title page. Notes in double brackets, like this one, stay in the source but never print. Delete them when you're done exploring.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterSection="1">
+      <Text>Act One</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterSynopsis="Yes">
+      <Text>Margaret waits up for a call that never comes.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>A line starting with # is a section, and one starting with = is a synopsis. They build the outline and never print.</Text>
+    </Paragraph>
+    <Paragraph Type="Scene Heading">
+      <Text>INT. KITCHEN - NIGHT</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>A scene heading starts with INT. or EXT. and usually ends with the time of day.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A small kitchen, cleaner than it needs to be. The wall clock reads 11:40.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>MARGARET (60s), cardigan buttoned wrong, sits at the table in front of a plate she hasn't touched. She watches the phone on the wall.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>SILENCE.
+Just the clock.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>Without the ! at the start, SILENCE would read as a character saying "Just the clock." The ! forces the lines to be action.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>MARGARET</Text>
+    </Paragraph>
+    <Paragraph Type="Parenthetical">
+      <Text>(quietly)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>You said you'd call.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>A name in capitals on its own line, followed directly by speech, is a character cue. A line in parentheses right under the name is a parenthetical.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>She scrapes the plate into the trash and sets it in the sink harder than she needs to.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A KNOCK at the back door.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DANNY (O.S.)</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Mom? It's me. I lost my phone.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>(O.S.) means off screen: we hear Danny before we see him.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Margaret doesn't move.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>MARGARET</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Of course you did.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>She opens the door. DANNY (30s), soaked through, holds out a bakery box gone soft in the rain.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DANNY</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>I </Text>
+      <Text Style="Italic">did</Text>
+      <Text> call. From a pay phone. Do you know how hard it is to find a pay phone?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>MARGARET</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Harder than finding your mother's house, apparently.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>He sets the box on the table and lifts the lid. Something that used to be a cake.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>Margaret speaks again right after a line of action, so Drafter adds (CONT'D) to her name by itself. Don't type it.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>MARGARET</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>Is that a cake?</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DANNY</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text>It was a cake.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>They both start talking at once.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>A ^ after the second name sets two speeches side by side.</Text>
+    </Paragraph>
+    <Paragraph>
+      <DualDialogue>
+        <Paragraph Type="Character">
+          <Text>MARGARET</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>You can't just turn up at midnight with--</Text>
+        </Paragraph>
+        <Paragraph Type="Character">
+          <Text>DANNY</Text>
+        </Paragraph>
+        <Paragraph Type="Dialogue">
+          <Text>I know, I know. I'm sorry. I--</Text>
+        </Paragraph>
+      </DualDialogue>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>Text between /* and */ is cut but kept, in case you want it back. It never prints.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>They both stop. Margaret hands him a dish towel and, after a long moment, a fork.</Text>
+    </Paragraph>
+    <Paragraph Type="Transition">
+      <Text>CUT TO:</Text>
+    </Paragraph>
+    <Paragraph Type="Scene Heading">
+      <Text>EXT. BACK PORCH - LATER</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>The rain has stopped. Margaret and Danny sit on the step, eating the ruined cake straight from the box.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>DANNY</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text Style="Underline">Next</Text>
+      <Text> year I'll call from the bakery.</Text>
+    </Paragraph>
+    <Paragraph Type="Character">
+      <Text>MARGARET</Text>
+    </Paragraph>
+    <Paragraph Type="Dialogue">
+      <Text Style="Bold">Next</Text>
+      <Text> year you'll come at seven.</Text>
+    </Paragraph>
+    <Paragraph Type="General" DrafterNote="Yes">
+      <Text>Single *stars* make italics, double **stars** make bold, and _underscores_ underline. A line wrapped in &gt; and &lt; is centered.</Text>
+    </Paragraph>
+    <Paragraph Type="Action" Alignment="Center">
+      <Text>END OF SAMPLE</Text>
+    </Paragraph>
+  </Content>
+  <TitlePage>
+    <Content>
+      <Paragraph Type="Action" Alignment="Center" DrafterKey="Title">
+        <Text>The Call</Text>
+      </Paragraph>
+      <Paragraph Type="Action" Alignment="Center" DrafterKey="Credit">
+        <Text>Written by</Text>
+      </Paragraph>
+      <Paragraph Type="Action" Alignment="Center" DrafterKey="Author">
+        <Text>A. Writer</Text>
+      </Paragraph>
+      <Paragraph Type="Action" Alignment="Left" DrafterKey="Draft date">
+        <Text>October 2026</Text>
+      </Paragraph>
+      <Paragraph Type="Action" Alignment="Left" DrafterKey="Contact">
+        <Text>A. Writer</Text>
+      </Paragraph>
+      <Paragraph Type="Action" Alignment="Left">
+        <Text>writer@example.com</Text>
+      </Paragraph>
+    </Content>
+  </TitlePage>
+</FinalDraft>

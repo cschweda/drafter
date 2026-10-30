@@ -8,6 +8,7 @@ import {
   exportNotice,
   exportProgress,
 } from '~/storage/export';
+import { OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 
 // A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10).
 const { kind } = useEditor();
@@ -67,9 +68,23 @@ function choose(kind: ExportKind) {
   close(true);
 }
 
+/**
+ * Export options… (out-the-door design §2.4): the menu's last item, after a line. A Markdown
+ * document has no scene numbers or title page, so it shows off, with the reason.
+ */
+const optionsWhy = computed(() => (kind.value === 'markdown' ? OPTIONS_NOT_FOR_MARKDOWN : ''));
+function chooseOptions() {
+  // Off, but still in the Tab order (aria-disabled), so the keyboard reaches it and hears why.
+  if (optionsWhy.value) return;
+  // The menu's button has focus as the dialog opens, so the dialog gives it back on closing: the
+  // item that opened it is gone by then.
+  close(true);
+  commandById('export-options')?.run();
+}
+
 /** The treatment asks a question first, in its own dialog (Phase 2 design §6.4). */
 function chooseTreatment() {
-  close(false);
+  close(true);
   commandById('export-treatment')?.run();
 }
 
@@ -121,6 +136,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseTreatment">
         <UIcon name="i-lucide-list-tree" class="icon" />Treatment (.md)…
       </button>
+      <div class="rule" role="separator" />
+      <button
+        type="button"
+        class="item"
+        :aria-disabled="optionsWhy ? 'true' : undefined"
+        :aria-describedby="optionsWhy ? 'export-options-why' : undefined"
+        @click="chooseOptions"
+      >
+        <UIcon name="i-lucide-sliders-horizontal" class="icon" />Export options…
+      </button>
+      <p v-if="optionsWhy" id="export-options-why" class="why">{{ optionsWhy }}</p>
     </div>
     <div class="toast" :class="{ shown: exportNotice || exportError || exportProgress }">
       <span role="status">{{ exportNotice }}</span>
@@ -184,8 +210,22 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   text-align: left;
   cursor: pointer;
 }
-.item:hover {
+.item:hover:not([aria-disabled='true']) {
   background: var(--chrome);
+}
+.item[aria-disabled='true'] {
+  color: var(--muted);
+  cursor: default;
+}
+.rule {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+.why {
+  margin: 0 8px 4px 30px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .item:focus-visible {
   outline: 2px solid var(--heading);

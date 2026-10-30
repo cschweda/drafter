@@ -98,6 +98,45 @@ test.describe('the Outline', () => {
     await expect(tree(page)).toContainText('p. 1 · 1 1/8 p');
   });
 
+  test("each row shows its time, and an act's is its scenes' total", async ({ page }) => {
+    await start(page);
+    await showOutline(page);
+    // The sample at a minute a page: 1 1/8 pages is 67.5 s and 2/8 is 15 s, each to 5 s; the
+    // act's 1 3/8 pages are their total, 82.5 s, so 1 min 25 s.
+    const kitchen = row(page, /^Scene 1, INT\. KITCHEN - NIGHT/);
+    const porch = row(page, /^Scene 2, EXT\. BACK PORCH - LATER/);
+    await expect(kitchen.locator('.length')).toHaveText('p. 1 · 1 1/8 pp · 1 min 10 s');
+    await expect(porch.locator('.length')).toHaveText('p. 2 · 2/8 p · 15 s');
+    await expect(actOne(page).locator('.length')).toHaveText('2 scenes · 1 3/8 pp · 1 min 25 s');
+    // In words, in each row's name.
+    await expect(kitchen).toHaveAccessibleName(
+      /^Scene 1, INT\. KITCHEN - NIGHT, page 1, 1 1\/8 pages, about 1 minute 10 seconds/,
+    );
+    await expect(porch).toHaveAccessibleName(/, 2\/8 page, about 15 seconds/);
+    await expect(actOne(page)).toHaveAccessibleName(
+      /^Act One, 2 scenes, 1 3\/8 pages, about 1 minute 25 seconds/,
+    );
+  });
+
+  test('the times follow the rate set in Stats', async ({ page }) => {
+    await start(page);
+    await showOutline(page);
+    const kitchen = row(page, /^Scene 1, INT\. KITCHEN - NIGHT/);
+    await expect(kitchen.locator('.length')).toHaveText('p. 1 · 1 1/8 pp · 1 min 10 s');
+    await runCommand(page, 'Show stats');
+    const stats = page.getByRole('dialog', { name: 'Stats' });
+    await stats.getByLabel('Minutes a page').fill('2');
+    await stats.getByLabel('Minutes a page').blur();
+    await expect(stats).toContainText('at 2 minutes a page');
+    await page.keyboard.press('Escape');
+    await expect(stats).toBeHidden();
+    // At 2 minutes a page: 1 1/8 pages is 135 s, and the act's 1 3/8 pages 165 s.
+    await showOutline(page);
+    await expect(kitchen.locator('.length')).toHaveText('p. 1 · 1 1/8 pp · 2 min 15 s');
+    await expect(actOne(page).locator('.length')).toHaveText('2 scenes · 1 3/8 pp · 2 min 45 s');
+    await expect(kitchen).toHaveAccessibleName(/, 1 1\/8 pages, about 2 minutes 15 seconds/);
+  });
+
   test("lists a stage play's acts and scenes", async ({ page }) => {
     await openWith(
       page,

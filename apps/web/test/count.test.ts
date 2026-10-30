@@ -9,8 +9,18 @@ import { countScript, runningTime } from '../app/stats/count';
 const template = builtins['us-screenplay'] as NonNullable<(typeof builtins)['us-screenplay']>;
 const count = (source: string) => {
   const doc = parse(source);
-  return countScript(doc, paginate(doc, template));
+  return countScript(doc, paginate(doc, template), template);
 };
+
+/**
+ * The sample's timing, worked out by hand: its 11 speeches come to 77 words (4, 7, 4, 19, 7, 4, 4,
+ * 8, 7, 7, 6; the parenthetical and the cut speech in the boneyard add none), less the 7 of
+ * Danny's ^ speech, which is said at the same time as Margaret's 8 and is the shorter, so 70
+ * spoken; and its 11
+ * action blocks to 20 lines at 60 columns (73, 133, 86, 94, 81, 81, and 103 characters wrap to 2,
+ * 3, 2, 2, 2, 2, and 2; "SILENCE." and "Just the clock." are a line each, and four short lines one).
+ */
+const SAMPLE_TIMING = { spoken: 70, actionLines: 20 };
 
 describe('runningTime', () => {
   test('says it in minutes, and hours past 59', () => {
@@ -36,7 +46,12 @@ describe('countScript', () => {
     const doc = parse(sample);
     const layout = paginate(doc, template);
     expect(layout.pages.map((page) => page.number)).toEqual([0, 1, 2]);
-    expect(countScript(doc, layout)).toEqual({ pages: 1.4, scenes: 2, words: 261, minutes: 1 });
+    expect(countScript(doc, layout, template)).toEqual({
+      pages: 1.4,
+      scenes: 2,
+      words: 261,
+      timing: SAMPLE_TIMING,
+    });
   });
 
   test('doesn’t count notes, boneyard, or the metadata block', () => {
@@ -99,10 +114,43 @@ describe('countScript', () => {
     for (const text of corpus) expect(wordsIn(text), text.slice(0, 20)).toBe(byRegExp(text));
   });
 
+  test("counts the whole script's timing, the preamble included", () => {
+    // A cold open before the first heading counts; the title page takes no time.
+    const source = [
+      'Title: The Call',
+      'Author: A. Writer',
+      '',
+      'A phone rings in the dark.',
+      '',
+      'MARGARET (V.O.)',
+      'Pick up. Please.',
+      '',
+      'INT. KITCHEN - NIGHT',
+      '',
+      `${'x'.repeat(61)}`,
+      '',
+      '@McCLANE',
+      'Yippee ki-yay.',
+      '',
+    ].join('\n');
+    const doc = parse(source);
+    expect(countScript(doc, null, template).timing).toEqual({ spoken: 5, actionLines: 3 });
+  });
+
+  test('counts dual dialogue once, as the longer speech of the pair', () => {
+    const pair = 'INT. HALL - DAY\n\nANN\nOne two three.\n\nBEN ^\nFour five.\n';
+    expect(countScript(parse(pair), null, template).timing).toEqual({ spoken: 3, actionLines: 0 });
+  });
+
   test('has no pages without a layout, and leaves a lone title page out', () => {
     const doc = parse('Title: Only\n');
-    expect(countScript(doc, null)).toEqual({ pages: 0, scenes: 0, words: 1, minutes: 0 });
-    expect(countScript(doc, paginate(doc, template)).pages).toBe(0);
+    expect(countScript(doc, null, template)).toEqual({
+      pages: 0,
+      scenes: 0,
+      words: 1,
+      timing: { spoken: 0, actionLines: 0 },
+    });
+    expect(countScript(doc, paginate(doc, template), template).pages).toBe(0);
   });
 
   test('measures the last page by how far down it runs', () => {
@@ -110,18 +158,17 @@ describe('countScript', () => {
     const line = 'Rain.\n\n';
     const half = count(line.repeat(14)); // 14 lines of text and 13 blanks between: 27 lines
     expect(half.pages).toBe(0.5);
-    expect(half.minutes).toBe(1);
   });
 
   test('remembers its answer for the same parse and layout', () => {
     const doc = parse(sample);
     const layout = paginate(doc, template);
-    expect(countScript(doc, layout)).toBe(countScript(doc, layout));
+    expect(countScript(doc, layout, template)).toBe(countScript(doc, layout, template));
     // A newer layout of the same parse is its own answer.
     const lagging: Layout = { ...layout, pages: layout.pages.slice(0, 2) };
     // (With one body page left, that page is the last, and it runs nine tenths of the way down.)
-    expect(countScript(doc, lagging).pages).toBe(0.9);
-    expect(countScript(doc, layout).pages).toBe(1.4);
+    expect(countScript(doc, lagging, template).pages).toBe(0.9);
+    expect(countScript(doc, layout, template).pages).toBe(1.4);
   });
 
   test('stays cheap on a 120-page script', () => {
@@ -139,10 +186,10 @@ describe('countScript', () => {
     const layout = paginate(doc, template);
     expect(layout.pages.length).toBeGreaterThan(100);
     const start = performance.now();
-    const first = countScript(doc, layout);
+    const first = countScript(doc, layout, template);
     const cold = performance.now() - start;
     const again = performance.now();
-    for (let i = 0; i < 1000; i++) countScript(doc, layout);
+    for (let i = 0; i < 1000; i++) countScript(doc, layout, template);
     const warm = performance.now() - again;
     expect(first.scenes).toBe(1200);
     // A generous bound, so a loaded machine doesn't flake: counting is a pass over the blocks.

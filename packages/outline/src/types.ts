@@ -1,5 +1,6 @@
 import type { Span } from '@drafter/fountain';
 import type { FieldKey, MarkKey } from '@drafter/notes';
+import type { Timing } from './timing';
 
 /** Where a scene sits in the pages, from a layout that matches the parse. */
 export interface ScenePages {
@@ -48,6 +49,16 @@ export interface Scene {
   speakers: string[];
   /** Printed words: action, dialogue, and the rest that prints. */
   words: number;
+  /**
+   * Its words spoken and lines of action, for the estimate from the dialogue (`TimingTally`: a
+   * dual-dialogue pair counts as its longer speech).
+   */
+  timing: Timing;
+  /**
+   * The words each speaker says in the scene, by the name as `speakers` gives it (a speaker with
+   * only a parenthetical has 0); both sides of a dual pair in full. Kept for a per-character view.
+   */
+  spokenBy: Record<string, number>;
   /** Null until a layout that matches the parse is given. */
   pages: ScenePages | null;
 }
@@ -68,6 +79,8 @@ export interface Section {
   scenes: number;
   /** The scenes' total length in eighths, or null without pages. */
   eighths: number | null;
+  /** The sum of its scenes' timing; nothing for a section with no scenes. */
+  timing: Timing;
 }
 
 export type OutlineItem = Scene | Section;

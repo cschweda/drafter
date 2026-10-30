@@ -36,6 +36,22 @@ const changes = setSceneDetails(doc, index.scenes[0], {
 
 Everything Drafter writes is ordinary Fountain: synopses (`= …`), sections, and notes (`[[Color: blue]]`), which never print. See the [Phase 2 design](../../docs/drafter-phase2-design.md), §5, §6, §9, and §10.
 
+## Timing
+
+Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block; `TimingTally` adds blocks up in order, counting a dual-dialogue pair (`^`) once, as its longer speech, since both are said at the same time. A speech is what the layout groups as one: its cue and the parentheticals, dialogue, and lyrics right after it; a note, boneyard, or synopsis block ends it. `estimateSeconds` turns a timing into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`). Each scene also has `spokenBy`, the words each of its speakers says.
+
+```ts
+import { estimateSeconds, TimingTally } from '@drafter/outline';
+
+index.scenes[0].timing; // { spoken: 42, actionLines: 6 }
+index.scenes[0].spokenBy; // { MARGARET: 30, DANNY: 12 }
+const tally = new TimingTally(template);
+for (const block of doc.blocks) tally.add(block);
+estimateSeconds(tally.timing(), 150); // seconds, at 150 words a minute
+```
+
+See the [out-the-door design](../../docs/drafter-out-the-door-design.md), §3.
+
 ## The Structure strip
 
 `structureStrip` turns the scene index into the geometry of Drafter's Structure strip: a row for each section depth from 1 to 3 the script uses (`STRIP_DEPTHS`), then a row of every scene, each block placed along one axis of pages. A scene starts at its page and line and ends where the next one starts (the last one by its eighths), so the scenes tile the axis; a section spans its scenes, and a section with no scenes is a tick. Without a layout the blocks are sized by printed words. `rulerMarks` gives the page ruler's marks for a width in pixels.
