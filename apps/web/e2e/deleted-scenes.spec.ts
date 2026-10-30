@@ -27,6 +27,7 @@ const options = (page: Page) =>
   history(page).getByRole('listbox', { name: 'Snapshots' }).getByRole('option');
 const labelField = (page: Page) => history(page).getByRole('textbox', { name: 'Label' });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
+const READ_ONLY = 'This script is open for editing in another tab.';
 const deletedTab = (page: Page) =>
   page.getByRole('tab', { name: 'Deleted scenes', exact: true, selected: true });
 
@@ -69,6 +70,54 @@ async function deletedSince(page: Page, before = BEFORE, after = NOW) {
   await expect(deletedTab(page)).toBeVisible();
   await expect(panel(page)).toBeVisible();
 }
+
+/** The id of the open script of the writer's own. */
+const scriptId = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<string>((resolve, reject) => {
+        const open = indexedDB.open('drafter');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const all = db.transaction('projects').objectStore('projects').getAll();
+          all.onsuccess = () => {
+            db.close();
+            const mine = (all.result as Array<{ id: string; sample?: string }>).find(
+              (p) => !p.sample,
+            );
+            if (mine) resolve(mine.id);
+            else reject(new Error('no script of the writer’s own'));
+          };
+        };
+      }),
+  );
+
+/** The rows `drafter-cache` holds for a script, in both its tables. */
+const cacheRows = (page: Page, projectId: string) =>
+  page.evaluate(
+    (id) =>
+      new Promise<number>((resolve, reject) => {
+        const open = indexedDB.open('drafter-cache');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction(['prints', 'snapshotScenes']);
+          const counts = ['prints', 'snapshotScenes'].map(
+            (name) =>
+              new Promise<number>((done) => {
+                const request = tx.objectStore(name).index('projectId').count(id);
+                request.onsuccess = () => done(request.result);
+              }),
+          );
+          void Promise.all(counts).then(([a = 0, b = 0]) => {
+            db.close();
+            resolve(a + b);
+          });
+        };
+      }),
+    projectId,
+  );
 
 const focusedEntry = (page: Page) =>
   page.evaluate(
@@ -149,6 +198,53 @@ test.describe('Deleted scenes', () => {
     expect((await wholeText(page)).split('INT. CELLAR - NIGHT').length - 1).toBe(1);
     // The slim bar keeps its count while the list is read again.
     await expect(page.locator('.slim', { hasText: '1 deleted scene' })).toBeVisible();
+  });
+
+  test('a read-only tab lists them, and Put back is off and says why', async ({
+    page,
+    context,
+  }) => {
+    await deletedSince(page);
+    await expect(entries(page)).toHaveCount(2);
+    // The text is written (750 ms after the last change) before the second tab opens.
+    await page.waitForTimeout(1200);
+    const second = await context.newPage();
+    await second.goto('/');
+    await expect(second.getByText(READ_ONLY).first()).toBeVisible();
+    await expect.poll(() => wholeText(second)).toBe(NOW);
+    await runCommand(second, 'Deleted scenes');
+    await expect(entries(second)).toHaveCount(2);
+    await expect(panel(second).locator('h3')).toHaveText([
+      'INT. CELLAR - NIGHT',
+      'EXT. COAL YARD - DAWN',
+    ]);
+    await expect(panel(second)).toContainText(READ_ONLY);
+    const cellar = entryOf(second, 'INT. CELLAR - NIGHT');
+    const putBack = cellar.getByRole('button', { name: 'Put back INT. CELLAR - NIGHT' });
+    await expect(putBack).toHaveAttribute('aria-disabled', 'true');
+    await expect(putBack).toHaveAccessibleDescription(READ_ONLY);
+    // Pressed, or P on the entry: it says why, and the script stays as it was.
+    await putBack.dispatchEvent('click');
+    await expect(announcer(second)).toHaveText(READ_ONLY);
+    await cellar.focus();
+    await second.keyboard.press('p');
+    expect(await wholeText(second)).toBe(NOW);
+    await expect(entries(second)).toHaveCount(2);
+    await second.close();
+  });
+
+  test('removing the script leaves none of its rows in the cache', async ({ page }) => {
+    await deletedSince(page);
+    await expect(entries(page)).toHaveCount(2);
+    const id = await scriptId(page);
+    await expect.poll(() => cacheRows(page, id)).toBeGreaterThan(0);
+    await runCommand(page, 'Remove from this browser');
+    const ask = page.getByRole('dialog', { name: /^Remove “/ });
+    await ask.getByRole('button', { name: 'Remove', exact: true }).click();
+    await expect(ask).toBeHidden();
+    // The scan the tab asks for as the script goes, and any rows it writes, leave nothing behind.
+    await page.waitForTimeout(1500);
+    await expect.poll(() => cacheRows(page, id)).toBe(0);
   });
 
   test('says when there are no versions yet', async ({ page }) => {

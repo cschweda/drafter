@@ -15,8 +15,8 @@ const NOW = longScript(LONG_SCENES.filter((_, n) => !CUT.includes(n)));
 
 type ProbeWindow = Window & { drafterHistoryProbe: HistoryProbe; scanning?: Promise<ProbeScan> };
 
-/** A new screenplay with a long history, the cache empty; returns its id. */
-async function longHistory(page: Page): Promise<string> {
+/** A new screenplay with a long history (`count` snapshots), the cache empty; returns its id. */
+async function longHistory(page: Page, count = SNAPSHOTS): Promise<string> {
   await start(page);
   await newScreenplay(page);
   await page.waitForFunction(() => 'drafterHistoryProbe' in window);
@@ -39,7 +39,7 @@ async function longHistory(page: Page): Promise<string> {
         };
       }),
   );
-  await seedLongHistory(page, projectId, SNAPSHOTS);
+  await seedLongHistory(page, projectId, count);
   await page.evaluate(
     (id) => (window as unknown as ProbeWindow).drafterHistoryProbe.clearCache(id),
     projectId,
@@ -60,6 +60,46 @@ const scan = (page: Page, projectId: string, now: string) =>
 
 const release = (page: Page) =>
   page.evaluate(() => (window as unknown as ProbeWindow).drafterHistoryProbe.release());
+
+/**
+ * The history worker's JS heap in use after a garbage collection, in MB, through Chromium's
+ * DevTools protocol (a worker has no `performance.memory`); null if the worker isn't found.
+ */
+async function workerHeapMb(page: Page): Promise<number | null> {
+  const cdp = await page.context().newCDPSession(page);
+  const sessions: string[] = [];
+  cdp.on('Target.attachedToTarget', (event) => {
+    if (event.targetInfo.type === 'worker' && event.targetInfo.url.includes('history'))
+      sessions.push(event.sessionId);
+  });
+  await cdp.send('Target.setAutoAttach', {
+    autoAttach: true,
+    waitForDebuggerOnStart: false,
+    flatten: false,
+  });
+  await expect.poll(() => sessions.length, { timeout: 5000 }).toBeGreaterThan(0);
+  const sessionId = sessions[0] as string;
+  let next = 0;
+  const ask = (method: string) =>
+    new Promise<{ usedSize?: number }>((resolve) => {
+      const id = ++next;
+      const listen = (event: { sessionId?: string; message: string }) => {
+        const reply = JSON.parse(event.message) as { id?: number; result?: { usedSize?: number } };
+        if (event.sessionId !== sessionId || reply.id !== id) return;
+        cdp.off('Target.receivedMessageFromTarget', listen);
+        resolve(reply.result ?? {});
+      };
+      cdp.on('Target.receivedMessageFromTarget', listen);
+      void cdp.send('Target.sendMessageToTarget', {
+        sessionId,
+        message: JSON.stringify({ id, method }),
+      });
+    });
+  await ask('HeapProfiler.collectGarbage');
+  const { usedSize } = await ask('Runtime.getHeapUsage');
+  await cdp.detach();
+  return usedSize === undefined ? null : usedSize / 2 ** 20;
+}
 
 /** The three cut scenes are listed, and all 300 snapshots were read. */
 function expectFound(result: ProbeScan) {
@@ -111,6 +151,37 @@ test.describe('the history worker on a long history', () => {
     // Budgets: a warm scan 500 ms, matching now 50 ms.
     expect(warm.doneMs).toBeLessThan(5_000);
     expect(again.doneMs).toBeLessThan(500);
+  });
+
+  test('a scan of 1,000 snapshots, the most read, is logged', async ({
+    page,
+    browserName,
+  }, testInfo) => {
+    // Logged only: the budget is 300 snapshots' (10 s cold), so 1,000 is given that per snapshot,
+    // and the test fails only past ten times it, as a guard against a hang.
+    const THOUSAND = 1000;
+    const guardMs = 10 * 10_000 * (THOUSAND / SNAPSHOTS);
+    test.setTimeout(guardMs + 120_000);
+    const projectId = await longHistory(page, THOUSAND);
+    /** The JS heap in use, in MB, where the browser says (Chromium); null elsewhere. */
+    const heap = () => {
+      const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+      return memory ? memory.usedJSHeapSize / 2 ** 20 : null;
+    };
+    const pageBefore = await page.evaluate(heap);
+    const cold = await scan(page, projectId, NOW);
+    const workerHeap = browserName === 'chromium' ? await workerHeapMb(page) : null;
+    const pageAfter = await page.evaluate(heap);
+    const warm = await scan(page, projectId, NOW);
+    const mb = (n: number | null) => (n === null ? 'n/a' : `${n.toFixed(1)} MB`);
+    console.log(
+      `[${testInfo.project.name}] scan of ${THOUSAND}: first rows ${cold.firstRowsMs?.toFixed(0)} ms, cold ${cold.doneMs.toFixed(0)} ms, warm (same worker) ${warm.doneMs.toFixed(0)} ms; worker heap ${mb(workerHeap)}, page heap ${mb(pageBefore)} → ${mb(pageAfter)} (${browserName})`,
+    );
+    expect(cold.error).toBeNull();
+    expect(cold.rows).toBe(CUT.length);
+    expect(cold.progress).toMatchObject({ read: THOUSAND, total: THOUSAND, capped: false });
+    expect(cold.doneMs).toBeLessThan(guardMs);
+    expect(warm.doneMs).toBeLessThan(guardMs);
   });
 
   test.describe('in Chromium', () => {

@@ -35,7 +35,7 @@ import { filterDeleted } from './labels';
 // script's deleted scenes, which stream in newest first, and asks again 1 second after the text
 // stops changing, when a snapshot is taken or deleted, and for another script (whose list starts
 // empty: never another script's scenes). Nothing is scanned for a Markdown document or a sample,
-// and the tab says why.
+// and the tab says why; a read-only tab lists them, and Put back says why it is off (§10).
 
 export interface ScanProgress {
   read: number;
@@ -115,7 +115,7 @@ function create(): DeletedSession {
   const pendingFind = ref<string | null>(null);
   const why = computed(() => {
     if (editor.kind.value === 'markdown') return NOT_FOR_MARKDOWN;
-    return snapshotsSession.notKept.value;
+    return snapshotsSession.notRead.value;
   });
 
   let client: HistoryClient | null = null;

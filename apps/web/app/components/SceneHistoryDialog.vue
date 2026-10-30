@@ -6,6 +6,7 @@ import { useEditor } from '~/editor/session';
 import { type HistoryClient, sceneText, useHistoryClient } from '~/history/client';
 import { progressLabel } from '~/history/labels';
 import {
+  closeOnScriptSwitch,
   gapRowLabel,
   NOT_IN_VERSION,
   NOT_NOW,
@@ -62,7 +63,8 @@ const listedAt = ref(Date.now());
 const target = computed(() => sceneHistoryOpen.value);
 /** The scene was deleted: there is no "now" to compare with or to replace. */
 const deletedScene = computed(() => !!target.value && 'snapshot' in target.value);
-const notKept = computed(() => snapshots.notKept.value);
+/** Why no versions are read: no script, or a sample. A read-only tab reads them (design §10). */
+const notRead = computed(() => snapshots.notRead.value);
 /** Why Use this version is off: a read-only tab, or a deleted scene. */
 const useWhy = computed(() => (deletedScene.value ? NOT_NOW : outline.readOnly.value));
 
@@ -134,7 +136,7 @@ function scan(again = false) {
   done.value = false;
   failed.value = null;
   progress.value = null;
-  if (!open || projectId === null || notKept.value) {
+  if (!open || projectId === null || notRead.value) {
     done.value = true;
     return;
   }
@@ -200,6 +202,9 @@ watch(sceneHistoryOpen, async (open, was) => {
     el.close();
   }
 });
+
+// Another script opened under the dialog: it closes.
+closeOnScriptSwitch(() => script.project.value?.id);
 
 // A take or a delete elsewhere in this tab: the versions are read again.
 watch(snapshots.version, () => {
@@ -569,7 +574,7 @@ const reading = computed(() => !done.value && rows.value === null);
         </div>
         <button type="button" class="btn" @click="close">Close</button>
       </div>
-      <p v-if="notKept" class="empty">{{ notKept }}</p>
+      <p v-if="notRead" class="empty">{{ notRead }}</p>
       <p v-else-if="failed" class="empty">Couldn’t read the versions: {{ failed }}</p>
       <p v-else-if="reading" class="empty">
         {{ progress ? progressLabel(progress.read, progress.total) : 'Reading versions…' }}

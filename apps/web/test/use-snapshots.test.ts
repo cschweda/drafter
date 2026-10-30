@@ -174,6 +174,7 @@ describe('the snapshot session', () => {
   test('takes none for a sample or in a read-only tab', async () => {
     const sample = await visit({ sample: true });
     expect(sample.session.notKept.value).toMatch(/sample/);
+    expect(sample.session.notRead.value).toMatch(/sample/);
     writeFor(0, 12 * MIN);
     sample.session.before('before-expand');
     expect(await sample.session.take('Mine')).toBe('failed');
@@ -187,6 +188,8 @@ describe('the snapshot session', () => {
     const mine = await visit();
     mine.readOnly.value = true;
     expect(mine.session.notKept.value).toMatch(/another tab/);
+    // A read-only tab keeps none, but reads the ones the editing tab keeps (design §10).
+    expect(mine.session.notRead.value).toBeNull();
     writeFor(0, 12 * MIN);
     mine.session.before('before-fix-all');
     record({ kind: 'saved', id: mine.p.id, text: 'saved', fileName: 'a.fountain' });

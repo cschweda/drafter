@@ -1,6 +1,6 @@
 import type { TextChange } from '@drafter/fountain';
 import type { SceneVersion, VersionRow } from '@drafter/history';
-import { type Ref, ref } from 'vue';
+import { type Ref, ref, type WatchStopHandle, watch } from 'vue';
 import type { ApplyOptions } from '../editor/apply-changes';
 import { useEditor } from '../editor/session';
 import { sayOutline } from '../outline/notice';
@@ -39,6 +39,16 @@ export const sceneHistoryOpen: Ref<SceneHistoryTarget | null> = ref(null);
 /** Opens History of this scene on `target`. */
 export function openSceneHistory(target: SceneHistoryTarget): void {
   sceneHistoryOpen.value = { ...target };
+}
+
+/**
+ * Closes History of this scene when another script opens under it (a desktop menu command can
+ * switch scripts while the dialog is open): its scene and versions are the other script's.
+ */
+export function closeOnScriptSwitch(project: () => string | null | undefined): WatchStopHandle {
+  return watch(project, (id, was) => {
+    if (id !== was) sceneHistoryOpen.value = null;
+  });
 }
 
 /** Use this version's words for a deleted scene, whose action is Put back. */

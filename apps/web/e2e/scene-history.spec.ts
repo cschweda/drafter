@@ -11,6 +11,7 @@ import { drafterDatabase, sampleSeenRows } from './seed';
 // strip's new block menu, the palette, and Deleted scenes; one Tab stop with History's keys; the
 // whole screen on a phone; and axe in both themes.
 
+const READ_ONLY = 'This script is open for editing in another tab.';
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'History of this scene' });
 const versions = (page: Page) =>
   dialog(page).getByRole('listbox', { name: 'Versions' }).getByRole('option');
@@ -290,6 +291,28 @@ test.describe('History of this scene', () => {
     await expect(versions(page).nth(2)).toContainText('Draft 2');
     await expect(versions(page).nth(2)).toHaveAttribute('aria-selected', 'true');
     await expect(versions(page).nth(2)).toBeFocused();
+  });
+
+  test('a read-only tab lists the versions, and Use this version is off and says why', async ({
+    page,
+    context,
+  }) => {
+    await versionsOf(page, THREE, script(HALL_V3, ROOF));
+    // The text is written (750 ms after the last change) before the second tab opens.
+    await page.waitForTimeout(1200);
+    const second = await context.newPage();
+    await second.goto('/');
+    await expect(second.getByText(READ_ONLY).first()).toBeVisible();
+    await expect.poll(() => wholeText(second)).toBe(script(HALL_V3, ROOF));
+    await openFromPalette(second);
+    await expect(versions(second)).toHaveCount(2);
+    const use = dialog(second).getByRole('button', { name: 'Use this version' });
+    await expect(use).toHaveAttribute('aria-disabled', 'true');
+    await expect(use).toHaveAccessibleDescription(READ_ONLY);
+    await use.dispatchEvent('click');
+    await expect(dialog(second).getByRole('status')).toContainText(READ_ONLY);
+    expect(await wholeText(second)).toBe(script(HALL_V3, ROOF));
+    await second.close();
   });
 
   test('says when there are no versions yet', async ({ page }) => {

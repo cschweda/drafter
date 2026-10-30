@@ -121,6 +121,11 @@ export function createHistoryCompute(
 
   /** Whether this worker has pruned the cache of removed scripts yet. */
   let pruned = false;
+  /**
+   * Rows were written since the last prune. Any of them may be a removed script's: a scan goes on
+   * writing until its script's switch stops it, after `removeProject` cleared the cache.
+   */
+  let wroteSincePrune = false;
 
   function memoryOf(projectId: string): Promise<Memory> {
     // The memory as it is now: by the time it has loaded, another script's request may have
@@ -183,6 +188,7 @@ export function createHistoryCompute(
           items.map(({ id, slots }) => ({ id, slots })),
           items.flatMap((item) => item.prints),
         );
+      wroteSincePrune = true;
       return true;
     } catch {
       drop();
@@ -210,15 +216,20 @@ export function createHistoryCompute(
 
   /**
    * Runs `request` until done or stopped. A stopped scan stores what it read before it returns,
-   * so nothing of its script waits in `pending` for another script's scan to write. A scan is often
-   * stopped because its script was removed, after `removeProject` cleared the cache, so a stopped
-   * scan that stored anything prunes again.
+   * so nothing of its script waits in `pending` for another script's scan to write. Then, finished
+   * or stopped, it prunes: on the worker's first scan, and after any scan that wrote, since its
+   * script may have been removed (and its rows cleared) while it was still writing.
    */
   async function scan(request: Scan, post: (reply: HistoryReply) => void, live: () => boolean) {
     try {
       await scanToEnd(request, post, live);
     } finally {
-      if (!live() && (await flush())) await cache?.prune().catch(drop);
+      await flush();
+      if (cache && (wroteSincePrune || !pruned)) {
+        pruned = true;
+        wroteSincePrune = false;
+        await cache.prune().catch(drop);
+      }
     }
   }
 
@@ -275,10 +286,6 @@ export function createHistoryCompute(
     const liveIds = new Set(refs.map((ref) => ref.id));
     for (const id of m.scenes.keys()) if (!liveIds.has(id)) m.scenes.delete(id);
     if (cache) await cache.sweep(projectId, liveIds).catch(drop);
-    if (cache && !pruned) {
-      pruned = true;
-      await cache.prune().catch(drop);
-    }
   }
 
   /** Answers a place request: where Put back puts the scene, from the snapshot's scenes and prints. */

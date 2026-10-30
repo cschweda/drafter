@@ -279,8 +279,7 @@ test.describe('offline', () => {
     expect(stored.urls).toContain('/');
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.js$/.test(u))).toBe(true);
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.css$/.test(u))).toBe(true);
-    // (The history worker is in this test build through its probe; with no view using it yet, a
-    // production build of this release so far has none.)
+    // The history worker too: Deleted scenes and History of this scene read the snapshots in it.
     for (const worker of [
       'layout.worker',
       'export.worker',

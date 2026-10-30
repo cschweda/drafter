@@ -4,12 +4,16 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { SceneVersion } from '@drafter/history';
 import { afterEach, describe, expect, test } from 'vitest';
+import { nextTick, ref } from 'vue';
 import { applyTextChanges } from '../app/editor/apply-changes';
 import {
+  closeOnScriptSwitch,
   createUseThisVersion,
   gapRowLabel,
+  openSceneHistory,
   rowAgain,
   type SceneHistoryTarget,
+  sceneHistoryOpen,
   type UseThisVersionDeps,
   versionKey,
   versionRowLabel,
@@ -98,6 +102,27 @@ afterEach(() => {
 });
 
 describe('History of this scene', () => {
+  test('closes when another script opens under it (a desktop menu command)', async () => {
+    const project = ref<string | null>('a');
+    const stop = closeOnScriptSwitch(() => project.value);
+    openSceneHistory(sceneNow);
+    project.value = 'a';
+    await nextTick();
+    expect(sceneHistoryOpen.value).not.toBeNull();
+    project.value = 'b';
+    await nextTick();
+    expect(sceneHistoryOpen.value).toBeNull();
+    // Closed, a switch leaves it closed; open again, it stays open on its own script.
+    project.value = 'a';
+    await nextTick();
+    expect(sceneHistoryOpen.value).toBeNull();
+    openSceneHistory(sceneNow);
+    await nextTick();
+    expect(sceneHistoryOpen.value).not.toBeNull();
+    stop();
+    sceneHistoryOpen.value = null;
+  });
+
   test("versionKey moves and acts as History's", () => {
     expect(versionKey(3, 0, 'ArrowDown')).toEqual({ focus: 1 });
     expect(versionKey(3, 1, 'ArrowUp')).toEqual({ focus: 0 });

@@ -101,7 +101,7 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/compare',
-    does: 'Compare: a line-by-line diff of two versions of a script, and where each change falls on the pages.',
+    does: 'Compare and Show changes: a line and word diff of two versions of a script, its rows, folds, and scene groups for the Changes view, and where each change falls on the pages.',
     uses: ['@drafter/fountain', '@drafter/layout'],
   },
   {

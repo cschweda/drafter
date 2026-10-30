@@ -452,6 +452,50 @@ describe('the history scan', () => {
     expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
   });
 
+  /**
+   * A worker that has pruned once scans `a` (four snapshots held in memory, so its removal leaves
+   * them readable), and the script is removed while the third is read: its rows are written after
+   * `removeProject` cleared the cache. `stop` cancels the scan at the fourth, which reads nothing.
+   */
+  async function removedMidScan(stop: boolean) {
+    const a = await createProject({ source: script(A) });
+    const texts = [0, 1, 2, 3].map((i) => script(A, i % 2 ? B : C, i === 2 ? D : E));
+    let compute: ReturnType<typeof createHistoryCompute> | null = null;
+    const source: SnapshotSource = {
+      list: async () => texts.map((_, i) => ({ id: `m${i}`, at: T0 - i * MIN })),
+      read: async (id) => {
+        const i = Number(id.slice(1));
+        if (i === 2) await removeProject(a.id);
+        if (i === 3 && stop) {
+          await compute?.handle({ seq: 2, kind: 'cancel' }, () => undefined);
+          return undefined;
+        }
+        return texts[i] ?? null;
+      },
+    };
+    // Each step a stream's worth later: every snapshot read is written at once.
+    let t = 0;
+    compute = createHistoryCompute(source, cacheStore(), () => (t += STREAM_MS));
+    // The worker's first scan, which prunes.
+    await run(compute, { seq: 1, kind: 'deleted', projectId: 'p1', now: script(A) });
+    const replies = await run(compute, {
+      seq: 2,
+      kind: 'deleted',
+      projectId: a.id,
+      now: script(A),
+    });
+    expect(replies.some((r) => r.kind === 'deleted' && r.done)).toBe(!stop);
+    return a.id;
+  }
+
+  test('a scan that writes after its script was removed, then finishes, leaves no rows', async () => {
+    expect(await rowsOf(await removedMidScan(false))).toEqual({ scenes: [], prints: 0 });
+  });
+
+  test('a scan that writes after its script was removed, then is cancelled, leaves no rows', async () => {
+    expect(await rowsOf(await removedMidScan(true))).toEqual({ scenes: [], prints: 0 });
+  });
+
   test('a scan drops the rows of scripts that no longer exist', async () => {
     const b = await createProject({ source: script(A) });
     await seed(b.id, 'b-0', T0, script(A, D));
