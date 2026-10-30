@@ -145,6 +145,15 @@ describe('the character table', () => {
 });
 
 describe('the scene heading split', () => {
+  test('reads a heading with a very long run of spaces at once', () => {
+    // A pattern split there backtracked once per space.
+    const doc = parse(`INT. HALL${' '.repeat(100_000)}x - NIGHT\n\nShe waits.\n`);
+    const started = performance.now();
+    const split = headingSplit(doc);
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(split.time.night).toBe(1);
+  });
+
   test('sorts headings by place and time of day', () => {
     const doc = parse(
       [

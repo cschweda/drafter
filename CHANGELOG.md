@@ -11,6 +11,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `@drafter/outline`: **each scene's speeches.** The scene index now lists every speech in a scene, in order: who says it, where its cue is, and how many words it has (both sides of a dual-dialogue pair in full, a lyric's words included, and a cue with only a parenthetical as a speech of no words). What's said before the first scene or section, such as a cold open, is the index's new `opening`, with its own speeches, words, and timing; what's said between a section's heading and its first scene (a cold open under `# Act One`) is that section's, with its own speeches, words, and timing too. A speech is counted once, in the opening, a section, or a scene, in the same pass as the timing, so the views coming next (Scaffold, the Stats tab, and the character grid) all read the same numbers.
 - `@drafter/cast`, a new package, works out **who is in each scene and where it is.** A character is in a scene when they speak in it, or when their name is in its action: in capitals (TOM), capitalised (Tom), or as their cue spells it (McCLANE), a possessive counting. A name that is also an ordinary word, such as Will, Hope, or The Driver, counts only in capitals, so "Will you look at that" doesn't put WILL in the scene, and a name of two words counts only whole, so ANN LEE is never also ANN. A name in dialogue, a parenthetical, a note, a synopsis, or the boneyard never counts, and someone who never has a cue isn't in the cast. From each scene heading it reads the location (INT. and EXT. of one place are one location), inside or outside, and the time of day. For each character it gives the scenes they're in, speaking or silent, their speeches and words, their share of all the dialogue, their screen time (once the pages are ready), their first and last scene, every absence of 20 pages or more, and who they share the most scenes with; and for each location, its scenes, length, times of day, and who is there. It's the engine for Scaffold, the Stats tab, and the character grid, coming next.
 
+## [0.19.1] - 2026-10-30
+
+**Two rare Markdown export lines kept as written, and Stats reads every heading at once.** A `<` before a bold or italic word starting with `@`, and a centered line with no text, now export as they should; a heading with a very long run of spaces no longer slows the Stats window.
+
+### Fixed
+
+- **Export as Markdown keeps two rare lines as written.** A `<` just before a bold or italic word that starts with `@` could become an email link in the Markdown, losing its characters; it is now escaped. A centered line with no text came out as `><`; it now writes nothing, as the PDF prints nothing. Both were found by a long run of the export's own random tests.
+- **Stats reads every scene heading at once.** A heading with a very long run of spaces before its time of day made the Stats window's day-and-night count slow, as the split it used backtracked once per space; it is now a simple scan, with the same results.
+
 ## [0.19.0] - 2026-10-30
 
 **Imports and Markdown out.** Drafter opens Highland and Fade In files as new scripts, opens a Markdown file as a screenplay when you want, exports a screenplay or stage play as Markdown that reads well anywhere (in a chat with an AI, on GitHub, in a notes app), and says plainly what a file is when it isn't a script.
@@ -823,7 +832,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/cschweda/drafter/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/cschweda/drafter/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/cschweda/drafter/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/cschweda/drafter/compare/v0.16.0...v0.17.0

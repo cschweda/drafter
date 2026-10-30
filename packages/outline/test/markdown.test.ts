@@ -5,6 +5,7 @@ import {
   type TitlePageMode,
   titlePageFor,
 } from '@drafter/layout';
+import { fromMarkdown } from 'mdast-util-from-markdown';
 import { describe, expect, test } from 'vitest';
 import { type ScriptMarkdownOptions, sceneIndex, scriptMarkdown } from '../src';
 import { screenplay, stagePlay } from './helpers';
@@ -165,6 +166,19 @@ describe('scriptMarkdown: structure', () => {
 });
 
 describe('scriptMarkdown: elements', () => {
+  test('never lets emphasis marks make an email link of a < before an @', () => {
+    // Marks written between a < and the next run's @ would read as part of an address.
+    const opener = md('INT. A - DAY\n\n!<*@div>*\n', {}, 'none');
+    expect(opener).toContain('\\<*@div>*');
+    const closer = md('INT. A - DAY\n\n!**a<**@x>\n', {}, 'none');
+    expect(closer).toContain('\\<');
+    expect(JSON.stringify(fromMarkdown(closer))).not.toContain('"link"');
+  });
+
+  test('writes nothing for a centered line with no text, as the PDF prints nothing', () => {
+    expect(md('INT. A - DAY\n\n><\n', {}, 'none')).toBe('## INT. A - DAY\n');
+  });
+
   test('writes a speech as a bold name, an italic parenthetical, and its dialogue', () => {
     expect(md(SCREENPLAY, {}, 'none')).toContain(
       "\n\n**JUNO**\\\n*(whispering)*\\\nAre we moving?\n\n**PELL**\\\nI can't tell.\n\n",

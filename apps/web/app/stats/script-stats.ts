@@ -104,12 +104,41 @@ const BOTH = /^\s*(?:INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|E\/I)\b/i;
  */
 function timeOfDay(text: string, prefix: string | null): 'DAY' | 'NIGHT' | null {
   const rest = prefix ? text.slice(prefix.length) : text;
-  const parts = rest.split(/\s+[-–]\s+/).slice(1);
-  for (const part of parts) {
+  for (const part of dashParts(rest).slice(1)) {
     const word = /^\p{L}+/u.exec(part.trim().toUpperCase())?.[0];
     if (word === 'DAY' || word === 'NIGHT') return word;
   }
   return null;
+}
+
+/**
+ * `text` split at each dash with white space on both sides, as `split(/\s+[-–]\s+/)` would split
+ * it, by a scan: that pattern backtracks once per space on a long run of them.
+ */
+function dashParts(text: string): string[] {
+  const parts: string[] = [];
+  const space = (c: string | undefined) => c !== undefined && /\s/.test(c);
+  let start = 0;
+  let i = 0;
+  while (i < text.length) {
+    if (!space(text[i])) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (space(text[j])) j++;
+    if ((text[j] === '-' || text[j] === '–') && space(text[j + 1])) {
+      let k = j + 1;
+      while (space(text[k])) k++;
+      parts.push(text.slice(start, i));
+      start = k;
+      i = k;
+    } else {
+      i = j;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
 }
 
 /** How the scene headings divide between inside and outside, and day and night. */
