@@ -2,15 +2,31 @@
 // the same functions and checks as the app's Open (docs/DECISIONS.md, `drafter convert`).
 import { randomBytes } from 'node:crypto';
 import { constants, type Dirent, type Stats } from 'node:fs';
-import { mkdir, open, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  copyFile,
+  link,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
   ArchiveError,
   type ArchiveFormat,
   fromFadeIn,
   fromHighland,
+  type ImportKind,
+  importKindOf,
+  MAX_SCRIPT_BYTES,
   notAScript,
   refusalMessage,
+  SNIFF_BYTES,
   ZIP_LIMITS,
 } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
@@ -30,17 +46,9 @@ export interface ConvertOptions {
 /** A problem with the whole run, not one file: printed as a message, exit 1. */
 export class ConvertError extends Error {}
 
-type Kind = 'fdx' | 'highland' | 'fadein';
-
-const KIND = /\.(fdx|highland|fadein)$/i;
-
-const kindOf = (name: string): Kind | null =>
-  (KIND.exec(name)?.[1]?.toLowerCase() as Kind | undefined) ?? null;
-
 /** The app's Open caps: a Final Draft file is text, at most 5 MB; an archive, the zip reader's 32 MB. */
-const MAX_TEXT_BYTES = 5 * 1024 * 1024;
-const MAX_BYTES: Record<Kind, number> = {
-  fdx: MAX_TEXT_BYTES,
+const MAX_BYTES: Record<ImportKind, number> = {
+  fdx: MAX_SCRIPT_BYTES,
   highland: ZIP_LIMITS.maxArchiveBytes,
   fadein: ZIP_LIMITS.maxArchiveBytes,
 };
@@ -48,8 +56,6 @@ const FORMAT: Record<'highland' | 'fadein', ArchiveFormat> = {
   highland: 'Highland',
   fadein: 'Fade In',
 };
-/** A NUL in this many leading bytes means the file is not text, as Open has it. */
-const SNIFF_BYTES = 8 * 1024;
 
 const WHAT_IT_READS =
   'drafter convert reads Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files';
@@ -85,12 +91,16 @@ export async function convert(
     try {
       await mkdir(outDir, { recursive: true });
     } catch (error) {
-      throw new ConvertError(`can't write to ${options.out}: ${reason(error)}`);
+      throw new ConvertError(`can't write to ${options.out}: ${folderReason(error)}`);
     }
   }
   const counts = { converted: 0, skipped: 0, refused: 0 };
-  /** The targets written in this run, by a key that matches on a case-insensitive disk too. */
-  const written = new Map<string, string>();
+  /**
+   * The `.fountain` files this run wrote, by path and by file (`dev:ino`, which any folding of
+   * names the disk does, by case or by Unicode normalization, comes back to), with each one's
+   * source as printed.
+   */
+  const written = { paths: new Map<string, string>(), files: new Map<string, string>() };
 
   const report = (job: Pick<Job, 'shown'> & Partial<Job>, outcome: Outcome) => {
     counts[outcome.kind]++;
@@ -109,30 +119,28 @@ export async function convert(
       report({ shown: path }, { kind: 'refused', reason: `can't read it: ${reason(error)}` });
       continue;
     }
-    const jobs: Job[] = [];
     if (info.isDirectory()) {
-      for (const rel of await scriptsIn(source, options.recursive === true)) {
-        jobs.push(jobFor(join(source, rel), join(path, rel), rel, outDir, options.out));
+      let found = 0;
+      for (const { rel, error } of await scriptsIn(source, options.recursive === true)) {
+        if (error !== undefined) {
+          // Reported in its place, so the lines stay in name order.
+          found++;
+          report(
+            { shown: rel === '' ? path : join(path, rel) },
+            { kind: 'refused', reason: `can't read it: ${reason(error)}` },
+          );
+          continue;
+        }
+        const job = jobFor(join(source, rel), join(path, rel), rel, outDir, options.out);
+        found++;
+        report(job, await convertOnce(job, options.force === true, written));
       }
-      if (jobs.length === 0) io.out(`${path}: nothing to convert here\n`);
+      if (found === 0) io.out(`${path}: nothing to convert here\n`);
     } else if (info.isFile()) {
-      jobs.push(jobFor(source, path, basename(source), outDir, options.out));
+      const job = jobFor(source, path, basename(source), outDir, options.out);
+      report(job, await convertOnce(job, options.force === true, written));
     } else {
       report({ shown: path }, { kind: 'refused', reason: 'it isn’t a file or a folder' });
-    }
-    for (const job of jobs) {
-      const key = job.target.toLowerCase();
-      const earlier = written.get(key);
-      if (earlier !== undefined) {
-        report(job, {
-          kind: 'refused',
-          reason: `${job.targetShown} was already written from ${earlier} in this run`,
-        });
-        continue;
-      }
-      const outcome = await convertOne(job, options.force === true);
-      if (outcome.kind === 'converted') written.set(key, job.shown);
-      report(job, outcome);
     }
   }
 
@@ -149,6 +157,36 @@ function notesSaid(notes: number): string {
   return notes === 1 ? ' (1 item came in as a note)' : ` (${notes} items came in as notes)`;
 }
 
+interface Written {
+  paths: Map<string, string>;
+  files: Map<string, string>;
+}
+
+const fileKey = (info: { dev: number; ino: number }) => `${info.dev}:${info.ino}`;
+
+/**
+ * Converts `job`, unless its `.fountain` is one this run already wrote: the same path, or, however
+ * the disk folds names, the same file. Records what it writes.
+ */
+async function convertOnce(job: Job, force: boolean, written: Written): Promise<Outcome> {
+  const there = await lstat(job.target).catch(() => null);
+  const earlier =
+    written.paths.get(job.target) ?? (there ? written.files.get(fileKey(there)) : undefined);
+  if (earlier !== undefined) {
+    return {
+      kind: 'refused',
+      reason: `${job.targetShown} was already written from ${earlier} in this run`,
+    };
+  }
+  const outcome = await convertOne(job, force);
+  if (outcome.kind === 'converted') {
+    written.paths.set(job.target, job.shown);
+    const made = await lstat(job.target).catch(() => null);
+    if (made) written.files.set(fileKey(made), job.shown);
+  }
+  return outcome;
+}
+
 /** `rel`'s Fountain: beside the source, or under `--out` with the folders under the argument kept. */
 function jobFor(
   source: string,
@@ -157,7 +195,9 @@ function jobFor(
   outDir: string | undefined,
   outShown: string | undefined,
 ): Job {
-  const name = `${basename(source).replace(KIND, '')}.fountain`;
+  const base = basename(source);
+  const kind = importKindOf(base);
+  const name = `${kind ? base.slice(0, -kind.length - 1) : base}.fountain`;
   if (outDir === undefined || outShown === undefined) {
     return {
       source,
@@ -173,15 +213,20 @@ function jobFor(
 /**
  * The scripts in a folder, as paths relative to it, in name order: its `.fdx`, `.highland`, and
  * `.fadein` files (a link to a file counts), and with `recursive` its subfolders' (never through a
- * link, so a loop can't trap it). Names starting with `.` are left out, as a macOS `._` file is.
+ * link, so a loop can't trap it). Names starting with `.` are left out, as a macOS `._` file is. A
+ * folder that can't be read comes in its place with the error (`rel` '' for `folder` itself).
  */
-async function scriptsIn(folder: string, recursive: boolean): Promise<string[]> {
-  const found: string[] = [];
+async function scriptsIn(
+  folder: string,
+  recursive: boolean,
+): Promise<Array<{ rel: string; error?: unknown }>> {
+  const found: Array<{ rel: string; error?: unknown }> = [];
   const walk = async (rel: string) => {
     let entries: Dirent[];
     try {
       entries = await readdir(join(folder, rel), { withFileTypes: true });
-    } catch {
+    } catch (error) {
+      found.push({ rel, error });
       return;
     }
     entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
@@ -190,8 +235,8 @@ async function scriptsIn(folder: string, recursive: boolean): Promise<string[]> 
       const path = rel === '' ? entry.name : join(rel, entry.name);
       if (entry.isDirectory()) {
         if (recursive) await walk(path);
-      } else if (kindOf(entry.name) && (await isFile(entry, join(folder, path)))) {
-        found.push(path);
+      } else if (importKindOf(entry.name) && (await isFile(entry, join(folder, path)))) {
+        found.push({ rel: path });
       }
     }
   };
@@ -216,34 +261,74 @@ async function convertOne(job: Job, force: boolean): Promise<Outcome> {
   }
   // As the editor holds it: every line break a line feed.
   const text = imported.text.replace(/\r\n?/g, '\n');
-  if (new TextEncoder().encode(text).byteLength > MAX_TEXT_BYTES) {
+  if (new TextEncoder().encode(text).byteLength > MAX_SCRIPT_BYTES) {
     return { kind: 'refused', reason: 'the script in it is larger than 5 MB' };
   }
   try {
     await mkdir(dirname(job.target), { recursive: true });
-    if (force) await replace(job.target, text);
-    else await writeFile(job.target, text, { flag: 'wx' });
   } catch (error) {
-    if ((error as { code?: string }).code === 'EEXIST' && !force) return { kind: 'skipped' };
+    return {
+      kind: 'refused',
+      reason: `can't make the folder ${dirname(job.targetShown)}: ${folderReason(error)}`,
+    };
+  }
+  try {
+    if (!(await publish(job.target, text, force))) return { kind: 'skipped' };
+  } catch (error) {
     return { kind: 'refused', reason: `can't write ${job.targetShown}: ${reason(error)}` };
   }
   const notes = imported.mapped.reduce((sum, { count }) => sum + count, 0);
   return { kind: 'converted', notes };
 }
 
+const codeOf = (error: unknown) => (error as { code?: string }).code;
+
+/** The codes a disk gives when it can't make a hard link at all (FAT and exFAT drives, some shares). */
+const NO_LINKS = new Set(['EPERM', 'ENOTSUP', 'EOPNOTSUPP', 'ENOSYS', 'EXDEV', 'EMLINK']);
+
 /**
- * Writes `text` to a new file beside `target`, then renames it over `target`: a link there is
- * replaced, never followed, so `--force` can't write through one to the source or anywhere else.
+ * Writes `text` to a temporary file beside `target`, then publishes it whole, so a write that
+ * fails partway (a full disk) never leaves a short `.fountain` that a later run would skip. With
+ * `force`, it is renamed over `target`, taking the mode of the file it replaces: a link there is
+ * replaced, never followed. Without, it is hard-linked to `target`, which fails if anything is
+ * there, a dangling link included, and never follows one; on a disk without hard links it is
+ * copied exclusively instead. False when `target` was there and `force` wasn't given. The
+ * temporary file is gone afterwards, whatever happened.
  */
-async function replace(target: string, text: string): Promise<void> {
-  const temp = join(dirname(target), `.${basename(target)}.${randomBytes(6).toString('hex')}.tmp`);
+async function publish(target: string, text: string, force: boolean): Promise<boolean> {
+  // Short, so a long script name can't push it past the longest name a disk allows.
+  const temp = join(dirname(target), `.drafter-${randomBytes(6).toString('hex')}.tmp`);
   try {
     await writeFile(temp, text, { flag: 'wx' });
-    await rename(temp, target);
   } catch (error) {
-    // Never a file that was there already: only the one this call made.
-    if ((error as { code?: string }).code !== 'EEXIST') await unlink(temp).catch(() => {});
+    // Past an exclusive create, the file is this call's own: take away what was written.
+    if (codeOf(error) !== 'EEXIST') await unlink(temp).catch(() => {});
     throw error;
+  }
+  try {
+    if (force) {
+      const old = await lstat(target).catch(() => null);
+      if (old?.isFile()) await chmod(temp, old.mode & 0o7777);
+      await rename(temp, target);
+      return true;
+    }
+    try {
+      await link(temp, target);
+    } catch (error) {
+      if (codeOf(error) === 'EEXIST') return false;
+      if (!NO_LINKS.has(codeOf(error) ?? '')) throw error;
+      try {
+        await copyFile(temp, target, constants.COPYFILE_EXCL);
+      } catch (copyError) {
+        if (codeOf(copyError) === 'EEXIST') return false;
+        // The exclusive copy made it, so a short one is this call's own.
+        await unlink(target).catch(() => {});
+        throw copyError;
+      }
+    }
+    return true;
+  } finally {
+    await unlink(temp).catch(() => {});
   }
 }
 
@@ -255,7 +340,7 @@ async function importFile(source: string): Promise<FdxImport> {
   const name = basename(source);
   const named = notAScript(name, new Uint8Array(0));
   if (named) throw new Refused(refusalMessage(name, named));
-  const kind = kindOf(name);
+  const kind = importKindOf(name);
   if (!kind) throw new Refused(WHAT_IT_READS);
   const bytes = await readCapped(source, MAX_BYTES[kind], kind);
   const refusal = notAScript(name, bytes);
@@ -274,12 +359,12 @@ function fdxText(bytes: Uint8Array): string {
   } catch {
     throw new Refused('it isn’t UTF-8 text');
   }
-  if (text.startsWith('﻿')) text = text.slice(1);
+  if (text.startsWith('\uFEFF')) text = text.slice(1);
   return text.replace(/\r\n?/g, '\n');
 }
 
 /** The file's bytes, or a refusal when it is over `cap`: never more than `cap` + 1 bytes are read. */
-async function readCapped(source: string, cap: number, kind: Kind): Promise<Uint8Array> {
+async function readCapped(source: string, cap: number, kind: ImportKind): Promise<Uint8Array> {
   const tooBig = () =>
     kind === 'fdx'
       ? new Refused('it is larger than 5 MB')
@@ -320,6 +405,13 @@ export function reason(error: unknown): string {
   if (code === 'ENOENT') return 'no such file';
   if (code === 'EISDIR') return "it's a folder";
   if (code === 'EACCES' || code === 'EPERM') return 'permission denied';
-  if (code === 'EEXIST' || code === 'ENOTDIR') return "it isn't a folder";
+  if (code === 'ENOTDIR') return "part of its path isn't a folder";
+  if (code === 'ENOSPC') return 'the disk is full';
   return (error as Error).message;
+}
+
+/** Why a folder couldn't be made: something that isn't a folder is already in its place. */
+function folderReason(error: unknown): string {
+  const code = codeOf(error);
+  return code === 'EEXIST' || code === 'ENOTDIR' ? 'a file is in the way' : reason(error);
 }

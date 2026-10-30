@@ -90,3 +90,23 @@ export function notAScript(name: string | undefined, bytes: Uint8Array): Refusal
 export function refusalMessage(name: string, refusal: Refusal): string {
   return `Drafter can’t open ${refusal.format} (${name}). ${refusal.advice}`;
 }
+
+/** A file from another screenwriting app that is imported, never edited: by its extension. */
+export type ImportKind = 'fdx' | 'highland' | 'fadein';
+
+const IMPORT_EXTENSION = /\.(fdx|highland|fadein)$/i;
+
+/**
+ * The kind of import a file's name says it is (in any case): a Final Draft file (`.fdx`), a
+ * Highland file (`.highland`), or a Fade In file (`.fadein`); null for anything else.
+ */
+export function importKindOf(name: string | undefined): ImportKind | null {
+  const match = name === undefined ? null : IMPORT_EXTENSION.exec(name);
+  return match ? (match[1]?.toLowerCase() as ImportKind) : null;
+}
+
+/** The most a script's text may be, in bytes: a feature film is well under 1 MB. */
+export const MAX_SCRIPT_BYTES = 5 * 1024 * 1024;
+
+/** A NUL byte in this many leading bytes means a file is not text. */
+export const SNIFF_BYTES = 8 * 1024;

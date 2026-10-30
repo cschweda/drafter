@@ -1,3 +1,5 @@
+import { importKindOf } from '@drafter/archive';
+
 /**
  * What a script is: Fountain (a screenplay or a stage play, whose template the metadata block
  * names) or plain Markdown, which has no pages, no elements, and no checks. Markdown is a kind of
@@ -18,19 +20,8 @@ export function kindOfFileName(name: string | undefined): DocumentKind {
   return name !== undefined && MARKDOWN_EXTENSION.test(name) ? 'markdown' : 'fountain';
 }
 
-/** A file from another screenwriting app that is imported, never edited: by its extension. */
-export type ImportKind = 'fdx' | 'highland' | 'fadein';
-
-const IMPORT_EXTENSION = /\.(fdx|highland|fadein)$/i;
-
-/**
- * The kind of import a file's name says it is (in any case): a Final Draft file (`.fdx`), a
- * Highland file (`.highland`), or a Fade In file (`.fadein`); null for anything else.
- */
-export function importKindOf(name: string | undefined): ImportKind | null {
-  const match = name === undefined ? null : IMPORT_EXTENSION.exec(name);
-  return match ? (match[1]?.toLowerCase() as ImportKind) : null;
-}
+// The rule is `@drafter/archive`'s, shared with `drafter convert`.
+export { type ImportKind, importKindOf } from '@drafter/archive';
 
 /**
  * A file from another app (`importKindOf`): never a kind of document. Opening one imports it as a

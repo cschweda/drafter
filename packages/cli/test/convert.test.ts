@@ -3,11 +3,14 @@
 // `@drafter/archive`'s `makeZip`, with original text.
 import { execFileSync } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
+  statSync,
   symlinkSync,
   truncateSync,
   writeFileSync,
@@ -206,6 +209,145 @@ describe('drafter convert', () => {
     expect(result.out).toMatch(
       /a\.fdx: refused: .*a\.fountain was already written from .*a\.fadein/,
     );
+  });
+
+  it('says when a file is in the way of a folder under --out, never "skipped"', async () => {
+    mkdirSync(at('scripts', 'sub'), { recursive: true });
+    writeFileSync(at('scripts', 'sub', 'a.fdx'), PLAIN);
+    mkdirSync(at('out'));
+    writeFileSync(at('out', 'sub'), 'a file where a folder should go');
+    const result = await drafter('convert', at('scripts'), '--recursive', '--out', at('out'));
+    expect(result.code).toBe(1);
+    expect(result.out).toMatch(/a\.fdx: refused: can't make the folder .*out\/sub: /);
+    expect(result.out).not.toMatch(/skipped/);
+    expect(result.out).toMatch(/^1 refused$/m);
+  });
+
+  // chmod can't make a folder unreadable to root, nor on Windows.
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    "says when a folder or a subfolder can't be read",
+    async () => {
+      mkdirSync(at('top', 'locked'), { recursive: true });
+      writeFileSync(at('top', 'a.fdx'), PLAIN);
+      writeFileSync(at('top', 'locked', 'b.fdx'), PLAIN);
+      chmodSync(at('top', 'locked'), 0o000);
+      mkdirSync(at('shut'));
+      chmodSync(at('shut'), 0o000);
+      try {
+        const result = await drafter('convert', at('top'), at('shut'), '--recursive');
+        expect(result.code).toBe(1);
+        expect(result.out).toMatch(/locked: refused: can't read it: permission denied$/m);
+        expect(result.out).toMatch(/shut: refused: can't read it: permission denied$/m);
+        expect(result.out).not.toMatch(/nothing to convert here/);
+        expect(result.out).toMatch(/^1 converted, 2 refused$/m);
+      } finally {
+        chmodSync(at('top', 'locked'), 0o755);
+        chmodSync(at('shut'), 0o755);
+      }
+    },
+  );
+
+  it('skips a dangling link at the output, creating nothing through it', async () => {
+    const source = put('a.fdx', PLAIN);
+    symlinkSync(at('elsewhere.fountain'), at('a.fountain'));
+    const result = await drafter('convert', source);
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/skipped/);
+    expect(existsSync(at('elsewhere.fountain'))).toBe(false);
+    expect(lstatSync(at('a.fountain')).isSymbolicLink()).toBe(true);
+    expect(readdirSync(dir()).sort()).toEqual(['a.fdx', 'a.fountain']);
+  });
+
+  it('never follows a link to a folder under --recursive, so a loop ends', async () => {
+    mkdirSync(at('sub'));
+    writeFileSync(at('sub', 'e.fdx'), PLAIN);
+    symlinkSync(dir(), at('sub', 'loop'));
+    symlinkSync(at('sub'), at('also-sub'));
+    const result = await drafter('convert', dir(), '--recursive');
+    expect(result.code, result.out).toBe(0);
+    expect(result.out).toMatch(/^1 converted$/m);
+  });
+
+  it('with --force, keeps the mode of the .fountain it replaces', async () => {
+    put('a.fdx', PLAIN);
+    put('a.fountain', 'old');
+    chmodSync(at('a.fountain'), 0o640);
+    expect((await drafter('convert', at('a.fdx'), '--force')).code).toBe(0);
+    expect(read('a.fountain')).toBe(fromFdx(PLAIN).text);
+    if (process.platform !== 'win32') expect(statSync(at('a.fountain')).mode & 0o777).toBe(0o640);
+  });
+
+  it('converts a file whose .fountain name is as long as a name can be', async () => {
+    const base = 'x'.repeat(246); // x….fountain is 255 bytes, the most most disks allow
+    put(`${base}.fdx`, PLAIN);
+    const first = await drafter('convert', at(`${base}.fdx`));
+    expect(first.code, first.out).toBe(0);
+    const forced = await drafter('convert', at(`${base}.fdx`), '--force');
+    expect(forced.code, forced.out).toBe(0);
+    expect(readdirSync(dir()).sort()).toEqual([`${base}.fdx`, `${base}.fountain`]);
+  });
+
+  it('leaves no temporary file behind', async () => {
+    put('a.fdx', PLAIN);
+    put('b.fdx', PLAIN);
+    put('b.fountain', 'there');
+    await drafter('convert', dir());
+    await drafter('convert', dir(), '--force');
+    expect(readdirSync(dir()).sort()).toEqual(['a.fdx', 'a.fountain', 'b.fdx', 'b.fountain']);
+  });
+
+  /** Whether this disk takes `b` for the same name as `a`. */
+  const sameName = (a: string, b: string) => {
+    writeFileSync(at(a), '');
+    const same = existsSync(at(b));
+    rmSync(at(a));
+    return same;
+  };
+
+  it('two names the disk takes for one (case) make one .fountain; two it tells apart make two', async () => {
+    const folds = sameName('Probe', 'probe');
+    mkdirSync(at('one'));
+    mkdirSync(at('two'));
+    writeFileSync(at('one', 'Call.fdx'), PLAIN);
+    writeFileSync(at('two', 'call.fdx'), WITH_NOTES);
+    const result = await drafter('convert', at('one'), at('two'), '--out', at('out'), '--force');
+    if (folds) {
+      expect(result.code).toBe(1);
+      expect(result.out).toMatch(
+        /call\.fdx: refused: .*call\.fountain was already written from .*Call\.fdx/,
+      );
+      expect(readdirSync(at('out'))).toEqual(['Call.fountain']);
+      expect(readFileSync(at('out', 'Call.fountain'), 'utf8')).toBe(fromFdx(PLAIN).text);
+    } else {
+      expect(result.code, result.out).toBe(0);
+      expect(readdirSync(at('out')).sort()).toEqual(['Call.fountain', 'call.fountain']);
+    }
+  });
+
+  it('two names the disk takes for one (Unicode normalization) make one .fountain', async () => {
+    const nfc = 'Caf\u00e9';
+    const nfd = 'Cafe\u0301';
+    const folds = sameName(nfc, nfd);
+    mkdirSync(at('one'));
+    mkdirSync(at('two'));
+    writeFileSync(at('one', `${nfc}.fdx`), PLAIN);
+    writeFileSync(at('two', `${nfd}.fdx`), WITH_NOTES);
+    const result = await drafter('convert', at('one'), at('two'), '--out', at('out'), '--force');
+    if (folds) {
+      expect(result.code).toBe(1);
+      expect(result.out).toMatch(/refused: .*was already written from /);
+      expect(readdirSync(at('out'))).toHaveLength(1);
+    } else {
+      expect(result.code, result.out).toBe(0);
+      expect(readdirSync(at('out'))).toHaveLength(2);
+    }
+  });
+
+  it('the same path named twice is converted once', async () => {
+    const source = put('a.fdx', PLAIN);
+    const result = await drafter('convert', source, source, '--force');
+    expect(result.code).toBe(1);
+    expect(result.out).toMatch(/^1 converted, 1 refused$/m);
   });
 
   it('refuses a file that is not a script, with the reason the app gives', async () => {

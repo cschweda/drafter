@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { notAScript, refusalMessage } from '../src/formats';
+import { importKindOf, MAX_SCRIPT_BYTES, notAScript, refusalMessage, SNIFF_BYTES } from '../src';
 
 const text = (s: string) => new TextEncoder().encode(s);
 const PLAIN = text('INT. HALL - DAY\n\nA door opens.\n');
@@ -107,5 +107,24 @@ describe('notAScript', () => {
     const said = refusalMessage('Pilot.fdr', old);
     expect(said).toMatch(/^Drafter can’t open an older Final Draft file \(Pilot\.fdr\)\. /);
     expect(said).toContain('Open it in Final Draft and save it as .fdx');
+  });
+});
+
+describe('importKindOf', () => {
+  test('knows a Final Draft, Highland, or Fade In file by its name, in any case', () => {
+    expect(importKindOf('The Call.fdx')).toBe('fdx');
+    expect(importKindOf('THE CALL.FDX')).toBe('fdx');
+    expect(importKindOf('Ferry.HighLand')).toBe('highland');
+    expect(importKindOf('Cabin.FADEIN')).toBe('fadein');
+    for (const name of ['The Call.fdx.fountain', 'fdx', 'a.fadein.md', 'a.txt', undefined]) {
+      expect(importKindOf(name), String(name)).toBeNull();
+    }
+  });
+});
+
+describe("Open's limits", () => {
+  test('a script is at most 5 MB, and a NUL in its first 8 KB means it is not text', () => {
+    expect(MAX_SCRIPT_BYTES).toBe(5 * 1024 * 1024);
+    expect(SNIFF_BYTES).toBe(8 * 1024);
   });
 });
