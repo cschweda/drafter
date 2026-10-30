@@ -192,3 +192,7 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 
 - **Long runs of one nested-list shape parse in quadratic time** (micromark, not Drafter): each time a nested container closes inside another, micromark's document tokenizer copies the whole event list (`EditMap.consume` in `micromark/lib/initialize/document.js`), so an outline of nothing but `- a` / `  - b` takes 0.27 s at 25 KB, 0.95 s at 50 KB, and 3.8 s at 100 KB (and `- - x` lines repeated, 8 s at 100 KB), at depth 2, where the nesting limit can't help. The maintainer's real 49 KB outline (and 4× it, 195 KB) parses in 41 to 91 ms, linearly, so no patch for now (the controller's ruling). The likely fix: splice only the end of the event list there (the exits go just after the last flow chunk, near the end), upstream or as a `pnpm patch`.
 - **A note's indent isn't scaled with its type**: a footnote in the PDF is set at 9 pt but keeps the text's 18 pt list indent (`scaled` in `document/layout.ts` scales sizes and spacing, not indents). Cosmetic.
+
+## HTML export
+
+- **Reading order is written twice**: `@drafter/render-html-file`'s Pages view reads a page as the Script tab does (dual dialogue's left speech first, a title page by field), with `readingOrder` and `titleOrder` ported from `@drafter/render-html`'s `page.ts` rather than shared. Moving them into `@drafter/layout` (or a small DOM-free export of `render-html`) would keep the two from drifting; the Task 3 review chose to leave it for now.

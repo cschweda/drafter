@@ -1,7 +1,7 @@
 import type { Layout, LayoutLine, LayoutRun, Page } from '@drafter/layout';
-import type { Template } from '@drafter/templates';
+import { PAPER_POINTS, type Template } from '@drafter/templates';
 import { el, escapeHtml } from './escape';
-import { colClass, gridRules, pageClass, pageRules, rowClass } from './rules';
+import { colClass, gridRules, pageClass, pageRules, paperRule, rowClass } from './rules';
 
 /**
  * The Pages view: its markup, and the generated rules for the rows, columns, and page sizes it
@@ -96,12 +96,25 @@ class Grid {
   }
 }
 
-/** A run as markup: its escaped text, in a span whose classes give its styles when it has any. */
+/**
+ * A run as markup: its escaped text, in a span whose classes give its styles when it has any. As
+ * the PDF draws only a run's text without the spaces around it, the span holds the trimmed text
+ * and the spaces stand outside it, so an underline starts and ends where the PDF's does; the
+ * columns are the same either way.
+ */
 function runHtml(run: LayoutRun): string {
-  const text = escapeHtml(printable(run.text));
+  const text = printable(run.text);
   if (text === '') return '';
   const styles = [run.bold && 'b', run.italic && 'i', run.underline && 'u'].filter(Boolean);
-  return styles.length > 0 ? el('span', { class: styles.join(' ') }, text) : text;
+  if (styles.length === 0) return escapeHtml(text);
+  const start = text.length - text.trimStart().length;
+  const end = text.trimEnd().length;
+  if (end <= start) return escapeHtml(text);
+  return (
+    escapeHtml(text.slice(0, start)) +
+    el('span', { class: styles.join(' ') }, escapeHtml(text.slice(start, end))) +
+    escapeHtml(text.slice(end))
+  );
 }
 
 /** One printed line at its row and column. `(MORE)` is the page's, not the script's: it is hidden from a screen reader. */
@@ -207,7 +220,12 @@ export function pagesHtml(layout: Layout, template: Template): PagesHtml {
         furnitureHtml(page, template, grid),
     ),
   );
-  const rules = [gridRules(grid.rows, grid.cols), pageRules([[width, height]])]
+  const paper = PAPER_POINTS[template.page.paper];
+  const rules = [
+    gridRules(grid.rows, grid.cols),
+    pageRules([[width, height]]),
+    paperRule(paper.width, paper.height),
+  ]
     .filter(Boolean)
     .join('\n');
   return { html: el('section', { class: 'pages' }, cards.join('')), rules };

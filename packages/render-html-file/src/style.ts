@@ -334,7 +334,11 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
 .document img { max-width: 100%; }
 .footnotes { font-size: 0.9375rem; }
 
-/* Print: the light palette always, no bar, a band to read rather than click, a page to a sheet. */
+/* Print: the light palette always, and no bar. A script in Pages prints its cards alone, a card to
+   a sheet with no margin, each at the top left of a sheet of its paper (the size is generated:
+   pageRules' companion, paperRule); the header and the band are the screen's, so they stay off.
+   Reading and a document print as a flow on the browser's own page, the header kept and the band
+   read rather than clicked. */
 @page card { margin: 0; }
 @media print {
   :root,
@@ -343,8 +347,20 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
   }
   .bar, .skip { display: none !important; }
   .band a { pointer-events: none; }
-  .pages { display: block; overflow: visible; }
-  .page { page: card; margin: 0 auto; border: 0; border-radius: 0; break-after: page; break-inside: avoid; }
+  body:has(> main[data-view="pages"]) > .head,
+  body:has(> main[data-view="pages"]) > .band { display: none !important; }
+  main[data-view="pages"] { max-width: none; margin: 0; padding: 0; }
+  .pages { display: block; overflow: visible; container-type: normal; }
+  .page {
+    page: card;
+    margin: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    break-after: page;
+    break-inside: avoid;
+  }
+  .page:last-child { break-after: auto; }
   .pages .page { font-size: 12pt; }
   .speech, .note, .sh { break-inside: avoid; }
   .sh { break-after: avoid; }

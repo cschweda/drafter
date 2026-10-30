@@ -61,6 +61,18 @@ export function pageRules(sizes: Iterable<readonly [number, number]>): string {
     .join('\n');
 }
 
+/**
+ * The sheet a printed card goes on: the template's paper, in points, as the PDF's pages are, for
+ * the stylesheet's `@page card` (no margin; the card's own margins are on its grid). A browser
+ * that ignores `size` prints on the paper the reader chose, the card still at its top left.
+ */
+export function paperRule(width: number, height: number): string {
+  for (const n of [width, height]) {
+    if (!Number.isFinite(n) || n <= 0) throw new RangeError(`Not a paper size: ${n}`);
+  }
+  return `@page card{size:${width}pt ${height}pt}`;
+}
+
 /** How finely a band block's share is kept: thousandths of the whole. */
 const SHARES = 1000;
 

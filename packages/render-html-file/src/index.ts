@@ -13,6 +13,7 @@ export {
   gridRules,
   pageClass,
   pageRules,
+  paperRule,
   rowClass,
 } from './rules';
 export type { ShellInput } from './shell';

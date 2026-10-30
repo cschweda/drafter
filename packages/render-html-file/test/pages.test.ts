@@ -297,4 +297,63 @@ describe('pagesHtml', () => {
     const print = STYLESHEET.slice(STYLESHEET.indexOf('@media print'));
     expect(print).toMatch(/\.pages \.page \{[^}]*font-size: 12pt/);
   });
+
+  it('an underline runs under the words, not the spaces around them, as in the PDF', () => {
+    // Built by hand: Fountain's own underline can't open or close beside a space.
+    const run = (text: string, underline = false) => ({
+      text,
+      bold: false,
+      italic: false,
+      underline,
+      span: { from: 0, to: 0 },
+    });
+    const line: LayoutLine = {
+      col: 0,
+      runs: [run('See '), run('  word  ', true), run(' go.')],
+      role: 'action',
+      blockIndex: 0,
+      span: { from: 0, to: 0 },
+    };
+    const layout: Layout = {
+      pages: [{ number: 1, lines: [line], sceneNumbersLeft: [], sceneNumbersRight: [] }],
+      index: [],
+      diagnostics: [],
+    };
+    const host = document.createElement('div');
+    host.innerHTML = pagesHtml(layout, screenplay).html;
+    expect(host.querySelector('.u')?.textContent).toBe('word');
+    expect(host.querySelector('.ln')?.textContent).toBe('See   word   go.');
+  });
+
+  it('prints each card on a sheet of its paper', () => {
+    expect(render(SCREENPLAY).out.rules).toContain('@page card{size:612pt 792pt}');
+    const a4: Template = {
+      ...screenplay,
+      page: {
+        ...screenplay.page,
+        paper: 'a4',
+        width: 82,
+        height: 70,
+        margin: { ...screenplay.page.margin, right: 7 },
+      },
+    };
+    const { out, pages } = render(SCREENPLAY, a4);
+    expect(out.rules).toContain('@page card{size:595.28pt 841.89pt}');
+    expect(pages[0]?.classList.contains('p82x70')).toBe(true);
+  });
+
+  it('prints Pages as the cards alone, from the sheet edge, and Reading as a flow', () => {
+    const print = STYLESHEET.slice(STYLESHEET.indexOf('@media print'));
+    expect(STYLESHEET).toContain('@page card { margin: 0; }');
+    expect(print).toMatch(/main\[data-view="pages"\]\) > \.head/);
+    expect(print).toMatch(/main\[data-view="pages"\]\) > \.band/);
+    expect(print).toMatch(
+      /main\[data-view="pages"\] \{ max-width: none; margin: 0; padding: 0; \}/,
+    );
+    expect(print).toMatch(/\.pages \{[^}]*container-type: normal/);
+    expect(print).toMatch(/\.page \{[^}]*page: card;[^}]*margin: 0;[^}]*break-after: page/);
+    expect(print).toContain('.page:last-child { break-after: auto; }');
+    // The header is hidden only beside Pages: Reading prints it.
+    expect(print.split('.head').length - 1).toBe(1);
+  });
 });

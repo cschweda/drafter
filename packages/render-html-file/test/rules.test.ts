@@ -7,6 +7,7 @@ import {
   gridRules,
   pageClass,
   pageRules,
+  paperRule,
   rowClass,
 } from '../src/rules';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
@@ -76,6 +77,16 @@ describe('pageRules', () => {
       ].join('\n'),
     );
     expect(() => pageRules([[85.5, 66]])).toThrow(RangeError);
+  });
+});
+
+describe('paperRule', () => {
+  it('sizes the printed card sheet as the paper, in points, and refuses a size that is not one', () => {
+    expect(paperRule(612, 792)).toBe('@page card{size:612pt 792pt}');
+    expect(paperRule(595.28, 841.89)).toBe('@page card{size:595.28pt 841.89pt}');
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => paperRule(bad, 792)).toThrow(RangeError);
+    }
   });
 });
 
