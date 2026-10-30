@@ -1,6 +1,6 @@
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
-import { paginate } from '@drafter/layout';
+import { paginate, type SceneNumbering, type TitlePageMode, titlePageFor } from '@drafter/layout';
 import {
   DOCUMENT_FONT_FILES,
   type DocumentFontSet,
@@ -21,12 +21,33 @@ import {
 } from './export-progress';
 
 /**
- * What the main thread sends the export worker: the whole text, and the template to lay a script
- * out with; or, for a Markdown document's PDF, the paper, the title, and the language its PDF
- * carries (Markdown PDF design §5, §6).
+ * How a script exports: which scene numbers print, and how much of the title page. A Final Draft
+ * file keeps the numbers written in the script whatever `sceneNumbers` says, since Final Draft
+ * decides what it prints (Call 8). The script itself is never changed.
+ */
+export interface ExportOptions {
+  sceneNumbers: SceneNumbering;
+  titlePage: TitlePageMode;
+}
+
+/** No scene numbers, and the whole title page: what an export did before there were options. */
+export const DEFAULT_EXPORT_OPTIONS: ExportOptions = Object.freeze({
+  sceneNumbers: 'none',
+  titlePage: 'full',
+});
+
+/**
+ * What the main thread sends the export worker: the whole text, the template to lay a script out
+ * with, and its options (absent, the defaults); or, for a Markdown document's PDF, the paper, the
+ * title, and the language its PDF carries (Markdown PDF design §5, §6).
  */
 export type ExportRequest =
-  | { kind: 'pdf' | 'txt' | 'fdx'; source: string; template: Template }
+  | {
+      kind: 'pdf' | 'txt' | 'fdx';
+      source: string;
+      template: Template;
+      options?: ExportOptions;
+    }
   | { kind: 'markdown-pdf'; source: string; paper: Paper; title: string; lang: string };
 /** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
 export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
@@ -107,10 +128,10 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
 }
 
 /**
- * Parses, paginates, and renders one request: what `drafter build --pdf` and `--txt` do. A Final
- * Draft file is the parsed script as `toFdx` writes it, with no pages. A Markdown document's PDF
- * is parsed here with the app's own parser, imported on the first one (Call 21), so a script's
- * export never loads it. Each set of fonts is loaded by the first PDF that needs it and kept; a
+ * Parses, paginates, and renders one request: what `drafter build --pdf` and `--txt` do, with the
+ * request's options. A Final Draft file is the parsed script, its title page cut to the options,
+ * as `toFdx` writes it, with no pages. A Markdown document's PDF is parsed here with the app's
+ * own parser, imported on the first one (Call 21), so a script's export never loads it. Each set of fonts is loaded by the first PDF that needs it and kept; a
  * failed load is tried again next time. An error is a reply, so the worker never throws. With
  * `onProgress`, each export says how far it is as it goes: unknown while it fetches, parses, and
  * (for a script) lays out; by blocks and pages as it lays out and draws a PDF; unknown again while
@@ -136,9 +157,11 @@ export function createExporter(
       });
       return { data: bytes, missing };
     }
-    const { kind, source, template } = request;
-    if (kind === 'fdx') return { data: toFdx(parse(source), template) };
-    const layout = paginate(parse(source), template);
+    const { kind, source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
+    const parsed = parse(source);
+    const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
+    if (kind === 'fdx') return { data: toFdx(doc, template) };
+    const layout = paginate(doc, template, { sceneNumbers: options.sceneNumbers });
     if (kind === 'txt') return { data: renderText(layout, template) };
     const fonts = await fontsOnce();
     return { data: await renderPdf(layout, template, { fonts, onProgress: rendering(report) }) };

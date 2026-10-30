@@ -8,12 +8,19 @@ import {
   type DocumentFontSet,
   FONT_FILES,
   type FontSet,
+  renderPdf,
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import { builtins } from '@drafter/templates';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import sampleScreenplay from '#samples/screenplay.fountain?raw';
 import * as compute from '../app/workers/export-compute';
-import { type ExportReply, fetchDocumentFonts, fetchFonts } from '../app/workers/export-compute';
+import {
+  DEFAULT_EXPORT_OPTIONS,
+  type ExportReply,
+  fetchDocumentFonts,
+  fetchFonts,
+} from '../app/workers/export-compute';
 
 // pdf-lib is render-pdf's, so it is found from there.
 const { PDFDocument } = createRequire(
@@ -114,6 +121,121 @@ describe('the export worker', () => {
       template: undefined as never,
     });
     expect('error' in reply).toBe(true);
+  });
+});
+
+describe('the export worker’s options', () => {
+  const { createExporter } = compute;
+  const LOCKED = [
+    'Title: The Call',
+    'Author: A. Writer',
+    'Contact: A. Writer',
+    '    555-0100',
+    '',
+    'INT. A - DAY',
+    '',
+    'One.',
+    '',
+    'INT. B - DAY #12A#',
+    '',
+    'Two.',
+    '',
+    'INT. C - DAY',
+    '',
+    'Three.',
+    '',
+  ].join('\n');
+  const textOf = (reply: ExportReply): string => {
+    if (!('data' in reply) || typeof reply.data !== 'string') {
+      throw new Error(`no text: ${JSON.stringify(reply)}`);
+    }
+    return reply.data;
+  };
+
+  test('the defaults print no scene numbers and the whole title page', () => {
+    expect(DEFAULT_EXPORT_OPTIONS).toEqual({ sceneNumbers: 'none', titlePage: 'full' });
+  });
+
+  test('a PDF with no title page has one page fewer', async () => {
+    const exporter = createExporter(realFonts);
+    const count = async (reply: ExportReply) =>
+      (await PDFDocument.load(bytesOf(reply))).getPageCount();
+    const full = await exporter({ kind: 'pdf', source: SOURCE, template });
+    const none = await exporter({
+      kind: 'pdf',
+      source: SOURCE,
+      template,
+      options: { sceneNumbers: 'none', titlePage: 'none' },
+    });
+    expect(await count(full)).toBe(2);
+    expect(await count(none)).toBe(1);
+  });
+
+  test('plain text with scene numbers as written prints the locked number at the template’s columns', async () => {
+    const reply = await createExporter(realFonts)({
+      kind: 'txt',
+      source: LOCKED,
+      template,
+      options: { sceneNumbers: 'written', titlePage: 'full' },
+    });
+    const lines = textOf(reply).split('\n');
+    const left = template.page.margin.left;
+    const heading = lines.find((line) => line.includes('INT. B - DAY')) as string;
+    expect(heading.indexOf('12A')).toBe(left + template.sceneNumbers.left);
+    expect(heading.lastIndexOf('12A')).toBe(left + template.sceneNumbers.right);
+    for (const other of ['INT. A - DAY', 'INT. C - DAY']) {
+      const line = lines.find((l) => l.includes(other)) as string;
+      expect(line.trim()).toBe(other);
+    }
+  });
+
+  test('a Final Draft file with title and author only has no Contact paragraph', async () => {
+    const exporter = createExporter(realFonts);
+    const full = textOf(await exporter({ kind: 'fdx', source: LOCKED, template }));
+    const kept = textOf(
+      await exporter({
+        kind: 'fdx',
+        source: LOCKED,
+        template,
+        options: { sceneNumbers: 'none', titlePage: 'title-author' },
+      }),
+    );
+    expect(full).toContain('DrafterKey="Contact"');
+    expect(kept).not.toContain('DrafterKey="Contact"');
+    expect(kept).not.toContain('555-0100');
+    expect(kept).toContain('DrafterKey="Title"');
+    expect(kept).toContain('DrafterKey="Author"');
+  });
+
+  test('a Final Draft file keeps its locked numbers whatever the scene-number option', async () => {
+    const exporter = createExporter(realFonts);
+    const expected = toFdx(parse(LOCKED), template);
+    expect(expected).toContain('Number="12A"');
+    for (const sceneNumbers of ['none', 'written', 'all'] as const) {
+      const reply = await exporter({
+        kind: 'fdx',
+        source: LOCKED,
+        template,
+        options: { sceneNumbers, titlePage: 'full' },
+      });
+      expect(textOf(reply), sceneNumbers).toBe(expected);
+    }
+  });
+
+  test('a request with no options exports as before', async () => {
+    const exporter = createExporter(realFonts);
+    const layout = paginate(parse(sampleScreenplay), template);
+    const pdf = await renderPdf(layout, template, { fonts: await realFonts() });
+    const before = {
+      txt: renderText(layout, template),
+      fdx: toFdx(parse(sampleScreenplay), template),
+    };
+    for (const options of [undefined, DEFAULT_EXPORT_OPTIONS]) {
+      const request = { source: sampleScreenplay, template, ...(options ? { options } : {}) };
+      expect(bytesOf(await exporter({ kind: 'pdf', ...request }))).toEqual(pdf);
+      expect(textOf(await exporter({ kind: 'txt', ...request }))).toBe(before.txt);
+      expect(textOf(await exporter({ kind: 'fdx', ...request }))).toBe(before.fdx);
+    }
   });
 });
 

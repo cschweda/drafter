@@ -4,6 +4,7 @@ import {
   type Layout,
   type PaginateOptions,
   paginate,
+  titlePageFor,
   UnsupportedTemplateError,
 } from '@drafter/layout';
 import { builtins, loadTemplate, type Template } from '@drafter/templates';
@@ -300,6 +301,63 @@ describe('title page', () => {
     expect(lay(source).pages.map((p) => p.number)).toEqual([0, 1]);
     expect(lay('Notes: Call the actors.\n\nAction.').pages.map((p) => p.number)).toEqual([1]);
   });
+
+  const keys = (tp: ReturnType<typeof titlePageFor>) => tp?.fields.map((f) => f.key) ?? null;
+  const everyKey = [
+    'TITLE: The Call',
+    'credit: Written by',
+    'Authors: A. Writer and B. Writer',
+    'Source: Based on a dream',
+    'Contact: A. Writer',
+    'Date: 1 May 2026',
+    'Draft date: 2 May 2026',
+    'Notes: Call the actors.',
+    '',
+    'INT. KITCHEN - NIGHT',
+  ].join('\n');
+
+  it('titlePageFor keeps Title, Credit, Author, Authors, and Source by the layout’s own aliases', () => {
+    const tp = parse(everyKey).titlePage;
+    const kept = titlePageFor(tp, 'title-author');
+    expect(keys(kept)).toEqual(['TITLE', 'credit', 'Authors', 'Source']);
+    expect(kept?.span).toEqual(tp?.span);
+    expect(kept?.raw).toBe(tp?.raw);
+    expect(keys(titlePageFor(parse(source).titlePage, 'title-author'))).toEqual([
+      'Title',
+      'Credit',
+      'Author',
+      'Source',
+    ]);
+  });
+
+  it("'none' is null and 'full' is the same object", () => {
+    const tp = parse(everyKey).titlePage;
+    expect(titlePageFor(tp, 'none')).toBeNull();
+    expect(titlePageFor(tp, 'full')).toBe(tp);
+    expect(titlePageFor(null, 'title-author')).toBeNull();
+    expect(titlePageFor(null, 'full')).toBeNull();
+  });
+
+  it('a title page left with nothing that prints is no title page, and page 1 is still page 1', () => {
+    const doc = parse(
+      'Contact: A. Writer\nDraft date: 1 May 2026\n\nINT. KITCHEN - NIGHT\n\nAction.',
+    );
+    const layout = paginate(
+      { ...doc, titlePage: titlePageFor(doc.titlePage, 'title-author') },
+      screenplay,
+    );
+    expect(layout.pages.map((p) => p.number)).toEqual([1]);
+    expect(layout.pages[0]?.number).toBe(1);
+    expect(layout.index[0]).toEqual({ page: 1, line: 0 });
+  });
+
+  it('does not change the title page it is given', () => {
+    const tp = parse(everyKey).titlePage;
+    const before = structuredClone(tp);
+    titlePageFor(tp, 'title-author');
+    titlePageFor(tp, 'none');
+    expect(tp).toEqual(before);
+  });
 });
 
 describe('page and scene numbers', () => {
@@ -337,6 +395,33 @@ describe('page and scene numbers', () => {
     const template = extend({ sceneNumbers: { enabled: true } });
     expect(page(lay(scenes, template), 1).sceneNumbersLeft.length).toBe(3);
     expect(page(lay(scenes, template, { sceneNumbers: false }), 1).sceneNumbersLeft).toEqual([]);
+  });
+
+  const numbers = (layout: Layout) => page(layout, 1).sceneNumbersLeft.map((n) => n.text);
+
+  it('As written numbers only locked scenes', () => {
+    expect(numbers(lay(scenes, screenplay, { sceneNumbers: 'written' }))).toEqual(['12A']);
+    expect(page(lay(scenes, screenplay, { sceneNumbers: 'written' }), 1).sceneNumbersRight).toEqual(
+      [{ line: 5, text: '12A' }],
+    );
+  });
+
+  it('Number every scene keeps locked numbers and counts the rest', () => {
+    expect(numbers(lay(scenes, screenplay, { sceneNumbers: 'all' }))).toEqual(['1', '12A', '3']);
+  });
+
+  it('none prints no numbers, even locked ones', () => {
+    const template = extend({ sceneNumbers: { enabled: true } });
+    expect(numbers(lay(scenes, screenplay, { sceneNumbers: 'none' }))).toEqual([]);
+    expect(numbers(lay(scenes, template, { sceneNumbers: 'none' }))).toEqual([]);
+  });
+
+  it('true and false still mean every scene and none', () => {
+    const template = extend({ sceneNumbers: { enabled: true } });
+    expect(numbers(lay(scenes, screenplay, { sceneNumbers: true }))).toEqual(['1', '12A', '3']);
+    expect(numbers(lay(scenes, template, { sceneNumbers: false }))).toEqual([]);
+    expect(numbers(lay(scenes, template))).toEqual(['1', '12A', '3']);
+    expect(numbers(lay(scenes))).toEqual([]);
   });
 });
 
