@@ -1,6 +1,14 @@
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { type Anchor, CONTEXT, type DiffRow, diffRows, foldRows, groupRows } from '../src';
+import {
+  type Anchor,
+  CONTEXT,
+  type DiffRow,
+  diffRows,
+  foldRows,
+  groupRows,
+  pairRows,
+} from '../src';
 
 /** A line from a small alphabet: headings, blanks, and a few action lines, so lines repeat. */
 const line = fc.constantFrom(
@@ -40,12 +48,28 @@ const pair = fc
 const anchors = (text: string): Anchor[] =>
   text.split('\n').flatMap((l, i) => (/^(INT|EXT)\. /.test(l) ? [{ line: i, title: l }] : []));
 
+/** A change across a heading is rare in random edits, so the grouping properties look harder. */
+const RUNS = { numRuns: 1000 };
+
+/** The rows of a pair laid out with its anchors, and their groups. */
+const grouped = (older: string, newer: string) => {
+  const a = { old: anchors(older), new: anchors(newer) };
+  const { rows, changes } = diffRows(older, newer, a);
+  return { rows, changes, a, groups: groupRows(rows, a.old, a.new) };
+};
+
+/** The index of the last anchor at or before `line` (-1 before the first): its section. */
+const sectionOf = (list: readonly Anchor[], line: number) => {
+  let s = -1;
+  for (let k = 0; k < list.length && list[k].line <= line; k++) s = k;
+  return s;
+};
+
 describe('rows properties', () => {
   test('groups tile the rows in order', () => {
     fc.assert(
       fc.property(pair, ([older, newer]) => {
-        const { rows } = diffRows(older, newer);
-        const groups = groupRows(rows, anchors(older), anchors(newer));
+        const { rows, groups } = grouped(older, newer);
         let at = 0;
         for (const group of groups) {
           expect(group.from).toBe(at);
@@ -60,22 +84,69 @@ describe('rows properties', () => {
     );
   });
 
-  test('every change is in exactly one group', () => {
+  // A change whose rows cross an anchor is cut there, so it can be in more than one group: a group
+  // lists every change it holds a row of, and only those.
+  test('a group lists the changes of its rows, and each change is in consecutive groups', () => {
     fc.assert(
       fc.property(pair, ([older, newer]) => {
-        const { rows, changes } = diffRows(older, newer);
-        const groups = groupRows(rows, anchors(older), anchors(newer));
-        const listed = groups.flatMap((g) => g.changes);
-        expect(listed).toEqual(changes.map((_, i) => i));
-        // A change is listed by the group its first row is in.
+        const { rows, changes, groups } = grouped(older, newer);
         for (const group of groups) {
-          for (const c of group.changes) {
-            const first = rows.findIndex((r) => r.change === c);
-            expect(first).toBeGreaterThanOrEqual(group.from);
-            expect(first).toBeLessThan(group.to);
+          const own = [
+            ...new Set(
+              rows
+                .slice(group.from, group.to)
+                .flatMap((r) => (r.change === null ? [] : [r.change])),
+            ),
+          ];
+          expect(group.changes).toEqual(own);
+          expect(group.changes.length === 0).toBe(group.added + group.removed === 0);
+        }
+        const listed = groups.flatMap((g) => g.changes).filter((c, k, all) => c !== all[k - 1]);
+        expect(listed).toEqual(changes.map((_, i) => i));
+      }),
+      RUNS,
+    );
+  });
+
+  test('each line is in the group of its own heading', () => {
+    fc.assert(
+      fc.property(pair, ([older, newer]) => {
+        const { rows, groups, a } = grouped(older, newer);
+        for (const group of groups) {
+          const inGroup = rows.slice(group.from, group.to);
+          const olds = inGroup.filter((r) => r.kind !== 'added');
+          const news = inGroup.filter((r) => r.kind !== 'removed');
+          expect(new Set(olds.map((r) => sectionOf(a.old, r.old as number))).size).toBeLessThan(2);
+          expect(new Set(news.map((r) => sectionOf(a.new, r.new as number))).size).toBeLessThan(2);
+        }
+      }),
+      RUNS,
+    );
+  });
+
+  test('within a group, paired rows are side by side and every row shows once', () => {
+    fc.assert(
+      fc.property(pair, ([older, newer]) => {
+        const { rows, groups } = grouped(older, newer);
+        for (const range of [...groups, { from: 0, to: rows.length }]) {
+          const split = pairRows(rows, range.from, range.to);
+          const left = split.flatMap((s) => (s.left === null ? [] : [s.left]));
+          const right = split.flatMap((s) => (s.right === null ? [] : [s.right]));
+          const ids = Array.from({ length: range.to - range.from }, (_, k) => range.from + k);
+          expect(left).toEqual(ids.filter((r) => rows[r].kind !== 'added'));
+          expect(right).toEqual(ids.filter((r) => rows[r].kind !== 'removed'));
+          for (const s of split) {
+            if (s.left !== null && rows[s.left].kind === 'same') expect(s.right).toBe(s.left);
+          }
+          for (const r of ids) {
+            const p = rows[r].pair;
+            if (rows[r].kind !== 'removed' || p === null || p < range.from || p >= range.to)
+              continue;
+            expect(split).toContainEqual({ left: r, right: p });
           }
         }
       }),
+      RUNS,
     );
   });
 
@@ -130,8 +201,8 @@ describe('rows properties', () => {
           at = piece.to;
         }
         expect(at).toBe(to);
-        // Each row is folded exactly when its unchanged stretch in the range is longer than
-        // 2 × CONTEXT and no change in the range is within CONTEXT rows of it.
+        // Each row but the first is folded exactly when its unchanged stretch in the range is longer
+        // than 2 × CONTEXT and no change in the range is within CONTEXT rows of it.
         const folded = new Set<number>();
         for (const p of pieces)
           if (p.kind === 'fold') for (let i = p.from; i < p.to; i++) folded.add(i);
@@ -143,7 +214,8 @@ describe('rows properties', () => {
           const near = rows
             .slice(Math.max(from, i - CONTEXT), Math.min(to, i + CONTEXT + 1))
             .some((r) => r.kind !== 'same');
-          const expected = rows[i].kind === 'same' && e - s > 2 * CONTEXT && !near;
+          // The range's first row, a group's heading, always shows.
+          const expected = rows[i].kind === 'same' && e - s > 2 * CONTEXT && !near && i !== from;
           expect(folded.has(i)).toBe(expected);
         }
       }),

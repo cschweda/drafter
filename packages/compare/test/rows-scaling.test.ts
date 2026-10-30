@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { type Anchor, diffRows, foldRows, groupRows } from '../src';
+import { type Anchor, diffRows, diffWords, foldRows, groupRows, pairRows } from '../src';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 /** Scene `i` of an invented script; `edit` changes one action line and one line of dialogue. */
@@ -21,7 +21,7 @@ const anchors = (text: string): Anchor[] =>
 
 describe('rows scaling', () => {
   test(
-    'diffRows and groupRows grow linearly',
+    'diffRows, groupRows, foldRows, pairRows, and diffWords grow linearly',
     () => {
       // Near-identical scripts: every fifth scene edited.
       const make = (n: number) => {
@@ -36,8 +36,15 @@ describe('rows scaling', () => {
       const { growth } = scaling(
         make,
         ({ older, newer, oldAnchors, newAnchors }) => {
-          const { rows } = diffRows(older, newer);
-          for (const g of groupRows(rows, oldAnchors, newAnchors)) foldRows(rows, g.from, g.to);
+          const { rows } = diffRows(older, newer, { old: oldAnchors, new: newAnchors });
+          for (const g of groupRows(rows, oldAnchors, newAnchors)) {
+            foldRows(rows, g.from, g.to);
+            pairRows(rows, g.from, g.to);
+          }
+          for (const row of rows) {
+            if (row.kind === 'removed' && row.pair !== null)
+              diffWords(row.text, rows[row.pair].text);
+          }
         },
         500,
       );

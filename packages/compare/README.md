@@ -32,7 +32,7 @@ A diff view draws rows, not changes. `diffRows` gives each unchanged line once a
 ```ts
 import { diffRows, diffWords, foldRows, groupRows, markdownAnchors, openFold, pairRows } from '@drafter/compare';
 
-const { rows, changes } = diffRows(older, newer);
+const { rows, changes } = diffRows(older, newer, { old: oldAnchors, new: newAnchors });
 // rows[i]: { kind: 'same' | 'added' | 'removed', old, new, text, change, pair }
 
 diffWords('Ann leaves the hall.', 'Ann crosses the hall.');
@@ -41,6 +41,7 @@ diffWords('Ann leaves the hall.', 'Ann crosses the hall.');
 diffWords('the cat sat', 'a dog stood'); // one change a side: the spaces between fold in
 
 // Anchors are the lines that start a scene: scene headings, or for Markdown, headings 1 to 3.
+// Give diffRows the same ones, so a change across a heading is cut there.
 const groups = groupRows(rows, oldAnchors, newAnchors);
 // { from, to, title, tag: 'same' | 'new' | 'deleted' | 'renamed' | 'opening', renamedFrom, added, removed, changes }
 markdownAnchors('# Act One\n```\n# not this\n```\n## Scene 1'); // lines 0 and 4
@@ -51,8 +52,9 @@ pairRows(rows, group.from, group.to); // [{ left, right }, ...]: row indices, nu
 ```
 
 - `diffWords` splits a line into tokens (a run of letters, digits, `'` and `’`; a run of whitespace; any other character), diffs them with `diffLines`, and folds an unchanged run of only whitespace, or of one or two characters, between two changes into them. A side of more than `MAX_TOKENS` (2,000) tokens gives `null`: no word marks.
-- `foldRows` folds an unchanged stretch longer than 2 × `CONTEXT` (3) lines, keeping `CONTEXT` lines next to each change in the range. A fold longer than `FOLD_STEP` (200) opens that many at a time. A group with more than `LARGE_GROUP` (400) changed lines is for the view to start collapsed.
-- `groupRows` cuts at each row whose line is an anchor of its side (the older for a removed row, the newer otherwise). A removed heading paired with an added one is one `renamed` group; rows before the first anchor are the `opening`. The groups tile the rows, changed or not; a group with no added or removed rows has nothing to show. Each change is listed in the group its first row is in.
+- `foldRows` folds an unchanged stretch longer than 2 × `CONTEXT` (3) lines, keeping `CONTEXT` lines next to each change in the range, and the range's first row (a group's heading). A fold longer than `FOLD_STEP` (200) opens that many at a time. A group with more than `LARGE_GROUP` (400) changed lines is for the view to start collapsed.
+- `groupRows` cuts at each row whose line is an anchor of its side (the older for a removed row, the newer otherwise). A removed heading paired with an added one is one `renamed` group; rows before the first anchor are the `opening`. The groups tile the rows, changed or not; a group with no added or removed rows has nothing to show. Given the same anchors, `diffRows` cuts a change that crosses a heading there, so each line is in its own heading's group, and a group lists every change it holds a row of.
+- `pairRows` puts a row beside its pair when both are in the range; unpaired rows go side by side by position.
 
 See the [version history design](../../docs/drafter-version-history-design.md), §5.
 

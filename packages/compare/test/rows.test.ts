@@ -19,9 +19,10 @@ const anchors = (text: string): Anchor[] =>
     .split(/\r?\n/)
     .flatMap((line, i) => (/^(INT|EXT)\. /.test(line) ? [{ line: i, title: line }] : []));
 
-const groupsOf = (older: string, newer: string) => {
-  const { rows } = diffRows(older, newer);
-  return { rows, groups: groupRows(rows, anchors(older), anchors(newer)) };
+const groupsOf = (older: string, newer: string, anchorsOf = anchors) => {
+  const a = { old: anchorsOf(older), new: anchorsOf(newer) };
+  const { rows } = diffRows(older, newer, a);
+  return { rows, groups: groupRows(rows, a.old, a.new) };
 };
 
 /** `n` unchanged lines of invented words. */
@@ -85,8 +86,10 @@ describe('foldRows', () => {
     const newer = [...filler(10, 'top'), 'new', ...filler(20, 'mid'), 'new2', ...filler(6, 'end')];
     const { rows } = diffRows(older.join('\n'), newer.join('\n'));
     // Rows: 10 same (0–9), a change (10, 11), 20 same (12–31), a change (32, 33), 6 same (34–39).
+    // The range's first row (a group's heading) always shows.
     expect(foldRows(rows, 0, rows.length)).toEqual([
-      { kind: 'fold', from: 0, to: 7 },
+      { kind: 'rows', from: 0, to: 1 },
+      { kind: 'fold', from: 1, to: 7 },
       { kind: 'rows', from: 7, to: 15 },
       { kind: 'fold', from: 15, to: 29 },
       { kind: 'rows', from: 29, to: 40 },
@@ -99,8 +102,11 @@ describe('foldRows', () => {
     expect(foldRows(short.rows, 0, short.rows.length)).toEqual([
       { kind: 'rows', from: 0, to: short.rows.length },
     ]);
-    // A range with no change in it folds whole when long enough.
-    expect(foldRows(rows, 12, 32)).toEqual([{ kind: 'fold', from: 12, to: 32 }]);
+    // A range with no change in it folds whole when long enough, but for its first row.
+    expect(foldRows(rows, 12, 32)).toEqual([
+      { kind: 'rows', from: 12, to: 13 },
+      { kind: 'fold', from: 13, to: 32 },
+    ]);
     expect(foldRows(rows, 12, 18)).toEqual([{ kind: 'rows', from: 12, to: 18 }]);
     expect(foldRows(rows, 5, 5)).toEqual([]);
   });
@@ -190,6 +196,83 @@ describe('groupRows', () => {
     ]);
   });
 
+  test('a change across a renamed heading leaves each line in the group of its heading', () => {
+    const older = '# Intro\nAnn waits by the door.\n## Act One\nSam leaves the hall.';
+    const newer = '# Intro\nAnn waits by the gate.\n## Act One Revised\nSam leaves the hall now.';
+    const { rows, groups } = groupsOf(older, newer, markdownAnchors);
+    expect(rows.map((r) => [r.kind, r.text, r.change, r.pair])).toEqual([
+      ['same', '# Intro', null, null],
+      ['removed', 'Ann waits by the door.', 0, 2],
+      ['added', 'Ann waits by the gate.', 0, 1],
+      ['removed', '## Act One', 0, 5],
+      ['removed', 'Sam leaves the hall.', 0, 6],
+      ['added', '## Act One Revised', 0, 3],
+      ['added', 'Sam leaves the hall now.', 0, 4],
+    ]);
+    expect(
+      groups.map((g) => [
+        g.from,
+        g.to,
+        g.title,
+        g.tag,
+        g.renamedFrom,
+        g.added,
+        g.removed,
+        g.changes,
+      ]),
+    ).toEqual([
+      [0, 3, 'Intro', 'same', null, 1, 1, [0]],
+      [3, 7, 'Act One Revised', 'renamed', 'Act One', 2, 2, [0]],
+    ]);
+    // Side by side, each line beside its replacement, in each group and over all the rows.
+    expect(groups.map((g) => pairRows(rows, g.from, g.to))).toEqual([
+      [
+        { left: 0, right: 0 },
+        { left: 1, right: 2 },
+      ],
+      [
+        { left: 3, right: 5 },
+        { left: 4, right: 6 },
+      ],
+    ]);
+    expect(pairRows(rows, 0, rows.length)).toEqual([
+      { left: 0, right: 0 },
+      { left: 1, right: 2 },
+      { left: 3, right: 5 },
+      { left: 4, right: 6 },
+    ]);
+  });
+
+  test('a change across an unpaired heading is a deleted group and a new one', () => {
+    const older = '# Intro\nAnn waits by the door.\n# Bell tower\nRain falls.';
+    const newer = '# Intro\nAnn waits by the gate.\n# Cellar\nSam runs.';
+    const { rows, groups } = groupsOf(older, newer, markdownAnchors);
+    expect(rows.map((r) => [r.kind, r.text, r.pair])).toEqual([
+      ['same', '# Intro', null],
+      ['removed', 'Ann waits by the door.', 2],
+      ['added', 'Ann waits by the gate.', 1],
+      ['removed', '# Bell tower', null],
+      ['removed', 'Rain falls.', null],
+      ['added', '# Cellar', null],
+      ['added', 'Sam runs.', null],
+    ]);
+    expect(groups.map((g) => [g.from, g.to, g.title, g.tag, g.added, g.removed])).toEqual([
+      [0, 3, 'Intro', 'same', 1, 1],
+      [3, 5, 'Bell tower', 'deleted', 0, 2],
+      [5, 7, 'Cellar', 'new', 2, 0],
+    ]);
+    // Without anchors, diffRows keeps a change's removed rows then its added ones.
+    expect(diffRows(older, newer).rows.map((r) => r.kind)).toEqual([
+      'same',
+      'removed',
+      'removed',
+      'removed',
+      'added',
+      'added',
+      'added',
+    ]);
+  });
+
   test('rows before the first anchor are the opening group', () => {
     const newer = OLDER.replace('Title: Rain Check', 'Title: Rain Check Two');
     const { groups } = groupsOf(OLDER, newer);
@@ -220,12 +303,18 @@ describe('markdownAnchors', () => {
       'still code',
       '~~~~',
       '### Three',
+      '#',
+      '## ',
+      '### ###',
     ].join('\r\n');
     expect(markdownAnchors(text)).toEqual([
       { line: 0, title: 'Act One' },
       { line: 2, title: 'The plan' },
       { line: 7, title: 'Indented three' },
       { line: 15, title: 'Three' },
+      { line: 16, title: '' },
+      { line: 17, title: '' },
+      { line: 18, title: '' },
     ]);
   });
 });
@@ -256,6 +345,45 @@ describe('pairRows', () => {
     expect(pairRows(rows, 1, 3)).toEqual([
       { left: 1, right: null },
       { left: 2, right: null },
+    ]);
+  });
+
+  test('pairRows puts a paired row beside its pair, not by position', () => {
+    // A change's rows, as diffRows lays them out when anchors cut it: an unpaired removed row
+    // before a paired one, and an added row paired with the second.
+    const row = (kind: DiffRow['kind'], text: string, pair: number | null): DiffRow => ({
+      kind,
+      old: null,
+      new: null,
+      text,
+      change: 0,
+      pair,
+    });
+    const rows = [
+      row('removed', 'Rain falls.', null),
+      row('removed', 'Ann waits by the door.', 3),
+      row('added', 'Sam runs.', null),
+      row('added', 'Ann waits by the gate.', 1),
+    ];
+    expect(pairRows(rows, 0, 4)).toEqual([
+      { left: 0, right: 2 },
+      { left: 1, right: 3 },
+    ]);
+    // The added row paired with the second removed row comes first: the first removed row is alone.
+    const late = [rows[0], { ...rows[1], pair: 2 }, { ...rows[3], pair: 1 }, rows[2]];
+    expect(pairRows(late, 0, 4)).toEqual([
+      { left: 0, right: null },
+      { left: 1, right: 2 },
+      { left: null, right: 3 },
+    ]);
+    // A pair outside the range is no pair.
+    expect(pairRows(late, 1, 4)).toEqual([
+      { left: 1, right: 2 },
+      { left: null, right: 3 },
+    ]);
+    expect(pairRows(late, 0, 2)).toEqual([
+      { left: 0, right: null },
+      { left: 1, right: null },
     ]);
   });
 });

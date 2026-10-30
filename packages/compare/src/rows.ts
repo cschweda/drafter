@@ -20,10 +20,21 @@ export interface DiffRow {
  * The rows of a diff of two texts, and its changes: each unchanged line once, and each change's
  * removed lines then its added ones. In a change that replaces lines, removed line i is paired with
  * added line i when their words are alike enough (`PAIR_MIN`). `\r\n` and `\n` read the same.
+ *
+ * Given the anchors `groupRows` will cut at, a change that crosses one is laid out a section at a
+ * time, so each line lands in the group of its own heading: the removed and added lines before the
+ * first anchor, then each removed section beside the added section whose heading it is paired with
+ * (a renamed heading), and a section whose heading isn't paired on its own, removed before added.
  */
-export function diffRows(older: string, newer: string): { rows: DiffRow[]; changes: Change[] } {
+export function diffRows(
+  older: string,
+  newer: string,
+  anchors?: { old: readonly Anchor[]; new: readonly Anchor[] },
+): { rows: DiffRow[]; changes: Change[] } {
   const a = splitLines(older).lines;
   const changes = changesOf(older, newer);
+  const oldAnchor = new Set(anchors?.old.map((x) => x.line));
+  const newAnchor = new Set(anchors?.new.map((x) => x.line));
   const rows: DiffRow[] = [];
   let i = 0;
   let j = 0;
@@ -34,24 +45,74 @@ export function diffRows(older: string, newer: string): { rows: DiffRow[]; chang
   };
   changes.forEach((change, c) => {
     sameTo(change.old[0]);
-    const removedAt = rows.length;
-    for (const text of change.removed) {
-      rows.push({ kind: 'removed', old: i++, new: null, text, change: c, pair: null });
-    }
-    const addedAt = rows.length;
-    for (const text of change.added) {
-      rows.push({ kind: 'added', old: null, new: j++, text, change: c, pair: null });
-    }
-    const n = Math.min(change.removed.length, change.added.length);
-    for (let k = 0; k < n; k++) {
-      if (lineSimilarity(change.removed[k], change.added[k]) >= PAIR_MIN) {
-        rows[removedAt + k].pair = addedAt + k;
-        rows[addedAt + k].pair = removedAt + k;
+    const { removed, added } = change;
+    const paired = Array.from(
+      { length: Math.min(removed.length, added.length) },
+      (_, k) => lineSimilarity(removed[k], added[k]) >= PAIR_MIN,
+    );
+    const removedRow: number[] = [];
+    const addedRow: number[] = [];
+    const emitRemoved = ([from, to]: Section) => {
+      for (let k = from; k < to; k++) {
+        removedRow[k] = rows.length;
+        const old = change.old[0] + k;
+        rows.push({ kind: 'removed', old, new: null, text: removed[k], change: c, pair: null });
       }
+    };
+    const emitAdded = ([from, to]: Section) => {
+      for (let k = from; k < to; k++) {
+        addedRow[k] = rows.length;
+        const at = change.new[0] + k;
+        rows.push({ kind: 'added', old: null, new: at, text: added[k], change: c, pair: null });
+      }
+    };
+    const rs = sections(removed.length, (k) => oldAnchor.has(change.old[0] + k));
+    const as = sections(added.length, (k) => newAnchor.has(change.new[0] + k));
+    // The lines before the change's first anchor on each side.
+    let r = 0;
+    let s = 0;
+    if (rs.length > 0 && !oldAnchor.has(change.old[0])) emitRemoved(rs[r++]);
+    if (as.length > 0 && !newAnchor.has(change.new[0])) emitAdded(as[s++]);
+    while (r < rs.length || s < as.length) {
+      if (r === rs.length) {
+        emitAdded(as[s++]);
+        continue;
+      }
+      // A removed heading paired with an added heading: a renamed one, laid out together.
+      const k = rs[r][0];
+      const partner = paired[k] && newAnchor.has(change.new[0] + k) ? k : null;
+      if (partner === null || s === as.length) emitRemoved(rs[r++]);
+      else if (as[s][0] === partner) {
+        emitRemoved(rs[r++]);
+        emitAdded(as[s++]);
+      } else emitAdded(as[s++]); // an added section before the renamed one
     }
+    paired.forEach((alike, k) => {
+      if (!alike) return;
+      rows[removedRow[k]].pair = addedRow[k];
+      rows[addedRow[k]].pair = removedRow[k];
+    });
+    i = change.old[1];
+    j = change.new[1];
   });
   sameTo(a.length);
   return { rows, changes };
+}
+
+/** A half-open range of a change's lines on one side. */
+type Section = [number, number];
+
+/** Lines 0 to `n` cut before each line that is an anchor; a cut at 0 makes no empty section. */
+function sections(n: number, isAnchor: (k: number) => boolean): Section[] {
+  const out: Section[] = [];
+  let from = 0;
+  for (let k = 1; k < n; k++) {
+    if (!isAnchor(k)) continue;
+    out.push([from, k]);
+    from = k;
+  }
+  if (n > 0) out.push([from, n]);
+  return out;
 }
 
 /** Rows shown as they are, or folded behind a button; half-open ranges of row indices. */
@@ -68,7 +129,8 @@ export const LARGE_GROUP = 400;
 
 /**
  * Rows `from` to `to` as pieces: an unchanged stretch longer than 2 × `CONTEXT` folds, but for the
- * `CONTEXT` lines next to each change in the range. The pieces tile the range, alternating.
+ * `CONTEXT` lines next to each change in the range and the range's first row (a group's heading).
+ * The pieces tile the range, alternating.
  */
 export function foldRows(rows: readonly DiffRow[], from: number, to: number): Piece[] {
   const pieces: Piece[] = [];
@@ -88,7 +150,7 @@ export function foldRows(rows: readonly DiffRow[], from: number, to: number): Pi
     let end = i;
     while (end < to && rows[end].kind === 'same') end++;
     if (end - i > 2 * CONTEXT) {
-      const foldFrom = i > from ? i + CONTEXT : i;
+      const foldFrom = i > from ? i + CONTEXT : i + 1;
       const foldTo = end < to ? end - CONTEXT : end;
       push('rows', i, foldFrom);
       push('fold', foldFrom, foldTo);
@@ -129,14 +191,18 @@ export interface RowGroup {
   /** Its added and removed rows. A group with neither has nothing to show. */
   added: number;
   removed: number;
-  /** The changes whose first row is in it, so each change is in one group. */
+  /**
+   * The changes it holds a row of, in order. A change that crosses an anchor is in each group it
+   * has rows in, so a group lists a change exactly when it has added or removed rows.
+   */
   changes: number[];
 }
 
 /**
  * The rows cut into groups at each row whose line is an anchor of its side: the older side for a
  * removed row, the newer for the others. A removed anchor paired with an added anchor is one renamed
- * group. Every group is kept, changed or not, so the groups tile the rows.
+ * group. Every group is kept, changed or not, so the groups tile the rows. Give `diffRows` the same
+ * anchors, so a change that crosses one is cut there and each line is in its own heading's group.
  */
 export function groupRows(
   rows: readonly DiffRow[],
@@ -151,7 +217,6 @@ export function groupRows(
   const groups: RowGroup[] = [];
   let group: RowGroup | null = null;
   const renamedTo = new Set<number>(); // the added rows renamed groups' headings became
-  const seen = new Set<number>();
   rows.forEach((row, r) => {
     const title = titleOf(row);
     if (r === 0 || (title !== undefined && !renamedTo.has(r))) {
@@ -186,8 +251,7 @@ export function groupRows(
     const g = group as RowGroup;
     if (row.kind === 'added') g.added++;
     else if (row.kind === 'removed') g.removed++;
-    if (row.change !== null && !seen.has(row.change)) {
-      seen.add(row.change);
+    if (row.change !== null && g.changes[g.changes.length - 1] !== row.change) {
       g.changes.push(row.change);
     }
   });
@@ -202,7 +266,8 @@ export interface SplitRow {
 
 /**
  * Rows `from` to `to` side by side: an unchanged row on both sides, and in each change its removed
- * rows on the left and its added rows on the right, paired by position, blanks filling the shorter.
+ * rows on the left and its added rows on the right. A row paired with one in the range is beside its
+ * pair; between pairs, unpaired rows go side by side by position, blanks filling the shorter side.
  */
 export function pairRows(rows: readonly DiffRow[], from: number, to: number): SplitRow[] {
   const out: SplitRow[] = [];
@@ -219,8 +284,31 @@ export function pairRows(rows: readonly DiffRow[], from: number, to: number): Sp
     for (; i < to && rows[i].kind !== 'same' && rows[i].change === change; i++) {
       (rows[i].kind === 'removed' ? left : right).push(i);
     }
-    for (let k = 0; k < Math.max(left.length, right.length); k++) {
-      out.push({ left: left[k] ?? null, right: right[k] ?? null });
+    // Paired with a row in the range (pairs are in order, so a pair's rows meet as both lists are walked).
+    const pairedHere = (r: number) => {
+      const p = rows[r].pair;
+      return p !== null && p >= from && p < to;
+    };
+    let x = 0;
+    let y = 0;
+    while (x < left.length || y < right.length) {
+      const l = left[x];
+      const r = right[y];
+      if (
+        l !== undefined &&
+        r !== undefined &&
+        (rows[l].pair === r || (!pairedHere(l) && !pairedHere(r)))
+      ) {
+        out.push({ left: l, right: r });
+        x++;
+        y++;
+      } else if (l !== undefined && (r === undefined || !pairedHere(l))) {
+        out.push({ left: l, right: null });
+        x++;
+      } else {
+        out.push({ left: null, right: r });
+        y++;
+      }
     }
   }
   return out;
@@ -255,7 +343,10 @@ export function markdownAnchors(text: string): Anchor[] {
       return;
     }
     const heading = HEADING.exec(line);
-    if (heading) anchors.push({ line: i, title: (heading[2] ?? '').trim() || line.trim() });
+    if (!heading) return;
+    // An empty heading has an empty title; `### ###` is all closing marks.
+    const title = (heading[2] ?? '').trim();
+    anchors.push({ line: i, title: /^#+$/.test(title) ? '' : title });
   });
   return anchors;
 }

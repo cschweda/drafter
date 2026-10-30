@@ -51,7 +51,7 @@ export function lineSimilarity(a: string, b: string): number;
 export const PAIR_MIN = 0.4; export const MAX_TOKENS = 2000;
 // rows.ts
 export interface DiffRow { kind: 'same' | 'added' | 'removed'; old: number | null; new: number | null; text: string; change: number | null; pair: number | null } // line numbers 0-based; pair: index of the paired row (Call 23)
-export function diffRows(older: string, newer: string): { rows: DiffRow[]; changes: Change[] };
+export function diffRows(older: string, newer: string, anchors?: { old: readonly Anchor[]; new: readonly Anchor[] }): { rows: DiffRow[]; changes: Change[] }; // pass the anchors groupRows will get
 export type Piece = { kind: 'rows'; from: number; to: number } | { kind: 'fold'; from: number; to: number };
 export const CONTEXT = 3; export const FOLD_STEP = 200; export const LARGE_GROUP = 400;
 export function foldRows(rows: readonly DiffRow[], from: number, to: number): Piece[];
