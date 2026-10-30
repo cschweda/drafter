@@ -21,6 +21,7 @@ const env = vi.hoisted(() => ({
   words: new Map<string, boolean>(),
   version: null as unknown as Ref<number>,
   ask: vi.fn(),
+  rest: vi.fn(),
   castOf: vi.fn(),
 }));
 vi.mock('../app/editor/session', () => ({
@@ -48,6 +49,7 @@ vi.mock('../app/cast/words', () => ({
     isWord: (name: string) => env.words.get(name.toUpperCase()),
     ask: env.ask,
     version: env.version,
+    rest: env.rest,
   }),
 }));
 vi.mock('@drafter/cast', async (importOriginal) => {
@@ -161,11 +163,15 @@ describe('useCast', () => {
     const b = cast.need();
     await wait(0);
     expect(env.castOf).toHaveBeenCalledTimes(2);
+    env.rest.mockClear();
     a();
     type(DOCK);
     await wait(1000);
     expect(env.castOf).toHaveBeenCalledTimes(3);
+    // Only the last view closing lets the dictionary's spare worker go.
+    expect(env.rest).not.toHaveBeenCalled();
     b();
+    expect(env.rest).toHaveBeenCalledOnce();
   });
 
   test('recomputes once after a 300 ms pause', async () => {

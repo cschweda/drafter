@@ -22,7 +22,7 @@ const wordsField = (page: Page) => stats(page).getByLabel('Spoken words a minute
 /** What the tab says for a figure: its definition, by the term, in a section. */
 const figure = (page: Page, section: string, term: string) =>
   stats(page)
-    .getByRole('region', { name: section })
+    .locator('.part', { has: page.getByRole('heading', { level: 3, name: section, exact: true }) })
     .locator('dt', { hasText: new RegExp(`^${term}$`) })
     .locator('+ dd');
 

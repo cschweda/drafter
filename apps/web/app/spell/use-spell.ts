@@ -25,10 +25,15 @@ import {
 // Calls 6, 7, and 49). With spellcheck on, its worker answers; with it off, a worker is made for
 // that question alone when first asked, and ended when spellcheck starts its own. When its
 // dictionary failed, it is made again on an ask SPARE_RETRY_MS later, or at once for another
-// language or another script; until then an ask has no answer, and the names stay words.
+// language or another script; until then an ask has no answer, and the names stay words. When no
+// view holds the cast any more (`restSpare`), the spare ends SPARE_IDLE_MS later, unless asked
+// again first, so a dictionary isn't kept loaded for nothing; the next ask makes another.
 
 /** How long after a spare worker's failed load the next ask may make another. */
 export const SPARE_RETRY_MS = 5000;
+
+/** How long the spare worker is kept after the last view that needs the cast closes. */
+export const SPARE_IDLE_MS = 30_000;
 
 export interface SpellSessionApp {
   state: Readonly<Ref<SpellState>>;
@@ -47,6 +52,8 @@ export interface SpellSessionApp {
    * answer (the dictionary failed to load, or the worker was ended while asked).
    */
   words(names: string[], language: SpellLanguage): Promise<string[] | null>;
+  /** No view needs the cast now: the spare worker ends SPARE_IDLE_MS later, unless asked first. */
+  restSpare(): void;
 }
 
 let shared: SpellSessionApp | undefined;
@@ -65,6 +72,8 @@ function create(): SpellSessionApp {
   let spareFailed = false;
   /** When the spare failed, and the language and script it was asked for. */
   let spareFailure = { at: 0, language: '' as SpellLanguage | '', loaded: -1 };
+  /** The spare's end, waiting out SPARE_IDLE_MS after the cast was let go. */
+  let spareEnd: ReturnType<typeof setTimeout> | undefined;
   /** Every change since the newest request's text was taken, or null when there is none. */
   let since: ChangeDesc | null = null;
   /** The newest request's number: only its reply is shown. */
@@ -245,6 +254,8 @@ function create(): SpellSessionApp {
 
   /** The worker that answers the words question now: spellcheck's, else one made for it. */
   function answerer(language: SpellLanguage): SpellClient | null {
+    clearTimeout(spareEnd);
+    spareEnd = undefined;
     if (client) return halted ? null : client;
     // A spare that failed answers nothing again. A fresh one tries the dictionary again, once
     // SPARE_RETRY_MS have passed (a cast is worked out at every pause, and each would load it
@@ -288,12 +299,25 @@ function create(): SpellSessionApp {
     return answer;
   }
 
+  function restSpare() {
+    clearTimeout(spareEnd);
+    spareEnd = undefined;
+    if (!spare) return;
+    spareEnd = setTimeout(() => {
+      spareEnd = undefined;
+      spare?.destroy();
+      spare = null;
+      spareFailed = false;
+    }, SPARE_IDLE_MS);
+  }
+
   return {
     state: readonly(state),
     suggest: (word) => client?.suggest(word) ?? Promise.resolve([]),
     problem: readonly(problem),
     settled,
     words,
+    restSpare,
   };
 }
 

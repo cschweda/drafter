@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCast } from '~/cast/use-cast';
 import { useEditor } from '~/editor/session';
+import { holdFollow } from '~/scaffold/follow';
 import { useScaffold } from '~/scaffold/session';
 
 // Scaffold (seeing-the-script design §5): one tab, beside the Source, with a page at a time: the
@@ -27,9 +28,16 @@ watch(
   },
   { immediate: true },
 );
+// The scene page follows the cursor only while the tab is shown.
+let unfollow: (() => void) | null = null;
+onMounted(() => {
+  unfollow = holdFollow();
+});
 onBeforeUnmount(() => {
   release?.();
   release = null;
+  unfollow?.();
+  unfollow = null;
 });
 </script>
 

@@ -90,7 +90,7 @@ const groups = shortcutGroups(COMMAND_DATA);
           <kbd>↓</kbd> to the block above or below, and <kbd>Home</kbd> and <kbd>End</kbd> to a
           row’s ends. <kbd>Enter</kbd> or <kbd>Space</kbd> goes to the scene or section in the
           Source. The context-menu key or <kbd>Shift+F10</kbd> (or a right-click) opens the block’s
-          menu: Go to and, on a scene, History of this scene.
+          menu: Go to and, on a scene, History of this scene and Scaffold for this scene.
         </li>
         <li>
           In the Stats tab’s Character by scene, <kbd>Tab</kbd> enters the grid on the cell you

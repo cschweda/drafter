@@ -175,7 +175,7 @@ function dayLabel(day: DayFigure): string {
     <h2 id="stats-overview" tabindex="-1">Overview</h2>
     <p v-if="sample" class="note">Stats are kept for your own scripts, not the samples.</p>
 
-    <section v-if="!sample" class="part" aria-labelledby="stats-today-title">
+    <div v-if="!sample" class="part">
       <h3 id="stats-today-title">Today</h3>
       <p v-if="readOnly" class="note">
         Another tab is editing this script, and counts its writing time there. Its days so far are below.
@@ -195,9 +195,9 @@ function dayLabel(day: DayFigure): string {
           <dd>{{ progressLabel(progress) }}</dd>
         </template>
       </dl>
-    </section>
+    </div>
 
-    <section class="part" aria-labelledby="stats-script-title">
+    <div class="part">
       <h3 id="stats-script-title">This script</h3>
       <dl class="figures">
         <template v-if="markdown">
@@ -288,9 +288,9 @@ function dayLabel(day: DayFigure): string {
           </tr>
         </tbody>
       </table>
-    </section>
+    </div>
 
-    <section v-if="!sample" class="part" aria-labelledby="stats-month-title">
+    <div v-if="!sample" class="part">
       <h3 id="stats-month-title">Last 30 days</h3>
       <p v-if="!days" class="note">Reading…</p>
       <p v-else-if="month && month.daysWritten === 0" class="note">
@@ -350,7 +350,7 @@ function dayLabel(day: DayFigure): string {
           <dd>{{ plural(month.streak, 'day') }}</dd>
         </dl>
       </template>
-    </section>
+    </div>
   </section>
 </template>
 

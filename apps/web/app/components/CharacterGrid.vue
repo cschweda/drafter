@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { showScaffold } from '~/scaffold/show';
-import { columnSceneId, type GridView, goToCell } from '~/stats/grid-data';
+import { type GridView, goToCell, placeOf } from '~/stats/grid-data';
 import { type GridPlace, gridKey, holdStop } from '~/stats/grid-keys';
 import { cellName } from '~/stats/grid-labels';
 import { useDrawnColumns } from '~/stats/grid-window';
@@ -108,12 +108,17 @@ const drawnRows = computed(() =>
 
 // ---- Focus: one Tab stop, the cell last focused ---------------------------------------------
 
-/** The character whose row has the Tab stop: a new cast may rank them elsewhere. */
+/**
+ * The character whose row and the scene whose column have the Tab stop: a new cast may rank them
+ * elsewhere, and a scene added or cut before it moves its column.
+ */
 let activeKey: string | undefined;
+let activeSceneId: string | undefined;
 watch(
   active,
   (place) => {
     activeKey = props.view.model.rows[place.row];
+    activeSceneId = props.view.ids[place.column];
   },
   { immediate: true, flush: 'sync' },
 );
@@ -122,11 +127,19 @@ watch(
 watch(
   () => [props.view.model.rows, columns.value] as const,
   ([keys, c]) => {
-    const { key, place: next } = holdStop(activeKey, active.value, keys, c);
+    const {
+      key,
+      sceneId,
+      place: next,
+    } = holdStop(activeKey, active.value, keys, c, {
+      id: activeSceneId,
+      ids: props.view.ids,
+    });
     const hadFocus = !!grid.value?.contains(document.activeElement);
     if (next.row !== active.value.row || next.column !== active.value.column) active.value = next;
     // A character who is gone hands the stop to whoever has the row now, for the next cast.
     activeKey = key;
+    activeSceneId = sceneId;
     if (hadFocus) void nextTick(() => focusHere());
   },
 );
@@ -173,7 +186,13 @@ function onKeydown(event: KeyboardEvent, row: number, column: number) {
 
 // ---- The menu: Go to, Scaffold for this character, and Scaffold for this scene --------------
 
-const menuFor = shallowRef<GridPlace | null>(null);
+/** The menu's cell, by the character's key and the scene's id, as they were when it opened. */
+const menuFor = shallowRef<{ key: string; sceneId: string } | null>(null);
+/** The menu's cell now, found again by key and id; null when either has left the script. */
+const menuAt = computed(() => {
+  const at = menuFor.value;
+  return at ? placeOf(props.view, at.key, at.sceneId) : null;
+});
 const menuPlace = shallowRef({ left: '0px', top: '0px', width: '0px', height: '0px' });
 let afterMenu: (() => void) | null = null;
 
@@ -189,7 +208,9 @@ function openMenu(row: number, column: number) {
     height: `${at.height}px`,
   };
   active.value = { row, column };
-  menuFor.value = { row, column };
+  const key = props.view.model.rows[row];
+  const sceneId = props.view.ids[column];
+  menuFor.value = key && sceneId ? { key, sceneId } : null;
 }
 
 function onContextmenu(event: MouseEvent, row: number, column: number) {
@@ -213,14 +234,14 @@ function onMenuCloseAutoFocus(event: Event) {
 const MENU_CONTENT = { align: 'start' as const, onCloseAutoFocus: onMenuCloseAutoFocus };
 
 const menuName = computed(() => {
-  const at = menuFor.value;
+  const at = menuAt.value;
   if (!at) return 'Actions';
   return `Actions for ${props.view.names[at.row] ?? ''} in scene ${props.view.numbers[at.column] ?? ''}`;
 });
 
 const menuItems = computed<DropdownMenuItem[][]>(() => {
-  const at = menuFor.value;
-  if (!at) return [];
+  const held = menuFor.value;
+  if (!held) return [];
   const later = (act: () => void) => () => {
     afterMenu = act;
   };
@@ -229,33 +250,25 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
       {
         label: 'Go to',
         icon: 'i-lucide-arrow-right',
-        onSelect: later(() => goToCell(props.view, at.row, at.column)),
+        onSelect: later(() => {
+          // Found again when chosen: the cast may have changed while the menu was open.
+          const at = placeOf(props.view, held.key, held.sceneId);
+          if (at) goToCell(props.view, at.row, at.column);
+        }),
       },
       {
         label: 'Scaffold for this character',
         icon: 'i-lucide-user',
-        onSelect: later(() => scaffoldForCharacter(at.row)),
+        onSelect: later(() => showScaffold({ kind: 'character', key: held.key })),
       },
       {
         label: 'Scaffold for this scene',
         icon: 'i-lucide-users',
-        onSelect: later(() => scaffoldFor(at.column)),
+        onSelect: later(() => showScaffold({ kind: 'scene', pinned: held.sceneId })),
       },
     ],
   ];
 });
-
-/** Scaffold for this character: the row's character, by their key. */
-function scaffoldForCharacter(row: number) {
-  const key = props.view.cast.characters[row]?.key;
-  if (key) showScaffold({ kind: 'character', key });
-}
-
-/** Scaffold for this scene: the column's scene, by its id, pinned. */
-function scaffoldFor(column: number) {
-  const id = columnSceneId(props.view, column);
-  if (id) showScaffold({ kind: 'scene', pinned: id });
-}
 
 const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX}px)`);
 </script>

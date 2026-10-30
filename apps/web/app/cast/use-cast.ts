@@ -148,7 +148,11 @@ function create(): CastSession {
         if (!held) return;
         held = false;
         holders--;
-        if (holders === 0) cancel();
+        if (holders === 0) {
+          cancel();
+          // The dictionary loaded for the names alone needn't stay loaded for nothing.
+          words.rest();
+        }
       };
     },
   };

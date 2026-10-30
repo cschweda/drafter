@@ -3,7 +3,13 @@ import { parse } from '@drafter/fountain';
 import { sceneIndex } from '@drafter/outline';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { cellTarget, columnSceneId, type GridView } from '../app/stats/grid-data';
+import {
+  cellTarget,
+  columnSceneId,
+  type GridView,
+  liveTarget,
+  placeOf,
+} from '../app/stats/grid-data';
 
 // Where Enter on a grid cell goes (seeing-the-script design §4.4): the character's first cue in the
 // scene, the first mention for a silent cell, and the scene's heading for an empty one.
@@ -74,5 +80,47 @@ describe('Scaffold for a column’s scene', () => {
     expect(columnSceneId(view, 1)).toBe('gallery');
     expect(columnSceneId(view, 0)).toBe('lamp-room');
     expect(columnSceneId(view, 2)).toBeNull();
+  });
+});
+
+describe('a cell’s place in the script as it is now', () => {
+  /** The live script's scenes, found by the same ids as the view's. */
+  function now(text: string) {
+    const index = sceneIndex(parse(text), screenplay, null);
+    const ids = ['scene-1', 'scene-2', 'scene-3'];
+    return (id: string) => index.scenes[ids.indexOf(id)];
+  }
+
+  test('text added above the scene after the cast: Enter still lands on the cue', () => {
+    const view = viewOf(LAMP);
+    const row = view.cast.characters.findIndex((c) => c.key === 'ODO');
+    const later = `A long night begins.\n\n${LAMP}`;
+    const target = liveTarget(view, row, 1, now(later.replace('A long night begins.\n\n', '')));
+    expect(target).toBe(LAMP.indexOf('ODO\nShips'));
+    // Now with the text above: the gallery has moved down, and so has the cue.
+    const moved = (id: string) =>
+      sceneIndex(parse(later), screenplay, null).scenes[['scene-1', 'scene-2'].indexOf(id)];
+    expect(liveTarget(view, row, 1, moved)).toBe(later.indexOf('ODO\nShips'));
+    // A silent cell's mention, and an empty cell's heading, move too.
+    const wren = view.cast.characters.findIndex((c) => c.key === 'WREN');
+    expect(liveTarget(view, wren, 1, moved)).toBe(later.indexOf('WREN watches'));
+  });
+
+  test('a heading goes to the scene where it is now; a scene that is gone goes nowhere', () => {
+    const view = viewOf(LAMP);
+    const later = `INT. CELLAR - DAY\n\nDamp.\n\n${LAMP}`;
+    const index = sceneIndex(parse(later), screenplay, null);
+    // The cellar is new: the view's two scenes are the live second and third.
+    const find = (id: string) => index.scenes[['scene-1', 'scene-2'].indexOf(id) + 1];
+    expect(liveTarget(view, null, 1, find)).toBe(later.indexOf('EXT. GALLERY'));
+    expect(liveTarget(view, null, 1, () => undefined)).toBeNull();
+  });
+
+  test('the menu’s character and scene are found again by key and id', () => {
+    const view = viewOf(LAMP);
+    const odo = view.cast.characters.findIndex((c) => c.key === 'ODO');
+    expect(placeOf(view, 'ODO', 'scene-2')).toEqual({ row: odo, column: 1 });
+    expect(placeOf(view, 'PIA', 'scene-2')).toBeNull();
+    expect(placeOf(view, 'ODO', 'gone')).toBeNull();
   });
 });

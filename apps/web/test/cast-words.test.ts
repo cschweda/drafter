@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view';
 import type { SpellLanguage } from '@drafter/spell';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { type ShallowRef, shallowRef } from 'vue';
-import { SPARE_RETRY_MS } from '../app/spell/use-spell';
+import { SPARE_IDLE_MS, SPARE_RETRY_MS } from '../app/spell/use-spell';
 import { createSpellWorker, type SpellRequest } from '../app/workers/spell-compute';
 import { FILES } from './dictionary-files';
 
@@ -160,6 +160,48 @@ describe('the dictionary’s answer', () => {
     await settle();
     expect(FakeWorker.made[1]?.asked()).toHaveLength(1);
     expect(answers.isWord('TOM')).toBe(true);
+  });
+
+  test('the worker for words alone ends 30 s after no view needs the cast, and comes back when asked', async () => {
+    env.settings.value = { ...env.settings.value, spellcheck: false };
+    const { answers } = await modules();
+    await settle();
+    answers.ask(['WILL']);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(1);
+    // The last view holding the cast closed.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    answers.rest();
+    expect(SPARE_IDLE_MS).toBe(30_000);
+    vi.advanceTimersByTime(SPARE_IDLE_MS - 1);
+    expect(FakeWorker.made[0]?.terminated).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(FakeWorker.made[0]?.terminated).toBe(true);
+    vi.useRealTimers();
+    // A view needs it again and asks: another is made.
+    answers.ask(['HOPE']);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(2);
+    expect(answers.isWord('HOPE')).toBe(true);
+  });
+
+  test('an ask before the 30 s are up keeps the worker for words', async () => {
+    env.settings.value = { ...env.settings.value, spellcheck: false };
+    const { answers } = await modules();
+    await settle();
+    answers.ask(['WILL']);
+    await settle();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    answers.rest();
+    vi.advanceTimersByTime(SPARE_IDLE_MS - 1);
+    // Asked again (a view holds the cast again): the end is called off.
+    answers.ask(['HOPE']);
+    vi.advanceTimersByTime(SPARE_IDLE_MS);
+    vi.useRealTimers();
+    await settle();
+    expect(answers.isWord('HOPE')).toBe(true);
+    expect(FakeWorker.made).toHaveLength(1);
+    expect(FakeWorker.made[0]?.terminated).toBe(false);
   });
 
   test('before the answer every name reads as a word', async () => {

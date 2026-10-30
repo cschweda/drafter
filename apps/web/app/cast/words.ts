@@ -15,6 +15,8 @@ export interface WordAnswers {
   ask(names: readonly string[]): void;
   /** Goes up when an answer comes, or the language changes: whoever read `isWord` reads it again. */
   version: Readonly<Ref<number>>;
+  /** No view needs the cast now: a worker made for words alone may end (use-spell.ts says when). */
+  rest(): void;
 }
 
 let shared: WordAnswers | undefined;
@@ -65,6 +67,7 @@ function create(): WordAnswers {
       });
     },
     version: readonly(version),
+    rest: () => spell.restSpare(),
   };
 }
 

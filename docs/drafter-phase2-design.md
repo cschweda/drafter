@@ -402,7 +402,7 @@ A slim column beside the Source pane: every scene as a block, top to bottom, its
 - **Phone:** not shown; the Outline's Timeline does the job there.
 - Not shown in focus mode.
 - **Since v0.15.0** the Structure strip ([its design](drafter-structure-strip-design.md)) shows every scene sized by length above the panes; the map reuses `structureStrip`'s geometry, and whether it is still wanted beside the strip, or becomes the strip with a "color by" choice and storyline rows, is Plan E's to decide (strip design §10).
-- **Since v0.21.0** (decided with Plan E's design, Call 38): there is no separate map. It becomes the Structure strip's **Color by** (INT/EXT, day or night, storyline, or scene color), built in Plan E's second part (v0.25.0); see the [seeing-the-script design §7](drafter-seeing-the-script-design.md#7-the-script-map-v0240).
+- **Since v0.21.0** (decided with Plan E's design, Call 38): there is no separate map. It becomes the Structure strip's **Color by** (INT/EXT, day or night, storyline, or scene color), built in Plan E's second part (v0.25.0); see the [seeing-the-script design §7](drafter-seeing-the-script-design.md#7-the-script-map-v0250).
 
 ## 15. The pacing view
 

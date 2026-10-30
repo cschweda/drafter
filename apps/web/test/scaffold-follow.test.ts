@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
-import { FOLLOW_MARK, FOLLOW_REST_MS, restingValue } from '../app/scaffold/follow';
+import { FOLLOW_MARK, FOLLOW_REST_MS, heldResting, restingValue } from '../app/scaffold/follow';
 
 // Scaffold's scene page follows the cursor when it rests (seeing-the-script design §5.2, Call 25):
 // FOLLOW_REST_MS after the last cursor move or the cast's update, it reads the cursor's scene again.
@@ -84,5 +84,46 @@ describe('following the cursor', () => {
     }
     expect(performance.getEntriesByName(FOLLOW_MARK)).toHaveLength(1);
     rest.stop();
+  });
+});
+
+describe('following only while Scaffold is shown', () => {
+  test('nothing is watched or timed until a view holds it, and again after the last lets go', async () => {
+    const cursor = ref(1);
+    const read = vi.fn(() => `scene at ${cursor.value}`);
+    const held = heldResting(() => cursor.value, read);
+    expect(held.value.value).toBe('scene at 1');
+    // No view: a move starts no timer and reads nothing.
+    cursor.value = 2;
+    await nextTick();
+    expect(vi.getTimerCount()).toBe(0);
+    const reads = read.mock.calls.length;
+    // A view holds it: the scene is read at once, then follows as it rests.
+    const release = held.hold();
+    expect(held.value.value).toBe('scene at 2');
+    cursor.value = 3;
+    await nextTick();
+    vi.advanceTimersByTime(FOLLOW_REST_MS);
+    expect(held.value.value).toBe('scene at 3');
+    // Two views, one closes: it still follows.
+    const other = held.hold();
+    release();
+    cursor.value = 4;
+    await nextTick();
+    vi.advanceTimersByTime(FOLLOW_REST_MS);
+    expect(held.value.value).toBe('scene at 4');
+    // The last one closes, mid-wait: the timer goes too, and nothing is read any more.
+    cursor.value = 5;
+    await nextTick();
+    other();
+    other();
+    expect(vi.getTimerCount()).toBe(0);
+    const after = read.mock.calls.length;
+    cursor.value = 6;
+    await nextTick();
+    vi.advanceTimersByTime(FOLLOW_REST_MS);
+    expect(read.mock.calls.length).toBe(after);
+    expect(held.value.value).toBe('scene at 4');
+    expect(after).toBeGreaterThan(reads);
   });
 });

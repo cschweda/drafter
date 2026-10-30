@@ -72,11 +72,45 @@ describe('the grid’s Tab stop through several casts', () => {
   test('after its character is gone, it stays with whoever has that row now', () => {
     // PIA had the stop on row 1; she is gone, so ODO, now on row 1, has it.
     const gone = holdStop('PIA', at(1, 4), ['WREN', 'ODO', 'MAVIS'], 10);
-    expect(gone).toEqual({ key: 'ODO', place: at(1, 4) });
+    expect(gone).toEqual({ key: 'ODO', sceneId: undefined, place: at(1, 4) });
     // The next cast ranks ODO first: the stop goes with him, not with row 1.
     const ranked = holdStop(gone.key, gone.place, ['ODO', 'WREN', 'MAVIS'], 10);
-    expect(ranked).toEqual({ key: 'ODO', place: at(0, 4) });
+    expect(ranked).toEqual({ key: 'ODO', sceneId: undefined, place: at(0, 4) });
     // No rows at all: no one holds it.
-    expect(holdStop('ODO', at(0, 0), [], 0)).toEqual({ key: undefined, place: at(0, 0) });
+    expect(holdStop('ODO', at(0, 0), [], 0)).toEqual({
+      key: undefined,
+      sceneId: undefined,
+      place: at(0, 0),
+    });
+  });
+});
+
+describe('the grid’s Tab stop keeps its scene', () => {
+  test('a scene added before it moves the column with the scene, by its id', () => {
+    const ids = ['hut', 'lock', 'towpath'];
+    // A new scene before the lock: the lock is the third column now.
+    expect(
+      holdPlace('ODO', at(0, 1), ['ODO'], 4, {
+        id: 'lock',
+        ids: ['new', 'hut', 'lock', 'towpath'],
+      }),
+    ).toEqual(at(0, 2));
+    // A scene taken out before it: back one.
+    expect(
+      holdPlace('ODO', at(0, 2), ['ODO'], 2, { id: 'towpath', ids: ['lock', 'towpath'] }),
+    ).toEqual(at(0, 1));
+    // The scene itself gone: the column number, within the scenes.
+    expect(holdPlace('ODO', at(0, 2), ['ODO'], 2, { id: 'gone', ids: ['hut', 'lock'] })).toEqual(
+      at(0, 1),
+    );
+    expect(ids).toHaveLength(3);
+  });
+
+  test('holdStop says which scene has the stop afterwards', () => {
+    const next = holdStop('ODO', at(0, 1), ['ODO'], 3, { id: 'lock', ids: ['new', 'hut', 'lock'] });
+    expect(next).toEqual({ key: 'ODO', sceneId: 'lock', place: at(0, 2) });
+    // Its scene gone: whichever scene has that column now.
+    const after = holdStop('ODO', at(0, 2), ['ODO'], 2, { id: 'gone', ids: ['hut', 'lock'] });
+    expect(after.sceneId).toBe('lock');
   });
 });

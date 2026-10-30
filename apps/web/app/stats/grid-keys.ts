@@ -55,34 +55,45 @@ export function gridKey(
   }
 }
 
+/** The scene the Tab stop's column was drawn from, by its id, and the columns' ids now. */
+export interface HeldScene {
+  id: string | undefined;
+  ids: readonly string[];
+}
+
 /**
  * Where the Tab stop goes when the cast is worked out again: to the row of the character it was on
- * (`key`), as a re-ranking moves them; else the same row number, within the rows; the column kept
- * within the scenes.
+ * (`key`), as a re-ranking moves them; else the same row number, within the rows. The column goes
+ * with its scene (`scene`, by id) when a scene was added or taken out before it; else it keeps its
+ * number, within the scenes.
  */
 export function holdPlace(
   key: string | undefined,
   place: GridPlace,
   rows: readonly string[],
   columns: number,
+  scene?: HeldScene,
 ): GridPlace {
   const found = key === undefined ? -1 : rows.indexOf(key);
+  const column = scene?.id === undefined ? -1 : scene.ids.indexOf(scene.id);
   return {
     row: found >= 0 ? found : Math.min(place.row, Math.max(0, rows.length - 1)),
-    column: Math.min(place.column, Math.max(0, columns - 1)),
+    column: column >= 0 ? column : Math.min(place.column, Math.max(0, columns - 1)),
   };
 }
 
 /**
- * `holdPlace`, and the character who has the stop afterwards: the same one when they are still
- * there, else whoever has that row now, so the cast after next follows them and not a row number.
+ * `holdPlace`, and the character and scene that have the stop afterwards: the same ones when they
+ * are still there, else whoever has that row and that column now, so the cast after next follows
+ * them and not a row or column number.
  */
 export function holdStop(
   key: string | undefined,
   place: GridPlace,
   rows: readonly string[],
   columns: number,
-): { key: string | undefined; place: GridPlace } {
-  const next = holdPlace(key, place, rows, columns);
-  return { key: rows[next.row], place: next };
+  scene?: HeldScene,
+): { key: string | undefined; sceneId: string | undefined; place: GridPlace } {
+  const next = holdPlace(key, place, rows, columns, scene);
+  return { key: rows[next.row], sceneId: scene?.ids[next.column], place: next };
 }

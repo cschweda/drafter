@@ -55,19 +55,69 @@ export function restingValue<T>(
   };
 }
 
-let followed: Resting<string | null> | undefined;
+export interface HeldResting<T> {
+  /** `read()` as of the last rest while held; as it was when let go, after. */
+  value: Readonly<ShallowRef<T>>;
+  /** A view needs it: it is read at once and follows; the returned function lets go (once). */
+  hold(): () => void;
+}
 
 /**
- * The id of the cursor's scene, as of the cursor's last rest (null before the first scene): the
- * last scene starting at or before the cursor's block, from the Outline's index. Made on first
- * use in the browser and kept for the visit.
+ * `restingValue` only while something holds it: with no holder nothing is watched or timed, and
+ * the first hold reads it again at once.
  */
-export function useFollowedScene(): Readonly<ShallowRef<string | null>> {
+export function heldResting<T>(
+  source: WatchSource<unknown>,
+  read: () => T,
+  ms = FOLLOW_REST_MS,
+): HeldResting<T> {
+  const value = shallowRef(read());
+  let holders = 0;
+  let live: { resting: Resting<T>; scope: ReturnType<typeof effectScope> } | undefined;
+  return {
+    value,
+    hold() {
+      holders++;
+      if (holders === 1) {
+        const scope = effectScope(true);
+        const resting = scope.run(() => {
+          const made = restingValue(source, read, ms);
+          value.value = made.value.value;
+          watch(
+            made.value,
+            (next) => {
+              value.value = next;
+            },
+            { flush: 'sync' },
+          );
+          return made;
+        }) as Resting<T>;
+        live = { resting, scope };
+      }
+      let held = true;
+      return () => {
+        if (!held) return;
+        held = false;
+        holders--;
+        if (holders === 0) {
+          live?.resting.stop();
+          live?.scope.stop();
+          live = undefined;
+        }
+      };
+    },
+  };
+}
+
+let followed: HeldResting<string | null> | undefined;
+
+/** The followed scene, made on first use in the browser and kept for the visit. */
+function follower(): HeldResting<string | null> {
   if (!followed) {
     const { cursorBlock } = useLayout();
     const { basis } = useCast();
     const outline = useOutline();
-    followed = restingValue(
+    followed = heldResting(
       () => [cursorBlock.value, basis.value],
       () => {
         const index = outline.index.value;
@@ -77,5 +127,19 @@ export function useFollowedScene(): Readonly<ShallowRef<string | null>> {
       },
     );
   }
-  return followed.value;
+  return followed;
+}
+
+/**
+ * The id of the cursor's scene, as of the cursor's last rest (null before the first scene): the
+ * last scene starting at or before the cursor's block, from the Outline's index. It follows only
+ * while a Scaffold view holds it (`holdFollow`), so a closed Scaffold costs nothing as you type.
+ */
+export function useFollowedScene(): Readonly<ShallowRef<string | null>> {
+  return follower().value;
+}
+
+/** A Scaffold view is shown: the scene follows the cursor until the returned function lets go. */
+export function holdFollow(): () => void {
+  return follower().hold();
 }

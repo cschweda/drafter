@@ -457,8 +457,6 @@ The design's 45 Calls (its §16) are binding once ruled on. This plan adds:
 
 ## Controller rulings
 
-_None yet._
-
 - **Call 1 (two releases):** accepted. Part 1 ships as v0.20.0 (Scaffold, the Stats tab, the character grid) and Part 2 as v0.21.0 (storylines, the Timeline, margin marks, the map, pacing). Plans F–H move to v0.22.0–v0.24.0, and Task 8's docs say so.
 - **Call 23 (Scaffold as a tab):** accepted. Drafter's panes show any tab, so Scaffold sits beside the Source in the other pane. That is the "panel beside the script" the maintainer asked for, without a third column.
 - **Calls 5 and 7 (a mention counts; the dictionary loads for this check):** accepted. The dictionaries are local and cached for offline use, so loading one costs no network use and asks nothing of the writer.
