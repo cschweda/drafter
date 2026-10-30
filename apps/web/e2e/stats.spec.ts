@@ -239,6 +239,19 @@ test.describe('writing stats', () => {
       'ANN (1)',
     ]);
     await expect(rows.nth(1).getByRole('rowheader')).toHaveText('BOB');
+    // The table's region is a Tab stop only while it scrolls sideways, and follows its size.
+    const region = table.locator('xpath=..');
+    await region.evaluate((el) => {
+      el.style.width = '4000px';
+    });
+    await expect(region).not.toHaveAttribute('tabindex');
+    await region.evaluate((el) => {
+      el.style.width = '200px';
+    });
+    await expect(region).toHaveAttribute('tabindex', '0');
+    await region.evaluate((el) => {
+      el.style.width = '';
+    });
     await expect(rows.nth(2).getByRole('cell')).toHaveText([
       '1',
       '1',

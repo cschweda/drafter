@@ -23,8 +23,12 @@ import {
 //
 // The cast also asks the worker which names are ordinary words (seeing-the-script design §3.3,
 // Calls 6, 7, and 49). With spellcheck on, its worker answers; with it off, a worker is made for
-// that question alone when first asked, made again on the next ask when its dictionary failed, and
-// ended when spellcheck starts its own.
+// that question alone when first asked, and ended when spellcheck starts its own. When its
+// dictionary failed, it is made again on an ask SPARE_RETRY_MS later, or at once for another
+// language or another script; until then an ask has no answer, and the names stay words.
+
+/** How long after a spare worker's failed load the next ask may make another. */
+export const SPARE_RETRY_MS = 5000;
 
 export interface SpellSessionApp {
   state: Readonly<Ref<SpellState>>;
@@ -57,8 +61,10 @@ function create(): SpellSessionApp {
   let client: SpellClient | null = null;
   /** With spellcheck off, the worker that answers the words question alone; null until asked. */
   let spare: SpellClient | null = null;
-  /** The spare's dictionary failed to load (or it died): the next ask ends it and makes another. */
+  /** The spare's dictionary failed to load (or it died): a later ask ends it and makes another. */
   let spareFailed = false;
+  /** When the spare failed, and the language and script it was asked for. */
+  let spareFailure = { at: 0, language: '' as SpellLanguage | '', loaded: -1 };
   /** Every change since the newest request's text was taken, or null when there is none. */
   let since: ChangeDesc | null = null;
   /** The newest request's number: only its reply is shown. */
@@ -238,22 +244,30 @@ function create(): SpellSessionApp {
   });
 
   /** The worker that answers the words question now: spellcheck's, else one made for it. */
-  function answerer(): SpellClient | null {
+  function answerer(language: SpellLanguage): SpellClient | null {
     if (client) return halted ? null : client;
-    // A spare that failed answers nothing again: a fresh one tries the dictionary again.
+    // A spare that failed answers nothing again. A fresh one tries the dictionary again, once
+    // SPARE_RETRY_MS have passed (a cast is worked out at every pause, and each would load it
+    // again), or at once for another language or another script.
     if (spare && spareFailed) {
+      const same =
+        spareFailure.language === language && spareFailure.loaded === editor.loaded.value;
+      if (same && Date.now() - spareFailure.at < SPARE_RETRY_MS) return null;
       spare.destroy();
       spare = null;
     }
     if (!spare) {
       try {
         spareFailed = false;
+        const loaded = editor.loaded.value;
         // Nothing is shown from it: no marks, and no state (spellcheck is off).
         const made: SpellClient = createSpellClient(
           makeWorker(),
           () => {},
           (next) => {
-            if (next === 'failed' && spare === made) spareFailed = true;
+            if (next !== 'failed' || spare !== made) return;
+            spareFailed = true;
+            spareFailure = { at: Date.now(), language, loaded };
           },
           0,
         );
@@ -266,7 +280,7 @@ function create(): SpellSessionApp {
   }
 
   async function words(names: string[], language: SpellLanguage): Promise<string[] | null> {
-    const asked = answerer();
+    const asked = answerer(language);
     if (!asked) return null;
     const answer = await asked.words(names, language);
     // Ended while it was asked (spellcheck turned on or off took over): ask whoever answers now.

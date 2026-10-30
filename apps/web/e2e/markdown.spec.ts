@@ -365,6 +365,12 @@ test.describe('the Markdown code is loaded only when needed', () => {
     await start(page);
     await page.waitForLoadState('networkidle');
     expect(seen).toEqual({ mode: [], parser: [] });
+    // The Stats tab on a script, with its Characters, needs none of it either.
+    await command(page, 'Show stats');
+    const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+    await expect(stats.getByRole('table', { name: /^Characters/ })).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    expect(seen).toEqual({ mode: [], parser: [] });
 
     await newMarkdown(page);
     await expect(page.locator('.cm-md-heading')).toContainText('# Untitled');

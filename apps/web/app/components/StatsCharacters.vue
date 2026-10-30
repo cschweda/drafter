@@ -11,6 +11,9 @@ const { cast } = useCast();
 const rates = useRates();
 const rows = computed(() => (cast.value ? characterRows(cast.value, rates.value) : null));
 const waiting = computed(() => !!rows.value?.some((row) => row.screen === null));
+// The table's region is a Tab stop only while it scrolls sideways (a phone, a narrow pane).
+const region = ref<HTMLElement>();
+const scrolls = useScrollsSideways(region);
 </script>
 
 <template>
@@ -20,7 +23,13 @@ const waiting = computed(() => !!rows.value?.some((row) => row.screen === null))
     <p v-else-if="rows.length === 0" class="note">No one speaks yet. A character’s cue starts their row.</p>
     <template v-else>
       <!-- Its own scrolling region on a narrow screen, which the keyboard can scroll too. -->
-      <div class="scroll" role="region" aria-labelledby="stats-characters-caption" tabindex="0">
+      <div
+        ref="region"
+        class="scroll"
+        role="region"
+        aria-labelledby="stats-characters-caption"
+        :tabindex="scrolls ? 0 : undefined"
+      >
         <table class="tally">
           <caption id="stats-characters-caption">
             Characters<span v-if="waiting" class="caption-note"> Screen time waits for the pages.</span>

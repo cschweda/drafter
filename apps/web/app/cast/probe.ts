@@ -7,7 +7,7 @@ import { useCast } from './use-cast';
 import { useWordAnswers } from './words';
 
 // For the browser tests only: a test build (`DRAFTER_TEST_MODULES=1`) puts this on `window`
-// (plugins/cast-probe.client.ts), so e2e/cast-budget.spec.ts can time `castOf` on the page and hold
+// (cast/probe-hook.ts, from the page), so e2e/cast-budget.spec.ts can time `castOf` on the page and hold
 // the cast as a view will, before any view does. No other build has it (scripts/check-build.mjs).
 
 export interface CastProbe {

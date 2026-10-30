@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { EditorView } from '@codemirror/view';
+import { installTestCastProbe } from '~/cast/probe-hook';
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
@@ -147,6 +148,7 @@ onMounted(() => {
   // Safari would type into the script with focus anywhere else (decided 2026-10-29).
   removeSelectionGuard = guardEditorSelection(view.contentDOM);
   if (!view.dom.isConnected) holder.value?.append(view.dom);
+  installTestCastProbe();
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);

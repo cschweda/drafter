@@ -57,7 +57,7 @@ function create(): WordAnswers {
       for (const key of fresh) pending.add(key);
       void spell.words(fresh, lang).then((words) => {
         for (const key of fresh) pending.delete(key);
-        // No answer: they stay capitals only, and the next ask tries again.
+        // No answer: they stay capitals only, and a later ask tries again (use-spell.ts says when).
         if (words === null) return;
         const yes = new Set(words);
         for (const key of fresh) known.set(key, yes.has(key));

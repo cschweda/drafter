@@ -4,6 +4,7 @@ import { EditorView } from '@codemirror/view';
 import type { SpellLanguage } from '@drafter/spell';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { type ShallowRef, shallowRef } from 'vue';
+import { SPARE_RETRY_MS } from '../app/spell/use-spell';
 import { createSpellWorker, type SpellRequest } from '../app/workers/spell-compute';
 import { FILES } from './dictionary-files';
 
@@ -199,7 +200,8 @@ describe('the dictionary’s answer', () => {
     expect(FakeWorker.made[0]?.asked()).toHaveLength(asked as number);
   });
 
-  test('a failed worker leaves names as words, and the next ask makes another', async () => {
+  test('a failed worker leaves names as words, and an ask 5 s later makes another', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
     loads.fail = true;
     env.settings.value = { ...env.settings.value, spellcheck: false };
     const { answers } = await modules();
@@ -209,21 +211,58 @@ describe('the dictionary’s answer', () => {
     expect(FakeWorker.made).toHaveLength(1);
     expect(NAMES.map(answers.isWord)).toEqual(NAMES.map(() => undefined));
     expect(answers.version.value).toBe(0);
-    // Asked again while it still fails: the failed worker ends, another is made and asked, and
-    // the names stay words.
+    // Asked again at once: no worker is made, nothing is asked, and the names stay words.
+    vi.advanceTimersByTime(SPARE_RETRY_MS - 1);
+    answers.ask(NAMES);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(1);
+    expect(FakeWorker.made[0]?.asked()).toHaveLength(1);
+    expect(answers.isWord('WILL')).toBeUndefined();
+    // 5 s on, while it still fails: the failed worker ends, another is made and asked.
+    vi.advanceTimersByTime(1);
     answers.ask(NAMES);
     await settle();
     expect(FakeWorker.made).toHaveLength(2);
     expect(FakeWorker.made[0]?.terminated).toBe(true);
     expect(FakeWorker.made[1]?.asked()).toHaveLength(1);
     expect(answers.isWord('WILL')).toBeUndefined();
-    // The dictionary loads now (back online): the next ask is answered.
+    // The dictionary loads now (back online): the next ask 5 s later is answered.
     loads.fail = false;
+    vi.advanceTimersByTime(SPARE_RETRY_MS);
     answers.ask(NAMES);
     await settle();
     expect(FakeWorker.made).toHaveLength(3);
     expect(FakeWorker.made[1]?.terminated).toBe(true);
     expect(NAMES.map(answers.isWord)).toEqual([true, true, true, false, false]);
     expect(answers.version.value).toBe(1);
+    vi.useRealTimers();
+  });
+
+  test('after a failed worker, another language or another script tries again at once', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    loads.fail = true;
+    env.settings.value = { ...env.settings.value, spellcheck: false };
+    const { answers } = await modules();
+    const { useEditor } = await import('../app/editor/session');
+    await settle();
+    answers.ask(NAMES);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(1);
+    // Another language: a fresh worker, at once.
+    env.settings.value = { ...env.settings.value, spellLanguage: 'en-GB' };
+    await settle();
+    answers.ask(NAMES);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(2);
+    expect(FakeWorker.made[0]?.terminated).toBe(true);
+    // Another script: a fresh worker, at once, asked the names again.
+    (useEditor().loaded as ShallowRef<number>).value++;
+    loads.fail = false;
+    answers.ask(NAMES);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(3);
+    expect(FakeWorker.made[1]?.terminated).toBe(true);
+    expect(answers.isWord('WILL')).toBe(true);
+    vi.useRealTimers();
   });
 });
