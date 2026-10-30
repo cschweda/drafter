@@ -3,13 +3,17 @@ const ATX = /^ {0,3}#{1,6}(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 
-/** Emphasis, code, and link markup taken out of a heading's text, leaving what is read. */
+/** Emphasis, code, link, and footnote markup taken out of a heading's text, leaving what is read. */
 function plain(text: string): string {
-  return text
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[*_`]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (
+    text
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      // A footnote's mark: a label holds no space and no `[`, so each try stops at the next `[`.
+      .replace(/\[\^[^\s[\]]+\]/g, '')
+      .replace(/[*_`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 }
 
 /**

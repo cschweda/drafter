@@ -54,6 +54,20 @@ A line that starts with `>` is a quotation, for a line of dialogue you want to k
 
 A link is the text in square brackets, then the address in round ones: [the Fountain syntax guide](https://fountain.io/syntax). Drafter's Preview shows only the link's text, and never follows it, so nothing in a document can open a page by itself.
 
+## Footnotes
+
+A footnote keeps an aside out of the way.[^aside] Put a caret and a label in square brackets where the note belongs, then write the note on a line of its own, anywhere in the document, starting with the same label and a colon:
+
+```
+The kitchen clock is ten minutes fast.[^clock]
+
+[^clock]: Margaret sets it that way on purpose.
+```
+
+The label can be a word or a number; the notes are numbered 1, 2, 3 in the order you refer to them. The Preview lists them at the end, and a PDF prints each at the foot of its page.
+
+[^aside]: Like this one. Indent a line by four spaces to give a note a second paragraph.
+
 ## Code
 
 Backticks around a few words keep them exactly as typed: `INT. KITCHEN - NIGHT`. Three backticks on a line of their own start a block that is kept as typed, line for line, which is a good way to show a bit of Fountain in your notes:

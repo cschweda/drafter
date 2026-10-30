@@ -196,6 +196,9 @@ export const DEPENDENCY_NOTES: Readonly<Record<string, string>> = {
   '@codemirror/lang-markdown': 'The editor’s mode for a Markdown document.',
   'mdast-util-from-markdown':
     'Reads a Markdown document for its Preview, its word count, and its PDF.',
+  'micromark-extension-gfm-footnote':
+    'Reads the footnotes in a Markdown document, written as GitHub writes them.',
+  'mdast-util-gfm-footnote': 'Puts those footnotes in the Markdown document’s tree.',
   'pdf-lib': 'Writes PDF files.',
   '@pdf-lib/fontkit': 'Embeds the fonts in a PDF, only the letters it uses.',
   nspell: 'The spellchecker: checks each word against a dictionary and suggests corrections.',
@@ -349,7 +352,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time.',
           '**The layout** is `@drafter/layout`, in a Web Worker (`layout.worker.ts`): 50 ms after you stop typing, the text goes to the worker, which parses it and paginates it by the template. A slower, older layout never replaces a newer one.',
           '**The Script pane** is `@drafter/render-html`, which draws those pages as positioned HTML a screen reader can follow.',
-          'A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `mdast-util-from-markdown` for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.',
+          'A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `mdast-util-from-markdown`, footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.',
         ],
       },
     ],

@@ -55,6 +55,7 @@ export const theme = EditorView.theme({
   '.cm-md-marker': { color: 'var(--faint)' },
   '.cm-md-link': { color: 'var(--title)' },
   '.cm-md-url': { color: 'var(--faint)' },
+  '.cm-md-footnote': { color: 'var(--paren)' },
   '.cm-md-html': { color: 'var(--note)' },
 
   // Folding, search, tooltips, and the completion list.
