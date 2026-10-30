@@ -105,11 +105,12 @@ describe('About Drafter', () => {
     expect(versionLine(info)).toBe('Version unknown');
   });
 
-  test('links to the repository, the releases, the changelog, and drafter.dev, over https', () => {
+  test('links to the repository, the releases, the changelog, the open .drafter specification, and drafter.dev, over https', () => {
     expect(ABOUT_LINKS.map((l) => l.href)).toEqual([
       'https://github.com/cschweda/drafter',
       'https://github.com/cschweda/drafter/releases',
       'https://github.com/cschweda/drafter/blob/main/CHANGELOG.md',
+      'https://github.com/cschweda/drafter/blob/main/docs/spec/drafter-package.md',
       'https://drafter.dev/',
     ]);
   });

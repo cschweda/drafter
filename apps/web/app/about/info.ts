@@ -10,6 +10,10 @@ declare const __DRAFTER_VERSION__: string | undefined;
 declare const __DRAFTER_COMMIT__: string | undefined;
 declare const __DRAFTER_COMMIT_DATE__: string | undefined;
 
+/** The open specification of the .drafter package (docs/spec/drafter-package.md), on GitHub. */
+export const SPEC_URL =
+  'https://github.com/cschweda/drafter/blob/main/docs/spec/drafter-package.md';
+
 /** About's links, each opened outside the app (a new tab; the desktop app's system browser). */
 export const ABOUT_LINKS: readonly { id: string; label: string; href: string }[] = [
   { id: 'repo', label: 'Source code on GitHub', href: 'https://github.com/cschweda/drafter' },
@@ -18,6 +22,11 @@ export const ABOUT_LINKS: readonly { id: string; label: string; href: string }[]
     id: 'changelog',
     label: 'Changelog',
     href: 'https://github.com/cschweda/drafter/blob/main/CHANGELOG.md',
+  },
+  {
+    id: 'spec',
+    label: 'The .drafter file format (an open specification)',
+    href: SPEC_URL,
   },
   { id: 'site', label: 'drafter.dev', href: 'https://drafter.dev/' },
 ];

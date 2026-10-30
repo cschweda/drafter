@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Open formats, said plainly.** A new help page, **Open formats** (Help, and the palette), says what every file Drafter writes is (Fountain, Markdown, and the small block Drafter adds at the end, in plain JSON) and links to the open specification of the `.drafter` package, which is in the public domain (CC0) so any app may read and write it. **About Drafter** links to the specification too.
+
 ## [0.21.1] - 2026-10-30
 
 **Drafter's own icon on every desktop window, and a site title and description that fit.** The desktop app's windows no longer show Electron's icon on Linux or in Windows' title bar, and drafter.dev's title and description are short enough for search results and link previews.
