@@ -42,7 +42,15 @@ import {
 } from '../utils/panes';
 import { SPLIT_MIN_PX } from './colors';
 import { type LineStop, stopLabel } from './labels';
-import { changeStops, type DiffModel, diffModel, goToScene } from './rows';
+import {
+  changeStops,
+  type DiffModel,
+  diffModel,
+  type GroupStop,
+  goToScene,
+  groupStops,
+  shownView,
+} from './rows';
 
 // Compare (Phase 2 design §11.2): two versions of the open script, in one of two views
 // (version-history design §5.1): **Changes**, the Fountain text's diff grouped by scene, the
@@ -125,8 +133,14 @@ export interface CompareSession {
   layoutFailed: Readonly<Ref<boolean>>;
   /** Go to scene for a group of the Changes view: the cursor goes to it in the script now, or it says it's gone. */
   goToGroup(group: RowGroup): void;
-  /** One per change, in order, for the comparison as drawn. */
+  /** One per change, in order, for the comparison as drawn: where Next change goes. */
   stops: Readonly<ComputedRef<CompareStop[]>>;
+  /** The Changes view's list: one entry per group with a change (empty in the Pages view). */
+  groupList: Readonly<ComputedRef<GroupStop[]>>;
+  /** Goes to a group of the Changes list: its header gets focus, and Next change goes on from it. */
+  goToListedGroup(entry: GroupStop): void;
+  /** The group header the Changes list asked for, by its place among the shown groups. */
+  pendingGroup: Ref<number | null>;
   /** Goes to stop `index`: the pane focuses it and says its label once it is drawn. */
   go(index: number): void;
   /** Next change (1) or Previous change (-1), wrapping. */
@@ -176,6 +190,9 @@ function create(): CompareSession {
   const at = ref<number | null>(null);
   const pendingFocus = ref(false);
   const focusScene = ref<string | null>(null);
+  const pendingGroup = ref<number | null>(null);
+  /** The view `openAt` asked for, for this comparison only: the remembered one is left alone. */
+  const asked = ref<CompareView | null>(null);
   const paneWidth = ref(0);
   /** The comparison whose pages were asked for: the worker lays out only for the Pages view. */
   let laidOut: Comparison | null = null;
@@ -240,7 +257,7 @@ function create(): CompareSession {
 
   const hasPages = computed(() => current.value?.kind !== 'markdown');
   const view = computed<CompareView>(() =>
-    hasPages.value ? settings.value.compareView : 'changes',
+    shownView(current.value?.kind ?? 'fountain', asked.value, settings.value.compareView),
   );
   const splitAllowed = computed(() => paneWidth.value >= SPLIT_MIN_PX);
   const layout = computed<DiffLayout>(() =>
@@ -257,6 +274,7 @@ function create(): CompareSession {
     at.value = null;
     pendingFocus.value = false;
     focusScene.value = null;
+    pendingGroup.value = null;
     if (view.value === 'pages') layOut(comparison);
   }
 
@@ -284,6 +302,8 @@ function create(): CompareSession {
     at.value = null;
     pendingFocus.value = false;
     focusScene.value = null;
+    pendingGroup.value = null;
+    asked.value = null;
     // The pane that showed it shows a core tab; focus, if it was in Compare, goes to that tab's panel.
     let after: TabId | null = null;
     const tabs = panes.tabs.value;
@@ -317,6 +337,19 @@ function create(): CompareSession {
       return { stop, label: stopLabel(stop, sceneOf(drawn.scenes, change)?.heading ?? null) };
     });
   });
+
+  const groupList = computed<GroupStop[]>(() => {
+    const comparison = current.value;
+    if (!comparison || view.value !== 'changes') return [];
+    return groupStops(comparison.model, comparison.kind);
+  });
+
+  function goToListedGroup(entry: GroupStop) {
+    // Next change goes on from the group's first change; Previous change, from the one before it.
+    at.value = entry.change === 0 ? null : entry.change - 1;
+    pendingFocus.value = false;
+    pendingGroup.value = entry.group;
+  }
 
   function go(index: number) {
     if (index < 0 || index >= stops.value.length) return;
@@ -362,12 +395,14 @@ function create(): CompareSession {
   return {
     current,
     open(a, b) {
+      asked.value = null;
       const { older, newer } = orderVersions(a, b);
       compare(older, newer);
       show();
     },
     openAt(a, b, heading) {
-      if (settings.value.compareView !== 'changes') void set('compareView', 'changes');
+      // The group is in the Changes view; the writer's remembered view is theirs, kept for next time.
+      asked.value = 'changes';
       const { older, newer } = orderVersions(a, b);
       compare(older, newer);
       focusScene.value = heading;
@@ -388,7 +423,10 @@ function create(): CompareSession {
     pages,
     view,
     hasPages,
-    setView: (shown) => void set('compareView', shown),
+    setView: (shown) => {
+      asked.value = null;
+      void set('compareView', shown);
+    },
     layout,
     splitAllowed,
     setLayout: (chosen) => void set('diffLayout', chosen),
@@ -396,6 +434,9 @@ function create(): CompareSession {
     layoutFailed: failed,
     goToGroup,
     stops,
+    groupList,
+    goToListedGroup,
+    pendingGroup,
     go,
     step,
     pendingFocus,

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { type DiffRow, type Piece, pairRows, type RowGroup, type WordPart } from '@drafter/compare';
+import { groupTitle } from '~/compare/rows';
 import type { DocumentKind } from '~/markdown/kind';
 
 // One group of the Changes view (version-history design §5.2): a scene's rows (a Markdown
 // document's heading's), under a header with its heading (an `h3`, so heading navigation moves
 // group to group), its tag (New scene, Deleted scene, Renamed), its counts, Go to scene, and a
-// toggle that hides and shows its rows. Its rows are drawn only while it is open; a large group
-// starts closed and says so. Unchanged stretches fold behind "Show 40 unchanged lines". Unified,
+// toggle that hides and shows its rows. Its rows are drawn only while it is open; a large group,
+// or one past the view's row budget, starts closed and says so. Unchanged stretches fold behind "Show 40 unchanged lines". Unified,
 // or side by side as a table with Before and After columns (§5.5).
 
 const props = defineProps<{
@@ -18,8 +19,11 @@ const props = defineProps<{
   rows: readonly DiffRow[];
   pieces: readonly Piece[];
   open: boolean;
-  /** More changed lines than `LARGE_GROUP`: closed at first, and its header says so. */
-  large: boolean;
+  /**
+   * Why it started closed, which its body says while it is: more changed lines than `LARGE_GROUP`,
+   * or past the view's row budget (`openGroups`). Null: it started open.
+   */
+  closedWhy: 'large' | 'waiting' | null;
   layout: 'unified' | 'split';
   labels: { before: string; after: string };
   kind: DocumentKind;
@@ -37,13 +41,7 @@ const tag = computed(() => {
   // A Markdown document's groups are its sections.
   return props.kind === 'markdown' ? TAGS[t].replace('scene', 'section') : TAGS[t];
 });
-const title = computed(() => {
-  const g = props.group;
-  if (g.tag === 'opening')
-    return props.kind === 'markdown' ? 'Before the first heading' : 'Title page and opening';
-  if (g.tag === 'renamed') return `${g.renamedFrom} → ${g.title}`;
-  return g.title || (props.kind === 'markdown' ? 'Untitled heading' : 'Untitled scene');
-});
+const title = computed(() => groupTitle(props.group, props.kind));
 const changed = computed(() => props.group.added + props.group.removed);
 const titleId = computed(() => `${props.idPrefix}-group-${props.index}`);
 const bodyId = computed(() => `${titleId.value}-rows`);
@@ -75,7 +73,13 @@ const split = computed(() =>
 <template>
   <section class="diff-group" :aria-labelledby="titleId">
     <header class="diff-group-header">
-      <h3 :id="titleId" class="diff-group-title" tabindex="-1">
+      <!-- Named "EXT. ROOF - NIGHT, Deleted scene": a hidden comma would be read with a space before it. -->
+      <h3
+        :id="titleId"
+        class="diff-group-title"
+        tabindex="-1"
+        :aria-label="tag ? `${title}, ${tag}` : undefined"
+      >
         <span class="diff-heading">{{ title }}</span>
         <span v-if="tag" class="diff-tag">{{ tag }}</span>
       </h3>
@@ -108,9 +112,13 @@ const split = computed(() =>
       </button>
     </header>
     <div :id="bodyId" class="diff-group-body">
-      <p v-if="!open && large" class="diff-large">
-        Large change: {{ changed.toLocaleString('en-US') }} lines.
-        <button type="button" class="diff-button" @click="emit('toggle')">Show</button>
+      <p v-if="!open && closedWhy" class="diff-large">
+        {{
+          closedWhy === 'large'
+            ? `Large change: ${changed.toLocaleString('en-US')} lines.`
+            : `${changed.toLocaleString('en-US')} ${changed === 1 ? 'line' : 'lines'} changed, closed so the view opens quickly.`
+        }}
+        <button type="button" class="diff-button" :aria-describedby="titleId" @click="emit('toggle')">Show</button>
       </p>
       <template v-else-if="open && layout === 'unified'">
         <template v-for="(piece, p) in pieces" :key="`${piece.kind}-${piece.from}`">

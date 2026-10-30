@@ -4,7 +4,12 @@ import {
   changeStops,
   diffModel,
   goToScene,
+  groupStops,
+  groupTitle,
+  openGroups,
+  ROW_BUDGET,
   shownGroups,
+  shownView,
   summaryText,
 } from '../app/compare/rows';
 
@@ -142,5 +147,77 @@ describe('the Changes view model', () => {
     const [hall] = shownGroups(compared(script(HALL), script(HALL_2)).model);
     const later = compared(script(HALL), script(HALL_2));
     expect(goToScene(hall as never, later, script(ROOF))).toEqual({ gone: true });
+  });
+
+  test('the Changes list names each group once, with its count of changes', () => {
+    const older = script(HALL, ROOF);
+    const newer = `Title: The Key\nAuthor: Ilse\n\n${HALL_2}\n${ROOF}\nRain.\n\nHail.\n`;
+    const { model } = compared(older, newer);
+    expect(groupStops(model, 'fountain')).toEqual([
+      { group: 0, change: 0, label: 'Title page and opening: 1 change' },
+      { group: 1, change: 1, label: 'INT. HALL - DAY: 1 change' },
+      { group: 2, change: 2, label: 'EXT. ROOF - NIGHT: 1 change' },
+    ]);
+    const twice = compared(script(HALL, ROOF), script(HALL_2, `${ROOF}\nRain.\n`)).model;
+    const renamed = compared(
+      script(HALL),
+      script(HALL.replace('INT. HALL', 'INT. GREAT HALL').replace('waits', 'sits')),
+    ).model;
+    expect(groupStops(renamed, 'fountain').map((s) => s.label)).toEqual([
+      'INT. HALL - DAY → INT. GREAT HALL - DAY: 2 changes',
+    ]);
+    expect(groupStops(twice, 'fountain').map((s) => s.label)).toEqual([
+      'INT. HALL - DAY: 1 change',
+      'EXT. ROOF - NIGHT: 1 change',
+    ]);
+    const md = diffModel(
+      '# A\n\nOne.\n\nTwo.\n\nSix.\n',
+      '# A\n\nUno.\n\nTwo.\n\nSeis.\n',
+      'markdown',
+    );
+    expect(groupStops(md, 'markdown').map((s) => s.label)).toEqual(['A: 2 changes']);
+  });
+
+  test('a group is titled by its heading, its rename, or what comes before the first', () => {
+    const model = diffModel(script(HALL), `Title: The Lock\n\n${HALL_2}`, 'fountain');
+    const [opening, hall] = shownGroups(model);
+    expect(groupTitle(opening as never, 'fountain')).toBe('Title page and opening');
+    expect(groupTitle(opening as never, 'markdown')).toBe('Before the first heading');
+    expect(groupTitle(hall as never, 'fountain')).toBe('INT. HALL - DAY');
+  });
+
+  test('opens groups in order until the drawn rows reach the budget; the rest wait', () => {
+    const group = (from: number, added: number) =>
+      ({
+        from,
+        to: from + added,
+        title: '',
+        tag: 'same',
+        renamedFrom: null,
+        added,
+        removed: 0,
+        changes: [from],
+      }) as const;
+    const groups = [
+      group(0, 300),
+      group(1000, 300),
+      group(2000, 401),
+      group(3000, 300),
+      group(4000, 200),
+      group(5000, 10),
+    ];
+    // Each draws its added rows; the 401 one is large and closed, and draws none.
+    const { open, waiting } = openGroups(groups, (g) => g.added, 1000);
+    expect([...open]).toEqual([0, 1000, 3000]);
+    expect([...waiting]).toEqual([4000, 5000]);
+    // The first group opens even past the budget.
+    expect([...openGroups([group(0, 390)], () => 5000, 1500).open]).toEqual([0]);
+    expect(ROW_BUDGET).toBe(1500);
+  });
+
+  test('openAt shows the Changes view without changing the remembered one', () => {
+    expect(shownView('fountain', null, 'pages')).toBe('pages');
+    expect(shownView('fountain', 'changes', 'pages')).toBe('changes');
+    expect(shownView('markdown', null, 'pages')).toBe('changes');
   });
 });

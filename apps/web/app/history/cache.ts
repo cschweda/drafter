@@ -121,11 +121,12 @@ export async function sweep(projectId: string, liveIds: ReadonlySet<string>): Pr
 export async function prune(): Promise<void> {
   const db = cacheDb();
   if (!db) return;
-  const projects = new Set(await drafterDb.projects.toCollection().primaryKeys());
+  // The cache's scripts first: a script removed between the two reads is then not in `projects`.
   const cached = new Set([
     ...(await db.snapshotScenes.orderBy('projectId').uniqueKeys()),
     ...(await db.prints.orderBy('projectId').uniqueKeys()),
   ]);
+  const projects = new Set(await drafterDb.projects.toCollection().primaryKeys());
   for (const projectId of cached)
     if (typeof projectId === 'string' && !projects.has(projectId))
       await clearProjectCache(projectId);

@@ -382,8 +382,11 @@ describe('the history scan', () => {
     };
   };
 
-  /** Scans `projectId` (four snapshots seeded) and cancels it while it reads the third. */
-  async function cancelledScan(projectId: string) {
+  /**
+   * Scans `projectId` (four snapshots seeded) and cancels it while it reads the third, after
+   * `before` (say, the script's removal).
+   */
+  async function cancelledScan(projectId: string, before?: () => Promise<void>) {
     for (let i = 0; i < 4; i++)
       await seed(projectId, `${projectId}-${i}`, T0 - i * MIN, script(A, i % 2 ? B : C));
     let compute: ReturnType<typeof createHistoryCompute> | null = null;
@@ -391,8 +394,10 @@ describe('the history scan', () => {
     const source: SnapshotSource = {
       list: (id) => inner.list(id),
       read: async (id) => {
-        if (id === `${projectId}-2`)
+        if (id === `${projectId}-2`) {
+          await before?.();
           await compute?.handle({ seq: 1, kind: 'cancel' }, () => undefined);
+        }
         return inner.read(id);
       },
     };
@@ -421,6 +426,13 @@ describe('the history scan', () => {
     const compute = await cancelledScan(a.id);
     await removeProject(a.id);
     await run(compute, { seq: 2, kind: 'deleted', projectId: b.id, now: script(A) });
+    expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
+  });
+
+  test('a script removed mid-scan has no rows once its stopped scan has stored', async () => {
+    const a = await createProject({ source: script(A) });
+    // No other scan follows: the stopped scan's own store is pruned.
+    await cancelledScan(a.id, () => removeProject(a.id));
     expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
   });
 

@@ -12,12 +12,26 @@ import { sayOutline } from '~/outline/notice';
 // its label is said once. On a phone the Changes list is a collapsed `<details>` at the top.
 
 const compare = useCompare();
-const { current, pages, view, layout, stops, layoutFailed } = compare;
+const { current, pages, view, layout, stops, groupList, layoutFailed } = compare;
 const wide = useWideScreen();
 const diffView = ref<{
   revealChange(change: number): Promise<HTMLElement | null>;
   focusHeading(heading: string): Promise<boolean>;
+  focusGroup(index: number): Promise<boolean>;
 }>();
+
+/**
+ * The Changes list's entries: in the Changes view one per group (a rename across the script lists
+ * its scenes, not each line), going to the group's header; in Pages one per change.
+ */
+const entries = computed(() =>
+  view.value === 'changes'
+    ? groupList.value.map((entry) => ({
+        label: entry.label,
+        go: () => compare.goToListedGroup(entry),
+      }))
+    : stops.value.map((stop, i) => ({ label: stop.label, go: () => compare.go(i) })),
+);
 
 const root = ref<HTMLElement>();
 const sheet = ref<HTMLElement>();
@@ -125,24 +139,33 @@ async function focusScene() {
   await diffView.value.focusHeading(heading);
 }
 watch([compare.focusScene, diffView], () => void focusScene(), { flush: 'post' });
+
+/** The Changes list's group entry: its header gets focus. */
+async function focusListedGroup() {
+  const index = compare.pendingGroup.value;
+  if (index === null || view.value !== 'changes' || !diffView.value) return;
+  compare.pendingGroup.value = null;
+  await diffView.value.focusGroup(index);
+}
+watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 'post' });
 </script>
 
 <template>
   <div ref="root" class="compare-host">
     <template v-if="current">
       <details v-if="!wide" class="changes">
-        <summary>Changes ({{ stops.length }})</summary>
-        <ul v-if="stops.length > 0">
-          <li v-for="(stop, i) in stops" :key="i">
-            <button type="button" class="change" @click="compare.go(i)">{{ stop.label }}</button>
+        <summary>Changes ({{ entries.length }})</summary>
+        <ul v-if="entries.length > 0">
+          <li v-for="(entry, i) in entries" :key="i">
+            <button type="button" class="change" @click="entry.go()">{{ entry.label }}</button>
           </li>
         </ul>
       </details>
       <section v-else class="changes" aria-labelledby="compare-changes-title">
         <h2 id="compare-changes-title" class="changes-title">Changes</h2>
-        <ul v-if="stops.length > 0">
-          <li v-for="(stop, i) in stops" :key="i">
-            <button type="button" class="change" @click="compare.go(i)">{{ stop.label }}</button>
+        <ul v-if="entries.length > 0">
+          <li v-for="(entry, i) in entries" :key="i">
+            <button type="button" class="change" @click="entry.go()">{{ entry.label }}</button>
           </li>
         </ul>
       </section>

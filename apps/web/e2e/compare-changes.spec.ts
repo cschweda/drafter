@@ -140,10 +140,9 @@ test.describe("Compare's Changes view", () => {
       'true',
     );
     await expect(rows(page, 'removed').locator('.drafter-sr-only')).toHaveText('removed, ');
-    // The Changes list names each change by its scene.
+    // The Changes list names each scene once, with its count of changes.
     await expect(panel(page).locator('.changes .change')).toHaveText([
-      'INT. HALL - DAY: 1 line changed',
-      'INT. HALL - DAY: 2 lines added',
+      'INT. HALL - DAY: 2 changes',
     ]);
   });
 
@@ -191,6 +190,10 @@ test.describe("Compare's Changes view", () => {
       has: page.getByRole('heading', { name: /EXT\. ROOF - NIGHT/ }),
     });
     await expect(roof.locator('.diff-tag')).toHaveText('Deleted scene');
+    // The heading and its tag read as two words, not run together.
+    await expect(
+      diff(page).getByRole('heading', { name: 'EXT. ROOF - NIGHT, Deleted scene', exact: true }),
+    ).toBeVisible();
     await roof.getByRole('button', { name: 'Go to scene' }).click();
     await expect(announcer(page)).toHaveText('That scene isn’t in the script now.');
   });
@@ -222,6 +225,25 @@ test.describe("Compare's Changes view", () => {
     await page.setViewportSize({ width: 1100, height: 900 });
     await expect(layoutGroup(page)).toHaveCount(0);
     await expect(diff(page).getByRole('table')).toHaveCount(0);
+  });
+
+  test("a Changes list entry goes to its scene's header, and N goes on from there", async ({
+    page,
+  }) => {
+    const after = BASE.replace('She waits by the door.', 'She paces by the door.').replace(
+      'Wind.',
+      'Wind.\n\nRain.',
+    );
+    await compareWithNow(page, BASE, after);
+    const list = panel(page).locator('.changes');
+    if (await list.evaluate((el) => el.tagName === 'DETAILS'))
+      await list.locator('summary').click();
+    await list.getByRole('button', { name: 'EXT. ROOF - NIGHT: 1 change' }).click();
+    await expect(
+      diff(page).getByRole('heading', { name: 'EXT. ROOF - NIGHT', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('n');
+    await expect.poll(() => focusedChange(page)).toBe('1');
   });
 
   test('N and Shift+N step through changes in the Changes view', async ({ page }) => {
@@ -337,6 +359,69 @@ test.describe("Compare's Changes view", () => {
     expect(elapsed).toBeLessThan(5_000);
   });
 
+  test('a character renamed across 5,000 lines opens within its row budget', async ({ page }) => {
+    test.slow();
+    // Fifty scenes of two speakers, one renamed throughout: a change in every scene, every few lines.
+    const script = (name: string) =>
+      `Title: Tollan\n\n${Array.from(
+        { length: 50 },
+        (_, s) =>
+          `INT. WEIR HOUSE ${s} - NIGHT\n\n${Array.from(
+            { length: 32 },
+            (_, i) => `${i % 2 ? 'OSKEN' : name}\nVelt ${s} orrin ${i} dask.\n`,
+          ).join('\n')}`,
+      ).join('\n')}`;
+    await page.addInitScript(() => {
+      const w = window as Window & { longTasks?: { start: number; duration: number }[] };
+      w.longTasks = [];
+      try {
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries())
+            w.longTasks?.push({ start: entry.startTime, duration: entry.duration });
+        }).observe({ type: 'longtask', buffered: true });
+      } catch {
+        // No long-task timing in this browser: the time and the DOM size are still logged.
+      }
+    });
+    await start(page);
+    await newScript(page);
+    await setText(page, script('MARRA'));
+    await takeSnapshot(page);
+    await setText(page, script('TESSIL'));
+    await runCommand(page, 'History…');
+    await options(page).first().focus();
+    const from = await page.evaluate(() => performance.now());
+    const started = Date.now();
+    await page.keyboard.press('Enter');
+    await expect(diff(page).locator('.diff-summary')).toBeVisible({ timeout: 60_000 });
+    await expect(diff(page).locator('.diff-row').first()).toBeVisible();
+    const elapsed = Date.now() - started;
+    const measured = await page.evaluate((since) => {
+      const w = window as Window & { longTasks?: { start: number; duration: number }[] };
+      const tasks = (w.longTasks ?? []).filter((t) => t.start >= since);
+      return {
+        rows: document.querySelectorAll('#panel-compare .diff-row').length,
+        elements: document.querySelectorAll('#panel-compare *').length,
+        longTasks: tasks.length,
+        longest: Math.round(Math.max(0, ...tasks.map((t) => t.duration))),
+      };
+    }, from);
+    console.log(
+      `A rename across 5,000 lines drew in ${elapsed} ms: ${measured.rows} rows, ${measured.elements} elements in the tab, ${measured.longTasks} long tasks (longest ${measured.longest} ms).`,
+    );
+    // Every scene is listed once; the scenes past the budget wait, closed, and say so.
+    await expect(diff(page).locator('h3')).toHaveCount(50);
+    const list = panel(page).locator('.changes .change');
+    await expect(list).toHaveCount(50);
+    await expect(list.first()).toHaveText('INT. WEIR HOUSE 0 - NIGHT: 16 changes');
+    await expect(diff(page).locator('.diff-large').last()).toHaveText(
+      /^32 lines changed, closed so the view opens quickly\.\s*Show$/,
+    );
+    expect(measured.rows).toBeLessThanOrEqual(1_600);
+    // A hang guard, ten times the budget; the time is logged above.
+    expect(elapsed).toBeLessThan(5_000);
+  });
+
   test('Pages keeps its asterisks', async ({ page }) => {
     await compareWithNow(page, BASE, CHANGED);
     await viewGroup(page).getByRole('button', { name: 'Pages' }).click();
@@ -360,7 +445,7 @@ test.describe("Compare's Changes view", () => {
     await expect(viewGroup(page)).toHaveCount(0);
     await expect(groupTitles(page)).toHaveText(['Notes']);
     await expect(diff(page).getByRole('button', { name: 'Go to heading' })).toBeVisible();
-    await expect(panel(page).locator('.changes .change')).toHaveText(['Notes: 1 line changed']);
+    await expect(panel(page).locator('.changes .change')).toHaveText(['Notes: 1 change']);
   });
 });
 

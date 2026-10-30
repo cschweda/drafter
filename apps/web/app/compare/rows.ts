@@ -4,6 +4,7 @@ import {
   type DiffRow,
   diffRows,
   groupRows,
+  LARGE_GROUP,
   markdownAnchors,
   type RowGroup,
   splitLines,
@@ -16,6 +17,7 @@ import {
   similarity,
 } from '@drafter/history';
 import type { DocumentKind } from '../markdown/kind';
+import type { CompareView } from '../settings/settings';
 import { type LineStop, stopLabel } from './labels';
 
 // Compare's Changes view as a model (version-history design §5.2): the two texts' rows, laid out
@@ -120,7 +122,10 @@ export function changeStops(model: DiffModel): TextStop[] {
   for (const group of model.groups)
     for (const c of group.changes)
       if (!headingOf.has(c) && group.title) headingOf.set(c, group.title);
-  const newerLines = Math.max(1, ...model.rows.map((row) => (row.new ?? -1) + 1));
+  // The newer text's line count, by a loop: a spread of every row overflows the stack.
+  let newerLines = 1;
+  for (const row of model.rows)
+    if (row.new !== null && row.new + 1 > newerLines) newerLines = row.new + 1;
   return model.changes.map((change, c) => {
     const row = model.rows[model.firstRow[c] as number] as DiffRow;
     // A removal sits before the newer line it names; at the end, after the last.
@@ -134,6 +139,91 @@ export function changeStops(model: DiffModel): TextStop[] {
     };
     return { stop, label: stopLabel(stop, headingOf.get(c) ?? null) };
   });
+}
+
+/** A group's name: its heading, "OLD → NEW" when renamed, or what comes before the first heading. */
+export function groupTitle(group: RowGroup, kind: DocumentKind): string {
+  if (group.tag === 'opening')
+    return kind === 'markdown' ? 'Before the first heading' : 'Title page and opening';
+  if (group.tag === 'renamed') return `${group.renamedFrom} → ${group.title}`;
+  return group.title || (kind === 'markdown' ? 'Untitled heading' : 'Untitled scene');
+}
+
+/** A shown group as the Changes view's list names it. */
+export interface GroupStop {
+  /** Its place among `shownGroups`. */
+  group: number;
+  /** Its first change. */
+  change: number;
+  /** "INT. HALL - DAY: 3 changes". */
+  label: string;
+}
+
+/**
+ * The Changes view's list: one entry per shown group, not per change, so a rename across a long
+ * script lists its scenes, not each line. Next change still steps change by change (`changeStops`).
+ */
+export function groupStops(model: DiffModel, kind: DocumentKind): GroupStop[] {
+  return shownGroups(model).map((group, g) => {
+    const n = group.changes.length;
+    return {
+      group: g,
+      change: group.changes[0] as number,
+      label: `${groupTitle(group, kind)}: ${n} ${n === 1 ? 'change' : 'changes'}`,
+    };
+  });
+}
+
+/** About how many rows the Changes view draws when it opens; the groups past it wait, closed. */
+export const ROW_BUDGET = 1500;
+
+/** A group with more changed lines than `LARGE_GROUP` starts closed. */
+export const isLarge = (group: RowGroup): boolean => group.added + group.removed > LARGE_GROUP;
+
+/**
+ * Which of the shown `groups` open when the view is drawn: in order, while the rows they draw
+ * (`drawn`) stay within `budget`; the first always opens. A large group starts closed and draws
+ * nothing. Once one doesn't fit, it and every group after it wait, closed (`waiting`), so the view
+ * opens at the same speed however many scenes changed.
+ */
+export function openGroups(
+  groups: readonly RowGroup[],
+  drawn: (group: RowGroup) => number,
+  budget = ROW_BUDGET,
+): { open: Set<number>; waiting: Set<number> } {
+  const open = new Set<number>();
+  const waiting = new Set<number>();
+  let used = 0;
+  let full = false;
+  for (const group of groups) {
+    if (isLarge(group)) continue;
+    if (full) {
+      waiting.add(group.from);
+      continue;
+    }
+    const rows = drawn(group);
+    if (open.size > 0 && used + rows > budget) {
+      full = true;
+      waiting.add(group.from);
+      continue;
+    }
+    used += rows;
+    open.add(group.from);
+  }
+  return { open, waiting };
+}
+
+/**
+ * The view Compare shows: a Markdown document's is always Changes; else the one a caller asked
+ * for this comparison (`openAt`), else the one remembered.
+ */
+export function shownView(
+  kind: DocumentKind,
+  asked: CompareView | null,
+  remembered: CompareView,
+): CompareView {
+  if (kind === 'markdown') return 'changes';
+  return asked ?? remembered;
 }
 
 /** What Go to scene needs of a comparison. */

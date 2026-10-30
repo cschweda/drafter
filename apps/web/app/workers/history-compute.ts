@@ -163,9 +163,10 @@ export function createHistoryCompute(
     return made.slots;
   }
 
-  async function flush() {
+  /** Writes what was read; true when it wrote anything. */
+  async function flush(): Promise<boolean> {
     const batch = pending.splice(0);
-    if (!cache || batch.length === 0) return;
+    if (!cache || batch.length === 0) return false;
     const byProject = new Map<string, typeof batch>();
     for (const item of batch) {
       const list = byProject.get(item.projectId);
@@ -179,8 +180,10 @@ export function createHistoryCompute(
           items.map(({ id, slots }) => ({ id, slots })),
           items.flatMap((item) => item.prints),
         );
+      return true;
     } catch {
       drop();
+      return false;
     }
   }
 
@@ -204,14 +207,15 @@ export function createHistoryCompute(
 
   /**
    * Runs `request` until done or stopped. A stopped scan stores what it read before it returns,
-   * so nothing of its script waits in `pending` for another script's scan to write (after, say,
-   * the script was removed).
+   * so nothing of its script waits in `pending` for another script's scan to write. A scan is often
+   * stopped because its script was removed, after `removeProject` cleared the cache, so a stopped
+   * scan that stored anything prunes again.
    */
   async function scan(request: Scan, post: (reply: HistoryReply) => void, live: () => boolean) {
     try {
       await scanToEnd(request, post, live);
     } finally {
-      if (!live()) await flush();
+      if (!live() && (await flush())) await cache?.prune().catch(drop);
     }
   }
 
