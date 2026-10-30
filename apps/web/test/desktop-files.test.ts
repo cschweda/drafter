@@ -127,12 +127,12 @@ describe('desktopFiles', () => {
   test('opens a file that is not a script’s type unbound, and says why', async () => {
     const fake = fakeBridge();
     const files = desktopFiles(fake.bridge);
-    put(fake, '/home/w/Mail/letter.rtf', 'LETTER');
-    fake.answers.push('/home/w/Mail/letter.rtf');
+    put(fake, '/home/w/Mail/letter.text', 'LETTER');
+    fake.answers.push('/home/w/Mail/letter.text');
     const picked = await files.pickToOpen();
-    expect(picked).toMatchObject({ ref: null, name: 'letter.rtf' });
+    expect(picked).toMatchObject({ ref: null, name: 'letter.text' });
     expect(picked?.notice).toBe(
-      '“letter.rtf” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.',
+      '“letter.text” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.',
     );
     // A script's name over something else (a link), too: judged by where it leads.
     put(fake, '/home/w/key', 'KEY');
@@ -284,14 +284,14 @@ describe('desktopFiles', () => {
   test('opens a dropped file the desktop app won’t grant from its bytes, unbound', async () => {
     const fake = fakeBridge();
     const files = desktopFiles(fake.bridge);
-    const file = new File(['Title: Notes\n'], 'notes.rtf', { lastModified: 5 });
-    fake.dropped.set(file, '/home/w/notes.rtf');
+    const file = new File(['Title: Notes\n'], 'notes.text', { lastModified: 5 });
+    fake.dropped.set(file, '/home/w/notes.text');
     // Not on the (fake) disk as a granted file: the bridge refuses it.
     fake.bridge.read = async () => {
       throw new Error('not-allowed: not a script');
     };
     const picked = await files.fromDrop(itemOf(file));
-    expect(picked).toMatchObject({ ref: null, name: 'notes.rtf', lastModified: 5 });
+    expect(picked).toMatchObject({ ref: null, name: 'notes.text', lastModified: 5 });
     expect(decoder.decode(picked?.bytes)).toBe('Title: Notes\n');
   });
 

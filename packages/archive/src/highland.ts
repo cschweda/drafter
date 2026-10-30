@@ -1,9 +1,9 @@
 // Highland's `.highland` file, from the app maker's public description (docs/DECISIONS.md, Imports
-// and Markdown out): a zip of a TextBundle, whose `text.*` (`.fountain`, `.markdown`, or `.txt`)
-// holds the script as Fountain, beside `info.json` and other JSON the app keeps (settings, sprints,
-// characters) and an `assets/` folder of images. The script comes in exactly as Highland wrote it, since it is already
-// Fountain. Every other entry, but the app's own metadata, is named, never read, in one note at
-// the script's end, so nothing is dropped silently.
+// and Markdown out): a zip of a TextBundle, whose `text.*` (`.fountain`, `.markdown`, `.md`, or
+// `.txt`) holds the script as Fountain, beside `info.json` and other JSON the app keeps (settings,
+// sprints, characters) and an `assets/` folder of images. The script comes in exactly as Highland
+// wrote it, since it is already Fountain. Every other entry, but the app's own metadata, is named,
+// never read, in one note at the script's end, so nothing is dropped silently.
 import type { FdxImport } from '@drafter/fdx';
 import { ArchiveError } from './errors';
 import { candidates, depth, isClutter, pickEntry, scriptText } from './text';

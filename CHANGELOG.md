@@ -18,7 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- **Open says what a file is when it isn't a script.** A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft file (`.fdr`), a Celtx project, or a zip is turned away with its kind named and what to do instead, for example "Drafter can’t open a Word document (Notes.docx). Save it as plain text or Fountain in the app that made it, then open that." An RTF or PDF is caught by what's inside it even when it's named `.txt`, so it no longer opens as a page of `{\rtf1…` codes. Nothing opens and the script you have open is left alone. Any other plain text still opens as Fountain, as before. This applies however the file arrives: Open, drop, or the desktop app's command line.
+- **Open says what a file is when it isn't a script.** A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft file (`.fdr`), a Celtx project, or a zip is turned away with its kind named and what to do instead, for example "Drafter can’t open a Word document (Notes.docx). Save it as plain text or Fountain in the app that made it, then open that." An RTF or PDF is caught by what's inside it even when it's named `.txt`, so it no longer opens as a page of `{\rtf1…` codes. Nothing opens and the script you have open is left alone. Any other plain text still opens as Fountain, as before. This applies to a file you open or drop, in the browser and the desktop app. A file named on the desktop app's command line was already turned away unless its name is one Drafter opens, so there it catches an RTF or PDF given a script's name.
 
 ### Fixed
 
