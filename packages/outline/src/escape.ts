@@ -4,18 +4,24 @@
 // a code block), so they are taken off; everything else comes through.
 //
 // Only what a parser would misread where it stands is escaped, so the raw file reads well to a
-// writer and to an AI: `\`, `` ` ``, `*`, `_`, `[`, and `~` anywhere; `<` before what could start a
-// tag; `&` before what could be an entity; and at a line's start or end what would make a block.
+// writer and to an AI: `\`, `` ` ``, `*`, `[`, and `~` anywhere; `_` unless it is between two
+// letters or digits; `<` before what could start a tag or an autolink; `&` before what could be an
+// entity; and at a line's start or end what would make a block.
 // What depends on the characters around it is judged on the whole line, never on a piece of it.
 // Every scan is one pass over the line, so a long line costs no more than its length.
 
 /** Characters that mean something wherever they stand: escapes, code, emphasis, links, strikethrough. */
-const ALWAYS = new Set(['\\', '`', '*', '_', '[', '~']);
+const ALWAYS = new Set(['\\', '`', '*', '[', '~']);
 
-/** What can follow `<` in a tag, a comment, a declaration, or an autolink. */
-const TAG_START = /[A-Za-z/!?]/;
+/**
+ * What can follow `<` in a tag, a comment, a declaration, or an autolink: a URI's scheme starts
+ * with a letter, and an email address with a letter, a digit, or most punctuation.
+ */
+const TAG_START = /[A-Za-z0-9/!?.#$%&'*+=^_`{|}~-]/;
 
 const isAlnum = (c: string | undefined) => c !== undefined && /[A-Za-z0-9]/.test(c);
+/** A letter or a digit, which CommonMark reads as neither whitespace nor punctuation. */
+const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
 
 /** Whether `line` from `i` reads as an entity's name and its `;` (`#?[A-Za-z0-9]+;`). */
 function entityAt(line: string, i: number): boolean {
@@ -25,10 +31,18 @@ function entityAt(line: string, i: number): boolean {
   return j > from && line[j] === ';';
 }
 
-/** Whether the character at `i` of `line` must be escaped, judged by the line around it. */
-function escapesAt(line: string, i: number): boolean {
+/**
+ * Whether the character at `i` of `line` must be escaped, judged by the line around it. `_` between
+ * two letters or digits can neither open nor close emphasis, so `snake_case` and a URL's `my_page`
+ * stay as they are; but only within the piece `from` to `to`, since an emphasis mark or a tag may
+ * be written at the piece's edge, beside it.
+ */
+function escapesAt(line: string, i: number, from: number, to: number): boolean {
   const c = line[i] as string;
   if (ALWAYS.has(c)) return true;
+  if (c === '_') {
+    return !(i > from && i + 1 < to && isWordChar(line[i - 1]) && isWordChar(line[i + 1]));
+  }
   if (c === '<') return TAG_START.test(line[i + 1] ?? '');
   if (c === '&') return entityAt(line, i + 1);
   return false;
@@ -42,7 +56,7 @@ export function escapeInline(line: string, from = 0, to = line.length): string {
   let out = '';
   let start = from;
   for (let i = from; i < to; i++) {
-    if (!escapesAt(line, i)) continue;
+    if (!escapesAt(line, i, from, to)) continue;
     out += `${line.slice(start, i)}\\`;
     start = i;
   }
@@ -78,14 +92,21 @@ const UNDERLINE = /^(?:=+\s*|-[-\s]*)$/u;
 /** An ordered list's number and its `.` or `)`. */
 const ORDERED = /^(\d{1,9})([.)])(?=\s|$)/u;
 
-/** A line of only `|`, `:`, `-`, and whitespace, with a `|`: GFM would read it as a table's delimiter row. */
-function delimiterRow(line: string): boolean {
+/**
+ * A line of only `|`, `:`, `-`, and whitespace that GFM would read as a table's delimiter row: one
+ * with a `|`, or, under a line of one cell, one with both a `:` and a `-` (`:--`, `--:`).
+ */
+function delimiterRow(line: string): 'pipe' | 'bare' | null {
   let pipe = false;
+  let colon = false;
+  let dash = false;
   for (const c of line) {
     if (c === '|') pipe = true;
-    else if (c !== ':' && c !== '-' && !/\s/u.test(c)) return false;
+    else if (c === ':') colon = true;
+    else if (c === '-') dash = true;
+    else if (!/\s/u.test(c)) return null;
   }
-  return pipe;
+  return pipe ? 'pipe' : colon && dash ? 'bare' : null;
 }
 
 /**
@@ -97,8 +118,11 @@ function delimiterRow(line: string): boolean {
 export function guardLine(line: string, inHeading = false): string {
   let out = line;
   if (!inHeading) {
+    const row = delimiterRow(out);
     if (BLOCK_START.test(out) || UNDERLINE.test(out)) out = `\\${out}`;
-    else if (delimiterRow(out)) out = out.replaceAll('|', '\\|');
+    else if (row === 'pipe') out = out.replaceAll('|', '\\|');
+    // A backslash at the start could stand before whitespace, where it is only a backslash.
+    else if (row === 'bare') out = out.replace('-', '\\-');
     else out = out.replace(ORDERED, '$1\\$2');
   }
   // A run of `#` at the end, after a space or nothing, would close a heading.

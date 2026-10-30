@@ -14,7 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - **A treatment shows your text exactly in any Markdown viewer.** A synopsis of `---` no longer turns into a horizontal rule, `&amp;` no longer shows as `&`, a line starting with four spaces no longer becomes a code block, and a heading such as `1. The start` no longer shows a stray backslash. The treatment and the script's Markdown now share one escaper.
-- **Markdown you can read as it is.** The treatment and the script's Markdown escape a character only where a Markdown reader would misread it, so the raw file stays clean for you and for an AI: `Now!`, `x < 3`, `Fish & chips`, `a | b`, `-- and then`, and `#1 fan` come through as typed, while `&amp;`, `<b>`, a line starting `# `, `- `, `> `, or `1. `, and a table-like `| --- |` line are still escaped. A very long line with thousands of spaces in it no longer slows the export down.
+- **Markdown you can read as it is.** The treatment and the script's Markdown escape a character only where a Markdown reader would misread it, so the raw file stays clean for you and for an AI: `Now!`, `x < 3`, `Fish & chips`, `a | b`, `-- and then`, `#1 fan`, and an underscore inside a word (`snake_case`, or a link such as `https://example.com/my_page`, which GitHub would otherwise show with a backslash) come through as typed, while `&amp;`, `<b>`, an email address in angle brackets (`<1@a.co>`), a line starting `# `, `- `, `> `, or `1. `, and a table-like `| --- |` or `:--` line are still escaped. A very long line with thousands of spaces in it no longer slows the export down.
 
 ## [0.18.0] - 2026-10-30
 

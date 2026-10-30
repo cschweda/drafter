@@ -193,6 +193,12 @@ describe('scriptMarkdown: elements', () => {
     expect(md('A word*.*x\n')).toBe('A word.x\n');
   });
 
+  test('leaves `_` between letters as it is, but not beside an emphasis mark', () => {
+    expect(md('Open my\\_page in snake\\_case.\n')).toBe('Open my_page in snake_case.\n');
+    // Beside `*` or `</u>`, a `_` could open or close emphasis, so it is escaped there.
+    expect(md('*a*\\_b\\_*c* and _a_\\_b\n')).toBe('*a*\\_b\\_*c* and <u>a</u>\\_b\n');
+  });
+
   test("writes a stage play's acts and scenes as headings and its stage directions in italics", () => {
     expect(md(STAGE_PLAY)).toBe(
       '# Low Tide\n\n## Act One\n\n### Scene 1\n\n*A dock. Gulls.*\n\n**JUNO**\\\nWait for me.\n\n### Scene 2\n\n*The same dock, empty.*\n',
