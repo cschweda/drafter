@@ -74,14 +74,14 @@ The Studio frame around the document as the Preview draws it, with:
 
 ### 4.1 What the file is built from
 
-- **Scripts:** the parsed script and the laid-out pages (`@drafter/layout`'s `paginate`), with the template and export options. The scene band's blocks (acts or sections, else scenes; each one's page range, share, and scene color) come from `@drafter/outline`'s scene index. **Call:** if what the band needs lives only in the app (`apps/web/app/strip`), the builder moves the pure part into a package so the CLI can use it; the Structure strip then uses it from there.
+- **Scripts:** the parsed script and the laid-out pages (`@drafter/layout`'s `paginate`), with the template and export options. The scene band's blocks (acts or sections, else scenes; each one's page range, share, and scene color) come from `@drafter/outline`'s `structureStrip(sceneIndex(…), linesPerPage(layout))`, which is already a package. **Call:** the scene-color hex values (`SWATCH`, today in `apps/web/app/outline/labels.ts`) move into `@drafter/notes` beside `SCENE_COLORS`, so the app and the export share them.
 - **A script with no sections and no scenes** (a few lines of action) has no band.
-- **Reading view roles:** **Call:** Reading is built from the layout's element types (the roles every template shares: scene heading, action, character, parenthetical, dialogue, transition, centered, lyric, section, page break, dual dialogue), not from template-specific names; anything else falls back to a plain paragraph, so no text is ever dropped. A stage play reads the same way (its act and scene headings are sections and scene headings).
+- **Reading view roles:** **Call:** Reading is built from each line's Fountain block kind (`doc.blocks[line.blockIndex].kind`: scene heading, action, character, parenthetical, dialogue, transition, centered, lyric, section; dual dialogue from the character block's `sem.dual`), not from the template's own role names (`stage_direction`, `act_heading`, …); anything else falls back to a plain paragraph, so no text is ever dropped. A stage play reads the same way (its act and scene headings are sections and scene headings).
 - **Markdown documents:** the same tree the Preview draws. **Call:** `apps/web/app/markdown/parse.ts` (with its footnote extension) moves into a small shared module or package so the DOM-free generator can use it; the CLI's `--html` covers scripts only in this release, as `--pdf` does.
 
 ### 4.2 How the pages stay exact
 
-**Call:** Pages draws each page as a fixed-size card (the paper size in points, scaled with the screen) holding the layout's lines at their line and column positions in Courier Prime 12 pt, positioned absolutely as the Script tab draws them, so every line sits where the PDF puts it. A character Courier Prime lacks falls back to the reader's monospace font (per glyph, by the browser), where the PDF uses its fallback fonts; an export with such characters shows the same "some characters aren't in the fonts" note the PDF export shows.
+**Call:** Pages draws each page as a fixed-size card (the paper size in points, scaled with the screen) holding the layout's lines at their line and column positions in Courier Prime 12 pt, positioned absolutely as the Script tab draws them, so every line sits where the PDF puts it. A character Courier Prime lacks falls back to the reader's monospace font (per glyph, by the browser). (The script PDF has no fallback font and no missing-character note today; only the Markdown PDF reports missing characters. The HTML export adds no note either.) **Call:** Pages uses the Script tab's character grid (`1ch` columns, `1in/6` rows, `template.page.width × height`), as `@drafter/render-html`'s stylesheet does, rather than paper points.
 
 ## 5. The Workbook (later)
 
@@ -138,8 +138,8 @@ WCAG 2.2 AA in both palettes, as the app targets: the switch and toggle are real
 11. Works with JavaScript off (§6).
 12. A DOM-free string generator in its own package, used by the worker and the CLI (§8).
 13. Notes in Reading only, never in Pages; "Include notes" shown for Markdown and HTML only (§3.3).
-14. The band's data moves into a package if it's app-only (§4.1).
+14. The band comes from `@drafter/outline`'s `structureStrip`; the scene-color hex values move into `@drafter/notes` (§4.1).
 15. Reading built from the shared element types, with a plain-paragraph fallback (§4.1).
 16. The Markdown parser moves where the generator can use it; the CLI's `--html` is scripts only (§4.1).
-17. Pages positioned absolutely from the layout, with per-glyph monospace fallback (§4.2).
+17. Pages on the Script tab's character grid, positioned absolutely from the layout, with per-glyph monospace fallback and no missing-character note (§4.2).
 18. CSP hashes computed at generation; a generator meta line with the version (§7).
