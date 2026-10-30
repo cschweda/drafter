@@ -181,9 +181,10 @@ export interface ScriptSession {
    */
   openedFile(file: OpenedFile): Promise<boolean>;
   /**
-   * Opens Fountain `text` imported from the Final Draft file named `importedFrom` as a new script
-   * with no file: not saved, so Save asks for a `.fountain`, and never writes the `.fdx`. A script
-   * with no title is called after the file. Resolves false if another switch was under way
+   * Opens Fountain `text` imported from the file named `importedFrom` (the Final Draft, Highland,
+   * or Fade In file, or the Markdown file opened as a screenplay) as a new script with no file: not
+   * saved, so Save asks for a `.fountain`, and never writes the file it came from. A script with no
+   * title is called after the file. Resolves false if another switch was under way
    * (nothing is made then).
    */
   openImported(text: string, importedFrom: string): Promise<boolean>;

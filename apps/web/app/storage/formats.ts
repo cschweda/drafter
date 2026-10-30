@@ -1,7 +1,7 @@
 /**
  * The files Open turns away because they are a known kind that isn't a script (Call 21): a short,
  * closed table, by extension and by first bytes. Anything else that is UTF-8 text opens as
- * Fountain, which reads any text.
+ * Fountain, which reads any text, and a zip named `.highland` or `.fadein` is imported.
  */
 
 /** What a refused file is ("a Word document") and what the writer can do instead. */
@@ -39,8 +39,15 @@ const BY_EXTENSION = new Map<string, Refusal>(
   }),
 );
 
-/** By the file's first bytes, whatever its name. */
-const BY_SIGNATURE: { bytes: number[]; refusal: Refusal }[] = [
+/** The zips Drafter imports (Highland's and Fade In's files), by extension, lowercased. */
+const PACKED_SCRIPTS = new Set(['highland', 'fadein']);
+
+/** By the file's first bytes, whatever its name, `unless` its extension says it is one Drafter reads. */
+const BY_SIGNATURE: {
+  bytes: number[];
+  refusal: Refusal;
+  unless?: (extension: string) => boolean;
+}[] = [
   { bytes: [0x7b, 0x5c, 0x72, 0x74, 0x66], refusal: RTF }, // {\rtf
   { bytes: [0x25, 0x50, 0x44, 0x46, 0x2d], refusal: PDF }, // %PDF-
   {
@@ -53,6 +60,8 @@ const BY_SIGNATURE: { bytes: number[]; refusal: Refusal }[] = [
   {
     bytes: [0x50, 0x4b, 0x03, 0x04], // PK\3\4, a zip's first local header
     refusal: { format: 'a Word, OpenDocument, or other packed file', advice: SAVE_AS_TEXT },
+    // A Highland or Fade In file is a zip too, and goes on to its importer (storage/open.ts).
+    unless: (extension) => PACKED_SCRIPTS.has(extension),
   },
 ];
 
@@ -66,9 +75,12 @@ const startsWith = (bytes: Uint8Array, signature: number[]) =>
 
 /** A known non-script format, by its extension (any case) or, whatever its name, by its first bytes; or null. */
 export function notAScript(name: string | undefined, bytes: Uint8Array): Refusal | null {
+  const extension = extensionOf(name);
   return (
-    BY_EXTENSION.get(extensionOf(name)) ??
-    BY_SIGNATURE.find(({ bytes: signature }) => startsWith(bytes, signature))?.refusal ??
+    BY_EXTENSION.get(extension) ??
+    BY_SIGNATURE.find(
+      ({ bytes: signature, unless }) => startsWith(bytes, signature) && !unless?.(extension),
+    )?.refusal ??
     null
   );
 }

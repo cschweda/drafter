@@ -163,6 +163,17 @@ describe('desktopFiles', () => {
     expect(fake.asked.save).toEqual([{ name: 'The Call.fdx', extension: '.fdx' }]);
   });
 
+  test('says no "opened as a new script" notice for a .highland or .fadein', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    for (const name of ['Ferry.highland', 'Cabin.fadein', 'LOUD.HIGHLAND']) {
+      put(fake, `/home/w/${name}`, 'PK');
+      const picked = await files.fromPath?.(`/home/w/${name}`);
+      expect(picked, name).toMatchObject({ ref: null, name });
+      expect(picked?.notice, name).toBeUndefined();
+    }
+  });
+
   test('says whether it was reading or writing that was not allowed', async () => {
     const fake = fakeBridge();
     const files = desktopFiles(fake.bridge);

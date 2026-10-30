@@ -693,3 +693,49 @@ describe('watching the open script’s file (the desktop app)', () => {
     expect(t.log.unwatched).toEqual([first]);
   });
 });
+
+describe('choosing a file to open in a browser', () => {
+  test('the file input accepts every type Drafter opens', async () => {
+    const { browserFiles } = await import('../app/storage/files');
+    // No picker: the hidden input asks, and it is answered by a cancel.
+    vi.stubGlobal('showOpenFilePicker', undefined);
+    let accept = '';
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (
+      this: HTMLInputElement,
+    ) {
+      accept = this.accept;
+      this.dispatchEvent(new Event('cancel'));
+    });
+    try {
+      expect(await browserFiles.pickToOpen()).toBeNull();
+    } finally {
+      click.mockRestore();
+    }
+    expect(accept).toBe(
+      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown',
+    );
+  });
+
+  test('the picker offers every type Drafter opens, as one', async () => {
+    const { browserFiles } = await import('../app/storage/files');
+    let asked: unknown;
+    vi.stubGlobal('showOpenFilePicker', async (options: unknown) => {
+      asked = options;
+      throw new DOMException('cancelled', 'AbortError');
+    });
+    expect(await browserFiles.pickToOpen()).toBeNull();
+    expect(asked).toEqual({
+      types: [
+        {
+          description: 'Script, Markdown document, or a Final Draft, Highland, or Fade In file',
+          accept: {
+            'text/plain': ['.fountain', '.txt'],
+            'text/markdown': ['.md', '.markdown'],
+            'application/xml': ['.fdx'],
+            'application/zip': ['.highland', '.fadein'],
+          },
+        },
+      ],
+    });
+  });
+});

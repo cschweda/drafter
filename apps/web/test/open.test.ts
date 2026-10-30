@@ -3,6 +3,7 @@ import { webcrypto } from 'node:crypto';
 import type { EditorState as State } from '@codemirror/state';
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { makeZip } from '../../../packages/archive/test/make-zip';
 import type { FileAccess, FileRef, PickedFile } from '../app/storage/files';
 
 // The snapshot session, which needs the whole editor session: a recorder of what it is asked.
@@ -670,6 +671,157 @@ describe('importing a Final Draft file', () => {
     (useGuard().readOnly as { value: boolean }).value = true;
     await t.openFile(t.picked('lamp.fdx', LAMP));
     expect(await t.mine()).toHaveLength(0);
+  });
+});
+
+/** A Highland file, hand-made: a TextBundle's main text, the app's own JSON, and anything else. */
+const FERRY = 'Title: The Night Ferry\n\nINT. FERRY CABIN - NIGHT\n\nThe engine knocks twice.\n';
+const highland = (others: { name: string; data: Uint8Array | string; method?: number }[] = []) =>
+  makeZip([
+    { name: 'text.fountain', data: FERRY },
+    { name: 'info.json', data: '{"type":"tests"}' },
+    ...others,
+  ]);
+/** A Fade In file, hand-made: one Open Screenplay Format document, with a paragraph of a style Drafter has no element for. */
+const fadeIn = (paragraphs: string) =>
+  makeZip([
+    {
+      name: 'document.xml',
+      data: `<?xml version="1.0" encoding="UTF-8"?>\n<document type="Open Screenplay Format document" version="40">\n<paragraphs>\n${paragraphs}\n</paragraphs>\n</document>\n`,
+    },
+  ]);
+const para = (style: string, text: string) =>
+  `<para><style basestyle="${style}"/><text>${text}</text></para>`;
+const CABIN = fadeIn(
+  [
+    para('Scene Heading', 'INT. FERRY CABIN - NIGHT'),
+    para('Action', 'The engine knocks twice.'),
+    para('Cast List', 'ABEL, a deckhand'),
+  ].join('\n'),
+);
+
+describe('importing a Highland or Fade In file', () => {
+  test('opens a .highland as a new Fountain script with no file, unsaved', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Ferry.highland', highland(), 21));
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toBe(FERRY);
+    expect(t.editor.kind.value).toBe('fountain');
+    const row = t.script.project.value;
+    expect(row?.title).toBe('The Night Ferry');
+    expect(row?.kind).toBe('fountain');
+    expect(row?.fileName).toBeUndefined();
+    expect(row?.fsHandleId).toBeUndefined();
+    expect(row?.savedHash).toBeUndefined();
+    expect(t.script.dirty.value).toBe(true);
+    expect(t.exportNotice.value).toBe('Imported “Ferry.highland”.');
+    expect(t.writes).toEqual([]);
+  });
+
+  test('opens a .fadein the same way and says how many items came in as notes', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Cabin.fadein', CABIN, 22));
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toContain('INT. FERRY CABIN - NIGHT');
+    expect(t.shown()).toContain('ABEL, a deckhand [[osf: Cast List]]');
+    const row = t.script.project.value;
+    expect(row?.title).toBe('Cabin');
+    expect(row?.fileName).toBeUndefined();
+    expect(row?.fsHandleId).toBeUndefined();
+    expect(t.exportNotice.value).toBe(
+      'Imported “Cabin.fadein”. 1 item came in as a note; Problems lists it.',
+    );
+    // A Highland file's other entries come in as one note, counted the same way.
+    await t.openFile(t.picked('Map.HIGHLAND', highland([{ name: 'assets/map.png', data: 'PNG' }])));
+    expect(t.shown()).toContain('[[highland: Also in the file, not brought in: assets/map.png]]');
+    expect(t.exportNotice.value).toBe(
+      'Imported “Map.HIGHLAND”. 1 item came in as a note; Problems lists it.',
+    );
+    expect(t.writes).toEqual([]);
+  });
+
+  test('never sniffs an archive for NUL bytes or decodes it as text', async () => {
+    const t = await fresh();
+    // Over the 5 MB a script may be, full of NUL and bytes that aren't UTF-8: the archive's own
+    // 32 MB cap applies, and only the script inside is decoded.
+    const picture = new Uint8Array(6 * 1024 * 1024).fill(0xff);
+    picture.fill(0, 0, 64 * 1024);
+    const bytes = highland([{ name: 'assets/still.bin', data: picture, method: 0 }]);
+    expect(bytes.byteLength).toBeGreaterThan(5 * 1024 * 1024);
+    await t.openFile(t.picked('Ferry.highland', bytes));
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toContain('INT. FERRY CABIN - NIGHT');
+    expect(await t.mine()).toHaveLength(1);
+  });
+
+  test('refuses a damaged archive, says why, and opens nothing', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Door.fountain', SCRIPT));
+    const was = t.script.project.value?.id;
+    const shown = t.shown();
+    const damaged = makeZip([{ name: 'text.fountain', data: FERRY, declaredCrc: 1 }]);
+    await t.openFile(t.picked('Ferry.highland', damaged));
+    expect(t.openError.value).toBe('This isn’t a Highland file Drafter can read: it is damaged.');
+    expect(t.script.project.value?.id).toBe(was);
+    expect(t.shown()).toBe(shown);
+    expect(await t.mine()).toHaveLength(1);
+    expect(snapshots.calls.filter(([kind]) => kind === 'afterImport')).toHaveLength(0);
+    // A text file under the name, and a Highland file under Fade In's: each says why.
+    await t.openFile(t.picked('Notes.highland', 'INT. HALL - DAY\n'));
+    expect(t.openError.value).toBe(
+      'This isn’t a Highland file Drafter can read: it isn’t a zip archive.',
+    );
+    await t.openFile(t.picked('Ferry.fadein', highland()));
+    expect(t.openError.value).toBe(
+      'This isn’t a Fade In file Drafter can read: it holds no script.',
+    );
+    const two = makeZip([
+      { name: 'one.xml', data: '<other/>' },
+      { name: 'two.xml', data: '<other/>' },
+    ]);
+    await t.openFile(t.picked('Two.fadein', two));
+    expect(t.openError.value).toMatch(
+      /^This isn’t a Fade In file Drafter can read: it holds more than one script \(.*one\.xml.*two\.xml.*\)\.$/,
+    );
+    expect(await t.mine()).toHaveLength(1);
+    expect(t.script.project.value?.id).toBe(was);
+  });
+
+  test('refuses an imported script over 5 MB, as it would a script file', async () => {
+    const t = await fresh();
+    // The script entry is at the limit, and the note naming the picture takes it over.
+    const big = makeZip([
+      { name: 'text.fountain', data: 'a'.repeat(5 * 1024 * 1024) },
+      { name: 'assets/still.png', data: 'PNG' },
+    ]);
+    await t.openFile(t.picked('Big.highland', big));
+    expect(t.openError.value).toBe(
+      'The script in this file is too big (over 5 MB), so Drafter didn’t open it.',
+    );
+    expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('imports the same file twice as two scripts', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Ferry.highland', highland(), 21));
+    await t.openFile(t.picked('Ferry.highland', highland(), 21));
+    expect(await t.mine()).toHaveLength(2);
+  });
+
+  test('takes an imported snapshot named after the file', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Cabin.fadein', CABIN));
+    expect(snapshots.calls).toEqual([['afterImport', t.shown(), 'Cabin.fadein']]);
+  });
+
+  test('opens nothing in a read-only tab', async () => {
+    const t = await fresh();
+    const { useGuard } = await import('../app/storage/guard');
+    (useGuard().readOnly as { value: boolean }).value = true;
+    await t.openFile(t.picked('Ferry.highland', highland()));
+    await t.openFile(t.picked('Cabin.fadein', CABIN));
+    expect(await t.mine()).toHaveLength(0);
+    expect(snapshots.calls).toEqual([]);
   });
 });
 

@@ -28,7 +28,8 @@ export interface OpenRequests {
   refused: Refusal[];
 }
 
-export const NOT_A_SCRIPT = 'it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx)';
+export const NOT_A_SCRIPT =
+  'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein)';
 
 /** The status-bar message for a refusal. */
 export const refusalMessage = ({ name, reason }: Refusal) =>
@@ -117,7 +118,7 @@ export function requestsFromArgv(argv: string[], cwd: string, ignore: string[] =
 
 /**
  * The scripts a launch's `argv` names: existing `.fountain`, `.md`, `.markdown`, `.txt` files, and
- * Final Draft `.fdx` files to import.
+ * Final Draft, Highland, and Fade In files (`.fdx`, `.highland`, `.fadein`) to import.
  */
 export function filesFromArgv(argv: string[], cwd: string, ignore: string[] = []): string[] {
   return requestsFromArgv(argv, cwd, ignore).files;

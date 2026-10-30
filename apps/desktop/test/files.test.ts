@@ -452,6 +452,13 @@ describe('saveTarget', () => {
     expect(saveTarget(join(dir, 'Notes.fountain'), '.fdx')).toBe(join(dir, 'Notes.fountain.fdx'));
     expect(saveTarget(join(dir, 'Notes.fdx'), '.fountain')).toBe(join(dir, 'Notes.fdx.fountain'));
   });
+
+  test('a script saved as x.highland is saved as x.highland.fountain', () => {
+    // A Highland or Fade In file is only ever imported: a script is never one, nor an export.
+    expect(saveTarget(join(dir, 'x.highland'), '.fountain')).toBe(join(dir, 'x.highland.fountain'));
+    expect(saveTarget(join(dir, 'x.fadein'), '.fountain')).toBe(join(dir, 'x.fadein.fountain'));
+    expect(saveTarget(join(dir, 'x.HIGHLAND'), '.md')).toBe(join(dir, 'x.HIGHLAND.md'));
+  });
 });
 
 describe('the folder a dialog starts in', () => {

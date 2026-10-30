@@ -144,6 +144,8 @@ test('opens .fountain, .md, .markdown, and .fdx, and says a .fountain file is pl
       [['md'], 'Editor', 'Alternate'],
       [['markdown'], 'Editor', 'Alternate'],
       [['fdx'], 'Viewer', 'Alternate'],
+      [['highland'], 'Viewer', 'Alternate'],
+      [['fadein'], 'Viewer', 'Alternate'],
     ],
   );
   const [fountain] = info.UTImportedTypeDeclarations as {

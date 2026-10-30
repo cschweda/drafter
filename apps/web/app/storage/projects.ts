@@ -61,9 +61,10 @@ export interface Project {
   /** The file's name, for the Source pane's slim bar. */
   fileName?: string;
   /**
-   * The Final Draft file a script was imported from (`The Call.fdx`): a script with no title is
-   * called after it until it has a file of its own. Never written to, and not the script's file.
-   * Unindexed, so it needed no new version.
+   * The file a script was imported from (`The Call.fdx`): the Final Draft, Highland, or Fade In
+   * file, or the Markdown file opened as a screenplay. A script with no title is called after it
+   * until it has a file of its own. Never written to, and not the script's file. Unindexed, so it
+   * needed no new version.
    */
   importedFrom?: string;
   fsHandleId?: string;

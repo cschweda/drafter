@@ -59,6 +59,22 @@ describe('notAScript', () => {
     expect(notAScript('a.txt', new Uint8Array())).toBeNull();
   });
 
+  test('lets a zip through when it is named .highland or .fadein, and only then', () => {
+    const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0, 0, 0, 8, 0]);
+    for (const name of ['Ferry.highland', 'Ferry.HIGHLAND', 'Cabin.fadein', 'Cabin.FadeIn']) {
+      expect(notAScript(name, zip), name).toBeNull();
+    }
+    for (const name of ['Ferry.highland.txt', 'highland', 'Ferry.fdx', 'Ferry.fountain', 'x.zip']) {
+      expect(notAScript(name, zip), name).not.toBeNull();
+    }
+    expect(notAScript(undefined, zip)).not.toBeNull();
+    // Only the zip is let through: an RTF or PDF named so is still refused.
+    expect(notAScript('Ferry.highland', text('{\\rtf1}'))?.format).toMatch(/RTF/);
+    expect(notAScript('Cabin.fadein', text('%PDF-1.7\n'))?.format).toMatch(/PDF/);
+    // And text named so goes on, for the importer to refuse with its own reason.
+    expect(notAScript('Notes.highland', PLAIN)).toBeNull();
+  });
+
   test('lets UTF-8 text with any other name through', () => {
     for (const name of [
       'Notes.csv',

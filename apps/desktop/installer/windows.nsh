@@ -3,8 +3,9 @@
 ; `.fountain` is registered by electron-builder itself (`win.fileAssociations`): Drafter opens it
 ; unless the writer chose another app for it. Markdown is only offered: `.md` and `.markdown` get
 ; Drafter in Open with (OpenWithProgids), and the app a Markdown file already opens in keeps it, as
-; on a Mac, where the two are `Alternate`. A Final Draft file (`.fdx`, imported as a new script) is
-; offered the same way. Everything is per user (SHELL_CONTEXT is HKCU here).
+; on a Mac, where the two are `Alternate`. A Final Draft, Highland, or Fade In file (`.fdx`,
+; `.highland`, `.fadein`, each imported as a new script) is offered the same way. Everything is per
+; user (SHELL_CONTEXT is HKCU here).
 
 !macro customInstall
   ; electron-builder's own command for `.fountain` leaves the program's path unquoted
@@ -24,6 +25,18 @@
   WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fdx\shell\open" "" "Open with Drafter"
   WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fdx\shell\open\command" "" '"$appExe" "%1"'
   WriteRegNone SHELL_CONTEXT "Software\Classes\.fdx\OpenWithProgids" "Drafter.fdx"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.highland" "" "Highland document"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.highland\DefaultIcon" "" "$appExe,0"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.highland\shell" "" "open"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.highland\shell\open" "" "Open with Drafter"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.highland\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.highland\OpenWithProgids" "Drafter.highland"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fadein" "" "Fade In document"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fadein\DefaultIcon" "" "$appExe,0"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fadein\shell" "" "open"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fadein\shell\open" "" "Open with Drafter"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\Drafter.fadein\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.fadein\OpenWithProgids" "Drafter.fadein"
   System::Call 'shell32::SHChangeNotify(i, i, i, i) v (0x08000000, 0, 0, 0)'
 !macroend
 
@@ -33,6 +46,10 @@
   DeleteRegKey SHELL_CONTEXT "Software\Classes\Drafter.markdown"
   DeleteRegValue SHELL_CONTEXT "Software\Classes\.fdx\OpenWithProgids" "Drafter.fdx"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\Drafter.fdx"
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.highland\OpenWithProgids" "Drafter.highland"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\Drafter.highland"
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.fadein\OpenWithProgids" "Drafter.fadein"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\Drafter.fadein"
   ; Removed for good (not an update's reinstall): `.fountain` no longer names Drafter's type,
   ; which electron-builder's own uninstall leaves behind.
   ${ifNot} ${isUpdated}

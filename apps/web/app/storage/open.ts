@@ -1,8 +1,9 @@
+import { ArchiveError, fromFadeIn, fromHighland } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
-import { isFinalDraftName, kindOfFileName } from '../markdown/kind';
+import { importKindOf, kindOfFileName } from '../markdown/kind';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
@@ -48,6 +49,7 @@ function ask(title: string): Promise<SameTitleChoice> {
 
 const MESSAGES = {
   tooBig: 'This file is too big to be a script (over 5 MB), so Drafter didn’t open it.',
+  importTooBig: 'The script in this file is too big (over 5 MB), so Drafter didn’t open it.',
   binary: 'This file isn’t a script: it holds more than text, so Drafter didn’t open it.',
   notUtf8:
     'This file isn’t UTF-8 text, so Drafter didn’t open it: saving would change its characters. Save it as UTF-8 in the app that made it, then open it again.',
@@ -66,9 +68,9 @@ function problemWith(bytes: Uint8Array): string | null {
 const nameKey = (title: string) => title.trim().toLowerCase();
 
 /**
- * What an import says: "Imported “The Call.fdx”.", and how many items came in as `[[fdx: …]]`
- * notes, which Problems lists (`fdx-note`). Items, not paragraphs: `mapped` also counts a scene
- * number Fountain can't hold and elements that aren't paragraphs.
+ * What an import says: "Imported “The Call.fdx”.", and how many items came in as notes
+ * (`[[fdx: …]]`, `[[osf: …]]`, `[[highland: …]]`), which Problems lists. Items, not paragraphs:
+ * `mapped` also counts a scene number Fountain can't hold and elements that aren't paragraphs.
  */
 function importedMessage(name: string, mapped: FdxImport['mapped']): string {
   const notes = mapped.reduce((sum, { count }) => sum + count, 0);
@@ -80,17 +82,26 @@ function importedMessage(name: string, mapped: FdxImport['mapped']): string {
 }
 
 /**
- * Imports a Final Draft file's text (Phase 2 design §22) as a new Fountain script with no file:
- * unsaved, so Save asks for a `.fountain` and never writes over the `.fdx`. A file `fromFdx`
- * refuses is said in the status bar, and nothing opens.
+ * Imports another app's file (Phase 2 design §22; Imports and Markdown out) as a new Fountain
+ * script with no file: unsaved, so Save asks for a `.fountain` and never writes over the file it
+ * came from. `run` reads it; a file it refuses (`FdxError`, `ArchiveError`) is said in the status
+ * bar, and so is a script over 5 MB, and nothing opens.
  */
-async function importFinalDraft(name: string, xml: string): Promise<void> {
+async function importScript(
+  name: string,
+  run: () => FdxImport | Promise<FdxImport>,
+): Promise<void> {
   let imported: FdxImport;
   try {
-    imported = fromFdx(xml);
+    imported = await run();
   } catch (error) {
-    if (!(error instanceof FdxError)) throw error;
+    if (!(error instanceof FdxError || error instanceof ArchiveError)) throw error;
     await say(openError, error.message);
+    return;
+  }
+  // The script inside is at most 5 MB, but a note naming what else came in can take it over.
+  if (new TextEncoder().encode(imported.text).byteLength > MAX_BYTES) {
+    await say(openError, MESSAGES.importTooBig);
     return;
   }
   if (!(await useScript().openImported(imported.text, name))) {
@@ -140,9 +151,20 @@ export async function openFile(file: PickedFile): Promise<void> {
       return;
     }
     // A known kind that isn't a script (a Word document, an RTF file) is named, with what to do.
+    // It lets a zip through only when it is named `.highland` or `.fadein`.
     const refusal = notAScript(file.name, file.bytes);
     if (refusal) {
       await say(openError, refusalMessage(file.name, refusal));
+      return;
+    }
+    const importing = importKindOf(file.name);
+    // A Highland or Fade In file is a zip, with NUL bytes and a cap of its own (the archive's
+    // 32 MB), so it skips the text checks: only the script inside is decoded, strictly.
+    if (importing === 'highland' || importing === 'fadein') {
+      const read = importing === 'highland' ? fromHighland : fromFadeIn;
+      const { bytes } = file;
+      await ready();
+      await importScript(file.name, () => read(bytes));
       return;
     }
     const problem = problemWith(file.bytes);
@@ -160,8 +182,9 @@ export async function openFile(file: PickedFile): Promise<void> {
     }
     await ready();
     // A Final Draft file is never a script's file: it comes in as a new one.
-    if (isFinalDraftName(file.name)) {
-      await importFinalDraft(file.name, decoded.text);
+    if (importing === 'fdx') {
+      const { text } = decoded;
+      await importScript(file.name, () => fromFdx(text));
       return;
     }
     const script = useScript();

@@ -250,12 +250,16 @@ test('opens .fountain files, and offers itself for Markdown and Final Draft with
   expect(registry('HKCU\\Software\\Classes\\Drafter.markdown\\shell\\open\\command')).toBe(
     `"${exe()}" "%1"`,
   );
-  // A Final Draft file is offered the same way (it is imported), never taken.
-  expect(registry('HKCU\\Software\\Classes\\.fdx\\OpenWithProgids', 'Drafter.fdx')).not.toBeNull();
-  expect(registry('HKCU\\Software\\Classes\\.fdx') ?? '').not.toMatch(/Drafter/);
-  expect(registry('HKCU\\Software\\Classes\\Drafter.fdx\\shell\\open\\command')).toBe(
-    `"${exe()}" "%1"`,
-  );
+  // A Final Draft, Highland, or Fade In file is offered the same way (it is imported), never taken.
+  for (const ext of ['fdx', 'highland', 'fadein']) {
+    expect(
+      registry(`HKCU\\Software\\Classes\\.${ext}\\OpenWithProgids`, `Drafter.${ext}`),
+    ).not.toBeNull();
+    expect(registry(`HKCU\\Software\\Classes\\.${ext}`) ?? '').not.toMatch(/Drafter/);
+    expect(registry(`HKCU\\Software\\Classes\\Drafter.${ext}\\shell\\open\\command`)).toBe(
+      `"${exe()}" "%1"`,
+    );
+  }
 });
 
 test('has Electron’s fuses set, as the Linux and Mac apps do', () => {
@@ -340,8 +344,12 @@ test('uninstalls silently, taking its files, shortcut, and file types, and leavi
     .poll(() => keyExists('HKCU\\Software\\Classes\\Drafter.fountain'), { timeout: 60_000 })
     .toBe(false);
   expect(keyExists('HKCU\\Software\\Classes\\Drafter.markdown')).toBe(false);
-  expect(keyExists('HKCU\\Software\\Classes\\Drafter.fdx')).toBe(false);
-  expect(registry('HKCU\\Software\\Classes\\.fdx\\OpenWithProgids', 'Drafter.fdx')).toBeNull();
+  for (const ext of ['fdx', 'highland', 'fadein']) {
+    expect(keyExists(`HKCU\\Software\\Classes\\Drafter.${ext}`)).toBe(false);
+    expect(
+      registry(`HKCU\\Software\\Classes\\.${ext}\\OpenWithProgids`, `Drafter.${ext}`),
+    ).toBeNull();
+  }
   expect(registry('HKCU\\Software\\Classes\\.fountain') ?? '').not.toBe('Drafter.fountain');
   for (const ext of ['.md', '.markdown']) {
     expect(

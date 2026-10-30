@@ -519,9 +519,12 @@ async function importScript(name: string, run: () => FdxImport | Promise<FdxImpo
   | `entry-too-big` | its script is larger than 5 MB. |
   | `no-inflate` | this browser can’t unpack it. Try a current browser, or the Drafter app. |
   | `no-script` | it holds no script. |
-  | `many-scripts` | it holds more than one script. |
+  | `many-scripts` | it holds more than one script. With a detail (Fade In's candidates' names): it holds more than one script (*detail*). |
   | `not-utf8` | its script isn’t UTF-8 text. |
-  | `not-osf` | its document isn’t one Drafter can read (*detail*). |
+  | `not-text` | its script holds more than text. |
+  | `not-osf` | its script isn’t in a form Drafter reads (*detail*). |
+
+  (`not-text`, the detail on `many-scripts`, and the `not-osf` words are as Tasks 3 and 4 built them, in `packages/archive/src/errors.ts`.)
 
   The toast is `importedMessage` unchanged ("Imported “Lamp.highland”."), with the count of notes.
 - **Call (Call 15), the picker and the input:**

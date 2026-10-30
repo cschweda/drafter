@@ -6,7 +6,8 @@
 // Every argument is checked before anything touches the disk, and every path must have been
 // granted (grants.ts): chosen in a dialog, dropped, or named on the command line. A write also
 // goes only to a regular file with a script's or an export's extension, and a Final Draft file
-// only where the writer chose one in a Save dialog (an export, never an imported file).
+// only where the writer chose one in a Save dialog (an export, never an imported file). A Highland
+// or Fade In file is never written at all.
 import { dirname, join } from 'node:path';
 import {
   checkBytes,
@@ -103,8 +104,8 @@ export function fileHandlers(deps: FileHandlerDeps) {
     rememberFolder(deps.settingsFile, dirname(path)).catch(() => {});
 
   /**
-   * Grants an existing script, or a Final Draft file to import, by its path (a drop's, the command
-   * line's); refuses anything else.
+   * Grants an existing script, or a Final Draft, Highland, or Fade In file to import, by its path
+   * (a drop's, the command line's); refuses anything else.
    */
   async function grantScript(path: unknown): Promise<string> {
     const file = checkPath(path);

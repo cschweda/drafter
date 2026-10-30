@@ -19,7 +19,7 @@ On Ubuntu 24.04 and later, **use the `.deb`**. It works with the sandbox on, wit
 sudo apt install ./Drafter-<version>-linux-amd64.deb
 ```
 
-It adds Drafter to your applications (under Office), registers `.fountain`, `.md`, and Final Draft `.fdx` files, and installs an AppArmor profile that lets Drafter, and only Drafter, use the sandbox. Start it from the menu, or with `drafterdev`, or open a file with it. A `.fountain` file opens in Drafter when you double-click it; for a `.md` file, Drafter is offered under **Open With** (or make it the default there). From a terminal:
+It adds Drafter to your applications (under Office), registers `.fountain` and `.md` files, and Final Draft `.fdx`, Highland `.highland`, and Fade In `.fadein` files, and installs an AppArmor profile that lets Drafter, and only Drafter, use the sandbox. Start it from the menu, or with `drafterdev`, or open a file with it. A `.fountain` file opens in Drafter when you double-click it; for a `.md` file, Drafter is offered under **Open With** (or make it the default there). From a terminal:
 
 ```sh
 drafterdev                      # start Drafter
@@ -28,7 +28,7 @@ drafterdev "My Script.fountain" # start it with a script open
 
 To remove it: `sudo apt remove drafterdev`. Your scripts are files you saved and aren't touched; Drafter's settings and recovery copies are in `~/.config/Drafter`.
 
-Drafter only imports a `.fdx` (as a new script you save as a `.fountain`), but where no other app claims `.fdx` files your file manager may open them in Drafter by default; to change that, choose another app in the file's Open With (or Properties) dialog, or run `xdg-mime default other-app.desktop application/x-fdx`.
+Drafter only imports a `.fdx`, `.highland`, or `.fadein` file (as a new script you save as a `.fountain`), and offers itself for them under **Open With**. Where no other app claims one of those types, your file manager may open it in Drafter by default; to change that, choose another app in the file's Open With (or Properties) dialog, or run `xdg-mime default other-app.desktop application/x-fdx` (or `application/x-highland`, or `application/x-fadein`).
 
 ## Any other distribution: the AppImage
 
