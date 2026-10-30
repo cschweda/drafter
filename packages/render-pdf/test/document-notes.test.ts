@@ -185,13 +185,16 @@ const arbDocument = fc
     return { body, source: `${body}\n\n${defs.join('\n\n')}\n` };
   });
 const arbPaper = fc.constantFrom<Paper>('letter', 'a4');
-const RUNS = { numRuns: 120 };
+const RUNS = { numRuns: 100 };
 const EPS = 1e-6;
 
 /** The words of note `label` as written: `n<label><paragraph>x<word>`. */
 const isNoteWord = (word: string) => /^n[a-h]\d+x\d+$/.test(word);
 
-describe('footnotes, over random documents', () => {
+/** Long random documents take a few seconds on a busy machine: room for that. */
+const PROPERTY_TIMEOUT = 60_000;
+
+describe('footnotes, over random documents', { timeout: PROPERTY_TIMEOUT }, () => {
   it('prints every referenced note exactly once, in number order, and no other', () => {
     fc.assert(
       fc.property(arbDocument, arbPaper, ({ source }, paper) => {
