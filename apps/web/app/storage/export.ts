@@ -84,8 +84,10 @@ const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md', fdx: '.fdx' } as const;
  * ("Couldn’t load the font …") are said as they are, and an error with none is a plain full stop.
  */
 function reason(error: unknown): string {
-  if (previewProblem(error) === 'deep') return ': this document is nested too deeply to lay out.';
-  return error instanceof Error && error.message ? `: ${error.message}` : '.';
+  const message = error instanceof Error ? error.message : '';
+  // By its words only: a RangeError of another kind ("Invalid string length") says what it is.
+  if (previewProblem(message) === 'deep') return ': this document is nested too deeply to lay out.';
+  return message ? `: ${message}` : '.';
 }
 
 /** Why a kind of export doesn't apply to the open script, or null when it does. */

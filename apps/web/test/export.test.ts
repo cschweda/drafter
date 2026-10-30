@@ -437,6 +437,11 @@ describe('exporting', () => {
       );
       shown.text += '\nMore.\n';
     }
+    // A RangeError of another kind says what it is, not that the document is deep.
+    render.mockRejectedValueOnce(new RangeError('Invalid string length'));
+    shown.text += '\nLonger.\n';
+    expect(await t.exportScript('pdf')).toBe('cancelled');
+    expect(t.exportError.value).toBe('Couldn’t export Deep.pdf: Invalid string length');
     // An error with no words of its own is a plain sentence.
     render.mockRejectedValueOnce(new Error(''));
     shown.text += '\nLast.\n';
