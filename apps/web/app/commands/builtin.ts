@@ -28,6 +28,7 @@ import {
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { aboutOpen } from '~/about/dialog';
+import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
@@ -106,11 +107,21 @@ export function registerBuiltinCommands(): void {
   const sprintOn = () => sprint.state.value.status !== 'idle';
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
-  /** Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus. */
+  const showChanges = useShowChanges();
+  /**
+   * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
+   * no comparison open, Show changes' marks on the Script pane, which shows.
+   */
   const stepChange = (direction: 1 | -1) => () => {
-    compare.show(false);
-    compare.step(direction);
+    if (comparing()) {
+      compare.show(false);
+      compare.step(direction);
+      return;
+    }
+    showTab('script', false);
+    showChanges.step(direction);
   };
+  const stepsChanges = () => comparing() || (showChanges.on.value && isFountain());
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -126,7 +137,8 @@ export function registerBuiltinCommands(): void {
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
-  function showTab(tab: TabId) {
+  /** Shows `tab`; `focusPanel` false leaves focus to the caller (Next change puts it on a mark). */
+  function showTab(tab: TabId, focusPanel = true) {
     // Focus mode shows only the Source: any other tab is for the writer to see.
     if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
@@ -136,6 +148,7 @@ export function registerBuiltinCommands(): void {
     } else {
       panes.phoneTab.value = tab;
     }
+    if (!focusPanel) return;
     void nextTick().then(() => {
       if (tab === 'source') view.focus();
       else document.getElementById(`panel-${tab}`)?.focus();
@@ -478,8 +491,8 @@ export function registerBuiltinCommands(): void {
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
     'next-misspelling': stepSpelling(1),
     'previous-misspelling': stepSpelling(-1),
-    'next-change': { enabled: comparing, run: stepChange(1) },
-    'previous-change': { enabled: comparing, run: stepChange(-1) },
+    'next-change': { enabled: stepsChanges, run: stepChange(1) },
+    'previous-change': { enabled: stepsChanges, run: stepChange(-1) },
 
     // View
     'show-source': { run: () => showTab('source') },
@@ -491,6 +504,16 @@ export function registerBuiltinCommands(): void {
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
+    // Show changes (version-history design §4.1): the Script pane shows, marked or clean.
+    'show-changes': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? MARKDOWN_WHY : undefined),
+      liveTitle: () => (showChanges.on.value ? 'Hide changes' : 'Show changes'),
+      run: () => {
+        showChanges.toggle();
+        if (showChanges.on.value) showTab('script', false);
+      },
+    },
     // Compare's tab goes with the comparison (Call 16).
     'compare-changes-view': {
       enabled: comparing,

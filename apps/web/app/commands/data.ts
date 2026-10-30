@@ -165,6 +165,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
   // registry key; from anywhere else these, while a comparison is open. They sit in View with
   // Close comparison, the desktop menu's home for Compare.
+  // Show changes on the Script pane (version-history design §4.1): its title says Hide changes
+  // while it is on. Next change and Previous change go through its marks with no comparison open.
+  { id: 'show-changes', title: 'Show changes', group: 'View', icon: 'i-lucide-diff' },
   { id: 'next-change', title: 'Next change', group: 'View' },
   { id: 'previous-change', title: 'Previous change', group: 'View' },
   // Compare's two views (version-history design §5.1, §8), while a comparison is open.

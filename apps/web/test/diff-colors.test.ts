@@ -82,6 +82,19 @@ describe("the Changes view's colors", () => {
     expect(short(pairs, 3)).toEqual([]);
   });
 
+  test.each(cases)(
+    "Show changes' signs and buttons on the page are at least 4.5:1 (%s, %s)",
+    (palette, theme) => {
+      // The Script pane's + in the margin and its removed-lines buttons are text on the page.
+      const t = DIFF_TOKENS[palette][theme];
+      const bg = page[theme]['--page'] as string;
+      const pairs: [string, string, string, string][] = ['--diff-add-sign', '--diff-del-sign'].map(
+        (sign) => [sign, t[sign] as string, '--page', bg],
+      );
+      expect(short(pairs, 4.5)).toEqual([]);
+    },
+  );
+
   test.each(cases)('focus outlines are at least 3:1 on every tint (%s, %s)', (palette, theme) => {
     // A focused row, fold, button, or group title is outlined in `--heading`, over its own tint.
     const t = DIFF_TOKENS[palette][theme];

@@ -1,13 +1,33 @@
+import type { PageMarks } from '@drafter/compare';
 import type { Layout } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
 
-/** What the main thread sends the layout worker: the whole text, so the worker's copy never drifts. */
-export type LayoutRequest = { seq: number; source: string; template: Template };
-export type LayoutReply = { seq: number; layout: Layout } | { seq: number; error: string };
+/** Show changes' baseline (version-history design §4.2): its id, and its text when the id is new. */
+export type LayoutBaseline = { id: number; text?: string };
+
+/**
+ * What the main thread sends the layout worker: the whole text, so the worker's copy never drifts,
+ * and Show changes' baseline while it is on.
+ */
+export type LayoutRequest = {
+  seq: number;
+  source: string;
+  template: Template;
+  baseline?: LayoutBaseline;
+};
+/** A layout, then (with a baseline) the marks of the same request; or what went wrong. */
+export type LayoutReply =
+  | { seq: number; layout: Layout }
+  | { seq: number; marks: PageMarks }
+  | { seq: number; error: string };
 
 export interface LayoutClient {
-  /** Sends the newest text 50 ms after the last call (trailing debounce). Returns the request's number. */
-  request(source: string, template: Template): number;
+  /**
+   * Sends the newest text 50 ms after the last call (trailing debounce). Returns the request's
+   * number. With `baseline`, the worker answers the marks too; its text is sent only when its id
+   * isn't the one sent last.
+   */
+  request(source: string, template: Template, baseline?: { id: number; text: string }): number;
   destroy(): void;
 }
 
@@ -19,9 +39,13 @@ export function createLayoutClient(
   onLayout: (layout: Layout, seq: number) => void,
   /** Called with the worker's message when a layout failed, or with a description if the worker itself fails. */
   onError: (message: string, seq: number) => void = () => {},
+  /** Called with a layout's marks, only for the layout shown last (`onLayout`'s newest). */
+  onMarks: (marks: PageMarks, seq: number) => void = () => {},
 ): LayoutClient {
   let seq = 0;
   let shown = 0;
+  /** The baseline id whose text the worker has. */
+  let sentBaseline: number | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let destroyed = false;
 
@@ -30,6 +54,11 @@ export function createLayoutClient(
     const reply = (event as MessageEvent<LayoutReply>).data;
     if ('error' in reply) {
       onError(reply.error, reply.seq);
+      return;
+    }
+    if ('marks' in reply) {
+      // Marks are of their own layout's text: only the shown layout's are any use.
+      if (reply.seq === shown) onMarks(reply.marks, reply.seq);
       return;
     }
     // A slower, older reply must not replace a newer layout.
@@ -47,11 +76,19 @@ export function createLayoutClient(
   );
 
   return {
-    request(source, template) {
+    request(source, template, baseline) {
       const mine = ++seq;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        worker.postMessage({ seq: mine, source, template } satisfies LayoutRequest);
+        const message: LayoutRequest = { seq: mine, source, template };
+        if (baseline) {
+          message.baseline =
+            baseline.id === sentBaseline
+              ? { id: baseline.id }
+              : { id: baseline.id, text: baseline.text };
+          sentBaseline = baseline.id;
+        }
+        worker.postMessage(message);
       }, DEBOUNCE_MS);
       return mine;
     },

@@ -19,6 +19,12 @@ export interface ScriptViewOptions {
   fontsReady?: Promise<unknown>;
   /** The clock for the manual-scroll guard, in milliseconds. Defaults to `performance.now()`. */
   now?: () => number;
+  /**
+   * Called for every page a draw leaves on the screen, built or kept, with the page it shows now,
+   * once its offsets are final: the app's own marks go on here (the Script pane's Show changes).
+   * Whatever it adds to a kept page stays there until it takes it away.
+   */
+  decorate?: (el: HTMLElement, page: Page) => void;
 }
 
 export interface ScriptView {
@@ -35,6 +41,8 @@ export interface ScriptView {
    * block the drawn layout doesn't have, or within two seconds of the reader scrolling the container.
    */
   reveal(blockIndex: number): void;
+  /** Runs `decorate` again on every page on the screen, as when the marks change but not the pages. */
+  redecorate(): void;
   /** Removes the region and every listener. */
   destroy(): void;
 }
@@ -78,7 +86,7 @@ export function createScriptView(
   container: HTMLElement,
   options: ScriptViewOptions = {},
 ): ScriptView {
-  const { fontsReady, now = () => performance.now() } = options;
+  const { fontsReady, now = () => performance.now(), decorate } = options;
   const doc = container.ownerDocument;
   const element = doc.createElement('section');
   element.className = 'drafter-script';
@@ -165,6 +173,7 @@ export function createScriptView(
     drawnTemplate = templateJson;
     pageByNumber = new Map(next.map((page): [number, HTMLElement] => [page.number, page.el]));
     current = { layout, template };
+    if (decorate) for (const page of next) decorate(page.el, page.page);
   }
 
   // A line is the thing to click: a click on the paper, or on the furniture, goes nowhere.
@@ -212,6 +221,11 @@ export function createScriptView(
         }
       }
       target?.scrollIntoView({ block: 'nearest' });
+    },
+
+    redecorate() {
+      if (!decorate || destroyed) return;
+      for (const page of drawn) decorate(page.el, page.page);
     },
 
     destroy() {

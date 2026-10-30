@@ -114,6 +114,11 @@ const groups = shortcutGroups(COMMAND_DATA);
           same from anywhere while a comparison is open.
         </li>
         <li>
+          In the Script tab, while Show changes is on, <kbd>N</kbd> goes to the next marked change
+          and <kbd>Shift+N</kbd> to the previous one, and says where it is; with no comparison open,
+          the palette’s Next change and Previous change go through these marks.
+        </li>
+        <li>
           Redo is also <kbd>Ctrl+Y</kbd> on Windows and Linux.
         </li>
         <li>

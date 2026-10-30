@@ -229,6 +229,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       </template>
       <template v-else-if="props.selected === 'script'">
         <span class="page">{{ pageLabel(page) }}</span>
+        <ChangesToggle />
         <span v-if="updating" class="updating">Updating…</span>
         <span class="spacer" />
         <div role="group" aria-label="Zoom" class="zoom">

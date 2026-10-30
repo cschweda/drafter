@@ -13,14 +13,17 @@ import { gapName } from './labels';
 /** How far in from the page's right edge the asterisk stands, in columns. */
 const STAR_COLUMN_FROM_RIGHT = 5;
 
-const spanKey = (from: number | string, to: number | string) => `${from}:${to}`;
+/** A printed line's key by its span, as `data-from` and `data-to` hold it. */
+export const spanKey = (from: number | string, to: number | string) => `${from}:${to}`;
 
 /** The row a line of the page stands on (its `--row`, margin included). */
-const rowOf = (el: HTMLElement) => Number(el.style.getPropertyValue('--row')) || 0;
+export const rowOf = (el: HTMLElement) => Number(el.style.getPropertyValue('--row')) || 0;
 
 /** The first child of `parent` that is the page's own, not a gap put in before it. */
 function firstOwnChild(parent: Element): Element | null {
-  for (const child of parent.children) if (!child.classList.contains('compare-gap')) return child;
+  for (const child of parent.children)
+    if (!child.classList.contains('compare-gap') && !child.classList.contains('live-gap'))
+      return child;
   return null;
 }
 
@@ -29,7 +32,7 @@ function firstOwnChild(parent: Element): Element | null {
  * that `line` begins, so it isn't read as part of a speech's or a heading's first line; and never
  * inside a heading.
  */
-function placeBefore(page: HTMLElement, line: HTMLElement): Element {
+export function placeBefore(page: HTMLElement, line: HTMLElement): Element {
   let node: Element = line;
   while (
     node.parentElement &&

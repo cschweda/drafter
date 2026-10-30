@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { commandById } from '~/commands/registry';
+import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import { useEditor } from '~/editor/session';
 import { outlineNotice, sayOutline } from '~/outline/notice';
@@ -217,6 +219,30 @@ function startCompare(a: Version, b: Version) {
   comparing.open(a, b);
 }
 
+// Show changes since this (version-history design §4.1): the Script pane, marked against the row.
+const showChanges = useShowChanges();
+
+/** What the baseline menu calls a snapshot with no label: its time, with its day if not today. */
+function sinceLabel(row: HistoryRow): string {
+  if (row.label) return row.label;
+  const at = new Date(row.createdAt);
+  if (at.toDateString() === new Date().toDateString()) return snapshotTime(row.createdAt);
+  return `${at.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${snapshotTime(row.createdAt)}`;
+}
+
+async function showChangesSince(row: HistoryRow) {
+  if (!row.readable) return tell(UNREADABLE);
+  if (showChanges.why.value) return tell(showChanges.why.value);
+  if ((await snapshotText(row.id)) === null) {
+    tell((await snapshotNow(row.id)) ? UNREADABLE : GONE);
+    return;
+  }
+  keepFocus = true;
+  close();
+  showChanges.since({ kind: 'snapshot', id: row.id, label: sinceLabel(row) });
+  void commandById('show-script')?.run();
+}
+
 async function compareNow(row: HistoryRow) {
   if (!row.readable) return tell(UNREADABLE);
   const version = await versionOf(row);
@@ -371,6 +397,8 @@ async function confirmDelete() {
     else {
       await deleteSnapshot(was.id);
       tell(`Deleted the snapshot from ${when}.`);
+      // Show changes since this snapshot falls back to the last save, and says so.
+      showChanges.check();
     }
   } catch {
     tell(UNCHANGED);
@@ -477,6 +505,15 @@ function menuItems(row: HistoryRow): DropdownMenuItem[][] {
         icon: 'i-lucide-git-compare-arrows',
         onSelect: later(() => void compareWith(row)),
       },
+      ...(editor.kind.value === 'fountain'
+        ? [
+            {
+              label: 'Show changes since this',
+              icon: 'i-lucide-diff',
+              onSelect: later(() => void showChangesSince(row)),
+            },
+          ]
+        : []),
     ]);
     groups.push([
       {
