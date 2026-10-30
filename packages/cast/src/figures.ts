@@ -22,8 +22,8 @@ export interface Character {
 
 export interface CharacterFigures {
   character: Character;
-  /** The scenes they are in, in order, speaking or silent. */
-  scenes: Presence[];
+  /** The scenes they are in, in order, speaking or silent: the very (frozen) array in `Cast.byScene`. */
+  scenes: readonly Presence[];
   /** The scenes they speak in. */
   speaksIn: number;
   /** Every cue of theirs, before the first scene and in sections' own stretches too. */
@@ -61,11 +61,23 @@ export interface LocationFigures {
   people: Array<{ key: string; scenes: number; speaksIn: number }>;
 }
 
+/** One character in one scene: `row` is their place in `Cast.characters`. */
+export interface InScene {
+  row: number;
+  presence: Presence;
+}
+
+/**
+ * The cast. Its lists of presences are frozen, and shared: a character's `figures.scenes` is their
+ * `byScene` row, and `inScene` holds the same `Presence` objects, so a view never copies them.
+ */
 export interface Cast {
   /** In the Characters table's order: most speeches first, then most words, then first to speak. */
   characters: Character[];
   /** Per character (as `characters`), the scenes they are in, by scene index. */
-  byScene: Presence[][];
+  byScene: ReadonlyArray<readonly Presence[]>;
+  /** Per scene, the characters in it, in the order of `characters`. */
+  inScene: ReadonlyArray<readonly InScene[]>;
   /** Per scene. */
   places: Place[];
   figures: Map<string, CharacterFigures>;
@@ -127,7 +139,7 @@ export function castOf(
   // Who is in each scene.
   const byScene: Presence[][] = characters.map(() => []);
   /** Per scene, the characters in it, in row order. */
-  const present: Array<Array<{ row: number; presence: Presence }>> = [];
+  const present: InScene[][] = [];
   const blocks = sceneBlocks(index, doc);
   index.scenes.forEach((scene, s) => {
     const cells = new Map<number, Presence>();
@@ -149,10 +161,11 @@ export function castOf(
     }
     const here = [...cells]
       .sort(([a], [b]) => a - b)
-      .map(([r, presence]) => ({ row: r, presence }));
+      .map(([r, presence]) => Object.freeze({ row: r, presence: Object.freeze(presence) }));
     for (const { row: r, presence } of here) byScene[r]?.push(presence);
-    present.push(here);
+    present.push(Object.freeze(here) as InScene[]);
   });
+  for (const scenes of byScene) Object.freeze(scenes);
 
   const places = index.scenes.map((scene) => placeOf(scene, doc, template));
   const strip = structureStrip(index, perPage);
@@ -174,7 +187,7 @@ export function castOf(
   const firstIn = new Map<number, string[]>();
   characters.forEach((character, r) => {
     const tally = sorted[r] as Tally;
-    const scenes = byScene[r] as Presence[];
+    const scenes = byScene[r] as readonly Presence[];
     const first = scenes[0]?.scene ?? null;
     if (first !== null) {
       const list = firstIn.get(first) ?? [];
@@ -218,7 +231,8 @@ export function castOf(
 
   return {
     characters,
-    byScene,
+    byScene: Object.freeze(byScene),
+    inScene: Object.freeze(present),
     places,
     figures,
     locations: locationFigures(places, present, characters, paged ? eighthsOf : null),
@@ -229,7 +243,7 @@ export function castOf(
 /** Each location's scenes, length, inside and outside split, times, and people. */
 function locationFigures(
   places: readonly Place[],
-  present: ReadonlyArray<ReadonlyArray<{ row: number; presence: Presence }>>,
+  present: ReadonlyArray<readonly InScene[]>,
   characters: readonly Character[],
   eighthsOf: ((scene: number) => number) | null,
 ): Map<string, LocationFigures> {

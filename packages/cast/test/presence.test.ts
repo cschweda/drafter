@@ -96,6 +96,43 @@ describe('presence', () => {
     expect(cast.characters.find((c) => c.key === 'WILL')?.order).toBe(0);
   });
 
+  test('a voice-over or off-screen cue inside a scene is present and speaking', () => {
+    const attic = build(
+      'INT. ATTIC - NIGHT\n\nDust on every box.\n\nMARA (V.O.)\nI kept all of it.\n\nODELL (O.S.)\nMara?\n\nEXT. LANE - NIGHT\n\nODELL\nGone.\n',
+    ).cast;
+    expect(attic.characters.map((c) => c.key)).toEqual(['ODELL', 'MARA']);
+    expect(attic.inScene[0]?.map(({ row, presence }) => [row, presence])).toEqual([
+      [0, { scene: 0, speaking: true, speeches: 1, words: 1, firstMention: null }],
+      [1, { scene: 0, speaking: true, speeches: 1, words: 5, firstMention: null }],
+    ]);
+    expect(scenesOf(attic, 'ODELL')).toEqual([1, 2]);
+  });
+
+  test('inScene lists who is in each scene, in the rows order', () => {
+    expect(cast.inScene).toHaveLength(14);
+    const keys = (scene: number) =>
+      cast.inScene[scene - 1]?.map(({ row }) => cast.characters[row]?.key);
+    expect(keys(1)).toEqual(['HOPE', 'WILL']);
+    expect(keys(2)).toEqual(['ANN', 'TOM']);
+    // The same cells as byScene: one object per character and scene.
+    for (const here of cast.inScene) {
+      for (const { row, presence } of here) {
+        expect(cast.byScene[row]).toContain(presence);
+      }
+    }
+  });
+
+  test('the shared lists are frozen', () => {
+    const r = cast.characters.findIndex((c) => c.key === 'TOM');
+    // A character's scenes in figures are the very array in byScene.
+    expect(cast.figures.get('TOM')?.scenes).toBe(cast.byScene[r]);
+    expect(Object.isFrozen(cast.byScene)).toBe(true);
+    expect(Object.isFrozen(cast.byScene[r])).toBe(true);
+    expect(Object.isFrozen(cast.byScene[r]?.[0])).toBe(true);
+    expect(Object.isFrozen(cast.inScene)).toBe(true);
+    expect(Object.isFrozen(cast.inScene[1])).toBe(true);
+  });
+
   test('undefined from isWord reads as a word', () => {
     const strict = build(HARBOR, { isWord: notKnown }).cast;
     expect(scenesOf(strict, 'TOM')).toEqual([2, 4, 11]);

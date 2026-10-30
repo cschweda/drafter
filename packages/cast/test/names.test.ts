@@ -1,6 +1,24 @@
 import { describe, expect, test } from 'vitest';
 import { matchNames, nameMap, spellings, tokens } from '../src/names';
 
+/** Invented words from a seeded generator (Marsaglia's xorshift). */
+function invented(seed: number) {
+  let state = seed;
+  const next = () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
+  };
+  const syllables = ['bra', 'tol', 'mev', 'ska', 'rin', 'dou', 'pel', 'vax', 'quo', 'ten', 'lir'];
+  const word = () => {
+    let w = '';
+    for (let i = 0; i < 3; i++) w += syllables[next() % syllables.length];
+    return w;
+  };
+  return { next, word };
+}
+
 describe('names', () => {
   test('capitals, capitalised, and as the cue spells it', () => {
     expect(spellings('McCLANE', false)).toEqual(['MCCLANE', 'Mcclane', 'McCLANE']);
@@ -40,9 +58,22 @@ describe('names', () => {
       { name: 'ANN', word: false },
       { name: 'ANN LEE', word: false },
       { name: 'DR. VOSS', word: false },
+      { name: 'ANN LEE ROSS', word: false },
     ]);
-    expect(map.get('ANN')?.map((s) => s.words.join(' '))).toEqual(['ANN LEE', 'ANN']);
-    expect(map.get('Ann')?.map((s) => s.character)).toEqual([1, 0]);
+    // By first word, then by second; a one-word name stands alone.
+    expect(map.get('ANN')?.alone.map((s) => s.character)).toEqual([0]);
+    expect(
+      map
+        .get('ANN')
+        ?.next.get('LEE')
+        ?.map((s) => s.words.join(' ')),
+    ).toEqual(['ANN LEE ROSS', 'ANN LEE']);
+    expect(
+      map
+        .get('Ann')
+        ?.next.get('Lee')
+        ?.map((s) => s.character),
+    ).toEqual([3, 1]);
     const found: Array<[number, number]> = [];
     const text = 'ANN LEE waves. ANN waves back. Ann Lee laughs. ANN. LEE. DR VOSS, DR. VOSS.';
     matchNames(text, map, (character, at) => found.push([character, at]));
@@ -53,5 +84,51 @@ describe('names', () => {
       [0, text.indexOf('ANN. LEE')],
       [2, text.lastIndexOf('DR. VOSS')],
     ]);
+    const three: number[] = [];
+    matchNames('ANN LEE ROSS sits. ANN LEE stands.', map, (character) => three.push(character));
+    expect(three).toEqual([3, 1]);
+  });
+
+  test('a first word many names share stays cheap', () => {
+    // A thousand invented names that all start THE, against 200 KB of action full of The and THE:
+    // each The tries only the names whose second word follows it, so a thousand cost about one.
+    const { next, word } = invented(11);
+    const named = Array.from({ length: 1000 }, (_, i) => ({
+      name: `THE ${word().toUpperCase()}${i}`,
+      word: false,
+    }));
+    let text = '';
+    while (text.length < 200_000) {
+      text += `The ${word()} ${word()} sees THE ${word().toUpperCase()} by the ${word()}. `;
+    }
+    const target = (named[next() % named.length] as { name: string }).name;
+    text += `${target} waves.`;
+    const many = nameMap(named);
+    const one = nameMap(named.slice(0, 1));
+    const time = (map: ReturnType<typeof nameMap>) => {
+      const start = performance.now();
+      matchNames(text, map, () => {});
+      return performance.now() - start;
+    };
+    time(many);
+    time(one);
+    let fast = Number.POSITIVE_INFINITY;
+    let slow = Number.POSITIVE_INFINITY;
+    for (let k = 0; k < 7; k++) {
+      fast = Math.min(fast, time(one));
+      slow = Math.min(slow, time(many));
+    }
+    const found: number[] = [];
+    matchNames(text, many, (character) => found.push(character));
+    expect(found).toEqual([named.findIndex((n) => n.name === target)]);
+    // Load slows both alike; a scan that tried every THE name would be several times slower.
+    expect(slow / Math.max(fast, 0.1)).toBeLessThan(3);
+    // A hang guard at ten times castOf's 15 ms budget.
+    expect(slow).toBeLessThan(150);
+    if (process.env.DRAFTER_TIMING) {
+      console.log(
+        `matchNames, 1,000 THE names, ${text.length} characters, best of 7: ${slow.toFixed(2)} ms (one name: ${fast.toFixed(2)} ms)`,
+      );
+    }
   });
 });

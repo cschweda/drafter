@@ -7,6 +7,11 @@ import type { Presence } from './presence';
 /** A gap this many pages long or longer is a long absence. */
 export const LONG_ABSENCE_PAGES = 20;
 
+/**
+ * A gap between two of a character's scenes. `pages` is the fractional gap on the strip's axis,
+ * and it alone decides whether the gap is long; a view prints `to.page − from.page`, the whole
+ * pages, so a gap of 19.9 pages prints as 19 and one of 20.0 as 20.
+ */
 export interface Absence {
   /** The scene they leave, and the page the gap starts on. */
   from: { scene: number; page: number };

@@ -99,8 +99,18 @@ export interface Spelling extends Phrase {
   character: number;
 }
 
-/** Each spelling by its first word, the longest names first. */
-export type NameMap = Map<string, Spelling[]>;
+/**
+ * The spellings that start with one word: the one-word names, and the longer ones by their second
+ * word, longest first. A word many names start with (`THE`) costs one lookup of the next word,
+ * not a try of every name.
+ */
+export interface NameStart {
+  alone: Spelling[];
+  next: Map<string, Spelling[]>;
+}
+
+/** Each spelling by its first word, then by its second. */
+export type NameMap = Map<string, NameStart>;
 
 /** The map of every spelling of `names` by first word; `word` says the name is an ordinary word. */
 export function nameMap(names: ReadonlyArray<{ name: string; word: boolean }>): NameMap {
@@ -108,23 +118,35 @@ export function nameMap(names: ReadonlyArray<{ name: string; word: boolean }>): 
   names.forEach(({ name, word }, character) => {
     for (const phrase of phrases(name, word)) {
       const first = phrase.words[0] as string;
-      let list = map.get(first);
+      let start = map.get(first);
+      if (!start) {
+        start = { alone: [], next: new Map() };
+        map.set(first, start);
+      }
+      const second = phrase.words[1];
+      if (second === undefined) {
+        start.alone.push({ ...phrase, character });
+        continue;
+      }
+      let list = start.next.get(second);
       if (!list) {
         list = [];
-        map.set(first, list);
+        start.next.set(second, list);
       }
       list.push({ ...phrase, character });
     }
   });
   // Stable, so names of one length keep the order they came in.
-  for (const list of map.values()) list.sort((a, b) => b.words.length - a.words.length);
+  for (const start of map.values()) {
+    for (const list of start.next.values()) list.sort((a, b) => b.words.length - a.words.length);
+  }
   return map;
 }
 
 /**
  * Calls `found` with the character and the offset in `text` of every name in it, in order. One
- * pass over the words: at each, the names starting with it are tried longest first, and a match
- * goes on past its last word, so ANN LEE is never also ANN.
+ * pass over the words: at each, the names starting with it and the word after are tried longest
+ * first, then the one-word names; a match goes on past its last word, so ANN LEE is never also ANN.
  */
 export function matchNames(
   text: string,
@@ -136,15 +158,15 @@ export function matchNames(
   let i = 0;
   while (i < words.length) {
     const here = words[i] as Token;
-    const list = map.get(here.word);
+    const start = map.get(here.word);
     let length = 0;
-    if (list) {
-      for (const spelling of list) {
-        if (fits(words, i, spelling)) {
-          found(spelling.character, here.at);
-          length = spelling.words.length;
-          break;
-        }
+    if (start) {
+      const after = words[i + 1];
+      const longer = after ? start.next.get(after.word) : undefined;
+      const match = longer?.find((s) => fits(words, i, s)) ?? start.alone[0];
+      if (match) {
+        found(match.character, here.at);
+        length = match.words.length;
       }
     }
     i += Math.max(1, length);

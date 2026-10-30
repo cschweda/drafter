@@ -3,7 +3,7 @@ import { gridModel } from '../src';
 import { build, filler, HARBOR } from './scripts';
 
 describe('the grid', () => {
-  const { cast, index } = build(HARBOR);
+  const { cast, index, doc } = build(HARBOR);
   const grid = gridModel(cast, index);
   const row = (key: string) => grid.rows.indexOf(key);
 
@@ -14,10 +14,18 @@ describe('the grid', () => {
   });
 
   test('a silent cell', () => {
-    expect(grid.cell(row('TOM'), 1)).toEqual({ speeches: 0, silent: true });
-    expect(grid.cell(row('TOM'), 3)).toEqual({ speeches: 1, silent: false });
+    expect(grid.cell(row('TOM'), 1)).toEqual({
+      speeches: 0,
+      silent: true,
+      firstMention: doc.source.indexOf('TOM on the desk'),
+    });
+    expect(grid.cell(row('TOM'), 3)).toEqual({
+      speeches: 1,
+      silent: false,
+      firstMention: doc.source.indexOf('Tom waits'),
+    });
     expect(grid.cell(row('TOM'), 0)).toBeNull();
-    expect(grid.cell(row('HOPE'), 0)).toEqual({ speeches: 1, silent: false });
+    expect(grid.cell(row('HOPE'), 0)).toEqual({ speeches: 1, silent: false, firstMention: null });
     // Outside the grid.
     expect(grid.cell(-1, 0)).toBeNull();
     expect(grid.cell(0, 14)).toBeNull();

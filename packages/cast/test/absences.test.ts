@@ -1,6 +1,6 @@
-import { structureStrip } from '@drafter/outline';
+import { type Scene, type StripBlock, structureStrip } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { LONG_ABSENCE_PAGES } from '../src';
+import { absencesOf, LONG_ABSENCE_PAGES, type Presence } from '../src';
 import { build, filler } from './scripts';
 
 /** A script of scenes, each a page of filler unless given its own body. */
@@ -59,5 +59,35 @@ describe('absences', () => {
     expect(figures?.longest?.to.page).toBe(index.scenes[5]?.pages?.page);
     // Back to back is no absence at all.
     expect(cast.figures.get('ANN')?.longest).toBeNull();
+  });
+
+  test('19.9 pages is not long; 20.0 is', () => {
+    const at = (scene: number): Presence => ({
+      scene,
+      speaking: true,
+      speeches: 1,
+      words: 1,
+      firstMention: null,
+    });
+    const span = (from: number, to: number): StripBlock => ({
+      kind: 'scene',
+      block: 0,
+      from,
+      to,
+      label: '',
+      color: null,
+    });
+    const gap = (back: number) =>
+      absencesOf([at(0), at(1)], [span(0, 1), span(back, back + 1)], [] as Scene[]);
+    const short = gap(20.9);
+    expect(short.long).toEqual([]);
+    expect(short.longest?.pages).toBeCloseTo(19.9, 9);
+    const long = gap(21);
+    expect(long.long).toHaveLength(1);
+    expect(long.long[0]?.pages).toBe(20);
+    // What a view prints, to.page − from.page: 19 pages for the short gap and 20 for the long.
+    const printed = (a: ReturnType<typeof gap>['longest']) => (a ? a.to.page - a.from.page : null);
+    expect(printed(short.longest)).toBe(19);
+    expect(printed(long.longest)).toBe(20);
   });
 });
