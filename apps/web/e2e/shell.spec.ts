@@ -142,13 +142,13 @@ test.describe('on a desktop', () => {
       const focused = await page.evaluate(() => {
         const el = document.activeElement as HTMLElement | null;
         if (!el || el === document.body) return null;
-        // The focus ring is an outline. (A box-shadow doesn't count: the
-        // selected tab's underline is one, focused or not.) The editor's
-        // text is ringed through the whole editor, gutters included; other
+        // The focus ring is a 2 px outline. (A box-shadow doesn't count: the
+        // selected tab's underline is one, focused or not.) The editor's text
+        // has no ring (design §8): the caret shows where focus is. Other
         // controls inside the editor, such as the search panel's, ring themselves.
-        const ringedElement = el.closest('.cm-content') ? el.closest('.cm-editor') : null;
-        const style = getComputedStyle(ringedElement ?? el);
-        const ringed = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
+        if (el.closest('.cm-content')) return null;
+        const style = getComputedStyle(el);
+        const ringed = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 2;
         return {
           name: `${el.tagName.toLowerCase()} ${el.getAttribute('aria-label') ?? el.textContent?.trim().slice(0, 24)}`,
           ringed,
@@ -160,6 +160,44 @@ test.describe('on a desktop', () => {
     }
     expect(seen.size).toBeGreaterThan(8);
     expect(unringed).toEqual([]);
+  });
+
+  test('rings no element the app focuses for a screen reader, and not the editor', async ({
+    page,
+  }) => {
+    // Design §8 (Call 11): a heading focused by script, so a screen reader reads it, needs no ring,
+    // and the editor shows its focus with the caret, not a box around the whole pane.
+    const outline = (el: Element) => getComputedStyle(el).outlineStyle;
+    await page.evaluate(() => {
+      const heading = document.createElement('h2');
+      heading.id = 'focus-probe';
+      heading.tabIndex = -1;
+      heading.textContent = 'Characters';
+      document.querySelector('main')?.append(heading);
+      heading.focus({ focusVisible: true } as FocusOptions);
+    });
+    const heading = page.locator('#focus-probe');
+    await expect(heading).toBeFocused();
+    expect(await heading.evaluate(outline)).toBe('none');
+
+    await page.locator('.cm-content').first().click();
+    await expect(page.locator('.cm-editor.cm-focused').first()).toBeVisible();
+    expect(await page.locator('.cm-editor').first().evaluate(outline)).toBe('none');
+    expect(await page.locator('.cm-content').first().evaluate(outline)).toBe('none');
+    // The caret (CodeMirror draws its own) is in the focus color, so where focus is shows.
+    const caret = await page
+      .locator('.cm-cursor-primary')
+      .first()
+      .evaluate((el) => getComputedStyle(el).borderLeftColor);
+    const focus = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--focus)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    expect(caret).toBe(focus);
   });
 });
 

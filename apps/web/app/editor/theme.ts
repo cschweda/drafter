@@ -15,13 +15,15 @@ export const theme = EditorView.theme({
     // The text size setting scales the Source pane through --text-scale (settings/apply.ts).
     fontSize: 'calc(13.5px * var(--text-scale, 1))',
   },
-  // The focus ring goes around the whole editor, gutters too, inside the pane's edge.
-  // `:focus-within` is there because CodeMirror adds `cm-focused` a moment after focus lands.
-  '&.cm-focused, &:focus-within': { outline: '2px solid var(--heading)', outlineOffset: '-2px' },
+  // No box around the editor (fresh-look design §8, Call 11): the caret shows where focus is, a
+  // 2 px bar in the focus color. (CodeMirror's own theme draws a dotted outline, and the global
+  // ring would draw one around the text; both go.)
+  '&.cm-focused': { outline: 'none' },
+  '.cm-content:focus-visible': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
-  '.cm-content': { padding: '12px 0', caretColor: 'var(--text)' },
+  '.cm-content': { padding: '12px 0', caretColor: 'var(--focus)' },
   '.cm-line': { padding: '0 16px 0 8px' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--text)' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--focus)', borderLeftWidth: '2px' },
   '.cm-selectionBackground': { background: 'color-mix(in srgb, var(--cue) 18%, transparent)' },
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
     background: 'color-mix(in srgb, var(--cue) 30%, transparent)',
@@ -40,11 +42,11 @@ export const theme = EditorView.theme({
   '.cm-f-note': { color: 'var(--note)', fontStyle: 'italic' },
   '.cm-f-section, .cm-f-title-key': { color: 'var(--title)' },
   '.cm-f-parenthetical, .cm-f-synopsis': { color: 'var(--paren)', fontStyle: 'italic' },
-  '.cm-f-boneyard': { color: 'var(--faint)' },
+  '.cm-f-boneyard': { color: 'var(--muted)' },
   '.cm-f-b': { fontWeight: '700' },
   '.cm-f-i': { fontStyle: 'italic' },
   '.cm-f-u': { textDecoration: 'underline' },
-  '.cm-f-marker': { color: 'var(--faint)' },
+  '.cm-f-marker': { color: 'var(--muted)' },
 
   // The highlighting classes of the Markdown mode (markdown/editor.ts).
   '.cm-md-heading': { color: 'var(--heading)', fontWeight: '700' },
@@ -52,9 +54,9 @@ export const theme = EditorView.theme({
   '.cm-md-i': { fontStyle: 'italic' },
   '.cm-md-code': { color: 'var(--cue)' },
   '.cm-md-quote': { color: 'var(--paren)', fontStyle: 'italic' },
-  '.cm-md-marker': { color: 'var(--faint)' },
+  '.cm-md-marker': { color: 'var(--muted)' },
   '.cm-md-link': { color: 'var(--title)' },
-  '.cm-md-url': { color: 'var(--faint)' },
+  '.cm-md-url': { color: 'var(--muted)' },
   '.cm-md-footnote': { color: 'var(--paren)' },
   '.cm-md-html': { color: 'var(--note)' },
 

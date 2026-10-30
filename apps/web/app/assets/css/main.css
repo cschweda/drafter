@@ -22,10 +22,52 @@ dialog:modal {
   margin: auto;
 }
 
-/* One focus ring for every control, in the brand's goldenrod. */
+/* One focus ring for every control, in the brand's goldenrod (design §8, Call 11). */
 :focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* What the app focuses so a screen reader reads it (a heading, a message, a dialog) isn't a
+   control, and gets no ring. A control with tabindex="-1" (a roving tab stop that isn't the stop
+   right now, a cell, a tab) keeps its ring. The editor shows its focus with the caret
+   (editor/theme.ts). */
+[tabindex="-1"]:not(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="gridcell"],
+  [role="row"],
+  [role="option"],
+  [role="menuitem"],
+  [role="treeitem"]
+):focus {
+  outline: none;
+}
+
+/* The one motion (design §2): a menu, a popover, or a dialog fades in as it rises 4 px. None with
+   reduced motion. */
+@keyframes motion-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.motion {
+  animation: motion-in var(--dur) var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion {
+    animation: none;
+  }
 }
 
 /* A misspelled word in the Source pane (Plan D, Call 17): a dotted 2 px underline in --spelling,

@@ -281,7 +281,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   height: 6px;
   min-width: 8rem;
   overflow: hidden;
-  border: 1px solid var(--faint);
+  border: 1px solid var(--muted);
   border-radius: 4px;
   background: var(--chrome);
 }

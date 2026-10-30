@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { contrast } from '../app/compare/colors';
 import { CHART_TOKENS } from '../app/stats/chart-colors';
+import { themeTokens } from './css-tokens';
 
 // The grid's shades (seeing-the-script design §8.2): each at least 3:1 against the page it is
 // drawn on (a graphic), with the grid's text at least 4.5:1 on every one, in both themes.
@@ -25,8 +26,9 @@ function block(selector: string): Record<string, string> {
 }
 const THEMES = ['light', 'dark'] as const;
 const SHADES = ['--grid-shade-1', '--grid-shade-2', '--grid-shade-3', '--grid-shade-4'];
-/** The Stats tab is drawn on the pane's background. */
-const page = { light: block('.light')['--bg'] as string, dark: block('.dark')['--bg'] as string };
+/** The Stats tab is drawn on the pane's background, or on the surface beside it (fresh look). */
+const pages = { light: themeTokens('light'), dark: themeTokens('dark') };
+const SURFACES = ['--bg', '--surface'];
 
 describe('the grid’s colors', () => {
   test.each(THEMES)('grid text on every shade is at least 4.5:1 (%s)', (theme) => {
@@ -37,7 +39,11 @@ describe('the grid’s colors', () => {
 
   test.each(THEMES)('each shade is at least 3:1 against the page (%s)', (theme) => {
     const t = CHART_TOKENS[theme];
-    const short = SHADES.filter((s) => contrast(t[s] as string, page[theme]) < 3);
+    const short = SURFACES.flatMap((bg) =>
+      SHADES.filter((s) => contrast(t[s] as string, pages[theme][bg] as string) < 3).map(
+        (s) => `${s} on ${bg}`,
+      ),
+    );
     expect(short).toEqual([]);
   });
 

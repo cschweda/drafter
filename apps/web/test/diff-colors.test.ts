@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { contrast, DIFF_COLORS, DIFF_TOKENS } from '../app/compare/colors';
+import { themeTokens } from './css-tokens';
 
 // The colors of Compare's Changes view (version-history design §7): two palettes, each with a
 // value for both themes, drawn on the page's own colors. Every pair that is read is checked here.
@@ -28,8 +29,8 @@ function block(selector: string): Record<string, string> {
 }
 
 const THEMES = ['light', 'dark'] as const;
-/** The page the view is drawn on, and its text, in each theme. */
-const page = { light: block('.light'), dark: block('.dark') };
+/** The page the view is drawn on, and its text, in each theme, with aliases followed. */
+const page = { light: themeTokens('light'), dark: themeTokens('dark') };
 
 const cases = DIFF_COLORS.flatMap((palette) => THEMES.map((theme) => [palette, theme] as const));
 

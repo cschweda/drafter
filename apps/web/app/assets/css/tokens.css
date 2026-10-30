@@ -1,26 +1,69 @@
-/* Drafter's design tokens: the colors of the approved mockup, with the
-   faint tones and the light theme's goldenrod darkened to pass WCAG
-   contrast. test/tokens.test.ts checks every text color against the
-   backgrounds it's used on. The dark theme is also the default, before
-   color mode sets a class. */
+/* Drafter's design tokens (fresh-look design §2): one calm, near-monochrome set, with goldenrod
+   the single accent. test/tokens.test.ts checks every text color against the surfaces it sits on,
+   in both themes. The dark theme is also the default, before color mode sets a class.
+
+   --faint is for disabled and decorative text only (Call 1); anything a reader must read is --text
+   or --muted. In the light theme --accent is a fill (a bar, a primary button), and text in the
+   accent color is --accent-text (Call 2). */
 :root,
 .dark {
   --bg: #0f1013;
-  --chrome: #15171c;
-  --chrome-2: #1a1d23;
-  --line: #262a31;
-  --text: #e6e8ec;
-  --muted: #8c93a1;
-  --faint: #7a8191;
-  --gutter: #7a8191;
-  --tab-on: #23272f;
+  --surface: #15171b;
+  --raised: #1c1f24;
+  --overlay: #23262c;
+  --border: #262a31;
+  --text: #e7e9ed;
+  --muted: #9aa1ad;
+  --faint: #6f7684;
+  --accent: #e5b04a;
+  --accent-soft: rgb(229 176 74 / 0.14);
+  --on-accent: #111216;
+  --accent-text: #e5b04a;
+  --focus: #f2cb7a;
   --desk: #0b0c0f;
+  --paper: #e8e4da;
+  --paper-ink: #1c1c1c;
+}
+
+.light {
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --raised: #f0efeb;
+  --overlay: #e9e7e2;
+  --border: #e3e1dc;
+  --text: #1b1c20;
+  --muted: #5d6372;
+  --faint: #8a909b;
+  --accent: #e5b04a;
+  --accent-soft: rgb(229 176 74 / 0.2);
+  --on-accent: #111216;
+  --accent-text: #7a5200;
+  --focus: #a06a00;
+  --desk: #e9e7e2;
+  --paper: #ffffff;
+  --paper-ink: #1c1c1c;
+}
+
+/* The same in both themes: the radii, and the one motion (design §8), which main.css's `.motion`
+   uses. These --radius-sm and --radius-lg are also Tailwind's, so its rounded-sm and rounded-lg
+   follow them. */
+:root {
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --dur: 140ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The script's own colors in the Source pane, and today's page. The syntax colors keep their hues
+   (design §2), measured on the new surfaces. --page, --ink, and --ink-muted are the page as it is
+   drawn today, which becomes the Page colour setting's Dark when the paper arrives (plan, Task 5). */
+:root,
+.dark {
   --page: #1b1e25;
   --ink: #e8eaee;
   --ink-muted: #9aa1ae;
-  --heading: #e5b04a;
   --cue: #8db8e8;
-  --paren: #8c93a1;
   --trans: #f5a9c0;
   --note: #9bd3a0;
   --title: #f49c84;
@@ -28,26 +71,53 @@
 }
 
 .light {
-  --bg: #f4f4f2;
-  --chrome: #ffffff;
-  --chrome-2: #f7f7f5;
-  --line: #e2e4e8;
-  --text: #1c1d21;
-  --muted: #5f6575;
-  --faint: #656b7a;
-  --gutter: #656b7a;
-  --tab-on: #ecedef;
-  --desk: #e9e9e6;
   --page: #ffffff;
   --ink: #1c1c1c;
   --ink-muted: #5c6270;
-  --heading: #8a5a00;
   --cue: #2f6db5;
-  --paren: #5f6575;
   --trans: #b23a68;
   --note: #2e7d4f;
   --title: #b5502f;
   --spelling: #c62828;
+}
+
+/* Today's names, as aliases of the new ones, until every component has moved over (plan, Task 10,
+   removes them). Line numbers and parentheticals are read, so they are --muted, not --faint. On
+   each theme's selector too, so an alias follows its theme wherever the class is. */
+:root,
+.dark,
+.light {
+  --chrome: var(--surface);
+  --chrome-2: var(--raised);
+  --line: var(--border);
+  --tab-on: var(--overlay);
+  --heading: var(--accent-text);
+  --gutter: var(--muted);
+  --paren: var(--muted);
+}
+
+/* Nuxt UI's colors (its menus, the command palette, tooltips) are the tokens. Its own are in a
+   cascade layer, so these, outside any, win in both themes. Its dimmed text is read (a menu item's
+   description, a placeholder), so it is --muted too. */
+:root,
+.dark,
+.light {
+  --ui-primary: var(--accent-text);
+  --ui-text-dimmed: var(--muted);
+  --ui-text-muted: var(--muted);
+  --ui-text-toned: var(--text);
+  --ui-text: var(--text);
+  --ui-text-highlighted: var(--text);
+  --ui-text-inverted: var(--bg);
+  --ui-bg: var(--raised);
+  --ui-bg-muted: var(--surface);
+  --ui-bg-elevated: var(--overlay);
+  --ui-bg-accented: var(--border);
+  --ui-bg-inverted: var(--text);
+  --ui-border: var(--border);
+  --ui-border-muted: var(--border);
+  --ui-border-accented: var(--muted);
+  --ui-border-inverted: var(--text);
 }
 
 /* Compare's Changes view (version-history design §7): Red and green by default, Blue and orange
