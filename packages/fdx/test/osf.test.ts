@@ -206,8 +206,8 @@ describe('fromOsf: text and formatting', () => {
       osf(
         para('Action', [
           ['Struck', 'strikethrough="1"'],
-          [' big', 'font="Times New Roman" size="16"'],
-          [' lit', 'bgcolor="#FFFF00"'],
+          [' big', 'font="Drafter Serif" size="14"'],
+          [' lit', 'bgcolor="#C0FFEE"'],
           [' again', 'strikethrough="1"'],
         ]),
       ),

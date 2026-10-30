@@ -31,11 +31,13 @@ const WORDS: Record<ArchiveReason, string> = {
   'many-scripts': 'it holds more than one script.',
   'not-utf8': 'its script isn’t UTF-8 text.',
   'not-text': 'its script holds more than text.',
-  'not-osf': 'its document isn’t one Drafter can read.',
+  'not-osf': 'its script isn’t in a form Drafter reads.',
 };
 
+/** The reason in words, with the detail (Fade In's candidate names, or `fromOsf`'s reason) in brackets. */
 function words(reason: ArchiveReason, detail: string | undefined): string {
-  if (reason === 'not-osf' && detail) return `its document isn’t one Drafter can read (${detail}).`;
+  if ((reason === 'not-osf' || reason === 'many-scripts') && detail)
+    return `${WORDS[reason].replace(/\.$/, '')} (${detail}).`;
   return WORDS[reason];
 }
 

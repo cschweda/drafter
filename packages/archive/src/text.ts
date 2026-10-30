@@ -33,11 +33,16 @@ export function candidates(entries: readonly ZipEntry[], extension: RegExp): Zip
 /** How many folders deep an entry sits. */
 export const depth = (entry: ZipEntry): number => entry.name.split('/').length - 1;
 
-/** The one to read: the only candidate, else the only one at the shallowest depth; else throws `no-script` / `many-scripts`. */
-export function pickEntry(found: readonly ZipEntry[], format: ArchiveFormat): ZipEntry {
+/** The candidates at the shallowest depth, in archive order; throws `no-script` when there are none. */
+export function shallowest(found: readonly ZipEntry[], format: ArchiveFormat): ZipEntry[] {
   if (found.length === 0) throw new ArchiveError(format, 'no-script');
   const least = Math.min(...found.map(depth));
-  const shallowest = found.filter((e) => depth(e) === least);
-  if (shallowest.length > 1) throw new ArchiveError(format, 'many-scripts');
-  return shallowest[0] as ZipEntry;
+  return found.filter((e) => depth(e) === least);
+}
+
+/** The one to read: the only candidate, else the only one at the shallowest depth; else throws `no-script` / `many-scripts`. */
+export function pickEntry(found: readonly ZipEntry[], format: ArchiveFormat): ZipEntry {
+  const top = shallowest(found, format);
+  if (top.length > 1) throw new ArchiveError(format, 'many-scripts');
+  return top[0] as ZipEntry;
 }

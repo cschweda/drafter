@@ -69,14 +69,6 @@ describe('fromFadeIn', () => {
   it('refuses an archive with no document', async () => {
     expect(await reasonOf(makeZip([{ name: 'notes.txt', data: 'Hello.' }]))).toBe('no-script');
     expect(
-      await reasonOf(
-        makeZip([
-          { name: 'one.xml', data: DOCUMENT },
-          { name: 'two.xml', data: DOCUMENT },
-        ]),
-      ),
-    ).toBe('many-scripts');
-    expect(
       await reasonOf(makeZip([{ name: 'screenplay.xml', data: new Uint8Array([0xff, 0xfe]) }])),
     ).toBe('not-utf8');
     expect(await reasonOf(makeZip([{ name: 'screenplay.xml', data: `${DOCUMENT}\u0000` }]))).toBe(
@@ -94,11 +86,70 @@ describe('fromFadeIn', () => {
     expect(error.cause).toBeInstanceOf(OsfError);
     expect(error.detail).toBe('it has no document root holding paragraphs');
     expect(error.message).toBe(
-      'This isn’t a Fade In file Drafter can read: its document isn’t one Drafter can read (it has no document root holding paragraphs).',
+      'This isn’t a Fade In file Drafter can read: its script isn’t in a form Drafter reads (it has no document root holding paragraphs).',
+    );
+    const bare = new ArchiveError('Fade In', 'not-osf');
+    expect(bare.message).toBe(
+      'This isn’t a Fade In file Drafter can read: its script isn’t in a form Drafter reads.',
     );
     expect(await reasonOf(makeZip([{ name: 'screenplay.xml', data: '<document>' }]))).toBe(
       'not-osf',
     );
+  });
+
+  it('prefers the one top-level .xml whose root is an OSF document', async () => {
+    const result = await fromFadeIn(
+      makeZip([
+        { name: 'settings.xml', data: '<?xml version="1.0"?>\n<preferences zoom="2"/>' },
+        { name: 'screenplay.xml', data: DOCUMENT },
+        { name: 'layout.xml', data: '<!-- the tests’ own -->\n<layout/>' },
+        { name: 'deeper/other.xml', data: DOCUMENT },
+      ]),
+    );
+    expect(result.text).toBe(SCRIPT);
+    // A comment before the root doesn't hide it.
+    const commented = await fromFadeIn(
+      makeZip([
+        { name: 'a.xml', data: '<cards/>' },
+        { name: 'b.xml', data: DOCUMENT.replace('\n', '\n<!-- a note -->\n') },
+      ]),
+    );
+    expect(commented.text).toBe(SCRIPT);
+    // A sibling that can't be unpacked isn't the document.
+    const packed = await fromFadeIn(
+      makeZip([
+        { name: 'cache.xml', data: '<cache/>', method: 12 },
+        { name: 'screenplay.xml', data: DOCUMENT },
+      ]),
+    );
+    expect(packed.text).toBe(SCRIPT);
+  });
+
+  it('refuses several top-level OSF documents, or none, naming the candidates', async () => {
+    const two = await refusal(
+      makeZip([
+        { name: 'one.xml', data: DOCUMENT },
+        { name: 'two.xml', data: DOCUMENT },
+      ]),
+    );
+    expect(two.reason).toBe('many-scripts');
+    expect(two.detail).toBe('one.xml, two.xml');
+    expect(two.message).toBe(
+      'This isn’t a Fade In file Drafter can read: it holds more than one script (one.xml, two.xml).',
+    );
+    const none = await refusal(
+      makeZip([
+        { name: 'a.xml', data: '<cards/>' },
+        { name: 'b.xml', data: '<layout/>' },
+        { name: 'c.xml', data: '<more/>' },
+        { name: 'd.xml', data: '<more/>' },
+        { name: 'e.xml', data: '<more/>' },
+        { name: 'f.xml', data: '<more/>' },
+        { name: 'g.xml', data: '<more/>' },
+      ]),
+    );
+    expect(none.reason).toBe('many-scripts');
+    expect(none.detail).toBe('a.xml, b.xml, c.xml, d.xml, e.xml, and 2 more');
   });
 
   it('refuses a Highland archive', async () => {

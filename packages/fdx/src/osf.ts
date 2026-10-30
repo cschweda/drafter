@@ -1,8 +1,8 @@
-// Open Screenplay Format import (Imports, Call 1): Fade In's document format, read from its
-// published example document (OSF 4.0, with 2.0's names too; docs/DECISIONS.md, Imports and
-// Markdown out). An OSF document is turned into the tree the Final Draft importer already reads,
-// so every rule that importer proved (forced markers, escaping, speeches, the title page by order,
-// notes kept whole, the `ignored` cap, linear time) holds for OSF unchanged.
+// Open Screenplay Format import (Imports, Call 1): Fade In's document format, read in the shape
+// its spec describes (OSF 4.0, with 2.0's names too; docs/DECISIONS.md, Imports and Markdown
+// out). An OSF document is turned into the tree the Final Draft importer already reads, so every
+// rule that importer proved (forced markers, escaping, speeches, the title page by order, notes
+// kept whole, the `ignored` cap, linear time) holds for OSF unchanged.
 //
 // The adapter copies no attribute through (Call 7): it writes only the attributes it maps, so an
 // OSF file can't set one of Drafter's own marks. Every attribute it doesn't map is named once in
@@ -484,6 +484,9 @@ export function fromOsf(xml: string): FdxImport {
   const result = importTree(tree, SOURCE);
   // The adapter's names first, then any the importer added; the importer's beyond its first
   // `MAX_IGNORED` are counted, not named.
+  // The count can run a little over: a name the importer counted but didn't list may be one the
+  // adapter already named, and is then counted twice. That only happens past `MAX_IGNORED` names,
+  // by a few at most, where an exact count matters little.
   const names = new Set(ignored);
   for (const name of result.ignored) names.add(name);
   return {
