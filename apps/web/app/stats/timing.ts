@@ -1,4 +1,4 @@
-import { type ComputedRef, computed } from 'vue';
+import { type ComputedRef, computed, effectScope } from 'vue';
 import { useGuard } from '../storage/guard';
 import type { Project } from '../storage/projects';
 import { useScript } from '../storage/script';
@@ -53,14 +53,17 @@ let openRates: ComputedRef<Rates> | null = null;
  * doesn't make every time on screen work itself out again.
  */
 export function useRates(): ComputedRef<Rates> {
-  openRates ??= computed((previous?: Rates) => {
-    const next = ratesOf(useScript().project.value);
-    return previous &&
-      previous.minutesPerPage === next.minutesPerPage &&
-      previous.wordsPerMinute === next.wordsPerMinute
-      ? previous
-      : next;
-  });
+  // In a scope of its own, so it outlives whichever component asked first.
+  openRates ??= effectScope(true).run(() =>
+    computed((previous?: Rates) => {
+      const next = ratesOf(useScript().project.value);
+      return previous &&
+        previous.minutesPerPage === next.minutesPerPage &&
+        previous.wordsPerMinute === next.wordsPerMinute
+        ? previous
+        : next;
+    }),
+  ) as ComputedRef<Rates>;
   return openRates;
 }
 

@@ -57,12 +57,16 @@ function onClose() {
   opener = null;
 }
 
+// Bumped when a choice couldn't be kept, so the radios are drawn again from what is stored.
+const drawn = ref(0);
+
 async function choose<K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) {
   failed.value = false;
   try {
     await setExportOption(key, value);
   } catch {
     failed.value = true;
+    drawn.value++;
   }
 }
 </script>
@@ -80,7 +84,7 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
       How this script’s PDF and plain text print. The script itself doesn’t change.
     </p>
     <p v-if="why" class="why">{{ why }}</p>
-    <fieldset :disabled="!!why">
+    <fieldset :key="`scene-${drawn}`" :disabled="!!why">
       <legend>Scene numbers</legend>
       <div v-for="choice in SCENE_CHOICES" :key="choice" class="choice">
         <input
@@ -100,7 +104,7 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
         </div>
       </div>
     </fieldset>
-    <fieldset :disabled="!!why">
+    <fieldset :key="`title-${drawn}`" :disabled="!!why">
       <legend>Title page</legend>
       <div v-for="choice in TITLE_CHOICES" :key="choice" class="choice">
         <input

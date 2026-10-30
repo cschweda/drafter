@@ -627,7 +627,7 @@ The strip took v0.15.0, so Plans E to H each moved down one minor; their letters
 
 **Design:** [the Markdown PDF design](drafter-markdown-pdf-design.md), with its own plan in `docs/plans/2026-10-29-markdown-pdf.md`. **Export as PDF** for a Markdown document: headings, paragraphs, emphasis, lists, quotes, code, rules, and clickable `http`, `https`, and `mailto` links on numbered US Letter or A4 pages (a **Paper for Markdown PDFs** setting), in Inter Tight with Courier Prime for code, laid out by `@drafter/render-pdf`'s `src/document/` and drawn in the export worker, offline. A long export of any kind shows a progress bar and a percentage in its toast.
 
-The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E, so Plans E to H each moved down three minors; their letters stay.
+The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E, so Plans E to H each moved down three minors at that point, and one more when the imports took v0.19.0; their letters stay, and they are now v0.20.0 to v0.23.0.
 
 ### Getting a script out the door — v0.17.0
 

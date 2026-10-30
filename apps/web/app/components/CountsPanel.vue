@@ -12,8 +12,7 @@ import {
   useSprint,
 } from '~/stats/sprint';
 import { ESTIMATE_LABEL, pageRatePhrase } from '~/stats/time-format';
-import { ratesOf } from '~/stats/timing';
-import { useScript } from '~/storage/script';
+import { useRates } from '~/stats/timing';
 
 defineProps<{ id: string }>();
 const emit = defineEmits<{ close: []; stats: [] }>();
@@ -23,8 +22,7 @@ const { counts, known } = useCounts();
 const { goal, progress, canSet, locked, setGoal } = useGoal();
 
 const markdown = computed(() => kind.value === 'markdown');
-const { project } = useScript();
-const rates = computed(() => ratesOf(project.value));
+const rates = useRates();
 const root = ref<HTMLElement>();
 onMounted(() => root.value?.focus());
 
