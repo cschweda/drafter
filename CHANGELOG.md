@@ -16,8 +16,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [0.18.0] - 2026-10-30
 
-**Version history.** A Deleted scenes tab lists every scene that's in an earlier version but not in the script now, with Put back (one undo); Show changes marks additions and deletions on the live pages against the last save or a chosen version; Compare gains a GitHub-style Changes view (red and green, or blue and orange, with word-level highlights, folds, scenes, and side by side); and History of this scene shows every version of one scene, even through a renamed heading. Everything is read on your device, in the background.
-
 **Version history.** Drafter now remembers the scenes you cut and shows what you changed, the way a code review shows a diff. **Deleted scenes** lists every scene that was in one of your snapshots but isn't in the script now, and **Put back** puts one back where it was, in one undo. **Show changes** marks the pages with what you've changed since you last saved. Compare opens on a new **Changes** view: your text grouped by scene, + and − in red and green (or blue and orange), the changed words marked, side by side if you like; **Pages** keeps its asterisks. And **History of this scene** shows every version of one scene, with **Use this version** to go back to one. Nothing of it prints or changes your file.
 
 ### Added
