@@ -1,0 +1,39 @@
+{
+  "name": "@drafter/cast",
+  "version": "0.19.0",
+  "description": "Who is in each scene of a Drafter script, where each scene is, and each character's and each location's figures.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/cast"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "@drafter/outline": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/layout": "workspace:*"
+  }
+}

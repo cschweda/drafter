@@ -111,6 +111,11 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
   },
   {
+    name: '@drafter/cast',
+    does: 'Who is in each scene, speaking or silent, and where each scene is; each character’s screen time, dialogue share, long absences, and who they share scenes with; and the character-by-scene grid.',
+    uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
+  },
+  {
     name: '@drafter/render-pdf',
     does: 'PDFs: a script’s pages in Courier Prime, and a Markdown document in Inter Tight.',
     uses: ['@drafter/layout', '@drafter/templates'],

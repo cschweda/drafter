@@ -41,6 +41,7 @@ flowchart BT
   outline["@drafter/outline"]
   compare["@drafter/compare"]
   history["@drafter/history"]
+  cast["@drafter/cast"]
   render_pdf["@drafter/render-pdf"]
   render_html["@drafter/render-html"]
   render_text["@drafter/render-text"]
@@ -67,6 +68,7 @@ flowchart BT
   notes --> outline
   layout --> compare
   outline --> history
+  outline --> cast
   layout --> render_pdf
   layout --> render_html
   layout --> render_text

@@ -12,6 +12,7 @@ const packages = [
   'notes',
   'compare',
   'history',
+  'cast',
   'archive',
   'spell',
   'outline',
