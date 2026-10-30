@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **drafter.dev's title and description fit what search engines and link previews show.** The title is now "Drafter: Fountain-first screenplays, plays, and novels" (54 characters, under the 60 they cut at) and the description 159 characters (under 160), still Fountain first and still naming novels; a test keeps them within those limits.
 - **The desktop app's windows show Drafter's icon, not Electron's.** On Linux (the taskbar and the window switcher, above all for an AppImage that isn't installed) and in Windows' title bar, a window now carries Drafter's mark from the app's own files; an unpackaged run on a Mac shows it in the Dock too. A check on every build makes sure the package holds the icon.
 
 ## [0.21.0] - 2026-10-30
