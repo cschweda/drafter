@@ -159,6 +159,8 @@ export default defineNuxtConfig({
         // build, the desktop app) it takes the package's own table (`index.js`) instead, the same
         // decoding without the DOM (about 29 KB more in the lazy parser chunk).
         { find: /^decode-named-character-reference$/, replacement: ENTITIES },
+        // `@drafter/markdown`'s parser-free subpath, which `@drafter/render-pdf` imports, from source too.
+        { find: /^@drafter\/markdown\/notes$/, replacement: `${PACKAGES}/markdown/src/notes.ts` },
         {
           find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,

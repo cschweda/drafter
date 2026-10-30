@@ -2,8 +2,6 @@
 
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { footnotes as pdfFootnotes } from '@drafter/render-pdf';
-import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import { markdownMode } from '../app/markdown/editor';
 import { footnotes } from '../app/markdown/notes';
@@ -129,38 +127,6 @@ describe('footnotes in a Markdown document', () => {
     const host = draw('Text.\n\n[^a]: Never referenced.\n');
     expect(host.querySelector('.md-notes')).toBeNull();
     expect(host.textContent).toBe('Text.');
-  });
-
-  test('numbers notes as the PDF does', () => {
-    const arbLabel = fc.constantFrom('a', 'b', 'c', 'note', '1');
-    const arbText = fc
-      .array(
-        fc.oneof(
-          fc.constantFrom('word', 'more words', '*slant*', '`code`'),
-          arbLabel.map((label) => `[^${label}]`),
-        ),
-        { minLength: 1, maxLength: 6 },
-      )
-      .map((parts) => parts.join(' '));
-    const arbDoc = fc
-      .tuple(
-        fc.array(arbText, { minLength: 1, maxLength: 5 }),
-        fc.array(fc.tuple(arbLabel, arbText), { maxLength: 6 }),
-      )
-      .map(
-        ([body, defs]) =>
-          `${body.join('\n\n')}\n\n${defs.map(([label, text]) => `[^${label}]: ${text}`).join('\n')}\n`,
-      );
-    fc.assert(
-      fc.property(arbDoc, (source) => {
-        const tree = parseMarkdown(source);
-        const web = footnotes(tree);
-        const pdf = pdfFootnotes(tree);
-        expect([...web.numbers]).toEqual([...pdf.numbers]);
-        expect(web.notes).toEqual(pdf.notes);
-      }),
-      { numRuns: 200 },
-    );
   });
 });
 

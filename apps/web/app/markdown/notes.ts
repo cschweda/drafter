@@ -1,3 +1,3 @@
-// The footnote numbering lives in @drafter/markdown, the one walk the Preview, the PDF, and the HTML
-// export share.
+// The footnote numbering lives in @drafter/markdown, the one walk the Preview and the PDF share
+// (the PDF takes it from the parser-free `@drafter/markdown/notes`).
 export { type Footnotes, footnotes } from '@drafter/markdown';
