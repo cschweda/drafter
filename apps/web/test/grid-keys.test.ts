@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { gridKey } from '../app/stats/grid-keys';
+import { gridKey, holdPlace } from '../app/stats/grid-keys';
 
 // The character-by-scene grid's keys (seeing-the-script design §4.4): the ARIA grid pattern over
 // the cells, a row per character and a column per scene.
@@ -46,5 +46,24 @@ describe('the grid’s keys', () => {
     expect(gridKey(model, at(1, 5), 'ArrowRight', true)).toBeNull();
     // An empty grid has nowhere to go.
     expect(gridKey({ rows: 0, columns: 0 }, at(0, 0), 'ArrowRight', false)).toBeNull();
+  });
+});
+
+// The cast is worked out again as the writer types, and its order can change (a character passes
+// another in speeches). The grid's Tab stop stays with the character, not the row number.
+describe('the grid’s Tab stop through a new cast', () => {
+  test('stays with the character when the rows are ranked again', () => {
+    expect(holdPlace('ODO', at(1, 4), ['ODO', 'WREN', 'MAVIS'], 10)).toEqual(at(0, 4));
+    expect(holdPlace('MAVIS', at(2, 4), ['MAVIS', 'ODO', 'WREN'], 10)).toEqual(at(0, 4));
+  });
+
+  test('keeps the row number, within the rows, when the character is gone', () => {
+    expect(holdPlace('PIA', at(1, 4), ['ODO', 'WREN', 'MAVIS'], 10)).toEqual(at(1, 4));
+    expect(holdPlace('PIA', at(5, 4), ['ODO', 'WREN'], 10)).toEqual(at(1, 4));
+    expect(holdPlace(undefined, at(0, 0), [], 0)).toEqual(at(0, 0));
+  });
+
+  test('keeps the column within the scenes', () => {
+    expect(holdPlace('ODO', at(0, 12), ['WREN', 'ODO'], 5)).toEqual(at(1, 4));
   });
 });

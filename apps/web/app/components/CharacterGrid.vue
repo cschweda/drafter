@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { type GridView, goToCell } from '~/stats/grid-data';
-import { type GridPlace, gridKey } from '~/stats/grid-keys';
+import { type GridPlace, gridKey, holdPlace } from '~/stats/grid-keys';
 import { cellName } from '~/stats/grid-labels';
-import { visibleColumns } from '~/stats/grid-window';
+import { useDrawnColumns } from '~/stats/grid-window';
 
 // The character-by-scene grid (seeing-the-script design §4.4): a row per character, in the
 // Characters table's order, and a column per scene. A cell holds the character's speeches there,
@@ -57,16 +57,12 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
 });
 
-/** The columns drawn: those in view and ten each side, and the focused cell's, in order. */
-const drawn = computed(() => {
-  const { from, to } = visibleColumns(scrollLeft.value, width.value, COLUMN_PX, columns.value);
-  const list: number[] = [];
-  const focused = active.value.column;
-  if (focused < from && focused < columns.value) list.push(focused);
-  for (let c = from; c < to; c++) list.push(c);
-  if (focused >= to && focused < columns.value) list.push(focused);
-  return list;
-});
+/**
+ * The columns drawn: those in view and ten each side, and the focused cell's, in order; the same
+ * list while a scroll stays inside one column, so the cells aren't made again for it.
+ */
+const focusedColumn = computed(() => active.value.column);
+const drawn = useDrawnColumns(scrollLeft, width, COLUMN_PX, columns, focusedColumn);
 
 // ---- The cells --------------------------------------------------------------------------------
 
@@ -111,13 +107,38 @@ const drawnRows = computed(() =>
 
 // ---- Focus: one Tab stop, the cell last focused ---------------------------------------------
 
-// A script that shrank keeps focus on a cell that is still there.
-watch([rows, columns], ([r, c]) => {
-  active.value = {
-    row: Math.min(active.value.row, Math.max(0, r - 1)),
-    column: Math.min(active.value.column, Math.max(0, c - 1)),
-  };
-});
+/** The character whose row has the Tab stop: a new cast may rank them elsewhere. */
+let activeKey: string | undefined;
+watch(
+  active,
+  (place) => {
+    activeKey = props.view.model.rows[place.row];
+  },
+  { immediate: true, flush: 'sync' },
+);
+// A new cast keeps the Tab stop on the same character, wherever they now rank, and on a cell that
+// is still there when the script shrank; focus in the grid follows it once the rows are drawn.
+watch(
+  () => [props.view.model.rows, columns.value] as const,
+  ([keys, c]) => {
+    const next = holdPlace(activeKey, active.value, keys, c);
+    const hadFocus = !!grid.value?.contains(document.activeElement);
+    if (next.row !== active.value.row || next.column !== active.value.column) active.value = next;
+    if (hadFocus) void nextTick(() => focusHere());
+  },
+);
+/** Focus on the Tab stop's cell, where it is, scrolling nothing. */
+function focusHere() {
+  const { row, column } = active.value;
+  document.getElementById(cellId(row, column))?.focus({ preventScroll: true });
+}
+/**
+ * A click on a header, the corner, or between cells focuses the grid itself, where the arrows do
+ * nothing: focus goes on to the Tab stop's cell.
+ */
+function onGridFocus(event: FocusEvent) {
+  if (event.target === grid.value) focusHere();
+}
 const isActive = (row: number, column: number) =>
   active.value.row === row && active.value.column === column;
 
@@ -224,6 +245,7 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
       :aria-rowcount="rows + 1"
       :aria-colcount="columns + 1"
       tabindex="-1"
+      @focus="onGridFocus"
       @scroll.passive="onScroll"
     >
       <div class="row head" role="row" aria-rowindex="1" :style="{ width: gridWidth }">

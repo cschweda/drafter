@@ -54,3 +54,21 @@ export function gridKey(
       return null;
   }
 }
+
+/**
+ * Where the Tab stop goes when the cast is worked out again: to the row of the character it was on
+ * (`key`), as a re-ranking moves them; else the same row number, within the rows; the column kept
+ * within the scenes.
+ */
+export function holdPlace(
+  key: string | undefined,
+  place: GridPlace,
+  rows: readonly string[],
+  columns: number,
+): GridPlace {
+  const found = key === undefined ? -1 : rows.indexOf(key);
+  return {
+    row: found >= 0 ? found : Math.min(place.row, Math.max(0, rows.length - 1)),
+    column: Math.min(place.column, Math.max(0, columns - 1)),
+  };
+}

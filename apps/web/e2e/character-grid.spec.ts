@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { longScript } from './long-script';
 import { editor, runCommand, setText, start } from './modules';
 
@@ -168,6 +168,24 @@ test.describe('Character by scene', () => {
     expect(await caretLine(page)).toEqual(['ODO', 'Ships tonight?']);
   });
 
+  test('a click on a header or the corner puts focus on the Tab stop’s cell', async ({ page }) => {
+    await showGrid(page, LAMP);
+    await cell(page, 'ODO, scene 2, 2 speeches').click();
+    await expect(cell(page, 'ODO, scene 2, 2 speeches')).toBeFocused();
+    // A name, a scene number, and the corner aren't cells: focus goes on to the cell last focused,
+    // where the arrow keys work.
+    await grid(page).getByRole('rowheader', { name: 'WREN' }).click();
+    await expect(cell(page, 'ODO, scene 2, 2 speeches')).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(cell(page, 'WREN, scene 2, silent')).toBeFocused();
+    await grid(page).getByRole('columnheader', { name: '3' }).click();
+    await expect(cell(page, 'WREN, scene 2, silent')).toBeFocused();
+    await grid(page).getByRole('columnheader', { name: 'Character' }).click();
+    await expect(cell(page, 'WREN, scene 2, silent')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(cell(page, 'WREN, scene 3, 2 speeches')).toBeFocused();
+  });
+
   test('Enter on a silent cell goes to the first mention', async ({ page }) => {
     await showGrid(page, LAMP);
     await cell(page, 'WREN, scene 2, silent').click();
@@ -248,6 +266,25 @@ test.describe('Character by scene', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       page.viewportSize()?.width ?? 0,
     );
+  });
+
+  test('the scene numbers stay in view as the grid scrolls down', async ({ page }) => {
+    await showGrid(page, longScript({ scenes: 40, characters: 40, seed: 11 }));
+    const corner = grid(page).getByRole('columnheader', { name: 'Character' });
+    const top = (await grid(page).boundingBox())?.y ?? 0;
+    const scrolled = await grid(page).evaluate((el) => {
+      el.scrollTop = 300;
+      return el.scrollTop;
+    });
+    expect(scrolled).toBeGreaterThan(0);
+    // The header row sticks to the grid's top: the corner and a scene number are still there,
+    // over the rows that scrolled under them.
+    const offTop = async (header: Locator) =>
+      Math.abs(((await header.boundingBox())?.y ?? -100) - (top + 1));
+    await expect.poll(() => offTop(corner)).toBeLessThan(1.5);
+    const number = grid(page).getByRole('columnheader', { name: '1', exact: true });
+    expect(await offTop(number)).toBeLessThan(1.5);
+    await expect(number).toBeInViewport();
   });
 
   // Budgets (seeing-the-script design §11): the grid's first paint within 200 ms. These log the
