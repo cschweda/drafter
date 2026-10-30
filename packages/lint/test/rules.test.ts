@@ -781,6 +781,27 @@ describe('highland-note', () => {
   });
 });
 
+describe('osf-note', () => {
+  const { found, miss } = forRule('osf-note');
+
+  it('osf-note lists every [[osf: …]] note, and none in a boneyard', () => {
+    const source =
+      'INT. FERRY - NIGHT\n\nWREN, a ferrier [[osf: Cast List]] [[fdx: Cast List]] [[a note of my own]]\n\n!END OF ACT ONE [[osf:   Act\nBreak ]]\n\n/* [[osf: Cast List]] */\n';
+    const all = found(source);
+    expect(all.map((d) => [d.severity, d.span.from, d.span.to])).toEqual([
+      ['info', source.indexOf('[[osf: Cast'), source.indexOf('List]]') + 6],
+      ['info', source.indexOf('[[osf:   Act'), source.indexOf('Break ]]') + 8],
+    ]);
+    expect(all.map((d) => d.message)).toEqual([
+      'This came in from Fade In as “Cast List”, which Drafter has no element for. Check it, then delete the note.',
+      'This came in from Fade In as “Act Break”, which Drafter has no element for. Check it, then delete the note.',
+    ]);
+    expect(found(source, stagePlay)).toHaveLength(2);
+    miss('She waits. [[osf is a format]]\n');
+    miss('She waits. [[osf: Cast List\n\nMore.\n');
+  });
+});
+
 describe('setup-without-payoff', () => {
   const { found, miss } = forRule('setup-without-payoff');
 

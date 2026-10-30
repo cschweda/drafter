@@ -53,3 +53,16 @@ export function importNote(
  * script's end.
  */
 export const highlandNote: Rule = importNote('highland-note', 'highland', 'Highland');
+
+/**
+ * osf-note (Imports, Call 20): an import from Fade In (`@drafter/archive`'s `fromFadeIn`, through
+ * `@drafter/fdx`'s `fromOsf`) keeps a paragraph style or element Drafter has no element for as
+ * action with an `[[osf: Name]]` note, and a scene number Fountain can't hold as one.
+ */
+export const osfNote: Rule = importNote(
+  'osf-note',
+  'osf',
+  'Fade In',
+  (label) =>
+    `This came in from Fade In as “${label}”, which Drafter has no element for. Check it, then delete the note.`,
+);

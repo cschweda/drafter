@@ -459,6 +459,20 @@ describe('highland-note', () => {
   });
 });
 
+describe('osf-note', () => {
+  it('runs osf-note in both templates', () => {
+    const source = 'INT. FERRY - NIGHT\n\nWREN, a ferrier [[osf: Cast List]]\n';
+    const stagePlay = builtins['stage-play-standard'] as Template;
+    for (const template of [screenplay, stagePlay]) {
+      const found = lint(parse(source), template).filter((d) => d.ruleId === 'osf-note');
+      expect(
+        found.map((d) => [d.severity, d.span.from]),
+        template.id,
+      ).toEqual([['info', source.indexOf('[[osf:')]]);
+    }
+  });
+});
+
 describe('rules', () => {
   it('lists each rule once, with the highest severity it reports', () => {
     expect(new Set(rules.map((r) => r.id)).size).toBe(rules.length);
@@ -474,6 +488,7 @@ describe('rules', () => {
       'stub-heading': 'info',
       'fdx-note': 'info',
       'highland-note': 'info',
+      'osf-note': 'info',
       'setup-without-payoff': 'info',
       'payoff-without-setup': 'info',
       'duplicate-field': 'info',
@@ -492,6 +507,7 @@ describe('rules', () => {
       'MARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGARET\nHi.\n\nMARGERET\nHi.\n',
       'INT. LOCATION - DAY\n\nTHEO, a keeper [[fdx: Cast List]]\n',
       'INT. LOCATION - DAY\n\n[[highland: Also in the file, not brought in: a.png]]\n',
+      'INT. LOCATION - DAY\n\nTHEO, a keeper [[osf: Cast List]]\n',
       'INT. A - DAY\n\n[[Setup: a]] [[Payoff: b]] [[Goal: x]] [[Goal: y]]\n',
     ].flatMap((source) => run(source));
     for (const id of Object.keys(expected)) expect(ids(found)).toContain(id);

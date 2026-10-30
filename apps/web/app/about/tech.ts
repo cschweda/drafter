@@ -137,7 +137,7 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/fdx',
-    does: 'Final Draft (.fdx) files: its own strict XML reader and writer, and the mapping to and from Fountain.',
+    does: 'Final Draft (.fdx) files: its own strict XML reader and writer, and the mapping to and from Fountain; and Open Screenplay Format (OSF) documents, read through the same mapping.',
     uses: ['@drafter/fountain', '@drafter/templates'],
   },
   {

@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from '@drafter/fountain';
 import { describe, expect, it } from 'vitest';
+import { fromFadeIn } from '../src/fadein';
 import { fromHighland } from '../src/highland';
 
 const folder = process.env.DRAFTER_REAL_FILES;
@@ -19,11 +20,19 @@ function realFile(name: string): string | null {
 }
 
 const highlandFile = realFile('real.highland');
+const fadeInFile = realFile('real.fadein');
 
 describe('real files', () => {
   it.skipIf(!highlandFile)("imports the maintainer's Highland file", async () => {
     const bytes = new Uint8Array(readFileSync(highlandFile ?? ''));
     const { text } = await fromHighland(bytes);
+    expect(text.trim()).not.toBe('');
+    expect(parse(text).blocks.some((b) => b.kind === 'scene_heading')).toBe(true);
+  });
+
+  it.skipIf(!fadeInFile)("imports the maintainer's Fade In file", async () => {
+    const bytes = new Uint8Array(readFileSync(fadeInFile ?? ''));
+    const { text } = await fromFadeIn(bytes);
     expect(text.trim()).not.toBe('');
     expect(parse(text).blocks.some((b) => b.kind === 'scene_heading')).toBe(true);
   });
