@@ -27,7 +27,7 @@ A deflated entry is walked first, without inflating (`deflate.ts`, from RFC 1951
 
 ## Highland
 
-`fromHighland(bytes)` reads the script out of a `.highland` file. By the app maker's public description, the file is a zip of a TextBundle: `text.fountain` holds the script as Fountain, `info.json` and other JSON files hold the app's own settings and data, and `assets/` holds images. The script comes in exactly as Highland wrote it (a BOM taken off, line endings made `\n`), since it is already Fountain; every other entry, except the app's JSON (`HIGHLAND_METADATA`), `__MACOSX/`, and dot-files, is named, never read, in one note at the script's end:
+`fromHighland(bytes)` reads the script out of a `.highland` file. By the app maker's public description, the file is a zip of a TextBundle: `text.fountain` (or `text.markdown`, `text.txt`) holds the script as Fountain, `info.json` and other JSON files hold the app's own settings and data, and `assets/` holds images. The script comes in exactly as Highland wrote it (a BOM taken off, line endings made `\n`), since it is already Fountain; every other entry, except the app's JSON (`HIGHLAND_METADATA`), `__MACOSX/`, and dot-files, is named, never read, in one note at the script's end (at most 50 names of up to 255 characters each, and about 16 KB, then "and N more"):
 
 ```fountain
 [[highland: Also in the file, not brought in: notes.txt, assets/cover.png]]
@@ -44,7 +44,7 @@ try {
 }
 ```
 
-The script is `text.fountain` when there is one, else the one `.fountain` entry, or the shallowest; none is `no-script`, and two at the same depth `many-scripts`. A script that isn't UTF-8 is `not-utf8`, and every `ZipError` comes back as an `ArchiveError` with the zip's reason. Only the script's entry is ever read. The result has the same shape as `@drafter/fdx`'s `FdxImport`, with `title` null, so the app titles the script from its title page.
+The script is the `text.*` (`.fountain`, `.markdown`, `.md`, or `.txt`, read as Fountain whatever its extension) at the shallowest depth, since subfolders hold revisions, `.fountain` preferred there; two left is `many-scripts`. Only when there is no `text.*` is the one `.fountain` entry, or the shallowest, read, never a bare `.txt` or `.md`; none is `no-script`. A script that isn't UTF-8 is `not-utf8`, one holding NUL `not-text`, and every `ZipError` comes back as an `ArchiveError` with the zip's reason. Only the script's entry is ever read. The result has the same shape as `@drafter/fdx`'s `FdxImport`, with `title` null, so the app titles the script from its title page.
 
 ## License
 

@@ -3,7 +3,10 @@
 import { ArchiveError, type ArchiveFormat } from './errors';
 import type { ZipEntry } from './zip';
 
-/** Strict UTF-8 (`not-utf8` otherwise), a leading BOM taken off, `\r\n` and `\r` made `\n`. */
+/**
+ * Strict UTF-8 (`not-utf8` otherwise), with no NUL (`not-text`, as Open refuses a file holding a
+ * zero byte), a leading BOM taken off, `\r\n` and `\r` made `\n`.
+ */
 export function scriptText(bytes: Uint8Array, format: ArchiveFormat): string {
   let text: string;
   try {
@@ -11,7 +14,8 @@ export function scriptText(bytes: Uint8Array, format: ArchiveFormat): string {
   } catch (error) {
     throw new ArchiveError(format, 'not-utf8', undefined, { cause: error });
   }
-  if (text.startsWith('﻿')) text = text.slice(1);
+  if (text.includes('\u0000')) throw new ArchiveError(format, 'not-text');
+  if (text.startsWith('\uFEFF')) text = text.slice(1);
   return text.replace(/\r\n?/g, '\n');
 }
 
@@ -27,7 +31,7 @@ export function candidates(entries: readonly ZipEntry[], extension: RegExp): Zip
 }
 
 /** How many folders deep an entry sits. */
-const depth = (entry: ZipEntry) => entry.name.split('/').length - 1;
+export const depth = (entry: ZipEntry): number => entry.name.split('/').length - 1;
 
 /** The one to read: the only candidate, else the only one at the shallowest depth; else throws `no-script` / `many-scripts`. */
 export function pickEntry(found: readonly ZipEntry[], format: ArchiveFormat): ZipEntry {

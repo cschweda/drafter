@@ -5,7 +5,13 @@ import type { ZipReason } from './zip';
 /** The apps whose files come packed as a zip. */
 export type ArchiveFormat = 'Highland' | 'Fade In';
 
-export type ArchiveReason = ZipReason | 'no-script' | 'many-scripts' | 'not-utf8' | 'not-osf';
+export type ArchiveReason =
+  | ZipReason
+  | 'no-script'
+  | 'many-scripts'
+  | 'not-utf8'
+  | 'not-text'
+  | 'not-osf';
 
 const WORDS: Record<ArchiveReason, string> = {
   'not-zip': 'it isn’t a zip archive.',
@@ -24,6 +30,7 @@ const WORDS: Record<ArchiveReason, string> = {
   'no-script': 'it holds no script.',
   'many-scripts': 'it holds more than one script.',
   'not-utf8': 'its script isn’t UTF-8 text.',
+  'not-text': 'its script holds more than text.',
   'not-osf': 'its document isn’t one Drafter can read.',
 };
 

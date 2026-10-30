@@ -71,7 +71,7 @@ describe('fromHighland: finding and reading the script', () => {
   });
 
   it('takes off a BOM and turns CRLF into LF', async () => {
-    const crlf = `﻿${SCRIPT.replace(/\n/g, '\r\n')}`;
+    const crlf = `\uFEFF${SCRIPT.replace(/\n/g, '\r\n')}`;
     expect((await fromHighland(plain('', crlf))).text).toBe(SCRIPT);
     expect((await fromHighland(plain('', 'One.\rTwo.\r'))).text).toBe('One.\nTwo.\n');
   });
@@ -102,6 +102,38 @@ describe('fromHighland: finding and reading the script', () => {
       { name: 'text.fountain', data: SCRIPT },
     ]);
     expect((await fromHighland(bytes)).text.startsWith(SCRIPT)).toBe(true);
+  });
+
+  it('takes the top-level text.* over a revision deeper down, whatever its extension', async () => {
+    const bytes = highland([
+      { name: `${BUNDLE}rev/text.fountain`, data: 'An older revision.\n' },
+      { name: `${BUNDLE}text.markdown`, data: SCRIPT },
+    ]);
+    const result = await fromHighland(bytes);
+    expect(result.text.startsWith(SCRIPT)).toBe(true);
+    expect(result.text).toContain('not brought in: rev/text.fountain]]');
+  });
+
+  it('reads text.markdown, text.md, or text.txt as the script when it is the only text.*', async () => {
+    for (const name of ['text.markdown', 'text.md', 'TEXT.TXT']) {
+      const bytes = highland([
+        { name, data: SCRIPT },
+        { name: 'other.fountain', data: 'Not the main text.\n' },
+      ]);
+      const result = await fromHighland(bytes);
+      expect(result.text.startsWith(SCRIPT)).toBe(true);
+      expect(result.text).toContain('not brought in: other.fountain]]');
+    }
+  });
+
+  it('prefers text.fountain over another text.* at the same depth', async () => {
+    const bytes = highland([
+      { name: 'text.txt', data: 'A plain copy.\n' },
+      { name: 'text.fountain', data: SCRIPT },
+    ]);
+    const result = await fromHighland(bytes);
+    expect(result.text.startsWith(SCRIPT)).toBe(true);
+    expect(result.text).toContain('not brought in: text.txt]]');
   });
 
   it('reads the script from an archive whose other entries are 20 MiB stored', async () => {
@@ -210,6 +242,39 @@ describe('fromHighland: the closing note', () => {
     );
   });
 
+  it('cuts a long name at 255 characters with an ellipsis', async () => {
+    const long = `${'é'.repeat(300)}.png`;
+    const { text } = await fromHighland(
+      highland([
+        { name: 'text.fountain', data: SCRIPT },
+        { name: long, data: 'x' },
+      ]),
+    );
+    expect(text).toBe(
+      `${SCRIPT}\n[[highland: Also in the file, not brought in: ${'é'.repeat(254)}…]]\n`,
+    );
+  });
+
+  it('keeps the note to about 16 KB, then says how many more', async () => {
+    const names = Array.from(
+      { length: 50 },
+      (_, i) => `${String(i).padStart(2, '0')}${'日'.repeat(260)}`,
+    );
+    const { text } = await fromHighland(
+      highland([
+        { name: 'text.fountain', data: SCRIPT },
+        ...names.map((name) => ({ name, data: 'x' })),
+      ]),
+    );
+    const note = text.slice(SCRIPT.length + 1).trimEnd();
+    expect(new TextEncoder().encode(note).byteLength).toBeLessThanOrEqual(16 * 1024 + 100);
+    const shownCount = note.split('…').length - 1;
+    expect(shownCount).toBeGreaterThan(10);
+    expect(shownCount).toBeLessThan(50);
+    expect(note.endsWith(`, and ${50 - shownCount} more]]`)).toBe(true);
+    expect(parse(text).regions.map((r) => [r.kind, r.closed])).toEqual([['note', true]]);
+  });
+
   it('writes the note alone when the script is empty', async () => {
     const bytes = highland([
       { name: 'text.fountain', data: '' },
@@ -232,14 +297,38 @@ describe('fromHighland: refusals', () => {
   });
 
   it('refuses an archive with no script', async () => {
-    const markdown = highland([
-      { name: 'text.markdown', data: '# Notes' },
-      { name: '__MACOSX/._x.fountain', data: 'x' },
+    const none = highland([
+      { name: 'notes.markdown', data: '# Notes' },
+      { name: '__MACOSX/._text.fountain', data: 'x' },
+      { name: '.text.txt', data: 'x' },
       { name: 'folder.fountain/', data: '', method: 0 },
+      { name: 'text.fountain/', data: '', method: 0 },
     ]);
-    expect(await reasonOf(markdown)).toBe('no-script');
-    expect((await refusal(markdown)).message).toBe(
+    expect(await reasonOf(none)).toBe('no-script');
+    expect((await refusal(none)).message).toBe(
       'This isn’t a Highland file Drafter can read: it holds no script.',
+    );
+  });
+
+  it('never takes a bare .txt or .md that isn’t text.*', async () => {
+    expect(await reasonOf(highland([{ name: 'notes.txt', data: SCRIPT }]))).toBe('no-script');
+    expect(await reasonOf(highland([{ name: 'readme.md', data: SCRIPT }]))).toBe('no-script');
+  });
+
+  it('refuses two text.* at the shallowest depth when neither is .fountain', async () => {
+    const bytes = highland([
+      { name: 'a/text.markdown', data: SCRIPT },
+      { name: 'b/text.txt', data: SCRIPT },
+      { name: 'a/b/text.fountain', data: SCRIPT },
+    ]);
+    expect(await reasonOf(bytes)).toBe('many-scripts');
+  });
+
+  it('refuses a script holding NUL, as Open refuses a file that holds more than text', async () => {
+    const error = await refusal(plain('', `${SCRIPT}\u0000`));
+    expect(error.reason).toBe('not-text');
+    expect(error.message).toBe(
+      'This isn’t a Highland file Drafter can read: its script holds more than text.',
     );
   });
 
