@@ -84,6 +84,9 @@ importers:
       '@drafter/archive':
         specifier: workspace:*
         version: link:../../packages/archive
+      '@drafter/cast':
+        specifier: workspace:*
+        version: link:../../packages/cast
       '@drafter/cm-fountain':
         specifier: workspace:*
         version: link:../../packages/cm-fountain

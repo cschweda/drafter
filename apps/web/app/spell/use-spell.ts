@@ -1,5 +1,6 @@
 import { type ChangeDesc, ChangeSet } from '@codemirror/state';
 import { mapSpellMarks, setSpellMarks, spellMarksOf } from '@drafter/cm-fountain';
+import type { SpellLanguage } from '@drafter/spell';
 import { effectScope, type Ref, readonly, ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
 import { useSettings } from '../settings/settings';
@@ -19,6 +20,10 @@ import {
 // of SPELL_DEBOUNCE_MS, and the reply is mapped through every edit made since it was sent, so the
 // marks land on the words they were made for. A reply to an older request (another script, kind,
 // or language since) is ignored by its number.
+//
+// The cast also asks the worker which names are ordinary words (seeing-the-script design §3.3,
+// Calls 6, 7, and 49). With spellcheck on, its worker answers; with it off, a worker is made for
+// that question alone when first asked, and ended when spellcheck starts its own.
 
 export interface SpellSessionApp {
   state: Readonly<Ref<SpellState>>;
@@ -32,6 +37,11 @@ export interface SpellSessionApp {
    * after a failed load, and when the newest check has its reply already.
    */
   settled(): Promise<void>;
+  /**
+   * The names whose every word is a dictionary word in `language`; null when the worker can't
+   * answer (the dictionary failed to load, or the worker was ended while asked).
+   */
+  words(names: string[], language: SpellLanguage): Promise<string[] | null>;
 }
 
 let shared: SpellSessionApp | undefined;
@@ -44,6 +54,8 @@ function create(): SpellSessionApp {
   const state = ref<SpellState>('off');
   const problem = ref('');
   let client: SpellClient | null = null;
+  /** With spellcheck off, the worker that answers the words question alone; null until asked. */
+  let spare: SpellClient | null = null;
   /** Every change since the newest request's text was taken, or null when there is none. */
   let since: ChangeDesc | null = null;
   /** The newest request's number: only its reply is shown. */
@@ -112,14 +124,17 @@ function create(): SpellSessionApp {
     });
   }
 
+  const makeWorker = () =>
+    new Worker(new URL('../workers/spell.worker.ts', import.meta.url), { type: 'module' });
+
   function start() {
     if (client) return;
     halted = false;
+    // One worker at a time: spellcheck's answers the words question from now on.
+    spare?.destroy();
+    spare = null;
     try {
-      const worker = new Worker(new URL('../workers/spell.worker.ts', import.meta.url), {
-        type: 'module',
-      });
-      client = createSpellClient(worker, onMarks, onState, 0);
+      client = createSpellClient(makeWorker(), onMarks, onState, 0);
     } catch {
       // A browser that blocks module workers: no marks, said once, as a failed load is.
       onState('failed');
@@ -219,11 +234,40 @@ function create(): SpellSessionApp {
     });
   });
 
+  /** The worker that answers the words question now: spellcheck's, else one made for it. */
+  function answerer(): SpellClient | null {
+    if (client) return halted ? null : client;
+    if (!spare) {
+      try {
+        // Nothing is shown from it: no marks, and no state (spellcheck is off).
+        spare = createSpellClient(
+          makeWorker(),
+          () => {},
+          () => {},
+          0,
+        );
+      } catch {
+        return null;
+      }
+    }
+    return spare;
+  }
+
+  async function words(names: string[], language: SpellLanguage): Promise<string[] | null> {
+    const asked = answerer();
+    if (!asked) return null;
+    const answer = await asked.words(names, language);
+    // Ended while it was asked (spellcheck turned on or off took over): ask whoever answers now.
+    if (answer === null && asked !== client && asked !== spare) return words(names, language);
+    return answer;
+  }
+
   return {
     state: readonly(state),
     suggest: (word) => client?.suggest(word) ?? Promise.resolve([]),
     problem: readonly(problem),
     settled,
+    words,
   };
 }
 

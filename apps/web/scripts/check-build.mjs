@@ -1,5 +1,5 @@
 // Checks the generated site after a build, so a mistake in the build fails it rather than shipping:
-// - the test module (the fixture) and the history probe are in a build made with
+// - the test module (the fixture) and the history and cast probes are in a build made with
 //   DRAFTER_TEST_MODULES=1 and in no other;
 // - every icon the app's own `.ts` files name is in the icon bundle (the bundle is made from a
 //   scan, and a file the scan doesn't read leaves its icon blank, with nothing at runtime to say so);
@@ -15,8 +15,13 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TOUR_ICONS } from './tour-icons.mjs';
 
-/** Text that is in a test build alone: the fixture's toolbar button and its command, and the history probe (`app/history/probe.ts`). */
-export const FIXTURE_MARKERS = ['Count scenes', 'Fixture: add a note', 'drafterHistoryProbe'];
+/** Text that is in a test build alone: the fixture's toolbar button and its command, and the history and cast probes (`app/history/probe.ts`, `app/cast/probe.ts`). */
+export const FIXTURE_MARKERS = [
+  'Count scenes',
+  'Fixture: add a note',
+  'drafterHistoryProbe',
+  'drafterCastProbe',
+];
 
 /**
  * The names of the `i-lucide-*` icons in `source`, without the prefix.

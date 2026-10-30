@@ -54,6 +54,7 @@ flowchart BT
   spell["@drafter/spell"]
   fountain["@drafter/fountain"]
   archive --> web
+  cast --> web
   cm_fountain --> web
   compare --> web
   history --> web

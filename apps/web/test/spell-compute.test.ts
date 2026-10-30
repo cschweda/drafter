@@ -1,7 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { SpellLanguage } from '@drafter/spell';
 import { describe, expect, test, vi } from 'vitest';
 import {
@@ -10,25 +6,7 @@ import {
   type SpellReply,
   type SpellRequest,
 } from '../app/workers/spell-compute';
-
-// The real dictionaries, read in Node from the packages `@drafter/spell` depends on (their
-// `exports` hides the files, so each package's folder is found from its `index.js`).
-const spell = fileURLToPath(new URL('../../../packages/spell/package.json', import.meta.url));
-const folderOf = (name: string) => dirname(createRequire(spell).resolve(name));
-const FILES: Record<SpellLanguage, { aff: Uint8Array; dic: Uint8Array }> = Object.fromEntries(
-  (
-    [
-      ['en-US', 'dictionary-en'],
-      ['en-GB', 'dictionary-en-gb'],
-    ] as const
-  ).map(([language, name]) => [
-    language,
-    {
-      aff: new Uint8Array(readFileSync(join(folderOf(name), 'index.aff'))),
-      dic: new Uint8Array(readFileSync(join(folderOf(name), 'index.dic'))),
-    },
-  ]),
-) as never;
+import { FILES } from './dictionary-files';
 
 const load = vi.fn(async (language: SpellLanguage) => FILES[language]);
 
@@ -135,6 +113,48 @@ describe('createSpellWorker', () => {
       mine: ['zephyrine'],
     });
     expect(words(reply)).toEqual(['phnoe']);
+  });
+});
+
+describe('the words request (seeing-the-script design §3.3)', () => {
+  const asked = (
+    seq: number,
+    names: string[],
+    language: SpellLanguage = 'en-US',
+  ): SpellRequest => ({
+    type: 'words',
+    seq,
+    names,
+    language,
+  });
+
+  test('answers the names whose every word, lowercased, is a dictionary word', async () => {
+    const worker = createSpellWorker(load);
+    const names = ['WILL', 'Hope', 'THE DRIVER', 'ANN LEE', 'MARGARET', 'DR. VOSS', 'ZORBLAX'];
+    expect(await worker.handle(asked(1, names))).toEqual({
+      type: 'words',
+      seq: 1,
+      words: ['WILL', 'Hope', 'THE DRIVER'],
+    });
+    // A name with nothing to look up is no word.
+    expect(await worker.handle(asked(2, ['--', '']))).toEqual({ type: 'words', seq: 2, words: [] });
+  });
+
+  test('loads the language it names, with no language request before it', async () => {
+    const loads = vi.fn(async (language: SpellLanguage) => FILES[language]);
+    const worker = createSpellWorker(loads);
+    expect(await worker.handle(asked(1, ['COLOUR'], 'en-GB'))).toMatchObject({ words: ['COLOUR'] });
+    expect(loads).toHaveBeenCalledExactlyOnceWith('en-GB');
+    expect(await worker.handle(asked(2, ['COLOUR'], 'en-US'))).toMatchObject({ words: [] });
+    // Its checks are in that language now too.
+    expect(words(await worker.handle(check(3, SCRIPT)))).toEqual(['phnoe', 'colour']);
+  });
+
+  test('a failed load is a failed reply', async () => {
+    const worker = createSpellWorker(async () => {
+      throw new Error('offline');
+    });
+    expect(await worker.handle(asked(1, ['WILL']))).toMatchObject({ type: 'failed' });
   });
 });
 

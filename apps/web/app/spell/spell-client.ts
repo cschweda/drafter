@@ -16,6 +16,11 @@ export interface SpellClient {
   check(input: CheckInput): number;
   /** At most five suggestions for `word`, asked at once; none when the worker can't answer. */
   suggest(word: string): Promise<string[]>;
+  /**
+   * The names whose every word is a dictionary word in `language`, asked at once (the worker loads
+   * the language if need be); null when the worker can't answer.
+   */
+  words(names: string[], language: SpellLanguage): Promise<string[] | null>;
   destroy(): void;
 }
 
@@ -38,6 +43,7 @@ export function createSpellClient(
   let destroyed = false;
   let state: SpellState | undefined;
   const asked = new Map<number, (suggestions: string[]) => void>();
+  const wordsAsked = new Map<number, (words: string[] | null) => void>();
 
   const tell = (next: SpellState) => {
     // Every failure is told, even one after another: a retry's failure must stop the caller again.
@@ -45,10 +51,12 @@ export function createSpellClient(
     state = next;
     onState(next);
   };
-  /** Every suggestion still waiting gets none. */
+  /** Every suggestion still waiting gets none, and every words question null. */
   const answerAll = () => {
     for (const resolve of asked.values()) resolve([]);
     asked.clear();
+    for (const resolve of wordsAsked.values()) resolve(null);
+    wordsAsked.clear();
   };
   const fail = () => {
     answerAll();
@@ -84,6 +92,12 @@ export function createSpellClient(
         asked.get(reply.seq)?.(reply.suggestions);
         asked.delete(reply.seq);
         break;
+      case 'words':
+        // An answer means the dictionary is there.
+        tell('ready');
+        wordsAsked.get(reply.seq)?.(reply.words);
+        wordsAsked.delete(reply.seq);
+        break;
     }
   });
   worker.addEventListener('error', () => {
@@ -116,6 +130,17 @@ export function createSpellClient(
         if (!post({ type: 'suggest', seq: mine, word })) {
           asked.delete(mine);
           resolve([]);
+        }
+      });
+    },
+    words(names, language) {
+      if (destroyed || state === 'failed') return Promise.resolve(null);
+      const mine = ++seq;
+      return new Promise((resolve) => {
+        wordsAsked.set(mine, resolve);
+        if (!post({ type: 'words', seq: mine, names, language })) {
+          wordsAsked.delete(mine);
+          resolve(null);
         }
       });
     },

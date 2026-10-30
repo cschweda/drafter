@@ -58,6 +58,7 @@ export const PACKAGES: readonly PackageNote[] = [
     does: 'The app itself, drafter.dev: the panes, menus, dialogs, storage, and workers.',
     uses: [
       '@drafter/archive',
+      '@drafter/cast',
       '@drafter/cm-fountain',
       '@drafter/compare',
       '@drafter/fdx',
