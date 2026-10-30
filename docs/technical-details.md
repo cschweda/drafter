@@ -40,6 +40,7 @@ flowchart BT
   cm_fountain["@drafter/cm-fountain"]
   outline["@drafter/outline"]
   compare["@drafter/compare"]
+  history["@drafter/history"]
   render_pdf["@drafter/render-pdf"]
   render_html["@drafter/render-html"]
   render_text["@drafter/render-text"]
@@ -64,6 +65,7 @@ flowchart BT
   layout --> outline
   notes --> outline
   layout --> compare
+  outline --> history
   layout --> render_pdf
   layout --> render_html
   layout --> render_text
