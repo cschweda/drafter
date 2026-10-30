@@ -8,6 +8,7 @@ const packages = [
   'render-pdf',
   'render-text',
   'render-html',
+  'render-html-file',
   'lint',
   'notes',
   'markdown',

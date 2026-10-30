@@ -201,6 +201,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/cli` | `drafter build`, `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
+| `@drafter/render-html-file` | Export as HTML: a script or a Markdown document as one self-contained, offline `.html` file, dark by default, with a light switch | 2 (in progress for v0.22.0) |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 2 (setups and payoffs, and duplicate scene fields), 4 (the rest) |
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
@@ -343,7 +344,7 @@ pnpm e2e              # builds the app from clean, as Netlify would, and runs it
 
 - **Browser tests** need Playwright's browsers, installed once with `pnpm --filter @drafter/web exec playwright install chromium firefox webkit`.
 - **Git hooks:** `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
-- **Package READMEs:** [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-html`](packages/render-html/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), [`cm-fountain`](packages/cm-fountain/README.md), [`cli`](packages/cli/README.md), [`notes`](packages/notes/README.md), [`compare`](packages/compare/README.md), [`outline`](packages/outline/README.md), [`spell`](packages/spell/README.md), [`fdx`](packages/fdx/README.md), [`archive`](packages/archive/README.md), and [`markdown`](packages/markdown/README.md).
+- **Package READMEs:** [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-html`](packages/render-html/README.md), [`render-html-file`](packages/render-html-file/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), [`cm-fountain`](packages/cm-fountain/README.md), [`cli`](packages/cli/README.md), [`notes`](packages/notes/README.md), [`compare`](packages/compare/README.md), [`outline`](packages/outline/README.md), [`spell`](packages/spell/README.md), [`fdx`](packages/fdx/README.md), [`archive`](packages/archive/README.md), and [`markdown`](packages/markdown/README.md).
 - **Decisions and deferred work:** choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
 After a build, the CLI runs from the repository root:

@@ -162,7 +162,7 @@ export default defineNuxtConfig({
         // `@drafter/markdown`'s parser-free subpath, which `@drafter/render-pdf` imports, from source too.
         { find: /^@drafter\/markdown\/notes$/, replacement: `${PACKAGES}/markdown/src/notes.ts` },
         {
-          find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
+          find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|outline|render-html|render-html-file|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],
