@@ -52,6 +52,21 @@ describe('sceneVersions', () => {
     ).toBe(true);
   });
 
+  test('each version carries its heading and its printed words, for the list', () => {
+    const { snapshots, prints } = versions(STEPS.map(edit));
+    const rows = sceneVersions(
+      printOf(edit(STEPS[7] as string), 'INT. BRIDGE - NIGHT'),
+      snapshots,
+      prints,
+    ) as SceneVersion[];
+    for (const row of rows) {
+      expect(row.heading).toBe(prints.get(row.hash)?.heading);
+      expect(row.words).toBe(prints.get(row.hash)?.words);
+    }
+    expect(rows[7]?.heading).toBe('INT. FERRY WHEELHOUSE - NIGHT');
+    expect(rows[0]?.heading).toBe('INT. BRIDGE - NIGHT');
+  });
+
   test('merges consecutive equal versions', () => {
     const texts = [STEPS[0], STEPS[0], STEPS[1], STEPS[1], STEPS[1]].map((s) => edit(s as string));
     const { snapshots, prints } = versions(texts);

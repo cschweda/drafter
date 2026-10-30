@@ -10,6 +10,7 @@ import {
 } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
+import { openSceneHistory } from '~/history/scene-history';
 import {
   colorName,
   lengthLabel,
@@ -304,7 +305,19 @@ function menuItems(row: Row): DropdownMenuItem[][] {
         movingToId.value = id;
       }),
     focus: (id) => void focusRow(id),
+    history: (id) => afterClosing(() => openHistoryOf(id)),
   });
+}
+
+/**
+ * History of this scene… (version-history design §6): the dialog opens on the scene as it is now,
+ * with focus put back on its row first, so closing the dialog returns there.
+ */
+async function openHistoryOf(id: string) {
+  const item = now(id);
+  if (item?.kind !== 'scene') return;
+  await focusRow(id);
+  openSceneHistory({ from: item.span.from, to: item.span.to, heading: item.heading });
 }
 
 // ---- Edit synopsis in place --------------------------------------------------------------

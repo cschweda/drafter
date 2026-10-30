@@ -159,6 +159,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Go
   { id: 'go-to-scene', title: 'Go to scene…', group: 'Go' },
   { id: 'go-to-line', title: 'Go to line…', group: 'Go' },
+  // History of this scene (version-history design §6, §8): the scene holding the cursor.
+  {
+    id: 'scene-history',
+    title: 'History of this scene…',
+    group: 'Go',
+    icon: 'i-lucide-history',
+    keywords: ['versions of this scene', 'scene versions'],
+  },
   { id: 'next-problem', title: 'Next problem', group: 'Go', keys: 'F8' },
   { id: 'previous-problem', title: 'Previous problem', group: 'Go', keys: 'Shift-F8' },
   // The spellcheck's (Plan D, Call 11): F7, the usual key, turns on caret browsing in Firefox.

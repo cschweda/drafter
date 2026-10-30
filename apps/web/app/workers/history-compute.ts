@@ -251,6 +251,7 @@ export function createHistoryCompute(
           seq,
           kind: 'versions',
           rows: start ? sceneVersions(start, past, m.prints) : [],
+          start: start?.hash ?? null,
           done,
         });
       lastPost = clock();

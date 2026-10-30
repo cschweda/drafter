@@ -14,6 +14,7 @@ const REASONS: Record<SnapshotReason, string> = {
   'before-revert': 'Before Revert to Saved',
   'before-restore': 'Before restoring a snapshot',
   'before-reload': 'Before reloading the file',
+  'before-scene-restore': 'Before restoring a scene',
 };
 
 /** The writer's label, or why it was taken: "Saved", "Opened The Call.fountain", "Before expand". */

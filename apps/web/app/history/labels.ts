@@ -19,7 +19,7 @@ function dateOf(at: number, now: number): string {
 }
 
 /** "today", "yesterday", or "Tuesday, 27 October" (History's day titles, in a sentence). */
-function dayOf(at: number, now: number): string {
+export function dayOf(at: number, now: number): string {
   const date = new Date(at);
   const today = new Date(now);
   if (dateKey(date) === dateKey(today)) return 'today';
@@ -72,18 +72,20 @@ export function progressLabel(read: number, total: number): string {
   return `Reading versions… ${read.toLocaleString('en-US')} of ${total.toLocaleString('en-US')}`;
 }
 
-export type DeletedAction = 'show-text' | 'put-back' | 'menu';
+export type DeletedAction = 'show-text' | 'put-back' | 'history' | 'menu';
 
 const ACTIONS: Record<string, DeletedAction> = {
   Enter: 'show-text',
   p: 'put-back',
   P: 'put-back',
+  h: 'history',
+  H: 'history',
   ContextMenu: 'menu',
 };
 
 /**
  * What `key` does on entry `focused` of `count`: Up and Down move, Home and End go to the first and
- * last; Enter shows or hides the text, P puts it back, and the context-menu key (the tab maps
+ * last; Enter shows or hides the text, P puts it back, H opens History of this scene, and the context-menu key (the tab maps
  * Shift+F10 to it) opens the entry's menu. Null for anything else.
  */
 export function deletedKey(

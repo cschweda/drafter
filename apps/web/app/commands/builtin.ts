@@ -42,6 +42,7 @@ import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { useDeleted } from '~/history/deleted';
+import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
 import { runMove } from '~/outline/move';
@@ -505,6 +506,21 @@ export function registerBuiltinCommands(): void {
     // Go
     'go-to-scene': { enabled: isFountain, run: () => openPalette('scene') },
     'go-to-line': { run: () => openPalette('line') },
+    // History of this scene (version-history design §6): the scene holding the cursor.
+    'scene-history': {
+      enabled: () => hasScript() && isFountain() && !!sceneAtCursor(),
+      why: () =>
+        isMarkdown()
+          ? NOT_FOR_MARKDOWN
+          : !sceneAtCursor()
+            ? 'The cursor isn’t in a scene.'
+            : undefined,
+      run: () => {
+        const scene = sceneAtCursor();
+        if (scene)
+          openSceneHistory({ from: scene.span.from, to: scene.span.to, heading: scene.heading });
+      },
+    },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
     'next-misspelling': stepSpelling(1),

@@ -40,7 +40,8 @@ export type HistoryReply =
       capped: boolean;
     }
   | { seq: number; kind: 'deleted'; scenes: DeletedScene[]; done: boolean }
-  | { seq: number; kind: 'versions'; rows: VersionRow[]; done: boolean }
+  /** `start`: the hash of the version followed (the scene now's, or the slot's); null when none. */
+  | { seq: number; kind: 'versions'; rows: VersionRow[]; start: string | null; done: boolean }
   /** Where Put back puts the scene; null when the snapshot is gone or can't be read. */
   | { seq: number; kind: 'place'; place: Place | null }
   | { seq: number; kind: 'error'; message: string };

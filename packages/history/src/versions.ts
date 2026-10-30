@@ -13,6 +13,10 @@ export interface SceneVersion {
   oldestAt: number;
   /** Where it was in the newest of them. */
   slot: SceneSlot;
+  /** Its heading, as the print has it (a renamed scene's older versions have their own). */
+  heading: string;
+  /** Its printed words, for the change in words against the version before. */
+  words: number;
 }
 
 /** A version, or a run of snapshots that held no version of the scene ("Not in this version"). */
@@ -74,6 +78,8 @@ export function sceneVersions(
         newestAt: snapshot.at,
         oldestAt: snapshot.at,
         slot: best.slot,
+        heading: best.print.heading,
+        words: best.print.words,
       });
     }
     ordinal = best.slot.ordinal;

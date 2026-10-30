@@ -1,6 +1,6 @@
 import type { Strip, StripBlock } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { stripKey } from '../app/strip/keys';
+import { opensMenu, stripKey } from '../app/strip/keys';
 
 // The strip's arrow keys (structure strip design §4, Call 12), as a pure function of the strip.
 
@@ -87,5 +87,23 @@ describe('the strip keys', () => {
     }
     // A place that isn't in the strip goes nowhere.
     expect(stripKey(STRIP, { row: 5, index: 0 }, 'ArrowRight')).toBeNull();
+  });
+});
+
+describe("the block menu's keys", () => {
+  const key = (k: string, more: Partial<KeyboardEvent> = {}) => ({
+    key: k,
+    shiftKey: false,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    ...more,
+  });
+  test('the context-menu key and Shift+F10 open it, and nothing else', () => {
+    expect(opensMenu(key('ContextMenu'))).toBe(true);
+    expect(opensMenu(key('F10', { shiftKey: true }))).toBe(true);
+    expect(opensMenu(key('F10'))).toBe(false);
+    expect(opensMenu(key('F10', { shiftKey: true, ctrlKey: true }))).toBe(false);
+    expect(opensMenu(key('Enter'))).toBe(false);
   });
 });

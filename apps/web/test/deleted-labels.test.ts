@@ -106,6 +106,8 @@ describe('Deleted scenes labels', () => {
     expect(deletedKey(3, 1, 'End')).toEqual({ focus: 2 });
     expect(deletedKey(3, 2, 'Home')).toEqual({ focus: 0 });
     expect(deletedKey(3, 1, 'Enter')).toEqual({ action: 'show-text' });
+    expect(deletedKey(3, 1, 'h')).toEqual({ action: 'history' });
+    expect(deletedKey(3, 1, 'H')).toEqual({ action: 'history' });
     expect(deletedKey(3, 1, 'p')).toEqual({ action: 'put-back' });
     expect(deletedKey(3, 1, 'P')).toEqual({ action: 'put-back' });
     expect(deletedKey(3, 1, 'ContextMenu')).toEqual({ action: 'menu' });

@@ -371,6 +371,22 @@ describe('the history scan', () => {
       scene: { snapshot: 's2', slot: 1 },
     });
     expect(shape(rowsOf(bySlot))).toEqual(['gap s1', 's2', 'gap s3']);
+
+    // The reply names the version it followed: the scene now's, or the slot's.
+    const startOf = (replies: HistoryReply[]) =>
+      last(replies.filter((r) => r.kind === 'versions') as Array<{ start: string | null }>).start;
+    // s1 holds B2 as it is now.
+    expect(startOf(bySpan)).toBe(newest.hash);
+    expect(startOf(bySlot)).toBe((rowsOf(bySlot)[1] as SceneVersion).hash);
+    // A span that is no scene now: no start, and no rows.
+    const nowhere = await run(compute, {
+      seq: 3,
+      kind: 'versions',
+      projectId: 'p1',
+      now: 'Just a line of action, no scene.',
+      scene: { from: 0, to: 5 },
+    });
+    expect(startOf(nowhere)).toBe(null);
   });
 
   /** The cache's rows of a script. */

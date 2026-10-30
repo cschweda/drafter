@@ -12,6 +12,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { cardsKey, rowMoveTarget } from '~/cards/grid';
 import type { DropSide } from '~/components/SceneCard.vue';
 import { useEditor } from '~/editor/session';
+import { openSceneHistory } from '~/history/scene-history';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { sceneMenuItems } from '~/outline/scene-menu';
@@ -253,7 +254,19 @@ function menuItems(card: Card): DropdownMenuItem[][] {
         movingToId.value = id;
       }),
     focus: (id) => void focusCard(id),
+    history: (id) => afterClosing(() => openHistoryOf(id)),
   });
+}
+
+/**
+ * History of this scene… (version-history design §6): the dialog opens on the scene as it is now,
+ * with focus put back on its card first, so closing the dialog returns there.
+ */
+async function openHistoryOf(id: string) {
+  const item = now(id);
+  if (item?.kind !== 'scene') return;
+  await focusCard(id);
+  openSceneHistory({ from: item.span.from, to: item.span.to, heading: item.heading });
 }
 
 // ---- Edit synopsis in place -------------------------------------------------------------------

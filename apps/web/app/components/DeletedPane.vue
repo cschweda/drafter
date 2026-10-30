@@ -13,6 +13,7 @@ import {
   versionsLabel,
 } from '~/history/labels';
 import { putBack } from '~/history/put-back';
+import { openSceneHistory } from '~/history/scene-history';
 import { sayOutline } from '~/outline/notice';
 import { useOutline } from '~/outline/use-outline';
 import { snapshotTime } from '~/snapshots/history';
@@ -23,8 +24,8 @@ import { snapshotText } from '~/storage/snapshots';
 // heading), when it was last in a version, how many held it, and its first lines; Show text shows
 // its whole text from that version, Put back puts it back (one undo), and its menu compares that
 // version with now or copies the text. The list is one Tab stop, History's pattern (Call 12): Up,
-// Down, Home and End move; Enter shows the text, P puts it back, and the context-menu key or
-// Shift+F10 opens the menu. In a read-only tab Put back says why it is off.
+// Down, Home and End move; Enter shows the text, P puts it back, H opens History of this scene, and
+// the context-menu key or Shift+F10 opens the menu. In a read-only tab Put back says why it is off.
 
 const deleted = useDeleted();
 const { shown, rows, progress, done, failed, filter, why, snapshots, pendingFind } = deleted;
@@ -74,7 +75,8 @@ watch(shown, async () => {
   else await focusRow(current.value);
 });
 
-// Find in Deleted scenes (from a Compare group): the entry gets focus once it is listed.
+// Find in Deleted scenes (from a Compare group): the entry gets focus once it is listed, also when
+// the tab is drawn after the Find (it was behind another in its pane) with the entry listed already.
 watch(
   [shown, pendingFind],
   async ([now, key]) => {
@@ -82,15 +84,25 @@ watch(
     const at = now.findIndex((r) => headingKey(r.newest.print.heading) === key);
     if (at < 0) return;
     pendingFind.value = null;
-    // The tab may still be coming into view (it was behind another in its pane): a few frames.
-    for (let tries = 0; tries < 5; tries++) {
-      await focusRow(at);
-      if (document.activeElement === document.getElementById(domId(at))) break;
+    // The tab may still be coming into view, and the tab it replaced in its pane may give focus to
+    // its pane as it goes: for up to a second, focus that lands nowhere (the page, or this panel)
+    // goes back to the entry, until it has stayed there a few frames. Focus the writer moved on
+    // elsewhere is left alone.
+    const entry = () => document.getElementById(domId(at));
+    let stayed = 0;
+    for (let frames = 0; frames < 60 && stayed < 10; frames++) {
+      const active = document.activeElement;
+      if (active === entry()) stayed++;
+      else if (!active || active === document.body || active.id === 'panel-deleted') {
+        stayed = 0;
+        await focusRow(at);
+      } else if (frames > 0) break;
+      else await focusRow(at);
       await new Promise((resolve) => requestAnimationFrame(resolve));
     }
     document.getElementById(domId(at))?.scrollIntoView({ block: 'nearest' });
   },
-  { flush: 'post' },
+  { flush: 'post', immediate: true },
 );
 
 // ---- Show text --------------------------------------------------------------------------------
@@ -143,6 +155,18 @@ async function onPutBack(row: DeletedScene) {
   } finally {
     busy.value = false;
   }
+}
+
+// ---- History of this scene ---------------------------------------------------------------------
+
+/** History of this scene (design §6), from the version it was last in; focus returns to the entry. */
+async function openHistory(row: DeletedScene) {
+  await focusRow(places.value.get(row.key) ?? 0);
+  openSceneHistory({
+    snapshot: row.newest.snapshot,
+    slot: row.newest.slot.ordinal - 1,
+    heading: row.newest.print.heading,
+  });
 }
 
 // ---- The menu: Compare that version with now, Copy text ---------------------------------------
@@ -224,6 +248,7 @@ function onKeydown(event: KeyboardEvent, row: DeletedScene) {
   if (next.focus !== undefined) void focusRow(next.focus);
   else if (next.action === 'show-text') void toggleText(row);
   else if (next.action === 'put-back') void onPutBack(row);
+  else if (next.action === 'history') void openHistory(row);
   else setMenu(row, true);
 }
 
@@ -349,6 +374,15 @@ const whyId = `${uid}-why`;
                 @click.stop="onPutBack(row)"
               >
                 Put back
+              </button>
+              <button
+                type="button"
+                class="act"
+                tabindex="-1"
+                :aria-label="`History of ${nameOf(row)}`"
+                @click.stop="openHistory(row)"
+              >
+                History
               </button>
               <MenuButton
                 :open="menuFor === row.key"

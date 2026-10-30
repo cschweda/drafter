@@ -85,7 +85,7 @@ describe('the history client', () => {
       { seq: first, ...deleted },
       { seq: second, kind: 'versions', projectId: 'p1', now: '', scene: { from: 0, to: 1 } },
     ]);
-    worker.reply({ seq: second, kind: 'versions', rows: [], done: false });
+    worker.reply({ seq: second, kind: 'versions', rows: [], start: null, done: false });
     worker.reply({ seq: first, kind: 'deleted', scenes: [], done: true });
     worker.reply({ seq: first, kind: 'deleted', scenes: [], done: true });
     expect(heard).toEqual([{ seq: first, kind: 'deleted', scenes: [], done: true }]);
