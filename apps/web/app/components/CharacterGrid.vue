@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { useOutline } from '~/outline/use-outline';
+import { showScaffold } from '~/scaffold/show';
 import { type GridView, goToCell } from '~/stats/grid-data';
 import { type GridPlace, gridKey, holdPlace } from '~/stats/grid-keys';
 import { cellName } from '~/stats/grid-labels';
@@ -168,7 +170,7 @@ function onKeydown(event: KeyboardEvent, row: number, column: number) {
   else void focusCell(next);
 }
 
-// ---- The menu: Go to (Task 6 adds Scaffold for this character, and for this scene) -----------
+// ---- The menu: Go to, and Scaffold for this scene ------------------------------------------
 
 const menuFor = shallowRef<GridPlace | null>(null);
 const menuPlace = shallowRef({ left: '0px', top: '0px', width: '0px', height: '0px' });
@@ -228,9 +230,23 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
         icon: 'i-lucide-arrow-right',
         onSelect: later(() => goToCell(props.view, at.row, at.column)),
       },
+      {
+        label: 'Scaffold for this scene',
+        icon: 'i-lucide-users',
+        onSelect: later(() => scaffoldFor(at.column)),
+      },
     ],
   ];
 });
+
+/**
+ * Scaffold for this scene: the column's scene, pinned. The grid's columns are the scenes the cast was
+ * worked out from, so the scene is found in the script as it is now by its place.
+ */
+function scaffoldFor(column: number) {
+  const scene = useOutline().index.value.scenes[column];
+  if (scene) showScaffold({ kind: 'scene', pinned: useOutline().idOf(scene) });
+}
 
 const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX}px)`);
 </script>

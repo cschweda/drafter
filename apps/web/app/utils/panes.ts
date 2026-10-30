@@ -38,14 +38,19 @@ export function coreTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
 /** The Stats tab (seeing-the-script design §4.1), which replaced the Stats window. */
 export const STATS_TAB_ID = 'stats';
 
+/** Scaffold (seeing-the-script design §5.1): who is in the cursor's scene, beside the Source. */
+export const SCAFFOLD_TAB_ID = 'scaffold';
+
 /**
- * Cards, Notes, and Stats (design §5.8; seeing-the-script design §4.1): not core, so they share the
- * slot and More with module tabs, first in More, in the design's order, until one is chosen.
+ * Cards, Notes, Stats, and Scaffold (design §5.8; seeing-the-script design §4.1, §5.1): not core,
+ * so they share the slot and More with module tabs, first in More, in the design's order, until
+ * one is chosen.
  */
 export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
   { id: 'cards', label: 'Cards' },
   { id: 'notes', label: 'Notes' },
   { id: STATS_TAB_ID, label: 'Stats' },
+  { id: SCAFFOLD_TAB_ID, label: 'Scaffold' },
 ];
 
 /**
@@ -78,7 +83,7 @@ export function openCompare(tabs: PaneTabs): PaneTabs {
 
 /**
  * The view tabs a document of `kind` has, before any module's. A Markdown document has no scenes or
- * notes, so no Cards or Notes; it has Stats, with its words, headings, and reading time.
+ * notes, so no Cards, Notes, or Scaffold; it has Stats, with its words, headings, and reading time.
  */
 export function viewTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
   return kind === 'markdown' ? VIEW_TABS.filter((tab) => tab.id === STATS_TAB_ID) : VIEW_TABS;

@@ -50,6 +50,7 @@ import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
 import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
+import { showScaffold } from '~/scaffold/show';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
@@ -530,6 +531,20 @@ export function registerBuiltinCommands(): void {
         });
       },
     },
+    // Scaffold for this scene (§5.6): the cursor's scene, pinned, so it stays as the cursor moves.
+    'scaffold-scene': {
+      enabled: () => hasScript() && isFountain() && !!sceneAtCursor(),
+      why: () =>
+        isMarkdown()
+          ? NOT_FOR_MARKDOWN
+          : !sceneAtCursor()
+            ? 'The cursor isn’t in a scene.'
+            : undefined,
+      run: () => {
+        const scene = sceneAtCursor();
+        if (scene) showScaffold({ kind: 'scene', pinned: useOutline().idOf(scene) });
+      },
+    },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
     'next-misspelling': stepSpelling(1),
@@ -612,6 +627,13 @@ export function registerBuiltinCommands(): void {
     // and the Drafter menu open it too.
     'show-stats': {
       run: () => showStats(),
+    },
+    // Scaffold (seeing-the-script design §5.6), beside the Source too. A Markdown document has no
+    // scenes, so no Scaffold.
+    'show-scaffold': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => showScaffold(),
     },
     'switch-theme': {
       run: () => {

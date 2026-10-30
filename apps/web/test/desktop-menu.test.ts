@@ -241,6 +241,16 @@ describe('Cards and notes in the desktop menus', () => {
   });
 });
 
+describe('Scaffold in the desktop menus', () => {
+  test('puts Show Scaffold in View and Scaffold for this scene in Go', () => {
+    registerCommands(['show-scaffold', 'scaffold-scene'].map((id) => command(id)));
+    const groups = Object.fromEntries(
+      menuCommands(useCommands().value).map((c) => [c.id, c.group]),
+    );
+    expect(groups).toEqual({ 'show-scaffold': 'View', 'scaffold-scene': 'Go' });
+  });
+});
+
 describe('The guided starters in the desktop menus', () => {
   test('puts New guided screenplay and New guided stage play in File', () => {
     const ids = ['new-guided-screenplay', 'new-guided-stage-play'];

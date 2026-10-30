@@ -132,26 +132,49 @@ describe('panes', () => {
       expect(ids(more)).toEqual(['module:a', 'module:c']);
     });
 
-    test('puts Cards, Notes, and Stats in the slot and More, before module tabs', () => {
+    test('puts Cards, Notes, Stats, and Scaffold in the slot and More, before module tabs', () => {
       expect(VIEW_TABS).toEqual([
         { id: 'cards', label: 'Cards' },
         { id: 'notes', label: 'Notes' },
         { id: 'stats', label: 'Stats' },
+        { id: 'scaffold', label: 'Scaffold' },
       ]);
       const { row, more } = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', null);
       expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline']);
-      expect(ids(more)).toEqual(['cards', 'notes', 'stats', 'module:a', 'module:b', 'module:c']);
+      expect(ids(more)).toEqual([
+        'cards',
+        'notes',
+        'stats',
+        'scaffold',
+        'module:a',
+        'module:b',
+        'module:c',
+      ]);
       // Chosen, Cards takes the slot.
       const chosen = tabRow(TABS, [...viewTabs('fountain'), ...others], 'cards', 'cards');
       expect(ids(chosen.row).at(-1)).toBe('cards');
-      expect(ids(chosen.more)).toEqual(['notes', 'stats', 'module:a', 'module:b', 'module:c']);
+      expect(ids(chosen.more)).toEqual([
+        'notes',
+        'stats',
+        'scaffold',
+        'module:a',
+        'module:b',
+        'module:c',
+      ]);
       // A module's tab chosen last takes the slot, and Cards goes first in More.
       const later = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', 'module:b');
       expect(ids(later.row).at(-1)).toBe('module:b');
-      expect(ids(later.more)).toEqual(['cards', 'notes', 'stats', 'module:a', 'module:c']);
+      expect(ids(later.more)).toEqual([
+        'cards',
+        'notes',
+        'stats',
+        'scaffold',
+        'module:a',
+        'module:c',
+      ]);
     });
 
-    test('has no Cards or Notes for a Markdown document, only Stats', () => {
+    test('has no Cards, Notes, or Scaffold for a Markdown document, only Stats', () => {
       const { row, more } = tabRow(coreTabs('markdown'), viewTabs('markdown'), 'source', null);
       expect(ids(row)).toEqual(['source', 'script', 'problems']);
       expect(ids(more)).toEqual(['stats']);

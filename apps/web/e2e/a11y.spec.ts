@@ -10,6 +10,7 @@ import {
   openSettings,
   palette,
   paletteInput,
+  runCommand,
   setText,
   settingsDialog,
   showSource,
@@ -249,6 +250,31 @@ for (const theme of THEMES) {
       await stats.getByRole('button', { name: 'List', exact: true }).click();
       await expect(stats.getByRole('list', { name: 'Character by scene' })).toBeVisible();
       await clean(page, 'the Stats tab at Character by scene, as a List');
+    });
+
+    test(`has no accessibility violations in Scaffold: the scene page (${theme})`, async ({
+      page,
+    }) => {
+      // Two keepers and a visitor, written for this test: a speaker, a silent one, a first seen.
+      await setText(
+        page,
+        'INT. LAMP ROOM - NIGHT\n\nWREN trims the wick. A visitor, ODO, waits.\n\nWREN\nYou came up all those stairs?\n\nEXT. GALLERY - DAWN\n\nODO\nShips.\n',
+      );
+      await editor(page).locator('.cm-line', { hasText: 'You came up' }).click();
+      await runCommand(page, 'Show Scaffold');
+      const scaffold = page.getByRole('tabpanel', { name: 'Scaffold', exact: true });
+      const heading = scaffold.getByRole('heading', { level: 2 });
+      await expect(heading).toHaveText('Scene 1 · INT. LAMP ROOM - NIGHT');
+      await expect(heading).toBeFocused();
+      await expect(scaffold.getByRole('table', { name: 'In this scene (2)' })).toBeVisible();
+      await expect(scaffold.getByText('First seen here: WREN, ODO.')).toBeVisible();
+      await clean(page, 'Scaffold, the scene page');
+      // Follow the cursor off (pressed, then not), and Go to with focus.
+      const follow = page.getByRole('button', { name: 'Follow the cursor', exact: true });
+      await follow.click();
+      await expect(follow).toHaveAttribute('aria-pressed', 'false');
+      await scaffold.getByRole('button', { name: 'Go to scene 1' }).focus();
+      await clean(page, 'Scaffold, the scene page, not following');
     });
 
     test(`has no accessibility violations in the Export options dialog (${theme})`, async ({

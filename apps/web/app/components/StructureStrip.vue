@@ -10,6 +10,7 @@ import { type OutlineItem, rulerMarks, type StripBlock } from '@drafter/outline'
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
 import { openSceneHistory } from '~/history/scene-history';
+import { showScaffold } from '~/scaffold/show';
 import { useOutline } from '~/outline/use-outline';
 import { useRates } from '~/stats/timing';
 import { scriptTopPage } from '~/strip/in-view';
@@ -32,8 +33,8 @@ import { useStrip } from '~/strip/use-strip';
 // top page is on the ruler (Call 10), one card names the block under the pointer or focus (Call
 // 11), and the blocks are one Tab stop with the arrow keys between them (Call 12). A block's menu
 // (version-history design §6.2, Call 31), from the context-menu key, Shift+F10, or a right-click,
-// has Go to and, on a scene, History of this scene…; one menu serves every block, anchored over the
-// block it is for.
+// has Go to and, on a scene, History of this scene… and Scaffold for this scene; one menu serves
+// every block, anchored over the block it is for.
 
 const { view, current, go } = useStrip();
 const outline = useOutline();
@@ -249,6 +250,13 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
         if (now?.kind !== 'scene') return;
         blockEl(id)?.focus();
         openSceneHistory({ id, from: now.span.from, to: now.span.to, heading: now.heading });
+      }),
+    });
+    group.push({
+      label: 'Scaffold for this scene',
+      icon: 'i-lucide-users',
+      onSelect: later(() => {
+        if (items.value.get(id)?.kind === 'scene') showScaffold({ kind: 'scene', pinned: id });
       }),
     });
   }

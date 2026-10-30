@@ -303,8 +303,8 @@ test.describe('the tab row', () => {
     await start(page);
     await turnOn(page, ['Scene list', 'Cast']);
     const tabs = row(page).getByRole('tab');
-    // No tab holds the slot until one is chosen; Cards, Notes, Stats, then the modules' tabs are in
-    // More.
+    // No tab holds the slot until one is chosen; Cards, Notes, Stats, Scaffold, then the modules'
+    // tabs are in More.
     await expect(tabs).toHaveText([/^Source/, /^Script/, /^Problems/, /^Outline/]);
     await more(page).click();
     await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
@@ -313,6 +313,7 @@ test.describe('the tab row', () => {
       // The sample's open notes are counted in Notes' name.
       /^Notes, \d+ open$/,
       'Stats',
+      'Scaffold',
       /^(Scenes|Cast)$/,
       /^(Scenes|Cast)$/,
     ]);

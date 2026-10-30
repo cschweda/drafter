@@ -105,6 +105,23 @@ test('View › Show stats opens the Stats tab beside the script', async ({ deskt
   await expect(page.getByRole('dialog', { name: 'Stats' })).toHaveCount(0);
 });
 
+test('View › Show Scaffold opens Scaffold beside the script', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  await expect
+    .poll(async () => (await menuItems(app)).some((i) => i.id === 'show-scaffold'))
+    .toBe(true);
+  // Go has Scaffold for this scene too, for the cursor's scene.
+  expect((await menuItems(app)).some((i) => i.id === 'scaffold-scene')).toBe(true);
+  await chooseMenuItem(app, ['View', 'Show Scaffold']);
+  // A tab in the pane not showing the Source, with focus on its page's heading.
+  const scaffold = page.getByRole('tabpanel', { name: 'Scaffold', exact: true });
+  await expect(scaffold).toBeVisible();
+  await expect(scaffold.getByRole('heading', { level: 2 })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Follow the cursor', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('follows what the page can do: undo, saving, and sprints', async ({ desktop }) => {
   const { app, page } = await desktop();
   const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;

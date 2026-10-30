@@ -17,6 +17,7 @@ import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { sceneMenuItems } from '~/outline/scene-menu';
 import { useOutline } from '~/outline/use-outline';
+import { showScaffold } from '~/scaffold/show';
 import { useSettings } from '~/settings/settings';
 
 // The Cards tab (Phase 2 design §7): every scene as an index card, in script order, under its
@@ -255,6 +256,7 @@ function menuItems(card: Card): DropdownMenuItem[][] {
       }),
     focus: (id) => void focusCard(id),
     history: (id) => afterClosing(() => openHistoryOf(id)),
+    scaffold: (id) => afterClosing(() => showScaffold({ kind: 'scene', pinned: id })),
   });
 }
 

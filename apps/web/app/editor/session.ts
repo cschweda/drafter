@@ -74,8 +74,12 @@ export interface EditorSession {
    * that removes it.
    */
   onEdit(listener: (transactions: readonly Transaction[]) => void): () => void;
-  /** Selects `select` (default: the offset), scrolls it into view, shows the Source tab, and focuses the editor. */
-  goto(offset: number, options?: { select?: Span }): void;
+  /**
+   * Selects `select` (default: the offset), scrolls it into view, shows the Source tab, and focuses
+   * the editor; with `keepFocus`, focus stays where it is while the Source shows beside it (a
+   * phone's one pane shows the Source, so the editor has focus there).
+   */
+  goto(offset: number, options?: { select?: Span; keepFocus?: boolean }): void;
 }
 
 let session: EditorSession | undefined;
@@ -232,7 +236,7 @@ function create(): EditorSession {
     return () => editListeners.delete(listener);
   }
 
-  function goto(offset: number, options: { select?: Span } = {}) {
+  function goto(offset: number, options: { select?: Span; keepFocus?: boolean } = {}) {
     const length = view.state.doc.length;
     const clamp = (n: number) => Math.min(length, Math.max(0, n));
     const { select } = options;
@@ -240,7 +244,8 @@ function create(): EditorSession {
     const head = clamp(select ? select.to : offset);
     view.dispatch({ selection: { anchor, head } });
 
-    if (window.matchMedia(WIDE_QUERY).matches) {
+    const wide = window.matchMedia(WIDE_QUERY).matches;
+    if (wide) {
       const held = document.activeElement?.closest<HTMLElement>('[data-pane]')?.dataset.pane;
       const from: PaneId | undefined = held === 'left' || held === 'right' ? held : undefined;
       panes.tabs.value = revealTab(panes.tabs.value, 'source', from);
@@ -250,7 +255,7 @@ function create(): EditorSession {
     // The Source pane may have only just been chosen: scroll and focus once it's drawn.
     void nextTick().then(() => {
       view.dispatch({ effects: EditorView.scrollIntoView(head, { y: 'center' }) });
-      view.focus();
+      if (!(options.keepFocus && wide)) view.focus();
     });
   }
 
