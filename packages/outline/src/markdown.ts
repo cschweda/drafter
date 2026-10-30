@@ -316,7 +316,12 @@ export function scriptMarkdown(
   const paragraph = (block: Block, role: Role) => {
     if (block.kind === 'centered') {
       // Fountain's marks shown as text, so the centering is kept (Call 30).
-      push(joinLines(blockLines(block, {}, (runs) => [plainRun('>'), ...runs, plainRun('<')])));
+      // A line with no text prints nothing, as `paginate` prints it, so it gets no marks.
+      const wrap = (runs: Style[]) =>
+        runs.some((run) => textStart(run.text) < run.text.length)
+          ? [plainRun('>'), ...runs, plainRun('<')]
+          : runs;
+      push(joinLines(blockLines(block, {}, wrap)));
     } else {
       push(joinLines(blockLines(block, { italic: ITALIC_ROLES.has(role) })));
     }

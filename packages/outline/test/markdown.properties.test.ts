@@ -254,19 +254,25 @@ describe('scriptMarkdown, read back', () => {
       fc.property(fc.array(line, { minLength: 1, maxLength: 3 }), (lines) => {
         const { doc, tree } = of(`INT. A - DAY\n\n!${lines.join('\n')}\n`);
         expect(actualLines(tree)).toEqual(expectedLines(doc));
+        // A line of `===` among the generated lines is a page break, written as a rule.
+        const breaks = doc.blocks.filter((b) => b.kind === 'page_break').length;
+        let rules = 0;
         walk(tree, (node) => {
-          expect([
-            'root',
-            'heading',
-            'paragraph',
-            'text',
-            'emphasis',
-            'strong',
-            'html',
-            'break',
-          ]).toContain(node.type);
+          if (node.type === 'thematicBreak') rules++;
+          else
+            expect([
+              'root',
+              'heading',
+              'paragraph',
+              'text',
+              'emphasis',
+              'strong',
+              'html',
+              'break',
+            ]).toContain(node.type);
           if (node.type === 'html') expect(['<u>', '</u>']).toContain(node.value);
         });
+        expect(rules).toBe(breaks);
       }),
       { numRuns: 20_000 },
     );

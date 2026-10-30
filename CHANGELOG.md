@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **Export as Markdown keeps two rare lines as written.** A `<` just before a bold or italic word that starts with `@` could become an email link in the Markdown, losing its characters; it is now escaped. A centered line with no text came out as `><`; it now writes nothing, as the PDF prints nothing. Both were found by a long run of the export's own random tests.
+
 ## [0.19.0] - 2026-10-30
 
 **Imports and Markdown out.** Drafter opens Highland and Fade In files as new scripts, opens a Markdown file as a screenplay when you want, exports a screenplay or stage play as Markdown that reads well anywhere (in a chat with an AI, on GitHub, in a notes app), and says plainly what a file is when it isn't a script.
