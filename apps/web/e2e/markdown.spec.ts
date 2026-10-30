@@ -263,6 +263,32 @@ test.describe('a Markdown document', () => {
     expect(dialogs).toEqual([]);
   });
 
+  test('numbers footnotes, lists them at the end, and goes from a reference to its note and back', async ({
+    page,
+  }) => {
+    await start(page);
+    await newMarkdown(page);
+    await typeAtEnd(
+      page,
+      'One[^later] and two[^1], and one again[^later].\n\n[^1]: The second note.\n[^later]: The first note.\n',
+    );
+    // The Source marks each reference and label quietly.
+    await expect(page.locator('.cm-md-footnote').first()).toHaveText('[^later]');
+    await showTab(page, 'Preview');
+    const refs = preview(page).locator('sup.md-fnref button');
+    await expect(refs).toHaveText(['1', '2', '1']);
+    await expect(refs.nth(1)).toHaveAccessibleName('Footnote 2');
+    const notes = preview(page).getByRole('region', { name: 'Notes' });
+    await expect(notes.getByRole('heading', { name: 'Notes' })).toBeVisible();
+    await expect(notes.locator('li')).toHaveText([/The first note\./, /The second note\./]);
+    await refs.nth(1).click();
+    await expect(notes.locator('li').nth(1)).toBeFocused();
+    await notes.getByRole('button', { name: 'Back to footnote 2’s reference' }).click();
+    await expect(refs.nth(1)).toBeFocused();
+    // Untitled, the six words of the paragraph (a reference's mark is no word), and the notes' six.
+    await expect(status(page)).toContainText('13 words');
+  });
+
   test('says there are no checks, and lists no problems', async ({ page }) => {
     await start(page);
     await newMarkdown(page);

@@ -124,6 +124,8 @@ watch(tree, draw);
 }
 .body :deep(:is(ul, ol)) {
   padding-left: 1.6em;
+  /* The app's base styles take lists' marks off; a document's lists keep theirs. */
+  list-style: revert;
 }
 .body :deep(blockquote) {
   padding-left: 1em;
@@ -167,6 +169,8 @@ watch(tree, draw);
   background: none;
   color: var(--heading);
   font: inherit;
+  /* The raised number keeps its line's height (the sup has none), but the button needs its own. */
+  line-height: 1;
   cursor: pointer;
 }
 .body :deep(:is(.md-fnref-button, .md-note-back):focus-visible) {

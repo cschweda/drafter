@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **The Preview's lists show their bullets and numbers again.** The app's base styles took list marks off everywhere, the Preview's lists too; a Markdown document's lists, and its notes, are now marked as in the PDF.
 - **The desktop menu test is formatted as Biome writes it**, so `pnpm check` passes again. Test only.
 - **The desktop quit test holds every quit, not only the first.** The app's own close flow asks, finds nothing unsaved and quits again, so a one-time hook in the test could let the app close on a fast Linux runner. Test only; the app is unchanged.
 
