@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **The desktop quit test holds every quit, not only the first.** The app's own close flow asks, finds nothing unsaved and quits again, so a one-time hook in the test could let the app close on a fast Linux runner. Test only; the app is unchanged.
+
 ## [0.19.1] - 2026-10-30
 
 **Two rare Markdown export lines kept as written, and Stats reads every heading at once.** A `<` before a bold or italic word starting with `@`, and a centered line with no text, now export as they should; a heading with a very long run of spaces no longer slows the Stats window.
