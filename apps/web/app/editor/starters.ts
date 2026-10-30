@@ -26,11 +26,12 @@ export const STARTERS: readonly Starter[] = STARTER_KINDS.map((data) => ({
 }));
 
 /**
- * Every "the X button" a starter's notes name, in order, X as written: a capitalized word,
- * and a second in lower case for a two-word label (`Page break`, `Stage direction`).
+ * Every "the X button" a starter's notes name, in order, X as written: a capitalized word, and
+ * a second for a two-word label (`Page break`, `Stage direction`), in any case, so a mis-cased
+ * label (`Page Break`) is caught by the test that every name is on the bar rather than skipped.
  */
 export function buttonsNamed(text: string): string[] {
-  return [...text.matchAll(/\b[Tt]he ([A-Z][a-z]*(?: [a-z]+)?) button\b/g)].map(
+  return [...text.matchAll(/\b[Tt]he ([A-Z][a-z]*(?: [A-Za-z]+)?) button\b/g)].map(
     (match) => match[1] as string,
   );
 }

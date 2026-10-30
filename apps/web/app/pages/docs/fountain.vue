@@ -21,10 +21,6 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
 <template>
   <article>
     <h1>{{ page.title }}</h1>
-    <p>
-      New to Fountain? <strong>File → New guided screenplay</strong> walks you through a first
-      script.
-    </p>
     <p class="docs-lead">
       A Fountain script is plain text: what a line looks like decides what it is. Most elements need
       no mark at all, and a mark at the start of a line forces it to be one thing when it would
@@ -32,6 +28,10 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
       where they’re needed, and so do <kbd>⌘⌥1</kbd> to <kbd>⌘⌥7</kbd> on a Mac
       (<kbd>Ctrl+Alt+1</kbd> to <kbd>Ctrl+Alt+7</kbd> elsewhere): a scene heading, action, a
       character, a parenthetical, a transition, centered text, and a lyric.
+    </p>
+    <p>
+      New to Fountain? <strong>File → New guided screenplay</strong> and
+      <strong>New guided stage play</strong> walk you through a first script.
     </p>
 
     <section v-for="entry in common" :id="entry.id" :key="entry.id" class="entry">

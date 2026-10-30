@@ -204,7 +204,7 @@ test.describe('without JavaScript', () => {
   }) => {
     await page.goto('/docs/fountain');
     expect(await mainText(page)).toContain(
-      'New to Fountain? File → New guided screenplay walks you through a first script.',
+      'New to Fountain? File → New guided screenplay and New guided stage play walk you through a first script.',
     );
     await page.goto('/docs');
     expect(await mainText(page)).toContain('a guided first screenplay and stage play');
