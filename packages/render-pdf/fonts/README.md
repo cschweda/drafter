@@ -13,3 +13,5 @@ Downloaded on 2026-10-25 from Google Fonts' repository, [`google/fonts/ofl/couri
 | `OFL.txt` | `9a755af092b494944c99f471be6fddd19b006a448fefdc4717e4ee0aa09a97b0` |
 
 `@drafter/render-pdf` never reads these files itself. Callers pass the bytes in, so the package runs in a browser worker as well as in Node: the CLI reads them from here, and the web app will fetch them.
+
+Inter Tight's four static styles, the text faces of a Markdown document's PDF, are in [`inter-tight/`](inter-tight/), with their own license, source, and checksums.

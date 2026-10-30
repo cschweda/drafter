@@ -9,6 +9,7 @@ import {
   useCommands,
 } from '../app/commands/registry';
 import type { DesktopBridge, DesktopMenuCommand } from '../app/desktop';
+import { exportApplies } from '../app/storage/export';
 
 function command(id: string, extra: Partial<Command> = {}): Command {
   const data = COMMAND_DATA.find((c) => c.id === id);
@@ -296,6 +297,36 @@ describe('The structure strip in the desktop menus', () => {
         keys: ['Mod-Alt-o'],
         enabled: true,
       },
+    ]);
+  });
+});
+
+describe('Export in the desktop menus', () => {
+  test('the menu carries each export’s enabled from exportApplies: PDF on for both kinds', () => {
+    // The commands are registered here with `enabled` from `exportApplies`, as builtin.ts does
+    // (the real builtins need Nuxt's auto-imports). The desktop e2e chooses File → Export → PDF
+    // for a Markdown document against the real ones.
+    const ids = ['export-pdf', 'export-md', 'export-txt', 'export-fdx'] as const;
+    const menuFor = (kind: 'fountain' | 'markdown') => {
+      clearCommands();
+      registerCommands(
+        ids.map((id) =>
+          command(id, { enabled: () => exportApplies(id.slice('export-'.length) as never, kind) }),
+        ),
+      );
+      return menuCommands(useCommands().value);
+    };
+    expect(menuFor('markdown')).toEqual([
+      { id: 'export-pdf', title: 'Export as PDF', group: 'File', enabled: true },
+      expect.objectContaining({ id: 'export-md', group: 'File', enabled: true }),
+      expect.objectContaining({ id: 'export-txt', group: 'File', enabled: true }),
+      expect.objectContaining({ id: 'export-fdx', group: 'File', enabled: false }),
+    ]);
+    expect(menuFor('fountain').map((c) => [c.id, c.enabled])).toEqual([
+      ['export-pdf', true],
+      ['export-md', false],
+      ['export-txt', true],
+      ['export-fdx', true],
     ]);
   });
 });

@@ -16,3 +16,23 @@ export function wordsLabel(count: number): string {
   if (count === 0) return 'No words';
   return count === 1 ? '1 word' : `${count.toLocaleString('en-US')} words`;
 }
+
+/** Why the Preview can't show a document: nested too deeply for the parser or the drawing, or anything else. */
+export type PreviewProblem = 'deep' | 'other';
+
+/**
+ * What went wrong, from the error a parse or a drawing threw (or the worker's message for it):
+ * running out of stack is a document nested too deeply (a RangeError in Chromium and WebKit, "too
+ * much recursion" in Firefox).
+ */
+export function previewProblem(error: unknown): PreviewProblem {
+  if (error instanceof RangeError) return 'deep';
+  const message = error instanceof Error ? error.message : String(error);
+  return /call stack|too much recursion/i.test(message) ? 'deep' : 'other';
+}
+
+/** What the Preview says in place of a document it can't show. */
+export const PREVIEW_PROBLEMS: Readonly<Record<PreviewProblem, string>> = {
+  deep: 'This document is nested too deeply to preview. Your text is safe in the Source.',
+  other: 'The Preview couldn’t show this document. Your text is safe in the Source.',
+};

@@ -192,7 +192,7 @@ test.describe('the app menu', () => {
     await expect(palette.getByRole('option', { name: /^Export as Markdown/ })).toHaveCount(0);
   });
 
-  test('offers a Markdown document the Markdown file and plain text, not a PDF', async ({
+  test('offers a Markdown document the PDF, the Markdown file, and plain text', async ({
     page,
   }) => {
     await start(page);
@@ -200,9 +200,22 @@ test.describe('the app menu', () => {
     await item(page, /^New Markdown document/).click();
     await expect.poll(() => text(page)).toContain('# Untitled');
     await openMenu(page);
-    await expect(item(page, /^Export as Markdown/)).toBeVisible();
-    await expect(item(page, /^Export as plain text/)).toBeVisible();
-    await expect(item(page, /^Export as PDF/)).toHaveCount(0);
+    // The PDF first, as for a script.
+    const exports = page.getByRole('menuitem', { name: /^Export as/ });
+    await expect(exports).toHaveText([
+      /^Export as PDF/,
+      /^Export as Markdown/,
+      /^Export as plain text/,
+    ]);
+    await expect(item(page, /^Export as PDF/)).not.toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+    // The palette shows Export as PDF in one too.
+    await page.keyboard.press('ControlOrMeta+k');
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    await palette.locator('input').fill('Export as');
+    await expect(palette.getByRole('option', { name: /^Export as PDF/ })).toBeVisible();
+    await expect(palette.getByRole('option', { name: /^Export as Markdown/ })).toBeVisible();
+    await expect(palette.getByRole('option', { name: /^Export as Final Draft/ })).toHaveCount(0);
   });
 
   test('shows an item disabled when its command is off', async ({ page }) => {

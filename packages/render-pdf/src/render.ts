@@ -2,6 +2,8 @@ import type { Layout, LayoutRun, Page } from '@drafter/layout';
 import { CHAR_WIDTH_PT, LINE_HEIGHT_PT, PAPER_POINTS, type Template } from '@drafter/templates';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
+import type { RenderProgress } from './progress';
+import { drawable } from './text';
 
 /** Courier Prime's four styles, as font file bytes. */
 export interface FontSet {
@@ -43,30 +45,6 @@ const columns = (s: string) => {
   return n;
 };
 
-const REPLACEMENT = String.fromCharCode(0xfffd);
-
-/**
- * Text pdf-lib can draw on one line: control characters (which it would treat
- * as line breaks) become spaces, and unpaired surrogates become U+FFFD. Each
- * replacement takes one column, as the character did.
- */
-function drawable(s: string): string {
-  let out = '';
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    const next = s.charCodeAt(i + 1);
-    if (c < 0x20 || c === 0x7f || c === 0x85 || c === 0x2028 || c === 0x2029) {
-      out += ' ';
-    } else if (c >= 0xd800 && c <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
-      out += s.slice(i, i + 2);
-      i++;
-    } else {
-      out += c >= 0xd800 && c <= 0xdfff ? REPLACEMENT : s.charAt(i);
-    }
-  }
-  return out;
-}
-
 /**
  * Draws laid-out pages as a PDF (technical design §6.2): one page per layout
  * page, sized from `template.page.paper`, with Courier Prime embedded. Text sits
@@ -77,7 +55,11 @@ function drawable(s: string): string {
 export async function renderPdf(
   layout: Layout,
   template: Template,
-  opts: { fonts: FontSet },
+  opts: {
+    fonts: FontSet;
+    /** Told how far the render is: the pages drawn, then the file saved. */
+    onProgress?: (progress: RenderProgress) => void;
+  },
 ): Promise<Uint8Array> {
   const missing = STYLES.filter((style) => !(opts?.fonts?.[style] instanceof Uint8Array));
   if (missing.length > 0) {
@@ -162,7 +144,10 @@ export async function renderPdf(
     layout.pages.length > 0
       ? layout.pages
       : [{ number: 1, lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
-  for (const page of pages) {
+  const report = (stage: RenderProgress['stage'], done: number, total: number) =>
+    opts.onProgress?.({ stage, done, total });
+  report('draw', 0, pages.length);
+  for (const [index, page] of pages.entries()) {
     const pdfPage = doc.addPage([paper.width, paper.height]);
     for (const [k, row] of page.lines.entries()) {
       for (const part of row.right ? [row, row.right] : [row]) {
@@ -184,6 +169,10 @@ export async function renderPdf(
     if (page.footer) {
       await drawText(pdfPage, plain(page.footer), 0, spec.height - 1 - spec.numbering.line);
     }
+    report('draw', index + 1, pages.length);
   }
-  return doc.save();
+  report('save', 0, 1);
+  const bytes = await doc.save();
+  report('save', 1, 1);
+  return bytes;
 }

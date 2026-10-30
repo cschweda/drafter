@@ -2,13 +2,14 @@
 import { domPane, type SyncPane } from '~/editor/scroll-sync';
 import { useEditor } from '~/editor/session';
 import { useScrollSync } from '~/editor/use-scroll-sync';
+import { PREVIEW_PROBLEMS, type PreviewProblem, previewProblem } from '~/markdown/preview';
 import { renderMarkdown } from '~/markdown/render';
 import { useMarkdown } from '~/markdown/use-markdown';
 
 // The Preview (Plan 4 Task 6): the Markdown document as headings, paragraphs, emphasis, lists,
 // quotes, and code, in one column. It is built as DOM from the parsed tree by `renderMarkdown`,
 // which makes elements and sets text and nothing else: no HTML string is ever parsed.
-const { tree, updating } = useMarkdown();
+const { tree, updating, problem } = useMarkdown();
 const content = ref<HTMLElement>();
 const article = ref<HTMLElement>();
 const { view } = useEditor();
@@ -19,10 +20,26 @@ let detachSync: (() => void) | undefined;
 const empty = computed(() => !!tree.value && tree.value.children?.length === 0);
 // A long document's first drawing waits for the worker.
 const preparing = computed(() => !tree.value && updating.value);
+// A tree the drawing couldn't build (nested thousands deep, which the drawing recurses through).
+const drawProblem = ref<PreviewProblem | null>(null);
+// The parse's problem, or the drawing's: said calmly in the pane, in place of the document.
+const trouble = computed(() => {
+  const which = problem.value ?? drawProblem.value;
+  return which ? PREVIEW_PROBLEMS[which] : null;
+});
 
 function draw() {
   if (!content.value) return;
-  content.value.replaceChildren(tree.value ? renderMarkdown(tree.value, document) : '');
+  let drawn: DocumentFragment | string = '';
+  drawProblem.value = null;
+  if (tree.value) {
+    try {
+      drawn = renderMarkdown(tree.value, document);
+    } catch (error) {
+      drawProblem.value = previewProblem(error);
+    }
+  }
+  content.value.replaceChildren(drawn);
   // A new drawing moves the blocks: the Preview is put back in step with the Source.
   syncPane?.invalidate();
   sync.placeView();
@@ -42,7 +59,8 @@ watch(tree, draw);
 <template>
   <article ref="article" class="preview" tabindex="0" aria-label="Preview">
     <div class="sheet">
-      <p v-if="empty" class="nothing">Nothing to preview yet.</p>
+      <p v-if="trouble" class="nothing" role="status">{{ trouble }}</p>
+      <p v-else-if="empty" class="nothing">Nothing to preview yet.</p>
       <p v-else-if="preparing" class="nothing" role="status">Preparing the preview…</p>
       <div ref="content" class="body" />
     </div>

@@ -7,6 +7,7 @@ import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useTemplateMenu } from '~/editor/template-menu';
+import { EXPORTS } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { kindOf, type Project } from '~/storage/projects';
 import { revertNotice } from '~/storage/save';
@@ -93,13 +94,13 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
   });
 });
 
-// A Fountain script exports as a PDF, plain text, or a Final Draft file; a Markdown document as its
-// Markdown file or plain text. (The PDF, Final Draft, and Markdown commands are off in the other
-// kind, and the palette hides them; here the other kind's items are left out.)
+// A Fountain script exports as a PDF, plain text, or a Final Draft file; a Markdown document as a
+// PDF, its Markdown file, or plain text (`EXPORTS`). (The Final Draft and Markdown commands are off
+// in the other kind, and the palette hides them; here the other kind's items are left out.)
 const exportIds = computed(() =>
-  editor.kind.value === 'markdown'
-    ? ['export-md', 'export-txt']
-    : ['export-pdf', 'export-txt', 'export-fdx'],
+  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].map(
+    (kind) => `export-${kind}`,
+  ),
 );
 const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',

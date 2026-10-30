@@ -59,22 +59,24 @@ describe('createMarkdownClient', () => {
     expect(worker.posted).toEqual([{ seq: last, source: 'abc' }]);
   });
 
-  test('ignores an older reply after a newer one, and reports an error reply', () => {
+  test('ignores an older reply after a newer one, and tells an error reply from a worker that failed', () => {
     const worker = fakeWorker();
     const trees: Array<[number, number]> = [];
-    const errors: string[] = [];
+    const errors: Array<[string, number, boolean]> = [];
     const client = createMarkdownClient(
       worker,
       (_tree, words, seq) => trees.push([seq, words]),
-      (message) => errors.push(message),
+      (message, seq, failed) => errors.push([message, seq, failed]),
     );
     worker.reply({ seq: 2, tree: { type: 'root' }, words: 2 });
     worker.reply({ seq: 1, tree: { type: 'root' }, words: 1 });
     expect(trees).toEqual([[2, 2]]);
+    // One text the parser couldn't read: the worker itself is fine.
     worker.reply({ seq: 3, error: 'boom' });
-    expect(errors).toEqual(['boom']);
+    expect(errors).toEqual([['boom', 3, false]]);
     worker.fail();
     expect(errors).toHaveLength(2);
+    expect(errors[1]?.[2]).toBe(true);
     client.destroy();
     worker.reply({ seq: 9, tree: { type: 'root' }, words: 9 });
     expect(trees).toHaveLength(1);

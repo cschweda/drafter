@@ -1,7 +1,7 @@
 {
   "name": "@drafter/render-pdf",
   "version": "0.15.1",
-  "description": "PDF output for Drafter: draws laid-out pages with Courier Prime embedded.",
+  "description": "PDF output for Drafter: laid-out script pages in Courier Prime, and Markdown documents in Inter Tight.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -33,10 +33,11 @@
   "dependencies": {
     "@drafter/layout": "workspace:*",
     "@drafter/templates": "workspace:*",
-    "@pdf-lib/fontkit": "^1.1.1",
-    "pdf-lib": "^1.17.1"
+    "@pdf-lib/fontkit": "1.1.1",
+    "pdf-lib": "1.17.1"
   },
   "devDependencies": {
-    "@drafter/fountain": "workspace:*"
+    "@drafter/fountain": "workspace:*",
+    "mdast-util-from-markdown": "^2.1.0"
   }
 }

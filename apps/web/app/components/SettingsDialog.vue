@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { DICTIONARIES, SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
+import type { Paper } from '@drafter/templates';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { desktop } from '~/desktop';
 import { settingsOpen } from '~/settings/dialog';
-import { type Settings, TEXT_SIZES, useSettings } from '~/settings/settings';
+import { PAPERS, type Settings, TEXT_SIZES, useSettings } from '~/settings/settings';
 
 // The Settings dialog (Phase 1 design §8): a labeled switch for each on/off setting, a select
 // for the text size. A change takes effect and is kept at once, so there is nothing to confirm.
@@ -127,6 +128,14 @@ function onLanguage(event: Event) {
   void set('spellLanguage', (event.target as HTMLSelectElement).value as SpellLanguage);
 }
 
+// ---- Paper for Markdown PDFs (Markdown PDF design §6) ----------------------------------------
+
+const PAPER_NAMES: Readonly<Record<Paper, string>> = { letter: 'US Letter', a4: 'A4' };
+
+function onPaper(event: Event) {
+  void set('markdownPaper', (event.target as HTMLSelectElement).value as Paper);
+}
+
 /** More words than this, and the heading says how many. */
 const LONG_LIST = 10;
 const mine = computed(() => settings.value.personalDictionary);
@@ -240,6 +249,26 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
       <p v-else id="settings-no-words" class="why" tabindex="-1">
         No words yet. A misspelled word’s menu has Add to my dictionary.
       </p>
+    </div>
+    <div v-if="item.key === 'spellNotes'" class="row">
+      <div class="text">
+        <label for="settings-markdown-paper" class="name">Paper for Markdown PDFs</label>
+        <p id="settings-markdown-paper-why" class="why">
+          The paper size of a Markdown document’s PDF. Screenplays and stage plays use their
+          template’s paper.
+        </p>
+      </div>
+      <select
+        id="settings-markdown-paper"
+        class="size"
+        aria-describedby="settings-markdown-paper-why"
+        :value="settings.markdownPaper"
+        @change="onPaper"
+      >
+        <option v-for="paper in PAPERS" :key="paper" :value="paper">
+          {{ PAPER_NAMES[paper] }}
+        </option>
+      </select>
     </div>
     </template>
     <ModulesSettings />

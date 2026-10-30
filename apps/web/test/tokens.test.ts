@@ -59,6 +59,10 @@ const TEXT_PAIRS: Array<[string, string, number]> = [
   ['--ink', '--page', 4.5],
   ['--ink-muted', '--page', 4.5],
   ['--heading', '--chrome', 3],
+  // An export's progress bar (ExportMenu.vue): the track's edge on the toast, and the still fill
+  // of a stage that can't say how far it is, with reduced motion, on the track. Graphics: 3:1.
+  ['--faint', '--chrome-2', 3],
+  ['--muted', '--chrome', 3],
   // The spelling mark's dotted underline is a graphic, not text (Plan D, Call 17).
   ['--spelling', '--bg', 3],
 ];
@@ -88,4 +92,20 @@ describe('design tokens', () => {
       expect(short).toEqual([]);
     },
   );
+
+  test('the export bar draws with the colors checked above', () => {
+    const vue = readFileSync(new URL('../app/components/ExportMenu.vue', import.meta.url), 'utf8');
+    const rule = (selector: string, from = 0) => {
+      const start = vue.indexOf(`${selector} {`, from);
+      expect(start).toBeGreaterThan(-1);
+      return vue.slice(start, vue.indexOf('}', start));
+    };
+    // The track has an edge you can see (its fill is --chrome, on the toast's --chrome-2).
+    expect(rule('.bar')).toMatch(/background: var\(--chrome\);/);
+    expect(rule('.bar')).toMatch(/border: 1px solid var\(--faint\);/);
+    // With reduced motion, an unknown stage's still fill is solid --muted, never faded.
+    const still = rule('.bar.unknown .fill', vue.indexOf('prefers-reduced-motion'));
+    expect(still).toMatch(/background: var\(--muted\);/);
+    expect(still).not.toMatch(/opacity/);
+  });
 });

@@ -5,7 +5,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.15.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Next: PDF export for Markdown, and Highland and Fade In imports; a signed macOS download follows. See the [roadmap](#roadmap).
+> **Status: v0.15.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Next: guided starters, export options, running time, and a Technical details page (v0.17.0), then version history, then Highland, Fade In, and Markdown imports; a signed macOS download follows. See the [roadmap](#roadmap).
 
 **What you can do today**
 
@@ -14,7 +14,7 @@
 - **Look back:** **History** (earlier versions, kept as you write and save, each restorable in one undo) and **Compare** (what changed between two versions, as script pages with the changes marked).
 - **Check spelling:** Drafter's own spellcheck, offline, in US or British English, with a dictionary of your own and one for each script.
 - **Keep going:** focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats.
-- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; export to PDF and plain text; and **Final Draft files** (open an `.fdx` as a new script, or export your script as one).
+- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; export to PDF and plain text, with a progress bar and a percentage on a long export; a Markdown document's PDF too, with links you can click, on US Letter or A4; and **Final Draft files** (open an `.fdx` as a new script, or export your script as one).
 - **Get started:** a welcome and a guided tour on a first visit; offline use and installing as an app; help pages; and, under Help in the menu, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
 - **On the desktop:** an app for Linux (an AppImage or a `.deb`) and Windows (an installer) that always saves in place and loads script modules from a folder. It builds on a Mac with one command.
 
@@ -148,7 +148,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/fountain` | Fountain text ⇄ syntax tree: lossless printing, fast full reparse | 0 |
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
-| `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded | 0 |
+| `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight | 0 (Markdown documents in 2) |
 | `@drafter/cli` | `drafter build` and `drafter check` | 0 (published in 5) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
@@ -185,7 +185,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|---|
 | 0 | Engine: parser, templates, pagination, PDF, CLI | **Done** | |
 | 1 | Minimum IDE: the first public release | **Live at drafter.dev**; the desktop app for Linux (v0.4.0) and Windows (v0.8.0), and a Mac build (v0.7.0) | A signed macOS download |
-| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0) | **Next:** PDF export for Markdown, and Highland and Fade In imports. Then the Beat Board, storylines, the Stats and Reference tabs, a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
+| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0) | **Next:** guided starters, export options, running time, and a Technical details page (v0.17.0); version history with GitHub-style diffs; Highland, Fade In, and Markdown imports. Then the Beat Board, storylines, the Stats and Reference tabs, a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
 | 3 | Formats | Planned | Celtx import; TV, radio, UK/BBC, and novel templates; user templates; French scenes and doubling charts for plays; `.html` export; PDF with notes in the margin or a watermark; a self-contained reader file |
 | 4 | Craft | Planned | Revision marks and production pages, alternate lines, a clean display mode, table read, a character pass, story order, a breakdown report, accepting a co-writer's changes, one character's dialogue for an actor, the remaining lint rules, a PWA install flow |
 | 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
@@ -204,7 +204,7 @@ The full list for each phase, with what each item does and when Phase 0 counts a
 | App shell | Nuxt 4 as a single-page app, with Nuxt UI v4 |
 | Source editor | CodeMirror 6, highlighted by `@drafter/fountain` rather than a second grammar |
 | Script rendering | HTML and CSS with Courier Prime, from the same page model as the PDF |
-| PDF | pdf-lib |
+| PDF | pdf-lib, with fontkit for the embedded fonts |
 | Storage | IndexedDB (via Dexie) and the File System Access API |
 | Offline | Progressive Web App |
 | Spellcheck | nspell with offline Hunspell dictionaries |
@@ -352,6 +352,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Phase 1 design](docs/drafter-phase1-design.md): the first public release, from the first visit and its guided tour to the editor, saving, export, focus mode, and phones, with mockups in [`docs/phase1/`](docs/phase1/).
 - [Phase 2 design](docs/drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
 - [Structure strip design](docs/drafter-structure-strip-design.md): the band of sections and scenes above the panes, its rows, sizes, keys, and how Phase 2's script map and Timeline build on it.
+- [Markdown PDF design](docs/drafter-markdown-pdf-design.md): a Markdown document as a printable PDF: what prints, line and page breaks, paper, and page numbers.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 

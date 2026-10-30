@@ -397,8 +397,13 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - Writing statistics by day, kept on your device (v0.5.0).
 - Spellcheck with nspell and a per-script dictionary that knows your character names (v0.14.0, Plan D): offline, in US or British English, with a right-click menu, a dictionary of your own, and a Spelling list in Problems.
 - The Structure strip (v0.15.0), described in the [README](../README.md#the-idea) and the [Structure strip design](drafter-structure-strip-design.md).
+- PDF export for Markdown documents (v0.16.0, the [Markdown PDF design](drafter-markdown-pdf-design.md)): headings, lists, quotes, code, and clickable links on numbered US Letter or A4 pages, in Inter Tight with Courier Prime for code, drawn in the export worker and working offline. The PDF isn't tagged yet, and has no bookmarks; both wait for the final accessibility steps.
 
-**Next:** PDF export for Markdown documents, and import from Highland and Fade In (moved up from Phase 3).
+**Next:**
+
+- v0.17.0: guided first-screenplay and first-stage-play starters, export options (scene numbers, and how much of the title page prints), a better running time, and a Technical details page.
+- Version history with GitHub-style diffs: the scenes deleted since an earlier version, to find and put back, and additions and deletions marked the way GitHub marks a diff.
+- Import from Highland and Fade In (moved up from Phase 3), with `.md` listed among the imports.
 
 **To come**
 

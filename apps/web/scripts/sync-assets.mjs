@@ -1,6 +1,7 @@
 // Copies the files drafter.dev serves as-is into `public/`: Courier Prime, the
 // same TTF files the PDF embeds, so the screen and the printed page share
-// their metrics; the brand's icons, logos, and share image; and the
+// their metrics; Inter Tight's four static styles, which a Markdown document's
+// PDF embeds (the export worker fetches them); the brand's icons, logos, and share image; and the
 // spellchecker's dictionaries with the licence of each package it uses, served
 // verbatim (the dictionaries' UKACD notice asks for its text "verbatim"). The
 // copies are ignored by Git, so `brand/`, `packages/render-pdf/fonts/`, and the
@@ -12,6 +13,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const STYLES = ['Regular', 'Bold', 'Italic', 'BoldItalic'];
+/** Inter Tight's styles in `packages/render-pdf/fonts/inter-tight/` (render-pdf's DOCUMENT_FONT_FILES). */
+const DOCUMENT_STYLES = ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic'];
 const BRAND = [
   'favicon.svg',
   'favicon.ico',
@@ -32,7 +35,11 @@ export const ASSETS = [
     to: `fonts/courier-prime/CourierPrime-${style}.ttf`,
   })),
   { from: 'packages/render-pdf/fonts/OFL.txt', to: 'fonts/courier-prime/OFL.txt' },
-  // Inter Tight's own licence, served verbatim (the font itself is a Vite asset, hashed).
+  ...DOCUMENT_STYLES.map((style) => ({
+    from: `packages/render-pdf/fonts/inter-tight/InterTight-${style}.ttf`,
+    to: `fonts/inter-tight/InterTight-${style}.ttf`,
+  })),
+  // Inter Tight's own licence, served verbatim (the interface's font is a Vite asset, hashed).
   { from: 'apps/web/app/assets/fonts/inter-tight/OFL.txt', to: 'fonts/inter-tight/OFL.txt' },
   ...BRAND.map((name) => ({ from: `brand/${name}`, to: name })),
 ];
