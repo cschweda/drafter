@@ -8,6 +8,7 @@ const { kind } = useEditor();
 const SECTIONS: ReadonlyArray<{ id: StatsSection; label: string }> = [
   { id: 'overview', label: 'Overview' },
   { id: 'characters', label: 'Characters' },
+  { id: 'grid', label: 'Character by scene' },
 ];
 </script>
 

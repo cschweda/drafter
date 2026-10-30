@@ -1,0 +1,50 @@
+import { describe, expect, test } from 'vitest';
+import { gridKey } from '../app/stats/grid-keys';
+
+// The character-by-scene grid's keys (seeing-the-script design §4.4): the ARIA grid pattern over
+// the cells, a row per character and a column per scene.
+const model = { rows: 4, columns: 30 };
+const at = (row: number, column: number) => ({ row, column });
+
+describe('the grid’s keys', () => {
+  test('arrows move and stop at edges', () => {
+    expect(gridKey(model, at(1, 5), 'ArrowRight', false)).toEqual(at(1, 6));
+    expect(gridKey(model, at(1, 5), 'ArrowLeft', false)).toEqual(at(1, 4));
+    expect(gridKey(model, at(1, 5), 'ArrowDown', false)).toEqual(at(2, 5));
+    expect(gridKey(model, at(1, 5), 'ArrowUp', false)).toEqual(at(0, 5));
+    // At an edge the key is still the grid's (the page doesn't scroll), and focus stays.
+    expect(gridKey(model, at(0, 0), 'ArrowUp', false)).toEqual(at(0, 0));
+    expect(gridKey(model, at(0, 0), 'ArrowLeft', false)).toEqual(at(0, 0));
+    expect(gridKey(model, at(3, 29), 'ArrowDown', false)).toEqual(at(3, 29));
+    expect(gridKey(model, at(3, 29), 'ArrowRight', false)).toEqual(at(3, 29));
+  });
+
+  test('Home and End go along a row', () => {
+    expect(gridKey(model, at(2, 12), 'Home', false)).toEqual(at(2, 0));
+    expect(gridKey(model, at(2, 12), 'End', false)).toEqual(at(2, 29));
+  });
+
+  test('Ctrl+Home and Ctrl+End go to the corners', () => {
+    expect(gridKey(model, at(2, 12), 'Home', true)).toEqual(at(0, 0));
+    expect(gridKey(model, at(2, 12), 'End', true)).toEqual(at(3, 29));
+  });
+
+  test('Page Down moves ten scenes', () => {
+    expect(gridKey(model, at(1, 5), 'PageDown', false)).toEqual(at(1, 15));
+    expect(gridKey(model, at(1, 25), 'PageDown', false)).toEqual(at(1, 29));
+    expect(gridKey(model, at(1, 15), 'PageUp', false)).toEqual(at(1, 5));
+    expect(gridKey(model, at(1, 5), 'PageUp', false)).toEqual(at(1, 0));
+  });
+
+  test('Enter and the menu keys', () => {
+    expect(gridKey(model, at(1, 5), 'Enter', false)).toBe('enter');
+    // Shift+F10 comes as ContextMenu: the grid maps it, as the other lists do.
+    expect(gridKey(model, at(1, 5), 'ContextMenu', false)).toBe('menu');
+    // Anything else isn't the grid's.
+    expect(gridKey(model, at(1, 5), 'a', false)).toBeNull();
+    expect(gridKey(model, at(1, 5), 'Tab', false)).toBeNull();
+    expect(gridKey(model, at(1, 5), 'ArrowRight', true)).toBeNull();
+    // An empty grid has nowhere to go.
+    expect(gridKey({ rows: 0, columns: 0 }, at(0, 0), 'ArrowRight', false)).toBeNull();
+  });
+});

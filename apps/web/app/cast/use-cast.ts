@@ -1,4 +1,5 @@
 import { type Cast, castOf } from '@drafter/cast';
+import type { Doc } from '@drafter/fountain';
 import { linesPerPage, type SceneIndex } from '@drafter/outline';
 import { effectScope, type ShallowRef, shallowRef, watch } from 'vue';
 import { useLayout } from '../editor/layout';
@@ -19,6 +20,11 @@ export const CAST_PAUSE_MS = 300;
 export interface CastSession {
   /** The newest cast; null until a view has first needed it, and after another script is opened. */
   cast: Readonly<ShallowRef<Cast | null>>;
+  /**
+   * The scene index and the parse the newest cast was worked out from, set with it, so a view
+   * reads scenes and offsets that match the cast's while the writer has typed on since.
+   */
+  basis: Readonly<ShallowRef<{ index: SceneIndex; doc: Doc } | null>>;
   /** A view holds the cast while it is shown; the returned function lets go (once). */
   need(): () => void;
 }
@@ -47,6 +53,7 @@ function create(): CastSession {
   const outline = useOutline();
   const words = useWordAnswers();
   const cast = shallowRef<Cast | null>(null);
+  const basis = shallowRef<{ index: SceneIndex; doc: Doc } | null>(null);
   /** The last cast was worked out with pages. */
   let paged = false;
   /** How many views hold the cast. */
@@ -75,7 +82,9 @@ function create(): CastSession {
     // left without pages while the layout is working on nothing, so the cast goes on without.)
     const lagging = !nextPaged && updating.value && !failed.value && index.scenes.length > 0;
     if (cast.value && paged && lagging && editor.kind.value !== 'markdown') return;
-    const next = castOf(index, editor.doc.value, editor.template.value, perPage, words.isWord);
+    const doc = editor.doc.value;
+    const next = castOf(index, doc, editor.template.value, perPage, words.isWord);
+    basis.value = { index, doc };
     cast.value = next;
     paged = nextPaged;
     words.ask(next.characters.map((c) => c.name));
@@ -106,12 +115,14 @@ function create(): CastSession {
   editor.onChange((changes) => {
     if (changes !== null) return;
     cast.value = null;
+    basis.value = null;
     paged = false;
     stale = true;
   });
 
   return {
     cast,
+    basis,
     need() {
       holders++;
       // A view opening shows the cast as soon as it can: no pause to wait out.

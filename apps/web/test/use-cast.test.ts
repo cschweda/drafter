@@ -192,15 +192,23 @@ describe('useCast', () => {
     await wait(0);
     const first = cast.cast.value;
     expect(first).not.toBeNull();
+    const before = cast.basis.value;
+    expect(before?.index).toBe(env.index.value);
+    expect(before?.doc).toBe(env.doc.value);
     type(`${DOCK}\nEXT. ROAD - DAY\n\nPIK\nOff we go.\n`);
     await wait(CAST_PAUSE_MS - 1);
-    // Never empty in between: the last cast until the new one.
+    // Never empty in between: the last cast until the new one, with the scenes it was made from.
     expect(cast.cast.value).toBe(first);
+    expect(cast.basis.value).toBe(before);
+    expect(cast.basis.value?.index.scenes).toHaveLength(2);
     await wait(1);
     expect(cast.cast.value?.characters.map((c) => c.key)).toContain('PIK');
+    expect(cast.basis.value?.index).toBe(env.index.value);
+    expect(cast.basis.value?.index.scenes).toHaveLength(3);
     // Another script: nothing of the last one's cast is kept.
     for (const listener of env.listeners) listener(null);
     expect(cast.cast.value).toBeNull();
+    expect(cast.basis.value).toBeNull();
   });
 
   test('keeps pages-based figures while the layout lags', async () => {

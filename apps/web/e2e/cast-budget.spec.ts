@@ -1,59 +1,20 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { CastProbe } from '../app/cast/probe';
-import { editor, setText, start } from './modules';
+import { longScript } from './long-script';
+import { editor, runCommand, setText, start } from './modules';
 
 // The cast's budgets (seeing-the-script design §11): `castOf` within 15 ms for a 120-page script,
-// and no long task while typing with a view holding the cast. These log the times and fail only
-// past ten times the budget, as a guard against a hang (the plan's Call 51). A test build puts
-// `drafterCastProbe` on the page (app/cast/probe.ts) to time `castOf` and to hold the cast as the
-// Stats tab and Scaffold will; Task 6 adds Scaffold itself to the typing test.
+// the Stats tab opened with Characters and the grid drawn within 300 ms, and no long task while
+// typing with the Stats tab shown. These log the times and fail only past ten times the budget, as
+// a guard against a hang (the plan's Call 51). A test build puts `drafterCastProbe` on the page
+// (app/cast/probe.ts) to time `castOf` and to count the casts worked out; Task 6 adds Scaffold
+// to the typing test.
 
-type ProbeWindow = Window & { drafterCastProbe: CastProbe; longTasks: number[] };
-
-/** A seeded generator of invented words (Marsaglia's xorshift), so every run types the same text. */
-function generator(seed: number) {
-  let state = seed;
-  const next = () => {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return state >>> 0;
-  };
-  const syllables = ['bra', 'tol', 'mev', 'ska', 'rin', 'dou', 'pel', 'vax', 'quo', 'ten', 'lir'];
-  const word = (parts = 1 + (next() % 3)) => {
-    let w = '';
-    for (let i = 0; i < parts; i++) w += syllables[next() % syllables.length];
-    return w;
-  };
-  return { next, word };
-}
-
-/**
- * About 120 pages: 185 scenes among 60 invented characters (a third of them two words long), each
- * scene naming three in its action, one capitalised and possessive, with four speeches.
- */
-function longScript(): string {
-  const { next, word } = generator(2026);
-  const names = Array.from({ length: 60 }, (_, i) =>
-    `${word(2)}${i % 3 === 0 ? ` ${word(2)}` : ''}`.toUpperCase(),
-  );
-  const pick = () => names[next() % names.length] as string;
-  const capitalised = (name: string) =>
-    name
-      .toLowerCase()
-      .split(' ')
-      .map((w) => (w[0] ?? '').toUpperCase() + w.slice(1))
-      .join(' ');
-  const sentence = (n: number) => Array.from({ length: n }, () => word()).join(' ');
-  let text = '';
-  for (let s = 0; s < 185; s++) {
-    text += `${next() % 2 ? 'INT.' : 'EXT.'} ${word(2).toUpperCase()} - ${next() % 2 ? 'DAY' : 'NIGHT'}\n\n`;
-    text += `${sentence(6)} ${pick()} ${sentence(10)} ${capitalised(pick())}'s ${sentence(12)}.\n${sentence(14)}.\n\n`;
-    for (let k = 0; k < 4; k++) text += `${pick()}\n${sentence(5 + (next() % 15))}.\n\n`;
-    text += `${sentence(20)} ${pick()} ${sentence(9)}.\n\n`;
-  }
-  return text;
-}
+type ProbeWindow = Window & {
+  drafterCastProbe: CastProbe;
+  longTasks: number[];
+  statsOpen?: { start: number | null; drawn: Promise<number> };
+};
 
 /** Calls one of the probe's methods on the page. */
 const probe = <K extends keyof CastProbe>(
@@ -86,18 +47,64 @@ test('castOf on a 120-page script is within budget', async ({ page, browserName 
   expect(ms).toBeLessThan(150);
 });
 
+test('opening the Stats tab with Characters and the grid is within budget', async ({
+  page,
+}, info) => {
+  test.setTimeout(120_000);
+  await long(page);
+  // Timed in the page, from the palette's Enter to the frame after the Characters table and the
+  // grid are both drawn, with the cast worked out for the first time in between.
+  await page.evaluate(() => {
+    const w = window as unknown as ProbeWindow;
+    let start: number | null = null;
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key === 'Enter' && start === null) {
+          start = performance.now();
+          if (w.statsOpen) w.statsOpen.start = start;
+        }
+      },
+      { capture: true },
+    );
+    const drawn = new Promise<number>((resolve) => {
+      const look = () => {
+        const panel = document.getElementById('panel-stats');
+        const table = panel?.querySelector('table tbody tr');
+        const cell = panel?.querySelector('[role="grid"] [role="gridcell"]');
+        if (start !== null && table && cell) setTimeout(() => resolve(performance.now()));
+        else requestAnimationFrame(look);
+      };
+      requestAnimationFrame(look);
+    });
+    w.statsOpen = { start: null, drawn };
+  });
+  await runCommand(page, 'Show stats');
+  const ms = await page.evaluate(async () => {
+    const open = (window as unknown as ProbeWindow).statsOpen;
+    const end = await open?.drawn;
+    return (end ?? 0) - (open?.start ?? 0);
+  });
+  const pages = await probe(page, 'pages');
+  console.log(`Stats tab opened, ${pages} pages, ${info.project.name}: ${ms.toFixed(1)} ms`);
+  expect(ms).toBeGreaterThan(0);
+  expect(ms).toBeLessThan(3000);
+});
+
 test.describe('in Chromium', () => {
   test.skip(
     ({ browserName, isMobile }) => browserName !== 'chromium' || !!isMobile,
     'long tasks are a Chromium API; two panes need a wide screen',
   );
 
-  test('typing while a view needs the cast makes no long task', async ({ page }) => {
+  test('typing with the Stats tab shown makes no long task', async ({ page }) => {
     test.setTimeout(120_000);
     await long(page);
-    await probe(page, 'need');
-    await expect.poll(() => probe(page, 'characters')).toBeGreaterThan(50);
-
+    await runCommand(page, 'Show stats');
+    const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+    await expect(stats.getByRole('rowheader')).not.toHaveCount(0);
+    await expect(stats.getByRole('grid', { name: 'Character by scene' })).toBeVisible();
+    await expect(editor(page)).toBeVisible();
     await page.evaluate(() => {
       const long: number[] = [];
       (window as unknown as ProbeWindow).longTasks = long;
@@ -139,6 +146,5 @@ test.describe('in Chromium', () => {
       if (best === undefined || seen.length < best.length) best = seen;
     }
     expect(best).toEqual([]);
-    await probe(page, 'release');
   });
 });

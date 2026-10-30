@@ -229,6 +229,28 @@ for (const theme of THEMES) {
       await clean(page, 'the Stats tab at Characters');
     });
 
+    test(`has no accessibility violations in the Stats tab: the grid and List (${theme})`, async ({
+      page,
+    }) => {
+      await countsButton(page).click();
+      await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
+      const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+      await page
+        .getByRole('navigation', { name: 'Stats sections' })
+        .getByRole('link', { name: 'Character by scene' })
+        .click();
+      const grid = stats.getByRole('grid', { name: 'Character by scene' });
+      await expect(grid).toBeVisible();
+      // A cell with focus, so its ring is checked too: the grid's Tab stop comes after List.
+      await stats.getByRole('button', { name: 'List', exact: true }).focus();
+      await page.keyboard.press('Tab');
+      await expect(grid.getByRole('gridcell').first()).toBeFocused();
+      await clean(page, 'the Stats tab at Character by scene');
+      await stats.getByRole('button', { name: 'List', exact: true }).click();
+      await expect(stats.getByRole('list', { name: 'Character by scene' })).toBeVisible();
+      await clean(page, 'the Stats tab at Character by scene, as a List');
+    });
+
     test(`has no accessibility violations in the Export options dialog (${theme})`, async ({
       page,
     }) => {

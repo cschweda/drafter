@@ -274,10 +274,13 @@ test.describe('writing stats', () => {
     await start(page);
     await runCommand(page, 'Show stats');
     const links = page.getByRole('navigation', { name: 'Stats sections' }).getByRole('link');
-    await expect(links).toHaveText(['Overview', 'Characters']);
+    await expect(links).toHaveText(['Overview', 'Characters', 'Character by scene']);
     await links.nth(1).click();
     await expect(heading(page, 'Characters')).toBeFocused();
     await expect(heading(page, 'Characters')).toBeInViewport();
+    await links.nth(2).click();
+    await expect(heading(page, 'Character by scene')).toBeFocused();
+    await expect(heading(page, 'Character by scene')).toBeInViewport();
     await links.nth(0).click();
     await expect(heading(page, 'Overview')).toBeFocused();
   });

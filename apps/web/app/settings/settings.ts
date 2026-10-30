@@ -43,6 +43,8 @@ export interface Settings {
   compareView: CompareView;
   /** The Changes view's layout, the last chosen: unified by default; side by side where the pane is wide enough. */
   diffLayout: DiffLayout;
+  /** The Stats tab's Character by scene as a List of text, not the grid: the last chosen, off by default (seeing-the-script design §4.4). */
+  gridAsList: boolean;
 }
 
 export type CompareView = 'changes' | 'pages';
@@ -76,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   diffColors: 'red-green',
   compareView: 'changes',
   diffLayout: 'unified',
+  gridAsList: false,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */

@@ -32,6 +32,7 @@ describe('settings', () => {
       diffColors: 'red-green',
       compareView: 'changes',
       diffLayout: 'unified',
+      gridAsList: false,
     });
   });
 

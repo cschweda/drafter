@@ -93,6 +93,16 @@ const groups = shortcutGroups(COMMAND_DATA);
           menu: Go to and, on a scene, History of this scene.
         </li>
         <li>
+          In the Stats tab’s Character by scene, <kbd>Tab</kbd> enters the grid on the cell you
+          last focused. The arrow keys move from cell to cell, <kbd>Home</kbd> and <kbd>End</kbd>
+          go to the ends of a character’s row, <kbd>Ctrl+Home</kbd> and <kbd>Ctrl+End</kbd> to the
+          first and last cells (<kbd>⌘</kbd> on a Mac), and <kbd>Page Up</kbd> and
+          <kbd>Page Down</kbd> move ten scenes. <kbd>Enter</kbd> goes to the character’s first cue
+          in that scene, or, where they’re there without speaking, to the first time the action
+          names them. The context-menu key or <kbd>Shift+F10</kbd> (or a right-click) opens the
+          cell’s menu: Go to.
+        </li>
+        <li>
           In the Notes tab, <kbd>↑</kbd> and <kbd>↓</kbd> move between the notes, and
           <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. On a note, <kbd>Enter</kbd>
           goes to it in the Source, <kbd>E</kbd> edits it in place (<kbd>Enter</kbd> saves,
