@@ -11,7 +11,8 @@ import {
   SPRINT_MINUTES,
   useSprint,
 } from '~/stats/sprint';
-import { ESTIMATE_LABEL, pageRatePhrase, ratesOf } from '~/stats/timing';
+import { ESTIMATE_LABEL, pageRatePhrase } from '~/stats/time-format';
+import { ratesOf } from '~/stats/timing';
 import { useScript } from '~/storage/script';
 
 defineProps<{ id: string }>();

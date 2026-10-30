@@ -478,7 +478,7 @@ test.describe('going there, and where you are', () => {
     await expect(card).toContainText('Estimate from the dialogue: 50 s');
     // Its name says both, as the card is for the eye.
     await expect(kitchen).toHaveAccessibleName(
-      'Scene 1, INT. KITCHEN - NIGHT, page 1, 1 1/8 pages, about 1 minute 10 seconds, estimate from the dialogue about 50 seconds',
+      'Scene 1, INT. KITCHEN - NIGHT, page 1, 1 1/8 pages, about 1 minute 10 seconds, estimate from the dialogue: about 50 seconds',
     );
     // An act's are its scenes' totals.
     const act = stripRow(page, 'Sections marked #').getByRole('button').first();

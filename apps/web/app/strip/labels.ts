@@ -8,7 +8,13 @@ import {
   sectionName,
   swatchOf,
 } from '../outline/labels';
-import { DEFAULT_RATES, ESTIMATE_LABEL, type Rates, shortTime, timeWords } from '../stats/timing';
+import {
+  DEFAULT_RATES,
+  ESTIMATE_LABEL,
+  type Rates,
+  shortTime,
+  timeWords,
+} from '../stats/time-format';
 
 // What the Structure strip says (structure strip design §3, §3.3, §4): its rows' marks and names,
 // each block's name, the lines of its card, and a scene's fill. Drafter's own words throughout.
@@ -47,7 +53,7 @@ const estimateOf = (item: OutlineItem, rates: Rates): number =>
 export function blockName(item: OutlineItem, rates: Rates = DEFAULT_RATES): string {
   const parts = [item.kind === 'scene' ? sceneName(item, rates) : sectionName(item, rates)];
   const estimate = estimateOf(item, rates);
-  if (estimate > 0) parts.push(`${ESTIMATE_LABEL.toLowerCase()} ${timeWords(estimate)}`);
+  if (estimate > 0) parts.push(`${ESTIMATE_LABEL.toLowerCase()}: ${timeWords(estimate)}`);
   const goal = goalOf(item);
   if (goal) parts.push(`goal: ${goal}`);
   return parts.join(', ');

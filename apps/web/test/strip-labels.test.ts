@@ -1,7 +1,7 @@
 import type { Scene, Section, StripRow } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
 import { SWATCH } from '../app/outline/labels';
-import { DEFAULT_RATES } from '../app/stats/timing';
+import { DEFAULT_RATES } from '../app/stats/time-format';
 import { blockFill, blockName, cardLines, rowMark, rowName } from '../app/strip/labels';
 
 const span = { from: 0, to: 1 };
@@ -75,7 +75,7 @@ describe('strip labels', () => {
     expect(blockName(section())).toBe('Act One, 5 scenes, 12 pages, about 12 minutes');
     // The estimate from the dialogue too, which the card shows.
     expect(blockName(scene({ timing: { spoken: 100, actionLines: 20 } }))).toBe(
-      'Scene 12, INT. KITCHEN - NIGHT, estimate from the dialogue about 1 minute 10 seconds',
+      'Scene 12, INT. KITCHEN - NIGHT, estimate from the dialogue: about 1 minute 10 seconds',
     );
   });
 

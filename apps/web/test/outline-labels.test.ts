@@ -8,7 +8,7 @@ import {
   sceneName,
   sectionName,
 } from '../app/outline/labels';
-import { DEFAULT_RATES } from '../app/stats/timing';
+import { DEFAULT_RATES } from '../app/stats/time-format';
 
 const scene = (more: Partial<Scene> = {}): Scene => ({
   kind: 'scene',

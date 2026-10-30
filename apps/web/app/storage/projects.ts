@@ -5,7 +5,7 @@ import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
-import type { Rates } from '../stats/timing';
+import type { Rates } from '../stats/time-format';
 import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';

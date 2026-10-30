@@ -3,18 +3,19 @@ import { webcrypto } from 'node:crypto';
 import type { EditorState as State } from '@codemirror/state';
 import { parse } from '@drafter/fountain';
 import 'fake-indexeddb/auto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   DEFAULT_RATES,
   ESTIMATE_LABEL,
   estimateNote,
   pageSeconds,
-  parseRate,
-  RATE_LIMITS,
-  ratesOf,
   shortTime,
   timeWords,
-} from '../app/stats/timing';
+} from '../app/stats/time-format';
+import { parseRate, RATE_LIMITS, ratesOf } from '../app/stats/timing';
 
 // The editor session without Nuxt's aliases, as export-options.test.ts has it.
 vi.mock('../app/editor/session', async () => {
@@ -57,6 +58,20 @@ vi.mock('../app/editor/session', async () => {
     goto() {},
   };
   return { useEditor: () => session };
+});
+
+describe('time-format', () => {
+  test('the labels read the formatting alone, not the script or its storage', () => {
+    // So the Outline's and the strip's words can be tested, and reused, without a session.
+    for (const file of ['outline/labels.ts', 'strip/labels.ts', 'stats/time-format.ts']) {
+      const source = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), '../app', file),
+        'utf8',
+      );
+      expect(source, file).not.toMatch(/from '\.\.?\/(stats\/timing|storage\/[^']*)'/);
+      expect(source, file).not.toMatch(/from '\.\/timing'/);
+    }
+  });
 });
 
 describe('ratesOf', () => {
@@ -227,6 +242,24 @@ describe('setRate', () => {
     });
     expect(await stored()).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 180 });
     readOnly.mockRestore();
+
+    // Every view shares one rates object, which a change to anything else leaves as it is, so
+    // nothing that shows a time works again when the script is saved.
+    const rates = t.useRates();
+    const before = rates.value;
+    let runs = 0;
+    const { watch, nextTick } = await import('vue');
+    const stop = watch(rates, () => runs++);
+    await t.session.keepOnProject(() => ({ exportOptions: { titlePage: 'none' } }));
+    await nextTick();
+    expect(rates.value).toBe(before);
+    expect(runs).toBe(0);
+    await t.setRate('wordsPerMinute', 185);
+    await nextTick();
+    expect(rates.value).toEqual({ minutesPerPage: 1.2, wordsPerMinute: 185 });
+    expect(runs).toBe(1);
+    stop();
+    await t.setRate('wordsPerMinute', 180);
 
     // Export options and rates are kept side by side.
     const { setExportOption } = await import('../app/storage/export-options');

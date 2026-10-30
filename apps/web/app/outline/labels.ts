@@ -1,5 +1,5 @@
 import type { Scene, SceneColor, Section } from '@drafter/outline';
-import { DEFAULT_RATES, pageSeconds, type Rates, shortTime, timeWords } from '../stats/timing';
+import { DEFAULT_RATES, pageSeconds, type Rates, shortTime, timeWords } from '../stats/time-format';
 
 // What the Outline says about a row, on screen and to a screen reader (Phase 2 design §6.1).
 

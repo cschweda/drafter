@@ -174,6 +174,20 @@ describe('dual dialogue', () => {
     expect(lyric.spokenBy().size).toBe(0);
   });
 
+  test('a note, the boneyard, or a synopsis ends a speech, as the layout ends it', () => {
+    // What follows the quiet block prints on its own, so it is no one's: here a lyric.
+    // (A note or boneyard on a line of the speech is part of it; one after a blank line is not.)
+    for (const quiet of ['= A synopsis.', '\n[[A note.]]', '\n/* Cut. */']) {
+      const t = tally(`ANN\nOne two.\n${quiet}\n~La la la\n`);
+      expect(Object.fromEntries(t.spokenBy())).toEqual({ ANN: 2 });
+      expect(t.timing().spoken).toBe(5);
+    }
+    // And a pair's sides are the speeches as printed: a lyric after a synopsis isn't Ben's.
+    const pair = tally('ANN\nOne two three.\n\nBEN ^\nFour.\n= A synopsis.\n~La la la la\n');
+    expect(Object.fromEntries(pair.spokenBy())).toEqual({ ANN: 3, BEN: 1 });
+    expect(pair.timing().spoken).toBe(3 + 4);
+  });
+
   test("the scene index counts a pair once, and keeps each speaker's words", () => {
     const source = [
       'INT. A - DAY',

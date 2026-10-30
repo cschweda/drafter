@@ -19,16 +19,8 @@ import {
   signed,
 } from '~/stats/history';
 import { characterTable, headingCount, headingSplit, readingMinutes } from '~/stats/script-stats';
-import {
-  ESTIMATE_LABEL,
-  estimateNote,
-  pageRatePhrase,
-  parseRate,
-  RATES_READ_ONLY,
-  type Rates,
-  setRate,
-  useRates,
-} from '~/stats/timing';
+import { ESTIMATE_LABEL, estimateNote, pageRatePhrase, type Rates } from '~/stats/time-format';
+import { parseRate, RATES_READ_ONLY, setRate, useRates } from '~/stats/timing';
 import { useWritingStats } from '~/stats/writing';
 import { useGuard } from '~/storage/guard';
 import { useScript } from '~/storage/script';

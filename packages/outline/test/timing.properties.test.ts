@@ -1,4 +1,4 @@
-import { parse } from '@drafter/fountain';
+import { type Block, parse } from '@drafter/fountain';
 import { bodyEnd } from '@drafter/notes';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
@@ -12,8 +12,47 @@ import {
   type Timing,
   TimingTally,
 } from '../src';
-import { anyScript } from './arbitraries';
+import { anyScript, screenplayScript } from './arbitraries';
 import { screenplay, stagePlay } from './helpers';
+
+/** Speeches with lyrics, and quiet blocks inside and after them, the case `spokenBy` must get right. */
+const lyricWord = fc.constantFrom('la', 'happy', 'birthday', 'oh');
+const lyric = fc.array(lyricWord, { minLength: 1, maxLength: 4 }).map((w) => `~${w.join(' ')}`);
+const speaker = fc.constantFrom('ANN', 'BEN', '@McCLANE');
+const quiet = fc.constantFrom(
+  '= A synopsis.',
+  '\n[[A note.]]',
+  '\n/* Cut. */',
+  '[[An inline note.]]',
+);
+const speechPart = fc.oneof(lyric, fc.constantFrom('One two three.', '(beat)', 'Four.'), quiet);
+const speech = fc
+  .tuple(speaker, fc.boolean(), fc.array(speechPart, { minLength: 1, maxLength: 4 }))
+  .map(([name, dual, parts]) => `${name}${dual ? ' ^' : ''}\n${parts.join('\n')}`);
+const lyricScene = fc
+  .array(fc.oneof(speech, lyric, fc.constant('He runs.')), { minLength: 1, maxLength: 5 })
+  .map((parts) => ['INT. HALL - DAY', ...parts].join('\n\n'));
+const lyricScript = fc.oneof(
+  screenplayScript,
+  fc.array(lyricScene, { minLength: 1, maxLength: 3 }).map((scenes) => `${scenes.join('\n\n')}\n`),
+);
+
+const SPEECH_PARTS = new Set<Block['kind']>(['parenthetical', 'dialogue', 'lyric']);
+
+/** Words spoken outside any speech, as the layout groups speeches: a cue, then the parts right after it. */
+function unattributed(blocks: readonly Block[], template: typeof screenplay): number {
+  let inSpeech = false;
+  let words = 0;
+  for (const block of blocks) {
+    if (block.kind === 'character') {
+      inSpeech = true;
+      continue;
+    }
+    inSpeech = inSpeech && SPEECH_PARTS.has(block.kind) && block.leading.split('\n').length === 2;
+    if (!inSpeech) words += blockTiming(block, template).spoken;
+  }
+  return words;
+}
 
 const sound = (t: Timing) => {
   for (const n of [t.spoken, t.actionLines]) {
@@ -82,6 +121,25 @@ describe('timing properties', () => {
         for (const scene of index.scenes) sum = addTiming(sum, scene.timing);
         sum = addTiming(sum, part(end, doc.blocks.length));
         expect(sum).toEqual(whole.timing());
+      }),
+    );
+  });
+
+  test("in each scene, the speakers' words and the words no one says add up to every word spoken", () => {
+    fc.assert(
+      fc.property(lyricScript, (source) => {
+        const doc = parse(source);
+        const template = doc.meta?.template === 'stage-play-standard' ? stagePlay : screenplay;
+        const index = sceneIndex(doc, template);
+        // A scene's blocks run to the next scene or section, or the end of the body.
+        const starts = [...index.scenes, ...index.sections].map((u) => u.block);
+        for (const scene of index.scenes) {
+          const to = Math.min(bodyEnd(doc), ...starts.filter((b) => b > scene.block));
+          const blocks = doc.blocks.slice(scene.block, to);
+          const spoken = blocks.reduce((sum, b) => sum + blockTiming(b, template).spoken, 0);
+          const credited = Object.values(scene.spokenBy).reduce((sum, n) => sum + n, 0);
+          expect(credited + unattributed(blocks, template)).toBe(spoken);
+        }
       }),
     );
   });

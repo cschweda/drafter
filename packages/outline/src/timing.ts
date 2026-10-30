@@ -96,7 +96,9 @@ interface Speech {
  * except that a dual-dialogue pair (a `^` cue's speech and the speech just before it) takes as
  * long as the longer of the two. A `^` pairs as the layout pairs it: with the speech before it
  * when nothing that prints comes between (notes, the boneyard, and synopses don't), and when that
- * speech isn't already in a pair; otherwise it prints on its own and counts in full. A section or
+ * speech isn't already in a pair; otherwise it prints on its own and counts in full. A speech is
+ * its cue and the parts right after it, as the layout groups them: a quiet block ends it too, and
+ * words after that are no one's. A section or
  * a page break parts them (the layout pairs across a screenplay's section, which prints nothing,
  * but a tally never runs across a section, so the scene index's units always add up).
  */
@@ -132,8 +134,10 @@ export class TimingTally {
       this.#spokenBy.set(speaker, (this.#spokenBy.get(speaker) ?? 0) + timing.spoken);
       return;
     }
-    if (QUIET.has(block.kind)) return;
+    // A quiet block ends a speech, as the layout ends one (what follows prints on its own), but
+    // leaves it free to pair with a `^` after it.
     this.#close();
+    if (QUIET.has(block.kind)) return;
     this.#last = null;
     this.#spoken += timing.spoken;
     this.#actionLines += timing.actionLines;
