@@ -59,6 +59,40 @@ describe('notAScript', () => {
     expect(notAScript('a.txt', new Uint8Array())).toBeNull();
   });
 
+  test('refuses a web page, by its name and by its first text', () => {
+    // Drafter's own HTML export among them: its script is the file it was made from.
+    for (const name of ['The Call.html', 'The Call.HTML', 'Page.htm', 'Page.Htm']) {
+      const refusal = notAScript(name, PLAIN);
+      expect(refusal?.format, name).toBe('a web page');
+      expect(refusal?.advice, name).toBe('Open the script it was made from instead.');
+    }
+    const pages = [
+      '<!DOCTYPE html>\n<html lang="en">',
+      '<!doctype HTML><html>',
+      '\uFEFF<!DOCTYPE html>\n',
+      '  \n\t<html>\n<head>',
+      '<HTML lang="en">',
+    ];
+    for (const page of pages) {
+      for (const name of ['The Call.fountain', 'The Call.txt', 'The Call.md', undefined]) {
+        expect(notAScript(name, text(page))?.format, `${name}: ${page}`).toBe('a web page');
+      }
+    }
+    // Only at the start, and only the whole word: a script that mentions HTML is a script.
+    for (const script of [
+      'INT. HALL - DAY\n\n<!DOCTYPE html>\n',
+      '<html-ish> notes\n',
+      '<htmlfoo>\n',
+      '<!doctype htm>\n',
+      'Title: <html>\n',
+    ]) {
+      expect(notAScript('a.fountain', text(script)), script).toBeNull();
+    }
+    expect(refusalMessage('The Call.html', notAScript('The Call.html', PLAIN) as never)).toBe(
+      'Drafter can’t open a web page (The Call.html). Open the script it was made from instead.',
+    );
+  });
+
   test('lets a zip through when it is named .highland or .fadein, and only then', () => {
     const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0, 0, 0, 8, 0]);
     for (const name of ['Ferry.highland', 'Ferry.HIGHLAND', 'Cabin.fadein', 'Cabin.FadeIn']) {

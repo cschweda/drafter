@@ -19,6 +19,15 @@ const PDF: Refusal = {
   advice: 'Open the script it was made from instead, or copy its text into a new script.',
 };
 
+/**
+ * A web page, Drafter's own HTML export among them: opened as a script, its markup would become
+ * the script, and saving would write Fountain over the page.
+ */
+const WEB_PAGE: Refusal = {
+  format: 'a web page',
+  advice: 'Open the script it was made from instead.',
+};
+
 /** By extension, lowercased, without its dot. */
 const BY_EXTENSION = new Map<string, Refusal>(
   Object.entries({
@@ -37,6 +46,8 @@ const BY_EXTENSION = new Map<string, Refusal>(
       advice: 'Export it from Celtx as plain text, then open that.',
     },
     zip: { format: 'a zip archive', advice: 'Unpack it, then open the script inside.' },
+    html: WEB_PAGE,
+    htm: WEB_PAGE,
   }),
 );
 
@@ -74,6 +85,20 @@ function extensionOf(name: string | undefined): string {
 const startsWith = (bytes: Uint8Array, signature: number[]) =>
   bytes.byteLength >= signature.length && signature.every((b, i) => bytes[i] === b);
 
+/**
+ * Whether the text starts as a web page does: `<!DOCTYPE html` or `<html` (any case, then a space,
+ * `>`, or the end), after a byte order mark and white space. Only the first bytes are read.
+ */
+function isWebPage(bytes: Uint8Array): boolean {
+  let start = 0;
+  if (startsWith(bytes, [0xef, 0xbb, 0xbf])) start = 3;
+  const head = String.fromCharCode(...bytes.subarray(start, start + 256))
+    .trimStart()
+    .slice(0, 16)
+    .toLowerCase();
+  return /^(?:<!doctype\s+html|<html)(?:[\s>]|$)/.test(head);
+}
+
 /** A known non-script format, by its extension (any case) or, whatever its name, by its first bytes; or null. */
 export function notAScript(name: string | undefined, bytes: Uint8Array): Refusal | null {
   const extension = extensionOf(name);
@@ -82,7 +107,7 @@ export function notAScript(name: string | undefined, bytes: Uint8Array): Refusal
     BY_SIGNATURE.find(
       ({ bytes: signature, unless }) => startsWith(bytes, signature) && !unless?.(extension),
     )?.refusal ??
-    null
+    (isWebPage(bytes) ? WEB_PAGE : null)
   );
 }
 

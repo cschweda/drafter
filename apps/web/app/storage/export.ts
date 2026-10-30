@@ -95,7 +95,7 @@ const EXTENSION = {
   fdx: '.fdx',
 } as const satisfies Record<ExportKind, string>;
 
-/** "Drafter 0.22.0" for an HTML file's generator line; "Drafter" where the build named no version. */
+/** "Drafter 0.22.0", an HTML file's generator line; "Drafter" where the build named no version. */
 const generator = () => `Drafter ${buildInfo().version}`.trim();
 
 /**

@@ -282,24 +282,26 @@ useDocsHead({
     <h3 id="cant-open">Files Drafter can’t open</h3>
     <p>
       A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft
-      file (<code>.fdr</code>), a Celtx project, and a zip archive aren’t scripts Drafter can read,
-      so Open turns them away, says what the file is, and says what to do instead: for most, save it
-      as plain text or Fountain in the app that made it, then open that. An RTF file or a PDF is
-      known by what’s inside it even when its name ends in <code>.txt</code>. Nothing opens, and the
+      file (<code>.fdr</code>), a Celtx project, a zip archive, and a web page (an
+      <code>.html</code> file, Drafter’s own HTML export among them) aren’t scripts Drafter can
+      read, so Open turns them away, says what the file is, and says what to do instead: for most,
+      save it as plain text or Fountain in the app that made it, then open that; for a web page or
+      a PDF, open the script it was made from. An RTF file, a PDF, or a web page is known by what’s
+      inside it even when its name ends in <code>.txt</code>. Nothing opens, and the
       script you have open is left alone. Any other file of plain text opens as a Fountain script.
     </p>
 
     <h2 id="export-options">Export options</h2>
     <p>
       <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF,
-      HTML page, plain text, Final Draft file, and Markdown file come out. <strong>Scene numbers</strong>: None
-      (the usual), As written (only the numbers you’ve written in the script, like
-      <code>#12A#</code>), or Number every scene (a scene with a written number keeps it, and the
-      rest are numbered by their place, so two scenes can share a number). <strong>Title
-      page</strong>: Full, Title and author only (the title, the credit, the authors, and the
-      source, without your contact details or the date), or None. <strong>Include notes (Markdown
-      and HTML)</strong>: Leave out (the usual) or Include, for the Markdown and HTML exports
-      alone.
+      HTML page, plain text, Final Draft file, and Markdown file come out.
+      <strong>Scene numbers</strong>: None (the usual), As written (only the numbers you’ve written
+      in the script, like <code>#12A#</code>), or Number every scene (a scene with a written number
+      keeps it, and the rest are numbered by their place, so two scenes can share a number).
+      <strong>Title page</strong>: Full, Title and author only (the title, the credit, the authors,
+      and the source, without your contact details or the date), or None. <strong>Include notes
+      (Markdown and HTML)</strong>: Leave out (the usual) or Include, for the Markdown and HTML
+      exports alone.
     </p>
     <p>
       Each script keeps its own choices, in this browser, and the script itself never changes: they

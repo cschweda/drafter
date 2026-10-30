@@ -510,6 +510,26 @@ test.describe('opening a file where there is no picker', () => {
     await expect(editor(page)).toContainText('INT.');
   });
 
+  test('refuses a web page, an exported one or one named as a script, and opens nothing', async ({
+    page,
+  }) => {
+    await start(page);
+    const before = (await stored(page)).length;
+    const PAGE = '<!DOCTYPE html>\n<html lang="en"><head><title>The Call</title></head></html>\n';
+    await chooseWithInput(page, 'The Call.html', PAGE);
+    await expect(alert(page)).toContainText(
+      'Drafter can’t open a web page (The Call.html). Open the script it was made from instead.',
+    );
+    // Named as a script, it is still known by its first text.
+    await chooseWithInput(page, 'The Call.fountain', PAGE);
+    await expect(alert(page)).toContainText(
+      'Drafter can’t open a web page (The Call.fountain). Open the script it was made from instead.',
+    );
+    expect((await stored(page)).length).toBe(before);
+    await expect(editor(page)).not.toContainText('DOCTYPE');
+    await expect(editor(page)).toContainText('INT.');
+  });
+
   test('announces a refusal again when the same file is refused twice', async ({ page }) => {
     await watchAlerts(page);
     await start(page);

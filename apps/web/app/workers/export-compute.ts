@@ -149,6 +149,9 @@ export function scriptKindLine(
   pages: number,
   minutesPerPage: number,
 ): string {
+  // Only the built-in templates have a kind's name: the app shows any other script as a
+  // screenplay (`templateIdOf`), so that is its name here. A template of the writer's own (not
+  // yet in Drafter) will need a name of its own for this line.
   const kind = isBuiltIn(template.id)
     ? TEMPLATE_NAMES[template.id]
     : TEMPLATE_NAMES['us-screenplay'];

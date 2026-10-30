@@ -18,8 +18,9 @@ import { useScript } from '~/storage/script';
 import type { ExportOptions } from '~/workers/export-compute';
 
 // Export options (out-the-door design §2.4): how the open script's exports print its scene numbers
-// and its title page, and whether its Markdown and HTML files carry its notes (Call 28). Each choice is
-// kept the moment it is made, on the script's project, never in its text; Done closes. Export as PDF still saves at once, with the options the script has.
+// and its title page, and whether its Markdown and HTML files carry its notes (Call 28). Each
+// choice is kept the moment it is made, on the script's project, never in its text; Done closes.
+// Export as PDF still saves at once, with the options the script has.
 const dialog = ref<HTMLDialogElement>();
 const script = useScript();
 const { readOnly } = useGuard();

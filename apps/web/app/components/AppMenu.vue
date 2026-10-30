@@ -96,8 +96,9 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
 });
 
 // A Fountain script exports as a PDF, an HTML page, plain text, a Final Draft file, or Markdown; a
-// Markdown document as a PDF, an HTML page, its Markdown file, or plain text (`EXPORTS`). (The Final Draft and Markdown commands are off
-// in the other kind, and the palette hides them; here the other kind's items are left out.)
+// Markdown document as a PDF, an HTML page, its Markdown file, or plain text (`EXPORTS`). (The
+// Final Draft and Markdown commands are off in the other kind, and the palette hides them; here
+// the other kind's items are left out.)
 const exportIds = computed(() =>
   EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].map(
     (kind) => `export-${kind}`,

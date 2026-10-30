@@ -357,6 +357,27 @@ describe('what a page may read and write', () => {
     );
   });
 
+  test('writes a .html only where an export was saved, never one the writer opened', async () => {
+    const page = join(dir, 'The Call.html');
+    await writeFile(page, '<!DOCTYPE html>');
+    // Opened (the Open dialog's All files): it may be read, never written.
+    const opened = setUp([page]);
+    expect(await opened.handlers.showOpen(opened.event)).toBe(page);
+    expect(await codeOf(opened.handlers.write(opened.event, page, bytes('X')))).toBe('not-allowed');
+    expect(await readFile(page, 'utf8')).toBe('<!DOCTYPE html>');
+    // Saved as a script there: the script's own extension follows, and the page is untouched.
+    const asScript = setUp([page]);
+    expect(await asScript.handlers.showSave(asScript.event, 'The Call.fountain', '.fountain')).toBe(
+      join(dir, 'The Call.html.fountain'),
+    );
+    // Chosen in a Save dialog for an HTML export: written; a name typed without .html gets it.
+    const exported = setUp([join(dir, 'Export')]);
+    const path = await exported.handlers.showSave(exported.event, 'Export.html', '.html');
+    expect(path).toBe(join(dir, 'Export.html'));
+    await exported.handlers.write(exported.event, path, bytes('<!DOCTYPE html>\n'));
+    expect(await readFile(join(dir, 'Export.html'), 'utf8')).toBe('<!DOCTYPE html>\n');
+  });
+
   test('never writes a .highland or .fadein, even one the writer opened', async () => {
     for (const name of ['Ferry.highland', 'Cabin.fadein', 'LOUD.FADEIN']) {
       const { handlers, event } = setUp();

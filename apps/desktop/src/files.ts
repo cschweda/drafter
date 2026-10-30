@@ -153,6 +153,12 @@ export const SCRIPT_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.markd
  * in a Save dialog for one; a `.highland` or `.fadein` never is (it isn't in `WRITE_EXTENSIONS`).
  */
 export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fadein'];
+/**
+ * The extensions the app writes only as an export, where the writer chose the file in a Save
+ * dialog for one: a Final Draft file, and an HTML page. One that was opened (an import, or a page
+ * picked with All files) is never written.
+ */
+export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html'];
 /** The extensions of the files the app opens: scripts, and the files it imports. */
 export const OPEN_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, ...IMPORT_EXTENSIONS];
 /** The extensions of the files the app writes: scripts, and the exports. */
