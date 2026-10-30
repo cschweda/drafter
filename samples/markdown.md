@@ -56,13 +56,7 @@ A link is the text in square brackets, then the address in round ones: [the Foun
 
 ## Footnotes
 
-A footnote keeps an aside out of the way.[^aside] Put a caret and a label in square brackets where the note belongs, then write the note on a line of its own, anywhere in the document, starting with the same label and a colon:
-
-```
-The kitchen clock is ten minutes fast.[^clock]
-
-[^clock]: Margaret sets it that way on purpose.
-```
+A footnote keeps an aside out of the way.[^aside] Where the note belongs, put a caret and a label in square brackets, like `[^clock]`. Then, on a line of its own anywhere in the document, write the note after the same label and a colon: `[^clock]: Margaret sets the clock fast on purpose.`
 
 The label can be a word or a number; the notes are numbered 1, 2, 3 in the order you refer to them. The Preview lists them at the end, and a PDF prints each at the foot of its page.
 
