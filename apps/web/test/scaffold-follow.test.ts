@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { nextTick, ref } from 'vue';
-import { FOLLOW_REST_MS, restingValue } from '../app/scaffold/follow';
+import { FOLLOW_MARK, FOLLOW_REST_MS, restingValue } from '../app/scaffold/follow';
 
 // Scaffold's scene page follows the cursor when it rests (seeing-the-script design §5.2, Call 25):
 // FOLLOW_REST_MS after the last cursor move or the cast's update, it reads the cursor's scene again.
 // It never moves focus and says nothing: the heading changes quietly.
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  // The timers only: the page's performance timeline stays real, for the mark.
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -67,5 +68,21 @@ describe('following the cursor', () => {
     expect(document.activeElement).toBe(field);
     rest.stop();
     field.remove();
+  });
+
+  test('keeps one performance mark, the last rest’s', async () => {
+    performance.clearMarks(FOLLOW_MARK);
+    const cursor = ref(1);
+    const rest = restingValue(
+      () => cursor.value,
+      () => cursor.value,
+    );
+    for (let n = 2; n < 5; n++) {
+      cursor.value = n;
+      await nextTick();
+      vi.advanceTimersByTime(FOLLOW_REST_MS);
+    }
+    expect(performance.getEntriesByName(FOLLOW_MARK)).toHaveLength(1);
+    rest.stop();
   });
 });

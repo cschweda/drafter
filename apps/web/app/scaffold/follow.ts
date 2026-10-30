@@ -39,6 +39,8 @@ export function restingValue<T>(
       clearTimeout(timer);
       timer = setTimeout(() => {
         timer = undefined;
+        // One mark at a time, so a long visit doesn't keep a mark for every rest.
+        performance.clearMarks?.(FOLLOW_MARK);
         performance.mark?.(FOLLOW_MARK);
         value.value = read();
       }, ms);

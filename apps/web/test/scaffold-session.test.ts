@@ -3,7 +3,7 @@ import { type Scene, sceneIndex } from '@drafter/outline';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import { ref } from 'vue';
-import { createScaffold } from '../app/scaffold/session';
+import { BACK_LIMIT, createScaffold } from '../app/scaffold/session';
 
 // Scaffold's session (seeing-the-script design §5.1, §5.2, Call 26): one tab with pages, a Back list
 // inside it, and the scene page following the cursor's scene, which is on at every visit. The
@@ -100,5 +100,16 @@ describe('Scaffold’s session', () => {
     expect(next.follow.value).toBe(true);
     expect(next.page.value).toEqual({ kind: 'scene', pinned: null });
     expect(heading(next.sceneShown.value)).toBe('EXT. QUAY - NIGHT');
+  });
+
+  test('Back keeps the last 50 pages', () => {
+    const { scaffold } = session();
+    expect(BACK_LIMIT).toBe(50);
+    for (let n = 0; n < 60; n++) scaffold.open({ kind: 'character', key: `C${n}` });
+    let steps = 0;
+    while (scaffold.back()) steps++;
+    expect(steps).toBe(50);
+    // The oldest went first: the first page left is the eleventh opened.
+    expect(scaffold.page.value).toEqual({ kind: 'character', key: 'C9' });
   });
 });

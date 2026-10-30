@@ -235,6 +235,51 @@ test.describe('Scaffold', () => {
       expect(await cursorLine(page)).toBe('INT. HARBOUR OFFICE - DAY');
     });
 
+    test('Show Scaffold follows the cursor again, as a fresh visit does', async ({ page }) => {
+      await showFerry(page);
+      await cursorOn(page, 'The horn sounds.');
+      await runCommand(page, 'Scaffold for this scene');
+      await expect(heading(page)).toHaveText(DECK);
+      await expect(followButton(page)).toHaveAttribute('aria-pressed', 'false');
+      await cursorOn(page, 'Are we nearly there?');
+      await runCommand(page, 'Show Scaffold');
+      await expect(followButton(page)).toHaveAttribute('aria-pressed', 'true');
+      await expect(heading(page)).toHaveText(CABIN);
+      await expect(heading(page)).toBeFocused();
+    });
+
+    test('a pinned scene deleted while Go to has focus leaves focus on the heading', async ({
+      page,
+    }) => {
+      await showFerry(page);
+      await cursorOn(page, 'The horn sounds.');
+      await runCommand(page, 'Scaffold for this scene');
+      await expect(heading(page)).toHaveText(DECK);
+      const go = scaffold(page).getByRole('button', { name: 'Go to scene 2' });
+      await go.focus();
+      // The deck scene goes, from outside Scaffold (as another edit would), focus staying on Go to.
+      await page.evaluate(() => {
+        type View = {
+          state: { doc: { toString(): string } };
+          dispatch(spec: unknown): void;
+        };
+        // CodeMirror's own link from its content to its view (what `EditorView.findFromDOM` reads).
+        const content = document.querySelector('.cm-content') as unknown as {
+          cmTile: { root: { view: View } };
+        };
+        const view = content.cmTile.root.view;
+        const text = view.state.doc.toString();
+        const from = text.indexOf('EXT. FERRY DECK');
+        const to = text.indexOf('INT. HARBOUR OFFICE');
+        view.dispatch({ changes: { from, to } });
+      });
+      await expect(
+        scaffold(page).getByText('That scene isn’t in the script any more.'),
+      ).toBeVisible();
+      await expect(go).toHaveCount(0);
+      await expect(heading(page)).toBeFocused();
+    });
+
     test('Scaffold for this scene from the palette pins the cursor’s scene', async ({ page }) => {
       await showFerry(page);
       await cursorOn(page, 'The horn sounds.');

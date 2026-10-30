@@ -72,3 +72,17 @@ export function holdPlace(
     column: Math.min(place.column, Math.max(0, columns - 1)),
   };
 }
+
+/**
+ * `holdPlace`, and the character who has the stop afterwards: the same one when they are still
+ * there, else whoever has that row now, so the cast after next follows them and not a row number.
+ */
+export function holdStop(
+  key: string | undefined,
+  place: GridPlace,
+  rows: readonly string[],
+  columns: number,
+): { key: string | undefined; place: GridPlace } {
+  const next = holdPlace(key, place, rows, columns);
+  return { key: rows[next.row], place: next };
+}

@@ -3,7 +3,7 @@ import { parse } from '@drafter/fountain';
 import { type Scene, sceneIndex } from '@drafter/outline';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { NO_PLACE, sceneFacts, sceneRows, sceneTitle } from '../app/scaffold/labels';
+import { NO_PLACE, rowsFor, sceneFacts, sceneRows, sceneTitle } from '../app/scaffold/labels';
 import { DEFAULT_RATES } from '../app/stats/time-format';
 
 // What Scaffold's scene page says (seeing-the-script design §5.2, Calls 27 and 28): the facts of a
@@ -145,5 +145,25 @@ describe('who is in a scene', () => {
     // In the second scene BRAM is seen again, not for the first time.
     const second = sceneRows(cast, 1, index.scenes[1] as Scene, DEFAULT_RATES);
     expect(second.map((r) => [r.key, r.first, r.more])).toEqual([['BRAM', false, 1]]);
+  });
+});
+
+// The cast is worked out after a pause; meanwhile the writer may add a scene above the one shown, so
+// its place in the cast's scenes is no longer its place in the script. The rows find it by its id.
+describe('the rows of the scene shown, while the cast catches up', () => {
+  test('a scene heading added above never shows another scene’s people', () => {
+    const { doc, index, cast } = build(FERRY);
+    const basis = { index, doc, ids: ['cabin', 'deck'] };
+    // The script now has a new scene first, so the deck is the third scene; its id is the same.
+    expect(rowsFor(cast, basis, 'deck', DEFAULT_RATES)?.map((r) => r.name)).toEqual(['BRAM']);
+    expect(rowsFor(cast, basis, 'cabin', DEFAULT_RATES)?.map((r) => r.name)).toEqual([
+      'INES',
+      'KOLL',
+      'BRAM',
+    ]);
+    // The new scene isn't in the cast yet: no rows (Counting…), never the cabin's.
+    expect(rowsFor(cast, basis, 'new', DEFAULT_RATES)).toBeNull();
+    expect(rowsFor(null, basis, 'deck', DEFAULT_RATES)).toBeNull();
+    expect(rowsFor(cast, null, 'deck', DEFAULT_RATES)).toBeNull();
   });
 });

@@ -44,6 +44,9 @@ export interface ScaffoldSources {
   sceneById(id: string): Scene | null;
 }
 
+/** The most pages Back keeps; the oldest goes first. */
+export const BACK_LIMIT = 50;
+
 const samePage = (a: ScaffoldPage, b: ScaffoldPage) => JSON.stringify(a) === JSON.stringify(b);
 
 /** A session over `sources`: `useScaffold` gives the app's, and tests give their own. */
@@ -67,7 +70,9 @@ export function createScaffold(sources: ScaffoldSources): ScaffoldSession {
     );
     const open = (next: ScaffoldPage) => {
       if (samePage(next, page.value)) return;
-      history.value = [...history.value, page.value];
+      // The first page opened (Show Scaffold's return to following, a pinned scene) goes on the
+      // list too, so Back returns to the page shown before it.
+      history.value = [...history.value, page.value].slice(-BACK_LIMIT);
       page.value = next;
       // A scene opened from the Outline, the Cards, the strip, or the grid stays put.
       if (next.kind === 'scene') follow.value = next.pinned === null;

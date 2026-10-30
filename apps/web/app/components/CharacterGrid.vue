@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { useOutline } from '~/outline/use-outline';
 import { showScaffold } from '~/scaffold/show';
-import { type GridView, goToCell } from '~/stats/grid-data';
-import { type GridPlace, gridKey, holdPlace } from '~/stats/grid-keys';
+import { columnSceneId, type GridView, goToCell } from '~/stats/grid-data';
+import { type GridPlace, gridKey, holdStop } from '~/stats/grid-keys';
 import { cellName } from '~/stats/grid-labels';
 import { useDrawnColumns } from '~/stats/grid-window';
 
@@ -123,9 +122,11 @@ watch(
 watch(
   () => [props.view.model.rows, columns.value] as const,
   ([keys, c]) => {
-    const next = holdPlace(activeKey, active.value, keys, c);
+    const { key, place: next } = holdStop(activeKey, active.value, keys, c);
     const hadFocus = !!grid.value?.contains(document.activeElement);
     if (next.row !== active.value.row || next.column !== active.value.column) active.value = next;
+    // A character who is gone hands the stop to whoever has the row now, for the next cast.
+    activeKey = key;
     if (hadFocus) void nextTick(() => focusHere());
   },
 );
@@ -239,13 +240,10 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
   ];
 });
 
-/**
- * Scaffold for this scene: the column's scene, pinned. The grid's columns are the scenes the cast was
- * worked out from, so the scene is found in the script as it is now by its place.
- */
+/** Scaffold for this scene: the column's scene, by its id, pinned. */
 function scaffoldFor(column: number) {
-  const scene = useOutline().index.value.scenes[column];
-  if (scene) showScaffold({ kind: 'scene', pinned: useOutline().idOf(scene) });
+  const id = columnSceneId(props.view, column);
+  if (id) showScaffold({ kind: 'scene', pinned: id });
 }
 
 const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX}px)`);

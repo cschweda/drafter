@@ -17,14 +17,23 @@ import { useWordAnswers } from './words';
 /** The pause after the last change before the cast is worked out again. */
 export const CAST_PAUSE_MS = 300;
 
+export interface CastBasis {
+  index: SceneIndex;
+  doc: Doc;
+  /** `index.scenes`' session ids (`useOutline().idOf`), taken when the cast was worked out. */
+  ids: readonly string[];
+}
+
 export interface CastSession {
   /** The newest cast; null until a view has first needed it, and after another script is opened. */
   cast: Readonly<ShallowRef<Cast | null>>;
   /**
    * The scene index and the parse the newest cast was worked out from, set with it, so a view
-   * reads scenes and offsets that match the cast's while the writer has typed on since.
+   * reads scenes and offsets that match the cast's while the writer has typed on since; and each of
+   * its scenes' session ids as they were then, so a view matches a scene of the script as it is now
+   * to the cast's by identity (an edit above a scene moves its place, never its id).
    */
-  basis: Readonly<ShallowRef<{ index: SceneIndex; doc: Doc } | null>>;
+  basis: Readonly<ShallowRef<CastBasis | null>>;
   /** A view holds the cast while it is shown; the returned function lets go (once). */
   need(): () => void;
 }
@@ -53,7 +62,7 @@ function create(): CastSession {
   const outline = useOutline();
   const words = useWordAnswers();
   const cast = shallowRef<Cast | null>(null);
-  const basis = shallowRef<{ index: SceneIndex; doc: Doc } | null>(null);
+  const basis = shallowRef<CastBasis | null>(null);
   /** The last cast was worked out with pages. */
   let paged = false;
   /** How many views hold the cast. */
@@ -84,7 +93,7 @@ function create(): CastSession {
     if (cast.value && paged && lagging && editor.kind.value !== 'markdown') return;
     const doc = editor.doc.value;
     const next = castOf(index, doc, editor.template.value, perPage, words.isWord);
-    basis.value = { index, doc };
+    basis.value = { index, doc, ids: Object.freeze(index.scenes.map((s) => outline.idOf(s))) };
     cast.value = next;
     paged = nextPaged;
     words.ask(next.characters.map((c) => c.name));

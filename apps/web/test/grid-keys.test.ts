@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { gridKey, holdPlace } from '../app/stats/grid-keys';
+import { gridKey, holdPlace, holdStop } from '../app/stats/grid-keys';
 
 // The character-by-scene grid's keys (seeing-the-script design §4.4): the ARIA grid pattern over
 // the cells, a row per character and a column per scene.
@@ -65,5 +65,18 @@ describe('the grid’s Tab stop through a new cast', () => {
 
   test('keeps the column within the scenes', () => {
     expect(holdPlace('ODO', at(0, 12), ['WREN', 'ODO'], 5)).toEqual(at(1, 4));
+  });
+});
+
+describe('the grid’s Tab stop through several casts', () => {
+  test('after its character is gone, it stays with whoever has that row now', () => {
+    // PIA had the stop on row 1; she is gone, so ODO, now on row 1, has it.
+    const gone = holdStop('PIA', at(1, 4), ['WREN', 'ODO', 'MAVIS'], 10);
+    expect(gone).toEqual({ key: 'ODO', place: at(1, 4) });
+    // The next cast ranks ODO first: the stop goes with him, not with row 1.
+    const ranked = holdStop(gone.key, gone.place, ['ODO', 'WREN', 'MAVIS'], 10);
+    expect(ranked).toEqual({ key: 'ODO', place: at(0, 4) });
+    // No rows at all: no one holds it.
+    expect(holdStop('ODO', at(0, 0), [], 0)).toEqual({ key: undefined, place: at(0, 0) });
   });
 });

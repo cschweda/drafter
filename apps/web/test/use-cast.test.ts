@@ -37,7 +37,12 @@ vi.mock('../app/editor/session', () => ({
 vi.mock('../app/editor/layout', () => ({
   useLayout: () => ({ layout: env.layout, failed: env.failed, updating: env.updating }),
 }));
-vi.mock('../app/outline/use-outline', () => ({ useOutline: () => ({ index: env.index }) }));
+vi.mock('../app/outline/use-outline', () => ({
+  useOutline: () => ({
+    index: env.index,
+    idOf: (item: { block: number }) => `id-${item.block}`,
+  }),
+}));
 vi.mock('../app/cast/words', () => ({
   useWordAnswers: () => ({
     isWord: (name: string) => env.words.get(name.toUpperCase()),
@@ -195,6 +200,9 @@ describe('useCast', () => {
     const before = cast.basis.value;
     expect(before?.index).toBe(env.index.value);
     expect(before?.doc).toBe(env.doc.value);
+    // Each scene's session id as it was when the cast was worked out, so a view finds a scene by
+    // who it is, not by a place that an edit above it has moved.
+    expect(before?.ids).toEqual(env.index.value.scenes.map((s) => `id-${s.block}`));
     type(`${DOCK}\nEXT. ROAD - DAY\n\nPIK\nOff we go.\n`);
     await wait(CAST_PAUSE_MS - 1);
     // Never empty in between: the last cast until the new one, with the scenes it was made from.

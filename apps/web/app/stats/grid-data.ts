@@ -19,6 +19,8 @@ export interface GridView {
   names: string[];
   /** Each column's scene number, as the script gives it ("12", or a written "12A"). */
   numbers: string[];
+  /** Each column's scene's session id, as it was when the cast was worked out. */
+  ids: readonly string[];
 }
 
 /** The grid's data from the cast the Stats tab holds; null until the cast is in. */
@@ -35,6 +37,7 @@ export function useGridView() {
       model: gridModel(c, b.index),
       names: c.characters.map((character) => character.name),
       numbers: b.index.scenes.map(sceneNumber),
+      ids: b.ids,
     };
   });
 }
@@ -55,6 +58,15 @@ export function cellTarget(view: GridView, row: number, column: number): number 
   }
   if (cell?.firstMention != null) return cell.firstMention;
   return scene.span.from;
+}
+
+/**
+ * The session id of a column's scene, for Scaffold for this scene: the scene the column was drawn
+ * from, by its id, so a scene added above it since doesn't put another in its place. Null past the
+ * last column.
+ */
+export function columnSceneId(view: GridView, column: number): string | null {
+  return view.ids[column] ?? null;
 }
 
 /** Puts the cursor where a cell goes, in the Source. */

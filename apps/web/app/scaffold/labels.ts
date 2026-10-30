@@ -142,3 +142,21 @@ export function sceneRows(cast: Cast, sceneIndex: number, scene: Scene, rates: R
     };
   });
 }
+
+/**
+ * The rows of the scene with session id `id`, from the cast and the scenes it was worked out from
+ * (`basis`): the scene is found there by its id as it was then, never by its place, which a scene
+ * added or removed above it has changed since. Null while the cast hasn't that scene (a new one), so
+ * the page says Counting… rather than show another scene's people.
+ */
+export function rowsFor(
+  cast: Cast | null,
+  basis: { index: { scenes: readonly Scene[] }; ids: readonly string[] } | null,
+  id: string,
+  rates: Rates,
+): SceneRow[] | null {
+  if (!cast || !basis) return null;
+  const at = basis.ids.indexOf(id);
+  const scene = basis.index.scenes[at];
+  return scene ? sceneRows(cast, at, scene, rates) : null;
+}
