@@ -196,3 +196,4 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 ## HTML export
 
 - **Reading order is written twice**: `@drafter/render-html-file`'s Pages view reads a page as the Script tab does (dual dialogue's left speech first, a title page by field), with `readingOrder` and `titleOrder` ported from `@drafter/render-html`'s `page.ts` rather than shared. Moving them into `@drafter/layout` (or a small DOM-free export of `render-html`) would keep the two from drifting; the Task 3 review chose to leave it for now.
+- **A document's own `#heading` links**: `[x](#heading)` in a Markdown document exports as its text, because the file's heading ids are its own (`h-<n>`, never from the words). Matching a writer's anchor to its heading (GitHub's slugs, or the Preview's if it gains them) and pointing the link at that heading's `h-<n>` would make them work; the Task 5 review chose text for now.

@@ -78,8 +78,8 @@ describe('renderDocumentHtml', () => {
     expect(doc.querySelector('button[data-toggle="view"]')).toBeNull();
     expect(doc.querySelector('button[data-toggle="theme"]')).not.toBeNull();
 
+    // The first heading is the title, which the header shows; it isn't drawn again.
     expect([...m.querySelectorAll('h1, h2')].map((h) => [h.tagName, h.textContent])).toEqual([
-      ['H1', 'The Lantern Keeper'],
       ['H2', 'Premise'],
       ['H2', 'Act One'],
       ['H2', 'Notes'],
@@ -144,6 +144,41 @@ describe('renderDocumentHtml', () => {
     const m = main(render('[outer ![pic](https://example.org/p.png)](https://example.org/o)'));
     expect(m.querySelectorAll('a').length).toBe(1);
     expect(m.querySelector('a a')).toBeNull();
+  });
+
+  it('the writer’s own #heading links are text: the file’s ids are its own', () => {
+    const m = main(render('## A\n\nSee [x](#a) and [the top](#h-1).\n'));
+    expect(m.querySelector('p a')).toBeNull();
+    expect(m.querySelector('p')?.textContent).toBe('See x and the top.');
+  });
+
+  it('a block of a kind it doesn’t know is a paragraph of its text, never dropped', () => {
+    const tree: MdNode = {
+      type: 'root',
+      children: [
+        {
+          type: 'mystery',
+          children: [
+            { type: 'text', value: 'Hidden ' },
+            { type: 'emphasis', children: [{ type: 'text', value: 'words' }] },
+            { type: 'text', value: ' ' },
+            { type: 'image', alt: 'pic', url: 'https://example.org/p.png' },
+          ],
+        },
+        { type: 'enigma', value: 'Plain <value>' },
+        {
+          type: 'container',
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Inside.' }] }],
+        },
+      ],
+    };
+    const m = main(render('', { tree }));
+    expect([...m.querySelectorAll(':scope > p')].map((p) => p.textContent)).toEqual([
+      'Hidden words [Image: pic]',
+      'Plain <value>',
+      'Inside.',
+    ]);
+    expect(m.querySelector('p > em')?.textContent).toBe('words');
   });
 
   it('images are their descriptions and nothing is fetched', () => {
@@ -262,8 +297,8 @@ describe('renderDocumentHtml', () => {
     expect(nav.getAttribute('aria-label')).toBe('Sections');
     const links = [...nav.querySelectorAll('ol > li > a')];
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-      ['Premise', '#h-2'],
-      ['Act One', '#h-3'],
+      ['Premise', '#h-1'],
+      ['Act One', '#h-2'],
     ]);
     for (const a of links) {
       const target = doc.getElementById((a.getAttribute('href') as string).slice(1));
@@ -274,7 +309,6 @@ describe('renderDocumentHtml', () => {
     expect([...main(doc).querySelectorAll('h1, h2:not(.footnotes h2)')].map((h) => h.id)).toEqual([
       'h-1',
       'h-2',
-      'h-3',
     ]);
 
     const tops = render('# One\n\ntext\n\n# Two *emph*[^1]\n\n### Deep\n\n[^1]: n\n');
@@ -291,6 +325,46 @@ describe('renderDocumentHtml', () => {
     expect(render('Just text.\n').querySelector('nav')).toBeNull();
     // A heading with no words gets no link (it would be a link with no name).
     expect(render('## \n\n## Real\n').querySelectorAll('nav.sections a').length).toBe(1);
+  });
+
+  it('the first heading is not drawn again when it is the title', () => {
+    const headings = (source: string, title: string) =>
+      [...render(source, { title }).querySelectorAll('main h1, main h2, main h3')].map((h) => [
+        h.tagName,
+        h.id,
+        h.textContent,
+      ]);
+    const sections = (source: string, title: string) =>
+      [...render(source, { title }).querySelectorAll('nav.sections a')].map((a) => a.textContent);
+
+    // A match, with its markup read as words: left out, no section link, and the next heading is h-1.
+    const source = '# The *Long*   Way\n\nText.\n\n# Part One\n\n## Scene\n';
+    expect(headings(source, 'The Long Way')).toEqual([
+      ['H1', 'h-1', 'Part One'],
+      ['H2', 'h-2', 'Scene'],
+    ]);
+    expect(sections(source, 'The Long Way')).toEqual(['Scene']);
+    expect(render(source, { title: 'The Long Way' }).querySelector('main')?.textContent).toContain(
+      'Text.',
+    );
+    expect(sections('# The Long Way\n\n# Part One\n', 'The Long Way')).toEqual(['Part One']);
+
+    // Different text: drawn, with its link.
+    expect(headings('# Draft Two\n\nText.\n', 'The Long Way')).toEqual([
+      ['H1', 'h-1', 'Draft Two'],
+    ]);
+    // The first heading is a ##: drawn, even with the title's words.
+    expect(headings('## The Long Way\n\nText.\n', 'The Long Way')).toEqual([
+      ['H2', 'h-1', 'The Long Way'],
+    ]);
+    // An h1 with the title's words later in the document: drawn.
+    expect(headings('Text first.\n\n# The Long Way\n', 'The Long Way')).toEqual([
+      ['H1', 'h-1', 'The Long Way'],
+    ]);
+    // A heading holding a footnote reference keeps it, so the note has its way back.
+    const noted = render('# The Long Way[^1]\n\nText.\n\n[^1]: Note.\n', { title: 'The Long Way' });
+    expect(noted.querySelector('main h1')?.textContent).toBe('The Long Way1');
+    expect(noted.querySelector('#fnref-1')).not.toBeNull();
   });
 
   it('heading levels are the writer’s, but never skip below the header’s h1', () => {

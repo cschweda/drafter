@@ -204,7 +204,7 @@ function block(node: MdNode, draw: Draw, tight: boolean, top = false): string {
       const level = draw.outline.level(node.depth ?? 1);
       const id = draw.body ? `h-${++draw.headings}` : undefined;
       if (id && top && node.depth === draw.sectionDepth) {
-        const text = plainText(node).replace(/\s+/g, ' ').trim();
+        const text = squeezed(plainText(node));
         if (text) draw.sections.push({ id, text });
       }
       return el(`h${level}`, { id }, inlines(node.children, draw));
@@ -233,9 +233,52 @@ function block(node: MdNode, draw: Draw, tight: boolean, top = false): string {
     case 'footnoteDefinition': // drawn at the end, if it is referenced
       return '';
     default:
-      if (node.children) return blocks(node.children, draw, tight);
+      // A kind it doesn't know: its blocks, or its text as a paragraph, as Reading's fallback
+      // does; nothing is dropped.
+      if (node.children?.some((child) => BLOCKS.has(child.type))) {
+        return blocks(node.children, draw, tight);
+      }
+      if (node.children) return el('p', {}, inlines(node.children, draw));
       return node.value ? el('p', {}, escapeHtml(node.value)) : '';
   }
+}
+
+/** The kinds of node that are blocks of their own, as CommonMark and its footnotes give them. */
+const BLOCKS: ReadonlySet<string> = new Set([
+  'heading',
+  'paragraph',
+  'blockquote',
+  'list',
+  'listItem',
+  'code',
+  'thematicBreak',
+  'html',
+  'definition',
+  'footnoteDefinition',
+]);
+
+/** A text's words with each run of spaces as one, for comparing a heading with the title. */
+const squeezed = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+/** Whether any node in `node` is a footnote reference. */
+function holdsReference(node: MdNode): boolean {
+  const stack = [node];
+  for (let next = stack.pop(); next; next = stack.pop()) {
+    if (next.type === 'footnoteReference') return true;
+    stack.push(...(next.children ?? []));
+  }
+  return false;
+}
+
+/**
+ * The document's first block when it is the title the header already shows: a `#` heading whose
+ * words are the title's (the title came from it), holding no footnote reference (which would lose
+ * the note's way back). Drawn again under the header, it would say the title twice.
+ */
+function titleHeading(roots: MdNode[], title: string): MdNode | undefined {
+  const first = roots[0];
+  if (first?.type !== 'heading' || first.depth !== 1 || holdsReference(first)) return undefined;
+  return squeezed(plainText(first)) === squeezed(title) ? first : undefined;
 }
 
 const blocks = (nodes: MdNode[] | undefined, draw: Draw, tight: boolean, top = false) =>
@@ -291,6 +334,11 @@ function definitions(tree: MdNode): Map<string, string> {
  * the footnotes numbered as the Preview numbers them, gathered at the end, linked both ways. No
  * font is embedded: a document is in the Studio type.
  *
+ * The title isn't said twice: a first `#` heading whose words are the title's is left out under
+ * the header (and has no section link), before the headings are numbered, so the first heading
+ * drawn is `h-1` either way. The writer's own `#heading` links are their text, since the file's
+ * ids are its own.
+ *
  * Throws a RangeError saying "nested too deeply" for a tree deeper than `MAX_TREE_DEPTH`, which the
  * export says as it says a document the parser refuses.
  */
@@ -304,7 +352,10 @@ export function renderDocumentHtml(input: DocumentHtmlInput): string {
     throw error;
   }
   const { numbers, notes } = footnotes(tree);
-  const roots = tree.children ?? [];
+  // The title's own heading is left out before anything is numbered, so the headings' ids (h-1
+  // on) and the section links are the same whether the title came from the document or not.
+  const all = tree.children ?? [];
+  const roots = titleHeading(all, input.title) ? all.slice(1) : all;
   const draw: Draw = {
     numbers,
     addresses: definitions(tree),
