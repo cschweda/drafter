@@ -1,6 +1,6 @@
 # Drafter's brand
 
-![Drafter: screenplays and stage plays, written in plain text](og-image.svg)
+![Drafter: Fountain first, for screenplays, stage plays, and novels](og-image.svg)
 
 ## The mark
 

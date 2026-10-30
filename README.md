@@ -1,4 +1,4 @@
-![Drafter: screenplays and stage plays, written in plain text](brand/og-image.svg)
+![Drafter: Fountain first, for screenplays, stage plays, and novels](brand/og-image.svg)
 
 # Drafter
 

@@ -33,9 +33,7 @@ test('has File, Edit, View, Go, and Help, with an item for every command', async
   await expect.poll(() => menuBar(app)).toEqual(MENU_BAR);
   // The page's list has arrived: every command Drafter has is in the menu, once.
   await expect
-    .poll(async () => (await menuItems(app)).map((i) => i.id), {
-      timeout: 15_000,
-    })
+    .poll(async () => (await menuItems(app)).map((i) => i.id), { timeout: 15_000 })
     .toEqual(expect.arrayContaining(COMMAND_DATA.map((c) => c.id)));
   const ids = (await menuItems(app)).map((i) => i.id);
   expect(new Set(ids).size).toBe(ids.length);
@@ -58,10 +56,7 @@ test('the File menu has Open as Screenplay…', async ({ desktop }) => {
   await expect.poll(() => state('open-as-screenplay'), { timeout: 15_000 }).toBe(true);
   const items = await menuItems(app);
   const at = items.findIndex((i) => i.id === 'open');
-  expect(items[at + 1]).toMatchObject({
-    id: 'open-as-screenplay',
-    label: 'Open as Screenplay…',
-  });
+  expect(items[at + 1]).toMatchObject({ id: 'open-as-screenplay', label: 'Open as Screenplay…' });
 });
 
 test('runs a command from the menu', async ({ desktop }) => {
@@ -147,10 +142,7 @@ test('File › Export › Markdown file exports a script', async ({ desktop, pro
   expect(written.startsWith('# The Call\n')).toBe(true);
   expect(written).toContain('\n### INT. KITCHEN - NIGHT\n');
   expect(written).toContain('**MARGARET**');
-  expect(dialogsAsked(profile)[0]).toMatchObject({
-    kind: 'save',
-    extension: '.md',
-  });
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.md' });
   expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.md$/);
 });
 
@@ -372,10 +364,8 @@ test('quits through app.quit(), where Task 5 can stop it', async ({ desktop }) =
   // Held on every quit, not once: the app's own close flow asks, finds nothing unsaved, and
   // quits again, which a one-time hook would let through.
   await app.evaluate(({ app: electron }) => {
-    const g = globalThis as unknown as {
-      beforeQuit: number;
-      holdQuit: (e: { preventDefault(): void }) => void;
-    };
+    type Held = { beforeQuit: number; holdQuit: (event: { preventDefault(): void }) => void };
+    const g = globalThis as unknown as Held;
     g.beforeQuit = 0;
     g.holdQuit = (event) => {
       g.beforeQuit++;

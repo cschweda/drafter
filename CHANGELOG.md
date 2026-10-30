@@ -13,12 +13,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **The welcome and the tour say Drafter is Fountain-first.** The welcome calls Drafter a Fountain-first writing app, for screenplays and stage plays in Fountain and anything else, from a treatment to a novel, in Markdown. The Fountain card adds that the script goes out in the formats the industry uses, and the Export step, now **Export, and open almost anything**, lists what Drafter exports (PDF, Final Draft, Markdown, plain text) and what Open reads (Final Draft, Highland, Fade In, Markdown, plain text). The tour isn't shown again to anyone who has seen it.
+- **Drafter says it is Fountain-first, and for novelists too.** The share image, the site's title and description, and the Linux package's summary now say Fountain first, for screenplays, stage plays, and novels (written as Markdown documents), with the formats a script goes out in.
 
 ### Fixed
 
 - **A Markdown document nested hundreds of levels deep is shown as "nested too deeply" at once.** Only a hostile or broken file nests like that (a line of hundreds of list marks, or footnotes defined one inside another), and it froze the app for seconds while the Preview, the word count, or the PDF read it. Drafter now checks first: deeper than 48 levels, the Preview says "This document is nested too deeply to preview. Your text is safe in the Source.", the PDF export says the document is nested too deeply to lay out, and the word count counts the plain text. Real documents never come near it.
 - **The Preview's lists show their bullets and numbers again.** The app's base styles took list marks off everywhere, the Preview's lists too; a Markdown document's lists, and its notes, are now marked as in the PDF.
-- **The desktop menu test is formatted as Biome writes it**, so `pnpm check` passes again. Test only.
 - **The desktop quit test holds every quit, not only the first.** The app's own close flow asks, finds nothing unsaved and quits again, so a one-time hook in the test could let the app close on a fast Linux runner. Test only; the app is unchanged.
 
 ## [0.19.1] - 2026-10-30
