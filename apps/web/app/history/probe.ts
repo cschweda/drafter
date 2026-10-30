@@ -48,6 +48,7 @@ export function installHistoryProbe(): void {
             result.progress = reply;
             return;
           }
+          if (reply.kind === 'place') return;
           if (reply.kind === 'error') {
             result.error = reply.message;
             result.doneMs = at;

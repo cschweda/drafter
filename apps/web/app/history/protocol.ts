@@ -1,4 +1,4 @@
-import type { DeletedScene, VersionRow } from '@drafter/history';
+import type { DeletedScene, Place, VersionRow } from '@drafter/history';
 
 // What the page and the history worker say to each other (version-history design §3.4).
 
@@ -16,6 +16,11 @@ export type HistoryRequest =
       /** The scene: by its span in `now`, or by its place (`slot`, an index) in a snapshot. */
       scene: { from: number; to: number } | { snapshot: string; slot: number };
     }
+  /**
+   * Where the scene at index `slot` of snapshot `snapshot` goes back in `now` (Put back, design
+   * §3.5): answered once, from what the worker has read. It runs beside the scans, stopping none.
+   */
+  | { seq: number; kind: 'place'; projectId: string; now: string; snapshot: string; slot: number }
   | { seq: number; kind: 'cancel' };
 
 /**
@@ -36,6 +41,8 @@ export type HistoryReply =
     }
   | { seq: number; kind: 'deleted'; scenes: DeletedScene[]; done: boolean }
   | { seq: number; kind: 'versions'; rows: VersionRow[]; done: boolean }
+  /** Where Put back puts the scene; null when the snapshot is gone or can't be read. */
+  | { seq: number; kind: 'place'; place: Place | null }
   | { seq: number; kind: 'error'; message: string };
 
 /** The newest snapshots a scan reads, at most (Call 10). */

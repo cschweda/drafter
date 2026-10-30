@@ -55,10 +55,21 @@ export function comparePane(tabs: PaneTabs): PaneId {
   return tabs.right === 'source' ? 'left' : 'right';
 }
 
+/**
+ * Deleted scenes (version-history design §9, Call 34): a tab that exists only while it is open, as
+ * Compare is, placed as Compare is, so the script can be seen beside it as scenes come back.
+ */
+export const DELETED_TAB: Tab = { id: 'deleted', label: 'Deleted scenes' };
+
+/** The tabs with tab `id` showing: where it is, else in the pane `comparePane` picks. */
+export function openBeside(tabs: PaneTabs, id: TabId): PaneTabs {
+  if (tabs.left === id || tabs.right === id) return tabs;
+  return { ...tabs, [comparePane(tabs)]: id };
+}
+
 /** The tabs with Compare showing: where it is, else in the pane `comparePane` picks. */
 export function openCompare(tabs: PaneTabs): PaneTabs {
-  if (tabs.left === COMPARE_TAB.id || tabs.right === COMPARE_TAB.id) return tabs;
-  return { ...tabs, [comparePane(tabs)]: COMPARE_TAB.id };
+  return openBeside(tabs, COMPARE_TAB.id);
 }
 
 /** The view tabs a document of `kind` has, before any module's. */

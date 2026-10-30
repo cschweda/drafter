@@ -20,6 +20,8 @@ export interface CommandData {
   keys?: string;
   /** The registry binds `keys` on the whole page (see `Command.global`). */
   global?: boolean;
+  /** More words the palette's search finds it by, beside its title (Call 39). */
+  keywords?: readonly string[];
 }
 
 export interface HelpPage {
@@ -111,6 +113,15 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
   { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
+  // Deleted scenes (version-history design §3.3, §8, §9): a tab, opened and closed from here. The
+  // maintainer looks for it as "show all versions".
+  {
+    id: 'deleted-scenes',
+    title: 'Deleted scenes',
+    group: 'File',
+    icon: 'i-lucide-archive-restore',
+    keywords: ['show all versions', 'versions', 'deleted', 'cut scenes', 'put back'],
+  },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
   ...SAMPLES.map(
     (sample): CommandData => ({

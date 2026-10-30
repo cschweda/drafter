@@ -4,6 +4,7 @@ import { commandById } from '~/commands/registry';
 import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import { useEditor } from '~/editor/session';
+import { useDeleted } from '~/history/deleted';
 import { outlineNotice, sayOutline } from '~/outline/notice';
 import {
   type HistoryAction,
@@ -241,6 +242,14 @@ async function showChangesSince(row: HistoryRow) {
   close();
   showChanges.since({ kind: 'snapshot', id: row.id, label: sinceLabel(row) });
   void commandById('show-script')?.run();
+}
+
+// Deleted scenes (version-history design §8): History closes, and the tab opens beside the script.
+const deleted = useDeleted();
+function openDeleted() {
+  keepFocus = true;
+  close();
+  deleted.open();
 }
 
 async function compareNow(row: HistoryRow) {
@@ -593,7 +602,17 @@ const nameOf = (row: HistoryRow) =>
     <template v-if="historyOpen">
       <div class="head">
         <h2 id="history-title">History</h2>
-        <button type="button" class="btn" @click="close">Close</button>
+        <span class="head-buttons">
+          <button
+            v-if="editor.kind.value === 'fountain'"
+            type="button"
+            class="btn"
+            @click="openDeleted"
+          >
+            Deleted scenes
+          </button>
+          <button type="button" class="btn" @click="close">Close</button>
+        </span>
       </div>
       <p class="help">
         Snapshots of this script, kept in this browser. They aren’t part of the file.
@@ -760,6 +779,10 @@ const nameOf = (row: HistoryRow) =>
     border: 0;
     border-radius: 0;
   }
+}
+.head-buttons {
+  display: flex;
+  gap: 8px;
 }
 .head {
   display: flex;

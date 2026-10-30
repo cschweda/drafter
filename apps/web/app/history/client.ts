@@ -6,7 +6,7 @@ import type { HistoryReply, HistoryRequest } from './protocol';
 // first request of a view (Deleted scenes, History of this scene) and ended when the last view
 // releases, as Compare's layout worker is. Each request hears only its own replies.
 
-type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' }>;
+type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' | 'place' }>;
 /** A scan as a view asks for it: the client numbers it. */
 export type HistoryAsk = Scan extends infer R ? (R extends Scan ? Omit<R, 'seq'> : never) : never;
 
@@ -59,7 +59,11 @@ export function createHistoryClients(make: () => WorkerLike) {
         const reply = (event as MessageEvent<HistoryReply>).data;
         const to = listening.get(reply.seq);
         if (!to) return;
-        if (reply.kind === 'error' || (reply.kind !== 'progress' && reply.done))
+        if (
+          reply.kind === 'error' ||
+          reply.kind === 'place' ||
+          (reply.kind !== 'progress' && reply.done)
+        )
           listening.delete(reply.seq);
         to.on(reply);
       });

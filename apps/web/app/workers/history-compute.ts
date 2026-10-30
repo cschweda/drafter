@@ -1,6 +1,8 @@
 import {
   deletedScenes,
+  type NowScene,
   type PastSnapshot,
+  putBackPlace,
   type ScenePrint,
   type SceneSlot,
   scenePrints,
@@ -90,6 +92,7 @@ interface Memory {
 }
 
 type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' }>;
+type Place = NonNullable<Extract<HistoryReply, { kind: 'place' }>['place']>;
 
 export interface HistoryCompute {
   /** Runs `request`, posting its replies; resolves when it is done or stopped. */
@@ -277,8 +280,36 @@ export function createHistoryCompute(
     }
   }
 
+  /** Answers a place request: where Put back puts the scene, from the snapshot's scenes and prints. */
+  async function place(
+    request: Extract<HistoryRequest, { kind: 'place' }>,
+    post: (reply: HistoryReply) => void,
+  ) {
+    const { seq, projectId, now: text, snapshot, slot } = request;
+    let found: Place | null = null;
+    try {
+      const m = await memoryOf(projectId);
+      const slots = await slotsOf(m, snapshot);
+      if (slots?.[slot]) {
+        const now = scenePrints(text);
+        const byHash = new Map(now.prints.map((p) => [p.hash, p]));
+        const nowScenes: NowScene[] = [];
+        for (const s of now.slots) {
+          const print = byHash.get(s.hash);
+          if (print) nowScenes.push({ print, from: s.from, to: s.to });
+        }
+        found = putBackPlace(slots, slot, m.prints, nowScenes, text.length, now.sections);
+      }
+      await flush();
+    } catch {
+      found = null;
+    }
+    post({ seq, kind: 'place', place: found });
+  }
+
   return {
     async handle(request, post) {
+      if (request.kind === 'place') return place(request, post);
       if (request.kind === 'cancel') {
         for (const [kind, seq] of lanes) if (seq === request.seq) lanes.delete(kind);
         return;

@@ -52,6 +52,24 @@ describe('the history client', () => {
     expect(workers).toHaveLength(2);
   });
 
+  test("a place request is answered once, and leaves the deleted scan's listener alone", () => {
+    const { workers, clients } = setup();
+    const view = clients.use();
+    const scan: HistoryReply[] = [];
+    const placed: HistoryReply[] = [];
+    const n = view.request(deleted, (r) => scan.push(r));
+    const p = view.request(
+      { kind: 'place', projectId: 'p1', now: '', snapshot: 's1', slot: 0 },
+      (r) => placed.push(r),
+    );
+    const worker = workers[0] as FakeWorker;
+    worker.reply({ seq: p, kind: 'place', place: null });
+    worker.reply({ seq: p, kind: 'place', place: null });
+    worker.reply({ seq: n, kind: 'deleted', scenes: [], done: true });
+    expect(placed).toHaveLength(1);
+    expect(scan).toHaveLength(1);
+  });
+
   test('each request hears only its own replies, until it is done', () => {
     const { workers, clients } = setup();
     const view = clients.use();

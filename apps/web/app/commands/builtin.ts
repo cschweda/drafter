@@ -41,6 +41,7 @@ import { useEditor } from '~/editor/session';
 import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
+import { useDeleted } from '~/history/deleted';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
 import { runMove } from '~/outline/move';
@@ -108,6 +109,12 @@ export function registerBuiltinCommands(): void {
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
   const showChanges = useShowChanges();
+  const deleted = useDeleted();
+  /** Whether a pane shows the Deleted scenes tab. */
+  const deletedShown = () =>
+    window.matchMedia(WIDE_QUERY).matches
+      ? panes.tabs.value.left === 'deleted' || panes.tabs.value.right === 'deleted'
+      : panes.phoneTab.value === 'deleted';
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -338,6 +345,17 @@ export function registerBuiltinCommands(): void {
       enabled: hasScript,
       run: () => {
         historyOpen.value = { focusLabel: false };
+      },
+    },
+    // Deleted scenes (version-history design §8, §9): opens the tab, or shows it; shown, it closes.
+    'deleted-scenes': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      liveTitle: () =>
+        deleted.isOpen.value && deletedShown() ? 'Close Deleted scenes' : 'Deleted scenes',
+      run: () => {
+        if (deleted.isOpen.value && deletedShown()) deleted.close(true);
+        else deleted.open();
       },
     },
     'take-snapshot': {

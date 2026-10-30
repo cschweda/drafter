@@ -518,4 +518,43 @@ describe('the history scan', () => {
     expect(await finalOf(null)).toEqual(cached);
     expect(await finalOf(failing)).toEqual(cached);
   });
+
+  test('place says where a deleted scene goes back, in the script now', async () => {
+    // The snapshot had A, B, C; now B is gone and A has moved after C.
+    const { source } = memorySource([script(A, B, C)]);
+    const compute = createHistoryCompute(source, null);
+    const now = script(C, A);
+    const replies = await run(compute, { seq: 1, kind: 'deleted', projectId: 'p1', now });
+    const entry = last(deletedReplies(replies)).scenes[0] as DeletedScene;
+    expect(entry.newest.print.heading).toBe('EXT. FERN BRIDGE - NIGHT');
+    const placed = await run(compute, {
+      seq: 2,
+      kind: 'place',
+      projectId: 'p1',
+      now,
+      snapshot: entry.newest.snapshot,
+      slot: entry.newest.slot.ordinal - 1,
+    });
+    expect(placed).toEqual([
+      {
+        seq: 2,
+        kind: 'place',
+        place: {
+          at: now.indexOf(A) + A.trimEnd().length,
+          side: 'after',
+          anchor: 'INT. COPPER MILL - DAY',
+        },
+      },
+    ]);
+    // A snapshot that is gone has no place.
+    const gone = await run(compute, {
+      seq: 3,
+      kind: 'place',
+      projectId: 'p1',
+      now,
+      snapshot: 'nowhere',
+      slot: 0,
+    });
+    expect(gone).toEqual([{ seq: 3, kind: 'place', place: null }]);
+  });
 });

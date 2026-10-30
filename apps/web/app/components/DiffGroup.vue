@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { type DiffRow, type Piece, pairRows, type RowGroup, type WordPart } from '@drafter/compare';
 import { groupTitle } from '~/compare/rows';
+import { useDeleted } from '~/history/deleted';
 import type { DocumentKind } from '~/markdown/kind';
 
 // One group of the Changes view (version-history design §5.2): a scene's rows (a Markdown
 // document's heading's), under a header with its heading (an `h3`, so heading navigation moves
 // group to group), its tag (New scene, Deleted scene, Renamed), its counts, Go to scene, and a
-// toggle that hides and shows its rows. Its rows are drawn only while it is open; a large group,
+// toggle that hides and shows its rows; a deleted scene's, Find in Deleted scenes. Its rows are drawn only while it is open; a large group,
 // or one past the view's row budget, starts closed and says so. Unchanged stretches fold behind "Show 40 unchanged lines". Unified,
 // or side by side as a table with Before and After columns (§5.5).
 
@@ -42,6 +43,9 @@ const tag = computed(() => {
   return props.kind === 'markdown' ? TAGS[t].replace('scene', 'section') : TAGS[t];
 });
 const title = computed(() => groupTitle(props.group, props.kind));
+// A deleted scene's group finds it in the Deleted scenes tab, where it can be put back (§3.3).
+const deleted = useDeleted();
+const findable = computed(() => props.kind === 'fountain' && props.group.tag === 'deleted');
 const changed = computed(() => props.group.added + props.group.removed);
 const titleId = computed(() => `${props.idPrefix}-group-${props.index}`);
 const bodyId = computed(() => `${titleId.value}-rows`);
@@ -99,6 +103,15 @@ const split = computed(() =>
         @click="emit('go')"
       >
         {{ kind === 'markdown' ? 'Go to heading' : 'Go to scene' }}
+      </button>
+      <button
+        v-if="findable"
+        type="button"
+        class="diff-button"
+        :aria-describedby="titleId"
+        @click="deleted.find(title)"
+      >
+        Find in Deleted scenes
       </button>
       <button
         type="button"

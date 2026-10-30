@@ -109,6 +109,14 @@ const groups = shortcutGroups(COMMAND_DATA);
           snapshot’s menu.
         </li>
         <li>
+          In the Deleted scenes tab (File’s Deleted scenes, or History’s Deleted scenes button),
+          <kbd>↑</kbd> and <kbd>↓</kbd> move between the scenes, and <kbd>Home</kbd> and
+          <kbd>End</kbd> go to the first and last. On a scene, <kbd>Enter</kbd> shows or hides its
+          text and <kbd>P</kbd> puts it back where it was. The context-menu key or
+          <kbd>Shift+F10</kbd> opens the scene’s menu, which compares that version with now or
+          copies its text.
+        </li>
+        <li>
           In the Compare tab, <kbd>N</kbd> goes to the next change and <kbd>Shift+N</kbd> to the
           previous one, and says what changed; the palette’s Next change and Previous change do the
           same from anywhere while a comparison is open.

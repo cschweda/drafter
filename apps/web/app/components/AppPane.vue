@@ -5,6 +5,7 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
+import { useDeleted } from '~/history/deleted';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { contextGeneration } from '~/modules/context';
@@ -13,7 +14,16 @@ import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
-import { COMPARE_TAB, coreTabs, TABS, type Tab, type TabId, tabRow, viewTabs } from '~/utils/panes';
+import {
+  COMPARE_TAB,
+  coreTabs,
+  DELETED_TAB,
+  TABS,
+  type Tab,
+  type TabId,
+  tabRow,
+  viewTabs,
+} from '~/utils/panes';
 
 const props = defineProps<{
   /** `left`, `right`, or `phone`; it names the tabs' ids. */
@@ -56,8 +66,11 @@ const openNotes = computed(() => openCount(noteEntries.value));
 // Compare exists only while a comparison is open, first among the others then, so it takes the slot
 // of the pane it opens in (Phase 2 design §5.8, Call 16).
 const { current: comparison } = useCompare();
+// Deleted scenes, too, exists only while it is open (version-history design §9, Call 34).
+const { isOpen: deletedOpen } = useDeleted();
 const others = computed<Tab[]>(() => [
   ...(comparison.value ? [COMPARE_TAB] : []),
+  ...(deletedOpen.value ? [DELETED_TAB] : []),
   ...viewTabs(kind.value).map((tab) =>
     tab.id === 'notes' && openNotes.value > 0
       ? { ...tab, badge: String(openNotes.value), badgeName: `${openNotes.value} open` }
@@ -260,6 +273,9 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <template v-else-if="props.selected === 'compare'">
         <CompareSlim />
       </template>
+      <template v-else-if="props.selected === 'deleted'">
+        <DeletedSlim />
+      </template>
       <template v-else>
         {{ SLIM[props.selected as 'source' | 'problems'] }}
         <template v-if="props.selected === 'source'">
@@ -329,6 +345,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
       <CardsPane v-else-if="props.selected === 'cards'" />
       <NotesPane v-else-if="props.selected === 'notes'" />
       <ComparePane v-else-if="props.selected === 'compare'" />
+      <DeletedPane v-else-if="props.selected === 'deleted'" />
       <ProblemsPane v-else />
     </div>
   </section>
