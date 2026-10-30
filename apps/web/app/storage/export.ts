@@ -16,30 +16,31 @@ import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './t
 import { whenIdle } from './turn';
 
 /**
- * Export to PDF, HTML, plain text, Final Draft, or Markdown (Phase 1 design §9.7; Phase 2 design
- * §22; Imports plan Call 24; HTML export design §1), and a Markdown document to PDF (Markdown PDF
- * design) and HTML. The text
+ * Export to PDF, HTML, EPUB, plain text, Final Draft, or Markdown (Phase 1 design §9.7; Phase 2
+ * design §22; Imports plan Call 24; HTML export design §1, §10a), and a Markdown document to PDF
+ * (Markdown PDF design), HTML, and EPUB. The text
  * is laid out and drawn in a worker, and saved only through `useFiles()`: where the browser has a
  * save picker it asks where, else the file downloads. The export commands (`commands/builtin.ts`) call `exportScript`; the toolbar's
  * Export menu, the app menu, and the palette run them.
  */
 
 /**
- * `pdf`, `html` (one self-contained page: the printed pages and a Reading view), `txt`, `fdx` (a
- * Final Draft file), and `md` (the whole script as Markdown, written in the worker) are a
- * screenplay's or a stage play's; a Markdown document's are `pdf` (drawn in Inter Tight, Markdown
- * PDF design), `html` (the document as the Preview draws it, in one page), `md` (its own text),
- * and `txt` (the same text, as a plain text file).
+ * `pdf`, `html` (one self-contained page: the printed pages and a Reading view), `epub` (the
+ * Reading view as an e-book), `txt`, `fdx` (a Final Draft file), and `md` (the whole script as
+ * Markdown, written in the worker) are a screenplay's or a stage play's; a Markdown document's are
+ * `pdf` (drawn in Inter Tight, Markdown PDF design), `html` (the document as the Preview draws
+ * it, in one page), `epub` (the same, as an e-book), `md` (its own text), and `txt` (the same
+ * text, as a plain text file).
  */
-export type ExportKind = 'pdf' | 'html' | 'txt' | 'md' | 'fdx';
+export type ExportKind = 'pdf' | 'html' | 'epub' | 'txt' | 'md' | 'fdx';
 
 /**
  * What each kind of document exports, in the order the menus list them: the PDF first in both,
- * then the HTML page, the other file made to be read as it is.
+ * then the HTML page and the EPUB, the other files made to be read as they are.
  */
 export const EXPORTS: Readonly<Record<'fountain' | 'markdown', readonly ExportKind[]>> = {
-  fountain: ['pdf', 'html', 'txt', 'fdx', 'md'],
-  markdown: ['pdf', 'html', 'md', 'txt'],
+  fountain: ['pdf', 'html', 'epub', 'txt', 'fdx', 'md'],
+  markdown: ['pdf', 'html', 'epub', 'md', 'txt'],
 };
 
 /** Whether a document of `documentKind` exports as `kind`: the menus and the commands ask this. */
@@ -83,6 +84,7 @@ const announceError = timedSay(exportError, TOAST_MS);
 const MIME: Record<ExportKind, string> = {
   pdf: 'application/pdf',
   html: 'text/html',
+  epub: 'application/epub+zip',
   txt: 'text/plain',
   md: 'text/markdown',
   fdx: 'application/xml',
@@ -90,6 +92,7 @@ const MIME: Record<ExportKind, string> = {
 const EXTENSION = {
   pdf: '.pdf',
   html: '.html',
+  epub: '.epub',
   txt: '.txt',
   md: '.md',
   fdx: '.fdx',
@@ -123,15 +126,15 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
  * ", with scene numbers as written and no title page" in "Exported The Call.pdf, ….", naming the
  * options that aren't the default (Call 11); nothing for the defaults or a Markdown document. A
  * Final Draft file keeps its written numbers whatever the option says (Call 8), so its toast
- * names only the title page; only a Markdown file and an HTML file carry notes (Call 28; HTML
- * export design §3.3), so only their toasts say "notes".
+ * names only the title page; only a Markdown file, an HTML file, and an EPUB carry notes (Call 28;
+ * HTML export design §3.3, §10a), so only their toasts say "notes".
  */
 function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
   if (markdown) return '';
   const honoured: ExportOptions = {
     ...options,
     sceneNumbers: kind === 'fdx' ? 'none' : options.sceneNumbers,
-    notes: kind === 'md' || kind === 'html' ? options.notes : 'leave-out',
+    notes: kind === 'md' || kind === 'html' || kind === 'epub' ? options.notes : 'leave-out',
   };
   const phrase = optionsPhrase(honoured);
   return phrase ? `, ${phrase}` : '';
@@ -141,7 +144,8 @@ function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions
  * What the worker is asked to make. A Markdown PDF carries the title the file is named by, and the
  * spellcheck's language, with the paper, as they were when it was asked for; an HTML file carries
  * the title and the language too, the app's name and version, and, for a script, its own page
- * rate, for the kind line over its title.
+ * rate, for the kind line over its title. An EPUB carries the same, but for the rate (it has no
+ * kind line), and the time it was asked for, its package's modified date.
  */
 function requestFor(
   asked: Asked,
@@ -157,9 +161,23 @@ function requestFor(
   const { source, template, options, title, markdown } = open;
   const lang = asked.lang;
   if (markdown) {
+    if (kind === 'epub') {
+      return {
+        kind: 'markdown-epub',
+        source,
+        title,
+        lang,
+        generator: generator(),
+        modified: Date.now(),
+      };
+    }
     return kind === 'html'
       ? { kind: 'markdown-html', source, title, lang, generator: generator() }
       : { kind: 'markdown-pdf', source, paper: asked.paper, title, lang };
+  }
+  if (kind === 'epub') {
+    const book = { title, lang, generator: generator(), modified: Date.now() };
+    return { kind, source, template, options, ...book };
   }
   if (kind === 'html') {
     return {

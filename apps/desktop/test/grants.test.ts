@@ -378,6 +378,21 @@ describe('what a page may read and write', () => {
     expect(await readFile(join(dir, 'Export.html'), 'utf8')).toBe('<!DOCTYPE html>\n');
   });
 
+  test('writes an .epub only where an export was saved, never one the writer opened', async () => {
+    const book = join(dir, 'The Call.epub');
+    await writeFile(book, 'PK');
+    const opened = setUp([book]);
+    expect(await opened.handlers.showOpen(opened.event)).toBe(book);
+    expect(await codeOf(opened.handlers.write(opened.event, book, bytes('X')))).toBe('not-allowed');
+    expect(await readFile(book, 'utf8')).toBe('PK');
+    // Chosen in a Save dialog for an EPUB export: written; a name typed without .epub gets it.
+    const exported = setUp([join(dir, 'Export')]);
+    const path = await exported.handlers.showSave(exported.event, 'Export.epub', '.epub');
+    expect(path).toBe(join(dir, 'Export.epub'));
+    await exported.handlers.write(exported.event, path, bytes('PK\u0003\u0004'));
+    expect(await readFile(join(dir, 'Export.epub'), 'utf8')).toBe('PK\u0003\u0004');
+  });
+
   test('never writes a .highland or .fadein, even one the writer opened', async () => {
     for (const name of ['Ferry.highland', 'Cabin.fadein', 'LOUD.FADEIN']) {
       const { handlers, event } = setUp();

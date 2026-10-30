@@ -42,8 +42,20 @@ describe('the command data', () => {
       expect(exportApplies('md', kind), kind).toBe(true);
     }
     // A script's list: PDF, HTML, plain text, Final Draft, then Markdown, beside the treatment.
-    expect(EXPORTS.fountain).toEqual(['pdf', 'html', 'txt', 'fdx', 'md']);
-    expect(EXPORTS.markdown).toEqual(['pdf', 'html', 'md', 'txt']);
+    expect(EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'txt', 'fdx', 'md']);
+    expect(EXPORTS.markdown).toEqual(['pdf', 'html', 'epub', 'md', 'txt']);
+  });
+
+  test('export-epub follows export-html, in File, and applies to every kind', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('export-epub')).toBe(ids.indexOf('export-html') + 1);
+    const command = COMMAND_DATA.find((c) => c.id === 'export-epub');
+    expect(command).toMatchObject({ title: 'Export as EPUB', group: 'File' });
+    // Found by what it is for, without naming any one device.
+    expect(command?.keywords).toEqual(expect.arrayContaining(['e-book', 'ebook', 'e-reader']));
+    for (const kind of ['fountain', 'markdown'] as const) {
+      expect(exportApplies('epub', kind), kind).toBe(true);
+    }
   });
 
   test('export-html follows export-md, in File, and applies to every kind', () => {

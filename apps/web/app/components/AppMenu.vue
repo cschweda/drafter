@@ -95,8 +95,9 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
   });
 });
 
-// A Fountain script exports as a PDF, an HTML page, plain text, a Final Draft file, or Markdown; a
-// Markdown document as a PDF, an HTML page, its Markdown file, or plain text (`EXPORTS`). (The
+// A Fountain script exports as a PDF, an HTML page, an EPUB, plain text, a Final Draft file, or
+// Markdown; a Markdown document as a PDF, an HTML page, an EPUB, its Markdown file, or plain text
+// (`EXPORTS`). (The
 // Final Draft and Markdown commands are off in the other kind, and the palette hides them; here
 // the other kind's items are left out.)
 const exportIds = computed(() =>
@@ -107,6 +108,7 @@ const exportIds = computed(() =>
 const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',
   'export-html': 'i-lucide-globe',
+  'export-epub': 'i-lucide-book',
   'export-md': 'i-lucide-file-output',
   'export-txt': 'i-lucide-file-type',
   'export-fdx': 'i-lucide-file-code',

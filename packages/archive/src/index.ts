@@ -21,3 +21,4 @@ export {
   type ZipLimits,
   type ZipReason,
 } from './zip';
+export { type ZipWriteEntry, zipStored } from './zip-write';

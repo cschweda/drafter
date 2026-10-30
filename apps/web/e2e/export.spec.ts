@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
+import { listZip, readEntry } from '@drafter/archive';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
@@ -612,7 +613,7 @@ async function openOptions(page: Page) {
 /** Opens the dialog, chooses `label` in the `group`, and closes it with Done. */
 async function choose(
   page: Page,
-  group: 'Scene numbers' | 'Title page' | 'Include notes (Markdown and HTML)',
+  group: 'Scene numbers' | 'Title page' | 'Include notes (Markdown, HTML, and EPUB)',
   label: string,
 ) {
   await openOptions(page);
@@ -659,6 +660,7 @@ test.describe('export options', () => {
     await expect(menu(page).getByRole('button')).toHaveText([
       'PDF',
       'HTML (.html)',
+      'EPUB (.epub)',
       'Plain text (.txt)',
       'Final Draft (.fdx)',
       'Markdown (.md)',
@@ -782,7 +784,7 @@ test.describe('export options', () => {
     await expect(pdfItem(page)).toBeFocused();
     // Safari's Tab skips buttons unless the user has turned that on: there, focus it directly.
     if (browserName === 'webkit') await optionsItem(page).focus();
-    else for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+    else for (let i = 0; i < 5; i++) await page.keyboard.press('Tab');
     await expect(optionsItem(page)).toBeFocused();
     await expect(optionsItem(page)).toHaveAttribute('aria-disabled', 'true');
     await expect(optionsItem(page)).toHaveAccessibleDescription(
@@ -979,12 +981,12 @@ test.describe('a script as Markdown', () => {
     page,
   }) => {
     await start(page);
-    await choose(page, 'Include notes (Markdown and HTML)', 'Include');
+    await choose(page, 'Include notes (Markdown, HTML, and EPUB)', 'Include');
     await page.reload();
     await expect(editor(page)).toContainText('The Call');
     await openOptions(page);
     const notes = optionsDialog(page).getByRole('group', {
-      name: 'Include notes (Markdown and HTML)',
+      name: 'Include notes (Markdown, HTML, and EPUB)',
     });
     await expect(notes.getByRole('radio', { name: 'Include', exact: true })).toBeChecked();
     await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
@@ -1010,10 +1012,10 @@ test.describe('a script as Markdown', () => {
       await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
       await openOptions(page);
       const notes = optionsDialog(page).getByRole('group', {
-        name: 'Include notes (Markdown and HTML)',
+        name: 'Include notes (Markdown, HTML, and EPUB)',
       });
       await expect(notes).toContainText(
-        'Only the Markdown and HTML exports carry notes; a PDF never prints them.',
+        'Only the Markdown, HTML, and EPUB exports carry notes; a PDF never prints them.',
       );
       const leaveOut = notes.getByRole('radio', { name: 'Leave out', exact: true });
       const include = notes.getByRole('radio', { name: 'Include', exact: true });
@@ -1049,7 +1051,7 @@ test.describe('a script as Markdown', () => {
 
   test('the script is unchanged by exporting Markdown', async ({ page }) => {
     await start(page);
-    await choose(page, 'Include notes (Markdown and HTML)', 'Include');
+    await choose(page, 'Include notes (Markdown, HTML, and EPUB)', 'Include');
     const before = await editor(page).evaluate((el) => el.textContent);
     await downloadMarkdown(page);
     await expect(ready(page)).toHaveText('Exported The Call.md, with notes.');
@@ -1333,5 +1335,125 @@ test.describe('Export as HTML', () => {
         await context.close();
       }
     }
+  });
+});
+
+test.describe('Export as EPUB', () => {
+  test.beforeEach(async ({ page }) => {
+    await removePickers(page);
+  });
+
+  const appMenu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+  const epubItem = (page: Page) => menu(page).getByRole('button', { name: 'EPUB (.epub)' });
+
+  /** Runs `choose`, which starts a download, and answers the file's name and bytes. */
+  async function downloaded(
+    page: Page,
+    choose: () => Promise<void>,
+  ): Promise<{ name: string; bytes: Uint8Array }> {
+    const download = page.waitForEvent('download');
+    await choose();
+    const file = await download;
+    return {
+      name: file.suggestedFilename(),
+      bytes: new Uint8Array(await readFile(await file.path())),
+    };
+  }
+
+  /** The book's entries, in order, unpacked with the archive's own reader, as text. */
+  async function unpacked(bytes: Uint8Array): Promise<Map<string, string>> {
+    const files = new Map<string, string>();
+    for (const entry of listZip(bytes)) {
+      files.set(entry.name, new TextDecoder().decode(await readEntry(bytes, entry)));
+    }
+    return files;
+  }
+
+  /** The package without its modified time, which is when each export was asked for. */
+  const timeless = (files: Map<string, string>) =>
+    new Map(
+      [...files].map(([name, text]) => [
+        name,
+        name.endsWith('.opf') ? text.replace(/<meta property="dcterms:modified">[^<]*</, '') : text,
+      ]),
+    );
+
+  test('exports an EPUB from the Export menu, the app menu, and the palette', async ({ page }) => {
+    await start(page);
+    const fromMenu = await downloaded(page, async () => {
+      await exportButton(page).click();
+      await epubItem(page).click();
+    });
+    expect(fromMenu.name).toBe('The Call.epub');
+    await expect(ready(page)).toHaveText('Exported The Call.epub.');
+    // The mimetype first, stored, exactly; then the container, which points at the package.
+    const [first] = listZip(fromMenu.bytes);
+    expect(first?.name).toBe('mimetype');
+    expect(first?.method).toBe(0);
+    expect(new TextDecoder().decode(fromMenu.bytes.subarray(30, 58))).toBe(
+      'mimetypeapplication/epub+zip',
+    );
+    const files = await unpacked(fromMenu.bytes);
+    expect(files.get('mimetype')).toBe('application/epub+zip');
+    expect(files.get('META-INF/container.xml')).toContain('full-path="EPUB/package.opf"');
+    const opf = files.get('EPUB/package.opf') ?? '';
+    expect(opf).toContain('<dc:title>The Call</dc:title>');
+    expect(opf).toMatch(/<dc:identifier id="uid">urn:uuid:[0-9a-f-]{36}<\/dc:identifier>/);
+    expect(opf).toMatch(/<meta property="dcterms:modified">\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ</);
+    // The Reading view, its speeches, and no script.
+    const part = files.get('EPUB/part-1.xhtml') ?? '';
+    expect(part.startsWith('<?xml')).toBe(true);
+    expect(part).toContain('INT. KITCHEN - NIGHT');
+    expect(part).toContain('class="speech"');
+    expect([...files.values()].join('')).not.toContain('<script');
+    expect([...files.keys()]).toContain('EPUB/fonts/courier-prime-regular.ttf');
+
+    const fromAppMenu = await downloaded(page, async () => {
+      await page.getByRole('button', { name: 'Drafter menu' }).click();
+      await appMenu(page)
+        .getByRole('menuitem', { name: /^Export as EPUB/ })
+        .click();
+    });
+    expect(fromAppMenu.name).toBe('The Call.epub');
+    expect(timeless(await unpacked(fromAppMenu.bytes))).toEqual(timeless(files));
+
+    // The palette finds it by what it is for, too.
+    const fromPalette = await downloaded(page, () => runCommand(page, 'Export as EPUB'));
+    expect(timeless(await unpacked(fromPalette.bytes))).toEqual(timeless(files));
+    await page.keyboard.press('ControlOrMeta+k');
+    await page.keyboard.type('e-reader');
+    await expect(palette(page).getByRole('option', { name: 'Export as EPUB' })).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
+
+  test('a Markdown document exports an EPUB with its footnotes', async ({ page }) => {
+    await start(page);
+    await openMarkdownSample(page);
+    await setText(
+      page,
+      [
+        '# Harbour Notes',
+        '',
+        'The keeper climbs.[^1]',
+        '',
+        '# The Lamp',
+        '',
+        'It turns.',
+        '',
+        '[^1]: Every night.',
+        '',
+      ].join('\n'),
+    );
+    await expect(editor(page)).toContainText('[^1]: Every night.');
+    const { name, bytes } = await downloaded(page, async () => {
+      await exportButton(page).click();
+      await epubItem(page).click();
+    });
+    expect(name).toBe('Harbour Notes.epub');
+    const files = await unpacked(bytes);
+    expect([...files.keys()][0]).toBe('mimetype');
+    expect(files.get('EPUB/part-1.xhtml')).toContain('epub:type="footnote"');
+    expect(files.get('EPUB/part-2.xhtml')).toContain('<h1 id="h-1">The Lamp</h1>');
+    expect([...files.keys()].some((n) => n.startsWith('EPUB/fonts/'))).toBe(false);
   });
 });

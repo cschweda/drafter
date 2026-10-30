@@ -28,6 +28,15 @@ const WEB_PAGE: Refusal = {
   advice: 'Open the script it was made from instead.',
 };
 
+/**
+ * An e-book, Drafter's own EPUB export among them: a zip of web pages, which would open as the
+ * packed file it is, or, named as a script, as its bytes.
+ */
+const E_BOOK: Refusal = {
+  format: 'an e-book',
+  advice: 'Open the script it was made from instead.',
+};
+
 /** By extension, lowercased, without its dot. */
 const BY_EXTENSION = new Map<string, Refusal>(
   Object.entries({
@@ -48,6 +57,7 @@ const BY_EXTENSION = new Map<string, Refusal>(
     zip: { format: 'a zip archive', advice: 'Unpack it, then open the script inside.' },
     html: WEB_PAGE,
     htm: WEB_PAGE,
+    epub: E_BOOK,
   }),
 );
 
@@ -85,6 +95,23 @@ function extensionOf(name: string | undefined): string {
 const startsWith = (bytes: Uint8Array, signature: number[]) =>
   bytes.byteLength >= signature.length && signature.every((b, i) => bytes[i] === b);
 
+const ascii = (text: string) => Array.from(text, (c) => c.charCodeAt(0));
+const MIMETYPE = ascii('mimetype');
+const EPUB_MIMETYPE = ascii('application/epub+zip');
+
+/**
+ * Whether the bytes start as an EPUB does: a zip whose first entry is named `mimetype` and holds
+ * `application/epub+zip` (EPUB's own rule, so that its kind can be read at a fixed place), the
+ * entry's content after its name and any extra field.
+ */
+function isEBook(bytes: Uint8Array): boolean {
+  if (!startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]) || bytes.byteLength < 30) return false;
+  const nameLength = (bytes[26] as number) | ((bytes[27] as number) << 8);
+  const extraLength = (bytes[28] as number) | ((bytes[29] as number) << 8);
+  if (nameLength !== MIMETYPE.length || !startsWith(bytes.subarray(30), MIMETYPE)) return false;
+  return startsWith(bytes.subarray(30 + nameLength + extraLength), EPUB_MIMETYPE);
+}
+
 /**
  * Whether the text starts as a web page does: `<!DOCTYPE html` or `<html` (any case, then a space,
  * `>`, or the end), after a byte order mark and white space. Only the first bytes are read.
@@ -99,10 +126,15 @@ function isWebPage(bytes: Uint8Array): boolean {
   return /^(?:<!doctype\s+html|<html)(?:[\s>]|$)/.test(head);
 }
 
-/** A known non-script format, by its extension (any case) or, whatever its name, by its first bytes; or null. */
+/**
+ * A known non-script format, by its extension (any case) or, whatever its name, by its first bytes
+ * (an e-book's before its name); or null.
+ */
 export function notAScript(name: string | undefined, bytes: Uint8Array): Refusal | null {
   const extension = extensionOf(name);
   return (
+    // An e-book by its content first: renamed (`.zip`, `.highland`), it is still one.
+    (isEBook(bytes) ? E_BOOK : undefined) ??
     BY_EXTENSION.get(extension) ??
     BY_SIGNATURE.find(
       ({ bytes: signature, unless }) => startsWith(bytes, signature) && !unless?.(extension),

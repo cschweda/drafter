@@ -368,6 +368,9 @@ importers:
 
   packages/render-html-file:
     dependencies:
+      '@drafter/archive':
+        specifier: workspace:*
+        version: link:../archive
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain

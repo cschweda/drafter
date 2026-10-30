@@ -33,8 +33,16 @@ import type { Grants } from './grants';
 
 export { dialogHook };
 
-export type SaveExtension = '.fountain' | '.md' | '.txt' | '.pdf' | '.html' | '.fdx';
-const SAVE_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.txt', '.pdf', '.html', '.fdx'];
+export type SaveExtension = '.fountain' | '.md' | '.txt' | '.pdf' | '.html' | '.epub' | '.fdx';
+const SAVE_EXTENSIONS: readonly string[] = [
+  '.fountain',
+  '.md',
+  '.txt',
+  '.pdf',
+  '.html',
+  '.epub',
+  '.fdx',
+];
 const isExtension = (value: unknown): value is SaveExtension =>
   typeof value === 'string' && SAVE_EXTENSIONS.includes(value);
 
@@ -121,9 +129,10 @@ export function fileHandlers(deps: FileHandlerDeps) {
     return grants.grant(file, OPEN_EXTENSIONS);
   }
 
-  // The Final Draft files and HTML pages the writer chose in a Save dialog for one (an export), by
-  // real path. Any other `.fdx` was opened to be imported, and any other `.html` was opened by
-  // mistake (Open refuses it), and neither is ever written: a script saves as a .fountain.
+  // The Final Draft files, HTML pages, and EPUBs the writer chose in a Save dialog for one (an
+  // export), by real path. Any other `.fdx` was opened to be imported, and any other `.html` or
+  // `.epub` was opened by mistake (Open refuses it), and none is ever written: a script saves as a
+  // .fountain.
   const exportsChosen = new Set<string>();
 
   // Watches, by page: each stops when the page asks, reloads, or goes.
@@ -202,7 +211,7 @@ export function fileHandlers(deps: FileHandlerDeps) {
           (hasExtension(real, IMPORT_EXTENSIONS) || hasExtension(real, EXPORT_ONLY_EXTENSIONS)) &&
           !exportsChosen.has(real)
         ) {
-          throw new FileError('not-allowed', 'an imported file or a page');
+          throw new FileError('not-allowed', 'an imported file, a page, or a book');
         }
         // The real path as just worked out, so a link put in place after the file was chosen
         // can't redirect the write. (A swap in the instant between this check and the rename is

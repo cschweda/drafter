@@ -3,10 +3,15 @@ import { parse } from '@drafter/fountain';
 import { paginate, type SceneNumbering, type TitlePageMode, titlePageFor } from '@drafter/layout';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
 import {
+  epubIdentifier,
+  epubStylesUsed,
   type FontStyle,
   kindLine,
+  renderDocumentEpub,
   renderDocumentHtml,
+  renderScriptEpub,
   renderScriptHtml,
+  scriptAuthor,
   stylesUsed,
 } from '@drafter/render-html-file';
 import {
@@ -57,7 +62,9 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptions = Object.freeze({
  * its title, language, and generator line (HTML export design §6, §7), and the script's own page
  * rate, for the header's kind line ("Screenplay · 94 pages · About 1 h 34 min"), which the worker
  * writes from the pages it lays out; a Markdown document's HTML file is its text, title,
- * language, and generator.
+ * language, and generator. An EPUB (§10a), a script's or a document's, is asked for as the HTML
+ * file is, without the page rate and with the time it was asked for (milliseconds since 1970),
+ * its package's modified date.
  */
 export type ExportRequest =
   | {
@@ -76,8 +83,26 @@ export type ExportRequest =
       generator: string;
       minutesPerPage: number;
     }
+  | {
+      kind: 'epub';
+      source: string;
+      template: Template;
+      options?: ExportOptions;
+      title: string;
+      lang: string;
+      generator: string;
+      modified: number;
+    }
   | { kind: 'markdown-pdf'; source: string; paper: Paper; title: string; lang: string }
-  | { kind: 'markdown-html'; source: string; title: string; lang: string; generator: string };
+  | { kind: 'markdown-html'; source: string; title: string; lang: string; generator: string }
+  | {
+      kind: 'markdown-epub';
+      source: string;
+      title: string;
+      lang: string;
+      generator: string;
+      modified: number;
+    };
 /** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
 export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
 /**
@@ -168,7 +193,7 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
  * worker never throws. With `onProgress`, each export says how far it is as it goes: unknown
  * while it fetches, parses, and (for a script) lays out; by blocks and pages as it lays out and
  * draws a PDF; unknown again while pdf-lib saves; and 1 at the end. Plain text, Final Draft,
- * Markdown, and HTML files are quick: unknown, then 1.
+ * Markdown, HTML, and EPUB files are quick: unknown, then 1.
  */
 export function createExporter(
   loadFonts: () => Promise<FontSet> = fetchFonts,
@@ -184,6 +209,21 @@ export function createExporter(
       const { title, lang, generator } = request;
       return {
         data: renderDocumentHtml({ tree: parseMarkdown(request.source), title, lang, generator }),
+      };
+    }
+    if (request.kind === 'markdown-epub') {
+      const { parseMarkdown } = await parserOnce();
+      const { source, title, lang, generator } = request;
+      return {
+        data: renderDocumentEpub({
+          tree: parseMarkdown(source),
+          title,
+          lang,
+          generator,
+          modified: new Date(request.modified),
+          // The same draft is the same book, so a reader keeps its place across exports.
+          id: epubIdentifier(title, source),
+        }),
       };
     }
     if (request.kind === 'markdown-pdf') {
@@ -226,6 +266,26 @@ export function createExporter(
         }),
       };
     }
+    if (request.kind === 'epub') {
+      // The Reading view as an e-book: only the styles its text draws in.
+      const used = [...epubStylesUsed(doc, layout)].map((style) => [style, fonts[style]] as const);
+      return {
+        data: renderScriptEpub({
+          doc,
+          layout,
+          template,
+          notes: options.notes,
+          fonts: Object.fromEntries(used) as Partial<Record<FontStyle, Uint8Array>>,
+          title: request.title,
+          lang: request.lang,
+          generator: request.generator,
+          // The title page as the export keeps it: with none, the book names no author either.
+          author: scriptAuthor(doc),
+          modified: new Date(request.modified),
+          id: epubIdentifier(request.title, source),
+        }),
+      };
+    }
     return { data: await renderPdf(layout, template, { fonts, onProgress: rendering(report) }) };
   }
 
@@ -234,7 +294,9 @@ export function createExporter(
     onProgress: (fraction: number | null) => void = () => {},
   ): Promise<ExportReply> => {
     const weights: StageWeights =
-      request.kind === 'markdown-pdf' || request.kind === 'markdown-html'
+      request.kind === 'markdown-pdf' ||
+      request.kind === 'markdown-html' ||
+      request.kind === 'markdown-epub'
         ? WEIGHTS.markdown
         : WEIGHTS.script;
     const report = progressReporter(weights, onProgress);

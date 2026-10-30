@@ -195,6 +195,26 @@ describe('el, the one place markup is written', () => {
     }
   });
 
+  it("takes an href to another of an EPUB's own files, by the name its code gives it", () => {
+    for (const good of ['part-2.xhtml#fn-3', 'part-1.xhtml', 'style.css', 'text/part-1.xhtml']) {
+      expect(el('a', { href: good }, 'x')).toBe(`<a href="${good}">x</a>`);
+    }
+    for (const bad of [
+      '../part-1.xhtml',
+      '/part-1.xhtml',
+      'part-1.html',
+      'Part-1.xhtml',
+      'part 1.xhtml',
+      'part-1.xhtml#a"b',
+      'part-1.xhtml?x',
+      'a.xhtml/../b.xhtml',
+    ]) {
+      expect(() => el('a', { href: bad }, 'x'), JSON.stringify(bad)).toThrow(RangeError);
+    }
+    // Only as an href: a src is a resource, and stays refused.
+    expect(() => el('img', { src: 'style.css', alt: '' })).toThrow(RangeError);
+  });
+
   it('checks every URL attribute, and takes data: only for an image', () => {
     expect(el('img', { src: 'data:image/png;base64,AAAA', alt: '' })).toBe(
       '<img src="data:image/png;base64,AAAA" alt="" />',

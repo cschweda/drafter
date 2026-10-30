@@ -6,10 +6,10 @@ import type { Project } from './projects';
 import { useScript } from './script';
 
 /**
- * Export options (out-the-door design §2): how a script's PDF, HTML, plain text, and Markdown file
- * print its scene numbers and its title page, how much of the title page a Final Draft file
- * carries, and whether a Markdown file and an HTML file carry its notes (Call 28; HTML export
- * design §3.3). They are
+ * Export options (out-the-door design §2): how a script's PDF, HTML, EPUB, plain text, and
+ * Markdown file print its scene numbers and its title page, how much of the title page a Final Draft file
+ * carries, and whether a Markdown file, an HTML file, and an EPUB carry its notes (Call 28; HTML
+ * export design §3.3, §10a). They are
  * the script's own, kept on its project in this browser (Call 9), never in the text; the Export
  * options dialog (`components/ExportOptionsDialog.vue`) sets them, and every export reads them.
  */
@@ -68,18 +68,18 @@ export const EXPORT_OPTION_HINTS: {
   notes: {
     'leave-out': 'No notes or synopses, as in the PDF.',
     include:
-      'In Markdown, each note and synopsis as a quote, where it stands; in HTML, each note beside its place in the Reading view, never on the pages. The boneyard is always left out.',
+      'In Markdown, each note and synopsis as a quote, where it stands; in HTML and EPUB, each note beside its place in the Reading view, never on the pages. The boneyard is always left out.',
   },
 };
 
 /**
  * The notes choice's name (HTML export design §3.3): the stored setting keeps its key (`notes`),
- * and is shared by the two exports that read it.
+ * and is shared by the three exports that read it.
  */
-export const NOTES_LEGEND = 'Include notes (Markdown and HTML)';
+export const NOTES_LEGEND = 'Include notes (Markdown, HTML, and EPUB)';
 /** Under the Include notes choices: the exports that read them. */
 export const NOTES_ONLY_MARKDOWN =
-  'Only the Markdown and HTML exports carry notes; a PDF never prints them.';
+  'Only the Markdown, HTML, and EPUB exports carry notes; a PDF never prints them.';
 
 /** The words for each choice that isn't the default, in the toast's sentence. */
 const SCENE_PHRASE: Record<Exclude<SceneNumbering, 'none'>, string> = {

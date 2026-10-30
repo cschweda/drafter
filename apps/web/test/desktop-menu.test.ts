@@ -373,6 +373,7 @@ describe('Export options in the desktop menus', () => {
       'export-pdf',
       'export-md',
       'export-html',
+      'export-epub',
       'export-txt',
       'export-fdx',
       'export-treatment',

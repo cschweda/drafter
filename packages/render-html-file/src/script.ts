@@ -39,16 +39,20 @@ const fieldText = (field: TitleField | undefined) =>
     .filter(Boolean)
     .join(' ') ?? '';
 
+/** A title-page field's text by its key (any of `keys`, in lower case), or ''. */
+export function titleField(doc: Doc, ...keys: string[]): string {
+  const fields = doc.titlePage?.fields ?? [];
+  return fieldText(fields.find((f) => keys.includes(f.key.trim().toLowerCase())));
+}
+
 /**
  * The lines under the header's title, from the title page as the export kept it (design §3.3):
  * the credit and the author as one line ("Written by Wren Okafor"), then the source and the draft
  * date, each when there is one. The title itself is the header's own; a script with no title
  * page (the export's "none") has only the title.
  */
-function titleLines(doc: Doc): string[] {
-  const fields = doc.titlePage?.fields ?? [];
-  const field = (...keys: string[]) =>
-    fieldText(fields.find((f) => keys.includes(f.key.trim().toLowerCase())));
+export function titleLines(doc: Doc): string[] {
+  const field = (...keys: string[]) => titleField(doc, ...keys);
   const byline = [field('credit'), field('author', 'authors')].filter(Boolean).join(' ');
   return [byline, field('source'), field('draft date')].filter(Boolean);
 }

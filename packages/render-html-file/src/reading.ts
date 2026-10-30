@@ -80,10 +80,30 @@ const textHtml = (block: Block) =>
     .map((line) => line.inline.map(runHtml).join(''))
     .join(el('br', {}));
 
+/**
+ * A heading Reading draws that a contents list can name: a section (with its Fountain depth) or a
+ * scene heading, its block's index (its id is `r-b-<block>`), and its words.
+ */
+export interface ReadingMark {
+  kind: 'section' | 'scene';
+  block: number;
+  /** A section's `#` count; 0 for a scene heading. */
+  depth: number;
+  text: string;
+}
+
+/** One piece of Reading, in order: an element (a heading, a paragraph, a speech or a pair, a note). */
+export interface ReadingItem {
+  html: string;
+  /** Set on a section's or a scene's heading. */
+  mark?: ReadingMark;
+}
+
 /** What Reading draws, in order: one element (or a speech), where it starts in the source, and whether it pairs. */
 interface Unit {
   html: string;
   from: number;
+  mark?: ReadingMark;
   /** A speech, which may take the next speech as its dual partner. */
   speech?: boolean;
   /** A speech whose cue has `^`: the right of a dual pair. */
@@ -103,7 +123,7 @@ function sceneNumbers(layout: Layout): Map<number, string> {
 }
 
 /** The blocks the pages print, from the layout's lines in page order; `(MORE)`, `(CONT'D)`, blanks, and the title page are from none. */
-function printedBlocks(layout: Layout): Set<number> {
+export function printedBlocks(layout: Layout): Set<number> {
   const printed = new Set<number>();
   for (const page of layout.pages) {
     for (const line of page.lines) {
@@ -128,10 +148,9 @@ class Colors {
     return `k${n % CHARACTER_COLORS.length}`;
   }
 
-  rules(): string {
-    return colorRules(
-      CHARACTER_COLORS.slice(0, Math.min(this.#byKey.size, CHARACTER_COLORS.length)),
-    );
+  /** The colors handed out, in class order. */
+  used() {
+    return CHARACTER_COLORS.slice(0, Math.min(this.#byKey.size, CHARACTER_COLORS.length));
   }
 }
 
@@ -210,6 +229,27 @@ function noteHtml(source: string, from: number, to: number): string {
  * (scene fields, setups and payoffs, card text) are left out. Boneyard never appears.
  */
 export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'include'): ReadingHtml {
+  const { items, colors } = readingItems(doc, layout, notes);
+  return {
+    html: el(
+      'section',
+      { class: 'reading', hidden: true },
+      items.map((item) => item.html).join(''),
+    ),
+    rules: colorRules(colors),
+  };
+}
+
+/**
+ * Reading's pieces, in order, before they are put in their section (as `readingHtml` does), so an
+ * EPUB can cut them into its parts at the sections' headings; and the character colors used, the
+ * `k<n>` classes' colors in order.
+ */
+export function readingItems(
+  doc: Doc,
+  layout: Layout,
+  notes: 'leave-out' | 'include',
+): { items: ReadingItem[]; colors: ReadonlyArray<Readonly<{ dark: string; light: string }>> } {
   const printed = printedBlocks(layout);
   const numbers = sceneNumbers(layout);
   const colors = new Colors();
@@ -240,6 +280,7 @@ export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'incl
           numbered + escapeHtml(block.sem.text.trim()),
         ),
         from,
+        mark: { kind: 'section', block: i, depth, text: block.sem.text.trim() },
       });
     } else if (block.kind === 'scene_heading') {
       const level = under();
@@ -250,6 +291,7 @@ export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'incl
           numbered + escapeHtml(block.sem.text.trim()),
         ),
         from,
+        mark: { kind: 'scene', block: i, depth: 0, text: block.sem.text.trim() },
       });
     } else if (block.kind === 'character') {
       let j = i + 1;
@@ -298,23 +340,21 @@ export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'incl
             region.span.from >= (doc.titlePage?.span.to ?? 0),
         )
       : [];
-  const out: string[] = [];
+  const out: ReadingItem[] = [];
   let next = 0;
   const notesBefore = (at: number) => {
     while (next < asides.length && (asides[next]?.span.from ?? 0) < at) {
       const { from, to } = (asides[next] as (typeof asides)[number]).span;
-      out.push(noteHtml(doc.source, from, to));
+      const html = noteHtml(doc.source, from, to);
+      if (html) out.push({ html });
       next++;
     }
   };
   for (const unit of paired) {
     notesBefore(unit.from);
-    out.push(unit.html);
+    out.push({ html: unit.html, mark: unit.mark });
   }
   notesBefore(Number.POSITIVE_INFINITY);
 
-  return {
-    html: el('section', { class: 'reading', hidden: true }, out.join('')),
-    rules: colors.rules(),
-  };
+  return { items: out, colors: colors.used() };
 }

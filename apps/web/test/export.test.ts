@@ -182,8 +182,8 @@ describe('exporting', () => {
     expect(t.exportApplies('html', 'fountain')).toBe(true);
     expect(t.exportApplies('html', 'markdown')).toBe(true);
     // Second in each list, after the PDF: the other finished-looking file.
-    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'txt', 'fdx', 'md']);
-    expect(t.EXPORTS.markdown).toEqual(['pdf', 'html', 'md', 'txt']);
+    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'txt', 'fdx', 'md']);
+    expect(t.EXPORTS.markdown).toEqual(['pdf', 'html', 'epub', 'md', 'txt']);
   });
 
   test('the HTML file is named like the others, ending .html', async () => {
@@ -271,6 +271,89 @@ describe('exporting', () => {
     expect(t.exportError.value).toBe(
       'Couldn’t export Deep.html: this document is nested too deeply to lay out.',
     );
+  });
+
+  test('epub is an export for scripts and Markdown documents, after the HTML page', async () => {
+    const t = await load({ inPlace: true });
+    expect(t.exportApplies('epub', 'fountain')).toBe(true);
+    expect(t.exportApplies('epub', 'markdown')).toBe(true);
+    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'txt', 'fdx', 'md']);
+    expect(t.EXPORTS.markdown).toEqual(['pdf', 'html', 'epub', 'md', 'txt']);
+  });
+
+  test('the EPUB is named like the others, ending .epub, and typed as an e-book', async () => {
+    for (const inPlace of [true, false]) {
+      const t = await load({ inPlace });
+      shown.project = { fileName: 'call.fountain' };
+      preferences.spellLanguage = 'en-GB';
+      const book = new Uint8Array([0x50, 0x4b, 3, 4]);
+      render.mockResolvedValue(book);
+      const before = Date.now();
+      expect(await t.exportScript('epub')).toBe('saved');
+      expect(t.log).toEqual(
+        inPlace
+          ? ['pick The Call Part 1.epub epub', 'write']
+          : ['download The Call Part 1.epub application/epub+zip'],
+      );
+      expect(t.written[0]?.data ?? book).toBe(book);
+      // The script's text, template, and options, as the HTML file's; its title, the spelling
+      // language, the app's name, and the time it was made, for the package's modified date.
+      expect(render).toHaveBeenCalledWith(
+        {
+          kind: 'epub',
+          source: TEXT,
+          template: builtins['us-screenplay'],
+          options: { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' },
+          title: 'The Call: Part 1',
+          lang: 'en-GB',
+          generator: expect.stringMatching(/^Drafter\b/),
+          modified: expect.any(Number),
+        },
+        expect.any(Function),
+      );
+      const [asked] = render.mock.calls.at(-1) ?? [];
+      const modified = (asked as { modified: number }).modified;
+      expect(modified).toBeGreaterThanOrEqual(before);
+      expect(modified).toBeLessThanOrEqual(Date.now());
+      expect(t.exportNotice.value).toBe('Exported The Call Part 1.epub.');
+    }
+  });
+
+  test('a Markdown document exports an EPUB, made in the worker from its text', async () => {
+    const t = await load({ inPlace: false });
+    shown.text = '# The Treatment\n\nWords.\n';
+    shown.kind = 'markdown';
+    shown.project = { exportOptions: { notes: 'include', sceneNumbers: 'all' } };
+    render.mockResolvedValue(new Uint8Array([0x50, 0x4b, 3, 4]));
+    expect(await t.exportScript('epub')).toBe('saved');
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'markdown-epub',
+        source: shown.text,
+        title: 'The Treatment',
+        lang: 'en-US',
+        generator: expect.stringMatching(/^Drafter\b/),
+        modified: expect.any(Number),
+      },
+      expect.any(Function),
+    );
+    expect(t.log).toEqual(['download The Treatment.epub application/epub+zip']);
+    expect(t.exportNotice.value).toBe('Exported The Treatment.epub.');
+  });
+
+  test('notes travel to an EPUB when included', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { notes: 'include' } };
+    render.mockResolvedValue(new Uint8Array([0x50, 0x4b, 3, 4]));
+    expect(await t.exportScript('epub')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'epub',
+        options: { sceneNumbers: 'none', titlePage: 'full', notes: 'include' },
+      }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.epub, with notes.');
   });
 
   test('says only a screenplay or a stage play exports as Final Draft, before any picker', async () => {

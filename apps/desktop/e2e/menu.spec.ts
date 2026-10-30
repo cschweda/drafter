@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
+import { listZip, readEntry } from '../../../packages/archive/src/zip';
 import { COMMAND_DATA } from '../../web/app/commands/data';
 import {
   ABOUT_PATH,
@@ -166,6 +167,34 @@ test('File › Export › HTML saves a script as one .html page', async ({ deskt
   expect(written).toMatch(/<meta name="generator" content="Drafter \d+\.\d+\.\d+" \/>/);
   expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.html' });
   expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.html$/);
+});
+
+test('File › Export › EPUB saves a script as an e-book', async ({ desktop, profile }) => {
+  const { app, page } = await desktop();
+  const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;
+  await expect.poll(() => state('export-epub')).toBe(true);
+  const folder = join(profile.home, 'Exports');
+  mkdirSync(folder, { recursive: true });
+  // Typed without its extension: the Save dialog's type adds it.
+  const target = join(folder, 'The Call book');
+  answerDialogs(profile, [target]);
+  await chooseMenuItem(app, ['File', 'Export', 'EPUB']);
+  await expect(page.locator('.toast [role="status"]').filter({ hasText: 'Exported' })).toHaveText(
+    'Exported The Call book.epub.',
+  );
+  const written = new Uint8Array(readFileSync(`${target}.epub`));
+  const entries = listZip(written);
+  expect(entries[0]?.name).toBe('mimetype');
+  expect(entries[0]?.method).toBe(0);
+  const text = async (name: string) => {
+    const entry = entries.find((e) => e.name === name);
+    return entry ? new TextDecoder().decode(await readEntry(written, entry)) : '';
+  };
+  expect(await text('mimetype')).toBe('application/epub+zip');
+  expect(await text('EPUB/package.opf')).toContain('<dc:title>The Call</dc:title>');
+  expect(await text('EPUB/part-1.xhtml')).toContain('class="speech"');
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.epub' });
+  expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.epub$/);
 });
 
 test('creates one script on Mod+Alt+N, and the editor’s Mod+Alt keys still work', async ({

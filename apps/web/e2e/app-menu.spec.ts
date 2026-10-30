@@ -210,6 +210,7 @@ test.describe('the app menu', () => {
     await expect(exports).toHaveText([
       /^Export as PDF/,
       /^Export as HTML/,
+      /^Export as EPUB/,
       /^Export as Markdown/,
       /^Export as plain text/,
     ]);

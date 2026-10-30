@@ -352,6 +352,7 @@ test.describe('a Markdown document', () => {
     await expect(menu.getByRole('button')).toHaveText([
       'PDF',
       'HTML (.html)',
+      'EPUB (.epub)',
       'Markdown (.md)',
       'Plain text (.txt)',
       'Export options…',

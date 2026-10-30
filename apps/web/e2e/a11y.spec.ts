@@ -238,7 +238,7 @@ for (const theme of THEMES) {
       await expect(options).toBeVisible();
       await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
       await expect(
-        options.getByRole('group', { name: 'Include notes (Markdown and HTML)' }),
+        options.getByRole('group', { name: 'Include notes (Markdown, HTML, and EPUB)' }),
       ).toBeVisible();
       await clean(page, 'the Export options dialog');
     });

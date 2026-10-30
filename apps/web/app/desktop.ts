@@ -14,7 +14,14 @@ declare const __DRAFTER_DESKTOP__: boolean | undefined;
 export type DesktopPlatform = NodeJS.Platform;
 
 /** The extensions a Save dialog offers: a script, a Markdown document, and the exports. */
-export type DesktopSaveExtension = '.fountain' | '.md' | '.txt' | '.pdf' | '.html' | '.fdx';
+export type DesktopSaveExtension =
+  | '.fountain'
+  | '.md'
+  | '.txt'
+  | '.pdf'
+  | '.html'
+  | '.epub'
+  | '.fdx';
 
 /**
  * The file system, through the main process (apps/desktop/src/files.ts), which is the only part of

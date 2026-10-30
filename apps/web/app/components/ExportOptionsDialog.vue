@@ -18,8 +18,9 @@ import { useScript } from '~/storage/script';
 import type { ExportOptions } from '~/workers/export-compute';
 
 // Export options (out-the-door design §2.4): how the open script's exports print its scene numbers
-// and its title page, and whether its Markdown and HTML files carry its notes (Call 28). Each
-// choice is kept the moment it is made, on the script's project, never in its text; Done closes.
+// and its title page, and whether its Markdown, HTML, and EPUB files carry its notes (Call 28).
+// Each choice is kept the moment it is made, on the script's project, never in its text; Done
+// closes.
 // Export as PDF still saves at once, with the options the script has.
 const dialog = ref<HTMLDialogElement>();
 const script = useScript();
@@ -85,8 +86,8 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
   >
     <h2 id="export-options-title">Export options</h2>
     <p id="export-options-what">
-      How this script prints and exports: as a PDF, an HTML page, plain text, a Final Draft file, or
-      Markdown. The script itself doesn’t change.
+      How this script prints and exports: as a PDF, an HTML page, an EPUB, plain text, a Final Draft
+      file, or Markdown. The script itself doesn’t change.
     </p>
     <p v-if="why" class="why">{{ why }}</p>
     <fieldset :key="`scene-${drawn}`" :disabled="!!why">

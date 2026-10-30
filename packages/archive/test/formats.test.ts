@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { importKindOf, MAX_SCRIPT_BYTES, notAScript, refusalMessage, SNIFF_BYTES } from '../src';
+import {
+  importKindOf,
+  MAX_SCRIPT_BYTES,
+  notAScript,
+  refusalMessage,
+  SNIFF_BYTES,
+  zipStored,
+} from '../src';
 
 const text = (s: string) => new TextEncoder().encode(s);
 const PLAIN = text('INT. HALL - DAY\n\nA door opens.\n');
@@ -90,6 +97,38 @@ describe('notAScript', () => {
     }
     expect(refusalMessage('The Call.html', notAScript('The Call.html', PLAIN) as never)).toBe(
       'Drafter can’t open a web page (The Call.html). Open the script it was made from instead.',
+    );
+  });
+
+  test('refuses an e-book, by its name and by its mimetype entry', () => {
+    // Drafter's own EPUB export among them: its script is the file it was made from.
+    for (const name of ['The Call.epub', 'The Call.EPUB', 'Book.Epub']) {
+      const refusal = notAScript(name, PLAIN);
+      expect(refusal?.format, name).toBe('an e-book');
+      expect(refusal?.advice, name).toBe('Open the script it was made from instead.');
+    }
+    const book = zipStored([
+      { name: 'mimetype', data: text('application/epub+zip') },
+      { name: 'EPUB/package.opf', data: text('<package/>') },
+    ]);
+    // An extra field after the name (another writer's) moves the content along; it is still one.
+    const extra = new Uint8Array(book.length + 4);
+    extra.set(book.subarray(0, 38));
+    extra[28] = 4;
+    extra.set(book.subarray(38), 42);
+    for (const bytes of [book, extra]) {
+      for (const name of ['The Call.fountain', 'The Call.highland', 'Book.zip', undefined]) {
+        expect(notAScript(name, bytes)?.format, String(name)).toBe('an e-book');
+      }
+    }
+    // Another zip whose first entry is something else is still a packed file, or an import.
+    const other = zipStored([{ name: 'mimetypes', data: text('application/epub+zip') }]);
+    expect(notAScript('a.fountain', other)?.format).toMatch(/packed file/);
+    expect(notAScript('a.highland', other)).toBeNull();
+    const notEpub = zipStored([{ name: 'mimetype', data: text('application/zip') }]);
+    expect(notAScript('a.highland', notEpub)).toBeNull();
+    expect(refusalMessage('The Call.epub', notAScript('The Call.epub', PLAIN) as never)).toBe(
+      'Drafter can’t open an e-book (The Call.epub). Open the script it was made from instead.',
     );
   });
 

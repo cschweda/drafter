@@ -78,6 +78,13 @@ const URL_ATTRIBUTES = new Set([
   'codebase',
 ]);
 
+/**
+ * A link to another file of an EPUB, as the EPUB's own code names them: a lower-case file name
+ * (with folders) ending `.xhtml` or `.css`, and perhaps an id. Never the writer's: their links
+ * are absolute URLs (`safeHref`) or text.
+ */
+const PACKAGE_HREF = /^[a-z0-9-]+(?:\/[a-z0-9-]+)*\.(?:xhtml|css)(?:#[A-Za-z][A-Za-z0-9-]*)?$/;
+
 /** The schemes a link may have: the writer's own links out, which open in a new tab. */
 const LINK_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
 
@@ -110,7 +117,8 @@ export function safeHref(url: string, image = false): string | undefined {
  * `<style>`'s is raw text, which may not hold `</`. The names are the code's, never the writer's,
  * so a name outside the expected shape is a mistake and throws, and so does an attribute in
  * `REFUSED`, an event handler, or a URL that `safeHref` refuses (`data:` only for an `<img>`'s
- * `src`).
+ * `src`), except an `href` to another of an EPUB's files by the name its code gave it
+ * (`part-2.xhtml#fn-3`, `style.css`).
  */
 export function el(name: string, attributes: Record<string, AttrValue>, content = ''): string {
   if (!NAME.test(name)) throw new RangeError(`Not an element name: ${name}`);
@@ -123,7 +131,11 @@ export function el(name: string, attributes: Record<string, AttrValue>, content 
     let text: string;
     if (value === true) text = key.startsWith('aria-') ? 'true' : '';
     else text = String(value);
-    if (URL_ATTRIBUTES.has(key) && safeHref(text, name === 'img' && key === 'src') === undefined) {
+    if (
+      URL_ATTRIBUTES.has(key) &&
+      safeHref(text, name === 'img' && key === 'src') === undefined &&
+      !(key === 'href' && PACKAGE_HREF.test(text))
+    ) {
       throw new RangeError(`Not a URL the file may hold, in ${key}: ${text.slice(0, 40)}`);
     }
     out += ` ${key}="${escapeHtml(text)}"`;

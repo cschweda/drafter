@@ -36,7 +36,7 @@ export function stylesUsed(layout: Layout): Set<FontStyle> {
 }
 
 /** What a font file is, from its first four bytes, and how a `data:` URL and `format()` name it. */
-function kindOf(bytes: Uint8Array): { mime: string; format: string } | undefined {
+export function fontKind(bytes: Uint8Array): { mime: string; format: string } | undefined {
   const tag = String.fromCharCode(...bytes.subarray(0, 4));
   if (tag === '\x00\x01\x00\x00' || tag === 'true') return { mime: 'ttf', format: 'truetype' };
   if (tag === 'OTTO') return { mime: 'otf', format: 'opentype' };
@@ -65,7 +65,7 @@ export function fontFaces(
     if (Object.prototype.toString.call(bytes) !== '[object Uint8Array]' || !bytes) {
       throw new TypeError(`fontFaces needs Courier Prime's ${style} style, which the script uses`);
     }
-    const kind = kindOf(bytes);
+    const kind = fontKind(bytes);
     if (!kind) throw new RangeError(`fontFaces: the ${style} bytes are not a font file`);
     rules.push(
       `@font-face{font-family:"Courier Prime";` +

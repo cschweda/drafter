@@ -98,8 +98,8 @@ useDocsHead({
           </tr>
           <tr>
             <th scope="row">
-              Export as PDF, HTML, plain text, Final Draft, or Markdown (a Markdown document: PDF,
-              HTML, its Markdown file, or plain text)
+              Export as PDF, HTML, EPUB, plain text, Final Draft, or Markdown (a Markdown document:
+              PDF, HTML, EPUB, its Markdown file, or plain text)
             </th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
@@ -282,11 +282,12 @@ useDocsHead({
     <h3 id="cant-open">Files Drafter can’t open</h3>
     <p>
       A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft
-      file (<code>.fdr</code>), a Celtx project, a zip archive, and a web page (an
-      <code>.html</code> file, Drafter’s own HTML export among them) aren’t scripts Drafter can
-      read, so Open turns them away, says what the file is, and says what to do instead: for most,
-      save it as plain text or Fountain in the app that made it, then open that; for a web page or
-      a PDF, open the script it was made from. An RTF file, a PDF, or a web page is known by what’s
+      file (<code>.fdr</code>), a Celtx project, a zip archive, a web page (an <code>.html</code>
+      file, Drafter’s own HTML export among them), and an e-book (an <code>.epub</code> file,
+      Drafter’s own EPUB export among them) aren’t scripts Drafter can read, so Open turns them
+      away, says what the file is, and says what to do instead: for most, save it as plain text or
+      Fountain in the app that made it, then open that; for a web page, an e-book, or a PDF, open
+      the script it was made from. An RTF file, a PDF, a web page, or an e-book is known by what’s
       inside it even when its name ends in <code>.txt</code>. Nothing opens, and the
       script you have open is left alone. Any other file of plain text opens as a Fountain script.
     </p>
@@ -294,14 +295,14 @@ useDocsHead({
     <h2 id="export-options">Export options</h2>
     <p>
       <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF,
-      HTML page, plain text, Final Draft file, and Markdown file come out.
+      HTML page, EPUB, plain text, Final Draft file, and Markdown file come out.
       <strong>Scene numbers</strong>: None (the usual), As written (only the numbers you’ve written
       in the script, like <code>#12A#</code>), or Number every scene (a scene with a written number
       keeps it, and the rest are numbered by their place, so two scenes can share a number).
       <strong>Title page</strong>: Full, Title and author only (the title, the credit, the authors,
       and the source, without your contact details or the date), or None. <strong>Include notes
-      (Markdown and HTML)</strong>: Leave out (the usual) or Include, for the Markdown and HTML
-      exports alone.
+      (Markdown, HTML, and EPUB)</strong>: Leave out (the usual) or Include, for the Markdown, HTML,
+      and EPUB exports alone.
     </p>
     <p>
       Each script keeps its own choices, in this browser, and the script itself never changes: they
@@ -325,8 +326,8 @@ useDocsHead({
     <p>
       Notes and synopses are left out, as in the PDF, unless <strong>Include notes</strong> is
       set to Include: then each note and synopsis is a quote where it stands, so a reader, or an AI,
-      sees what you were thinking. The boneyard is always left out. Only the Markdown and HTML
-      exports carry notes; a PDF, plain text, or Final Draft file never prints them. A Markdown
+      sees what you were thinking. The boneyard is always left out. Only the Markdown, HTML, and
+      EPUB exports carry notes; a PDF, plain text, or Final Draft file never prints them. A Markdown
       document’s Markdown export is its own text, as it is.
     </p>
 
@@ -347,6 +348,26 @@ useDocsHead({
       Reading, beside the text, never on the pages. A Markdown document’s page is the document as
       the Preview draws it, with its links working and its footnotes at the end. With JavaScript
       turned off the page still shows the script or the document; only the switches need it.
+    </p>
+
+    <h3 id="export-epub">Export as EPUB</h3>
+    <p>
+      Export, then <strong>EPUB (.epub)</strong>, saves an e-book, for reading a draft on an
+      e-reader, a tablet, or a phone. Where a PDF keeps its pages, an e-book flows to the screen it
+      is on: the reader picks the type size, and the device sets light or dark. A screenplay’s or
+      stage play’s e-book is its Reading view, one chapter per act (the whole script as one when it
+      has no acts), with a contents list of the acts and their scenes; each character’s name is in
+      a color of its own where the screen shows color, and always printed. It follows your Scene
+      numbers, Title page, and Include notes choices, as the HTML page does. A Markdown document’s
+      e-book is the document, one chapter per <code>#</code> heading, with its links and its
+      footnotes. Nothing in it runs or reaches the internet, and a script’s e-book carries its
+      Courier Prime.
+    </p>
+    <p>
+      To read it, open the file with your e-reader’s or tablet’s own app, or send it there the way
+      the device takes books: most can copy a file from a computer over USB, many have an app or a
+      web page to upload one, and some fetch books from a cloud folder or an email address of
+      their own. Its documentation says which.
     </p>
 
     <h2 id="recovery-copy">The recovery copy</h2>

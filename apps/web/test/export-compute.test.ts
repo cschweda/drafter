@@ -1,13 +1,19 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { listZip, readEntry } from '@drafter/archive';
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate, titlePageFor } from '@drafter/layout';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
 import {
+  epubIdentifier,
+  epubStylesUsed,
   runningTime as packageRunningTime,
+  renderDocumentEpub,
   renderDocumentHtml,
+  renderScriptEpub,
   renderScriptHtml,
+  scriptAuthor,
   stylesUsed,
 } from '@drafter/render-html-file';
 import {
@@ -498,6 +504,147 @@ describe('the export worker’s HTML', () => {
   });
 });
 
+describe('the export worker’s EPUB', () => {
+  const { createExporter } = compute;
+  const SCRIPT = [
+    'Title: The Call',
+    'Author: A. Writer',
+    '',
+    '# ACT ONE',
+    '',
+    'INT. A - DAY',
+    '',
+    'One. [[A note to self.]]',
+    '',
+    'MARA',
+    'Hello?',
+    '',
+  ].join('\n');
+  const MODIFIED = Date.UTC(2026, 9, 30, 12, 0, 0);
+  const epub = (request: Partial<Extract<compute.ExportRequest, { kind: 'epub' }>> = {}) =>
+    ({
+      kind: 'epub',
+      source: SCRIPT,
+      template,
+      title: 'The Call',
+      lang: 'en-GB',
+      generator: 'Drafter 9.9.9',
+      modified: MODIFIED,
+      ...request,
+    }) as const;
+
+  /** The book renderScriptEpub makes for `source` with these options, as the worker should. */
+  async function expected(source: string, options: compute.ExportOptions) {
+    const parsed = parse(source);
+    const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
+    const layout = paginate(doc, template, { sceneNumbers: options.sceneNumbers });
+    const all = await realFonts();
+    const fonts = Object.fromEntries([...epubStylesUsed(doc, layout)].map((s) => [s, all[s]]));
+    return renderScriptEpub({
+      doc,
+      layout,
+      template,
+      notes: options.notes,
+      fonts,
+      title: 'The Call',
+      lang: 'en-GB',
+      generator: 'Drafter 9.9.9',
+      author: scriptAuthor(doc),
+      modified: new Date(MODIFIED),
+      id: epubIdentifier('The Call', source),
+    });
+  }
+
+  /** A book's entries' names, and one entry's text. */
+  async function entries(bytes: Uint8Array) {
+    const listed = listZip(bytes);
+    const text = async (name: string) => {
+      const entry = listed.find((e) => e.name === name);
+      return entry ? new TextDecoder().decode(await readEntry(bytes, entry)) : undefined;
+    };
+    return { names: listed.map((e) => e.name), text };
+  }
+
+  test('builds a script’s EPUB with the export options, its author, and a stable id', async () => {
+    const exporter = createExporter(realFonts);
+    const plain = bytesOf(await exporter(epub()));
+    expect(plain).toEqual(await expected(SCRIPT, DEFAULT_EXPORT_OPTIONS));
+    const book = await entries(plain);
+    expect(book.names[0]).toBe('mimetype');
+    const opf = (await book.text('EPUB/package.opf')) as string;
+    expect(opf).toContain('<dc:creator>A. Writer</dc:creator>');
+    expect(opf).toContain('<dc:language>en-GB</dc:language>');
+    expect(opf).toContain('2026-10-30T12:00:00Z');
+    expect(opf).toContain(epubIdentifier('The Call', SCRIPT));
+    expect(book.names).toContain('EPUB/fonts/courier-prime-regular.ttf');
+    expect(book.names.filter((n) => n.startsWith('EPUB/fonts/'))).toHaveLength(1);
+
+    // No title page: no author either; notes in.
+    const options = { sceneNumbers: 'all', titlePage: 'none', notes: 'include' } as const;
+    const chosen = bytesOf(await exporter(epub({ options })));
+    expect(chosen).toEqual(await expected(SCRIPT, options));
+    const other = await entries(chosen);
+    expect(await other.text('EPUB/package.opf')).not.toContain('dc:creator');
+    expect(await other.text('EPUB/part-1.xhtml')).toContain('A note to self.');
+  });
+
+  test('builds a Markdown document’s EPUB', async () => {
+    const exporter = createExporter(realFonts);
+    const source = '# Harbour Notes\n\nThe map.[^1]\n\n[^1]: Drawn by hand.\n';
+    const reply = await exporter({
+      kind: 'markdown-epub',
+      source,
+      title: 'Harbour Notes',
+      lang: 'en-GB',
+      generator: 'Drafter 9.9.9',
+      modified: MODIFIED,
+    });
+    expect(bytesOf(reply)).toEqual(
+      renderDocumentEpub({
+        tree: parseMarkdown(source),
+        title: 'Harbour Notes',
+        lang: 'en-GB',
+        generator: 'Drafter 9.9.9',
+        modified: new Date(MODIFIED),
+        id: epubIdentifier('Harbour Notes', source),
+      }),
+    );
+    const book = await entries(bytesOf(reply));
+    expect(book.names.some((n) => n.startsWith('EPUB/fonts/'))).toBe(false);
+  });
+
+  test('a Markdown document nested too deeply is an error the export says plainly', async () => {
+    const reply = await createExporter(realFonts)({
+      kind: 'markdown-epub',
+      source: `${'*a '.repeat(1_500)}b${' a*'.repeat(1_500)}`,
+      title: 'Deep',
+      lang: 'en',
+      generator: 'Drafter',
+      modified: MODIFIED,
+    });
+    expect('error' in reply && reply.error).toMatch(/nested too deeply/);
+  });
+
+  test('says it is under way, then 1', async () => {
+    const exporter = createExporter(realFonts);
+    for (const request of [
+      epub(),
+      {
+        kind: 'markdown-epub',
+        source: '# A\n',
+        title: 'A',
+        lang: 'en',
+        generator: 'Drafter',
+        modified: MODIFIED,
+      } as const,
+    ]) {
+      const sent: Array<number | null> = [];
+      bytesOf(await exporter(request, (f) => sent.push(f)));
+      expect(sent, request.kind).toEqual([null, 1]);
+    }
+  });
+});
+
 describe('the export worker’s progress', () => {
   const { createExporter } = compute;
   /** Every fraction the export sent, and its reply. */
@@ -634,6 +781,22 @@ describe('the export worker, for a Markdown document', () => {
     expect(parser.loads).toBe(0);
     expect(scriptFonts).toHaveBeenCalledTimes(1);
     const document = await exporter({ kind: 'markdown-html', source: DOCUMENT, ...meta });
+    expect('data' in document).toBe(true);
+    expect(parser.loads).toBe(1);
+    expect(scriptFonts).toHaveBeenCalledTimes(1);
+    expect(documentFonts).not.toHaveBeenCalled();
+  });
+
+  test('a script’s EPUB never loads the parser, and a document’s EPUB loads no fonts', async () => {
+    const scriptFonts = vi.fn(realFonts);
+    const documentFonts = vi.fn(realDocumentFonts);
+    const exporter = createExporter(scriptFonts, documentFonts);
+    const meta = { title: 'T', lang: 'en', generator: 'Drafter', modified: 0 };
+    const script = await exporter({ kind: 'epub', source: SOURCE, template, ...meta });
+    expect('data' in script).toBe(true);
+    expect(parser.loads).toBe(0);
+    expect(scriptFonts).toHaveBeenCalledTimes(1);
+    const document = await exporter({ kind: 'markdown-epub', source: DOCUMENT, ...meta });
     expect('data' in document).toBe(true);
     expect(parser.loads).toBe(1);
     expect(scriptFonts).toHaveBeenCalledTimes(1);

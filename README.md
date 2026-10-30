@@ -149,8 +149,10 @@ The file you open is never changed. Text that Fountain has no element for (hidde
 | **Plain text** | The laid-out pages as text, to paste anywhere. |
 | **Fountain** | Save. Highland, Beat, Slugline, and any text editor read it. |
 | **A Markdown document's PDF** | A typeset document: headings, lists, links you can click, and footnotes at the foot of the page. |
+| **HTML** (`.html`, coming in v0.22.0) | One web page that opens in any browser with no connection: a script's printed pages and a reading view, or a Markdown document as the Preview draws it. |
+| **EPUB** (`.epub`, coming in v0.22.0) | An e-book for an e-reader or a tablet, reflowed to its screen: a script's reading view, one chapter per act, or a Markdown document, one chapter per `#` heading, with its footnotes. |
 
-Export options, per script, set the scene numbers (none, as written, or every scene), how much of the title page prints, and whether a Markdown export carries your notes. Drafter doesn't write Highland or Fade In files: Highland opens Fountain directly, and Fade In opens Final Draft.
+Export options, per script, set the scene numbers (none, as written, or every scene), how much of the title page prints, and whether a Markdown, HTML, or EPUB export carries your notes. Drafter doesn't write Highland or Fade In files: Highland opens Fountain directly, and Fade In opens Final Draft.
 
 ### From the command line
 
@@ -202,7 +204,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/cli` | `drafter build` (PDF, HTML, text, JSON), `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
-| `@drafter/render-html-file` | Export as HTML: a script or a Markdown document as one self-contained, offline `.html` file, dark by default, with a light switch | 2 (in progress for v0.22.0) |
+| `@drafter/render-html-file` | Export as HTML and EPUB: a script or a Markdown document as one self-contained, offline `.html` file, dark by default, with a light switch, or as an e-book | 2 (in progress for v0.22.0) |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 2 (setups and payoffs, and duplicate scene fields), 4 (the rest) |
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
@@ -211,7 +213,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits, the Structure strip's geometry, each scene's timing, and the whole script as Markdown | 2 (built in Plans A and B, and the Structure strip) |
 | `@drafter/spell` | Offline spellcheck (nspell): the words worth checking, the two bundled English dictionaries, and a per-script dictionary | 2 (built in Plan D) |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export, and Open Screenplay Format import | 2 (built in Plan FD; OSF in v0.19.0) |
-| `@drafter/archive` | Highland and Fade In files: a strict read-only zip reader, and the script inside each | 2 (built in v0.19.0) |
+| `@drafter/archive` | Highland and Fade In files: a strict read-only zip reader, and the script inside each; and a small stored-zip writer for the EPUB export | 2 (built in v0.19.0; the writer in v0.22.0) |
 | `@drafter/markdown` | Markdown documents: the parser (CommonMark with GitHub's footnotes), footnote numbering, the title, and the word count, shared by the Preview and the PDF (which takes only the footnote walk, `@drafter/markdown/notes`, and never loads the parser) | 2 (moved out of the app in v0.22.0) |
 | `@drafter/stats` | Script statistics | 2 (planned) |
 

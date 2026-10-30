@@ -101,6 +101,7 @@ describe('menuTemplate', () => {
   test('puts Export options… last in File → Export, by its whole name', () => {
     const exports = [
       cmd('export-html', 'File', 'Export as HTML'),
+      cmd('export-epub', 'File', 'Export as EPUB'),
       cmd('export-txt', 'File', 'Export as plain text'),
       cmd('export-fdx', 'File', 'Export as Final Draft (.fdx)'),
       cmd('export-treatment', 'File', 'Export as treatment…'),
@@ -112,6 +113,7 @@ describe('menuTemplate', () => {
     expect(items.map((i) => i.id)).toEqual([
       'export-pdf',
       'export-html',
+      'export-epub',
       'export-txt',
       'export-fdx',
       'export-treatment',

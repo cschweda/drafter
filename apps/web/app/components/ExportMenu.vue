@@ -128,6 +128,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button type="button" class="item" @click="choose('html')">
         <UIcon name="i-lucide-globe" class="icon" />HTML (.html)
       </button>
+      <!-- The same reflowed for an e-reader or a tablet: beside the page (design §10a). -->
+      <button type="button" class="item" @click="choose('epub')">
+        <UIcon name="i-lucide-book" class="icon" />EPUB (.epub)
+      </button>
       <button v-if="kind === 'markdown'" type="button" class="item" @click="choose('md')">
         <UIcon name="i-lucide-file-text" class="icon" />Markdown (.md)
       </button>

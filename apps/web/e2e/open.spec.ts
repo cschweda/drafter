@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { zipStored } from '@drafter/archive';
 import { expect, type Page, test } from '@playwright/test';
 import {
   alertsHeard,
@@ -527,6 +528,32 @@ test.describe('opening a file where there is no picker', () => {
     );
     expect((await stored(page)).length).toBe(before);
     await expect(editor(page)).not.toContainText('DOCTYPE');
+    await expect(editor(page)).toContainText('INT.');
+  });
+
+  test('refuses an e-book, an exported one or one named as a script, and opens nothing', async ({
+    page,
+  }) => {
+    await start(page);
+    const before = (await stored(page)).length;
+    // An EPUB, as Drafter's own export writes one: its first entry is the mimetype, stored.
+    const BOOK = [
+      ...zipStored([
+        { name: 'mimetype', data: new TextEncoder().encode('application/epub+zip') },
+        { name: 'EPUB/package.opf', data: new TextEncoder().encode('<package/>') },
+      ]),
+    ];
+    await chooseWithInput(page, 'The Call.epub', BOOK);
+    await expect(alert(page)).toContainText(
+      'Drafter can’t open an e-book (The Call.epub). Open the script it was made from instead.',
+    );
+    // Named as a script, it is still known by its mimetype entry.
+    await chooseWithInput(page, 'The Call.fountain', BOOK);
+    await expect(alert(page)).toContainText(
+      'Drafter can’t open an e-book (The Call.fountain). Open the script it was made from instead.',
+    );
+    expect((await stored(page)).length).toBe(before);
+    await expect(editor(page)).not.toContainText('epub');
     await expect(editor(page)).toContainText('INT.');
   });
 

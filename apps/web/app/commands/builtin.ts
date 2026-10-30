@@ -461,9 +461,10 @@ export function registerBuiltinCommands(): void {
     // exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter Tight (Markdown PDF
     // design §10); Final Draft for a script; and a Markdown file for both, a script's the whole script
     // written in the export worker, a document's its own text (Call 24); and an HTML page for both
-    // (HTML export design §1).
+    // (HTML export design §1), and an EPUB for both, to read on an e-reader (§10a).
     'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
     'export-html': { enabled: () => exportsHere('html'), run: () => void exportScript('html') },
+    'export-epub': { enabled: () => exportsHere('epub'), run: () => void exportScript('epub') },
     'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
     'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },

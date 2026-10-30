@@ -363,8 +363,10 @@ test.describe('without JavaScript', () => {
       'RTF',
       'PDF',
       'Markdown (.md)',
-      'Include notes (Markdown and HTML)',
+      'Include notes (Markdown, HTML, and EPUB)',
       'HTML (.html)',
+      'EPUB (.epub)',
+      'e-book',
       'AI chat',
     ]) {
       expect(text, phrase).toContain(phrase);

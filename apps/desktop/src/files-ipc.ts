@@ -24,6 +24,7 @@ const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
   '.txt': { name: 'Plain text', extensions: ['txt'] },
   '.pdf': { name: 'PDF', extensions: ['pdf'] },
   '.html': { name: 'Web page', extensions: ['html'] },
+  '.epub': { name: 'E-book', extensions: ['epub'] },
   '.fdx': { name: 'Final Draft file', extensions: ['fdx'] },
 };
 const ALL_FILES: FileFilter = { name: 'All files', extensions: ['*'] };

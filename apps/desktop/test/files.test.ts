@@ -451,6 +451,10 @@ describe('saveTarget', () => {
     expect(saveTarget(join(dir, 'Notes'), '.html')).toBe(join(dir, 'Notes.html'));
     expect(saveTarget(join(dir, 'Notes.md'), '.html')).toBe(join(dir, 'Notes.md.html'));
     expect(saveTarget(join(dir, 'Notes.html'), '.fountain')).toBe(join(dir, 'Notes.html.fountain'));
+    // An EPUB export is a .epub, and a script typed as one gets its own extension.
+    expect(saveTarget(join(dir, 'Notes'), '.epub')).toBe(join(dir, 'Notes.epub'));
+    expect(saveTarget(join(dir, 'Notes.md'), '.epub')).toBe(join(dir, 'Notes.md.epub'));
+    expect(saveTarget(join(dir, 'Notes.epub'), '.fountain')).toBe(join(dir, 'Notes.epub.fountain'));
     // A Final Draft export is a .fdx, and a script is never one.
     expect(saveTarget(join(dir, 'Notes'), '.fdx')).toBe(join(dir, 'Notes.fdx'));
     expect(saveTarget(join(dir, 'Notes.fountain'), '.fdx')).toBe(join(dir, 'Notes.fountain.fdx'));

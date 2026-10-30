@@ -54,7 +54,6 @@ flowchart BT
   spell["@drafter/spell"]
   markdown["@drafter/markdown"]
   fountain["@drafter/fountain"]
-  archive --> web
   cm_fountain --> web
   compare --> web
   history --> web
@@ -63,7 +62,6 @@ flowchart BT
   render_pdf --> web
   render_text --> web
   spell --> web
-  archive --> cli
   render_html_file --> cli
   render_pdf --> cli
   render_text --> cli
@@ -75,6 +73,7 @@ flowchart BT
   layout --> render_pdf
   markdown --> render_pdf
   layout --> render_html
+  archive --> render_html_file
   markdown --> render_html_file
   outline --> render_html_file
   layout --> render_text

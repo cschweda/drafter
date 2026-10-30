@@ -6,7 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Export as EPUB, for reading a draft on an e-reader or a tablet.** Export → EPUB (in the Export menu, the app menu, the command palette, and the desktop app's File › Export) saves a screenplay, a stage play, or a Markdown document as an `.epub` e-book, which flows to the reader's screen and type size where a PDF keeps its pages. A script's e-book is its reading view: scene headings, action, and each speech under its character's name, one chapter per act (the whole script as one when it has no acts), with a contents list of the acts and their scenes; the title page's title, credit, and author open it, the export options' scene numbers and title page apply, and your notes are in only if you choose Include notes. Character names are in color where the screen has it, and always printed. A Markdown document's e-book is the document, one chapter per `#` heading, with its links and its footnotes (at the end of their chapter, linked both ways). It has no script and loads nothing from the internet; it carries Courier Prime for a script, only in the styles the script uses, and a document uses the e-reader's own type. Open refuses an `.epub` ("Drafter can’t open an e-book … Open the script it was made from instead."), by its name or its contents, and the desktop app writes an `.epub` only where you chose to save an export.
+- `@drafter/archive`: **a small zip writer**, `zipStored`, for the EPUB: every entry stored (not compressed), names in UTF-8, the package's own CRC-32, and a fixed date, so the same entries always make the same bytes; it refuses a name with `..`, a leading `/`, a backslash, or a control character. `@drafter/render-html-file`: `renderScriptEpub`, `renderDocumentEpub`, `epubIdentifier`, `epubStylesUsed`, and `scriptAuthor`.
+
 ### Changed
+
+- **Include notes covers the EPUB too.** The export option is now **Include notes (Markdown, HTML, and EPUB)**.
 
 - **The Markdown parser and the scene colors live in packages**, for the HTML export. A new package, `@drafter/markdown`, holds the Markdown document's parser (with its footnotes and nesting guard), its footnote numbering, its title, and its word count, which the Preview and the PDF now share; the PDF and the Preview number footnotes with one piece of code instead of two. The scene colors' values join `@drafter/notes`. Nothing you see changes.
 

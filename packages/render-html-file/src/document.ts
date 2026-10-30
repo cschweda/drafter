@@ -137,6 +137,12 @@ interface Draw {
   /** The level of root headings the section links go to (2, else 1), and the links so far. */
   sectionDepth: number;
   sections: Section[];
+  /**
+   * For an EPUB: the part being drawn, and the part each note is in. A note goes at the end of the
+   * part that refers to it first (one referred to only inside another note goes with that note),
+   * and `placed` lists the notes the current part has taken, in the order they were placed.
+   */
+  epub?: { file: string; noteFiles: Map<number, string>; placed: number[] };
 }
 
 function inline(node: MdNode, draw: Draw, inLink: boolean): string {
@@ -161,12 +167,34 @@ function inline(node: MdNode, draw: Draw, inLink: boolean): string {
       const first = !draw.referenced.has(n);
       draw.referenced.add(n);
       const id = first ? `fnref-${n}` : undefined;
+      let href = `#fn-${n}`;
+      const { epub } = draw;
+      if (epub) {
+        if (!epub.noteFiles.has(n)) {
+          epub.noteFiles.set(n, epub.file);
+          epub.placed.push(n);
+        }
+        const file = epub.noteFiles.get(n) as string;
+        if (file !== epub.file) href = `${file}${href}`;
+      }
       // Inside a link the number can't be a link too; it is still the note's way back.
       if (inLink) return el('sup', { class: 'fnref', id }, String(n));
       return el(
         'sup',
         { class: 'fnref' },
-        el('a', { href: `#fn-${n}`, id, 'aria-label': `Footnote ${n}` }, String(n)),
+        el(
+          'a',
+          epub
+            ? {
+                href,
+                id,
+                'epub:type': 'noteref',
+                role: 'doc-noteref',
+                'aria-label': `Footnote ${n}`,
+              }
+            : { href, id, 'aria-label': `Footnote ${n}` },
+          String(n),
+        ),
       );
     }
     case 'image':
@@ -327,6 +355,137 @@ function definitions(tree: MdNode): Map<string, string> {
 }
 
 /**
+ * What drawing a document starts from: its root blocks (without the title's own heading), the
+ * drawing's state, and its notes, numbered as the Preview numbers them. Throws a RangeError
+ * saying "nested too deeply" for a tree deeper than `MAX_TREE_DEPTH`.
+ */
+function prepare(tree: MdNode, title: string) {
+  if (treeDepth(tree, MAX_TREE_DEPTH) > MAX_TREE_DEPTH) {
+    const error = new RangeError(
+      `This document is nested too deeply to export: more than ${MAX_TREE_DEPTH} levels.`,
+    );
+    error.name = 'NestedTooDeeply';
+    throw error;
+  }
+  const { numbers, notes } = footnotes(tree);
+  // The title's own heading is left out before anything is numbered, so the headings' ids (h-1
+  // on) and the section links are the same whether the title came from the document or not.
+  const all = tree.children ?? [];
+  const roots = titleHeading(all, title) ? all.slice(1) : all;
+  const draw: Draw = {
+    numbers,
+    addresses: definitions(tree),
+    referenced: new Set(),
+    outline: new Outline(1, 1),
+    body: true,
+    headings: 0,
+    sectionDepth: roots.some((node) => node.type === 'heading' && node.depth === 2) ? 2 : 1,
+    sections: [],
+  };
+  return { roots, draw, notes };
+}
+
+/** One part of a document's EPUB: its name for the contents, its file, and its markup. */
+export interface DocumentPart {
+  title: string;
+  file: string;
+  html: string;
+}
+
+/**
+ * A document cut into an EPUB's parts (design §10a): one per root `#` heading (a chapter), with
+ * what comes before the first one as a part of its own named by the title; the whole document as
+ * one part when it has no `#` (the title's own heading is not one: the header shows it). Each
+ * part's footnotes are EPUB 3 footnotes at its end, `<aside epub:type="footnote" id="fn-n">`, each
+ * with a link back to its first reference, which is in the same part; a reference is an
+ * `epub:type="noteref"` link, to `file#fn-n` when its note is in an earlier part. Headings keep
+ * the ids (`h-n`) and levels the HTML file gives them. `fileOf(i)` names part i's file.
+ */
+export function documentParts(
+  tree: MdNode,
+  title: string,
+  fileOf: (i: number) => string,
+): DocumentPart[] {
+  const { roots, draw, notes } = prepare(tree, title);
+  const groups: { title: string; nodes: MdNode[] }[] = [];
+  for (const node of roots) {
+    if (node.type === 'heading' && node.depth === 1) {
+      groups.push({ title: squeezed(plainText(node)), nodes: [node] });
+    } else if (groups.length === 0) {
+      groups.push({ title, nodes: [node] });
+    } else {
+      groups[groups.length - 1]?.nodes.push(node);
+    }
+  }
+  // Leading definitions draw nothing: they are no part of their own.
+  const silent = (node: MdNode) => node.type === 'definition' || node.type === 'footnoteDefinition';
+  if (groups.length > 1 && groups[0]?.title === title && groups[0].nodes.every(silent)) {
+    groups.shift();
+  }
+  if (groups.length === 0) groups.push({ title, nodes: [] });
+
+  const noteFiles = new Map<number, string>();
+  return groups.map((group, i) => {
+    const file = fileOf(i);
+    const epub = { file, noteFiles, placed: [] as number[] };
+    const part: Draw = { ...draw, epub };
+    let html = blocks(group.nodes, part, false, true);
+    draw.headings = part.headings;
+    // The notes this part refers to first, and those they refer to in turn, by number.
+    const asides = new Map<number, string>();
+    for (let k = 0; k < epub.placed.length; k++) {
+      const n = epub.placed[k] as number;
+      const note = notes[n - 1];
+      if (note)
+        asides.set(n, asideHtml(note, n, { ...part, outline: new Outline(2, 3), body: false }));
+    }
+    if (asides.size > 0) {
+      html += el(
+        'section',
+        { class: 'footnotes', 'aria-label': 'Notes' },
+        el('hr', {}) +
+          [...asides.entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([, aside]) => aside)
+            .join(''),
+      );
+    }
+    return { title: group.title || `Part ${i + 1}`, file, html };
+  });
+}
+
+/**
+ * One note as an EPUB footnote: its number, its text, and a link back to its first reference at
+ * the end of its last paragraph (or after its last block).
+ */
+function asideHtml(note: MdNode, n: number, draw: Draw): string {
+  const back = el(
+    'a',
+    { href: `#fnref-${n}`, class: 'back', 'aria-label': `Back to footnote ${n}’s reference` },
+    '↩',
+  );
+  const label = el('span', { class: 'fn-n' }, `${n}.`);
+  const children = note.children ?? [];
+  const last = children.at(-1);
+  let body: string;
+  if (children.length === 1 && last?.type === 'paragraph') {
+    body = el('p', {}, `${label} ${inlines(last.children, draw)} ${back}`);
+  } else if (last?.type === 'paragraph') {
+    body =
+      el('p', {}, label) +
+      blocks(children.slice(0, -1), draw, false) +
+      el('p', {}, `${inlines(last.children, draw)} ${back}`);
+  } else {
+    body = el('p', {}, label) + blocks(children, draw, false) + el('p', {}, back);
+  }
+  return el(
+    'aside',
+    { id: `fn-${n}`, class: 'fn', 'epub:type': 'footnote', role: 'doc-footnote' },
+    body,
+  );
+}
+
+/**
  * A Markdown document's whole file (design §4): the header ("Document · N words · M min read" and
  * the title), a row of links to its sections (each root `##` heading, or `#` when it has none),
  * and the document as the Preview draws it, with links that work (`http:`, `https:`, and `mailto:`
@@ -344,28 +503,7 @@ function definitions(tree: MdNode): Map<string, string> {
  */
 export function renderDocumentHtml(input: DocumentHtmlInput): string {
   const { tree } = input;
-  if (treeDepth(tree, MAX_TREE_DEPTH) > MAX_TREE_DEPTH) {
-    const error = new RangeError(
-      `This document is nested too deeply to export: more than ${MAX_TREE_DEPTH} levels.`,
-    );
-    error.name = 'NestedTooDeeply';
-    throw error;
-  }
-  const { numbers, notes } = footnotes(tree);
-  // The title's own heading is left out before anything is numbered, so the headings' ids (h-1
-  // on) and the section links are the same whether the title came from the document or not.
-  const all = tree.children ?? [];
-  const roots = titleHeading(all, input.title) ? all.slice(1) : all;
-  const draw: Draw = {
-    numbers,
-    addresses: definitions(tree),
-    referenced: new Set(),
-    outline: new Outline(1, 1),
-    body: true,
-    headings: 0,
-    sectionDepth: roots.some((node) => node.type === 'heading' && node.depth === 2) ? 2 : 1,
-    sections: [],
-  };
+  const { roots, draw, notes } = prepare(tree, input.title);
   let body = blocks(roots, draw, false, true);
   if (notes.length > 0) {
     body += notesHtml(notes, { ...draw, outline: new Outline(2, 3), body: false });

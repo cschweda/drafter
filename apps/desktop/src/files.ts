@@ -155,14 +155,20 @@ export const SCRIPT_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.markd
 export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fadein'];
 /**
  * The extensions the app writes only as an export, where the writer chose the file in a Save
- * dialog for one: a Final Draft file, and an HTML page. One that was opened (an import, or a page
- * picked with All files) is never written.
+ * dialog for one: a Final Draft file, an HTML page, and an EPUB. One that was opened (an import, or
+ * a page or a book picked with All files) is never written.
  */
-export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html'];
+export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html', '.epub'];
 /** The extensions of the files the app opens: scripts, and the files it imports. */
 export const OPEN_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, ...IMPORT_EXTENSIONS];
 /** The extensions of the files the app writes: scripts, and the exports. */
-export const WRITE_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, '.pdf', '.html', '.fdx'];
+export const WRITE_EXTENSIONS: readonly string[] = [
+  ...SCRIPT_EXTENSIONS,
+  '.pdf',
+  '.html',
+  '.epub',
+  '.fdx',
+];
 
 /** Whether `path`'s extension is one of `extensions` (in any case). */
 export const hasExtension = (path: string, extensions: readonly string[]) =>

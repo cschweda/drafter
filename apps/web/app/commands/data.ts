@@ -151,6 +151,12 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },
   { id: 'export-md', title: 'Export as Markdown file', group: 'File' },
   { id: 'export-html', title: 'Export as HTML', group: 'File' },
+  {
+    id: 'export-epub',
+    title: 'Export as EPUB',
+    group: 'File',
+    keywords: ['e-book', 'ebook', 'e-reader', 'tablet'],
+  },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },
   { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },

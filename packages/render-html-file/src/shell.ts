@@ -34,6 +34,9 @@ export interface ShellInput {
 /** A language tag as BCP 47 spells one: letters, then letter-or-digit subtags. */
 const LANG = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 
+/** `lang` when it is a BCP 47 tag in shape, else `en`. */
+export const langOf = (lang: string) => (LANG.test(lang) ? lang : 'en');
+
 /**
  * The policy: nothing from anywhere, but the one style and the one script by their hashes, fonts
  * and images from `data:` only, no `<base>`, and no form. No style attribute and no inline event
@@ -98,7 +101,7 @@ export function htmlShell(input: ShellInput): string {
     .filter(Boolean)
     .join('\n');
   const script = input.kind === 'script';
-  const lang = LANG.test(input.lang) ? input.lang : 'en';
+  const lang = langOf(input.lang);
 
   const head =
     el('meta', { charset: 'utf-8' }) +
