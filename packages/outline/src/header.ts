@@ -40,14 +40,27 @@ const endOf = (doc: Doc, block: Block) => contentEnd(doc.source, block.span.to);
 /** Blocks that never print: synopses and sections are outline marks; notes and boneyards are hidden. */
 const HIDDEN = new Set(['synopsis', 'section', 'note', 'boneyard']);
 
-/** What a parse prints: each block that prints, its kind and its printing lines' text. */
+/** The lines of a block that print: none for a hidden block, and none that hold only notes. */
+const printingLines = (b: Block) =>
+  HIDDEN.has(b.kind) ? [] : b.lines.filter((l) => !l.transparent);
+
+/**
+ * What a parse prints: each block that prints, its kind, its printing lines' text, and whether it
+ * runs straight on from a block that prints (no blank line, and nothing hidden between). A hidden
+ * block still ends what is above it: a lyric under a synopsis is its own paragraph, and under a
+ * line of notes it joins the speech above, so the two print differently.
+ */
 const printing = (doc: Doc) =>
   JSON.stringify(
-    doc.blocks.flatMap((b) => {
-      const lines = HIDDEN.has(b.kind) ? [] : b.lines.filter((l) => !l.transparent);
-      return lines.length === 0
-        ? []
-        : [[b.kind, lines.map((l) => l.inline.map((r) => r.text).join(''))]];
+    doc.blocks.flatMap((b, i) => {
+      const lines = printingLines(b);
+      if (lines.length === 0) return [];
+      const above = doc.blocks[i - 1];
+      const joined =
+        above !== undefined &&
+        b.leading.split('\n').length === 2 &&
+        printingLines(above).length > 0;
+      return [[b.kind, joined, lines.map((l) => l.inline.map((r) => r.text).join(''))]];
     }),
   );
 

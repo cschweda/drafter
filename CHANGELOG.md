@@ -26,6 +26,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **The Stats window**, which the Stats tab replaces with everything it showed.
 
+### Fixed
+
+- **Clearing a synopsis inside a speech no longer pulls a lyric into the speech.** A synopsis line with a note on it (`= [[a note]] the.`), typed between a speech and a `~` lyric, ends the speech, so the lyric prints as its own paragraph. Clearing the synopsis keeps the note on its line, but the speech reads through a line of notes, so the lyric joined it and lost the blank line above it. Clearing the synopsis there now changes nothing, as it already did where the line of notes would join action or centered text; under a speech with a blank line or the end of the script after it, the `=` and its words still go and the note stays.
+
 ## [0.20.0] - 2026-10-30
 
 **Formats: Fountain first, every main format out.** `drafter convert` turns Final Draft, Highland, and Fade In files into Fountain, a whole folder at once; Markdown documents get footnotes, at the end of the Preview and at the foot of the PDF's pages; the welcome, the tour, the share image, and the README say Drafter is Fountain-first, for screenplays, stage plays, and novels; and a Markdown document nested hundreds of levels deep, or with a hostile heading, can no longer hold up the app.
