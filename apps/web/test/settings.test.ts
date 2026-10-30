@@ -29,8 +29,38 @@ describe('settings', () => {
       personalDictionary: [],
       structureStrip: false,
       markdownPaper: 'letter',
+      diffColors: 'red-green',
+      compareView: 'changes',
+      diffLayout: 'unified',
     });
   });
+
+  test.each([
+    ['diffColors', 'red-green', 'blue-orange', ['blue', 'red', true, null]],
+    ['compareView', 'changes', 'pages', ['lines', 'Pages', 1, null]],
+    ['diffLayout', 'unified', 'split', ['side-by-side', 'Split', false, null]],
+  ] as const)(
+    '%s is %s by default, and a stored %s is kept, and anything else isn’t',
+    async (key, byDefault, other, wrong) => {
+      const first = createSettings();
+      await first.ready;
+      expect(first.settings.value[key]).toBe(byDefault);
+      await first.set(key, other as never);
+      expect(await db.settings.get(key)).toEqual({ key, value: other });
+      const second = createSettings();
+      await second.ready;
+      expect(second.settings.value[key]).toBe(other);
+      await second.set(key, wrong[0] as never);
+      expect(second.settings.value[key]).toBe(other);
+      for (const value of wrong) {
+        await db.settings.clear();
+        await db.settings.put({ key, value });
+        const store = createSettings();
+        await store.ready;
+        expect(store.settings.value[key], String(value)).toBe(byDefault);
+      }
+    },
+  );
 
   test('paper for Markdown PDFs is US Letter by default, and a stored a4 is kept, and anything else isn’t', async () => {
     expect(PAPERS).toEqual(['letter', 'a4']);

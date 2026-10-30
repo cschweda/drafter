@@ -167,6 +167,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Close comparison, the desktop menu's home for Compare.
   { id: 'next-change', title: 'Next change', group: 'View' },
   { id: 'previous-change', title: 'Previous change', group: 'View' },
+  // Compare's two views (version-history design §5.1, §8), while a comparison is open.
+  { id: 'compare-changes-view', title: 'Compare’s Changes view', group: 'View' },
+  { id: 'compare-pages-view', title: 'Compare’s Pages view', group: 'View' },
   { id: 'close-compare', title: 'Close comparison', group: 'View' },
   {
     id: 'focus-mode',

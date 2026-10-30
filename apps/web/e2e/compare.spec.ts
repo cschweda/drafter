@@ -8,9 +8,11 @@ import {
   start,
 } from './modules';
 
-// Compare (Phase 2 design §11.2): the newer of two versions as pages, changed and added lines with
-// an asterisk, removed lines behind a button, a Changes list, and Next and Previous change (N and
-// Shift+N in the tab, and the palette). Opened from History; read-only; Markdown as marked lines.
+// Compare's Pages view (Phase 2 design §11.2): the newer of two versions as pages, changed and
+// added lines with an asterisk, removed lines behind a button, a Changes list, and Next and
+// Previous change (N and Shift+N in the tab, and the palette). Opened from History; read-only.
+// Compare opens on its Changes view (version-history design §5.1, compare-changes.spec.ts), so
+// these tests choose Pages first, as a writer does once (it is remembered).
 
 const history = (page: Page) => page.getByRole('dialog', { name: 'History' });
 const options = (page: Page) =>
@@ -68,7 +70,15 @@ async function onRow(page: Page, row: number, key: string) {
   await page.keyboard.press(key);
 }
 
-/** A script at `before`, snapshotted, then changed to `after`, compared with now. */
+/** Chooses the Pages view on Compare's slim bar. */
+async function showPages(page: Page) {
+  await comparePaneOf(page)
+    .getByRole('group', { name: 'View' })
+    .getByRole('button', { name: 'Pages' })
+    .click();
+}
+
+/** A script at `before`, snapshotted, then changed to `after`, compared with now, as pages. */
 async function compareWithNow(page: Page, before: string, after: string) {
   await start(page);
   await newScript(page);
@@ -78,6 +88,7 @@ async function compareWithNow(page: Page, before: string, after: string) {
   await onRow(page, 0, 'Enter');
   await expect(history(page)).toBeHidden();
   await expect(shownCompareTab(page)).toBeVisible();
+  await showPages(page);
   await expect(pages(page).first()).toBeVisible();
 }
 
@@ -208,6 +219,7 @@ test.describe('Compare', () => {
     await expect(choices.getByRole('button')).toHaveText(['Now', /, Taken by you$/, 'Cancel']);
     await choices.getByRole('button').nth(1).click();
     await expect(history(page)).toBeHidden();
+    await showPages(page);
     await expect(pages(page).first()).toBeVisible();
     await expect(panel(page).locator('.compare-mark')).toHaveText(['added, A dog barks.']);
     await expect(panel(page)).not.toContainText('Rain.');
@@ -243,22 +255,6 @@ test.describe('Compare', () => {
     await comparePaneOf(page).getByRole('button', { name: 'Close comparison' }).click();
     await expect(compareTab(page)).toHaveCount(0);
     await expect(page.locator('[data-pane="right"]').getByRole('tabpanel')).toBeFocused();
-  });
-
-  test('compares a Markdown document as marked lines', async ({ page }) => {
-    await start(page);
-    await newScript(page, 'New Markdown document');
-    await setText(page, '# Notes\n\nOne.\n\nTwo.\n');
-    await takeSnapshot(page);
-    await setText(page, '# Notes\n\nOne.\n\nThree.\n');
-    await onRow(page, 0, 'Enter');
-    await expect(shownCompareTab(page)).toBeVisible();
-    await expect(pages(page)).toHaveCount(0);
-    const lines = panel(page).getByRole('region', { name: 'The newer version, by line' });
-    await expect(lines.locator('.line.marked')).toHaveText([/changed, Three\.\*$/]);
-    await expect(changes(page)).toHaveText(['Line 5: 1 line changed']);
-    await changes(page).first().click();
-    await expect.poll(() => focusedChange(page)).toBe('0');
   });
 
   test('offers no edits: Compare is read-only', async ({ page }) => {

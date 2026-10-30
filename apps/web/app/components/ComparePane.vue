@@ -5,15 +5,19 @@ import { markPage } from '~/compare/draw';
 import { useCompare } from '~/compare/use-compare';
 import { sayOutline } from '~/outline/notice';
 
-// The Compare tab (Phase 2 design §11.2): the Changes list above the newer version's pages, drawn
-// with `buildPage` and marked by `markPage` (Call 17), or its source lines (`CompareLines`, Call 20).
-// Read-only: nothing here edits. N and Shift+N go to the next and previous change while focus is
-// in the tab (Call 21); a change gets focus and its label is said once. On a phone the Changes list
-// is a collapsed `<details>` at the top.
+// The Compare tab (Phase 2 design §11.2): the Changes list above the view the slim bar chose
+// (version-history design §5.1): the Changes view (`DiffView`), or the newer version's pages, drawn
+// with `buildPage` and marked by `markPage` (Call 17). Read-only: nothing here edits. N and Shift+N
+// go to the next and previous change while focus is in the tab (Call 21); a change gets focus and
+// its label is said once. On a phone the Changes list is a collapsed `<details>` at the top.
 
 const compare = useCompare();
-const { current, pages, lines, stops } = compare;
+const { current, pages, view, layout, stops, layoutFailed } = compare;
 const wide = useWideScreen();
+const diffView = ref<{
+  revealChange(change: number): Promise<HTMLElement | null>;
+  focusHeading(heading: string): Promise<boolean>;
+}>();
 
 const root = ref<HTMLElement>();
 const sheet = ref<HTMLElement>();
@@ -55,7 +59,10 @@ async function focusPending() {
   const index = compare.at.value;
   const stop = index === null ? undefined : stops.value[index];
   if (!stop) return;
-  const target = root.value?.querySelector<HTMLElement>(`[data-change="${stop.stop.change}"]`);
+  const target =
+    view.value === 'changes'
+      ? await diffView.value?.revealChange(stop.stop.change)
+      : sheet.value?.querySelector<HTMLElement>(`[data-change="${stop.stop.change}"]`);
   if (!target) return;
   compare.pendingFocus.value = false;
   target.focus({ preventScroll: true });
@@ -94,7 +101,10 @@ let observer: ResizeObserver | undefined;
 onMounted(() => {
   panel = root.value?.closest<HTMLElement>('[role="tabpanel"]') ?? root.value ?? null;
   panel?.addEventListener('keydown', onKeydown);
-  observer = new ResizeObserver(() => applyZoom());
+  observer = new ResizeObserver(() => {
+    applyZoom();
+    compare.paneWidth.value = root.value?.clientWidth ?? 0;
+  });
   if (root.value) observer.observe(root.value);
   if (probe.value) observer.observe(probe.value);
   draw();
@@ -105,7 +115,16 @@ onBeforeUnmount(() => {
 });
 
 watch(pages, draw);
-watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending());
+watch([compare.pendingFocus, compare.at, view, stops], () => void focusPending());
+
+/** Opened at a scene (from Deleted scenes or History of this scene): its group's header gets focus. */
+async function focusScene() {
+  const heading = compare.focusScene.value;
+  if (heading === null || view.value !== 'changes' || !diffView.value) return;
+  compare.focusScene.value = null;
+  await diffView.value.focusHeading(heading);
+}
+watch([compare.focusScene, diffView], () => void focusScene(), { flush: 'post' });
 </script>
 
 <template>
@@ -127,11 +146,24 @@ watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending(
           </li>
         </ul>
       </section>
-      <p v-if="current.changes.length === 0" class="note">
-        No changes: the two versions are the same.
-      </p>
-      <p v-else-if="!lines && !pages" role="status" class="note">Laying out the pages…</p>
-      <CompareLines v-if="lines" :text="current.newer.text" :changes="current.changes" />
+      <DiffView
+        v-if="view === 'changes'"
+        ref="diffView"
+        :model="current.model"
+        :kind="current.kind"
+        :layout="layout"
+        :labels="{ before: current.older.label, after: current.newer.label }"
+        @go="compare.goToGroup"
+      />
+      <template v-else>
+        <p v-if="current.changes.length === 0" class="note">
+          No changes: the two versions are the same.
+        </p>
+        <p v-else-if="layoutFailed" class="note">
+          The pages couldn’t be laid out. The Changes view shows every change.
+        </p>
+        <p v-else-if="!pages" role="status" class="note">Laying out the pages…</p>
+      </template>
     </template>
     <div
       ref="probe"
@@ -140,7 +172,7 @@ watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending(
       aria-hidden="true"
     />
     <section
-      v-show="!lines"
+      v-show="view === 'pages'"
       ref="sheet"
       class="drafter-script pages"
       aria-label="The newer version"

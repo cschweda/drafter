@@ -23,11 +23,12 @@ function counted(kind: ChangeStop['kind'], lines: number): string {
 
 /**
  * "Page 12, INT. HALL: 2 lines changed"; "Page 3: 1 line added" with no scene; "Title page: …" for
- * the title page (page 0); "Line 40: 2 lines changed" for a line stop, which has no scene.
+ * the title page (page 0). A line stop has no page: "INT. HALL: 2 lines changed" in Compare's
+ * Changes view, or "Line 40: 2 lines changed" before the first heading.
  */
 export function stopLabel(stop: ChangeStop | LineStop, heading: string | null): string {
   const count = counted(stop.kind, stop.lines);
-  if ('line' in stop) return `Line ${stop.line}: ${count}`;
+  if ('line' in stop) return heading ? `${heading}: ${count}` : `Line ${stop.line}: ${count}`;
   const page = stop.page === 0 ? 'Title page' : `Page ${stop.page}`;
   return `${heading ? `${page}, ${heading}` : page}: ${count}`;
 }

@@ -13,6 +13,7 @@ import { useSettings } from './settings';
  *   go to the editor (`applyEditorSettings`; `load` does the same for a script that is opened). The
  *   spellcheck's language, Check notes and boneyard, and My dictionary are the spellcheck's own to
  *   watch (`spell/use-spell.ts`): each one checks the text again in its worker.
+ * - Colors for changes is `data-diff-colors` on the root, which picks Compare's diff tokens.
  * - The text size is `--text-scale` on the root, which the Source pane's theme and the Script
  *   pane's 100% zoom multiply by.
  * - Match system appearance sets the color mode's preference to `system`, and turning it off
@@ -38,6 +39,14 @@ export function applySettings(): () => void {
           settings.value.typewriter,
         ],
         () => applyEditorSettings(view, settings.value),
+        { immediate: true },
+      ),
+      // Compare's Changes view takes its colors from tokens chosen by this attribute.
+      watch(
+        () => settings.value.diffColors,
+        (colors) => {
+          document.documentElement.dataset.diffColors = colors;
+        },
         { immediate: true },
       ),
       watch(

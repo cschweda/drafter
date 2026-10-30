@@ -150,10 +150,20 @@ describe('rows properties', () => {
     );
   });
 
-  test('rows replay both texts, and pairs point at each other', () => {
+  /** The rows of a pair, with no anchors or with them (a change laid out a section at a time). */
+  const replayed = (withAnchors: boolean) => (older: string, newer: string) =>
+    withAnchors
+      ? diffRows(older, newer, { old: anchors(older), new: anchors(newer) })
+      : diffRows(older, newer);
+
+  test.each([
+    ['', false],
+    [', with anchors', true],
+  ])('rows replay both texts, and pairs point at each other%s', (_, withAnchors) => {
+    const rowsOf = replayed(withAnchors as boolean);
     fc.assert(
       fc.property(pair, ([older, newer]) => {
-        const { rows } = diffRows(older, newer);
+        const { rows } = rowsOf(older, newer);
         const side = (keep: (r: DiffRow) => boolean, n: (r: DiffRow) => number | null) => {
           const kept = rows.filter(keep);
           kept.forEach((r, i) => {
@@ -180,6 +190,7 @@ describe('rows properties', () => {
           expect(new Set([r.kind, rows[r.pair].kind])).toEqual(new Set(['removed', 'added']));
         });
       }),
+      withAnchors ? RUNS : undefined,
     );
   });
 

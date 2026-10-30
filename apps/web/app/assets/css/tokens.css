@@ -49,3 +49,51 @@
   --title: #b5502f;
   --spelling: #c62828;
 }
+
+/* Compare's Changes view (version-history design §7): Red and green by default, Blue and orange
+   by `data-diff-colors` on the root (Settings, Colors for changes). The values are
+   app/compare/colors.ts's DIFF_TOKENS, which test/diff-colors.test.ts checks for contrast and
+   checks these against. A selector of the theme and the attribute outranks one of either. */
+:root,
+.dark,
+:root[data-diff-colors="red-green"] {
+  --diff-add-bg: #1c3124;
+  --diff-del-bg: #3a2225;
+  --diff-add-word: #2a5236;
+  --diff-del-word: #5e2f34;
+  --diff-add-sign: #7fd99a;
+  --diff-del-sign: #ffa39b;
+  --diff-fold-bg: #242934;
+}
+
+.light,
+.light[data-diff-colors="red-green"] {
+  --diff-add-bg: #e3f3e7;
+  --diff-del-bg: #fbe7e5;
+  --diff-add-word: #bfe5c9;
+  --diff-del-word: #f5c9c4;
+  --diff-add-sign: #17663a;
+  --diff-del-sign: #a8322b;
+  --diff-fold-bg: #eef1f5;
+}
+
+:root[data-diff-colors="blue-orange"],
+.dark[data-diff-colors="blue-orange"] {
+  --diff-add-bg: #1c2a40;
+  --diff-del-bg: #372919;
+  --diff-add-word: #2b4870;
+  --diff-del-word: #5c4122;
+  --diff-add-sign: #9cc2f7;
+  --diff-del-sign: #f2b06c;
+  --diff-fold-bg: #242934;
+}
+
+.light[data-diff-colors="blue-orange"] {
+  --diff-add-bg: #e2ecfb;
+  --diff-del-bg: #fcebdc;
+  --diff-add-word: #bfd5f6;
+  --diff-del-word: #f6d0ad;
+  --diff-add-sign: #1d559e;
+  --diff-del-sign: #8f4700;
+  --diff-fold-bg: #eef1f5;
+}

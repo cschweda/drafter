@@ -54,8 +54,14 @@ describe('Compare labels', () => {
     expect(stopLabel({ change: 0, kind: 'changed', line: 40, lines: 2 }, null)).toBe(
       'Line 40: 2 lines changed',
     );
-    expect(stopLabel({ change: 1, kind: 'removed', line: 7, lines: 1 }, 'ignored')).toBe(
+    expect(stopLabel({ change: 1, kind: 'removed', line: 7, lines: 1 }, null)).toBe(
       'Line 7: 1 line removed',
+    );
+  });
+
+  test('names a stop in the Changes view by its heading, which has no page', () => {
+    expect(stopLabel({ change: 1, kind: 'removed', line: 7, lines: 1 }, 'INT. HALL')).toBe(
+      'INT. HALL: 1 line removed',
     );
   });
 

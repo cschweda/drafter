@@ -492,6 +492,21 @@ export function registerBuiltinCommands(): void {
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
     // Compare's tab goes with the comparison (Call 16).
+    'compare-changes-view': {
+      enabled: comparing,
+      run: () => {
+        compare.setView('changes');
+        compare.show();
+      },
+    },
+    // A Markdown document has only the Changes view.
+    'compare-pages-view': {
+      enabled: () => comparing() && compare.hasPages.value,
+      run: () => {
+        compare.setView('pages');
+        compare.show();
+      },
+    },
     'close-compare': { enabled: comparing, run: () => compare.close() },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.

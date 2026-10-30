@@ -1,6 +1,7 @@
 import { SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
 import type { Paper } from '@drafter/templates';
 import { type Ref, readonly, shallowRef } from 'vue';
+import { DIFF_COLORS, type DiffColors } from '../compare/colors';
 import { db } from '../storage/db';
 
 export interface Settings {
@@ -36,7 +37,18 @@ export interface Settings {
   structureStrip: boolean;
   /** The paper of a Markdown document's PDF: US Letter by default (Markdown PDF design §6, Call 20). A script's PDF uses its template's. */
   markdownPaper: Paper;
+  /** Colors for changes in Compare's Changes view: red and green, or blue and orange (version-history design §7). */
+  diffColors: DiffColors;
+  /** Compare's view, the last chosen on its slim bar: the Changes view by default (version-history design §5.1). */
+  compareView: CompareView;
+  /** The Changes view's layout, the last chosen: unified by default; side by side where the pane is wide enough. */
+  diffLayout: DiffLayout;
 }
+
+export type CompareView = 'changes' | 'pages';
+export type DiffLayout = 'unified' | 'split';
+export const COMPARE_VIEWS: readonly CompareView[] = ['changes', 'pages'];
+export const DIFF_LAYOUTS: readonly DiffLayout[] = ['unified', 'split'];
 
 export type CardSize = 'small' | 'medium' | 'large';
 /** The card sizes, smallest first. */
@@ -61,6 +73,9 @@ export const DEFAULT_SETTINGS: Settings = {
   personalDictionary: [],
   structureStrip: false,
   markdownPaper: 'letter',
+  diffColors: 'red-green',
+  compareView: 'changes',
+  diffLayout: 'unified',
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -75,6 +90,9 @@ function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
   if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
   if (key === 'markdownPaper') return (PAPERS as readonly unknown[]).includes(value);
+  if (key === 'diffColors') return (DIFF_COLORS as readonly unknown[]).includes(value);
+  if (key === 'compareView') return (COMPARE_VIEWS as readonly unknown[]).includes(value);
+  if (key === 'diffLayout') return (DIFF_LAYOUTS as readonly unknown[]).includes(value);
   if (key === 'spellLanguage') return (SPELL_LANGUAGES as readonly unknown[]).includes(value);
   if (key === 'personalDictionary') {
     // Each entry one word: a non-empty string with no whitespace.
