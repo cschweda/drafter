@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { el, escapeHtml } from '../src/escape';
+import { el, escapeHtml, safeHref } from '../src/escape';
+import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 /**
  * The text the file can carry for `s`, written out from the rules rather than from the code: a
@@ -120,19 +121,14 @@ describe('escapeHtml', () => {
     );
   });
 
-  it('is linear in the length of the text', () => {
-    const unit = '<&>"\'\0\ud800ab';
-    const time = (n: number) => {
-      const text = unit.repeat(n);
-      const start = performance.now();
-      escapeHtml(text);
-      return performance.now() - start;
-    };
-    time(20_000);
-    const small = Math.max(time(50_000), 1);
-    const large = time(400_000);
-    expect(large / small).toBeLessThan(40);
-  });
+  it(
+    'is linear in the length of the text',
+    () => {
+      const { growth } = scaling((n) => '<&>"\'\0\ud800ab'.repeat(n), escapeHtml, 50_000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 });
 
 describe('el, the one place markup is written', () => {
@@ -168,6 +164,98 @@ describe('el, the one place markup is written', () => {
   it('takes a prefixed attribute name, for the EPUB', () => {
     expect(el('aside', { 'epub:type': 'footnote' }, 'n')).toBe(
       '<aside epub:type="footnote">n</aside>',
+    );
+  });
+
+  it('refuses style, srcdoc, formaction, srcset, and ping, as it refuses event handlers', () => {
+    for (const key of ['style', 'srcdoc', 'formaction', 'srcset', 'ping', 'onload', 'onerror']) {
+      expect(() => el('p', { [key]: 'x' }, ''), key).toThrow(RangeError);
+    }
+  });
+
+  it('writes a link only to an anchor, http, https, or mailto', () => {
+    expect(el('a', { href: '#b-3' }, 'x')).toBe('<a href="#b-3">x</a>');
+    expect(el('a', { href: 'https://example.com/?a=1&b="2"' }, 'x')).toBe(
+      '<a href="https://example.com/?a=1&amp;b=&quot;2&quot;">x</a>',
+    );
+    expect(el('a', { href: 'mailto:ada@example.com' }, 'x')).toContain('mailto:');
+    for (const bad of [
+      'javascript:alert(1)',
+      ' JavaScript:alert(1)',
+      'java\tscript:alert(1)',
+      '\x01javascript:alert(1)',
+      'vbscript:x',
+      'data:text/html,<script>alert(1)</script>',
+      'file:///etc/passwd',
+      '//example.com/x',
+      'relative/path',
+      '',
+    ]) {
+      expect(() => el('a', { href: bad }, 'x'), JSON.stringify(bad)).toThrow(RangeError);
+    }
+  });
+
+  it('checks every URL attribute, and takes data: only for an image', () => {
+    expect(el('img', { src: 'data:image/png;base64,AAAA', alt: '' })).toBe(
+      '<img src="data:image/png;base64,AAAA" alt="" />',
+    );
+    expect(() => el('img', { src: 'https://example.com/x.png' })).not.toThrow();
+    expect(() => el('img', { src: 'data:text/html,x' })).toThrow(RangeError);
+    expect(() => el('script', { src: 'data:image/png,x' })).toThrow(RangeError);
+    expect(() => el('a', { href: 'data:image/png,x' }, '')).toThrow(RangeError);
+    for (const key of ['action', 'poster', 'cite', 'xlink:href', 'background', 'data']) {
+      expect(() => el('x', { [key]: 'javascript:alert(1)' }, ''), key).toThrow(RangeError);
+    }
+  });
+
+  it('refuses "</" in a script or a style, whose text is raw', () => {
+    expect(() => el('script', {}, 'a</script><b>')).toThrow(RangeError);
+    expect(() => el('style', {}, '</style>')).toThrow(RangeError);
+    expect(el('style', {}, '.a{}')).toBe('<style>.a{}</style>');
+  });
+
+  it('writes a true aria- attribute as "true"', () => {
+    expect(el('span', { 'aria-hidden': true }, '')).toBe('<span aria-hidden="true"></span>');
+  });
+});
+
+describe('safeHref', () => {
+  it('keeps anchors and the three link schemes, and nothing else', () => {
+    expect(safeHref('#fn-1')).toBe('#fn-1');
+    expect(safeHref('http://example.com')).toBe('http://example.com');
+    expect(safeHref('HTTPS://example.com')).toBe('HTTPS://example.com');
+    expect(safeHref('mailto:a@b.c')).toBe('mailto:a@b.c');
+    expect(safeHref('javascript:alert(1)')).toBeUndefined();
+    expect(safeHref('data:image/png,x')).toBeUndefined();
+    expect(safeHref('data:image/png,x', true)).toBe('data:image/png,x');
+    expect(safeHref('data:text/html,x', true)).toBeUndefined();
+    expect(safeHref('nonsense')).toBeUndefined();
+  });
+
+  it('a property: whatever it keeps, a browser reads as an anchor or one of the three schemes', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.string({ unit: 'binary', maxLength: 20 }),
+          fc
+            .tuple(
+              fc.constantFrom('java', 'http', 'https', 'mailto', 'data', 'vb', ' ', '\t', '#'),
+              fc.constantFrom('', '\t', '\n', '\x00', ' '),
+              fc.constantFrom('script:', 's:', ':', '//x', 'image/png,'),
+              fc.string({ maxLength: 8 }),
+            )
+            .map((parts) => parts.join('')),
+        ),
+        (url) => {
+          const kept = safeHref(url);
+          if (kept === undefined) return;
+          const a = document.createElement('a');
+          a.setAttribute('href', kept);
+          if (kept.startsWith('#')) return;
+          expect(['http:', 'https:', 'mailto:']).toContain(a.protocol);
+        },
+      ),
+      { numRuns: 500 },
     );
   });
 });

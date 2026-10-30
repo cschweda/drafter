@@ -19,6 +19,7 @@ function file(over: Partial<ShellInput> = {}): string {
     nav: '<nav class="band" aria-label="Scenes"><ol><li><a href="#b-1">One</a></li></ol></nav>',
     body: BODY,
     fontFaces: '',
+    rules: '',
     ...over,
   });
 }

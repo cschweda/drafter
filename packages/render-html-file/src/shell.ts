@@ -24,6 +24,11 @@ export interface ShellInput {
   body: string;
   /** `@font-face` rules with `data:` URLs, or ''. They go in front of the stylesheet. */
   fontFaces: string;
+  /**
+   * The file's generated rules (`gridRules`, `pageRules`, `bandRules`, `colorRules`), or ''. They
+   * go after the stylesheet, in the same `<style>`: the CSP allows no style attribute.
+   */
+  rules: string;
 }
 
 /** A language tag as BCP 47 spells one: letters, then letter-or-digit subtags. */
@@ -31,22 +36,31 @@ const LANG = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 
 /**
  * The policy: nothing from anywhere, but the one style and the one script by their hashes, fonts
- * and images from `data:` only, no `<base>`, and no form. Style attributes are allowed, since a
- * printed line's place on the page is one (`--row`, `--col`), and they can't reach out: a `url(`
- * in one is still held to `data:` by `img-src` and `font-src`. A browser too old for
- * `style-src-attr` falls back to the hash and drops them; the text is all there, unplaced.
+ * and images from `data:` only, no `<base>`, and no form. No style attribute and no inline event
+ * handler is allowed, and the file has none: what varies (a line's place, a page's size) is a
+ * class with a generated rule in the one `<style>`.
  */
 const policy = (style: string, script: string) =>
   [
     "default-src 'none'",
     `style-src ${cspHash(style)}`,
-    "style-src-attr 'unsafe-inline'",
     `script-src ${cspHash(script)}`,
     'font-src data:',
     'img-src data:',
     "base-uri 'none'",
     "form-action 'none'",
   ].join('; ');
+
+/**
+ * Generated CSS, refused if it holds `<` (which could end the style element) or a carriage return
+ * (which HTML reads as a line feed before the browser hashes the text, so the CSP's hash, taken
+ * here, would no longer match and the whole stylesheet would be dropped).
+ */
+function cssPart(css: string, what: string): string {
+  if (css.includes('<')) throw new RangeError(`${what} may not hold "<": it would end the style.`);
+  if (css.includes('\r')) throw new RangeError(`${what} may not hold a carriage return.`);
+  return css;
+}
 
 /** One switch: what it means when off, said beside it, and the button that turns it on. */
 const pair = (toggle: string, off: string, on: string) =>
@@ -80,10 +94,9 @@ export function headerHtml(kind: string, title: string, lines: readonly string[]
  * reader has. The switches start hidden, since they need the script, which shows them.
  */
 export function htmlShell(input: ShellInput): string {
-  if (input.fontFaces.includes('<')) {
-    throw new RangeError('Font rules may not hold "<": they would end the style element.');
-  }
-  const style = input.fontFaces ? `${input.fontFaces}\n${STYLESHEET}` : STYLESHEET;
+  const style = [cssPart(input.fontFaces, 'Font rules'), STYLESHEET, cssPart(input.rules, 'Rules')]
+    .filter(Boolean)
+    .join('\n');
   const script = input.kind === 'script';
   const lang = LANG.test(input.lang) ? input.lang : 'en';
 

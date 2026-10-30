@@ -203,7 +203,8 @@ a { color: var(--accent); }
 }
 .byline { margin: 0.5rem 0 0; color: var(--dim); }
 
-/* The band: a script's acts or scenes, each as wide as its share of the pages. */
+/* The band: a script's acts or scenes, each as wide as its share of the pages (a generated .gN
+   class sets its flex-grow) and edged in its color (a generated class sets --c). */
 .band { max-width: 60rem; margin: 0 auto 2.5rem; padding: 0 1.25rem; }
 .band ol { display: flex; gap: 3px; margin: 0; padding: 0; list-style: none; }
 .band li { flex: 1 1 0; min-width: 6px; }
@@ -237,13 +238,12 @@ a { color: var(--accent); }
 
 main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
 
-/* Pages: each a paper card on the Script tab's grid, 1ch by 1in/6, in Courier Prime 12pt. */
+/* Pages: each a paper card on the Script tab's grid, 1ch by 1in/6, in Courier Prime 12pt. A
+   page's size and a line's place are classes whose rules the file generates (rules.ts). */
 .pages { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; overflow-x: auto; }
 .page {
   position: relative;
   flex: none;
-  width: calc(var(--cols) * 1ch);
-  height: calc(var(--rows) * 1in / 6);
   background: var(--page);
   color: var(--page-ink);
   font-family: ${MONO};
@@ -254,8 +254,6 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
 }
 .page .ln {
   position: absolute;
-  top: calc(var(--row) * 1in / 6);
-  left: calc(var(--col) * 1ch);
   white-space: pre;
 }
 .b { font-weight: 700; }

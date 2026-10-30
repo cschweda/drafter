@@ -2,7 +2,14 @@ import { createHash } from 'node:crypto';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { escapeHtml } from '../src/escape';
-import { CLIENT_SCRIPT, headerHtml, htmlShell, type ShellInput, STYLESHEET } from '../src/index';
+import {
+  CLIENT_SCRIPT,
+  gridRules,
+  headerHtml,
+  htmlShell,
+  type ShellInput,
+  STYLESHEET,
+} from '../src/index';
 import { PALETTES } from '../src/style';
 
 const HOSTILE = '</title><script>alert(1)</script>';
@@ -17,6 +24,7 @@ function input(over: Partial<ShellInput> = {}): ShellInput {
     nav: '',
     body: '<section class="pages"></section><section class="reading" hidden=""></section>',
     fontFaces: '',
+    rules: '',
     ...over,
   };
 }
@@ -43,7 +51,10 @@ describe('htmlShell', () => {
   it('has one style and one script, and a CSP whose hashes match them', () => {
     const doc = parse(
       htmlShell(
-        input({ fontFaces: '@font-face{font-family:"X";src:url(data:font/ttf;base64,AAAA)}' }),
+        input({
+          fontFaces: '@font-face{font-family:"X";src:url(data:font/ttf;base64,AAAA)}',
+          rules: gridRules([6], [15]),
+        }),
       ),
     );
     const styles = doc.querySelectorAll('style');
@@ -53,10 +64,11 @@ describe('htmlShell', () => {
     const csp = cspOf(doc);
     expect(csp).toContain(sha256(styles[0]?.textContent ?? ''));
     expect(csp).toContain(sha256(scripts[0]?.textContent ?? ''));
-    // The script is the fixed text, and the style is the fonts and then the fixed text.
+    // The script is the fixed text, and the style is the fonts, the fixed text, and the rules.
     expect(scripts[0]?.textContent).toBe(CLIENT_SCRIPT);
-    expect(styles[0]?.textContent?.endsWith(STYLESHEET)).toBe(true);
-    expect(styles[0]?.textContent).toContain('@font-face');
+    expect(styles[0]?.textContent).toBe(
+      `@font-face{font-family:"X";src:url(data:font/ttf;base64,AAAA)}\n${STYLESHEET}\n${gridRules([6], [15])}`,
+    );
   });
 
   it('puts the CSP before the style and the script, so it governs both', () => {
@@ -85,11 +97,13 @@ describe('htmlShell', () => {
     expect(directives.get('form-action')).toEqual(["'none'"]);
     for (const [name, sources] of directives) {
       for (const source of sources) {
-        expect(source, name).not.toMatch(/http|https:|\*|'self'|'unsafe-eval'/);
+        expect(source, name).not.toMatch(/http|https:|\*|'self'|'unsafe-/);
       }
     }
-    // Style attributes (a line's grid position) are allowed, but not inline script of any kind.
-    expect(directives.get('style-src-attr')).toEqual(["'unsafe-inline'"]);
+    // No style attribute and no inline script beyond the one hashed.
+    expect(directives.has('style-src-attr')).toBe(false);
+    expect(directives.has('script-src-attr')).toBe(false);
+    expect(directives.get('style-src')?.every((s) => s.startsWith("'sha256-"))).toBe(true);
     expect(directives.get('script-src')?.every((s) => s.startsWith("'sha256-"))).toBe(true);
   });
 
@@ -149,10 +163,25 @@ describe('htmlShell', () => {
     expect(header?.querySelectorAll('script, title').length).toBe(0);
   });
 
-  it('refuses font rules that could end the style element', () => {
-    expect(() => htmlShell(input({ fontFaces: '</style><script>alert(1)</script>' }))).toThrow(
-      RangeError,
-    );
+  it('refuses font rules or generated rules that could end the style element', () => {
+    for (const css of ['</style><script>alert(1)</script>', '.a{}<']) {
+      expect(() => htmlShell(input({ fontFaces: css }))).toThrow(RangeError);
+      expect(() => htmlShell(input({ rules: css }))).toThrow(RangeError);
+    }
+  });
+
+  it('refuses a carriage return in either, which would change the hash the browser takes', () => {
+    expect(() => htmlShell(input({ fontFaces: '.a{}\r\n' }))).toThrow(RangeError);
+    expect(() => htmlShell(input({ rules: '.a{}\r\n.b{}' }))).toThrow(RangeError);
+  });
+
+  it('writes no style attribute, in either kind', () => {
+    for (const kind of ['script', 'document'] as const) {
+      const html = htmlShell(input({ kind, nav: '', rules: gridRules([1], [2]) }));
+      expect(html, kind).not.toMatch(/\sstyle\s*=/i);
+      const doc = parse(html);
+      expect(doc.querySelectorAll('[style]').length, kind).toBe(0);
+    }
   });
 
   it('a hostile generator or language changes nothing else', () => {
