@@ -665,6 +665,25 @@ describe('importing a Final Draft file', () => {
     expect(await t.mine()).toHaveLength(0);
   });
 
+  test('refuses a Latin-1 .fdx with Open’s own UTF-8 message, and leaves the open script alone', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Door.fountain', SCRIPT));
+    const was = t.script.project.value?.id;
+    const shown = t.shown();
+    // Well-formed Final Draft XML, but "Café" in Latin-1: 0xE9 alone is not UTF-8.
+    const xml = fdx(paragraph('Action', 'Café.'));
+    const latin1 = Uint8Array.from(xml, (c) => c.charCodeAt(0));
+    expect(latin1.includes(0xe9)).toBe(true);
+    await t.openFile(t.picked('Cafe.fdx', latin1));
+    expect(t.openError.value).toBe(
+      'This file isn’t UTF-8 text, so Drafter didn’t open it: saving would change its characters. Save it as UTF-8 in the app that made it, then open it again.',
+    );
+    expect(t.script.project.value?.id).toBe(was);
+    expect(t.shown()).toBe(shown);
+    expect(await t.mine()).toHaveLength(1);
+    expect(snapshots.calls.filter(([kind]) => kind === 'afterImport')).toHaveLength(0);
+  });
+
   test('a read-only tab imports nothing', async () => {
     const t = await fresh();
     const { useGuard } = await import('../app/storage/guard');

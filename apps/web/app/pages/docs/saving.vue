@@ -198,10 +198,10 @@ useDocsHead({
     <p>
       <strong>Open a file…</strong>, or dropping a file on the window, opens a Fountain script
       (<code>.fountain</code>), a Markdown file (<code>.md</code> or <code>.markdown</code>), or
-      plain text (<code>.txt</code>) as itself, and Save writes back to it. A file from another
-      screenwriting app, a Final Draft (<code>.fdx</code>), Highland (<code>.highland</code>), or
-      Fade In (<code>.fadein</code>) file, is opened a different way: its script comes in as a new
-      one, and the file you opened is never changed.
+      plain text (<code>.txt</code>) as itself, and Save saves it the way Save does in your browser.
+      A file from another screenwriting app, a Final Draft (<code>.fdx</code>), Highland
+      (<code>.highland</code>), or Fade In (<code>.fadein</code>) file, is opened a different way:
+      its script comes in as a new one, and the file you opened is never changed.
     </p>
 
     <h3 id="final-draft">Final Draft</h3>
@@ -261,7 +261,7 @@ useDocsHead({
     <p>
       A <code>.md</code> or <code>.markdown</code> file opens as a Markdown document: a page of
       notes, an outline, or a treatment, with a Preview beside it instead of script pages. Save
-      writes back to the same file.
+      saves it the way Save does in your browser.
     </p>
     <p>
       If the Markdown file holds a screenplay you typed in Fountain, choose
@@ -273,9 +273,10 @@ useDocsHead({
     <p>
       If it holds an outline, open it as a Markdown document and choose
       <strong>New screenplay from this outline</strong>. Drafter makes a new screenplay from it: the
-      first <code>#</code> heading is the title, the other headings become sections, each list item
-      becomes a scene stub with a stand-in heading, and each paragraph a synopsis. The Problems tab
-      lists the stubs that still need a real heading, and the outline itself stays as it was.
+      <code>#</code> heading at the top, before any other text, is the title, the other headings
+      become sections, each list item becomes a scene stub with a stand-in heading, and each
+      paragraph a synopsis. The Problems tab lists the stubs that still need a real heading, and the
+      outline itself stays as it was.
     </p>
 
     <h3 id="cant-open">Files Drafter can’t open</h3>
@@ -291,13 +292,13 @@ useDocsHead({
     <h2 id="export-options">Export options</h2>
     <p>
       <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF,
-      plain text, Final Draft file, and Markdown file come out. <strong>Scene numbers</strong>: None (the usual), As written (only the
-      numbers you’ve written in the script, like <code>#12A#</code>), or Number every scene (a scene
-      with a written number keeps it, and the rest are numbered by their place, so two scenes can
-      share a number). <strong>Title page</strong>: Full, Title and author only (the title, the
-      credit, the authors, and the source, without your contact details or the date), or None.
-      <strong>Notes in Markdown</strong>: Leave out (the usual) or Include, for the Markdown export
-      alone.
+      plain text, Final Draft file, and Markdown file come out. <strong>Scene numbers</strong>: None
+      (the usual), As written (only the numbers you’ve written in the script, like
+      <code>#12A#</code>), or Number every scene (a scene with a written number keeps it, and the
+      rest are numbered by their place, so two scenes can share a number). <strong>Title
+      page</strong>: Full, Title and author only (the title, the credit, the authors, and the
+      source, without your contact details or the date), or None. <strong>Notes in
+      Markdown</strong>: Leave out (the usual) or Include, for the Markdown export alone.
     </p>
     <p>
       Each script keeps its own choices, in this browser, and the script itself never changes: they
@@ -355,8 +356,8 @@ useDocsHead({
       called snapshots, so you can go back to one. It takes one after every 10 minutes of active
       writing, every time you save to a file, and when you open a file. It also takes one before
       Expand outline, Fix all, Revert to Saved, or loading a changed file over the script, and when
-      a file from another app comes in, or a Markdown file opens as a screenplay. Samples keep none, and a snapshot that matches the newest is
-      not taken again.
+      a file from another app comes in, or a Markdown file opens as a screenplay. Samples keep none,
+      and a snapshot that matches the newest is not taken again.
     </p>
     <p>
       Open <strong>History…</strong> from the app menu (File, in the desktop app), the command palette,
