@@ -195,6 +195,12 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 
 ## HTML export
 
+- **Images embedded as base64** (design §11, Call 8): a Markdown image is shown as its description in the HTML file and the EPUB, as the Preview does; when Drafter has images of its own, they can go in as `data:` URIs (allowed by the file's CSP already) and as EPUB manifest items.
+- **Search inside the file, a contents sidebar, and per-reader comments** (design §11): the HTML file has the browser's own Find, the band (a script) or the headings (a document) to move by, and no comments; a reader file to comment in is Phase 3's self-contained reader file.
+- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.27.0) exports as its own page in its own release.
+- **The CLI has no EPUB option** (`drafter build --epub`): `--html` is there; an EPUB from the command line would take its identifier from the title and author, as the app does for a script with no project.
+- **A real-device check of the downloads**: on an iPhone, that downloading the `.html` file saves it rather than opening it, and that an `.epub` reaches Books; to do in the release pass.
+
 - **Reading order is written twice**: `@drafter/render-html-file`'s Pages view reads a page as the Script tab does (dual dialogue's left speech first, a title page by field), with `readingOrder` and `titleOrder` ported from `@drafter/render-html`'s `page.ts` rather than shared. Moving them into `@drafter/layout` (or a small DOM-free export of `render-html`) would keep the two from drifting; the Task 3 review chose to leave it for now.
 - **A document's own `#heading` links**: `[x](#heading)` in a Markdown document exports as its text, because the file's heading ids are its own (`h-<n>`, never from the words). Matching a writer's anchor to its heading (GitHub's slugs, or the Preview's if it gains them) and pointing the link at that heading's `h-<n>` would make them work; the Task 5 review chose text for now.
 

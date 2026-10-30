@@ -407,13 +407,17 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 **Next:**
 
 - Export as HTML, and EPUB for reading a draft on an e-reader (v0.22.0, [its design](drafter-html-export-design.md)).
-- **Drafts and Cuts**, numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind (v0.23.0). To be designed.
-- **Novel** (v0.24.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
-- Plan E, part 2 (v0.25.0): storylines, the script map as the Structure strip's Color by, and pacing; then Plans F to H (v0.26.0 to v0.28.0; Phase 2 design §22), F expected to become the Workbook.
+- **A fresh look** (v0.23.0, [its design](drafter-fresh-look-design.md)): calm and paper-first, two bars, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, and a tab bar on a phone.
+- **Drafts and Cuts** (v0.24.0, [its design](drafter-drafts-and-cuts-design.md)): numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind.
+- **Novel** (v0.25.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
+- Plan E, part 2 (v0.26.0): storylines, the script map as the Structure strip's Color by, and pacing.
+- **The Workbook** (v0.27.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
+- **The `.drafter` project package** (v0.28.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
+- Plans G and H (v0.29.0 and v0.30.0; Phase 2 design §22): reader notes and the Reference tab.
 
 **To come**
 
-- A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
+- The Workbook's cards (the Beat Board, taken into Plan F): a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
 - The built-in Reference tab.
 - A script map, as the Structure strip's **Color by**: every scene's block colored by INT/EXT, day or night, storyline, or scene color (decided with Plan E's design).

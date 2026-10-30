@@ -660,6 +660,10 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 **Decided (2026-10-30, with Plan E's first part; the controller's ruling on the seeing-the-script design's Call 1, renumbered after the formats release): Plan E ships in two parts, with Drafts and Cuts and Novel between them** (the maintainer's order). **v0.21.0** is Plan E part 1 (Scaffold, the Stats tab, and the character grid); **v0.22.0** is Export as HTML, and EPUB, for reading a draft on an e-reader ([its design](drafter-html-export-design.md)); **v0.23.0** is **Drafts and Cuts**, numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind, to be designed; **v0.24.0** is **Novel**, a choice beside Screenplay and Stage play for drafting a novel in Markdown (chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release), to be designed; **v0.25.0** is Plan E part 2 (storylines, the strip's Color by, and pacing); and Plans F to H move to **v0.26.0 to v0.28.0**, their letters unchanged, F still expected to become the Workbook. The script map is the strip's **Color by** (Call 38), not a column of its own.
 
+**Decided (2026-10-30, with HTML and EPUB; the maintainer's order): a fresh look comes before Drafts and Cuts, and Plan F becomes the Workbook.** **v0.22.0** is Export as HTML and EPUB; **v0.23.0** is **a fresh look** ([its design](drafter-fresh-look-design.md)): calm and paper-first, two bars instead of five, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, a tab bar along the foot of a phone, and six bug fixes, so the releases after it are built in the new look; **v0.24.0** is **Drafts and Cuts** ([its design](drafter-drafts-and-cuts-design.md)); **v0.25.0** is **Novel**; **v0.26.0** is Plan E part 2; **v0.27.0** is Plan F, now **the Workbook**: a story bible and scene cards beside the script (the Beat Board's cards among them), a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes dropped into it, and voice notes recorded and transcribed on the device, with a live sound bar while recording, to be designed; **v0.28.0** is **the `.drafter` project package**; and Plans G and H move to **v0.29.0 and v0.30.0**, their letters unchanged.
+
+**The `.drafter` project package (v0.28.0), optional:** one file holding a whole project for sharing or archiving: a documented, open zip (as a `.highland` file is) with the `.fountain` file, its drafts folder, its Cuts file, its workbook, and its voice notes' audio. File → **Export project…** writes one and **Open project…** reads one. It is never the default: writing and Save stay a plain `.fountain` file, and every file inside the package is plain text or audio, readable without Drafter. To be designed after the Workbook, whose files it carries.
+
 ### Plan E, part 1 — v0.21.0: Scaffold and the Stats tab
 
 **Status:** built (2026-10-30). Axe checks every new view (each Stats section, the grid and its List, Scaffold's scene, character, and location pages, and the Cast and Places) in both themes at both widths on every project (Call 45, the v0.18.0 ruling carried forward); the screen-reader listening pass waits for the final steps. See `docs/DEFERRED.md`.
@@ -680,7 +684,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Scaffold's figures match the Stats tab's and the scene index's on fixtures, and its panel and its character and location pages work fully by keyboard.
 - axe passes on every Stats section, the grid, and Scaffold, in both themes at both widths.
 
-### Plan E, part 2 — v0.25.0: Storylines, the map, and pacing
+### Plan E, part 2 — v0.26.0: Storylines, the map, and pacing
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14), as the Structure strip's **Color by** (Call 38); the pacing view and its guides (§15), Drafter's own and generic (the controller overruled a fifteen-mark guide); and the Stats tab's Storylines and Pacing sections (§16).
 
@@ -690,7 +694,9 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The strip's Color by, the Timeline, and the pacing table work fully by keyboard, and each chart has its table.
 - axe passes on the Storylines and Pacing sections, the Timeline, the margin marks, and the strip's Color by, in both themes at both widths.
 
-### Plan F — v0.26.0: The Beat Board
+### Plan F — v0.27.0: The Workbook (was the Beat Board)
+
+**Status:** to be designed (decided 2026-10-30, above): the story bible and scene cards, the pasted-notes landing spot, the watched notes folder, and on-device voice notes. Its design replaces the Beat Board scope below, which it takes in.
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -701,7 +707,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.27.0: Reader notes
+### Plan G — v0.29.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -712,7 +718,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.28.0: Reference
+### Plan H — v0.30.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 

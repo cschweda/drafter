@@ -144,15 +144,15 @@ flowchart TD
 
 ## Exporting
 
-Exporting turns your script into a PDF to print or send, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.
+Exporting turns your script into a PDF to print or send, a web page that opens anywhere, an e-book, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.
 
 *Exporting: the export worker lays the script out and writes the file, with a progress bar.*
 
 ```mermaid
 flowchart TD
   s1["Export<br/>From the Export menu, with the script’s export options"]
-  s2["The export worker<br/>Parses the script and, for a PDF or text, puts it on pages"]
-  s3["Drawing the file<br/>PDF (pdf-lib), plain text, Markdown, or Final Draft XML"]
+  s2["The export worker<br/>Parses the script and, for a PDF, an HTML page, or text, puts it on pages"]
+  s3["Drawing the file<br/>PDF (pdf-lib), an HTML page, an EPUB, plain text, Markdown, or Final Draft XML"]
   s4["Your file<br/>Saved where you choose, or downloaded"]
   s1 --> s2
   s2 --> s3
@@ -161,9 +161,10 @@ flowchart TD
 
 - **The export worker** (`export.worker.ts`) parses the script and, for a PDF or plain text, lays it out again with the same engine as the Script pane, then hands the pages to a renderer. It reports how far it has got, at most ten times a second, for the toast’s progress bar.
 - **PDF** is `@drafter/render-pdf`, with `pdf-lib`, embedding Courier Prime, the font the Script pane shows. A Markdown document’s PDF is set in Inter Tight, with Courier Prime for code.
+- **HTML and EPUB** are `@drafter/render-html-file`, which writes the file as text with no browser, so the command line’s `--html` makes the same page. The HTML page holds everything it needs: one stylesheet, one small script, and Courier Prime as base64 in only the styles the script uses, under a content security policy that lets it load nothing at all. It opens on the printed pages, placed from the same layout as the Script pane, with a Reading view beside them, and works with JavaScript off. The EPUB is the Reading view as an e-book (or the document), one chapter per act or `#` heading, zipped by `@drafter/archive`’s own small writer; its identifier is the script’s, so a new export replaces the old book. A 120-page script’s page is about 0.9 MB, written in under 20 ms.
 - **Plain text** is `@drafter/render-text`: the same pages as fixed-width text. **Final Draft** is `@drafter/fdx`, which writes the XML itself, and reads `.fdx` files too.
 - **Markdown** is `@drafter/outline`’s: the title, sections, and scenes as headings, a speech as the name in bold over its lines, and every line escaped so nothing in it reads as Markdown it wasn’t. A Markdown document’s Markdown file is its own text.
-- **Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), and, for a Markdown file alone, notes (left out or included). They are kept with the script’s record in the browser, never in the script’s text.
+- **Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), and, for a Markdown, HTML, or EPUB file, notes (left out or included). They are kept with the script’s record in the browser, never in the script’s text.
 - Where the browser has a save picker, it asks where to save; elsewhere the file downloads.
 
 ## Working offline
