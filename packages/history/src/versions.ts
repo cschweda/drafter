@@ -39,7 +39,8 @@ export function sceneVersions(
   const score = (print: ScenePrint): number => {
     let found = scores.get(print.hash);
     if (found === undefined) {
-      if (print.hash === current.hash) found = 2; // the same version beats any estimate
+      // The same version beats any estimate.
+      if (print.hash === current.hash) found = 2;
       else found = sameScene(current, print) ? similarity(current, print).jaccard : -1;
       scores.set(print.hash, found);
     }

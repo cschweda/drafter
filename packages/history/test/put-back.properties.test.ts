@@ -42,7 +42,14 @@ function putBack(text: string, index: number, current: string) {
   const prints = new Map<string, ScenePrint>(past.prints.map((p) => [p.hash, p]));
   const slot = past.slots[index];
   if (!slot) throw new Error('no such scene');
-  const place = putBackPlace(past.slots, index, prints, nowScenes(current), current.length);
+  const place = putBackPlace(
+    past.slots,
+    index,
+    prints,
+    nowScenes(current),
+    current.length,
+    scenePrints(current).sections,
+  );
   const sceneText = text.slice(slot.from, slot.to);
   const changes = putBackChanges(current, place, sceneText);
   return { past, prints, slot, place, sceneText, changes, after: apply(current, changes) };

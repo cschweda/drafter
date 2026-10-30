@@ -39,11 +39,22 @@ export interface SceneSlot {
   to: number;
   /** A section heading (an act, in a play) came right before it. */
   section: boolean;
+  /** That section heading's title, when there is one (Put back opens the section again). */
+  sectionTitle?: string;
+}
+
+/** A section heading in one version of the text: its title, and where its start is. */
+export interface SectionPlace {
+  title: string;
+  /** The end of the heading (and of a synopsis under it): where a scene opening it goes. */
+  at: number;
 }
 
 export interface SnapshotScenes {
   /** Every scene, in order. */
   slots: SceneSlot[];
+  /** Every section heading, in order. */
+  sections: SectionPlace[];
   /** One print for each distinct version among them, but for the ones the caller already has. */
   prints: ScenePrint[];
 }
@@ -90,16 +101,28 @@ function normalized(source: string): string {
 
 /**
  * The shingle count and sketch of a run of words (lowercased already): every three in a row,
- * joined by a space; fewer than three words make one shingle of them all, and none make none.
+ * joined by a space. A scene too short to make three of those (under five words) adds every two
+ * in a row, and one under three words every word, so a line or two grown longer under its heading
+ * still shares shingles with what it was. None make none.
  */
 export function sketchOf(words: readonly string[]): { shingles: number; sketch: Uint32Array } {
   if (words.length === 0) return { shingles: 0, sketch: new Uint32Array(0) };
-  const hashes =
-    words.length < 3
-      ? [hash32(words.join(' '))]
-      : Array.from({ length: words.length - 2 }, (_, i) =>
-          hash32(`${words[i]} ${words[i + 1]} ${words[i + 2]}`),
-        );
+  const sizes = words.length < 3 ? [3, 2, 1] : words.length < 5 ? [3, 2] : [3];
+  const hashes: number[] = [];
+  for (const size of sizes) {
+    for (let i = 0; i + size <= words.length; i++) {
+      const w = words[i] as string;
+      hashes.push(
+        hash32(
+          size === 3
+            ? `${w} ${words[i + 1]} ${words[i + 2]}`
+            : size === 2
+              ? `${w} ${words[i + 1]}`
+              : w,
+        ),
+      );
+    }
+  }
   const all = Uint32Array.from(hashes).sort();
   let distinct = 0;
   for (let i = 0; i < all.length; i++) {
@@ -137,12 +160,15 @@ export function scenePrints(text: string, known?: (hash: string) => boolean): Sn
   const doc = parse(text);
   const index = sceneIndex(doc, templateOf(doc));
   const slots: SceneSlot[] = [];
+  const sections: SectionPlace[] = [];
   const prints: ScenePrint[] = [];
   const seen = new Set<string>();
-  let previous: string | null = null;
+  /** The section heading right before the scene, if one was. */
+  let section: string | null = null;
   for (const item of index.items) {
     if (item.kind === 'section') {
-      previous = 'section';
+      sections.push({ title: item.title, at: item.introEnd });
+      section = item.title;
       continue;
     }
     const scene = item;
@@ -152,9 +178,10 @@ export function scenePrints(text: string, known?: (hash: string) => boolean): Sn
       ordinal: scene.ordinal,
       from: scene.span.from,
       to: scene.span.to,
-      section: previous === 'section',
+      section: section !== null,
+      ...(section !== null && { sectionTitle: section }),
     });
-    previous = 'scene';
+    section = null;
     if (seen.has(hash)) continue;
     seen.add(hash);
     if (known?.(hash)) continue;
@@ -168,5 +195,5 @@ export function scenePrints(text: string, known?: (hash: string) => boolean): Sn
       preview,
     });
   }
-  return { slots, prints };
+  return { slots, sections, prints };
 }

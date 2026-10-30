@@ -1,7 +1,7 @@
 import { parse, type TextChange } from '@drafter/fountain';
 import { bodyEnd, lineBreakOf } from '@drafter/outline';
 import { sameScene, similarity } from './match';
-import type { ScenePrint, SceneSlot } from './print';
+import { headingKey, type ScenePrint, type SceneSlot, type SectionPlace } from './print';
 
 // Put back (version-history design §3.5, Call 11): where a deleted scene goes in the script now,
 // and the text change that puts it there.
@@ -25,9 +25,11 @@ export interface NowScene {
 /**
  * Where the scene at `index` of `snapshot` goes back (Call 11). It anchors on its old previous
  * scene P, after the scene now matching P; or, when a section heading came right before it (it
- * opened an act), on its old next scene N, before the scene now matching N. If that neighbour
- * has no match now, the other is tried, then the next ones out on each side, nearest first,
- * alternating; with none left, it goes at the end (`nowLength`). `prints` holds the snapshot's.
+ * opened an act), on its old next scene N, before the scene now matching N, and if N has none,
+ * right after that section heading, when a heading of its title is in `nowSections` (so it opens
+ * the act again rather than closing the one before). Otherwise, the other neighbour is tried,
+ * then the next ones out on each side, nearest first, alternating; with none left, it goes at
+ * the end (`nowLength`). `prints` holds the snapshot's.
  */
 export function putBackPlace(
   snapshot: readonly SceneSlot[],
@@ -35,21 +37,55 @@ export function putBackPlace(
   prints: ReadonlyMap<string, ScenePrint>,
   nowScenes: readonly NowScene[],
   nowLength: number,
+  nowSections: readonly SectionPlace[] = [],
 ): Place {
-  const first = snapshot[index]?.section ? 1 : -1;
-  for (let distance = 1; distance < snapshot.length; distance++) {
+  const slot = snapshot[index];
+  const first = slot?.section ? 1 : -1;
+  for (let distance = 1; distance < snapshot.length || distance === 1; distance++) {
     for (const k of [index + first * distance, index - first * distance]) {
       const neighbour = snapshot[k];
       const print = neighbour && prints.get(neighbour.hash);
-      if (!neighbour || !print) continue;
-      const match = matchNow(print, neighbour.ordinal - 1, nowScenes);
-      if (!match) continue;
-      return k < index
-        ? { at: match.to, side: 'after', anchor: match.print.heading }
-        : { at: match.from, side: 'before', anchor: match.print.heading };
+      const match = neighbour && print ? matchNow(print, neighbour.ordinal - 1, nowScenes) : null;
+      if (match) {
+        return k < index
+          ? { at: match.to, side: 'after', anchor: match.print.heading }
+          : { at: match.from, side: 'before', anchor: match.print.heading };
+      }
+      if (distance === 1 && k > index && slot?.sectionTitle !== undefined) {
+        const opening = sectionNow(
+          slot.sectionTitle,
+          nowSections,
+          snapshot,
+          index,
+          prints,
+          nowScenes,
+        );
+        if (opening) return { at: opening.at, side: 'after', anchor: opening.title };
+      }
     }
   }
   return { at: nowLength, side: 'end', anchor: null };
+}
+
+/**
+ * The section heading now with `title`'s key: of several, the first after the scene now
+ * matching the old previous scene, if one does, else the first.
+ */
+function sectionNow(
+  title: string,
+  nowSections: readonly SectionPlace[],
+  snapshot: readonly SceneSlot[],
+  index: number,
+  prints: ReadonlyMap<string, ScenePrint>,
+  nowScenes: readonly NowScene[],
+): SectionPlace | null {
+  const key = headingKey(title);
+  const named = nowSections.filter((s) => headingKey(s.title) === key);
+  if (named.length < 2) return named[0] ?? null;
+  const previous = snapshot[index - 1];
+  const print = previous && prints.get(previous.hash);
+  const after = previous && print ? matchNow(print, previous.ordinal - 1, nowScenes)?.to : null;
+  return (after != null && named.find((s) => s.at >= after)) || (named[0] as SectionPlace);
 }
 
 /**
@@ -87,10 +123,30 @@ function endOfBody(text: string): number {
   return to > 0 && text[to - 1] === '\r' ? to - 1 : to;
 }
 
-/** How many line breaks `text` ends with (`fromEnd`) or starts with. */
+/**
+ * Whether a line (its `\r` aside) is blank: nothing but spaces and tabs. Two spaces alone are
+ * not: Fountain keeps such a line, as a blank line inside a speech.
+ */
+function isBlank(line: string): boolean {
+  const text = line.endsWith('\r') ? line.slice(0, -1) : line;
+  return text !== '  ' && /^[ \t]*$/.test(text);
+}
+
+/**
+ * How many line breaks `text` ends with (`fromEnd`) or starts with, through blank lines: the
+ * part of a line at the insertion point and every whole line out to the first that isn't
+ * blank. Spaces at the insertion point's side don't stop the count.
+ */
 function breaks(text: string, fromEnd: boolean): number {
-  const found = fromEnd ? text.match(/(?:\r?\n)*$/) : text.match(/^(?:\r?\n)*/);
-  return (found?.[0].match(/\n/g) ?? []).length;
+  const lines = text.split('\n');
+  if (fromEnd) lines.reverse();
+  if (!isBlank(lines[0] as string)) return 0;
+  let count = 0;
+  for (let i = 1; i < lines.length; i++) {
+    count++;
+    if (!isBlank(lines[i] as string)) break;
+  }
+  return count;
 }
 
 /**

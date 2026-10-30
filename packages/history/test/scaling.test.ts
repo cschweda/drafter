@@ -1,14 +1,23 @@
 import { describe, expect, test } from 'vitest';
-import { deletedScenes, type PastSnapshot, type ScenePrint, scenePrints } from '../src';
+import {
+  deletedScenes,
+  type PastSnapshot,
+  type ScenePrint,
+  type SceneSlot,
+  scenePrints,
+} from '../src';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 // Generated scripts of invented words, from a seeded generator, so every run times the same text.
 
 function generator(seed: number) {
   let state = seed;
+  // Marsaglia's xorshift, in 32-bit integers (a product of doubles would round and repeat).
   const next = () => {
-    state = (state * 1103515245 + 12345) % 2147483648;
-    return state;
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
   };
   const syllables = ['bra', 'tol', 'mev', 'ska', 'rin', 'dou', 'pel', 'vax', 'quo', 'ten', 'lir'];
   const word = () => {
@@ -26,7 +35,7 @@ function generator(seed: number) {
 
 /** A scene of invented words: about 90 printed words, a speech among the action. */
 function scene(g: ReturnType<typeof generator>, i: number): string {
-  const place = `${g.word().toUpperCase()} ${g.word().toUpperCase()}`;
+  const place = `${g.word().toUpperCase()} ${g.word().toUpperCase()} ${i + 1}`;
   return [
     `${i % 2 ? 'INT.' : 'EXT.'} ${place} - ${i % 3 ? 'DAY' : 'NIGHT'}`,
     `${g.sentence(14)} ${g.sentence(10)}`,
@@ -48,25 +57,53 @@ function script(count: number, seed = 7): string {
 }
 
 /**
- * `count` snapshots of a 150-scene script, newest first, from cached prints: each one the script
- * with a scene or two at another version or missing, as a day of writing leaves them.
+ * `count` snapshots of a 150-scene script, newest first, from cached prints, as days of writing
+ * leave them: each snapshot has a scene at a new version (a paragraph rewritten), and every third
+ * one a scene cut and a new one written in its place, so the versions to resolve and the scenes
+ * deleted grow with `count`. The script now is the newest snapshot's with five more scenes cut.
  */
 function history(count: number) {
-  const base = scenePrints(script(150));
-  const prints = new Map<string, ScenePrint>(base.prints.map((p) => [p.hash, p]));
-  // Some other versions of the scenes, printed once.
-  const others = scenePrints(script(150, 99));
-  for (const p of others.prints) prints.set(p.hash, p);
-  const snapshots: PastSnapshot[] = [];
+  const g = generator(11);
+  /** Every scene version, in the order written; printed together, once. */
+  const texts: string[] = [];
+  const write = (paragraphs: readonly string[]) => {
+    texts.push(paragraphs.join('\n\n'));
+    return { paragraphs, version: texts.length - 1 };
+  };
+  let written = 150;
+  let scenes = Array.from({ length: 150 }, (_, i) => write(scene(g, i).split('\n\n')));
+  const held: number[][] = [];
   for (let k = 0; k < count; k++) {
-    const slots = base.slots.map((slot) => ({ ...slot }));
-    const at = k % 150;
-    const other = others.slots[at];
-    if (other) slots[at] = { ...(slots[at] as (typeof slots)[number]), hash: other.hash };
-    if (k % 3 === 0) slots.splice((k * 7) % 140, 1);
-    snapshots.push({ id: `s${k}`, at: count - k, slots });
+    const at = g.next() % scenes.length;
+    const old = scenes[at] as (typeof scenes)[number];
+    const paragraphs = [...old.paragraphs];
+    paragraphs[1 + 2 * (g.next() % 2)] = `${g.sentence(16)} ${g.sentence(12)}`;
+    scenes = scenes.with(at, write(paragraphs));
+    if (k % 3 === 0) {
+      scenes = scenes.toSpliced(g.next() % scenes.length, 1);
+      const fresh = write(scene(g, written++).split('\n\n'));
+      scenes = scenes.toSpliced(g.next() % scenes.length, 0, fresh);
+    }
+    held.push(scenes.map((s) => s.version));
   }
-  const current = base.slots.slice(0, 145).map((s) => prints.get(s.hash) as ScenePrint);
+  const printed = scenePrints(`${texts.join('\n\n')}\n`);
+  if (printed.slots.length !== texts.length) throw new Error('a generated scene did not print');
+  const prints = new Map<string, ScenePrint>(printed.prints.map((p) => [p.hash, p]));
+  const hashOf = (version: number) => (printed.slots[version] as SceneSlot).hash;
+  const snapshots: PastSnapshot[] = held
+    .map((versions, k) => ({
+      id: `s${k}`,
+      at: k + 1,
+      slots: versions.map((v, i) => ({
+        hash: hashOf(v),
+        ordinal: i + 1,
+        from: 0,
+        to: 0,
+        section: false,
+      })),
+    }))
+    .reverse();
+  const current = scenes.slice(5).map((s) => prints.get(hashOf(s.version)) as ScenePrint);
   return { snapshots, prints, current };
 }
 
@@ -92,6 +129,7 @@ describe('scaling', () => {
         ({ snapshots, prints, current }) => deletedScenes(snapshots, prints, current),
         300,
       );
+      console.info(`deletedScenes growth 300 to 1,200 snapshots: ${result.growth.toFixed(1)}`);
       expect(result.growth).toBeLessThan(MAX_GROWTH);
     },
     SCALING_TIMEOUT,
@@ -105,7 +143,7 @@ describe('scaling', () => {
     // The 50 ms budget is checked in the app's e2e (Task 3); here, it is logged and held to the
     // hang guard of ten times the budget.
     console.info(`deletedScenes: 150 scenes now, 300 snapshots, ${elapsed.toFixed(1)} ms`);
-    expect(found.length).toBeGreaterThan(0);
+    expect(found.length).toBeGreaterThan(100);
     expect(elapsed).toBeLessThan(500);
   });
 

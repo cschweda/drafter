@@ -22,14 +22,15 @@ deletedScenes(snapshots, cache, nowPrints); // one entry per deleted scene, newe
 sceneVersions(nowPrint, snapshots, cache); // the scene's versions, consecutive equal ones merged
 
 // Put back the scene at `index` of a snapshot: after its old previous scene, or before its old
-// next one when it opened an act; then the nearest neighbour left; else at the end.
-const place = putBackPlace(snapshot.slots, index, cache, nowScenes, nowText.length);
+// next one when it opened an act (or right after the act's heading, with that one gone); then
+// the nearest neighbour left; else at the end. `sections` is `scenePrints(nowText).sections`.
+const place = putBackPlace(snapshot.slots, index, cache, nowScenes, nowText.length, sections);
 const changes = putBackChanges(nowText, place, sceneTextFromSnapshot); // one insertion
 
 sceneAnchors(text); // [{ line, title }]: each scene heading's line, for Compare's groups
 ```
 
-Two versions are the same scene when their hashes are equal; or their headings are the same and they share at least a quarter of the smaller one's wording (or both have none); or they share at least half of all their wording; or most (three quarters) of the smaller one's wording is in the other, as in a merge or a split (`MATCH`). A scene is deleted when no scene now is the same scene. See the [version-history design](../../docs/drafter-version-history-design.md), §3.
+Two versions are the same scene when their hashes are equal; or their headings are the same and they share at least a quarter of the smaller one's wording (or either has none, as a heading written first); or they share at least half of all their wording; or most (three quarters) of the smaller one's wording is in the other, as in a merge or a split (`MATCH`). A scene is deleted when no scene now is the same scene. See the [version-history design](../../docs/drafter-version-history-design.md), §3.
 
 ## License
 

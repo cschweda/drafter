@@ -7,6 +7,7 @@ export {
   PRINT_VERSION,
   type ScenePrint,
   type SceneSlot,
+  type SectionPlace,
   SKETCH_K,
   type SnapshotScenes,
   scenePrints,

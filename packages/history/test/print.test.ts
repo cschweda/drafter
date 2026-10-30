@@ -86,10 +86,15 @@ describe('scenePrints', () => {
     expect([...(a?.sketch ?? [])]).toEqual([...(b?.sketch ?? [])]);
   });
 
-  test('a scene under 3 words has one shingle', () => {
-    expect(now('INT. HALL - DAY\n\nHe nods.\n')[0]?.shingles).toBe(1);
+  test('a scene under 3 words has its words and pairs as shingles, one under 5 its pairs', () => {
+    // "he nods", "he", "nods"; "nods"; "he nods twice", "he nods", "nods twice".
+    expect(now('INT. HALL - DAY\n\nHe nods.\n')[0]?.shingles).toBe(3);
     expect(now('INT. HALL - DAY\n\nNods.\n')[0]?.shingles).toBe(1);
-    expect(now('INT. HALL - DAY\n\nHe nods twice.\n')[0]?.shingles).toBe(1);
+    expect(now('INT. HALL - DAY\n\nHe nods twice.\n')[0]?.shingles).toBe(3);
+    // Four words: two threes and three pairs. Five: three threes, and no pairs.
+    expect(now('INT. HALL - DAY\n\nHe nods twice, slowly.\n')[0]?.shingles).toBe(5);
+    expect(now('INT. HALL - DAY\n\nHe nods twice, very slowly.\n')[0]?.shingles).toBe(3);
+    expect(now('INT. HALL - DAY\n\nNods. Nods.\n')[0]?.shingles).toBe(2);
     const empty = now('INT. HALL - DAY\n\n[[Write this.]]\n')[0];
     expect(empty?.shingles).toBe(0);
     expect(empty?.sketch.length).toBe(0);

@@ -32,11 +32,16 @@ function made(words: readonly string[], heading = 'INT. ROOM - DAY'): ScenePrint
   };
 }
 
-/** Shingles of three words, as strings, for the true Jaccard. */
+/**
+ * A scene's shingles, as strings, for the true Jaccard and containment: every three words in a
+ * row; under five words (fewer than three of those), every two as well; under three, every word.
+ */
 function shingleSet(words: readonly string[]): Set<string> {
-  if (words.length < 3) return new Set(words.length ? [words.join(' ')] : []);
   const out = new Set<string>();
-  for (let i = 0; i + 3 <= words.length; i++) out.add(words.slice(i, i + 3).join(' '));
+  const sizes = words.length < 3 ? [3, 2, 1] : words.length < 5 ? [3, 2] : [3];
+  for (const size of sizes) {
+    for (let i = 0; i + size <= words.length; i++) out.add(words.slice(i, i + size).join(' '));
+  }
   return out;
 }
 
@@ -47,6 +52,16 @@ function trueJaccard(a: readonly string[], b: readonly string[]): number {
   for (const s of x) if (y.has(s)) both++;
   const union = x.size + y.size - both;
   return union === 0 ? 0 : both / union;
+}
+
+/** Shared shingles over the smaller scene's: how much of it is in the other. */
+function trueContainment(a: readonly string[], b: readonly string[]): number {
+  const x = shingleSet(a);
+  const y = shingleSet(b);
+  let both = 0;
+  for (const s of x) if (y.has(s)) both++;
+  const smaller = Math.min(x.size, y.size);
+  return smaller === 0 ? 0 : both / smaller;
 }
 
 describe('sameScene (Call 6)', () => {
@@ -116,6 +131,27 @@ describe('sameScene (Call 6)', () => {
     }
   });
 
+  test('a heading-only scene filled in later is the same scene', () => {
+    const bare = one('INT. BARN - DAY');
+    const filled = one('INT. BARN - DAY\n\nTobin feeds the goats and counts them twice, slowly.');
+    expect(bare.shingles).toBe(0);
+    expect(sameScene(bare, filled)).toBe(true);
+    expect(sameScene(filled, bare)).toBe(true);
+    expect(sameScene(one('INT. SHED - DAY'), filled)).toBe(false);
+  });
+
+  test('a scene of under three words grown under its heading is the same', () => {
+    const short = one('INT. CAR - NIGHT\n\nThey drive.');
+    const longer = one('INT. CAR - NIGHT\n\nThey drive in silence.');
+    expect(sameScene(short, longer)).toBe(true);
+    expect(sameScene(longer, short)).toBe(true);
+    expect(
+      sameScene(one('INT. CAR - NIGHT\n\nSilence.'), one('INT. CAR - NIGHT\n\nSilence falls.')),
+    ).toBe(true);
+    // Under another heading, a word or two in common is not enough.
+    expect(sameScene(short, one('INT. BUS - NIGHT\n\nThey drive in silence.'))).toBe(false);
+  });
+
   test('the five car scenes share a heading key', () => {
     expect(new Set(CAR.map((c) => one(c).headingKey))).toEqual(new Set(['INT. CAR - NIGHT']));
     expect(printOf(LAST_FERRY, 'INT. CAR - DAY').headingKey).toBe('INT. CAR - DAY');
@@ -149,6 +185,40 @@ describe('similarity', () => {
           expect(Math.abs(similarity(made(a), made(b)).jaccard - truth)).toBeLessThanOrEqual(0.15);
         },
       ),
+      { numRuns: 200, seed: 20261030 },
+    );
+  });
+
+  test('containment is exact for small scenes and within 0.35 of the truth for large ones', () => {
+    // Small: both scenes fit in their sketches, so the answer is the true containment.
+    fc.assert(
+      fc.property(words(SKETCH_K), words(SKETCH_K), (a, b) => {
+        expect(similarity(made(a), made(b)).containment).toBeCloseTo(trueContainment(a, b), 10);
+      }),
+      { numRuns: 200 },
+    );
+    // Large: a scene of 60 to 200 words, some of it (none to all) in a scene of 150 to 400
+    // more, as a scene merged into another is, or cut down to part of one. Lengths and shares
+    // are drawn evenly (unbiased), so every containment is tried. The estimate is the share
+    // found among the smaller's hashes up to τ, about 64 × smaller / larger of them (7 or more
+    // here), so its spread is about √(C(1 − C) / 7) ≤ 0.19 at worst; over 3,000 runs, 99% are
+    // within 0.25. The seed is fixed so the run is the same each time.
+    const share = fc.noBias(fc.integer({ min: 0, max: 1000 })).map((n) => n / 1000);
+    const scene = (min: number, max: number) =>
+      fc.noBias(
+        fc.array(fc.constantFrom(...vocabulary), { minLength: min, maxLength: max, size: 'max' }),
+      );
+    fc.assert(
+      fc.property(scene(60, 200), scene(150, 400), share, share, (a, extra, kept, at) => {
+        const cut = Math.floor(extra.length * at);
+        const b = [
+          ...extra.slice(0, cut),
+          ...a.slice(0, Math.floor(a.length * kept)),
+          ...extra.slice(cut),
+        ];
+        const { containment } = similarity(made(a), made(b));
+        expect(Math.abs(containment - trueContainment(a, b))).toBeLessThanOrEqual(0.35);
+      }),
       { numRuns: 200, seed: 20261030 },
     );
   });

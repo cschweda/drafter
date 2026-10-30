@@ -17,7 +17,14 @@ import {
 function putBack(snapshot: string, index: number, current: string): { place: Place; text: string } {
   const past = scenePrints(snapshot);
   const prints = new Map<string, ScenePrint>(past.prints.map((p) => [p.hash, p]));
-  const place = putBackPlace(past.slots, index, prints, nowScenes(current), current.length);
+  const place = putBackPlace(
+    past.slots,
+    index,
+    prints,
+    nowScenes(current),
+    current.length,
+    scenePrints(current).sections,
+  );
   const slot = past.slots[index];
   if (!slot) throw new Error('no such scene');
   const changes = putBackChanges(current, place, snapshot.slice(slot.from, slot.to));
@@ -81,8 +88,25 @@ describe('putBackPlace and putBackChanges (Call 11)', () => {
     expect(text).toBe(current.replace(S.arrival, `${S.arrival}\n\n${S.landing}`));
   });
 
-  test('a section opener with its next scene gone goes after its previous one', () => {
+  test('a section opener with its next scene gone opens its section again', () => {
     const current = without(S.kitchen, S.storm);
+    const { place, text } = putBack(LAST_FERRY, 6, current);
+    expect(place).toEqual({
+      at: current.indexOf('# ACT TWO') + '# ACT TWO'.length,
+      side: 'after',
+      anchor: 'ACT TWO',
+    });
+    expect(text).toBe(without(S.storm));
+    // The act's last scene gone too: still at the start of the act, not the end of the one before.
+    const empty = '# ACT ONE\n\nINT. ONE - DAY\n\nMara opens the shutters.\n\n# ACT TWO\n';
+    const past = `${empty}\nINT. TWO - DAY\n\nTobin sweeps the porch.\n\nINT. THREE - DAY\n\nIlse reads the letter.\n`;
+    expect(putBack(past, 1, empty).text).toBe(
+      `${empty}\nINT. TWO - DAY\n\nTobin sweeps the porch.\n`,
+    );
+  });
+
+  test('a section opener with its next scene and its section gone goes after its previous one', () => {
+    const current = without(S.kitchen, S.storm).replace('# ACT TWO\n\n', '');
     const { place } = putBack(LAST_FERRY, 6, current);
     expect(place.side).toBe('after');
     expect(place.anchor).toBe('INT. HARBOUR PUB - NIGHT');
@@ -97,14 +121,36 @@ describe('putBackPlace and putBackChanges (Call 11)', () => {
 
   test('at the end of a play, before its settings', () => {
     const current = lanternRoom([], []);
-    const { place, text } = putBack(LANTERN_ROOM, 0, current);
+    const { place, text } = putBack(LANTERN_ROOM, 1, current);
     expect(place.side).toBe('end');
-    expect(text).toBe(lanternRoom([], [PLAY_SCENES[0]]));
+    expect(text).toBe(lanternRoom([], [PLAY_SCENES[1]]));
+    // The act's opening scene opens the act again, though the act is empty now.
+    const opening = putBack(LANTERN_ROOM, 0, current);
+    expect(opening.place).toMatchObject({ side: 'after', anchor: 'Act One' });
+    expect(opening.text).toBe(lanternRoom([PLAY_SCENES[0]], []));
   });
 
   test('into an empty script', () => {
     const { text } = putBack(`${S.office}\n`, 0, '');
     expect(text).toBe(S.office);
+  });
+
+  test('a line of spaces counts as blank, but not the two spaces of a kept blank line', () => {
+    // Between the cabin and the pub, a line of three spaces: a blank line, so none is added there.
+    const spaced = without(S.landing).replace(`${S.cabin}\n\n`, `${S.cabin}\n   \n`);
+    const { text } = putBack(LAST_FERRY, 4, spaced);
+    expect(text).toContain(`${S.cabin}\n\n${S.landing}\n   \n${S.pub}`);
+    // Before the pub, a line of tabs and spaces then a line break: blank too.
+    const before = without(S.landing).replace(`\n\n${S.pub}`, `\n\t \n${S.pub}`);
+    const at = before.indexOf(S.pub) - 4;
+    const changes = putBackChanges(before, { at, side: 'after', anchor: 'X' }, S.landing);
+    expect(apply(before, changes)).toContain(`${S.cabin}\n\n${S.landing}\n\t \n${S.pub}`);
+    // Two spaces alone are a line Fountain keeps (a blank line in a speech), not a blank one.
+    const kept = 'INT. ONE - DAY\n\nMara waits.\n  \n';
+    const end = { at: kept.length, side: 'after', anchor: 'INT. ONE - DAY' } as const;
+    expect(apply(kept, putBackChanges(kept, end, 'INT. TWO - DAY\n\nTobin sweeps.'))).toBe(
+      `${kept}\nINT. TWO - DAY\n\nTobin sweeps.`,
+    );
   });
 
   test('keeps one blank line each side', () => {

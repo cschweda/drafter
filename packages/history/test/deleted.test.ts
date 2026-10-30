@@ -59,6 +59,15 @@ describe('deletedScenes', () => {
     expect(deleted([LAST_FERRY], V.mergedRenamed)).toEqual([]);
   });
 
+  test('a heading-only scene filled in later is not deleted; one cut is', () => {
+    const bare = 'INT. BARN - DAY\n\nINT. HOUSE - DAY\n\nMara waits.\n';
+    const filled =
+      'INT. BARN - DAY\n\nTobin feeds the goats and counts them twice, slowly.\n\nINT. HOUSE - DAY\n\nMara waits.\n';
+    expect(deleted([bare], filled)).toEqual([]);
+    expect(deleted([filled], bare)).toEqual([]);
+    expect(deleted([bare], 'INT. HOUSE - DAY\n\nMara waits.\n')).toEqual(['INT. BARN - DAY']);
+  });
+
   test('a moved scene is not deleted', () => {
     expect(deleted([LAST_FERRY], V.moved)).toEqual([]);
   });

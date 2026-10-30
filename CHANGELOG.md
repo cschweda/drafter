@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- `@drafter/history`, a new package for **version history** (version-history design §3, §6, and §11), with nothing on screen yet. It reduces each scene of a version to a print (a hash of its text, its heading, and a small sketch of its wording) and answers three questions from those: which scenes of past versions are in no scene of the script now (a scene trimmed, renamed, split, merged, moved, or copied still counts as there), every version of one scene, followed even as it is renamed and rewritten a bit at a time, and where a deleted scene goes back (after the scene that came before it, or after its act's heading if it opened the act). It gives Compare the scene-heading lines to group changes under.
+- `@drafter/history`, a new package for **version history** (version-history design §3, §6, and §11), with nothing on screen yet. It reduces each scene of a version to a print (a hash of its text, its heading, and a small sketch of its wording) and answers three questions from those: which scenes of past versions are in no scene of the script now (a scene trimmed, renamed, split, merged, moved, or copied still counts as there, and so does a heading written first and filled in later), every version of one scene, followed even as it is renamed and rewritten a bit at a time, and where a deleted scene goes back (after the scene that came before it, or after its act's heading if it opened the act). It gives Compare the scene-heading lines to group changes under.
 
 ## [0.17.0] - 2026-10-29
 
