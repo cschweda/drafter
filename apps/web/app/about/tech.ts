@@ -100,7 +100,7 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/outline',
-    does: 'The scene index (scenes, sections, page counts, running times) and the edits the Outline and Cards make; and a script as Markdown, as a treatment or the whole script.',
+    does: 'The scene index (scenes, sections, page counts, running times, and every speech) and the edits the Outline and Cards make; and a script as Markdown, as a treatment or the whole script.',
     uses: ['@drafter/fountain', '@drafter/layout', '@drafter/notes', '@drafter/templates'],
   },
   {
@@ -357,7 +357,8 @@ export const TECH_SECTIONS: readonly TechSection[] = [
         items: [
           '**The editor** is CodeMirror 6. `@drafter/cm-fountain` keeps the parse in the editor’s state: `parse` once, then `reparse` on every change, which parses the full text again.',
           '**The parse** is `@drafter/fountain`, a lossless parser: printing the tree gives back exactly the text it read, spaces and mistakes included. There is no second grammar for highlighting; the colors come from the same parse, drawn for the part of the script on screen.',
-          '**The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time.',
+          '**The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time, and lists every speech once, with its words.',
+          '**The cast** is `@drafter/cast`’s: who is in each scene and where it is, from the scene index, the parse, and the spelling dictionary’s answer to which names are ordinary words. It is worked out only while the Stats tab or Scaffold is shown, 300 ms after you stop typing, so the two always agree and a long script types as smoothly as before.',
           '**The layout** is `@drafter/layout`, in a Web Worker (`layout.worker.ts`): 50 ms after you stop typing, the text goes to the worker, which parses it and paginates it by the template. A slower, older layout never replaces a newer one.',
           '**The Script pane** is `@drafter/render-html`, which draws those pages as positioned HTML a screen reader can follow.',
           'A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `mdast-util-from-markdown`, footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.',

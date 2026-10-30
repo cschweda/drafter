@@ -211,6 +211,21 @@ test.describe('without JavaScript', () => {
     expect(await mainText(page)).toContain('a guided first screenplay and stage play');
   });
 
+  test('the help index says what Stats and Scaffold count, and who is in a scene', async ({
+    page,
+  }) => {
+    await page.goto('/docs');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Stats and Scaffold', exact: true }),
+    ).toBeVisible();
+    const text = await mainText(page);
+    expect(text).toContain('a mention counts as being there');
+    expect(text).toContain('counts as speaking in the scene');
+    expect(text).toContain('only in capitals (TOM)');
+    expect(text).toContain('counts only as the whole name');
+    expect(text).toContain('neither changes your script');
+  });
+
   test('the Technical details page has its parts, its diagrams as lists, and every dependency', async ({
     page,
   }) => {

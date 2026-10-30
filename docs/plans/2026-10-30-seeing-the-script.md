@@ -1,11 +1,13 @@
-# Seeing the script (v0.20.0 and v0.21.0) — Implementation Plan
+# Seeing the script (v0.21.0 and v0.24.0) — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship Phase 2's Plan E in two releases (design Call 1).
 
-- **Part 1, v0.20.0, Scaffold and the Stats tab:** who is in each scene, speaking or silent, by §16's rule with the spell dictionary; the Stats tab replacing the window, with Characters (screen time, dialogue share, most often with) and the character-by-scene grid with its long absences; and **Scaffold**, a tab beside the script with a scene page that follows the cursor, a page for each character and each location, and the cast and places lists.
-- **Part 2, v0.21.0, storylines, the map, and pacing:** storylines tagged, named, colored, renamed, and shown as chips, in the Outline's Timeline, and in the Script pane's margin; the script map as the Structure strip's **Color by**; and the pacing view with its guides, with Storylines and Pacing sections in the Stats tab.
+**Release numbers (decided 2026-10-30, after this plan):** v0.20.0 went to the formats release (`drafter convert`, footnotes in Markdown documents), so Part 1 is **v0.21.0**; **Export as HTML** (and EPUB) is v0.22.0 and **Novel**, a template choice for drafting novels in Markdown, v0.23.0; Part 2 is **v0.24.0**; and Plans F to H are **v0.25.0 to v0.27.0**, their letters unchanged. The numbers below are the current ones; the Calls and the controller's rulings keep the numbers they were made with.
+
+- **Part 1, v0.21.0, Scaffold and the Stats tab:** who is in each scene, speaking or silent, by §16's rule with the spell dictionary; the Stats tab replacing the window, with Characters (screen time, dialogue share, most often with) and the character-by-scene grid with its long absences; and **Scaffold**, a tab beside the script with a scene page that follows the cursor, a page for each character and each location, and the cast and places lists.
+- **Part 2, v0.24.0, storylines, the map, and pacing:** storylines tagged, named, colored, renamed, and shown as chips, in the Outline's Timeline, and in the Script pane's margin; the script map as the Structure strip's **Color by**; and the pacing view with its guides, with Storylines and Pacing sections in the Stats tab.
 
 **Architecture:** The scene index (`@drafter/outline`) gains `speeches` per scene and an `opening` tally, so speeches are counted once. A new pure package, `@drafter/cast`, works out presence, locations, and every per-character and per-location figure from the index, the parse, and an `isWord` answer that the spell worker gives. In `apps/web`, `useCast` computes the cast on the main thread only while a view needs it, after typing pauses. The Stats tab and Scaffold are view tabs. In Part 2, `@drafter/notes` gains storyline names, colors, and rename; `@drafter/outline` gains `storylineLanes` and `pacingSeries` on the strip's axis; the Timeline, the margin marks (through `decorate`), the strip's Color by, and the pacing chart read them.
 
@@ -15,7 +17,7 @@
 
 ## Global Constraints
 
-- Branch `seeing-the-script` (worktree `scratchpad/drafter-se`), from `main` at v0.19.0 (`818ecf7`). Part 1 ends at Task 8 with a push of this branch; the controller merges and releases v0.20.0. **Part 2 starts from `main` after v0.20.0 is merged:** merge `main` into this branch (or branch `seeing-the-script-2` from it), then `pnpm install`, before Task 9.
+- Branch `seeing-the-script` (worktree `scratchpad/drafter-se`), from `main` at v0.19.0 (`818ecf7`). Part 1 ends at Task 8 with a push of this branch; the controller merges and releases v0.21.0. **Part 2 starts from `main` after v0.21.0 is merged:** merge `main` into this branch (or branch `seeing-the-script-2` from it), then `pnpm install`, before Task 9.
 - **The name is Scaffold.** Never "X-Ray" or "x-ray" in the UI, the code, the help pages, the README, the changelog, DECISIONS, or the palette's search words. The maintainer's message is quoted only in the design's "Asked for".
 - **Clean room:** no code, markup, stylesheets, icons, or words from any streaming service's cast panel, any screenwriting app, any script-breakdown tool, or any beat-sheet book or brand. Presence, the figures, the charts, and the guides' labels are written for Drafter from the design. Every test script is original text written for Drafter, and generated scripts use invented words.
 - **No new third-party dependency.** `@drafter/cast` depends on `@drafter/fountain`, `@drafter/outline`, and `@drafter/templates` (workspace) only. It gets a `docs/DEPENDENCIES.md` row (workspace package, no third-party code) in Task 2 before `apps/web` adds it. The charts are plain SVG.
@@ -37,7 +39,7 @@
 
 ---
 
-## Part 1 — v0.20.0: Scaffold and the Stats tab
+## Part 1 — v0.21.0: Scaffold and the Stats tab
 
 ### Task 1: Speeches in the scene index (`@drafter/outline`)
 
@@ -248,23 +250,23 @@ export function filterFold(text: string): string; // case and accents folded, fo
 
 ---
 
-### Task 8: Docs and release prep for v0.20.0
+### Task 8: Docs and release prep for v0.21.0
 
 **Files:**
 - Modify: `README.md`, `docs/drafter-phase2-design.md` (§14, §16, §22, §26), `docs/drafter-architecture.md` (§13), `docs/DECISIONS.md`, `docs/DEFERRED.md`, `CHANGELOG.md`, `docs/technical-details.md` and `pages/docs/technical.vue` (`@drafter/cast`), `pages/docs/index.vue` or a section of an existing help page for Stats and Scaffold (what "in a scene" means, and that a mention counts), `packages/outline/README.md`, `packages/cast/README.md`
 
-- [ ] **Step 1: README** (stay near 5,000 words): the status line names Scaffold and the Stats tab, and "Next" names v0.21.0 (storylines, the map, and pacing), then Plans F to H (v0.22.0 to v0.24.0). The Phase 2 roadmap row adds "Scaffold, the Stats tab, and the character grid (v0.20.0)". The Packages table gets `@drafter/cast`. Features gets a line each for Scaffold, the Stats tab, and the grid. Design documents links this design.
-- [ ] **Step 2: The Phase 2 design.** §22: Plan E becomes two headings, `### Plan E, part 1 — v0.20.0: Scaffold and the Stats tab` (**Status:** built, axe on every new view, linking this design and plan) and `### Plan E, part 2 — v0.21.0: Storylines, the map, and pacing`, the done-when split between them, with the map's line changed to the strip's Color by (Call 38). Plans F, G, and H become v0.22.0, v0.23.0, and v0.24.0. A "Decided" paragraph (the controller's ruling on Call 1, with its date) says so. §14 gets a "Since v0.21.0" note pointing to design §7. §16 notes `speeches` and the retired `characterTable`. §26 records the changes. **Architecture §13:** the same order.
+- [ ] **Step 1: README** (stay near 5,000 words): the status line names Scaffold and the Stats tab, and "Next" names Export as HTML (v0.22.0), Novel (v0.23.0), Plan E part 2 (v0.24.0: storylines, the map, and pacing), then Plans F to H (v0.25.0 to v0.27.0). The Phase 2 roadmap row adds "Scaffold, the Stats tab, and the character grid (v0.21.0)". The Packages table gets `@drafter/cast`. Features gets a line each for Scaffold, the Stats tab, and the grid. Design documents links this design.
+- [ ] **Step 2: The Phase 2 design.** §22: Plan E becomes two headings, `### Plan E, part 1 — v0.21.0: Scaffold and the Stats tab` (**Status:** built, axe on every new view, linking this design and plan) and `### Plan E, part 2 — v0.24.0: Storylines, the map, and pacing`, the done-when split between them, with the map's line changed to the strip's Color by (Call 38). Plans F, G, and H become v0.25.0, v0.26.0, and v0.27.0. A "Decided" paragraph (the controller's ruling on Call 1, with its date) says so. §14 gets a "Since v0.24.0" note pointing to design §7. §16 notes `speeches` and the retired `characterTable`. §26 records the changes. **Architecture §13:** the same order.
 - [ ] **Step 3: DECISIONS, DEFERRED, CHANGELOG.** Every Part 1 Call (design §16, Calls 2–30, 43–45) and this plan's in the Seeing the script section, as each landed, with measured times. DEFERRED gets a `## Seeing the script` group with design §14's list. CHANGELOG `[Unreleased]` has Scaffold, the Stats tab, and the grid under Added, in the writer's words, and Words (now with lyrics) and Scenes (now with silent scenes) under Changed.
 - [ ] **Step 4: Run the whole suite:** `pnpm -r build`, `pnpm -r typecheck`, `pnpm test`, `pnpm check`, the web e2e (`E2E_PORT=4175`), and `pnpm --filter @drafter/desktop e2e`. → PASS.
 - [ ] **Step 5: Commit.** `docs: Scaffold and the Stats tab`
-- [ ] **Step 6: Push** `seeing-the-script` and watch CI. Don't merge or tag: the controller releases v0.20.0.
+- [ ] **Step 6: Push** `seeing-the-script` and watch CI. Don't merge or tag: the controller releases v0.21.0.
 
 ---
 
-## Part 2 — v0.21.0: Storylines, the map, and pacing
+## Part 2 — v0.24.0: Storylines, the map, and pacing
 
-Starts after v0.20.0 is merged (Global Constraints).
+Starts after v0.21.0 is merged (Global Constraints).
 
 ### Task 9: Storylines in the file (`@drafter/notes`)
 
@@ -426,18 +428,18 @@ export function setGuide(doc: Doc, guide: GuideId | null): TextChange[]; // one 
 
 ---
 
-### Task 16: Docs and release prep for v0.21.0
+### Task 16: Docs and release prep for v0.24.0
 
 **Files:**
 - Modify: `README.md`, `docs/drafter-phase2-design.md` (§13, §14, §15, §22, §26), `docs/drafter-architecture.md` (§13), `docs/drafter-structure-strip-design.md` (§10: the map's question settled), `docs/DECISIONS.md`, `docs/DEFERRED.md`, `CHANGELOG.md`, `docs/technical-details.md` and `pages/docs/technical.vue`, the help page Task 8 wrote (storylines, the Timeline, the margin, Color by, pacing), `packages/notes/README.md`, `packages/outline/README.md`
 
 - [ ] **Step 1: Merge `main`** if anything landed since Task 9 started; `pnpm install`.
-- [ ] **Step 2: README:** the status line names storylines, the map, and pacing, and "Next" names Plan F, the Beat Board (v0.22.0), then G and H (v0.23.0, v0.24.0). The roadmap row adds "storylines with a Timeline and margin marks, the strip colored as a script map, and a pacing view (v0.21.0)". Features lines are added.
-- [ ] **Step 3: The Phase 2 design:** Plan E part 2's **Status:** built, axe on every new view. §13, §14, and §15 get "Since v0.21.0" notes, and §26 records them. **Strip design §10:** the open question is answered (Call 38).
+- [ ] **Step 2: README:** the status line names storylines, the map, and pacing, and "Next" names Plan F, the Beat Board (v0.25.0), then G and H (v0.26.0, v0.27.0). The roadmap row adds "storylines with a Timeline and margin marks, the strip colored as a script map, and a pacing view (v0.24.0)". Features lines are added.
+- [ ] **Step 3: The Phase 2 design:** Plan E part 2's **Status:** built, axe on every new view. §13, §14, and §15 get "Since v0.24.0" notes, and §26 records them. **Strip design §10:** the open question is answered (Call 38).
 - [ ] **Step 4: DECISIONS, DEFERRED, CHANGELOG:** Part 2's Calls (31–42) and measured times; DEFERRED's Seeing the script group gets storyline rows in the strip and Beat Board rename; CHANGELOG `[Unreleased]` in the writer's words.
 - [ ] **Step 5: Run the whole suite,** as Task 8 Step 4. → PASS.
 - [ ] **Step 6: Commit.** `docs: storylines, the map, and pacing`
-- [ ] **Step 7: Push** and watch CI. Don't merge or tag: the controller releases v0.21.0.
+- [ ] **Step 7: Push** and watch CI. Don't merge or tag: the controller releases v0.24.0.
 
 ---
 
@@ -446,7 +448,7 @@ export function setGuide(doc: Doc, guide: GuideId | null): TextChange[]; // one 
 The design's 45 Calls (its §16) are binding once ruled on. This plan adds:
 
 46. **Sixteen tasks in two parts,** packages first in each (Tasks 1–2 and 9–10 pure), then the session, then each view, so each view's task starts on tested models.
-47. **Part 2 starts from `main` after v0.20.0 merges** (Global Constraints), so the second release's conflicts with the first are settled once, before any code.
+47. **Part 2 starts from `main` after v0.21.0 merges** (Global Constraints), so the second release's conflicts with the first are settled once, before any code.
 48. **`useCast` holds a reference count of the views that need it** (`need()` returns a release), so closing the last view stops the work (Task 3).
 49. **The spell worker's new `words` request reuses its loaded checker** and loads one for the language when needed. It is a request, not a second worker (Task 3).
 50. **Chart and grid token values are the implementer's,** bound by the contrast tests, not chosen in the plan (Tasks 5 and 15).
@@ -469,3 +471,4 @@ _None yet._
   
   No named beat set is shipped. Task 15 and the design's pacing section change to match.
 - **All other Calls:** accepted as recommended.
+- **Release numbers (2026-10-30, after the formats release):** v0.20.0 shipped as the formats release, so Part 1 is v0.21.0. Export as HTML (and EPUB) is v0.22.0, Novel v0.23.0, Part 2 v0.24.0, and Plans F to H v0.25.0 to v0.27.0. The plan's text gives these numbers; the rulings above keep the ones they were made with.

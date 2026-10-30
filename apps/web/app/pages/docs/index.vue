@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { HELP_PAGES, helpHref } from '~/commands/data';
+import { PRESENCE_NOTE } from '~/scaffold/presence-note';
 
 definePageMeta({ layout: 'docs' });
 
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, licences, and technical details. Plain pages that read without JavaScript.',
+    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -41,6 +42,35 @@ const about: Record<string, string> = {
       <strong>Check for updates…</strong>, and <strong>About Drafter</strong>: the version you’re
       on, with a button that copies it for a bug report, and links to the source code, the
       releases, and the changelog.
+    </p>
+
+    <h2 id="stats-and-scaffold">Stats and Scaffold</h2>
+    <p>
+      <strong>Stats</strong> (Show stats, or <strong>Stats…</strong> in the counts) opens a tab
+      beside your script. <strong>Overview</strong> has today’s writing, the script’s pages and
+      running time at your own minutes a page, and the last 30 days. <strong>Characters</strong>
+      lists everyone who speaks: their speeches, the scenes they’re in and the scenes they speak
+      in, their words, their share of all the dialogue, their screen time (the length of their
+      scenes), and who they share the most scenes with. <strong>Character by scene</strong> is a grid
+      of who is in each scene, with how many speeches, a dot for being there without speaking, and
+      the long absences (20 pages or more) outlined and listed; <strong>List</strong> says the same
+      as text.
+    </p>
+    <p>
+      <strong>Scaffold</strong> (Show Scaffold) opens a tab that shows who is in the scene your
+      cursor is in, where it is, and how long it runs, and follows the cursor as you move. Every name
+      opens that character’s page (their scenes, screen time, dialogue, absences, and every line they
+      speak, each going to its place in the script), and every place opens its location’s page.
+      <strong>Cast</strong> and <strong>Places</strong> list them all, and <strong>Back</strong>
+      (or <kbd>Alt+←</kbd>, <kbd>⌥←</kbd> on a Mac) goes to the page before. Stats and Scaffold
+      count the same way, so their figures always agree, and neither changes your script.
+    </p>
+    <p><strong>Who is in a scene.</strong> {{ PRESENCE_NOTE }}</p>
+    <p>
+      A speech is a character’s cue and what follows it. A speech before the first scene, or between
+      an act’s heading and its first scene, counts toward the character’s speeches and words but
+      puts them in no scene. A Markdown document has no scenes, so it has no Scaffold, and its Stats
+      tab has its words, headings, and reading time.
     </p>
   </article>
 </template>

@@ -401,21 +401,22 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - Getting a script out the door (v0.17.0, the [out-the-door design](drafter-out-the-door-design.md)): a guided first screenplay and first stage play that teach each element as you read; export options for scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), kept per script; the running time at a rate set per script, with an estimate from the dialogue, and each scene's and act's time in the Outline and the Structure strip; and a Technical details help page.
 - Version history (v0.18.0, the [version-history design](drafter-version-history-design.md)): **Deleted scenes**, every scene in a snapshot that is in no scene of the script now, with **Put back** to its old place in one undo; **Show changes**, the Script pane's pages marked against the last save or a chosen snapshot, never printed; a **Changes** view in Compare, a GitHub-style diff of the Fountain text grouped by scene, with + and −, the changed words marked, folds, and side by side, in red and green or blue and orange (Compare's Pages view keeps its asterisks); and **History of this scene**, every version of one scene, with **Use this version**. The scenes are matched across versions by `@drafter/history` in a worker of its own, with its notes cached in a second database, `drafter-cache`.
 - Imports and Markdown out (v0.19.0): Highland and Fade In files open as new scripts (moved up from Phase 3), with `.md` listed among the imports; **Open as screenplay**, for a screenplay typed in a Markdown file; **Export as Markdown** for a whole script, with a Notes in Markdown export option; and Open turns away a file that isn't a script, saying what it is and what to do.
+- The formats release (v0.20.0): `drafter convert`, Final Draft, Highland, and Fade In files to Fountain from the command line, a folder at once; footnotes in Markdown documents; and Fountain named first wherever Drafter describes its formats.
+- Plan E, part 1 (v0.21.0, the [seeing-the-script design](drafter-seeing-the-script-design.md)): who is in each scene, speaking or silent (a name in the action counts, a name that is also a word only in capitals), worked out by `@drafter/cast` from the scene index's speeches; the **Stats tab** in place of the Stats window, with each character's screen time, dialogue share, and who they share the most scenes with, and a **character-by-scene grid** that shows long absences, with a List view; and **Scaffold**, a tab beside the script that follows the cursor's scene, with a page for each character (their scenes, screen time, dialogue, absences, and every line) and each location, and the Cast and Places.
 
 **Next:**
 
-- Plans E to H (v0.21.0 and v0.23.0 for Plan E's two parts, then v0.24.0 to v0.26.0; Phase 2 design §22), starting with Plan E, "Seeing the script", with Scaffold; Export as HTML is v0.22.0 ([its design](drafter-html-export-design.md)).
+- Export as HTML, and EPUB for reading a draft on an e-reader (v0.22.0, [its design](drafter-html-export-design.md)).
+- **Novel** (v0.23.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
+- Plan E, part 2 (v0.24.0): storylines, the script map as the Structure strip's Color by, and pacing; then Plans F to H (v0.25.0 to v0.27.0; Phase 2 design §22), F expected to become the Workbook.
 
 **To come**
 
 - A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
-- The Stats tab, including screen time per character and who shares scenes with whom.
-- Scaffold (Plan E, named by the maintainer): a panel beside the script that shows who is in the current scene (speaking or silent, with each one's words and share of its time), where it is, and how long it runs; a page for each character (their scenes, screen time, dialogue share, absences, and lines) and for each location. Built on the Stats tab and v0.17.0's per-scene timing.
 - The built-in Reference tab.
-- A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there. It builds on the Structure strip's geometry, and Plan E decides whether it is still wanted beside the strip.
-- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.
-- A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
+- A script map, as the Structure strip's **Color by**: every scene's block colored by INT/EXT, day or night, storyline, or scene color (decided with Plan E's design).
+- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides of Drafter's own (thirds and quarters, three acts, or the writer's own marks) laid over it as suggestions, never rules.
 - Reader notes, with no account and nothing passing through a server:
   - A reader opens your script at drafter.dev in a reader mode, adds comments to lines or selections (their name, a category and color, replies), and sends them back as a file: the `.fountain` itself, with the comments kept as Fountain notes any Fountain tool can show.
   - You add a reader's file to your current draft, even after you kept writing. Each comment finds its place by its quote, its context, and its scene; a preview says how many matched, how many matched approximately, and how many found no place, and none is ever dropped. Notes typed by hand (`[[Name: comment]]`) merge too.
@@ -424,10 +425,10 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 3 — Formats
 
 - Import from Celtx (Highland and Fade In imports moved up to Phase 2).
-- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
+- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for graphic novels (Novel, for prose in Markdown, comes in Phase 2 as v0.23.0).
 - User-added templates, dropped in as JSON, and template export.
 - For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
-- Standalone `.html` export.
+- Standalone `.html` export (moved up to Phase 2 as v0.22.0, with EPUB).
 - PDF export with notes in the margin, or a clean copy, and a watermark and header for drafts you send out (for example "CONFIDENTIAL" or the reader's name).
 - A self-contained reader file: one `.html` a reader opens in any browser to read and comment, for readers who won't visit a site.
 
