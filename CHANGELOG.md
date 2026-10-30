@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-29
+
+**Getting a script out the door.** A guided first screenplay and stage play that teach themselves; export options kept for each script (scene numbers none, as written, or every scene; title page full, title and author only, or none); running time at a rate you set, with an estimate from the dialogue, and each scene's and act's time in the Outline and the Structure strip; and a Technical details help page on how Drafter is built.
+
 ### Added
 
 - **Guided first scripts.** New to Fountain? **File → New guided screenplay** and **New guided stage play** open a short script that teaches itself as you read it. A note under each part says, in plain words, what that element is for, which element-bar button writes it, and the Fountain mark that makes it, so you can type it without the bar too: the title page, sections and synopses, scene headings (and why they say DAY or NIGHT), action, characters, dialogue, parentheticals, (CONT'D), forcing a line with ! or @, transitions, italics, bold and underline, the boneyard, and centered text; the stage play adds its cast list, page break, acts and scenes, stage directions, and entrances and exits. Each ends with **Your turn**, a scene for you to replace with your own. The notes never print, and the Script tab beside them shows the printed page. They open at the top, as a new script of your own that isn't changed until you type, and they're also in **Help → Sample scripts** (as Guided first screenplay and Guided first stage play), the palette, and the desktop app's File and Help → Sample Scripts menus. The Fountain cheat sheet now starts by pointing a newcomer to the guided screenplay. Opening one doesn't count as having seen that kind's sample, so your first New of that kind still opens with it.
@@ -769,7 +773,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/cschweda/drafter/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/cschweda/drafter/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/cschweda/drafter/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/cschweda/drafter/compare/v0.14.0...v0.15.0
