@@ -23,7 +23,8 @@ import {
 //
 // The cast also asks the worker which names are ordinary words (seeing-the-script design §3.3,
 // Calls 6, 7, and 49). With spellcheck on, its worker answers; with it off, a worker is made for
-// that question alone when first asked, and ended when spellcheck starts its own.
+// that question alone when first asked, made again on the next ask when its dictionary failed, and
+// ended when spellcheck starts its own.
 
 export interface SpellSessionApp {
   state: Readonly<Ref<SpellState>>;
@@ -56,6 +57,8 @@ function create(): SpellSessionApp {
   let client: SpellClient | null = null;
   /** With spellcheck off, the worker that answers the words question alone; null until asked. */
   let spare: SpellClient | null = null;
+  /** The spare's dictionary failed to load (or it died): the next ask ends it and makes another. */
+  let spareFailed = false;
   /** Every change since the newest request's text was taken, or null when there is none. */
   let since: ChangeDesc | null = null;
   /** The newest request's number: only its reply is shown. */
@@ -237,15 +240,24 @@ function create(): SpellSessionApp {
   /** The worker that answers the words question now: spellcheck's, else one made for it. */
   function answerer(): SpellClient | null {
     if (client) return halted ? null : client;
+    // A spare that failed answers nothing again: a fresh one tries the dictionary again.
+    if (spare && spareFailed) {
+      spare.destroy();
+      spare = null;
+    }
     if (!spare) {
       try {
+        spareFailed = false;
         // Nothing is shown from it: no marks, and no state (spellcheck is off).
-        spare = createSpellClient(
+        const made: SpellClient = createSpellClient(
           makeWorker(),
           () => {},
-          () => {},
+          (next) => {
+            if (next === 'failed' && spare === made) spareFailed = true;
+          },
           0,
         );
+        spare = made;
       } catch {
         return null;
       }

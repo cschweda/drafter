@@ -15,6 +15,7 @@ const env = vi.hoisted(() => ({
   kind: null as unknown as ShallowRef<'fountain' | 'markdown'>,
   layout: null as unknown as ShallowRef<Layout | null>,
   failed: null as unknown as Ref<boolean>,
+  updating: null as unknown as Ref<boolean>,
   index: null as unknown as ComputedRef<SceneIndex>,
   listeners: new Set<(changes: unknown) => void>(),
   words: new Map<string, boolean>(),
@@ -34,7 +35,7 @@ vi.mock('../app/editor/session', () => ({
   }),
 }));
 vi.mock('../app/editor/layout', () => ({
-  useLayout: () => ({ layout: env.layout, failed: env.failed }),
+  useLayout: () => ({ layout: env.layout, failed: env.failed, updating: env.updating }),
 }));
 vi.mock('../app/outline/use-outline', () => ({ useOutline: () => ({ index: env.index }) }));
 vi.mock('../app/cast/words', () => ({
@@ -92,6 +93,7 @@ async function wait(ms: number) {
 }
 const layOut = () => {
   env.layout.value = paginate(env.doc.value, screenplay);
+  env.updating.value = false;
 };
 
 beforeEach(() => {
@@ -102,6 +104,7 @@ beforeEach(() => {
   env.kind = shallowRef('fountain');
   env.layout = shallowRef(null);
   env.failed = ref(false);
+  env.updating = ref(false);
   env.listeners = new Set();
   env.words = new Map([['WILL', true]]);
   env.version = ref(0);
@@ -209,6 +212,7 @@ describe('useCast', () => {
     expect(paged?.figures.get('WILL')?.screenEighths).not.toBeNull();
 
     // A new scene: the layout hasn't caught up, so the index has no pages.
+    env.updating.value = true;
     type(`${DOCK}\nEXT. ROAD - DAY\n\nPIK\nOff we go.\n`);
     await wait(CAST_PAUSE_MS);
     expect(env.index.value.scenes.every((s) => s.pages === null)).toBe(true);
@@ -226,6 +230,28 @@ describe('useCast', () => {
     await wait(CAST_PAUSE_MS);
     expect(cast.cast.value?.figures.get('PIK')?.screenEighths).toBeNull();
     expect(scenesOf(cast.cast.value as never, 'PIK')).toEqual([2, 3]);
+  });
+
+  test('a scene whose pages stay null while the layout is current still gets a fresh cast', async () => {
+    layOut();
+    const { CAST_PAUSE_MS, cast } = await session();
+    cast.need();
+    await wait(0);
+    const paged = cast.cast.value;
+    // The index has no pages, but the layout isn't working on anything: nothing is coming to
+    // wait for, so the cast is worked out now, without pages.
+    type(`${DOCK}\nEXT. ROAD - DAY\n\nPIK\nOff we go.\n`);
+    await wait(CAST_PAUSE_MS);
+    expect(env.index.value.scenes.some((s) => s.pages === null)).toBe(true);
+    expect(cast.cast.value).not.toBe(paged);
+    expect(cast.cast.value?.characters.map((c) => c.key)).toContain('PIK');
+    expect(cast.cast.value?.figures.get('PIK')?.screenEighths).toBeNull();
+    // The layout catching up ends its work (updating falls) with a new layout: paged again.
+    env.updating.value = true;
+    await wait(CAST_PAUSE_MS);
+    layOut();
+    await wait(CAST_PAUSE_MS);
+    expect(cast.cast.value?.figures.get('PIK')?.screenEighths).not.toBeNull();
   });
 
   test('the word answers recompute it', async () => {

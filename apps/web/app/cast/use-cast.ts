@@ -43,7 +43,7 @@ let session: CastSession | undefined;
 
 function create(): CastSession {
   const editor = useEditor();
-  const { layout, failed } = useLayout();
+  const { layout, failed, updating } = useLayout();
   const outline = useOutline();
   const words = useWordAnswers();
   const cast = shallowRef<Cast | null>(null);
@@ -71,8 +71,9 @@ function create(): CastSession {
     const perPage = linesPerPage(layout.value);
     const nextPaged = hasPages(index, perPage);
     // The layout is catching up with an edit: the last pages-based cast stands until it does. (A
-    // script with no scenes, or a Markdown document, has no pages to wait for.)
-    const lagging = !nextPaged && !failed.value && index.scenes.length > 0;
+    // script with no scenes, or a Markdown document, has no pages to wait for; nor has a scene
+    // left without pages while the layout is working on nothing, so the cast goes on without.)
+    const lagging = !nextPaged && updating.value && !failed.value && index.scenes.length > 0;
     if (cast.value && paged && lagging && editor.kind.value !== 'markdown') return;
     const next = castOf(index, editor.doc.value, editor.template.value, perPage, words.isWord);
     cast.value = next;
@@ -92,11 +93,14 @@ function create(): CastSession {
   }
 
   effectScope(true).run(() => {
-    watch([editor.doc, editor.template, editor.kind, layout, failed, words.version], () => {
-      stale = true;
-      // With no cast to show (another script was opened), there is no pause to wait out.
-      if (holders > 0) schedule(cast.value === null);
-    });
+    watch(
+      [editor.doc, editor.template, editor.kind, layout, failed, updating, words.version],
+      () => {
+        stale = true;
+        // With no cast to show (another script was opened), there is no pause to wait out.
+        if (holders > 0) schedule(cast.value === null);
+      },
+    );
   });
   // Another script: nothing of the last one's cast is kept.
   editor.onChange((changes) => {

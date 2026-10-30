@@ -199,7 +199,7 @@ describe('the dictionary’s answer', () => {
     expect(FakeWorker.made[0]?.asked()).toHaveLength(asked as number);
   });
 
-  test('a failed worker leaves names as words', async () => {
+  test('a failed worker leaves names as words, and the next ask makes another', async () => {
     loads.fail = true;
     env.settings.value = { ...env.settings.value, spellcheck: false };
     const { answers } = await modules();
@@ -209,10 +209,21 @@ describe('the dictionary’s answer', () => {
     expect(FakeWorker.made).toHaveLength(1);
     expect(NAMES.map(answers.isWord)).toEqual(NAMES.map(() => undefined));
     expect(answers.version.value).toBe(0);
-    // Asked again later, it is answered at once, with nothing posted, and nothing changes.
+    // Asked again while it still fails: the failed worker ends, another is made and asked, and
+    // the names stay words.
     answers.ask(NAMES);
     await settle();
-    expect(FakeWorker.made[0]?.asked()).toHaveLength(1);
+    expect(FakeWorker.made).toHaveLength(2);
+    expect(FakeWorker.made[0]?.terminated).toBe(true);
+    expect(FakeWorker.made[1]?.asked()).toHaveLength(1);
     expect(answers.isWord('WILL')).toBeUndefined();
+    // The dictionary loads now (back online): the next ask is answered.
+    loads.fail = false;
+    answers.ask(NAMES);
+    await settle();
+    expect(FakeWorker.made).toHaveLength(3);
+    expect(FakeWorker.made[1]?.terminated).toBe(true);
+    expect(NAMES.map(answers.isWord)).toEqual([true, true, true, false, false]);
+    expect(answers.version.value).toBe(1);
   });
 });
