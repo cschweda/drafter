@@ -21,13 +21,22 @@ function counted(kind: ChangeStop['kind'], lines: number): string {
   return `${n} ${kind}`;
 }
 
+/** "a blank line removed", "2 blank lines added": a change of blank lines only, as its marker says. */
+function blankCounted(kind: ChangeStop['kind'], n: number): string {
+  const which = kind === 'unprinted' ? 'added' : kind;
+  return n <= 1 ? `a blank line ${which}` : `${n} blank lines ${which}`;
+}
+
 /**
  * "Page 12, INT. HALL: 2 lines changed"; "Page 3: 1 line added" with no scene; "Title page: …" for
  * the title page (page 0). A line stop has no page: "INT. HALL: 2 lines changed" in Compare's
  * Changes view, or "Line 40: 2 lines changed" before the first heading.
  */
 export function stopLabel(stop: ChangeStop | LineStop, heading: string | null): string {
-  const count = counted(stop.kind, stop.lines);
+  const count =
+    'blank' in stop && stop.blank
+      ? blankCounted(stop.kind, stop.lines)
+      : counted(stop.kind, stop.lines);
   if ('line' in stop) return heading ? `${heading}: ${count}` : `Line ${stop.line}: ${count}`;
   const page = stop.page === 0 ? 'Title page' : `Page ${stop.page}`;
   return `${heading ? `${page}, ${heading}` : page}: ${count}`;
@@ -51,10 +60,6 @@ export function gapLines(lines: readonly string[]): string[] {
  */
 export function gapName(gap: Pick<GapMark, 'kind' | 'lines'>): string {
   const lines = gap.lines.filter(hasText).length;
-  if (lines === 0) {
-    const n = gap.lines.length;
-    const which = gap.kind === 'removed' ? 'removed' : 'added';
-    return n <= 1 ? `a blank line ${which}` : `${n} blank lines ${which}`;
-  }
+  if (lines === 0) return blankCounted(gap.kind, gap.lines.length);
   return counted(gap.kind === 'removed' ? 'removed' : 'unprinted', lines);
 }

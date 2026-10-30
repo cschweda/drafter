@@ -89,7 +89,11 @@ describe('markPages', () => {
     const spaced = edit(SHORT_SCREENPLAY, 'Of course.\n', 'Of course.\n\n\n');
     const blank = compare(SHORT_SCREENPLAY, spaced).marks;
     expect(blank.stops).toHaveLength(1);
-    expect(blank.stops[0]?.lines).toBeGreaterThan(0);
+    // Two blank lines added after the speech: two blank lines, said as blank.
+    expect(blank.stops).toEqual([
+      { change: 0, kind: 'unprinted', page: 1, block: 15, lines: 2, blank: true },
+    ]);
+    expect(blank.gaps[0]?.lines).toEqual(['', '']);
   });
 
   test('puts a removal at the end of the last page', () => {

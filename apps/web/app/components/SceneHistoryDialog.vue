@@ -7,14 +7,16 @@ import { type HistoryClient, sceneText, useHistoryClient } from '~/history/clien
 import { progressLabel } from '~/history/labels';
 import {
   gapRowLabel,
+  NOT_IN_VERSION,
   NOT_NOW,
+  rowAgain,
   sceneHistoryOpen,
   useThisVersion,
   type VersionAction,
   versionKey,
   versionRowLabel,
 } from '~/history/scene-history';
-import { outlineNotice, sayOutline } from '~/outline/notice';
+import { noticeWhileOpen, sayOutline } from '~/outline/notice';
 import { useOutline } from '~/outline/use-outline';
 import { useSettings } from '~/settings/settings';
 import { snapshotTime } from '~/snapshots/history';
@@ -34,6 +36,9 @@ import { listSnapshots, type SnapshotInfo } from '~/storage/snapshots';
 // listbox with one Tab stop, History's pattern: Up, Down, Home, End; Enter compares with now; U uses
 // the version; the context-menu key or Shift+F10 opens its menu. In a read-only tab, or for a deleted
 // scene (whose action is Put back), Use this version says why it is off.
+
+/** The status line: only what is said while this dialog is open. */
+const notice = noticeWhileOpen(() => sceneHistoryOpen.value !== null);
 
 const DIALOG_ID = 'scene-history-dialog';
 const dialog = ref<HTMLDialogElement>();
@@ -114,11 +119,18 @@ async function listInfo(projectId: string) {
   }
 }
 
-function scan() {
+/**
+ * Reads the scene's versions. `again`: the listing is read again with the dialog open (a snapshot
+ * taken or deleted), so the rows shown stay until the whole new listing has come, and the selection
+ * and focus stay on the same row.
+ */
+function scan(again = false) {
   const open = target.value;
   const projectId = script.project.value?.id ?? null;
-  rows.value = null;
-  start.value = null;
+  if (!again) {
+    rows.value = null;
+    start.value = null;
+  }
   done.value = false;
   failed.value = null;
   progress.value = null;
@@ -139,7 +151,16 @@ function scan() {
       if (mine !== asked || !sceneHistoryOpen.value) return;
       if (reply.kind === 'progress') progress.value = { read: reply.read, total: reply.total };
       else if (reply.kind === 'versions') {
+        // Read again: the rows shown stay until the whole listing is in (warm, so quick).
+        if (again && !reply.done) return;
+        const was = activeAt.value === null ? null : selected.value;
+        const inList = listEl.value?.contains(document.activeElement) ?? false;
         rows.value = reply.rows;
+        const at = rowAgain(was, reply.rows);
+        if (at !== null && at !== activeAt.value) {
+          activeAt.value = at;
+          if (inList) void focusRow(at);
+        }
         start.value = reply.start;
         if (reply.done) done.value = true;
         void selectFirst();
@@ -182,7 +203,7 @@ watch(sceneHistoryOpen, async (open, was) => {
 
 // A take or a delete elsewhere in this tab: the versions are read again.
 watch(snapshots.version, () => {
-  if (sceneHistoryOpen.value) scan();
+  if (sceneHistoryOpen.value) scan(true);
 });
 
 /** Bumped at each opening, so the diff is made again with the scene as it is now. */
@@ -280,6 +301,8 @@ function onRowFocus(i: number) {
 /** Compare the selected version with now, or with the version before it. */
 const mode = ref<'now' | 'before'>('now');
 const selected = computed(() => items.value[current.value] ?? null);
+/** The selected row is a run of versions without the scene: Use and Copy say why they do nothing. */
+const onGap = computed(() => !!selected.value && !isVersion(selected.value));
 /** Versions' texts as read, by snapshot and span; null when it can't be read. */
 const texts = shallowRef(new Map<string, string | null>());
 const textKey = (v: SceneVersion) => `${v.snapshots[0]}|${v.slot.from}|${v.slot.to}`;
@@ -388,7 +411,8 @@ function compareWith(which: 'now' | 'before') {
 }
 
 async function use(row: VersionRow | null) {
-  if (!row || !isVersion(row)) return;
+  if (!row) return;
+  if (!isVersion(row)) return tell(NOT_IN_VERSION);
   if (useWhy.value) return tell(useWhy.value);
   const on = sceneHistoryOpen.value;
   if (!on) return;
@@ -403,7 +427,8 @@ async function use(row: VersionRow | null) {
 }
 
 async function copyText(row: VersionRow | null) {
-  if (!row || !isVersion(row)) return;
+  if (!row) return;
+  if (!isVersion(row)) return tell(NOT_IN_VERSION);
   const text = await textOf(row);
   if (text === null) return tell('This version can’t be read.');
   try {
@@ -508,7 +533,7 @@ function onKeydown(event: KeyboardEvent, i: number) {
   const key = event.key === 'F10' && event.shiftKey ? 'ContextMenu' : event.key;
   const mod = event.ctrlKey || event.metaKey;
   if (event.altKey || mod || (event.shiftKey && key !== 'ContextMenu' && key.length > 1)) return;
-  const next = versionKey(items.value.length, i, key);
+  const next = versionKey(items.value.length, i, key, event.repeat);
   if (!next) {
     if (['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) event.preventDefault();
     return;
@@ -626,7 +651,7 @@ const reading = computed(() => !done.value && rows.value === null);
               type="button"
               class="btn"
               :aria-disabled="useWhy || !selected || !isVersion(selected) ? 'true' : undefined"
-              :aria-describedby="useWhy ? 'scene-history-why' : undefined"
+              :aria-describedby="useWhy || onGap ? 'scene-history-why' : undefined"
               @click="use(selected)"
             >
               Use this version
@@ -635,12 +660,15 @@ const reading = computed(() => !done.value && rows.value === null);
               type="button"
               class="btn"
               :aria-disabled="!selected || !isVersion(selected) ? 'true' : undefined"
+              :aria-describedby="onGap ? 'scene-history-why' : undefined"
               @click="copyText(selected)"
             >
               Copy text
             </button>
           </div>
-          <p v-if="useWhy" id="scene-history-why" class="why">{{ useWhy }}</p>
+          <p v-if="useWhy || onGap" id="scene-history-why" class="why">
+            {{ onGap ? NOT_IN_VERSION : useWhy }}
+          </p>
           <div class="diff">
             <DiffView
               v-if="model"
@@ -655,7 +683,7 @@ const reading = computed(() => !done.value && rows.value === null);
         </section>
       </div>
       <!-- The page behind a modal dialog is inert, so what the dialog's actions say is said here too. -->
-      <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ outlineNotice }}</p>
+      <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ notice }}</p>
     </template>
   </dialog>
 </template>
@@ -851,9 +879,13 @@ h2 {
     border: 0;
     border-radius: 0;
   }
+  /* The list is as tall as its rows, up to a third of the screen; the diff has the rest. */
   .body {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(6rem, 35%) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .list {
+    max-height: 35dvh;
   }
 }
 @media (forced-colors: active) {

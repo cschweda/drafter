@@ -5,7 +5,7 @@ import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import { useEditor } from '~/editor/session';
 import { useDeleted } from '~/history/deleted';
-import { outlineNotice, sayOutline } from '~/outline/notice';
+import { noticeWhileOpen, sayOutline } from '~/outline/notice';
 import {
   type HistoryAction,
   type HistoryRow,
@@ -36,6 +36,9 @@ import { encodeFile, fileBaseName, titleFileOf, titleFor } from '~/storage/text'
 // read again as it is acted on. In a read-only tab everything is listed, compared, and saved, and
 // Restore, Label…, Delete, and Take snapshot say why they are off (Call 25). On a phone it fills
 // the screen.
+
+/** The status line: only what is said while this dialog is open. */
+const notice = noticeWhileOpen(() => historyOpen.value !== null);
 
 const DIALOG_ID = 'history-dialog';
 const dialog = ref<HTMLDialogElement>();
@@ -728,7 +731,7 @@ const nameOf = (row: HistoryRow) =>
         </div>
       </div>
       <!-- The page behind a modal dialog is inert, so what History's actions say is said here too. -->
-      <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ outlineNotice }}</p>
+      <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ notice }}</p>
     </template>
     <dialog
       ref="askDialog"

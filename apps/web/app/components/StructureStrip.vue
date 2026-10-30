@@ -248,7 +248,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => {
         const now = items.value.get(id);
         if (now?.kind !== 'scene') return;
         blockEl(id)?.focus();
-        openSceneHistory({ from: now.span.from, to: now.span.to, heading: now.heading });
+        openSceneHistory({ id, from: now.span.from, to: now.span.to, heading: now.heading });
       }),
     });
   }

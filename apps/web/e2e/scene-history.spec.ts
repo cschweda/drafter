@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { nextFileName, stubPickers } from './fs-stub';
 import { editor, runCommand, setText, showSource, start, wholeText } from './modules';
 import { drafterDatabase, sampleSeenRows } from './seed';
 
@@ -238,6 +239,59 @@ test.describe('History of this scene', () => {
     await expect(dialog(page)).toBeVisible();
   });
 
+  test('a row without the scene says why Use this version and Copy text do nothing', async ({
+    page,
+  }) => {
+    await versionsOf(
+      page,
+      [script(HALL_V1, ROOF), script(ROOF), script(HALL_V2, ROOF)],
+      script(HALL_V3, ROOF),
+    );
+    await openFromPalette(page);
+    await expect(versions(page)).toHaveCount(3);
+    await expect(versions(page).nth(1)).toContainText('Not in this version');
+    await versions(page).nth(1).focus();
+    await expect(versions(page).nth(1)).toHaveAttribute('aria-selected', 'true');
+    const why = 'The scene isn’t in this version, so there is no text to use or copy.';
+    for (const name of ['Use this version', 'Copy text']) {
+      const button = dialog(page).getByRole('button', { name });
+      await expect(button).toHaveAttribute('aria-disabled', 'true');
+      await expect(button).toHaveAccessibleDescription(new RegExp(`^${why}`));
+    }
+    await dialog(page).getByRole('button', { name: 'Copy text' }).dispatchEvent('click');
+    await expect(dialog(page).getByRole('status')).toContainText(why);
+  });
+
+  test('its status line shows only what is said after it opens', async ({ page }) => {
+    await versionsOf(page, [script(HALL_V1, ROOF)], script(HALL_V2, ROOF));
+    // Taking the snapshot said so, and the message is still up as the dialog opens.
+    await openFromPalette(page);
+    await expect(announcer(page)).toContainText('Took a snapshot labeled “Draft 1”');
+    await expect(dialog(page).getByRole('status')).toHaveText('');
+  });
+
+  test('a snapshot taken while it is open keeps the rows and the focused row', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, 'the File System Access API');
+    await stubPickers(page);
+    await versionsOf(page, THREE, script(HALL_V3, ROOF));
+    await openFromPalette(page);
+    await expect(versions(page)).toHaveCount(2);
+    await expect(versions(page).nth(0)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(versions(page).nth(1)).toHaveAttribute('aria-selected', 'true');
+    // A save from the dialog keeps a snapshot of the scene as it is now: a new row on top.
+    await nextFileName(page, 'Weir.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(versions(page)).toHaveCount(3);
+    await expect(versions(page).nth(2)).toContainText('Draft 2');
+    await expect(versions(page).nth(2)).toHaveAttribute('aria-selected', 'true');
+    await expect(versions(page).nth(2)).toBeFocused();
+  });
+
   test('says when there are no versions yet', async ({ page }) => {
     await start(page);
     await newScript(page);
@@ -258,6 +312,10 @@ test.describe('History of this scene', () => {
     expect(box?.height ?? 0).toBeGreaterThan((size?.height ?? 0) - 2);
     const overflow = await dialog(page).evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+    // The list is as tall as its one row, and the diff has the rest.
+    const list = await dialog(page).getByRole('listbox', { name: 'Versions' }).boundingBox();
+    const row = await versions(page).first().boundingBox();
+    expect(list?.height ?? 0).toBeLessThan((row?.height ?? 0) + 8);
   });
 });
 

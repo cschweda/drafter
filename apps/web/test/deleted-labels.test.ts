@@ -113,5 +113,10 @@ describe('Deleted scenes labels', () => {
     expect(deletedKey(3, 1, 'ContextMenu')).toEqual({ action: 'menu' });
     expect(deletedKey(3, 1, 'x')).toBeNull();
     expect(deletedKey(0, 0, 'ArrowDown')).toBeNull();
+    // A held key repeats moves, never an action: P held down puts back once.
+    expect(deletedKey(3, 1, 'p', true)).toBeNull();
+    expect(deletedKey(3, 1, 'H', true)).toBeNull();
+    expect(deletedKey(3, 1, 'Enter', true)).toBeNull();
+    expect(deletedKey(3, 1, 'ArrowDown', true)).toEqual({ focus: 2 });
   });
 });

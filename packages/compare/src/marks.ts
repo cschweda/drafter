@@ -37,6 +37,8 @@ export interface ChangeStop {
    * lines only, how many blank lines.
    */
   lines: number;
+  /** Set (true) when the change holds blank lines only, so its name can say so. */
+  blank?: true;
 }
 
 export interface PageMarks {
@@ -106,7 +108,9 @@ export function markPages(layout: Layout, changes: readonly Change[]): PageMarks
   const marks: PageMarks = { lines: [], gaps: [], stops: [] };
   changes.forEach((change, index) => {
     const touched = change.kind === 'removed' ? change.removed : change.added;
-    const count = touched.filter((line) => line.trim() !== '').length || touched.length;
+    const withText = touched.filter((line) => line.trim() !== '').length;
+    const count = withText || touched.length;
+    const blank = withText === 0 && touched.length > 0 ? ({ blank: true } as const) : {};
     if (change.kind !== 'removed') {
       // A line meets the change when it starts before the change ends and ends after it starts.
       const start = firstWhere((k) => (maxTo[k] as number) > change.span.from);
@@ -129,6 +133,7 @@ export function markPages(layout: Layout, changes: readonly Change[]): PageMarks
           page: first.page,
           block: first.line.blockIndex,
           lines: count,
+          ...blank,
         });
         return;
       }
@@ -152,6 +157,7 @@ export function markPages(layout: Layout, changes: readonly Change[]): PageMarks
       page,
       block: next ? next.line.blockIndex : lastBlock,
       lines: count,
+      ...blank,
     });
   });
   return marks;

@@ -517,8 +517,13 @@ export function registerBuiltinCommands(): void {
             : undefined,
       run: () => {
         const scene = sceneAtCursor();
-        if (scene)
-          openSceneHistory({ from: scene.span.from, to: scene.span.to, heading: scene.heading });
+        if (!scene) return;
+        openSceneHistory({
+          id: useOutline().idOf(scene),
+          from: scene.span.from,
+          to: scene.span.to,
+          heading: scene.heading,
+        });
       },
     },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },

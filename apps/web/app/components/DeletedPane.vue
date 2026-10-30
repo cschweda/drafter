@@ -239,7 +239,7 @@ function onKeydown(event: KeyboardEvent, row: DeletedScene) {
   const key = event.key === 'F10' && event.shiftKey ? 'ContextMenu' : event.key;
   if (event.altKey || event.ctrlKey || event.metaKey) return;
   if (event.shiftKey && key !== 'ContextMenu' && key.length > 1) return;
-  const next = deletedKey(shown.value.length, places.value.get(row.key) ?? 0, key);
+  const next = deletedKey(shown.value.length, places.value.get(row.key) ?? 0, key, event.repeat);
   if (!next) {
     if (['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) event.preventDefault();
     return;

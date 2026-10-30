@@ -80,4 +80,14 @@ describe('Compare labels', () => {
     expect(gapName(gap({ lines: ['', '  '] }))).toBe('2 blank lines removed');
     expect(gapName(gap({ kind: 'unprinted', lines: [''] }))).toBe('a blank line added');
   });
+
+  test('a stop of blank lines only is named as its marker is', () => {
+    // The Changes list, Next change, and the marker's button say the same words.
+    const one = stop({ kind: 'removed', page: 5, lines: 1, blank: true });
+    expect(stopLabel(one, 'INT. HALL')).toBe('Page 5, INT. HALL: a blank line removed');
+    expect(stopLabel(one, 'INT. HALL')).toContain(gapName(gap({ lines: [''] })));
+    const two = stop({ kind: 'unprinted', page: 1, lines: 2, blank: true });
+    expect(stopLabel(two, null)).toBe('Page 1: 2 blank lines added');
+    expect(stopLabel(two, null)).toContain(gapName(gap({ kind: 'unprinted', lines: ['', ''] })));
+  });
 });

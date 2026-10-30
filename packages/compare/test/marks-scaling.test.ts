@@ -23,7 +23,9 @@ function reference(layout: Layout, changes: readonly Change[]): PageMarks {
   const marks: PageMarks = { lines: [], gaps: [], stops: [] };
   changes.forEach((change, index) => {
     const touched = change.kind === 'removed' ? change.removed : change.added;
-    const count = touched.filter((line) => line.trim() !== '').length || touched.length;
+    const withText = touched.filter((line) => line.trim() !== '').length;
+    const count = withText || touched.length;
+    const blank = withText === 0 && touched.length > 0 ? ({ blank: true } as const) : {};
     if (change.kind !== 'removed') {
       const hit = printed.filter((p) => meets(p.line.span, change.span));
       if (hit.length > 0) {
@@ -36,6 +38,7 @@ function reference(layout: Layout, changes: readonly Change[]): PageMarks {
           page: first.page,
           block: first.line.blockIndex,
           lines: count,
+          ...blank,
         });
         return;
       }
@@ -59,6 +62,7 @@ function reference(layout: Layout, changes: readonly Change[]): PageMarks {
       page,
       block: next ? next.line.blockIndex : lastBlock,
       lines: count,
+      ...blank,
     });
   });
   return marks;

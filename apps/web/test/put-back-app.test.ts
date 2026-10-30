@@ -35,6 +35,7 @@ function setup(place: Place | null, options: { readOnly?: string; text?: string 
     state: EditorState.create({ doc: NOW, extensions: [history()] }),
     parent: document.body,
   });
+  views.push(view);
   const said: string[] = [];
   const asked: Array<{ snapshot: string; slot: number; now: string }> = [];
   const deps: PutBackDeps = {
@@ -58,7 +59,12 @@ const afterHall: Place = {
   anchor: 'INT. HALL - DAY',
 };
 
+// Each view is destroyed after its test: a live view left in the page measures itself on a later
+// frame, and jsdom has no getClientRects for that.
+const views: EditorView[] = [];
+
 afterEach(() => {
+  for (const view of views.splice(0)) view.destroy();
   document.body.replaceChildren();
 });
 

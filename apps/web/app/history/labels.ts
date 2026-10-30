@@ -92,6 +92,7 @@ export function deletedKey(
   count: number,
   focused: number,
   key: string,
+  repeat = false,
 ): { focus?: number; action?: DeletedAction } | null {
   if (count <= 0) return null;
   const at = Math.min(Math.max(focused, 0), count - 1);
@@ -103,6 +104,7 @@ export function deletedKey(
   };
   const next = to[key];
   if (next !== undefined) return next >= 0 && next < count ? { focus: next } : null;
-  const action = ACTIONS[key];
+  // A held key repeats a move, never an action (one Put back, one Use this version).
+  const action = repeat ? undefined : ACTIONS[key];
   return action ? { action } : null;
 }

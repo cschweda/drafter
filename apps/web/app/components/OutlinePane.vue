@@ -317,7 +317,7 @@ async function openHistoryOf(id: string) {
   const item = now(id);
   if (item?.kind !== 'scene') return;
   await focusRow(id);
-  openSceneHistory({ from: item.span.from, to: item.span.to, heading: item.heading });
+  openSceneHistory({ id, from: item.span.from, to: item.span.to, heading: item.heading });
 }
 
 // ---- Edit synopsis in place --------------------------------------------------------------

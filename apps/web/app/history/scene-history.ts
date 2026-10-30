@@ -1,5 +1,5 @@
 import type { TextChange } from '@drafter/fountain';
-import type { SceneVersion } from '@drafter/history';
+import type { SceneVersion, VersionRow } from '@drafter/history';
 import { type Ref, ref } from 'vue';
 import type { ApplyOptions } from '../editor/apply-changes';
 import { useEditor } from '../editor/session';
@@ -24,7 +24,13 @@ import { dayOf } from './labels';
  * scenes), with its heading for the dialog's title.
  */
 export type SceneHistoryTarget =
-  | { from: number; to: number; heading: string }
+  | {
+      /** The Outline's id for the scene (`useOutline().idOf`), which follows it through edits. */
+      id?: string;
+      from: number;
+      to: number;
+      heading: string;
+    }
   | { snapshot: string; slot: number; heading: string };
 
 /** The scene History of this scene is open on, or null while it is closed. */
@@ -37,6 +43,14 @@ export function openSceneHistory(target: SceneHistoryTarget): void {
 
 /** Use this version's words for a deleted scene, whose action is Put back. */
 export const NOT_NOW = 'That scene isn’t in the script now. Put it back from Deleted scenes.';
+
+/** Why Use this version and Copy text do nothing on a "Not in n versions" row. */
+export const NOT_IN_VERSION =
+  'The scene isn’t in this version, so there is no text to use or copy. Choose another version.';
+
+/** Use this version's words when the scene now isn't the one the dialog opened on. */
+export const CHANGED =
+  'That scene changed after History of this scene opened. Open it again to use a version.';
 
 export type VersionAction = 'compare' | 'use' | 'menu';
 
@@ -56,6 +70,7 @@ export function versionKey(
   count: number,
   focused: number,
   key: string,
+  repeat = false,
 ): { focus?: number; action?: VersionAction } | null {
   if (count <= 0) return null;
   const at = Math.min(Math.max(focused, 0), count - 1);
@@ -67,8 +82,25 @@ export function versionKey(
   };
   const next = to[key];
   if (next !== undefined) return next >= 0 && next < count ? { focus: next } : null;
-  const action = ACTIONS[key];
+  // A held key repeats a move, never an action (one Put back, one Use this version).
+  const action = repeat ? undefined : ACTIONS[key];
   return action ? { action } : null;
+}
+
+/**
+ * Where `previous` (the selected row) is in `rows`, a listing read again (a snapshot taken or
+ * deleted while the dialog is open), so the selection and focus stay on it: the row of the same
+ * kind that shares one of its snapshots, else a version with the same text. Null when it is gone.
+ */
+export function rowAgain(previous: VersionRow | null, rows: readonly VersionRow[]): number | null {
+  if (!previous) return null;
+  const isGap = 'gap' in previous;
+  const had = new Set(previous.snapshots);
+  let at = rows.findIndex(
+    (row) => 'gap' in row === isGap && row.snapshots.some((id) => had.has(id)),
+  );
+  if (at < 0 && !isGap) at = rows.findIndex((row) => !('gap' in row) && row.hash === previous.hash);
+  return at < 0 ? null : at;
 }
 
 const WEEKDAY = new Intl.DateTimeFormat('en-US', { weekday: 'long' });
@@ -104,9 +136,12 @@ export function versionRowLabel(
   const day = dayOf(row.newestAt, now);
   const when = `${day.charAt(0).toUpperCase()}${day.slice(1)}, ${snapshotTime(row.newestAt)}`;
   const n = row.snapshots.length;
+  const from = `${shortDay(row.oldestAt, now)} ${snapshotTime(row.oldestAt)}`;
+  const to = `${shortDay(row.newestAt, now)} ${snapshotTime(row.newestAt)}`;
+  // Both ends in the same minute read the same: no range then.
   const held =
     n > 1
-      ? `Unchanged in ${n.toLocaleString('en-US')} versions, ${shortDay(row.oldestAt, now)} ${snapshotTime(row.oldestAt)} to ${shortDay(row.newestAt, now)} ${snapshotTime(row.newestAt)}`
+      ? `Unchanged in ${n.toLocaleString('en-US')} versions${from === to ? '' : `, ${from} to ${to}`}`
       : null;
   return { when, said, change: wordsChange(row.words, olderWords), held };
 }
@@ -133,8 +168,8 @@ export interface UseThisVersionDeps {
   /** The script's text now. */
   text(): string;
   sceneText(snapshot: string, slot: { from: number; to: number }): Promise<string | null>;
-  /** The scene's span in the script now, or null when it isn't there. */
-  sceneNow(target: SceneHistoryTarget): { from: number; to: number } | null;
+  /** The scene's span and heading in the script now (found by its id), or null when it isn't there. */
+  sceneNow(target: SceneHistoryTarget): { from: number; to: number; heading: string } | null;
   /** Keeps a "Before restoring a scene" snapshot of the text now (captured at once). */
   before(): void;
   /** One transaction, one undo; false when nothing could change. */
@@ -170,6 +205,11 @@ export function createUseThisVersion(
     const span = deps.sceneNow(target);
     if (!span) {
       deps.say('That scene isn’t in the script now.');
+      return false;
+    }
+    // The scene found now must be the one the dialog opened on, not another in its place.
+    if (span.heading !== target.heading) {
+      deps.say(CHANGED);
       return false;
     }
     const when = onWhen(version.newestAt, Date.now());
@@ -208,11 +248,13 @@ export function useThisVersion(version: SceneVersion, on?: SceneHistoryTarget): 
       sceneText,
       sceneNow: (target) => {
         if ('snapshot' in target) return null;
-        const scenes = outline.index.value.items.filter((item) => item.kind === 'scene');
+        const scenes = outline.index.value.scenes;
+        const byId = target.id ? outline.itemById(target.id) : undefined;
         const found =
+          (byId?.kind === 'scene' ? byId : undefined) ??
           scenes.find((s) => s.span.from === target.from) ??
           scenes.find((s) => s.span.from <= target.from && target.from < s.span.to);
-        return found ? { from: found.span.from, to: found.span.to } : null;
+        return found ? { from: found.span.from, to: found.span.to, heading: found.heading } : null;
       },
       before: () => snapshots.before('before-scene-restore'),
       apply: (changes, options) => outline.apply(changes, options),
