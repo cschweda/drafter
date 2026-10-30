@@ -1,5 +1,6 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
 import type { SampleKind } from '../editor/sample-kinds';
+import type { StarterKind } from '../editor/starter-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
@@ -30,6 +31,12 @@ export interface Project {
    * (`storage/first-samples.ts`). Unindexed, so it needed no new version.
    */
   sampleScript?: SampleKind;
+  /**
+   * Set on a document made from one of the guided starters (`editor/starters.ts`): like a sample
+   * script, the writer's own, but not a meeting with that kind's annotated sample. Unindexed, so it
+   * needed no new version.
+   */
+  starter?: StarterKind;
   /**
    * Set on a document that opened with a sample's text because it was the writer's first of its
    * kind: the new-document text Start blank puts in instead, and where the cursor goes in it.

@@ -21,6 +21,10 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
 <template>
   <article>
     <h1>{{ page.title }}</h1>
+    <p>
+      New to Fountain? <strong>File → New guided screenplay</strong> walks you through a first
+      script.
+    </p>
     <p class="docs-lead">
       A Fountain script is plain text: what a line looks like decides what it is. Most elements need
       no mark at all, and a mark at the start of a line forces it to be one thing when it would

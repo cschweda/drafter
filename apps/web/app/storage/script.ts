@@ -15,6 +15,7 @@ import { desktop } from '../desktop';
 import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
 import { useEditor } from '../editor/session';
+import type { StarterKind } from '../editor/starter-kinds';
 import type { NewKind } from '../editor/template';
 import { appChange } from '../editor/typewriter';
 import type { DocumentKind } from '../markdown/kind';
@@ -204,6 +205,8 @@ export interface ScriptSession {
       baseline?: string;
       /** Made from one of Help's sample scripts (`Project.sampleScript`). */
       sampleScript?: SampleKind;
+      /** Made from one of the guided starters (`Project.starter`). */
+      starter?: StarterKind;
     },
   ): Promise<Project>;
   /** Script `id` is no longer bound to its file: its handle is let go (the file is untouched). */
@@ -994,6 +997,7 @@ function create(): ScriptSession {
       kind?: DocumentKind;
       baseline?: string;
       sampleScript?: SampleKind;
+      starter?: StarterKind;
     } = {},
   ): Promise<Project> {
     return createProject({
@@ -1001,6 +1005,7 @@ function create(): ScriptSession {
       ...(format.kind === undefined ? {} : { kind: format.kind }),
       ...(format.baseline === undefined ? {} : { baseline: format.baseline }),
       ...(format.sampleScript === undefined ? {} : { sampleScript: format.sampleScript }),
+      ...(format.starter === undefined ? {} : { starter: format.starter }),
       ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
       ...(format.bom === undefined ? {} : { bom: format.bom }),
     });

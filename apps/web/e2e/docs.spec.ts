@@ -199,6 +199,17 @@ test.describe('without JavaScript', () => {
     );
   });
 
+  test('points a newcomer to the guided screenplay from the cheat sheet and the help index', async ({
+    page,
+  }) => {
+    await page.goto('/docs/fountain');
+    expect(await mainText(page)).toContain(
+      'New to Fountain? File → New guided screenplay walks you through a first script.',
+    );
+    await page.goto('/docs');
+    expect(await mainText(page)).toContain('a guided first screenplay and stage play');
+  });
+
   test('says on the Privacy page that nothing leaves the device', async ({ page }) => {
     await page.goto('/docs/privacy');
     const text = (await mainText(page)).toLowerCase();

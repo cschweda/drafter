@@ -37,6 +37,7 @@ import { firstSceneStart } from '~/editor/first-scene';
 import { SAMPLE_SCRIPTS } from '~/editor/sample-scripts';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
+import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
@@ -383,6 +384,26 @@ export function registerBuiltinCommands(): void {
             await script.open(made.id);
             // A screenplay starts where the story does, as the first visit does; the others at the top.
             editor.goto(sample.kind === 'screenplay' ? firstSceneStart(sample.text) : 0);
+          }),
+        },
+      ]),
+    ),
+    // The guided starters (out-the-door design §1.5), from File's New items and Help → Sample scripts:
+    // as a sample script is, a new script of the writer's own with no file, opened unchanged. Each
+    // starts at the top, on its title page, where the lesson does.
+    ...Object.fromEntries(
+      STARTERS.map((starter): [string, Behavior] => [
+        starter.command,
+        {
+          enabled: canStart,
+          run: quietly(async () => {
+            const made = await script.addScript(starter.text, {
+              kind: 'fountain',
+              baseline: starter.text,
+              starter: starter.kind,
+            });
+            await script.open(made.id);
+            editor.goto(0);
           }),
         },
       ]),

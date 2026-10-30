@@ -104,6 +104,11 @@ interface Section {
   strip?: RegExp;
   /** Items that aren't commands (roles). */
   fixed?: readonly Item[];
+  /**
+   * Commands of another menu listed here too, after the picked ones, by these labels (Help →
+   * Sample Scripts lists File's guided starters). They stay in their own menu as well.
+   */
+  also?: Readonly<Record<string, string>>;
 }
 
 const prefix =
@@ -174,7 +179,15 @@ const LAYOUT: Record<Group, Section[]> = {
   Help: [
     { pick: ['help-fountain', 'help-shortcuts', 'help-saving', 'help-privacy', 'help-licences'] },
     { pick: ['take-the-tour'] },
-    { pick: prefix('sample-script-'), submenu: 'Sample Scripts', strip: /^Sample script: / },
+    {
+      pick: prefix('sample-script-'),
+      submenu: 'Sample Scripts',
+      strip: /^Sample script: /,
+      also: {
+        'new-guided-screenplay': 'Guided first screenplay',
+        'new-guided-stage-play': 'Guided first stage play',
+      },
+    },
     { pick: ['check-for-updates'] },
   ],
 };
@@ -313,7 +326,10 @@ export function menuTemplate(
             ? (section.pick as readonly string[]).flatMap((id) => mine.filter((c) => c.id === id))
             : mine.filter((c) => (section.pick as (id: string) => boolean)(c.id));
       for (const c of picked) placed.add(c.id);
-      const items = picked.map((c) => itemFor(c, section.strip));
+      const also = Object.entries(section.also ?? {}).flatMap(([id, title]) =>
+        commands.filter((c) => c.id === id).map((c) => ({ ...itemFor(c), label: label(title) })),
+      );
+      const items = [...picked.map((c) => itemFor(c, section.strip)), ...also];
       if (section.submenu) {
         if (items.length > 0) sections.push([{ label: section.submenu, submenu: items }]);
         if (section.fixed) sections.push([...section.fixed]);

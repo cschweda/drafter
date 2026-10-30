@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Guided first scripts.** New to Fountain? **File → New guided screenplay** and **New guided stage play** open a short script that teaches itself as you read it. A note under each part says, in plain words, what that element is for, which element-bar button writes it, and the Fountain mark that makes it, so you can type it without the bar too: the title page, sections and synopses, scene headings (and why they say DAY or NIGHT), action, characters, dialogue, parentheticals, (CONT'D), forcing a line with ! or @, transitions, italics, bold and underline, the boneyard, and centered text; the stage play adds its cast list, page break, acts and scenes, stage directions, and entrances and exits. Each ends with **Your turn**, a scene for you to replace with your own. The notes never print, and the Script tab beside them shows the printed page. They open at the top, as a new script of your own that isn't changed until you type, and they're also in **Help → Sample scripts** (as Guided first screenplay and Guided first stage play), the palette, and the desktop app's File and Help → Sample Scripts menus. The Fountain cheat sheet now starts by pointing a newcomer to the guided screenplay. Opening one doesn't count as having seen that kind's sample, so your first New of that kind still opens with it.
+
 ## [0.16.0] - 2026-10-29
 
 **Export a Markdown document as a PDF.** Notes, treatments, outlines and pitch documents export as a clean PDF: 1-inch margins, Inter Tight with Courier Prime for code, clickable web and email links, page numbers, headings kept with their text, US Letter or A4 (a new setting), and it works offline. Any export that takes a moment, scripts included, now shows a progress bar with a percentage.

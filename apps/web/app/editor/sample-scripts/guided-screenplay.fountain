@@ -1,0 +1,92 @@
+Title: Your Title Here
+Credit: written by
+Author: Your Name
+Draft date: First draft
+Contact: Your email or phone
+
+[[These lines make the title page. Each one is a key, a colon, and a value: change the words after the colons to your own. A blank line ends the title page. Export options, at the end of the Export menu, can leave all of it, or everything but the title and author, off a PDF.]]
+
+[[Welcome. This short screenplay teaches itself as you read it. Lines like this one, inside double square brackets, are notes: they are for you, and they never print. Each note explains the line just above it. To see how the page prints, open the Script tab beside this one. The row of buttons above the text is the element bar: put the cursor on a line and press a button to make that line an element. Help, then Fountain cheat sheet, lists every mark.]]
+
+# Act One
+
+= Nell's oven dies on the morning of her biggest order.
+
+[[A line starting with # is a section, a part of the script such as an act. A line starting with = is a synopsis, a one-line summary for you. The Section button and the Synopsis button, both under More, write them. They shape the Outline and the Structure strip, and they never print.]]
+
+INT. CORNER BAKERY - DAY
+
+[[This is a scene heading. It says where we are and when: INT. for inside or EXT. for outside, then the place, then a dash and the time of day, such as DAY or NIGHT. The time of day tells a reader, and anyone planning the shoot, whether it is light outside, so Drafter's Problems tab points out a heading without one. Leave a blank line before and after a heading. The Scene button, marked INT., writes one for you.]]
+
+Flour hangs in the air. NELL, sixties, floury to the elbows, kneels by a huge iron oven and knocks on its door like it's a neighbour's.
+
+[[This paragraph is action: what we see and hear. Any paragraph that isn't another element is action, so mostly you just type. A character's name is in capitals the first time we meet them. The Action button, marked !, makes a line action.]]
+
+NELL
+Come on, old girl. Not today.
+
+[[NELL is a character: a name in capitals on a line of its own, after a blank line. The words straight under it, with no blank line between, are dialogue. The Character button, marked @, writes a name, and the Dialogue button the line under it.]]
+
+TOMAS (O.S.)
+Mum? The van's here. Are they ready?
+
+[[(O.S.) after a name is an extension: we hear Tomas, but he is off screen, in the shop. Another is (V.O.), for a voice-over.]]
+
+NELL
+(calling back)
+Five minutes!
+
+[[The line in parentheses is a parenthetical: a short direction for how a line is said. It goes on its own line, under the name or between lines of dialogue. The Parenthetical button, marked with parentheses, writes one.]]
+
+She opens the oven door. Cold. She shuts it again, gently.
+
+NELL
+Fifty loaves. In five minutes.
+
+[[Nell speaks, then there is action, then she speaks again. On the printed page Drafter adds (CONT'D) after her name for you, so you never type it yourself.]]
+
+!SMOKE.
+It curls out of the oven's seams.
+
+[[Without the ! at its start, Drafter would read SMOKE. as a name and the line under it as what they say. An ! at the start of a line makes it action, whatever it looks like.]]
+
+@McKAY
+(from the doorway)
+Need a hand, Nell?
+
+[[McKAY isn't all in capitals, so on its own it wouldn't read as a name. The @ at its start says it is one. The Character button adds the @ when a name needs it.]]
+
+CUT TO:
+
+[[CUT TO: is a transition: how one scene gives way to the next, in capitals with a blank line before and after. One that ends in TO:, like this, needs no mark; any other starts with a >, as in >FADE OUT. The Transition button, marked >, writes one.]]
+
+EXT. BAKERY YARD - NIGHT
+
+Fifty loaves cool on racks along the wall. NELL and McKAY sit on upturned flour tins and share the one that came out _crooked_.
+
+@McKAY
+You *never* panic.
+
+NELL
+I counted fifty-one. That's **panic**.
+
+[[Words between single asterisks print in italics, between double asterisks in bold, and between underscores underlined. Select some words, then the Italic button, the Bold button, or the Underline button marks them for you.]]
+
+/*
+NELL
+I should have bought a new oven years ago.
+*/
+
+[[The three lines above are in the boneyard: cut from the script but kept, in case you want them back. A slash and a star open it, and a star and a slash close it, and nothing inside prints. The Boneyard button, under More, moves the lines you select there.]]
+
+# Your turn
+
+[[Now a scene of your own. Change the heading below to a place and a time of day of your own, and the action under it to what we see there. Then press Enter twice and keep going: a name in capitals, the dialogue under it, and so on. The Script tab shows the page as you type.]]
+
+INT. YOUR FIRST LOCATION - DAY
+
+Write what we see here.
+
+> THE END <
+
+[[THE END, between a > and a <, is centered on the page. The Centered button, under More, writes it. For the rest, such as lyrics, two characters speaking at once, and setups and payoffs, see Help, then Fountain cheat sheet.]]

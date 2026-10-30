@@ -423,6 +423,45 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
     expect(help.find((i) => i.id === 'check-for-updates')?.label).toBe('Check for Updates…');
   });
 
+  test('lists New guided screenplay and New guided stage play in File, after New stage play, and in Help → Sample Scripts', () => {
+    const run = vi.fn();
+    const list = [
+      ...HELP.slice(0, 3),
+      cmd('new-markdown', 'File', 'New Markdown document'),
+      cmd('new-guided-screenplay', 'File', 'New guided screenplay'),
+      cmd('new-guided-stage-play', 'File', 'New guided stage play'),
+      ...HELP.slice(3),
+    ];
+    const template = menus(menuTemplate(list, run, { platform: 'linux' }));
+    const file = submenu(template.File);
+    expect(file.slice(0, 5).map((i) => [i.id, i.label])).toEqual([
+      ['new-screenplay', 'New screenplay'],
+      ['new-stage-play', 'New stage play'],
+      ['new-markdown', 'New Markdown document'],
+      ['new-guided-screenplay', 'New guided screenplay'],
+      ['new-guided-stage-play', 'New guided stage play'],
+    ]);
+    const samples = submenu(submenu(template.Help).find((i) => i.label === 'Sample Scripts'));
+    expect(samples.map((i) => [i.id, i.label])).toEqual([
+      ['sample-script-screenplay', 'Screenplay'],
+      ['sample-script-stage-play', 'Stage play'],
+      ['sample-script-markdown', 'Markdown'],
+      ['new-guided-screenplay', 'Guided first screenplay'],
+      ['new-guided-stage-play', 'Guided first stage play'],
+    ]);
+    // Either item runs the command.
+    (samples[3] as { click: () => void }).click();
+    (file[4] as { click: () => void }).click();
+    expect(run.mock.calls).toEqual([['new-guided-screenplay'], ['new-guided-stage-play']]);
+    // Each is in File once, and nowhere else in Help.
+    expect(
+      walk(template.File ? [template.File] : []).filter((i) => i.id === 'new-guided-screenplay'),
+    ).toHaveLength(1);
+    expect(
+      walk(submenu(template.Help)).filter((i) => i.id === 'new-guided-screenplay'),
+    ).toHaveLength(1);
+  });
+
   test('About Drafter is the page’s dialog while the page is there, once, where About goes', () => {
     const run = vi.fn();
     const about = vi.fn();

@@ -55,6 +55,18 @@ describe('the command data', () => {
     );
   });
 
+  test('has New guided screenplay and New guided stage play in File, after the New items, with no key', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    const guided = ['new-guided-screenplay', 'new-guided-stage-play'];
+    expect(ids.slice(ids.indexOf('new-markdown') + 1, ids.indexOf('new-markdown') + 3)).toEqual(
+      guided,
+    );
+    expect(COMMAND_DATA.filter((c) => guided.includes(c.id))).toEqual([
+      { id: 'new-guided-screenplay', title: 'New guided screenplay', group: 'File' },
+      { id: 'new-guided-stage-play', title: 'New guided stage play', group: 'File' },
+    ]);
+  });
+
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
       '/docs/fountain/',

@@ -241,6 +241,18 @@ describe('Cards and notes in the desktop menus', () => {
   });
 });
 
+describe('The guided starters in the desktop menus', () => {
+  test('puts New guided screenplay and New guided stage play in File', () => {
+    const ids = ['new-guided-screenplay', 'new-guided-stage-play'];
+    registerCommands(ids.map((id) => command(id)));
+    const sent = menuCommands(useCommands().value).map((c) => [c.id, c.title, c.group]);
+    expect(sent).toEqual([
+      ['new-guided-screenplay', 'New guided screenplay', 'File'],
+      ['new-guided-stage-play', 'New guided stage play', 'File'],
+    ]);
+  });
+});
+
 describe('Snapshots and Compare in the desktop menus', () => {
   test('puts History… and Take snapshot… in File, and Next change, Previous change, and Close comparison in View', () => {
     const ids = ['history', 'take-snapshot', 'next-change', 'previous-change', 'close-compare'];

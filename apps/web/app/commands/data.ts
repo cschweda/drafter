@@ -5,6 +5,7 @@
 // here. This file imports only plain data, by relative paths, so a test outside the app can read it.
 
 import { SAMPLES } from '../editor/sample-kinds';
+import { STARTER_KINDS } from '../editor/starter-kinds';
 import { DOCUMENT_TYPES } from '../editor/template';
 import { SPRINT_MINUTES } from '../stats/sprint-minutes';
 import type { CommandGroup } from './registry';
@@ -83,6 +84,11 @@ export const COMMAND_DATA: readonly CommandData[] = [
       group: 'File',
       ...(type.newKeys && { keys: type.newKeys, global: true }),
     }),
+  ),
+  // The guided starters (out-the-door design §1.5): a first screenplay and stage play that teach
+  // themselves, after the New items. No key: they are used once or twice.
+  ...STARTER_KINDS.map(
+    (starter): CommandData => ({ id: starter.command, title: starter.title, group: 'File' }),
   ),
   // The Fountain templates, then Markdown as a kind of document.
   ...DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map(

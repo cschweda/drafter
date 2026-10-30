@@ -34,7 +34,8 @@ const about: Record<string, string> = {
     <p>
       In Drafter, the Help section of the menu (Help in the desktop app’s menu bar) has these pages,
       <strong>Take the tour</strong>, <strong>Sample scripts</strong> (a tiny screenplay, stage play,
-      and Markdown document, each opened as a new script of your own),
+      and Markdown document, and a guided first screenplay and stage play whose notes teach each
+      element, each opened as a new script of your own),
       <strong>Check for updates…</strong>, and <strong>About Drafter</strong>: the version you’re
       on, with a button that copies it for a bug report, and links to the source code, the
       releases, and the changelog.

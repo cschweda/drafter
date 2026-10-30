@@ -1,0 +1,89 @@
+Title: Your Title Here
+Credit: A play in one act by
+Author: Your Name
+Draft date: First draft
+Contact: Your email or phone
+
+[[These lines make the title page. Each one is a key, a colon, and a value: change the words after the colons to your own. A blank line ends the title page. Export options, at the end of the Export menu, can leave all of it, or everything but the title and author, off a PDF.]]
+
+[[Welcome. This short play teaches itself as you read it. Lines like this one, inside double square brackets, are notes: they are for you, and they never print. Each note explains the lines just above it. To see how the page prints, open the Script tab beside this one. The row of buttons above the text is the element bar: put the cursor on a line and press a button to make that line an element. A play has no INT. or EXT. headings. A line starting with # is an act and one starting with ## a scene, and in a play both print. Help, then Fountain cheat sheet, lists every mark.]]
+
+> CHARACTERS <
+
+JUNE, a night nurse, forties.
+
+ARLO, her brother, younger, always late.
+
+[[This is the cast list. CHARACTERS, between a > and a <, is centered on the page; the Centered button, under More, writes it. Each character is a line of stage direction in ordinary sentence case, so none reads as a character's name with a speech under it.]]
+
+===
+
+[[Three equals signs on a line of their own start a new page, so Act One begins on a fresh one. The Page break button, under More, writes it.]]
+
+# Act One
+
+[[A line starting with # starts an act, and prints as its heading. The Act button, marked #, writes one.]]
+
+## Scene 1
+
+[[A line starting with ## starts a scene, and prints as its heading. The Scene button, marked ##, writes one. A play's scene needs no INT. or EXT., and no time of day.]]
+
+A hospital ward, late at night. One desk lamp. Somewhere a machine beeps, slow and steady.
+
+JUNE sits at the nurses' station with a crossword and a cold cup of tea.
+
+[[These two paragraphs are stage directions: what the audience sees and hears. Any paragraph that isn't another element is one, so mostly you just type. The Stage direction button, marked !, makes a line a stage direction.]]
+
+ARLO enters, soaked, holding a paper cup.
+
+[[An entrance is a stage direction too. Plays often put the name in capitals, as here; because it's in a sentence, Drafter still reads it as a direction, not as a name.]]
+
+ARLO
+I brought you soup.
+
+JUNE
+(to the audience)
+He has never once brought me soup.
+
+[[ARLO and JUNE are characters: a name in capitals on a line of its own, after a blank line, with the words straight under it as dialogue. The Character button, marked @, writes a name, and the Dialogue button the line under it. The line in parentheses is a parenthetical, a short direction for how a line is said; the Parenthetical button, marked with parentheses, writes one.]]
+
+ARLO
+It's from the machine downstairs. It counts.
+
+A call bell rings. JUNE stands, takes the cup from him, and drinks.
+
+JUNE
+Don't touch anything.
+
+She exits.
+
+[[An exit is written the same way as an entrance: a sentence of stage direction.]]
+
+## Scene 2
+
+The same ward, near dawn. Grey light at the window. ARLO is asleep in the visitor's chair.
+
+JUNE enters, and lays her cardigan over him.
+
+JUNE
+(quietly)
+It counted.
+
+Blackout.
+
+[[A scene can end on a direction such as Blackout, when the stage lights go out.]]
+
+## Scene 3
+
+[[Your turn. Change the direction below to what the audience sees in a scene of your own, and the line under JUNE to what she says. Then press Enter twice and keep going: a name in capitals, the dialogue under it, and so on. The Script tab shows the page as you type. For the rest of Fountain's marks, see Help, then Fountain cheat sheet.]]
+
+Write what the audience sees here.
+
+JUNE
+Write what June says here.
+
+[[The lines below hold Drafter's settings for this script: they say it uses the stage-play template. Leave them as they are.]]
+
+/* drafter
+{ "v": 1, "template": "stage-play-standard" }
+*/

@@ -5,6 +5,7 @@ import { formatKeys, isApple } from '~/commands/keys';
 import { type Command, useCommands } from '~/commands/registry';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
+import { STARTER_KINDS } from '~/editor/starter-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useTemplateMenu } from '~/editor/template-menu';
 import { EXPORTS } from '~/storage/export';
@@ -111,8 +112,8 @@ const EXPORT_ICONS: Record<string, string> = {
 
 // Help: the group at the end of the menu. Take the tour is first (always on), then the help pages
 // (each opens in a new tab, and is named by the page's title under the Help label), the Sample
-// scripts submenu (a tiny sample of each kind, opened as a new script), Reset sample (off unless a
-// sample is open), Check for updates…, and About Drafter last.
+// scripts submenu (a tiny sample of each kind, then the guided starters, each opened as a new
+// script), Reset sample (off unless a sample is open), Check for updates…, and About Drafter last.
 const HELP_ICONS: Record<string, string> = {
   'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
@@ -139,6 +140,13 @@ const helpItems = computed<DropdownMenuItem[]>(() => [
           label: sample.name,
         })),
       ),
+      // The guided starters, under the tiny samples, by the names a lesson goes by.
+      STARTER_KINDS.flatMap((starter) =>
+        entry(starter.command, 'i-lucide-graduation-cap', true).map((item) => ({
+          ...item,
+          label: starter.menuLabel,
+        })),
+      ),
     ],
   },
   ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
@@ -149,6 +157,7 @@ const helpItems = computed<DropdownMenuItem[]>(() => [
 const items = computed<DropdownMenuItem[][]>(() => [
   [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
+    ...STARTER_KINDS.flatMap((starter) => entry(starter.command, 'i-lucide-graduation-cap', true)),
     ...entry('open', 'i-lucide-folder-open'),
   ],
   templateSection.value,

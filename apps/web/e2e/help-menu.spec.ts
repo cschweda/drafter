@@ -37,6 +37,8 @@ interface Row {
   source: string;
   sample?: string;
   sampleScript?: string;
+  starter?: string;
+  templateId?: string;
 }
 
 function stored(page: Page): Promise<Row[]> {
@@ -154,6 +156,81 @@ test.describe('the sample scripts', () => {
     await item(page, /^Sample scripts/).hover();
     await item(page, /^Stage play$/).click();
     await expect.poll(() => text(page)).toContain('Sample: Stage play');
+  });
+});
+
+test.describe('the guided starters', () => {
+  /** The whole text, from CodeMirror's state: the editor draws only the lines near the view. */
+  const wholeText = (page: Page) =>
+    page.evaluate(() => {
+      type Linked = { view?: { state: { doc: { toString(): string } } } };
+      const content = document.querySelector('.cm-content') as
+        | (Element & { cmTile?: Linked; cmView?: Linked })
+        | null;
+      return (content?.cmTile ?? content?.cmView)?.view?.state.doc.toString() ?? '';
+    });
+
+  /** The cursor's offset, from CodeMirror's own link on its content element (as `modules.ts` reads the text). */
+  const cursorAt = (page: Page) =>
+    page.evaluate(() => {
+      type Linked = { view?: { state: { selection: { main: { head: number } } } } };
+      const content = document.querySelector('.cm-content') as
+        | (Element & { cmTile?: Linked; cmView?: Linked })
+        | null;
+      return (content?.cmTile ?? content?.cmView)?.view?.state.selection.main.head ?? null;
+    });
+
+  test('Help → Sample scripts → Guided first screenplay opens it at the top, unchanged, as a new script', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a submenu is opened by pointer or keys here');
+    await start(page);
+    const before = (await stored(page)).length;
+    await mark(page).click();
+    await item(page, /^Sample scripts/).hover();
+    await item(page, /^Guided first screenplay$/).click();
+    await expect.poll(() => text(page)).toContain('Title: Your Title Here');
+    await expect.poll(() => wholeText(page)).toContain('INT. YOUR FIRST LOCATION - DAY');
+    // At the top, on the title page, where the lesson starts.
+    await expect.poll(() => cursorAt(page)).toBe(0);
+    const rows = await stored(page);
+    expect(rows).toHaveLength(before + 1);
+    const made = rows.find((r) => r.starter === 'screenplay');
+    expect(made?.title).toBe('Your Title Here');
+    expect(made?.sample).toBeUndefined();
+    expect(made?.sampleScript).toBeUndefined();
+    // Opened unchanged: the title has no unsaved mark, and the Scripts menu lists it.
+    await expect(page).toHaveTitle('Your Title Here — Drafter');
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    const scripts = page.getByRole('group', { name: 'Scripts', exact: true });
+    await expect(scripts).toContainText('Your Title Here');
+  });
+
+  test('New guided stage play from the app menu opens the play with the stage-play template', async ({
+    page,
+  }) => {
+    await start(page);
+    await mark(page).click();
+    await item(page, /^New guided stage play/).click();
+    await expect.poll(() => wholeText(page)).toContain('> CHARACTERS <');
+    await expect.poll(() => cursorAt(page)).toBe(0);
+    const made = (await stored(page)).find((r) => r.starter === 'stage-play');
+    expect(made?.templateId).toBe('stage-play-standard');
+    await expect(page).toHaveTitle('Your Title Here — Drafter');
+  });
+
+  test('the screenplay starter opens with no problems', async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'New guided screenplay');
+    await expect.poll(() => wholeText(page)).toContain('INT. YOUR FIRST LOCATION - DAY');
+    await runCommand(page, 'Show Problems');
+    const problems = page
+      .locator('[data-pane]')
+      .last()
+      .getByRole('tab', { name: /^Problems/ });
+    await expect(problems).toHaveText(/^Problems\s*$/);
+    await expect(page.locator('[data-tour="status"]')).toContainText('No problems');
   });
 });
 
