@@ -1,6 +1,7 @@
 import type { Block, Doc } from '@drafter/fountain';
 import { type Role, type RoleStyle, resolveRole, type Template } from '@drafter/templates';
 import { blankLine, blockLines, columns, type Frame, frameOf, isBlank, joined } from './lines';
+import { numbersOf, rolesOf } from './numbers';
 import { titlePage } from './title';
 import {
   type Layout,
@@ -126,7 +127,7 @@ export function paginate(doc: Doc, template: Template, opts: PaginateOptions = {
 /** Turns blocks into the items that fill pages: blocks, speeches, dual pairs, and page breaks. */
 class Items {
   readonly #blocks: readonly Block[];
-  readonly #roles: Role[] = [];
+  readonly #roles: Role[];
   readonly #printings: Array<Printing | null>;
 
   constructor(
@@ -136,9 +137,7 @@ class Items {
     private readonly diagnostics: LayoutDiagnostic[],
   ) {
     this.#blocks = doc.blocks;
-    for (const block of doc.blocks) {
-      this.#roles.push(resolveRole(template, block, this.#roles.at(-1) ?? null));
-    }
+    this.#roles = rolesOf(doc.blocks, template);
     this.#printings = doc.blocks.map((block, i) => this.#printing(block, i));
   }
 
@@ -166,24 +165,12 @@ class Items {
   build(numbering: SceneNumbering): { items: Item[]; scenes: Map<number, string> } {
     const entries = this.#entries();
     const items: Item[] = [];
-    const scenes = new Map<number, string>();
-    let scene = 0;
+    const scenes = numbersOf(this.#blocks, this.#roles, numbering);
     for (let e = 0; e < entries.length; e++) {
       const entry = entries[e] as Entry;
       if (entry.type === 'break') {
         items.push(entry);
       } else if (entry.type === 'block') {
-        const block = this.#blocks[entry.index] as Block;
-        if (block.kind === 'scene_heading' && this.#roles[entry.index] !== 'disabled') {
-          scene++;
-          const number =
-            numbering === 'all'
-              ? (block.sem.number ?? String(scene))
-              : numbering === 'written'
-                ? block.sem.number
-                : null;
-          if (number !== null) scenes.set(entry.index, number);
-        }
         items.push(this.#block(entry.index, this.#printings[entry.index] as Printing));
       } else {
         const { speech } = entry;

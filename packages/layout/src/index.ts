@@ -1,5 +1,6 @@
+export { sceneNumbersFor } from './numbers';
 export { paginate } from './paginate';
-export { titlePageFor } from './title';
+export { titleKeyPrints, titlePageFor } from './title';
 export type {
   Layout,
   LayoutDiagnostic,

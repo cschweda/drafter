@@ -1,17 +1,13 @@
 import type { Block, Doc } from '@drafter/fountain';
+import { markdownText } from './escape';
 import type { OutlineNode, Scene, SceneIndex } from './types';
+
+// The escaper is the script's Markdown's (Call 34); re-exported so the public name stays.
+export { markdownText };
 
 // Export as treatment (Phase 2 design §6.4): the outline as Markdown. The script's title, then
 // each section's title as a heading and its own synopses, then each scene's heading one level
 // deeper and its synopses, and, if asked, its first paragraph of action.
-
-/** The writer's text as Markdown that shows it as it is. */
-export function markdownText(text: string): string {
-  return text
-    .replace(/[\\`*_[\]<>]/g, (c) => `\\${c}`)
-    .replace(/^(\s*)([#=+-])(?=\s|$)/, '$1\\$2')
-    .replace(/^(\s*\d+)([.)])/, '$1\\$2');
-}
 
 const printable = (block: Block) =>
   block.lines

@@ -50,6 +50,12 @@ describe('treatment', () => {
     );
   });
 
+  test("the treatment escapes as the script's Markdown does", () => {
+    expect(of('INT. A - DAY\n\n= ---\n\n= Fish &amp; chips\n')).toBe(
+      '# Treatment\n\n## INT. A - DAY\n\n\\---\n\nFish \\&amp; chips\n',
+    );
+  });
+
   test("writes a play's acts and scenes", () => {
     const out = of(SAMPLE_STAGE_PLAY);
     expect(out.startsWith('# The Call\n\n## Act One\n\n### Scene 1\n')).toBe(true);

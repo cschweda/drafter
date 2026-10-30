@@ -9,6 +9,7 @@ export {
 } from '@drafter/notes';
 export { expandOutline, STAGE_STUB, STUB_HEADING, scriptFromMarkdown } from './expand';
 export { type SceneDetails, setColor, setSceneDetails, setSynopsis } from './header';
+export { type ScriptMarkdownOptions, scriptMarkdown } from './markdown';
 export {
   downTarget,
   type Move,

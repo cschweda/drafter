@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/outline`: **the whole script as Markdown**, the engine behind Export as Markdown. `scriptMarkdown(doc, index, template, options)` writes a screenplay or stage play as CommonMark that reads well in any Markdown viewer and pastes cleanly into a website, a notes app, or an AI chat: the title as `#`, then the title page's other lines as paragraphs; sections as headings one level below the title, and scene headings one level below the deepest section (`### 12. INT. KITCHEN - NIGHT` when numbered), with anything past level 6 written in bold; a speech as the name in bold, any parenthetical in italics, and the dialogue, one line under the other; a stage play's stage directions in italics; transitions as written; centered text between its marks (`>THE END<`); lyrics in italics; a page break as `* * *`. The second speech of dual dialogue says *(at the same time)* after the name. Your **bold**, *italics*, and underlining come through, underlining as `<u>…</u>`. Scene numbers follow the script's export option exactly as the PDF does (none, as written, or every scene), and notes, synopses, and the boneyard are left out, as in the PDF, unless notes are asked for: then each note is a quote where it stands (`> **Note:** …`, or `> **Note (Writer):** …` for a keyed note) and each synopsis a quote too. The boneyard never comes through. Leading spaces are taken off, since Markdown can't hold them.
+- `@drafter/layout`: `sceneNumbersFor(doc, template, numbering)`, each printed scene heading's number by block index, the very numbers `paginate` prints (it now takes them from this function, and every PDF and text export is byte for byte as before), and `titleKeyPrints(key)`, whether a title page key prints.
+
+### Fixed
+
+- **A treatment shows your text exactly in any Markdown viewer.** A synopsis of `---` no longer turns into a horizontal rule, `&amp;` no longer shows as `&`, a line starting with four spaces no longer becomes a code block, and `!`, `&`, `|`, and `~` are escaped too. The treatment and the script's Markdown now share one escaper.
+
 ## [0.18.0] - 2026-10-30
 
 **Version history.** A Deleted scenes tab lists every scene that's in an earlier version but not in the script now, with Put back (one undo); Show changes marks additions and deletions on the live pages against the last save or a chosen version; Compare gains a GitHub-style Changes view (red and green, or blue and orange, with word-level highlights, folds, scenes, and side by side); and History of this scene shows every version of one scene, even through a renamed heading. Everything is read on your device, in the background.

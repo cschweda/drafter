@@ -312,6 +312,9 @@ importers:
       '@drafter/render-text':
         specifier: workspace:*
         version: link:../render-text
+      mdast-util-from-markdown:
+        specifier: ^2.1.0
+        version: 2.1.0
 
   packages/render-html:
     dependencies:
