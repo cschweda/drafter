@@ -152,7 +152,8 @@ describe('a Markdown document’s nesting, scanned before it is parsed', () => {
           0.1,
         );
       console.log(`Nesting scan, ${name}: ${growth.toFixed(1)}× from n to 8n.`);
-      expect(growth, name).toBeLessThan(12);
+      // Linear is 8×, quadratic 64×: 20 tells them apart with room for a busy machine.
+      expect(growth, name).toBeLessThan(20);
     }
   }, 120_000);
 });
