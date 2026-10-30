@@ -31,6 +31,7 @@
   "dependencies": {
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
+    "@drafter/markdown": "workspace:*",
     "@drafter/notes": "workspace:*",
     "@drafter/outline": "workspace:*",
     "@drafter/templates": "workspace:*"

@@ -24,7 +24,7 @@ footnotes(tree).numbers; // Map { '1' => 1 }
 | `countWords(tree)`, `wordsIn(text)`, `isSpace(code)` | Words as they're read: runs of characters between what `/\s/` calls a space, footnotes included once, markup not at all. |
 | `MdNode` | The fields of an mdast node Drafter reads, a structural type. |
 
-`@drafter/markdown/notes` exports `footnotes` and its types alone: the walk without the parser, for a reader that never parses (`@drafter/render-pdf`), so importing it loads no `mdast` or `micromark` module.
+`@drafter/markdown/notes` exports `footnotes` and its types alone, and `@drafter/markdown/words` exports `countWords`, `wordsIn`, and `isSpace`: the walk and the word count without the parser, for a reader that never parses (`@drafter/render-pdf`, `@drafter/render-html-file`), so importing them loads no `mdast` or `micromark` module.
 
 `micromark-extension-gfm-footnote` is pinned exactly: `parseMarkdown` hands it a label list backed by a set, through one field of the parser's, so many footnotes parse in linear time (see [DEPENDENCIES](../../docs/DEPENDENCIES.md)).
 

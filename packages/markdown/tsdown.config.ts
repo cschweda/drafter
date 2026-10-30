@@ -1,9 +1,10 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  // notes.ts is its own entry, `@drafter/markdown/notes`: the footnote walk without the parser, for
-  // `@drafter/render-pdf`, which must not load the parser at runtime.
-  entry: ['src/index.ts', 'src/notes.ts'],
+  // notes.ts and words.ts are entries of their own, `@drafter/markdown/notes` and
+  // `@drafter/markdown/words`: the footnote walk and the word count without the parser, for
+  // `@drafter/render-pdf` and `@drafter/render-html-file`, which must not load it at runtime.
+  entry: ['src/index.ts', 'src/notes.ts', 'src/words.ts'],
   format: 'esm',
   dts: true,
   clean: true,

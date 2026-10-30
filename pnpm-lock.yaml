@@ -368,6 +368,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+      '@drafter/markdown':
+        specifier: workspace:*
+        version: link:../markdown
       '@drafter/notes':
         specifier: workspace:*
         version: link:../notes

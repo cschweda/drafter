@@ -36,10 +36,11 @@ export default defineConfig({
         find: /^vue$/,
         replacement: fileURLToPath(new URL('./apps/web/node_modules/vue', import.meta.url)),
       },
-      // A parser-free subpath (`@drafter/render-pdf` takes the footnote walk from it), from source too.
+      // The parser-free subpaths (the renderers take the footnote walk and the word count from
+      // them), from source too.
       {
-        find: /^@drafter\/markdown\/notes$/,
-        replacement: fileURLToPath(new URL('./packages/markdown/src/notes.ts', import.meta.url)),
+        find: /^@drafter\/markdown\/(notes|words)$/,
+        replacement: fileURLToPath(new URL('./packages/markdown/src/$1.ts', import.meta.url)),
       },
       ...packages.map((name) => ({
         find: new RegExp(`^@drafter/${name}$`),

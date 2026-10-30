@@ -338,7 +338,14 @@ h3.sec, h4.sec, h5.sec, h6.sec { margin-top: 2.25rem; font-size: 1.1875rem; }
 .document table { border-collapse: collapse; margin: 0 0 1rem; }
 .document th, .document td { padding: 0.375rem 0.75rem; border: 1px solid var(--line); text-align: left; }
 .document img { max-width: 100%; }
+.document .raw { white-space: pre-wrap; overflow-wrap: anywhere; }
+.document .image { color: var(--dim); font-style: italic; }
+.document sup { line-height: 0; }
+.document .fnref a { padding: 0 0.15em; text-decoration: none; }
 .footnotes { font-size: 0.9375rem; }
+.footnotes hr { width: 6rem; margin: 3rem 0 1rem; }
+.footnotes h2 { margin-top: 0; font-size: 1rem; color: var(--dim); }
+.footnotes li:target, .document .fnref :target, .document :target.fnref { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Print: the light palette always, and no bar. A script in Pages prints its cards alone, a card to
    a sheet with no margin, each at the top left of a sheet of its paper (the size is generated:

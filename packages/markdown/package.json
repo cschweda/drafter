@@ -23,6 +23,11 @@
       "source": "./src/notes.ts",
       "types": "./dist/notes.d.ts",
       "default": "./dist/notes.js"
+    },
+    "./words": {
+      "source": "./src/words.ts",
+      "types": "./dist/words.d.ts",
+      "default": "./dist/words.js"
     }
   },
   "files": [

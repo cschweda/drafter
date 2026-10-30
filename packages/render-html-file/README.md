@@ -2,10 +2,11 @@
 
 Drafter's HTML export, for [Drafter](https://github.com/cschweda/drafter): a script or a Markdown document as one `.html` file that someone can open in any current browser, from an email attachment or a USB stick, with no connection. Everything is inside the file: one stylesheet, one small script, and the fonts. It opens dark, has a light switch, and prints light. It touches no DOM and reads no files, so it runs in Node, in a browser, and in a worker; it returns a string.
 
-This release builds it in steps. So far it has the frame every file shares, and a script's whole file: its Pages and Reading views, the header, and the scene band.
+This release builds it in steps. So far it has the frame every file shares, a script's whole file (its Pages and Reading views, the header, and the scene band), and a Markdown document's whole file.
 
 ```ts
-import { renderScriptHtml } from '@drafter/render-html-file';
+import { markdownTitle, parseMarkdown } from '@drafter/markdown';
+import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 
 const doc = parse(source); // with the export's title page applied
 const html = renderScriptHtml({
@@ -19,6 +20,14 @@ const html = renderScriptHtml({
   generator: 'Drafter 0.22.0',
   kindLine: 'Screenplay · 94 pages · About 1 h 35 min',
 });
+
+// A Markdown document, from the tree the Preview draws.
+const page = renderDocumentHtml({
+  tree: parseMarkdown(text), // throws NestedTooDeeply for a document nested too deeply
+  title: markdownTitle(text) ?? 'Untitled',
+  lang: 'en',
+  generator: 'Drafter 0.22.0',
+});
 ```
 
 ## API
@@ -26,6 +35,7 @@ const html = renderScriptHtml({
 | Export | What it does |
 |---|---|
 | `renderScriptHtml(input)` | A script's whole file: the header (the caller's `kindLine`, the title, and the title page's credit and author, source, and draft date), the band, the Pages view with the band's targets, and the hidden Reading view, with Courier Prime in the styles the pages use and every part's generated rules in the one style. |
+| `renderDocumentHtml(input)` | A Markdown document's whole file, from `@drafter/markdown`'s tree (the one the Preview draws): the header ("Document · 1,240 words · 6 min read": `countWords`, at `WORDS_PER_MINUTE`, 230, rounded up, at least 1), a `nav.sections` row of links to each root `##` heading (or `#` when there is none), and the document as the Preview draws it. Headings carry generated ids (`h-<n>`) and the writer's levels, but never skip one under the header's h1 (a document that starts at `###` starts at h2). A link is a link (`target="_blank"`, `rel="noopener noreferrer"`, the address as `new URL` normalizes it) only for `http:`, `https:`, and `mailto:`; any other address, relative path, or `#heading` is its text, and so is a reference whose definition is unsafe. An image is "[Image: description]" and nothing is fetched; raw HTML is text. Footnotes are numbered by `@drafter/markdown`'s walk, as the Preview numbers them: each reference is `sup > a[href=#fn-n]`, the first one `id="fnref-n"` (inside a link, a plain `sup` with that id), and the notes are a `section.footnotes` at the end (a rule, an h2 "Notes", an `ol` of `li#fn-n`), each with a link back. No font is embedded. A tree deeper than `MAX_TREE_DEPTH` (1000 levels, which only a hostile text reaches: the parser nests emphasis as deep as it is written) throws a RangeError saying "nested too deeply", as the export says a document the parser refuses. |
 | `readingHtml(doc, layout, notes)` | The Reading view: `{ html, rules }`. `html` is `<section class="reading" hidden="">` holding the blocks the layout prints (and every section), each by its Fountain kind: a section as a heading a level under the nearest shallower open section's (levels never skip, up to h6), a scene heading as `h.sh` (with `.sn`, the number, when the layout prints one), both with `id="r-b-<block>"`; a speech as `div.speech` (`p.who.kN` with `span.ext`, then `div.said`), a `^` pair in `div.dual`; action, `.tr`, `.ct`, `.ly`, and any other kind as `p`. With `'include'`, each `[[note]]` is an `aside.note` at its place, except Drafter's own keyed notes (scene fields, setups and payoffs, card text, as `@drafter/notes`' `readNote` reads them); boneyard never. `rules` are the color rules for the characters who speak. |
 | `characterKey(cue)`, `CHARACTER_COLORS` | The one name a cue's character goes by (capitals; no extensions, `@`, or `^`; spaces collapsed), and the characters' colors, a dark and a light shade each, handed out in order of first speech and repeated past the end. |
 | `bandHtml(doc, template, layout)` | The scene band: `{ html, rules, blocks }`. From `@drafter/outline`'s `structureStrip`, its top row (sections if any, else scenes) as `nav.band` links to `#b-<block>`, each `li` as wide as its share (`gN`) and edged in its `SCENE_SWATCH` color (`sN`), labelled "ACT ONE, pages 1 to 32". '' (and no blocks) with no sections and no scenes. |
@@ -51,6 +61,7 @@ const html = renderScriptHtml({
 - **Works with JavaScript off.** The defaults are in the markup: dark, Pages. The switches start hidden, and the script shows them.
 - **Prints light**, without the bar. A script in Pages prints its cards alone, one to a sheet of the template's paper (`paperRule`), each from the sheet's top left with no margin, as the PDF's pages are; Reading and a document print as a flow, header kept.
 - **The band works without the script.** A band link is a plain `#b-<block>` anchor into Pages; while Reading shows, the script sends it to the same block's `r-b-<block>` there.
+- **A document never loads the parser.** It is built from the tree the caller parsed; the footnote walk and the word count come from `@drafter/markdown`'s parser-free subpaths, so importing this package loads no `mdast` or `micromark` module (`test/no-parser.test.ts`).
 - **Reading is built from Fountain's kinds**, not the template's role names, so a stage play reads as a screenplay does, and a kind it doesn't know is a paragraph: nothing printed is dropped. Notes appear only there, only when asked for.
 - **Pages are on the grid, in Courier Prime.** A character Courier Prime lacks (CJK, emoji) is drawn from the reader's monospace or another fallback font, glyph by glyph, and that font's width can shift the rest of its line off the grid, as on the Script tab. The text is all there; only those lines' alignment differs from the PDF.
 

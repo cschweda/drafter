@@ -129,6 +129,7 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: [
       '@drafter/fountain',
       '@drafter/layout',
+      '@drafter/markdown',
       '@drafter/notes',
       '@drafter/outline',
       '@drafter/templates',
