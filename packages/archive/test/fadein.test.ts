@@ -125,6 +125,20 @@ describe('fromFadeIn', () => {
     expect(packed.text).toBe(SCRIPT);
   });
 
+  it('reads a prolog of many empty comments at once', async () => {
+    // A pattern of repeated lazy comments would backtrack exponentially on these.
+    const started = performance.now();
+    const result = await fromFadeIn(
+      makeZip([
+        { name: 'a.xml', data: `${'<!---->'.repeat(150)}<cards/>` },
+        { name: 'b.xml', data: `${'<!---->'.repeat(140)}<!--` },
+        { name: 'screenplay.xml', data: DOCUMENT },
+      ]),
+    );
+    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(result.text).toBe(SCRIPT);
+  });
+
   it('refuses several top-level OSF documents, or none, naming the candidates', async () => {
     const two = await refusal(
       makeZip([

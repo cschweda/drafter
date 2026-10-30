@@ -14,8 +14,31 @@ const XML = /\.xml$/i;
 /** How far into an entry to look for its root element. */
 const PEEK = 1024;
 
-/** OSF's root element, after what may come before it: a BOM, white space, the declaration, comments. */
-const OSF_ROOT = /^\uFEFF?\s*(?:<\?[\s\S]*?\?>\s*)?(?:<!--[\s\S]*?-->\s*)*<document[\s/>]/;
+/**
+ * Whether `head` opens with OSF's root element, after what may come before it: a BOM, white space,
+ * the declaration, comments. A scan, not a pattern: a pattern of repeated lazy comments backtracks
+ * exponentially on a prolog of empty ones.
+ */
+function osfRoot(head: string): boolean {
+  let at = head.startsWith('\uFEFF') ? 1 : 0;
+  const space = () => {
+    while (at < head.length && /\s/.test(head[at] as string)) at++;
+  };
+  space();
+  if (head.startsWith('<?', at)) {
+    const end = head.indexOf('?>', at + 2);
+    if (end < 0) return false;
+    at = end + 2;
+    space();
+  }
+  while (head.startsWith('<!--', at)) {
+    const end = head.indexOf('-->', at + 4);
+    if (end < 0) return false;
+    at = end + 3;
+    space();
+  }
+  return /^<document[\s/>]/.test(head.slice(at, at + 10));
+}
 
 /** The most candidate names a `many-scripts` refusal lists. */
 const MAX_NAMED = 5;
@@ -41,7 +64,7 @@ async function pickDocument(bytes: Uint8Array, entries: readonly ZipEntry[]): Pr
       if (error instanceof ZipError) continue;
       throw error;
     }
-    if (OSF_ROOT.test(head)) osf.push(entry);
+    if (osfRoot(head)) osf.push(entry);
   }
   if (osf.length === 1) return osf[0] as ZipEntry;
   throw new ArchiveError('Fade In', 'many-scripts', named(osf.length > 1 ? osf : top));
