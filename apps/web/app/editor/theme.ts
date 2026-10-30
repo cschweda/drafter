@@ -15,11 +15,14 @@ export const theme = EditorView.theme({
     // The text size setting scales the Source pane through --text-scale (settings/apply.ts).
     fontSize: 'calc(13.5px * var(--text-scale, 1))',
   },
-  // No box around the editor (fresh-look design §8, Call 11): the caret shows where focus is, a
-  // 2 px bar in the focus color. (CodeMirror's own theme draws a dotted outline, and the global
-  // ring would draw one around the text; both go.)
+  // No box around the editor (fresh-look design §8, Call 11). Focus shows as a 3 px bar in the
+  // focus color at the left of the current line, there while the caret blinks off or a selection
+  // hides it, and as the caret itself, 2 px in the same color. (CodeMirror's own theme draws a
+  // dotted outline, and the global ring would draw one around the text; both go.)
   '&.cm-focused': { outline: 'none' },
   '.cm-content:focus-visible': { outline: 'none' },
+  '.cm-activeLine': { backgroundColor: 'transparent' },
+  '&.cm-focused .cm-activeLine': { boxShadow: 'inset 3px 0 0 var(--focus)' },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
   '.cm-content': { padding: '12px 0', caretColor: 'var(--focus)' },
   '.cm-line': { padding: '0 16px 0 8px' },
@@ -42,7 +45,13 @@ export const theme = EditorView.theme({
   '.cm-f-note': { color: 'var(--note)', fontStyle: 'italic' },
   '.cm-f-section, .cm-f-title-key': { color: 'var(--title)' },
   '.cm-f-parenthetical, .cm-f-synopsis': { color: 'var(--paren)', fontStyle: 'italic' },
-  '.cm-f-boneyard': { color: 'var(--muted)' },
+  // Boneyard is cut and never prints: struck through, as well as quiet, so it isn't told apart
+  // by its color alone.
+  '.cm-f-boneyard': {
+    color: 'var(--muted)',
+    textDecoration: 'line-through',
+    textDecorationColor: 'color-mix(in srgb, var(--muted) 60%, transparent)',
+  },
   '.cm-f-b': { fontWeight: '700' },
   '.cm-f-i': { fontStyle: 'italic' },
   '.cm-f-u': { textDecoration: 'underline' },

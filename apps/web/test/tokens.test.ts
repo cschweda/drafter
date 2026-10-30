@@ -119,9 +119,9 @@ describe('design tokens', () => {
 
   test('the radii and the motion are one set for both themes', () => {
     const tokens = themeTokens('dark');
-    expect(tokens['--radius-sm']).toBe('6px');
-    expect(tokens['--radius']).toBe('8px');
-    expect(tokens['--radius-lg']).toBe('12px');
+    expect(tokens['--r-sm']).toBe('6px');
+    expect(tokens['--r']).toBe('8px');
+    expect(tokens['--r-lg']).toBe('12px');
     expect(tokens['--dur']).toBe('140ms');
     expect(tokens['--ease']).toBe('cubic-bezier(0.2, 0.8, 0.2, 1)');
   });

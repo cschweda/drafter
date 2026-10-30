@@ -253,7 +253,7 @@ test.describe("Compare's Changes view", () => {
     await expect.poll(() => focusedChange(page)).toBe('0');
   });
 
-  test('N and Shift+N step through changes in the Changes view', async ({ page }) => {
+  test('N and Shift+N step through changes in the Changes view', async ({ page, browserName }) => {
     const after = BASE.replace('She waits by the door.', 'She paces by the door.')
       .replace('The phone rings.\n\n', '')
       .replace('Wind.', 'Wind.\n\nRain.');
@@ -271,8 +271,19 @@ test.describe("Compare's Changes view", () => {
     }
     await page.keyboard.press('Shift+N');
     await expect.poll(() => focusedChange(page)).toBe('2');
-    // The focused row is the change's first, in the Changes view.
+    // The focused row is the change's first, in the Changes view, with its ring (a row has
+    // tabindex="-1", and the no-ring rule for focused headings mustn't reach it). Firefox doesn't
+    // count focus moved by script as visible after the test's own `focus()` of the panel, so it
+    // draws no ring there for anyone; a keyboard user's N does.
     await expect(diff(page).locator(':focus')).toHaveClass(/diff-row added/);
+    const ring = await diff(page)
+      .locator(':focus')
+      .evaluate((el) => ({
+        visible: el.matches(':focus-visible'),
+        outline: getComputedStyle(el).outlineStyle,
+      }));
+    if (browserName !== 'firefox') expect(ring.visible).toBe(true);
+    if (ring.visible) expect(ring.outline).toBe('solid');
   });
 
   test('the choice of view and layout is remembered', async ({ page, isMobile }) => {

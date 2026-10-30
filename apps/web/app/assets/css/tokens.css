@@ -45,12 +45,12 @@
 }
 
 /* The same in both themes: the radii, and the one motion (design §8), which main.css's `.motion`
-   uses. These --radius-sm and --radius-lg are also Tailwind's, so its rounded-sm and rounded-lg
-   follow them. */
+   uses. The radii have names of their own: Tailwind's --radius-sm, --radius-md, and --radius-lg are
+   what Nuxt UI's menus, palette, and dialogs are drawn with, and stay as they are. */
 :root {
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --r-sm: 6px;
+  --r: 8px;
+  --r-lg: 12px;
   --dur: 140ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }

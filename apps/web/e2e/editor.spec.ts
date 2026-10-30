@@ -133,14 +133,45 @@ test.describe('on a desktop', () => {
     await expect(page.locator('.announcer')).toHaveText('');
   });
 
-  test('shows a ring around the editor when it has focus', async ({ page }) => {
+  test('shows its focus with a bar on the current line, not a ring', async ({ page }) => {
+    // Fresh-look design §8 (Call 11): no box around the editor; a bar in the focus color at the
+    // left of the current line shows focus, even while the caret blinks off or a selection hides it.
     await page.locator('.cm-content').click();
-    const ring = await page.locator('.cm-editor').evaluate((el) => {
-      const style = getComputedStyle(el);
-      return { style: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) };
+    await expect(page.locator('.cm-editor.cm-focused')).toHaveCount(1);
+    expect(
+      await page.locator('.cm-editor').evaluate((el) => getComputedStyle(el).outlineStyle),
+    ).toBe('none');
+    const focus = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--focus)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
     });
-    expect(ring.style).not.toBe('none');
-    expect(ring.width).toBeGreaterThanOrEqual(2);
+    const bar = () =>
+      page
+        .locator('.cm-activeLine')
+        .first()
+        .evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(await bar()).toContain(focus);
+    expect(await bar()).toMatch(/inset/);
+    // The whole text chosen hides the caret; the bar stays.
+    await page.keyboard.press('ControlOrMeta+A');
+    expect(await bar()).toContain(focus);
+    // Away from the editor, no bar.
+    await page.getByRole('button', { name: 'Open', exact: true }).focus();
+    await expect(page.locator('.cm-editor.cm-focused')).toHaveCount(0);
+    expect(await bar()).toBe('none');
+  });
+
+  test('strikes through boneyard text, which never prints', async ({ page }) => {
+    await setText(page, 'INT. HALL - DAY\n\n/* An old idea. */\n\nShe waits.');
+    const boneyard = page.locator('.cm-f-boneyard').first();
+    await expect(boneyard).toBeVisible();
+    expect(await boneyard.evaluate((el) => getComputedStyle(el).textDecorationLine)).toContain(
+      'line-through',
+    );
   });
 
   test('leaves the editor with Escape then Tab', async ({ page }) => {

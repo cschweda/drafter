@@ -4,7 +4,14 @@ import { foldGutter, foldKeymap } from '@codemirror/language';
 import { lintKeymap, previousDiagnostic } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import { drawSelection, EditorView, keymap, lineNumbers, ViewPlugin } from '@codemirror/view';
+import {
+  drawSelection,
+  EditorView,
+  highlightActiveLine,
+  keymap,
+  lineNumbers,
+  ViewPlugin,
+} from '@codemirror/view';
 import {
   type CursorElement,
   fountain,
@@ -183,6 +190,8 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),
+    // The current line, which carries the bar that shows the editor has focus (editor/theme.ts).
+    highlightActiveLine(),
     foldGutter(),
     search(),
     EditorView.lineWrapping,

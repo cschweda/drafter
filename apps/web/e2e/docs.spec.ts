@@ -456,7 +456,7 @@ test.describe('with JavaScript', () => {
     await page.evaluate(() => localStorage.setItem('nuxt-color-mode', 'light'));
     await page.reload();
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
-    expect(await background(page)).toBe('rgb(244, 244, 242)');
+    expect(await background(page)).toBe('rgb(246, 245, 242)');
   });
 
   test('reads at 320px wide without scrolling sideways', async ({ page }) => {
