@@ -20,6 +20,8 @@ export interface CommandData {
   keys?: string;
   /** The registry binds `keys` on the whole page (see `Command.global`). */
   global?: boolean;
+  /** More words the palette's search finds it by, beside its title (Call 39). */
+  keywords?: readonly string[];
 }
 
 export interface HelpPage {
@@ -111,6 +113,15 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
   { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
+  // Deleted scenes (version-history design §3.3, §8, §9): a tab, opened and closed from here. The
+  // maintainer looks for it as "show all versions".
+  {
+    id: 'deleted-scenes',
+    title: 'Deleted scenes',
+    group: 'File',
+    icon: 'i-lucide-archive-restore',
+    keywords: ['show all versions', 'versions', 'deleted', 'cut scenes', 'put back'],
+  },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
   ...SAMPLES.map(
     (sample): CommandData => ({
@@ -148,6 +159,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Go
   { id: 'go-to-scene', title: 'Go to scene…', group: 'Go' },
   { id: 'go-to-line', title: 'Go to line…', group: 'Go' },
+  // History of this scene (version-history design §6, §8): the scene holding the cursor.
+  {
+    id: 'scene-history',
+    title: 'History of this scene…',
+    group: 'Go',
+    icon: 'i-lucide-history',
+    keywords: ['versions of this scene', 'scene versions'],
+  },
   { id: 'next-problem', title: 'Next problem', group: 'Go', keys: 'F8' },
   { id: 'previous-problem', title: 'Previous problem', group: 'Go', keys: 'Shift-F8' },
   // The spellcheck's (Plan D, Call 11): F7, the usual key, turns on caret browsing in Firefox.
@@ -165,8 +184,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
   // registry key; from anywhere else these, while a comparison is open. They sit in View with
   // Close comparison, the desktop menu's home for Compare.
+  // Show changes on the Script pane (version-history design §4.1): its title says Hide changes
+  // while it is on. Next change and Previous change go through its marks with no comparison open.
+  { id: 'show-changes', title: 'Show changes', group: 'View', icon: 'i-lucide-diff' },
   { id: 'next-change', title: 'Next change', group: 'View' },
   { id: 'previous-change', title: 'Previous change', group: 'View' },
+  // Compare's two views (version-history design §5.1, §8), while a comparison is open.
+  { id: 'compare-changes-view', title: 'Compare’s Changes view', group: 'View' },
+  { id: 'compare-pages-view', title: 'Compare’s Pages view', group: 'View' },
   { id: 'close-compare', title: 'Close comparison', group: 'View' },
   {
     id: 'focus-mode',

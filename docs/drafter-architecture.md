@@ -399,12 +399,12 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - The Structure strip (v0.15.0), described in the [README](../README.md#the-idea) and the [Structure strip design](drafter-structure-strip-design.md).
 - PDF export for Markdown documents (v0.16.0, the [Markdown PDF design](drafter-markdown-pdf-design.md)): headings, lists, quotes, code, and clickable links on numbered US Letter or A4 pages, in Inter Tight with Courier Prime for code, drawn in the export worker and working offline. The PDF isn't tagged yet, and has no bookmarks; both wait for the final accessibility steps.
 - Getting a script out the door (v0.17.0, the [out-the-door design](drafter-out-the-door-design.md)): a guided first screenplay and first stage play that teach each element as you read; export options for scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), kept per script; the running time at a rate set per script, with an estimate from the dialogue, and each scene's and act's time in the Outline and the Structure strip; and a Technical details help page.
+- Version history (v0.18.0, the [version-history design](drafter-version-history-design.md)): **Deleted scenes**, every scene in a snapshot that is in no scene of the script now, with **Put back** to its old place in one undo; **Show changes**, the Script pane's pages marked against the last save or a chosen snapshot, never printed; a **Changes** view in Compare, a GitHub-style diff of the Fountain text grouped by scene, with + and −, the changed words marked, folds, and side by side, in red and green or blue and orange (Compare's Pages view keeps its asterisks); and **History of this scene**, every version of one scene, with **Use this version**. The scenes are matched across versions by `@drafter/history` in a worker of its own, with its notes cached in a second database, `drafter-cache`.
 
 **Next:**
 
-- v0.18.0: version history with GitHub-style diffs: the scenes deleted since an earlier version, to find and put back, and additions and deletions marked the way GitHub marks a diff.
 - v0.19.0: import from Highland and Fade In (moved up from Phase 3), with `.md` listed among the imports.
-- Then Plans E to H (v0.20.0 to v0.23.0, Phase 2 design §22).
+- Then Plans E to H (v0.20.0 to v0.23.0, Phase 2 design §22), Plan E with Scaffold.
 
 **To come**
 

@@ -1,0 +1,36 @@
+{
+  "name": "@drafter/history",
+  "version": "0.17.0",
+  "description": "Version history for Drafter: scene prints, the scenes of past versions that are deleted now, one scene's versions, and where Put back goes.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/history"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/fountain": "workspace:*",
+    "@drafter/outline": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  }
+}

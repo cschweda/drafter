@@ -637,6 +637,14 @@ The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E,
 
 This release took v0.17.0, and version history (v0.18.0) and the imports (v0.19.0) come before Plan E, so Plans E to H are v0.20.0 to v0.23.0; their letters stay.
 
+### Version history — v0.18.0
+
+**Status:** built (2026-10-30). Axe checks the four new views in both themes on every project (the controller overruled the design's Call 36, which had put them off); the screen-reader listening pass waits for the final steps, as for the releases before it. See `docs/DEFERRED.md`.
+
+**Design:** [the version-history design](drafter-version-history-design.md), with its own plan in `docs/plans/2026-10-30-version-history.md`. Four things the maintainer asked for: **Deleted scenes**, a tab listing every scene in a snapshot that no scene of the script now matches, with **Put back** to its old place in one undo; **Show changes**, the Script pane's pages marked against the last save or a chosen snapshot, never printed or exported; a **Changes** view in Compare (§11.2), a GitHub-style diff of the Fountain text grouped by scene, with + and −, the changed words marked, folds, and side by side, in red and green or blue and orange (the Pages view keeps v0.13.0's asterisks, the controller's ruling on the design's Call 19); and **History of this scene**, every version of one scene, with **Use this version**. Scenes are matched across versions by a new package, `@drafter/history`, in a worker of its own, with its notes in a second database, `drafter-cache`. No new dependency.
+
+This release is v0.18.0 and changes no plan's number: Plans E to H stay v0.20.0 to v0.23.0, where v0.17.0 put them, and the imports release (Highland, Fade In, and Markdown), next, takes v0.19.0. (The version-history design's §14 gave Plans E to H as v0.19.0 to v0.22.0, moved by the imports to v0.20.0 to v0.23.0; v0.17.0 had already made that move.)
+
 ### Plan E — v0.20.0: Seeing the script
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15); and **Scaffold** (below).
@@ -765,3 +773,7 @@ Made with the Markdown PDF (2026-10-29):
 Made with getting a script out the door (2026-10-29):
 
 - **This design, §16 and §22:** v0.17.0 is listed as built, after the Markdown PDF, with [its own design](drafter-out-the-door-design.md); version history is v0.18.0 and the imports v0.19.0, so Plans E to H become v0.20.0 to v0.23.0, their letters unchanged. Plan E takes Scaffold, the maintainer's cast-and-scene panel with a page for each character and location, built on §16 and v0.17.0's per-scene timing; §16 notes that the per-script rates and the estimate from the dialogue carry into the Stats tab. **Architecture §13 and the README:** the same order, v0.17.0 among what's built, and Scaffold in Phase 2's list. **Architecture §10 and technical design §7:** Expand from outline is no longer called scaffolding, so the word names only the new feature.
+
+Made with version history (2026-10-30):
+
+- **This design, §22:** version history is listed as built, as v0.18.0 after v0.17.0, with [its own design](drafter-version-history-design.md); the imports release takes v0.19.0 and Plans E to H stay v0.20.0 to v0.23.0. Compare (§11.2) gains a Changes view beside Pages, which keeps its asterisks. **Architecture §13 and the README:** version history among what's built (the status line, What you can do today, the Phase 2 roadmap, the Packages table with `@drafter/history`, and Design documents), and "Next" names the imports (v0.19.0), then Plans E to H (v0.20.0 to v0.23.0, Plan E with Scaffold). **Technical details** (the help page and `docs/technical-details.md`): `@drafter/history` and the history worker. **Privacy:** the `drafter-cache` database.

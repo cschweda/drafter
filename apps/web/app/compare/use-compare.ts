@@ -1,10 +1,9 @@
 import {
   type Change,
   type ChangeStop,
-  changesOf,
   markPages,
   type PageMarks,
-  splitLines,
+  type RowGroup,
   stepChange,
 } from '@drafter/compare';
 import { type Doc, parse } from '@drafter/fountain';
@@ -29,6 +28,8 @@ import { createLayoutClient, type LayoutClient } from '../editor/layout-client';
 import { useEditor } from '../editor/session';
 import { templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
+import { sayOutline } from '../outline/notice';
+import { type CompareView, type DiffLayout, useSettings } from '../settings/settings';
 import { snapshotTime } from '../snapshots/history';
 import { useScript } from '../storage/script';
 import {
@@ -39,14 +40,27 @@ import {
   type TabId,
   WIDE_QUERY,
 } from '../utils/panes';
+import { SPLIT_MIN_PX } from './colors';
 import { type LineStop, stopLabel } from './labels';
+import {
+  changeStops,
+  type DiffModel,
+  diffModel,
+  type GroupStop,
+  goToScene,
+  groupStops,
+  shownView,
+  stepFromGroup,
+} from './rows';
 
-// Compare (Phase 2 design §11.2): two versions of the open script, the newer drawn as pages with
-// what changed marked. "Now" is the editor's text when Compare opened, so the marks hold still
-// while the writer reads; Update takes it again (Call 15). The newer version is laid out by a
-// layout worker of Compare's own, made when a comparison opens and ended when it closes, so the
-// Script pane's layout is untouched (Call 17). A Markdown document, or a layout that failed, is
-// drawn as marked source lines (Call 20). The tab exists only while a comparison is open (Call 16).
+// Compare (Phase 2 design §11.2): two versions of the open script, in one of two views
+// (version-history design §5.1): **Changes**, the Fountain text's diff grouped by scene, the
+// default; or **Pages**, the newer drawn as pages with what changed marked. The writer's last
+// choice is remembered (`compareView`), and a Markdown document has only Changes. "Now" is the
+// editor's text when Compare opened, so the marks hold still while the writer reads; Update takes
+// it again (Call 15). The newer version is laid out by a layout worker of Compare's own, made when
+// the Pages view is first shown and ended when the comparison closes, so the Script pane's layout
+// is untouched (Call 17). The tab exists only while a comparison is open (Call 16).
 
 export interface Version {
   /** What the slim bar calls it: "10:42", "now (10:58)". */
@@ -61,6 +75,8 @@ export interface Comparison {
   newer: Version;
   kind: DocumentKind;
   changes: Change[];
+  /** The Changes view's rows and groups; `changes` are its changes. */
+  model: DiffModel;
 }
 
 /** A pages layout of a comparison's newer text, and what was read from the same parse. */
@@ -82,6 +98,13 @@ export interface CompareSession {
   current: Readonly<ShallowRef<Comparison | null>>;
   /** Orders the two by time (now is newest), diffs them, and shows the tab. */
   open(a: Version, b: Version): void;
+  /**
+   * Opens on the Changes view at the group of the scene headed `heading` (from Deleted scenes and
+   * History of this scene): the view scrolls to it and focuses its header.
+   */
+  openAt(a: Version, b: Version, heading: string): void;
+  /** The heading `openAt` asked for, until the view has focused its group. */
+  focusScene: Ref<string | null>;
   /** Takes the editor's text as "now" again, when one side is now. */
   update(): void;
   /**
@@ -91,12 +114,34 @@ export interface CompareSession {
   close(refocus?: boolean): void;
   /** The change focused, for Next and Previous change. */
   at: Ref<number | null>;
-  /** The newer version laid out as pages, once its layout has come; null in line mode. */
+  /** The newer version laid out as pages, once its layout has come. */
   pages: Readonly<ShallowRef<ComparePages | null>>;
-  /** Drawn as source lines: a Markdown document, or a layout that failed. */
-  lines: Readonly<ComputedRef<boolean>>;
-  /** One per change, in order, for the comparison as drawn. */
+  /** The view shown: a Markdown document's is always Changes. */
+  view: Readonly<ComputedRef<CompareView>>;
+  /** Pages, offered for a script only. */
+  hasPages: Readonly<ComputedRef<boolean>>;
+  /** Chooses the view, and remembers it. */
+  setView(view: CompareView): void;
+  /** The Changes view's layout as drawn: side by side only where the pane is wide enough. */
+  layout: Readonly<ComputedRef<DiffLayout>>;
+  /** Whether the pane is wide enough for side by side (`SPLIT_MIN_PX`); the choice is hidden if not. */
+  splitAllowed: Readonly<ComputedRef<boolean>>;
+  /** Chooses the layout, and remembers it. */
+  setLayout(layout: DiffLayout): void;
+  /** The Compare pane's width, as the pane measures it. */
+  paneWidth: Ref<number>;
+  /** The newer version's pages couldn't be laid out: the Pages view says so. */
+  layoutFailed: Readonly<Ref<boolean>>;
+  /** Go to scene for a group of the Changes view: the cursor goes to it in the script now, or it says it's gone. */
+  goToGroup(group: RowGroup): void;
+  /** One per change, in order, for the comparison as drawn: where Next change goes. */
   stops: Readonly<ComputedRef<CompareStop[]>>;
+  /** The Changes view's list: one entry per group with a change (empty in the Pages view). */
+  groupList: Readonly<ComputedRef<GroupStop[]>>;
+  /** Goes to a group of the Changes list: its header gets focus, and Next change goes on from it. */
+  goToListedGroup(entry: GroupStop): void;
+  /** The group header the Changes list asked for, by its place among the shown groups. */
+  pendingGroup: Ref<number | null>;
   /** Goes to stop `index`: the pane focuses it and says its label once it is drawn. */
   go(index: number): void;
   /** Next change (1) or Previous change (-1), wrapping. */
@@ -138,12 +183,22 @@ function create(): CompareSession {
   const panes = usePanes();
   const slot = useTabSlot();
   const focus = useFocusMode();
+  const { settings, set } = useSettings();
 
   const current = shallowRef<Comparison | null>(null);
   const pages = shallowRef<ComparePages | null>(null);
   const failed = ref(false);
   const at = ref<number | null>(null);
   const pendingFocus = ref(false);
+  const focusScene = ref<string | null>(null);
+  const pendingGroup = ref<number | null>(null);
+  /** The first change of the group a Changes list entry went to, until the next step from it. */
+  let fromGroup: number | null = null;
+  /** The view `openAt` asked for, for this comparison only: the remembered one is left alone. */
+  const asked = ref<CompareView | null>(null);
+  const paneWidth = ref(0);
+  /** The comparison whose pages were asked for: the worker lays out only for the Pages view. */
+  let laidOut: Comparison | null = null;
 
   let client: LayoutClient | null = null;
   /** What each layout request was for, so a layout is marked with its own comparison. */
@@ -156,7 +211,7 @@ function create(): CompareSession {
     requests.clear();
   }
 
-  // A browser without module workers, or one that blocks them, throws here: Compare draws lines.
+  // A browser without module workers, or one that blocks them, throws here: Pages says it failed.
   function makeWorker(): LayoutClient | null {
     try {
       return createLayoutClient(
@@ -187,9 +242,10 @@ function create(): CompareSession {
     }
   }
 
-  /** Lays out the newer text of `comparison`, a Fountain script's. */
+  /** Lays out the newer text of `comparison`, a Fountain script's, once. */
   function layOut(comparison: Comparison) {
-    if (comparison.kind === 'markdown') return;
+    if (comparison.kind === 'markdown' || laidOut === comparison) return;
+    laidOut = comparison;
     client ??= makeWorker();
     if (!client) {
       failed.value = true;
@@ -202,19 +258,27 @@ function create(): CompareSession {
     requests.set(newest, { comparison, template, doc });
   }
 
+  const hasPages = computed(() => current.value?.kind !== 'markdown');
+  const view = computed<CompareView>(() =>
+    shownView(current.value?.kind ?? 'fountain', asked.value, settings.value.compareView),
+  );
+  const splitAllowed = computed(() => paneWidth.value >= SPLIT_MIN_PX);
+  const layout = computed<DiffLayout>(() =>
+    splitAllowed.value ? settings.value.diffLayout : 'unified',
+  );
+
   function compare(older: Version, newer: Version) {
-    const comparison: Comparison = {
-      older,
-      newer,
-      kind: editor.kind.value,
-      changes: changesOf(older.text, newer.text),
-    };
+    const kind = editor.kind.value;
+    const model = diffModel(older.text, newer.text, kind);
+    const comparison: Comparison = { older, newer, kind, changes: model.changes, model };
     current.value = comparison;
     pages.value = null;
     failed.value = false;
     at.value = null;
     pendingFocus.value = false;
-    layOut(comparison);
+    focusScene.value = null;
+    pendingGroup.value = null;
+    if (view.value === 'pages') layOut(comparison);
   }
 
   const wide = () => window.matchMedia(WIDE_QUERY).matches;
@@ -234,11 +298,15 @@ function create(): CompareSession {
     const shownIn = document.getElementById(`panel-${COMPARE_TAB.id}`)?.closest('[data-pane]');
     const held = refocus || (!!shownIn && shownIn.contains(document.activeElement));
     endWorker();
+    laidOut = null;
     current.value = null;
     pages.value = null;
     failed.value = false;
     at.value = null;
     pendingFocus.value = false;
+    focusScene.value = null;
+    pendingGroup.value = null;
+    asked.value = null;
     // The pane that showed it shows a core tab; focus, if it was in Compare, goes to that tab's panel.
     let after: TabId | null = null;
     const tabs = panes.tabs.value;
@@ -261,24 +329,10 @@ function create(): CompareSession {
     }
   }
 
-  const lines = computed(() => current.value?.kind === 'markdown' || failed.value);
-
   const stops = computed<CompareStop[]>(() => {
     const comparison = current.value;
     if (!comparison) return [];
-    if (lines.value) {
-      const count = splitLines(comparison.newer.text).lines.length;
-      return comparison.changes.map((change, i) => {
-        const stop: LineStop = {
-          change: i,
-          kind: change.kind,
-          // A removal sits before the line it names; at the end, after the last.
-          line: Math.max(1, Math.min(change.new[0] + 1, count)),
-          lines: change.kind === 'removed' ? change.removed.length : change.added.length,
-        };
-        return { stop, label: stopLabel(stop, null) };
-      });
-    }
+    if (view.value === 'changes') return changeStops(comparison.model);
     const drawn = pages.value;
     if (!drawn || drawn.comparison !== comparison) return [];
     return drawn.marks.stops.map((stop) => {
@@ -287,13 +341,33 @@ function create(): CompareSession {
     });
   });
 
+  const groupList = computed<GroupStop[]>(() => {
+    const comparison = current.value;
+    if (!comparison || view.value !== 'changes') return [];
+    return groupStops(comparison.model, comparison.kind);
+  });
+
+  function goToListedGroup(entry: GroupStop) {
+    // Next change goes to the group's first change; Previous change, to the one before it.
+    at.value = entry.change === 0 ? null : entry.change - 1;
+    fromGroup = entry.change;
+    pendingFocus.value = false;
+    pendingGroup.value = entry.group;
+  }
+
   function go(index: number) {
     if (index < 0 || index >= stops.value.length) return;
+    fromGroup = null;
     at.value = index;
     pendingFocus.value = true;
   }
 
   function step(direction: 1 | -1) {
+    if (fromGroup !== null && at.value === (fromGroup === 0 ? null : fromGroup - 1)) {
+      const next = stepFromGroup(stops.value.length, fromGroup, direction);
+      if (next !== null) go(next);
+      return;
+    }
     // `stepChange` reads only how many there are.
     const next = stepChange(
       stops.value.map((s) => s.stop as ChangeStop),
@@ -312,15 +386,39 @@ function create(): CompareSession {
       },
     );
     watch(editor.kind, () => close());
+    // A step's stop is the view's own: another view starts again from the top.
+    watch(view, (shown) => {
+      at.value = null;
+      pendingFocus.value = false;
+      if (shown === 'pages' && current.value) layOut(current.value);
+    });
   });
+
+  function goToGroup(group: RowGroup) {
+    const comparison = current.value;
+    if (!comparison) return;
+    const found = goToScene(group, comparison, editor.view.state.doc.toString());
+    if ('gone' in found) void sayOutline('That scene isn’t in the script now.');
+    else editor.goto(found.offset);
+  }
 
   return {
     current,
     open(a, b) {
+      asked.value = null;
       const { older, newer } = orderVersions(a, b);
       compare(older, newer);
       show();
     },
+    openAt(a, b, heading) {
+      // The group is in the Changes view; the writer's remembered view is theirs, kept for next time.
+      asked.value = 'changes';
+      const { older, newer } = orderVersions(a, b);
+      compare(older, newer);
+      focusScene.value = heading;
+      show(false);
+    },
+    focusScene,
     update() {
       const comparison = current.value;
       if (!comparison || comparison.newer.at !== null) return;
@@ -333,8 +431,22 @@ function create(): CompareSession {
     close,
     at,
     pages,
-    lines,
+    view,
+    hasPages,
+    setView: (shown) => {
+      asked.value = null;
+      void set('compareView', shown);
+    },
+    layout,
+    splitAllowed,
+    setLayout: (chosen) => void set('diffLayout', chosen),
+    paneWidth,
+    layoutFailed: failed,
+    goToGroup,
     stops,
+    groupList,
+    goToListedGroup,
+    pendingGroup,
     go,
     step,
     pendingFocus,

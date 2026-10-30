@@ -28,6 +28,7 @@ import {
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { aboutOpen } from '~/about/dialog';
+import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
@@ -40,6 +41,8 @@ import { useEditor } from '~/editor/session';
 import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
+import { useDeleted } from '~/history/deleted';
+import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
 import { runMove } from '~/outline/move';
@@ -106,11 +109,27 @@ export function registerBuiltinCommands(): void {
   const sprintOn = () => sprint.state.value.status !== 'idle';
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
-  /** Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus. */
+  const showChanges = useShowChanges();
+  const deleted = useDeleted();
+  /** Whether a pane shows the Deleted scenes tab. */
+  const deletedShown = () =>
+    window.matchMedia(WIDE_QUERY).matches
+      ? panes.tabs.value.left === 'deleted' || panes.tabs.value.right === 'deleted'
+      : panes.phoneTab.value === 'deleted';
+  /**
+   * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
+   * no comparison open, Show changes' marks on the Script pane, which shows.
+   */
   const stepChange = (direction: 1 | -1) => () => {
-    compare.show(false);
-    compare.step(direction);
+    if (comparing()) {
+      compare.show(false);
+      compare.step(direction);
+      return;
+    }
+    showTab('script', false);
+    showChanges.step(direction);
   };
+  const stepsChanges = () => comparing() || (showChanges.on.value && isFountain());
 
   // ---- When a command applies -------------------------------------------------------------
 
@@ -126,7 +145,8 @@ export function registerBuiltinCommands(): void {
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
-  function showTab(tab: TabId) {
+  /** Shows `tab`; `focusPanel` false leaves focus to the caller (Next change puts it on a mark). */
+  function showTab(tab: TabId, focusPanel = true) {
     // Focus mode shows only the Source: any other tab is for the writer to see.
     if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
@@ -136,6 +156,7 @@ export function registerBuiltinCommands(): void {
     } else {
       panes.phoneTab.value = tab;
     }
+    if (!focusPanel) return;
     void nextTick().then(() => {
       if (tab === 'source') view.focus();
       else document.getElementById(`panel-${tab}`)?.focus();
@@ -327,6 +348,17 @@ export function registerBuiltinCommands(): void {
         historyOpen.value = { focusLabel: false };
       },
     },
+    // Deleted scenes (version-history design §8, §9): opens the tab, or shows it; shown, it closes.
+    'deleted-scenes': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      liveTitle: () =>
+        deleted.isOpen.value && deletedShown() ? 'Close Deleted scenes' : 'Deleted scenes',
+      run: () => {
+        if (deleted.isOpen.value && deletedShown()) deleted.close(true);
+        else deleted.open();
+      },
+    },
     'take-snapshot': {
       enabled: hasScript,
       run: () => {
@@ -474,12 +506,32 @@ export function registerBuiltinCommands(): void {
     // Go
     'go-to-scene': { enabled: isFountain, run: () => openPalette('scene') },
     'go-to-line': { run: () => openPalette('line') },
+    // History of this scene (version-history design §6): the scene holding the cursor.
+    'scene-history': {
+      enabled: () => hasScript() && isFountain() && !!sceneAtCursor(),
+      why: () =>
+        isMarkdown()
+          ? NOT_FOR_MARKDOWN
+          : !sceneAtCursor()
+            ? 'The cursor isn’t in a scene.'
+            : undefined,
+      run: () => {
+        const scene = sceneAtCursor();
+        if (!scene) return;
+        openSceneHistory({
+          id: useOutline().idOf(scene),
+          from: scene.span.from,
+          to: scene.span.to,
+          heading: scene.heading,
+        });
+      },
+    },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
     'next-misspelling': stepSpelling(1),
     'previous-misspelling': stepSpelling(-1),
-    'next-change': { enabled: comparing, run: stepChange(1) },
-    'previous-change': { enabled: comparing, run: stepChange(-1) },
+    'next-change': { enabled: stepsChanges, run: stepChange(1) },
+    'previous-change': { enabled: stepsChanges, run: stepChange(-1) },
 
     // View
     'show-source': { run: () => showTab('source') },
@@ -491,7 +543,32 @@ export function registerBuiltinCommands(): void {
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
+    // Show changes (version-history design §4.1): the Script pane shows, marked or clean.
+    'show-changes': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? MARKDOWN_WHY : undefined),
+      liveTitle: () => (showChanges.on.value ? 'Hide changes' : 'Show changes'),
+      run: () => {
+        showChanges.toggle();
+        if (showChanges.on.value) showTab('script', false);
+      },
+    },
     // Compare's tab goes with the comparison (Call 16).
+    'compare-changes-view': {
+      enabled: comparing,
+      run: () => {
+        compare.setView('changes');
+        compare.show();
+      },
+    },
+    // A Markdown document has only the Changes view.
+    'compare-pages-view': {
+      enabled: () => comparing() && compare.hasPages.value,
+      run: () => {
+        compare.setView('pages');
+        compare.show();
+      },
+    },
     'close-compare': { enabled: comparing, run: () => compare.close() },
     'focus-mode': {
       // The key is bound on the window, so it leaves focus mode from anywhere, the editor included.

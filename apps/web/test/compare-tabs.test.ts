@@ -3,7 +3,9 @@ import { orderVersions } from '../app/compare/use-compare';
 import {
   COMPARE_TAB,
   comparePane,
+  DELETED_TAB,
   dropTab,
+  openBeside,
   openCompare,
   TABS,
   tabRow,
@@ -61,5 +63,22 @@ describe('the Compare tab', () => {
     expect(orderVersions(early, now)).toEqual({ older: early, newer: now });
     expect(orderVersions(late, early)).toEqual({ older: early, newer: late });
     expect(orderVersions(early, late)).toEqual({ older: early, newer: late });
+  });
+});
+
+describe('the Deleted scenes tab', () => {
+  test('opens, as Compare does, in the pane not showing Source, and goes as Compare does', () => {
+    expect(DELETED_TAB).toEqual({ id: 'deleted', label: 'Deleted scenes' });
+    expect(openBeside({ left: 'source', right: 'script' }, DELETED_TAB.id)).toEqual({
+      left: 'source',
+      right: 'deleted',
+    });
+    expect(openBeside({ left: 'outline', right: 'source' }, DELETED_TAB.id)).toEqual({
+      left: 'deleted',
+      right: 'source',
+    });
+    const showing = { left: 'source', right: 'deleted' };
+    expect(openBeside(showing, DELETED_TAB.id)).toBe(showing);
+    expect(dropTab(showing, DELETED_TAB.id)).toEqual({ left: 'source', right: 'script' });
   });
 });

@@ -52,6 +52,8 @@ interface Item {
   of?: number;
   icon?: string;
   kbds?: string[];
+  /** More words a command is found by (`Command.keywords`), never drawn. */
+  keywords?: readonly string[];
   onSelect: () => void;
 }
 
@@ -112,6 +114,7 @@ function itemOf(c: Command): Item {
     label: c.title,
     icon: c.icon ?? GROUP_ICON[c.group as CommandGroup] ?? 'i-lucide-puzzle',
     ...(c.keys ? { kbds: [formatKeys(c.keys, apple)] } : {}),
+    ...(c.keywords ? { keywords: c.keywords } : {}),
     onSelect: () => choose(() => c.run(), c.id),
   };
 }
@@ -137,11 +140,12 @@ const groups = computed(() => {
   return out;
 });
 
-// Every group is searched by its label alone (a scene's line number is not part of the search),
-// and a long script's scenes all show: Nuxt UI's own limit is twelve.
+// Every group is searched by its label, and a command by its keywords too ("show all versions"
+// finds Deleted scenes, Call 39); a scene's line number is not part of the search, and a long
+// script's scenes all show: Nuxt UI's own limit is twelve.
 const FUSE = {
   resultLimit: 1000,
-  fuseOptions: { keys: ['label'], threshold: 0.1, ignoreLocation: true },
+  fuseOptions: { keys: ['label', 'keywords'], threshold: 0.1, ignoreLocation: true },
   matchAllWhenSearchEmpty: true,
 };
 

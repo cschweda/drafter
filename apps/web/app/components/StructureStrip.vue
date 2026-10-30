@@ -7,11 +7,13 @@ const lastFocused = shallowRef<string | null>(null);
 
 <script setup lang="ts">
 import { type OutlineItem, rulerMarks, type StripBlock } from '@drafter/outline';
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
+import { openSceneHistory } from '~/history/scene-history';
 import { useOutline } from '~/outline/use-outline';
 import { useRates } from '~/stats/timing';
 import { scriptTopPage } from '~/strip/in-view';
-import { stripKey } from '~/strip/keys';
+import { opensMenu, stripKey } from '~/strip/keys';
 import {
   blockFill,
   blockName,
@@ -28,7 +30,10 @@ import { useStrip } from '~/strip/use-strip';
 // percentage of the axis, so a resize redraws nothing (Call 19). It edits nothing: a block goes
 // to its place as the Outline does (Call 9), the cursor's blocks are marked and the Script pane's
 // top page is on the ruler (Call 10), one card names the block under the pointer or focus (Call
-// 11), and the blocks are one Tab stop with the arrow keys between them (Call 12).
+// 11), and the blocks are one Tab stop with the arrow keys between them (Call 12). A block's menu
+// (version-history design §6.2, Call 31), from the context-menu key, Shift+F10, or a right-click,
+// has Go to and, on a scene, History of this scene…; one menu serves every block, anchored over the
+// block it is for.
 
 const { view, current, go } = useStrip();
 const outline = useOutline();
@@ -153,6 +158,12 @@ const blockEl = (id: string) =>
 const MOVES = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
 
 async function onKeydown(event: KeyboardEvent, row: number, index: number) {
+  if (opensMenu(event)) {
+    event.preventDefault();
+    const block = rows.value[row]?.blocks[index];
+    if (block) openMenuFor(block.id);
+    return;
+  }
   if (event.altKey || event.ctrlKey || event.metaKey || !MOVES.has(event.key)) return;
   event.preventDefault();
   const current = view.value;
@@ -164,6 +175,85 @@ async function onKeydown(event: KeyboardEvent, row: number, index: number) {
   await nextTick();
   blockEl(id)?.focus();
 }
+
+// ---- The block menu ---------------------------------------------------------------------------
+
+/** The block whose menu is open, and where its anchor sits over it, relative to the strip. */
+const menuFor = shallowRef<string | null>(null);
+const menuPlace = shallowRef({ left: '0px', top: '0px', width: '0px', height: '0px' });
+const menuName = computed(() => {
+  const id = menuFor.value;
+  const block = id ? rows.value.flatMap((row) => row.blocks).find((b) => b.id === id) : undefined;
+  return block ? `Actions for ${block.name}` : 'Actions';
+});
+let afterMenu: (() => void) | null = null;
+/** The block to give focus back to when the menu closes. */
+let menuBlock: string | null = null;
+
+function openMenuFor(id: string) {
+  const el = blockEl(id);
+  const band = root.value;
+  if (!el || !band) return;
+  const box = band.getBoundingClientRect();
+  const at = el.getBoundingClientRect();
+  menuPlace.value = {
+    left: `${at.left - box.left}px`,
+    top: `${at.top - box.top}px`,
+    width: `${Math.max(at.width, 2)}px`,
+    height: `${at.height}px`,
+  };
+  lastFocused.value = id;
+  menuBlock = id;
+  menuFor.value = id;
+}
+
+function onContextmenu(event: MouseEvent, id: string) {
+  event.preventDefault();
+  blockEl(id)?.focus();
+  openMenuFor(id);
+}
+
+function setMenu(open: boolean) {
+  if (!open) menuFor.value = null;
+}
+
+function onMenuCloseAutoFocus(event: Event) {
+  event.preventDefault();
+  const act = afterMenu;
+  const id = menuBlock;
+  afterMenu = null;
+  requestAnimationFrame(() => {
+    if (act) act();
+    else if (menuFor.value === null && id) blockEl(id)?.focus();
+  });
+}
+const MENU_CONTENT = { align: 'start' as const, onCloseAutoFocus: onMenuCloseAutoFocus };
+
+const menuItems = computed<DropdownMenuItem[][]>(() => {
+  const id = menuFor.value;
+  if (!id) return [];
+  const later = (act: () => void) => () => {
+    afterMenu = act;
+  };
+  const group: DropdownMenuItem[] = [
+    { label: 'Go to', icon: 'i-lucide-arrow-right', onSelect: later(() => void go(id)) },
+  ];
+  const item = items.value.get(id);
+  if (item?.kind === 'scene') {
+    group.push({
+      label: 'History of this scene…',
+      icon: 'i-lucide-history',
+      // Focus on the block first, so closing the dialog returns there.
+      onSelect: later(() => {
+        const now = items.value.get(id);
+        if (now?.kind !== 'scene') return;
+        blockEl(id)?.focus();
+        openSceneHistory({ id, from: now.span.from, to: now.span.to, heading: now.heading });
+      }),
+    });
+  }
+  return [group];
+});
 
 // ---- The card -------------------------------------------------------------------------------
 
@@ -254,6 +344,7 @@ watch(
             :tabindex="block.id === tabStop ? 0 : -1"
             :data-block="block.id"
             @click="go(block.id)"
+            @contextmenu="onContextmenu($event, block.id)"
             @keydown="onKeydown($event, r, b)"
             @focus="onFocus(block.id)"
             @blur="onBlur(block.id)"
@@ -287,6 +378,23 @@ watch(
         <div class="ruler-space" />
       </div>
     </template>
+    <MenuButton
+      :open="menuFor !== null"
+      :items="menuItems"
+      :content="MENU_CONTENT"
+      @update:open="setMenu"
+    >
+      <!-- The menu's anchor, over the block it is for: never focused, and named for the menu. -->
+      <button
+        type="button"
+        class="menu-anchor"
+        tabindex="-1"
+        aria-hidden="true"
+        :style="menuPlace"
+      >
+        <span v-if="menuFor !== null" class="sr-only">{{ menuName }}</span>
+      </button>
+    </MenuButton>
     <div
       v-if="card"
       ref="cardEl"
@@ -314,6 +422,14 @@ watch(
   color: var(--text);
   font-size: 11px;
   line-height: 18px;
+}
+.menu-anchor {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  opacity: 0;
+  pointer-events: none;
 }
 .empty {
   grid-column: 1 / -1;

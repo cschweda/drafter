@@ -299,6 +299,7 @@ test.describe('without JavaScript', () => {
       'indexeddb',
       'localstorage',
       'writing stats',
+      'drafter-cache',
     ]) {
       expect(text, phrase).toContain(phrase);
     }

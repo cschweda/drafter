@@ -5,15 +5,33 @@ import { markPage } from '~/compare/draw';
 import { useCompare } from '~/compare/use-compare';
 import { sayOutline } from '~/outline/notice';
 
-// The Compare tab (Phase 2 design §11.2): the Changes list above the newer version's pages, drawn
-// with `buildPage` and marked by `markPage` (Call 17), or its source lines (`CompareLines`, Call 20).
-// Read-only: nothing here edits. N and Shift+N go to the next and previous change while focus is
-// in the tab (Call 21); a change gets focus and its label is said once. On a phone the Changes list
-// is a collapsed `<details>` at the top.
+// The Compare tab (Phase 2 design §11.2): the Changes list above the view the slim bar chose
+// (version-history design §5.1): the Changes view (`DiffView`), or the newer version's pages, drawn
+// with `buildPage` and marked by `markPage` (Call 17). Read-only: nothing here edits. N and Shift+N
+// go to the next and previous change while focus is in the tab (Call 21); a change gets focus and
+// its label is said once. On a phone the Changes list is a collapsed `<details>` at the top.
 
 const compare = useCompare();
-const { current, pages, lines, stops } = compare;
+const { current, pages, view, layout, stops, groupList, layoutFailed } = compare;
 const wide = useWideScreen();
+const diffView = ref<{
+  revealChange(change: number): Promise<HTMLElement | null>;
+  focusHeading(heading: string): Promise<boolean>;
+  focusGroup(index: number): Promise<boolean>;
+}>();
+
+/**
+ * The Changes list's entries: in the Changes view one per group (a rename across the script lists
+ * its scenes, not each line), going to the group's header; in Pages one per change.
+ */
+const entries = computed(() =>
+  view.value === 'changes'
+    ? groupList.value.map((entry) => ({
+        label: entry.label,
+        go: () => compare.goToListedGroup(entry),
+      }))
+    : stops.value.map((stop, i) => ({ label: stop.label, go: () => compare.go(i) })),
+);
 
 const root = ref<HTMLElement>();
 const sheet = ref<HTMLElement>();
@@ -55,7 +73,10 @@ async function focusPending() {
   const index = compare.at.value;
   const stop = index === null ? undefined : stops.value[index];
   if (!stop) return;
-  const target = root.value?.querySelector<HTMLElement>(`[data-change="${stop.stop.change}"]`);
+  const target =
+    view.value === 'changes'
+      ? await diffView.value?.revealChange(stop.stop.change)
+      : sheet.value?.querySelector<HTMLElement>(`[data-change="${stop.stop.change}"]`);
   if (!target) return;
   compare.pendingFocus.value = false;
   target.focus({ preventScroll: true });
@@ -94,7 +115,10 @@ let observer: ResizeObserver | undefined;
 onMounted(() => {
   panel = root.value?.closest<HTMLElement>('[role="tabpanel"]') ?? root.value ?? null;
   panel?.addEventListener('keydown', onKeydown);
-  observer = new ResizeObserver(() => applyZoom());
+  observer = new ResizeObserver(() => {
+    applyZoom();
+    compare.paneWidth.value = root.value?.clientWidth ?? 0;
+  });
   if (root.value) observer.observe(root.value);
   if (probe.value) observer.observe(probe.value);
   draw();
@@ -105,33 +129,64 @@ onBeforeUnmount(() => {
 });
 
 watch(pages, draw);
-watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending());
+watch([compare.pendingFocus, compare.at, view, stops], () => void focusPending());
+
+/** Opened at a scene (from Deleted scenes or History of this scene): its group's header gets focus. */
+async function focusScene() {
+  const heading = compare.focusScene.value;
+  if (heading === null || view.value !== 'changes' || !diffView.value) return;
+  compare.focusScene.value = null;
+  await diffView.value.focusHeading(heading);
+}
+watch([compare.focusScene, diffView], () => void focusScene(), { flush: 'post' });
+
+/** The Changes list's group entry: its header gets focus. */
+async function focusListedGroup() {
+  const index = compare.pendingGroup.value;
+  if (index === null || view.value !== 'changes' || !diffView.value) return;
+  compare.pendingGroup.value = null;
+  await diffView.value.focusGroup(index);
+}
+watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 'post' });
 </script>
 
 <template>
   <div ref="root" class="compare-host">
     <template v-if="current">
       <details v-if="!wide" class="changes">
-        <summary>Changes ({{ stops.length }})</summary>
-        <ul v-if="stops.length > 0">
-          <li v-for="(stop, i) in stops" :key="i">
-            <button type="button" class="change" @click="compare.go(i)">{{ stop.label }}</button>
+        <summary>Changes ({{ entries.length }})</summary>
+        <ul v-if="entries.length > 0">
+          <li v-for="(entry, i) in entries" :key="i">
+            <button type="button" class="change" @click="entry.go()">{{ entry.label }}</button>
           </li>
         </ul>
       </details>
       <section v-else class="changes" aria-labelledby="compare-changes-title">
         <h2 id="compare-changes-title" class="changes-title">Changes</h2>
-        <ul v-if="stops.length > 0">
-          <li v-for="(stop, i) in stops" :key="i">
-            <button type="button" class="change" @click="compare.go(i)">{{ stop.label }}</button>
+        <ul v-if="entries.length > 0">
+          <li v-for="(entry, i) in entries" :key="i">
+            <button type="button" class="change" @click="entry.go()">{{ entry.label }}</button>
           </li>
         </ul>
       </section>
-      <p v-if="current.changes.length === 0" class="note">
-        No changes: the two versions are the same.
-      </p>
-      <p v-else-if="!lines && !pages" role="status" class="note">Laying out the pages…</p>
-      <CompareLines v-if="lines" :text="current.newer.text" :changes="current.changes" />
+      <DiffView
+        v-if="view === 'changes'"
+        ref="diffView"
+        :model="current.model"
+        :kind="current.kind"
+        :layout="layout"
+        :labels="{ before: current.older.label, after: current.newer.label }"
+        @go="compare.goToGroup"
+      />
+      <template v-else>
+        <p v-if="current.changes.length === 0" class="note">
+          No changes: the two versions are the same.
+        </p>
+        <p v-else-if="layoutFailed" class="note">
+          The pages couldn’t be laid out. The Changes view shows every change.
+        </p>
+        <p v-else-if="!pages" role="status" class="note">Laying out the pages…</p>
+      </template>
     </template>
     <div
       ref="probe"
@@ -140,7 +195,7 @@ watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending(
       aria-hidden="true"
     />
     <section
-      v-show="!lines"
+      v-show="view === 'pages'"
       ref="sheet"
       class="drafter-script pages"
       aria-label="The newer version"
@@ -228,20 +283,22 @@ watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending(
 .pages :deep(.compare-star) {
   font-weight: bold;
 }
-/* A thin rule between two rows, with its button in the left margin. */
+/* A thin rule in the blank row above the line the lines were before (or on that row's edge), with
+   its button in the left margin; the lines it shows open to the button's right from the next row
+   edge, a whole number of rows high, so the box never cuts a line in two (`gapPlace`). */
 .pages :deep(.compare-gap) {
   position: absolute;
-  top: calc(var(--row) * var(--line));
+  top: calc(var(--row) * var(--line) - 1px);
   left: 1ch;
   right: 1ch;
   height: 0;
+  display: flex;
+  align-items: flex-start;
   border-top: 1px dashed currentColor;
   z-index: 1;
 }
 .pages :deep(.compare-gap-button) {
-  position: absolute;
-  top: 0;
-  left: 0;
+  flex: none;
   transform: translateY(-50%);
   padding: 0 4px;
   border: 1px solid currentColor;
@@ -253,14 +310,14 @@ watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending(
   cursor: pointer;
 }
 .pages :deep(.compare-gap-lines) {
-  position: absolute;
-  top: calc(var(--line) / 2);
-  left: 12ch;
-  right: 4ch;
-  padding: 4px 8px;
-  border: 1px solid currentColor;
+  flex: 1;
+  min-width: 0;
+  margin: calc(var(--drop) * var(--line)) 0 0 8px;
+  padding: 0 8px;
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 2px 6px rgb(0 0 0 / 20%);
   background: var(--drafter-page, #fff);
-  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 .pages :deep(.compare-gap-lines ins),
 .pages :deep(.compare-gap-lines del) {
@@ -270,5 +327,9 @@ watch([compare.pendingFocus, compare.at, lines, stops], () => void focusPending(
 }
 .pages :deep(.compare-gap-lines ins) {
   text-decoration: none;
+}
+.pages :deep(.change-said) {
+  -webkit-user-select: none;
+  user-select: none;
 }
 </style>

@@ -279,7 +279,14 @@ test.describe('offline', () => {
     expect(stored.urls).toContain('/');
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.js$/.test(u))).toBe(true);
     expect(stored.urls.some((u) => /^\/_nuxt\/.+\.css$/.test(u))).toBe(true);
-    for (const worker of ['layout.worker', 'export.worker', 'markdown.worker', 'spell.worker']) {
+    // The history worker too: Deleted scenes and History of this scene read the snapshots in it.
+    for (const worker of [
+      'layout.worker',
+      'export.worker',
+      'markdown.worker',
+      'spell.worker',
+      'history.worker',
+    ]) {
       expect(stored.urls.some((u) => u.includes(worker))).toBe(true);
     }
     // Inter Tight: the interface's two files, and the four styles a Markdown document's PDF embeds.

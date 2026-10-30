@@ -198,6 +198,7 @@ onBeforeUnmount(() => {
     <SettingsDialog />
     <StatsDialog />
     <HistoryDialog />
+    <SceneHistoryDialog />
     <AboutDialog />
     <UpdateCheckDialog />
     <AppTour />

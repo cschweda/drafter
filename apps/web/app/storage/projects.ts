@@ -2,6 +2,7 @@ import { type DrafterMeta, parse } from '@drafter/fountain';
 import type { SampleKind } from '../editor/sample-kinds';
 import type { StarterKind } from '../editor/starter-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
+import { clearProjectCache } from '../history/cache';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
@@ -195,7 +196,7 @@ export async function writeSource(
   });
 }
 
-/** Also deletes its snapshot, its file handle, its goal, its days' counts, and its writing time; never touches the file. */
+/** Also deletes its snapshots, its file handle, its goal, its days’ counts, its writing time, and its rows in the prints cache; never touches the file. */
 export async function removeProject(id: string): Promise<void> {
   await db.transaction('rw', db.projects, db.snapshots, db.handles, db.settings, async () => {
     await db.settings.delete(goalKey(id));
@@ -212,6 +213,10 @@ export async function removeProject(id: string): Promise<void> {
     await db.snapshots.where('projectId').equals(id).delete();
     await db.projects.delete(id);
   });
+  // The prints cache is another database, so it's cleared after (version-history design §3.6): it
+  // holds the script's scene headings and previews, which must not outlive it. A failure here
+  // leaves rows nothing reads, and doesn't undo the removal.
+  await clearProjectCache(id).catch(() => undefined);
 }
 
 // The text as last saved to its file (technical design §8.4): one snapshot a

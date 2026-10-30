@@ -16,6 +16,14 @@ describe('the command data', () => {
     }
   });
 
+  test('Deleted scenes is in File, after History, and found by "show all versions"', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('deleted-scenes')).toBe(ids.indexOf('history') + 1);
+    const deleted = COMMAND_DATA.find((c) => c.id === 'deleted-scenes');
+    expect(deleted).toMatchObject({ title: 'Deleted scenes', group: 'File' });
+    expect(deleted?.keywords).toEqual(expect.arrayContaining(['show all versions', 'versions']));
+  });
+
   test('has no key twice, and no key it cannot format', () => {
     const keys = COMMAND_DATA.flatMap((c) => (c.keys ? [c.keys.toLowerCase()] : []));
     expect(new Set(keys).size).toBe(keys.length);

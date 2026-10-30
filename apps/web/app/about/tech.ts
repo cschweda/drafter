@@ -61,6 +61,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/compare',
       '@drafter/fdx',
       '@drafter/fountain',
+      '@drafter/history',
       '@drafter/layout',
       '@drafter/lint',
       '@drafter/notes',
@@ -100,8 +101,13 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/compare',
-    does: 'Compare: a line-by-line diff of two versions of a script, and where each change falls on the pages.',
+    does: 'Compare and Show changes: a line and word diff of two versions of a script, its rows, folds, and scene groups for the Changes view, and where each change falls on the pages.',
     uses: ['@drafter/fountain', '@drafter/layout'],
+  },
+  {
+    name: '@drafter/history',
+    does: 'Version history: which scenes of past versions are gone now, one scene’s versions, and where Put back goes.',
+    uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
   },
   {
     name: '@drafter/render-pdf',
@@ -360,6 +366,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**Only one tab edits a script.** A second tab with the same script open shows it read-only, so two tabs never write one recovery copy.',
           '**Save** goes through one interface, `FileAccess`. In Chrome and Edge it uses the File System Access API to save back to the file you opened; Firefox and Safari can’t, so Save downloads a complete copy. The desktop app reads and writes files by path, through its main process.',
           '**Snapshots** are copies of the whole text, in the `snapshots` table: after every 10 minutes of writing, when you save or open a file, before a change that rewrites much of it, and when you ask for one. They are compressed where the browser can, and thinned out as they age.',
+          '**Version history** reads the snapshots in a worker of its own (`history.worker.ts`), newest first: `@drafter/history` parses each one, notes each scene’s heading, a hash of its text, and a sketch of its wording, and matches scenes across versions, for Deleted scenes and History of this scene. The notes are cached in a second database, `drafter-cache`, so no snapshot is read twice, and removing a script removes them. Show changes and Compare’s Changes view are `@drafter/compare`’s line and word diff; Show changes’ marks come from the layout worker, after the pages.',
         ],
       },
     ],

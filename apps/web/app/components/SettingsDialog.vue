@@ -2,6 +2,7 @@
 import { DICTIONARIES, SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
 import type { Paper } from '@drafter/templates';
 import { HELP_PAGES, helpHref } from '~/commands/data';
+import { DIFF_COLOR_NAMES, DIFF_COLORS, type DiffColors } from '~/compare/colors';
 import { desktop } from '~/desktop';
 import { settingsOpen } from '~/settings/dialog';
 import { PAPERS, type Settings, TEXT_SIZES, useSettings } from '~/settings/settings';
@@ -122,6 +123,12 @@ function onSize(event: Event) {
   void set('textSize', Number((event.target as HTMLSelectElement).value));
 }
 
+// ---- Colors for changes (version-history design §7) -----------------------------------------
+
+function onDiffColors(event: Event) {
+  void set('diffColors', (event.target as HTMLSelectElement).value as DiffColors);
+}
+
 // ---- Spelling (Plan D, Calls 3, 8, and 9) ----------------------------------------------------
 
 function onLanguage(event: Event) {
@@ -181,6 +188,26 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
       >
         <option v-for="size in TEXT_SIZES" :key="size" :value="String(size)">
           {{ percent(size) }}
+        </option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="text">
+        <label for="settings-diff-colors" class="name">Colors for changes</label>
+        <p id="settings-diff-colors-why" class="why">
+          The colors Compare marks added and removed lines with. Blue and orange are easier to
+          tell apart for many people who see red and green as alike.
+        </p>
+      </div>
+      <select
+        id="settings-diff-colors"
+        class="size"
+        aria-describedby="settings-diff-colors-why"
+        :value="settings.diffColors"
+        @change="onDiffColors"
+      >
+        <option v-for="colors in DIFF_COLORS" :key="colors" :value="colors">
+          {{ DIFF_COLOR_NAMES[colors] }}
         </option>
       </select>
     </div>

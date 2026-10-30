@@ -23,6 +23,8 @@ export interface Command {
    * keymap, which already has them; the registry only lists them.
    */
   global?: boolean;
+  /** More words the palette's search finds it by, beside its title. */
+  keywords?: readonly string[];
 }
 
 const commands = shallowRef<readonly Command[]>([]);

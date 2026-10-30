@@ -93,6 +93,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../../packages/fountain
+      '@drafter/history':
+        specifier: workspace:*
+        version: link:../../packages/history
       '@drafter/layout':
         specifier: workspace:*
         version: link:../../packages/layout
@@ -244,6 +247,18 @@ importers:
         version: link:../templates
 
   packages/fountain: {}
+
+  packages/history:
+    dependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
 
   packages/layout:
     dependencies:

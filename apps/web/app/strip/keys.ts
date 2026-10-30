@@ -61,3 +61,14 @@ export function stripKey(strip: Strip, at: StripPlace, key: string): StripPlace 
       return null;
   }
 }
+
+/**
+ * Whether a key opens the focused block's menu (version-history design §6.2, Call 31): the
+ * context-menu key, or Shift+F10, with no other modifier.
+ */
+export function opensMenu(
+  event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'altKey' | 'ctrlKey' | 'metaKey'>,
+): boolean {
+  if (event.altKey || event.ctrlKey || event.metaKey) return false;
+  return event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey);
+}

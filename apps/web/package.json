@@ -27,6 +27,7 @@
     "@drafter/compare": "workspace:*",
     "@drafter/fdx": "workspace:*",
     "@drafter/fountain": "workspace:*",
+    "@drafter/history": "workspace:*",
     "@drafter/layout": "workspace:*",
     "@drafter/lint": "workspace:*",
     "@drafter/notes": "workspace:*",
