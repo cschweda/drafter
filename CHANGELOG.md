@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-30
+
+**Export as HTML and EPUB, and open formats said plainly.** A script or document exports as one web page that opens anywhere with no connection (dark, with a light switch; the exact pages or a reading view), or as an e-book for an e-reader or a tablet; `drafter build --html` does the same from the command line; and a new Open formats help page, with About, links to the open, public-domain specification of the `.drafter` package.
+
 ### Added
 
 - **Export as HTML: one web page that opens anywhere, with no connection.** Export → HTML (in the Export menu, the app menu, the command palette, and the desktop app's File › Export) saves a screenplay, a stage play, or a Markdown document as one `.html` file to send to anyone: it opens in any browser, on a computer or a phone, with nothing to install and nothing loaded from the internet. A script's page opens on its **Pages**, laid out exactly as the Script tab shows them, in Courier Prime; **Reading** shows the same script as a page to read, each speech under its character's name in a color of its own, with a band of the acts and scenes along the top to jump to, and a line over the title giving the kind, the page count, and the running time at your own minutes a page. A Markdown document's page is the document as the Preview draws it, with its links and footnotes, and its words and reading time. It opens dark, with a switch to light; the reader's choices are remembered in their browser, printing gives light pages, one script page to a sheet, and with JavaScript off the page still shows everything. The export options' scene numbers and title page apply, and your notes are in Reading only if you choose Include notes. Open refuses a web page ("Drafter can’t open a web page … Open the script it was made from instead."), and the desktop app writes an `.html` only where you chose to save an export. A 120-page script's page is under 1 MB.
@@ -901,7 +905,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.21.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/cschweda/drafter/compare/v0.21.1...v0.22.0
 [0.21.1]: https://github.com/cschweda/drafter/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/cschweda/drafter/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/cschweda/drafter/compare/v0.19.1...v0.20.0
