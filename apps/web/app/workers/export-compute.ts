@@ -4,6 +4,7 @@ import { paginate, type SceneNumbering, type TitlePageMode, titlePageFor } from 
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
 import {
   type FontStyle,
+  kindLine,
   renderDocumentHtml,
   renderScriptHtml,
   stylesUsed,
@@ -20,8 +21,6 @@ import {
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import type { Paper, Template } from '@drafter/templates';
-import { isBuiltIn, TEMPLATE_NAMES } from '../editor/template';
-import { countScript, runningTime } from '../stats/count';
 import {
   type ProgressReporter,
   progressReporter,
@@ -137,28 +136,6 @@ export async function fetchDocumentFonts(
   return Object.fromEntries(loaded) as unknown as DocumentFontSet;
 }
 
-/**
- * The small line over an HTML file's title (design §3.3): the template's kind, the printed pages,
- * and the running time as Stats shows it, `pages` (to a tenth, `countScript`'s) at the script's
- * own rate, in whole minutes: "Stage play · 94 pages · About 1 h 52 min". `printed` is the pages
- * the file draws, the title page left out.
- */
-export function scriptKindLine(
-  template: Template,
-  printed: number,
-  pages: number,
-  minutesPerPage: number,
-): string {
-  // Only the built-in templates have a kind's name: the app shows any other script as a
-  // screenplay (`templateIdOf`), so that is its name here. A template of the writer's own (not
-  // yet in Drafter) will need a name of its own for this line.
-  const kind = isBuiltIn(template.id)
-    ? TEMPLATE_NAMES[template.id]
-    : TEMPLATE_NAMES['us-screenplay'];
-  const count = `${printed.toLocaleString('en-US')} ${printed === 1 ? 'page' : 'pages'}`;
-  return `${kind} · ${count} · ${runningTime(Math.round(pages * minutesPerPage))}`;
-}
-
 /** A render's progress as the export's: saving says nothing until it ends, so it is unknown. */
 const rendering =
   (report: ProgressReporter) =>
@@ -235,8 +212,6 @@ export function createExporter(
     if (request.kind === 'html') {
       // Only the styles the pages draw in: the file embeds no other.
       const used = [...stylesUsed(layout)].map((style) => [style, fonts[style]] as const);
-      const printed = layout.pages.filter((page) => page.number > 0).length;
-      const { pages } = countScript(doc, layout, template);
       return {
         data: renderScriptHtml({
           doc,
@@ -247,7 +222,7 @@ export function createExporter(
           title: request.title,
           lang: request.lang,
           generator: request.generator,
-          kindLine: scriptKindLine(template, printed, pages, request.minutesPerPage),
+          kindLine: kindLine(layout, template, request.minutesPerPage),
         }),
       };
     }

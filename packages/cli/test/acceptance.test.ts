@@ -52,6 +52,9 @@ describe('pnpm drafter, from the repository root', () => {
       const out = join(dir(), 'sample.pdf');
       expect(pnpmDrafter('build', file, '--pdf', out).status).toBe(0);
       expect(existsSync(out)).toBe(true);
+      const html = join(dir(), 'sample.html');
+      expect(pnpmDrafter('build', file, '--html', html).status).toBe(0);
+      expect(readFileSync(html, 'utf8')).toContain('class="reading"');
     }
     expect(pnpmDrafter('check', 'samples/stage-play.fountain').stdout).toContain(
       '(stage-play-standard)',
@@ -98,4 +101,24 @@ describe('pnpm drafter, from the repository root', () => {
       }
     });
   });
+});
+
+describe('the CLI, imported in Node', () => {
+  it('loads no Markdown parser', () => {
+    const script = `
+      import { registerHooks } from 'node:module';
+      import { pathToFileURL } from 'node:url';
+      const seen = [];
+      registerHooks({ resolve(s, c, next) { const r = next(s, c); seen.push(r.url); return r; } });
+      await import(pathToFileURL(${JSON.stringify(repo('packages/cli/dist/cli.js'))}).href);
+      console.log(JSON.stringify(seen));
+    `;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      encoding: 'utf8',
+    });
+    expect(result.status, result.stderr).toBe(0);
+    const loaded = JSON.parse(result.stdout) as string[];
+    expect(loaded.some((url) => url.includes('render-html-file'))).toBe(true);
+    expect(loaded.filter((url) => /mdast-util-from-markdown|micromark/.test(url))).toEqual([]);
+  }, 30_000);
 });

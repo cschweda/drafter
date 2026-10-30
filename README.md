@@ -104,7 +104,7 @@ Either pane can be collapsed, for "just write" or "just read."
 - **Stage plays as a first-class format.** A Dramatists Guild–style template and a documented convention for writing plays in standard Fountain.
 - **Runs anywhere with a browser.** Chromebook, Linux, Windows, Mac, or iPad, with no install and no sign-up, and offline once installed as an app.
 - **Accessibility as a feature.** WCAG 2.2 AA is the target, checked automatically with axe in every major state; testing with screen readers comes [last](#roadmap). A screen-reader user can navigate the rendered script by structure, and every drag-and-drop has a keyboard equivalent.
-- **The engine is a library.** The parser and pagination engine are standalone packages, so they also power a CLI (`drafter build script.fountain --pdf script.pdf`), CI checks, and other tools.
+- **The engine is a library.** The parser and pagination engine are standalone packages, so they also power a CLI (`drafter build script.fountain --pdf script.pdf`, or `--html script.html`), CI checks, and other tools.
 - **Table read** (Phase 4). The browser's speech synthesis reads the script aloud with a different voice for each character.
 
 ## How it works
@@ -158,6 +158,7 @@ The same code runs in a terminal ([Development](#development) shows how to build
 
 ```sh
 drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text
+drafter build script.fountain --html script.html   # one HTML page, pages and reading view, to open anywhere
 drafter convert MyScript.fdx                      # MyScript.fountain, beside it
 drafter convert ~/Scripts                         # every .fdx, .highland, and .fadein in the folder
 drafter convert ~/Scripts --recursive             # and in its subfolders
@@ -198,7 +199,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
 | `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight | 0 (Markdown documents in 2) |
-| `@drafter/cli` | `drafter build`, `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
+| `@drafter/cli` | `drafter build` (PDF, HTML, text, JSON), `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-html-file` | Export as HTML: a script or a Markdown document as one self-contained, offline `.html` file, dark by default, with a light switch | 2 (in progress for v0.22.0) |

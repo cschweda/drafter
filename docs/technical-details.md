@@ -64,6 +64,7 @@ flowchart BT
   render_text --> web
   spell --> web
   archive --> cli
+  render_html_file --> cli
   render_pdf --> cli
   render_text --> cli
   lint --> cm_fountain

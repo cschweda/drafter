@@ -1,9 +1,10 @@
 # @drafter/cli
 
-The [Drafter](https://github.com/cschweda/drafter) command line: lays out a Fountain script and writes it as a PDF, fixed-width text, or JSON, or checks it for problems; and converts Final Draft, Highland, and Fade In files to Fountain, many at once.
+The [Drafter](https://github.com/cschweda/drafter) command line: lays out a Fountain script and writes it as a PDF, an HTML page, fixed-width text, or JSON, or checks it for problems; and converts Final Draft, Highland, and Fade In files to Fountain, many at once.
 
 ```sh
 drafter build script.fountain                       # writes script.pdf
+drafter build script.fountain --html script.html   # one page to open anywhere, offline
 drafter build script.fountain --pdf draft.pdf --txt draft.txt --json draft.json
 drafter build play.fountain --template stage-play-standard --txt -
 drafter check script.fountain                       # exits 1 if anything is an error
@@ -20,6 +21,7 @@ In this repository, run it from the root as `pnpm drafter …` after `pnpm -r bu
 | Option | What it does |
 |---|---|
 | `--pdf <file>` | Write a PDF, with Courier Prime embedded. With no output named, `script.fountain` becomes `script.pdf`. |
+| `--html <file>` | Write one self-contained HTML page: the printed pages and a reading view, dark by default with a light switch, Courier Prime embedded, no network needed. The running time in its header is a page a minute, since the command line has no per-script rate. Notes are left out (there is no notes option here; the app's Export as HTML can include them). |
 | `--txt <file>` | Write fixed-width text: each page the full width and height of its grid, margins included, pages separated by form feeds. |
 | `--json <file>` | Write the parsed script as JSON (`toJSON` from `@drafter/fountain`). |
 | `--template <id\|file>` | A built-in template (`us-screenplay`, `stage-play-standard`) or a template JSON file. |

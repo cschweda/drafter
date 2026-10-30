@@ -203,6 +203,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+      '@drafter/render-html-file':
+        specifier: workspace:*
+        version: link:../render-html-file
       '@drafter/render-pdf':
         specifier: workspace:*
         version: link:../render-pdf

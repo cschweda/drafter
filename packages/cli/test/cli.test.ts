@@ -38,6 +38,54 @@ describe('drafter build', () => {
     expect(decode(pdf.bytes.subarray(0, 5))).toBe('%PDF-');
   });
 
+  it('writes an HTML file with --html', async () => {
+    const out = join(dir(), 's.html');
+    const result = await drafter('build', short, '--html', out);
+    expect(result.code, result.err).toBe(0);
+    const html = readFileSync(out, 'utf8');
+    expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
+    expect(html).toContain('data-view="pages"');
+    expect(html).toContain('@font-face');
+    expect(html).toContain('<html lang="en"');
+    expect(html).toMatch(/Screenplay · 3\.?\d* pages?|Screenplay · \d+ pages/);
+    expect(html).toContain('About ');
+    expect(html).toMatch(/name="generator" content="Drafter \d/);
+    expect(result.err).toContain('s.html');
+    // No file in the build writes a PDF unless asked.
+    expect(existsSync(join(dir(), 's.pdf'))).toBe(false);
+  });
+
+  it('writes --html to standard output for -', async () => {
+    const result = await drafter('build', short, '--html', '-');
+    expect(result.code).toBe(0);
+    expect(result.out.startsWith('<!DOCTYPE html>')).toBe(true);
+  });
+
+  it('numbers the scenes in --html with --scene-numbers', async () => {
+    const plain = await drafter('build', short, '--html', '-');
+    const numbered = await drafter('build', short, '--html', '-', '--scene-numbers');
+    expect(plain.out).not.toContain('class="sn"');
+    expect(numbered.out).toContain('class="sn"');
+  });
+
+  it('leaves the notes out of --html', async () => {
+    const script = join(dir(), 'n.fountain');
+    writeFileSync(script, 'INT. HALL - DAY\n\nA door. [[remember the key]]\n');
+    const result = await drafter('build', script, '--html', '-');
+    expect(result.out).not.toContain('remember the key');
+  });
+
+  it('refuses --html - with another output to standard output', async () => {
+    const result = await drafter('build', short, '--html', '-', '--pdf', '-');
+    expect(result.code).toBe(1);
+    expect(result.err).toMatch(/standard output/);
+  });
+
+  it('lists --html in the help', async () => {
+    const help = await drafter('build', '--help');
+    expect(help.out).toContain('--html <file>');
+  });
+
   it('sends only one output to standard output', async () => {
     const result = await drafter('build', short, '--txt', '-', '--json', '-');
     expect(result.code).toBe(1);

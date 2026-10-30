@@ -83,12 +83,13 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/cli',
-    does: 'The command line: `drafter build` writes a script as PDF, text, or JSON, `drafter check` reports its problems, and `drafter convert` turns Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files into Fountain, many at once.',
+    does: 'The command line: `drafter build` writes a script as PDF, HTML, text, or JSON, `drafter check` reports its problems, and `drafter convert` turns Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files into Fountain, many at once.',
     uses: [
       '@drafter/archive',
       '@drafter/fdx',
       '@drafter/fountain',
       '@drafter/layout',
+      '@drafter/render-html-file',
       '@drafter/render-pdf',
       '@drafter/render-text',
       '@drafter/templates',

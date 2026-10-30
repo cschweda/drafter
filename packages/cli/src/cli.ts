@@ -1,8 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { extname, resolve } from 'node:path';
+import { basename, extname, resolve } from 'node:path';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
 import { type Layout, paginate, UnsupportedTemplateError } from '@drafter/layout';
+import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
@@ -55,6 +56,7 @@ interface BuildOptions {
   pdf?: string;
   txt?: string;
   json?: string;
+  html?: string;
   template?: string;
   sceneNumbers?: boolean;
 }
@@ -92,7 +94,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   const program = new Command('drafter')
     .description(
-      'Lays out Fountain screenplays and stage plays, and writes them as PDF, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
+      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
     )
     .version(pkg.version)
     .exitOverride()
@@ -101,11 +103,15 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   program
     .command('build')
-    .description('Lay out a script and write it as PDF, fixed-width text, or JSON.')
+    .description('Lay out a script and write it as PDF, HTML, fixed-width text, or JSON.')
     .argument('<input>', 'the .fountain file')
     .option('--pdf <file>', "write a PDF (with no output named, the input's name ending in .pdf)")
     .option('--txt <file>', 'write fixed-width text, page by page')
     .option('--json <file>', 'write the parsed script as JSON')
+    .option(
+      '--html <file>',
+      'write a self-contained HTML page: printed pages and a reading view, dark and light (notes left out)',
+    )
     .option('--template <id|file>', templateHelp)
     .option('--scene-numbers', 'print scene numbers')
     .option('--no-scene-numbers', "don't print scene numbers, whatever the template says")
@@ -147,8 +153,8 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 }
 
 async function build(input: string, options: BuildOptions, io: IO): Promise<number> {
-  const outputs: Array<['pdf' | 'txt' | 'json', string]> = [];
-  for (const kind of ['pdf', 'txt', 'json'] as const) {
+  const outputs: Array<['pdf' | 'txt' | 'json' | 'html', string]> = [];
+  for (const kind of ['pdf', 'html', 'txt', 'json'] as const) {
     const target = options[kind];
     if (target !== undefined) outputs.push([kind, target]);
   }
@@ -178,14 +184,49 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     const data =
       kind === 'pdf'
         ? await renderPdf(layout, template, { fonts: await loadFonts() })
-        : kind === 'txt'
-          ? renderText(layout, template)
-          : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
+        : kind === 'html'
+          ? await scriptHtml(input, doc, template, layout)
+          : kind === 'txt'
+            ? renderText(layout, template)
+            : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
     await emit(target, data, io);
   }
   const written = outputs.map(([, target]) => (target === '-' ? 'standard output' : target));
   io.err(`${input}: ${pages(layout)} (${template.id}) → ${written.join(', ')}\n`);
   return 0;
+}
+
+/**
+ * The script as one HTML page: both views, the notes left out, and Courier Prime embedded in the
+ * styles the pages use. The CLI has no per-script rate, so the header's running time is a page a
+ * minute (the app's default).
+ */
+async function scriptHtml(
+  input: string,
+  doc: Doc,
+  template: Template,
+  layout: Layout,
+): Promise<string> {
+  const fonts = await loadFonts();
+  const used = Object.fromEntries(
+    [...stylesUsed(layout)].map((style) => [style, fonts[style]] as const),
+  ) as Partial<Record<FontStyle, Uint8Array>>;
+  const title = doc.titlePage?.fields.find((f) => f.key.trim().toLowerCase() === 'title');
+  const named = title?.runs
+    .map((runs) => runs.map((run) => run.text).join(''))
+    .join(' ')
+    .trim();
+  return renderScriptHtml({
+    doc,
+    layout,
+    template,
+    notes: 'leave-out',
+    fonts: used,
+    title: named || basename(input, extname(input)),
+    lang: 'en',
+    generator: `Drafter ${pkg.version}`,
+    kindLine: kindLine(layout, template, 1),
+  });
 }
 
 async function check(input: string, options: BuildOptions, io: IO): Promise<number> {

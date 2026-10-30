@@ -4,7 +4,12 @@ import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate, titlePageFor } from '@drafter/layout';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
-import { renderDocumentHtml, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
+import {
+  runningTime as packageRunningTime,
+  renderDocumentHtml,
+  renderScriptHtml,
+  stylesUsed,
+} from '@drafter/render-html-file';
 import {
   DOCUMENT_FONT_FILES,
   type DocumentFontSet,
@@ -297,7 +302,7 @@ describe('the export worker’s options', () => {
 });
 
 describe('the export worker’s HTML', () => {
-  const { createExporter, scriptKindLine } = compute;
+  const { createExporter } = compute;
   const SCRIPT = [
     'Title: The Call',
     'Author: A. Writer',
@@ -423,11 +428,10 @@ describe('the export worker’s HTML', () => {
     expect(play).toContain('<p class="kind">Stage play · 1 page · Under a minute</p>');
   });
 
-  test('scriptKindLine counts one page, and many', () => {
-    expect(scriptKindLine(template, 1, 0.4, 1)).toBe('Screenplay · 1 page · Under a minute');
-    expect(scriptKindLine(builtins['stage-play-standard'], 94, 93.5, 1.2)).toBe(
-      'Stage play · 94 pages · About 1 h 52 min',
-    );
+  test('the package’s running time says what Stats says, over 0 to 600 minutes', () => {
+    for (let minutes = 0; minutes <= 600; minutes++) {
+      expect(packageRunningTime(minutes), `${minutes}`).toBe(runningTime(minutes));
+    }
   });
 
   test('builds an html file from a Markdown document', async () => {
