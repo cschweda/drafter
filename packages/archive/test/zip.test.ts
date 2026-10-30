@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { listZip, readEntry, ZIP_LIMITS, ZipError, type ZipReason } from '../src/zip';
-import { makeZip, zeroBomb } from './make-zip';
+import { emptyDynamicBlocks, makeZip, zeroBomb } from './make-zip';
 
 const SCENE = `INT. LIGHTHOUSE - NIGHT
 
@@ -151,7 +151,7 @@ describe('refusing the archive', () => {
   });
 
   test('refuses unsafe names', () => {
-    for (const name of ['/etc/x', 'a/../b', '..', 'C:x', 'a\\b', 'a\0b', 'a\x1bb', '']) {
+    for (const name of ['/etc/x', 'a/../b', '..', 'C:x', 'a\\b', 'a\0b', 'a\x1bb', 'a\x85b', '']) {
       const zip = makeZip([
         { name: 'fine.txt', data: 'ok' },
         { name, data: 'bad' },
@@ -160,6 +160,36 @@ describe('refusing the archive', () => {
         reason(() => listZip(zip)),
         JSON.stringify(name),
       ).toBe('unsafe-name');
+    }
+  });
+
+  test('refuses C1 controls, line and paragraph separators, and bidi controls in a UTF-8 name', () => {
+    const bad = [
+      '\u0085', // NEL, a C1 control
+      '\u009b', // CSI
+      '\u2028',
+      '\u2029',
+      '\u202a',
+      '\u202b',
+      '\u202c',
+      '\u202d',
+      '\u202e',
+      '\u2066',
+      '\u2067',
+      '\u2068',
+      '\u2069',
+    ];
+    for (const ch of bad) {
+      const zip = makeZip([{ name: `scene${ch}.txt`, data: 'bad', flags: 0x800 }]);
+      expect(
+        reason(() => listZip(zip)),
+        JSON.stringify(ch),
+      ).toBe('unsafe-name');
+    }
+    // Their neighbours, which a real package's names can hold, are fine.
+    for (const ch of ['\u00a0', '\u2027', '\u2030', '\u2065', '\u206a', 'é']) {
+      const zip = makeZip([{ name: `scene${ch}.txt`, data: 'ok', flags: 0x800 }]);
+      expect(listZip(zip)[0]?.name, JSON.stringify(ch)).toBe(`scene${ch}.txt`);
     }
   });
 
@@ -183,6 +213,38 @@ describe('refusing the archive', () => {
   test('refuses a local header whose name differs from its central record', () => {
     const zip = makeZip([{ name: 'text.md', data: 'one', localName: 'evil.md' }]);
     expect(reason(() => listZip(zip))).toBe('damaged');
+  });
+
+  test("refuses a local header whose CRC-32, sizes, or UTF-8 flag differ from its central record's", () => {
+    const base = { name: 'text.md', data: SCENE };
+    expect(listZip(makeZip([base]))).toHaveLength(1);
+    const broken = [
+      { localCrc: 0x12345678 },
+      { localSize: 1 },
+      { localCompressedSize: 1 },
+      { localFlags: 0x800 },
+      { flags: 0x800, localFlags: 0 },
+    ];
+    for (const change of broken) {
+      expect(
+        reason(() => listZip(makeZip([{ ...base, ...change }]))),
+        JSON.stringify(change),
+      ).toBe('damaged');
+    }
+  });
+
+  test('takes zeros in the local header when flag bit 3 puts the CRC-32 and sizes after the data', () => {
+    const zip = makeZip([
+      {
+        name: 'text.md',
+        data: SCENE,
+        flags: 0x8,
+        localCrc: 0,
+        localSize: 0,
+        localCompressedSize: 0,
+      },
+    ]);
+    expect(listZip(zip).map((e) => e.name)).toEqual(['text.md']);
   });
 
   test('refuses data that runs past the central directory', () => {
@@ -238,6 +300,34 @@ describe('refusing an entry', () => {
     expect(await readReason(() => readEntry(stored, s))).toBe('damaged');
   });
 
+  test('cancels an inflater that keeps giving past the declared size, and refuses the entry', async () => {
+    const zip = makeZip([{ name: 'scene.fountain', data: SCENE }]);
+    const [entry] = listZip(zip);
+    if (!entry) throw new Error('one entry');
+    const cancel = vi.fn();
+    let pulls = 0;
+    // Whatever it's fed, a stream that gives 1 KiB chunks forever.
+    vi.stubGlobal(
+      'DecompressionStream',
+      class {
+        writable = new WritableStream();
+        readable = new ReadableStream<Uint8Array>(
+          {
+            pull(controller) {
+              pulls++;
+              controller.enqueue(new Uint8Array(1024));
+            },
+            cancel,
+          },
+          { highWaterMark: 0 },
+        );
+      },
+    );
+    expect(await readReason(() => readEntry(zip, entry))).toBe('damaged');
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(pulls).toBeLessThanOrEqual(Math.ceil(entry.size / 1024) + 1);
+  });
+
   test('refuses a CRC-32 mismatch', async () => {
     for (const method of [0, 8] as const) {
       const zip = makeZip([{ name: 'scene', data: SCENE, method, declaredCrc: 0x12345678 }]);
@@ -264,6 +354,20 @@ describe('refusing an entry', () => {
     const [c] = listZip(cut);
     if (!c) throw new Error('one entry');
     expect(await readReason(() => readEntry(cut, c))).toBe('damaged');
+  });
+
+  test('refuses a compressed size far past what deflate could need, before walking it', async () => {
+    // 64 KiB of empty blocks for an empty entry: a valid stream, but no encoder writes one.
+    const raw = emptyDynamicBlocks(65 * 1024);
+    const zip = makeZip([{ name: 'empty', data: '', raw }]);
+    const [entry] = listZip(zip);
+    if (!entry) throw new Error('one entry');
+    expect(await readReason(() => readEntry(zip, entry))).toBe('damaged');
+    // Just inside the bound, the same kind of stream reads.
+    const fits = makeZip([{ name: 'empty', data: '', raw: emptyDynamicBlocks(63 * 1024) }]);
+    const [f] = listZip(fits);
+    if (!f) throw new Error('one entry');
+    expect((await readEntry(fits, f)).length).toBe(0);
   });
 
   test("refuses a method it doesn't read", async () => {

@@ -91,6 +91,7 @@ const ZIP64_LOCATOR_SIZE = 20;
 const END_SEARCH = END_SIZE + 0xffff;
 
 const FLAG_ENCRYPTED = 0x0001;
+const FLAG_DATA_DESCRIPTOR = 0x0008;
 const FLAG_STRONG_ENCRYPTION = 0x0040;
 const FLAG_UTF8 = 0x0800;
 
@@ -139,12 +140,13 @@ function decodeName(raw: Uint8Array, utf8: boolean): string {
 
 /**
  * Whether a name is safe to list: not empty or absolute, and without a backslash, a control
- * character (NUL among them), a `..` segment, or a drive letter.
+ * character (C0, DEL, or C1, NUL among them), a line or paragraph separator, a bidi control, a
+ * `..` segment, or a drive letter. No real package's names hold any of these, and a name can end
+ * up in a script's notes.
  */
 function safeName(name: string): boolean {
   if (name === '' || name.startsWith('/') || /^[A-Za-z]:/.test(name)) return false;
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it finds
-  if (/[\\\u0000-\u001f\u007f]/.test(name)) return false;
+  if (/[\\\p{Cc}\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(name)) return false;
   return !name.split('/').includes('..');
 }
 
@@ -229,6 +231,17 @@ export function listZip(bytes: Uint8Array, limits?: Partial<ZipLimits>): ZipEntr
     const localFlags = u16(bytes, localOffset + 6);
     if (localFlags & (FLAG_ENCRYPTED | FLAG_STRONG_ENCRYPTION)) fail('encrypted');
     if (u16(bytes, localOffset + 8) !== method) fail('damaged');
+    if ((localFlags & FLAG_UTF8) !== (flags & FLAG_UTF8)) fail('damaged');
+    // Without flag bit 3, the local header carries the CRC-32 and sizes too, and they must agree;
+    // with it, they follow the data in a descriptor, and the central record's are the ones read.
+    if (
+      !(localFlags & FLAG_DATA_DESCRIPTOR) &&
+      (u32(bytes, localOffset + 14) !== crc ||
+        u32(bytes, localOffset + 18) !== compressedSize ||
+        u32(bytes, localOffset + 22) !== size)
+    ) {
+      fail('damaged');
+    }
     const localNameLength = u16(bytes, localOffset + 26);
     const localExtraLength = u16(bytes, localOffset + 28);
     const localNameAt = localOffset + LOCAL_SIZE;
@@ -303,6 +316,9 @@ export async function readEntry(
     return checked(packed.slice(), entry);
   }
   if (entry.method !== 8) fail('method');
+  // No encoder needs more than an eighth over the size, and 64 KiB, so a stream past that is
+  // padding (empty blocks, say) that would only make the walk slow.
+  if (compressedSize > size + (size >>> 3) + 64 * 1024) fail('damaged');
   const stream = inflater();
   if (!stream) fail('no-inflate');
 

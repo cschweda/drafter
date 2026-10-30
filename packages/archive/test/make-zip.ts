@@ -17,6 +17,11 @@ export interface MakeEntry {
   declaredCrc?: number;
   /** The name in the local header, when it should differ from the central record's. */
   localName?: string;
+  /** The local header's flags, CRC-32, and sizes, when they should differ from the central record's. */
+  localFlags?: number;
+  localCrc?: number;
+  localSize?: number;
+  localCompressedSize?: number;
   /** An extra field, in both headers. */
   extra?: Uint8Array;
   /** Compressed bytes to store as they are, instead of compressing `data`. */
@@ -70,6 +75,10 @@ interface Laid {
   name: Uint8Array;
   localName: Uint8Array;
   flags: number;
+  localFlags: number;
+  localCrc: number | undefined;
+  localSize: number | undefined;
+  localCompressedSize: number | undefined;
   method: number;
   crc: number;
   size: number;
@@ -92,6 +101,10 @@ export function makeZip(entries: MakeEntry[], options: MakeOptions = {}): Uint8A
       name: nameBytes(e.name, flags),
       localName: nameBytes(e.localName ?? e.name, flags),
       flags,
+      localFlags: e.localFlags ?? flags,
+      localCrc: e.localCrc,
+      localSize: e.localSize,
+      localCompressedSize: e.localCompressedSize,
       method,
       crc: e.declaredCrc ?? crc32(data),
       size: e.declaredSize ?? data.length,
@@ -105,13 +118,13 @@ export function makeZip(entries: MakeEntry[], options: MakeOptions = {}): Uint8A
     e.offset = out.length;
     out.u32(0x04034b50);
     out.u16(20); // version needed to extract
-    out.u16(e.flags);
+    out.u16(e.localFlags);
     out.u16(e.method);
     out.u16(0); // time
     out.u16(0x21); // date: 1980-01-01
-    out.u32(e.crc);
-    out.u32(e.compressedSize);
-    out.u32(e.size);
+    out.u32(e.localCrc ?? e.crc);
+    out.u32(e.localCompressedSize ?? e.compressedSize);
+    out.u32(e.localSize ?? e.size);
     out.u16(e.localName.length);
     out.u16(e.extra.length);
     out.bytes(e.localName);
@@ -213,4 +226,61 @@ export function zeroBomb(groups: number): { packed: Uint8Array; size: number } {
   for (let g = 0; g < groups; g++) packed.set(group, head.length + g * group.length);
   packed.set(tail, head.length + group.length * groups);
   return { packed, size: 1 + 258 * (1 + 8 * groups) };
+}
+
+/** Writes bits least significant first, and Huffman codes most significant first (RFC 1951 §3.1.1). */
+export class Bits {
+  private out: number[] = [];
+  private acc = 0;
+  private n = 0;
+  put(value: number, count: number): this {
+    for (let i = 0; i < count; i++) {
+      this.acc |= ((value >>> i) & 1) << this.n;
+      if (++this.n === 8) {
+        this.out.push(this.acc);
+        this.acc = 0;
+        this.n = 0;
+      }
+    }
+    return this;
+  }
+  code(value: number, length: number): this {
+    for (let i = length - 1; i >= 0; i--) this.put((value >>> i) & 1, 1);
+    return this;
+  }
+  bytes(): Uint8Array {
+    return Uint8Array.from(this.n ? [...this.out, this.acc] : this.out);
+  }
+}
+
+/** §3.2.7: the order the code length code's lengths are sent in. */
+export const CLEN_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+
+/** One empty dynamic-Huffman block, the smallest zlib accepts: a 1-bit end of block, one 1-bit distance code. */
+function emptyDynamicBlock(bits: Bits, final: number) {
+  bits.put(final, 1).put(2, 2);
+  bits.put(0, 5).put(0, 5).put(15, 4); // 257 literal/length codes, 1 distance code, 19 code length codes
+  // The code length code: symbols 1 and 18, one bit each (1 is code 0, 18 is code 1).
+  for (const sym of CLEN_ORDER) bits.put(sym === 1 || sym === 18 ? 1 : 0, 3);
+  bits.code(1, 1).put(127, 7); // 18: 138 zeros
+  bits.code(1, 1).put(107, 7); // 18: 118 zeros, so 256 so far
+  bits.code(0, 1); // symbol 256, length 1
+  bits.code(0, 1); // distance 0, length 1
+  bits.code(0, 1); // end of block
+}
+
+/** About `bytes` of empty dynamic blocks, then a final one: a valid stream that inflates to nothing. */
+export function emptyDynamicBlocks(bytes: number): Uint8Array {
+  const bits = new Bits();
+  // Each block is 93 bits, so eight of them are a whole number of bytes (93), repeated.
+  for (let i = 0; i < 8; i++) emptyDynamicBlock(bits, 0);
+  const group = bits.bytes();
+  const tail = new Bits();
+  emptyDynamicBlock(tail, 1);
+  const end = tail.bytes();
+  const groups = Math.max(0, Math.floor((bytes - end.length) / group.length));
+  const out = new Uint8Array(groups * group.length + end.length);
+  for (let g = 0; g < groups; g++) out.set(group, g * group.length);
+  out.set(end, groups * group.length);
+  return out;
 }

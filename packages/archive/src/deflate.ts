@@ -38,16 +38,24 @@ interface Code {
   symbols: Uint16Array;
 }
 
-function buildCode(lengths: ArrayLike<number>): Code {
+/**
+ * The code for a list of lengths. As zlib does: over-subscribed lengths are refused, and so are
+ * incomplete ones, except no codes at all (decoding then fails at the first use) and, outside the
+ * code length code, a single code of length 1.
+ */
+function buildCode(lengths: ArrayLike<number>, codeLengths = false): Code {
   const counts = new Uint16Array(MAX_BITS + 1);
   for (let i = 0; i < lengths.length; i++) counts[lengths[i] as number]++;
   counts[0] = 0;
-  // Over-subscribed lengths describe no code at all.
   let left = 1;
+  let used = 0;
   for (let len = 1; len <= MAX_BITS; len++) {
     left = (left << 1) - (counts[len] as number);
-    if (left < 0) throw new DeflateWalkError();
+    if (left < 0) throw new DeflateWalkError(); // over-subscribed
+    used += counts[len] as number;
   }
+  const single = used === 1 && counts[1] === 1;
+  if (left > 0 && used > 0 && (codeLengths || !single)) throw new DeflateWalkError(); // incomplete
   const offsets = new Uint16Array(MAX_BITS + 2);
   for (let len = 1; len <= MAX_BITS; len++) {
     offsets[len + 1] = (offsets[len] as number) + (counts[len] as number);
@@ -63,7 +71,8 @@ function buildCode(lengths: ArrayLike<number>): Code {
 const FIXED_LIT = buildCode(
   Array.from({ length: 288 }, (_, i) => (i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8)),
 );
-const FIXED_DIST = buildCode(Array.from({ length: 30 }, () => 5));
+// §3.2.6: 32 distance codes of 5 bits; 30 and 31 never occur, and are refused when they do.
+const FIXED_DIST = buildCode(Array.from({ length: 32 }, () => 5));
 
 /**
  * Walks the raw deflate stream in `bytes`, and gives how many bytes it inflates to. Throws a
@@ -128,7 +137,7 @@ export function walkDeflate(bytes: Uint8Array, limit: number): number {
       if (nlen > 286 || ndist > 30) throw new DeflateWalkError();
       const clens = new Uint8Array(19);
       for (let i = 0; i < ncode; i++) clens[CLEN_ORDER[i] as number] = bits(3);
-      const clen = buildCode(clens);
+      const clen = buildCode(clens, true);
       const lengths = new Uint8Array(nlen + ndist);
       for (let i = 0; i < lengths.length; ) {
         const sym = decode(clen);

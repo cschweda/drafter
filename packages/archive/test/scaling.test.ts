@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { listZip, readEntry, type ZipEntry, ZipError } from '../src/zip';
-import { makeZip, zeroBomb } from './make-zip';
+import { emptyDynamicBlocks, makeZip, zeroBomb } from './make-zip';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling, scalingAsync } from './scaling';
 
 /** Text of `bytes` length, varied enough that deflate has real work to do. */
@@ -76,5 +76,15 @@ describe('zip scaling', () => {
     const start = performance.now();
     await expect(readEntry(zip, entry)).rejects.toThrow(ZipError);
     expect(performance.now() - start).toBeLessThan(1000);
+  });
+
+  test('refuses about 32 MiB of empty dynamic blocks for an empty entry in under 100 ms', async () => {
+    const raw = emptyDynamicBlocks(32 * 1024 * 1024 - 1024);
+    const zip = makeZip([{ name: 'empty', data: '', raw }]);
+    const [entry] = listZip(zip);
+    if (!entry) throw new Error('one entry');
+    const start = performance.now();
+    await expect(readEntry(zip, entry)).rejects.toThrow(ZipError);
+    expect(performance.now() - start).toBeLessThan(100);
   });
 });
