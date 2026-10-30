@@ -180,3 +180,4 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 - **OSF's revisions, colors, and fonts** are named in `ignored` and not brought in, as Final Draft's are (see Plan FD's Revisions line).
 - **`drafter build --md`** in the CLI: the Markdown export is in the app only.
 - **Underline in Markdown** is `<u>…</u>` (Call 32, the controller's ruling), which shows as plain tags where HTML isn't allowed. If writers would rather have `_…_` (shown as italics in most viewers), it can become an option.
+- **End-to-end tests across the imports and Markdown out** (the final review): opening a Highland file then exporting it as Markdown with its notes, and opening a `.md` as a screenplay then exporting a PDF, are each covered in halves and by a package-level run, but not by one browser test each.
