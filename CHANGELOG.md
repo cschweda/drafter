@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-29
+
+**Export a Markdown document as a PDF.** Notes, treatments, outlines and pitch documents export as a clean PDF: 1-inch margins, Inter Tight with Courier Prime for code, clickable web and email links, page numbers, headings kept with their text, US Letter or A4 (a new setting), and it works offline. Any export that takes a moment, scripts included, now shows a progress bar with a percentage.
+
 ### Added
 
 - **Export a Markdown document as a PDF.** A Markdown document now has **Export as PDF**, first in the toolbar's Export menu (then Markdown and plain text), and in the app menu, the palette, and the desktop app's File menu. You get a clean, printable document: headings, paragraphs, emphasis, lists, quotes, code, and rules, in Inter Tight with Courier Prime for code, on pages numbered at the foot when there are two or more. Links to web pages and email addresses are clickable in the PDF. Choose **US Letter** (the default) or **A4** under **Paper for Markdown PDFs** in Settings; screenplays and stage plays still use their template's paper. The file is named after the document's first heading, as its other exports are, and carries that title and your spelling language. It works offline, like the rest of the app, and about 100 pages take a couple of seconds while the editor stays free to use. A character Drafter's fonts don't have (Chinese or Japanese text, an emoji) prints as ?, and the toast says which ones.
@@ -751,7 +755,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/cschweda/drafter/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/cschweda/drafter/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/cschweda/drafter/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/cschweda/drafter/compare/v0.13.1...v0.14.0

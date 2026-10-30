@@ -5,7 +5,7 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.15.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Next: guided starters, export options, running time, and a Technical details page (v0.17.0), then version history, then Highland, Fade In, and Markdown imports; a signed macOS download follows. See the [roadmap](#roadmap).
+> **Status: v0.16.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Next: guided starters, export options, running time, and a Technical details page (v0.17.0), then version history, then Highland, Fade In, and Markdown imports; a signed macOS download follows. See the [roadmap](#roadmap).
 
 **What you can do today**
 
