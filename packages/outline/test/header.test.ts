@@ -379,6 +379,56 @@ describe('setSceneDetails', () => {
   });
 });
 
+describe('a synopsis with notes inside a speech', () => {
+  // A synopsis line ends a speech: what follows it is its own paragraph. Cleared, its notes stay on
+  // a line that the speech reads through, so a lyric under it would join the speech and print
+  // without the blank line above it. Then nothing changes.
+  test('the shrunk counterexample: a lyric under it stays where it prints', () => {
+    const source = 'INT. KITCHEN - DAY\n\nMARGARET\nthe.\n  \n= [[a note]] the.\n~the.';
+    expect(synopsis(source, '')).toBe(source);
+  });
+
+  const shapes = ['= [[a note]] the.', '= the. [[a note]]', '= [[a note]]', '= a [[b]] c [[d]]'];
+  const contexts: Array<[string, (line: string) => string]> = [
+    ['a lyric under it', (l) => `INT. A - DAY\n\nANN\nHi.\n${l}\n~La la.\n`],
+    ['a two-space line, then a lyric', (l) => `INT. A - DAY\n\nANN\nHi.\n  \n${l}\n~La la.\n`],
+    ['a parenthetical under it', (l) => `INT. A - DAY\n\nANN\nHi.\n${l}\n(beat)\nBye.\n`],
+    ['a line under it', (l) => `INT. A - DAY\n\nANN\nHi.\n${l}\nBye.\n`],
+    ['a blank line under it', (l) => `INT. A - DAY\n\nANN\nHi.\n${l}\n\nAction.\n`],
+    ['the end of the script', (l) => `INT. A - DAY\n\nANN\nHi.\n${l}\n`],
+    ['action, then a lyric', (l) => `INT. A - DAY\n\nAction.\n${l}\n~La la.\n`],
+    ['the header', (l) => `INT. A - DAY\n\n${l}\n\nAction.\n`],
+  ];
+  for (const [name, at] of contexts) {
+    test(`with ${name}, clearing it never changes what prints (LF and CRLF)`, () => {
+      for (const line of shapes) {
+        for (const nl of ['\n', '\r\n']) {
+          const before = at(line).replaceAll('\n', nl);
+          expect(printed(synopsis(before, ''))).toBe(printed(before));
+        }
+      }
+    });
+  }
+
+  test('where what follows is apart from it anyway, its notes stay and the `=` goes', () => {
+    for (const nl of ['\n', '\r\n']) {
+      const blank = 'INT. A - DAY\n\nANN\nHi.\n= [[a note]] the.\n\nAction.\n'.replaceAll('\n', nl);
+      expect(synopsis(blank, '')).toBe(blank.replace('= [[a note]] the.', '[[a note]]'));
+      const end = 'INT. A - DAY\n\nANN\nHi.\n= the. [[a note]]\n'.replaceAll('\n', nl);
+      expect(synopsis(end, '')).toBe(end.replace('= the. [[a note]]', '[[a note]]'));
+    }
+  });
+
+  test('a lyric under it keeps it, in either line ending', () => {
+    for (const nl of ['\n', '\r\n']) {
+      for (const line of shapes) {
+        const source = `INT. A - DAY\n\nANN\nHi.\n${line}\n~La la.\n`.replaceAll('\n', nl);
+        expect(synopsis(source, '')).toBe(source);
+      }
+    }
+  });
+});
+
 describe('a script with an unclosed /*', () => {
   const OPEN = 'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
   test('gets no synopsis or color changes', () => {
