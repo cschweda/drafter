@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CHARACTER_COLORS } from '../src/reading';
 import { PALETTES, type Palette, STYLESHEET } from '../src/style';
 
 /** WCAG 2's relative luminance of a `#rrggbb` color. */
@@ -98,5 +99,28 @@ describe('the palettes', () => {
     );
     const used = STYLESHEET.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
     expect(used.filter((c) => !known.has(c.toLowerCase()))).toEqual([]);
+  });
+
+  it("every character's color passes AA on the frame and the panel of each palette, as measured", () => {
+    // [dark on bg, dark on panel, light on bg, light on panel], by color, in the palette's order.
+    const measured = CHARACTER_COLORS.map(({ dark, light }) => [
+      contrast(dark, PALETTES.dark.bg),
+      contrast(dark, PALETTES.dark.panel),
+      contrast(light, PALETTES.light.bg),
+      contrast(light, PALETTES.light.panel),
+    ]);
+    for (const figures of measured) {
+      for (const figure of figures) expect(figure).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(measured).toEqual([
+      [8.95, 8.19, 5.84, 5.25],
+      [8.26, 7.55, 6.26, 5.64],
+      [9.79, 8.96, 5.15, 4.64],
+      [8.23, 7.53, 6.42, 5.78],
+      [9.51, 8.7, 5.76, 5.18],
+      [10.14, 9.27, 5.62, 5.06],
+      [8.92, 8.16, 6.02, 5.42],
+      [11.79, 10.78, 5.65, 5.09],
+    ]);
   });
 });

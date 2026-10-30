@@ -29,10 +29,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
+    "@drafter/notes": "workspace:*",
+    "@drafter/outline": "workspace:*",
     "@drafter/templates": "workspace:*"
-  },
-  "devDependencies": {
-    "@drafter/fountain": "workspace:*"
   }
 }

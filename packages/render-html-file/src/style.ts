@@ -269,10 +269,15 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
 .i { font-style: italic; }
 .u { text-decoration: underline; }
 
-/* Reading: the script reflowed for a screen. */
+/* Reading: the script reflowed for a screen. A section is a heading a level under its parent's
+   (.sec), a scene heading an amber line under its section's (.sh, its number in .sn), a speech
+   the name in a margin (.who, in its character's generated .kN color) beside what is said
+   (.said). */
 .reading { max-width: 46rem; margin: 0 auto; font-size: 1.0625rem; line-height: 1.65; }
-.reading h2 { margin: 3rem 0 1rem; font-size: 1.5rem; line-height: 1.25; }
-.reading p { margin: 0 0 1rem; }
+.reading > p { margin: 0 0 1rem; }
+.sec { margin: 3rem 0 1rem; font-size: 1.5rem; line-height: 1.25; }
+h3.sec, h4.sec, h5.sec, h6.sec { margin-top: 2.25rem; font-size: 1.1875rem; }
+.sn { margin-right: 0.75rem; }
 .sh {
   margin: 2.5rem 0 0.75rem;
   color: var(--accent);
@@ -293,9 +298,10 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
   overflow-wrap: anywhere;
 }
 .ext { color: var(--dim); font-weight: 400; }
-.paren { margin: 0; color: var(--dim); font-size: 0.875rem; }
-.dual { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-.dual .speech { grid-template-columns: 6rem 1fr; }
+.said p { margin: 0; }
+.said .paren { color: var(--dim); font-size: 0.875rem; }
+.dual { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 0 0 1rem; }
+.dual .speech { grid-template-columns: 6rem 1fr; margin: 0; }
 .tr { color: var(--dim); text-align: right; }
 .ct { text-align: center; }
 .ly { font-style: italic; }

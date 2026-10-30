@@ -117,12 +117,23 @@ function runHtml(run: LayoutRun): string {
   );
 }
 
-/** One printed line at its row and column. `(MORE)` is the page's, not the script's: it is hidden from a screen reader. */
-function lineHtml({ line, row }: Part, template: Template, grid: Grid): string {
+/**
+ * The blocks the band links to on one page, by the body row each starts on (`layout.index`):
+ * each gets `id="b-<block>"` there, as a link target.
+ */
+type Marks = Map<number, number[]>;
+
+/**
+ * One printed line at its row and column, with a band target's id when the line is the first of
+ * a block the band links to. `(MORE)` is the page's, not the script's: it is hidden from a screen
+ * reader.
+ */
+function lineHtml({ line, row }: Part, template: Template, grid: Grid, id?: string): string {
   const { top, left } = template.page.margin;
   return el(
     'div',
     {
+      id,
       class: grid.place(top + row, left + line.col),
       'aria-hidden': line.synthetic === 'more' ? 'true' : undefined,
     },
@@ -135,8 +146,12 @@ function lineHtml({ line, row }: Part, template: Template, grid: Grid): string {
  * (a scene heading; a play's act and scene) are wrapped in one element with the heading role at
  * its level, so a reader can move by headings; the wrapper isn't positioned, so its lines keep
  * their places on the page.
+ *
+ * A band target goes on the block's own first line. A block that prints nothing there (a
+ * screenplay's section, which maps to the next printed line, perhaps another block's) gets an
+ * empty marker at that row instead, so every target is there once.
  */
-function bodyHtml(page: Page, template: Template, grid: Grid): string {
+function bodyHtml(page: Page, template: Template, grid: Grid, marks: Marks | undefined): string {
   const out: string[] = [];
   // The heading being gathered: its block, its level, and its lines so far.
   let block = -1;
@@ -150,7 +165,14 @@ function bodyHtml(page: Page, template: Template, grid: Grid): string {
   for (const part of readingOrder(page.lines)) {
     const { line } = part;
     const heading = line.blockIndex >= 0 ? template.roles[line.role]?.heading : undefined;
-    const markup = lineHtml(part, template, grid);
+    let id: string | undefined;
+    const here = page.lines[part.row] === line ? marks?.get(part.row) : undefined;
+    const own = here?.indexOf(line.blockIndex) ?? -1;
+    if (here && own >= 0) {
+      id = `b-${line.blockIndex}`;
+      here.splice(own, 1);
+    }
+    const markup = lineHtml(part, template, grid, id);
     if (heading === undefined || line.blockIndex !== block) close();
     if (heading === undefined) {
       out.push(markup);
@@ -161,6 +183,12 @@ function bodyHtml(page: Page, template: Template, grid: Grid): string {
     }
   }
   close();
+  const { top, left } = template.page.margin;
+  for (const [row, blocks] of marks ?? []) {
+    for (const block of blocks) {
+      out.push(el('span', { id: `b-${block}`, class: grid.place(top + row, left) }));
+    }
+  }
   return out.join('');
 }
 
@@ -202,8 +230,15 @@ function furnitureHtml(page: Page, template: Template, grid: Grid): string {
  * lines, each at its row and column by the `ln rN cN` classes, then its furniture. A layout with
  * no pages is one blank page, as the PDF is. Every character of text is escaped; nothing is
  * reflowed. The rules for the classes used come back beside the markup.
+ *
+ * `targets` are the blocks the band links to: each gets `id="b-<block>"` at its first printed line
+ * (`layout.index`), which a plain `#b-<block>` link reaches with no script.
  */
-export function pagesHtml(layout: Layout, template: Template): PagesHtml {
+export function pagesHtml(
+  layout: Layout,
+  template: Template,
+  targets: Iterable<number> = [],
+): PagesHtml {
   const { width, height } = template.page;
   const size = pageClass(width, height);
   const grid = new Grid();
@@ -211,12 +246,20 @@ export function pagesHtml(layout: Layout, template: Template): PagesHtml {
     layout.pages.length > 0
       ? layout.pages
       : [{ number: 1, lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
+  const marks = new Map<number, Marks>();
+  for (const block of new Set(targets)) {
+    const at = layout.index[block];
+    if (!at) continue;
+    const page = marks.get(at.page) ?? new Map<number, number[]>();
+    marks.set(at.page, page);
+    page.set(at.line, [...(page.get(at.line) ?? []), block]);
+  }
   const cards = pages.map((page) =>
     el(
       'div',
       { class: `page ${size}` },
       el('span', { class: 'vh' }, page.number === 0 ? 'Title page' : `Page ${page.number}`) +
-        bodyHtml(page, template, grid) +
+        bodyHtml(page, template, grid, marks.get(page.number)) +
         furnitureHtml(page, template, grid),
     ),
   );

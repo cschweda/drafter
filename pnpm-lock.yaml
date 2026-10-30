@@ -362,16 +362,21 @@ importers:
 
   packages/render-html-file:
     dependencies:
-      '@drafter/layout':
-        specifier: workspace:*
-        version: link:../layout
-      '@drafter/templates':
-        specifier: workspace:*
-        version: link:../templates
-    devDependencies:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
 
   packages/render-pdf:
     dependencies:

@@ -73,7 +73,7 @@ flowchart BT
   layout --> render_pdf
   markdown --> render_pdf
   layout --> render_html
-  layout --> render_html_file
+  outline --> render_html_file
   layout --> render_text
   templates --> layout
   notes --> lint
