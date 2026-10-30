@@ -1,5 +1,6 @@
 import type { Block, Doc, InlineRun, Line } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
+import { readNote } from '@drafter/notes';
 import { el, escapeHtml } from './escape';
 import { colorRules } from './rules';
 
@@ -29,17 +30,33 @@ export const CHARACTER_COLORS: ReadonlyArray<Readonly<{ dark: string; light: str
   { dark: '#c3d65a', light: '#5c6b00' }, // olive
 ];
 
-/** A parenthesized part of a cue, with nothing nested: `(V.O.)`, `(CONT'D)`. Linear: no backtracking. */
-const PAREN = /\([^()]*\)/g;
 const SPACES = /\s+/g;
+
+/** `text` without its parenthesized parts, nested or not, each a space: one pass, a depth count. */
+function withoutParens(text: string): string {
+  let out = '';
+  let depth = 0;
+  for (const ch of text) {
+    if (ch === '(') {
+      if (depth === 0) out += ' ';
+      depth++;
+    } else if (ch === ')' && depth > 0) {
+      depth--;
+    } else if (depth === 0) {
+      out += ch;
+    }
+  }
+  return out;
+}
 
 /**
  * The one name a character goes by, whatever its cue says: in capitals, without its extensions
- * (`(V.O.)`, `(CONT'D)`, any parenthesized part), the forcing `@`, or the dual-dialogue `^`, its
- * spaces collapsed. So Tom, TOM, TOM (V.O.), and TOM (CONT'D) share one color.
+ * (`(V.O.)`, `(CONT'D)`, any parenthesized part, nested or not), the forcing `@`, or the
+ * dual-dialogue `^`, its spaces collapsed. So Tom, TOM, TOM (V.O.), and TOM (CONT'D) share one
+ * color.
  */
 export function characterKey(cue: string): string {
-  let name = cue.replace(PAREN, ' ').replace(SPACES, ' ').trim();
+  let name = withoutParens(cue).replace(SPACES, ' ').trim();
   if (name.endsWith('^')) name = name.slice(0, -1).trimEnd();
   if (name.startsWith('@')) name = name.slice(1).trimStart();
   return name.toUpperCase();
@@ -147,10 +164,20 @@ const PARAGRAPH: Partial<Record<string, string>> = {
   lyric: 'ly',
 };
 
-/** A note as an aside: its text, trimmed, its lines kept. Empty notes say nothing. */
+/**
+ * Whether a note is one of Drafter's own keyed notes, by `@drafter/notes`' own reading of a head:
+ * a scene field (`Color:`, `Goal:`, `Storyline:`…), a setup or payoff, or a card's text. These
+ * are the Outline's and the Cards' data, not notes to a reader. A writer's own head (`Note:`,
+ * `Sam:`, `TODO:`) is a note like any other.
+ */
+const DRAFTERS = new Set(['field', 'mark', 'card']);
+const isDrafters = (inner: string) => DRAFTERS.has(readNote(inner).head?.kind ?? '');
+
+/** A note as an aside: its text, trimmed, its lines kept. Empty notes, and Drafter's own, say nothing. */
 function noteHtml(source: string, from: number, to: number): string {
-  const text = source.slice(from + 2, to - 2).trim();
-  if (text === '') return '';
+  const inner = source.slice(from + 2, to - 2);
+  const text = inner.trim();
+  if (text === '' || isDrafters(inner)) return '';
   return el(
     'aside',
     { class: 'note' },
@@ -179,29 +206,33 @@ function noteHtml(source: string, from: number, to: number): string {
  * side in `div.dual`. Any other kind is a plain paragraph, so no printed text is dropped.
  *
  * With notes included, each `[[note]]` is an `<aside class="note">` at its place: after the
- * element that holds it, or between the elements it stands between. Boneyard never appears.
+ * element that holds it, or between the elements it stands between. Drafter's own keyed notes
+ * (scene fields, setups and payoffs, card text) are left out. Boneyard never appears.
  */
 export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'include'): ReadingHtml {
   const printed = printedBlocks(layout);
   const numbers = sceneNumbers(layout);
   const colors = new Colors();
   const units: Unit[] = [];
-  let depth = 0; // the depth of the section the walk is in, 0 before any
+  // The open sections, outermost first: each one's depth and heading level. A section is a level
+  // under the nearest open section shallower than it (h2 at the top), and a scene heading a level
+  // under the innermost, so the levels never skip, whatever depths the writer uses.
+  const open: Array<{ depth: number; level: number }> = [];
+  const under = () => Math.min(6, (open[open.length - 1]?.level ?? 1) + 1);
 
   const { blocks } = doc;
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i] as Block;
-    if (block.kind === 'section') {
-      depth = block.sem.depth;
-    } else if (!printed.has(i)) {
-      continue;
-    }
+    if (block.kind !== 'section' && !printed.has(i)) continue;
     const { from } = block.span;
     const number = numbers.get(i);
     const numbered = number ? `${el('span', { class: 'sn' }, escapeHtml(number))} ` : '';
 
     if (block.kind === 'section') {
-      const level = Math.min(6, 1 + block.sem.depth);
+      const { depth } = block.sem;
+      while (open.length > 0 && (open[open.length - 1]?.depth ?? 0) >= depth) open.pop();
+      const level = under();
+      open.push({ depth, level });
       units.push({
         html: el(
           `h${level}`,
@@ -211,7 +242,7 @@ export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'incl
         from,
       });
     } else if (block.kind === 'scene_heading') {
-      const level = Math.min(6, 2 + depth);
+      const level = under();
       units.push({
         html: el(
           `h${level}`,
@@ -229,7 +260,7 @@ export function readingHtml(doc: Doc, layout: Layout, notes: 'leave-out' | 'incl
       ) {
         j++;
       }
-      const parts = blocks.slice(i + 1, j);
+      const parts = blocks.slice(i + 1, j).filter((_, k) => printed.has(i + 1 + k));
       units.push({
         html: speechHtml(block, parts, colors),
         from,

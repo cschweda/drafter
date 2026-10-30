@@ -58,6 +58,9 @@ describe('characterKey', () => {
     }
     expect(characterKey('Mary  Ann (V.O.)')).toBe('MARY ANN');
     expect(characterKey('@McAllister')).toBe('MCALLISTER');
+    expect(characterKey('TOM ((x))')).toBe('TOM');
+    expect(characterKey('TOM (V.O. (sort of)) (CONT’D)')).toBe('TOM');
+    expect(characterKey('ANN (B) LEE')).toBe('ANN LEE');
   });
 
   it('takes linear time on a long cue full of parentheses', () => {
@@ -119,6 +122,46 @@ describe('readingHtml', () => {
     });
   });
 
+  it('heading levels never skip, whatever depths the sections use', () => {
+    const source = `### A
+
+INT. ONE - DAY
+
+X.
+
+# B
+
+## B1
+
+INT. TWO - DAY
+
+Y.
+
+### C
+
+#### D
+
+INT. THREE - DAY
+
+Z.
+`;
+    const { host } = read(lay(source));
+    const levels = [...host.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((h) => [
+      h.textContent,
+      Number(h.tagName[1]),
+    ]);
+    expect(levels).toEqual([
+      ['A', 2],
+      ['INT. ONE - DAY', 3],
+      ['B', 2],
+      ['B1', 3],
+      ['INT. TWO - DAY', 4],
+      ['C', 4],
+      ['D', 5],
+      ['INT. THREE - DAY', 6],
+    ]);
+  });
+
   it('prints no scene number when the layout prints none', () => {
     const { host } = read(lay(SCREENPLAY, undefined, { sceneNumbers: 'none' }));
     expect(host.querySelector('.sn')).toBeNull();
@@ -163,6 +206,37 @@ describe('readingHtml', () => {
     expect(said[0]?.className).toBe('paren');
     expect(said[0]?.textContent).toBe('(not looking up)');
     expect(said[1]?.querySelectorAll('br').length).toBe(1);
+  });
+
+  it('a ^ speech with no free speech before it stands alone, as on the page', () => {
+    const source = `INT. HALL - DAY
+
+The door opens.
+
+ANNE ^
+Hello?
+
+BEN
+Here.
+
+CARL ^
+And here.
+
+DORA ^
+Me too.
+`;
+    const { host } = read(lay(source));
+    const reading = host.querySelector('.reading') as HTMLElement;
+    // ANNE alone; BEN and CARL side by side; DORA alone again, since CARL is taken.
+    expect(
+      [...reading.children]
+        .filter((e) => e.matches('.speech, .dual'))
+        .map((e) =>
+          e.matches('.dual')
+            ? `dual:${speechesIn(e as HTMLElement).map(([w]) => w)}`
+            : speechesIn(dom(e.outerHTML))[0]?.[0],
+        ),
+    ).toEqual(['ANNE', 'dual:BEN,CARL', 'DORA']);
   });
 
   it("one color for Tom, TOM, TOM (V.O.), and TOM (CONT'D)", () => {
@@ -215,18 +289,34 @@ Five.
 
     const { host } = read(laid, 'include');
     const asides = [...host.querySelectorAll('aside.note')].map((a) => a.textContent);
-    expect(asides).toEqual([
-      'Color: Blue',
-      'Make the rain louder here.',
-      'Jonah should sound tired, not cross.',
-    ]);
+    // The scene's [[Color: Blue]] is the Outline's, not a note to a reader.
+    expect(asides).toEqual(['Make the rain louder here.', 'Jonah should sound tired, not cross.']);
     // Each at its place: after what holds it, before what follows.
     const order = [...host.querySelectorAll('.reading > *')].map((e) => e.textContent ?? '');
     const at = (text: string) => order.findIndex((t) => t.includes(text));
-    expect(at('Color: Blue')).toBe(at('LIGHTHOUSE KITCHEN') + 1);
     expect(at('Make the rain louder')).toBe(at('Rain needles') + 1);
     expect(at('sound tired')).toBe(at('Somebody has to') + 1);
     expect(host.textContent).not.toContain('[[');
+  });
+
+  it("leaves out Drafter's own keyed notes, and keeps the writer's own heads", () => {
+    const source = `INT. HALL - DAY [[Goal: get the key]] [[Storyline: A, B]]
+
+Ann waits. [[Setup: the key]] [[payoff : the door]] [[Card: Ann waits for Ben.]]
+
+[[Note: fix this]]
+
+[[Sam: too long?]] [[TODO: trim]] [[Color: red]]
+
+Ben comes. [[Conflict: he forgot]] [[Outcome: no key]] [[Shift: up]] [[plain words]]
+`;
+    const { host } = read(lay(source), 'include');
+    expect([...host.querySelectorAll('aside.note')].map((a) => a.textContent)).toEqual([
+      'Note: fix this',
+      'Sam: too long?',
+      'TODO: trim',
+      'plain words',
+    ]);
   });
 
   it('boneyard never appears, even with notes included', () => {

@@ -121,7 +121,8 @@ describe('renderScriptHtml', () => {
 
   it('notes appear in Reading only', () => {
     const doc = read(renderScriptHtml(input(lay(SCREENPLAY), { notes: 'include' })));
-    expect(doc.querySelectorAll('.reading aside.note').length).toBe(3);
+    expect(doc.querySelectorAll('.reading aside.note').length).toBe(2);
+    expect(doc.querySelector('.reading')?.textContent).not.toContain('Color: Blue');
     expect(doc.querySelector('.pages')?.textContent).not.toContain('Make the rain louder');
   });
 
