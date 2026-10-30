@@ -407,8 +407,9 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 **Next:**
 
 - Export as HTML, and EPUB for reading a draft on an e-reader (v0.22.0, [its design](drafter-html-export-design.md)).
-- **Novel** (v0.23.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
-- Plan E, part 2 (v0.24.0): storylines, the script map as the Structure strip's Color by, and pacing; then Plans F to H (v0.25.0 to v0.27.0; Phase 2 design §22), F expected to become the Workbook.
+- **Drafts and Cuts**, numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind (v0.23.0). To be designed.
+- **Novel** (v0.24.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
+- Plan E, part 2 (v0.25.0): storylines, the script map as the Structure strip's Color by, and pacing; then Plans F to H (v0.26.0 to v0.28.0; Phase 2 design §22), F expected to become the Workbook.
 
 **To come**
 
@@ -425,7 +426,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 3 — Formats
 
 - Import from Celtx (Highland and Fade In imports moved up to Phase 2).
-- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for graphic novels (Novel, for prose in Markdown, comes in Phase 2 as v0.23.0).
+- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for graphic novels (Novel, for prose in Markdown, comes in Phase 2 as v0.24.0).
 - User-added templates, dropped in as JSON, and template export.
 - For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
 - Standalone `.html` export (moved up to Phase 2 as v0.22.0, with EPUB).

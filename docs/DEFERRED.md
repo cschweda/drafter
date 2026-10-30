@@ -204,7 +204,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Grouping sub-locations.** HOUSE - KITCHEN and HOUSE - HALL are two locations (Call 15); the Places list sorts them together but adds nothing up.
 - **Sorting the Characters table** (Call 19). It keeps the cast's order (most speeches first); sorting by a column, as a table's header buttons would, comes later.
 - **Exporting the Stats tab's tables** (Characters, the grid's List, Long absences), as CSV or Markdown.
-- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.24.0) adds storylines without either.
+- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.25.0) adds storylines without either.
 - **A per-scene history link from Scaffold.** History of this scene is in the scene menus already.
 - **The Stats tab opening over its budget in Firefox and WebKit** (243 to 502 ms against 300 ms, which the design sets for Chromium; DECISIONS has the profile). Most of WebKit's time is the tab switch itself; mounting the Overview later, or drawing the tab's shell first, would bring it under.
 - **The spare words worker retries every 5 seconds** (`SPARE_RETRY_MS`) while a dictionary fails to load with spellcheck off, or at once for another language. A dictionary that never loads (a broken download) is asked again every 5 s while a view holds the cast; a longer wait after each failure would cost less, if it ever shows.

@@ -402,7 +402,7 @@ A slim column beside the Source pane: every scene as a block, top to bottom, its
 - **Phone:** not shown; the Outline's Timeline does the job there.
 - Not shown in focus mode.
 - **Since v0.15.0** the Structure strip ([its design](drafter-structure-strip-design.md)) shows every scene sized by length above the panes; the map reuses `structureStrip`'s geometry, and whether it is still wanted beside the strip, or becomes the strip with a "color by" choice and storyline rows, is Plan E's to decide (strip design §10).
-- **Since v0.21.0** (decided with Plan E's design, Call 38): there is no separate map. It becomes the Structure strip's **Color by** (INT/EXT, day or night, storyline, or scene color), built in Plan E's second part (v0.24.0); see the [seeing-the-script design §7](drafter-seeing-the-script-design.md#7-the-script-map-v0240).
+- **Since v0.21.0** (decided with Plan E's design, Call 38): there is no separate map. It becomes the Structure strip's **Color by** (INT/EXT, day or night, storyline, or scene color), built in Plan E's second part (v0.25.0); see the [seeing-the-script design §7](drafter-seeing-the-script-design.md#7-the-script-map-v0240).
 
 ## 15. The pacing view
 
@@ -658,7 +658,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 **Decided (2026-10-30, with the formats release): v0.20.0 is the formats release** (`drafter convert`, footnotes in Markdown documents, the tour's Fountain-first wording, and the README's Formats section), ahead of Plan E. Plan E ships in two parts, v0.21.0 (Scaffold, the Stats tab, and the character grid) and v0.23.0 (storylines, the Timeline, the map, and pacing), with **Export as HTML** ([its design](drafter-html-export-design.md)) as v0.22.0 between them. Plans F to H move to v0.24.0 to v0.26.0, their letters unchanged. Plan F, the Beat Board, is expected to become the **Workbook** the maintainer asked for (a story bible and scene cards beside the script), with its own design.
 
-**Decided (2026-10-30, with Plan E's first part; the controller's ruling on the seeing-the-script design's Call 1, renumbered after the formats release): Plan E ships in two parts, and Novel comes between them.** **v0.21.0** is Plan E part 1 (Scaffold, the Stats tab, and the character grid); **v0.22.0** is Export as HTML, and EPUB, for reading a draft on an e-reader ([its design](drafter-html-export-design.md)); **v0.23.0** is **Novel**, a choice beside Screenplay and Stage play for drafting a novel in Markdown (chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release), to be designed; **v0.24.0** is Plan E part 2 (storylines, the strip's Color by, and pacing); and Plans F to H move to **v0.25.0 to v0.27.0**, their letters unchanged, F still expected to become the Workbook. The script map is the strip's **Color by** (Call 38), not a column of its own.
+**Decided (2026-10-30, with Plan E's first part; the controller's ruling on the seeing-the-script design's Call 1, renumbered after the formats release): Plan E ships in two parts, with Drafts and Cuts and Novel between them** (the maintainer's order). **v0.21.0** is Plan E part 1 (Scaffold, the Stats tab, and the character grid); **v0.22.0** is Export as HTML, and EPUB, for reading a draft on an e-reader ([its design](drafter-html-export-design.md)); **v0.23.0** is **Drafts and Cuts**, numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind, to be designed; **v0.24.0** is **Novel**, a choice beside Screenplay and Stage play for drafting a novel in Markdown (chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release), to be designed; **v0.25.0** is Plan E part 2 (storylines, the strip's Color by, and pacing); and Plans F to H move to **v0.26.0 to v0.28.0**, their letters unchanged, F still expected to become the Workbook. The script map is the strip's **Color by** (Call 38), not a column of its own.
 
 ### Plan E, part 1 — v0.21.0: Scaffold and the Stats tab
 
@@ -680,7 +680,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Scaffold's figures match the Stats tab's and the scene index's on fixtures, and its panel and its character and location pages work fully by keyboard.
 - axe passes on every Stats section, the grid, and Scaffold, in both themes at both widths.
 
-### Plan E, part 2 — v0.24.0: Storylines, the map, and pacing
+### Plan E, part 2 — v0.25.0: Storylines, the map, and pacing
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14), as the Structure strip's **Color by** (Call 38); the pacing view and its guides (§15), Drafter's own and generic (the controller overruled a fifteen-mark guide); and the Stats tab's Storylines and Pacing sections (§16).
 
@@ -690,7 +690,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The strip's Color by, the Timeline, and the pacing table work fully by keyboard, and each chart has its table.
 - axe passes on the Storylines and Pacing sections, the Timeline, the margin marks, and the strip's Color by, in both themes at both widths.
 
-### Plan F — v0.25.0: The Beat Board
+### Plan F — v0.26.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -701,7 +701,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.26.0: Reader notes
+### Plan G — v0.27.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -712,7 +712,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.27.0: Reference
+### Plan H — v0.28.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 
@@ -809,4 +809,4 @@ Made with the imports and Markdown out (2026-10-30):
 
 Made with Plan E, part 1 (2026-10-30):
 
-- **This design, §14, §16, and §22:** §14 notes that the map becomes the Structure strip's Color by (Call 38); §16 notes the scene index's `speeches` and `opening` and the retired `characterTable`; §22 splits Plan E into part 1 (v0.21.0, built) and part 2 (v0.24.0), with the done-when divided between them, and a "Decided" paragraph puts Export as HTML (v0.22.0) and **Novel** (v0.23.0) between the parts and Plans F to H at v0.25.0 to v0.27.0. **Architecture §13 and the README:** Scaffold, the Stats tab, and the character grid among what's built (the status line, What you can do today, the Phase 2 roadmap, the Packages table with `@drafter/cast`, and Design documents), and "Next" names Export as HTML, Novel, Plan E part 2, then Plans F to H. **Technical details:** `@drafter/cast`. **The seeing-the-script design and plan:** renumbered the same way, with a note saying so.
+- **This design, §14, §16, and §22:** §14 notes that the map becomes the Structure strip's Color by (Call 38); §16 notes the scene index's `speeches` and `opening` and the retired `characterTable`; §22 splits Plan E into part 1 (v0.21.0, built) and part 2 (v0.25.0), with the done-when divided between them, and a "Decided" paragraph puts Export as HTML (v0.22.0), **Drafts and Cuts** (v0.23.0), and **Novel** (v0.24.0) between the parts and Plans F to H at v0.26.0 to v0.28.0. **Architecture §13 and the README:** Scaffold, the Stats tab, and the character grid among what's built (the status line, What you can do today, the Phase 2 roadmap, the Packages table with `@drafter/cast`, and Design documents), and "Next" names Export as HTML, Drafts and Cuts, Novel, Plan E part 2, then Plans F to H. **Technical details:** `@drafter/cast`. **The seeing-the-script design and plan:** renumbered the same way, with a note saying so.
