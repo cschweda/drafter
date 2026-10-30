@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Convert many files to Fountain at once, from the command line.** `drafter convert` turns Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) files into `.fountain` files, exactly as opening each one in Drafter and saving it would. Name files or whole folders (`--recursive` goes into subfolders); each `.fountain` is written beside its file, or into the folder `--out` names. A `.fountain` that is already there is left alone unless you add `--force`, and the file you convert is never changed. Each file gets a line saying what happened (converted, and how many items came in as notes; skipped; or refused, with the same reason the app gives, such as "Drafter can’t open a Word document"), and a summary follows; it exits 1 if any file was refused. Run it as `pnpm drafter convert …` after a build.
+
+### Changed
+
+- `notAScript` and `refusalMessage`, the table of files that aren't scripts, moved from the web app into `@drafter/archive`, so the app's Open and `drafter convert` refuse the same files with the same words. `@drafter/cli` now depends on `@drafter/fdx` and `@drafter/archive`.
+
 ## [0.19.1] - 2026-10-30
 
 **Two rare Markdown export lines kept as written, and Stats reads every heading at once.** A `<` before a bold or italic word starting with `@`, and a centered line with no text, now export as they should; a heading with a very long run of spaces no longer slows the Stats window.

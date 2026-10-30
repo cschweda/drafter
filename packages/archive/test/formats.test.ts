@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { notAScript, refusalMessage } from '../app/storage/formats';
+import { notAScript, refusalMessage } from '../src/formats';
 
 const text = (s: string) => new TextEncoder().encode(s);
 const PLAIN = text('INT. HALL - DAY\n\nA door opens.\n');

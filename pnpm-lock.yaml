@@ -188,6 +188,12 @@ importers:
 
   packages/cli:
     dependencies:
+      '@drafter/archive':
+        specifier: workspace:*
+        version: link:../archive
+      '@drafter/fdx':
+        specifier: workspace:*
+        version: link:../fdx
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain

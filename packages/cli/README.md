@@ -1,12 +1,14 @@
 # @drafter/cli
 
-The [Drafter](https://github.com/cschweda/drafter) command line: lays out a Fountain script and writes it as a PDF, fixed-width text, or JSON, or checks it for problems.
+The [Drafter](https://github.com/cschweda/drafter) command line: lays out a Fountain script and writes it as a PDF, fixed-width text, or JSON, or checks it for problems; and converts Final Draft, Highland, and Fade In files to Fountain, many at once.
 
 ```sh
 drafter build script.fountain                       # writes script.pdf
 drafter build script.fountain --pdf draft.pdf --txt draft.txt --json draft.json
 drafter build play.fountain --template stage-play-standard --txt -
 drafter check script.fountain                       # exits 1 if anything is an error
+drafter convert "The Call.fdx"                      # writes The Call.fountain beside it
+drafter convert old-scripts --recursive --out fountain
 ```
 
 In this repository, run it from the root as `pnpm drafter …` after `pnpm -r build`. Publishing it to npm, for `npx @drafter/cli`, is planned for Phase 5.
@@ -37,6 +39,31 @@ samples/stage-play.fountain:43:1: note: Strict Fountain keeps a parenthetical on
 
 Each diagnostic is `file:line:column: severity: message [code]`, a form terminals and editors link to. Severity is `error`, `warning`, or `note`. `check` exits 1 when any diagnostic is an error.
 
+### `drafter convert <path...> [options]`
+
+Converts Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) files to Fountain, with the same functions the app's Open uses (`fromFdx` from `@drafter/fdx`, `fromHighland` and `fromFadeIn` from `@drafter/archive`), so each `.fountain` holds exactly the text the app would import: UTF-8, every line ending a line feed, with what Drafter has no element for kept as notes (`[[fdx: …]]`, `[[highland: …]]`, `[[osf: …]]`).
+
+Each path is a file or a folder. A folder's `.fdx`, `.highland`, and `.fadein` files are converted, in name order; its other files, and names starting with `.` (such as macOS's `._` files), are left alone.
+
+| Option | What it does |
+|---|---|
+| `--out <dir>` | Write the `.fountain` files here, made if it is missing, instead of beside each file. With `--recursive`, a file in a subfolder goes in the same subfolder under `--out`. |
+| `--force` | Replace a `.fountain` that is already there. Without it, that file is skipped and left as it is. |
+| `--recursive` | Convert the scripts in a folder's subfolders too (never following a link to a folder). |
+
+`script.fdx` becomes `script.fountain`. The file converted is never written, and neither is anything a `.fountain` there links to: `--force` replaces the link itself. Two files that would make the same `.fountain` in one run (`a.fdx` and `a.fadein`) aren't both written; the second is refused.
+
+A file is refused, with the reason the app gives, when it is a kind that isn't a script (a Word, RTF, PDF, OpenDocument, or Pages document, an older Final Draft `.fdr`, a Celtx project, a zip), judged by its name and its first bytes; when it isn't a kind `convert` reads (a `.txt` or `.fountain` named on its own); and when its importer refuses it (not a Final Draft file, a damaged or encrypted archive, a name inside that isn't safe, no script inside). The app's limits apply: a Final Draft file over 5 MB, or that isn't UTF-8 text, and an archive over 32 MB are refused before they are read, and the archive reader's own limits hold inside.
+
+It prints a line for each file, then a summary:
+
+```
+scripts/Call.fdx → scripts/Call.fountain (2 items came in as notes)
+scripts/Old.fdx: skipped: scripts/Old.fountain is already there (--force replaces it)
+scripts/Draft.highland: refused: This isn’t a Highland file Drafter can read: it is damaged.
+1 converted, 1 skipped, 1 refused
+```
+
 ## Choosing the template
 
 `--template` if it's given; otherwise the template named in the file's metadata block (`/* drafter { "template": "…" } */` at the end of the file); otherwise `us-screenplay`. A metadata block that names a template Drafter doesn't have gets a warning, and the script is laid out with `us-screenplay`. An unknown `--template` is an error, because you asked for it by name.
@@ -45,8 +72,8 @@ Each diagnostic is `file:line:column: severity: message [code]`, a form terminal
 
 | Code | Meaning |
 |---|---|
-| 0 | Success. For `check`, no diagnostic is an error. |
-| 1 | `check` found an error, or a file couldn't be read or written, or a template is invalid or unsupported, or the command line was wrong. |
+| 0 | Success. For `check`, no diagnostic is an error. For `convert`, no file was refused (a skipped file isn't a failure). |
+| 1 | `check` found an error, or `convert` refused a file or found nothing to convert, or a file couldn't be read or written, or a template is invalid or unsupported, or the command line was wrong. |
 
 ## License
 

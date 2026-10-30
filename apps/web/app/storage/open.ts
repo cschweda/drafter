@@ -1,4 +1,10 @@
-import { ArchiveError, fromFadeIn, fromHighland } from '@drafter/archive';
+import {
+  ArchiveError,
+  fromFadeIn,
+  fromHighland,
+  notAScript,
+  refusalMessage,
+} from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
@@ -8,7 +14,6 @@ import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
 import { FileGoneError, FileProblemError, type PickedFile, useFiles } from './files';
-import { notAScript, refusalMessage } from './formats';
 import { useGuard } from './guard';
 import { getHandle, kindOf, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';

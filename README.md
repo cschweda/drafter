@@ -150,7 +150,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
 | `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight | 0 (Markdown documents in 2) |
-| `@drafter/cli` | `drafter build` and `drafter check` | 0 (published in 5) |
+| `@drafter/cli` | `drafter build`, `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
@@ -303,6 +303,7 @@ After a build, the CLI runs from the repository root:
 pnpm drafter build samples/screenplay.fountain                 # writes samples/screenplay.pdf
 pnpm drafter build samples/stage-play.fountain --txt -         # fixed-width text to the terminal
 pnpm drafter check samples/stage-play.fountain                 # diagnostics; exits 1 on any error
+pnpm drafter convert ~/scripts --out ~/fountain                # every .fdx, .highland, .fadein to .fountain
 ```
 
 The stage play picks its own template from the metadata block at the end of the file; `--template` overrides it. The [CLI's README](packages/cli/README.md) has every option.

@@ -106,7 +106,7 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
     const ref = refOf(path);
     const file = await read(path);
     // The desktop app writes only scripts (the real file's type, links followed). Anything else the
-    // writer opened ("All files") that Open doesn't turn away (storage/formats.ts) becomes a new
+    // writer opened ("All files") that Open doesn’t turn away (`notAScript`) becomes a new
     // script with its text, tied to no file, so Save asks where to put it instead of failing every
     // time.
     let real = path;

@@ -63,6 +63,10 @@ try {
 
 No `.xml` is `no-script`, several with no single OSF root is `many-scripts` (naming up to five), and a document `fromOsf` refuses is `not-osf`, with its reason.
 
+## Files that aren't scripts
+
+`notAScript(name, bytes)` names a file that is a known kind other than a script, so the app's Open and `drafter convert` turn it away with the same words: by extension, in any case (`.rtf`, `.doc`, `.docx`, `.odt`, `.pages`, `.pdf`, `.fdr`, `.celtx`, `.zip`), or, whatever its name, by its first bytes (RTF, PDF, an OLE compound file, and a zip, unless it is named `.highland` or `.fadein`). It returns a `Refusal` (what the file is, and what to do instead) or null, and `refusalMessage(name, refusal)` says it: "Drafter can’t open a Word document (Notes.docx). Save it as plain text or Fountain in the app that made it, then open that."
+
 ## License
 
 MIT

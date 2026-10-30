@@ -81,8 +81,10 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/cli',
-    does: 'The command line: `drafter build` writes a script as PDF, text, or JSON, and `drafter check` reports its problems.',
+    does: 'The command line: `drafter build` writes a script as PDF, text, or JSON, `drafter check` reports its problems, and `drafter convert` turns Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files into Fountain, many at once.',
     uses: [
+      '@drafter/archive',
+      '@drafter/fdx',
       '@drafter/fountain',
       '@drafter/layout',
       '@drafter/render-pdf',
@@ -142,7 +144,7 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/archive',
-    does: 'Highland (.highland) and Fade In (.fadein) files, which come packed as a zip: its own strict read-only zip reader, and the script inside each.',
+    does: 'Highland (.highland) and Fade In (.fadein) files, which come packed as a zip: its own strict read-only zip reader, and the script inside each; and the list of files that aren’t scripts, which Open and `drafter convert` refuse.',
     uses: ['@drafter/fdx'],
   },
   {

@@ -1,7 +1,8 @@
 /**
- * The files Open turns away because they are a known kind that isn't a script (Call 21): a short,
- * closed table, by extension and by first bytes. Anything else that is UTF-8 text opens as
- * Fountain, which reads any text, and a zip named `.highland` or `.fadein` is imported.
+ * The files Drafter turns away because they are a known kind that isn't a script (Imports and
+ * Markdown out, Call 21): a short, closed table, by extension and by first bytes. The app's Open
+ * and `drafter convert` both ask it first. Anything else that is UTF-8 text opens as Fountain,
+ * which reads any text, and a zip named `.highland` or `.fadein` is imported.
  */
 
 /** What a refused file is ("a Word document") and what the writer can do instead. */
