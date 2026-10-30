@@ -134,6 +134,13 @@ export interface ScriptSession {
    * kind already.
    */
   setKind(kind: DocumentKind): Promise<void>;
+  /**
+   * Keeps `fields`, the open script's own settings that are not its text (its export options), on
+   * its project: the copy held here at once, and the stored one in turn. Nothing in the text
+   * changes, so the script isn't changed and Undo has nothing new. Does nothing in a tab that only
+   * shows the script, or with no script open.
+   */
+  keepOnProject(fields: Pick<Partial<Project>, 'exportOptions'>): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
   /** A sample is open and the editor can change it: Reset sample would do something. */
@@ -733,6 +740,12 @@ function create(): ScriptSession {
     }
   }
 
+  async function keepOnProject(fields: Pick<Partial<Project>, 'exportOptions'>) {
+    const current = project.value;
+    if (!current || guard.readOnly.value) return;
+    await patch(current.id, fields);
+  }
+
   async function sampleProject(kind: SampleKind): Promise<Project> {
     const existing = (await listProjects()).find((p) => p.sample === kind);
     return (
@@ -1144,6 +1157,7 @@ function create(): ScriptSession {
     forgetBlank,
     startBlank,
     setKind,
+    keepOnProject,
     openSample,
     canResetSample,
     resetSample,

@@ -587,3 +587,216 @@ test.describe('exporting through the save picker (Chromium)', () => {
     await expect(editor(page)).toContainText('The Call');
   });
 });
+
+test.describe('export options', () => {
+  test.beforeEach(async ({ page }) => {
+    await removePickers(page);
+  });
+
+  const optionsDialog = (page: Page) => page.getByRole('dialog', { name: 'Export options' });
+  const optionsItem = (page: Page) => menu(page).getByRole('button', { name: 'Export options…' });
+  const sceneNumbers = (page: Page) =>
+    optionsDialog(page).getByRole('group', { name: 'Scene numbers' });
+  const titlePage = (page: Page) => optionsDialog(page).getByRole('group', { name: 'Title page' });
+
+  /** Opens Export options from the end of the toolbar's Export menu. */
+  async function openOptions(page: Page) {
+    await exportButton(page).click();
+    await optionsItem(page).click();
+    await expect(optionsDialog(page)).toBeVisible();
+  }
+
+  /** Opens the dialog, chooses `label` in the `group`, and closes it with Done. */
+  async function choose(page: Page, group: 'Scene numbers' | 'Title page', label: string) {
+    await openOptions(page);
+    const radio = optionsDialog(page)
+      .getByRole('group', { name: group })
+      .getByRole('radio', { name: label, exact: true });
+    await radio.check();
+    await expect(radio).toBeChecked();
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    await expect(optionsDialog(page)).toBeHidden();
+  }
+
+  /** Exports the open script as plain text from the Export menu, and answers the text. */
+  async function downloadText(page: Page): Promise<{ name: string; text: string }> {
+    await exportButton(page).click();
+    const download = page.waitForEvent('download');
+    await txtItem(page).click();
+    const file = await download;
+    return { name: file.suggestedFilename(), text: await readFile(await file.path(), 'utf8') };
+  }
+
+  /** The text of each page of a PDF, as pdfjs reads it. */
+  async function pagesOf(bytes: Uint8Array): Promise<string[]> {
+    const pdfjs = (await import(
+      pathToFileURL(renderPdfRequire.resolve('pdfjs-dist/legacy/build/pdf.mjs')).href
+    )) as typeof import('pdfjs-dist');
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes), verbosity: 0 }).promise;
+    const pages: string[] = [];
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const content = await (await pdf.getPage(n)).getTextContent();
+      pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' '));
+    }
+    return pages;
+  }
+
+  test('Export options… is at the end of the Export menu and in the palette', async ({ page }) => {
+    await start(page);
+    await exportButton(page).click();
+    await expect(menu(page).getByRole('button')).toHaveText([
+      'PDF',
+      'Plain text (.txt)',
+      'Final Draft (.fdx)',
+      'Treatment (.md)…',
+      'Export options…',
+    ]);
+    // After a line, of its own.
+    await expect(menu(page).getByRole('separator')).toHaveCount(1);
+    await optionsItem(page).click();
+    await expect(optionsDialog(page)).toBeVisible();
+    // The defaults, as an export was before there were options.
+    await expect(
+      sceneNumbers(page).getByRole('radio', { name: 'None', exact: true }),
+    ).toBeChecked();
+    await expect(titlePage(page).getByRole('radio', { name: 'Full', exact: true })).toBeChecked();
+    await expect(optionsDialog(page)).toContainText(
+      'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script',
+    );
+    await expect(optionsDialog(page)).toContainText('so two scenes can share a number');
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    await expect(optionsDialog(page)).toBeHidden();
+
+    await runCommand(page, 'Export options…');
+    await expect(optionsDialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(optionsDialog(page)).toBeHidden();
+  });
+
+  test('choosing No title page exports a PDF without one, and the toast says so', async ({
+    page,
+  }) => {
+    await start(page);
+    await choose(page, 'Title page', 'None');
+    const { name, bytes } = await downloadPdf(page);
+    expect(name).toBe('The Call.pdf');
+    const pages = await pagesOf(bytes);
+    // The title page is gone: two pages, and the first is the script's page 1.
+    expect(pages).toHaveLength(2);
+    expect(pages[0]).not.toContain('Written by');
+    expect(pages[0]).not.toContain('writer@example.com');
+    expect(pages[0]).toContain('INT. KITCHEN - NIGHT');
+    await expect(ready(page)).toHaveText('Exported The Call.pdf, with no title page.');
+  });
+
+  test('the options are remembered per script, after a reload', async ({ page }) => {
+    await start(page);
+    await choose(page, 'Scene numbers', 'Number every scene');
+    await choose(page, 'Title page', 'Title and author only');
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    await openOptions(page);
+    await expect(
+      sceneNumbers(page).getByRole('radio', { name: 'Number every scene', exact: true }),
+    ).toBeChecked();
+    await expect(
+      titlePage(page).getByRole('radio', { name: 'Title and author only', exact: true }),
+    ).toBeChecked();
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    const { text } = await downloadText(page);
+    // Every scene numbered, at both sides of its heading; the title and author, but no contact.
+    expect(text).toMatch(/^ *1 +INT\. KITCHEN - NIGHT +1$/m);
+    expect(text).toContain('A. Writer');
+    expect(text).not.toContain('writer@example.com');
+    expect(text).not.toContain('October 2026');
+    await expect(ready(page)).toHaveText(
+      'Exported The Call.txt, with every scene numbered and the title and author only.',
+    );
+  });
+
+  test('exports each script with its own options after switching', async ({ page }) => {
+    await start(page);
+    await choose(page, 'Title page', 'None');
+    // A second script, with a title page of its own and no options chosen.
+    await runCommand(page, 'New guided screenplay');
+    await expect(page).toHaveTitle('Your Title Here — Drafter');
+    const guided = await downloadText(page);
+    expect(guided.name).toBe('Your Title Here.txt');
+    expect(guided.text).toContain('Your email or phone');
+    await expect(ready(page)).toHaveText('Exported Your Title Here.txt.');
+    await choose(page, 'Title page', 'Title and author only');
+    const cut = await downloadText(page);
+    expect(cut.text).toContain('Your Title Here');
+    expect(cut.text).toContain('Your Name');
+    expect(cut.text).not.toContain('Your email or phone');
+
+    // Back to the first: its own choice, not the one just made.
+    await runCommand(page, 'Open sample: Screenplay');
+    await expect(page).toHaveTitle('The Call — Drafter');
+    const call = await downloadText(page);
+    expect(call.name).toBe('The Call.txt');
+    expect(call.text).not.toContain('Written by');
+    expect(call.text).toContain('INT. KITCHEN - NIGHT');
+    await expect(ready(page)).toHaveText('Exported The Call.txt, with no title page.');
+  });
+
+  test('is disabled for a Markdown document, with the reason', async ({ page }) => {
+    await start(page);
+    await openMarkdownSample(page);
+    await exportButton(page).click();
+    await expect(optionsItem(page)).toBeDisabled();
+    await expect(menu(page)).toContainText(
+      'A Markdown document has no scene numbers or title page.',
+    );
+    await page.keyboard.press('Escape');
+    // The palette doesn't offer it.
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette(page).locator('input').fill('Export options');
+    await expect(palette(page).getByRole('option', { name: /^Export options/ })).toHaveCount(0);
+  });
+
+  test('in a read-only tab the choices are disabled and say why, and exporting works', async ({
+    context,
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'two tabs are the same on a phone');
+    await start(page);
+    await choose(page, 'Title page', 'None');
+    const other = await context.newPage();
+    await removePickers(other);
+    await other.goto('/');
+    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await openOptions(other);
+    await expect(optionsDialog(other)).toContainText(
+      'Another tab has this script open, so its export options can’t be changed here.',
+    );
+    for (const radio of await optionsDialog(other).getByRole('radio').all()) {
+      await expect(radio).toBeDisabled();
+    }
+    // The stored choice shows, and is the one the export uses.
+    await expect(titlePage(other).getByRole('radio', { name: 'None', exact: true })).toBeChecked();
+    await optionsDialog(other).getByRole('button', { name: 'Done' }).click();
+    const { bytes } = await downloadPdf(other);
+    expect(await pagesOf(bytes)).toHaveLength(2);
+    await expect(ready(other)).toHaveText('Exported The Call.pdf, with no title page.');
+  });
+
+  test('the script is unchanged by choosing options', async ({ page, isMobile }) => {
+    await start(page);
+    const before = await page.title();
+    expect(before).toBe('The Call — Drafter');
+    await choose(page, 'Scene numbers', 'As written');
+    await choose(page, 'Title page', 'Title and author only');
+    // No changed dot in the title, and Undo has nothing to take back.
+    await expect(page).toHaveTitle('The Call — Drafter');
+    if (!isMobile) {
+      await editor(page).click();
+      const text = await editor(page).evaluate((el) => el.textContent);
+      await page.keyboard.press('ControlOrMeta+z');
+      await page.waitForTimeout(100);
+      expect(await editor(page).evaluate((el) => el.textContent)).toBe(text);
+      await expect(page).toHaveTitle('The Call — Drafter');
+    }
+  });
+});

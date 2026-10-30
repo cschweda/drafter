@@ -174,7 +174,13 @@ const items = computed<DropdownMenuItem[][]>(() => [
     // File, as in the palette: Start blank only while a first document still has its sample's untouched text.
     ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],
-  exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
+  [
+    ...exportIds.value.flatMap((id) => entry(id, EXPORT_ICONS[id] as string)),
+    // Export options… ends the section, after a line (out-the-door design §2.4); off, with the
+    // reason, for a Markdown document.
+    { type: 'separator' },
+    ...entry('export-options', 'i-lucide-sliders-horizontal'),
+  ],
   [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
   helpItems.value,
 ]);

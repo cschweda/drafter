@@ -89,6 +89,27 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('puts Export options… last in File → Export, by its whole name', () => {
+    const exports = [
+      cmd('export-txt', 'File', 'Export as plain text'),
+      cmd('export-fdx', 'File', 'Export as Final Draft (.fdx)'),
+      cmd('export-treatment', 'File', 'Export as treatment…'),
+      cmd('export-options', 'File', 'Export options…'),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...exports], () => {}, { platform: 'linux' }));
+    const exportMenu = submenu(m.File).find((i) => labelOf(i) === 'Export');
+    const items = submenu(exportMenu).filter((i) => i.type !== 'separator');
+    expect(items.map((i) => i.id)).toEqual([
+      'export-pdf',
+      'export-txt',
+      'export-fdx',
+      'export-treatment',
+      'export-options',
+    ]);
+    // Only "Export as " is cut from a title, so this one keeps its own.
+    expect(labelOf(items.at(-1) as MenuItemConstructorOptions)).toBe('Export options…');
+  });
+
   test('puts the spelling commands in Edit and Go', () => {
     const spelling = [
       cmd('check-spelling', 'Edit', 'Check spelling'),

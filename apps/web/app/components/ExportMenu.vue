@@ -8,6 +8,7 @@ import {
   exportNotice,
   exportProgress,
 } from '~/storage/export';
+import { OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 
 // A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10).
 const { kind } = useEditor();
@@ -67,6 +68,16 @@ function choose(kind: ExportKind) {
   close(true);
 }
 
+/**
+ * Export options… (out-the-door design §2.4): the menu's last item, after a line. A Markdown
+ * document has no scene numbers or title page, so it shows off, with the reason.
+ */
+const optionsWhy = computed(() => (kind.value === 'markdown' ? OPTIONS_NOT_FOR_MARKDOWN : ''));
+function chooseOptions() {
+  close(false);
+  commandById('export-options')?.run();
+}
+
 /** The treatment asks a question first, in its own dialog (Phase 2 design §6.4). */
 function chooseTreatment() {
   close(false);
@@ -121,6 +132,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseTreatment">
         <UIcon name="i-lucide-list-tree" class="icon" />Treatment (.md)…
       </button>
+      <div class="rule" role="separator" />
+      <button
+        type="button"
+        class="item"
+        :disabled="!!optionsWhy"
+        :aria-describedby="optionsWhy ? 'export-options-why' : undefined"
+        @click="chooseOptions"
+      >
+        <UIcon name="i-lucide-sliders-horizontal" class="icon" />Export options…
+      </button>
+      <p v-if="optionsWhy" id="export-options-why" class="why">{{ optionsWhy }}</p>
     </div>
     <div class="toast" :class="{ shown: exportNotice || exportError || exportProgress }">
       <span role="status">{{ exportNotice }}</span>
@@ -184,8 +206,22 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   text-align: left;
   cursor: pointer;
 }
-.item:hover {
+.item:hover:not(:disabled) {
   background: var(--chrome);
+}
+.item:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.rule {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+.why {
+  margin: 0 8px 4px 30px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .item:focus-visible {
   outline: 2px solid var(--heading);

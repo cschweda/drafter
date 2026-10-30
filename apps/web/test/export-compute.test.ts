@@ -226,10 +226,22 @@ describe('the export worker’s options', () => {
     const exporter = createExporter(realFonts);
     const layout = paginate(parse(sampleScreenplay), template);
     const pdf = await renderPdf(layout, template, { fonts: await realFonts() });
+    // The sample's plain text and Final Draft file as they were before there were options,
+    // written from the release before them (v0.16.0's layout) and kept: a change to the default
+    // export shows here, not only as two of today's renders agreeing.
     const before = {
-      txt: renderText(layout, template),
-      fdx: toFdx(parse(sampleScreenplay), template),
+      txt: await readFile(
+        new URL('./fixtures/sample-screenplay.export.txt', import.meta.url),
+        'utf8',
+      ),
+      fdx: await readFile(
+        new URL('./fixtures/sample-screenplay.export.fdx', import.meta.url),
+        'utf8',
+      ),
     };
+    // Still the engine's own output today, with nothing asked of it.
+    expect(renderText(layout, template)).toBe(before.txt);
+    expect(toFdx(parse(sampleScreenplay), template)).toBe(before.fdx);
     for (const options of [undefined, DEFAULT_EXPORT_OPTIONS]) {
       const request = { source: sampleScreenplay, template, ...(options ? { options } : {}) };
       expect(bytesOf(await exporter({ kind: 'pdf', ...request }))).toEqual(pdf);

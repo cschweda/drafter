@@ -211,6 +211,20 @@ for (const theme of THEMES) {
       await clean(page, 'the Stats window');
     });
 
+    test(`has no accessibility violations in the Export options dialog (${theme})`, async ({
+      page,
+    }) => {
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await page
+        .getByRole('group', { name: 'Export' })
+        .getByRole('button', { name: 'Export options…' })
+        .click();
+      const options = page.getByRole('dialog', { name: 'Export options' });
+      await expect(options).toBeVisible();
+      await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
+      await clean(page, 'the Export options dialog');
+    });
+
     test(`has no accessibility violations in Settings and its modules (${theme})`, async ({
       page,
     }) => {

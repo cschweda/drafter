@@ -139,6 +139,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },
   { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },
+  { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },
   { id: 'settings', title: 'Settings…', group: 'File', keys: 'Mod-,', global: true },

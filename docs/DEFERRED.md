@@ -133,3 +133,9 @@ What the Markdown PDF release (v0.16.0) left for later (Markdown PDF design §12
 - **NVDA's progress-bar beeps** (the screen-reader pass). NVDA beeps as a `role="progressbar"` changes, by default; check in the NVDA and VoiceOver pass whether the toast's bar beeps, and whether that and the quarters said are too much together.
 - **The Preview’s “nested too deeply” message, announced** (the screen-reader pass). The Preview says it in a `role="status"` that is drawn (`v-if`) with the message already in it, and some screen readers announce a live region only when its text changes after it is there. Check with NVDA and VoiceOver that it is said; if not, keep the region drawn and set its text.
 - **The Markdown parser in a chunk of its own** (when the workers move to `worker.format: 'es'`). The export worker is one file, so the parser's code (some 80 KB of its 1.3 MB) comes with it though only a Markdown PDF runs it.
+
+## Getting a script out the door
+
+What v0.17.0 (out-the-door design §7) leaves for later.
+
+- **Scene numbering that never repeats a written number.** Number every scene keeps a number written in the script (`#4#`) and numbers the rest by their place, so five scenes with `#4#` on the second print 1, 4, 3, 4, 5; the dialog says so. Numbering around the written ones, as a production draft does (12, 12A, 13), would need a rule for each case (a written number out of order, a letter after a letter) and is for when a writer asks.

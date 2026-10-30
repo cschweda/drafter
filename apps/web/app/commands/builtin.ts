@@ -60,6 +60,7 @@ import { useSpell } from '~/spell/use-spell';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
+import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
@@ -433,6 +434,16 @@ export function registerBuiltinCommands(): void {
       enabled: isFountain,
       run: () => {
         treatmentOpen.value = true;
+      },
+    },
+    // How the open script's PDF and plain text print its scene numbers and title page (out-the-door
+    // design §2.4): at the end of the Export menu. On in a read-only tab, whose dialog shows the
+    // choices it can't change; off for a Markdown document, which has neither.
+    'export-options': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? OPTIONS_NOT_FOR_MARKDOWN : undefined),
+      run: () => {
+        exportOptionsOpen.value = true;
       },
     },
     // A Markdown outline as a new screenplay (design §6.5): its headings as sections, its items as stubs.

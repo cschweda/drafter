@@ -218,6 +218,23 @@ useDocsHead({
       in Drafter again brings them back.
     </p>
 
+    <h2 id="export-options">Export options</h2>
+    <p>
+      <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF and
+      plain text print. <strong>Scene numbers</strong>: None (the usual), As written (only the
+      numbers you’ve written in the script, like <code>#12A#</code>), or Number every scene (a scene
+      with a written number keeps it, and the rest are numbered by their place, so two scenes can
+      share a number). <strong>Title page</strong>: Full, Title and author only (the title, the
+      credit, the authors, and the source, without your contact details or the date), or None.
+    </p>
+    <p>
+      Each script keeps its own choices, in this browser, and the script itself never changes: they
+      aren’t in its file, so another browser or computer starts with the usual ones. The export’s
+      message names any choice that isn’t the usual one. A Final Draft file gets the title page you
+      choose, and always keeps the scene numbers written in the script, since Final Draft decides
+      whether to print them. A Markdown document has neither, so its Export options is off.
+    </p>
+
     <h2 id="recovery-copy">The recovery copy</h2>
     <p>
       Drafter keeps a copy of every script in this browser’s own storage, whether or not the script

@@ -5,6 +5,7 @@ import { type TemplateId, templateIdOf } from '../editor/template';
 import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
+import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';
 import { fileBaseName, titleFileOf, titleOf } from './text';
@@ -64,6 +65,12 @@ export interface Project {
    */
   importedFrom?: string;
   fsHandleId?: string;
+  /**
+   * How this script exports (scene numbers, the title page): set in the Export options dialog,
+   * kept here and never in the script, so choosing one never changes the text. A missing or
+   * unknown value is its default (`exportOptionsOf`). Unindexed, so it needed no new version.
+   */
+  exportOptions?: Partial<ExportOptions>;
 }
 
 /** The kind a project is: Fountain unless it says it is Markdown. */

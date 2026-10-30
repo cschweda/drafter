@@ -329,10 +329,12 @@ test.describe('a Markdown document', () => {
     await typeAtEnd(page, 'Body text.');
     await page.getByRole('button', { name: 'Export' }).click();
     const menu = page.getByRole('group', { name: 'Export' });
+    // Export options… ends the menu, off for a Markdown document (export.spec.ts says why).
     await expect(menu.getByRole('button')).toHaveText([
       'PDF',
       'Markdown (.md)',
       'Plain text (.txt)',
+      'Export options…',
     ]);
     await menu.getByRole('button', { name: 'Markdown (.md)' }).click();
     await expect.poll(() => files(page)).toContain('Untitled.md');

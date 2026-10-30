@@ -342,3 +342,22 @@ describe('Export in the desktop menus', () => {
     ]);
   });
 });
+
+describe('Export options in the desktop menus', () => {
+  test('puts Export options… in File → Export, last', () => {
+    // Every export command, in the order the registry has them: the desktop app's File → Export
+    // submenu picks them by their `export-` prefix, in this order.
+    const ids = COMMAND_DATA.filter((c) => c.id.startsWith('export-')).map((c) => c.id);
+    registerCommands(ids.map((id) => command(id)));
+    const sent = menuCommands(useCommands().value).filter((c) => c.id.startsWith('export-'));
+    expect(sent.map((c) => c.id)).toEqual([
+      'export-pdf',
+      'export-md',
+      'export-txt',
+      'export-fdx',
+      'export-treatment',
+      'export-options',
+    ]);
+    expect(sent.at(-1)).toMatchObject({ title: 'Export options…', group: 'File' });
+  });
+});

@@ -192,6 +192,7 @@ onBeforeUnmount(() => {
     <OutlineAnnouncer />
     <SpellMenu />
     <TreatmentDialog />
+    <ExportOptionsDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />
     <SettingsDialog />
