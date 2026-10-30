@@ -191,6 +191,8 @@ This release takes v0.17.0. The Markdown PDF (v0.16.0) already moved Plans E to 
 
 The imports release comes next and will move them again by one. The letters stay.
 
+**Since (2026-10-29):** version history was put ahead of the imports, as v0.18.0, and the imports take v0.19.0, so Plans E to H are v0.20.0 to v0.23.0 (Phase 2 design §22). This table is kept as it was decided. Plan E also takes Scaffold, the maintainer's cast-and-scene panel, built on this release's per-scene `timing` and `spokenBy`.
+
 ## 8. Calls
 
 1. The starters talk to a newcomer, name each button and its mark, and teach Fountain's marks themselves (§1.1).

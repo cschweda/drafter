@@ -5,17 +5,18 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.16.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Next: guided starters, export options, running time, and a Technical details page (v0.17.0), then version history, then Highland, Fade In, and Markdown imports; a signed macOS download follows. See the [roadmap](#roadmap).
+> **Status: v0.16.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way, now with guided starters, export options, and running times. Next: version history (v0.18.0), then Highland, Fade In, and Markdown imports (v0.19.0); a signed macOS download follows. See the [roadmap](#roadmap).
 
 **What you can do today**
 
 - **Write:** the editor and its live pages; an element bar that writes Fountain for you, with a cheat sheet; Screenplay and Stage play templates, and plain Markdown documents; the command palette, settings, the Problems pane, and optional script modules.
-- **Shape the story:** **Outline** (scenes and sections as a tree, with synopses, colors, and a treatment export) and **Cards** (an index card for every scene), both rearranged by drag or keys; **Notes** (every note and boneyard in one list, with categories, readers' names, and open or resolved status); scene goals; setups and payoffs; and the [**Structure strip**](#the-idea), a band of blocks above the panes to click and go.
+- **Shape the story:** **Outline** (scenes and sections as a tree, with synopses, colors, each one's running time, and a treatment export) and **Cards** (an index card for every scene), both rearranged by drag or keys; **Notes** (every note and boneyard in one list, with categories, readers' names, and open or resolved status); scene goals; setups and payoffs; and the [**Structure strip**](#the-idea), a band of blocks above the panes to click and go.
 - **Look back:** **History** (earlier versions, kept as you write and save, each restorable in one undo) and **Compare** (what changed between two versions, as script pages with the changes marked).
 - **Check spelling:** Drafter's own spellcheck, offline, in US or British English, with a dictionary of your own and one for each script.
 - **Keep going:** focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats.
-- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; export to PDF and plain text, with a progress bar and a percentage on a long export; a Markdown document's PDF too, with links you can click, on US Letter or A4; and **Final Draft files** (open an `.fdx` as a new script, or export your script as one).
-- **Get started:** a welcome and a guided tour on a first visit; offline use and installing as an app; help pages; and, under Help in the menu, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
+- **Time it:** the running time at your own minutes a page and an estimate from the dialogue, set per script in Stats, with each scene's and act's time in the Outline and the Structure strip.
+- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; export to PDF and plain text, with a progress bar and a percentage on a long export; a Markdown document's PDF too, with links you can click, on US Letter or A4; and **Final Draft files** (open an `.fdx` as a new script, or export your script as one). **Export options**, per script, for scene numbers (none, as written, or every scene) and how much of the title page prints.
+- **Get started:** a welcome and a guided tour on a first visit; a **guided first screenplay** and **stage play** (File → New guided screenplay) that teach each element as you read; offline use and installing as an app; help pages, among them **Technical details** (how Drafter is built, with diagrams); and, under Help in the menu, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
 - **On the desktop:** an app for Linux (an AppImage or a `.deb`) and Windows (an installer) that always saves in place and loads script modules from a folder. It builds on a Mac with one command.
 
 <picture>
@@ -76,11 +77,11 @@ The left pane is a [CodeMirror 6](https://codemirror.net) editor showing the raw
 |---|---|---|
 | **Script** | The paginated, formatted script, built from the same page model as the PDF export. Click a line to jump to it in the source. | Phase 1 |
 | **Problems** | Lint results, like a compiler's error list. Click to jump. | Phase 1 |
-| **Outline** | Sections, scenes, synopses, scene colors, and page counts. Reorder scenes by drag or keyboard, and the source is rewritten. | Phase 2 (built) |
+| **Outline** | Sections, scenes, synopses, scene colors, page counts, and running times. Reorder scenes by drag or keyboard, and the source is rewritten. | Phase 2 (built) |
 | **Cards** | An index-card view of scenes with synopsis and color, moved by drag or keyboard. | Phase 2 (built) |
 | **Beat Board** | A free canvas of idea cards to color, link, and move into the outline, with storylines shown in color. | Phase 2 |
 | **Notes** | Every `[[note]]` and `/* boneyard */` in one place, linked to its position, with categories, readers, and open or resolved status. | Phase 2 (built) |
-| **Stats** | Page count, estimated runtime, dialogue share per character, INT/EXT and DAY/NIGHT breakdowns, pacing. | Phase 2 |
+| **Stats** | Page count, running time at your own rate and an estimate from the dialogue, dialogue share per character, INT/EXT and DAY/NIGHT breakdowns, pacing. | Phase 2 |
 | **Reference** | Fountain syntax and the active template's formatting rules, built in. | Phase 2 |
 
 Above both panes, the **Structure strip** (Phase 2, built) shows the whole script at once: your sections and scenes as a band of blocks, each as wide as its share of the pages and tinted by its scene color, with a page ruler. Click a block, or press Enter on it, to go there. It's off until you turn it on from the toolbar, the palette, Settings, or Ctrl+Alt+O (⌘⌥O on a Mac).
@@ -124,7 +125,7 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 
 - **The same story twice**, as a [screenplay](samples/screenplay.fountain) and a [stage play](samples/stage-play.fountain), to show how Drafter's Fountain works and how the two formats differ. Neither is complete. Notes in double brackets explain each piece of syntax in the source and never print. In the app, a first visit opens on the screenplay, and both are under Open → Samples.
 - **Two synthetic Final Draft files** in [`samples/fdx/`](samples/fdx/), written by hand with invented values (not made in Final Draft), to try Open on. The app doesn't list them.
-- **Three much smaller ones**, written for the app, under Help → **Sample scripts**: a screenplay and a stage play, each under a page (the screenplay uses every Fountain element once; the stage play its acts, scenes, cues, and stage directions), and a Markdown document. Each opens as a new script of your own, leaving the one you had open as it was.
+- **Three much smaller ones**, written for the app, under Help → **Sample scripts**: a screenplay and a stage play, each under a page (the screenplay uses every Fountain element once; the stage play its acts, scenes, cues, and stage directions), and a Markdown document. Each opens as a new script of your own, leaving the one you had open as it was. Below them are the two guided starters, a first screenplay and a first stage play that teach Fountain as you read.
 
 How the two formats differ:
 
@@ -156,7 +157,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 2 (setups and payoffs, and duplicate scene fields), 4 (the rest) |
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
 | `@drafter/compare` | The line diff behind Compare: what changed between two versions of a script, and where it sits in the newer one | 2 (built in Plan C) |
-| `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits, and the Structure strip's geometry | 2 (built in Plans A and B, and the Structure strip) |
+| `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits, the Structure strip's geometry, and each scene's timing | 2 (built in Plans A and B, and the Structure strip) |
 | `@drafter/spell` | Offline spellcheck (nspell): the words worth checking, the two bundled English dictionaries, and a per-script dictionary | 2 (built in Plan D) |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built in Plan FD) |
 | `@drafter/stats` | Script statistics | 2 (planned) |
@@ -185,7 +186,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 |---|---|---|---|
 | 0 | Engine: parser, templates, pagination, PDF, CLI | **Done** | |
 | 1 | Minimum IDE: the first public release | **Live at drafter.dev**; the desktop app for Linux (v0.4.0) and Windows (v0.8.0), and a Mac build (v0.7.0) | A signed macOS download |
-| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0) | **Next:** guided starters, export options, running time, and a Technical details page (v0.17.0); version history with GitHub-style diffs; Highland, Fade In, and Markdown imports. Then the Beat Board, storylines, the Stats and Reference tabs, a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
+| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0); guided starters, export options, running times by scene, and a Technical details page (v0.17.0) | **Next:** version history with GitHub-style diffs (v0.18.0); Highland, Fade In, and Markdown imports (v0.19.0). Then the Beat Board, storylines, the Stats and Reference tabs, Scaffold (who is in each scene, with a page for each character and location), a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
 | 3 | Formats | Planned | Celtx import; TV, radio, UK/BBC, and novel templates; user templates; French scenes and doubling charts for plays; `.html` export; PDF with notes in the margin or a watermark; a self-contained reader file |
 | 4 | Craft | Planned | Revision marks and production pages, alternate lines, a clean display mode, table read, a character pass, story order, a breakdown report, accepting a co-writer's changes, one character's dialogue for an actor, the remaining lint rules, a PWA install flow |
 | 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
@@ -353,6 +354,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Phase 2 design](docs/drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
 - [Structure strip design](docs/drafter-structure-strip-design.md): the band of sections and scenes above the panes, its rows, sizes, keys, and how Phase 2's script map and Timeline build on it.
 - [Markdown PDF design](docs/drafter-markdown-pdf-design.md): a Markdown document as a printable PDF: what prints, line and page breaks, paper, and page numbers.
+- [Getting a script out the door](docs/drafter-out-the-door-design.md): the guided starters, export options, running times, and the Technical details page.
 - [Technical details](docs/technical-details.md): how Drafter is put together, in plain words first, with diagrams: the packages, from a keystroke to the page, storage, export, offline use, the desktop app, the clean-room rule, releases, and every dependency. The same page is in the app, under Help.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.

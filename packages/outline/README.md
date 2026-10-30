@@ -38,7 +38,7 @@ Everything Drafter writes is ordinary Fountain: synopses (`= …`), sections, an
 
 ## Timing
 
-Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block; `TimingTally` adds blocks up in order, counting a dual-dialogue pair (`^`) once, as its longer speech, since both are said at the same time. `estimateSeconds` turns a timing into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`). Each scene also has `spokenBy`, the words each of its speakers says.
+Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block; `TimingTally` adds blocks up in order, counting a dual-dialogue pair (`^`) once, as its longer speech, since both are said at the same time. A speech is what the layout groups as one: its cue and the parentheticals, dialogue, and lyrics right after it; a note, boneyard, or synopsis block ends it. `estimateSeconds` turns a timing into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`). Each scene also has `spokenBy`, the words each of its speakers says.
 
 ```ts
 import { estimateSeconds, TimingTally } from '@drafter/outline';
