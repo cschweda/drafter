@@ -23,6 +23,14 @@ const percent = computed(() => {
   const fraction = exportProgress.value?.fraction;
   return fraction === null || fraction === undefined ? null : Math.floor(fraction * 100);
 });
+/**
+ * What the toast says while an export runs. Another message (an import's "Imported …") can take
+ * the toast's live region meanwhile, and empties it after a few seconds; the bar, and this line
+ * drawn beside it (not said again), stay for as long as the export runs.
+ */
+const underWay = computed(() =>
+  exportProgress.value ? `Exporting ${exportProgress.value.name}…` : '',
+);
 const root = ref<HTMLElement>();
 const place = reactive({ top: 0, left: 0 });
 let trigger: HTMLElement | null = null;
@@ -114,11 +122,15 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
         <UIcon name="i-lucide-list-tree" class="icon" />Treatment (.md)…
       </button>
     </div>
-    <div class="toast" :class="{ shown: exportNotice || exportError }">
+    <div class="toast" :class="{ shown: exportNotice || exportError || exportProgress }">
       <span role="status">{{ exportNotice }}</span>
+      <!-- Said once, when the export started; the bar's name says it to a screen reader after. -->
+      <span v-if="underWay && exportNotice !== underWay" class="under-way" aria-hidden="true">{{
+        underWay
+      }}</span>
       <!-- The bar's value is read when it is asked for, never said at each step; the quarters are
            said once each, below. The percent beside it is the bar's own, drawn. -->
-      <div v-if="exportProgress && exportNotice" class="progress">
+      <div v-if="exportProgress" class="progress">
         <div
           class="bar"
           :class="{ unknown: percent === null }"
@@ -199,6 +211,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   color: var(--text);
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+/* "Exporting …" again, on its own line, once another message has the live region. */
+.under-way {
+  display: block;
 }
 /* A slow export's bar, under its "Exporting …", with the percent beside it. */
 .progress {

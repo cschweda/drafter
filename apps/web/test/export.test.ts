@@ -424,6 +424,26 @@ describe('exporting', () => {
     expect(t.written).toEqual([]);
   });
 
+  test('says a document nested too deeply to lay out in words, not the engine’s', async () => {
+    const t = await load({ inPlace: true });
+    shown.kind = 'markdown';
+    shown.text = '# Deep\n\nText.\n';
+    // Chromium's and WebKit's words for it, then Firefox's.
+    for (const engine of ['Maximum call stack size exceeded', 'too much recursion']) {
+      render.mockRejectedValueOnce(new Error(engine));
+      expect(await t.exportScript('pdf')).toBe('cancelled');
+      expect(t.exportError.value).toBe(
+        'Couldn’t export Deep.pdf: this document is nested too deeply to lay out.',
+      );
+      shown.text += '\nMore.\n';
+    }
+    // An error with no words of its own is a plain sentence.
+    render.mockRejectedValueOnce(new Error(''));
+    shown.text += '\nLast.\n';
+    expect(await t.exportScript('pdf')).toBe('cancelled');
+    expect(t.exportError.value).toBe('Couldn’t export Deep.pdf.');
+  });
+
   test('says so, and does not throw, when the file cannot be written', async () => {
     const t = await load({ inPlace: true });
     t.control.failWrite = true;

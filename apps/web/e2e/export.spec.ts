@@ -115,6 +115,16 @@ const SAMPLE = readFileSync(
   'utf8',
 );
 
+/** A small Final Draft file, of the tests' own words, that imports with nothing left over. */
+const TIDE = `<?xml version="1.0" encoding="UTF-8"?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Scene Heading"><Text>EXT. SEAWALL - DAWN</Text></Paragraph>
+    <Paragraph Type="Action"><Text>The tide comes in.</Text></Paragraph>
+  </Content>
+</FinalDraft>
+`;
+
 const progressBar = (page: Page) => page.locator('.toast').getByRole('progressbar');
 
 /**
@@ -437,6 +447,45 @@ test.describe('a Markdown document’s PDF', () => {
     expect(values[0]).toBeNull();
     expectRising(values);
     expect(values.at(-1)).toBe('100');
+  });
+
+  test('keeps a slow export’s bar while another message comes and goes', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, 'a long export is checked in Chromium');
+    test.setTimeout(60_000);
+    await start(page);
+    // The fonts come slowly enough that an import's message is said, and gone, before they arrive.
+    await page.route('**/fonts/courier-prime/*.ttf', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 12_000));
+      await route.continue();
+    });
+    await exportButton(page).click();
+    const download = page.waitForEvent('download', { timeout: 40_000 });
+    await pdfItem(page).click();
+    const bar = progressBar(page);
+    await expect(bar).toBeVisible();
+    // A Final Draft file dropped meanwhile says it came in, in the same toast.
+    await page.evaluate((xml) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([xml], 'tide.fdx', { type: 'application/xml' }));
+      for (const type of ['dragenter', 'dragover', 'drop']) {
+        document.body.dispatchEvent(
+          new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }),
+        );
+      }
+    }, TIDE);
+    await expect(toast(page)).toHaveText('Imported “tide.fdx”.');
+    await expect(bar).toBeVisible();
+    // Its message goes after a few seconds; the export, still under way, keeps its bar and says so.
+    await expect(toast(page)).toHaveText('', { timeout: 10_000 });
+    await expect(bar).toBeVisible();
+    await expect(page.locator('.toast')).toContainText('Exporting The Call.pdf…');
+    await download;
+    await expect(ready(page)).toHaveText('Exported The Call.pdf.');
+    await expect(bar).toHaveCount(0);
   });
 });
 

@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useEditor } from '../editor/session';
+import { previewProblem } from '../markdown/preview';
 import { markdownTitle } from '../markdown/title';
 import { type Settings, useSettings } from '../settings/settings';
 import { renderExport } from './export-client';
@@ -75,6 +76,17 @@ const MIME: Record<ExportKind, string> = {
   fdx: 'application/xml',
 };
 const EXTENSION = { pdf: '.pdf', txt: '.txt', md: '.md', fdx: '.fdx' } as const;
+
+/**
+ * The end of "Couldn’t export The Call.pdf…": the reason, in the writer's words. A document nested
+ * too deeply runs the layout out of stack, which the engine words its own way ("Maximum call stack
+ * size exceeded"); it is said as the Preview says it (`previewProblem`). Drafter's own messages
+ * ("Couldn’t load the font …") are said as they are, and an error with none is a plain full stop.
+ */
+function reason(error: unknown): string {
+  if (previewProblem(error) === 'deep') return ': this document is nested too deeply to lay out.';
+  return error instanceof Error && error.message ? `: ${error.message}` : '.';
+}
 
 /** Why a kind of export doesn't apply to the open script, or null when it does. */
 function notFor(kind: ExportKind, markdown: boolean): string | null {
@@ -193,8 +205,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
     clearTimeout(slow);
     endProgress();
     if (progress && exportNotice.value === progress) exportNotice.value = '';
-    const why = error instanceof Error && error.message ? `: ${error.message}` : '.';
-    await announceError(`Couldn’t export ${name}${why}`);
+    await announceError(`Couldn’t export ${name}${reason(error)}`);
     return 'cancelled';
   }
 }
@@ -278,8 +289,7 @@ export async function exportMarkdownFile(
     await announceReady(`Exported ${target?.name ?? name}.`);
     return 'saved';
   } catch (error) {
-    const why = error instanceof Error && error.message ? `: ${error.message}` : '.';
-    await announceError(`Couldn’t export ${name}${why}`);
+    await announceError(`Couldn’t export ${name}${reason(error)}`);
     return 'cancelled';
   }
 }

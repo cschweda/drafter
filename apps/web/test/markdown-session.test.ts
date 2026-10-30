@@ -133,8 +133,7 @@ describe('the Markdown session', () => {
     const { md, edit } = await longSession(LONG('# One'));
     expect(posted).toHaveLength(1);
     // The worker couldn't parse this text: the main thread draws it instead, this once.
-    for (const l of listeners)
-      l({ data: { seq: posted[0]?.seq, error: 'Maximum call stack size exceeded' } });
+    for (const l of listeners) l({ data: { seq: posted[0]?.seq, error: 'Something odd' } });
     await vi.waitFor(() => expect(md.tree.value?.children?.[0]?.type).toBe('heading'));
     expect(md.problem.value).toBeNull();
     await edit(LONG('# Two'));
@@ -156,6 +155,19 @@ describe('the Markdown session', () => {
     reply(posted[1]?.seq as number, 'fine');
     expect(md.problem.value).toBeNull();
     expect(md.tree.value).toMatchObject({ marker: 'fine' });
+  });
+
+  test('says a text is nested too deeply when the worker says so, without parsing it again', async () => {
+    // The page could parse this text, but the worker ran out of stack on it: parsing it again on
+    // the main thread would only freeze the page for longer, so the Preview says why at once.
+    const { md } = await longSession(LONG('# Nested'));
+    for (const l of listeners)
+      l({ data: { seq: posted[0]?.seq, error: 'Maximum call stack size exceeded' } });
+    await vi.dynamicImportSettled();
+    expect(md.problem.value).toBe('deep');
+    expect(md.tree.value).toBeNull();
+    expect(md.words.value).toBe(0);
+    expect(md.updating.value).toBe(false);
   });
 
   test('makes the worker again after it fails, three times at most in a visit', async () => {

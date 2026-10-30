@@ -72,8 +72,19 @@ function create(): MarkdownSession {
             made.destroy();
             if (client === made) client = undefined;
           }
+          if (seq !== wanted) return;
+          // A text nested too deeply for the worker's stack is too deep for the page's too: parsing
+          // it again would only hold the page up. The Preview says why at once.
+          if (!failed && previewProblem(message) === 'deep') {
+            wanted = null;
+            tree.value = null;
+            counted.value = 0;
+            problem.value = 'deep';
+            updating.value = false;
+            return;
+          }
           // The newest text is drawn on the main thread instead, this once.
-          if (seq === wanted) showNow();
+          showNow();
         },
       );
       client = made;
