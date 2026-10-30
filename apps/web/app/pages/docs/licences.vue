@@ -86,7 +86,8 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
     <section>
       <h3>Courier Prime</h3>
       <p>
-        The script’s typeface, on screen and in a PDF. Under the SIL Open Font License, Version 1.1.
+        The script’s typeface, on screen and in a PDF, and the code in a Markdown document’s PDF.
+        Under the SIL Open Font License, Version 1.1.
       </p>
       <p>Copyright 2015 The Courier Prime Project Authors</p>
       <p>
@@ -99,8 +100,8 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
     <section>
       <h3>Inter Tight</h3>
       <p>
-        The typeface of Drafter’s menus, buttons, and these pages. Under the SIL Open Font License,
-        Version 1.1, the same licence as Courier Prime’s.
+        The interface’s typeface, and the text of a Markdown document’s PDF. Under the SIL Open
+        Font License, Version 1.1, the same licence as Courier Prime’s.
       </p>
       <p>Copyright 2022 The Inter Project Authors</p>
       <p>

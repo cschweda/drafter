@@ -166,6 +166,81 @@ test.describe('a Markdown document', () => {
     await expect(status(page)).toContainText('5,857 words', { timeout: 15_000 });
   });
 
+  test('parses a long document in its worker, entities and all', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'the worker is checked in Chromium');
+    const failures: string[] = [];
+    page.on('console', (message) => {
+      if (/Markdown preview failed/.test(message.text())) failures.push(message.text());
+    });
+    const workers: string[] = [];
+    page.on('worker', (worker) => workers.push(worker.url()));
+    await start(page);
+    await newMarkdown(page);
+    // About 30,000 characters, past the size a key's preview is drawn for at once; the last
+    // heading has a character reference, which the worker's parser decodes.
+    const paragraph = 'A paragraph of *prose* that goes on for a while, word after word.\n\n';
+    await typeAtEnd(page, `${paragraph.repeat(450)}## The End &amp; After`);
+    await showTab(page, 'Preview');
+    await expect(
+      preview(page).getByRole('heading', { level: 2, name: 'The End & After', exact: true }),
+    ).toBeAttached({ timeout: 15_000 });
+    // An edit near the end comes back from the worker too.
+    await typeAtEnd(page, ' Again');
+    await showTab(page, 'Preview');
+    await expect(
+      preview(page).getByRole('heading', { level: 2, name: 'The End & After Again' }),
+    ).toBeAttached({ timeout: 15_000 });
+    expect(workers.filter((url) => /markdown\.worker/.test(url))).toHaveLength(1);
+    expect(failures).toEqual([]);
+  });
+
+  test('says calmly when a document is nested too deeply to preview', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    // Five thousand quote marks on one line are slow for the editor, in every browser, and slower
+    // still on a phone, whose Preview is the same code the desktop projects check.
+    test.skip(!!isMobile, 'the desktop projects check the same Preview, faster');
+    test.setTimeout(90_000);
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await start(page);
+    await newMarkdown(page);
+    await showTab(page, 'Source');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+A');
+    // A quote inside a quote, five thousand deep.
+    await page.keyboard.insertText(`${'>'.repeat(5_000)} x`);
+    await expect(editor(page)).not.toContainText('Untitled');
+    await showTab(page, 'Preview');
+    const deep = preview(page).getByRole('status');
+    if (browserName === 'chromium') {
+      // Chromium runs out of stack drawing it: the pane says so.
+      await expect(deep).toHaveText(
+        'This document is nested too deeply to preview. Your text is safe in the Source.',
+        { timeout: 15_000 },
+      );
+    } else {
+      // Firefox and WebKit have the stack for it, and draw it; either way, nothing breaks.
+      await expect(deep.or(preview(page).locator('blockquote').first())).toBeAttached({
+        timeout: 15_000,
+      });
+    }
+    // A document that can be drawn is drawn again. (Focused, not clicked: the editor finds a
+    // click's place slowly on a line of five thousand marks.)
+    await showTab(page, 'Source');
+    await editor(page).focus();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText('# Shallow again\n');
+    await showTab(page, 'Preview');
+    await expect(preview(page).getByRole('heading', { name: 'Shallow again' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(preview(page).getByRole('status')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
   test('shows raw HTML and links as text, and runs nothing', async ({ page }) => {
     const dialogs: string[] = [];
     page.on('dialog', async (d) => {
@@ -242,7 +317,7 @@ test.describe('a Markdown document', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('offers the Markdown file and plain text to export, and writes them', async ({
+  test('offers the PDF, the Markdown file, and plain text to export, and writes the text ones', async ({
     page,
     browserName,
     isMobile,
@@ -254,7 +329,11 @@ test.describe('a Markdown document', () => {
     await typeAtEnd(page, 'Body text.');
     await page.getByRole('button', { name: 'Export' }).click();
     const menu = page.getByRole('group', { name: 'Export' });
-    await expect(menu.getByRole('button')).toHaveText(['Markdown (.md)', 'Plain text (.txt)']);
+    await expect(menu.getByRole('button')).toHaveText([
+      'PDF',
+      'Markdown (.md)',
+      'Plain text (.txt)',
+    ]);
     await menu.getByRole('button', { name: 'Markdown (.md)' }).click();
     await expect.poll(() => files(page)).toContain('Untitled.md');
     expect(await textOf(page, 'Untitled.md')).toBe('# Untitled\n\nBody text.');

@@ -5,9 +5,18 @@
 **An open-source, local-first, zero-login IDE for screenplays and stage plays.** Write plain-text [Fountain](https://fountain.io) on the left; see the paginated, industry-formatted script on the right, updating as you type.
 
 > [!NOTE]
-> **Status: v0.15.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Built so far: an **Outline** tab (your scenes and sections as a tree, moved by drag or by keys, with synopses, colors, and a treatment export); **Cards** and **Notes** (an index card for every scene, moved by drag or keys; every note and boneyard in one list, with categories, readers' names, and open or resolved status; scene goals; setups and payoffs); **Final Draft files** (open an `.fdx` as a new script, or export your script as one); **History** (earlier versions of your script, kept as you write and save, each one restorable in one undo); **Compare** (what changed between two versions, as script pages with the changes marked); **spellcheck** (Drafter's own, offline, in US or British English, with a dictionary of your own and one for each script); and a **Structure strip**: your sections and scenes as a band of blocks above the panes, sized by length and colored, to click and go (turned on from the toolbar, Settings, or Ctrl+Alt+O, ⌘⌥O on a Mac). The editor and its live pages, a recovery copy kept in your browser as you type, and Save and Open for real `.fountain` files; the command palette, settings, the Problems pane, Screenplay and Stage play templates, plain Markdown documents, export to PDF and plain text, and optional script modules; focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats; an element bar that writes Fountain for you, with a cheat sheet; a welcome and a guided tour on a first visit; offline use and installing as an app; and help pages, with **About Drafter** (the version, for a bug report, and the links), **Sample scripts** (a tiny screenplay, stage play, and Markdown document, each opened as a new script), and **Check for updates**, in the Help section of the menu. Saving goes straight back to the file in Chrome and Edge on a computer, and downloads a copy elsewhere; the desktop app for Linux (an AppImage or a `.deb`) and Windows (an installer) saves in place always. The desktop app also loads script modules from a folder, and builds on a Mac with one command. Next: PDF export for Markdown, and Highland and Fade In imports; a signed macOS download follows. The engine from Phase 0 also runs on its own: `pnpm drafter build script.fountain` makes a paginated PDF. See the [roadmap](#roadmap).
+> **Status: v0.16.0. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way. Next: guided starters, export options, running time, and a Technical details page (v0.17.0), then version history, then Highland, Fade In, and Markdown imports; a signed macOS download follows. See the [roadmap](#roadmap).
 
-**Drafter for Linux and Windows.** Drafter also comes as a desktop app. See [Drafter for Linux](#drafter-for-linux) and [Drafter for Windows](#drafter-for-windows) for the downloads, how to install and start it, and how it differs from drafter.dev. **On a Mac**, you can [build the same app yourself](#drafter-on-a-mac) with one command until a signed download is ready.
+**What you can do today**
+
+- **Write:** the editor and its live pages; an element bar that writes Fountain for you, with a cheat sheet; Screenplay and Stage play templates, and plain Markdown documents; the command palette, settings, the Problems pane, and optional script modules.
+- **Shape the story:** **Outline** (scenes and sections as a tree, with synopses, colors, and a treatment export) and **Cards** (an index card for every scene), both rearranged by drag or keys; **Notes** (every note and boneyard in one list, with categories, readers' names, and open or resolved status); scene goals; setups and payoffs; and the [**Structure strip**](#the-idea), a band of blocks above the panes to click and go.
+- **Look back:** **History** (earlier versions, kept as you write and save, each restorable in one undo) and **Compare** (what changed between two versions, as script pages with the changes marked).
+- **Check spelling:** Drafter's own spellcheck, offline, in US or British English, with a dictionary of your own and one for each script.
+- **Keep going:** focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats.
+- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; export to PDF and plain text, with a progress bar and a percentage on a long export; a Markdown document's PDF too, with links you can click, on US Letter or A4; and **Final Draft files** (open an `.fdx` as a new script, or export your script as one).
+- **Get started:** a welcome and a guided tour on a first visit; offline use and installing as an app; help pages; and, under Help in the menu, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
+- **On the desktop:** an app for Linux (an AppImage or a `.deb`) and Windows (an installer) that always saves in place and loads script modules from a folder. It builds on a Mac with one command.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
@@ -74,11 +83,7 @@ The left pane is a [CodeMirror 6](https://codemirror.net) editor showing the raw
 | **Stats** | Page count, estimated runtime, dialogue share per character, INT/EXT and DAY/NIGHT breakdowns, pacing. | Phase 2 |
 | **Reference** | Fountain syntax and the active template's formatting rules, built in. | Phase 2 |
 
-Above both panes, the **Structure strip** can show the whole script at once:
-
-| View | What it shows | Arrives in |
-|---|---|---|
-| **Structure strip** | Your sections and scenes as a band of blocks above the panes, each as wide as its share of the pages and tinted by its scene color, with a page ruler. Click a block, or press Enter on it, to go there. Turned on and off from the toolbar, the palette, Settings, or Ctrl+Alt+O (⌘⌥O on a Mac). | Phase 2 (built) |
+Above both panes, the **Structure strip** (Phase 2, built) shows the whole script at once: your sections and scenes as a band of blocks, each as wide as its share of the pages and tinted by its scene color, with a page ruler. Click a block, or press Enter on it, to go there. It's off until you turn it on from the toolbar, the palette, Settings, or Ctrl+Alt+O (⌘⌥O on a Mac).
 
 Either pane can be collapsed, for "just write" or "just read."
 
@@ -90,12 +95,11 @@ Either pane can be collapsed, for "just write" or "just read."
 
 ## What makes it different
 
-- **Source and script side by side, always.** You edit text, not a rich document, and the markup stays visible. Tab and Enter conveniences insert plain Fountain, so the familiar screenwriting-app keystrokes still work.
+- **Source and script side by side, always.** You edit text, not a rich document, and the markup stays visible. Tab and Enter insert plain Fountain, so the familiar screenwriting-app keystrokes still work.
 - **A Problems pane.** A linter for scripts: unclosed notes, cues with no dialogue, near-duplicate character names, and more, with click-to-jump. Drafter reads common Fountain mistakes leniently, and its Strict Fountain checks can rewrite the file into spec form for other tools.
 - **Stage plays as a first-class format.** A Dramatists Guild–style template and a documented convention for writing plays in standard Fountain.
-- **Lossless outline ⇄ script.** Sections, synopses, and scene headings already live in the file, so outlining and reordering are edits to the source, not a second document that can drift.
-- **Runs anywhere with a browser.** Chromebook, Linux, Windows, Mac, or iPad, with no install and no sign-up. It works offline once installed as an app.
-- **Accessibility as a feature.** WCAG 2.2 AA is the target, checked automatically with axe in every major state; testing with screen readers comes in Phase 2. A screen-reader user can navigate the rendered script by structure, and every drag-and-drop has a keyboard equivalent.
+- **Runs anywhere with a browser.** Chromebook, Linux, Windows, Mac, or iPad, with no install and no sign-up, and offline once installed as an app.
+- **Accessibility as a feature.** WCAG 2.2 AA is the target, checked automatically with axe in every major state; testing with screen readers comes [last](#roadmap). A screen-reader user can navigate the rendered script by structure, and every drag-and-drop has a keyboard equivalent.
 - **The engine is a library.** The parser and pagination engine are standalone packages, so they also power a CLI (`drafter build script.fountain --pdf script.pdf`), CI checks, and other tools.
 - **Table read** (Phase 4). The browser's speech synthesis reads the script aloud with a different voice for each character.
 
@@ -109,14 +113,20 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
        └──── every edit, from any view, is a text change to the source
 ```
 
-- **One parser, one buffer.** `@drafter/fountain` produces a concrete syntax tree that keeps every block's raw text and surrounding whitespace, so `print(parse(text)) === text` for any input, well-formed or not. Editor highlighting is drawn from the same parse; there is no second grammar to drift out of sync.
-- **Edits are text.** Renaming a character, moving a scene, or editing a synopsis on a card all become text changes to the source. Everything is undoable, and the file is always the truth.
+- **One parser, one buffer.** `@drafter/fountain` produces a concrete syntax tree that keeps every block's raw text and surrounding whitespace, so `print(parse(text)) === text` for any input, well-formed or not. Editor highlighting comes from the same parse; there is no second grammar to drift out of sync.
+- **Edits are text.** Sections, synopses, and scene headings already live in the file, so outlining is not a second document that can drift: renaming a character, moving a scene, or editing a synopsis on a card all become text changes to the source. Everything is undoable, and the file is always the truth.
 - **Pagination is a pure function.** Screenplays use 12-point Courier: 10 characters and 6 lines to the inch. Layout works in characters and lines rather than pixels, so it runs anywhere (a Web Worker in the app, Node in the CLI), and the screen and the PDF come from the same page model.
 - **Templates drive the format.** A template sets the page size and margins; each element's indent, width, case, and spacing; dialogue-splitting rules (`(MORE)` and `(CONT'D)`); and a *role map* that assigns roles such as stage direction, act heading, or sound cue to standard Fountain elements, so no new syntax is needed.
 
 ## Samples
 
-[`samples/`](samples/) holds two short scripts that tell the same story, one as a [screenplay](samples/screenplay.fountain) and one as a [stage play](samples/stage-play.fountain). Neither is complete; together they show how Drafter's Fountain works and how the two formats differ. Notes in double brackets explain each piece of syntax in the source and never print. In the app (Phase 1), a first visit opens on the screenplay, and both are under Open → Samples. [`samples/fdx/`](samples/fdx/) holds two synthetic Final Draft files, written by hand with invented values and not made in Final Draft, to try Open on; the app doesn't list them. Help → **Sample scripts** has three much smaller ones, written for the app: a screenplay and a stage play, each under a page (the screenplay uses every Fountain element once; the stage play its acts, scenes, cues, and stage directions), and a Markdown document. Each opens as a new script of your own, leaving the one you had open as it was.
+[`samples/`](samples/) has three sets:
+
+- **The same story twice**, as a [screenplay](samples/screenplay.fountain) and a [stage play](samples/stage-play.fountain), to show how Drafter's Fountain works and how the two formats differ. Neither is complete. Notes in double brackets explain each piece of syntax in the source and never print. In the app, a first visit opens on the screenplay, and both are under Open → Samples.
+- **Two synthetic Final Draft files** in [`samples/fdx/`](samples/fdx/), written by hand with invented values (not made in Final Draft), to try Open on. The app doesn't list them.
+- **Three much smaller ones**, written for the app, under Help → **Sample scripts**: a screenplay and a stage play, each under a page (the screenplay uses every Fountain element once; the stage play its acts, scenes, cues, and stage directions), and a Markdown document. Each opens as a new script of your own, leaving the one you had open as it was.
+
+How the two formats differ:
 
 | | Screenplay | Stage play |
 |---|---|---|
@@ -131,159 +141,60 @@ Fountain source ──parse──▶ syntax tree ──────▶ outline �
 
 ## Packages
 
-The engine is a set of framework-free TypeScript packages, published as `@drafter/*`. The web app lives in `apps/web`. Two packages touch the DOM: `render-html` builds it, and `cm-fountain` drives CodeMirror's view, which does. Only `cm-fountain` depends on CodeMirror. The rest run anywhere Node does.
+The engine is a set of framework-free TypeScript packages, published as `@drafter/*`. Only `cm-fountain` depends on CodeMirror. Two packages touch the DOM (`render-html` builds it, and `cm-fountain` drives CodeMirror's view); the rest run anywhere Node does.
 
 | Package | What it does | Phase |
 |---|---|---|
 | `@drafter/fountain` | Fountain text ⇄ syntax tree: lossless printing, fast full reparse | 0 |
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
-| `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded | 0 |
+| `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight | 0 (Markdown documents in 2) |
 | `@drafter/cli` | `drafter build` and `drafter check` | 0 (published in 5) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
-| `@drafter/lint` | Problems-pane rules (Phase 2 adds setups and payoffs, and duplicate scene fields) | 1 (starter set), 4 (the rest) |
+| `@drafter/lint` | Problems-pane rules | 1 (starter set), 2 (setups and payoffs, and duplicate scene fields), 4 (the rest) |
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
 | `@drafter/compare` | The line diff behind Compare: what changed between two versions of a script, and where it sits in the newer one | 2 (built in Plan C) |
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits, and the Structure strip's geometry | 2 (built in Plans A and B, and the Structure strip) |
 | `@drafter/spell` | Offline spellcheck (nspell): the words worth checking, the two bundled English dictionaries, and a per-script dictionary | 2 (built in Plan D) |
-| `@drafter/stats` | Script statistics | 2 |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export | 2 (built in Plan FD) |
+| `@drafter/stats` | Script statistics | 2 (planned) |
 
-Planned repository layout:
+Repository layout:
 
 ```
 drafter/
-├── apps/web/      # the Nuxt 4 app for drafter.dev (Phase 1)
+├── apps/web/      # the Nuxt 4 app for drafter.dev
+├── apps/desktop/  # the Electron desktop app for Linux, Windows, and macOS
 ├── packages/      # the @drafter/* engine packages
-├── templates/     # community templates, as plain JSON
-├── samples/       # a sample screenplay and stage play
+├── modules/       # the optional script modules
+├── samples/       # the sample scripts
 ├── fixtures/      # original test scripts
+├── brand/         # the logo, icons, and share image
 └── docs/          # design documents
 ```
+
+A `templates/` folder for community templates, as plain JSON, is planned.
 
 ## Roadmap
 
 The ordering principle: the reasons to choose Drafter must be on screen at the first public release. That's why the Problems pane, the stage-play template, and accessibility come early, Final Draft files follow the outline, and radio and TV formats come later.
 
-| Phase | Theme | Status |
-|---|---|---|
-| [0](#phase-0--engine-no-ui) | Engine: parser, templates, pagination, PDF, CLI | **Done** |
-| [1](#phase-1--minimum-ide-first-public-release) | Minimum IDE: the first public release | **Live at drafter.dev**, with the desktop app for Linux and Windows; a signed macOS download comes later |
-| [2](#phase-2--structure) | Structure: outline, Final Draft files, cards, beat board, storylines, snapshots, spellcheck | **Under way**: the Outline, Final Draft import and export, Cards and Notes, History and Compare, Spellcheck, and the Structure strip are built |
-| [3](#phase-3--formats) | Formats: other apps' imports; TV, radio, UK, and novel templates; user templates | Planned |
-| [4](#phase-4--craft) | Craft: revisions and production pages, alternate lines, proof mode, clean display mode, table read, offline install | Planned |
-| [5](#phase-5--community) | Community: npm packages, CLI, VS Code extension, template gallery | Planned |
-| [Later](#later) | Open from and save to Dropbox and Google Drive directly | Planned |
-| [Last](#last--testing-with-nvda-and-voiceover) | Testing with NVDA and VoiceOver, after every phase is built | Planned |
-
-### Phase 0 — Engine (no UI)
-
-The engine as standalone packages, with no UI at all. The phase ends when a CLI turns a `.fountain` file into a correctly paginated PDF and the full test suite passes. If this phase is right, everything after it is UI.
-
-**Builds**
-
-- `@drafter/fountain`: a concrete-syntax-tree parser and printer that reparses in full on every change. Every block keeps its raw text, so printing is lossless. Where the spec's strict reading would garble a common mistake, the parser reads leniently and flags the spot.
-- `@drafter/templates`: the template schema and loader (validation, `extends`, inch-to-character conversion) and two built-in templates, **US Screenplay (Feature)** and **Stage Play (Dramatists Guild standard)**.
-- `@drafter/layout`: `paginate(doc, template)`, covering word wrap, keep-with-next, dialogue splitting with `(MORE)` and `(CONT'D)`, dual dialogue, scene numbers, forced page breaks, and the title page.
-- `@drafter/render-pdf`: PDF output with Courier Prime embedded. It runs in Node and in a browser worker.
-- `@drafter/cli`: `drafter build <file> [--pdf] [--txt] [--json] [--template] [--scene-numbers]` and `drafter check <file>`.
-
-**Done when**
-
-- Printing a parse reproduces the input exactly, for 10,000 random strings and every fixture.
-- Reparsing after multi-range edits matches a fresh parse across 1,000 random edit sequences.
-- Every classification fixture matches its expected element sequence.
-- Layout property tests pass: no overfull page, no page that starts blank, no character cue stranded at the bottom of a page, and every line maps back to its source.
-- Hand-checked position fixtures match, the PDF's text and page count match the layout, and pagination is deterministic.
-- Malformed templates are rejected with a complete list of errors and are never partially applied.
-- The CLI writes PDF, text, and JSON output, and `drafter check` fails on an unclosed boneyard.
-- Build, tests, and lint are clean from a fresh clone.
-
-### Phase 1 — Minimum IDE (first public release)
-
-**Builds**
-
-- The Nuxt 4 single-page app, with Nuxt UI v4 for panes, menus, the command palette, and dialogs, laid out like the [Inform 7](https://ganelson.github.io/inform-website/) IDE: two facing panes that can each show any tab, a toolbar of round buttons, and a status bar. Dark by default, with a light theme.
-- A first visit that opens on a sample screenplay, with a welcome dialog, an optional two-minute guided tour, and New screenplay, New stage play, and Open a file one click away.
-- The CodeMirror 6 source pane: highlighting driven by the one parser, Tab and Enter conveniences that insert plain Fountain, autocomplete for characters, locations, transitions, and sections, and folding by scene and section.
-- Focus mode, which leaves only the page you're writing on, and typewriter scrolling, which keeps the line you're typing in the middle of the screen.
-- A sprint timer, a daily goal, and a count of pages, scenes, words, and running time.
-- The Script tab, with live pagination in a Web Worker.
-- The Problems tab, with the starter set of lint rules and the Strict Fountain checks.
-- Saving like a desktop app: Save and Save As to a `.fountain` file, a warning before leaving with unsaved changes, and an always-on recovery copy in the browser, with a warning when the browser may clear it.
-- Open and save `.fountain` files (save-in-place on Chromium, download elsewhere), and export to PDF, plain text, and Final Draft (`.fdx`), which Open also reads. On Chrome and Edge, saving in place means a script kept in a Dropbox, Google Drive, or iCloud folder syncs through that service's own app.
-- A template switcher for screenplay and stage play, and a sample script for each.
-- Phones and tablets, with one pane at a time on a phone.
-- Accessibility: keyboard-complete, a rendered pane navigable by headings, and axe-clean.
-- Deployment to drafter.dev.
-
-**Done when** a person can write a feature or a play in it, with the script built for screen readers to read by its structure and checked by automated tests. Testing with NVDA and VoiceOver comes last, after every phase is built. The [Phase 1 design](docs/drafter-phase1-design.md) has the details.
-
-### Phase 2 — Structure
-
-- Outline, Cards, and Notes tabs, where every change is an edit to the source. Built: the Outline, and Cards and Notes with Scene details, scene goals, and setups and payoffs.
-- Final Draft `.fdx` import and export (moved up from Phase 3), with nothing dropped silently on import. Built: an import comes in as a new, unsaved script, anything Drafter has no element for becomes a `[[fdx: …]]` note that Problems lists, and the `.fdx` itself is never changed.
-- A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
-- Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
-- Condense to outline and expand from outline, plus scene reordering with a keyboard equivalent for every drag (built in v0.10.0).
-- Snapshots with a retention schedule, and a Compare view that renders two snapshots as script pages with changed lines marked (built in v0.13.0).
-- The Stats tab, including screen time per character and who shares scenes with whom.
-- Writing statistics by day, kept on your device (shipped in v0.5.0).
-- Spellcheck with nspell and a per-script dictionary that knows your character names (built in v0.14.0): offline, in US or British English, with a right-click menu, a dictionary of your own, and a Spelling list in Problems.
-- The built-in Reference tab.
-- A Structure strip (built in v0.15.0): your sections and scenes as a band of blocks above the panes, sized by their pages and tinted by scene color, with a page ruler; click a block, or press Enter on it, to go there. Off until you turn it on, from the toolbar, the palette, Settings, or Ctrl+Alt+O (⌘⌥O on a Mac).
-- Next, after the Structure strip: PDF export for Markdown documents, and import from Highland and Fade In (moved up from Phase 3).
-- A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there. It builds on the Structure strip's geometry, and Plan E decides whether it is still wanted beside the strip.
-- A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.
-- A character-by-scene grid: who is in each scene, as a heat map, with each character's share of the dialogue, so a character who vanishes for 40 pages shows.
-- Scene goals: optional goal, conflict, outcome, and value shift for each scene, kept in the file as Fountain notes. Built in v0.12.0: Scene details writes and edits them, and the Outline and the cards show the goal; the script map comes later.
-- Setups and payoffs: mark a setup, link it to its payoff, and see the setups that never pay off (built in v0.12.0).
-- Reader notes, with no account: a reader opens your script at drafter.dev in a reader mode, adds comments to lines or selections (their name, a category and colour, replies), and sends them back as a file: the `.fountain` itself, the comments kept as Fountain notes any Fountain tool can show. You add a reader's file to your current draft even after you kept writing: each comment finds its place by its quote, its context, and its scene, a preview says how many matched, and none is ever dropped. You reply and resolve them in the margin, filter by reader or category, and send your replies back the same way. Notes typed by hand (`[[Name: comment]]`) merge too. Nothing passes through a server.
-- Note categories and status (open, resolved) in the Notes tab (built in v0.12.0).
-
-### Phase 3 — Formats
-
-- Import from Celtx (Highland and Fade In imports moved up to Phase 2).
-- TV single-camera, TV multi-camera (sitcom), radio and audio drama, and UK/BBC (A4) templates, and a template for novels or graphic novels.
-- User-added templates, dropped in as JSON, and template export.
-- For plays: French scenes, who is on stage at every moment (entrances and exits), and a doubling chart of roles one actor could play because they never share the stage.
-- Standalone `.html` export.
-- PDF export with notes in the margin, or a clean copy, and a watermark and header for drafts you send out (for example "CONFIDENTIAL" or the reader's name).
-- A self-contained reader file: one `.html` a reader opens in any browser to read and comment, for readers who won't visit a site.
-
-### Phase 4 — Craft
-
-- The remaining lint rules.
-- Revision marks and colored-page PDF.
-- Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
-- Alternate versions of a line, switchable in place.
-- A "clean" display mode that hides Fountain markers without changing the file.
-- Table read, using speech synthesis with a different voice per character.
-- A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
-- Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
-- A breakdown report: locations, time of day, and cast for each scene, to export for production.
-- Accept or reject a co-writer's edited copy change by change, from Compare.
-- One character's dialogue, exported for an actor.
-- A PWA install flow and offline dictionary caching.
-
-### Phase 5 — Community
-
-- A template gallery and a docs site.
-- The `@drafter/*` packages and `@drafter/cli` published on npm, so `npx @drafter/cli build script.fountain` works without the app.
-- A VS Code extension.
-- A plugin API, only if there's demand, sandboxed in a Web Worker.
-
-### Later
-
-- Open from and save to Dropbox and Google Drive directly. You sign in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server.
-
-### Last — Testing with NVDA and VoiceOver
-
-After every phase is built, the whole app is tested with NVDA on Windows and VoiceOver. Until then every view is built for screen readers and checked automatically (axe, keyboard-only tests, and the accessibility tree), and Drafter claims no conformance with any standard. The [Phase 2 design](docs/drafter-phase2-design.md) (§20) has the reasoning.
+| Phase | Theme | Shipped | Still to come |
+|---|---|---|---|
+| 0 | Engine: parser, templates, pagination, PDF, CLI | **Done** | |
+| 1 | Minimum IDE: the first public release | **Live at drafter.dev**; the desktop app for Linux (v0.4.0) and Windows (v0.8.0), and a Mac build (v0.7.0) | A signed macOS download |
+| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0) | **Next:** guided starters, export options, running time, and a Technical details page (v0.17.0); version history with GitHub-style diffs; Highland, Fade In, and Markdown imports. Then the Beat Board, storylines, the Stats and Reference tabs, a script map, a pacing view, a character-by-scene grid, and reader notes with no account |
+| 3 | Formats | Planned | Celtx import; TV, radio, UK/BBC, and novel templates; user templates; French scenes and doubling charts for plays; `.html` export; PDF with notes in the margin or a watermark; a self-contained reader file |
+| 4 | Craft | Planned | Revision marks and production pages, alternate lines, a clean display mode, table read, a character pass, story order, a breakdown report, accepting a co-writer's changes, one character's dialogue for an actor, the remaining lint rules, a PWA install flow |
+| 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
+| Later | | Planned | Open from and save to Dropbox and Google Drive directly, signed in with them, never with Drafter |
+| Last | | Planned | Testing with NVDA and VoiceOver, after every phase is built. Until then every view is built for screen readers and checked automatically, and Drafter claims no conformance with any standard |
 
 **Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
+
+The full list for each phase, with what each item does and when Phase 0 counts as done, is in the [architecture document, §13](docs/drafter-architecture.md#13-phased-plan); the [Phase 1](docs/drafter-phase1-design.md) and [Phase 2](docs/drafter-phase2-design.md) designs have the details.
 
 ## Stack
 
@@ -293,7 +204,7 @@ After every phase is built, the whole app is tested with NVDA on Windows and Voi
 | App shell | Nuxt 4 as a single-page app, with Nuxt UI v4 |
 | Source editor | CodeMirror 6, highlighted by `@drafter/fountain` rather than a second grammar |
 | Script rendering | HTML and CSS with Courier Prime, from the same page model as the PDF |
-| PDF | pdf-lib |
+| PDF | pdf-lib, with fontkit for the embedded fonts |
 | Storage | IndexedDB (via Dexie) and the File System Access API |
 | Offline | Progressive Web App |
 | Spellcheck | nspell with offline Hunspell dictionaries |
@@ -302,7 +213,7 @@ After every phase is built, the whole app is tested with NVDA on Windows and Voi
 
 ## Storage and browsers
 
-Drafter never needs an account, and it saves like a desktop app. Your script is a `.fountain` file: Save writes it, and Drafter warns you before you leave with unsaved changes. Behind that, your browser keeps a recovery copy of the script at all times, updated as you type, so a crash or a closed tab loses almost nothing.
+Drafter never needs an account, and it saves like a desktop app. Your script is a `.fountain` file: Save writes it, and Drafter warns you before you leave with unsaved changes. Behind that, your browser keeps a recovery copy at all times, updated as you type, so a crash or a closed tab loses almost nothing.
 
 | | Chrome, Edge, and other Chromium browsers | Firefox | Safari |
 |---|---|---|---|
@@ -312,106 +223,45 @@ Drafter never needs an account, and it saves like a desktop app. Your script is 
 | Import by drag-and-drop or file picker | ✅ | ✅ | ✅ |
 | Export by download | ✅ | ✅ | ✅ |
 
-Brave is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari. The leave warning is a desktop-browser feature; phones and tablets don't show it reliably, which is one more reason the recovery copy is always on.
+- **Brave** is the exception among Chromium browsers: it ships with the File System Access API turned off, so it saves by download, like Firefox and Safari.
+- **The leave warning** is a desktop-browser feature; phones and tablets don't show it reliably, which is one more reason the recovery copy is always on.
+- **When the recovery copy isn't safe**, because the browser blocks storage or may clear it, Drafter tells you. Safari, for example, can clear storage for websites you haven't used recently; installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it.
+- **Every saved file is a complete `.fountain`**, so any copy is a full backup.
 
-Drafter tells you when the recovery copy isn't safe, because the browser blocks storage or may clear it. Safari, for example, can clear storage for websites you haven't used recently; installing Drafter as an app (Add to Dock, or Add to Home Screen) protects it. Every saved file is a complete `.fountain`, so any copy is a full backup. The full policy is in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
+The full policy is in the [architecture document, §6](docs/drafter-architecture.md#6-storage-and-files-no-logins-ever).
 
 ## Drafter for Linux
 
-Drafter also comes as a desktop app for Linux: the same editor as drafter.dev, in a window of its own, built with Electron. It comes for [Windows](#drafter-for-windows) too. A macOS download comes last, because it needs Apple's developer account; until then you can [build the Mac app yourself](#drafter-on-a-mac).
-
-### Download
-
-Get it from the [latest release](https://github.com/cschweda/drafter/releases/latest) on GitHub. There are two packages, both for 64-bit Intel and AMD computers (x64), each about 100 to 130 MB:
+The same editor as drafter.dev, in a window of its own, built with Electron. Get it from the [latest release](https://github.com/cschweda/drafter/releases/latest) on GitHub, for 64-bit Intel and AMD (x64):
 
 | Package | Use it on | File |
 |---|---|---|
 | `.deb` | Ubuntu, Debian, Linux Mint, Pop!_OS, and other Debian-based systems. **The one to use on Ubuntu 24.04 and later.** | `Drafter-<version>-linux-amd64.deb` |
-| AppImage | Any other distribution (Fedora, Arch, openSUSE, and so on). Nothing to install; it runs from where you put it. | `Drafter-x86_64.AppImage` (the same name for every version, so an update replaces it in place) |
-
-### Install and start the `.deb`
+| AppImage | Any other distribution (Fedora, Arch, openSUSE, and so on). Nothing to install. | `Drafter-x86_64.AppImage` |
 
 ```sh
-sudo apt install ./Drafter-<version>-linux-amd64.deb
+sudo apt install ./Drafter-<version>-linux-amd64.deb             # the .deb; then start it with drafterdev
+chmod +x Drafter-x86_64.AppImage && ./Drafter-x86_64.AppImage    # the AppImage
 ```
 
-Drafter then appears in your applications (under Office). A `.fountain` file opens in it when you double-click it; for a `.md` file, Drafter is offered under **Open With** (or make it the default there). Start it from the applications menu, or from a terminal:
+The AppImage needs FUSE 2 (`libfuse2`), and on Ubuntu 24.04 and later it needs an AppArmor profile for Chromium's sandbox, so use the `.deb` there. Drafter checks GitHub once at start for a new version and never installs by itself: the AppImage offers **Restart**, the `.deb` **Get it**, and you can turn the check off in Settings. The [Linux install guide](docs/desktop-install-linux.md) has starting, file types, removing it, the sandbox choices, and updates.
 
-```sh
-drafterdev                      # start Drafter
-drafterdev "My Script.fountain" # start it with a script open
-```
-
-To remove it: `sudo apt remove drafterdev`. Your scripts are files you saved and aren't touched; Drafter's settings and recovery copies are in `~/.config/Drafter`.
-
-### Install and start the AppImage
-
-```sh
-chmod +x Drafter-x86_64.AppImage
-./Drafter-x86_64.AppImage
-./Drafter-x86_64.AppImage "My Script.fountain"   # with a script open
-```
-
-An AppImage needs FUSE 2: install `libfuse2` if it won't start (on Ubuntu 24.04 the package is `libfuse2t64`). It doesn't add itself to your applications menu or file types, so double-clicking a script won't open it in Drafter until a tool such as Gear Lever or AppImageLauncher adds it; from a terminal, name the script as above. To remove it, delete the file.
-
-On Ubuntu 24.04 and later, the AppImage can't use Chromium's sandbox (a system setting blocks it) unless you give it a small AppArmor profile, and Drafter asks before it starts without one. Use the `.deb` there, or follow the [install guide](docs/desktop-install-linux.md), which has the profile and every other choice.
-
-### Updates
-
-A few seconds after it starts, Drafter checks GitHub once for a new version; it never installs or restarts by itself. The AppImage downloads the new version in the background, then says it's ready with **Restart** and **Later**; Restart asks about unsaved changes first, then replaces the AppImage in place (same file, same name, so a launcher or an AppArmor profile for it still works) and starts the new version. If that replacement fails partway (the disk fills, the power goes), download the AppImage from the release page again; your scripts are files of their own and aren't affected. The `.deb` can't update itself, so it says a new version is available with **Get it**, which opens the release page in your browser to download the new package. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version.
-
-### Web and desktop: what's different
-
-The editor, the pages, export, the Problems pane, templates, Markdown documents, script modules, the writing aids, and the help pages are the same in both. These differ:
-
-| | drafter.dev (web) | The desktop app (Linux and Windows) |
-|---|---|---|
-| Getting it | Nothing to install: open the site. Works in any modern browser, on any computer, tablet, or phone. | Download and install a 100 to 130 MB package, for Linux or Windows; macOS later. |
-| Saving | Saves straight back to your file in Chrome and Edge on a computer; elsewhere Save downloads a copy. | Always saves straight back to your file. Each save is written in full before it replaces the old file, so a crash or a full disk can't leave it half written. |
-| Your scripts | Plain-text files. | The same files: a script saved in one opens unchanged in the other, line breaks and all. |
-| The recovery copy | Kept in the browser, which can clear it (Safari clears a site's storage after about a week without a visit, and "clear site data" removes it). | Kept in Drafter's own folder (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), which no browser clears. Each keeps its own recovery copy and recent scripts; they aren't shared. |
-| Opening scripts | Open, or drag a file onto the page. | Also double-click a `.fountain` file (with the `.deb` or on Windows; an AppImage doesn't register file types), start `drafterdev "My Script.fountain"` from a terminal (`Drafter.exe` on Windows), or open a file while Drafter is already running, and it comes to the front. |
-| Access to your files | In Chrome, a script saved to a file may open read-only after a reload until you choose **Check for changes**. | Drafter can read and write only the files you chose (by Open, Save As, a drop, or the command line), and doesn't ask again after a restart. |
-| Menus | The Drafter menu in the toolbar, and the command palette. | Also a menu bar (File, Edit, View, Go, Help). |
-| Closing with unsaved changes | The browser's own "Leave page?" warning. | Asks **Save**, **Don't Save**, or **Cancel**. |
-| Working offline | After the first visit, through the browser's service worker. | Always: everything is in the app. |
-| Updates | A new version is offered when you next open the site, with **Reload**; **Help → Check for updates…** asks the browser to look now. | Checked once when Drafter starts (you can turn it off), and whenever you choose **Help → Check for Updates…**. The AppImage and the Windows app install it only when you choose **Restart**; the `.deb` offers **Get it**, the release page. |
-| Network | Loads the site from drafter.dev; after that, only the browser's check for a new version. | None, apart from the update check (or none at all with it off, unless you choose Check for Updates). |
-| Spellcheck | Drafter's own in the script, offline. Other text fields use your browser's. | The same in the script. Other text fields use the app's own English dictionary, so they work offline too. |
-| Installing as an app | Chrome and Edge can install the site as an app; Safari can add it to the Dock or Home Screen. | It is an app. |
+**How it differs from drafter.dev:** it always saves straight back to your file, keeps its recovery copy in its own folder (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`) where no browser can clear it, opens a `.fountain` file with a double-click, has a menu bar, asks **Save**, **Don't Save**, or **Cancel** before closing, works offline always, and makes no network request but the update check. [Drafter on the web and on the desktop](docs/web-and-desktop.md) has the full comparison.
 
 ## Drafter for Windows
 
-The same desktop app, for Windows 10 and 11, as an installer published with each release on GitHub.
-
-### Download
-
-From the [latest release](https://github.com/cschweda/drafter/releases/latest), under *Assets*:
+The same desktop app, for Windows 10 and 11. From the [latest release](https://github.com/cschweda/drafter/releases/latest), under *Assets*:
 
 | Your PC | The installer |
 |---|---|
 | Most PCs (64-bit Intel or AMD) | `Drafter-<version>-windows-x64-setup.exe` |
 | Windows on Arm (a Snapdragon laptop, or Windows 11 in a VM on an Apple silicon Mac) | `Drafter-<version>-windows-arm64-setup.exe` |
 
-Open it and it installs at once, for you alone and with no administrator, into `%LOCALAPPDATA%\Programs\drafter`, with Drafter in the Start menu and on the desktop. `.fountain` files then open in Drafter with a double-click; `.md` and `.markdown` keep the app they open in now, with Drafter under **Open with**. Uninstall it from **Settings → Apps**; your settings, recovery copy, and modules folder (`%APPDATA%\Drafter`) stay unless you delete them.
-
-The installer isn't signed yet, so **SmartScreen** may say *"Windows protected your PC"*: choose **More info**, then **Run anyway**. The [Windows install guide](docs/desktop-install-windows.md) has the steps, where everything is, and the modules folder.
-
-### Updates
-
-As with the AppImage: Drafter checks GitHub once when it starts, downloads the new installer for your processor in the background, and offers **Restart**; it never installs by itself, and you can turn **Check for updates** off. **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version. The download must match the SHA-512 in the release's `latest.yml`; until the installers are signed there is no signature to check, which is the same trust as downloading the installer yourself ([the guide](docs/desktop-install-windows.md#what-an-update-is-checked-for) says what that covers).
-
-To build the installers on a Windows PC: `pnpm install`, then `pnpm desktop:win` (they land in `apps/desktop/release/`).
+Open it and it installs at once, for you alone and with no administrator, with Drafter in the Start menu and `.fountain` files opening in it with a double-click. The installer isn't signed yet, so **SmartScreen** may say *"Windows protected your PC"*: choose **More info**, then **Run anyway**. Updates work as with the AppImage. The [Windows install guide](docs/desktop-install-windows.md) has the steps, where everything is, updates and what they're checked for, uninstalling, the modules folder, and building the installers yourself.
 
 ## Drafter on a Mac
 
-There's no Mac download yet: a Mac app from the internet has to be signed and notarised with an Apple developer account, which Drafter doesn't have yet. A signed download that updates itself comes later. Until then, the same desktop app builds on your own Mac with one command, and a Mac opens an app built on it without any warning.
-
-**Or skip the build:** open [drafter.dev](https://drafter.dev) in Chrome or Edge and install it as an app (the install button in the address bar). It sits in your Dock, works offline, and saves straight back to your files. The desktop app adds a recovery copy no browser can clear, double-clicking a `.fountain` file to open it, a menu bar, and a modules folder.
-
-### Build it on your Mac
-
-You need Node 22.13 or later and pnpm 10 (`corepack enable` provides it), and `git` (macOS offers to install Apple's command-line tools the first time you run it). Then:
+There's no Mac download yet: a Mac app from the internet has to be signed and notarized with an Apple developer account, which Drafter doesn't have yet. A signed download that updates itself comes later. Until then, the same desktop app builds on your own Mac with one command, and opens there without any warning. With Node 22.13 or later, pnpm 10 (`corepack enable`), and `git`:
 
 ```sh
 git clone https://github.com/cschweda/drafter.git
@@ -420,15 +270,9 @@ pnpm install
 pnpm desktop:mac
 ```
 
-The app lands in `apps/desktop/release/mac-arm64/Drafter.app` (on an Intel Mac, `apps/desktop/release/mac/Drafter.app`), with a `.dmg` of it beside that folder. Drag **Drafter.app** to your **Applications** folder and start it from there. It's built for the Mac it was built on: another Mac will refuse a copy of it, so build it there too.
+Then drag `apps/desktop/release/mac-arm64/Drafter.app` (on an Intel Mac, `apps/desktop/release/mac/Drafter.app`) to **Applications**. To update, run `git pull`, `pnpm install`, and `pnpm desktop:mac` again. The [Mac guide](docs/desktop-install-macos.md) has the details: what to install first, opening files, where Drafter keeps things, updating, removing it, and what to do if something goes wrong.
 
-It is the Linux app's editor, files, menus, and recovery copy, made a Mac app: a `.fountain` file opens in it with a double-click (a `.md` file under **Open With**), the **Drafter** menu has **Settings…** (⌘,) and **Quit Drafter** (⌘Q), closing the window leaves it running until you quit, and its settings, recovery copies, and modules folder are in `~/Library/Application Support/Drafter`.
-
-### Updates on a Mac
-
-Drafter checks GitHub once when it starts, and again whenever you choose **Help → Check for Updates…**, and says when a new version is out, with **Get it** (the release page). It can't install it itself: to update, quit Drafter, then in the folder you cloned run `git pull`, `pnpm install`, and `pnpm desktop:mac`, and put the new `Drafter.app` in Applications in place of the old one. Your settings and recovery copies aren't in the app, so they stay.
-
-The [Mac guide](docs/desktop-install-macos.md) has the details: what to install first, opening files, where Drafter keeps things, removing it, and what to do if something goes wrong.
+**Or skip the build:** open [drafter.dev](https://drafter.dev) in Chrome or Edge and install it as an app (the install button in the address bar). It sits in your Dock, works offline, and saves straight back to your files. The desktop app adds a recovery copy no browser can clear, double-clicking a `.fountain` file to open it, a menu bar, and a modules folder.
 
 ## Development
 
@@ -445,11 +289,10 @@ pnpm dev              # the app, at http://localhost:3000
 pnpm e2e              # builds the app from clean, as Netlify would, and runs its browser tests
 ```
 
-The browser tests need Playwright's browsers, installed once with `pnpm --filter @drafter/web exec playwright install chromium firefox webkit`.
-
-`pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
-
-Each package has its own README: [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-html`](packages/render-html/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), [`cm-fountain`](packages/cm-fountain/README.md), and [`cli`](packages/cli/README.md). Choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
+- **Browser tests** need Playwright's browsers, installed once with `pnpm --filter @drafter/web exec playwright install chromium firefox webkit`.
+- **Git hooks:** `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
+- **Package READMEs:** [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-html`](packages/render-html/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), [`cm-fountain`](packages/cm-fountain/README.md), [`cli`](packages/cli/README.md), [`notes`](packages/notes/README.md), [`compare`](packages/compare/README.md), [`outline`](packages/outline/README.md), [`spell`](packages/spell/README.md), and [`fdx`](packages/fdx/README.md).
+- **Decisions and deferred work:** choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
 After a build, the CLI runs from the repository root:
 
@@ -465,74 +308,26 @@ The stage play picks its own template from the metadata block at the end of the 
 
 ## Clean-room implementation
 
-Drafter is written from scratch, from public specifications, without reading anyone else's implementation. This section explains what that means, why it works, why it matters for a project like this, and what it asks of everyone who works on Drafter from here on. It describes the project's practice; it isn't legal advice.
+Drafter is written from scratch, from public specifications, without reading anyone else's implementation. A clean-room implementation keeps two things apart: *what a program has to do*, which comes from public written sources, and *how the code does it*, which comes only from the people writing it. Because nobody working on the code reads another implementation's source, nothing in it is copied from one. It describes the project's practice; it isn't legal advice.
 
-### What it means
+- **Permitted:** the [Fountain specification](https://fountain.io/syntax), industry formatting conventions for screenplays and stage plays, general software engineering, `.fdx` files a user owns (read as plain XML), other applications used as a writer uses them (their documentation, and comparing their output with Drafter's), and the Courier Prime typeface.
+- **Excluded:** the source code of other screenwriting applications and Fountain libraries (Beat, Final Draft, Trelby, Scrite, BetterFountain, afterwriting, Highland, Slugline, Fade In, and any other), not to copy, adapt, or read for ideas; their packages as dependencies; and their test suites, sample files, and scripts.
+- **Why:** Drafter's MIT license holds only if none of the code is borrowed, and the engine is meant to be reused by people who need to trust where it came from.
+- **From here on:** the rule covers every contributor, every package, and every phase, AI coding assistants included. Where the specification is silent, the decision goes in [`docs/DECISIONS.md`](docs/DECISIONS.md), with a test that pins it.
 
-A clean-room implementation keeps two things apart: *what a program has to do*, which comes from public written sources, and *how the code does it*, which comes only from the people writing it. Because nobody working on the code reads another implementation's source, nothing in it is copied from one.
-
-Drafter's permitted sources:
-
-| Source | Used for |
-|---|---|
-| The [Fountain specification](https://fountain.io/syntax) | What each element of a script is, and how it's written in plain text |
-| Industry formatting conventions for screenplays and stage plays | Margins, indents, `(MORE)` and `(CONT'D)`, title pages, and the rest of what a page looks like |
-| General software engineering | Parsing, line breaking, pagination, and browser storage, all common knowledge |
-| `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 2; built from the structure description and hand-made fixtures, tested on a synthetic set written by hand and checked against one real Final Draft sample, more real files welcome) |
-| Other applications, used as a writer uses them | Their documentation, and comparing their output with Drafter's |
-| [Courier Prime](https://fonts.google.com/specimen/Courier+Prime) | The typeface: a font under the SIL Open Font License, not code |
-
-And what's excluded:
-
-- **The source code of other screenwriting applications and Fountain libraries**: Beat, Final Draft, Trelby, Scrite, BetterFountain, afterwriting, Highland, Slugline, Fade In, and any other. Not to copy, not to adapt, and not to read for ideas.
-- **Their packages as dependencies.** Drafter installs no Fountain parser and no screenwriting library. [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) lists every dependency and why it's there.
-- **Their test suites, sample files, and scripts.** Every fixture in this repository was written for it.
-
-### Why it works
-
-Copyright protects a program's *expression*, the code as someone wrote it. It doesn't protect the ideas, methods, or formats the code works with; US law says so directly ([17 U.S.C. § 102(b)](https://www.law.cornell.edu/uscode/text/17/102)), and most other countries draw the same line. Fountain was published so that any tool could read and write it, and screenplay conventions such as the standard margins and `(MORE)` at the foot of a split speech belong to the craft, not to any product. Anyone may implement them.
-
-A claim of copying turns on whether code was copied or created independently. Code written only from public specifications, by people who never saw the other source, is independent by construction, and a clean room leaves a record that shows it. The classic case is the IBM PC BIOS: in the 1980s, Phoenix Technologies had one team write down what IBM's BIOS did and a second team, who had never seen IBM's code, write a compatible BIOS from that description alone. Compatible PCs from many makers followed.
-
-Drafter's equivalent of the first team's description is its design documents. The [technical design](docs/drafter-technical-design.md) opens with a clean-room statement and derives every rule from the specification, the conventions, and general engineering; the code is written from the design. Where the specification is silent, the gap is filled by a decision made on the merits and recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), not by looking up what another implementation does. The layout fixtures go a step further: their page positions were worked out by hand from the written rules, with the arithmetic beside each one, and reviewed before any layout code existed. The repository is its own record of independent work.
-
-### Why it matters
-
-- **The license means what it says.** Drafter is MIT-licensed, so anyone can use, change, embed, or sell it. That promise holds only if none of the code is borrowed. Code taken from a copyleft project brings that project's license with it (Beat, for example, is GPL-3, and borrowing from it would make Drafter GPL too), and code taken from a commercial product is code nobody licensed to us. Either could force a rewrite or a removal years later, after other projects had come to depend on Drafter.
-- **The engine is meant to be reused.** `@drafter/fountain` and `@drafter/layout` are libraries as well as the app's engine: the CLI uses them, and so can CI checks, other editors, and tools nobody has thought of yet. People who build on them need to trust where the code came from.
-- **Behavior stays explicit.** A port of another program inherits its quirks without saying so. Writing from the specification forces every choice into the open, where it can be reviewed, tested, and changed on purpose. `DECISIONS.md` exists because of this rule, and the project is better for it.
-- **It respects other projects.** Drafter works with other Fountain tools through the shared format, the way the format's authors intended, without taking their work.
-
-### What it means for future development
-
-The rule doesn't end with Phase 0. It covers every contributor, every package, and every phase.
-
-- **Work from the specification, never from another implementation.** That includes a quick look at how another app splits dialogue or detects a title page. If you've studied another screenwriting application's source in the past, say so in your pull request, so a reviewer can take extra care, and write from the specification, not from memory.
-- **When the specification is silent, decide and write it down.** Add a dated entry to `docs/DECISIONS.md`, and a fixture or test that pins the behavior. Comparing Drafter's output with another app's is fine; reproducing its code or its test cases isn't.
-- **Expect small differences from other tools.** Where the specification is ambiguous, Drafter may read a file differently from another tool. That's a documented decision, not a bug to fix by imitation, and the file stays standard Fountain either way.
-- **Final Draft support comes from the files.** The `.fdx` import and export were built from the published description of the file's XML structure in the technical design and from hand-made fixtures, not from another program's converter. A synthetic test set now covers the format's structure: a short film, edge cases, a revised draft, and a stage play, written by hand with original text and invented values, from the element names the technical design documents, without consulting any real `.fdx` file, Final Draft, or converter, and a generated 120-page feature (two of them are in [`samples/fdx/`](samples/fdx/) to try Open on). Import has been checked against one real file, Final Draft 13's own sample script (its structure only; nothing from it is in the repository), and fixed where it differed; more real files are welcome, and a round trip through Final Draft itself is still to come.
-- **Dependencies stay out of the domain.** No Fountain parsers and no screenwriting libraries, ever. A new dependency gets an entry in `docs/DEPENDENCIES.md` first, saying why it's needed and confirming it isn't screenwriting-related.
-- **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
-- **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](docs/drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.
+[Clean-room implementation](docs/clean-room.md) has the whole statement: the permitted sources and what each is used for, why it works in law (and the IBM PC BIOS precedent), why it matters, and what it asks of future development, Final Draft support included.
 
 ### Clean-room verification
 
 **The short version: Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library.**
 
-On 27 October 2026 the whole repository was audited against these rules: `main` at commit `6af51a7`, and the branches about to merge into it (the desktop app). [The full audit](docs/clean-room-audit.md) has the method and evidence for each check. It found:
+On 27 October 2026 the whole repository was audited against these rules. It found no code from screenwriting software and no Fountain or screenwriting package among more than 700 installed, no copied code from anywhere, general-purpose libraries only, each declared in [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) with no GPL code in the app, and original test content. Most of Drafter's code was written by an AI coding assistant working under these rules and reviewed by the maintainer. An audit finds copying that leaves traces; it can't prove that something was never read or remembered, or rule out what an AI model learned in training.
 
-- **No code from screenwriting software.** Nothing names, ports, imports, or depends on another screenwriting or playwriting application or Fountain library. Of more than 700 installed packages, none is a Fountain or screenwriting package. The parser follows the [technical design](docs/drafter-technical-design.md), not any existing parser.
-- **No copied code from anywhere.** No source file carries another project's licence header or a note that it was adapted from elsewhere, nothing is vendored or minified, and the git history has no foreign files added and later removed. Every commit has one author.
-- **General-purpose libraries only, all declared.** Drafter does use open-source libraries, such as Vue, Nuxt, CodeMirror, pdf-lib, Dexie, and Electron, as ordinary dependencies. Each is listed with why it's there in [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md). No GPL code ships in the app.
-- **Original test content.** Fixtures and samples were written for Drafter. A few test inputs reuse example character names from the Fountain specification itself, a permitted source. One line in a fixture quoted a film; it was replaced.
-
-Most of Drafter's code was written by an AI coding assistant working under these rules, which forbid reading other implementations, and reviewed by the maintainer.
-
-**Limits.** An audit finds copying that leaves traces. It can't prove that something was never read or remembered, or rule out what an AI model learned in training. It covers the commits named above, and it isn't legal advice.
+The [summary of findings](docs/clean-room.md#clean-room-verification) names the commits audited, and [the full audit](docs/clean-room-audit.md) has the method and evidence for each check.
 
 ## Contributing
 
-**The clean-room rule.** While working on Drafter, **don't read the source code of other screenwriting applications or Fountain libraries**, and don't add their packages as dependencies. Reading their documentation, using their apps, and comparing their output are all fine. [Clean-room implementation](#clean-room-implementation) explains what's allowed, why, and how to handle the cases in between.
+**The clean-room rule.** While working on Drafter, **don't read the source code of other screenwriting applications or Fountain libraries**, and don't add their packages as dependencies. Reading their documentation, using their apps, and comparing their output are all fine. [Clean-room implementation](docs/clean-room.md) explains what's allowed, why, and how to handle the cases in between.
 
 **Test content is original.** Screenplays are almost never in the public domain, so every fixture is written for this project. Placeholder names and nonsense dialogue are fine; third-party scripts and sample files are not.
 
@@ -544,7 +339,7 @@ Most of Drafter's code was written by an AI coding assistant working under these
 
 1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, and commit. Don't push `main` yet: pushing it deploys drafter.dev, whose Saving page links to the latest release.
 2. Push the tag first: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must match `apps/desktop/package.json`'s version, or the workflow stops.
-3. Let `.github/workflows/desktop.yml` make the release: after every check passes, its `publish` job creates the GitHub Release as a draft, uploads the AppImage, the `.deb`, `latest-linux.yml`, the two Windows installers, and `latest.yml`, checks them, and only then publishes it. It waits for the Linux job and both Windows jobs; if any of them fails, nothing is published. Once it is published, push `main`, so the site's download link never points at a release without packages.
+3. Let `.github/workflows/desktop.yml` make the release. After every check passes, its `publish` job creates the GitHub Release as a draft, uploads the AppImage, the `.deb`, `latest-linux.yml`, the two Windows installers, and `latest.yml`, checks them, and only then publishes it. It waits for the Linux job and both Windows jobs; if any of them fails, nothing is published. Once it is published, push `main`, so the site's download link never points at a release without packages.
 4. Then edit the release's notes on GitHub (the workflow writes a one-line placeholder).
 
 Don't create the release on GitHub (or with `gh release create`) before the workflow does: the workflow never uploads to a release that is already published, so a hand-made release would be left with no packages and no update feed, and the desktop apps would find no update.
@@ -557,13 +352,14 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Phase 1 design](docs/drafter-phase1-design.md): the first public release, from the first visit and its guided tour to the editor, saving, export, focus mode, and phones, with mockups in [`docs/phase1/`](docs/phase1/).
 - [Phase 2 design](docs/drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
 - [Structure strip design](docs/drafter-structure-strip-design.md): the band of sections and scenes above the panes, its rows, sizes, keys, and how Phase 2's script map and Timeline build on it.
+- [Markdown PDF design](docs/drafter-markdown-pdf-design.md): a Markdown document as a printable PDF: what prints, line and page breaks, paper, and page numbers.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 
 ## Acknowledgments
 
 - [Fountain](https://fountain.io), the plain-text screenplay format created by John August and Stu Maschwitz, with many contributors.
-- The [Inform 7](https://ganelson.github.io/inform-website/) IDE, Graham Nelson's environment for writing interactive fiction. Drafter borrows none of the interactive fiction itself (the parser games in the line of Zork and Enchanter). What it takes as inspiration is the IDE: two facing panes, with plain source on one side and the result on the other, tabs that either pane can show, and how easy that makes it to write, see the outcome, and go straight back to the line that produced it.
+- The [Inform 7](https://ganelson.github.io/inform-website/) IDE, Graham Nelson's environment for writing interactive fiction. Drafter takes none of the interactive fiction itself (the parser games in the line of Zork and Enchanter), only the IDE: two facing panes, plain source on one side and the result on the other, tabs that either pane can show, and how easily that lets you write, see the outcome, and go straight back to the line that produced it.
 - [Courier Prime](https://fonts.google.com/specimen/Courier+Prime), the screenplay typeface Drafter targets, released under the SIL Open Font License.
 - [Inter Tight](https://fonts.google.com/specimen/Inter+Tight), the typeface of Drafter's wordmark and interface, also under the SIL Open Font License.
 

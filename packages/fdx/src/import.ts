@@ -80,6 +80,9 @@ export const IGNORED: ReadonlySet<string> = new Set([
   'Characters',
   // A display setting: the columns of a list view (the beat board's, among others).
   'TableColumnSettings',
+  // A shooting script's revision marks: where a revision deleted text. What was deleted isn't the
+  // script's writing, so even text held there stays out.
+  'DeletedText',
 ]);
 
 /** The most names `ignored` lists; `ignoredCount` says how many there were. */
@@ -87,6 +90,16 @@ export const MAX_IGNORED = 50;
 
 /** An element whose content is never text for the script: a setting, or an image's bytes. */
 const skipped = (name: string) => IGNORED.has(name) || name === 'Picture';
+
+/** The kinds a paragraph's text makes: one all hidden keeps its text, else it would lose its kind. */
+const NEEDS_TEXT: ReadonlySet<string> = new Set([
+  'Scene Heading',
+  'Shot',
+  'Character',
+  'Parenthetical',
+  'Dialogue',
+  'Transition',
+]);
 
 /** An `Outline N (label)` paragraph type: a section of depth N. */
 const OUTLINE = /^Outline ([1-9])(?:\s|$)/;
@@ -199,27 +212,95 @@ function bareText(element: XmlElement): string {
 /** A `[[fdx: …]]` note naming what Drafter couldn't map; a `]]` inside can't end it early. */
 const fdxNote = (label: string) => `[[fdx: ${closeSafe(label.replace(/\s+/g, ' '))}]]`;
 
-/** The paragraph's `<Text>` runs, as lines of styled characters and notes. */
-function linesOf(paragraph: XmlElement): Tok[][] {
+/** Whether a `<Text>` run is styled `HiddenText`. */
+const isHidden = (run: XmlElement) => (run.attrs.Style ?? '').split('+').includes('HiddenText');
+
+/**
+ * A paragraph whose text is all hidden: some hidden run holds text, and nothing else in it does.
+ * Made a note, it would leave the paragraph no text to be its kind with.
+ */
+function hiddenOnly(paragraph: XmlElement): boolean {
+  if (bareText(paragraph) !== '') return false;
+  let hidden = false;
+  for (const child of paragraph.children) {
+    if (typeof child === 'string' || child.name !== 'Text') continue;
+    const blank = textOf(child).trim() === '';
+    if (!isHidden(child) && !blank) return false;
+    if (isHidden(child) && !blank) hidden = true;
+  }
+  return hidden;
+}
+
+/**
+ * The paragraph's `<Text>` runs, as lines of styled characters and notes. A run styled `AllCaps`
+ * prints in capitals, so it is written in them. A run styled `HiddenText` doesn't print, so it is
+ * a `[[fdx: Hidden: …]]` note in its place (runs one after another, one note; `onHidden` is told
+ * of each), unless `hidden` is `'text'`: a kind that never prints (an outline item, a summary, a
+ * note) keeps it as its text. The visible stretches around a hidden note are cut into lines each
+ * on its own and the note put between them, never read again: a `[[` in the stretch before it that
+ * closes nowhere in that stretch is written `[\[`, so it can't close at the note and hide the
+ * text between (`breakStrays`).
+ */
+function linesOf(
+  paragraph: XmlElement,
+  hidden: 'note' | 'text' = 'note',
+  onHidden?: () => void,
+): Tok[][] {
   // A paragraph with no `<Text>` but text of its own (`<Paragraph>Hi</Paragraph>`) is read as it.
   const hasText = paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Text');
   const bare = bareText(paragraph);
   if (!hasText && bare !== '') return fromPlain(bare);
+  const lines: Tok[][] = [[]];
   let plain = '';
-  const styles: Style[] = [];
+  let styles: Style[] = [];
+  /** Adds the visible stretch read so far; `beforeNote`, a note follows it. */
+  const endStretch = (beforeNote: boolean) => {
+    let stretch = splitLines(plain, styles);
+    plain = '';
+    styles = [];
+    if (beforeNote) {
+      stretch = breakStrays(stretch);
+      // A `[` just before the note would be read as the start of it: a space keeps it apart.
+      const end = stretch[stretch.length - 1] as Tok[];
+      const last = end[end.length - 1];
+      if (last && !isNote(last) && last.ch === '[') end.push({ ch: ' ', style: plainStyle });
+    }
+    const [first = [], ...rest] = stretch;
+    append(lines[lines.length - 1] as Tok[], first);
+    append(lines, rest);
+  };
+  let note = '';
+  const endNote = () => {
+    if (note.trim() !== '') {
+      endStretch(true);
+      (lines[lines.length - 1] as Tok[]).push({
+        note: `[[fdx: Hidden: ${closeSafe(noteText(note.trim()))}]]`,
+      });
+      onHidden?.();
+    }
+    note = '';
+  };
   for (const child of paragraph.children) {
     if (typeof child === 'string' || child.name !== 'Text') continue;
     const parts = (child.attrs.Style ?? '').split('+');
+    const raw = normalize(textOf(child));
+    const text = parts.includes('AllCaps') ? raw.toUpperCase() : raw;
+    if (hidden === 'note' && parts.includes('HiddenText')) {
+      note += text;
+      continue;
+    }
+    endNote();
+    plain += text;
     const style = {
       bold: parts.includes('Bold'),
       italic: parts.includes('Italic'),
       underline: parts.includes('Underline'),
     };
-    const text = normalize(textOf(child));
-    plain += text;
     for (let k = 0; k < text.length; k++) styles.push(style);
   }
-  return splitLines(plain, styles);
+  endNote();
+  endStretch(false);
+  return lines;
 }
 
 /** Cuts styled text into lines, keeping each `[[…]]` whole: notes stay notes (controller ruling 2). */
@@ -441,7 +522,7 @@ interface Field {
 }
 
 class Importer {
-  private readonly blocks: string[] = [];
+  private blocks: string[] = [];
   private readonly mappedCounts = new Map<string, number>();
   private readonly ignoredNames = new Set<string>();
   private pageBreak = false;
@@ -457,6 +538,8 @@ class Importer {
   /** The `Alt` element whose text is stored for each id. */
   private readonly storedAlts = new Map<string, XmlElement>();
   private readonly usedAlts = new Set<string>();
+  /** An `OmittedScene` is being read: its blocks become notes once it is. */
+  private omitting = false;
 
   run(root: XmlElement): FdxImport {
     const content = root.children.find(
@@ -667,6 +750,7 @@ class Importer {
         continue;
       }
       if (child.name === 'Paragraph') this.paragraph(child);
+      else if (child.name === 'OmittedScene') this.omittedScene(child);
       else this.other(child);
     }
   }
@@ -707,6 +791,7 @@ class Importer {
       for (const child of paragraph.children) {
         if (typeof child === 'string' || child === dual) continue;
         if (child.name === 'SceneProperties') this.propertiesContent(child);
+        else if (child.name === 'OmittedScene') this.omittedScene(child);
         else this.other(child);
       }
       let speakers = 0;
@@ -716,6 +801,10 @@ class Importer {
           if (child.trim() === '') continue;
           this.flushSpeech();
           this.action(fromPlain(child.trim()), 'DualDialogue text');
+          continue;
+        }
+        if (child.name === 'OmittedScene') {
+          this.omittedScene(child);
           continue;
         }
         if (child.name !== 'Paragraph') {
@@ -742,7 +831,15 @@ class Importer {
       bareText(paragraph) === '' &&
       paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Picture') &&
       !paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Text');
-    const all = pictureOnly ? [] : linesOf(paragraph);
+    // Kinds that never print keep hidden text as their own, as an omitted scene does, which never
+    // prints at all; elsewhere it is a note. A paragraph of a kind that needs its text, all of it
+    // hidden, keeps it as its text too, and a note after it says Final Draft hid it.
+    const unprinted = this.omitting || OUTLINE.test(type) || type === 'Summary' || type === 'Note';
+    const allHidden = !unprinted && hiddenOnly(paragraph);
+    const hiddenKind = allHidden && NEEDS_TEXT.has(type);
+    const all = pictureOnly
+      ? []
+      : linesOf(paragraph, unprinted || hiddenKind ? 'text' : 'note', () => this.count('Hidden'));
     const lines = type === 'Action' || type === 'Dialogue' ? all : trimBlank(all);
     const inSpeech = type === 'Parenthetical' || type === 'Dialogue';
     const lyricMark = type === 'Dialogue' && attrs.DrafterLyric === 'Yes';
@@ -789,7 +886,9 @@ class Importer {
     } else if (type === 'Action' && attrs.Alignment === 'Center') {
       if (lines.length > 0) this.centered(lines);
     } else if (type === 'Action') {
-      if (lines.length > 0) this.action(lines);
+      // All hidden, it is its note alone, which no more prints than the paragraph did.
+      if (allHidden) this.push(plainLine(lines.flat().filter(isNote)));
+      else if (lines.length > 0) this.action(lines);
     } else if (type === 'Character') {
       if (lines.length > 0)
         this.speech = { cue: breakStrays(lines), parts: [], dual: this.dualCue };
@@ -810,6 +909,11 @@ class Importer {
       if (!heading && this.speech) this.afterSpeech.push(summary);
       else this.push(summary);
     }
+    // After its summary, which stays on the heading.
+    if (hiddenKind && lines.length > 0) {
+      this.count('Hidden');
+      this.place(fdxNote(`Hidden paragraph: ${oneLine(visible(lines).join(' '))}`));
+    }
 
     this.strayText(paragraph);
     // The paragraph's text as an alternate is compared with it, worked out once and only if needed:
@@ -823,11 +927,46 @@ class Importer {
       if (typeof child === 'string' || child.name === 'Text') continue;
       if (child.name === 'SceneProperties') this.propertiesContent(child);
       else if (child.name === 'Alts') this.alternates(child, shown);
+      else if (child.name === 'OmittedScene') this.omittedScene(child);
       else if (child.name === 'Picture') {
         // A picture's image is in `Images`, which is ignored; a short note says one was here.
         this.count('Picture');
         this.place(fdxNote('Picture'));
       } else this.other(child);
+    }
+  }
+
+  /**
+   * A scene a shooting script omits: its heading reads OMITTED, and Final Draft keeps the scene's
+   * paragraphs inside it, unprinted, to restore. They are read as any others, then each block they
+   * make comes in as a `[[fdx: Omitted: …]]` note in its place, its Fountain kept, so nothing
+   * prints and nothing joins the script's outline. A page break inside is dropped; one in an
+   * omitted scene inside another is read with the outer one's blocks, so no note is in a note.
+   */
+  private omittedScene(scene: XmlElement) {
+    if (this.omitting) {
+      this.content(scene);
+      return;
+    }
+    this.flushSpeech();
+    const outer = this.blocks;
+    const pageBreak = this.pageBreak;
+    this.blocks = [];
+    this.pageBreak = false;
+    this.omitting = true;
+    try {
+      this.content(scene);
+      this.flushSpeech();
+    } finally {
+      const inner = this.blocks;
+      this.blocks = outer;
+      this.pageBreak = pageBreak;
+      this.omitting = false;
+      for (const block of inner) {
+        if (block === '===') continue;
+        this.count('Omitted');
+        this.push(`[[fdx: Omitted: ${closeSafe(noteText(block))}]]`);
+      }
     }
   }
 
@@ -1149,10 +1288,13 @@ class Importer {
       (c): c is XmlElement => typeof c !== 'string' && c.name === 'Paragraph',
     );
     const keyed = paragraphs.some((p) => p.attrs.DrafterKey !== undefined);
-    const fields = (keyed ? byKey(paragraphs) : byOrder(paragraphs)).map((field) => ({
-      ...field,
-      lines: breakStrays(field.lines),
-    }));
+    const onHidden = () => this.count('Hidden');
+    const fields = (keyed ? byKey(paragraphs, onHidden) : byOrder(paragraphs, onHidden)).map(
+      (field) => ({
+        ...field,
+        lines: breakStrays(field.lines),
+      }),
+    );
     if (fields.length === 0) return null;
 
     const text = fields
@@ -1163,22 +1305,20 @@ class Importer {
       })
       .join('\n');
     const titleField = fields.find((f) => f.key.toLowerCase() === 'title');
+    // A hidden run's note is left out, and the spaces either side of it are one.
     const title = titleField
-      ? visible(titleField.lines)
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .join(' ')
+      ? visible(titleField.lines).map(oneLine).filter(Boolean).join(' ')
       : '';
     return { text, title: title || null };
   }
 }
 
 /** Fields by `DrafterKey`; a paragraph without one continues the field before it. */
-function byKey(paragraphs: readonly XmlElement[]): Field[] {
+function byKey(paragraphs: readonly XmlElement[], onHidden: () => void): Field[] {
   const fields: Field[] = [];
   for (const paragraph of paragraphs) {
     const key = paragraph.attrs.DrafterKey?.trim();
-    const lines = linesOf(paragraph);
+    const lines = linesOf(paragraph, 'note', onHidden);
     const current = fields[fields.length - 1];
     if (key !== undefined && TITLE_KEY.test(key)) fields.push({ key, lines });
     else if (current) append(current.lines, lines);
@@ -1194,7 +1334,7 @@ function byKey(paragraphs: readonly XmlElement[]): Field[] {
  * line is likely written as an empty `<Text>`, though no real file has confirmed it), only
  * separate blocks.
  */
-function byOrder(paragraphs: readonly XmlElement[]): Field[] {
+function byOrder(paragraphs: readonly XmlElement[], onHidden: () => void): Field[] {
   const fields: Field[] = [];
   let gap = false;
   let current: Field | null = null;
@@ -1208,7 +1348,7 @@ function byOrder(paragraphs: readonly XmlElement[]): Field[] {
     return current;
   };
   for (const paragraph of paragraphs) {
-    const lines = trimBlank(linesOf(paragraph));
+    const lines = trimBlank(linesOf(paragraph, 'note', onHidden));
     if (lines.length === 0) {
       gap = true;
       continue;

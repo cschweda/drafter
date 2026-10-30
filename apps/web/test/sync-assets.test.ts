@@ -2,6 +2,7 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DOCUMENT_FONT_FILES } from '@drafter/render-pdf';
 import { DICTIONARIES } from '@drafter/spell';
 import { describe, expect, test } from 'vitest';
 import { ASSETS, PACKAGE_ASSETS, packageDir, syncAssets } from '../scripts/sync-assets.mjs';
@@ -11,13 +12,17 @@ const spell = join(repoRoot, 'packages/spell/package.json');
 const ALL = ASSETS.length + PACKAGE_ASSETS.length;
 
 describe('syncAssets', () => {
-  test('lists the four Courier Prime styles, both fonts’ licenses, and the brand files', () => {
+  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, both fonts’ licenses, and the brand files', () => {
     expect(ASSETS.map(({ to }) => to)).toEqual([
       'fonts/courier-prime/CourierPrime-Regular.ttf',
       'fonts/courier-prime/CourierPrime-Bold.ttf',
       'fonts/courier-prime/CourierPrime-Italic.ttf',
       'fonts/courier-prime/CourierPrime-BoldItalic.ttf',
       'fonts/courier-prime/OFL.txt',
+      'fonts/inter-tight/InterTight-Regular.ttf',
+      'fonts/inter-tight/InterTight-Italic.ttf',
+      'fonts/inter-tight/InterTight-SemiBold.ttf',
+      'fonts/inter-tight/InterTight-SemiBoldItalic.ttf',
       'fonts/inter-tight/OFL.txt',
       'favicon.svg',
       'favicon.ico',
@@ -30,6 +35,13 @@ describe('syncAssets', () => {
       'logo-light.svg',
       'mark.svg',
     ]);
+    // The PDF's Inter Tight is render-pdf's own files, the ones its layout measured.
+    expect(ASSETS.filter(({ to }) => to.endsWith('.ttf')).map(({ from }) => from)).toEqual(
+      [
+        ...['Regular', 'Bold', 'Italic', 'BoldItalic'].map((s) => `CourierPrime-${s}.ttf`),
+        ...Object.values(DOCUMENT_FONT_FILES).filter((file) => file.startsWith('inter-tight/')),
+      ].map((file) => `packages/render-pdf/fonts/${file}`),
+    );
   });
 
   test('copies every Courier Prime style and brand icon into public', async () => {

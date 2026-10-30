@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'vitest';
 import { isFinalDraftName, kindOfFileName, NEW_MARKDOWN } from '../app/markdown/kind';
 import { parseMarkdown } from '../app/markdown/parse';
-import { previewDelay } from '../app/markdown/preview';
+import { PREVIEW_PROBLEMS, previewDelay, previewProblem } from '../app/markdown/preview';
 import { renderMarkdown } from '../app/markdown/render';
 import { markdownTitle, retitleMarkdown } from '../app/markdown/title';
 import { countWords } from '../app/markdown/words';
@@ -183,5 +183,20 @@ describe('documents and files', () => {
     expect(previewDelay(0)).toBe(0);
     expect(previewDelay(5_000)).toBe(0);
     expect(previewDelay(500_000)).toBeGreaterThan(0);
+  });
+
+  test('tells a document nested too deeply to preview from any other failure', () => {
+    // Chromium and WebKit run out of stack with a RangeError; Firefox with "too much recursion".
+    expect(previewProblem(new RangeError('Maximum call stack size exceeded'))).toBe('deep');
+    expect(previewProblem('Maximum call stack size exceeded.')).toBe('deep');
+    expect(previewProblem(new Error('too much recursion'))).toBe('deep');
+    expect(previewProblem(new TypeError('x is undefined'))).toBe('other');
+    expect(previewProblem('boom')).toBe('other');
+    expect(PREVIEW_PROBLEMS.deep).toBe(
+      'This document is nested too deeply to preview. Your text is safe in the Source.',
+    );
+    expect(PREVIEW_PROBLEMS.other).toBe(
+      'The Preview couldn’t show this document. Your text is safe in the Source.',
+    );
   });
 });

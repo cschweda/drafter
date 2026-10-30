@@ -35,7 +35,8 @@ const PRECACHED = /\.(?:js|css|woff2|ttf|png|svg|ico|webmanifest|aff|dic)$/;
 /**
  * Files every build must have, copied in by `scripts/sync-assets.mjs`: each bundled dictionary
  * (`DICTIONARIES` in `packages/spell/src/dictionaries.ts`) and the licence of each package the
- * spellchecker uses, which the dictionaries' notice requires be shipped with them.
+ * spellchecker uses, which the dictionaries' notice requires be shipped with them; both fonts'
+ * licences; and Inter Tight's four styles, which a Markdown document's PDF fetches.
  */
 export const REQUIRED_FILES = [
   'dictionaries/en-US/index.aff',
@@ -48,6 +49,10 @@ export const REQUIRED_FILES = [
   'licenses/dictionary-en-gb.txt',
   'fonts/courier-prime/OFL.txt',
   'fonts/inter-tight/OFL.txt',
+  'fonts/inter-tight/InterTight-Regular.ttf',
+  'fonts/inter-tight/InterTight-Italic.ttf',
+  'fonts/inter-tight/InterTight-SemiBold.ttf',
+  'fonts/inter-tight/InterTight-SemiBoldItalic.ttf',
 ];
 
 /**

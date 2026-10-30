@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { createSettings, DEFAULT_SETTINGS, TEXT_SIZES } from '../app/settings/settings';
+import { createSettings, DEFAULT_SETTINGS, PAPERS, TEXT_SIZES } from '../app/settings/settings';
 import { db } from '../app/storage/db';
 
 beforeEach(async () => {
@@ -28,7 +28,30 @@ describe('settings', () => {
       spellNotes: false,
       personalDictionary: [],
       structureStrip: false,
+      markdownPaper: 'letter',
     });
+  });
+
+  test('paper for Markdown PDFs is US Letter by default, and a stored a4 is kept, and anything else isn’t', async () => {
+    expect(PAPERS).toEqual(['letter', 'a4']);
+    const first = createSettings();
+    await first.ready;
+    expect(first.settings.value.markdownPaper).toBe('letter');
+    await first.set('markdownPaper', 'a4');
+    expect(await db.settings.get('markdownPaper')).toEqual({ key: 'markdownPaper', value: 'a4' });
+    const second = createSettings();
+    await second.ready;
+    expect(second.settings.value.markdownPaper).toBe('a4');
+    // A paper Drafter doesn't have changes nothing, set or stored.
+    await second.set('markdownPaper', 'legal' as never);
+    expect(second.settings.value.markdownPaper).toBe('a4');
+    for (const value of ['legal', 'A4', true, null]) {
+      await db.settings.clear();
+      await db.settings.put({ key: 'markdownPaper', value });
+      const store = createSettings();
+      await store.ready;
+      expect(store.settings.value.markdownPaper, String(value)).toBe('letter');
+    }
   });
 
   test('the structure strip is off by default, and a stored true is kept', async () => {

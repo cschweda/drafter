@@ -253,7 +253,11 @@ describe('checking the files the build must have', () => {
     // Both typefaces' licences, which the OFL asks to travel with the fonts.
     expect(REQUIRED_FILES).toContain('fonts/courier-prime/OFL.txt');
     expect(REQUIRED_FILES).toContain('fonts/inter-tight/OFL.txt');
-    expect(REQUIRED_FILES).toHaveLength(10);
+    // Inter Tight's four styles, which a Markdown document's PDF fetches.
+    for (const style of ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic']) {
+      expect(REQUIRED_FILES).toContain(`fonts/inter-tight/InterTight-${style}.ttf`);
+    }
+    expect(REQUIRED_FILES).toHaveLength(14);
   });
 
   test('passes when every one is there', async () => {
@@ -272,6 +276,15 @@ describe('checking the files the build must have', () => {
       await built(REQUIRED_FILES.filter((name) => name !== 'dictionaries/en-US/index.dic')),
     );
     expect(problems).toBe('The build has no dictionaries/en-US/index.dic.');
+  });
+
+  test('reports a missing Inter Tight style, which a Markdown PDF needs', async () => {
+    const problems = await check(
+      await built(
+        REQUIRED_FILES.filter((name) => name !== 'fonts/inter-tight/InterTight-SemiBold.ttf'),
+      ),
+    );
+    expect(problems).toBe('The build has no fonts/inter-tight/InterTight-SemiBold.ttf.');
   });
 });
 

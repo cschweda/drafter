@@ -58,7 +58,7 @@ import { SPELLING_HEADING_ID } from '~/spell/rows';
 import { useSpell } from '~/spell/use-spell';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
-import { exportScript } from '~/storage/export';
+import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
@@ -120,6 +120,7 @@ export function registerBuiltinCommands(): void {
   /** Fountain's own commands, checks, and scenes mean nothing in a Markdown document. */
   const isFountain = () => editor.kind.value === 'fountain';
   const isMarkdown = () => editor.kind.value === 'markdown';
+  const exportsHere = (kind: ExportKind) => exportApplies(kind, editor.kind.value);
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
@@ -401,9 +402,11 @@ export function registerBuiltinCommands(): void {
     // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
     // PDF, plain text, or a Final Draft file; a Markdown document as its Markdown file or plain text (a PDF of
     // one is deferred).
-    'export-pdf': { enabled: isFountain, run: () => void exportScript('pdf') },
-    'export-fdx': { enabled: isFountain, run: () => void exportScript('fdx') },
-    'export-md': { enabled: isMarkdown, run: () => void exportScript('md') },
+    // What the open kind exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter
+    // Tight (Markdown PDF design §10); Final Draft for a script, the Markdown file for a document.
+    'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
+    'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
+    'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },
     'export-treatment': {
       enabled: isFountain,

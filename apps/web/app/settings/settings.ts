@@ -1,4 +1,5 @@
 import { SPELL_LANGUAGES, type SpellLanguage } from '@drafter/spell';
+import type { Paper } from '@drafter/templates';
 import { type Ref, readonly, shallowRef } from 'vue';
 import { db } from '../storage/db';
 
@@ -33,11 +34,15 @@ export interface Settings {
   personalDictionary: readonly string[];
   /** The Structure strip above the panes; off by default, to keep the writing screen calm (structure strip design §5). */
   structureStrip: boolean;
+  /** The paper of a Markdown document's PDF: US Letter by default (Markdown PDF design §6, Call 20). A script's PDF uses its template's. */
+  markdownPaper: Paper;
 }
 
 export type CardSize = 'small' | 'medium' | 'large';
 /** The card sizes, smallest first. */
 export const CARD_SIZES: readonly CardSize[] = ['small', 'medium', 'large'];
+/** The papers a Markdown document's PDF can be on, as Settings lists them. */
+export const PAPERS: readonly Paper[] = ['letter', 'a4'];
 
 export const DEFAULT_SETTINGS: Settings = {
   matchSystem: false,
@@ -55,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   spellNotes: false,
   personalDictionary: [],
   structureStrip: false,
+  markdownPaper: 'letter',
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -68,6 +74,7 @@ function isKey(key: string): key is keyof Settings {
 function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
   if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
+  if (key === 'markdownPaper') return (PAPERS as readonly unknown[]).includes(value);
   if (key === 'spellLanguage') return (SPELL_LANGUAGES as readonly unknown[]).includes(value);
   if (key === 'personalDictionary') {
     // Each entry one word: a non-empty string with no whitespace.

@@ -94,6 +94,12 @@ test.describe('the dialog', () => {
       '130%',
       '150%',
     ]);
+    const paper = dialog(page).getByLabel('Paper for Markdown PDFs');
+    await expect(paper).toHaveValue('letter');
+    await expect(paper.locator('option')).toHaveText(['US Letter', 'A4']);
+    await expect(paper).toHaveAccessibleDescription(
+      'The paper size of a Markdown document’s PDF. Screenplays and stage plays use their template’s paper.',
+    );
   });
 
   test('opens from the palette', async ({ page }) => {

@@ -320,15 +320,18 @@ importers:
         specifier: workspace:*
         version: link:../templates
       '@pdf-lib/fontkit':
-        specifier: ^1.1.1
+        specifier: 1.1.1
         version: 1.1.1
       pdf-lib:
-        specifier: ^1.17.1
+        specifier: 1.17.1
         version: 1.17.1
     devDependencies:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      mdast-util-from-markdown:
+        specifier: ^2.1.0
+        version: 2.1.0
 
   packages/render-text:
     dependencies:
