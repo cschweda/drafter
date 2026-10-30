@@ -1,6 +1,6 @@
 # Export as PDF for Markdown documents — Design
 
-**Status:** designed 2026-10-29, to ship as v0.16.0, right after the Structure strip (v0.15.0). The plan is [`docs/plans/2026-10-29-markdown-pdf.md`](plans/2026-10-29-markdown-pdf.md).
+**Status:** built 2026-10-29, as v0.16.0, right after the Structure strip (v0.15.0); the PDF is untagged and has no bookmarks yet (§11, §12). The plan is [`docs/plans/2026-10-29-markdown-pdf.md`](plans/2026-10-29-markdown-pdf.md).
 
 **Asked for (maintainer, 2026-10-29):** "is it possible to export as pdf -- the script (play/screen/markdown)", then "yes please". Screenplays and stage plays already export as PDF. Markdown documents don't: `storage/export.ts` refuses with "A PDF of a Markdown document isn’t available yet", the Export menu and the app menu leave the item out, the palette hides `export-pdf`, and `docs/DEFERRED.md` lists it ("PDF for Markdown documents").
 
@@ -166,6 +166,8 @@ The Markdown PDF takes v0.16.0, so the Phase 2 plans after the Structure strip e
 
 The imports release (Highland, Fade In, Markdown), planned as `v0.N.0` after this one, will move them down once more when it lands. The letters stay, so the Phase 2 design still reads.
 
+**Since (2026-10-29):** two releases were put between this one and Plan E, v0.17.0 (guided starters, export options, running time, and a Technical details page) and v0.18.0 (version history), so Plans E to H are now v0.19.0 to v0.22.0 (Phase 2 design §22).
+
 ## 14. Calls
 
 1. Margins of 1 inch all round; ragged right, never justified (§2.1).
@@ -196,4 +198,4 @@ The imports release (Highland, Fade In, Markdown), planned as `v0.N.0` after thi
 26. No `drafter build` for Markdown in v1 (§9).
 27. `export-pdf` on for both kinds; PDF first in a Markdown document's Export menu (§10).
 28. Untagged; tagged PDF and bookmarks deferred for both kinds (§11).
-29. The Markdown PDF is v0.16.0; Plans E–H move to v0.17.0–v0.20.0 (§13).
+29. The Markdown PDF is v0.16.0; Plans E–H move to v0.17.0–v0.20.0 (§13), and since then to v0.19.0–v0.22.0.

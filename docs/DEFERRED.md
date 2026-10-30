@@ -5,7 +5,6 @@ Work that Phase 0 deliberately leaves for later, with the phase it belongs to.
 - **Windowed incremental reparse** (Phase 1, only if profiling demands it). `reparse` runs a full parse behind an API that a windowed version could replace without changing callers; see technical design §2.7 for the budget that would trigger it.
 - **More title-page layouts** (Phase 3, with the TV, radio, and UK templates). Phase 0 implements `centered-feature` only. Copyright and Notes don't print on it; a layout that wants them can place them.
 - **Widow and orphan control for action** (when a template needs it). Action splits wherever the page ends, as §5.3 says; a template could ask for a minimum number of lines on each side, the way speeches have.
-- **PDF for Markdown documents** (after Phase 1). Export offers the Markdown file and plain text; a PDF of a Markdown document needs its own page layout (headings, lists, quotes, code in the interface's typeface), which the screenplay renderer doesn't do. The PDF item is not offered for a Markdown document, and asking for it says so.
 - **Clickable links and images in the Markdown preview** (after Phase 1). The preview shows a link's text and an image's description and nothing else, so no address can run and nothing is fetched. Links that open in a new tab (http, https, and mailto only) could follow, as could images from the writer's own files.
 - **Headings as scenes in a Markdown document** (after Phase 1). Go to scene is not offered for Markdown; a "Go to heading" built from the same tree as the preview would do the job.
 - **Layout shift on a phone's first paint** (after Plan 5). Lighthouse on drafter.dev at v0.3.0 measured CLS 0.15 on mobile (good is under 0.1; performance still 93): the bars above the panes (the storage warning, the sample bar) appear after the first paint and push the panes down. Reserving their space, or drawing them in the first paint from what the page already knows, would close it. Courier Prime's `font-display` and the render-blocking entry stylesheet are the next small wins.
@@ -113,8 +112,20 @@ What the Structure strip (v0.15.0, strip design §11) leaves for later.
 
 ## Markdown PDF
 
-What the Markdown PDF release (v0.16.0) left for later.
+What the Markdown PDF release (v0.16.0) left for later (Markdown PDF design §12, and its reviews).
 
+- **PDF bookmarks from the headings** (the final accessibility steps; the first to pick up). A document's headings, and a script's scenes, as the PDF's outline, so a reader can jump to them. Cheap: the layout already knows each heading's page and place.
+- **Tagged PDF and PDF/UA, for scripts and documents** (the final accessibility steps). Both PDFs are untagged: a screen reader reads their text in the order it is drawn, which is reading order, but hears no headings, lists, or links as such, and a link has no description.
+- **Links to headings inside the document** (`#…`). A link to a heading prints as plain text today; it could jump to the heading's page.
+- **A list of link addresses for print.** A link's address isn't printed; a printed copy could list the addresses after the text, or as notes.
+- **Drawing images.** An image prints as `[Image: …]`, as in the Preview, and nothing is fetched; images from the writer's own files could be drawn.
+- **GitHub's tables, strikethrough, task lists, and footnotes** (with the Preview). Neither the Preview nor the PDF reads them; they print as typed.
+- **Syntax highlighting in code.** A fence's language is ignored, and code is one color.
+- **Fonts for more scripts, and right-to-left and joining scripts.** Inter Tight covers Latin, Greek, Cyrillic, and Vietnamese (Courier Prime, for code, less); anything else prints as `?`, and the toast names it.
+- **A running header.** Pages carry only their number at the foot.
+- **Justified text and hyphenation.** Text is ragged right, and a soft hyphen is never drawn.
+- **`drafter build` for Markdown.** The CLI builds Fountain only; a Markdown document's PDF is made in the app.
+- **The subset tag on the embedded fonts' names.** A subset font's name should start with a six-letter tag (`ABCDEF+InterTight-Regular`); Drafter's fonts are embedded under fixed names (`customName`), for the same bytes every time, so they have none. Viewers draw them fine; a tag taken from the glyphs used would keep the bytes the same.
 - **Cancel a long export** (when asked for). An 850-page document takes some 20 seconds in the worker; the toast shows its progress and the editor stays usable, but the export can’t be stopped (it would mean ending and remaking the worker, and the fonts it keeps).
 - **The editor on a line of thousands of Markdown marks** (when it bites). A line of five thousand `>` takes the editor seconds per click or key (CodeMirror measuring the marks' layout, in every browser); the Preview now says such a document is nested too deeply, but the Source stays slow on it. Found in the Task 6 review; it was there before.
 - **Progress that moves evenly** (cosmetic). The layout's share of a Markdown PDF's bar is counted by blocks, and the first blocks are slower while the width cache warms, so the bar can creep and then jump. Weighting by characters, or by measured time, would smooth it.

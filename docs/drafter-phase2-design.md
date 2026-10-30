@@ -535,7 +535,9 @@ Each plan is a shippable minor release with its own plan document, tag, GitHub R
 
 **Decided (2026-10-28): Final Draft files come right after Plan A,** as Plan FD (v0.11.0), moved up from Phase 3; the plans after it each take the next minor. Plan FD keeps its own name so the letters the rest of this document uses for B to H stay as they are.
 
-**Decided (2026-10-29): after Plan D, the Structure strip (v0.15.0: the outline as a band above the script, turned on and off), then PDF export for Markdown documents, then Highland, Fade In, and Markdown imports come next,** each its own minor. The strip took v0.15.0, so the headings below give Plans E to H as v0.16.0 to v0.19.0 and their letters stay; the Markdown PDF and import releases will move them down again, by one minor each, when they land. Their scope is unchanged.
+**Decided (2026-10-29): after Plan D, the Structure strip (v0.15.0: the outline as a band above the script, turned on and off), then PDF export for Markdown documents, then Highland, Fade In, and Markdown imports come next,** each its own minor. The strip took v0.15.0, so the headings below gave Plans E to H as v0.16.0 to v0.19.0 and their letters stayed; the Markdown PDF and import releases will move them down again, by one minor each, when they land. Their scope is unchanged.
+
+**Decided (2026-10-29, with the Markdown PDF): the Markdown PDF took v0.16.0, and two releases come next, ahead of Plan E:** v0.17.0 (guided first-script starters, export options, a better running time, and a Technical details page) and v0.18.0 (version history, with GitHub-style diffs). So the headings below give Plans E to H as v0.19.0 to v0.22.0, their letters unchanged; the imports release (Highland, Fade In, and Markdown) will move them down once more, by one minor, when it lands. Their scope is unchanged.
 
 The order is otherwise the suggested one with two changes, both Calls: **setups and payoffs move into Plan B**, because they are keyed notes listed in the Notes tab B builds, and **snapshots come before spellcheck**, because the browser's spellcheck already works while history does not exist, and Plans A and B make large structural edits that a writer drafting for the first time should be able to go back on.
 
@@ -615,7 +617,15 @@ The order is otherwise the suggested one with two changes, both Calls: **setups 
 
 The strip took v0.15.0, so Plans E to H each moved down one minor; their letters stay.
 
-### Plan E — v0.16.0: Seeing the script
+### Markdown PDF — v0.16.0
+
+**Status:** built (2026-10-29), except that the PDF is untagged and has no bookmarks: tagged PDF and PDF/UA, for scripts and documents, and bookmarks from the headings wait for the final accessibility steps; see `docs/DEFERRED.md`.
+
+**Design:** [the Markdown PDF design](drafter-markdown-pdf-design.md), with its own plan in `docs/plans/2026-10-29-markdown-pdf.md`. **Export as PDF** for a Markdown document: headings, paragraphs, emphasis, lists, quotes, code, rules, and clickable `http`, `https`, and `mailto` links on numbered US Letter or A4 pages (a **Paper for Markdown PDFs** setting), in Inter Tight with Courier Prime for code, laid out by `@drafter/render-pdf`'s `src/document/` and drawn in the export worker, offline. A long export of any kind shows a progress bar and a percentage in its toast.
+
+The Markdown PDF took v0.16.0, and v0.17.0 and v0.18.0 were put ahead of Plan E, so Plans E to H each moved down three minors; their letters stay.
+
+### Plan E — v0.19.0: Seeing the script
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15).
 
@@ -627,7 +637,7 @@ The strip took v0.15.0, so Plans E to H each moved down one minor; their letters
 - The grid meets its time budget.
 - axe passes on every Stats section, the map, and the Timeline, in both themes at both widths.
 
-### Plan F — v0.17.0: The Beat Board
+### Plan F — v0.20.0: The Beat Board
 
 **Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
@@ -638,7 +648,7 @@ The strip took v0.15.0, so Plans E to H each moved down one minor; their letters
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.18.0: Reader notes
+### Plan G — v0.21.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -649,7 +659,7 @@ The strip took v0.15.0, so Plans E to H each moved down one minor; their letters
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.19.0: Reference
+### Plan H — v0.22.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 
@@ -727,3 +737,7 @@ Made with Plan A (2026-10-28):
 Made with the Structure strip (2026-10-29):
 
 - **This design, §13, §14, and §22:** the Structure strip ships as v0.15.0 between Plans D and E, with [its own design](drafter-structure-strip-design.md); Plans E to H become v0.16.0 to v0.19.0, their letters unchanged; the Timeline's lanes and the script map reuse its geometry, and Plan E decides whether the map is still wanted beside it. **README:** the strip is in the status line, the Phase 2 roadmap, and the views table, and `@drafter/outline` lists its geometry.
+
+Made with the Markdown PDF (2026-10-29):
+
+- **This design, §22:** the Markdown PDF ships as v0.16.0 after the Structure strip, with [its own design](drafter-markdown-pdf-design.md); v0.17.0 (guided starters, export options, running time, and a Technical details page) and v0.18.0 (version history) come next, so Plans E to H become v0.19.0 to v0.22.0, their letters unchanged, and the imports release will move them once more. **README and architecture §13:** the Markdown PDF is in the status line, What you can do today, the Phase 2 roadmap (built in v0.16.0), the Packages and Stack tables, and Design documents; the "Next" lines name v0.17.0, version history, and the imports.
