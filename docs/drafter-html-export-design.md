@@ -1,4 +1,4 @@
-# Export as HTML — Design
+# Export as HTML (and EPUB) — Design
 
 **Status:** designed 2026-10-30; not built. To be planned after this document is approved. It is built after the `formats` release (v0.20.0: `drafter convert`, Markdown footnotes, the tour's wording), because it uses that release's footnotes. It ships before the Workbook (a separate design to follow), which will add its own page to the same export.
 
@@ -117,6 +117,17 @@ WCAG 2.2 AA in both palettes, as the app targets: the switch and toggle are real
 - No network: the exported file, opened in Playwright with all requests blocked, renders completely, and no request is attempted.
 - e2e: Export → HTML from the toolbar, menu, palette, and the desktop's File menu; the switch, the toggle, and the band work in the opened file; JavaScript off still shows the content.
 
+## 10a. EPUB, for reading on an e-reader (added 2026-10-30)
+
+**Asked for (maintainer, 2026-10-30), with a new reMarkable Paper Pure:** "epub export". An EPUB flows to the reader's screen and type size, where a PDF is fixed to the page, so it suits reading a draft on a tablet or e-reader (the reMarkable takes PDF and EPUB, by its own app, its USB web page, or its cloud folders).
+
+- **Export → EPUB** sits beside Export → HTML, for screenplays, stage plays, and Markdown documents, in the same places (§1), named `title.epub`.
+- **It reuses this release's generator.** A script's EPUB is its **Reading view** (§3.2) only: an e-reader reflows, so there are no Pages. A Markdown document's EPUB is the document as §4 draws it. Same escaping (§7), same notes option (§3.3), same character colors (they may print grey on a monochrome screen; the name is always there).
+- **Structure: EPUB 3, reflowable.** One XHTML content document per top-level part: a script's sections (acts) or, with none, the whole script in one; a document's `#` headings (chapters), else one. A `nav.xhtml` table of contents from the same parts (and scene headings beneath, for a script). A `package.opf` with the title, author (the title page's Author, or the document's), language, a stable `urn:uuid` identifier made from the export, and the modified date. **Call:** footnotes as EPUB 3 footnotes (`<aside epub:type="footnote">` linked by `epub:type="noteref"`), at the end of their chapter.
+- **No script, no network.** EPUB content has no JavaScript and no light/dark switch: the reader's own e-reader sets the theme. One small stylesheet, light by default, sized in `em` so the reader's type size rules. **Call:** Courier Prime is embedded (OFL) for a script's text, only the styles used; a document uses the reader's own serif.
+- **The container.** A zip with `mimetype` first and stored, then `META-INF/container.xml`, the package, the nav, the content, the stylesheet, and the fonts. **Call:** written by a small zip **writer** added to `@drafter/archive` (stored entries, the package's own `crc32`), so no new dependency; the reader there stays as it is.
+- **Checked** by unit tests on the structure (the mimetype entry first and uncompressed, every manifest item present, every content document well-formed XHTML, the nav listing every part, hostile text escaped), and, where Java is available in CI or locally, by the W3C's `epubcheck` with no errors (recorded, not required in the gate).
+
 ## 11. Not in this release
 
 - Images embedded as base64 (when Drafter has images).
@@ -137,6 +148,8 @@ WCAG 2.2 AA in both palettes, as the app targets: the switch and toggle are real
 10. Fonts as base64, WOFF2 or subset if cheap (§6).
 11. Works with JavaScript off (§6).
 12. A DOM-free string generator in its own package, used by the worker and the CLI (§8).
+19. EPUB 3, reflowable, from the Reading view and the document renderer; footnotes as EPUB footnotes; Courier Prime for scripts only; no script (§10a).
+20. A small stored-entry zip writer in `@drafter/archive`, no new dependency (§10a).
 13. Notes in Reading only, never in Pages; "Include notes" shown for Markdown and HTML only (§3.3).
 14. The band comes from `@drafter/outline`'s `structureStrip`; the scene-color hex values move into `@drafter/notes` (§4.1).
 15. Reading built from the shared element types, with a plain-paragraph fallback (§4.1).

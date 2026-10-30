@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Export → HTML for screenplays, stage plays, and Markdown documents: one self-contained, offline `.html` file in the "Studio" look, dark by default with a light switch, and for scripts a Pages · Reading switch.
+**Goal:** Export → HTML (and, in Task 9, EPUB) for screenplays, stage plays, and Markdown documents: one self-contained, offline `.html` file in the "Studio" look, dark by default with a light switch, and for scripts a Pages · Reading switch.
 
 **Architecture:** A new DOM-free package, `@drafter/render-html-file`, turns a parsed script plus its layout (or a Markdown tree) into one HTML string: an escaped body, one fixed stylesheet, one fixed script, Courier Prime as base64, and a CSP meta that allows nothing from the network. The web app's export worker and the CLI call it; the app wires a new `html` export kind through the existing export plumbing. The Markdown parser and the scene-color hex values move into packages so the generator and the CLI can use them.
 
@@ -228,3 +228,19 @@
 - [ ] **Step 3: Write the docs** listed above, in the repo's voice; README stays concise (move detail to docs).
 - [ ] **Step 4: Full gates.** `set -e; pnpm install; pnpm check; pnpm -r typecheck; pnpm test` (re-run load-sensitive timing failures alone and record both), the web e2e suite on every project, `pnpm --filter @drafter/desktop e2e`.
 - [ ] **Step 5: Commit.** `docs: Export as HTML in the README, the help, and the decisions, with its measured size and speed`
+
+### Task 9: Export → EPUB (design §10a)
+
+**Files:**
+- Create: `packages/archive/src/zip-write.ts` (`zipStored(entries: { name: string; data: Uint8Array }[]): Uint8Array`, local headers + central directory + end record, UTF-8 names, `crc32` from `crc32.ts`), `packages/archive/test/zip-write.test.ts`, `packages/render-html-file/src/epub.ts`, `packages/render-html-file/test/epub.test.ts`
+- Modify: `packages/archive/src/index.ts`, `packages/render-html-file/src/index.ts`, and the same app wiring as Task 6 for a new kind `epub` (`ExportKind`, `EXPORTS`, `MIME.epub = 'application/epub+zip'`, `EXTENSION.epub = '.epub'`, `FileKind`, pickers "E-book", desktop save types, `export-epub` command after `export-html`, Export menu, app menu icon), `apps/desktop/test/menu.test.ts`, README Formats table, CHANGELOG, DECISIONS, help
+
+**Interfaces:**
+- Consumes: Task 4's Reading builder and Task 5's document builder (refactor them so the body builders can emit XHTML: self-closing void elements, `xmlns`, no inline script/style).
+- Produces: `renderScriptEpub(input: Omit<ScriptHtmlInput, 'kindLine'> & { author?: string; modified: Date; id: string }): Uint8Array`; `renderDocumentEpub(input: DocumentHtmlInput & { author?: string; modified: Date; id: string }): Uint8Array`.
+
+- [ ] **Step 1: Write the failing tests:** `zip-write.test.ts`: `round-trips through the archive's own reader` (names, bytes, order), `stores without compression`, `UTF-8 names`, `an empty entry`. `epub.test.ts`: `mimetype is the first entry, stored, exactly application/epub+zip`; `container.xml points at the package`; `every manifest item exists and every file is in the manifest`; `every content document parses as XHTML` (jsdom `DOMParser` with `application/xhtml+xml`, no `parsererror`); `the nav lists every act (or chapter) and, for a script, its scenes`; `a script's EPUB is its Reading view: every speech once, in order`; `footnotes are EPUB footnotes, linked both ways`; `hostile text escaped in content, title, and author`; `no script element and no http(s) reference anywhere`; `Courier Prime only for a script, only styles used`. If `epubcheck` is on PATH, a test runs it and expects no errors (skipped otherwise).
+- [ ] **Step 2: Run them.** → FAIL.
+- [ ] **Step 3: Implement** the writer, the XHTML variants of the body builders, the package, nav, and container, and the app wiring.
+- [ ] **Step 4: Run them**, plus e2e: `exports an EPUB from the Export menu, the app menu, and the palette` (download; unzip with the archive reader; mimetype first) on every project; desktop File › Export › EPUB. → PASS.
+- [ ] **Step 5: Commit.** `feat: Export as EPUB, for reading a draft on an e-reader`
