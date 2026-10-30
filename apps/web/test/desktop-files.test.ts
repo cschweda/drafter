@@ -163,6 +163,25 @@ describe('desktopFiles', () => {
     expect(fake.asked.save).toEqual([{ name: 'The Call.fdx', extension: '.fdx' }]);
   });
 
+  test('opens a .md and a .markdown in place, with no notice', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    for (const name of ['notes.md', 'plan.markdown', 'LOUD.MARKDOWN']) {
+      const path = `/home/w/${name}`;
+      put(fake, path, '# Notes\n');
+      const named = await files.fromPath?.(path);
+      expect(named, name).toMatchObject({ ref: { name, path }, name });
+      expect(named?.notice, name).toBeUndefined();
+      fake.answers.push(path);
+      const picked = await files.pickToOpen();
+      expect(picked, name).toMatchObject({ ref: { name, path }, name });
+      expect(picked?.notice, name).toBeUndefined();
+      // Save writes back to it.
+      await files.write({ name, path }, '# Notes\n\nMore.\n');
+      expect(decoder.decode(fake.disk.get(path)?.bytes), name).toBe('# Notes\n\nMore.\n');
+    }
+  });
+
   test('says no "opened as a new script" notice for a .highland or .fadein', async () => {
     const fake = fakeBridge();
     const files = desktopFiles(fake.bridge);

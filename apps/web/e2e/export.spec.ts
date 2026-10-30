@@ -752,7 +752,7 @@ test.describe('export options', () => {
     await exportButton(page).click();
     await expect(optionsItem(page)).toBeDisabled();
     await expect(menu(page)).toContainText(
-      'A Markdown document has no scene numbers or title page.',
+      'A Markdown document has no scene numbers, title page, or notes to choose.',
     );
     await page.keyboard.press('Escape');
     // The palette doesn't offer it.
@@ -778,7 +778,7 @@ test.describe('export options', () => {
     await expect(optionsItem(page)).toBeFocused();
     await expect(optionsItem(page)).toHaveAttribute('aria-disabled', 'true');
     await expect(optionsItem(page)).toHaveAccessibleDescription(
-      'A Markdown document has no scene numbers or title page.',
+      'A Markdown document has no scene numbers, title page, or notes to choose.',
     );
     // Choosing it does nothing: no dialog, and the menu stays.
     await page.keyboard.press('Enter');

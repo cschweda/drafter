@@ -37,6 +37,24 @@ test('opens a file named on the command line', async ({ desktop, profile }) => {
     .toContain('The Open Door');
 });
 
+test('opens a .markdown file named on the command line as Markdown', async ({
+  desktop,
+  profile,
+}) => {
+  const path = script(profile, 'Plan.markdown', '# The Plan\n\nThe ferry leaves at nine.\n');
+  const { page } = await desktop({ args: [path] });
+  await expect(editor(page)).toContainText('# The Plan');
+  await expect(page.getByRole('tab', { name: 'Preview' }).first()).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await mine(page)).map((row) => {
+        const { title, kind } = row as typeof row & { kind?: string };
+        return [title, kind];
+      }),
+    )
+    .toContainEqual(['The Plan', 'markdown']);
+});
+
 test('opens a file from a second launch in the first window', async ({ desktop, profile }) => {
   const path = script(profile, 'The Lamp.fountain', LAMP);
   const { app, page } = await desktop();

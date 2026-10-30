@@ -83,7 +83,8 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
   >
     <h2 id="export-options-title">Export options</h2>
     <p id="export-options-what">
-      How this script’s PDF, plain text, and Markdown print. The script itself doesn’t change.
+      How this script prints and exports: as a PDF, plain text, a Final Draft file, or Markdown. The
+      script itself doesn’t change.
     </p>
     <p v-if="why" class="why">{{ why }}</p>
     <fieldset :key="`scene-${drawn}`" :disabled="!!why">

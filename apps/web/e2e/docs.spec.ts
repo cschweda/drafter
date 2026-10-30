@@ -333,6 +333,53 @@ test.describe('without JavaScript', () => {
     }
   });
 
+  test('Saving has Files from other apps, and #final-draft still lands', async ({ page }) => {
+    await page.goto('/docs/saving#final-draft');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Files from other apps' }),
+    ).toHaveAttribute('id', 'other-apps');
+    // The old address of the Final Draft section lands on its part of the new one.
+    await expect(page.locator('#final-draft')).toHaveText('Final Draft');
+    await expect(page.locator('#final-draft')).toBeInViewport();
+    for (const name of [
+      'Final Draft',
+      'Highland and Fade In',
+      'Markdown',
+      'Files Drafter can’t open',
+      'Export as Markdown',
+    ]) {
+      await expect(page.getByRole('heading', { level: 3, name, exact: true }), name).toBeVisible();
+    }
+    const text = await mainText(page);
+    for (const phrase of [
+      '.highland',
+      '.fadein',
+      '[[highland:',
+      '[[osf: Cast List]]',
+      '.markdown',
+      'Open as screenplay…',
+      'New screenplay from this outline',
+      'Word document',
+      'RTF',
+      'PDF',
+      'Markdown (.md)',
+      'Notes in Markdown',
+      'AI chat',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+  });
+
+  test('the description stays under 200 characters', async ({ page }) => {
+    await page.goto('/docs/saving');
+    const description =
+      (await page.locator('meta[name="description"]').getAttribute('content')) ?? '';
+    expect(description.length).toBeLessThan(200);
+    for (const name of ['Final Draft', 'Highland', 'Fade In', 'Markdown']) {
+      expect(description, name).toContain(name);
+    }
+  });
+
   test('links the Linux and Windows downloads from the Saving page, and the Mac build guide', async ({
     page,
   }) => {

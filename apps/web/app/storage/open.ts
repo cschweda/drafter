@@ -3,7 +3,7 @@ import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
-import { importKindOf, kindOfFileName } from '../markdown/kind';
+import { type ImportKind, importKindOf, kindOfFileName } from '../markdown/kind';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
@@ -121,6 +121,41 @@ async function openAsNewScript(text: string, name: string, message: string): Pro
   await sayInToast(message);
 }
 
+/**
+ * A file's text, decoded strictly, or null when it isn't a script's text (too big, not text, not
+ * UTF-8), which is said in the status bar.
+ */
+async function textOf(bytes: Uint8Array): Promise<ReturnType<typeof decodeFile> | null> {
+  const problem = problemWith(bytes);
+  if (problem) {
+    await say(openError, problem);
+    return null;
+  }
+  try {
+    return decodeFile(bytes, { strict: true });
+  } catch (error) {
+    if (!(error instanceof NotUtf8Error)) throw error;
+    await say(openError, MESSAGES.notUtf8);
+    return null;
+  }
+}
+
+/**
+ * How to read an import, or null when it can't be read (said in the status bar). A Final Draft file
+ * is XML text, so it passes Open's text checks first. A Highland or Fade In file is a zip, with NUL
+ * bytes and a cap of its own (the archive's 32 MB), so it skips them: only the script inside is
+ * decoded, strictly.
+ */
+async function importerFor(
+  kind: ImportKind,
+  bytes: Uint8Array,
+): Promise<(() => FdxImport | Promise<FdxImport>) | null> {
+  if (kind === 'highland') return () => fromHighland(bytes);
+  if (kind === 'fadein') return () => fromFadeIn(bytes);
+  const decoded = await textOf(bytes);
+  return decoded ? () => fromFdx(decoded.text) : null;
+}
+
 /** The script already open for this file, if it came from the same file on disk. */
 async function openedAlready(file: PickedFile) {
   if (!file.ref) return undefined;
@@ -174,36 +209,18 @@ export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void
       await say(openError, refusalMessage(file.name, refusal));
       return;
     }
+    // A file from another app comes in as a new script; anything else opens as itself.
     const importing = importKindOf(file.name);
-    // A Highland or Fade In file is a zip, with NUL bytes and a cap of its own (the archive's
-    // 32 MB), so it skips the text checks: only the script inside is decoded, strictly.
-    if (importing === 'highland' || importing === 'fadein') {
-      const read = importing === 'highland' ? fromHighland : fromFadeIn;
-      const { bytes } = file;
+    if (importing) {
+      const read = await importerFor(importing, file.bytes);
+      if (!read) return;
       await ready();
-      await importScript(file.name, () => read(bytes));
+      await importScript(file.name, read);
       return;
     }
-    const problem = problemWith(file.bytes);
-    if (problem) {
-      await say(openError, problem);
-      return;
-    }
-    let decoded: ReturnType<typeof decodeFile>;
-    try {
-      decoded = decodeFile(file.bytes, { strict: true });
-    } catch (error) {
-      if (!(error instanceof NotUtf8Error)) throw error;
-      await say(openError, MESSAGES.notUtf8);
-      return;
-    }
+    const decoded = await textOf(file.bytes);
+    if (!decoded) return;
     await ready();
-    // A Final Draft file is never a script's file: it comes in as a new one.
-    if (importing === 'fdx') {
-      const { text } = decoded;
-      await importScript(file.name, () => fromFdx(text));
-      return;
-    }
     const kind = kindOfFileName(file.name);
     // Open as screenplay: the Markdown file's text, exactly as it is, as a new script that is never
     // the file's, so Save asks for a .fountain and the .md is never written as Fountain.

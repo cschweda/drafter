@@ -471,9 +471,10 @@ export function registerBuiltinCommands(): void {
         treatmentOpen.value = true;
       },
     },
-    // How the open script's PDF and plain text print its scene numbers and title page (out-the-door
-    // design §2.4): at the end of the Export menu. On in a read-only tab, whose dialog shows the
-    // choices it can't change; off for a Markdown document, which has neither.
+    // How the open script's exports come out (out-the-door design §2.4): scene numbers and the title
+    // page for its PDF, plain text, Final Draft file, and Markdown, and notes for its Markdown alone
+    // (Call 28). At the end of the Export menu. On in a read-only tab, whose dialog shows the choices
+    // it can't change; off for a Markdown document, which has none of them.
     'export-options': {
       enabled: () => hasScript() && isFountain(),
       why: () => (isMarkdown() ? OPTIONS_NOT_FOR_MARKDOWN : undefined),

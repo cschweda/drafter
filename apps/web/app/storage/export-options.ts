@@ -101,7 +101,8 @@ export function optionsPhrase(options: ExportOptions): string {
 
 export const FDX_NOTE =
   'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them.';
-export const OPTIONS_NOT_FOR_MARKDOWN = 'A Markdown document has no scene numbers or title page.';
+export const OPTIONS_NOT_FOR_MARKDOWN =
+  'A Markdown document has no scene numbers, title page, or notes to choose.';
 export const OPTIONS_READ_ONLY =
   'Another tab has this script open, so its export options can’t be changed here.';
 

@@ -143,6 +143,19 @@ test.describe('importing a Highland file (Chromium, with the picker)', () => {
     expect(saved).toBe(FERRY);
     expect((await imported(page, 'The Night Ferry'))?.fileName).toBe('The Night Ferry.fountain');
   });
+  test('opens a Fade In file from the picker as a new, unsaved script', async ({ page }) => {
+    await start(page);
+    await putFile(page, 'Cabin.fadein', FADE_IN);
+    await nextFileName(page, 'Cabin.fadein');
+    await openButton(page).click();
+    await scripts(page).getByRole('button', { name: 'Open a file…' }).click();
+    await expect(editor(page)).toContainText('INT. FERRY CABIN - NIGHT');
+    await expect(toast(page)).toHaveText(
+      'Imported “Cabin.fadein”. 1 item came in as a note; Problems lists it.',
+    );
+    await expectNew(page, 'Cabin', 'Cabin.fadein');
+    expect(await bytesOf(page, 'Cabin.fadein')).toEqual(FADE_IN);
+  });
 });
 
 test.describe('importing a Highland or Fade In file where there is no picker', () => {
@@ -169,6 +182,14 @@ test.describe('importing a Highland or Fade In file where there is no picker', (
     await expect(
       problems.getByText('This came in from Fade In as “Cast List”', { exact: false }),
     ).toHaveCount(1);
+  });
+
+  test('opens a dropped Highland file as a new, unsaved script', async ({ page }) => {
+    await start(page);
+    await drop(page, 'Ferry.highland', HIGHLAND);
+    await expect(editor(page)).toContainText('The engine knocks twice.');
+    await expect(toast(page)).toHaveText('Imported “Ferry.highland”.');
+    await expectNew(page, 'The Night Ferry', 'Ferry.highland');
   });
 
   test('opens one from the file input', async ({ page }) => {

@@ -19,7 +19,8 @@ import { fromApp } from './window';
 
 const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
   '.fountain': { name: 'Fountain script', extensions: ['fountain'] },
-  '.md': { name: 'Markdown document', extensions: ['md', 'markdown'] },
+  // A script's Markdown export is saved through this filter too, so it names the file, not a kind.
+  '.md': { name: 'Markdown file', extensions: ['md', 'markdown'] },
   '.txt': { name: 'Plain text', extensions: ['txt'] },
   '.pdf': { name: 'PDF', extensions: ['pdf'] },
   '.fdx': { name: 'Final Draft file', extensions: ['fdx'] },
