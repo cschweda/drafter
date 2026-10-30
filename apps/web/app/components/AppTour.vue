@@ -6,6 +6,7 @@ import { usePanes } from '~/composables/usePanes';
 import { useWideScreen } from '~/composables/useWideScreen';
 import { isFirstVisit, useScript } from '~/storage/script';
 import { announceTour } from '~/tour/announce';
+import { watchScrollFocus } from '~/tour/scroll-focus';
 import { tourRequests, tourShowing, whenClear } from '~/tour/state';
 import {
   buildSteps,
@@ -54,6 +55,17 @@ const {
 const stage = ref<'welcome' | 'intro' | null>(null);
 watchEffect(() => {
   tourShowing.value = stage.value !== null || isActive.value;
+});
+
+// The intro card's text gets a tab stop while it scrolls (tour/scroll-focus.ts).
+let stopScrollFocus: (() => void) | null = null;
+watch(stage, async (now) => {
+  stopScrollFocus?.();
+  stopScrollFocus = null;
+  if (now !== 'intro') return;
+  await nextTick();
+  const text = document.getElementById('intro-description');
+  if (text && stage.value === 'intro') stopScrollFocus = watchScrollFocus(text);
 });
 
 // ---- Offering the tour ---------------------------------------------------------------------
@@ -189,6 +201,7 @@ function onKeydown(event: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKeydown, true));
 onBeforeUnmount(() => {
   unmounted = true;
+  stopScrollFocus?.();
   window.removeEventListener('keydown', onKeydown, true);
 });
 </script>
