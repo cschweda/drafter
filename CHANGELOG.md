@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-30
+
+**Imports and Markdown out.** Drafter opens Highland and Fade In files as new scripts, opens a Markdown file as a screenplay when you want, exports a screenplay or stage play as Markdown that reads well anywhere (in a chat with an AI, on GitHub, in a notes app), and says plainly what a file is when it isn't a script.
+
 ### Added
 
 - **Open Highland and Fade In files.** Choose Open, drop the file on Drafter, or, in the desktop app, open it with Drafter from your file manager, and a `.highland` or `.fadein` comes in as a new script, as a Final Draft file does: not saved yet, so Save asks where to put a `.fountain`, and the file you opened is never changed. A Highland script comes in exactly as you wrote it; anything else the file holds, such as pictures, is named in a note at the end. A Fade In script comes in with its scenes, speeches, and title page, and a paragraph in a style Drafter has no element for comes in with a note naming it. The message says how many notes came in, Problems lists them, and History keeps the script as it came in. A file that isn't one Drafter can read, such as a text file renamed `.highland` or a Highland file renamed `.fadein`, is turned away with the reason, and nothing opens. The desktop app offers itself for both kinds under Open With, and takes neither over.
@@ -814,7 +818,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/cschweda/drafter/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/cschweda/drafter/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/cschweda/drafter/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/cschweda/drafter/compare/v0.15.1...v0.16.0
