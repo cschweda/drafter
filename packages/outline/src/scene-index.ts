@@ -2,6 +2,7 @@ import type { Block, Doc, Region, Span } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
 import { bodyEnd, contentEnd, normalizeLabel, readKeyedNote, readNote } from '@drafter/notes';
 import { resolveRole, type Template } from '@drafter/templates';
+import { TimingTally, wordsIn } from './timing';
 import type { OutlineItem, OutlineNode, Scene, SceneIndex, Section, Synopsis } from './types';
 
 // The scene index (Phase 2 design §5.1): a pure function of the parse, the template, and the
@@ -17,11 +18,6 @@ export function startsScene(template: Template, block: Block): boolean {
     (block.kind === 'scene_heading' || block.kind === 'section') &&
     SCENE_ROLES.has(resolveRole(template, block, null))
   );
-}
-
-/** Words in a line of printed text: runs of letters or digits. */
-function wordsIn(text: string): number {
-  return text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)?.length ?? 0;
 }
 
 const UNPRINTED = new Set(['section', 'synopsis', 'note', 'boneyard', 'page_break']);
@@ -153,6 +149,7 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
       const synopses: Synopsis[] = [];
       const speakers = new Map<string, string>();
       let words = 0;
+      const tally = new TimingTally(template);
       for (let i = index; i < next; i++) {
         const b = blocks[i] as Block;
         if (b.kind === 'synopsis')
@@ -161,7 +158,13 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
           speakers.set(b.sem.name.toUpperCase(), b.sem.name);
         }
         words += printedWords(b);
+        tally.add(b);
       }
+      const timing = tally.timing();
+      // Made with fromEntries, so a name such as `__proto__` is a key like any other.
+      const spokenBy: Scene['spokenBy'] = Object.fromEntries(
+        [...speakers].map(([key, name]) => [name, tally.spokenBy().get(key) ?? 0]),
+      );
       // The notes inside the scene. Regions are in source order, as scenes are.
       while (region < regions.length && (regions[region]?.span.from ?? 0) < span.from) region++;
       let past = region;
@@ -201,11 +204,15 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
         ...sceneNotes(source, inside),
         speakers: [...speakers.values()],
         words,
+        timing,
+        spokenBy,
         pages: scenePages,
       };
       for (const o of open) {
         o.section.span.to = unitEnd;
         o.section.scenes++;
+        o.section.timing.spoken += timing.spoken;
+        o.section.timing.actionLines += timing.actionLines;
         o.section.eighths =
           o.section.eighths === null || scene.pages === null
             ? null
@@ -229,6 +236,7 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
       parent: open[open.length - 1]?.section.block ?? null,
       scenes: 0,
       eighths: pages ? 0 : null,
+      timing: { spoken: 0, actionLines: 0 },
     };
     for (const o of open) o.section.span.to = unitEnd;
     const node = { item: section, children: [] as OutlineNode[] };

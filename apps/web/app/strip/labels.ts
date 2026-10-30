@@ -1,12 +1,20 @@
-import type { OutlineItem, StripRow } from '@drafter/outline';
+import { estimateSeconds, type OutlineItem, type StripRow } from '@drafter/outline';
 import {
   colorName,
   lengthLabel,
+  rowTime,
   sceneName,
   sceneNumber,
   sectionName,
   swatchOf,
 } from '../outline/labels';
+import {
+  DEFAULT_RATES,
+  ESTIMATE_LABEL,
+  type Rates,
+  shortTime,
+  timeWords,
+} from '../stats/time-format';
 
 // What the Structure strip says (structure strip design §3, §3.3, §4): its rows' marks and names,
 // each block's name, the lines of its card, and a scene's fill. Drafter's own words throughout.
@@ -34,29 +42,56 @@ export const rowName = (row: StripRow): string =>
 const goalOf = (item: OutlineItem): string | undefined =>
   item.kind === 'scene' ? item.fields.goal?.body : undefined;
 
-/** A block's name: as the Outline names its row, then the scene's goal when it has one. */
-export function blockName(item: OutlineItem): string {
-  const name = item.kind === 'scene' ? sceneName(item) : sectionName(item);
+/** Seconds of the estimate from the dialogue for a block, at the script's spoken pace; 0 for none. */
+const estimateOf = (item: OutlineItem, rates: Rates): number =>
+  estimateSeconds(item.timing, rates.wordsPerMinute);
+
+/**
+ * A block's name: as the Outline names its row, then the estimate from the dialogue (which the
+ * card shows) and the scene's goal, each when it has one.
+ */
+export function blockName(item: OutlineItem, rates: Rates = DEFAULT_RATES): string {
+  const parts = [item.kind === 'scene' ? sceneName(item, rates) : sectionName(item, rates)];
+  const estimate = estimateOf(item, rates);
+  if (estimate > 0) parts.push(`${ESTIMATE_LABEL.toLowerCase()}: ${timeWords(estimate)}`);
   const goal = goalOf(item);
-  return goal ? `${name}, goal: ${goal}` : name;
+  if (goal) parts.push(`goal: ${goal}`);
+  return parts.join(', ');
 }
 
-/** The lines of a block's card (Call 11), leaving out any line it has nothing for. */
-export function cardLines(item: OutlineItem): string[] {
+/** The card's line for the estimate from the dialogue, or '' when the block has nothing to time. */
+function estimateLine(item: OutlineItem, rates: Rates): string {
+  const estimate = estimateOf(item, rates);
+  return estimate > 0 ? `${ESTIMATE_LABEL}: ${shortTime(estimate)}` : '';
+}
+
+/**
+ * The lines of a block's card (Call 11), leaving out any line it has nothing for: the time at the
+ * script's page rate beside the length, and the estimate from the dialogue at its spoken pace
+ * (`rates`, the defaults when not given), which needs no pages.
+ */
+export function cardLines(item: OutlineItem, rates: Rates = DEFAULT_RATES): string[] {
   if (item.kind === 'section') {
-    const scenes = `${item.scenes} ${item.scenes === 1 ? 'scene' : 'scenes'}`;
-    return [
-      item.title || 'Untitled section',
-      item.eighths === null ? scenes : `${scenes} · ${lengthLabel(item.eighths)}`,
-    ];
+    const facts = [`${item.scenes} ${item.scenes === 1 ? 'scene' : 'scenes'}`];
+    if (item.eighths !== null) facts.push(lengthLabel(item.eighths), rowTime(item.eighths, rates));
+    return [item.title || 'Untitled section', facts.join(' · '), estimateLine(item, rates)].filter(
+      Boolean,
+    );
   }
   const facts: string[] = [];
-  if (item.pages) facts.push(`page ${item.pages.page}`, lengthLabel(item.pages.eighths));
+  if (item.pages) {
+    facts.push(
+      `page ${item.pages.page}`,
+      lengthLabel(item.pages.eighths),
+      rowTime(item.pages.eighths, rates),
+    );
+  }
   if (item.color) facts.push(colorName(item.color.value));
   const goal = goalOf(item);
   return [
     `Scene ${sceneNumber(item)}, ${item.heading || 'Untitled scene'}`,
     facts.join(' · '),
+    estimateLine(item, rates),
     goal ? `Goal: ${goal}` : '',
     item.synopses[0]?.text ?? '',
   ].filter(Boolean);

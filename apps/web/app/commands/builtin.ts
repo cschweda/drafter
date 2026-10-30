@@ -37,6 +37,7 @@ import { firstSceneStart } from '~/editor/first-scene';
 import { SAMPLE_SCRIPTS } from '~/editor/sample-scripts';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
+import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
@@ -59,6 +60,7 @@ import { useSpell } from '~/spell/use-spell';
 import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
+import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen } from '~/storage/open';
@@ -387,6 +389,26 @@ export function registerBuiltinCommands(): void {
         },
       ]),
     ),
+    // The guided starters (out-the-door design §1.5), from File's New items and Help → Sample scripts:
+    // as a sample script is, a new script of the writer's own with no file, opened unchanged. Each
+    // starts at the top, on its title page, where the lesson does.
+    ...Object.fromEntries(
+      STARTERS.map((starter): [string, Behavior] => [
+        starter.command,
+        {
+          enabled: canStart,
+          run: quietly(async () => {
+            const made = await script.addScript(starter.text, {
+              kind: 'fountain',
+              baseline: starter.text,
+              starter: starter.kind,
+            });
+            await script.open(made.id);
+            editor.goto(0);
+          }),
+        },
+      ]),
+    ),
     // Help → Check for updates (the service worker's check on the web, the updater's in the desktop app), and
     // About Drafter (the version, for a bug report, and the links). The desktop app's About Drafter runs this too.
     'check-for-updates': {
@@ -412,6 +434,16 @@ export function registerBuiltinCommands(): void {
       enabled: isFountain,
       run: () => {
         treatmentOpen.value = true;
+      },
+    },
+    // How the open script's PDF and plain text print its scene numbers and title page (out-the-door
+    // design §2.4): at the end of the Export menu. On in a read-only tab, whose dialog shows the
+    // choices it can't change; off for a Markdown document, which has neither.
+    'export-options': {
+      enabled: () => hasScript() && isFountain(),
+      why: () => (isMarkdown() ? OPTIONS_NOT_FOR_MARKDOWN : undefined),
+      run: () => {
+        exportOptionsOpen.value = true;
       },
     },
     // A Markdown outline as a new screenplay (design §6.5): its headings as sections, its items as stubs.

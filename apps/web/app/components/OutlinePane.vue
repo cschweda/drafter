@@ -13,6 +13,7 @@ import { useEditor } from '~/editor/session';
 import {
   colorName,
   lengthLabel,
+  rowTime,
   sceneName,
   sceneNumber,
   sectionName,
@@ -23,6 +24,7 @@ import { goalLine } from '~/outline/scene-details';
 import { sceneMenuItems } from '~/outline/scene-menu';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
 import { useOutline } from '~/outline/use-outline';
+import { useRates } from '~/stats/timing';
 
 // The Outline tab (Phase 2 design §6.1–6.2): the script's sections holding its scenes, as an
 // ARIA tree. One row is a tab stop; the arrow keys, Home, End, and typing move between rows;
@@ -35,6 +37,8 @@ const outline = useOutline();
 const { index, idOf, readOnly } = outline;
 const markdown = computed(() => editor.kind.value === 'markdown');
 const isPlay = computed(() => editor.template.value.id === 'stage-play-standard');
+/** The open script's rates: each row's time is its pages at the script's minutes a page. */
+const rates = useRates();
 
 const filter = ref('');
 const closed = ref(new Set<string>());
@@ -78,7 +82,7 @@ const rows = computed<Row[]>(() => {
       const sig = JSON.stringify([
         item.kind === 'scene'
           ? [
-              sceneName(item),
+              sceneName(item, rates.value),
               item.heading,
               item.color?.value,
               item.synopses[0]?.text,
@@ -86,7 +90,7 @@ const rows = computed<Row[]>(() => {
               item.speakers,
               item.pages,
             ]
-          : [sectionName(item), item.title, item.scenes, item.eighths],
+          : [sectionName(item, rates.value), item.title, item.scenes, item.eighths],
         level,
         expandable,
         open,
@@ -415,22 +419,30 @@ watch(rows, async () => {
   }
 });
 
+/** "p. 12 · 1 3/8 pp · 1 min 25 s": where a scene starts, its length, and its time. */
 const sceneLength = (row: Row) =>
   row.item.kind === 'scene' && row.item.pages
-    ? `p. ${row.item.pages.page} · ${lengthLabel(row.item.pages.eighths)}`
+    ? [
+        `p. ${row.item.pages.page}`,
+        lengthLabel(row.item.pages.eighths),
+        rowTime(row.item.pages.eighths, rates.value),
+      ].join(' · ')
     : '';
+/** "5 scenes · 12 pp · 12 min": an act's time is its scenes' pages at the rate. */
 const sectionSummary = (row: Row) => {
   if (row.item.kind !== 'section') return '';
   const { scenes, eighths } = row.item;
   const count = `${scenes} ${scenes === 1 ? 'scene' : 'scenes'}`;
-  return eighths === null ? count : `${count} · ${lengthLabel(eighths)}`;
+  return eighths === null
+    ? count
+    : [count, lengthLabel(eighths), rowTime(eighths, rates.value)].join(' · ');
 };
 /** A scene row's synopsis, goal, or speakers, shown under it and read as its description. */
 const hasDetails = (row: Row) =>
   row.item.kind === 'scene' &&
   (row.item.synopses.length > 0 || goalLine(row.item) !== null || row.item.speakers.length > 0);
 const nameOfRow = (row: Row) =>
-  row.item.kind === 'scene' ? sceneName(row.item) : sectionName(row.item);
+  row.item.kind === 'scene' ? sceneName(row.item, rates.value) : sectionName(row.item, rates.value);
 </script>
 
 <template>

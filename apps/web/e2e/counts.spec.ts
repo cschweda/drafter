@@ -48,6 +48,17 @@ test.describe('counts', () => {
     await expect(target(page)).toHaveCount(0);
   });
 
+  test('shows both times', async ({ page }) => {
+    await start(page);
+    await countsButton(page).click();
+    // The sample: 1.4 pages at a minute a page, and its dialogue and action at about a minute.
+    await expect(figure(page, 'Running time')).toHaveText('About 1 min');
+    await expect(figure(page, 'Estimate from the dialogue')).toHaveText('About 1 min');
+    await expect(panel(page)).toContainText(
+      'Running time is at 1 minute a page. Set the rates in Stats.',
+    );
+  });
+
   test('opens and closes from the keyboard, and Escape returns focus', async ({
     page,
     browserName,

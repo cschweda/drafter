@@ -89,6 +89,27 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('puts Export options… last in File → Export, by its whole name', () => {
+    const exports = [
+      cmd('export-txt', 'File', 'Export as plain text'),
+      cmd('export-fdx', 'File', 'Export as Final Draft (.fdx)'),
+      cmd('export-treatment', 'File', 'Export as treatment…'),
+      cmd('export-options', 'File', 'Export options…'),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...exports], () => {}, { platform: 'linux' }));
+    const exportMenu = submenu(m.File).find((i) => labelOf(i) === 'Export');
+    const items = submenu(exportMenu).filter((i) => i.type !== 'separator');
+    expect(items.map((i) => i.id)).toEqual([
+      'export-pdf',
+      'export-txt',
+      'export-fdx',
+      'export-treatment',
+      'export-options',
+    ]);
+    // Only "Export as " is cut from a title, so this one keeps its own.
+    expect(labelOf(items.at(-1) as MenuItemConstructorOptions)).toBe('Export options…');
+  });
+
   test('puts the spelling commands in Edit and Go', () => {
     const spelling = [
       cmd('check-spelling', 'Edit', 'Check spelling'),
@@ -198,6 +219,22 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-saving')?.label).toBe('Saving');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
     expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
+  });
+
+  test('puts Technical Details in Help, after Third-party Licences', () => {
+    const t = menuTemplate(
+      [...COMMANDS, cmd('help-technical', 'Help', 'Open the page: Technical details')],
+      () => {},
+      { platform: 'linux' },
+    );
+    const ids = submenu(menus(t).Help)
+      .map((i) => i.id)
+      .filter(Boolean);
+    expect(ids.slice(ids.indexOf('help-licences'), ids.indexOf('help-licences') + 2)).toEqual([
+      'help-licences',
+      'help-technical',
+    ]);
+    expect(named(t, 'help-technical')?.label).toBe('Technical Details');
   });
 
   test('sends the command’s id when an item is chosen', () => {
@@ -421,6 +458,48 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       'about-drafter',
     ]);
     expect(help.find((i) => i.id === 'check-for-updates')?.label).toBe('Check for Updates…');
+  });
+
+  test('lists New guided screenplay and New guided stage play in File, after New stage play, and in Help → Sample Scripts', () => {
+    const run = vi.fn();
+    const list = [
+      ...HELP.slice(0, 3),
+      cmd('new-markdown', 'File', 'New Markdown document'),
+      cmd('new-guided-screenplay', 'File', 'New guided screenplay'),
+      cmd('new-guided-stage-play', 'File', 'New guided stage play'),
+      ...HELP.slice(3),
+    ];
+    const template = menus(menuTemplate(list, run, { platform: 'linux' }));
+    const file = submenu(template.File);
+    expect(file.slice(0, 5).map((i) => [i.id, i.label])).toEqual([
+      ['new-screenplay', 'New screenplay'],
+      ['new-stage-play', 'New stage play'],
+      ['new-markdown', 'New Markdown document'],
+      ['new-guided-screenplay', 'New guided screenplay'],
+      ['new-guided-stage-play', 'New guided stage play'],
+    ]);
+    const samples = submenu(submenu(template.Help).find((i) => i.label === 'Sample Scripts'));
+    expect(samples.map((i) => [i.id, i.label])).toEqual([
+      ['sample-script-screenplay', 'Screenplay'],
+      ['sample-script-stage-play', 'Stage play'],
+      ['sample-script-markdown', 'Markdown'],
+      ['new-guided-screenplay:also', 'Guided first screenplay'],
+      ['new-guided-stage-play:also', 'Guided first stage play'],
+    ]);
+    // Either item runs the command.
+    (samples[3] as { click: () => void }).click();
+    (file[4] as { click: () => void }).click();
+    expect(run.mock.calls).toEqual([['new-guided-screenplay'], ['new-guided-stage-play']]);
+    // Each is in File once, and nowhere else in Help.
+    expect(
+      walk(template.File ? [template.File] : []).filter((i) => i.id === 'new-guided-screenplay'),
+    ).toHaveLength(1);
+    expect(
+      walk(submenu(template.Help)).filter((i) => i.id === 'new-guided-screenplay:also'),
+    ).toHaveLength(1);
+    // Every id in the menu names one item.
+    const ids = walk(Object.values(template)).flatMap((i) => (i.id ? [i.id] : []));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   test('About Drafter is the page’s dialog while the page is there, once, where About goes', () => {

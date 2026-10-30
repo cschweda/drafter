@@ -290,7 +290,7 @@ The regression suite is hand-counted position fixtures (frozen once verified) pl
 This is the feature to get right, because no app does it losslessly. The trick is that in Fountain the outline is *already in the file*: `#` sections, `=` synopses, scene headings. So:
 
 - **Condense.** Fold every scene to its heading + synopsis (and sections to their title). What you're looking at is still the source — just folded. Export it as Markdown or a treatment document. Reorder scenes in this view and the full scene text moves with it.
-- **Expand.** Start from an outline — a list of `#` sections, sluglines, and `=` synopses typed in the source or pasted as Markdown — and the editor scaffolds each into a scene stub. Writing fills in the stubs; the synopsis stays attached as the scene's summary in the Outline and Cards panes.
+- **Expand.** Start from an outline — a list of `#` sections, sluglines, and `=` synopses typed in the source or pasted as Markdown — and the editor turns each into a scene stub. Writing fills in the stubs; the synopsis stays attached as the scene's summary in the Outline and Cards panes.
 - **Synopsis sync.** Because synopses are real source lines, editing one in the Cards view is a text edit at a known range. No second document model to drift.
 - **Treatment export.** Section titles + synopses + (optionally) the first action paragraph of each scene → a readable prose treatment. Final Draft can't do this.
 
@@ -398,18 +398,20 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - Spellcheck with nspell and a per-script dictionary that knows your character names (v0.14.0, Plan D): offline, in US or British English, with a right-click menu, a dictionary of your own, and a Spelling list in Problems.
 - The Structure strip (v0.15.0), described in the [README](../README.md#the-idea) and the [Structure strip design](drafter-structure-strip-design.md).
 - PDF export for Markdown documents (v0.16.0, the [Markdown PDF design](drafter-markdown-pdf-design.md)): headings, lists, quotes, code, and clickable links on numbered US Letter or A4 pages, in Inter Tight with Courier Prime for code, drawn in the export worker and working offline. The PDF isn't tagged yet, and has no bookmarks; both wait for the final accessibility steps.
+- Getting a script out the door (v0.17.0, the [out-the-door design](drafter-out-the-door-design.md)): a guided first screenplay and first stage play that teach each element as you read; export options for scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), kept per script; the running time at a rate set per script, with an estimate from the dialogue, and each scene's and act's time in the Outline and the Structure strip; and a Technical details help page.
 
 **Next:**
 
-- v0.17.0: guided first-screenplay and first-stage-play starters, export options (scene numbers, and how much of the title page prints), a better running time, and a Technical details page.
-- Version history with GitHub-style diffs: the scenes deleted since an earlier version, to find and put back, and additions and deletions marked the way GitHub marks a diff.
-- Import from Highland and Fade In (moved up from Phase 3), with `.md` listed among the imports.
+- v0.18.0: version history with GitHub-style diffs: the scenes deleted since an earlier version, to find and put back, and additions and deletions marked the way GitHub marks a diff.
+- v0.19.0: import from Highland and Fade In (moved up from Phase 3), with `.md` listed among the imports.
+- Then Plans E to H (v0.20.0 to v0.23.0, Phase 2 design §22).
 
 **To come**
 
 - A Beat Board: a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
 - The Stats tab, including screen time per character and who shares scenes with whom.
+- Scaffold (Plan E, named by the maintainer): a panel beside the script that shows who is in the current scene (speaking or silent, with each one's words and share of its time), where it is, and how long it runs; a page for each character (their scenes, screen time, dialogue share, absences, and lines) and for each location. Built on the Stats tab and v0.17.0's per-scene timing.
 - The built-in Reference tab.
 - A script map: every scene as a block sized by its length beside the editor, colored by INT/EXT, day or night, or storyline, and clicked to jump there. It builds on the Structure strip's geometry, and Plan E decides whether it is still wanted beside the strip.
 - A pacing view: scene lengths and the balance of dialogue and action along the page timeline, with optional structure guides (three acts, five acts, fifteen beats, each with Drafter's own plain labels) laid over it as suggestions, never rules.

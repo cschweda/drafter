@@ -30,9 +30,10 @@ export async function metSample(kind: SampleKind, projects: readonly Project[]):
   } catch {
     return true;
   }
-  // A document made from Help's sample scripts is not the annotated sample, nor one the writer wrote.
+  // A document made from Help's sample scripts or a guided starter is not the annotated sample, nor
+  // one the writer wrote.
   return projects.some((p) =>
-    p.sample ? p.sample === kind : !p.sampleScript && newKindOf(p) === kind,
+    p.sample ? p.sample === kind : !p.sampleScript && !p.starter && newKindOf(p) === kind,
   );
 }
 

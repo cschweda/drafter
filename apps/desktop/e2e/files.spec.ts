@@ -260,6 +260,32 @@ test('exports a PDF to a chosen path', async ({ desktop, profile }) => {
   expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.pdf$/);
 });
 
+test('exports plain text with the script’s export options, chosen from File → Export', async ({
+  desktop,
+  profile,
+}) => {
+  const path = join(folder(profile, 'Exports'), 'The Call.txt');
+  const app = await desktop();
+  const { page } = app;
+  await chooseMenuItem(app.app, ['File', 'Export', 'Export options…']);
+  const options = page.getByRole('dialog', { name: 'Export options' });
+  await expect(options).toBeVisible();
+  await options
+    .getByRole('group', { name: 'Title page' })
+    .getByRole('radio', { name: 'None', exact: true })
+    .check();
+  await options.getByRole('button', { name: 'Done' }).click();
+  await expect(options).toBeHidden();
+  answerDialogs(profile, [path]);
+  await chooseMenuItem(app.app, ['File', 'Export', 'Plain text']);
+  await expect(page.locator('.toast [role="status"]').filter({ hasText: 'Exported' })).toHaveText(
+    'Exported The Call.txt, with no title page.',
+  );
+  // No title page: the file starts with the script.
+  expect(text(path)).not.toContain('Written by');
+  expect(text(path)).toContain('INT. KITCHEN - NIGHT');
+});
+
 test('exports a Markdown document’s PDF to a chosen path', async ({ desktop, profile }) => {
   const path = join(folder(profile, 'Exports'), 'Harbour Notes (draft).pdf');
   const app = await desktop();

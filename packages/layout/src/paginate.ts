@@ -8,6 +8,7 @@ import {
   type LayoutLine,
   type Page,
   type PaginateOptions,
+  type SceneNumbering,
   UnsupportedTemplateError,
 } from './types';
 
@@ -104,8 +105,9 @@ export function paginate(doc: Doc, template: Template, opts: PaginateOptions = {
     if (title.last !== null) titleLast = { page: 0, line: title.last };
   }
 
-  const numberScenes = opts.sceneNumbers ?? template.sceneNumbers.enabled;
-  const { items, scenes } = new Items(doc, template, height, diagnostics).build(numberScenes);
+  const option = opts.sceneNumbers ?? template.sceneNumbers.enabled;
+  const numbering: SceneNumbering = option === true ? 'all' : option === false ? 'none' : option;
+  const { items, scenes } = new Items(doc, template, height, diagnostics).build(numbering);
   const pager = new Pager(template, height, scenes, doc.blocks.length);
   new Filler(template, height, pager).fill(items);
   for (const body of pager.pages) pages.push(body);
@@ -161,7 +163,7 @@ class Items {
     return style ? { role: action, style } : null;
   }
 
-  build(numberScenes: boolean): { items: Item[]; scenes: Map<number, string> } {
+  build(numbering: SceneNumbering): { items: Item[]; scenes: Map<number, string> } {
     const entries = this.#entries();
     const items: Item[] = [];
     const scenes = new Map<number, string>();
@@ -174,7 +176,13 @@ class Items {
         const block = this.#blocks[entry.index] as Block;
         if (block.kind === 'scene_heading' && this.#roles[entry.index] !== 'disabled') {
           scene++;
-          if (numberScenes) scenes.set(entry.index, block.sem.number ?? String(scene));
+          const number =
+            numbering === 'all'
+              ? (block.sem.number ?? String(scene))
+              : numbering === 'written'
+                ? block.sem.number
+                : null;
+          if (number !== null) scenes.set(entry.index, number);
         }
         items.push(this.#block(entry.index, this.#printings[entry.index] as Printing));
       } else {

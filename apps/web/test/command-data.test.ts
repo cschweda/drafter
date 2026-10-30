@@ -26,13 +26,14 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the five help pages, in the Help group', () => {
+  test('has the six help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/fountain',
       '/docs/saving',
       '/docs/shortcuts',
       '/docs/privacy',
       '/docs/licences',
+      '/docs/technical',
     ]);
     for (const page of HELP_PAGES) {
       const command = COMMAND_DATA.find((c) => c.id === page.id);
@@ -55,6 +56,18 @@ describe('the command data', () => {
     );
   });
 
+  test('has New guided screenplay and New guided stage play in File, after the New items, with no key', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    const guided = ['new-guided-screenplay', 'new-guided-stage-play'];
+    expect(ids.slice(ids.indexOf('new-markdown') + 1, ids.indexOf('new-markdown') + 3)).toEqual(
+      guided,
+    );
+    expect(COMMAND_DATA.filter((c) => guided.includes(c.id))).toEqual([
+      { id: 'new-guided-screenplay', title: 'New guided screenplay', group: 'File' },
+      { id: 'new-guided-stage-play', title: 'New guided stage play', group: 'File' },
+    ]);
+  });
+
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
       '/docs/fountain/',
@@ -62,6 +75,7 @@ describe('the command data', () => {
       '/docs/shortcuts/',
       '/docs/privacy/',
       '/docs/licences/',
+      '/docs/technical/',
     ]);
   });
 });

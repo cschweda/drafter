@@ -146,6 +146,14 @@ for (const theme of THEMES) {
       await showTab(page, 'Preview');
       await expect(page.getByRole('article', { name: 'Preview' })).toContainText('Some words');
       await clean(page, 'a Markdown document, in the Preview');
+      // Its Export menu, with Export options… off and the reason under it.
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await expect(
+        page
+          .getByRole('group', { name: 'Export' })
+          .getByRole('button', { name: 'Export options…' }),
+      ).toHaveAttribute('aria-disabled', 'true');
+      await clean(page, 'a Markdown document’s Export menu');
     });
 
     test(`has no accessibility violations with the element bar's menus open (${theme})`, async ({
@@ -209,6 +217,20 @@ for (const theme of THEMES) {
       await expect(stats).toBeVisible();
       await expect(stats.getByRole('table', { name: 'Characters' })).toBeVisible();
       await clean(page, 'the Stats window');
+    });
+
+    test(`has no accessibility violations in the Export options dialog (${theme})`, async ({
+      page,
+    }) => {
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await page
+        .getByRole('group', { name: 'Export' })
+        .getByRole('button', { name: 'Export options…' })
+        .click();
+      const options = page.getByRole('dialog', { name: 'Export options' });
+      await expect(options).toBeVisible();
+      await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
+      await clean(page, 'the Export options dialog');
     });
 
     test(`has no accessibility violations in Settings and its modules (${theme})`, async ({
@@ -345,6 +367,7 @@ for (const theme of THEMES) {
       '/docs/saving/',
       '/docs/privacy/',
       '/docs/shortcuts/',
+      '/docs/technical/',
     ]) {
       test(`has no accessibility violations on ${path} (${theme})`, async ({ page }) => {
         await useTheme(page, theme);

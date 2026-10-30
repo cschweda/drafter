@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditor } from '~/editor/session';
 import { openTreatment, saveTreatment, treatmentOpen } from '~/outline/treatment';
 
 // Export as treatment (Phase 2 design §6.4): the outline as Markdown, with each scene's first
@@ -6,15 +7,29 @@ import { openTreatment, saveTreatment, treatmentOpen } from '~/outline/treatment
 const dialog = ref<HTMLDialogElement>();
 const firstAction = ref(false);
 const working = ref(false);
+const { view } = useEditor();
+/** What had focus when the dialog opened: the Export menu's button, the palette's input, … */
+let opener: HTMLElement | null = null;
 
 watch(treatmentOpen, async (open) => {
   await nextTick();
-  if (open && dialog.value && !dialog.value.open) dialog.value.showModal();
+  if (open && dialog.value && !dialog.value.open) {
+    // A menu's item is never the opener: the menu is closing (as in the Stats window).
+    const active = document.activeElement;
+    opener = active instanceof HTMLElement && !active.closest('[role="menu"]') ? active : null;
+    dialog.value.showModal();
+  }
   if (!open && dialog.value?.open) dialog.value.close();
 });
 
 function onClose() {
   treatmentOpen.value = false;
+  // An opener that has gone since (the palette's input, a menu's item) can't have focus back:
+  // then the script has it, when the Source shows. Open as a document moves it on itself.
+  if (working.value) opener = null;
+  else if (opener?.isConnected) opener.focus();
+  else if (view.dom.offsetParent !== null) view.focus();
+  opener = null;
 }
 
 async function save() {

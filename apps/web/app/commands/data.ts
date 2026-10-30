@@ -5,6 +5,7 @@
 // here. This file imports only plain data, by relative paths, so a test outside the app can read it.
 
 import { SAMPLES } from '../editor/sample-kinds';
+import { STARTER_KINDS } from '../editor/starter-kinds';
 import { DOCUMENT_TYPES } from '../editor/template';
 import { SPRINT_MINUTES } from '../stats/sprint-minutes';
 import type { CommandGroup } from './registry';
@@ -35,6 +36,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
   { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
+  { id: 'help-technical', path: '/docs/technical', title: 'Technical details' },
 ];
 
 /** The address a link uses: the page's directory, which is where a static host serves it (no redirect). */
@@ -83,6 +85,11 @@ export const COMMAND_DATA: readonly CommandData[] = [
       group: 'File',
       ...(type.newKeys && { keys: type.newKeys, global: true }),
     }),
+  ),
+  // The guided starters (out-the-door design §1.5): a first screenplay and stage play that teach
+  // themselves, after the New items. No key: they are used once or twice.
+  ...STARTER_KINDS.map(
+    (starter): CommandData => ({ id: starter.command, title: starter.title, group: 'File' }),
   ),
   // The Fountain templates, then Markdown as a kind of document.
   ...DOCUMENT_TYPES.filter((type) => type.kind === 'fountain').map(
@@ -133,6 +140,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },
   { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },
+  { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },
   { id: 'settings', title: 'Settings…', group: 'File', keys: 'Mod-,', global: true },
