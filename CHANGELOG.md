@@ -6,9 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-30
+
+**Two rare Markdown export lines kept as written, and Stats reads every heading at once.** A `<` before a bold or italic word starting with `@`, and a centered line with no text, now export as they should; a heading with a very long run of spaces no longer slows the Stats window.
+
 ### Fixed
 
 - **Export as Markdown keeps two rare lines as written.** A `<` just before a bold or italic word that starts with `@` could become an email link in the Markdown, losing its characters; it is now escaped. A centered line with no text came out as `><`; it now writes nothing, as the PDF prints nothing. Both were found by a long run of the export's own random tests.
+- **Stats reads every scene heading at once.** A heading with a very long run of spaces before its time of day made the Stats window's day-and-night count slow, as the split it used backtracked once per space; it is now a simple scan, with the same results.
 
 ## [0.19.0] - 2026-10-30
 
@@ -822,7 +827,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/cschweda/drafter/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/cschweda/drafter/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/cschweda/drafter/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/cschweda/drafter/compare/v0.16.0...v0.17.0
