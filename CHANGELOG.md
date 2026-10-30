@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-10-30
+
+**Drafter's own icon on every desktop window, and a site title and description that fit.** The desktop app's windows no longer show Electron's icon on Linux or in Windows' title bar, and drafter.dev's title and description are short enough for search results and link previews.
+
 ### Fixed
 
 - **drafter.dev's title and description fit what search engines and link previews show.** The title is now "Drafter: Fountain-first screenplays, plays, and novels" (54 characters, under the 60 they cut at) and the description 159 characters (under 160), still Fountain first and still naming novels; a test keeps them within those limits.
@@ -883,7 +887,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.21.1...HEAD
+[0.21.1]: https://github.com/cschweda/drafter/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/cschweda/drafter/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/cschweda/drafter/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/cschweda/drafter/compare/v0.19.0...v0.19.1
