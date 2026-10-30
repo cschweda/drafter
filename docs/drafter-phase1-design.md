@@ -444,7 +444,7 @@ None of them is a screenwriting tool. `@codemirror/language` supplies folding, n
   - writing statistics by day, kept on the device
   - testing with NVDA and VoiceOver
   - character tools: screen time per character, and who shares scenes with whom
-- **Phase 3** adds importing Highland, Fade In, and Celtx files, and a template for novels or graphic novels.
+- **Phase 3** adds importing Celtx files (Highland and Fade In moved to v0.19.0, in Phase 2), and a template for novels or graphic novels.
 - **Phase 4** adds:
   - alternate versions of a line, switchable in place
   - production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere

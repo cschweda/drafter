@@ -22,6 +22,7 @@ Pure and deterministic: no DOM, no globals, no clock. The same document and temp
 |---|---|
 | `paginate(doc, template, opts?)` | Lays out a document. `opts.sceneNumbers` overrides the template's `sceneNumbers.enabled`: `'none'`; `'written'`, only the scenes with a number written in the script (`#12A#`); or `'all'`, every scene, a written number kept and the rest counted by position. `true` is `'all'` and `false` is `'none'`. Throws `UnsupportedTemplateError` for a proportional font or anything other than 12 pt. |
 | `titlePageFor(titlePage, mode)` | A title page cut to `mode`: `'full'` returns it as is, `'none'` gives null, and `'title-author'` keeps only Title, Credit, Author or Authors, and Source (by the names the layout reads), in their order. Never changes the one it is given. A title page left with nothing that prints lays out as none, and the script still starts on page 1. |
+| `sceneNumbersFor(doc, template, numbering)` | Each printed scene heading's number, by block index, for `'none'`, `'written'`, or `'all'`: exactly what `paginate` prints, so another export (the Markdown file) numbers scenes as the PDF does. |
 | `wrap(text, runs, width)` | Word-wraps one line of styled runs to a width, keeping styles and source spans across breaks. One array of runs per output line. |
 | `Layout`, `Page`, `LayoutLine`, `LayoutRun`, `LayoutDiagnostic`, `PaginateOptions`, `SceneNumbering`, `TitlePageMode` | The result and option types. |
 

@@ -493,6 +493,8 @@ pdf-lib, with `@pdf-lib/fontkit` registered (`pdfDoc.registerFontkit`); pdf-lib 
 
 **Import.** Inverse mapping to Fountain text, emitting forced markers wherever the inferred kind would differ from what the plain text implies (an all-caps action line gets `!`; a character named lowercase gets `@`). Unknown paragraph types become action with a `[[fdx: Type]]` note so nothing is silently dropped. Import never produces a `Doc` directly; it produces Fountain text, which is then parsed — so FDX import is covered by the same invariants as everything else.
 
+**Open Screenplay Format** (the script inside a Fade In file, v0.19.0) is read by translating its tree into the Final Draft tree (`osfToFdxTree`), so `[[osf: …]]` notes follow the same rules, and every import guarantee above holds for it.
+
 ### 6.4 Other exports
 
 - `.txt` — `Layout` rendered with spaces: a faithful fixed-width script, readable anywhere.
@@ -678,7 +680,7 @@ Target WCAG 2.2 AA from the first public release, verified automatically from Ph
 
 There is no server, no accounts, and no network calls after the app loads (except user-initiated dictionary downloads). Remaining surface:
 
-- **Imported content is untrusted text.** FDX is parsed with a strict XML parser (no DTD, no entities beyond the five built-ins, no external references). All text reaches the DOM via `textContent`, never `innerHTML`. Notes and synopses are rendered as text.
+- **Imported content is untrusted text.** FDX is parsed with a strict XML parser (no DTD, no entities beyond the five built-ins, no external references). A Highland or Fade In file is a zip, read by `@drafter/archive`'s own reader within fixed caps (a 32 MiB archive, 1,000 entries, 5 MiB for the script, 256 MiB declared in all), refusing zip64, split and encrypted archives and any unsafe or duplicate name outright, reading only the central directory and the one entry it needs, and writing nothing. All text reaches the DOM via `textContent`, never `innerHTML`. Notes and synopses are rendered as text.
 - **Templates are data, not code.** JSON validated against the schema. Role rules match character names with exact lists, not regular expressions, so a template can't carry a catastrophic pattern.
 - **No plugin API in v1.** If one is added, plugins run in a Web Worker with no DOM access and communicate via a message protocol that exposes read-only `Doc` and returns `TextChange[]`/`Diagnostic[]`; nothing else.
 - **CSP:** `default-src 'self'; font-src 'self'; worker-src 'self'; connect-src 'self' https://<dictionary-cdn>`. No inline scripts after build, which takes deliberate setup: Nuxt UI's color-mode script must be allowed by hash, and `@nuxt/icon` must bundle its icons instead of fetching them from the Iconify API at runtime. Loading templates by URL would need `connect-src` to allow their hosts, so it's deferred.

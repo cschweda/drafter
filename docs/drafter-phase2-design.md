@@ -645,6 +645,14 @@ This release took v0.17.0, and version history (v0.18.0) and the imports (v0.19.
 
 This release is v0.18.0 and changes no plan's number: Plans E to H stay v0.20.0 to v0.23.0, where v0.17.0 put them, and the imports release (Highland, Fade In, and Markdown), next, takes v0.19.0. (The version-history design's §14 gave Plans E to H as v0.19.0 to v0.22.0, moved by the imports to v0.20.0 to v0.23.0; v0.17.0 had already made that move.)
 
+### Imports and Markdown out — v0.19.0
+
+**Status:** built (2026-10-30). Axe checks the changed Export options dialog and the help page in both themes on every project; there is no new view. The screen-reader listening pass waits for the final steps, as for the releases before it. See `docs/DEFERRED.md`.
+
+**Plan:** [`docs/plans/2026-10-29-imports-highland-fadein-markdown.md`](plans/2026-10-29-imports-highland-fadein-markdown.md), with its Calls in `docs/DECISIONS.md`. What the maintainer asked for: **Highland and Fade In files** open as new, unsaved scripts, moved up from Phase 3 (Celtx stays there), read by a new package, `@drafter/archive` (its own strict, read-only zip reader), and Open Screenplay Format read by `@drafter/fdx` through the Final Draft importer, so nothing is dropped silently; **Open as screenplay**, for a screenplay typed in a Markdown file; **Export as Markdown** for a whole script, honouring the scene-number and title-page options, with a third option, Notes in Markdown; and Open **refusing files that aren't scripts** (a Word document, an RTF file, a PDF, and the like), saying what each is and what to do. Both imports were built from the formats' public descriptions and synthetic fixtures; checking them against real files waits for the maintainer to send one of each. No new dependency.
+
+This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 to v0.23.0, where v0.17.0 put them.
+
 ### Plan E — v0.20.0: Seeing the script
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14); the Stats tab replacing the window (§16), with screen time, dialogue share, most often with, the character grid, and Storylines; the pacing view and its guides (§15); and **Scaffold** (below).
@@ -777,3 +785,7 @@ Made with getting a script out the door (2026-10-29):
 Made with version history (2026-10-30):
 
 - **This design, §22:** version history is listed as built, as v0.18.0 after v0.17.0, with [its own design](drafter-version-history-design.md); the imports release takes v0.19.0 and Plans E to H stay v0.20.0 to v0.23.0. Compare (§11.2) gains a Changes view beside Pages, which keeps its asterisks. **Architecture §13 and the README:** version history among what's built (the status line, What you can do today, the Phase 2 roadmap, the Packages table with `@drafter/history`, and Design documents), and "Next" names the imports (v0.19.0), then Plans E to H (v0.20.0 to v0.23.0, Plan E with Scaffold). **Technical details** (the help page and `docs/technical-details.md`): `@drafter/history` and the history worker. **Privacy:** the `drafter-cache` database.
+
+Made with the imports and Markdown out (2026-10-30):
+
+- **This design, §22:** the imports release is listed as built, as v0.19.0 after version history, with its own plan; Plans E to H stay v0.20.0 to v0.23.0. **Architecture §13 and the README:** Highland and Fade In import, Open as screenplay, and Export as Markdown among what's built (the status line, What you can do today, the Phase 2 roadmap, and the Packages table with `@drafter/archive`), and "Next" names Plan E, "Seeing the script", with Scaffold (v0.20.0), then Plans F to H. **Phase 1 design:** its Phase 3 line keeps Celtx only. **Technical design §6.3 and §14:** OSF read through the Final Draft tree, and the zip rules. **Clean room:** the public descriptions of the `.highland` and `.fadein` packages and the published OSF specification join the permitted sources. **Technical details:** `@drafter/archive`, and Markdown among the exports.

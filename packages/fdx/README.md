@@ -1,6 +1,6 @@
 # @drafter/fdx
 
-Final Draft (`.fdx`) files for [Drafter](https://github.com/cschweda/drafter): export a parsed Fountain script as Final Draft XML, and import a Final Draft file, or an Open Screenplay Format document, as Fountain text. A `.fdx` file is XML, and this package reads and writes it with a small XML reader and writer of its own: no DOM, no dependency, so it runs in Node, in a browser, and in a worker.
+Final Draft (`.fdx`) files for [Drafter](https://github.com/cschweda/drafter): export a parsed Fountain script as Final Draft XML, and import a Final Draft file, or an Open Screenplay Format document (the script inside a Fade In file), as Fountain text. A `.fdx` file is XML, and this package reads and writes it with a small XML reader and writer of its own: no DOM, no dependency, so it runs in Node, in a browser, and in a worker.
 
 ## Export
 

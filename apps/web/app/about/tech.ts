@@ -97,7 +97,7 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/outline',
-    does: 'The scene index (scenes, sections, page counts, running times) and the edits the Outline and Cards make.',
+    does: 'The scene index (scenes, sections, page counts, running times) and the edits the Outline and Cards make; and a script as Markdown, as a treatment or the whole script.',
     uses: ['@drafter/fountain', '@drafter/layout', '@drafter/notes', '@drafter/templates'],
   },
   {
@@ -137,12 +137,12 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/fdx',
-    does: 'Final Draft (.fdx) files: its own strict XML reader and writer, and the mapping to and from Fountain; and Open Screenplay Format (OSF) documents, read through the same mapping.',
+    does: 'Final Draft (.fdx) files: its own strict XML reader and writer, and the mapping to and from Fountain; and Open Screenplay Format (OSF) documents, the script inside a Fade In (.fadein) file, read through the same mapping.',
     uses: ['@drafter/fountain', '@drafter/templates'],
   },
   {
     name: '@drafter/archive',
-    does: 'Files from other screenwriting apps that come packed as a zip: its own strict read-only zip reader, and the script inside each.',
+    does: 'Highland (.highland) and Fade In (.fadein) files, which come packed as a zip: its own strict read-only zip reader, and the script inside each.',
     uses: ['@drafter/fdx'],
   },
   {
@@ -265,7 +265,7 @@ const EXPORT: Diagram = {
     },
     {
       label: 'Drawing the file',
-      detail: 'PDF (pdf-lib), plain text, or Final Draft XML',
+      detail: 'PDF (pdf-lib), plain text, Markdown, or Final Draft XML',
     },
     { label: 'Your file', detail: 'Saved where you choose, or downloaded' },
   ],
@@ -383,7 +383,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Exporting turns your script into a PDF to print or send, plain text, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.',
+        text: 'Exporting turns your script into a PDF to print or send, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.',
       },
     ],
     details: [
@@ -394,7 +394,8 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The export worker** (`export.worker.ts`) parses the script and, for a PDF or plain text, lays it out again with the same engine as the Script pane, then hands the pages to a renderer. It reports how far it has got, at most ten times a second, for the toast’s progress bar.',
           '**PDF** is `@drafter/render-pdf`, with `pdf-lib`, embedding Courier Prime, the font the Script pane shows. A Markdown document’s PDF is set in Inter Tight, with Courier Prime for code.',
           '**Plain text** is `@drafter/render-text`: the same pages as fixed-width text. **Final Draft** is `@drafter/fdx`, which writes the XML itself, and reads `.fdx` files too.',
-          '**Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none). They are kept with the script’s record in the browser, never in the script’s text.',
+          '**Markdown** is `@drafter/outline`’s: the title, sections, and scenes as headings, a speech as the name in bold over its lines, and every line escaped so nothing in it reads as Markdown it wasn’t. A Markdown document’s Markdown file is its own text.',
+          '**Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), and, for a Markdown file alone, notes (left out or included). They are kept with the script’s record in the browser, never in the script’s text.',
           'Where the browser has a save picker, it asks where to save; elsewhere the file downloads.',
         ],
       },

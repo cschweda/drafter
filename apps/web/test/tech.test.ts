@@ -115,11 +115,29 @@ describe('the data, against the repository', () => {
     expect(storage?.kind === 'flow' && storage.fan).toBe(true);
   });
 
-  test('names no employer, and no screenwriting app but Final Draft (its file format)', () => {
+  test('names no employer, and no screenwriting app but the file formats Drafter reads', () => {
     const text = JSON.stringify([TECH_SECTIONS, PACKAGES, DEPENDENCY_NOTES]);
-    expect(text).not.toMatch(/ICJIA|Highland|Fade In|WriterSolo|Celtx|Trelby|Slugline/i);
+    expect(text).not.toMatch(/ICJIA|WriterSolo|Celtx|Trelby|Slugline/i);
+    expect(text).toMatch(/Highland \(\.highland\)/);
+    expect(text).toMatch(/Fade In \(\.fadein\)/);
+    expect(namesAnApp(text)).toBe(false);
+  });
+
+  test('the file-format guard turns away the two apps named any other way', () => {
+    expect(namesAnApp('Highland (.highland) and Fade In (.fadein) files')).toBe(false);
+    expect(namesAnApp('Drafter is faster than Highland')).toBe(true);
+    expect(namesAnApp('as fade in does')).toBe(true);
   });
 });
+
+/**
+ * Whether `text` names Highland or Fade In other than as a file format Drafter reads, which is
+ * always with its extension, as "Final Draft (.fdx)" is: never to describe or compare the apps.
+ */
+function namesAnApp(text: string): boolean {
+  const left = text.replaceAll('Highland (.highland)', '').replaceAll('Fade In (.fadein)', '');
+  return /highland|fade ?in\b/i.test(left);
+}
 
 const FIXTURE: PackageNote[] = [
   { name: '@drafter/web', does: 'The app.', uses: ['@drafter/layout', '@drafter/fountain'] },

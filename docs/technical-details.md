@@ -133,7 +133,7 @@ flowchart TD
 
 ## Exporting
 
-Exporting turns your script into a PDF to print or send, plain text, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.
+Exporting turns your script into a PDF to print or send, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.
 
 *Exporting: the export worker lays the script out and writes the file, with a progress bar.*
 
@@ -141,7 +141,7 @@ Exporting turns your script into a PDF to print or send, plain text, or a Final 
 flowchart TD
   s1["Export<br/>From the Export menu, with the script’s export options"]
   s2["The export worker<br/>Parses the script and, for a PDF or text, puts it on pages"]
-  s3["Drawing the file<br/>PDF (pdf-lib), plain text, or Final Draft XML"]
+  s3["Drawing the file<br/>PDF (pdf-lib), plain text, Markdown, or Final Draft XML"]
   s4["Your file<br/>Saved where you choose, or downloaded"]
   s1 --> s2
   s2 --> s3
@@ -151,7 +151,8 @@ flowchart TD
 - **The export worker** (`export.worker.ts`) parses the script and, for a PDF or plain text, lays it out again with the same engine as the Script pane, then hands the pages to a renderer. It reports how far it has got, at most ten times a second, for the toast’s progress bar.
 - **PDF** is `@drafter/render-pdf`, with `pdf-lib`, embedding Courier Prime, the font the Script pane shows. A Markdown document’s PDF is set in Inter Tight, with Courier Prime for code.
 - **Plain text** is `@drafter/render-text`: the same pages as fixed-width text. **Final Draft** is `@drafter/fdx`, which writes the XML itself, and reads `.fdx` files too.
-- **Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none). They are kept with the script’s record in the browser, never in the script’s text.
+- **Markdown** is `@drafter/outline`’s: the title, sections, and scenes as headings, a speech as the name in bold over its lines, and every line escaped so nothing in it reads as Markdown it wasn’t. A Markdown document’s Markdown file is its own text.
+- **Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), and, for a Markdown file alone, notes (left out or included). They are kept with the script’s record in the browser, never in the script’s text.
 - Where the browser has a save picker, it asks where to save; elsewhere the file downloads.
 
 ## Working offline
