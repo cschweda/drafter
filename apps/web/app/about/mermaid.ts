@@ -42,6 +42,33 @@ export function drawnPackages(packages: readonly PackageNote[]): PackageNote[] {
   return packages.filter((p) => p.uses.length > 0 || used.has(p.name));
 }
 
+/**
+ * The packages with only their direct uses: a use that another of its uses already reaches is
+ * left out (the transitive reduction), so the diagram draws about half the lines and every
+ * package still reaches exactly what it uses.
+ */
+export function directUses(packages: readonly PackageNote[]): PackageNote[] {
+  const byName = new Map(packages.map((p) => [p.name, p]));
+  const reached = new Map<string, Set<string>>();
+  const reachOf = (name: string): Set<string> => {
+    const known = reached.get(name);
+    if (known) return known;
+    const out = new Set<string>();
+    reached.set(name, out);
+    for (const used of byName.get(name)?.uses ?? []) {
+      out.add(used);
+      for (const further of reachOf(used)) out.add(further);
+    }
+    return out;
+  };
+  return packages.map((p) => ({
+    ...p,
+    uses: p.uses.filter(
+      (used) => !p.uses.some((other) => other !== used && reachOf(other).has(used)),
+    ),
+  }));
+}
+
 /** Each package's row: 0 for one that uses none, else one more than the deepest it uses. */
 export function packageRows(packages: readonly PackageNote[]): PackageNote[][] {
   const byName = new Map(packages.map((p) => [p.name, p]));
@@ -77,16 +104,21 @@ const label = (text: string) =>
 /** A package's node id: its name without the scope, in letters, digits, and underscores. */
 const nodeId = (name: string) => name.replace(/^@drafter\//, '').replace(/[^A-Za-z0-9]/g, '_');
 
-/** A flow as `flowchart TD` with one node per step, chained; packages as `flowchart BT` with an edge per use. Labels quoted, `"` escaped. */
+/**
+ * A flow as `flowchart TD` with one node per step, chained (a fan: the first step to each of the
+ * others); packages as `flowchart BT` with an edge per direct use. Labels quoted, `"` escaped.
+ */
 export function toMermaid(diagram: Diagram, packages: readonly PackageNote[]): string {
   if (diagram.kind === 'flow') {
     const nodes = diagram.steps.map(
       (step, i) => `  s${i + 1}["${label(step.label)}<br/>${label(step.detail)}"]`,
     );
-    const edges = diagram.steps.slice(1).map((_, i) => `  s${i + 1} --> s${i + 2}`);
+    const edges = diagram.steps
+      .slice(1)
+      .map((_, i) => `  s${diagram.fan ? 1 : i + 1} --> s${i + 2}`);
     return ['flowchart TD', ...nodes, ...edges].join('\n');
   }
-  const drawn = drawnPackages(packages);
+  const drawn = directUses(drawnPackages(packages));
   const nodes = drawn.map((p) => `  ${nodeId(p.name)}["${label(p.name)}"]`);
   const edges = drawn.flatMap((p) =>
     p.uses.map((used) => `  ${nodeId(used)} --> ${nodeId(p.name)}`),

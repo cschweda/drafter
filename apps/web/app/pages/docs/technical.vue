@@ -29,7 +29,8 @@ useDocsHead({
 const licences = HELP_PAGES.find((p) => p.id === 'help-licences');
 if (!licences) throw new Error('The Third-party licences page is not in the list of help pages.');
 
-const REPO = ABOUT_LINKS.find((link) => link.id === 'repo')?.href ?? '';
+const REPO = ABOUT_LINKS.find((link) => link.id === 'repo')?.href;
+if (!REPO) throw new Error('About Drafter has no link to the repository.');
 /** A file in the repository, on GitHub. */
 const repoHref = (path: string) => `${REPO}/blob/main/${path}`;
 

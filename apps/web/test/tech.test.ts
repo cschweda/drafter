@@ -5,7 +5,14 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { drawnPackages, packageRows, technicalMarkdown, toMermaid } from '../app/about/mermaid';
+import {
+  directUses,
+  drawnPackages,
+  inlineParts,
+  packageRows,
+  technicalMarkdown,
+  toMermaid,
+} from '../app/about/mermaid';
 import {
   DEPENDENCY_NOTES,
   type Diagram,
@@ -98,6 +105,16 @@ describe('the data, against the repository', () => {
     }
   });
 
+  test('spells as the rest of Drafter does, in US English', () => {
+    expect(TECH_SECTIONS.map((s) => s.id)).toContain('organized');
+    expect(JSON.stringify([TECH_SECTIONS, DEPENDENCY_NOTES])).not.toMatch(/organis/i);
+  });
+
+  test('the storage diagram is a fan from the editor, not a chain', () => {
+    const storage = diagrams().find((d) => d.id === 'storage');
+    expect(storage?.kind === 'flow' && storage.fan).toBe(true);
+  });
+
   test('names no employer, and no screenwriting app but Final Draft (its file format)', () => {
     const text = JSON.stringify([TECH_SECTIONS, PACKAGES, DEPENDENCY_NOTES]);
     expect(text).not.toMatch(/ICJIA|Highland|Fade In|WriterSolo|Celtx|Trelby|Slugline/i);
@@ -135,6 +152,72 @@ describe('packageRows', () => {
   });
 });
 
+/** Every package `name` reaches through `uses`, at any depth. */
+function reach(packages: readonly PackageNote[], name: string): string[] {
+  const byName = new Map(packages.map((p) => [p.name, p]));
+  const seen = new Set<string>();
+  const visit = (n: string) => {
+    for (const used of byName.get(n)?.uses ?? []) {
+      if (seen.has(used)) continue;
+      seen.add(used);
+      visit(used);
+    }
+  };
+  visit(name);
+  return [...seen].sort();
+}
+
+describe('directUses', () => {
+  test('keeps only the uses not reached through another, and reaches all the same packages', () => {
+    expect(directUses(FIXTURE).map((p) => [p.name, p.uses])).toEqual([
+      ['@drafter/web', ['@drafter/layout']],
+      ['@drafter/layout', ['@drafter/fountain']],
+      ['@drafter/fountain', []],
+      ['@drafter/desktop', []],
+    ]);
+    const direct = directUses(PACKAGES);
+    for (const p of PACKAGES) {
+      // The drawing reaches exactly what the package uses, directly or not.
+      expect(reach(direct, p.name), p.name).toEqual(reach(PACKAGES, p.name));
+      const kept = direct.find((d) => d.name === p.name)?.uses ?? [];
+      // No line the others already imply.
+      for (const used of kept) {
+        const others = kept.filter((u) => u !== used);
+        expect(
+          others.some((o) => reach(PACKAGES, o).includes(used)),
+          `${p.name} → ${used}`,
+        ).toBe(false);
+      }
+    }
+    const edges = direct.reduce((n, p) => n + p.uses.length, 0);
+    expect(edges).toBeLessThan(PACKAGES.reduce((n, p) => n + p.uses.length, 0));
+    expect(edges).toBeLessThanOrEqual(30);
+  });
+});
+
+describe('inlineParts', () => {
+  test('reads backticks as code and double stars as strong, and nothing else', () => {
+    expect(inlineParts('plain')).toEqual([{ text: 'plain' }]);
+    expect(inlineParts('a `b` c')).toEqual([
+      { text: 'a ' },
+      { text: 'b', code: true },
+      { text: ' c' },
+    ]);
+    expect(inlineParts('**The editor** is `x`.')).toEqual([
+      { text: 'The editor', strong: true },
+      { text: ' is ' },
+      { text: 'x', code: true },
+      { text: '.' },
+    ]);
+    // Nothing inside backticks is markup, and an empty pair is still code.
+    expect(inlineParts('`**not strong**`')).toEqual([{ text: '**not strong**', code: true }]);
+    expect(inlineParts('``')).toEqual([{ text: '', code: true }]);
+    // A single star, an underscore, or brackets are plain text.
+    expect(inlineParts('a *b* _c_ [d](e)')).toEqual([{ text: 'a *b* _c_ [d](e)' }]);
+    expect(inlineParts('')).toEqual([]);
+  });
+});
+
 describe('toMermaid', () => {
   test('toMermaid writes a chain for a flow and an edge per use for the packages', () => {
     const flow: Diagram = {
@@ -163,9 +246,33 @@ describe('toMermaid', () => {
         '  web["@drafter/web"]',
         '  layout["@drafter/layout"]',
         '  fountain["@drafter/fountain"]',
+        // web uses fountain through layout, so only its direct use is drawn.
         '  layout --> web',
-        '  fountain --> web',
         '  fountain --> layout',
+      ].join('\n'),
+    );
+  });
+
+  test('toMermaid draws a fan from its first step to each of the others', () => {
+    const fan: Diagram = {
+      id: 'fan',
+      kind: 'flow',
+      fan: true,
+      caption: 'Three at once.',
+      steps: [
+        { label: 'You type', detail: 'the text' },
+        { label: 'A', detail: 'one' },
+        { label: 'B', detail: 'two' },
+      ],
+    };
+    expect(toMermaid(fan, [])).toBe(
+      [
+        'flowchart TD',
+        '  s1["You type<br/>the text"]',
+        '  s2["A<br/>one"]',
+        '  s3["B<br/>two"]',
+        '  s1 --> s2',
+        '  s1 --> s3',
       ].join('\n'),
     );
   });

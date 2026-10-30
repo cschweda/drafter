@@ -9,7 +9,7 @@ The same page is in Drafter, under Help → Technical details, and at [drafter.d
 ## Contents
 
 - [The short version](#the-short-version)
-- [How it’s organised](#how-its-organised)
+- [How it’s organized](#how-its-organized)
 - [From a keystroke to the page](#from-a-keystroke-to-the-page)
 - [Where your script is kept](#where-your-script-is-kept)
 - [Exporting](#exporting)
@@ -25,13 +25,13 @@ Drafter is a web app that runs entirely in your browser, or in a window of its o
 
 drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site runs code for you or stores anything. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).
 
-## How it’s organised
+## How it’s organized
 
 Drafter is built from small pieces, each with one job: one reads Fountain, one puts a script on pages, one draws a PDF, and so on. The app sits on top and puts them together. A piece only uses the pieces beneath it, so each can be tested on its own.
 
 One repository holds them all as pnpm workspaces: the engine packages in `packages/` (published as `@drafter/*`), the app in `apps/web`, and the desktop app in `apps/desktop`. Only `@drafter/cm-fountain` knows about CodeMirror, and only it and `@drafter/render-html` touch a web page; the rest run anywhere Node does, which is how the command line uses them.
 
-*Drafter’s packages in layers: each one uses only packages in the layers below it, and the parser, which uses none, is at the bottom.*
+*Drafter’s packages in layers: each one uses only packages in the layers below it, and the parser, which uses none, is at the bottom. Each use shown, a line or a “uses”, is a direct one; a package also uses whatever those use.*
 
 ```mermaid
 flowchart BT
@@ -53,43 +53,23 @@ flowchart BT
   cm_fountain --> web
   compare --> web
   fdx --> web
-  fountain --> web
-  layout --> web
-  lint --> web
-  notes --> web
   outline --> web
   render_html --> web
   render_pdf --> web
   render_text --> web
   spell --> web
-  templates --> web
-  fountain --> cli
-  layout --> cli
   render_pdf --> cli
   render_text --> cli
-  templates --> cli
-  fountain --> cm_fountain
   lint --> cm_fountain
-  notes --> cm_fountain
-  templates --> cm_fountain
-  fountain --> outline
   layout --> outline
   notes --> outline
-  templates --> outline
-  fountain --> compare
   layout --> compare
   layout --> render_pdf
-  templates --> render_pdf
   layout --> render_html
-  templates --> render_html
   layout --> render_text
-  templates --> render_text
-  fountain --> layout
   templates --> layout
-  fountain --> lint
   notes --> lint
   templates --> lint
-  fountain --> fdx
   templates --> fdx
   fountain --> templates
   fountain --> notes
@@ -128,17 +108,17 @@ flowchart TD
 
 While you write, your browser keeps a recovery copy of the script, updated as you type, so a crash or a closed tab loses almost nothing. When you save, Drafter writes your script to a file on your computer: a plain `.fountain` file that any text editor can open. Along the way it keeps snapshots, earlier copies you can go back to.
 
-*Where your script is kept: a recovery copy in the browser as you type, your file when you save, and snapshots along the way.*
+*Where your script is kept: the text in the editor goes three ways, each in its own time: a recovery copy as you type, your file when you save, and snapshots along the way.*
 
 ```mermaid
 flowchart TD
   s1["You type<br/>The text in the editor"]
   s2["The recovery copy<br/>In the browser’s IndexedDB, a moment after you stop typing"]
-  s3["Save<br/>Writes your .fountain file, or downloads a copy"]
-  s4["Snapshots<br/>Copies of the whole script, kept in IndexedDB as history"]
+  s3["Save<br/>Writes your .fountain file, or downloads a copy, when you choose"]
+  s4["Snapshots<br/>Copies of the whole script in IndexedDB, as you write, save, or ask"]
   s1 --> s2
-  s2 --> s3
-  s3 --> s4
+  s1 --> s3
+  s1 --> s4
 ```
 
 - **The recovery copy** is in the browser’s IndexedDB, through Dexie. It is written 750 ms after you stop typing, or every 5 seconds while you keep going. The database has five tables: `projects`, `snapshots`, `templates`, `handles`, and `settings`.
@@ -182,7 +162,7 @@ The desktop app is the same Drafter, in a window of its own, with a menu bar and
 - It is Electron, with the web app’s build inside it, served from the app’s own files at `app://drafter/`. It has no service worker: everything is already on your computer.
 - The page talks to the main process only through a small bridge (the preload), with named calls and plain data. Files go through the same `FileAccess` interface as in the browser, so the rest of the app doesn’t know which one it is in.
 - For Linux there is an AppImage and a `.deb`, and for Windows an installer (x64 and Arm). A Mac app is built on your own Mac with one command, until there is a signed download.
-- Updates come from GitHub Releases, through `electron-updater`: the app checks once when it starts and never installs by itself; you can turn the check off in Settings.
+- Updates come from GitHub Releases. The app checks once when it starts, never installs by itself, and you can turn the check off in Settings. The AppImage and the Windows app download a new version through `electron-updater` and install it when you choose Restart; the `.deb` checks the same way and offers the download page. A Mac app reads the latest release’s version with its own small check, not `electron-updater`, which installs only a signed app, and offers the download page too.
 
 ## The clean-room rule
 
@@ -196,7 +176,7 @@ So none of Drafter’s dependencies is a screenwriting tool or a Fountain librar
 
 ## How a release ships
 
-Before a new version goes out, thousands of automatic tests check it, in three browsers. Then it gets a version number, the desktop apps are built and tested on GitHub’s computers, and only when every one of them passes is the release published, with the website following it.
+Before a new version goes out, thousands of automatic tests check it, in three browsers. Then it gets a version number, and the Linux and Windows apps are built and tested on GitHub’s computers. The release is published only if all of those builds pass, and the website is updated after it.
 
 *How a release ships: tests, a tag, the desktop builds on GitHub, then the website.*
 
@@ -206,7 +186,7 @@ flowchart TD
   s2["The version<br/>Set in each package.json, and the changelog written"]
   s3["A tag<br/>vX.Y.Z, pushed to GitHub"]
   s4["The desktop workflow<br/>Builds and tests the Linux and Windows apps on GitHub Actions"]
-  s5["The GitHub Release<br/>Published only when every file is there and checked"]
+  s5["The GitHub Release<br/>Published only when the Linux and Windows jobs pass and every file is checked"]
   s6["drafter.dev<br/>Netlify builds the site when main is pushed"]
   s1 --> s2
   s2 --> s3
@@ -217,12 +197,12 @@ flowchart TD
 
 - **Unit and property tests** run in Vitest (with fast-check generating scripts), and **end-to-end tests** in Playwright, in Chromium, Firefox, and WebKit, with axe checking accessibility in both themes.
 - **A release** sets the version in every `package.json`, moves the changelog’s entries under it, and pushes a tag, `vX.Y.Z`, which must match the desktop app’s version.
-- **The desktop workflow** (`.github/workflows/desktop.yml`) builds and tests the Linux and Windows packages, then makes the GitHub Release as a draft, uploads every file, checks them, and only then publishes it. If any job fails, nothing is published.
+- **The desktop workflow** (`.github/workflows/desktop.yml`) builds and tests the Linux and Windows packages, then makes the GitHub Release as a draft, uploads every file, checks them, and only then publishes it. If the Linux job or either Windows job fails, nothing is published. The Mac build is a check on branch pushes only: nothing for a Mac is published until it can be signed.
 - **drafter.dev** is built by Netlify from `main`, which is pushed after the release is out, so the site’s download link never points at a release without its files.
 
 ## What it depends on
 
-Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, and the command line need to run, and what it does for Drafter.
+Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, and the command line need to build and run, and what it does for Drafter.
 
 - `nuxt`: Builds drafter.dev as a set of static files, with nothing running on a server.
 - `vue`: Draws the app’s screens and keeps them up to date as you write.
@@ -250,7 +230,7 @@ Drafter takes as few of other people’s packages as it can, and none from the s
 - `dictionary-en`: The American English dictionary.
 - `dictionary-en-gb`: The British English dictionary.
 - `commander`: Reads the command line’s options.
-- `electron-updater`: Lets the desktop app check GitHub for a new version, and the AppImage and the Windows app update themselves.
+- `electron-updater`: Lets the Linux and Windows apps check GitHub for a new version, and the AppImage and the Windows app update themselves.
 
 The spellchecker’s, the dictionaries’, and the fonts’ licences are given in full on the [Third-party licences](https://drafter.dev/docs/licences/) page.
 

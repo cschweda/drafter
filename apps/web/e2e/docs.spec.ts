@@ -239,10 +239,17 @@ test.describe('without JavaScript', () => {
         await expect(arrow).toHaveAttribute('aria-hidden', 'true');
       }
     }
-    // The package diagram says what each box uses, in words.
+    // The package diagram says what each box uses directly, in words a reader can see.
     const packages = page.locator('figure[data-diagram="packages"]');
     await expect(packages).toContainText('@drafter/fountain');
     await expect(packages).toContainText('uses @drafter/fountain');
+    await expect(
+      packages.getByText('uses @drafter/fountain', { exact: true }).first(),
+    ).toBeVisible();
+    // Storage isn't a chain: the editor's text goes three ways, side by side after one arrow.
+    const storage = page.locator('main figure').nth(2);
+    await expect(storage.locator('ol > li')).toHaveCount(2);
+    await expect(storage.locator('ul > li')).toHaveCount(3);
     // Every third-party runtime dependency, by name, with its line.
     const list = page.locator('main dl');
     for (const [name, line] of Object.entries(DEPENDENCY_NOTES)) {

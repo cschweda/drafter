@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { drawnPackages, packageRows } from '~/about/mermaid';
+import { directUses, drawnPackages, packageRows } from '~/about/mermaid';
 import type { Diagram, PackageNote } from '~/about/tech';
 
 // A diagram on the Technical details page (out-the-door design §4.2), drawn in HTML and CSS: a
-// flow is an ordered list of boxes with an arrow between each, and the packages are an ordered
-// list of layers, the app's at the top. The words are the list's own, so a screen reader reads
+// flow is an ordered list of boxes with an arrow between each (a fan: its first box, an arrow, then
+// the others side by side), and the packages are an ordered list of layers, the app's at the top,
+// each box saying what it uses directly. The words are the list's own, so a screen reader reads
 // them; the arrows are drawn and hidden from it. Colors are the theme's tokens, so both themes
 // (and print) need nothing more. docs/technical-details.md has the same diagrams as Mermaid.
 
@@ -12,7 +13,17 @@ const props = defineProps<{ diagram: Diagram; packages: readonly PackageNote[] }
 
 /** The layers, the top one first: each package is above everything it uses. */
 const layers = computed(() =>
-  props.diagram.kind === 'packages' ? packageRows(drawnPackages(props.packages)).reverse() : [],
+  props.diagram.kind === 'packages'
+    ? packageRows(directUses(drawnPackages(props.packages))).reverse()
+    : [],
+);
+
+/** A flow's boxes in order, or a fan's first box and then the rest together. */
+const flowSteps = computed(() =>
+  props.diagram.kind === 'flow' && !props.diagram.fan ? props.diagram.steps : [],
+);
+const fanSteps = computed(() =>
+  props.diagram.kind === 'flow' && props.diagram.fan ? props.diagram.steps : [],
 );
 
 /** What a package uses, in words: "uses @drafter/fountain and @drafter/templates". */
@@ -27,20 +38,39 @@ function usesText(p: PackageNote): string {
 <template>
   <figure class="tech-diagram" :data-diagram="diagram.kind">
     <figcaption>{{ diagram.caption }}</figcaption>
-    <ol v-if="diagram.kind === 'flow'" class="tech-chain">
-      <li v-for="(step, i) in diagram.steps" :key="i" class="tech-link">
+    <ol v-if="flowSteps.length > 0" class="tech-chain">
+      <li v-for="(step, i) in flowSteps" :key="i" class="tech-link">
         <span class="tech-box">
-          <strong class="tech-label">{{ step.label }}</strong>
+          <strong class="tech-label">{{ step.label }}</strong><span class="tech-hidden">: </span>
           <span class="tech-detail">{{ step.detail }}</span>
         </span>
-        <span v-if="i < diagram.steps.length - 1" class="tech-arrow" aria-hidden="true" />
+        <span v-if="i < flowSteps.length - 1" class="tech-arrow" aria-hidden="true" />
+      </li>
+    </ol>
+    <ol v-else-if="fanSteps.length > 0" class="tech-chain">
+      <li class="tech-link">
+        <span class="tech-box">
+          <strong class="tech-label">{{ fanSteps[0]?.label }}</strong
+          ><span class="tech-hidden">: </span>
+          <span class="tech-detail">{{ fanSteps[0]?.detail }}</span>
+        </span>
+        <span class="tech-arrow" aria-hidden="true" />
+      </li>
+      <li class="tech-link">
+        <ul class="tech-layer tech-fan">
+          <li v-for="(step, i) in fanSteps.slice(1)" :key="i" class="tech-box">
+            <strong class="tech-label">{{ step.label }}</strong><span class="tech-hidden">: </span>
+            <span class="tech-detail">{{ step.detail }}</span>
+          </li>
+        </ul>
       </li>
     </ol>
     <ol v-else class="tech-chain">
       <li v-for="(layer, i) in layers" :key="i" class="tech-link">
         <ul class="tech-layer">
           <li v-for="p in layer" :key="p.name" class="tech-box tech-package">
-            <code>{{ p.name }}</code><span class="tech-hidden">, {{ usesText(p) }}</span>
+            <code>{{ p.name }}</code><span class="tech-hidden">, </span>
+            <span class="tech-uses">{{ usesText(p) }}</span>
           </li>
         </ul>
         <span v-if="i < layers.length - 1" class="tech-arrow tech-arrow-up" aria-hidden="true" />
@@ -98,8 +128,12 @@ figcaption {
   gap: 6px;
   width: 100%;
 }
+.tech-fan .tech-box {
+  flex: 1 1 11rem;
+  max-width: 16rem;
+}
 .tech-package {
-  display: block;
+  display: flex;
   width: auto;
   margin: 0;
   padding: 4px 8px;
@@ -107,6 +141,11 @@ figcaption {
 }
 .tech-package code {
   font-family: var(--font-mono, monospace);
+}
+.tech-uses {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 /* A line and its head, pointing down (the next step) or up (the layer above builds on this one). */
 .tech-arrow {

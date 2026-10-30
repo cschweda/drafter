@@ -290,7 +290,7 @@ The regression suite is hand-counted position fixtures (frozen once verified) pl
 This is the feature to get right, because no app does it losslessly. The trick is that in Fountain the outline is *already in the file*: `#` sections, `=` synopses, scene headings. So:
 
 - **Condense.** Fold every scene to its heading + synopsis (and sections to their title). What you're looking at is still the source — just folded. Export it as Markdown or a treatment document. Reorder scenes in this view and the full scene text moves with it.
-- **Expand.** Start from an outline — a list of `#` sections, sluglines, and `=` synopses typed in the source or pasted as Markdown — and the editor scaffolds each into a scene stub. Writing fills in the stubs; the synopsis stays attached as the scene's summary in the Outline and Cards panes.
+- **Expand.** Start from an outline — a list of `#` sections, sluglines, and `=` synopses typed in the source or pasted as Markdown — and the editor turns each into a scene stub. Writing fills in the stubs; the synopsis stays attached as the scene's summary in the Outline and Cards panes.
 - **Synopsis sync.** Because synopses are real source lines, editing one in the Cards view is a text edit at a known range. No second document model to drift.
 - **Treatment export.** Section titles + synopses + (optionally) the first action paragraph of each scene → a readable prose treatment. Final Draft can't do this.
 

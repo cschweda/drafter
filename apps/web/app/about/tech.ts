@@ -25,10 +25,11 @@ export interface TechSection {
 }
 
 export type Diagram =
-  /** A chain of steps, top to bottom. */
+  /** A chain of steps, top to bottom; with `fan`, the first step leads to each of the others. */
   | {
       id: string;
       kind: 'flow';
+      fan?: true;
       caption: string;
       steps: { label: string; detail: string }[];
     }
@@ -190,14 +191,14 @@ export const DEPENDENCY_NOTES: Readonly<Record<string, string>> = {
   'dictionary-en-gb': 'The British English dictionary.',
   commander: 'Reads the command line’s options.',
   'electron-updater':
-    'Lets the desktop app check GitHub for a new version, and the AppImage and the Windows app update themselves.',
+    'Lets the Linux and Windows apps check GitHub for a new version, and the AppImage and the Windows app update themselves.',
 };
 
 const PACKAGE_DIAGRAM: Diagram = {
   id: 'packages',
   kind: 'packages',
   caption:
-    'Drafter’s packages in layers: each one uses only packages in the layers below it, and the parser, which uses none, is at the bottom.',
+    'Drafter’s packages in layers: each one uses only packages in the layers below it, and the parser, which uses none, is at the bottom. Each use shown, a line or a “uses”, is a direct one; a package also uses whatever those use.',
 };
 
 const KEYSTROKE: Diagram = {
@@ -222,16 +223,20 @@ const KEYSTROKE: Diagram = {
 const STORAGE: Diagram = {
   id: 'storage',
   kind: 'flow',
+  fan: true,
   caption:
-    'Where your script is kept: a recovery copy in the browser as you type, your file when you save, and snapshots along the way.',
+    'Where your script is kept: the text in the editor goes three ways, each in its own time: a recovery copy as you type, your file when you save, and snapshots along the way.',
   steps: [
     { label: 'You type', detail: 'The text in the editor' },
     {
       label: 'The recovery copy',
       detail: 'In the browser’s IndexedDB, a moment after you stop typing',
     },
-    { label: 'Save', detail: 'Writes your .fountain file, or downloads a copy' },
-    { label: 'Snapshots', detail: 'Copies of the whole script, kept in IndexedDB as history' },
+    { label: 'Save', detail: 'Writes your .fountain file, or downloads a copy, when you choose' },
+    {
+      label: 'Snapshots',
+      detail: 'Copies of the whole script in IndexedDB, as you write, save, or ask',
+    },
   ],
 };
 
@@ -266,7 +271,10 @@ const RELEASE: Diagram = {
       label: 'The desktop workflow',
       detail: 'Builds and tests the Linux and Windows apps on GitHub Actions',
     },
-    { label: 'The GitHub Release', detail: 'Published only when every file is there and checked' },
+    {
+      label: 'The GitHub Release',
+      detail: 'Published only when the Linux and Windows jobs pass and every file is checked',
+    },
     { label: 'drafter.dev', detail: 'Netlify builds the site when main is pushed' },
   ],
 };
@@ -290,8 +298,8 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     ],
   },
   {
-    id: 'organised',
-    title: 'How it’s organised',
+    id: 'organized',
+    title: 'How it’s organized',
     plain: [
       {
         kind: 'p',
@@ -411,7 +419,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           'It is Electron, with the web app’s build inside it, served from the app’s own files at `app://drafter/`. It has no service worker: everything is already on your computer.',
           'The page talks to the main process only through a small bridge (the preload), with named calls and plain data. Files go through the same `FileAccess` interface as in the browser, so the rest of the app doesn’t know which one it is in.',
           'For Linux there is an AppImage and a `.deb`, and for Windows an installer (x64 and Arm). A Mac app is built on your own Mac with one command, until there is a signed download.',
-          'Updates come from GitHub Releases, through `electron-updater`: the app checks once when it starts and never installs by itself; you can turn the check off in Settings.',
+          'Updates come from GitHub Releases. The app checks once when it starts, never installs by itself, and you can turn the check off in Settings. The AppImage and the Windows app download a new version through `electron-updater` and install it when you choose Restart; the `.deb` checks the same way and offers the download page. A Mac app reads the latest release’s version with its own small check, not `electron-updater`, which installs only a signed app, and offers the download page too.',
         ],
       },
     ],
@@ -448,7 +456,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Before a new version goes out, thousands of automatic tests check it, in three browsers. Then it gets a version number, the desktop apps are built and tested on GitHub’s computers, and only when every one of them passes is the release published, with the website following it.',
+        text: 'Before a new version goes out, thousands of automatic tests check it, in three browsers. Then it gets a version number, and the Linux and Windows apps are built and tested on GitHub’s computers. The release is published only if all of those builds pass, and the website is updated after it.',
       },
     ],
     details: [
@@ -458,7 +466,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
         items: [
           '**Unit and property tests** run in Vitest (with fast-check generating scripts), and **end-to-end tests** in Playwright, in Chromium, Firefox, and WebKit, with axe checking accessibility in both themes.',
           '**A release** sets the version in every `package.json`, moves the changelog’s entries under it, and pushes a tag, `vX.Y.Z`, which must match the desktop app’s version.',
-          '**The desktop workflow** (`.github/workflows/desktop.yml`) builds and tests the Linux and Windows packages, then makes the GitHub Release as a draft, uploads every file, checks them, and only then publishes it. If any job fails, nothing is published.',
+          '**The desktop workflow** (`.github/workflows/desktop.yml`) builds and tests the Linux and Windows packages, then makes the GitHub Release as a draft, uploads every file, checks them, and only then publishes it. If the Linux job or either Windows job fails, nothing is published. The Mac build is a check on branch pushes only: nothing for a Mac is published until it can be signed.',
           '**drafter.dev** is built by Netlify from `main`, which is pushed after the release is out, so the site’s download link never points at a release without its files.',
         ],
       },
@@ -470,7 +478,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, and the command line need to run, and what it does for Drafter.',
+        text: 'Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, and the command line need to build and run, and what it does for Drafter.',
       },
     ],
     details: [
