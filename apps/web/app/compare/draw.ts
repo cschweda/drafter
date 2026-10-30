@@ -1,5 +1,5 @@
 import type { PageMarks } from '@drafter/compare';
-import { gapName } from './labels';
+import { gapLines, gapName } from './labels';
 
 // Compare's marks on a page drawn by `@drafter/render-html`'s `buildPage` (Phase 2 design §11.2,
 // Call 17). A printed line is matched to its marks by its span, which the page keeps on each line as
@@ -66,7 +66,8 @@ export function placeGap(wrap: HTMLElement, row: number, taken: ReadonlySet<numb
 const linesOf = (button: Element) =>
   button.ownerDocument.getElementById(button.getAttribute('aria-controls') ?? '');
 
-function setOpen(button: Element, open: boolean): void {
+/** Shows or hides a gap's lines, without moving focus. */
+export function setOpen(button: Element, open: boolean): void {
   button.setAttribute('aria-expanded', String(open));
   const held = linesOf(button);
   if (held) held.hidden = !open;
@@ -159,7 +160,7 @@ export function markPage(el: HTMLElement, page: number, marks: PageMarks): void 
     held.id = `compare-gap-${page}-${index}`;
     held.className = 'compare-gap-lines';
     held.hidden = true;
-    for (const text of gap.lines) {
+    for (const text of gapLines(gap.lines)) {
       const line = doc.createElement(gap.kind === 'removed' ? 'del' : 'ins');
       // An empty line still takes its row.
       line.textContent = text === '' ? ' ' : text;

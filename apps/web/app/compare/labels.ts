@@ -33,7 +33,28 @@ export function stopLabel(stop: ChangeStop | LineStop, heading: string | null): 
   return `${heading ? `${page}, ${heading}` : page}: ${count}`;
 }
 
-/** A gap's button: "3 lines removed", "1 line changed that doesn’t print". */
+const hasText = (line: string) => line.trim() !== '';
+
+/**
+ * A gap's lines as its box shows them: without the blank lines before the first line with text and
+ * after the last; one blank line when it holds nothing else.
+ */
+export function gapLines(lines: readonly string[]): string[] {
+  const first = lines.findIndex(hasText);
+  if (first < 0) return [''];
+  return lines.slice(first, lines.findLastIndex(hasText) + 1);
+}
+
+/**
+ * A gap's button: "3 lines removed", "1 line changed that doesn’t print", counting the lines with
+ * text; a gap of blank lines only is "a blank line removed" ("2 blank lines added" when new).
+ */
 export function gapName(gap: Pick<GapMark, 'kind' | 'lines'>): string {
-  return counted(gap.kind === 'removed' ? 'removed' : 'unprinted', gap.lines.length);
+  const lines = gap.lines.filter(hasText).length;
+  if (lines === 0) {
+    const n = gap.lines.length;
+    const which = gap.kind === 'removed' ? 'removed' : 'added';
+    return n <= 1 ? `a blank line ${which}` : `${n} blank lines ${which}`;
+  }
+  return counted(gap.kind === 'removed' ? 'removed' : 'unprinted', lines);
 }

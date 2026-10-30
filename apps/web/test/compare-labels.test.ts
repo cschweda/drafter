@@ -72,4 +72,12 @@ describe('Compare labels', () => {
       '1 line changed that doesn’t print',
     );
   });
+
+  test('a gap counts the lines with text, and says so when it holds only blank lines', () => {
+    expect(gapName(gap({ lines: ['', 'Nobody answers it.', ''] }))).toBe('1 line removed');
+    expect(gapName(gap({ lines: ['One.', '', 'Two.'] }))).toBe('2 lines removed');
+    expect(gapName(gap({ lines: [''] }))).toBe('a blank line removed');
+    expect(gapName(gap({ lines: ['', '  '] }))).toBe('2 blank lines removed');
+    expect(gapName(gap({ kind: 'unprinted', lines: [''] }))).toBe('a blank line added');
+  });
 });

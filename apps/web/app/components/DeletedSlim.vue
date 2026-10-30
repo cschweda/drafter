@@ -3,13 +3,18 @@ import { useDeleted } from '~/history/deleted';
 import { countLabel, progressLabel } from '~/history/labels';
 
 // The Deleted scenes tab's slim bar (version-history design §9): "12 deleted scenes", or while the
-// versions are read, a progress bar with "Reading versions… 120 of 300"; and Close, which takes
+// versions are first read, a progress bar with "Reading versions… 120 of 300"; and Close, which takes
 // the tab away.
 
 const deleted = useDeleted();
-const { rows, progress, done, why } = deleted;
+const { shown, filter, rows, progress, done, listed, why } = deleted;
 const progressId = useId();
-const reading = computed(() => !why.value && !done.value && progress.value !== null);
+// Read again after an edit, the count stands: the progress shows on the first reading only.
+const reading = computed(
+  () => !why.value && !done.value && !listed.value && progress.value !== null,
+);
+// Entries put back leave the count at once, as they leave the list.
+const count = computed(() => (filter.value.trim() === '' ? shown.value.length : rows.value.length));
 </script>
 
 <template>
@@ -23,7 +28,7 @@ const reading = computed(() => !why.value && !done.value && progress.value !== n
     />
     <span :id="progressId">{{ progressLabel(progress.read, progress.total) }}</span>
   </template>
-  <span v-else-if="done">{{ countLabel(rows.length) }}</span>
+  <span v-else-if="listed">{{ countLabel(count) }}</span>
   <span class="spacer" />
   <button
     type="button"

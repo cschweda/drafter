@@ -1,8 +1,8 @@
 import type { GapMark, LineMark, PageMarks } from '@drafter/compare';
 import type { Page } from '@drafter/layout';
 import type { ScriptView } from '@drafter/render-html';
-import { placeBefore, placeGap, rowOf, spanKey, takenRows, wireGap } from './draw';
-import { gapName } from './labels';
+import { placeBefore, placeGap, rowOf, setOpen, spanKey, takenRows, wireGap } from './draw';
+import { gapLines, gapName } from './labels';
 
 // Show changes' marks on the Script pane's pages (version-history design §4.3), put on through the
 // view's `decorate` hook as each page is drawn. Whole lines only (Call 18): an added or changed
@@ -115,7 +115,7 @@ function mark(el: HTMLElement, page: number, marks: PageMarks): void {
     held.id = `live-gap-${page}-${index}`;
     held.className = 'live-gap-lines';
     held.hidden = true;
-    for (const text of gap.lines) {
+    for (const text of gapLines(gap.lines)) {
       const line = doc.createElement(gap.kind === 'removed' ? 'del' : 'ins');
       line.textContent = text === '' ? ' ' : text;
       held.append(line);
@@ -179,14 +179,17 @@ function keep(el: HTMLElement): Kept | null {
   return open.length > 0 || focus ? { open, focus } : null;
 }
 
-/** Opens again the gaps that were open, and puts focus back on the same mark, if it is there. */
+/**
+ * Opens again the gaps that were open (without moving focus: the writer may be typing in the
+ * Source), and puts focus back on the same mark only when a mark of this page had it.
+ */
 function restore(el: HTMLElement, kept: Kept | null): void {
   if (!kept) return;
   const gapOf = (key: string) =>
     [...el.querySelectorAll<HTMLElement>('.live-gap')].find((g) => g.dataset.gap === key);
   for (const key of kept.open) {
     const button = gapOf(key)?.querySelector<HTMLButtonElement>('.live-gap-button');
-    if (button && button.getAttribute('aria-expanded') !== 'true') button.click();
+    if (button) setOpen(button, true);
   }
   const { focus } = kept;
   if (!focus) return;

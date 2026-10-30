@@ -119,7 +119,7 @@ test.describe('Compare', () => {
     );
     await expect(changes(page)).toHaveText([
       'Page 1, INT. HALL - DAY: 1 line changed',
-      'Page 1, INT. HALL - DAY: 2 lines added',
+      'Page 1, INT. HALL - DAY: 1 line added',
     ]);
     // The pages keep their headings.
     await expect(panel(page).getByRole('heading', { name: 'EXT. ROOF - NIGHT' })).toHaveCount(1);
@@ -127,11 +127,11 @@ test.describe('Compare', () => {
 
   test('shows a removed-lines marker that reveals the struck-through lines', async ({ page }) => {
     await compareWithNow(page, BASE, BASE.replace('The phone rings.\n\n', ''));
-    const gap = panel(page).getByRole('button', { name: '2 lines removed', exact: true });
+    const gap = panel(page).getByRole('button', { name: '1 line removed', exact: true });
     await expect(gap).toHaveAttribute('aria-expanded', 'false');
     await expect(panel(page).locator('del', { hasText: 'The phone rings.' })).toBeHidden();
     // Named for the scene the lines were in, not the next one.
-    await expect(changes(page)).toHaveText(['Page 1, INT. HALL - DAY: 2 lines removed']);
+    await expect(changes(page)).toHaveText(['Page 1, INT. HALL - DAY: 1 line removed']);
     await gap.click();
     await expect(gap).toHaveAttribute('aria-expanded', 'true');
     await expect(panel(page).locator('del', { hasText: 'The phone rings.' })).toBeVisible();

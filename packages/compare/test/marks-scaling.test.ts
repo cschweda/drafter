@@ -22,7 +22,8 @@ function reference(layout: Layout, changes: readonly Change[]): PageMarks {
     a.from < b.to && b.from < a.to;
   const marks: PageMarks = { lines: [], gaps: [], stops: [] };
   changes.forEach((change, index) => {
-    const count = change.kind === 'removed' ? change.removed.length : change.added.length;
+    const touched = change.kind === 'removed' ? change.removed : change.added;
+    const count = touched.filter((line) => line.trim() !== '').length || touched.length;
     if (change.kind !== 'removed') {
       const hit = printed.filter((p) => meets(p.line.span, change.span));
       if (hit.length > 0) {

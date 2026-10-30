@@ -132,9 +132,9 @@ test.describe('Show changes on the Script pane', () => {
   test('a removed-lines button shows the lines struck through', async ({ page }) => {
     await savedThenChanged(page, BASE, BASE.replace('Nobody answers it.\n\n', ''));
     await turnOn(page);
-    const button = scriptRegion(page).getByRole('button', { name: '2 lines removed' });
+    const button = scriptRegion(page).getByRole('button', { name: '1 line removed' });
     await expect(button).toBeVisible();
-    await expect(button).toHaveText('− 2 lines removed');
+    await expect(button).toHaveText('− 1 line removed');
     await expect(button).toHaveAttribute('aria-expanded', 'false');
     await button.click();
     await expect(button).toHaveAttribute('aria-expanded', 'true');
@@ -178,7 +178,7 @@ test.describe('Show changes on the Script pane', () => {
   test('Escape closes the removed lines and puts focus on their button', async ({ page }) => {
     await savedThenChanged(page, BASE, BASE.replace('Nobody answers it.\n\n', ''));
     await turnOn(page);
-    const button = scriptRegion(page).getByRole('button', { name: '2 lines removed' });
+    const button = scriptRegion(page).getByRole('button', { name: '1 line removed' });
     await button.click();
     await expect(button).toHaveAttribute('aria-expanded', 'true');
     await page.keyboard.press('Escape');
@@ -268,7 +268,7 @@ test.describe('Show changes on the Script pane', () => {
       page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.change ?? null);
     const labels = [
       'Page 1, INT. HALL - DAY: 1 line changed',
-      'Page 1, INT. HALL - DAY: 2 lines added',
+      'Page 1, INT. HALL - DAY: 1 line added',
       'Page 1, EXT. ROOF - NIGHT: 1 line changed',
     ];
     for (const i of [0, 1, 2, 0]) {
@@ -430,7 +430,7 @@ test.describe("Show changes' accessibility", () => {
       await savedThenChanged(page, BASE, after);
       await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
       await turnOn(page, 1);
-      await scriptRegion(page).getByRole('button', { name: '2 lines removed' }).click();
+      await scriptRegion(page).getByRole('button', { name: '1 line removed' }).click();
       const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
       expect(
         violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`),

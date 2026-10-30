@@ -124,6 +124,17 @@ describe('removed-lines markers', () => {
       expect(press(second, 'Escape')).toBe(true);
     });
 
+    test(`${name}: the box holds the lines with text, not the blank lines around them`, () => {
+      const { el, marks } = pageOf(BEFORE, AFTER);
+      draw(el, marks);
+      const first = buttonOf(gapsOf(el, cls)[0] as HTMLElement);
+      expect(first.textContent).toContain('1 line removed');
+      const held = document.getElementById(first.getAttribute('aria-controls') ?? '');
+      expect([...(held?.children ?? [])].map((line) => line.textContent)).toEqual([
+        'Nobody answers it.',
+      ]);
+    });
+
     test(`${name}: the hidden words can't be selected and copied`, () => {
       const { el, marks } = pageOf(BEFORE.replace('Wind.', 'Rain.'), AFTER);
       draw(el, marks);
@@ -153,5 +164,20 @@ describe('removed-lines markers', () => {
     decorateLive(el, page, structuredClone(marks));
     expect(document.activeElement?.classList.contains('live-mark')).toBe(true);
     expect(document.activeElement?.textContent).toBe(line.textContent);
+  });
+
+  test('marking again keeps a marker open but never takes focus from outside the page', () => {
+    const { el, marks } = pageOf(BEFORE, AFTER);
+    const page = { number: 1 } as Parameters<typeof decorateLive>[1];
+    decorateLive(el, page, marks);
+    buttonOf(gapsOf(el, '.live-gap')[0] as HTMLElement).click();
+    const input = document.createElement('input');
+    document.body.append(input);
+    input.focus();
+    decorateLive(el, page, structuredClone(marks));
+    expect(document.activeElement).toBe(input);
+    expect(buttonOf(gapsOf(el, '.live-gap')[0] as HTMLElement).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
   });
 });

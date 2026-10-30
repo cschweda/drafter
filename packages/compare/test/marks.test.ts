@@ -80,7 +80,16 @@ describe('markPages', () => {
     const [gap] = marks.gaps;
     expect(at(newer, gap.before as { from: number; to: number })).toBe('EXT. YARD - DAY');
     expect(gap.page).toBe(layout.pages[yard]?.number);
-    expect(marks.stops[0]).toMatchObject({ kind: 'removed', page: gap.page, lines: 2 });
+    expect(marks.stops[0]).toMatchObject({ kind: 'removed', page: gap.page, lines: 1 });
+  });
+
+  test('a stop counts the lines with text, and a change of blank lines only counts them', () => {
+    const newer = edit(SHORT_SCREENPLAY, '\nJUNE\nOf course.\n', '');
+    expect(compare(SHORT_SCREENPLAY, newer).marks.stops[0]).toMatchObject({ lines: 2 });
+    const spaced = edit(SHORT_SCREENPLAY, 'Of course.\n', 'Of course.\n\n\n');
+    const blank = compare(SHORT_SCREENPLAY, spaced).marks;
+    expect(blank.stops).toHaveLength(1);
+    expect(blank.stops[0]?.lines).toBeGreaterThan(0);
   });
 
   test('puts a removal at the end of the last page', () => {
@@ -195,7 +204,7 @@ describe('markPages', () => {
         kind: 'removed',
         page: 1,
         block: block('The bus does not stop.') as number,
-        lines: 3,
+        lines: 2,
       },
     ]);
   });

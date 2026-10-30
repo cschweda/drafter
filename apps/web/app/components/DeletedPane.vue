@@ -68,7 +68,10 @@ watch(shown, async () => {
   if (activeKey.value !== null && !places.value.has(activeKey.value)) activeKey.value = null;
   if (!had) return;
   await nextTick();
-  if (!list.value?.contains(document.activeElement)) await focusRow(current.value);
+  if (list.value?.contains(document.activeElement)) return;
+  // The last entry gone (put back): focus on the panel, which says the list is empty.
+  if (shown.value.length === 0) document.getElementById('panel-deleted')?.focus();
+  else await focusRow(current.value);
 });
 
 // Find in Deleted scenes (from a Compare group): the entry gets focus once it is listed.
@@ -79,7 +82,12 @@ watch(
     const at = now.findIndex((r) => headingKey(r.newest.print.heading) === key);
     if (at < 0) return;
     pendingFind.value = null;
-    await focusRow(at);
+    // The tab may still be coming into view (it was behind another in its pane): a few frames.
+    for (let tries = 0; tries < 5; tries++) {
+      await focusRow(at);
+      if (document.activeElement === document.getElementById(domId(at))) break;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
     document.getElementById(domId(at))?.scrollIntoView({ block: 'nearest' });
   },
   { flush: 'post' },
@@ -100,14 +108,17 @@ async function textOf(row: DeletedScene): Promise<string | null> {
   return text;
 }
 
+/** Opens at once, saying "Reading…" until the text is read; or closes. */
 async function toggleText(row: DeletedScene) {
   const next = new Set(opened.value);
-  if (next.has(row.key)) next.delete(row.key);
-  else {
-    next.add(row.key);
-    await textOf(row);
+  if (next.has(row.key)) {
+    next.delete(row.key);
+    opened.value = next;
+    return;
   }
+  next.add(row.key);
   opened.value = next;
+  await textOf(row);
 }
 
 // ---- Put back ---------------------------------------------------------------------------------
@@ -123,7 +134,12 @@ async function onPutBack(row: DeletedScene) {
   try {
     // Focus stays in the list, on the next entry, so several can be put back in turn; this one
     // leaves the list when it is next listed.
-    if (await putBack(row)) await focusRow(at + 1 < shown.value.length ? at + 1 : at);
+    if (await putBack(row)) {
+      const next = shown.value[at + 1] ?? shown.value[at - 1];
+      // It leaves the list now, so it can't be put back twice.
+      deleted.putBackDone(row.key);
+      if (next) await focusRow(places.value.get(next.key) ?? 0);
+    }
   } finally {
     busy.value = false;
   }
@@ -251,6 +267,7 @@ watch(done, (finished) => {
 const metaOf = (row: DeletedScene) =>
   `${lastInLabel(row, snapshots.value.get(row.newest.snapshot), listedAt.value)}. ${versionsLabel(row, listedAt.value)}.`;
 
+const nameOf = (row: DeletedScene) => row.newest.print.heading || 'Untitled scene';
 const headingId = (i: number) => `${domId(i)}-heading`;
 const metaId = (i: number) => `${domId(i)}-meta`;
 const textId = (i: number) => `${domId(i)}-text`;
@@ -279,10 +296,16 @@ const whyId = `${uid}-why`;
       </p>
       <p v-if="progress?.capped" class="note">Only the newest 1,000 versions were read.</p>
       <p v-if="failed" class="note">Couldn’t read the versions: {{ failed }}</p>
-      <p v-if="rows.length === 0 && done" class="empty">
+      <p v-if="rows.length === 0 && done && progress?.total === 0" class="empty">
+        No versions yet. Save, or take a snapshot, and a scene you delete after it is listed here.
+      </p>
+      <p v-else-if="rows.length === 0 && done" class="empty">
         No deleted scenes. Every scene in your versions is still in the script.
       </p>
       <p v-else-if="rows.length === 0" class="empty">Reading versions…</p>
+      <p v-else-if="shown.length === 0 && filter.trim() === ''" class="empty">
+        No deleted scenes. Every scene in your versions is still in the script.
+      </p>
       <p v-else-if="shown.length === 0" class="empty">
         No deleted scene matches “{{ filter.trim() }}”.
       </p>
@@ -311,6 +334,7 @@ const whyId = `${uid}-why`;
                 tabindex="-1"
                 :aria-expanded="opened.has(row.key) ? 'true' : 'false'"
                 :aria-controls="textId(i)"
+                :aria-label="`${opened.has(row.key) ? 'Hide' : 'Show'} text of ${nameOf(row)}`"
                 @click.stop="toggleText(row)"
               >
                 {{ opened.has(row.key) ? 'Hide text' : 'Show text' }}
@@ -321,6 +345,7 @@ const whyId = `${uid}-why`;
                 tabindex="-1"
                 :aria-disabled="readOnly ? 'true' : undefined"
                 :aria-describedby="readOnly ? whyId : undefined"
+                :aria-label="`Put back ${nameOf(row)}`"
                 @click.stop="onPutBack(row)"
               >
                 Put back
@@ -352,6 +377,7 @@ const whyId = `${uid}-why`;
           >
             <pre v-if="texts.get(row.key) != null">{{ texts.get(row.key) }}</pre>
             <p v-else-if="texts.has(row.key)" class="note">This version can’t be read.</p>
+            <p v-else class="note">Reading…</p>
           </div>
         </div>
       </div>

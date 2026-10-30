@@ -32,7 +32,10 @@ export interface ChangeStop {
   page: number;
   /** The block its first mark is on, or that its gap sits before (at the end: the last printed); -1 for none. */
   block: number;
-  /** How many lines it removed (`removed`) or put in (the others). */
+  /**
+   * How many lines with text it removed (`removed`) or put in (the others); for a change of blank
+   * lines only, how many blank lines.
+   */
   lines: number;
 }
 
@@ -102,7 +105,8 @@ export function markPages(layout: Layout, changes: readonly Change[]): PageMarks
 
   const marks: PageMarks = { lines: [], gaps: [], stops: [] };
   changes.forEach((change, index) => {
-    const count = change.kind === 'removed' ? change.removed.length : change.added.length;
+    const touched = change.kind === 'removed' ? change.removed : change.added;
+    const count = touched.filter((line) => line.trim() !== '').length || touched.length;
     if (change.kind !== 'removed') {
       // A line meets the change when it starts before the change ends and ends after it starts.
       const start = firstWhere((k) => (maxTo[k] as number) > change.span.from);

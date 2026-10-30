@@ -103,8 +103,8 @@ test.describe('Deleted scenes', () => {
       'Put back INT. CELLAR - NIGHT after INT. HALL - DAY. Undo takes it out.',
     );
     await expect.poll(() => wholeText(page)).toBe(script(HALL, CELLAR, ROOF));
-    // Focus stayed in the list.
-    expect(await focusedEntry(page)).toBe('INT. CELLAR - NIGHT');
+    // It left the list at once, and focus is on the tab's panel, which says the list is empty.
+    await expect(panel(page)).toBeFocused();
     await showSource(page);
     await editor(page).focus();
     await page.keyboard.press('ControlOrMeta+z');
@@ -131,6 +131,34 @@ test.describe('Deleted scenes', () => {
       'No deleted scenes. Every scene in your versions is still in the script.',
     );
     expect(await wholeText(page)).toBe(BEFORE);
+  });
+
+  test('Put back twice quickly puts the scene back once', async ({ page }) => {
+    await deletedSince(page);
+    const cellar = entryOf(page, 'INT. CELLAR - NIGHT');
+    const button = cellar.getByRole('button', { name: 'Put back INT. CELLAR - NIGHT' });
+    await button.click();
+    await expect(announcer(page)).toHaveText(/^Put back INT\. CELLAR - NIGHT/);
+    // It leaves the list at once, before the list is read again.
+    await expect(cellar).toHaveCount(0, { timeout: 500 });
+    await button.click({ timeout: 300 }).catch(() => undefined);
+    // Read again: still listed once nowhere, and in the script once.
+    await expect(panel(page).locator('h3')).toHaveText(['EXT. COAL YARD - DAWN']);
+    await page.waitForTimeout(1500);
+    await expect(panel(page).locator('h3')).toHaveText(['EXT. COAL YARD - DAWN']);
+    expect((await wholeText(page)).split('INT. CELLAR - NIGHT').length - 1).toBe(1);
+    // The slim bar keeps its count while the list is read again.
+    await expect(page.locator('.slim', { hasText: '1 deleted scene' })).toBeVisible();
+  });
+
+  test('says when there are no versions yet', async ({ page }) => {
+    await start(page);
+    await newScript(page);
+    await setText(page, NOW);
+    await runCommand(page, 'Deleted scenes');
+    await expect(panel(page)).toContainText(
+      'No versions yet. Save, or take a snapshot, and a scene you delete after it is listed here.',
+    );
   });
 
   test('Show text shows the whole scene', async ({ page }) => {
@@ -257,6 +285,15 @@ test.describe('Deleted scenes', () => {
     await yard.getByRole('button', { name: 'Find in Deleted scenes' }).click();
     await expect(deletedTab(page)).toBeVisible();
     await expect.poll(() => focusedEntry(page)).toBe('EXT. COAL YARD - DAWN');
+    // A filter that hid it is cleared first.
+    await panel(page).getByRole('searchbox', { name: 'Filter' }).fill('cellar');
+    await expect(panel(page).locator('h3')).toHaveText(['INT. CELLAR - NIGHT']);
+    await runCommand(page, 'History…');
+    await options(page).first().focus();
+    await page.keyboard.press('Enter');
+    await yard.getByRole('button', { name: 'Find in Deleted scenes' }).click();
+    await expect.poll(() => focusedEntry(page)).toBe('EXT. COAL YARD - DAWN');
+    await expect(panel(page).getByRole('searchbox', { name: 'Filter' })).toHaveValue('');
   });
 
   test('History opens it from its header', async ({ page }) => {

@@ -55,6 +55,11 @@ export interface DeletedSession {
   progress: Readonly<Ref<ScanProgress | null>>;
   /** The last list of this scan has come. */
   done: Readonly<Ref<boolean>>;
+  /**
+   * A scan of this script has finished since the tab opened, so its count stands while it is read
+   * again (the slim bar keeps it rather than showing progress).
+   */
+  listed: Readonly<Ref<boolean>>;
   /** The worker's error, if the scan failed. */
   failed: Readonly<Ref<string | null>>;
   filter: Ref<string>;
@@ -69,8 +74,13 @@ export interface DeletedSession {
    * Compare group); the tab clears it once focused.
    */
   pendingFind: Ref<string | null>;
-  /** Opens the tab at the entry whose heading is `heading`. */
+  /** Opens the tab at the entry whose heading is `heading`, clearing the filter. */
   find(heading: string): void;
+  /**
+   * The entry with this key was put back: it leaves the list at once, and the list is read again
+   * now, so it can't be put back twice.
+   */
+  putBackDone(key: string): void;
 }
 
 /** How long after the last change to the text the list is asked for again (§3.4). */
@@ -90,9 +100,17 @@ function create(): DeletedSession {
   const rows = shallowRef<DeletedScene[]>([]);
   const progress = ref<ScanProgress | null>(null);
   const done = ref(false);
+  const listed = ref(false);
+  /** Entries put back, hidden until a scan begun after them replies. */
+  const hidden = ref(new Set<string>());
   const failed = ref<string | null>(null);
   const filter = ref('');
-  const shown = computed(() => filterDeleted(rows.value, filter.value));
+  const shown = computed(() =>
+    filterDeleted(
+      hidden.value.size === 0 ? rows.value : rows.value.filter((r) => !hidden.value.has(r.key)),
+      filter.value,
+    ),
+  );
   const snapshots = shallowRef<ReadonlyMap<string, SnapshotInfo>>(new Map());
   const pendingFind = ref<string | null>(null);
   const why = computed(() => {
@@ -110,6 +128,8 @@ function create(): DeletedSession {
     rows.value = [];
     progress.value = null;
     done.value = false;
+    listed.value = false;
+    hidden.value = new Set();
     failed.value = null;
     snapshots.value = new Map();
     listedFor = null;
@@ -149,6 +169,8 @@ function create(): DeletedSession {
     done.value = false;
     failed.value = null;
     void listInfo(projectId);
+    // The entries put back so far: this scan reads the text with them in it.
+    const shownAgain = hidden.value.size > 0 ? new Set(hidden.value) : null;
     client ??= useHistoryClient();
     client.request(
       { kind: 'deleted', projectId, now: editor.view.state.doc.toString() },
@@ -163,7 +185,15 @@ function create(): DeletedSession {
           };
         } else if (reply.kind === 'deleted') {
           rows.value = reply.scenes;
-          if (reply.done) done.value = true;
+          if (shownAgain) {
+            const next = new Set(hidden.value);
+            for (const key of shownAgain) next.delete(key);
+            hidden.value = next;
+          }
+          if (reply.done) {
+            done.value = true;
+            listed.value = true;
+          }
         } else if (reply.kind === 'error') {
           failed.value = reply.message;
           done.value = true;
@@ -222,8 +252,14 @@ function create(): DeletedSession {
   }
 
   function find(heading: string) {
+    filter.value = '';
     pendingFind.value = headingKey(heading);
     open(false);
+  }
+
+  function putBackDone(key: string) {
+    hidden.value = new Set(hidden.value).add(key);
+    if (isOpen.value) scan();
   }
 
   effectScope(true).run(() => {
@@ -253,6 +289,7 @@ function create(): DeletedSession {
     rows,
     progress,
     done,
+    listed,
     failed,
     filter,
     shown,
@@ -260,6 +297,7 @@ function create(): DeletedSession {
     snapshots,
     pendingFind,
     find,
+    putBackDone,
   };
 }
 
