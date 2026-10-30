@@ -14,6 +14,7 @@ import {
 } from '../src';
 import { anyScript, screenplayScript } from './arbitraries';
 import { screenplay, stagePlay } from './helpers';
+import { ReferenceTally } from './timing-reference';
 
 /** Speeches with lyrics, and quiet blocks inside and after them, the case `spokenBy` must get right. */
 const lyricWord = fc.constantFrom('la', 'happy', 'birthday', 'oh');
@@ -36,6 +37,18 @@ const lyricScript = fc.oneof(
   screenplayScript,
   fc.array(lyricScene, { minLength: 1, maxLength: 3 }).map((scenes) => `${scenes.join('\n\n')}\n`),
 );
+/** Speeches before the first scene, under an act's heading or not, then scenes or none. */
+const coldOpen = fc
+  .tuple(
+    fc.boolean(),
+    fc.array(fc.oneof(speech, fc.constant('A door slams.')), { minLength: 1, maxLength: 4 }),
+    fc.array(lyricScene, { maxLength: 3 }),
+  )
+  .map(
+    ([act, open, scenes]) =>
+      `${[...(act ? ['# Act One'] : []), ...open, ...scenes].join('\n\n')}\n`,
+  );
+const speechScript = fc.oneof(anyScript, lyricScript, coldOpen);
 
 const SPEECH_PARTS = new Set<Block['kind']>(['parenthetical', 'dialogue', 'lyric']);
 
@@ -140,6 +153,71 @@ describe('timing properties', () => {
           const credited = Object.values(scene.spokenBy).reduce((sum, n) => sum + n, 0);
           expect(credited + unattributed(blocks, template)).toBe(spoken);
         }
+      }),
+    );
+  });
+
+  test('speeches add up to spokenBy for every scene and the opening', () => {
+    fc.assert(
+      fc.property(speechScript, (source) => {
+        const doc = parse(source);
+        const template = doc.meta?.template === 'stage-play-standard' ? stagePlay : screenplay;
+        const index = sceneIndex(doc, template);
+        const units = [...(index.opening ? [index.opening] : []), ...index.scenes];
+        for (const unit of units) {
+          const sums: Record<string, number> = {};
+          for (const s of unit.speeches) sums[s.name] = (sums[s.name] ?? 0) + s.words;
+          expect(sums).toEqual(unit.spokenBy);
+          for (const s of unit.speeches) expect(doc.blocks[s.block]?.kind).toBe('character');
+        }
+        // Every cue is one speech, in the opening or a scene, once (these scripts put no speech
+        // in a section's opening after the first scene).
+        const cues = doc.blocks.flatMap((b, i) =>
+          b.kind === 'character' && i < bodyEnd(doc) ? [i] : [],
+        );
+        expect(units.flatMap((u) => u.speeches.map((s) => s.block))).toEqual(cues);
+        expect(index.opening === null).toBe(
+          !cues.some((i) => i < (index.scenes[0]?.block ?? Number.POSITIVE_INFINITY)),
+        );
+      }),
+    );
+  });
+
+  test('timing is unchanged by recording speeches', () => {
+    fc.assert(
+      fc.property(speechScript, (source) => {
+        const doc = parse(source);
+        const template = doc.meta?.template === 'stage-play-standard' ? stagePlay : screenplay;
+        const index = sceneIndex(doc, template);
+        /** v0.19.0's tally of blocks `from` up to `to`. */
+        const reference = (from: number, to: number) => {
+          const t = new ReferenceTally(template);
+          for (let i = from; i < to; i++) t.add(doc.blocks[i] as never);
+          return t;
+        };
+        const end = bodyEnd(doc);
+        const starts = [...index.scenes, ...index.sections].map((u) => u.block);
+        for (const scene of index.scenes) {
+          const to = Math.min(end, ...starts.filter((b) => b > scene.block));
+          const old = reference(scene.block, to);
+          expect(scene.timing).toEqual(old.timing());
+          const byKey = Object.fromEntries(old.spokenBy());
+          for (const [name, words] of Object.entries(scene.spokenBy)) {
+            expect(words).toBe(byKey[name.toUpperCase()]);
+          }
+        }
+        if (index.opening) {
+          const old = reference(0, Math.min(end, index.scenes[0]?.block ?? end));
+          expect(index.opening.timing).toEqual(old.timing());
+        }
+        const whole = new TimingTally(template);
+        doc.blocks.forEach((b, i) => {
+          whole.add(b, i);
+        });
+        expect(whole.timing()).toEqual(reference(0, doc.blocks.length).timing());
+        expect(new Map(whole.spokenBy())).toEqual(
+          new Map(reference(0, doc.blocks.length).spokenBy()),
+        );
       }),
     );
   });

@@ -18,6 +18,16 @@ export interface Synopsis {
   span: Span;
 }
 
+/** One speech: a cue and the parts after it, as `TimingTally` groups them (seeing-the-script design §3.4). */
+export interface Speech {
+  /** The speaker's name as its unit's `speakers` (or the opening's `spokenBy`) gives it. */
+  name: string;
+  /** The cue's block. */
+  block: number;
+  /** Its words spoken: both sides of a dual pair in full; a cue with only a parenthetical has 0. */
+  words: number;
+}
+
 /** One scene (Phase 2 design §5.1). */
 export interface Scene {
   kind: 'scene';
@@ -59,6 +69,8 @@ export interface Scene {
    * only a parenthetical has 0); both sides of a dual pair in full. Kept for a per-character view.
    */
   spokenBy: Record<string, number>;
+  /** One per cue in the scene, in order; a name's `words` add up to its `spokenBy`. */
+  speeches: Speech[];
   /** Null until a layout that matches the parse is given. */
   pages: ScenePages | null;
 }
@@ -83,6 +95,18 @@ export interface Section {
   timing: Timing;
 }
 
+/**
+ * What is said before the first scene (a cold open, under an act's heading or not), tallied as a
+ * scene's blocks are. With the scenes' `speeches`, it holds every speech once, except one in a
+ * section's opening after the first scene (between an act's heading and its first scene).
+ */
+export interface Opening {
+  speeches: Speech[];
+  /** By the name as first typed in the opening, as a scene's `spokenBy`. */
+  spokenBy: Record<string, number>;
+  timing: Timing;
+}
+
 export type OutlineItem = Scene | Section;
 
 export type OutlineNode = { item: Section; children: OutlineNode[] } | { item: Scene };
@@ -96,4 +120,6 @@ export interface SceneIndex {
   sections: Section[];
   /** Sections holding scenes and deeper sections. */
   tree: OutlineNode[];
+  /** The speeches before the first scene; null when no speech is there. */
+  opening: Opening | null;
 }

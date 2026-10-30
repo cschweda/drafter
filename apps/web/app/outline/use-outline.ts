@@ -23,7 +23,14 @@ import { sayOutline } from './notice';
 // after every parse (and when the pages arrive), each item's session id, and the edits a view
 // makes. Shared by the Outline tab, its slim bar, and the commands.
 
-const EMPTY: SceneIndex = { preamble: null, items: [], scenes: [], sections: [], tree: [] };
+const EMPTY: SceneIndex = {
+  preamble: null,
+  items: [],
+  scenes: [],
+  sections: [],
+  tree: [],
+  opening: null,
+};
 
 export interface OutlineSession {
   index: ComputedRef<SceneIndex>;

@@ -38,13 +38,15 @@ Everything Drafter writes is ordinary Fountain: synopses (`= …`), sections, an
 
 ## Timing
 
-Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block; `TimingTally` adds blocks up in order, counting a dual-dialogue pair (`^`) once, as its longer speech, since both are said at the same time. A speech is what the layout groups as one: its cue and the parentheticals, dialogue, and lyrics right after it; a note, boneyard, or synopsis block ends it. `estimateSeconds` turns a timing into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`). Each scene also has `spokenBy`, the words each of its speakers says.
+Each scene and section in the index also carries `timing`: the words spoken in it (dialogue and lyrics that print) and its printed lines of action, each source line wrapped at the width of the role the template gives action. `blockTiming` gives the same for one block; `TimingTally` adds blocks up in order, counting a dual-dialogue pair (`^`) once, as its longer speech, since both are said at the same time. A speech is what the layout groups as one: its cue and the parentheticals, dialogue, and lyrics right after it; a note, boneyard, or synopsis block ends it. `estimateSeconds` turns a timing into an estimate of the running time at a speaking pace, with 1.5 seconds for each line of action (`ACTION_SECONDS_PER_LINE`). Each scene also has `spokenBy`, the words each of its speakers says, and `speeches`, one entry per cue in order (`{ name, block, words }`, both sides of a dual pair in full), whose words add up to `spokenBy`. The index's `opening` is the same tally (`speeches`, `spokenBy`, `timing`) for everything before the first scene, such as a cold open, or null when no one speaks there, so every speech up to the first scene's end is counted once. `TimingTally.speeches()` gives the speeches it has added up, keyed by the cue's name in capitals.
 
 ```ts
 import { estimateSeconds, TimingTally } from '@drafter/outline';
 
 index.scenes[0].timing; // { spoken: 42, actionLines: 6 }
 index.scenes[0].spokenBy; // { MARGARET: 30, DANNY: 12 }
+index.scenes[0].speeches; // [{ name: 'MARGARET', block: 4, words: 18 }, …]
+index.opening; // null, or { speeches, spokenBy, timing } for a cold open
 const tally = new TimingTally(template);
 for (const block of doc.blocks) tally.add(block);
 estimateSeconds(tally.timing(), 150); // seconds, at 150 words a minute

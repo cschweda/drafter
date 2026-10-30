@@ -3,7 +3,16 @@ import type { Layout } from '@drafter/layout';
 import { bodyEnd, contentEnd, normalizeLabel, readKeyedNote, readNote } from '@drafter/notes';
 import { resolveRole, type Template } from '@drafter/templates';
 import { TimingTally, wordsIn } from './timing';
-import type { OutlineItem, OutlineNode, Scene, SceneIndex, Section, Synopsis } from './types';
+import type {
+  Opening,
+  OutlineItem,
+  OutlineNode,
+  Scene,
+  SceneIndex,
+  Section,
+  Speech,
+  Synopsis,
+} from './types';
 
 // The scene index (Phase 2 design §5.1): a pure function of the parse, the template, and the
 // layout when it matches the parse, recomputed after every parse. Nothing is cached between
@@ -67,6 +76,26 @@ export function sceneNotes(
   return { fields, storylines, marks };
 }
 
+/** The speakers' names by the cue's name in capitals: as first typed in the unit. */
+type Names = Map<string, string>;
+
+function noteSpeaker(names: Names, block: Block): void {
+  if (block.kind !== 'character') return;
+  const key = block.sem.name.toUpperCase();
+  if (!names.has(key)) names.set(key, block.sem.name);
+}
+
+/** A unit's tally, named: its speeches and the words each speaker says, by `names`. */
+function spoken(tally: TimingTally, names: Names): Pick<Scene, 'speeches' | 'spokenBy'> {
+  const speeches: Speech[] = tally
+    .speeches()
+    .map(({ key, block, words }) => ({ name: names.get(key) ?? key, block, words }));
+  const by = tally.spokenBy();
+  // Made with fromEntries, so a name such as `__proto__` is a key like any other.
+  const spokenBy = Object.fromEntries([...names].map(([key, name]) => [name, by.get(key) ?? 0]));
+  return { speeches, spokenBy };
+}
+
 /** Where each block starts on the pages, in lines from the top of the first page; null without a matching layout. */
 function pageLines(doc: Doc, layout: Layout | null | undefined) {
   if (!layout || layout.index.length !== doc.blocks.length) return null;
@@ -103,10 +132,24 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
   const { blocks, source } = doc;
   const end = bodyEnd(doc);
   const structural: number[] = [];
+  // Before the first scene, the blocks are tallied as the opening's.
+  let opener: TimingTally | null = new TimingTally(template);
+  const openerNames: Names = new Map();
+  let opening: Opening | null = null;
   for (let i = 0; i < end; i++) {
     const block = blocks[i] as Block;
-    if (block.kind === 'section' || startsScene(template, block)) structural.push(i);
+    const scene = startsScene(template, block);
+    if (scene || block.kind === 'section') structural.push(i);
+    if (!opener) continue;
+    if (scene) {
+      opening = openingOf(opener, openerNames);
+      opener = null;
+      continue;
+    }
+    noteSpeaker(openerNames, block);
+    opener.add(block, i);
   }
+  if (opener) opening = openingOf(opener, openerNames);
 
   // The preamble: the title page and whatever comes before the first scene or section.
   const firstStructural = structural[0] ?? end;
@@ -147,24 +190,19 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
       if (block.kind === 'section') close(block.sem.depth);
       const span = { from: block.span.from, to: unitEnd };
       const synopses: Synopsis[] = [];
-      const speakers = new Map<string, string>();
+      const speakers: Names = new Map();
       let words = 0;
       const tally = new TimingTally(template);
       for (let i = index; i < next; i++) {
         const b = blocks[i] as Block;
         if (b.kind === 'synopsis')
           synopses.push({ text: b.sem.text, block: i, span: { ...b.span } });
-        if (b.kind === 'character' && !speakers.has(b.sem.name.toUpperCase())) {
-          speakers.set(b.sem.name.toUpperCase(), b.sem.name);
-        }
+        noteSpeaker(speakers, b);
         words += printedWords(b);
-        tally.add(b);
+        tally.add(b, i);
       }
       const timing = tally.timing();
-      // Made with fromEntries, so a name such as `__proto__` is a key like any other.
-      const spokenBy: Scene['spokenBy'] = Object.fromEntries(
-        [...speakers].map(([key, name]) => [name, tally.spokenBy().get(key) ?? 0]),
-      );
+      const { speeches, spokenBy } = spoken(tally, speakers);
       // The notes inside the scene. Regions are in source order, as scenes are.
       while (region < regions.length && (regions[region]?.span.from ?? 0) < span.from) region++;
       let past = region;
@@ -206,6 +244,7 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
         words,
         timing,
         spokenBy,
+        speeches,
         pages: scenePages,
       };
       for (const o of open) {
@@ -249,5 +288,11 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
   // A section with no scenes has no length to show.
   for (const section of sections) if (section.scenes === 0) section.eighths = null;
 
-  return { preamble, items, scenes, sections, tree };
+  return { preamble, items, scenes, sections, tree, opening };
+}
+
+/** The opening from its tally, or null when no one speaks in it. */
+function openingOf(tally: TimingTally, names: Names): Opening | null {
+  if (tally.speeches().length === 0) return null;
+  return { ...spoken(tally, names), timing: tally.timing() };
 }

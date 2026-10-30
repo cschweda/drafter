@@ -214,6 +214,57 @@ describe('dual dialogue', () => {
   });
 });
 
+describe('speeches', () => {
+  /** The tally's speeches, each with its block's index in `source`. */
+  const speeches = (source: string) => {
+    const t = new TimingTally(screenplay);
+    parse(source).blocks.forEach((block, i) => {
+      t.add(block, i);
+    });
+    return t.speeches();
+  };
+
+  test('records one speech per cue with its words', () => {
+    expect(
+      speeches('ANN\nOne two three.\n\nHe sits.\n\nBEN\nFour.\n(beat)\nFive six.\n\nANN\nSeven.\n'),
+    ).toEqual([
+      { key: 'ANN', block: 0, words: 3 },
+      { key: 'BEN', block: 3, words: 3 },
+      { key: 'ANN', block: 7, words: 1 },
+    ]);
+  });
+
+  test('a cue with only a parenthetical is a speech of 0 words', () => {
+    expect(speeches('@McCLANE\n(dry)\n\nANN\n(beat)\n')).toEqual([
+      { key: 'MCCLANE', block: 0, words: 0 },
+      { key: 'ANN', block: 2, words: 0 },
+    ]);
+  });
+
+  test('both sides of a dual pair are speeches in full', () => {
+    const t = new TimingTally(screenplay);
+    parse('ANN\nOne two three.\n\nBEN ^\nFour five.\n').blocks.forEach((b, i) => {
+      t.add(b, i);
+    });
+    expect(t.speeches()).toEqual([
+      { key: 'ANN', block: 0, words: 3 },
+      { key: 'BEN', block: 2, words: 2 },
+    ]);
+    // The pair still takes as long as the longer side.
+    expect(t.timing().spoken).toBe(3);
+  });
+
+  test("a lyric's words are the speech's", () => {
+    expect(speeches('ANN\n~Happy birthday to you\n~And many more\n\n~La la\n')).toEqual([
+      { key: 'ANN', block: 0, words: 7 },
+    ]);
+    // Without an index, a speech's block is its place among the blocks the tally was given.
+    const t = new TimingTally(screenplay);
+    for (const block of parse('He runs.\n\nANN\nHi.\n').blocks) t.add(block);
+    expect(t.speeches()).toEqual([{ key: 'ANN', block: 1, words: 1 }]);
+  });
+});
+
 describe('estimateSeconds', () => {
   test('estimateSeconds adds speech at the pace and 1.5 s a line', () => {
     expect(ACTION_SECONDS_PER_LINE).toBe(1.5);

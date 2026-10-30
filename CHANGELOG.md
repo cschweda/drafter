@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/outline`: **each scene's speeches.** The scene index now lists every speech in a scene, in order: who says it, where its cue is, and how many words it has (both sides of a dual-dialogue pair in full, a lyric's words included, and a cue with only a parenthetical as a speech of no words). What's said before the first scene, such as a cold open, is the index's new `opening`, with its own speeches, words, and timing. A speech is counted once, in the same pass as the timing, so the views coming next (Scaffold, the Stats tab, and the character grid) all read the same numbers.
+
 ## [0.19.0] - 2026-10-30
 
 **Imports and Markdown out.** Drafter opens Highland and Fade In files as new scripts, opens a Markdown file as a screenplay when you want, exports a screenplay or stage play as Markdown that reads well anywhere (in a chat with an AI, on GitHub, in a notes app), and says plainly what a file is when it isn't a script.

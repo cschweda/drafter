@@ -8,7 +8,8 @@ import { resolveRole, type Template } from '@drafter/templates';
 // `TimingTally` adds blocks up in order, as the scene index and `countScript` walk them: it counts
 // a pair of dual-dialogue speeches once (they're said at the same time), and keeps the words each
 // speaker says (`spokenBy`), so a later per-character view (who speaks how long, and in which
-// scenes) reads them from the scene index without counting again.
+// scenes) reads them from the scene index without counting again. It records each speech too (its
+// cue's block and its words), so the scene index lists every scene's speeches from the same pass.
 
 /** What a stretch of the script takes: the words spoken, and the printed lines of action. */
 export interface Timing {
@@ -83,10 +84,19 @@ const QUIET = new Set<Block['kind']>(['note', 'boneyard', 'synopsis']);
 /** What a speech is made of after its cue, as the layout groups it. */
 const SPEECH_PARTS = new Set<Block['kind']>(['parenthetical', 'dialogue', 'lyric']);
 
-interface Speech {
+/** A speech as the tally records it: the speaker by the cue's name in capitals, the cue's block, its words. */
+export interface TalliedSpeech {
+  key: string;
+  block: number;
+  words: number;
+}
+
+interface OpenSpeech {
+  /** What `speeches()` gives for it; its words are added as its parts come. */
+  record: TalliedSpeech;
   spoken: number;
   /** The speech it is beside, when it is the second (`^`) of a dual pair. */
-  partner: Speech | null;
+  partner: OpenSpeech | null;
   /** In a dual pair already, either side, so no third `^` joins it. */
   paired: boolean;
 }
@@ -106,32 +116,38 @@ export class TimingTally {
   #spoken = 0;
   #actionLines = 0;
   /** The open speech: its cue has been added, and maybe some of its parts. */
-  #speech: Speech | null = null;
+  #speech: OpenSpeech | null = null;
   /** The last speech closed, while nothing that prints has come since. */
-  #last: Speech | null = null;
-  /** The speaker of the open speech, by the cue's name in capitals. */
-  #speaker: string | null = null;
+  #last: OpenSpeech | null = null;
   readonly #spokenBy = new Map<string, number>();
+  readonly #speeches: TalliedSpeech[] = [];
+  /** How many blocks have been added: a speech's block when `add` is given no index. */
+  #added = 0;
 
   constructor(private readonly template: Template) {}
 
-  add(block: Block): void {
+  /** Adds `block`, which is block `index` of the parse (by default, its place among those added). */
+  add(block: Block, index: number = this.#added): void {
+    this.#added++;
     if (block.kind === 'character') {
       this.#close();
       const free = this.#last && !this.#last.paired ? this.#last : null;
       const partner = block.sem.dual ? free : null;
       if (partner) partner.paired = true;
-      this.#speech = { spoken: 0, partner, paired: partner !== null };
-      this.#speaker = block.sem.name.toUpperCase();
-      this.#spokenBy.set(this.#speaker, this.#spokenBy.get(this.#speaker) ?? 0);
+      const key = block.sem.name.toUpperCase();
+      const record = { key, block: index, words: 0 };
+      this.#speeches.push(record);
+      this.#speech = { record, spoken: 0, partner, paired: partner !== null };
+      this.#spokenBy.set(key, this.#spokenBy.get(key) ?? 0);
       return;
     }
     const timing = blockTiming(block, this.template);
     if (this.#speech && SPEECH_PARTS.has(block.kind) && adjacent(block)) {
       this.#speech.spoken += timing.spoken;
       this.#spoken += timing.spoken;
-      const speaker = this.#speaker as string;
-      this.#spokenBy.set(speaker, (this.#spokenBy.get(speaker) ?? 0) + timing.spoken);
+      const record = this.#speech.record;
+      record.words += timing.spoken;
+      this.#spokenBy.set(record.key, (this.#spokenBy.get(record.key) ?? 0) + timing.spoken);
       return;
     }
     // A quiet block ends a speech, as the layout ends one (what follows prints on its own), but
@@ -155,6 +171,15 @@ export class TimingTally {
     return this.#spokenBy;
   }
 
+  /**
+   * Every speech so far, in order, one per cue: its speaker (the cue's name in capitals), its
+   * cue's block, and its words (both sides of a pair in full; a cue with only a parenthetical, 0).
+   * A speaker's speeches add up to what `spokenBy` gives them.
+   */
+  speeches(): ReadonlyArray<Readonly<TalliedSpeech>> {
+    return this.#speeches;
+  }
+
   /** Ends the open speech: the shorter side of a pair comes off the total. */
   #close(): void {
     const speech = this.#speech;
@@ -162,7 +187,6 @@ export class TimingTally {
     if (speech.partner) this.#spoken -= Math.min(speech.spoken, speech.partner.spoken);
     this.#last = speech;
     this.#speech = null;
-    this.#speaker = null;
   }
 }
 

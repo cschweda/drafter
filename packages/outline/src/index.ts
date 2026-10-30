@@ -41,11 +41,13 @@ export {
 } from './timing';
 export { markdownText, treatment } from './treatment';
 export type {
+  Opening,
   OutlineItem,
   OutlineNode,
   Scene,
   SceneIndex,
   ScenePages,
   Section,
+  Speech,
   Synopsis,
 } from './types';

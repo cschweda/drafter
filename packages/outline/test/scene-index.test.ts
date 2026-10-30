@@ -209,6 +209,57 @@ describe('sceneIndex', () => {
     expect(index.scenes[0]?.words).toBeGreaterThan(0);
   });
 
+  test('each scene lists its speeches in order', () => {
+    const { index } = indexOf(
+      'INT. A - DAY\n\nANN\nHi there.\n\nBEN (V.O.)\nYo.\n\n@ann\n(nods)\n\nINT. B - DAY\n\nQuiet.\n',
+    );
+    expect(index.scenes[0]?.speeches).toEqual([
+      { name: 'ANN', block: 1, words: 2 },
+      { name: 'BEN', block: 3, words: 1 },
+      // As `speakers` gives the name: the scene's first spelling.
+      { name: 'ANN', block: 5, words: 0 },
+    ]);
+    expect(index.scenes[1]?.speeches).toEqual([]);
+    expect(index.opening).toBeNull();
+  });
+
+  test('speeches before the first scene are the opening', () => {
+    const { index } = indexOf(
+      'Title: Cold\n\nA phone rings.\n\n@Tess\nWho is this?\n\n@VOICE ^\nYou know who.\n\nINT. A - DAY\n\nTESS\nHello?\n',
+    );
+    expect(index.opening).toEqual({
+      speeches: [
+        { name: 'Tess', block: 1, words: 3 },
+        { name: 'VOICE', block: 3, words: 3 },
+      ],
+      spokenBy: { Tess: 3, VOICE: 3 },
+      timing: { spoken: 3, actionLines: 1 },
+    });
+    expect(index.scenes[0]?.speeches).toEqual([{ name: 'TESS', block: 6, words: 1 }]);
+    // A section before the first scene is still the opening: a cold open under an act's heading.
+    const act = indexOf('# Act One\n\nTESS\nWho is this?\n\nINT. A - DAY\n\nHe waits.\n');
+    expect(act.index.opening?.speeches).toEqual([{ name: 'TESS', block: 1, words: 3 }]);
+  });
+
+  test('no opening without a speech before the first scene', () => {
+    expect(indexOf(THREE).index.opening).toBeNull();
+    expect(indexOf('A door slams.\n\nINT. A - DAY\n\nANN\nHi.\n').index.opening).toBeNull();
+    expect(indexOf('').index.opening).toBeNull();
+    // A script with no scene at all: its speeches are all the opening's.
+    expect(indexOf('ANN\nHi.\n').index.opening?.speeches).toEqual([
+      { name: 'ANN', block: 0, words: 1 },
+    ]);
+  });
+
+  test('a forced @McCLANE keeps its name', () => {
+    const { index } = indexOf('INT. A - DAY\n\n@McCLANE\nYippee.\n\nMCCLANE\nAgain.\n');
+    expect(index.scenes[0]?.speeches).toEqual([
+      { name: 'McCLANE', block: 1, words: 1 },
+      { name: 'McCLANE', block: 3, words: 1 },
+    ]);
+    expect(index.scenes[0]?.spokenBy).toEqual({ McCLANE: 2 });
+  });
+
   test('places scenes on pages and counts eighths when the layout matches', () => {
     // The scene-list module's figures for the same sample: page 1, 1 1/8 pages; page 2, 2/8.
     const { index } = indexOf(SAMPLE_SCREENPLAY, { pages: true });
