@@ -104,6 +104,11 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: ['@drafter/fountain', '@drafter/layout'],
   },
   {
+    name: '@drafter/history',
+    does: 'Version history: which scenes of past versions are gone now, one scene’s versions, and where Put back goes.',
+    uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
+  },
+  {
     name: '@drafter/render-pdf',
     does: 'PDFs: a script’s pages in Courier Prime, and a Markdown document in Inter Tight.',
     uses: ['@drafter/layout', '@drafter/templates'],

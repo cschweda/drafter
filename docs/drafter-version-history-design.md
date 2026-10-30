@@ -52,18 +52,19 @@ Each scene version is reduced to a **scene print** (in `@drafter/history`, §11)
 | `words` | Printed words, as the scene index counts them. |
 | `preview` | The first three printed lines of the scene, at most 240 characters, for the list. |
 
-A scene with fewer than three printed words has one shingle, its words joined; a scene with none has an empty sketch.
+A scene with fewer than five printed words (too few for three shingles) also has a shingle for every two words in a row, and one with fewer than three a shingle for every word, so a line grown longer under its heading still shares some; a scene with none has an empty sketch.
 
 - **Call:** **the 53-bit hash is written for Drafter** (two 32-bit multiply-and-xor lanes combined), not SHA-256. A cold scan (§3.4) hashes tens of thousands of scene versions, and `crypto.subtle.digest` is asynchronous and about a hundred times slower per call. A collision only makes two versions read as one; the test suite pins the hash's values.
 - **Call:** **shingles of three printed words, a sketch of 64.** Three words are enough that two different scenes rarely share many shingles, and few enough that a light edit leaves most shingles alone. A bottom-k sketch of 64 estimates the Jaccard similarity of two scenes with an error around 0.06 at 0.5, in 256 bytes per scene, and is exact for scenes of up to 64 shingles (about a third of a page).
 
-From two sketches, `similarity(a, b)` estimates **J**, the Jaccard similarity (shared shingles over all shingles), from the 64 smallest hashes of the two sketches merged; and **C**, the containment (shared shingles over the smaller scene's), as `J × (|A| + |B|) / ((1 + J) × min(|A|, |B|))`.
+From two sketches, `similarity(a, b)` estimates **J**, the Jaccard similarity (shared shingles over all shingles), from the 64 smallest hashes of the two sketches merged; and **C**, the containment (shared shingles over the smaller scene's), straight from the sketches: up to τ, the larger scene's largest sketch value (or the smaller of the two largest when both sketches are full), every hash of either scene is in its sketch, so C is the share of the smaller's hashes up to τ that are in the larger's sketch (0 when it has none up to τ).
 
 **Call:** **two scene versions are the same scene when:**
 
 1. their `hash`es are equal; or
-2. their `headingKey`s are equal and either both have no printed words or `C ≥ 0.25`; or
-3. `J ≥ 0.5`, whatever their headings.
+2. their `headingKey`s are equal and either one has no printed words (a heading written first and filled in later) or `C ≥ 0.25`; or
+3. `J ≥ 0.5`, whatever their headings; or
+4. `C ≥ 0.75` and the smaller has at least 8 shingles, whatever their headings (a merge, or the half of a split under a new heading).
 
 Reasons: rule 2 keeps a scene the writer has cut hard or rewritten under its own heading (a scene cut to a quarter of its length has C = 1); the containment threshold stops a different scene with the same common heading ("INT. CAR - NIGHT" five times) from passing for it. Rule 3 keeps a scene whose heading was renamed but whose text mostly stayed. The thresholds are constants in one place (`MATCH`), fixed by fixtures written for Drafter (a trimmed scene, a renamed heading, a rewrite under one heading, five car scenes with one deleted, a split scene, two merged scenes).
 
@@ -107,7 +108,7 @@ Matching stays bounded because most comparisons are a map lookup: a scene versio
 **Put back** inserts the entry's newest version, the scene's whole source from that snapshot (heading to the end of its last block, keyed notes included), into the script now, at its old place:
 
 1. In the snapshot it was last in, take its previous scene P and its next scene N.
-2. **Call:** if a section heading (`#`, or a play's act) stood between P and the scene in that snapshot, the scene opened a section: anchor on N, and put it **before** the scene now matching N. Otherwise anchor on P, and put it **after** the scene now matching P (at the end of P's span). So a scene that opened Act Two goes back after `# ACT TWO`, and one that closed Act One goes back before it.
+2. **Call:** if a section heading (`#`, or a play's act) stood between P and the scene in that snapshot, the scene opened a section: anchor on N, and put it **before** the scene now matching N; if N has no match now but a section heading of the same title is in the script, put it right **after** that heading, so it opens the section again. Otherwise anchor on P, and put it **after** the scene now matching P (at the end of P's span). So a scene that opened Act Two goes back after `# ACT TWO`, and one that closed Act One goes back before it.
 3. If the anchor has no match now, try the other neighbour, then the next ones out (P's previous, N's next…), alternating, nearest first.
 4. If no neighbour has a match, it goes at the end of the script.
 
@@ -122,7 +123,7 @@ A locked scene number in the put-back heading (`#12#`) is kept as written, even 
 | Table | Key | Holds |
 |---|---|---|
 | `prints` | `[projectId+hash]`, index `projectId` | One scene print per distinct scene version. |
-| `snapshotScenes` | `id` (the snapshot's), index `projectId` | `{ id, projectId, version, scenes: { hash, ordinal, from, to, section }[] }`: the snapshot's scenes in order, with their span in its text and whether a section heading came just before. |
+| `snapshotScenes` | `id` (the snapshot's), index `projectId` | `{ id, projectId, version, scenes: { hash, ordinal, from, to, section, sectionTitle? }[] }`: the snapshot's scenes in order, with their span in its text and whether a section heading came just before (and its title). |
 
 - `version` is `PRINT_VERSION`; a row of another version is read as a miss, so changing how prints are made rebuilds them.
 - **Swept** at the end of every full scan: `snapshotScenes` rows whose snapshot is gone are deleted, then `prints` no remaining row names.
