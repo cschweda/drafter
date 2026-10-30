@@ -22,6 +22,10 @@ const SLOTS: Readonly<Record<string, Slot>> = {
 
 const CENTERED: readonly Slot[] = ['title', 'credit', 'author', 'source'];
 
+/** Whether a title page key prints (Title, Credit, Author or Authors, Source, Contact, Draft date or Date); others, such as Copyright and Notes, don't. */
+export const titleKeyPrints = (key: string): boolean =>
+  Object.hasOwn(SLOTS, key.trim().toLowerCase());
+
 /**
  * The title page with only the fields `mode` keeps: for `'title-author'`, those the layout prints
  * centered (title, credit, author or authors, and source, by the same names it reads), in their

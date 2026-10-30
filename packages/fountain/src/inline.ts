@@ -23,6 +23,13 @@ const isSpace = (code: number | undefined) =>
 const slot = (d: Delimiter) => (d.marker === 95 ? 3 : d.length - 1);
 
 /**
+ * Text with no line break, such as a section's or a synopsis's, read for emphasis as an action
+ * line is: its styled runs, with the marks taken off.
+ */
+export const inlineRuns = (text: string): InlineRun[] =>
+  parseInline(text, [[0, text.length]], true);
+
+/**
  * Parses emphasis (technical design §2.6) in the text that `segs` select from
  * `source`: `*italic*`, `**bold**`, `***bold italic***`, `_underline_`. A
  * delimiter run matches only a run of the same marker and length; a backslash
