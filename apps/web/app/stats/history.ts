@@ -13,7 +13,7 @@ export interface StatsDay {
   pages?: number;
 }
 
-/** Days in the Stats window's chart, today included. */
+/** Days in the Stats tab's chart, today included. */
 export const MONTH_DAYS = 30;
 
 export interface DayFigure {

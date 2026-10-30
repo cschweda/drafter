@@ -132,29 +132,29 @@ describe('panes', () => {
       expect(ids(more)).toEqual(['module:a', 'module:c']);
     });
 
-    test('puts Cards and Notes in the slot and More, before module tabs', () => {
+    test('puts Cards, Notes, and Stats in the slot and More, before module tabs', () => {
       expect(VIEW_TABS).toEqual([
         { id: 'cards', label: 'Cards' },
         { id: 'notes', label: 'Notes' },
+        { id: 'stats', label: 'Stats' },
       ]);
       const { row, more } = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', null);
       expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline']);
-      expect(ids(more)).toEqual(['cards', 'notes', 'module:a', 'module:b', 'module:c']);
+      expect(ids(more)).toEqual(['cards', 'notes', 'stats', 'module:a', 'module:b', 'module:c']);
       // Chosen, Cards takes the slot.
       const chosen = tabRow(TABS, [...viewTabs('fountain'), ...others], 'cards', 'cards');
       expect(ids(chosen.row).at(-1)).toBe('cards');
-      expect(ids(chosen.more)).toEqual(['notes', 'module:a', 'module:b', 'module:c']);
+      expect(ids(chosen.more)).toEqual(['notes', 'stats', 'module:a', 'module:b', 'module:c']);
       // A module's tab chosen last takes the slot, and Cards goes first in More.
       const later = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', 'module:b');
       expect(ids(later.row).at(-1)).toBe('module:b');
-      expect(ids(later.more)).toEqual(['cards', 'notes', 'module:a', 'module:c']);
+      expect(ids(later.more)).toEqual(['cards', 'notes', 'stats', 'module:a', 'module:c']);
     });
 
-    test('has no Cards or Notes for a Markdown document', () => {
-      expect(viewTabs('markdown')).toEqual([]);
+    test('has no Cards or Notes for a Markdown document, only Stats', () => {
       const { row, more } = tabRow(coreTabs('markdown'), viewTabs('markdown'), 'source', null);
       expect(ids(row)).toEqual(['source', 'script', 'problems']);
-      expect(more).toEqual([]);
+      expect(ids(more)).toEqual(['stats']);
     });
 
     test('has no More when the one other tab is in the slot, and no slot with none', () => {

@@ -210,13 +210,23 @@ for (const theme of THEMES) {
       await clean(page, 'focus mode');
     });
 
-    test(`has no accessibility violations in the Stats window (${theme})`, async ({ page }) => {
+    test(`has no accessibility violations in the Stats tab: Overview and Characters (${theme})`, async ({
+      page,
+    }) => {
       await countsButton(page).click();
       await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
-      const stats = page.getByRole('dialog', { name: 'Stats' });
+      const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
       await expect(stats).toBeVisible();
-      await expect(stats.getByRole('table', { name: 'Characters' })).toBeVisible();
-      await clean(page, 'the Stats window');
+      await expect(stats.getByRole('heading', { name: 'Overview', level: 2 })).toBeFocused();
+      await expect(stats.getByRole('table', { name: /^Characters/ })).toBeVisible();
+      await clean(page, 'the Stats tab, Overview and Characters');
+      // Scrolled to Characters, by its link.
+      await page
+        .getByRole('navigation', { name: 'Stats sections' })
+        .getByRole('link', { name: 'Characters' })
+        .click();
+      await expect(stats.getByRole('heading', { name: 'Characters', level: 2 })).toBeFocused();
+      await clean(page, 'the Stats tab at Characters');
     });
 
     test(`has no accessibility violations in the Export options dialog (${theme})`, async ({

@@ -196,7 +196,6 @@ onBeforeUnmount(() => {
     <SceneDetailsDialog />
     <NewNoteDialog />
     <SettingsDialog />
-    <StatsDialog />
     <HistoryDialog />
     <SceneHistoryDialog />
     <AboutDialog />

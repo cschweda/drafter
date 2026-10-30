@@ -60,8 +60,8 @@ import { openSpellMenu } from '~/spell/menu';
 import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
 import { SPELLING_HEADING_ID } from '~/spell/rows';
 import { useSpell } from '~/spell/use-spell';
-import { statsOpen } from '~/stats/dialog';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
+import { showStats } from '~/stats/tab';
 import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
 import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
@@ -608,11 +608,10 @@ export function registerBuiltinCommands(): void {
         sprint.hidden.value = false;
       },
     },
-    // Writing stats (docs/drafter-stats-design.md §4): the Counts panel and the Drafter menu open it too.
+    // The Stats tab (seeing-the-script design §4.1), beside the Source: the Counts panel's Stats…
+    // and the Drafter menu open it too.
     'show-stats': {
-      run: () => {
-        statsOpen.value = true;
-      },
+      run: () => showStats(),
     },
     'switch-theme': {
       run: () => {

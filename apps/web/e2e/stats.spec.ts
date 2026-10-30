@@ -2,19 +2,24 @@ import { expect, type Page, test } from '@playwright/test';
 import { editor, runCommand, showSource, start } from './modules';
 
 // Writing stats (docs/drafter-stats-design.md): words and time today in the status bar, and the
-// Stats window. Its accessibility test is in a11y.spec.ts.
+// Stats tab (seeing-the-script design §4), which replaced the Stats window: Overview (the window's
+// sections) and Characters. Its accessibility tests are in a11y.spec.ts.
 
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const countsButton = (page: Page) => status(page).locator('.counts-button');
 const countsPanel = (page: Page) => page.getByRole('dialog', { name: 'Counts' });
-const stats = (page: Page) => page.getByRole('dialog', { name: 'Stats' });
+const stats = (page: Page) => page.getByRole('tabpanel', { name: 'Stats', exact: true });
+const statsTab = (page: Page) => page.getByRole('tab', { name: 'Stats', exact: true });
+const heading = (page: Page, name: string) =>
+  stats(page).getByRole('heading', { name, exact: true, level: 2 });
+const characterTable = (page: Page) => stats(page).getByRole('table', { name: /^Characters/ });
 const wordsToday = (page: Page) => status(page).locator('[data-stat="words-today"]');
 const timeToday = (page: Page) => status(page).locator('[data-stat="time-today"]');
 
 const minutesField = (page: Page) => stats(page).getByLabel('Minutes a page');
 const wordsField = (page: Page) => stats(page).getByLabel('Spoken words a minute');
 
-/** What the window says for a figure: its definition, by the term, in a section. */
+/** What the tab says for a figure: its definition, by the term, in a section. */
 const figure = (page: Page, section: string, term: string) =>
   stats(page)
     .getByRole('region', { name: section })
@@ -129,27 +134,69 @@ test.describe('writing stats', () => {
     await expect(timeToday(page)).toBeVisible();
   });
 
-  test('the Stats window opens from the Counts panel, shows the script, and Escape returns focus', async ({
-    page,
-  }) => {
+  test('Show stats opens the Stats tab beside the Source', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'a phone has one pane');
+    await start(page);
+    await showSource(page);
+    await runCommand(page, 'Show stats');
+    // In the pane not showing Source, with focus on its first heading.
+    const left = page.locator('[data-pane="left"]');
+    const right = page.locator('[data-pane="right"]');
+    await expect(right.getByRole('tab', { name: 'Stats', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(left.getByRole('tab', { name: 'Source', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(heading(page, 'Overview')).toBeFocused();
+    // No window opens.
+    await expect(page.getByRole('dialog', { name: 'Stats' })).toHaveCount(0);
+
+    // The Drafter menu's Show stats too, with the Script back on the right first.
+    await right.getByRole('tab', { name: 'Script', exact: true }).click();
+    await expect(stats(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Drafter menu' }).click();
+    await page
+      .getByRole('menu', { name: 'Drafter menu' })
+      .getByRole('menuitem', { name: /^Show stats/ })
+      .click();
+    await expect(right.getByRole('tab', { name: 'Stats', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(heading(page, 'Overview')).toBeFocused();
+  });
+
+  test('the Counts panel’s Stats… opens the tab', async ({ page }) => {
+    await newScript(page, 'New screenplay');
+    await typeAtEnd(page, SCENES);
+    await countsButton(page).click();
+    await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
+    await expect(countsPanel(page)).toBeHidden();
+    await expect(stats(page)).toBeVisible();
+    await expect(heading(page, 'Overview')).toBeFocused();
+  });
+
+  test('Overview has today, the script with its rates, and the last 30 days', async ({ page }) => {
     await newScript(page, 'New screenplay');
     await typeAtEnd(page, SCENES);
     await expect(wordsToday(page)).toHaveText('+13 words today');
-    await countsButton(page).click();
-    await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
-    await expect(stats(page)).toBeVisible();
-    // The window has focus, at its top.
-    await expect(stats(page)).toBeFocused();
-    await expect(countsPanel(page)).toBeHidden();
-
+    await runCommand(page, 'Show stats');
+    const overview = stats(page).getByRole('region', { name: 'Overview' });
+    await expect(overview.getByRole('heading', { level: 3 })).toHaveText([
+      'Today',
+      'This script',
+      'Last 30 days',
+    ]);
     await expect(figure(page, 'Today', 'Words added')).toHaveText('+13');
     await expect(figure(page, 'Today', 'Writing time')).toHaveText('<1 min');
     await expect(figure(page, 'This script', 'Scenes')).toHaveText('2');
     await expect(figure(page, 'This script', 'Characters')).toHaveText('2');
     await expect(figure(page, 'This script', 'Days written')).toHaveText('1');
-    const characters = stats(page).getByRole('table', { name: 'Characters' });
-    await expect(characters.getByRole('row')).toHaveCount(3);
-    await expect(characters.getByRole('row').nth(1)).toHaveText(/ANN\s*1\s*1\s*2/);
+    await expect(minutesField(page)).toHaveValue('1');
+    await expect(wordsField(page)).toHaveValue('150');
     const headings = stats(page).getByRole('table', { name: 'Scene headings' });
     await expect(headings).toContainText('Interior');
     await expect(headings).toContainText('Night');
@@ -159,34 +206,106 @@ test.describe('writing stats', () => {
     const chartTable = stats(page).getByRole('table', { name: /Words added each day/ });
     await expect(chartTable.getByRole('row')).toHaveCount(31);
     await expect(chartTable.getByRole('row').last()).toContainText('+13');
-
-    await page.keyboard.press('Escape');
-    await expect(stats(page)).toBeHidden();
-    await expect(countsButton(page)).toBeFocused();
   });
 
-  test('the Stats window opens from the palette and the Drafter menu, and its Close button closes it', async ({
-    page,
-  }) => {
+  test('Characters shows screen time, dialogue share, and most often with', async ({ page }) => {
+    await newScript(page, 'New screenplay');
+    await typeAtEnd(
+      page,
+      '\n\nINT. HALL - DAY\n\nANN waits on the stairs. BOB comes down.\n\nANN\nHello there.\n\nBOB\nHi.\n\nEXT. YARD - NIGHT\n\nBOB\nCold out.\n',
+    );
+    await runCommand(page, 'Show stats');
+    const table = characterTable(page);
+    await expect(table.getByRole('columnheader')).toHaveText([
+      'Character',
+      'Speeches',
+      'Scenes',
+      'Speaks in',
+      'Words',
+      'Dialogue share',
+      /Screen time/,
+      'Most often with',
+    ]);
+    // Most speeches first. BOB has 3 of the 5 words, ANN 2; ANN is in the hall only.
+    const rows = table.getByRole('row');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(1).getByRole('cell')).toHaveText([
+      '2',
+      '2',
+      '2',
+      '3',
+      '60%',
+      /^\d\/8 p · about \d+ s/,
+      'ANN (1)',
+    ]);
+    await expect(rows.nth(1).getByRole('rowheader')).toHaveText('BOB');
+    await expect(rows.nth(2).getByRole('cell')).toHaveText([
+      '1',
+      '1',
+      '1',
+      '2',
+      '40%',
+      /^\d\/8 p · about \d+ s/,
+      'BOB (1)',
+    ]);
+    // A screen reader hears the screen time in words, and the rate in its header.
+    await expect(rows.nth(1).getByRole('cell').nth(5)).toHaveAccessibleName(
+      /^\d\/8 page, about \d+ seconds$/,
+    );
+    await expect(table.getByRole('columnheader').nth(6)).toHaveAccessibleName(
+      /^Screen time ?, at 1 minute a page$/,
+    );
+  });
+
+  test('the links at the top go to each section', async ({ page }) => {
     await start(page);
     await runCommand(page, 'Show stats');
-    await expect(stats(page)).toBeVisible();
+    const links = page.getByRole('navigation', { name: 'Stats sections' }).getByRole('link');
+    await expect(links).toHaveText(['Overview', 'Characters']);
+    await links.nth(1).click();
+    await expect(heading(page, 'Characters')).toBeFocused();
+    await expect(heading(page, 'Characters')).toBeInViewport();
+    await links.nth(0).click();
+    await expect(heading(page, 'Overview')).toBeFocused();
+  });
+
+  test('a Markdown document’s Stats tab has Overview only', async ({ page }) => {
+    await newScript(page, 'New Markdown document');
+    await runCommand(page, 'Show stats');
+    await expect(heading(page, 'Overview')).toBeFocused();
+    await expect(stats(page).getByRole('heading', { level: 2 })).toHaveText(['Overview']);
+    await expect(characterTable(page)).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Stats sections' })).toHaveCount(0);
+    // Its only view tab, under More.
+    await expect(statsTab(page).first()).toBeVisible();
+  });
+
+  test('a sample has no Today or Last 30 days', async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
     // The sample's figures are shown, and nothing is kept for it.
     await expect(stats(page)).toContainText(
       'Stats are kept for your own scripts, not the samples.',
     );
     await expect(figure(page, 'This script', 'Scenes')).toHaveText('2');
-    await stats(page).getByRole('button', { name: 'Close' }).click();
-    await expect(stats(page)).toBeHidden();
+    await expect(stats(page).getByRole('region', { name: 'Today' })).toHaveCount(0);
+    await expect(stats(page).getByRole('region', { name: 'Last 30 days' })).toHaveCount(0);
+  });
 
-    await page.getByRole('button', { name: 'Drafter menu' }).click();
-    await page
-      .getByRole('menu', { name: 'Drafter menu' })
-      .getByRole('menuitem', { name: /^Show stats/ })
-      .click();
-    await expect(stats(page)).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(stats(page)).toBeHidden();
+  test('on a phone it is the one pane’s tab', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'a phone’s one pane');
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const pane = page.locator('[data-pane="phone"]');
+    await expect(pane.getByRole('tab', { name: 'Stats', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(heading(page, 'Overview')).toBeFocused();
+    await expect(characterTable(page)).toBeVisible();
+    // The table scrolls in its own region; the page doesn't scroll sideways.
+    const width = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(width).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
   });
 
   test('a new script says nothing is written yet', async ({ page }) => {
@@ -211,31 +330,7 @@ test.describe('writing stats', () => {
     await expect(figure(page, 'This script', 'Reading time')).toHaveText('Under a minute');
     // No pages in a Markdown document.
     await expect(figure(page, 'Today', 'Pages added')).toHaveCount(0);
-    await expect(stats(page).getByRole('table', { name: 'Characters' })).toHaveCount(0);
-  });
-
-  test('closing the window opened from the palette or the Drafter menu gives focus back to the script', async ({
-    page,
-    isMobile,
-  }) => {
-    test.skip(!!isMobile, 'a phone shows the Script tab, not the editor, to begin with');
-    await start(page);
-    await showSource(page);
-    await editor(page).click();
-    await runCommand(page, 'Show stats');
-    await expect(stats(page)).toBeFocused();
-    await page.keyboard.press('Escape');
-    await expect(stats(page)).toBeHidden();
-    await expect(editor(page)).toBeFocused();
-
-    await page.getByRole('button', { name: 'Drafter menu' }).click();
-    await page
-      .getByRole('menu', { name: 'Drafter menu' })
-      .getByRole('menuitem', { name: /^Show stats/ })
-      .click();
-    await expect(stats(page)).toBeFocused();
-    await stats(page).getByRole('button', { name: 'Close' }).click();
-    await expect(editor(page)).toBeFocused();
+    await expect(characterTable(page)).toHaveCount(0);
   });
 
   test('a stage play counts its ## scenes, for the script and for each character', async ({
@@ -250,8 +345,16 @@ test.describe('writing stats', () => {
     );
     await runCommand(page, 'Show stats');
     await expect(figure(page, 'This script', 'Scenes')).toHaveText('2');
-    const characters = stats(page).getByRole('table', { name: 'Characters' });
-    await expect(characters.getByRole('row').nth(1)).toHaveText(/ANN\s*2\s*2\s*2/);
+    // ANN: two speeches, in two scenes, speaking in both, two words.
+    await expect(characterTable(page).getByRole('row').nth(1).getByRole('cell')).toHaveText([
+      '2',
+      '2',
+      '2',
+      '2',
+      '100%',
+      /p · about/,
+      '—',
+    ]);
     // A play has no INT./EXT. headings to divide.
     await expect(stats(page).getByRole('table', { name: 'Scene headings' })).toHaveCount(0);
   });
@@ -273,7 +376,7 @@ test.describe('writing stats', () => {
     expect(await statsKeys(page)).toEqual([]);
   });
 
-  test("shows the running time at the script's rate and the estimate from the dialogue", async ({
+  test("the rates can still be set: the running time at the script's rate and the estimate from the dialogue", async ({
     page,
   }) => {
     await start(page);
@@ -316,7 +419,6 @@ test.describe('writing stats', () => {
     await expect(stats(page)).toContainText('at 180 words a minute');
     // Nothing in the script changed.
     await expect(page).toHaveTitle(title);
-    await page.keyboard.press('Escape');
 
     await page.reload();
     await expect(editor(page)).toContainText('EXT. YARD - NIGHT');
@@ -326,7 +428,6 @@ test.describe('writing stats', () => {
     await expect(figure(page, 'This script', 'Running time')).toContainText(
       'at 1.5 minutes a page',
     );
-    await page.keyboard.press('Escape');
 
     // Another script has rates of its own.
     await page.getByRole('button', { name: 'Open', exact: true }).click();

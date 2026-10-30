@@ -1,12 +1,13 @@
+import { dayOrNight, insideOf } from '@drafter/cast';
 import type { Block, Doc } from '@drafter/fountain';
 import { builtins, resolveRole, type Template } from '@drafter/templates';
 import { templateIdOf } from '../editor/template';
 import type { MdNode } from '../markdown/render';
-import { wordsIn } from '../markdown/words';
 
-// The Stats window's figures for the script as a whole (docs/drafter-stats-design.md §4): who
-// speaks and how much, how the scene headings divide, and a Markdown document's headings. Pure
-// functions of the parse.
+// The Stats tab's figures for the script as a whole (docs/drafter-stats-design.md §4): the scenes,
+// how the scene headings divide, and a Markdown document's headings. Pure functions of the parse.
+// Who speaks, and how much, is the cast's (`stats/characters.ts`): it reads the scene index, so it
+// is counted once.
 
 /** The roles that begin a scene: a screenplay's heading, and a play's (a `##` section). */
 const SCENE_ROLES = new Set(['scene_heading', 'scene_heading_play']);
@@ -34,111 +35,12 @@ export function sceneCount(doc: Doc): number {
   return count;
 }
 
-export interface CharacterRow {
-  /** As first typed: a forced `@McCLANE` keeps its own capitals. */
-  name: string;
-  /** Cues: each is a speech, even one with only a parenthetical under it. */
-  speeches: number;
-  /** Scenes the character speaks in; a speech before the first scene is in none. */
-  scenes: number;
-  /** Words of dialogue, parentheticals left out. */
-  words: number;
-}
-
-/**
- * The speaking characters, most speeches first (then most words, then first to speak). A cue's
- * extensions, `(V.O.)` or `(CONT'D)`, and a dual dialogue's `^` are not part of the name, and
- * names are one character whatever their capitals. Scenes are the template's (`sceneStart`).
- */
-export function characterTable(doc: Doc): CharacterRow[] {
-  const starts = sceneStart(templateOf(doc));
-  const rows = new Map<string, CharacterRow & { seen: Set<number>; order: number }>();
-  let scene = 0;
-  let speaker: (CharacterRow & { seen: Set<number> }) | null = null;
-  for (const block of doc.blocks) {
-    if (starts(block)) {
-      scene++;
-      speaker = null;
-    } else if (block.kind === 'character') {
-      const { name } = block.sem;
-      const key = name.toUpperCase();
-      let row = rows.get(key);
-      if (!row) {
-        row = { name, speeches: 0, scenes: 0, words: 0, seen: new Set(), order: rows.size };
-        rows.set(key, row);
-      }
-      row.speeches++;
-      if (scene > 0) row.seen.add(scene);
-      speaker = row;
-    } else if (block.kind === 'dialogue' && speaker) {
-      for (const line of block.lines) {
-        if (line.transparent) continue;
-        let text = '';
-        for (const run of line.inline) text += run.text;
-        speaker.words += wordsIn(text);
-      }
-    } else if (block.kind !== 'parenthetical') {
-      speaker = null;
-    }
-  }
-  return [...rows.values()]
-    .sort((a, b) => b.speeches - a.speeches || b.words - a.words || a.order - b.order)
-    .map(({ name, speeches, seen, words }) => ({ name, speeches, scenes: seen.size, words }));
-}
-
 export interface HeadingSplit {
   total: number;
-  /** By the heading's prefix: `INT.`; `EXT.` and `EST.`; `INT./EXT.` and `I/E`; none. */
+  /** By the heading's prefix, as `@drafter/cast` reads it: `INT.`; `EXT.` and `EST.`; `INT./EXT.` and `I/E`; none. */
   place: { interior: number; exterior: number; both: number; other: number };
   /** By the time after the last ` - `: `DAY`, `NIGHT`, anything else or none. */
   time: { day: number; night: number; other: number };
-}
-
-/** Both inside and outside, in either order: `INT./EXT.`, `EXT./INT.`, `I/E`, `E/I`. */
-const BOTH = /^\s*(?:INT\.?\s*\/\s*EXT|EXT\.?\s*\/\s*INT|I\/E|E\/I)\b/i;
-
-/**
- * DAY or NIGHT, from the first part after the place that begins with either: the parts are split
- * at ` - ` (or an en dash), so `NIGHT - CONTINUOUS`, `DAY - LATER`, and `NIGHT (1987)` are read,
- * and the place's own words (`DAY CARE`) are not. Null for anything else, or no time.
- */
-function timeOfDay(text: string, prefix: string | null): 'DAY' | 'NIGHT' | null {
-  const rest = prefix ? text.slice(prefix.length) : text;
-  for (const part of dashParts(rest).slice(1)) {
-    const word = /^\p{L}+/u.exec(part.trim().toUpperCase())?.[0];
-    if (word === 'DAY' || word === 'NIGHT') return word;
-  }
-  return null;
-}
-
-/**
- * `text` split at each dash with white space on both sides, as `split(/\s+[-–]\s+/)` would split
- * it, by a scan: that pattern backtracks once per space on a long run of them.
- */
-function dashParts(text: string): string[] {
-  const parts: string[] = [];
-  const space = (c: string | undefined) => c !== undefined && /\s/.test(c);
-  let start = 0;
-  let i = 0;
-  while (i < text.length) {
-    if (!space(text[i])) {
-      i++;
-      continue;
-    }
-    let j = i;
-    while (space(text[j])) j++;
-    if ((text[j] === '-' || text[j] === '–') && space(text[j + 1])) {
-      let k = j + 1;
-      while (space(text[k])) k++;
-      parts.push(text.slice(start, i));
-      start = k;
-      i = k;
-    } else {
-      i = j;
-    }
-  }
-  parts.push(text.slice(start));
-  return parts;
 }
 
 /** How the scene headings divide between inside and outside, and day and night. */
@@ -151,14 +53,14 @@ export function headingSplit(doc: Doc): HeadingSplit {
   for (const block of doc.blocks) {
     if (block.kind !== 'scene_heading') continue;
     split.total++;
-    const prefix = (block.sem.prefix ?? '').toUpperCase().replace(/\.$/, '');
-    // `EXT./INT.` is read by the parser as `EXT.` and a place starting with `/INT.`.
-    const both = BOTH.test(block.sem.text);
-    if (both || prefix === 'I/E' || /^INT\.?\/EXT$/.test(prefix)) split.place.both++;
-    else if (prefix === 'INT') split.place.interior++;
-    else if (prefix === 'EXT' || prefix === 'EST') split.place.exterior++;
+    // The prefix is the parser's, and the text starts with it: `EXT./INT.` is read by the parser as
+    // `EXT.` and a place starting with `/INT.`, which the text as a whole reads as both.
+    const inside = insideOf(block.sem.text);
+    if (inside === 'both') split.place.both++;
+    else if (inside === 'inside') split.place.interior++;
+    else if (inside === 'outside') split.place.exterior++;
     else split.place.other++;
-    const time = timeOfDay(block.sem.text, block.sem.prefix);
+    const time = dayOrNight(block.sem.text, block.sem.prefix);
     if (time === 'DAY') split.time.day++;
     else if (time === 'NIGHT') split.time.night++;
     else split.time.other++;

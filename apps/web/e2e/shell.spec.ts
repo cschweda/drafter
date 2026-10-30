@@ -295,7 +295,7 @@ test.describe('the tab row', () => {
       ]);
     }
     await expect(page.getByRole('tablist')).toHaveCount(isMobile ? 1 : 2);
-    // Cards and Notes wait under More until one is chosen (controller ruling 4).
+    // Cards, Notes, and Stats wait under More until one is chosen (controller ruling 4).
     await expect(page.getByRole('button', { name: 'More tabs' })).toHaveCount(isMobile ? 1 : 2);
   });
 
@@ -303,7 +303,8 @@ test.describe('the tab row', () => {
     await start(page);
     await turnOn(page, ['Scene list', 'Cast']);
     const tabs = row(page).getByRole('tab');
-    // No tab holds the slot until one is chosen; Cards, Notes, then the modules' tabs are in More.
+    // No tab holds the slot until one is chosen; Cards, Notes, Stats, then the modules' tabs are in
+    // More.
     await expect(tabs).toHaveText([/^Source/, /^Script/, /^Problems/, /^Outline/]);
     await more(page).click();
     await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
@@ -311,6 +312,7 @@ test.describe('the tab row', () => {
       'Cards',
       // The sample's open notes are counted in Notes' name.
       /^Notes, \d+ open$/,
+      'Stats',
       /^(Scenes|Cast)$/,
       /^(Scenes|Cast)$/,
     ]);
@@ -331,7 +333,7 @@ test.describe('the tab row', () => {
     const items = menu(page).getByRole('menuitem');
     await more(page).focus();
     await page.keyboard.press('Enter');
-    // Cards and Notes first, then the modules' tabs.
+    // Cards, Notes, and Stats first, then the modules' tabs.
     await expect(items.first()).toBeFocused();
     await expect(items.first()).toHaveText('Cards');
     await page.keyboard.press('Escape');

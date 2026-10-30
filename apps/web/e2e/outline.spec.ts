@@ -124,12 +124,10 @@ test.describe('the Outline', () => {
     const kitchen = row(page, /^Scene 1, INT\. KITCHEN - NIGHT/);
     await expect(kitchen.locator('.length')).toHaveText('p. 1 · 1 1/8 pp · 1 min 10 s');
     await runCommand(page, 'Show stats');
-    const stats = page.getByRole('dialog', { name: 'Stats' });
+    const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
     await stats.getByLabel('Minutes a page').fill('2');
     await stats.getByLabel('Minutes a page').blur();
     await expect(stats).toContainText('at 2 minutes a page');
-    await page.keyboard.press('Escape');
-    await expect(stats).toBeHidden();
     // At 2 minutes a page: 1 1/8 pages is 135 s, and the act's 1 3/8 pages 165 s.
     await showOutline(page);
     await expect(kitchen.locator('.length')).toHaveText('p. 1 · 1 1/8 pp · 2 min 15 s');

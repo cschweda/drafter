@@ -432,8 +432,8 @@ test.describe('the read-only bar', () => {
   }
 });
 
-// The tab row (Phase 2 design §5.8): Cards and Notes are not core tabs, so they share the slot and
-// More with module tabs, first in More.
+// The tab row (Phase 2 design §5.8): Cards, Notes, and Stats are not core tabs, so they share the
+// slot and More with module tabs, first in More.
 test.describe('the tab row’s slot', () => {
   test('chooses Cards from More, which then takes the slot', async ({ page }) => {
     await start(page);
@@ -448,11 +448,11 @@ test.describe('the tab row’s slot', () => {
         if (!(await menu.isVisible())) await more.click();
         await expect(menu).toBeVisible({ timeout: 1000 });
       }).toPass();
-    // No tab in the slot yet: Cards and Notes are first in More (controller ruling 4). The sample
-    // has open notes, so Notes is named with their count.
+    // No tab in the slot yet: Cards, Notes, and Stats are first in More (controller ruling 4). The
+    // sample has open notes, so Notes is named with their count.
     await expect(row.getByRole('tab')).toHaveText(['Source', 'Script', /^Problems/, 'Outline']);
     await openMore();
-    await expect(menu.getByRole('menuitem')).toHaveText(['Cards', /^Notes, \d+ open$/]);
+    await expect(menu.getByRole('menuitem')).toHaveText(['Cards', /^Notes, \d+ open$/, 'Stats']);
     // Cards from More: it takes the slot, and focus goes to its tab.
     await menu.getByRole('menuitem', { name: 'Cards' }).click();
     await expect(menu).toBeHidden();
@@ -461,7 +461,7 @@ test.describe('the tab row’s slot', () => {
     await expect(cards).toBeFocused();
     await expect(page.getByRole('listbox', { name: 'Cards' })).toBeVisible();
     await openMore();
-    await expect(menu.getByRole('menuitem')).toHaveText([/^Notes, \d+ open$/]);
+    await expect(menu.getByRole('menuitem')).toHaveText([/^Notes, \d+ open$/, 'Stats']);
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     // Back to a core tab: Cards keeps the slot.

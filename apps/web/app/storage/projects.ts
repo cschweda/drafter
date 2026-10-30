@@ -77,7 +77,7 @@ export interface Project {
   exportOptions?: Partial<ExportOptions>;
   /**
    * The rates this script's running time and estimate from the dialogue are figured at: set in
-   * the Stats window, kept here and never in the script (Call 9). A missing or out-of-range value
+   * the Stats tab, kept here and never in the script (Call 9). A missing or out-of-range value
    * is its default (`ratesOf`). Unindexed, so it needed no new version.
    */
   timing?: Partial<Rates>;

@@ -3,10 +3,10 @@
 // the other pane swaps the two, so there's always one editor, one Script
 // view, and one Problems list.
 
-/** A tab's id: one of the core four, Cards or Notes, or a script module's (`moduleTabId`). */
+/** A tab's id: one of the core four, a view tab (Cards, Notes, Stats), or a script module's (`moduleTabId`). */
 export type TabId = string;
 export type CoreTabId = 'source' | 'script' | 'problems' | 'outline';
-export type ViewTabId = 'cards' | 'notes';
+export type ViewTabId = 'cards' | 'notes' | 'stats' | 'scaffold';
 export type PaneId = 'left' | 'right';
 export interface PaneTabs {
   left: TabId;
@@ -35,13 +35,17 @@ export function coreTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
   return kind === 'markdown' ? TABS.filter((tab) => tab.id !== 'outline') : TABS;
 }
 
+/** The Stats tab (seeing-the-script design §4.1), which replaced the Stats window. */
+export const STATS_TAB_ID = 'stats';
+
 /**
- * Cards and Notes (design §5.8): not core, so they share the slot and More with module tabs, first
- * in More, in the design's order, until one is chosen. None for Markdown: a Markdown document has no scenes or notes.
+ * Cards, Notes, and Stats (design §5.8; seeing-the-script design §4.1): not core, so they share the
+ * slot and More with module tabs, first in More, in the design's order, until one is chosen.
  */
 export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
   { id: 'cards', label: 'Cards' },
   { id: 'notes', label: 'Notes' },
+  { id: STATS_TAB_ID, label: 'Stats' },
 ];
 
 /**
@@ -72,9 +76,12 @@ export function openCompare(tabs: PaneTabs): PaneTabs {
   return openBeside(tabs, COMPARE_TAB.id);
 }
 
-/** The view tabs a document of `kind` has, before any module's. */
+/**
+ * The view tabs a document of `kind` has, before any module's. A Markdown document has no scenes or
+ * notes, so no Cards or Notes; it has Stats, with its words, headings, and reading time.
+ */
 export function viewTabs(kind: 'fountain' | 'markdown'): ReadonlyArray<Tab> {
-  return kind === 'markdown' ? [] : VIEW_TABS;
+  return kind === 'markdown' ? VIEW_TABS.filter((tab) => tab.id === STATS_TAB_ID) : VIEW_TABS;
 }
 
 /**
