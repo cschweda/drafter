@@ -815,8 +815,16 @@ function create(): ScriptSession {
   ): Promise<void> {
     return exclusive(async () => {
       const held = project.value;
-      if (typeof change === 'function' && held?.id !== id) return;
-      const fields = typeof change === 'function' ? change(held as Project) : change;
+      let fields: Partial<Project>;
+      if (typeof change !== 'function') fields = change;
+      else if (held?.id === id) fields = change(held);
+      else {
+        // Another script opened while this write waited its turn: the choice is still kept, made
+        // from the stored copy.
+        const stored = await getProject(id);
+        if (!stored) return;
+        fields = change(stored);
+      }
       if (held?.id === id && writer && !guard.readOnly.value) {
         // This tab writes the script, and the copy it holds is the stored one.
         const next: Project = { ...held, ...fields, updatedAt: Date.now() };

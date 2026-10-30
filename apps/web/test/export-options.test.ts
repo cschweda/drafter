@@ -179,4 +179,35 @@ describe('setExportOption', () => {
     expect(t.session.project.value?.exportOptions).toEqual(both);
     expect((await t.db.projects.get(id))?.exportOptions).toEqual(both);
   });
+
+  test('a choice waiting its turn is kept, though another script opened meanwhile', async () => {
+    const t = await visit();
+    const id = t.session.project.value?.id as string;
+    // The first write is slow; the second choice waits behind it, and the writer opens another script.
+    const put = t.db.projects.put.bind(t.db.projects);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let first = true;
+    vi.spyOn(t.db.projects, 'put').mockImplementation(async (...args) => {
+      if (first) {
+        first = false;
+        await held;
+      }
+      return put(...args);
+    });
+    const one = t.setExportOption('sceneNumbers', 'written');
+    const two = t.setExportOption('titlePage', 'none');
+    const opened = t.session.newScript('screenplay');
+    await vi.waitFor(() => expect(t.session.project.value?.id).not.toBe(id));
+    release();
+    await Promise.all([one, two, opened]);
+    expect((await t.db.projects.get(id))?.exportOptions).toEqual({
+      sceneNumbers: 'written',
+      titlePage: 'none',
+    });
+    // The script open now has none of them.
+    expect(t.session.project.value?.exportOptions).toBeUndefined();
+  });
 });
