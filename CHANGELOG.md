@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-30
+
+**Formats: Fountain first, every main format out.** `drafter convert` turns Final Draft, Highland, and Fade In files into Fountain, a whole folder at once; Markdown documents get footnotes, at the end of the Preview and at the foot of the PDF's pages; the welcome, the tour, the share image, and the README say Drafter is Fountain-first, for screenplays, stage plays, and novels; and a Markdown document nested hundreds of levels deep, or with a hostile heading, can no longer hold up the app.
+
 ### Added
 
 - **Footnotes in Markdown documents.** Write `text[^1]` where a note belongs and `[^1]: The note.` on a line of its own anywhere in the document, as on GitHub; a label can be a word (`[^source]`), and a note can run to more paragraphs, each indented four spaces. Notes are numbered 1, 2, 3 in the order you first refer to them, whatever their labels, and a note you refer to twice keeps its number. In the Preview a reference is a small raised number you can click (or press) to go to its note, and the notes are listed at the end under **Notes**, each with a button back. In the PDF each note prints at the foot of the page its reference is on, under a short rule, in smaller type: if a note won't fit under its line, the line moves to the next page with it, and a note longer than the room left goes on at the foot of the next page. A note's words count toward the document's; a note nothing refers to isn't printed or counted, and a reference with no note stays as you typed it. The Source pane shows `[^1]` in a quieter color, and the sample Markdown document has a short section on footnotes.
@@ -846,7 +850,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/cschweda/drafter/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/cschweda/drafter/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/cschweda/drafter/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/cschweda/drafter/compare/v0.17.0...v0.18.0
