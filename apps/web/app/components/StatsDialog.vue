@@ -26,8 +26,8 @@ import {
   parseRate,
   RATES_READ_ONLY,
   type Rates,
-  ratesOf,
   setRate,
+  useRates,
 } from '~/stats/timing';
 import { useWritingStats } from '~/stats/writing';
 import { useGuard } from '~/storage/guard';
@@ -117,7 +117,7 @@ const splitRows = computed(() => {
 const headings = computed(() => headingCount(tree.value));
 
 // ---- The rates -------------------------------------------------------------------------------
-const rates = computed(() => ratesOf(project.value));
+const rates = useRates();
 /** The running time at the script's page rate, in whole minutes. */
 const runMinutes = computed(() =>
   counts.value ? Math.round(counts.value.pages * rates.value.minutesPerPage) : 0,

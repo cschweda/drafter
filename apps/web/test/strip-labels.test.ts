@@ -1,6 +1,7 @@
 import type { Scene, Section, StripRow } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
 import { SWATCH } from '../app/outline/labels';
+import { DEFAULT_RATES } from '../app/stats/timing';
 import { blockFill, blockName, cardLines, rowMark, rowName } from '../app/strip/labels';
 
 const span = { from: 0, to: 1 };
@@ -20,6 +21,8 @@ const scene = (more: Partial<Scene> = {}): Scene => ({
   marks: [],
   speakers: [],
   words: 0,
+  timing: { spoken: 0, actionLines: 0 },
+  spokenBy: {},
   pages: null,
   ...more,
 });
@@ -34,6 +37,7 @@ const section = (more: Partial<Section> = {}): Section => ({
   parent: null,
   scenes: 5,
   eighths: 96,
+  timing: { spoken: 0, actionLines: 0 },
   ...more,
 });
 
@@ -65,8 +69,14 @@ describe('strip labels', () => {
           fields: { goal: { body: 'Get the call', span } },
         }),
       ),
-    ).toBe('Scene 12, INT. KITCHEN - NIGHT, blue, page 12, 1 3/8 pages, goal: Get the call');
-    expect(blockName(section())).toBe('Act One, 5 scenes, 12 pages');
+    ).toBe(
+      'Scene 12, INT. KITCHEN - NIGHT, blue, page 12, 1 3/8 pages, about 1 minute 25 seconds, goal: Get the call',
+    );
+    expect(blockName(section())).toBe('Act One, 5 scenes, 12 pages, about 12 minutes');
+    // The estimate from the dialogue too, which the card shows.
+    expect(blockName(scene({ timing: { spoken: 100, actionLines: 20 } }))).toBe(
+      'Scene 12, INT. KITCHEN - NIGHT, estimate from the dialogue about 1 minute 10 seconds',
+    );
   });
 
   test("the card gives page, length, color, goal, and synopsis, leaving out what's missing", () => {
@@ -84,7 +94,7 @@ describe('strip labels', () => {
       ),
     ).toEqual([
       'Scene 12, INT. KITCHEN - NIGHT',
-      'page 12 · 1 3/8 pp · blue',
+      'page 12 · 1 3/8 pp · 1 min 25 s · blue',
       'Goal: Get the call',
       'Margaret waits.',
     ]);
@@ -94,12 +104,55 @@ describe('strip labels', () => {
     );
     expect(cardLines(scene({ pages: { page: 2, line: 1, eighths: 1 } }))).toEqual([
       'Scene 12, INT. KITCHEN - NIGHT',
-      'page 2 · 1/8 p',
+      'page 2 · 1/8 p · 10 s',
     ]);
   });
 
+  test('the card gives the time and the estimate from the dialogue', () => {
+    // 100 words at 150 a minute is 40 s, and 20 lines of action 30 s.
+    const timed = scene({
+      color: { value: 'blue', span },
+      pages: { page: 12, line: 3, eighths: 11 },
+      fields: { goal: { body: 'Get the call', span } },
+      synopses: [{ text: 'Margaret waits.', block: 5, span }],
+      timing: { spoken: 100, actionLines: 20 },
+    });
+    expect(cardLines(timed)).toEqual([
+      'Scene 12, INT. KITCHEN - NIGHT',
+      'page 12 · 1 3/8 pp · 1 min 25 s · blue',
+      'Estimate from the dialogue: 1 min 10 s',
+      'Goal: Get the call',
+      'Margaret waits.',
+    ]);
+    // At the script's rates: 1.2 minutes a page, and 200 words a minute (30 s, and 30 s).
+    expect(cardLines(timed, { minutesPerPage: 1.2, wordsPerMinute: 200 }).slice(1, 3)).toEqual([
+      'page 12 · 1 3/8 pp · 1 min 40 s · blue',
+      'Estimate from the dialogue: 1 min',
+    ]);
+    expect(cardLines(timed, DEFAULT_RATES)).toEqual(cardLines(timed));
+  });
+
+  test('the estimate shows without pages', () => {
+    expect(cardLines(scene({ timing: { spoken: 25, actionLines: 0 } }))).toEqual([
+      'Scene 12, INT. KITCHEN - NIGHT',
+      'Estimate from the dialogue: 10 s',
+    ]);
+  });
+
+  test("a section's card gives its time and estimate", () => {
+    // 1,500 words at 150 a minute is 10 minutes.
+    expect(cardLines(section({ timing: { spoken: 1500, actionLines: 0 } }))).toEqual([
+      'Act One',
+      '5 scenes · 12 pp · 12 min',
+      'Estimate from the dialogue: 10 min',
+    ]);
+    expect(cardLines(section({ eighths: null, timing: { spoken: 1500, actionLines: 0 } }))).toEqual(
+      ['Act One', '5 scenes', 'Estimate from the dialogue: 10 min'],
+    );
+  });
+
   test('the card for a section gives its scenes and length', () => {
-    expect(cardLines(section())).toEqual(['Act One', '5 scenes · 12 pp']);
+    expect(cardLines(section())).toEqual(['Act One', '5 scenes · 12 pp · 12 min']);
     expect(cardLines(section({ title: '', scenes: 1, eighths: null }))).toEqual([
       'Untitled section',
       '1 scene',

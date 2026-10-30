@@ -1,4 +1,5 @@
 import type { Scene, SceneColor, Section } from '@drafter/outline';
+import { DEFAULT_RATES, pageSeconds, type Rates, shortTime, timeWords } from '../stats/timing';
 
 // What the Outline says about a row, on screen and to a screen reader (Phase 2 design §6.1).
 
@@ -41,18 +42,38 @@ export const swatchOf = (value: string): string | undefined =>
 /** "Scene 12" or "Scene 12A": the locked number if it has one, else its place. */
 export const sceneNumber = (scene: Scene): string => scene.number ?? String(scene.ordinal);
 
-/** A scene row's name: "Scene 12, INT. KITCHEN - NIGHT, blue, page 12, 1 3/8 pages". */
-export function sceneName(scene: Scene): string {
+/** A row's time at the page rate: '1 min 25 s', or '' without pages. */
+export function rowTime(eighths: number | null, rates: Rates): string {
+  return eighths === null ? '' : shortTime(pageSeconds(eighths, rates.minutesPerPage));
+}
+
+/** The same in words, for a row's name: 'about 1 minute 25 seconds'. */
+const rowTimeWords = (eighths: number, rates: Rates): string =>
+  timeWords(pageSeconds(eighths, rates.minutesPerPage));
+
+/**
+ * A scene row's name: "Scene 12, INT. KITCHEN - NIGHT, blue, page 12, 1 3/8 pages, about 1 minute
+ * 25 seconds", the time at the script's page rate (`rates`, a minute a page when not given).
+ */
+export function sceneName(scene: Scene, rates: Rates = DEFAULT_RATES): string {
   const parts = [`Scene ${sceneNumber(scene)}`, scene.heading || 'Untitled scene'];
   if (scene.color) parts.push(colorName(scene.color.value));
-  if (scene.pages) parts.push(`page ${scene.pages.page}`, lengthWords(scene.pages.eighths));
+  if (scene.pages) {
+    parts.push(
+      `page ${scene.pages.page}`,
+      lengthWords(scene.pages.eighths),
+      rowTimeWords(scene.pages.eighths, rates),
+    );
+  }
   return parts.join(', ');
 }
 
-/** A section row's name: "Act One, 5 scenes, 12 pages". */
-export function sectionName(section: Section): string {
+/** A section row's name: "Act One, 5 scenes, 12 pages, about 12 minutes". */
+export function sectionName(section: Section, rates: Rates = DEFAULT_RATES): string {
   const parts = [section.title || 'Untitled section'];
   parts.push(`${section.scenes} ${section.scenes === 1 ? 'scene' : 'scenes'}`);
-  if (section.eighths !== null) parts.push(lengthWords(section.eighths));
+  if (section.eighths !== null) {
+    parts.push(lengthWords(section.eighths), rowTimeWords(section.eighths, rates));
+  }
   return parts.join(', ');
 }

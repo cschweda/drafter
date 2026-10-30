@@ -465,6 +465,28 @@ test.describe('going there, and where you are', () => {
     await expect(card).toHaveCount(0);
   });
 
+  test("the card shows a scene's time and its estimate from the dialogue", async ({ page }) => {
+    await start(page);
+    await setText(page, await readFile(SAMPLE, 'utf8'));
+    await paged(page);
+    const card = strip(page).locator('.card');
+    const kitchen = scenes(page).first();
+    await kitchen.hover();
+    // 1 1/8 pages at a minute a page; the dialogue's words at 150 a minute and its lines of action
+    // at 1.5 s come to about 50 s.
+    await expect(card).toContainText('page 1 · 1 1/8 pp · 1 min 10 s');
+    await expect(card).toContainText('Estimate from the dialogue: 50 s');
+    // Its name says both, as the card is for the eye.
+    await expect(kitchen).toHaveAccessibleName(
+      'Scene 1, INT. KITCHEN - NIGHT, page 1, 1 1/8 pages, about 1 minute 10 seconds, estimate from the dialogue about 50 seconds',
+    );
+    // An act's are its scenes' totals.
+    const act = stripRow(page, 'Sections marked #').getByRole('button').first();
+    await act.hover();
+    await expect(card).toContainText('2 scenes · 1 3/8 pp · 1 min 25 s');
+    await expect(card).toContainText('Estimate from the dialogue: 1 min');
+  });
+
   test('in a read-only tab, shows the strip and goes to a scene', async ({ context }) => {
     const first = await context.newPage();
     await start(first);

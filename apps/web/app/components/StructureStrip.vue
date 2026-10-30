@@ -9,6 +9,7 @@ const lastFocused = shallowRef<string | null>(null);
 import { type OutlineItem, rulerMarks, type StripBlock } from '@drafter/outline';
 import { useEditor } from '~/editor/session';
 import { useOutline } from '~/outline/use-outline';
+import { useRates } from '~/stats/timing';
 import { scriptTopPage } from '~/strip/in-view';
 import { stripKey } from '~/strip/keys';
 import {
@@ -33,6 +34,8 @@ const { view, current, go } = useStrip();
 const outline = useOutline();
 const editor = useEditor();
 const focusMode = useFocusMode();
+/** The open script's rates, for the times its blocks are named and carded with. */
+const rates = useRates();
 
 /** The live items by id, so a block kept from before the layout caught up is named as it is now. */
 const items = computed(() => {
@@ -91,7 +94,7 @@ const rows = computed(() => {
       const left = pct((block.from - strip.start) / strip.length);
       return {
         id,
-        name: item ? blockName(item) : block.label,
+        name: item ? blockName(item, rates.value) : block.label,
         label: share * width.value >= LABEL_MIN_PX ? block.label : '',
         style: {
           // A tick at the far right stays inside the track.
@@ -180,7 +183,7 @@ const card = computed(() => {
   const block = rows.value.flatMap((row) => row.blocks).find((b) => b.id === id);
   if (!block) return null;
   const item = items.value.get(id);
-  return { id, lines: item ? cardLines(item) : [block.name], style: block.style };
+  return { id, lines: item ? cardLines(item, rates.value) : [block.name], style: block.style };
 });
 
 function showCard(id: string) {

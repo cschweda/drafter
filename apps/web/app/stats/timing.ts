@@ -1,4 +1,5 @@
 import { ACTION_SECONDS_PER_LINE, DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
+import { type ComputedRef, computed } from 'vue';
 import { useGuard } from '../storage/guard';
 import type { Project } from '../storage/projects';
 import { useScript } from '../storage/script';
@@ -53,6 +54,14 @@ export function ratesOf(project: Pick<Project, 'timing'> | null | undefined): Ra
       ? wordsPerMinute
       : DEFAULT_RATES.wordsPerMinute,
   };
+}
+
+let openRates: ComputedRef<Rates> | null = null;
+
+/** The open script's rates: one computed, shared by every view that shows a time. */
+export function useRates(): ComputedRef<Rates> {
+  openRates ??= computed(() => ratesOf(useScript().project.value));
+  return openRates;
 }
 
 /** A typed rate, or the message the field shows. */
