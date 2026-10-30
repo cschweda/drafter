@@ -1,3 +1,4 @@
+import { SCENE_SWATCH } from '@drafter/notes';
 import type { Scene, SceneColor, Section } from '@drafter/outline';
 import { DEFAULT_RATES, pageSeconds, type Rates, shortTime, timeWords } from '../stats/time-format';
 
@@ -19,18 +20,11 @@ export function lengthWords(eighths: number): string {
   return short.replace(/ pp$/, ' pages').replace(/ p$/, ' page');
 }
 
-/** The colors' swatches: decoration only, since the color's name is always shown beside it. */
-export const SWATCH: Record<SceneColor, string> = {
-  red: '#d9534f',
-  orange: '#e8883a',
-  yellow: '#e5c13a',
-  green: '#4caf6a',
-  teal: '#2fa7a0',
-  blue: '#4a86d9',
-  purple: '#9a6ad6',
-  pink: '#e06aa8',
-  gray: '#8c93a1',
-};
+/**
+ * The colors' swatches: decoration only, since the color's name is always shown beside it. The hex
+ * values are `@drafter/notes`'s, which the HTML export's band shares.
+ */
+export const SWATCH: Readonly<Record<SceneColor, string>> = SCENE_SWATCH;
 
 /** A color's name as the writer reads it: Drafter's word, or what the note says. */
 export const colorName = (value: string): string => value;

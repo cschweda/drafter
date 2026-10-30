@@ -4,8 +4,6 @@ import { importKindOf, isImportName, kindOfFileName, NEW_MARKDOWN } from '../app
 import { parseMarkdown } from '../app/markdown/parse';
 import { PREVIEW_PROBLEMS, previewDelay, previewProblem } from '../app/markdown/preview';
 import { renderMarkdown } from '../app/markdown/render';
-import { markdownTitle, retitleMarkdown } from '../app/markdown/title';
-import { countWords } from '../app/markdown/words';
 
 function draw(source: string): HTMLElement {
   const host = document.createElement('div');
@@ -111,48 +109,6 @@ describe('the Markdown preview', () => {
 
   test('draws nothing for an empty document', () => {
     expect(draw('').childNodes.length).toBe(0);
-  });
-});
-
-describe('counting words', () => {
-  test('counts words', () => {
-    expect(countWords(parseMarkdown(''))).toBe(0);
-    expect(countWords(parseMarkdown('# Title\n\nOne *two* **three** `four`.\n'))).toBe(5);
-    expect(countWords(parseMarkdown('- a b\n- c\n\n> d e f\n'))).toBe(6);
-  });
-
-  test('counts a link’s text and not its address, and the markup not at all', () => {
-    expect(
-      countWords(parseMarkdown('[two words](http://example.com/a/b) ![alt text](x.png)\n')),
-    ).toBe(4);
-    expect(countWords(parseMarkdown('---\n\n***\n'))).toBe(0);
-  });
-});
-
-describe('the title of a Markdown document', () => {
-  test('is the first heading, without its markup', () => {
-    expect(markdownTitle('Some notes\n\n# The *Long* Treatment\n\n## Later\n')).toBe(
-      'The Long Treatment',
-    );
-    expect(markdownTitle('  ## Closing hashes ##  \n')).toBe('Closing hashes');
-    expect(markdownTitle('Setext title\n====\n')).toBe('Setext title');
-  });
-
-  test('is nothing when there is no heading, and skips a heading in a code fence', () => {
-    expect(markdownTitle('just words\n')).toBeUndefined();
-    expect(markdownTitle('```\n# not a heading\n```\n')).toBeUndefined();
-    expect(markdownTitle('#\n')).toBeUndefined();
-    expect(markdownTitle('#hashtag\n')).toBeUndefined();
-  });
-});
-
-describe('naming a copy of a Markdown document', () => {
-  test('replaces the first heading’s text, keeping its level, or puts a heading in front', () => {
-    expect(retitleMarkdown('Intro\n\n## Old *name*\n\n# Other\n', 'New (copy)')).toBe(
-      'Intro\n\n## New (copy)\n\n# Other\n',
-    );
-    expect(retitleMarkdown('just words\n', 'Notes (copy)')).toBe('# Notes (copy)\n\njust words\n');
-    expect(markdownTitle(retitleMarkdown('```\n# code\n```\n', 'T'))).toBe('T');
   });
 });
 

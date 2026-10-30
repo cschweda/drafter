@@ -51,6 +51,7 @@ flowchart BT
   templates["@drafter/templates"]
   notes["@drafter/notes"]
   spell["@drafter/spell"]
+  markdown["@drafter/markdown"]
   fountain["@drafter/fountain"]
   archive --> web
   cm_fountain --> web
@@ -69,6 +70,7 @@ flowchart BT
   layout --> compare
   outline --> history
   layout --> render_pdf
+  markdown --> render_pdf
   layout --> render_html
   layout --> render_text
   templates --> layout
@@ -107,7 +109,7 @@ flowchart TD
 - **The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time.
 - **The layout** is `@drafter/layout`, in a Web Worker (`layout.worker.ts`): 50 ms after you stop typing, the text goes to the worker, which parses it and paginates it by the template. A slower, older layout never replaces a newer one.
 - **The Script pane** is `@drafter/render-html`, which draws those pages as positioned HTML a screen reader can follow.
-- A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `mdast-util-from-markdown`, footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.
+- A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `@drafter/markdown` (`mdast-util-from-markdown` underneath), footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.
 
 ## Where your script is kept
 

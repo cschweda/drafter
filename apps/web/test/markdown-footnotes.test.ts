@@ -5,14 +5,10 @@ import { EditorView } from '@codemirror/view';
 import { footnotes as pdfFootnotes } from '@drafter/render-pdf';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { MAX_NESTING } from '../app/markdown/depth';
 import { markdownMode } from '../app/markdown/editor';
 import { footnotes } from '../app/markdown/notes';
 import { parseMarkdown } from '../app/markdown/parse';
-import { type MdNode, renderMarkdown } from '../app/markdown/render';
-import { markdownTitle } from '../app/markdown/title';
-import { countWords } from '../app/markdown/words';
-import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
+import { renderMarkdown } from '../app/markdown/render';
 
 function draw(source: string): HTMLElement {
   const host = document.createElement('div');
@@ -135,40 +131,6 @@ describe('footnotes in a Markdown document', () => {
     expect(host.textContent).toBe('Text.');
   });
 
-  test('counts a note’s words with the document’s, and the reference mark not at all', () => {
-    expect(countWords(parseMarkdown('One two[^a].\n\n[^a]: Three four five.\n'))).toBe(5);
-    // A note never referenced isn't printed, so it isn't counted.
-    expect(countWords(parseMarkdown('One two.\n\n[^a]: Three four five.\n'))).toBe(2);
-    // The mark joins the words around it, as it prints nothing of its own between them.
-    expect(countWords(parseMarkdown('word[^a]s\n\n[^a]: x\n'))).toBe(2);
-  });
-
-  test('leaves a heading’s reference mark out of the title, only when it is one', () => {
-    expect(markdownTitle('# The Long Way[^1]\n\n[^1]: A working title.\n')).toBe('The Long Way');
-    // With its definition written above the heading.
-    expect(markdownTitle('[^n]: Note.\n\n# Shore[^n] Leave\n')).toBe('Shore Leave');
-    // No definition: the parser leaves it as text, and so does the title.
-    expect(markdownTitle('# The Long Way[^1]\n')).toBe('The Long Way[^1]');
-    // In a code span it is code, kept as written (the backticks go, as for any code span).
-    expect(markdownTitle('# Using `[^1]` marks\n\n[^1]: Note.\n')).toBe('Using [^1] marks');
-    // A definition in a code fence is no definition.
-    expect(markdownTitle('# Fence[^f]\n\n```\n[^f]: not one\n```\n')).toBe('Fence[^f]');
-  });
-
-  test(
-    'reads a heading of many backticks and labels in linear time',
-    () => {
-      const { growth } = scaling(
-        (n) =>
-          `# ${'`'.repeat(n)} ${'``x'.repeat(n)} ${'[^a]'.repeat(n)} [^${'b'.repeat(n)}\n\n[^a]: y\n`,
-        (source) => markdownTitle(source),
-        20_000,
-      );
-      expect(growth).toBeLessThan(MAX_GROWTH);
-    },
-    SCALING_TIMEOUT,
-  );
-
   test('numbers notes as the PDF does', () => {
     const arbLabel = fc.constantFrom('a', 'b', 'c', 'note', '1');
     const arbText = fc
@@ -199,101 +161,6 @@ describe('footnotes in a Markdown document', () => {
       }),
       { numRuns: 200 },
     );
-  });
-});
-
-describe('the footnote parser on hostile input', () => {
-  const linear = (name: string, make: (n: number) => string, n: number) => {
-    const { small, large, growth } = scaling(make, (source) => parseMarkdown(source), n);
-    console.log(
-      `Footnotes, ${name}: ${small.toFixed(1)} ms at n, ${large.toFixed(1)} ms at 4n (growth ${growth.toFixed(1)}).`,
-    );
-    expect(growth).toBeLessThan(MAX_GROWTH);
-  };
-
-  test(
-    'reads unclosed `[^` openings in linear time',
-    () => linear('`[^` openings', (n) => '[^'.repeat(n), 25_000),
-    SCALING_TIMEOUT,
-  );
-
-  test(
-    'reads very long labels in linear time',
-    () =>
-      linear(
-        'long labels',
-        (n) => `x[^${'a'.repeat(n)}]\n\n[^${'a'.repeat(n)}]: y\n${'x[^b'.repeat(n / 4)}`,
-        100_000,
-      ),
-    SCALING_TIMEOUT,
-  );
-
-  test(
-    'reads many references in linear time',
-    () => linear('references', (n) => `${'x[^a]'.repeat(n)}\n\n[^a]: y\n`, 20_000),
-    SCALING_TIMEOUT,
-  );
-
-  test(
-    'reads many definitions, and references to them, in linear time',
-    () =>
-      linear(
-        'definitions',
-        (n) =>
-          Array.from({ length: n }, (_, i) => `[^n${i}]: note\n`).join('') +
-          Array.from({ length: n }, (_, i) => `x[^n${i}] `).join(''),
-        5_000,
-      ),
-    SCALING_TIMEOUT,
-  );
-
-  test(
-    'reads definitions nested as deep as a document may in linear time, and refuses deeper at once',
-    () => {
-      // Each line indented four columns carries on every open definition (the extension's
-      // container rules), so the parser's time is depth times length: bounded by MAX_NESTING.
-      const head = Array.from({ length: MAX_NESTING }, (_, i) => `${i ? '    ' : ''}[^a]: x`).join(
-        '\n',
-      );
-      linear(
-        'nested to the limit',
-        (n) => `${head}\n${'    more words of the note\n'.repeat(n)}`,
-        500,
-      );
-      const deeper = `${head}\n    [^a]: x\n`;
-      const start = performance.now();
-      expect(() => parseMarkdown(deeper)).toThrow(RangeError);
-      expect(performance.now() - start).toBeLessThan(100);
-    },
-    SCALING_TIMEOUT,
-  );
-
-  test('keeps a definition’s label to 999 characters, as GFM does', () => {
-    const long = 'a'.repeat(1_000);
-    const tree = parseMarkdown(`x[^${long}]\n\n[^${long}]: y\n`);
-    expect(footnotes(tree).notes).toEqual([]);
-  });
-});
-
-describe('the parse', () => {
-  test('makes footnote nodes, and keeps raw HTML an html node', () => {
-    const tree = parseMarkdown('A[^b] <i>c</i>\n\n[^b]: Note.\n') as MdNode & {
-      children: MdNode[];
-    };
-    const types = (node: MdNode): string[] => [node.type, ...(node.children ?? []).flatMap(types)];
-    expect(types(tree)).toEqual([
-      'root',
-      'paragraph',
-      'text',
-      'footnoteReference',
-      'text',
-      'html',
-      'text',
-      'html',
-      'footnoteDefinition',
-      'paragraph',
-      'text',
-    ]);
   });
 });
 

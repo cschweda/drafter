@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **The Markdown parser and the scene colors live in packages**, for the HTML export. A new package, `@drafter/markdown`, holds the Markdown document's parser (with its footnotes and nesting guard), its footnote numbering, its title, and its word count, which the Preview and the PDF now share; the PDF and the Preview number footnotes with one piece of code instead of two. The scene colors' values join `@drafter/notes`. Nothing you see changes.
+
 ## [0.20.0] - 2026-10-30
 
 **Formats: Fountain first, every main format out.** `drafter convert` turns Final Draft, Highland, and Fade In files into Fountain, a whole folder at once; Markdown documents get footnotes, at the end of the Preview and at the foot of the PDF's pages; the welcome, the tour, the share image, and the README say Drafter is Fountain-first, for screenplays, stage plays, and novels; and a Markdown document nested hundreds of levels deep, or with a hostile heading, can no longer hold up the app.

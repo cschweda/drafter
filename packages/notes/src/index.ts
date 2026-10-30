@@ -1,5 +1,5 @@
 export { categoryColors, setCategoryColor } from './categories';
-export { SCENE_COLORS, type SceneColor } from './colors';
+export { SCENE_COLORS, SCENE_SWATCH, type SceneColor } from './colors';
 export {
   deleteEntry,
   insertNote,

@@ -10,6 +10,7 @@ const packages = [
   'render-html',
   'lint',
   'notes',
+  'markdown',
   'compare',
   'history',
   'archive',

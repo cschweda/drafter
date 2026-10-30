@@ -40,20 +40,6 @@ const filler = (count: number, tag = 'ost') =>
     (_, i) => `${tag}${i} ${'vorn taleb quisp marrowy plenk dravish ulm senner '.repeat(9)}`,
   ).join('\n\n');
 
-describe('footnotes', () => {
-  it('numbers notes by first reference, and gives each note the last number of the notes inside it', () => {
-    const tree = md('A[^z] B[^y] A[^z].\n\n[^y]: Y, see[^x].\n[^z]: Z.\n[^x]: X.\n[^w]: Unused.\n');
-    const { numbers, notes, last } = footnotes(tree);
-    expect([...numbers]).toEqual([
-      ['z', 1],
-      ['y', 2],
-      ['x', 3],
-    ]);
-    expect(notes.map((n) => n.identifier)).toEqual(['z', 'y', 'x']);
-    expect(last).toEqual([1, 3, 3]);
-  });
-});
-
 describe('a footnote’s reference', () => {
   it('is a raised, smaller number that carries its note', () => {
     const [block] = documentBlocks(md('Ost[^a] vorn.\n\n[^a]: Note.\n'), 468);

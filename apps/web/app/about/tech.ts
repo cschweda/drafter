@@ -65,6 +65,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/history',
       '@drafter/layout',
       '@drafter/lint',
+      '@drafter/markdown',
       '@drafter/notes',
       '@drafter/outline',
       '@drafter/render-html',
@@ -115,7 +116,7 @@ export const PACKAGES: readonly PackageNote[] = [
   {
     name: '@drafter/render-pdf',
     does: 'PDFs: a script’s pages in Courier Prime, and a Markdown document in Inter Tight.',
-    uses: ['@drafter/layout', '@drafter/templates'],
+    uses: ['@drafter/layout', '@drafter/markdown', '@drafter/templates'],
   },
   {
     name: '@drafter/render-html',
@@ -161,6 +162,11 @@ export const PACKAGES: readonly PackageNote[] = [
     name: '@drafter/spell',
     does: 'Spellcheck: the words of a script worth checking, and the two English dictionaries.',
     uses: ['@drafter/fountain'],
+  },
+  {
+    name: '@drafter/markdown',
+    does: 'Markdown documents: reads one into a tree, footnotes and all (refusing one nested too deeply), numbers its footnotes, and finds its title and counts its words.',
+    uses: [],
   },
   {
     name: '@drafter/fountain',
@@ -354,7 +360,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The Problems** are `@drafter/lint`’s rules, run on the parse, with any fixes they offer as text changes. **The scene index** (`@drafter/outline`) feeds the Outline, Cards, and the Structure strip, with each scene’s pages and running time.',
           '**The layout** is `@drafter/layout`, in a Web Worker (`layout.worker.ts`): 50 ms after you stop typing, the text goes to the worker, which parses it and paginates it by the template. A slower, older layout never replaces a newer one.',
           '**The Script pane** is `@drafter/render-html`, which draws those pages as positioned HTML a screen reader can follow.',
-          'A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `mdast-util-from-markdown`, footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.',
+          'A Markdown document has its own worker (`markdown.worker.ts`), which reads it with `@drafter/markdown` (`mdast-util-from-markdown` underneath), footnotes and all, for the Preview. Spellcheck has one too (`spell.worker.ts`): `@drafter/spell` loads a dictionary into nspell there and checks the script’s words, so typing never waits on it.',
         ],
       },
     ],

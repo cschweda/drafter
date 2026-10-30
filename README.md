@@ -210,6 +210,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/spell` | Offline spellcheck (nspell): the words worth checking, the two bundled English dictionaries, and a per-script dictionary | 2 (built in Plan D) |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export, and Open Screenplay Format import | 2 (built in Plan FD; OSF in v0.19.0) |
 | `@drafter/archive` | Highland and Fade In files: a strict read-only zip reader, and the script inside each | 2 (built in v0.19.0) |
+| `@drafter/markdown` | Markdown documents: the parser (CommonMark with GitHub's footnotes), footnote numbering, the title, and the word count, shared by the Preview and the PDF | 2 (moved out of the app in v0.22.0) |
 | `@drafter/stats` | Script statistics | 2 (planned) |
 
 Repository layout:
@@ -342,7 +343,7 @@ pnpm e2e              # builds the app from clean, as Netlify would, and runs it
 
 - **Browser tests** need Playwright's browsers, installed once with `pnpm --filter @drafter/web exec playwright install chromium firefox webkit`.
 - **Git hooks:** `pnpm install` points Git at `.githooks/`, so the changelog check runs on every push. In a clone where you skip the install, run `git config core.hooksPath .githooks` once.
-- **Package READMEs:** [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-html`](packages/render-html/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), [`cm-fountain`](packages/cm-fountain/README.md), [`cli`](packages/cli/README.md), [`notes`](packages/notes/README.md), [`compare`](packages/compare/README.md), [`outline`](packages/outline/README.md), [`spell`](packages/spell/README.md), [`fdx`](packages/fdx/README.md), and [`archive`](packages/archive/README.md).
+- **Package READMEs:** [`fountain`](packages/fountain/README.md), [`templates`](packages/templates/README.md), [`layout`](packages/layout/README.md), [`render-pdf`](packages/render-pdf/README.md), [`render-html`](packages/render-html/README.md), [`render-text`](packages/render-text/README.md), [`lint`](packages/lint/README.md), [`cm-fountain`](packages/cm-fountain/README.md), [`cli`](packages/cli/README.md), [`notes`](packages/notes/README.md), [`compare`](packages/compare/README.md), [`outline`](packages/outline/README.md), [`spell`](packages/spell/README.md), [`fdx`](packages/fdx/README.md), [`archive`](packages/archive/README.md), and [`markdown`](packages/markdown/README.md).
 - **Decisions and deferred work:** choices the design documents leave open are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md), and work saved for later phases in [`docs/DEFERRED.md`](docs/DEFERRED.md).
 
 After a build, the CLI runs from the repository root:

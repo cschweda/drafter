@@ -1,0 +1,36 @@
+{
+  "name": "@drafter/markdown",
+  "version": "0.20.0",
+  "description": "Markdown documents for Drafter: the CommonMark parser with GitHub's footnotes, the nesting guard, footnote numbering, the title, and the word count.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/markdown"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-gfm-footnote": "^2.1.0",
+    "micromark-extension-gfm-footnote": "2.1.0"
+  }
+}

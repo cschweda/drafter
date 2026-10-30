@@ -5,25 +5,11 @@
  * no `javascript:` address can run), and an image as its description (nothing is fetched). A
  * footnote's reference is its number, raised, and the notes are listed at the end (`footnotes`).
  */
+import type { MdNode } from '@drafter/markdown';
 import { footnotes } from './notes';
 
-/** The parts of an mdast node this file reads; `mdast-util-from-markdown`'s tree has them. */
-export interface MdNode {
-  type: string;
-  children?: MdNode[];
-  value?: string;
-  depth?: number;
-  ordered?: boolean | null;
-  start?: number | null;
-  spread?: boolean | null;
-  alt?: string | null;
-  /** A footnote reference's or definition's normalized label, which joins them. */
-  identifier?: string;
-  /** Where the node starts in the text, as `mdast-util-from-markdown` records it. */
-  position?: { start?: { offset?: number } };
-  /** Where a block starts in the text, kept when the worker sends the tree without `position`. */
-  from?: number;
-}
+/** The parts of an mdast node the Preview reads, from @drafter/markdown, which parses it. */
+export type { MdNode } from '@drafter/markdown';
 
 /** The nodes the Preview draws as blocks of their own, which carry their offset (`data-from`) for scroll sync. */
 export const BLOCK_TYPES: ReadonlySet<string> = new Set([

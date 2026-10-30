@@ -12,12 +12,12 @@ import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
 const PACKAGES = fileURLToPath(new URL('../../packages', import.meta.url));
 /**
  * `decode-named-character-reference`'s plain build (`index.js`, not its `browser` one), found
- * from the Markdown parser that depends on it (the alias below says why).
+ * from the Markdown parser that depends on it, in `@drafter/markdown` (the alias below says why).
  */
 const ENTITIES = join(
   dirname(
     createRequire(
-      `${realpathSync(fileURLToPath(new URL('node_modules/mdast-util-from-markdown', import.meta.url)))}/`,
+      `${realpathSync(fileURLToPath(new URL('../../packages/markdown/node_modules/mdast-util-from-markdown', import.meta.url)))}/`,
     ).resolve('decode-named-character-reference'),
   ),
   'index.js',
@@ -160,7 +160,7 @@ export default defineNuxtConfig({
         // decoding without the DOM (about 29 KB more in the lazy parser chunk).
         { find: /^decode-named-character-reference$/, replacement: ENTITIES },
         {
-          find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
+          find: /^@drafter\/(archive|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|outline|render-html|render-pdf|render-text|spell|templates)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],
