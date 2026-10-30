@@ -45,7 +45,10 @@ interface Code {
  */
 function buildCode(lengths: ArrayLike<number>, codeLengths = false): Code {
   const counts = new Uint16Array(MAX_BITS + 1);
-  for (let i = 0; i < lengths.length; i++) counts[lengths[i] as number]++;
+  for (let i = 0; i < lengths.length; i++) {
+    const len = lengths[i] as number;
+    counts[len] = (counts[len] as number) + 1;
+  }
   counts[0] = 0;
   let left = 1;
   let used = 0;
@@ -63,7 +66,11 @@ function buildCode(lengths: ArrayLike<number>, codeLengths = false): Code {
   const symbols = new Uint16Array(lengths.length);
   for (let sym = 0; sym < lengths.length; sym++) {
     const len = lengths[sym] as number;
-    if (len) symbols[offsets[len]++] = sym;
+    if (len) {
+      const at = offsets[len] as number;
+      offsets[len] = at + 1;
+      symbols[at] = sym;
+    }
   }
   return { counts, symbols };
 }
