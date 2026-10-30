@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import {
+  type Block,
   blockAt,
   characters,
   type InlineRun,
+  inlineRuns,
   locations,
   parse,
   print,
@@ -319,5 +321,21 @@ describe('the samples', () => {
       'utf8',
     );
     expect(parse(source).meta).toEqual({ v: 1, template: 'stage-play-standard' });
+  });
+});
+
+describe('inlineRuns', () => {
+  it("reads a section's text for emphasis as an action line is read", () => {
+    const doc = parse('# The *big* _day_\n');
+    const block = doc.blocks[0] as Block;
+    expect(block.kind === 'section' ? block.sem.text : null).toBe('The *big* _day_');
+    expect(inlineRuns('The *big* _day_ \\*').map(({ span, ...run }) => run)).toEqual([
+      { text: 'The ', bold: false, italic: false, underline: false },
+      { text: 'big', bold: false, italic: true, underline: false },
+      { text: ' ', bold: false, italic: false, underline: false },
+      { text: 'day', bold: false, italic: false, underline: true },
+      { text: ' *', bold: false, italic: false, underline: false },
+    ]);
+    expect(inlineRuns('')).toEqual([]);
   });
 });

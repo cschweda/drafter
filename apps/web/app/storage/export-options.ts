@@ -6,14 +6,17 @@ import type { Project } from './projects';
 import { useScript } from './script';
 
 /**
- * Export options (out-the-door design §2): how a script's PDF and plain text print its scene
- * numbers and its title page, and how much of the title page a Final Draft file carries. They are
+ * Export options (out-the-door design §2): how a script's PDF, plain text, and Markdown file print
+ * its scene numbers and its title page, how much of the title page a Final Draft file carries,
+ * and whether a Markdown file carries its notes (Call 28). They are
  * the script's own, kept on its project in this browser (Call 9), never in the text; the Export
  * options dialog (`components/ExportOptionsDialog.vue`) sets them, and every export reads them.
  */
 
 const SCENE_NUMBERS: readonly SceneNumbering[] = ['none', 'written', 'all'];
 const TITLE_PAGES: readonly TitlePageMode[] = ['full', 'title-author', 'none'];
+type Notes = ExportOptions['notes'];
+const NOTES: readonly Notes[] = ['leave-out', 'include'];
 
 /** The project's options, any missing or unknown value read as its default. */
 export function exportOptionsOf(
@@ -27,6 +30,10 @@ export function exportOptionsOf(
     titlePage: TITLE_PAGES.includes(stored?.titlePage as TitlePageMode)
       ? (stored?.titlePage as TitlePageMode)
       : DEFAULT_EXPORT_OPTIONS.titlePage,
+    // A project kept before there was a notes option has none: Leave out, as it exported then.
+    notes: NOTES.includes(stored?.notes as Notes)
+      ? (stored?.notes as Notes)
+      : DEFAULT_EXPORT_OPTIONS.notes,
   };
 }
 
@@ -34,15 +41,18 @@ export function exportOptionsOf(
 export const EXPORT_OPTION_LABELS: {
   sceneNumbers: Record<SceneNumbering, string>;
   titlePage: Record<TitlePageMode, string>;
+  notes: Record<Notes, string>;
 } = {
   sceneNumbers: { none: 'None', written: 'As written', all: 'Number every scene' },
   titlePage: { full: 'Full', 'title-author': 'Title and author only', none: 'None' },
+  notes: { 'leave-out': 'Leave out', include: 'Include' },
 };
 
 /** The line under each choice in the dialog: what it prints. */
 export const EXPORT_OPTION_HINTS: {
   sceneNumbers: Record<SceneNumbering, string>;
   titlePage: Record<TitlePageMode, string>;
+  notes: Record<Notes, string>;
 } = {
   sceneNumbers: {
     none: 'No scene numbers print.',
@@ -54,7 +64,14 @@ export const EXPORT_OPTION_HINTS: {
     'title-author': 'The title, the credit, the authors, and the source: no contact or date.',
     none: 'No title page: the script starts on page 1.',
   },
+  notes: {
+    'leave-out': 'No notes or synopses, as in the PDF.',
+    include: 'Each note and synopsis as a quote, where it stands. The boneyard is always left out.',
+  },
 };
+
+/** Under the Notes in Markdown choices: the one export that reads them. */
+export const NOTES_ONLY_MARKDOWN = 'Only a Markdown export carries notes; a PDF never prints them.';
 
 /** The words for each choice that isn't the default, in the toast's sentence. */
 const SCENE_PHRASE: Record<Exclude<SceneNumbering, 'none'>, string> = {
@@ -69,18 +86,23 @@ const TITLE_PHRASE: Record<Exclude<TitlePageMode, 'full'>, string> = {
 /**
  * "with scene numbers as written and the title and author only", or '' for the defaults (design
  * Call 11): the end of the export toast's "Exported The Call.pdf, …", so a choice made last month
- * is no surprise.
+ * is no surprise. "notes" comes last when they are included (Call 28); the caller leaves them out
+ * of an export that never carries them. Three are a list: "with a, b, and notes".
  */
 export function optionsPhrase(options: ExportOptions): string {
   const parts: string[] = [];
   if (options.sceneNumbers !== 'none') parts.push(SCENE_PHRASE[options.sceneNumbers]);
   if (options.titlePage !== 'full') parts.push(TITLE_PHRASE[options.titlePage]);
-  return parts.length === 0 ? '' : `with ${parts.join(' and ')}`;
+  if (options.notes === 'include') parts.push('notes');
+  if (parts.length === 0) return '';
+  if (parts.length < 3) return `with ${parts.join(' and ')}`;
+  return `with ${parts.slice(0, -1).join(', ')}, and ${parts.at(-1)}`;
 }
 
 export const FDX_NOTE =
   'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them.';
-export const OPTIONS_NOT_FOR_MARKDOWN = 'A Markdown document has no scene numbers or title page.';
+export const OPTIONS_NOT_FOR_MARKDOWN =
+  'A Markdown document has no scene numbers, title page, or notes to choose.';
 export const OPTIONS_READ_ONLY =
   'Another tab has this script open, so its export options can’t be changed here.';
 

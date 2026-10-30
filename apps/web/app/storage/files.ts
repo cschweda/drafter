@@ -123,7 +123,7 @@ function pickWithInput(): Promise<PickedFile | null> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.fountain,.txt,.md,.markdown,.fdx,text/plain,text/markdown';
+    input.accept = '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown';
     input.hidden = true;
     const done = () => input.remove();
     input.addEventListener('change', () => {
@@ -156,12 +156,13 @@ export const browserFiles: FileAccess = {
       const [handle] = await show.call(window, {
         types: [
           {
-            description: 'Fountain script, Markdown document, text, or Final Draft file',
+            description: 'Script, Markdown document, or a Final Draft, Highland, or Fade In file',
             accept: {
               'text/plain': ['.fountain', '.txt'],
               'text/markdown': ['.md', '.markdown'],
               // Imported as a new script (storage/open.ts), never saved back to.
               'application/xml': ['.fdx'],
+              'application/zip': ['.highland', '.fadein'],
             },
           },
         ],

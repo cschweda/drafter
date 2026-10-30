@@ -53,6 +53,23 @@ const SCRIPT_TYPES = [
     role: 'Viewer',
     rank: 'Alternate',
   },
+  // Highland and Fade In files are imported the same way, each with a type of its own under `x-`.
+  {
+    ext: 'highland',
+    name: 'Highland document',
+    description: 'Highland document',
+    mimeType: 'application/x-highland',
+    role: 'Viewer',
+    rank: 'Alternate',
+  },
+  {
+    ext: 'fadein',
+    name: 'Fade In document',
+    description: 'Fade In document',
+    mimeType: 'application/x-fadein',
+    role: 'Viewer',
+    rank: 'Alternate',
+  },
 ];
 
 /** @type {import('electron-builder').Configuration} */
@@ -150,8 +167,8 @@ module.exports = {
     // Drafter.exe, and its files' icons in Explorer are all this one.
     icon: path.resolve(__dirname, '../../brand/icon-windows.ico'),
     // On Windows the association's name is its ProgID, so it gets one of Drafter's own. Only
-    // `.fountain` is taken: Markdown and Final Draft files are offered in Open with, never made
-    // Drafter's (installer/windows.nsh).
+    // `.fountain` is taken: Markdown, Final Draft, Highland, and Fade In files are offered in Open
+    // with, never made Drafter's (installer/windows.nsh).
     fileAssociations: [
       { ext: 'fountain', name: 'Drafter.fountain', description: 'Fountain screenplay' },
     ],
@@ -187,7 +204,8 @@ module.exports = {
     differentialPackage: false,
     // Only a per-machine install needs elevate.exe, and this one never is.
     packElevateHelper: false,
-    // `.md`, `.markdown`, and `.fdx` in Open with, and a clean uninstall of `.fountain`.
+    // `.md`, `.markdown`, `.fdx`, `.highland`, and `.fadein` in Open with, and a clean uninstall
+    // of `.fountain`.
     include: path.resolve(__dirname, 'installer/windows.nsh'),
   },
   linux: {

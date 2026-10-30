@@ -181,12 +181,18 @@ export interface ScriptSession {
    */
   openedFile(file: OpenedFile): Promise<boolean>;
   /**
-   * Opens Fountain `text` imported from the Final Draft file named `importedFrom` as a new script
-   * with no file: not saved, so Save asks for a `.fountain`, and never writes the `.fdx`. A script
-   * with no title is called after the file. Resolves false if another switch was under way
-   * (nothing is made then).
+   * Opens Fountain `text` imported from the file named `importedFrom` (the Final Draft, Highland,
+   * or Fade In file, or the Markdown file opened as a screenplay) as a new script with no file: not
+   * saved, so Save asks for a `.fountain`, and never writes the file it came from. A script with no
+   * title is called after the file. `format` keeps a text file's line break and BOM (Open as
+   * screenplay), so Save writes them as the file had them; an import from another app has none.
+   * Resolves false if another switch was under way (nothing is made then).
    */
-  openImported(text: string, importedFrom: string): Promise<boolean>;
+  openImported(
+    text: string,
+    importedFrom: string,
+    format?: { lineBreak?: LineBreak; bom?: boolean },
+  ): Promise<boolean>;
   /**
    * Puts a file's text in script `id`, in place of what it holds: one undoable change in the
    * editor, and the script counts as saved to that file. `'held'`: another tab has the script
@@ -1008,8 +1014,20 @@ function create(): ScriptSession {
     return opened;
   }
 
-  function openImported(text: string, importedFrom: string): Promise<boolean> {
-    return switchTo(() => createProject({ source: text, kind: 'fountain', importedFrom }));
+  function openImported(
+    text: string,
+    importedFrom: string,
+    format: { lineBreak?: LineBreak; bom?: boolean } = {},
+  ): Promise<boolean> {
+    return switchTo(() =>
+      createProject({
+        source: text,
+        kind: 'fountain',
+        importedFrom,
+        ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
+        ...(format.bom === undefined ? {} : { bom: format.bom }),
+      }),
+    );
   }
 
   async function replaceWith(id: string, file: OpenedFile): Promise<'replaced' | 'held' | 'busy'> {

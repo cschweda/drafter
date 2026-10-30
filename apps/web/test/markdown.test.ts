@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, test } from 'vitest';
-import { isFinalDraftName, kindOfFileName, NEW_MARKDOWN } from '../app/markdown/kind';
+import { importKindOf, isImportName, kindOfFileName, NEW_MARKDOWN } from '../app/markdown/kind';
 import { parseMarkdown } from '../app/markdown/parse';
 import { PREVIEW_PROBLEMS, previewDelay, previewProblem } from '../app/markdown/preview';
 import { renderMarkdown } from '../app/markdown/render';
@@ -167,12 +167,27 @@ describe('documents and files', () => {
     expect(kindOfFileName(undefined)).toBe('fountain');
   });
 
-  test('knows a Final Draft file by its name: an import, not a kind of document', () => {
-    expect(isFinalDraftName('The Call.fdx')).toBe(true);
-    expect(isFinalDraftName('THE CALL.FDX')).toBe(true);
-    expect(isFinalDraftName('The Call.fdx.fountain')).toBe(false);
-    expect(isFinalDraftName('fdx')).toBe(false);
-    expect(isFinalDraftName(undefined)).toBe(false);
+  test('knows a Final Draft, Highland, or Fade In file by its name: an import, not a kind of document', () => {
+    expect(importKindOf('The Call.fdx')).toBe('fdx');
+    expect(importKindOf('THE CALL.FDX')).toBe('fdx');
+    expect(importKindOf('Ferry.highland')).toBe('highland');
+    expect(importKindOf('Ferry.HighLand')).toBe('highland');
+    expect(importKindOf('Cabin.fadein')).toBe('fadein');
+    expect(importKindOf('Cabin.FADEIN')).toBe('fadein');
+    for (const name of [
+      'The Call.fdx.fountain',
+      'fdx',
+      'highland',
+      'a.fadein.md',
+      'a.txt',
+      undefined,
+    ]) {
+      expect(importKindOf(name), String(name)).toBeNull();
+      expect(isImportName(name), String(name)).toBe(false);
+    }
+    for (const name of ['The Call.fdx', 'Ferry.highland', 'Cabin.fadein']) {
+      expect(isImportName(name), name).toBe(true);
+    }
   });
 
   test('starts a new document with a title and a blank line', () => {

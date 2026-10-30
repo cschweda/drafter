@@ -348,6 +348,32 @@ describe('what a page may read and write', () => {
     );
   });
 
+  test('never writes a .highland or .fadein, even one the writer opened', async () => {
+    for (const name of ['Ferry.highland', 'Cabin.fadein', 'LOUD.FADEIN']) {
+      const { handlers, event } = setUp();
+      const imported = join(dir, name);
+      await writeFile(imported, 'PK');
+      // Dropped or named: granted, and read …
+      void handlers.grantDropped(event, imported);
+      expect((await handlers.read(event, imported)).bytes, name).toEqual(bytes('PK'));
+      expect(await handlers.grantScript(imported), name).toBe(imported);
+      // … but never written.
+      expect(await codeOf(handlers.write(event, imported, bytes('X'))), name).toBe('not-allowed');
+      // Chosen in the Open dialog, the same.
+      const opened = setUp([imported]);
+      expect(await opened.handlers.showOpen(opened.event)).toBe(imported);
+      expect(await codeOf(opened.handlers.write(opened.event, imported, bytes('X'))), name).toBe(
+        'not-allowed',
+      );
+      // Chosen in a Save dialog, it is a script's name and gets .fountain after it.
+      const saved = setUp([imported]);
+      expect(await saved.handlers.showSave(saved.event, 'Script.fountain', '.fountain')).toBe(
+        `${imported}.fountain`,
+      );
+      expect(await readFile(imported, 'utf8'), name).toBe('PK');
+    }
+  });
+
   test('checks every argument', async () => {
     const { handlers, event } = setUp();
     for (const bad of ['relative.fountain', '', 42, null, { path: '/a' }]) {

@@ -66,7 +66,7 @@ import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
 import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
-import { pickAndOpen } from '~/storage/open';
+import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
@@ -328,6 +328,10 @@ export function registerBuiltinCommands(): void {
       enabled: idle,
       run: quietly(pickAndOpen),
     },
+    'open-as-screenplay': {
+      enabled: idle,
+      run: quietly(() => pickAndOpenAs('fountain')),
+    },
     // A tab that can't save says so when it's asked to.
     save: { run: quietly(save) },
     'save-as': { run: quietly(saveAs) },
@@ -453,11 +457,10 @@ export function registerBuiltinCommands(): void {
         aboutOpen.value = true;
       },
     },
-    // Export: the toolbar's Export menu, the app menu, and the palette run these. A Fountain script exports as a
-    // PDF, plain text, or a Final Draft file; a Markdown document as its Markdown file or plain text (a PDF of
-    // one is deferred).
-    // What the open kind exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter
-    // Tight (Markdown PDF design §10); Final Draft for a script, the Markdown file for a document.
+    // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind
+    // exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter Tight (Markdown PDF
+    // design §10); Final Draft for a script; and a Markdown file for both, a script's the whole script
+    // written in the export worker, a document's its own text (Call 24).
     'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
     'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
     'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
@@ -468,9 +471,10 @@ export function registerBuiltinCommands(): void {
         treatmentOpen.value = true;
       },
     },
-    // How the open script's PDF and plain text print its scene numbers and title page (out-the-door
-    // design §2.4): at the end of the Export menu. On in a read-only tab, whose dialog shows the
-    // choices it can't change; off for a Markdown document, which has neither.
+    // How the open script's exports come out (out-the-door design §2.4): scene numbers and the title
+    // page for its PDF, plain text, Final Draft file, and Markdown, and notes for its Markdown alone
+    // (Call 28). At the end of the Export menu. On in a read-only tab, whose dialog shows the choices
+    // it can't change; off for a Markdown document, which has none of them.
     'export-options': {
       enabled: () => hasScript() && isFountain(),
       why: () => (isMarkdown() ? OPTIONS_NOT_FOR_MARKDOWN : undefined),

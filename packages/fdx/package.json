@@ -1,7 +1,7 @@
 {
   "name": "@drafter/fdx",
   "version": "0.18.0",
-  "description": "Final Draft files for Drafter: a strict XML reader and writer, and the mapping between .fdx and Fountain.",
+  "description": "Final Draft files, and Open Screenplay Format import, for Drafter: a strict XML reader and writer, and the mapping between .fdx and Fountain.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,

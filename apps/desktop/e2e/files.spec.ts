@@ -134,13 +134,13 @@ async function elsewhere(
 
 test('opens a file of another type as a new script, and says why', async ({ desktop, profile }) => {
   const scripts = folder(profile);
-  const letter = join(scripts, 'letter.rtf');
+  const letter = join(scripts, 'letter.text');
   writeFileSync(letter, 'INT. POST OFFICE - DAY\n\nA letter arrives.\n');
   const { page } = await desktop();
   await openPath(page, profile, letter);
   await expect(editor(page)).toContainText('A letter arrives.');
   await expect(page.locator('[role="alert"].failed')).toContainText(
-    '“letter.rtf” opened as a new script',
+    '“letter.text” opened as a new script',
   );
   // Save asks where to put it, and leaves the original alone.
   const saved = join(scripts, 'letter.fountain');
@@ -151,6 +151,38 @@ test('opens a file of another type as a new script, and says why', async ({ desk
     .toContain('A letter arrives.');
   expect(text(letter)).toBe('INT. POST OFFICE - DAY\n\nA letter arrives.\n');
   expect(dialogsAsked(profile).filter((asked) => asked.kind === 'save')).toHaveLength(1);
+});
+
+test('never writes the .md it opened as a screenplay', async ({ desktop, profile }) => {
+  const scripts = folder(profile);
+  const typed = 'Title: The Night Train\n\nINT. TRAIN - NIGHT\n\nRain on the glass.\n';
+  const notes = join(scripts, 'train.md');
+  writeFileSync(notes, typed);
+  const { app, page } = await desktop();
+  await expect(editor(page)).toContainText('The Call');
+  // File › Open as Screenplay…: the same Open dialog, and the .md comes in as a new script.
+  answerDialogs(profile, [notes]);
+  await chooseMenuItem(app, ['File', 'Open as Screenplay…']);
+  await expect(editor(page)).toContainText('INT. TRAIN - NIGHT');
+  await expect(page.locator('.toast [role="status"]')).toHaveText(
+    'Opened “train.md” as a screenplay.',
+  );
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'open' });
+  // Saved twice: the first asks for a .fountain, the second writes it; the .md never changes.
+  const saved = join(scripts, 'The Night Train.fountain');
+  answerDialogs(profile, [saved]);
+  await typeAtEnd(page, '\nThe lights flicker.\n');
+  await saveNow(page);
+  await expect
+    .poll(() => (lstatSync(saved, { throwIfNoEntry: false }) ? text(saved) : ''))
+    .toContain('The lights flicker.');
+  const asks = dialogsAsked(profile).filter((asked) => asked.kind === 'save');
+  expect(asks).toHaveLength(1);
+  expect(asks[0]).toMatchObject({ extension: '.fountain' });
+  await typeAtEnd(page, '\nThe train stops.\n');
+  await saveNow(page);
+  await expect.poll(() => text(saved)).toContain('The train stops.');
+  expect(text(notes)).toBe(typed);
 });
 
 test('saves and reopens files with unusual names', async ({ desktop, profile }) => {

@@ -148,10 +148,11 @@ export async function targetOf(path: string, links = 0): Promise<string> {
 /** The extensions of the files the app opens as scripts. */
 export const SCRIPT_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.markdown', '.txt'];
 /**
- * The extensions of the files the app imports: a Final Draft file opens as a new script, never as
- * its file. It is written only as an export, where the writer chose it in a Save dialog for one.
+ * The extensions of the files the app imports: a Final Draft, Highland, or Fade In file opens as a
+ * new script, never as its file. A `.fdx` is written only as an export, where the writer chose it
+ * in a Save dialog for one; a `.highland` or `.fadein` never is (it isn't in `WRITE_EXTENSIONS`).
  */
-export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx'];
+export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fadein'];
 /** The extensions of the files the app opens: scripts, and the files it imports. */
 export const OPEN_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, ...IMPORT_EXTENSIONS];
 /** The extensions of the files the app writes: scripts, and the exports. */

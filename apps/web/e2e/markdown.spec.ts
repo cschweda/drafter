@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { files, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
+import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -433,6 +433,119 @@ test.describe('Markdown files without a file picker', () => {
   });
 });
 
+test.describe('Markdown files, dropped or from the file input', () => {
+  /** A file dropped on the window. */
+  async function drop(page: Page, name: string, text: string) {
+    await page.evaluate(
+      ({ n, t }) => {
+        const dt = new DataTransfer();
+        dt.items.add(new File([t], n, { type: 'text/markdown' }));
+        for (const type of ['dragenter', 'dragover', 'drop']) {
+          document.body.dispatchEvent(
+            new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }),
+          );
+        }
+      },
+      { n: name, t: text },
+    );
+  }
+
+  test('opens a dropped .md and a dropped .markdown file as Markdown', async ({ page }) => {
+    await removePickers(page);
+    await start(page);
+    for (const [name, text] of [
+      ['notes.md', '# Dropped notes\n\nBody.\n'],
+      ['plan.markdown', '# Dropped plan\n\nSteps.\n'],
+    ] as const) {
+      await drop(page, name, text);
+      await expect(editor(page), name).toContainText(text.split('\n')[0] as string);
+      await expect(tabs(page, 'Preview').first(), name).toBeVisible();
+    }
+    await expect
+      .poll(async () =>
+        (await stored(page)).filter((p) => !p.sample).map((p) => [p.fileName, p.kind, p.title]),
+      )
+      .toEqual(
+        expect.arrayContaining([
+          ['notes.md', 'markdown', 'Dropped notes'],
+          ['plan.markdown', 'markdown', 'Dropped plan'],
+        ]),
+      );
+  });
+
+  test('the picker and the file input offer .md and .markdown', async ({ page }) => {
+    // A picker that keeps what it was asked to accept, and is then cancelled.
+    await page.addInitScript(() => {
+      const w = window as unknown as Record<string, unknown> & { __accepted: string[] };
+      w.__accepted = [];
+      w.showOpenFilePicker = async (options?: {
+        types?: { accept: Record<string, string[]> }[];
+      }) => {
+        for (const type of options?.types ?? []) {
+          w.__accepted.push(...Object.values(type.accept).flat());
+        }
+        throw new DOMException('The user aborted a request.', 'AbortError');
+      };
+    });
+    await start(page);
+    await openButton(page).click();
+    await scriptsMenu(page).getByRole('button', { name: 'Open a file…' }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __accepted: string[] }).__accepted))
+      .toEqual(expect.arrayContaining(['.md', '.markdown', '.fountain', '.fdx']));
+
+    // Where there is no picker, the file input offers the same.
+    await page.evaluate(() => {
+      Object.defineProperty(window, 'showOpenFilePicker', { value: undefined, configurable: true });
+    });
+    await openButton(page).click();
+    const chooser = page.waitForEvent('filechooser');
+    await scriptsMenu(page).getByRole('button', { name: 'Open a file…' }).click();
+    const accept = ((await (await chooser).element().getAttribute('accept')) ?? '').split(',');
+    expect(accept).toEqual(expect.arrayContaining(['.md', '.markdown', 'text/markdown']));
+  });
+
+  test('turns an opened Markdown outline into a screenplay with New screenplay from this outline', async ({
+    page,
+  }) => {
+    const OUTLINE =
+      '# The Night Ferry\n\n## Act One\n\n- The ferry leaves.\n\n## Act Two\n\n- The engine fails.\n\n## Act Three\n\n- They reach the shore.\n';
+    await removePickers(page);
+    await start(page);
+    await openButton(page).click();
+    const chooser = page.waitForEvent('filechooser');
+    await scriptsMenu(page).getByRole('button', { name: 'Open a file…' }).click();
+    await (await chooser).setFiles({
+      name: 'ferry.md',
+      mimeType: 'text/markdown',
+      buffer: Buffer.from(OUTLINE),
+    });
+    await expect(editor(page)).toContainText('## Act Three');
+
+    await command(page, 'New screenplay from this outline');
+    await expect(tabs(page, 'Script').first()).toBeVisible();
+    await expect
+      .poll(async () => {
+        const made = (await stored(page)).find(
+          (p) => !p.sample && p.kind !== 'markdown' && p.title === 'The Night Ferry',
+        );
+        return made?.source.match(/^INT\. LOCATION - DAY$/gm)?.length ?? 0;
+      })
+      .toBe(3);
+    // A new script with no file; the Markdown document is unchanged.
+    const rows = (await stored(page)).filter((p) => !p.sample);
+    const made = rows.find((p) => p.kind !== 'markdown' && p.title === 'The Night Ferry');
+    expect(made?.fileName).toBeUndefined();
+    for (const stub of ['= The ferry leaves.', '= The engine fails.', '= They reach the shore.']) {
+      expect(made?.source, stub).toContain(stub);
+    }
+    expect(rows.find((p) => p.fileName === 'ferry.md')).toMatchObject({
+      kind: 'markdown',
+      source: OUTLINE,
+    });
+  });
+});
+
 test.describe('Markdown files', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -497,6 +610,48 @@ test.describe('Markdown files', () => {
         ]),
       );
     await expect(tabs(page, 'Script').first()).toBeVisible();
+  });
+});
+
+test.describe('Open as screenplay', () => {
+  const TYPED = 'Title: The Night Train\n\nINT. TRAIN - NIGHT\n\nRain on the glass.\n';
+
+  test('Open as screenplay from the palette opens a .md as a screenplay, and Save asks for a .fountain and the .md is unchanged', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'the stand-in file system is Chromium’s');
+    await stubPickers(page);
+    await start(page);
+    await putFile(page, 'train.md', TYPED);
+    await nextFileName(page, 'train.md');
+    await command(page, 'Open as screenplay…');
+    await expect(editor(page)).toContainText('INT. TRAIN - NIGHT');
+    await expect(page.locator('.toast [role="status"]')).toHaveText(
+      'Opened “train.md” as a screenplay.',
+    );
+    // A Fountain script: the Script tab, not the Preview.
+    await expect(tabs(page, 'Script').first()).toBeVisible();
+    await expect
+      .poll(async () => (await stored(page)).filter((p) => !p.sample))
+      .toEqual([expect.objectContaining({ kind: 'fountain', title: 'The Night Train' })]);
+    expect((await stored(page)).find((p) => !p.sample)?.fileName).toBeUndefined();
+
+    // Save asks for a .fountain, and never writes the .md.
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect.poll(() => picks(page)).toContain('The Night Train.fountain');
+    await expect.poll(() => textOf(page, 'The Night Train.fountain')).toBe(TYPED);
+    expect(await textOf(page, 'train.md')).toBe(TYPED);
+  });
+
+  test('the app menu lists Open as screenplay after Open', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'Drafter menu' }).click();
+    const menu = page.getByRole('menu', { name: 'Drafter menu' });
+    await expect(menu).toBeVisible();
+    const shown = (await menu.getByRole('menuitem').allTextContents()).map((n) => n.trim());
+    const at = (label: string) => shown.findIndex((n) => n.startsWith(label));
+    expect(at('Open as screenplay…')).toBe(at('Open…') + 1);
   });
 });
 

@@ -253,6 +253,16 @@ describe('The guided starters in the desktop menus', () => {
   });
 });
 
+describe('Open as screenplay in the desktop menus', () => {
+  test('hands the menu Open as screenplay… in File, after Open, with no key', () => {
+    registerCommands(['open', 'open-as-screenplay'].map((id) => command(id)));
+    expect(menuCommands(useCommands().value)).toEqual([
+      { id: 'open', title: 'Open…', group: 'File', keys: ['Mod-o'], enabled: true },
+      { id: 'open-as-screenplay', title: 'Open as screenplay…', group: 'File', enabled: true },
+    ]);
+  });
+});
+
 describe('Snapshots and Compare in the desktop menus', () => {
   test('puts History… and Take snapshot… in File, and Next change, Previous change, and Close comparison in View', () => {
     const ids = ['history', 'take-snapshot', 'next-change', 'previous-change', 'close-compare'];
@@ -336,9 +346,18 @@ describe('Export in the desktop menus', () => {
     ]);
     expect(menuFor('fountain').map((c) => [c.id, c.enabled])).toEqual([
       ['export-pdf', true],
-      ['export-md', false],
+      ['export-md', true],
       ['export-txt', true],
       ['export-fdx', true],
+    ]);
+  });
+
+  test('File › Export lists Markdown file for a script', () => {
+    // A screenplay's or a stage play's Markdown export is the same command as a Markdown
+    // document's: the desktop app's File › Export submenu shows it, on, as "Markdown file".
+    registerCommands([command('export-md', { enabled: () => exportApplies('md', 'fountain') })]);
+    expect(menuCommands(useCommands().value)).toEqual([
+      { id: 'export-md', title: 'Export as Markdown file', group: 'File', enabled: true },
     ]);
   });
 });

@@ -336,7 +336,9 @@ test.describe('opening a file where there is no picker', () => {
   test('opens a dropped file', async ({ page }) => {
     await start(page);
     await dragFile(page, 'Dropped.txt', SCRIPT, false);
-    await expect(zone(page)).toContainText('Drop a .fountain, .md, .txt, or .fdx file to open it');
+    await expect(zone(page)).toContainText(
+      'Drop a .fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein file to open it',
+    );
     await dragFile(page, 'Dropped.txt', SCRIPT, true);
     await expect(zone(page)).toHaveCount(0);
     await expect(editor(page)).toContainText('A door opens.');
@@ -493,6 +495,19 @@ test.describe('opening a file where there is no picker', () => {
     await chooseWithInput(page, 'Door.fountain', SCRIPT);
     await expect(editor(page)).toContainText('A door opens.');
     await expect(alert(page)).toHaveCount(0);
+  });
+
+  test('dropping a .rtf says it is an RTF document and opens nothing', async ({ page }) => {
+    await start(page);
+    const before = (await stored(page)).length;
+    await dragFile(page, 'Letter.rtf', '{\\rtf1\\ansi INT. POST OFFICE - DAY\\par}', true);
+    await expect(zone(page)).toHaveCount(0);
+    await expect(alert(page)).toContainText(
+      'Drafter can’t open an RTF document (Letter.rtf). Save it as plain text or Fountain in the app that made it, then open that.',
+    );
+    expect((await stored(page)).length).toBe(before);
+    await expect(editor(page)).not.toContainText('rtf1');
+    await expect(editor(page)).toContainText('INT.');
   });
 
   test('announces a refusal again when the same file is refused twice', async ({ page }) => {

@@ -8,7 +8,7 @@ if (!page) throw new Error('The Saving page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    'How Save works in each browser; scripts in a Dropbox, Google Drive, or iCloud Drive folder; Final Draft files; the recovery copy; installing as an app; and the desktop app for Linux and Windows.',
+    'How Save works in each browser; synced folders; opening Final Draft, Highland, Fade In, and Markdown files; exporting; the recovery copy; installing as an app; and the desktop app.',
 });
 </script>
 
@@ -98,8 +98,8 @@ useDocsHead({
           </tr>
           <tr>
             <th scope="row">
-              Export as PDF, plain text, or Final Draft (a Markdown document: PDF, its Markdown
-              file, or plain text)
+              Export as PDF, plain text, Final Draft, or Markdown (a Markdown document: PDF, its
+              Markdown file, or plain text)
             </th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
@@ -194,7 +194,17 @@ useDocsHead({
       already in the browser asks whether to replace that script or open the file beside it.
     </p>
 
-    <h2 id="final-draft">Final Draft files</h2>
+    <h2 id="other-apps">Files from other apps</h2>
+    <p>
+      <strong>Open a file…</strong>, or dropping a file on the window, opens a Fountain script
+      (<code>.fountain</code>), a Markdown file (<code>.md</code> or <code>.markdown</code>), or
+      plain text (<code>.txt</code>) as itself, and Save saves it the way Save does in your browser.
+      A file from another screenwriting app, a Final Draft (<code>.fdx</code>), Highland
+      (<code>.highland</code>), or Fade In (<code>.fadein</code>) file, is opened a different way:
+      its script comes in as a new one, and the file you opened is never changed.
+    </p>
+
+    <h3 id="final-draft">Final Draft</h3>
     <p>
       Drafter opens a Final Draft file (<code>.fdx</code>) the way it opens any other: choose
       <strong>Open a file…</strong>, or drop it on the window. It comes in as a new script with its
@@ -218,21 +228,103 @@ useDocsHead({
       in Drafter again brings them back.
     </p>
 
+    <h3 id="highland-fade-in">Highland and Fade In</h3>
+    <p>
+      A Highland file (<code>.highland</code>) or a Fade In file (<code>.fadein</code>) opens the
+      same way as a Final Draft file: choose <strong>Open a file…</strong>, or drop it on the
+      window, or, in the desktop app, open it with Drafter from your file manager. Its script comes
+      in as a new one, not saved yet, so the first Save asks where to put a <code>.fountain</code>,
+      and the file you opened is never changed. History keeps the script as it came in.
+    </p>
+    <ul>
+      <li>
+        <strong>Highland</strong> already writes in Fountain, so its script comes in exactly as you
+        wrote it. Anything else in the file, such as pictures, isn’t brought in, but one
+        note at the end names it, like
+        <code>[[highland: Also in the file, not brought in: cover.png]]</code>.
+      </li>
+      <li>
+        <strong>Fade In</strong> keeps its script in Open Screenplay Format, which Drafter reads as
+        it reads a Final Draft file: scenes, speeches, dual dialogue, scene numbers, bold, italic,
+        and underline, notes, and the title page all come across. A paragraph in a style Drafter has
+        no element for comes in as action with a note, like <code>[[osf: Cast List]]</code>. Fade
+        In’s page layout, fonts, and other settings are left out.
+      </li>
+    </ul>
+    <p>
+      Drafter says how many notes came in, and the Problems tab lists each one. A file that isn’t
+      one Drafter can read, such as a text file renamed <code>.highland</code>, is turned away with
+      the reason, and nothing opens.
+    </p>
+
+    <h3 id="markdown-files">Markdown</h3>
+    <p>
+      A <code>.md</code> or <code>.markdown</code> file opens as a Markdown document: a page of
+      notes, an outline, or a treatment, with a Preview beside it instead of script pages. Save
+      saves it the way Save does in your browser.
+    </p>
+    <p>
+      If the Markdown file holds a screenplay you typed in Fountain, choose
+      <strong>Open as screenplay…</strong> instead (in the palette, the app menu, or the desktop
+      app’s File menu). It opens the file as a new screenplay with its text exactly as written. It
+      isn’t saved yet, so Save asks where to put a <code>.fountain</code>, and the Markdown file is
+      never changed.
+    </p>
+    <p>
+      If it holds an outline, open it as a Markdown document and choose
+      <strong>New screenplay from this outline</strong>. Drafter makes a new screenplay from it: the
+      <code>#</code> heading at the top, before any other text, is the title, the other headings
+      become sections, each list item becomes a scene stub with a stand-in heading, and each
+      paragraph a synopsis. The Problems tab lists the stubs that still need a real heading, and the
+      outline itself stays as it was.
+    </p>
+
+    <h3 id="cant-open">Files Drafter can’t open</h3>
+    <p>
+      A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft
+      file (<code>.fdr</code>), a Celtx project, and a zip archive aren’t scripts Drafter can read,
+      so Open turns them away, says what the file is, and says what to do instead: for most, save it
+      as plain text or Fountain in the app that made it, then open that. An RTF file or a PDF is
+      known by what’s inside it even when its name ends in <code>.txt</code>. Nothing opens, and the
+      script you have open is left alone. Any other file of plain text opens as a Fountain script.
+    </p>
+
     <h2 id="export-options">Export options</h2>
     <p>
-      <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF and
-      plain text print. <strong>Scene numbers</strong>: None (the usual), As written (only the
-      numbers you’ve written in the script, like <code>#12A#</code>), or Number every scene (a scene
-      with a written number keeps it, and the rest are numbered by their place, so two scenes can
-      share a number). <strong>Title page</strong>: Full, Title and author only (the title, the
-      credit, the authors, and the source, without your contact details or the date), or None.
+      <strong>Export options…</strong>, at the end of the Export menu, sets how a script’s PDF,
+      plain text, Final Draft file, and Markdown file come out. <strong>Scene numbers</strong>: None
+      (the usual), As written (only the numbers you’ve written in the script, like
+      <code>#12A#</code>), or Number every scene (a scene with a written number keeps it, and the
+      rest are numbered by their place, so two scenes can share a number). <strong>Title
+      page</strong>: Full, Title and author only (the title, the credit, the authors, and the
+      source, without your contact details or the date), or None. <strong>Notes in
+      Markdown</strong>: Leave out (the usual) or Include, for the Markdown export alone.
     </p>
     <p>
       Each script keeps its own choices, in this browser, and the script itself never changes: they
       aren’t in its file, so another browser or computer starts with the usual ones. The export’s
       message names any choice that isn’t the usual one. A Final Draft file gets the title page you
       choose, and always keeps the scene numbers written in the script, since Final Draft decides
-      whether to print them. A Markdown document has neither, so its Export options is off.
+      whether to print them. A Markdown document has no scene numbers, title page, or notes to
+      choose, so its Export options is off.
+    </p>
+
+    <h3 id="export-markdown">Export as Markdown</h3>
+    <p>
+      Export, then <strong>Markdown (.md)</strong>, saves a screenplay or stage play as a Markdown
+      file: plain text that reads well anywhere, in a notes app, on a website, in any Markdown
+      viewer, or pasted into an AI chat, which reads Markdown more easily than a PDF. The title is
+      the top heading, scene headings are headings (numbered when your Scene numbers choice says
+      so), a speech is the character’s name in bold with the dialogue under it, and your bold,
+      italic, and underline come through. It follows your Scene numbers and Title page choices just
+      as the PDF does.
+    </p>
+    <p>
+      Notes and synopses are left out, as in the PDF, unless <strong>Notes in Markdown</strong> is
+      set to Include: then each note and synopsis is a quote where it stands, so a reader, or an AI,
+      sees what you were thinking. The boneyard is always left out. Only the Markdown export carries
+      notes; a PDF, plain text, or Final Draft file never prints them. A Markdown document’s Markdown
+      export is its own text, as it is.
     </p>
 
     <h2 id="recovery-copy">The recovery copy</h2>
@@ -264,8 +356,8 @@ useDocsHead({
       called snapshots, so you can go back to one. It takes one after every 10 minutes of active
       writing, every time you save to a file, and when you open a file. It also takes one before
       Expand outline, Fix all, Revert to Saved, or loading a changed file over the script, and when
-      you import a Final Draft file. Samples keep none, and a snapshot that matches the newest is
-      not taken again.
+      a file from another app comes in, or a Markdown file opens as a screenplay. Samples keep none,
+      and a snapshot that matches the newest is not taken again.
     </p>
     <p>
       Open <strong>History…</strong> from the app menu (File, in the desktop app), the command palette,

@@ -14,6 +14,8 @@ Drafter's permitted sources:
 | Industry formatting conventions for screenplays and stage plays | Margins, indents, `(MORE)` and `(CONT'D)`, title pages, and the rest of what a page looks like |
 | General software engineering | Parsing, line breaking, pagination, and browser storage, all common knowledge |
 | `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 2): built from the structure description and hand-made fixtures, tested on a synthetic set written by hand, and checked against Final Draft 13's own sample scripts; more real files welcome |
+| Public descriptions of the `.highland` and `.fadein` packages and the published Open Screenplay Format specification, and files a user owns | Highland and Fade In import (v0.19.0), built from the descriptions and synthetic fixtures; real files not yet checked. The sources, with their URLs and the dates they were read, are in [`DECISIONS.md`](DECISIONS.md) |
+| PKWARE's APPNOTE.TXT, the zip format's published description | The read-only zip reader in `@drafter/archive` |
 | Other applications, used as a writer uses them | Their documentation, and comparing their output with Drafter's |
 | [Courier Prime](https://fonts.google.com/specimen/Courier+Prime) | The typeface: a font under the SIL Open Font License, not code |
 
@@ -49,6 +51,10 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
   - The `.fdx` import and export were built from the published description of the file's XML structure in the technical design, and from hand-made fixtures.
   - A synthetic test set covers the format's structure: a short film, edge cases, a revised draft, and a stage play, written by hand with original text and invented values, from the element names the technical design documents, without consulting any real `.fdx` file, Final Draft, or converter; and a generated 120-page feature. Two of them are in [`samples/fdx/`](../samples/fdx/) to try Open on.
   - Import has been checked against real files, Final Draft 13's own Outline, Script, and Shooting Script samples (their structure only; nothing from them is in the repository), and fixed where it differed. More real files are welcome, and a round trip through Final Draft itself is still to come.
+- **Highland and Fade In support comes from public descriptions**, not from another program's converter, zip, or XML code:
+  - The Highland import was built from the app maker's public description of the `.highland` package and the TextBundle specification; the Fade In import from the published Open Screenplay Format example documents and public descriptions of the `.fadein` package; the zip reader from APPNOTE.TXT. [`DECISIONS.md`](DECISIONS.md) names each source and when it was read.
+  - Every fixture is synthetic, a zip made in the tests with original text, and no other repository's test files were used.
+  - No real `.highland` or `.fadein` file has been checked yet. When the maintainer supplies one, it is read locally through `DRAFTER_REAL_FILES`, only its structure is written down, and it is never committed (`.gitignore` holds `*.highland` and `*.fadein`); see [`DEFERRED.md`](DEFERRED.md).
 - **Dependencies stay out of the domain.** No Fountain parsers and no screenwriting libraries, ever. A new dependency gets an entry in `docs/DEPENDENCIES.md` first, saying why it's needed and confirming it isn't screenwriting-related.
 - **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
 - **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.

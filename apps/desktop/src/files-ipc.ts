@@ -19,7 +19,8 @@ import { fromApp } from './window';
 
 const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
   '.fountain': { name: 'Fountain script', extensions: ['fountain'] },
-  '.md': { name: 'Markdown document', extensions: ['md', 'markdown'] },
+  // A script's Markdown export is saved through this filter too, so it names the file, not a kind.
+  '.md': { name: 'Markdown file', extensions: ['md', 'markdown'] },
   '.txt': { name: 'Plain text', extensions: ['txt'] },
   '.pdf': { name: 'PDF', extensions: ['pdf'] },
   '.fdx': { name: 'Final Draft file', extensions: ['fdx'] },
@@ -27,8 +28,8 @@ const SAVE_FILTERS: Record<SaveExtension, FileFilter> = {
 const ALL_FILES: FileFilter = { name: 'All files', extensions: ['*'] };
 const OPEN_FILTERS: FileFilter[] = [
   {
-    name: 'Fountain script, Markdown document, text, or Final Draft file',
-    extensions: ['fountain', 'md', 'markdown', 'txt', 'fdx'],
+    name: 'Script, Markdown document, or a Final Draft, Highland, or Fade In file',
+    extensions: ['fountain', 'md', 'markdown', 'txt', 'fdx', 'highland', 'fadein'],
   },
   ALL_FILES,
 ];
@@ -41,7 +42,8 @@ export interface FileAccessMain {
   /**
    * Grants an existing script the writer named outside the page (the command line, a second
    * launch, a file double-clicked): the page may then open and save it. Rejects anything that
-   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`) or Final Draft file (`.fdx`).
+   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`) or a file to import (`.fdx`,
+   * `.highland`, `.fadein`).
    */
   grant(path: string): Promise<string>;
 }

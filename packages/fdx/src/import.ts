@@ -209,8 +209,19 @@ function bareText(element: XmlElement): string {
   return text.trim() === '' ? '' : text.trim();
 }
 
-/** A `[[fdx: …]]` note naming what Drafter couldn't map; a `]]` inside can't end it early. */
-const fdxNote = (label: string) => `[[fdx: ${closeSafe(label.replace(/\s+/g, ' '))}]]`;
+/** Where an import's tree came from: the prefix of its notes, and its settings elements. */
+export interface ImportSource {
+  /** `fdx` for a Final Draft file, `osf` for an Open Screenplay Format document. */
+  prefix: 'fdx' | 'osf';
+  /** The elements that hold formatting and settings, reported by name in `ignored`. */
+  ignored: ReadonlySet<string>;
+}
+
+/**
+ * A `[[prefix: …]]` note naming what Drafter couldn't map; a `]]` inside can't end it early.
+ */
+const sourceNote = (prefix: ImportSource['prefix'], label: string) =>
+  `[[${prefix}: ${closeSafe(label.replace(/\s+/g, ' '))}]]`;
 
 /** Whether a `<Text>` run is styled `HiddenText`. */
 const isHidden = (run: XmlElement) => (run.attrs.Style ?? '').split('+').includes('HiddenText');
@@ -245,6 +256,7 @@ function linesOf(
   paragraph: XmlElement,
   hidden: 'note' | 'text' = 'note',
   onHidden?: () => void,
+  prefix: ImportSource['prefix'] = 'fdx',
 ): Tok[][] {
   // A paragraph with no `<Text>` but text of its own (`<Paragraph>Hi</Paragraph>`) is read as it.
   const hasText = paragraph.children.some((c) => typeof c !== 'string' && c.name === 'Text');
@@ -274,7 +286,7 @@ function linesOf(
     if (note.trim() !== '') {
       endStretch(true);
       (lines[lines.length - 1] as Tok[]).push({
-        note: `[[fdx: Hidden: ${closeSafe(noteText(note.trim()))}]]`,
+        note: `[[${prefix}: Hidden: ${closeSafe(noteText(note.trim()))}]]`,
       });
       onHidden?.();
     }
@@ -522,6 +534,21 @@ interface Field {
 }
 
 class Importer {
+  constructor(private readonly source: ImportSource) {}
+
+  /** A `[[prefix: …]]` note for this source. */
+  private mark(label: string): string {
+    return sourceNote(this.source.prefix, label);
+  }
+
+  /**
+   * The kinds only Final Draft has (outline paragraphs, `Summary`, and `Note`): another source's
+   * style of the same name is a name, not one of these.
+   */
+  private get finalDraft(): boolean {
+    return this.source.prefix === 'fdx';
+  }
+
   private blocks: string[] = [];
   private readonly mappedCounts = new Map<string, number>();
   private readonly ignoredNames = new Set<string>();
@@ -634,7 +661,7 @@ class Importer {
       this.usedAlts.add(id);
       if (text === undefined || text === '' || this.altLines.get(id) === shown()) continue;
       this.count('Alternate');
-      this.place(fdxNote(`Alternate: ${text}`));
+      this.place(this.mark(`Alternate: ${text}`));
     }
   }
 
@@ -667,7 +694,7 @@ class Importer {
       }
       this.flushSpeech();
       this.count('Alternate');
-      this.push(fdxNote(`Alternate: ${text}`));
+      this.push(this.mark(`Alternate: ${text}`));
     }
   }
 
@@ -695,7 +722,7 @@ class Importer {
       this.count('Beat');
       const label =
         title === '' ? `Beat: ${text}` : text === '' ? `Beat, ${title}` : `Beat, ${title}: ${text}`;
-      this.push(fdxNote(label));
+      this.push(this.mark(label));
     }
   }
 
@@ -722,8 +749,13 @@ class Importer {
       this.flushSpeech();
       this.count('Script note');
       const writer = oneLine(note.attrs.WriterName ?? '').replaceAll(']]', '] ]');
-      this.push(writer ? ownNote(`${writer}: ${text}`) : fdxNote(`Script note: ${text}`));
+      this.push(writer ? ownNote(`${writer}: ${text}`) : this.mark(`Script note: ${text}`));
     }
+  }
+
+  /** An element whose content is never text: a setting, or (in Final Draft) an image's bytes. */
+  private skips(name: string): boolean {
+    return this.source.ignored.has(name) || (this.finalDraft && name === 'Picture');
   }
 
   private ignore(name: string) {
@@ -757,7 +789,7 @@ class Importer {
 
   /** An element Drafter doesn't map: settings are ignored, anything holding text is a note. */
   private other(element: XmlElement) {
-    if (IGNORED.has(element.name)) {
+    if (this.source.ignored.has(element.name)) {
       this.ignore(element.name);
       return;
     }
@@ -765,7 +797,7 @@ class Importer {
     const walk = (node: XmlElement) => {
       for (const child of node.children) {
         if (typeof child !== 'string') {
-          if (skipped(child.name)) this.ignore(child.name);
+          if (this.skips(child.name)) this.ignore(child.name);
           else walk(child);
         } else if (child.trim() !== '') texts.push(child.trim());
       }
@@ -834,12 +866,20 @@ class Importer {
     // Kinds that never print keep hidden text as their own, as an omitted scene does, which never
     // prints at all; elsewhere it is a note. A paragraph of a kind that needs its text, all of it
     // hidden, keeps it as its text too, and a note after it says Final Draft hid it.
-    const unprinted = this.omitting || OUTLINE.test(type) || type === 'Summary' || type === 'Note';
+    const outline = this.finalDraft ? OUTLINE.exec(type) : null;
+    const summaryType = this.finalDraft && type === 'Summary';
+    const noteType = this.finalDraft && type === 'Note';
+    const unprinted = this.omitting || outline !== null || summaryType || noteType;
     const allHidden = !unprinted && hiddenOnly(paragraph);
     const hiddenKind = allHidden && NEEDS_TEXT.has(type);
     const all = pictureOnly
       ? []
-      : linesOf(paragraph, unprinted || hiddenKind ? 'text' : 'note', () => this.count('Hidden'));
+      : linesOf(
+          paragraph,
+          unprinted || hiddenKind ? 'text' : 'note',
+          () => this.count('Hidden'),
+          this.source.prefix,
+        );
     const lines = type === 'Action' || type === 'Dialogue' ? all : trimBlank(all);
     const inSpeech = type === 'Parenthetical' || type === 'Dialogue';
     const lyricMark = type === 'Dialogue' && attrs.DrafterLyric === 'Yes';
@@ -850,7 +890,7 @@ class Importer {
       this.pageBreak = true;
     }
     // A summary or a note inside a speech waits for its end rather than breaking it.
-    const aside = (type === 'Summary' || type === 'Note') && this.speech !== null;
+    const aside = (summaryType || noteType) && this.speech !== null;
     if (!inSpeech && !aside) this.flushSpeech();
 
     // A section's depth is 1 to 6, as export writes it; any other value (a huge one would make a
@@ -861,7 +901,6 @@ class Importer {
     const sectionType = type === 'General' || type === 'Scene Heading';
     // Final Draft's outline paragraphs (`Outline 1 (Acts)` and so on) are sections of their
     // depth, or of their `OutlineLevel` when they carry one; deeper than six is six.
-    const outline = OUTLINE.exec(type);
     const level = attrs.OutlineLevel?.trim() ?? '';
     const outlineDepth = outline
       ? Math.min(Number(/^[1-9]$/.test(level) ? level : outline[1]), 6)
@@ -873,12 +912,12 @@ class Importer {
     } else if (isSection) {
       if (outlineDepth === 0 || lines.length > 0)
         this.push(`${'#'.repeat(depth)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
-    } else if (type === 'Summary') {
+    } else if (summaryType) {
       // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order
       // (after the speech, inside one).
       if (lines.length > 0) this.place(this.synopsisLines(lines));
-    } else if ((type === 'General' && attrs.DrafterNote === 'Yes') || type === 'Note') {
-      if (lines.length > 0 || type !== 'Note') this.place(this.note(lines));
+    } else if ((type === 'General' && attrs.DrafterNote === 'Yes') || noteType) {
+      if (lines.length > 0 || !noteType) this.place(this.note(lines));
     } else if (type === 'General' && attrs.DrafterSynopsis === 'Yes') {
       if (lines.length > 0) this.push(this.synopsisLines(lines));
     } else if (type === 'Scene Heading' || type === 'Shot') {
@@ -912,7 +951,7 @@ class Importer {
     // After its summary, which stays on the heading.
     if (hiddenKind && lines.length > 0) {
       this.count('Hidden');
-      this.place(fdxNote(`Hidden paragraph: ${oneLine(visible(lines).join(' '))}`));
+      this.place(this.mark(`Hidden paragraph: ${oneLine(visible(lines).join(' '))}`));
     }
 
     this.strayText(paragraph);
@@ -931,7 +970,7 @@ class Importer {
       else if (child.name === 'Picture') {
         // A picture's image is in `Images`, which is ignored; a short note says one was here.
         this.count('Picture');
-        this.place(fdxNote('Picture'));
+        this.place(this.mark('Picture'));
       } else this.other(child);
     }
   }
@@ -965,7 +1004,7 @@ class Importer {
       for (const block of inner) {
         if (block === '===') continue;
         this.count('Omitted');
-        this.push(`[[fdx: Omitted: ${closeSafe(noteText(block))}]]`);
+        this.push(`[[${this.source.prefix}: Omitted: ${closeSafe(noteText(block))}]]`);
       }
     }
   }
@@ -1021,7 +1060,7 @@ class Importer {
       }
       const name = oneLine(beat.attrs.Name ?? '');
       this.count('Arc beat');
-      this.place(fdxNote(name ? `Arc beat, ${name}: ${text}` : `Arc beat: ${text}`));
+      this.place(this.mark(name ? `Arc beat, ${name}: ${text}` : `Arc beat: ${text}`));
     }
   }
 
@@ -1060,7 +1099,7 @@ class Importer {
       // A number the parser can't read as one (`12 A`) is kept in a note on the heading.
       this.count('Number');
       const last = [...(lines[lines.length - 1] ?? []), { ch: ' ', style: plainStyle }];
-      lines = [...lines.slice(0, -1), [...last, { note: fdxNote(`Number ${number}`) }]];
+      lines = [...lines.slice(0, -1), [...last, { note: this.mark(`Number ${number}`) }]];
     }
     const text = lines.map(plainLine).join(' ').trim();
     const suffix = valid ? ` #${number}#` : '';
@@ -1119,7 +1158,7 @@ class Importer {
     let note = '';
     if (type !== undefined) {
       this.count(type);
-      note = fdxNote(type);
+      note = this.mark(type);
       if (lines.every(blank)) {
         // Nothing to carry: the note alone says the paragraph was there.
         this.push(note);
@@ -1289,12 +1328,14 @@ class Importer {
     );
     const keyed = paragraphs.some((p) => p.attrs.DrafterKey !== undefined);
     const onHidden = () => this.count('Hidden');
-    const fields = (keyed ? byKey(paragraphs, onHidden) : byOrder(paragraphs, onHidden)).map(
-      (field) => ({
-        ...field,
-        lines: breakStrays(field.lines),
-      }),
-    );
+    const fields = (
+      keyed
+        ? byKey(paragraphs, onHidden, this.source.prefix)
+        : byOrder(paragraphs, onHidden, this.source.prefix)
+    ).map((field) => ({
+      ...field,
+      lines: breakStrays(field.lines),
+    }));
     if (fields.length === 0) return null;
 
     const text = fields
@@ -1314,11 +1355,15 @@ class Importer {
 }
 
 /** Fields by `DrafterKey`; a paragraph without one continues the field before it. */
-function byKey(paragraphs: readonly XmlElement[], onHidden: () => void): Field[] {
+function byKey(
+  paragraphs: readonly XmlElement[],
+  onHidden: () => void,
+  prefix: ImportSource['prefix'],
+): Field[] {
   const fields: Field[] = [];
   for (const paragraph of paragraphs) {
     const key = paragraph.attrs.DrafterKey?.trim();
-    const lines = linesOf(paragraph, 'note', onHidden);
+    const lines = linesOf(paragraph, 'note', onHidden, prefix);
     const current = fields[fields.length - 1];
     if (key !== undefined && TITLE_KEY.test(key)) fields.push({ key, lines });
     else if (current) append(current.lines, lines);
@@ -1334,7 +1379,11 @@ function byKey(paragraphs: readonly XmlElement[], onHidden: () => void): Field[]
  * line is likely written as an empty `<Text>`, though no real file has confirmed it), only
  * separate blocks.
  */
-function byOrder(paragraphs: readonly XmlElement[], onHidden: () => void): Field[] {
+function byOrder(
+  paragraphs: readonly XmlElement[],
+  onHidden: () => void,
+  prefix: ImportSource['prefix'],
+): Field[] {
   const fields: Field[] = [];
   let gap = false;
   let current: Field | null = null;
@@ -1348,7 +1397,7 @@ function byOrder(paragraphs: readonly XmlElement[], onHidden: () => void): Field
     return current;
   };
   for (const paragraph of paragraphs) {
-    const lines = trimBlank(linesOf(paragraph, 'note', onHidden));
+    const lines = trimBlank(linesOf(paragraph, 'note', onHidden, prefix));
     if (lines.length === 0) {
       gap = true;
       continue;
@@ -1369,6 +1418,14 @@ function byOrder(paragraphs: readonly XmlElement[], onHidden: () => void): Field
 }
 
 /**
+ * Reads a tree in Final Draft's shape as Fountain text: a Final Draft file's own, or one another
+ * format's reader made (`osfToFdxTree`), whose notes carry its own prefix.
+ */
+export function importTree(root: XmlElement, source: ImportSource): FdxImport {
+  return new Importer(source).run(root);
+}
+
+/**
  * Reads a Final Draft file as Fountain text. Throws `FdxError` when the text isn't XML the strict
  * reader accepts (the reader's `XmlError` is its `cause`) or isn't a Final Draft document.
  */
@@ -1380,5 +1437,5 @@ export function fromFdx(xml: string): FdxImport {
     if (error instanceof XmlError) throw new FdxError(error.message, { cause: error });
     throw error;
   }
-  return new Importer().run(root);
+  return importTree(root, { prefix: 'fdx', ignored: IGNORED });
 }

@@ -50,7 +50,7 @@ function onDrop(event: DragEvent) {
       if (file) return openFile(file);
       return say(
         openError,
-        'That isn’t a file Drafter can open. Drop a .fountain, .md, .txt, or .fdx file.',
+        'That isn’t a file Drafter can open. Drop a .fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein file.',
       );
     })
     .catch(() => say(openError, 'Couldn’t open the file. Your current script is unchanged.'));
@@ -74,7 +74,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="over" class="zone" data-drop-zone>
-    <p>Drop a .fountain, .md, .txt, or .fdx file to open it</p>
+    <p>Drop a .fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein file to open it</p>
   </div>
 </template>
 

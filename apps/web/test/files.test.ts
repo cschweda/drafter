@@ -381,6 +381,7 @@ describe('saving through a FileAccess', () => {
     const { setExportOption, exportOptionsOf } = await import('../app/storage/export-options');
     await setExportOption('sceneNumbers', 'all');
     await setExportOption('titlePage', 'title-author');
+    await setExportOption('notes', 'include');
     const { setRate, ratesOf } = await import('../app/stats/timing');
     await setRate('minutesPerPage', 1.5);
     t.type('EDIT\n');
@@ -388,7 +389,7 @@ describe('saving through a FileAccess', () => {
     const mine = t.script.project.value;
     expect(mine?.id).not.toBe(sample?.id);
     // Exports read the open script's project: the choices made on the sample still hold.
-    const chosen = { sceneNumbers: 'all', titlePage: 'title-author' };
+    const chosen = { sceneNumbers: 'all', titlePage: 'title-author', notes: 'include' };
     expect(exportOptionsOf(mine)).toEqual(chosen);
     expect(exportOptionsOf(await t.projects.getProject(mine?.id ?? ''))).toEqual(chosen);
     // And so do its rates.
@@ -413,7 +414,11 @@ describe('saving through a FileAccess', () => {
     const made = rows.find((p) => p.fileName === 'The Call.fountain');
     expect(made).toBeTruthy();
     expect(made?.id).not.toBe(sample?.id);
-    expect(exportOptionsOf(made)).toEqual({ sceneNumbers: 'none', titlePage: 'none' });
+    expect(exportOptionsOf(made)).toEqual({
+      sceneNumbers: 'none',
+      titlePage: 'none',
+      notes: 'leave-out',
+    });
     expect(ratesOf(made)).toEqual({ minutesPerPage: 1, wordsPerMinute: 180 });
   });
 
@@ -691,5 +696,51 @@ describe('watching the open script’s file (the desktop app)', () => {
     await vi.waitFor(() => expect(t.log.watches).toEqual([first]));
     remove();
     expect(t.log.unwatched).toEqual([first]);
+  });
+});
+
+describe('choosing a file to open in a browser', () => {
+  test('the file input accepts every type Drafter opens', async () => {
+    const { browserFiles } = await import('../app/storage/files');
+    // No picker: the hidden input asks, and it is answered by a cancel.
+    vi.stubGlobal('showOpenFilePicker', undefined);
+    let accept = '';
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (
+      this: HTMLInputElement,
+    ) {
+      accept = this.accept;
+      this.dispatchEvent(new Event('cancel'));
+    });
+    try {
+      expect(await browserFiles.pickToOpen()).toBeNull();
+    } finally {
+      click.mockRestore();
+    }
+    expect(accept).toBe(
+      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown',
+    );
+  });
+
+  test('the picker offers every type Drafter opens, as one', async () => {
+    const { browserFiles } = await import('../app/storage/files');
+    let asked: unknown;
+    vi.stubGlobal('showOpenFilePicker', async (options: unknown) => {
+      asked = options;
+      throw new DOMException('cancelled', 'AbortError');
+    });
+    expect(await browserFiles.pickToOpen()).toBeNull();
+    expect(asked).toEqual({
+      types: [
+        {
+          description: 'Script, Markdown document, or a Final Draft, Highland, or Fade In file',
+          accept: {
+            'text/plain': ['.fountain', '.txt'],
+            'text/markdown': ['.md', '.markdown'],
+            'application/xml': ['.fdx'],
+            'application/zip': ['.highland', '.fadein'],
+          },
+        },
+      ],
+    });
   });
 });

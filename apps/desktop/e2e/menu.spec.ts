@@ -49,6 +49,16 @@ test('has File, Edit, View, Go, and Help, with an item for every command', async
   expect(errors).toEqual([]);
 });
 
+test('the File menu has Open as Screenplay…', async ({ desktop }) => {
+  const { app } = await desktop();
+  // On once the first script has opened, as Open is.
+  const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;
+  await expect.poll(() => state('open-as-screenplay'), { timeout: 15_000 }).toBe(true);
+  const items = await menuItems(app);
+  const at = items.findIndex((i) => i.id === 'open');
+  expect(items[at + 1]).toMatchObject({ id: 'open-as-screenplay', label: 'Open as Screenplay…' });
+});
+
 test('runs a command from the menu', async ({ desktop }) => {
   const { app, page } = await desktop();
   await expect
@@ -112,6 +122,28 @@ test('saves once on Mod+S', async ({ desktop, profile }) => {
   await page.waitForTimeout(800);
   expect(dialogsAsked(profile).filter((d) => d.kind === 'save')).toHaveLength(1);
   expect(existsSync(join(folder, 'Twice.fountain'))).toBe(false);
+});
+
+test('File › Export › Markdown file exports a script', async ({ desktop, profile }) => {
+  const { app, page } = await desktop();
+  const state = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.enabled;
+  // On for a screenplay as for a Markdown document: one command for both (Call 24).
+  await expect.poll(() => state('export-md')).toBe(true);
+  const folder = join(profile.home, 'Exports');
+  mkdirSync(folder, { recursive: true });
+  const target = join(folder, 'The Call (outline).md');
+  answerDialogs(profile, [target]);
+  await chooseMenuItem(app, ['File', 'Export', 'Markdown file']);
+  await expect(page.locator('.toast [role="status"]').filter({ hasText: 'Exported' })).toHaveText(
+    'Exported The Call (outline).md.',
+  );
+  // The whole script, as Markdown: its title, its section, and its first scene.
+  const written = readFileSync(target, 'utf8');
+  expect(written.startsWith('# The Call\n')).toBe(true);
+  expect(written).toContain('\n### INT. KITCHEN - NIGHT\n');
+  expect(written).toContain('**MARGARET**');
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.md' });
+  expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Call\.md$/);
 });
 
 test('creates one script on Mod+Alt+N, and the editor’s Mod+Alt keys still work', async ({

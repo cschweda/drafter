@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -225,15 +225,46 @@ describe('the packages’ names (electron-builder.config.cjs)', () => {
   test('each system names its own file types (electron-builder adds a platform’s to the top level’s)', () => {
     expect(config.fileAssociations).toBeUndefined();
     const exts = (list: { ext: string }[]) => list.map((type) => type.ext);
-    expect(exts(config.linux.fileAssociations)).toEqual(['fountain', 'md', 'markdown', 'fdx']);
-    expect(exts(config.mac.fileAssociations)).toEqual(['fountain', 'md', 'markdown', 'fdx']);
-    // A Final Draft file is only offered (an import), never Drafter's by default.
-    const fdx = config.mac.fileAssociations.find((type: { ext: string }) => type.ext === 'fdx');
-    expect(fdx).toMatchObject({ rank: 'Alternate', role: 'Viewer' });
-    // Markdown and Final Draft are only offered on Windows (installer/windows.nsh), never taken.
+    const all = ['fountain', 'md', 'markdown', 'fdx', 'highland', 'fadein'];
+    expect(exts(config.linux.fileAssociations)).toEqual(all);
+    expect(exts(config.mac.fileAssociations)).toEqual(all);
+    // A Final Draft, Highland, or Fade In file is only offered (an import), never Drafter's by
+    // default, and each has a MIME type of its own for the .deb.
+    const imports: Record<string, string> = {
+      fdx: 'application/x-fdx',
+      highland: 'application/x-highland',
+      fadein: 'application/x-fadein',
+    };
+    for (const [ext, mimeType] of Object.entries(imports)) {
+      for (const list of [config.mac.fileAssociations, config.linux.fileAssociations]) {
+        const type = list.find((t: { ext: string }) => t.ext === ext);
+        expect(type, ext).toMatchObject({ rank: 'Alternate', role: 'Viewer', mimeType });
+      }
+    }
+    // Markdown and the imports are only offered on Windows (installer/windows.nsh), never taken.
     expect(config.win.fileAssociations).toEqual([
       { ext: 'fountain', name: 'Drafter.fountain', description: 'Fountain screenplay' },
     ]);
+  });
+
+  test('the Windows installer offers each import in Open with, and takes it out again', async () => {
+    const nsh = await readFile(join(__dirname, '..', 'installer', 'windows.nsh'), 'utf8');
+    const [install = '', uninstall = ''] = nsh.split('!macro customUnInstall');
+    for (const ext of ['fdx', 'highland', 'fadein']) {
+      const progId = `Drafter.${ext}`;
+      expect(install, ext).toContain(
+        `WriteRegNone SHELL_CONTEXT "Software\\Classes\\.${ext}\\OpenWithProgids" "${progId}"`,
+      );
+      expect(install, ext).toContain(
+        `WriteRegStr SHELL_CONTEXT "Software\\Classes\\${progId}\\shell\\open\\command" "" '"$appExe" "%1"'`,
+      );
+      expect(uninstall, ext).toContain(
+        `DeleteRegValue SHELL_CONTEXT "Software\\Classes\\.${ext}\\OpenWithProgids" "${progId}"`,
+      );
+      expect(uninstall, ext).toContain(`DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${progId}"`);
+      // Offered, never taken: the extension's own default is left alone.
+      expect(nsh, ext).not.toContain(`Software\\Classes\\.${ext}" ""`);
+    }
   });
 
   test('the packed name makes plain folder names (not @drafterdesktop)', () => {

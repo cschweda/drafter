@@ -6,7 +6,7 @@
  * with no permission to ask for again. `files.ts` installs it when `desktop()` has a bridge.
  */
 import type { DesktopFilesBridge, DesktopSaveExtension } from '../desktop';
-import { isFinalDraftName } from '../markdown/kind';
+import { isImportName } from '../markdown/kind';
 import {
   type FileAccess,
   FileGoneError,
@@ -106,8 +106,9 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
     const ref = refOf(path);
     const file = await read(path);
     // The desktop app writes only scripts (the real file's type, links followed). Anything else the
-    // writer opened ("All files") becomes a new script with its text, tied to no file, so Save
-    // asks where to put it instead of failing every time.
+    // writer opened ("All files") that Open doesn't turn away (storage/formats.ts) becomes a new
+    // script with its text, tied to no file, so Save asks where to put it instead of failing every
+    // time.
     let real = path;
     try {
       real = await bridge.realPath(path);
@@ -119,8 +120,9 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
         ref: null,
         name: ref.name,
         ...file,
-        // A Final Draft file is imported, and the import says what came in (storage/open.ts).
-        ...(isFinalDraftName(ref.name)
+        // A Final Draft, Highland, or Fade In file is imported, and the import says what came in
+        // (storage/open.ts).
+        ...(isImportName(ref.name)
           ? {}
           : {
               notice: `“${ref.name}” opened as a new script. Drafter saves only .fountain, .md, .markdown, and .txt files, so Save will ask where to put it.`,

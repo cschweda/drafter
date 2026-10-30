@@ -78,7 +78,7 @@ afterEach(() => {
 
 describe('exportOptionsOf', () => {
   test('reads missing or unknown options as the defaults', () => {
-    const defaults = { sceneNumbers: 'none', titlePage: 'full' };
+    const defaults = { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' };
     expect(exportOptionsOf(undefined)).toEqual(defaults);
     expect(exportOptionsOf(null)).toEqual(defaults);
     expect(exportOptionsOf({})).toEqual(defaults);
@@ -89,10 +89,28 @@ describe('exportOptionsOf', () => {
     );
     expect(
       exportOptionsOf({ exportOptions: { sceneNumbers: 'roman', titlePage: 'none' } as never }),
-    ).toEqual({ sceneNumbers: 'none', titlePage: 'none' });
+    ).toEqual({ sceneNumbers: 'none', titlePage: 'none', notes: 'leave-out' });
     expect(exportOptionsOf({ exportOptions: { sceneNumbers: 'written' } })).toEqual({
       sceneNumbers: 'written',
       titlePage: 'full',
+      notes: 'leave-out',
+    });
+  });
+
+  test('reads a missing or unknown notes value as Leave out', () => {
+    // A project kept before there was a notes option has none: it reads as Leave out.
+    expect(
+      exportOptionsOf({ exportOptions: { sceneNumbers: 'all', titlePage: 'none' } }).notes,
+    ).toBe('leave-out');
+    for (const notes of ['all', '', null, 1, 'Include']) {
+      expect(exportOptionsOf({ exportOptions: { notes } as never }).notes, String(notes)).toBe(
+        'leave-out',
+      );
+    }
+    expect(exportOptionsOf({ exportOptions: { notes: 'include' } })).toEqual({
+      sceneNumbers: 'none',
+      titlePage: 'full',
+      notes: 'include',
     });
   });
 });
@@ -100,7 +118,7 @@ describe('exportOptionsOf', () => {
 describe('optionsPhrase', () => {
   test('optionsPhrase is empty for the defaults and names each other choice', () => {
     const phrase = (sceneNumbers: string, titlePage: string) =>
-      optionsPhrase({ sceneNumbers, titlePage } as ExportOptions);
+      optionsPhrase({ sceneNumbers, titlePage, notes: 'leave-out' } as ExportOptions);
     expect(phrase('none', 'full')).toBe('');
     expect(phrase('none', 'title-author')).toBe('with the title and author only');
     expect(phrase('none', 'none')).toBe('with no title page');
@@ -114,6 +132,18 @@ describe('optionsPhrase', () => {
       'with every scene numbered and the title and author only',
     );
     expect(phrase('all', 'none')).toBe('with every scene numbered and no title page');
+  });
+
+  test('optionsPhrase says with notes', () => {
+    const phrase = (sceneNumbers: string, titlePage: string) =>
+      optionsPhrase({ sceneNumbers, titlePage, notes: 'include' } as ExportOptions);
+    expect(phrase('none', 'full')).toBe('with notes');
+    expect(phrase('all', 'full')).toBe('with every scene numbered and notes');
+    expect(phrase('none', 'none')).toBe('with no title page and notes');
+    // Three: a list, its last joined by "and".
+    expect(phrase('written', 'title-author')).toBe(
+      'with scene numbers as written, the title and author only, and notes',
+    );
   });
 });
 
@@ -129,10 +159,25 @@ describe('setExportOption', () => {
     expect(t.session.project.value?.exportOptions).toEqual({
       sceneNumbers: 'written',
       titlePage: 'full',
+      notes: 'leave-out',
     });
-    expect(await stored()).toEqual({ sceneNumbers: 'written', titlePage: 'full' });
+    expect(await stored()).toEqual({
+      sceneNumbers: 'written',
+      titlePage: 'full',
+      notes: 'leave-out',
+    });
     await t.setExportOption('titlePage', 'none');
-    expect(await stored()).toEqual({ sceneNumbers: 'written', titlePage: 'none' });
+    expect(await stored()).toEqual({
+      sceneNumbers: 'written',
+      titlePage: 'none',
+      notes: 'leave-out',
+    });
+    await t.setExportOption('notes', 'include');
+    expect(await stored()).toEqual({
+      sceneNumbers: 'written',
+      titlePage: 'none',
+      notes: 'include',
+    });
     // The text is not touched, and the script isn't changed by it.
     expect(t.editor.view.state.doc.toString()).toBe(text);
     expect((await t.db.projects.get(id))?.source).toBe(text);
@@ -141,17 +186,26 @@ describe('setExportOption', () => {
     // A tab that only shows the script keeps nothing.
     const readOnly = vi.spyOn(t.guard.readOnly, 'value', 'get').mockReturnValue(true);
     await t.setExportOption('titlePage', 'title-author');
-    expect(await stored()).toEqual({ sceneNumbers: 'written', titlePage: 'none' });
+    expect(await stored()).toEqual({
+      sceneNumbers: 'written',
+      titlePage: 'none',
+      notes: 'include',
+    });
     expect(t.session.project.value?.exportOptions).toEqual({
       sceneNumbers: 'written',
       titlePage: 'none',
+      notes: 'include',
     });
     readOnly.mockRestore();
 
     // A recovery write afterward keeps them: they are the project's, not the text's.
     t.editor.view.dispatch({ changes: { from: text.length, insert: 'More.\n' } });
     await t.session.flush();
-    expect(await stored()).toEqual({ sceneNumbers: 'written', titlePage: 'none' });
+    expect(await stored()).toEqual({
+      sceneNumbers: 'written',
+      titlePage: 'none',
+      notes: 'include',
+    });
   });
 
   test('two quick choices are both kept, though the first is still being written', async () => {
@@ -175,7 +229,7 @@ describe('setExportOption', () => {
     const two = t.setExportOption('titlePage', 'none');
     release();
     await Promise.all([one, two]);
-    const both = { sceneNumbers: 'written', titlePage: 'none' };
+    const both = { sceneNumbers: 'written', titlePage: 'none', notes: 'leave-out' };
     expect(t.session.project.value?.exportOptions).toEqual(both);
     expect((await t.db.projects.get(id))?.exportOptions).toEqual(both);
   });
@@ -206,6 +260,7 @@ describe('setExportOption', () => {
     expect((await t.db.projects.get(id))?.exportOptions).toEqual({
       sceneNumbers: 'written',
       titlePage: 'none',
+      notes: 'leave-out',
     });
     // The script open now has none of them.
     expect(t.session.project.value?.exportOptions).toBeUndefined();

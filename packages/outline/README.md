@@ -1,6 +1,6 @@
 # @drafter/outline
 
-Structure for [Drafter](https://github.com/cschweda/drafter): the scene index of a parsed Fountain script, and the edits that work on its structure (moving scenes and sections, synopses, scene colors and the rest of a scene's header, treatments, and outlines turned into scene stubs), each returned as text changes, and the geometry of the Structure strip, the band of sections and scenes Drafter draws above its panes. It reads a parsed document, a template, and a layout when there is one, and touches no file and no DOM, so it runs in Node, in a browser, and in a worker.
+Structure for [Drafter](https://github.com/cschweda/drafter): the scene index of a parsed Fountain script, and the edits that work on its structure (moving scenes and sections, synopses, scene colors and the rest of a scene's header, treatments, and outlines turned into scene stubs), each returned as text changes, the whole script as Markdown, and the geometry of the Structure strip, the band of sections and scenes Drafter draws above its panes. It reads a parsed document, a template, and a layout when there is one, and touches no file and no DOM, so it runs in Node, in a browser, and in a worker.
 
 ```ts
 import { parse } from '@drafter/fountain';
@@ -51,6 +51,31 @@ estimateSeconds(tally.timing(), 150); // seconds, at 150 words a minute
 ```
 
 See the [out-the-door design](../../docs/drafter-out-the-door-design.md), §3.
+
+## The script as Markdown
+
+`scriptMarkdown` writes the whole script, not only its outline, as CommonMark that reads well in any Markdown viewer and pastes cleanly into a website, a notes app, or an AI chat. The title page's Title is `#` and its other printed lines are paragraphs; sections are headings one level below the title, and scene headings one level below the deepest section, numbered as the PDF numbers them (`sceneNumbersFor` in `@drafter/layout`); a level past 6 is a bold paragraph. A speech is one paragraph: the name in bold, a parenthetical in italics, then the dialogue, line under line. A play's stage directions and lyrics are italic, centered text keeps its marks (`\>THE END<`), a page break is `* * *`, and the second speech of dual dialogue says *(at the same time)*. Bold, italics, and underlining come through as `**`, `*`, and `<u>…</u>`. Notes and synopses are left out unless `notes: 'include'`, when they are quotes where they stand; the boneyard never is. Cut the title page first with `titlePageFor`, as the PDF does.
+
+```ts
+import { parse } from '@drafter/fountain';
+import { titlePageFor } from '@drafter/layout';
+import { sceneIndex, scriptMarkdown } from '@drafter/outline';
+import { builtins } from '@drafter/templates';
+
+const template = builtins['us-screenplay'];
+const parsed = parse('Title: The Call\n\nINT. KITCHEN - NIGHT #12#\n\nMARGARET\n(quietly)\nYou said you\'d call.\n');
+const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, 'full') };
+scriptMarkdown(doc, sceneIndex(doc, template), template, { sceneNumbers: 'written', notes: 'leave-out' });
+// # The Call
+//
+// ## 12. INT. KITCHEN - NIGHT
+//
+// **MARGARET**\
+// *(quietly)*\
+// You said you'd call.
+```
+
+`markdownText` is the escaper it and `treatment` share: the writer's text, escaped so a CommonMark parser reads back exactly that text in one paragraph, each line's ends trimmed and the lines joined by hard breaks.
 
 ## The Structure strip
 

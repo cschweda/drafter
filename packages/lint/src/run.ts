@@ -5,6 +5,7 @@ import { characterWithoutDialogue } from './rules/cue';
 import { fdxNote } from './rules/fdx';
 import { duplicateField } from './rules/fields';
 import { headingNoTime } from './rules/heading';
+import { highlandNote, osfNote } from './rules/import-notes';
 import { similarNames } from './rules/names';
 import {
   headingBlankAfter,
@@ -28,6 +29,8 @@ export const rules: readonly Rule[] = [
   headingNoTime,
   stubHeading,
   fdxNote,
+  highlandNote,
+  osfNote,
   setupWithoutPayoff,
   payoffWithoutSetup,
   duplicateField,

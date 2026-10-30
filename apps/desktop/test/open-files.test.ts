@@ -74,6 +74,17 @@ describe('filesFromArgv', () => {
     ]);
   });
 
+  test('grants a .highland and a .fadein named on the command line', () => {
+    const a = touch('Ferry.highland', 'PK');
+    const b = touch('Cabin.fadein', 'PK');
+    touch('LOUD.HIGHLAND', 'PK');
+    expect(filesFromArgv(['/usr/bin/drafterdev', a, b, 'LOUD.HIGHLAND'], dir)).toEqual([
+      a,
+      b,
+      join(dir, 'LOUD.HIGHLAND'),
+    ]);
+  });
+
   test('leaves out the executable, the app, and an AppImage, however they are written', () => {
     const script = touch('x.txt');
     const app = join(dir, 'app.txt'); // an app path that happens to look like a script
@@ -127,11 +138,11 @@ describe('requestsFromArgv', () => {
     expect(refused.map((r) => r.name)).toEqual(['ok.fountain', 'picture.png', 'missing.md']);
     expect(refused.map((r) => r.reason)).toEqual([
       'it isn’t there',
-      'it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx)',
+      'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein)',
       'it isn’t there',
     ]);
     expect(refusalMessage(refused[1] as Refusal)).toBe(
-      'Drafter can’t open “picture.png”: it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx).',
+      'Drafter can’t open “picture.png”: it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein).',
     );
   });
 
@@ -194,7 +205,7 @@ describe('names that are not ASCII', () => {
     touch('写真.png');
     const png = requestsFromArgv(['x', '写真.png'], dir).refused;
     expect(refusalMessage(png[0] as Refusal)).toBe(
-      'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, .txt, or .fdx).',
+      'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, or .fadein).',
     );
   });
 });
