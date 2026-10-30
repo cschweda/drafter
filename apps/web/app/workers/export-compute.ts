@@ -92,6 +92,8 @@ export type ExportRequest =
       lang: string;
       generator: string;
       modified: number;
+      /** The project's id, the book's identity (`epubIdentifier`); none for a script not saved. */
+      projectId?: string;
     }
   | { kind: 'markdown-pdf'; source: string; paper: Paper; title: string; lang: string }
   | { kind: 'markdown-html'; source: string; title: string; lang: string; generator: string }
@@ -102,6 +104,8 @@ export type ExportRequest =
       lang: string;
       generator: string;
       modified: number;
+      /** The project's id, as a script's EPUB's. */
+      projectId?: string;
     };
 /** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
 export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
@@ -221,8 +225,8 @@ export function createExporter(
           lang,
           generator,
           modified: new Date(request.modified),
-          // The same draft is the same book, so a reader keeps its place across exports.
-          id: epubIdentifier(title, source),
+          // The same work is the same book, so a re-export replaces the old one on an e-reader.
+          id: epubIdentifier({ project: request.projectId, title }),
         }),
       };
     }
@@ -282,7 +286,13 @@ export function createExporter(
           // The title page as the export keeps it: with none, the book names no author either.
           author: scriptAuthor(doc),
           modified: new Date(request.modified),
-          id: epubIdentifier(request.title, source),
+          // The work's identity, not its text's: the project, else the title and the title
+          // page's author (as written, whatever the export's title page option).
+          id: epubIdentifier({
+            project: request.projectId,
+            title: request.title,
+            author: scriptAuthor(parsed),
+          }),
         }),
       };
     }

@@ -107,6 +107,76 @@ describe('zipStored', () => {
     ).toThrow(RangeError);
   });
 
+  test("refuses every name the archive's own reader refuses (a drive letter, C1, bidi, separators)", () => {
+    const one = (name: string) => () => zipStored([{ name, data: new Uint8Array() }]);
+    for (const bad of [
+      'C:/x',
+      'c:x',
+      'a\u0085b',
+      'a\u2028b',
+      'a\u2029b',
+      'a\u202eb',
+      'a\u2067b',
+      'a\ud800b',
+      'a\udc00',
+    ]) {
+      expect(one(bad), JSON.stringify(bad)).toThrow(RangeError);
+    }
+  });
+
+  test('never writes an archive its own reader refuses (property)', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.string({ unit: 'binary', minLength: 1, maxLength: 12 }),
+          fc.string({
+            unit: fc.constantFrom('a', '/', '.', ':', '\\', '\ud800', '\u0085', 'C'),
+            maxLength: 8,
+          }),
+        ),
+        (name) => {
+          let zip: Uint8Array;
+          try {
+            zip = zipStored([{ name, data: new Uint8Array() }]);
+          } catch (error) {
+            expect(error).toBeInstanceOf(RangeError);
+            return;
+          }
+          expect(listZip(zip).map((e) => e.name)).toEqual([name]);
+        },
+      ),
+      { numRuns: 2000 },
+    );
+  });
+
+  test('refuses a name past 65,535 UTF-8 bytes, which a zip header cannot say', () => {
+    // 0xffff bytes is the most a name may take; one more, or a short count of wide characters
+    // that encode past it, is refused rather than written with a wrapped length.
+    expect(() => zipStored([{ name: 'a'.repeat(0xffff), data: new Uint8Array() }])).not.toThrow();
+    expect(() => zipStored([{ name: 'a'.repeat(0x10000), data: new Uint8Array() }])).toThrow(
+      RangeError,
+    );
+    // 21,846 three-byte characters: 65,538 bytes, though only 21,846 UTF-16 units.
+    expect(() => zipStored([{ name: '日'.repeat(21846), data: new Uint8Array() }])).toThrow(
+      RangeError,
+    );
+  });
+
+  test('refuses two names that differ only by case, as a case-blind disk would merge them', () => {
+    expect(() =>
+      zipStored([
+        { name: 'EPUB/Part-1.xhtml', data: new Uint8Array() },
+        { name: 'epub/part-1.xhtml', data: new Uint8Array() },
+      ]),
+    ).toThrow(RangeError);
+    expect(() =>
+      zipStored([
+        { name: 'a', data: new Uint8Array() },
+        { name: 'b', data: new Uint8Array() },
+      ]),
+    ).not.toThrow();
+  });
+
   test('the same entries make the same bytes', () => {
     const entries = [{ name: 'a.txt', data: bytes('one') }];
     expect(zipStored(entries)).toEqual(zipStored(entries));

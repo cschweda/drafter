@@ -530,6 +530,7 @@ describe('the export worker’s EPUB', () => {
       lang: 'en-GB',
       generator: 'Drafter 9.9.9',
       modified: MODIFIED,
+      projectId: 'project-1',
       ...request,
     }) as const;
 
@@ -551,7 +552,7 @@ describe('the export worker’s EPUB', () => {
       generator: 'Drafter 9.9.9',
       author: scriptAuthor(doc),
       modified: new Date(MODIFIED),
-      id: epubIdentifier('The Call', source),
+      id: epubIdentifier({ project: 'project-1' }),
     });
   }
 
@@ -575,7 +576,7 @@ describe('the export worker’s EPUB', () => {
     expect(opf).toContain('<dc:creator>A. Writer</dc:creator>');
     expect(opf).toContain('<dc:language>en-GB</dc:language>');
     expect(opf).toContain('2026-10-30T12:00:00Z');
-    expect(opf).toContain(epubIdentifier('The Call', SCRIPT));
+    expect(opf).toContain(epubIdentifier({ project: 'project-1' }));
     expect(book.names).toContain('EPUB/fonts/courier-prime-regular.ttf');
     expect(book.names.filter((n) => n.startsWith('EPUB/fonts/'))).toHaveLength(1);
 
@@ -588,6 +589,30 @@ describe('the export worker’s EPUB', () => {
     expect(await other.text('EPUB/part-1.xhtml')).toContain('A note to self.');
   });
 
+  test("the book's identifier is the project's: the same across edits, another for another", async () => {
+    const exporter = createExporter(realFonts);
+    const idOf = async (request: Parameters<typeof epub>[0]) => {
+      const opf = (await (
+        await entries(bytesOf(await exporter(epub(request))))
+      ).text('EPUB/package.opf')) as string;
+      return /<dc:identifier id="uid">([^<]*)</.exec(opf)?.[1];
+    };
+    const first = await idOf({});
+    expect(first).toBe(epubIdentifier({ project: 'project-1' }));
+    // Edited, and retitled: still the same book, so an e-reader replaces the old copy.
+    expect(await idOf({ source: `${SCRIPT}\nMARA\nStill there?\n`, title: 'The Call Back' })).toBe(
+      first,
+    );
+    expect(await idOf({ projectId: 'project-9' })).not.toBe(first);
+    // With no project, the title and the title page's author name it.
+    expect(await idOf({ projectId: undefined })).toBe(
+      epubIdentifier({ title: 'The Call', author: 'A. Writer' }),
+    );
+    expect(await idOf({ projectId: undefined, source: `${SCRIPT}\nMARA\nStill there?\n` })).toBe(
+      epubIdentifier({ title: 'The Call', author: 'A. Writer' }),
+    );
+  });
+
   test('builds a Markdown document’s EPUB', async () => {
     const exporter = createExporter(realFonts);
     const source = '# Harbour Notes\n\nThe map.[^1]\n\n[^1]: Drawn by hand.\n';
@@ -598,6 +623,7 @@ describe('the export worker’s EPUB', () => {
       lang: 'en-GB',
       generator: 'Drafter 9.9.9',
       modified: MODIFIED,
+      projectId: 'project-2',
     });
     expect(bytesOf(reply)).toEqual(
       renderDocumentEpub({
@@ -606,7 +632,7 @@ describe('the export worker’s EPUB', () => {
         lang: 'en-GB',
         generator: 'Drafter 9.9.9',
         modified: new Date(MODIFIED),
-        id: epubIdentifier('Harbour Notes', source),
+        id: epubIdentifier({ project: 'project-2' }),
       }),
     );
     const book = await entries(bytesOf(reply));

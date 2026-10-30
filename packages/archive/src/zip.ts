@@ -151,9 +151,10 @@ function decodeName(raw: Uint8Array, utf8: boolean): string {
  * Whether a name is safe to list: not empty or absolute, and without a backslash, a control
  * character (C0, DEL, or a C1 that decoded as UTF-8, NUL among them), a line or paragraph
  * separator, a bidi control, a `..` segment, or a drive letter. No real package's names hold any
- * of these, and a name can end up in a script's notes.
+ * of these, and a name can end up in a script's notes. The zip writer checks its names with this
+ * too, so it can never write an archive this reader refuses.
  */
-function safeName(name: string): boolean {
+export function safeName(name: string): boolean {
   if (name === '' || name.startsWith('/') || /^[A-Za-z]:/.test(name)) return false;
   if (/[\\\p{Cc}\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(name)) return false;
   return !name.split('/').includes('..');

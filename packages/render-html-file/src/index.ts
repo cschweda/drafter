@@ -3,7 +3,7 @@ export { bandHtml } from './band';
 export { CLIENT_SCRIPT } from './client';
 export type { DocumentHtmlInput } from './document';
 export { MAX_TREE_DEPTH, renderDocumentHtml, WORDS_PER_MINUTE } from './document';
-export type { DocumentEpubInput, EpubBook, ScriptEpubInput } from './epub';
+export type { DocumentEpubInput, EpubBook, EpubWork, ScriptEpubInput } from './epub';
 export {
   epubIdentifier,
   epubStylesUsed,

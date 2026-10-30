@@ -12,6 +12,7 @@ const shown = vi.hoisted(() => ({
   text: '',
   kind: 'fountain' as 'fountain' | 'markdown',
   project: null as null | {
+    id?: string;
     fileName?: string;
     lineBreak?: '\n' | '\r\n';
     bom?: boolean;
@@ -284,7 +285,7 @@ describe('exporting', () => {
   test('the EPUB is named like the others, ending .epub, and typed as an e-book', async () => {
     for (const inPlace of [true, false]) {
       const t = await load({ inPlace });
-      shown.project = { fileName: 'call.fountain' };
+      shown.project = { id: 'project-1', fileName: 'call.fountain' };
       preferences.spellLanguage = 'en-GB';
       const book = new Uint8Array([0x50, 0x4b, 3, 4]);
       render.mockResolvedValue(book);
@@ -308,6 +309,8 @@ describe('exporting', () => {
           lang: 'en-GB',
           generator: expect.stringMatching(/^Drafter\b/),
           modified: expect.any(Number),
+          // The book's identity: the project, so a re-export is the same book on an e-reader.
+          projectId: 'project-1',
         },
         expect.any(Function),
       );
@@ -323,7 +326,7 @@ describe('exporting', () => {
     const t = await load({ inPlace: false });
     shown.text = '# The Treatment\n\nWords.\n';
     shown.kind = 'markdown';
-    shown.project = { exportOptions: { notes: 'include', sceneNumbers: 'all' } };
+    shown.project = { id: 'project-2', exportOptions: { notes: 'include', sceneNumbers: 'all' } };
     render.mockResolvedValue(new Uint8Array([0x50, 0x4b, 3, 4]));
     expect(await t.exportScript('epub')).toBe('saved');
     expect(render).toHaveBeenCalledWith(
@@ -334,6 +337,7 @@ describe('exporting', () => {
         lang: 'en-US',
         generator: expect.stringMatching(/^Drafter\b/),
         modified: expect.any(Number),
+        projectId: 'project-2',
       },
       expect.any(Function),
     );

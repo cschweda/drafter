@@ -145,7 +145,8 @@ function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions
  * spellcheck's language, with the paper, as they were when it was asked for; an HTML file carries
  * the title and the language too, the app's name and version, and, for a script, its own page
  * rate, for the kind line over its title. An EPUB carries the same, but for the rate (it has no
- * kind line), and the time it was asked for, its package's modified date.
+ * kind line), and the time it was asked for, its package's modified date, and the project's id,
+ * the book's identity.
  */
 function requestFor(
   asked: Asked,
@@ -155,10 +156,14 @@ function requestFor(
     options: ExportOptions;
     title: string;
     markdown: boolean;
+    /** The open project's id, an EPUB's identity; none when nothing is saved. */
+    projectId: string | undefined;
   },
 ): ExportRequest {
   const { kind } = asked;
   const { source, template, options, title, markdown } = open;
+  // Only when there is one, so a request without a project has no such key.
+  const work = open.projectId === undefined ? {} : { projectId: open.projectId };
   const lang = asked.lang;
   if (markdown) {
     if (kind === 'epub') {
@@ -169,6 +174,7 @@ function requestFor(
         lang,
         generator: generator(),
         modified: Date.now(),
+        ...work,
       };
     }
     return kind === 'html'
@@ -176,7 +182,7 @@ function requestFor(
       : { kind: 'markdown-pdf', source, paper: asked.paper, title, lang };
   }
   if (kind === 'epub') {
-    const book = { title, lang, generator: generator(), modified: Date.now() };
+    const book = { title, lang, generator: generator(), modified: Date.now(), ...work };
     return { kind, source, template, options, ...book };
   }
   if (kind === 'html') {
@@ -272,7 +278,8 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
         script.project.value?.bom ?? false,
       );
     } else {
-      const request = requestFor(asked, { source, template, options, title, markdown });
+      const projectId = script.project.value?.id;
+      const request = requestFor(asked, { source, template, options, title, markdown, projectId });
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;

@@ -28,7 +28,7 @@ export interface EpubBook {
   author?: string;
   /** `dcterms:modified`, written in UTC to the second. */
   modified: Date;
-  /** `dc:identifier`, the book's one id: `epubIdentifier(title, text)` makes one. */
+  /** `dc:identifier`, the book's one id: `epubIdentifier(work)` makes one. */
   id: string;
 }
 
@@ -38,22 +38,40 @@ const ROOT = 'EPUB/';
 const XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n';
 const encoder = new TextEncoder();
 
+/** What names a book: the work it was made from, never its text (`epubIdentifier`). */
+export interface EpubWork {
+  /** The app's project id: stable for a script whatever is written in it, or retitled. */
+  project?: string;
+  /** Without a project (the CLI, or nothing saved), the title and the author name the work. */
+  title: string;
+  author?: string;
+}
+
 /**
- * A stable `urn:uuid` for an export, so a reader that keeps its place by the book's id finds it
- * again when the same draft is exported again, and a changed draft is a different book. The first
- * 16 bytes of the SHA-256 of "drafter-epub", the title's length, the title, and the text (each
- * apart, so nothing moves between them), with the version nibble set to 5 and the variant to
- * RFC 4122's, in the 8-4-4-4-12 shape. It has a name-based UUID's shape and properties (the same
- * name, the same id), not version 5's SHA-1 and namespace.
+ * A stable `urn:uuid` for the work an export is made from (DECISIONS: the book's identifier is the
+ * work's), so a re-export of the same script is the same book, and an e-reader that knows books by
+ * their id replaces the old copy (and most keep the reader's place) rather than shelving a second.
+ * In the app it is the project's id; without one, the title and the author. The first 16 bytes of
+ * the SHA-256 of "drafter-epub" and those facts (each apart, with a length or a marker, so nothing
+ * moves between them, and a project can never name the book a title does), with the version nibble
+ * set to 5 and the variant to RFC 4122's, in the 8-4-4-4-12 shape. It has a name-based UUID's
+ * shape and properties (the same name, the same id), not version 5's SHA-1 and namespace.
  */
-export function epubIdentifier(title: string, text: string): string {
-  const digest = sha256(encoder.encode(`drafter-epub\n${title.length}\n${title}\n${text}`));
+export function epubIdentifier(work: EpubWork): string {
+  const name =
+    work.project !== undefined
+      ? `drafter-epub\nproject\n${work.project}`
+      : `drafter-epub\nwork\n${work.title.length}\n${work.title}\n${work.author ?? ''}`;
+  const digest = sha256(encoder.encode(name));
   const bytes = digest.slice(0, 16);
   bytes[6] = ((bytes[6] as number) & 0x0f) | 0x50;
   bytes[8] = ((bytes[8] as number) & 0x3f) | 0x80;
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
   return `urn:uuid:${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+
+/** A book's title as it is shown: "Untitled" for none, in the package, the contents, and the header. */
+const shownTitle = (title: string) => (title.trim() === '' ? 'Untitled' : title);
 
 /** The script's author for `dc:creator`: its title page's Author (or Authors), else ''. */
 export const scriptAuthor = (doc: Doc) => titleField(doc, 'author', 'authors');
@@ -233,19 +251,25 @@ function fontFiles(
  * claim: the book hasn't been audited against WCAG 2.2 AA as an EPUB (no Ace run), so it doesn't
  * say it conforms.
  */
-const ACCESSIBILITY = [
-  x('meta', { property: 'schema:accessMode' }, 'textual'),
-  x('meta', { property: 'schema:accessModeSufficient' }, 'textual'),
-  ...['structuralNavigation', 'tableOfContents', 'readingOrder', 'displayTransformability'].map(
-    (feature) => x('meta', { property: 'schema:accessibilityFeature' }, feature),
-  ),
-  x('meta', { property: 'schema:accessibilityHazard' }, 'none'),
-  x(
-    'meta',
-    { property: 'schema:accessibilitySummary' },
-    'All text, in reading order, with headings and a table of contents to move by; the reader can change its type size and colors. A character’s name is always printed beside its color. No images, sound, or motion.',
-  ),
-];
+function accessibility(summary: string): string[] {
+  return [
+    x('meta', { property: 'schema:accessMode' }, 'textual'),
+    x('meta', { property: 'schema:accessModeSufficient' }, 'textual'),
+    ...['structuralNavigation', 'tableOfContents', 'readingOrder', 'displayTransformability'].map(
+      (feature) => x('meta', { property: 'schema:accessibilityFeature' }, feature),
+    ),
+    x('meta', { property: 'schema:accessibilityHazard' }, 'none'),
+    x('meta', { property: 'schema:accessibilitySummary' }, summary),
+  ];
+}
+
+const SUMMARY_START =
+  'All text, in reading order, with headings and a table of contents to move by; the reader can change its type size and colors.';
+/** Each kind's summary: only a script has characters, and colors that mark them. */
+const SUMMARY = {
+  script: `${SUMMARY_START} Each character’s name is printed in full beside its color, so the color is never the only way to tell who speaks. No images, sound, or motion.`,
+  document: `${SUMMARY_START} No images, sound, or motion.`,
+} as const;
 
 /** The book's whole zip, from its parts, stylesheet, and fonts. */
 function book(o: {
@@ -255,14 +279,14 @@ function book(o: {
   author?: string;
   modified: Date;
   id: string;
-  bodyClass: string;
+  bodyClass: 'script' | 'document';
   parts: Part[];
   css: string;
   fonts: FontFile[];
 }): Uint8Array {
   const modified = modifiedOf(o.modified);
   const lang = langOf(o.lang);
-  const title = o.title.trim() === '' ? 'Untitled' : o.title;
+  const title = shownTitle(o.title);
   const author = o.author?.trim() ? o.author : undefined;
 
   const navList = el(
@@ -317,7 +341,7 @@ function book(o: {
     author === undefined ? '' : x('dc:creator', {}, escapeHtml(author)),
     x('dc:language', {}, escapeHtml(lang)),
     x('meta', { property: 'dcterms:modified' }, modified),
-    ...ACCESSIBILITY,
+    ...accessibility(SUMMARY[o.bodyClass]),
   ].filter(Boolean);
   const opf =
     XML_DECLARATION +
@@ -409,11 +433,12 @@ function scriptParts(items: readonly ReadingItem[], title: string): Omit<Part, '
 export function renderScriptEpub(input: ScriptEpubInput): Uint8Array {
   const { doc, layout } = input;
   const { items, colors } = readingItems(doc, layout, input.notes);
-  const parts = scriptParts(items, input.title).map((part, i) => ({
+  const title = shownTitle(input.title);
+  const parts = scriptParts(items, title).map((part, i) => ({
     ...part,
     file: partFile(i),
     html:
-      (i === 0 ? headerHtml(input.title, titleLines(doc)) : '') +
+      (i === 0 ? headerHtml(title, titleLines(doc)) : '') +
       el('section', { class: 'reading', 'epub:type': 'chapter' }, part.html),
   }));
   const colorCss = colors.map((color, i) => `.k${i}{color:${color.light}}`).join('\n');
@@ -433,10 +458,11 @@ export function renderScriptEpub(input: ScriptEpubInput): Uint8Array {
  * when there is one). No font is embedded: the e-reader's own serif reads it.
  */
 export function renderDocumentEpub(input: DocumentEpubInput): Uint8Array {
-  const parts = documentParts(input.tree, input.title, partFile).map((part, i) => ({
+  const title = shownTitle(input.title);
+  const parts = documentParts(input.tree, title, partFile).map((part, i) => ({
     ...part,
     html:
-      (i === 0 ? headerHtml(input.title, input.author?.trim() ? [input.author] : []) : '') +
+      (i === 0 ? headerHtml(title, input.author?.trim() ? [input.author] : []) : '') +
       el('section', { class: 'document', 'epub:type': 'chapter' }, part.html),
     beneath: [],
   }));

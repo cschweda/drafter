@@ -382,6 +382,7 @@ test.describe('without JavaScript', () => {
       'HTML (.html)',
       'EPUB (.epub)',
       'e-book',
+      'a new export replaces the old one on most e-readers',
       'AI chat',
     ]) {
       expect(text, phrase).toContain(phrase);

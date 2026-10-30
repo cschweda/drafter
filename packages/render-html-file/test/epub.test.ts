@@ -188,9 +188,41 @@ describe('the container', () => {
       'displayTransformability',
     ]);
     expect(metas('schema:accessibilityHazard')).toEqual(['none']);
-    expect(metas('schema:accessibilitySummary')[0]).toMatch(/table of contents/);
+    const summary = metas('schema:accessibilitySummary');
+    expect(summary).toHaveLength(1);
+    expect(summary[0]).toMatch(/table of contents/);
+    // A script's names have colors, and the summary says each is printed beside its name.
+    expect(summary[0]).toMatch(/character/);
+    expect(summary[0]).toMatch(/color/);
     expect(opf.getElementsByTagNameNS('http://purl.org/dc/terms/', 'conformsTo')).toHaveLength(0);
     expect(metas('dcterms:conformsTo')).toEqual([]);
+  });
+
+  it("a document's summary says nothing of characters or their colors", async () => {
+    const { opf } = await opened(renderDocumentEpub(documentInput('# One\n\nText.')));
+    const summary = [...opf.querySelectorAll('meta')]
+      .filter((m) => m.getAttribute('property') === 'schema:accessibilitySummary')
+      .map((m) => m.textContent ?? '');
+    expect(summary).toHaveLength(1);
+    expect(summary[0]).toMatch(/table of contents/);
+    expect(summary[0]).not.toMatch(/character|beside its color/i);
+  });
+
+  it('an empty title is "Untitled" in the header, as in the package and the contents', async () => {
+    for (const epub of [
+      renderScriptEpub(scriptInput(lay(BARE), { title: '  ' })),
+      renderDocumentEpub(documentInput('Just text.', { title: '' })),
+    ]) {
+      const { opf, docs, spine, nav } = await opened(epub);
+      expect(
+        opf.getElementsByTagNameNS('http://purl.org/dc/elements/1.1/', 'title')[0]?.textContent,
+      ).toBe('Untitled');
+      const first = docs.get(spine[0] ?? '');
+      expect(first?.querySelector('header h1')?.textContent).toBe('Untitled');
+      expect(first?.querySelector('title')?.textContent).toBe('Untitled');
+      const links = [...(docs.get(nav?.path ?? '')?.querySelectorAll('nav a') ?? [])];
+      expect(links[0]?.textContent).toBe('Untitled');
+    }
   });
 
   it('refuses a date that is not one', () => {
@@ -207,16 +239,33 @@ describe('the container', () => {
 });
 
 describe('epubIdentifier', () => {
-  it('is a urn:uuid in the version-5 shape, the same for the same export, else different', () => {
-    const id = epubIdentifier('The Salt Road', SCREENPLAY);
-    expect(id).toMatch(
-      /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  const SHAPE = /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it("is the work's, not its text's: one project is one book across every edit", () => {
+    const id = epubIdentifier({ project: 'a1b2c3', title: 'The Salt Road' });
+    expect(id).toMatch(SHAPE);
+    expect(epubIdentifier({ project: 'a1b2c3', title: 'The Salt Road' })).toBe(id);
+    // A retitled script, or one with a new author, is still the same project and the same book.
+    expect(epubIdentifier({ project: 'a1b2c3', title: 'Salt Road', author: 'W. Okafor' })).toBe(id);
+    // Another project is another book, even under the same title.
+    expect(epubIdentifier({ project: 'd4e5f6', title: 'The Salt Road' })).not.toBe(id);
+  });
+
+  it('without a project, is the title and the author: the same for the same, else different', () => {
+    const id = epubIdentifier({ title: 'The Salt Road', author: 'Wren Okafor' });
+    expect(id).toMatch(SHAPE);
+    expect(epubIdentifier({ title: 'The Salt Road', author: 'Wren Okafor' })).toBe(id);
+    expect(epubIdentifier({ title: 'The Salt Roads', author: 'Wren Okafor' })).not.toBe(id);
+    expect(epubIdentifier({ title: 'The Salt Road' })).not.toBe(id);
+    expect(epubIdentifier({ title: 'The Salt Road', author: '' })).toBe(
+      epubIdentifier({ title: 'The Salt Road' }),
     );
-    expect(epubIdentifier('The Salt Road', SCREENPLAY)).toBe(id);
-    expect(epubIdentifier('The Salt Road', `${SCREENPLAY}x`)).not.toBe(id);
-    expect(epubIdentifier('The Salt Roads', SCREENPLAY)).not.toBe(id);
-    // The title and the text are kept apart, so moving a character between them changes it.
-    expect(epubIdentifier('ab', 'c')).not.toBe(epubIdentifier('a', 'bc'));
+    // The title and the author are kept apart, so moving a character between them changes it.
+    expect(epubIdentifier({ title: 'ab', author: 'c' })).not.toBe(
+      epubIdentifier({ title: 'a', author: 'bc' }),
+    );
+    // A project id never names the same book as a title that happens to equal it.
+    expect(epubIdentifier({ project: 'x', title: 'x' })).not.toBe(epubIdentifier({ title: 'x' }));
   });
 });
 
@@ -629,7 +678,7 @@ function findings(path: string): string[] {
 }
 
 describe.skipIf(!checker)('epubcheck', () => {
-  it('finds no error and no warning in a screenplay, a stage play, a document, and a novel', () => {
+  it('finds no error and no warning in a screenplay, a stage play, an untitled script, a document, and a novel', () => {
     const dir = mkdtempSync(join(tmpdir(), 'drafter-epub-'));
     try {
       const fonts = realFonts();
@@ -638,7 +687,8 @@ describe.skipIf(!checker)('epubcheck', () => {
           scriptInput(lay(SCREENPLAY), { notes: 'include', fonts }),
         ),
         'stage-play.epub': renderScriptEpub(scriptInput(lay(STAGE_PLAY, stagePlay), { fonts })),
-        'bare.epub': renderScriptEpub(scriptInput(lay(BARE), { fonts, author: '' })),
+        // No author and no title: "Untitled" throughout.
+        'bare.epub': renderScriptEpub(scriptInput(lay(BARE), { fonts, author: '', title: '' })),
         'document.epub': renderDocumentEpub(
           documentInput(
             '# One\n\nText.[^a] [A link](https://example.org/).\n\n# Two\n\nMore.[^a]\n\n[^a]: A note.\n',

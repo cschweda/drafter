@@ -5,6 +5,7 @@
 // descriptors, no comment, and a fixed date (1980-01-01, the earliest a zip can say), so the same
 // entries always make the same bytes. Not zip64: an archive past 4 GiB or 65,535 entries is refused.
 import { crc32 } from './crc32';
+import { safeName } from './zip';
 
 export interface ZipWriteEntry {
   /** The entry's name inside the archive: a relative path, `/` between its parts. */
@@ -25,38 +26,45 @@ const FLAG_UTF8 = 0x0800;
 const DOS_DATE = (0 << 9) | (1 << 5) | 1;
 const DOS_TIME = 0;
 
+/** The most bytes a name may take: its length is a 16-bit field in both headers. */
+const MAX_NAME_BYTES = 0xffff;
+
 /**
- * Whether a name may be written: not empty, not absolute, no backslash, no control character, and
- * no `..` (or empty) part, so an unpacker can never be led outside its folder. The archive's own
- * reader refuses these too.
+ * Whether a name may be written: everything the archive's own reader asks (`safeName`: not empty,
+ * not absolute, no drive letter, backslash, control character, line or paragraph separator, bidi
+ * control, or `..` part), and besides no empty part and no lone surrogate (which UTF-8 cannot
+ * carry, so the name would come back changed). So an unpacker is never led outside its folder,
+ * and the writer never makes an archive its reader refuses.
  */
-function checkName(name: string): void {
-  const parts = name.split('/');
+function checkName(name: string, encoded: Uint8Array): void {
   if (
-    name === '' ||
-    name.startsWith('/') ||
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what is refused
-    /[\\\u0000-\u001f\u007f]/.test(name) ||
-    parts.includes('..') ||
-    parts.slice(0, -1).includes('')
+    !safeName(name) ||
+    name.split('/').slice(0, -1).includes('') ||
+    /[\uD800-\uDFFF]/u.test(name)
   ) {
     throw new RangeError(`Not a name a zip may hold: ${JSON.stringify(name.slice(0, 80))}`);
+  }
+  if (encoded.length > MAX_NAME_BYTES) {
+    throw new RangeError(`A name too long for a zip: ${encoded.length} bytes`);
   }
 }
 
 /**
  * The entries as one zip archive, in the order given, each stored (method 0). The first entry's
  * data starts at byte 30 plus its name's length, as an EPUB's `mimetype` must. Throws a RangeError
- * for a name `checkName` refuses, two entries of one name, or an archive too big for a plain zip.
+ * for a name `checkName` refuses, two entries whose names differ at most by case (a case-blind disk
+ * would unpack them onto one file), or an archive too big for a plain zip.
  */
 export function zipStored(entries: readonly ZipWriteEntry[]): Uint8Array {
   const encoder = new TextEncoder();
   const seen = new Set<string>();
   const items = entries.map((entry) => {
-    checkName(entry.name);
-    if (seen.has(entry.name)) throw new RangeError(`Two entries named ${entry.name}`);
-    seen.add(entry.name);
-    return { name: encoder.encode(entry.name), data: entry.data, crc: crc32(entry.data) };
+    const name = encoder.encode(entry.name);
+    checkName(entry.name, name);
+    const folded = entry.name.toLowerCase();
+    if (seen.has(folded)) throw new RangeError(`Two entries named ${entry.name}`);
+    seen.add(folded);
+    return { name, data: entry.data, crc: crc32(entry.data) };
   });
   if (items.length > 0xfffe) throw new RangeError('Too many entries for a zip');
 

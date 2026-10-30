@@ -369,6 +369,10 @@ useDocsHead({
       web page to upload one, and some fetch books from a cloud folder or an email address of
       their own. Its documentation says which.
     </p>
+    <p>
+      Each script is one book to your e-reader, whatever you change in it: a new export replaces
+      the old one on most e-readers, rather than sitting beside it as a second copy.
+    </p>
 
     <h2 id="recovery-copy">The recovery copy</h2>
     <p>
