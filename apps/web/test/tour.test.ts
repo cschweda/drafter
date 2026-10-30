@@ -89,6 +89,23 @@ describe('the tour’s steps', () => {
     expect(WELCOME.skipLabel).toBe("No thanks, I'll look around.");
   });
 
+  test('say Drafter is Fountain-first and open to other formats, and claim no export it lacks', () => {
+    expect(WELCOME.description).toBe(
+      'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
+    );
+    expect(INTRO_SLIDES[0]?.content).toEqual([
+      'A Drafter script is plain text, written in a simple format called Fountain. Type it like this, and Drafter lays out the page.',
+      'Fountain is the heart of Drafter. You write in it, and the script goes out in the formats the industry uses.',
+    ]);
+    const exported = buildSteps(true).find((s) => s.id === 'export');
+    expect(exported?.title).toBe('Export, and open almost anything');
+    const [exports, opens] = (exported?.content ?? '').split('. Open, ');
+    // Exported: PDF, Final Draft, Markdown, plain text. Highland and Fade In are only opened.
+    expect(exports).toMatch(/PDF.*Final Draft.*Markdown.*plain text/);
+    expect(exports).not.toMatch(/Highland|Fade In/);
+    expect(opens).toMatch(/Final Draft, Highland, Fade In, Markdown, and plain text/);
+  });
+
   test('have an intro card of Fountain in 30 seconds, with the five examples', () => {
     expect(INTRO_SLIDES).toHaveLength(1);
     expect(INTRO_SLIDES[0]?.title).toBe('Fountain in 30 seconds');
