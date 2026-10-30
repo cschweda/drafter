@@ -12,6 +12,8 @@ import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
+import { isBackKey } from '~/scaffold/keys';
+import { scaffoldBack } from '~/scaffold/show';
 import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import {
@@ -117,6 +119,13 @@ const barred = computed(
  * that scroll a focused panel (F6 puts focus there) scroll the tree, as they scrolled the panel.
  */
 function onPanelKeydown(event: KeyboardEvent) {
+  // Scaffold's Back key, heard anywhere in its panel, the panel itself too (design §5.1). Alt+Left
+  // is the browser's Back as well: the page stays where it is.
+  if (props.selected === 'scaffold' && !event.defaultPrevented && isBackKey(event)) {
+    event.preventDefault();
+    scaffoldBack();
+    return;
+  }
   if (!barred.value || event.target !== event.currentTarget || event.defaultPrevented) return;
   if (event.altKey || event.ctrlKey || event.metaKey) return;
   const panel = event.currentTarget as HTMLElement;

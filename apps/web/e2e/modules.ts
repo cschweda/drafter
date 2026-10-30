@@ -74,6 +74,27 @@ export async function setText(page: Page, text: string) {
   await page.keyboard.insertText(text);
 }
 
+/**
+ * Clicks `target`, a line of the Source or something in one, as a writer's click lands: scrolled
+ * into view first, then two frames, then the click. Playwright's own click on a line off screen
+ * scrolls and presses in the same frame, before the scroll event; CodeMirror's focus handler then
+ * puts back the scroll position it had, and the release lands on another line, selecting a range
+ * from the cursor (CodeMirror view 6.43, the focus handler that restores `lastScrollTop`). A real
+ * scroll comes frames before the press, so this waits as one would.
+ */
+export async function clickInSource(
+  page: Page,
+  target: Locator,
+  options?: Parameters<Locator['click']>[0],
+) {
+  await target.scrollIntoViewIfNeeded();
+  await page.evaluate(
+    () =>
+      new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
+  );
+  await target.click(options);
+}
+
 /** The script's text, line by line. */
 export const textOf = (page: Page) =>
   page.evaluate(() =>

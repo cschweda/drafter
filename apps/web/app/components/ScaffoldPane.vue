@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useCast } from '~/cast/use-cast';
 import { useEditor } from '~/editor/session';
-import { isBackKey } from '~/scaffold/keys';
 import { useScaffold } from '~/scaffold/session';
-import { scaffoldBack } from '~/scaffold/show';
 
 // Scaffold (seeing-the-script design §5): one tab, beside the Source, with a page at a time: the
 // scene page first, a character's, a location's, and the Cast and Places lists. Alt+Left goes Back
-// while focus is in the tab (the slim bar has its own). The tab holds the cast while it shows a
+// while focus is in the tab's panel (AppPane hears it there, the panel itself included; the slim
+// bar has its own). The tab holds the cast while it shows a
 // script, so the cast is worked out only while someone looks. A Markdown document has no Scaffold:
 // its tab is taken away (index.vue), and this draws nothing meanwhile.
 const { kind } = useEditor();
@@ -32,17 +31,10 @@ onBeforeUnmount(() => {
   release?.();
   release = null;
 });
-
-function onKeydown(event: KeyboardEvent) {
-  if (!isBackKey(event)) return;
-  // Alt+Left is the browser's Back too: the page stays where it is.
-  event.preventDefault();
-  scaffoldBack();
-}
 </script>
 
 <template>
-  <div class="scaffold" @keydown="onKeydown">
+  <div class="scaffold">
     <template v-if="!markdown">
       <ScaffoldScene v-if="page.kind === 'scene'" />
       <ScaffoldCharacter

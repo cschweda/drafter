@@ -473,4 +473,57 @@ test.describe('Scaffold’s pages', () => {
     await expect(heading(page)).toBeFocused();
     await expect(followButton(page)).toHaveAttribute('aria-pressed', 'true');
   });
+
+  test('Alt+Left goes Back from the tab’s own panel too', async ({ page }) => {
+    await showLighthouse(page);
+    await link(page, 'NELL').click();
+    await expect(heading(page)).toHaveText('NELL');
+    // Focus on the panel itself, outside the page drawn in it.
+    await scaffold(page).focus();
+    await page.keyboard.press('Alt+ArrowLeft');
+    await expect(heading(page)).toHaveText('Scene 1 · INT. LAMP ROOM - NIGHT');
+  });
+
+  test('a row taken away with focus on it leaves focus on its table’s heading', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'the script is edited beside Scaffold');
+    await showLighthouse(page);
+    await link(page, 'NELL').click();
+    const gallery = table(page, 'Scenes (12)').getByRole('button', {
+      name: /EXT\. GALLERY - DAWN$/,
+    });
+    await gallery.focus();
+    // The gallery scene taken out of the script.
+    await page.evaluate(() => {
+      type View = { state: { doc: { toString(): string } }; dispatch(spec: unknown): void };
+      const content = document.querySelector('.cm-content') as unknown as {
+        cmTile: { root: { view: View } };
+      };
+      const view = content.cmTile.root.view;
+      const text = view.state.doc.toString();
+      const from = text.indexOf('EXT. GALLERY - DAWN');
+      const to = text.indexOf('INT. SUPPLY BOAT - DAY');
+      view.dispatch({ changes: { from, to, insert: '' } });
+    });
+    const caption = scaffold(page).getByRole('heading', { name: 'Scenes (11)', level: 3 });
+    await expect(caption).toBeVisible();
+    await expect(caption).toBeFocused();
+  });
+
+  test('the Cast’s filter is still there after Back', async ({ page }) => {
+    await showLighthouse(page);
+    await runCommand(page, 'Show the cast');
+    await expect(heading(page)).toHaveText('Cast');
+    const filter = scaffold(page).getByRole('searchbox', { name: 'Filter the cast' });
+    await filter.fill('fen');
+    await expect(scaffold(page).getByText('1 of 3 shown.')).toBeVisible();
+    await link(page, 'FENN').click();
+    await expect(heading(page)).toHaveText('FENN');
+    await press(page, backButton(page));
+    await expect(heading(page)).toHaveText('Cast');
+    await expect(filter).toHaveValue('fen');
+    await expect(scaffold(page).getByText('1 of 3 shown.')).toBeVisible();
+  });
 });

@@ -22,6 +22,8 @@ export interface CastBasis {
   doc: Doc;
   /** `index.scenes`' session ids (`useOutline().idOf`), taken when the cast was worked out. */
   ids: readonly string[];
+  /** `index.items`' session ids, scenes and sections, so a section's own stretch is found too. */
+  items: readonly string[];
 }
 
 export interface CastSession {
@@ -93,7 +95,12 @@ function create(): CastSession {
     if (cast.value && paged && lagging && editor.kind.value !== 'markdown') return;
     const doc = editor.doc.value;
     const next = castOf(index, doc, editor.template.value, perPage, words.isWord);
-    basis.value = { index, doc, ids: Object.freeze(index.scenes.map((s) => outline.idOf(s))) };
+    basis.value = {
+      index,
+      doc,
+      ids: Object.freeze(index.scenes.map((s) => outline.idOf(s))),
+      items: Object.freeze(index.items.map((item) => outline.idOf(item))),
+    };
     cast.value = next;
     paged = nextPaged;
     words.ask(next.characters.map((c) => c.name));

@@ -35,6 +35,8 @@ export interface ScaffoldSession {
   canGoBack: ComputedRef<boolean>;
   /** The scene page's scene, from the Outline's index; null on another page or before the first scene. */
   sceneShown: ComputedRef<Scene | null>;
+  /** What is typed in the Cast's and the Places' filters, kept for the visit, so Back finds it. */
+  filters: { cast: Ref<string>; places: Ref<string> };
 }
 
 export interface ScaffoldSources {
@@ -106,6 +108,7 @@ export function createScaffold(sources: ScaffoldSources): ScaffoldSession {
       back,
       canGoBack: computed(() => history.value.length > 0),
       sceneShown,
+      filters: { cast: ref(''), places: ref('') },
     } satisfies ScaffoldSession;
   }) as ScaffoldSession;
 }

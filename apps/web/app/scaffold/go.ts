@@ -1,9 +1,9 @@
 import type { Ref } from 'vue';
-import { nextTick, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
 import type { CastBasis } from '../cast/use-cast';
 import { useEditor } from '../editor/session';
 import { useOutline } from '../outline/use-outline';
-import type { SpokenLine } from './lines';
+import { cueTarget, type SpokenLine } from './lines';
 import { SCAFFOLD_HEADING_ID } from './show';
 
 // Going from a Scaffold page to the script (seeing-the-script design §5.7): the cursor goes there
@@ -18,22 +18,22 @@ export function goToSceneId(id: string | undefined): void {
 }
 
 /**
- * Puts the cursor at a line's cue: in a scene, as far into the scene (found by its id) as the cue
- * was when the cast was worked out, never past its end; outside the scenes, where it was.
+ * Puts the cursor at a line's cue: as far into its scene or section's own stretch (found by its id)
+ * as the cue was when the cast was worked out, at the start of that line (`cueTarget`); in the
+ * opening, where it was.
  */
 export function goToCue(basis: CastBasis, line: SpokenLine): void {
-  const cue = basis.doc.blocks[line.block]?.span.from;
-  if (cue === undefined) return;
-  if (line.scene === null) {
-    useEditor().goto(cue, { keepFocus: true });
-    return;
-  }
-  const then = basis.index.scenes[line.scene];
-  const id = basis.ids[line.scene];
-  const now = id === undefined ? undefined : useOutline().itemById(id);
-  if (!then || !now) return;
-  const at = Math.min(now.span.to, now.span.from + (cue - then.span.from));
-  useEditor().goto(at, { keepFocus: true });
+  const editor = useEditor();
+  const outline = useOutline();
+  const text = editor.view.state.doc;
+  const first = outline.index.value.items[0]?.span.from ?? text.length;
+  const at = cueTarget(
+    basis,
+    line,
+    { itemById: outline.itemById, first },
+    (n) => text.lineAt(Math.min(text.length, Math.max(0, n))).from,
+  );
+  if (at !== null) editor.goto(at, { keepFocus: true });
 }
 
 /**
@@ -54,4 +54,48 @@ export function rescueFocus(
     // Before the page is drawn again, while the control with focus is still there.
     { flush: 'pre' },
   );
+}
+
+/**
+ * When a row with focus in it is taken out of `root` (its scene left the script, or the writer's
+ * edit moved it out of the table), focus goes to `heading` (the table's caption) rather than to
+ * nowhere. The element that had focus is remembered while it has it; a removal is seen by a
+ * MutationObserver, as no browser reliably says when a focused element is removed.
+ */
+export function keepFocusOnRemoval(
+  root: Readonly<Ref<HTMLElement | undefined>>,
+  heading: () => HTMLElement | null,
+) {
+  let held: Element | null = null;
+  const onFocusIn = (event: FocusEvent) => {
+    held = event.target instanceof Element ? event.target : null;
+  };
+  // Focus moved on by the writer: the element is still there, so let it go.
+  const onFocusOut = () => {
+    queueMicrotask(() => {
+      if (held?.isConnected) held = null;
+    });
+  };
+  const observer =
+    typeof MutationObserver === 'undefined'
+      ? null
+      : new MutationObserver(() => {
+          if (!held || held.isConnected) return;
+          held = null;
+          const active = document.activeElement;
+          if (active && active !== document.body) return;
+          heading()?.focus();
+        });
+  onMounted(() => {
+    const el = root.value;
+    if (!el) return;
+    el.addEventListener('focusin', onFocusIn);
+    el.addEventListener('focusout', onFocusOut);
+    observer?.observe(el, { childList: true, subtree: true });
+  });
+  onBeforeUnmount(() => {
+    observer?.disconnect();
+    root.value?.removeEventListener('focusin', onFocusIn);
+    root.value?.removeEventListener('focusout', onFocusOut);
+  });
 }

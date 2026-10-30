@@ -11,6 +11,15 @@ import type { ScaffoldPage } from './session';
 /** A play's `## Scene 2`, or any heading that isn't in the INT./EXT. form (§3.6). */
 export const NO_PLACE = 'This scene’s heading doesn’t name a place.';
 
+/**
+ * Who counts as in a scene, as the scene and character pages say it (seeing-the-script design §3,
+ * Calls 5 to 7): a mention counts, a voice-over counts as speaking, a name that is also a word
+ * counts in capitals only (until the dictionary answers, and always for a word like Will), and a
+ * name of two words or more counts only whole.
+ */
+export const PRESENCE_NOTE =
+  'Someone is in a scene when they speak in it or their name is in its action: a mention counts as being there, and a voice-over, such as (V.O.), counts as speaking in the scene. A name that is also an ordinary word, like Tom, counts in the action only in capitals (TOM) until the dictionary has answered, and always so for a word like Will. A name of two words or more counts only as the whole name, never one word of it.';
+
 /** "Scene 12 · INT. KITCHEN - NIGHT", the scene page's heading. */
 export function sceneTitle(scene: Scene): string {
   const number = `Scene ${sceneNumber(scene)}`;

@@ -2,6 +2,7 @@
 import { useCast } from '~/cast/use-cast';
 import { lengthLabel, lengthWords } from '~/outline/labels';
 import { matchesFilter } from '~/scaffold/pages';
+import { useScaffold } from '~/scaffold/session';
 import { SCAFFOLD_HEADING_ID } from '~/scaffold/show';
 import { characterRows } from '~/stats/characters';
 import { pageRatePhrase } from '~/stats/time-format';
@@ -10,18 +11,19 @@ import { useRates } from '~/stats/timing';
 // Scaffold's Cast and Places (seeing-the-script design §5.5): every character, as the Stats tab's
 // Characters table orders them, with their scenes, screen time, and dialogue share (the same rows,
 // so the two agree); and every location, A to Z (by its key, so a place and the places inside it
-// sit together), with its scenes and pages. Each has a filter that folds case and accents.
+// sit together), with its scenes and pages. Each has a filter that folds case and accents, kept in
+// the session, so a page opened from the list and Back find it as it was.
 const props = defineProps<{ kind: 'cast' | 'places' }>();
 const { cast } = useCast();
 const rates = useRates();
-const filter = ref('');
-const filterId = useId();
-watch(
-  () => props.kind,
-  () => {
-    filter.value = '';
+const { filters } = useScaffold();
+const filter = computed({
+  get: () => filters[props.kind].value,
+  set: (text: string) => {
+    filters[props.kind].value = text;
   },
-);
+});
+const filterId = useId();
 
 const people = computed(() => (cast.value ? characterRows(cast.value, rates.value) : []));
 const places = computed(() =>

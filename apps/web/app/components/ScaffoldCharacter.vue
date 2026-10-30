@@ -2,14 +2,16 @@
 import { useCast } from '~/cast/use-cast';
 import { sceneNumber } from '~/outline/labels';
 import { goToCue, goToSceneId, rescueFocus } from '~/scaffold/go';
-import { sceneTitle } from '~/scaffold/labels';
+import { PRESENCE_NOTE } from '~/scaffold/labels';
 import { linesOf, type SpokenLine } from '~/scaffold/lines';
 import {
   characterFacts,
   characterSummary,
+  lineHeading,
   NO_LONGER,
   sharePercents,
   speechesOf,
+  WHEN_PAGES,
 } from '~/scaffold/pages';
 import { useScaffold } from '~/scaffold/session';
 import { SCAFFOLD_HEADING_ID, SCAFFOLD_SCENES_ID, scaffoldBack } from '~/scaffold/show';
@@ -66,10 +68,9 @@ const lines = computed(() => {
   return b && figures.value ? linesOf(b.doc, speechesOf(b.index, props.characterKey)) : [];
 });
 /** A group of lines' heading: its scene's title, or where a speech outside the scenes is. */
-function lineTitle(scene: number | null, before: boolean): string {
-  const s = scene === null ? undefined : basis.value?.index.scenes[scene];
-  if (s) return sceneTitle(s);
-  return before ? 'Before the first scene' : 'Between scenes';
+function lineTitle(line: SpokenLine): string {
+  const b = basis.value;
+  return b ? lineHeading(b.index, line) : '';
 }
 /** The scene a fact links to (the one after the longest absence), by its id now. */
 const sceneLink = (at: number) => {
@@ -111,12 +112,7 @@ function go(line: SpokenLine) {
           </dd>
         </div>
       </dl>
-      <p class="note">
-        Someone is in a scene when they speak in it or their name is in its action. A name that is
-        also an ordinary word counts in the action only in capitals until the dictionary has
-        answered, and always so for a word like Will. A name of two words or more counts only as the
-        whole name, never one word of it.
-      </p>
+      <p class="note">{{ PRESENCE_NOTE }}</p>
 
       <p v-if="figures.sharedWith.length === 0" class="note">Shares no scene with anyone.</p>
       <ScaffoldTable v-else heading-id="scaffold-shared" :caption="`Shares scenes with (${figures.sharedWith.length})`">
@@ -173,7 +169,13 @@ function go(line: SpokenLine) {
                 <span class="sr-only">Go to scene {{ scene.number }}: </span>{{ scene.heading }}
               </button>
             </th>
-            <td class="num">{{ scene.page ?? '—' }}</td>
+            <td class="num">
+              <template v-if="scene.page !== null">{{ scene.page }}</template>
+              <template v-else>
+                <span aria-hidden="true">—</span>
+                <span class="sr-only">{{ WHEN_PAGES }}</span>
+              </template>
+            </td>
             <td>{{ scene.speaking ? 'Speaks' : 'Silent' }}</td>
             <td class="num">{{ scene.words.toLocaleString('en-US') }}</td>
           </tr>

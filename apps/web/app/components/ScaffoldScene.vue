@@ -3,7 +3,7 @@ import { placeOf } from '@drafter/cast';
 import { useCast } from '~/cast/use-cast';
 import { useEditor } from '~/editor/session';
 import { useOutline } from '~/outline/use-outline';
-import { rowsFor, sceneFacts, sceneTitle } from '~/scaffold/labels';
+import { PRESENCE_NOTE, rowsFor, sceneFacts, sceneTitle } from '~/scaffold/labels';
 import { useScaffold } from '~/scaffold/session';
 import { SCAFFOLD_HEADING_ID, SCAFFOLD_SCENES_ID } from '~/scaffold/show';
 import { useRates } from '~/stats/timing';
@@ -163,12 +163,7 @@ function goTo() {
           </table>
         </div>
         <p v-if="firsts.length > 0" class="firsts">First seen here: {{ firsts.join(', ') }}.</p>
-        <p class="note">
-          Someone is in a scene when they speak in it or their name is in its action. A name that is
-          also an ordinary word, like Will or even Tom, counts in the action only in capitals (WILL,
-          TOM), and a mention counts as being there. A voice-over, such as (V.O.), counts as speaking
-          in the scene.
-        </p>
+        <p class="note">{{ PRESENCE_NOTE }}</p>
       </template>
     </template>
   </div>

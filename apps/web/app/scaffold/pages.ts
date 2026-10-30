@@ -9,6 +9,7 @@ import {
   shortTime,
   timeWords,
 } from '../stats/time-format';
+import { sceneTitle } from './labels';
 
 // What Scaffold's character and location pages, and its Cast and Places lists, say
 // (seeing-the-script design §5.3–§5.5): the summary lines, a character's figures, a location's
@@ -149,8 +150,11 @@ export function timesOfDay(f: LocationFigures): string {
     .join(', ');
 }
 
-/** A speech, with the index of the scene it is in, or null outside every scene. */
-export type PlacedSpeech = Speech & { scene: number | null };
+/**
+ * A speech, with the index of the scene it is in (null outside every scene), the outline item that
+ * owns it (null in the opening), and whether it comes before the script's first scene.
+ */
+export type PlacedSpeech = Speech & { scene: number | null; item: number | null; before: boolean };
 
 /**
  * Every speech of the character `key`, in script order: before the first scene, in a section's own
@@ -160,13 +164,30 @@ export function speechesOf(index: SceneIndex, key: string): PlacedSpeech[] {
   const out: PlacedSpeech[] = [];
   const mine = (speech: Speech) => speech.name.toUpperCase() === key;
   for (const speech of index.opening?.speeches ?? [])
-    if (mine(speech)) out.push({ ...speech, scene: null });
+    if (mine(speech)) out.push({ ...speech, scene: null, item: null, before: true });
   let scene = 0;
-  for (const item of index.items) {
+  index.items.forEach((item, i) => {
+    const before = scene === 0 && item.kind === 'section';
     const at = item.kind === 'scene' ? scene++ : null;
-    for (const speech of item.speeches) if (mine(speech)) out.push({ ...speech, scene: at });
-  }
+    for (const speech of item.speeches)
+      if (mine(speech)) out.push({ ...speech, scene: at, item: i, before });
+  });
   return out;
+}
+
+/**
+ * The heading of a group of a character's lines: its scene's title; outside the scenes, where the
+ * lines are, before the first scene or between scenes, and in which section.
+ */
+export function lineHeading(
+  index: SceneIndex,
+  line: { scene: number | null; item: number | null; before: boolean },
+): string {
+  const scene = line.scene === null ? undefined : index.scenes[line.scene];
+  if (scene) return sceneTitle(scene);
+  const where = line.before ? 'Before the first scene' : 'Between scenes';
+  const item = line.item === null ? undefined : index.items[line.item];
+  return item?.kind === 'section' && item.title ? `${where}, in ${item.title}` : where;
 }
 
 /** Text folded for the lists' filter: lower case, accents off, the ends trimmed. */

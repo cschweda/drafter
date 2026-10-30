@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SpokenLine } from '~/scaffold/lines';
+import { lineGroups, type SpokenLine } from '~/scaffold/lines';
 import { LINES_SHOWN } from '~/scaffold/pages';
 
 // A character's Lines (seeing-the-script design §5.3, Call 29): every speech's printed text, in the
@@ -8,36 +8,17 @@ import { LINES_SHOWN } from '~/scaffold/pages';
 // speeches", which shows the rest and puts focus on the first of them.
 const props = defineProps<{
   lines: readonly SpokenLine[];
-  /** A group's heading: the scene's title, or where a speech outside the scenes is. */
-  title: (scene: number | null, before: boolean) => string;
+  /** A group's heading, from its first line: the scene's title, or where a speech outside the scenes is. */
+  title: (line: SpokenLine) => string;
 }>();
 const emit = defineEmits<{ go: [line: SpokenLine] }>();
 
 const all = ref(false);
 const shown = computed(() => (all.value ? props.lines : props.lines.slice(0, LINES_SHOWN)));
-/** Runs of lines in one scene (or outside the scenes), in order. */
-const groups = computed(() => {
-  const out: Array<{
-    scene: number | null;
-    heading: string;
-    lines: Array<{ at: number; line: SpokenLine }>;
-  }> = [];
-  let seenScene = false;
-  shown.value.forEach((line, at) => {
-    const last = out.at(-1);
-    if (last && last.scene === line.scene) {
-      last.lines.push({ at, line });
-      return;
-    }
-    out.push({
-      scene: line.scene,
-      heading: props.title(line.scene, !seenScene),
-      lines: [{ at, line }],
-    });
-    if (line.scene !== null) seenScene = true;
-  });
-  return out;
-});
+/** Runs of lines in one place (a scene, a section's own stretch, the opening), in order. */
+const groups = computed(() =>
+  lineGroups(shown.value).map((group) => ({ ...group, heading: props.title(group.first) })),
+);
 const lineId = (at: number) => `scaffold-line-${at}`;
 
 function showAll() {

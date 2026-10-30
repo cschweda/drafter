@@ -1,5 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
-import { editor, palette, paletteInput, runCommand, setText, start } from './modules';
+import {
+  clickInSource,
+  editor,
+  palette,
+  paletteInput,
+  runCommand,
+  setText,
+  start,
+} from './modules';
 import { drafterDatabase, sampleSeenRows } from './seed';
 
 // Scaffold (seeing-the-script design §5): a tab beside the Source showing who is in the cursor's
@@ -55,20 +63,25 @@ const DECK = 'Scene 2 · EXT. FERRY DECK - NIGHT';
 const OFFICE = 'Scene 3 · INT. HARBOUR OFFICE - DAY';
 
 /**
- * Puts the cursor at the start of the ferry's line holding `text`, by the palette's Go to line (a
- * click on a line just after the palette has closed can select from there instead).
+ * Puts the cursor at the start of the ferry's line holding `text`: by a click on it in the Source
+ * when the Source is shown (`clickInSource`), or else by the palette's Go to line, which shows it.
  */
 async function cursorOn(page: Page, text: string) {
-  const line = FERRY.split('\n').findIndex((l) => l.includes(text)) + 1;
-  await page.keyboard.press('ControlOrMeta+k');
-  await expect(paletteInput(page)).toBeFocused();
-  await paletteInput(page).fill(String(line));
-  await expect(palette(page).getByRole('option').first()).toHaveAccessibleName(
-    new RegExp(`^Go to line ${line}\\b`),
-  );
-  await expect(palette(page).locator('[role="option"][data-highlighted]')).toHaveCount(1);
-  await page.keyboard.press('Enter');
-  await expect(palette(page)).toBeHidden();
+  if (await editor(page).isVisible()) {
+    const line = editor(page).locator('.cm-line', { hasText: text }).first();
+    await clickInSource(page, line, { position: { x: 1, y: 4 } });
+  } else {
+    const line = FERRY.split('\n').findIndex((l) => l.includes(text)) + 1;
+    await page.keyboard.press('ControlOrMeta+k');
+    await expect(paletteInput(page)).toBeFocused();
+    await paletteInput(page).fill(String(line));
+    await expect(palette(page).getByRole('option').first()).toHaveAccessibleName(
+      new RegExp(`^Go to line ${line}\\b`),
+    );
+    await expect(palette(page).locator('[role="option"][data-highlighted]')).toHaveCount(1);
+    await page.keyboard.press('Enter');
+    await expect(palette(page)).toBeHidden();
+  }
   await expect(editor(page)).toBeFocused();
 }
 

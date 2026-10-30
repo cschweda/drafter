@@ -2,7 +2,7 @@
 import { useCast } from '~/cast/use-cast';
 import { lengthLabel, lengthWords, sceneNumber } from '~/outline/labels';
 import { goToSceneId, rescueFocus } from '~/scaffold/go';
-import { locationSummary, NO_LONGER, timesOfDay } from '~/scaffold/pages';
+import { locationSummary, NO_LONGER, timesOfDay, WHEN_PAGES } from '~/scaffold/pages';
 import { useScaffold } from '~/scaffold/session';
 import { SCAFFOLD_HEADING_ID, scaffoldBack } from '~/scaffold/show';
 import { useRates } from '~/stats/timing';
@@ -74,7 +74,13 @@ const scenes = computed(() => {
                 <span class="sr-only">Go to scene {{ scene.number }}: </span>{{ scene.heading }}
               </button>
             </th>
-            <td class="num">{{ scene.page ?? '—' }}</td>
+            <td class="num">
+              <template v-if="scene.page !== null">{{ scene.page }}</template>
+              <template v-else>
+                <span aria-hidden="true">—</span>
+                <span class="sr-only">{{ WHEN_PAGES }}</span>
+              </template>
+            </td>
             <td class="num">
               <template v-if="scene.length">
                 <span aria-hidden="true">{{ scene.length.text }}</span>
