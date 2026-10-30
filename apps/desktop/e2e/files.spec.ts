@@ -134,13 +134,13 @@ async function elsewhere(
 
 test('opens a file of another type as a new script, and says why', async ({ desktop, profile }) => {
   const scripts = folder(profile);
-  const letter = join(scripts, 'letter.rtf');
+  const letter = join(scripts, 'letter.text');
   writeFileSync(letter, 'INT. POST OFFICE - DAY\n\nA letter arrives.\n');
   const { page } = await desktop();
   await openPath(page, profile, letter);
   await expect(editor(page)).toContainText('A letter arrives.');
   await expect(page.locator('[role="alert"].failed')).toContainText(
-    '“letter.rtf” opened as a new script',
+    '“letter.text” opened as a new script',
   );
   // Save asks where to put it, and leaves the original alone.
   const saved = join(scripts, 'letter.fountain');

@@ -495,6 +495,19 @@ test.describe('opening a file where there is no picker', () => {
     await expect(alert(page)).toHaveCount(0);
   });
 
+  test('dropping a .rtf says it is an RTF document and opens nothing', async ({ page }) => {
+    await start(page);
+    const before = (await stored(page)).length;
+    await dragFile(page, 'Letter.rtf', '{\\rtf1\\ansi INT. POST OFFICE - DAY\\par}', true);
+    await expect(zone(page)).toHaveCount(0);
+    await expect(alert(page)).toContainText(
+      'Drafter can’t open an RTF document (Letter.rtf). Save it as plain text or Fountain in the app that made it, then open that.',
+    );
+    expect((await stored(page)).length).toBe(before);
+    await expect(editor(page)).not.toContainText('rtf1');
+    await expect(editor(page)).toContainText('INT.');
+  });
+
   test('announces a refusal again when the same file is refused twice', async ({ page }) => {
     await watchAlerts(page);
     await start(page);

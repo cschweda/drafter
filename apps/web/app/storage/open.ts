@@ -7,6 +7,7 @@ import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
 import { FileGoneError, FileProblemError, type PickedFile, useFiles } from './files';
+import { notAScript, refusalMessage } from './formats';
 import { useGuard } from './guard';
 import { getHandle, kindOf, listProjects } from './projects';
 import { READ_ONLY_HINT, readOnlyHint } from './save';
@@ -136,6 +137,12 @@ export async function openFile(file: PickedFile): Promise<void> {
     // A tab that only shows a script may show old text, and opening replaces what it shows.
     if (useGuard().readOnly.value) {
       await say(readOnlyHint, READ_ONLY_HINT);
+      return;
+    }
+    // A known kind that isn't a script (a Word document, an RTF file) is named, with what to do.
+    const refusal = notAScript(file.name, file.bytes);
+    if (refusal) {
+      await say(openError, refusalMessage(file.name, refusal));
       return;
     }
     const problem = problemWith(file.bytes);

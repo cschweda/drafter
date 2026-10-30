@@ -673,6 +673,43 @@ describe('importing a Final Draft file', () => {
   });
 });
 
+describe('a file that isn’t a script', () => {
+  test('refuses a .docx, says it is a Word document, and leaves the open script alone', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Door.fountain', SCRIPT));
+    const was = t.script.project.value?.id;
+    const shown = t.shown();
+    // A .docx is a zip; refused by its name before its bytes are looked at.
+    const docx = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0, 0, 0, 8, 0]);
+    await t.openFile(t.picked('Notes.docx', docx));
+    expect(t.openError.value).toBe(
+      'Drafter can’t open a Word document (Notes.docx). Save it as plain text or Fountain in the app that made it, then open that.',
+    );
+    expect(t.script.project.value?.id).toBe(was);
+    expect(t.shown()).toBe(shown);
+    expect(await t.mine()).toHaveLength(1);
+    expect(snapshots.calls.filter(([kind]) => kind === 'afterImport')).toHaveLength(0);
+  });
+
+  test('refuses an RTF file named Draft.txt', async () => {
+    const t = await fresh();
+    const was = t.script.project.value?.id;
+    await t.openFile(t.picked('Draft.txt', '{\\rtf1\\ansi INT. HALL - DAY\\par}'));
+    expect(t.openError.value).toMatch(/^Drafter can’t open an RTF document \(Draft\.txt\)\. /);
+    expect(t.script.project.value?.id).toBe(was);
+    expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('opens a .csv of text as Fountain, as before', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Scenes.csv', 'INT. HALL - DAY,A door opens.\n'));
+    expect(t.openError.value).toBe('');
+    expect(t.script.project.value?.fileName).toBe('Scenes.csv');
+    expect(t.script.project.value?.kind ?? 'fountain').toBe('fountain');
+    expect(t.shown()).toBe('INT. HALL - DAY,A door opens.\n');
+  });
+});
+
 describe('opening a file the system named (the desktop app)', () => {
   /** A bridge that lets the test make the system name a file, or say it can't open one. */
   function bridge() {
