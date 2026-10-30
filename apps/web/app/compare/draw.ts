@@ -45,6 +45,67 @@ export function placeBefore(page: HTMLElement, line: HTMLElement): Element {
   return heading && page.contains(heading) ? heading : node;
 }
 
+/**
+ * Where a gap's rule goes, in rows, for a gap before the line on `row`: in the middle of the blank
+ * row above when there is one, else on the row's top edge, so the rule never crosses a printed line.
+ * `drop` is how far below the rule the next row edge is, where the lines it shows open, so the box
+ * never cuts a line in two.
+ */
+export function gapPlace(row: number, taken: ReadonlySet<number>): { at: number; drop: number } {
+  return row > 0 && !taken.has(row - 1) ? { at: row - 0.5, drop: 0.5 } : { at: row, drop: 0 };
+}
+
+/** Sets a gap's place (`gapPlace`) on its element, as `--row` and `--drop`. */
+export function placeGap(wrap: HTMLElement, row: number, taken: ReadonlySet<number>): void {
+  const { at, drop } = gapPlace(row, taken);
+  wrap.style.setProperty('--row', String(at));
+  wrap.style.setProperty('--drop', String(drop));
+}
+
+/** The lines a gap's button shows, by the button. */
+const linesOf = (button: Element) =>
+  button.ownerDocument.getElementById(button.getAttribute('aria-controls') ?? '');
+
+function setOpen(button: Element, open: boolean): void {
+  button.setAttribute('aria-expanded', String(open));
+  const held = linesOf(button);
+  if (held) held.hidden = !open;
+}
+
+/**
+ * Makes a gap's button show and hide its lines: one gap open at a time among the buttons matching
+ * `selector`, and Escape (on the button or the lines) closes it and puts focus on the button.
+ */
+export function wireGap(wrap: HTMLElement, button: HTMLButtonElement, selector: string): void {
+  button.addEventListener('click', () => {
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    if (open)
+      for (const other of button.ownerDocument.querySelectorAll(
+        `${selector}[aria-expanded="true"]`,
+      ))
+        if (other !== button) setOpen(other, false);
+    setOpen(button, open);
+    // Safari doesn't focus a button on a click, and Escape is heard on the button or its lines.
+    if (open && button.ownerDocument.activeElement !== button)
+      button.focus({ preventScroll: true });
+  });
+  wrap.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || button.getAttribute('aria-expanded') !== 'true') return;
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(button, false);
+    button.focus();
+  });
+}
+
+/** Rows a printed line of the page stands on, for `gapPlace`. */
+export function takenRows(page: HTMLElement): Set<number> {
+  const rows = new Set<number>();
+  for (const line of page.querySelectorAll<HTMLElement>('.drafter-line:not(.compare-star)'))
+    rows.add(rowOf(line));
+  return rows;
+}
+
 function star(page: HTMLElement, row: number, cols: number): void {
   const el = page.ownerDocument.createElement('div');
   el.className = 'drafter-line compare-star';
@@ -66,6 +127,7 @@ export function markPage(el: HTMLElement, page: number, marks: PageMarks): void 
     bySpan.set(key, [...(bySpan.get(key) ?? []), line]);
     lastRow = Math.max(lastRow, rowOf(line));
   }
+  const taken = takenRows(el);
 
   for (const mark of marks.lines) {
     if (mark.page !== page) continue;
@@ -75,7 +137,7 @@ export function markPage(el: HTMLElement, page: number, marks: PageMarks): void 
       line.classList.add('compare-mark');
       line.tabIndex = -1;
       const said = doc.createElement('span');
-      said.className = 'drafter-sr-only';
+      said.className = 'drafter-sr-only change-said';
       said.textContent = `${mark.kind}, `;
       line.prepend(said);
       star(el, rowOf(line), cols);
@@ -91,7 +153,7 @@ export function markPage(el: HTMLElement, page: number, marks: PageMarks): void 
 
     const wrap = doc.createElement('div');
     wrap.className = `compare-gap compare-gap-${gap.kind}`;
-    wrap.style.setProperty('--row', String(row));
+    placeGap(wrap, row, taken);
 
     const held = doc.createElement('div');
     held.id = `compare-gap-${page}-${index}`;
@@ -111,11 +173,7 @@ export function markPage(el: HTMLElement, page: number, marks: PageMarks): void 
     button.setAttribute('aria-expanded', 'false');
     button.setAttribute('aria-controls', held.id);
     button.textContent = gapName(gap);
-    button.addEventListener('click', () => {
-      const open = button.getAttribute('aria-expanded') !== 'true';
-      button.setAttribute('aria-expanded', String(open));
-      held.hidden = !open;
-    });
+    wireGap(wrap, button, '.compare-gap-button');
 
     wrap.append(button, held);
     if (before) {

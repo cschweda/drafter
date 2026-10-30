@@ -50,6 +50,7 @@ import {
   goToScene,
   groupStops,
   shownView,
+  stepFromGroup,
 } from './rows';
 
 // Compare (Phase 2 design §11.2): two versions of the open script, in one of two views
@@ -191,6 +192,8 @@ function create(): CompareSession {
   const pendingFocus = ref(false);
   const focusScene = ref<string | null>(null);
   const pendingGroup = ref<number | null>(null);
+  /** The first change of the group a Changes list entry went to, until the next step from it. */
+  let fromGroup: number | null = null;
   /** The view `openAt` asked for, for this comparison only: the remembered one is left alone. */
   const asked = ref<CompareView | null>(null);
   const paneWidth = ref(0);
@@ -345,19 +348,26 @@ function create(): CompareSession {
   });
 
   function goToListedGroup(entry: GroupStop) {
-    // Next change goes on from the group's first change; Previous change, from the one before it.
+    // Next change goes to the group's first change; Previous change, to the one before it.
     at.value = entry.change === 0 ? null : entry.change - 1;
+    fromGroup = entry.change;
     pendingFocus.value = false;
     pendingGroup.value = entry.group;
   }
 
   function go(index: number) {
     if (index < 0 || index >= stops.value.length) return;
+    fromGroup = null;
     at.value = index;
     pendingFocus.value = true;
   }
 
   function step(direction: 1 | -1) {
+    if (fromGroup !== null && at.value === (fromGroup === 0 ? null : fromGroup - 1)) {
+      const next = stepFromGroup(stops.value.length, fromGroup, direction);
+      if (next !== null) go(next);
+      return;
+    }
     // `stepChange` reads only how many there are.
     const next = stepChange(
       stops.value.map((s) => s.stop as ChangeStop),

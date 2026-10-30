@@ -1,7 +1,7 @@
 import type { GapMark, LineMark, PageMarks } from '@drafter/compare';
 import type { Page } from '@drafter/layout';
 import type { ScriptView } from '@drafter/render-html';
-import { placeBefore, rowOf, spanKey } from './draw';
+import { placeBefore, placeGap, rowOf, spanKey, takenRows, wireGap } from './draw';
 import { gapName } from './labels';
 
 // Show changes' marks on the Script pane's pages (version-history design §4.3), put on through the
@@ -80,6 +80,7 @@ function mark(el: HTMLElement, page: number, marks: PageMarks): void {
     else bySpan.set(key, [line]);
     lastRow = Math.max(lastRow, rowOf(line));
   }
+  const taken = takenRows(el);
   const banded = new Set<number>();
   for (const found of share.lines) {
     for (const line of bySpan.get(spanKey(found.span.from, found.span.to)) ?? []) {
@@ -88,7 +89,7 @@ function mark(el: HTMLElement, page: number, marks: PageMarks): void {
       line.dataset.change = String(found.change);
       line.tabIndex = -1;
       const said = doc.createElement('span');
-      said.className = 'drafter-sr-only live-said';
+      said.className = 'drafter-sr-only live-said change-said';
       said.textContent = `${found.kind}, `;
       line.prepend(said);
       const row = rowOf(line);
@@ -108,7 +109,8 @@ function mark(el: HTMLElement, page: number, marks: PageMarks): void {
     const row = before ? rowOf(before) : lastRow + 1;
     const wrap = doc.createElement('div');
     wrap.className = `live-gap live-gap-${gap.kind}`;
-    wrap.style.setProperty('--row', String(row));
+    wrap.dataset.gap = gapKey(gap);
+    placeGap(wrap, row, taken);
     const held = doc.createElement('div');
     held.id = `live-gap-${page}-${index}`;
     held.className = 'live-gap-lines';
@@ -128,11 +130,7 @@ function mark(el: HTMLElement, page: number, marks: PageMarks): void {
     sign.setAttribute('aria-hidden', 'true');
     sign.textContent = gap.kind === 'removed' ? '− ' : '+ ';
     button.append(sign, gapName(gap));
-    button.addEventListener('click', () => {
-      const open = button.getAttribute('aria-expanded') !== 'true';
-      button.setAttribute('aria-expanded', String(open));
-      held.hidden = !open;
-    });
+    wireGap(wrap, button, '.live-gap-button');
     wrap.append(button, held);
     if (before) {
       const at = placeBefore(el, before);
@@ -147,8 +145,58 @@ function mark(el: HTMLElement, page: number, marks: PageMarks): void {
  * so a draw costs nothing on pages without a change.
  */
 export function decorateLive(el: HTMLElement, page: Page, marks: PageMarks | null): void {
+  const kept = keep(el);
   unmark(el);
   if (marks) mark(el, page.number, marks);
+  restore(el, kept);
+}
+
+/** A gap by what it holds and where it is, so the same gap marked again is known. */
+function gapKey(gap: GapMark): string {
+  const at = gap.before ? spanKey(gap.before.from, gap.before.to) : 'end';
+  return `${gap.kind}|${at}|${gap.lines.join('\n')}`;
+}
+
+/** What marking a page again must keep: the gaps open, and the mark with focus. */
+interface Kept {
+  open: string[];
+  focus: { gap: string } | { line: string } | null;
+}
+
+function keep(el: HTMLElement): Kept | null {
+  if (el.dataset[MARKED] === undefined) return null;
+  const open: string[] = [];
+  for (const gap of el.querySelectorAll<HTMLElement>('.live-gap'))
+    if (gap.querySelector('[aria-expanded="true"]')) open.push(gap.dataset.gap ?? '');
+  const active = el.ownerDocument.activeElement;
+  let focus: Kept['focus'] = null;
+  if (active && el.contains(active)) {
+    const gap = active.closest<HTMLElement>('.live-gap');
+    if (gap) focus = { gap: gap.dataset.gap ?? '' };
+    else if (active.classList.contains('live-mark') && active instanceof HTMLElement)
+      focus = { line: spanKey(active.dataset.from ?? '', active.dataset.to ?? '') };
+  }
+  return open.length > 0 || focus ? { open, focus } : null;
+}
+
+/** Opens again the gaps that were open, and puts focus back on the same mark, if it is there. */
+function restore(el: HTMLElement, kept: Kept | null): void {
+  if (!kept) return;
+  const gapOf = (key: string) =>
+    [...el.querySelectorAll<HTMLElement>('.live-gap')].find((g) => g.dataset.gap === key);
+  for (const key of kept.open) {
+    const button = gapOf(key)?.querySelector<HTMLButtonElement>('.live-gap-button');
+    if (button && button.getAttribute('aria-expanded') !== 'true') button.click();
+  }
+  const { focus } = kept;
+  if (!focus) return;
+  const target =
+    'gap' in focus
+      ? gapOf(focus.gap)?.querySelector<HTMLElement>('.live-gap-button')
+      : [...el.querySelectorAll<HTMLElement>('.live-mark')].find(
+          (l) => spanKey(l.dataset.from ?? '', l.dataset.to ?? '') === focus.line,
+        );
+  if (target && el.ownerDocument.activeElement !== target) target.focus({ preventScroll: true });
 }
 
 /** The marks each view shows; a view with none recorded is waiting for its layout's marks. */

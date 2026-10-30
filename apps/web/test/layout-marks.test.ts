@@ -111,6 +111,25 @@ describe("Show changes' marks in the layout worker", () => {
   });
 });
 
+describe("Show changes' marks when they fail", () => {
+  test('marks that throw answer empty marks, so the pages are not left waiting', () => {
+    const compute = createLayoutCompute(() => {
+      throw new Error('broken');
+    });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const replies = answer(compute, {
+      seq: 5,
+      source: AFTER,
+      template,
+      baseline: { id: 1, text: BEFORE },
+    });
+    expect(error).toHaveBeenCalledOnce();
+    error.mockRestore();
+    expect(replies).toHaveLength(2);
+    expect(replies[1]).toEqual({ seq: 5, marks: { lines: [], gaps: [], stops: [] } });
+  });
+});
+
 describe("the layout client's baseline", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());

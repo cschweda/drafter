@@ -93,6 +93,12 @@ function wordsOf(index: number): WordPart[] | null {
 }
 
 function toggle(group: RowGroup) {
+  // Opened or closed by the writer, a group is no longer waiting on the budget.
+  if (waiting.value.has(group.from)) {
+    const still = new Set(waiting.value);
+    still.delete(group.from);
+    waiting.value = still;
+  }
   const next = new Set(open.value);
   if (next.has(group.from)) next.delete(group.from);
   else next.add(group.from);

@@ -79,6 +79,25 @@ const editArb = fc.record({
   ),
 });
 
+/** A screenplay of three pages and more, so marks and gaps fall on later pages and across breaks. */
+const LONG_SCREENPLAY = Array.from({ length: 9 }, (_, s) =>
+  [
+    `INT. QUARROW HALL ${s} - NIGHT`,
+    '',
+    `Venna ${s} sets the lamp down by the marsk and listens to the orrel turn.`,
+    '',
+    'TOLVEN',
+    `Pask ${s}. The quenby is late again.`,
+    '',
+    'VENNA',
+    '(quietly)',
+    'Then we wait for it.',
+    '',
+    `The wind ${s} worries at the shutters until one gives.`,
+    '',
+  ].join('\n'),
+).join('\n');
+
 function applyEdits(text: string, edits: { at: number; op: string; text: string }[]): string {
   const lines = text.split('\n');
   for (const { at, op, text: line } of edits) {
@@ -91,10 +110,18 @@ function applyEdits(text: string, edits: { at: number; op: string; text: string 
 }
 
 describe('markPages by binary search', () => {
+  test('the long fixture runs over several pages', () => {
+    expect(lay(LONG_SCREENPLAY).pages.length).toBeGreaterThanOrEqual(3);
+  });
+
   test('marks exactly what reading every line marks', () => {
     fc.assert(
       fc.property(
-        fc.constantFrom(['screenplay', SHORT_SCREENPLAY] as const, ['play', SHORT_PLAY] as const),
+        fc.constantFrom(
+          ['screenplay', SHORT_SCREENPLAY] as const,
+          ['play', SHORT_PLAY] as const,
+          ['screenplay', LONG_SCREENPLAY] as const,
+        ),
         fc.array(editArb, { minLength: 1, maxLength: 8 }),
         ([kind, older], edits) => {
           const newer = applyEdits(older, edits);

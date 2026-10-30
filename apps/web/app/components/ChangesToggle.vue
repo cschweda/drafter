@@ -52,7 +52,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
   <span v-if="why" :id="whyId" class="sr-only">{{ why }}</span>
   <MenuButton v-if="on" :items="items" :content="{ align: 'start' }">
     <button type="button" class="zoom-button since">
-      since: {{ baselineLabel(baseline) }}
+      <span class="since-word">since: </span>{{ baselineLabel(baseline) }}
       <UIcon name="i-lucide-chevron-down" class="chevron" aria-hidden="true" />
     </button>
   </MenuButton>
@@ -67,5 +67,16 @@ const items = computed<DropdownMenuItem[][]>(() => [
 .chevron {
   width: 14px;
   height: 14px;
+}
+/* On a phone the bar keeps to one row: "since: " is still in the button's name, but not shown. */
+@media (max-width: 480px) {
+  .since-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 </style>

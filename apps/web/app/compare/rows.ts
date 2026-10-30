@@ -160,6 +160,15 @@ export interface GroupStop {
 }
 
 /**
+ * Next (1) or Previous (-1) change from a Changes list entry, whose group's first change is `first`
+ * of `count`: Next lands on that change, Previous on the one before it (wrapping); null with none.
+ */
+export function stepFromGroup(count: number, first: number, direction: 1 | -1): number | null {
+  if (count === 0) return null;
+  return direction === 1 ? first % count : (first - 1 + count) % count;
+}
+
+/**
  * The Changes view's list: one entry per shown group, not per change, so a rename across a long
  * script lists its scenes, not each line. Next change still steps change by change (`changeStops`).
  */

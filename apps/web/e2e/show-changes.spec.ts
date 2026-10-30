@@ -145,6 +145,48 @@ test.describe('Show changes on the Script pane', () => {
     );
   });
 
+  test('a removed-lines marker never cuts or covers part of a live line', async ({ page }) => {
+    // Removed before a cue (a blank row above it) and at the very end (no blank row above).
+    const before = `${BASE.replace('Nobody answers it.', 'Nobody answers it.\n\nMARRA\nWho is it?')}Rain.\n`;
+    const after = before.replace('Nobody answers it.\n\n', '').replace('Rain.\n', '');
+    await savedThenChanged(page, before, after);
+    await turnOn(page);
+    const buttons = scriptRegion(page).locator('.live-gap-button');
+    await expect(buttons).toHaveCount(2);
+    for (const i of [0, 1]) {
+      await buttons.nth(i).click();
+      await expect(buttons.nth(i)).toHaveAttribute('aria-expanded', 'true');
+      const cut = await scriptRegion(page).evaluate((region, n) => {
+        const gap = region.querySelectorAll<HTMLElement>('.live-gap')[n] as HTMLElement;
+        const page = gap.closest('.drafter-page') as HTMLElement;
+        const rule = gap.getBoundingClientRect().top + 1;
+        const box = (gap.querySelector('.live-gap-lines') as HTMLElement).getBoundingClientRect();
+        const lines = [...page.querySelectorAll<HTMLElement>('.drafter-line')]
+          .filter((l) => l.textContent?.trim())
+          .map((l) => l.getBoundingClientRect());
+        // Within a line's box, with half a pixel for rounding.
+        const inside = (y: number) =>
+          lines.filter((r) => y > r.top + 0.5 && y < r.bottom - 0.5).length;
+        return { rule: inside(rule), top: inside(box.top), bottom: inside(box.bottom) };
+      }, i);
+      expect(cut).toEqual({ rule: 0, top: 0, bottom: 0 });
+    }
+    // One is open at a time.
+    await expect(buttons.first()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('Escape closes the removed lines and puts focus on their button', async ({ page }) => {
+    await savedThenChanged(page, BASE, BASE.replace('Nobody answers it.\n\n', ''));
+    await turnOn(page);
+    const button = scriptRegion(page).getByRole('button', { name: '2 lines removed' });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Escape');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect(button).toBeFocused();
+    await expect(scriptRegion(page).locator('.live-gap-lines')).toBeHidden();
+  });
+
   test('saving clears the marks', async ({ page }) => {
     await savedThenChanged(page, BASE, CHANGED);
     await turnOn(page, 2);

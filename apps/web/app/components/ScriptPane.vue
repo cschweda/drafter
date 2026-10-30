@@ -301,13 +301,19 @@ watch(cursorBlock, (block) => {
   outline: 2px solid var(--heading);
   outline-offset: 1px;
 }
-/* Removed lines (or new ones that print nothing): a rule between two rows, its button in the margin. */
+/* Removed lines (or new ones that print nothing): a rule in the blank row above the line they were
+   before (or on that row's edge, `gapPlace`), its button in the margin. The lines it shows open to
+   the button's right, from the next row edge down, and are a whole number of rows high, so the box
+   never cuts a line of the page in two and a live line never looks removed. */
 .script-host :deep(.live-gap) {
   position: absolute;
-  top: calc(var(--row) * var(--line));
+  top: calc(var(--row) * var(--line) - 1px);
   left: 0;
   right: 1ch;
   height: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-left: 1ch;
   border-top: 2px solid var(--diff-del-sign);
   z-index: 1;
 }
@@ -315,9 +321,8 @@ watch(cursorBlock, (block) => {
   border-top-color: var(--diff-add-sign);
 }
 .script-host :deep(.live-gap-button) {
-  position: absolute;
-  top: 0;
-  left: 1ch;
+  flex: none;
+  margin-top: -1px;
   transform: translateY(-50%);
   min-height: 24px;
   padding: 0 6px;
@@ -334,19 +339,22 @@ watch(cursorBlock, (block) => {
   color: var(--diff-add-sign);
 }
 .script-host :deep(.live-gap-lines) {
-  position: absolute;
-  top: calc(var(--line) / 2 + 12px);
-  left: 12ch;
-  right: 4ch;
-  padding: 4px 8px;
-  border: 1px solid var(--diff-del-sign);
-  background: var(--diff-del-bg);
+  flex: 1;
+  min-width: 0;
+  margin: calc(var(--drop) * var(--line) - 1px) 0 0 8px;
+  padding: 0 8px;
+  /* An outline that takes no room, so the box stays a whole number of rows high. */
+  box-shadow:
+    0 0 0 1px var(--diff-del-sign),
+    0 2px 6px rgb(0 0 0 / 20%);
+  background: linear-gradient(var(--diff-del-bg), var(--diff-del-bg)), var(--drafter-page, #fff);
   color: var(--drafter-ink, #000);
-  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 .script-host :deep(.live-gap-unprinted .live-gap-lines) {
-  border-color: var(--diff-add-sign);
-  background: var(--diff-add-bg);
+  box-shadow:
+    0 0 0 1px var(--diff-add-sign),
+    0 2px 6px rgb(0 0 0 / 20%);
+  background: linear-gradient(var(--diff-add-bg), var(--diff-add-bg)), var(--drafter-page, #fff);
 }
 .script-host :deep(.live-gap-lines del),
 .script-host :deep(.live-gap-lines ins) {
@@ -356,6 +364,11 @@ watch(cursorBlock, (block) => {
 }
 .script-host :deep(.live-gap-lines ins) {
   text-decoration: none;
+}
+/* The hidden "added, " and "changed, " are for a screen reader, not for a copy of the page's text. */
+.script-host :deep(.change-said) {
+  -webkit-user-select: none;
+  user-select: none;
 }
 /* Never printed: Show changes is something to look with (Call 1). */
 @media print {

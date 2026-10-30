@@ -244,6 +244,13 @@ test.describe("Compare's Changes view", () => {
     ).toBeFocused();
     await page.keyboard.press('n');
     await expect.poll(() => focusedChange(page)).toBe('1');
+    // Shift+N from the entry goes to the change before the group, the last of INT. HALL.
+    await list.getByRole('button', { name: 'EXT. ROOF - NIGHT: 1 change' }).click();
+    await expect(
+      diff(page).getByRole('heading', { name: 'EXT. ROOF - NIGHT', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Shift+N');
+    await expect.poll(() => focusedChange(page)).toBe('0');
   });
 
   test('N and Shift+N step through changes in the Changes view', async ({ page }) => {
@@ -418,6 +425,13 @@ test.describe("Compare's Changes view", () => {
       /^32 lines changed, closed so the view opens quickly\.\s*Show$/,
     );
     expect(measured.rows).toBeLessThanOrEqual(1_600);
+    // Opened and closed again by the writer, a waiting group no longer says it is waiting.
+    const lastGroup = diff(page).locator('.diff-group').last();
+    await lastGroup.locator('.diff-large').getByRole('button', { name: 'Show' }).click();
+    await expect(lastGroup.locator('.diff-row').first()).toBeVisible();
+    await lastGroup.getByRole('button', { name: 'Hide lines' }).click();
+    await expect(lastGroup.locator('.diff-row')).toHaveCount(0);
+    await expect(lastGroup.locator('.diff-large')).toHaveCount(0);
     // A hang guard, ten times the budget; the time is logged above.
     expect(elapsed).toBeLessThan(5_000);
   });

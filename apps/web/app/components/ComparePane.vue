@@ -283,20 +283,22 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
 .pages :deep(.compare-star) {
   font-weight: bold;
 }
-/* A thin rule between two rows, with its button in the left margin. */
+/* A thin rule in the blank row above the line the lines were before (or on that row's edge), with
+   its button in the left margin; the lines it shows open to the button's right from the next row
+   edge, a whole number of rows high, so the box never cuts a line in two (`gapPlace`). */
 .pages :deep(.compare-gap) {
   position: absolute;
-  top: calc(var(--row) * var(--line));
+  top: calc(var(--row) * var(--line) - 1px);
   left: 1ch;
   right: 1ch;
   height: 0;
+  display: flex;
+  align-items: flex-start;
   border-top: 1px dashed currentColor;
   z-index: 1;
 }
 .pages :deep(.compare-gap-button) {
-  position: absolute;
-  top: 0;
-  left: 0;
+  flex: none;
   transform: translateY(-50%);
   padding: 0 4px;
   border: 1px solid currentColor;
@@ -308,14 +310,14 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
   cursor: pointer;
 }
 .pages :deep(.compare-gap-lines) {
-  position: absolute;
-  top: calc(var(--line) / 2);
-  left: 12ch;
-  right: 4ch;
-  padding: 4px 8px;
-  border: 1px solid currentColor;
+  flex: 1;
+  min-width: 0;
+  margin: calc(var(--drop) * var(--line)) 0 0 8px;
+  padding: 0 8px;
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 2px 6px rgb(0 0 0 / 20%);
   background: var(--drafter-page, #fff);
-  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
 }
 .pages :deep(.compare-gap-lines ins),
 .pages :deep(.compare-gap-lines del) {
@@ -325,5 +327,9 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
 }
 .pages :deep(.compare-gap-lines ins) {
   text-decoration: none;
+}
+.pages :deep(.change-said) {
+  -webkit-user-select: none;
+  user-select: none;
 }
 </style>

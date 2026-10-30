@@ -195,4 +195,24 @@ describe('Show changes', () => {
     changes.step(-1);
     expect(changes.at.value).toBe(2);
   });
+
+  test("a script's listing that comes late never replaces the next script's", async () => {
+    const { changes, deps } = setup({ saved: null });
+    await settle();
+    let finishFirst: (rows: SnapshotInfo[]) => void = () => {};
+    deps.list = (id) =>
+      id === 'p1'
+        ? new Promise<SnapshotInfo[]>((resolve) => {
+            finishFirst = resolve;
+          })
+        : Promise.resolve([info('b1', T0, 'Second script')]);
+    deps.snapshotsVersion.value++;
+    await settle();
+    deps.projectId.value = 'p2';
+    await settle();
+    expect(changes.choices.value.map((c) => c.label)).toEqual(['First version', 'Second script']);
+    finishFirst([info('a1', T0, 'First script')]);
+    await settle();
+    expect(changes.choices.value.map((c) => c.label)).toEqual(['First version', 'Second script']);
+  });
 });

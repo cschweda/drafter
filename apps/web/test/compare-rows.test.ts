@@ -10,6 +10,7 @@ import {
   ROW_BUDGET,
   shownGroups,
   shownView,
+  stepFromGroup,
   summaryText,
 } from '../app/compare/rows';
 
@@ -219,5 +220,14 @@ describe('the Changes view model', () => {
     expect(shownView('fountain', null, 'pages')).toBe('pages');
     expect(shownView('fountain', 'changes', 'pages')).toBe('changes');
     expect(shownView('markdown', null, 'pages')).toBe('changes');
+  });
+
+  test("from a Changes list entry, N goes to the group's first change and Shift+N to the one before", () => {
+    expect(stepFromGroup(5, 2, 1)).toBe(2);
+    expect(stepFromGroup(5, 2, -1)).toBe(1);
+    // The first group: Shift+N wraps to the last change.
+    expect(stepFromGroup(5, 0, -1)).toBe(4);
+    expect(stepFromGroup(5, 0, 1)).toBe(0);
+    expect(stepFromGroup(0, 0, 1)).toBeNull();
   });
 });

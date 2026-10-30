@@ -143,8 +143,16 @@ export function createShowChanges(deps: ShowChangesDeps): ShowChanges {
     deps.setBaseline(sent);
   }
 
-  async function relist(projectId: string | null) {
-    listed.value = projectId === null ? [] : await deps.list(projectId).catch(() => []);
+  /** Each listing, so an older one that finishes late (another script's) is dropped. */
+  let lists = 0;
+
+  /** Lists the script's snapshots; false when a newer listing has started meanwhile. */
+  async function relist(projectId: string | null): Promise<boolean> {
+    const mine = ++lists;
+    const found = projectId === null ? [] : await deps.list(projectId).catch(() => []);
+    if (mine !== lists) return false;
+    listed.value = found;
+    return true;
   }
 
   /** The baseline's text now; null when a chosen snapshot is gone (it falls back). */
@@ -185,8 +193,7 @@ export function createShowChanges(deps: ShowChangesDeps): ShowChanges {
           chosen.value = null;
           at.value = null;
         }
-        await relist(id);
-        void resolve();
+        if (await relist(id)) void resolve();
       },
       { immediate: true },
     );
