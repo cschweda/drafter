@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -18,6 +18,8 @@ const about: Record<string, string> = {
     'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
   'help-shortcuts': 'Every command and its keys, for a Mac and for Windows and Linux.',
   'help-privacy': 'No account, no analytics, no telemetry: your script never leaves your device.',
+  'help-open-formats':
+    'Every file Drafter writes is an open format you can read without it, including the open specification of the .drafter package.',
   'help-licences':
     'The spellchecker, its dictionaries, and the fonts inside Drafter, each with its licence.',
   'help-technical':
@@ -28,7 +30,7 @@ const about: Record<string, string> = {
 <template>
   <article>
     <h1>Help</h1>
-    <p class="docs-lead">Six short pages about writing in Fountain and how Drafter works.</p>
+    <p class="docs-lead">Seven short pages about writing in Fountain and how Drafter works.</p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
         <a :href="helpHref(page)">{{ page.title }}</a>: {{ about[page.id] }}
@@ -41,7 +43,7 @@ const about: Record<string, string> = {
       element, each opened as a new script of your own),
       <strong>Check for updates…</strong>, and <strong>About Drafter</strong>: the version you’re
       on, with a button that copies it for a bug report, and links to the source code, the
-      releases, and the changelog.
+      releases, the changelog, and the open specification of the <code>.drafter</code> file.
     </p>
 
     <h2 id="stats-and-scaffold">Stats and Scaffold</h2>

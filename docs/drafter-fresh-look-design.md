@@ -22,7 +22,7 @@ Each choice open to the designer is marked **Call:**; they are listed in §12.
 
 ## 2. Tokens
 
-One set of CSS custom properties on `:root` (dark) and `.light` (light), replacing the scattered colours in `main.css` and component styles. Nuxt UI's theme maps to them.
+One set of CSS custom properties on `:root, .dark` and `.light` in `app/assets/css/tokens.css` (where today's twenty tokens live: `--bg`, `--chrome`, `--chrome-2`, `--line`, `--text`, `--muted`, `--heading`, `--tab-on`, `--page`, `--ink`, …), replacing them; the old names stay as aliases of the new ones until every component is moved over, then go. Nuxt UI's theme (`app.config.ts`) maps to them.
 
 ```
 dark:  --bg #0f1013  --surface #15171b  --raised #1c1f24  --overlay #23262c  --border #262a31
@@ -57,7 +57,7 @@ Left to right: **the Drafter mark and wordmark, which open the app menu, as they
 
 ### 3.2 The editor pane (left) — "Write"
 
-- No tab strip: on a wide screen the left pane **is** the editor. **Call: the pane model changes.** Today either pane can hold any tab and choosing one open in the other pane swaps them; from v0.23.0 the left pane always holds the editor and every other view lives in the Inspector, so the swap rule and the left pane's tab choice go away (fixes "Show Script removes the editor"). A stored layout whose left pane held something else is migrated once: the editor goes left and that view becomes the Inspector's open tab. The commands keep their names ("Show Source" still shows the editor and gains the palette keyword "write").
+- No tab strip: on a wide screen the left pane **is** the editor. **Call: the pane model changes.** Today either pane can hold any tab and choosing one open in the other pane swaps them; from v0.23.0 the left pane always holds the editor and every other view lives in the Inspector, so the swap rule and the left pane's tab choice go away (fixes "Show Script removes the editor"). (The pane layout lasts only for the visit today — `useState`, nothing stored — so there is nothing to migrate.) The commands keep their names ("Show Source" still shows the editor and gains the palette keyword "write").
 - A 36px header holds the **element bar** (Scene · Action · Character · Dialogue · Paren · Transition, compact chips; the current element `--accent-soft`), shown while the editor has focus and replaced by the script's title when it doesn't, and on the right the editor's toggles as **icon buttons** (Line numbers, Typewriter, Sync scrolling) with pressed state = `--accent-soft`. The element bar never clips: it collapses to the current element + "More ▾" when narrow (fixes the clipped `?`/`⋯`).
 - The element bar's typing hints ("Character @") move to tooltips.
 - The current line: a 2px accent bar at the left edge and a faint tint.
@@ -81,6 +81,7 @@ The sample bar becomes the top bar's chip (§3.1). The storage warning ("This br
 
 ## 4. The page
 
+- (Pages are already drawn at full paper height by `@drafter/render-html`; what changes is the paper colour, the edge, and the shadow.)
 - **The paper fills the view (maintainer, 2026-10-30: "extend the script all the way to the bottom … It's a page of paper … even if it's not full -- that's fine").** Every page is drawn at its full paper height (US Letter or A4 proportions), never shrunk to its text, so the paper always runs from the top of the Inspector to its bottom edge (and on past it, as real pages do); a short last page is still a whole sheet with white space below the text. There is never an empty desk under a page that ends early.
 - **Call:** the script page is **paper on a desk** in both themes: `--paper` with `--paper-ink`, a 1px hairline and a soft two-layer shadow, a 24px gap between pages, 24px space above the first page. Dark mode's paper is "dim" (`#e8e4da`), not white.
 - A setting **Page colour: Paper (default) · Dark** keeps today's dark page for writers who want it (it is a real preference for night writing). **Call:** it is an app-wide setting, stored with the other settings; it applies to every page drawn on screen (the Script tab, Compare's Pages, Show changes) and never to print, the PDF, or any export. The contrast test measures the page's marks (Show changes, notes on pages, scene numbers) on both page colours, and the editor's syntax colours on both themes.
@@ -100,7 +101,7 @@ The sample bar becomes the top bar's chip (§3.1). The storage warning ("This br
 ## 6. The phone
 
 - One 44px top bar: the Drafter mark (the app menu, as on a wide screen), title, search. (The same one-pane layout serves every width below 1024px; §3.1.)
-- A **56px bottom tab bar**: Write · Script · Outline · More (More: Cards, Stats, Scaffold, Notes, Problems, History). **Call:** a **fresh** visit on a phone opens on **Write** (fixes "the phone opened on the Script tab"); a returning visit keeps the tab it last had (the stored phone tab), so nobody's habit changes.
+- A **56px bottom tab bar**: Write · Script · Outline · More (More: Cards, Stats, Scaffold, Notes, Problems, History). **Call:** a phone opens on **Write** (fixes "the phone opened on the Script tab"); the tab isn't stored between visits today and stays unstored.
 - The element bar is a row **above the on-screen keyboard** while typing (positioned with `visualViewport`), scrolling horizontally, never cut mid-word.
 - Menus and the palette open as **bottom sheets**; dialogs full-height sheets.
 - No status bar; save state is the top bar's title colour/dot, and the counts live in Stats.
@@ -121,7 +122,7 @@ The sample bar becomes the top bar's chip (§3.1). The storage warning ("This br
 
 ## 9. Theme default
 
-**Call:** dark stays the default (the brand and the maintainer's preference), and **"Match system appearance"** stays a setting, now **on by default for a fresh visit** — one with no stored theme choice and no stored settings at all — so a light-system reader isn't surprised by dark; once the writer picks a theme, that choice wins. Existing visitors who have settings stored are left exactly as they are. (The review noted "a browser set to light still opened dark".)
+**Call:** dark stays the default (the brand and the maintainer's preference), and **"Match system appearance"** stays a setting, now **on by default for a fresh visit** — Drafter's own first-visit test (`isFirstVisit()`, no scripts stored yet) and no theme stored under `nuxt-color-mode` — so a light-system reader isn't surprised by dark; once the writer picks a theme, that choice wins. Existing visitors who have settings stored are left exactly as they are. (The review noted "a browser set to light still opened dark".)
 
 ## 10. How it's built
 
@@ -163,6 +164,6 @@ The sample bar becomes the top bar's chip (§3.1). The storage warning ("This br
 16. The Structure toggle is a top-bar icon (§3.1).
 17. Below 1024px: one pane with the bottom tab bar (§3.1, §6).
 18. Page colour is app-wide, on-screen only (§4).
-19. A returning phone visit keeps its tab (§6).
+19. A phone always opens on Write (§6).
 20. The tour keeps ten steps; absent targets point at the Menu or More (§10).
 21. Bar sizes are targets; the binding limits are listed (§10a).

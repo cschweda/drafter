@@ -37,6 +37,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
+  { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },
   { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
   { id: 'help-technical', path: '/docs/technical', title: 'Technical details' },
 ];
