@@ -27,7 +27,10 @@ export const ZIP_LIMITS: Readonly<ZipLimits> = Object.freeze({
 });
 
 export interface ZipEntry {
-  /** As stored: UTF-8 when flag bit 11 is set, else each byte as one Latin-1 character. */
+  /**
+   * UTF-8 when flag bit 11 is set or the bytes are valid UTF-8; else each byte as one Latin-1
+   * character, 0x80 to 0x9F as U+FFFD.
+   */
   name: string;
   /** 0 stored, 8 deflated; any other is listed, and refused by `readEntry`. */
   method: number;
@@ -125,24 +128,30 @@ function findEnd(bytes: Uint8Array): number {
 
 const UTF8_DECODER = new TextDecoder('utf-8', { fatal: true });
 
+/**
+ * A name with flag bit 11 is strict UTF-8. One without is UTF-8 too when it decodes as such (macOS
+ * Archive Utility leaves the flag clear); otherwise each byte is one Latin-1 character, with 0x80
+ * to 0x9F, which in CP437 are letters rather than C1 controls, read as U+FFFD.
+ */
 function decodeName(raw: Uint8Array, utf8: boolean): string {
-  if (utf8) {
-    try {
-      return UTF8_DECODER.decode(raw);
-    } catch {
-      return fail('unsafe-name');
-    }
+  try {
+    return UTF8_DECODER.decode(raw);
+  } catch {
+    if (utf8) return fail('unsafe-name');
   }
   let name = '';
-  for (let i = 0; i < raw.length; i++) name += String.fromCharCode(raw[i] as number);
+  for (let i = 0; i < raw.length; i++) {
+    const byte = raw[i] as number;
+    name += byte >= 0x80 && byte <= 0x9f ? '\ufffd' : String.fromCharCode(byte);
+  }
   return name;
 }
 
 /**
  * Whether a name is safe to list: not empty or absolute, and without a backslash, a control
- * character (C0, DEL, or C1, NUL among them), a line or paragraph separator, a bidi control, a
- * `..` segment, or a drive letter. No real package's names hold any of these, and a name can end
- * up in a script's notes.
+ * character (C0, DEL, or a C1 that decoded as UTF-8, NUL among them), a line or paragraph
+ * separator, a bidi control, a `..` segment, or a drive letter. No real package's names hold any
+ * of these, and a name can end up in a script's notes.
  */
 function safeName(name: string): boolean {
   if (name === '' || name.startsWith('/') || /^[A-Za-z]:/.test(name)) return false;

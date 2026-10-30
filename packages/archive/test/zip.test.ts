@@ -66,10 +66,40 @@ describe('reading', () => {
       { name: 'café/scène.txt', data: 'x', flags: 0x800 },
       { name: 'café.txt', data: 'y' },
     ]);
-    // The second name is the single byte 0xE9, read as one Latin-1 character.
+    // The second name is the single byte 0xE9, not UTF-8, so read as one Latin-1 character.
     expect(listZip(zip).map((e) => e.name)).toEqual(['café/scène.txt', 'café.txt']);
-    const wrongWay = makeZip([{ name: 'cafÃ©.txt', data: 'z' }]);
-    expect(listZip(wrongWay)[0]?.name).toBe('cafÃ©.txt');
+  });
+
+  test('reads a name without flag bit 11 as UTF-8 when it is valid UTF-8', () => {
+    // macOS Archive Utility stores UTF-8 names without the flag.
+    const names = [
+      '日本.txt',
+      'scène.txt',
+      'Ünïcödé',
+      'a—b.png',
+      'it’s.png',
+      'שלום.txt',
+      'مرحبا',
+      '😀.png',
+      '👨‍👩‍👧.png',
+      'Ślą',
+    ];
+    for (const name of names) {
+      // Each character of the stored name is one UTF-8 byte, written without the flag.
+      const stored = String.fromCharCode(...new TextEncoder().encode(name));
+      expect(listZip(makeZip([{ name: stored, data: 'x' }]))[0]?.name, name).toBe(name);
+    }
+  });
+
+  test('reads a Latin-1 byte from 0x80 to 0x9F as U+FFFD, not as a C1 control', () => {
+    // 0x82 is é in CP437; 0x85 would be NEL in Latin-1.
+    expect(listZip(makeZip([{ name: 'caf\x82.txt', data: 'x' }]))[0]?.name).toBe('caf\ufffd.txt');
+    expect(listZip(makeZip([{ name: 'a\x85b', data: 'x' }]))[0]?.name).toBe('a\ufffdb');
+  });
+
+  test('refuses a C1 control that a name without flag bit 11 holds as UTF-8', () => {
+    // C2 85 is valid UTF-8 for U+0085.
+    expect(reason(() => listZip(makeZip([{ name: 'a\xc2\x85b', data: 'x' }])))).toBe('unsafe-name');
   });
 
   test('lists folders as directory entries', () => {
@@ -151,7 +181,7 @@ describe('refusing the archive', () => {
   });
 
   test('refuses unsafe names', () => {
-    for (const name of ['/etc/x', 'a/../b', '..', 'C:x', 'a\\b', 'a\0b', 'a\x1bb', 'a\x85b', '']) {
+    for (const name of ['/etc/x', 'a/../b', '..', 'C:x', 'a\\b', 'a\0b', 'a\x1bb', '']) {
       const zip = makeZip([
         { name: 'fine.txt', data: 'ok' },
         { name, data: 'bad' },
