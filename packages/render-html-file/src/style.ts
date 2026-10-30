@@ -238,9 +238,18 @@ a { color: var(--accent); }
 
 main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
 
-/* Pages: each a paper card on the Script tab's grid, 1ch by 1in/6, in Courier Prime 12pt. A
-   page's size and a line's place are classes whose rules the file generates (rules.ts). */
-.pages { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; overflow-x: auto; }
+/* Pages: each a paper card on the Script tab's grid, 1ch by 1em of 12pt type (1in/6), in Courier
+   Prime. A page's size and a line's place are classes whose rules the file generates (rules.ts);
+   on a narrow screen the page's class shrinks its type against the width of .pages, the
+   container, and every place shrinks with it. */
+.pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  overflow-x: auto;
+  container-type: inline-size;
+}
 .page {
   position: relative;
   flex: none;
@@ -248,7 +257,7 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
   color: var(--page-ink);
   font-family: ${MONO};
   font-size: 12pt;
-  line-height: calc(1in / 6);
+  line-height: 1;
   border: 1px solid var(--line);
   border-radius: 2px;
 }
@@ -336,6 +345,7 @@ main { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
   .band a { pointer-events: none; }
   .pages { display: block; overflow: visible; }
   .page { page: card; margin: 0 auto; border: 0; border-radius: 0; break-after: page; break-inside: avoid; }
+  .pages .page { font-size: 12pt; }
   .speech, .note, .sh { break-inside: avoid; }
   .sh { break-after: avoid; }
 }

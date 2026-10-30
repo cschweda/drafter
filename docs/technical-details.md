@@ -43,6 +43,7 @@ flowchart BT
   history["@drafter/history"]
   render_pdf["@drafter/render-pdf"]
   render_html["@drafter/render-html"]
+  render_html_file["@drafter/render-html-file"]
   render_text["@drafter/render-text"]
   layout["@drafter/layout"]
   lint["@drafter/lint"]
@@ -72,6 +73,7 @@ flowchart BT
   layout --> render_pdf
   markdown --> render_pdf
   layout --> render_html
+  layout --> render_html_file
   layout --> render_text
   templates --> layout
   notes --> lint

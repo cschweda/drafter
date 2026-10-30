@@ -27,5 +27,12 @@
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/layout": "workspace:*",
+    "@drafter/templates": "workspace:*"
+  },
+  "devDependencies": {
+    "@drafter/fountain": "workspace:*"
   }
 }

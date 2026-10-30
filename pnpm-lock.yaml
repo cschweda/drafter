@@ -360,7 +360,18 @@ importers:
         specifier: workspace:*
         version: link:../fountain
 
-  packages/render-html-file: {}
+  packages/render-html-file:
+    dependencies:
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+    devDependencies:
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
 
   packages/render-pdf:
     dependencies:

@@ -15,14 +15,11 @@ import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 const clean = (css: string) => !css.includes('<') && !css.includes('\r');
 
 describe('gridRules', () => {
+  // A row is 1em of the page's 12pt type, which is 1in / 6, and a column is 1ch: the Script tab's
+  // grid, in units that shrink with the page's type on a narrow screen.
   it('writes a rule for each row and column used, once, in order, on the Script tab’s grid', () => {
     expect(gridRules([12, 0, 12], [15, 3])).toBe(
-      [
-        '.r0{top:calc(0in / 6)}',
-        '.r12{top:calc(12in / 6)}',
-        '.c3{left:3ch}',
-        '.c15{left:15ch}',
-      ].join('\n'),
+      ['.r0{top:0em}', '.r12{top:12em}', '.c3{left:3ch}', '.c15{left:15ch}'].join('\n'),
     );
     expect(rowClass(12)).toBe('r12');
     expect(colClass(15)).toBe('c15');
@@ -62,7 +59,9 @@ describe('gridRules', () => {
 });
 
 describe('pageRules', () => {
-  it('sizes each page size used, once', () => {
+  // The type is 12pt unless 0.6em a column (Courier Prime's advance, a hair over) would make the
+  // page wider than the pages' column, when it shrinks to fit: 85 columns are 51em.
+  it('sizes each page size used, once, shrinking its type to fit a narrow screen', () => {
     expect(pageClass(85, 66)).toBe('p85x66');
     expect(
       pageRules([
@@ -72,8 +71,8 @@ describe('pageRules', () => {
       ]),
     ).toBe(
       [
-        '.p82x70{width:82ch;height:calc(70in / 6)}',
-        '.p85x66{width:85ch;height:calc(66in / 6)}',
+        '.p82x70{width:82ch;height:70em;font-size:min(12pt, calc(100cqw / 49.2))}',
+        '.p85x66{width:85ch;height:66em;font-size:min(12pt, calc(100cqw / 51))}',
       ].join('\n'),
     );
     expect(() => pageRules([[85.5, 66]])).toThrow(RangeError);

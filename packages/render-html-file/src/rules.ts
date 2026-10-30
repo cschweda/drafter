@@ -24,23 +24,36 @@ export const pageClass = (cols: number, rows: number) =>
   `p${count(cols, 'column count')}x${count(rows, 'row count')}`;
 
 /**
- * Rules for the rows and columns a file uses, on the Script tab's grid: a row is 1in/6 (12pt type
- * at six lines an inch), a column is 1ch of Courier Prime 12pt. A line is placed by its classes:
+ * Rules for the rows and columns a file uses, on the Script tab's grid: a row is 1em of the page's
+ * 12pt type, which is 1in/6 (six lines an inch), and a column is 1ch of Courier Prime 12pt. They
+ * are in em and ch rather than inches so that a page shrinks whole, lines in their places, when
+ * its type does on a narrow screen (`pageRules`). A line is placed by its classes:
  * `class="ln r12 c15"`.
  */
 export function gridRules(rows: Iterable<number>, cols: Iterable<number>): string {
   return [
-    ...distinct(rows, 'row').map((n) => `.${rowClass(n)}{top:calc(${n}in / 6)}`),
+    ...distinct(rows, 'row').map((n) => `.${rowClass(n)}{top:${n}em}`),
     ...distinct(cols, 'column').map((n) => `.${colClass(n)}{left:${n}ch}`),
   ].join('\n');
 }
 
-/** Rules for the page sizes a file uses, each `[cols, rows]`, a class from `pageClass`. */
+/**
+ * Rules for the page sizes a file uses, each `[cols, rows]`, a class from `pageClass`. A page is
+ * `cols` ch wide and `rows` em tall, in 12pt type; when that is wider than the pages' column (a
+ * phone), the type shrinks until it fits, and the page with it (design §3.1), as a PDF viewer
+ * shows a whole page. A column is taken as 0.6em, a hair over Courier Prime's 1228/2048, so the
+ * page always fits; `.pages` is the container `cqw` measures. A browser without container units
+ * drops the declaration and keeps 12pt, and the pages scroll sideways instead.
+ */
 export function pageRules(sizes: Iterable<readonly [number, number]>): string {
   const seen = new Map<string, string>();
   for (const [cols, rows] of sizes) {
     const name = pageClass(cols, rows);
-    seen.set(name, `.${name}{width:${cols}ch;height:calc(${rows}in / 6)}`);
+    const ems = (cols * 6) / 10;
+    seen.set(
+      name,
+      `.${name}{width:${cols}ch;height:${rows}em;font-size:min(12pt, calc(100cqw / ${ems}))}`,
+    );
   }
   return [...seen.keys()]
     .sort()

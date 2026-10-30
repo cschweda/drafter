@@ -126,7 +126,7 @@ export const PACKAGES: readonly PackageNote[] = [
   {
     name: '@drafter/render-html-file',
     does: 'Export as HTML: a script or a Markdown document as one .html file that opens anywhere with no connection, dark by default, with a light switch and, for a script, its printed pages and a reading view.',
-    uses: [],
+    uses: ['@drafter/layout', '@drafter/templates'],
   },
   {
     name: '@drafter/render-text',
