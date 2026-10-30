@@ -15,6 +15,10 @@ export interface Fragment {
   link: string | null;
   /** `measure.width` of exactly `text`: what pdf-lib will draw. */
   width: number;
+  /** How far the baseline is raised: a footnote's reference. */
+  rise?: number;
+  /** The footnote a reference's number refers to. */
+  note?: number;
 }
 
 /** One line of a block. `ascent` is how far its baseline sits below the line's top. */
@@ -85,7 +89,9 @@ const sameStyle = (a: Run, b: Run) =>
   a.size === b.size &&
   a.color === b.color &&
   a.underline === b.underline &&
-  a.link === b.link;
+  a.link === b.link &&
+  a.rise === b.rise &&
+  a.note === b.note;
 
 /**
  * Wraps a block to `width` (the text area's), Call 13. Characters a face lacks become '?' and are
@@ -155,6 +161,8 @@ export function wrapBlock(
         underline: style.underline,
         link: style.link,
         width: w,
+        ...(style.rise === undefined ? {} : { rise: style.rise }),
+        ...(style.note === undefined ? {} : { note: style.note }),
       });
       x += w;
     }

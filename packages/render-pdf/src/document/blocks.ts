@@ -1,4 +1,5 @@
 import type { Face } from './fonts';
+import { footnotes } from './notes';
 import { STYLE } from './style';
 import type { DocNode } from './tree';
 
@@ -11,6 +12,10 @@ export interface Run {
   underline: boolean;
   /** The address the text links to (a safe one, `safeLink`), or null. */
   link: string | null;
+  /** How far the baseline is raised, in points: a footnote's reference. */
+  rise?: number;
+  /** The number of the footnote this text refers to: a footnote's reference. */
+  note?: number;
 }
 
 /** One block of a document, before it is broken into lines. */
@@ -113,7 +118,9 @@ function push(runs: Run[], run: Run): void {
     last.size === run.size &&
     last.color === run.color &&
     last.underline === run.underline &&
-    last.link === run.link
+    last.link === run.link &&
+    last.rise === run.rise &&
+    last.note === run.note
   ) {
     last.text += run.text;
   } else {
@@ -154,11 +161,17 @@ function definitions(tree: DocNode): Map<string, string> {
 
 /**
  * The blocks of a document, in reading order. Link reference definitions are resolved and print
- * nothing. `textWidth`, the paper's, bounds the indent: it stops growing once the text would be
- * narrower than a quarter of it (Call 31). The walk keeps its own stack, so any depth of nesting is
- * read.
+ * nothing; so do footnote definitions, whose notes print at the foot of the page (`layoutDocument`),
+ * and a footnote's reference is its number, raised and smaller, numbered by `numbers` (the whole
+ * document's, `footnotes`). `textWidth`, the paper's, bounds the indent: it stops growing once the
+ * text would be narrower than a quarter of it (Call 31). The walk keeps its own stack, so any depth
+ * of nesting is read.
  */
-export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
+export function documentBlocks(
+  tree: DocNode,
+  textWidth: number,
+  numbers: ReadonlyMap<string, number> = footnotes(tree).numbers,
+): DocBlock[] {
   const addresses = definitions(tree);
   const maxIndent = textWidth * 0.75;
   const blocks: DocBlock[] = [];
@@ -273,6 +286,23 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
             link: style.link === undefined ? safeLink(node.url) : style.link,
           });
           break;
+        case 'footnoteReference': {
+          const n = node.identifier === undefined ? undefined : numbers.get(node.identifier);
+          // The parser makes a reference only when its note exists, and every such note is numbered.
+          if (n === undefined) break;
+          const { scale, rise } = STYLE.superscript;
+          push(runs, {
+            text: String(n),
+            face: textFace(style.bold, style.italic),
+            size: style.size * scale,
+            color: style.color,
+            underline: false,
+            link: null,
+            rise: style.size * rise,
+            note: n,
+          });
+          break;
+        }
         case 'linkReference': {
           const url = node.identifier === undefined ? undefined : addresses.get(node.identifier);
           // The parser makes a reference only when its definition exists; any other prints its text, plain.
@@ -386,6 +416,7 @@ export function documentBlocks(tree: DocNode, textWidth: number): DocBlock[] {
         break;
       }
       case 'definition':
+      case 'footnoteDefinition':
         break;
       default:
         if (node.children) {
