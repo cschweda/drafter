@@ -294,3 +294,12 @@ The design's 36 Calls (its §15) are binding. This plan adds:
 40. **The worker's logic sits behind `SnapshotSource` and `PrintStore`,** tested with `fake-indexeddb`, which `apps/web` already has; no new dependency (Task 3).
 41. **Theme token values are the implementer's,** bound by the contrast test, not chosen in the plan (Task 4).
 42. **Timing in e2e fails only past 10× the budget;** the measured times go in DECISIONS (Tasks 3–5).
+
+## Controller rulings (2026-10-30)
+
+- **Call 19 (Compare's Pages view):** keep the asterisk. The Pages view keeps v0.13.0's asterisk in the margin and "N lines removed" markers, because an asterisk is the production convention for a revised line and is what Phase 4's printed revision marks will use. The + and − with red and green (or blue and orange) belong to the new Changes view and to Show changes. Each view therefore keeps one visual language of its own, and nothing that shipped changes.
+- **Call 13 (cache database):** accepted. The prints cache goes in a separate `drafter-cache` database, so `drafter` needs no version bump. It is removed with the script.
+- **Call 36 (axe):** overruled. Axe checks run by default for every new view since v0.9.0, so the Changes view, Show changes, the Deleted scenes tab and Scene history each get axe checks in both themes in this release, as the rest of the app does. The screen-reader listening pass still waits for the final steps.
+- **Calls 14 and 34:** accepted. Show changes starts off on each visit, and Deleted scenes is a tab that exists only while it is open.
+- **Merge order (Call 38):** start this plan after v0.17.0 is merged and released, and merge `main` into `version-history` before Task 1. That replaces "before Task 8", so the conflicts are settled once, before any code.
+- **Thresholds (Call 6):** accepted as starting values. Task 2's fixtures must include renamed headings, a split scene, two scenes merged into one, a scene moved, and a near-duplicate scene, and the thresholds are tuned against them.
