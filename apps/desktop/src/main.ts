@@ -378,6 +378,12 @@ function start() {
   });
 
   void app.whenReady().then(() => {
+    // An unpackaged run on a Mac is Electron's own app, with Electron's Dock icon; a built Drafter.app
+    // carries Drafter's. (Linux and Windows set it per window: window.ts's windowIcon.)
+    if (process.platform === 'darwin' && !app.isPackaged) {
+      const icon = join(WEB, 'icon-512.png');
+      if (existsSync(icon)) app.dock?.setIcon(icon);
+    }
     let csp: string | null = null;
     try {
       csp = cspFromHeaders(readFileSync(join(WEB, '_headers'), 'utf8'));

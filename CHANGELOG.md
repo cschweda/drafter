@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **The desktop app's windows show Drafter's icon, not Electron's.** On Linux (the taskbar and the window switcher, above all for an AppImage that isn't installed) and in Windows' title bar, a window now carries Drafter's mark from the app's own files; an unpackaged run on a Mac shows it in the Dock too. A check on every build makes sure the package holds the icon.
+
 ## [0.21.0] - 2026-10-30
 
 **Seeing the script: Scaffold, the Stats tab, and who is in every scene.** Scaffold is a new tab that shows who is in the scene you're writing, with a page for every character and every place, the cast, and the places; Stats is now a tab, with each character's screen time, share of the dialogue, and who they are most often with; and Character by scene lays the whole script out as a grid of who is where, with long absences marked.

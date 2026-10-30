@@ -2,7 +2,8 @@
 // Plan 6's Global Constraints): sandboxed and context-isolated, no Node in the page, nothing loaded
 // but app://drafter/, and nothing opened but the app's own pages (in a window of their own) and
 // https addresses (in the system browser).
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   app,
   BrowserWindow,
@@ -28,8 +29,21 @@ function initiatorUrl(event: { initiator?: { url: string } | null }): string | u
 /** The brand's dark chrome, so a window never flashes white before the page draws. */
 const BACKGROUND = '#0F1013';
 
+/**
+ * The window's own icon: Drafter's mark from the bundled web build (`web/icon-512.png`, in the
+ * package and in an unpackaged run once `build:web` has made it). Linux's taskbar and window
+ * switcher, and Windows' title bar, show it; without it they show Electron's. A Mac takes the icon
+ * from the app bundle, so it gets none here; nor does a build without the file.
+ */
+export function windowIcon(root = app.getAppPath()): string | undefined {
+  if (process.platform === 'darwin') return undefined;
+  const icon = join(root, 'web', 'icon-512.png');
+  return existsSync(icon) ? icon : undefined;
+}
+
 /** The options every app window gets: the main one, and a help page opened from it. */
 export function windowOptions(preload: string): BrowserWindowConstructorOptions {
+  const icon = windowIcon();
   return {
     title: 'Drafter',
     width: 1280,
@@ -38,6 +52,7 @@ export function windowOptions(preload: string): BrowserWindowConstructorOptions 
     minHeight: 480,
     backgroundColor: BACKGROUND,
     show: false,
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload,
       contextIsolation: true,

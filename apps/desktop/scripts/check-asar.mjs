@@ -15,6 +15,8 @@ const MUST_HAVE = [
   'package.json',
   'web/index.html',
   'web/_headers',
+  // The window's icon (src/window.ts): without it Linux and Windows show Electron's.
+  'web/icon-512.png',
 ];
 
 /** Paths (with a leading slash, as the asar lists them) that don't belong in the app. */
