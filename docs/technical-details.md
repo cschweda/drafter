@@ -47,10 +47,12 @@ flowchart BT
   layout["@drafter/layout"]
   lint["@drafter/lint"]
   fdx["@drafter/fdx"]
+  archive["@drafter/archive"]
   templates["@drafter/templates"]
   notes["@drafter/notes"]
   spell["@drafter/spell"]
   fountain["@drafter/fountain"]
+  archive --> web
   cm_fountain --> web
   compare --> web
   fdx --> web

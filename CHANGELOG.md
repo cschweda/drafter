@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `@drafter/archive`, a new package for files from other screenwriting apps that come packed as a zip (the coming Highland and Fade In imports). It is Drafter's own strict, read-only zip reader, written from the zip format's published description: it lists an archive's files and reads one at a time, and refuses anything that could hurt (an archive too big or too full, zip64, split or encrypted archives, unsafe or repeated names, overlapping or damaged data, a zip bomb) with a plain reason, before unpacking anything. Nothing in a file it reads is ever written anywhere.
+
 ## [0.18.0] - 2026-10-30
 
 **Version history.** A Deleted scenes tab lists every scene that's in an earlier version but not in the script now, with Put back (one undo); Show changes marks additions and deletions on the live pages against the last save or a chosen version; Compare gains a GitHub-style Changes view (red and green, or blue and orange, with word-level highlights, folds, scenes, and side by side); and History of this scene shows every version of one scene, even through a renamed heading. Everything is read on your device, in the background.

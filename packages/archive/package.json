@@ -1,0 +1,31 @@
+{
+  "name": "@drafter/archive",
+  "version": "0.18.0",
+  "description": "Files from other screenwriting apps that come packed as a zip: Drafter's own strict read-only zip reader.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/archive"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}
