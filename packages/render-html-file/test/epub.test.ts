@@ -1,7 +1,8 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { listZip, readEntry } from '@drafter/archive';
 import { parseMarkdown } from '@drafter/markdown';
 import { describe, expect, it } from 'vitest';
@@ -170,6 +171,26 @@ describe('the container', () => {
       odd.opf.getElementsByTagNameNS('http://purl.org/dc/elements/1.1/', 'language')[0]
         ?.textContent,
     ).toBe('en');
+  });
+
+  it('says its accessibility, and claims no conformance it has not been audited for', async () => {
+    const { opf } = await opened(renderScriptEpub(scriptInput(lay(SCREENPLAY))));
+    const metas = (property: string) =>
+      [...opf.querySelectorAll('meta')]
+        .filter((m) => m.getAttribute('property') === property)
+        .map((m) => m.textContent);
+    expect(metas('schema:accessMode')).toEqual(['textual']);
+    expect(metas('schema:accessModeSufficient')).toEqual(['textual']);
+    expect(metas('schema:accessibilityFeature')).toEqual([
+      'structuralNavigation',
+      'tableOfContents',
+      'readingOrder',
+      'displayTransformability',
+    ]);
+    expect(metas('schema:accessibilityHazard')).toEqual(['none']);
+    expect(metas('schema:accessibilitySummary')[0]).toMatch(/table of contents/);
+    expect(opf.getElementsByTagNameNS('http://purl.org/dc/terms/', 'conformsTo')).toHaveLength(0);
+    expect(metas('dcterms:conformsTo')).toEqual([]);
   });
 
   it('refuses a date that is not one', () => {
@@ -549,30 +570,94 @@ function epubcheck(): string | undefined {
 
 const checker = epubcheck();
 
+/** Courier Prime's real files, as the app and the CLI embed them. */
+const realFonts = () => {
+  const file = (name: string) =>
+    new Uint8Array(
+      readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../render-pdf/fonts', name)),
+    );
+  return {
+    regular: file('CourierPrime-Regular.ttf'),
+    bold: file('CourierPrime-Bold.ttf'),
+    italic: file('CourierPrime-Italic.ttf'),
+    boldItalic: file('CourierPrime-BoldItalic.ttf'),
+  };
+};
+
+/** A novel-like document: several chapters, footnotes within and across them, a link out. */
+const NOVEL = [
+  '# The Lantern Keeper',
+  '',
+  'A story in three parts.[^tale]',
+  '',
+  '# One: The Stair',
+  '',
+  'Ines climbs the ninety-one steps.[^steps] The lamp is *older* than the town.',
+  '',
+  '## Night',
+  '',
+  '> The lamp turns, and the sea answers.',
+  '',
+  '# Two: The Ships',
+  '',
+  'She logs every ship,[^log] and the ones that never come.[^steps]',
+  '',
+  '- The *Marrow*, late.',
+  '- The *Ost*, never.',
+  '',
+  '# Three: The Dark',
+  '',
+  'See [the keepers’ guild](https://example.org/guild) for the rest.[^end]',
+  '',
+  '```',
+  'LAMP OFF 06:10',
+  '```',
+  '',
+  '[^tale]: Told by the keeper’s daughter.',
+  '[^steps]: Counted twice, every night.',
+  '[^log]: In a ledger with a broken spine.[^ledger]',
+  '[^ledger]: Bound in sailcloth.',
+  '[^end]: Or so the ledger says.',
+  '',
+].join('\n');
+
+/** Every message `epubcheck` gives for a book: its fatal errors, errors, and warnings. */
+function findings(path: string): string[] {
+  const run = spawnSync(checker as string, [path], { encoding: 'utf8' });
+  const output = `${run.stdout}\n${run.stderr}`;
+  return output.split('\n').filter((line) => /^(FATAL|ERROR|WARNING)\b/.test(line));
+}
+
 describe.skipIf(!checker)('epubcheck', () => {
-  it('finds no error in a screenplay, a stage play, and a document', () => {
+  it('finds no error and no warning in a screenplay, a stage play, a document, and a novel', () => {
     const dir = mkdtempSync(join(tmpdir(), 'drafter-epub-'));
     try {
+      const fonts = realFonts();
       const books = {
-        'screenplay.epub': renderScriptEpub(scriptInput(lay(SCREENPLAY), { notes: 'include' })),
-        'stage-play.epub': renderScriptEpub(scriptInput(lay(STAGE_PLAY, stagePlay))),
+        'screenplay.epub': renderScriptEpub(
+          scriptInput(lay(SCREENPLAY), { notes: 'include', fonts }),
+        ),
+        'stage-play.epub': renderScriptEpub(scriptInput(lay(STAGE_PLAY, stagePlay), { fonts })),
+        'bare.epub': renderScriptEpub(scriptInput(lay(BARE), { fonts, author: '' })),
         'document.epub': renderDocumentEpub(
           documentInput(
             '# One\n\nText.[^a] [A link](https://example.org/).\n\n# Two\n\nMore.[^a]\n\n[^a]: A note.\n',
-            {
-              author: 'Ines Vale',
-            },
+            { author: 'Ines Vale' },
           ),
         ),
+        'novel.epub': renderDocumentEpub(
+          documentInput(NOVEL, { title: 'The Lantern Keeper', author: 'Ines Vale' }),
+        ),
       };
+      const all: string[] = [];
       for (const [name, bytes] of Object.entries(books)) {
         const path = join(dir, name);
         writeFileSync(path, bytes);
-        // Throws, with the checker's report, on any error.
-        execFileSync(checker as string, [path], { encoding: 'utf8', stdio: 'pipe' });
+        all.push(...findings(path).map((line) => `${name}: ${line}`));
       }
+      expect(all).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  }, 120_000);
+  }, 180_000);
 });

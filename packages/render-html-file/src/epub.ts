@@ -226,6 +226,27 @@ function fontFiles(
   return files;
 }
 
+/**
+ * The book's accessibility, as EPUB Accessibility 1.1 asks a package to say it (schema.org's
+ * terms): all text, read in order, with headings and a contents list to move by, its type and
+ * colors the reader's to change, and nothing that flashes, moves, or sounds. No `dcterms:conformsTo`
+ * claim: the book hasn't been audited against WCAG 2.2 AA as an EPUB (no Ace run), so it doesn't
+ * say it conforms.
+ */
+const ACCESSIBILITY = [
+  x('meta', { property: 'schema:accessMode' }, 'textual'),
+  x('meta', { property: 'schema:accessModeSufficient' }, 'textual'),
+  ...['structuralNavigation', 'tableOfContents', 'readingOrder', 'displayTransformability'].map(
+    (feature) => x('meta', { property: 'schema:accessibilityFeature' }, feature),
+  ),
+  x('meta', { property: 'schema:accessibilityHazard' }, 'none'),
+  x(
+    'meta',
+    { property: 'schema:accessibilitySummary' },
+    'All text, in reading order, with headings and a table of contents to move by; the reader can change its type size and colors. A character’s name is always printed beside its color. No images, sound, or motion.',
+  ),
+];
+
 /** The book's whole zip, from its parts, stylesheet, and fonts. */
 function book(o: {
   title: string;
@@ -270,11 +291,9 @@ function book(o: {
     title,
     generator: o.generator,
     bodyClass: 'contents',
-    body: el(
-      'nav',
-      { 'epub:type': 'toc', id: 'toc', role: 'doc-toc', 'aria-labelledby': 'toc-title' },
-      el('h1', { id: 'toc-title' }, 'Contents') + navList,
-    ),
+    // EPUB's nav schema allows neither a role nor `aria-labelledby` on the toc's `<nav>`: the
+    // `epub:type` names it, and its heading labels it.
+    body: el('nav', { 'epub:type': 'toc', id: 'toc' }, el('h1', {}, 'Contents') + navList),
   });
 
   const manifest = [
@@ -298,6 +317,7 @@ function book(o: {
     author === undefined ? '' : x('dc:creator', {}, escapeHtml(author)),
     x('dc:language', {}, escapeHtml(lang)),
     x('meta', { property: 'dcterms:modified' }, modified),
+    ...ACCESSIBILITY,
   ].filter(Boolean);
   const opf =
     XML_DECLARATION +
