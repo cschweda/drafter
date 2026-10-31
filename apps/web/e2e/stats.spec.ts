@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { editor, runCommand, showSource, start } from './modules';
+import { editor, openCountsPanel, runCommand, showSource, start } from './modules';
 
 // Writing stats (docs/drafter-stats-design.md): words and time today in the status bar, and the
 // Stats tab (seeing-the-script design §4), which replaced the Stats window: Overview (the window's
@@ -119,7 +119,8 @@ test.describe('writing stats', () => {
     await expect(wordsToday(page)).toHaveText(/^−\d+ words today$/);
   });
 
-  test('the status bar shows neither on a sample', async ({ page }) => {
+  test('the status bar shows neither on a sample', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'a phone has no status bar (fresh-look Task 6): Stats has these');
     await start(page);
     await showSource(page);
     await typeAtEnd(page, '\n\nMore words here.\n');
@@ -127,11 +128,12 @@ test.describe('writing stats', () => {
     await expect(status(page)).not.toContainText('today');
   });
 
-  test('a daily goal in words leaves out the words item', async ({ page }) => {
+  test('a daily goal in words leaves out the words item', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'a phone has no status bar (fresh-look Task 6): Stats has these');
     await newScript(page, 'New screenplay');
     await typeAtEnd(page, SCENES);
     await expect(wordsToday(page)).toBeVisible();
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await countsPanel(page).getByLabel('Goal for today').fill('1000');
     await countsPanel(page).getByLabel('Unit').selectOption('words');
     await countsPanel(page).getByRole('button', { name: 'Set goal' }).click();
@@ -178,7 +180,7 @@ test.describe('writing stats', () => {
   test('the Counts panel’s Stats… opens the tab', async ({ page }) => {
     await newScript(page, 'New screenplay');
     await typeAtEnd(page, SCENES);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
     await expect(countsPanel(page)).toBeHidden();
     await expect(stats(page)).toBeVisible();

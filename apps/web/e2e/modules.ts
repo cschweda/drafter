@@ -305,3 +305,39 @@ export async function showView(page: Page, name: string) {
   }
   await expect(pane.getByRole('tab', { name: pattern, selected: true })).toBeVisible();
 }
+
+/**
+ * The top bar's save state (fresh-look Task 6): `data-save-state` is `unsaved` while the text has
+ * changes its file doesn't, `saved` once it is in its file, and `clean` for a script in no file
+ * that hasn't been edited. The status bar no longer says it.
+ */
+export const saveState = (page: Page) => page.locator('[data-save-state]');
+
+/** Waits for the script to be saved in its file, with nothing changed since. */
+export async function expectSaved(page: Page) {
+  await expect(saveState(page)).toHaveAttribute('data-save-state', 'saved');
+}
+
+/** Waits for the script to have changes its file (or no file) doesn't have. */
+export async function expectUnsaved(page: Page) {
+  await expect(saveState(page)).toHaveAttribute('data-save-state', 'unsaved');
+}
+
+/**
+ * Opens the Counts panel: from the status bar's counts item where the bar is shown, from the
+ * palette where it isn't (below 640px, Task 6).
+ */
+export async function openCountsPanel(page: Page) {
+  const item = page.locator('[data-tour="status"] .counts-button');
+  if (await item.isVisible()) await item.click();
+  else {
+    await page.keyboard.press('ControlOrMeta+k');
+    await expect(paletteInput(page)).toBeFocused();
+    await paletteInput(page).fill('Counts and daily goal');
+    await palette(page)
+      .getByRole('option', { name: 'Counts and daily goal…', exact: true })
+      .click();
+    await expect(palette(page)).toBeHidden();
+  }
+  await expect(page.getByRole('dialog', { name: 'Counts' })).toBeVisible();
+}

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
-import { editor, runCommand, setText, showSource, start } from './modules';
+import { editor, expectSaved, runCommand, setText, showSource, start } from './modules';
 import { stateWithSettings } from './seed';
 
 // Show changes on the Script pane (version-history design §4): off on every visit; on, the pages
@@ -24,7 +24,6 @@ const options = (page: Page) =>
 const labelField = (page: Page) => history(page).getByRole('textbox', { name: 'Label' });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save', exact: true });
-const status = (page: Page) => page.locator('[data-tour="status"]');
 
 const BASE = [
   'Title: The Call',
@@ -67,7 +66,7 @@ async function save(page: Page) {
   const download = page.waitForEvent('download');
   await saveButton(page).click();
   await download;
-  await expect(status(page)).toContainText('Saved');
+  await expectSaved(page);
 }
 
 /** Takes a snapshot, labelled `label`, from History, and closes it. */

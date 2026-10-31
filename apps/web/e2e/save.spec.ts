@@ -13,6 +13,7 @@ import {
   textOf,
   watchAlerts,
 } from './fs-stub';
+import { expectSaved, expectUnsaved, openSettings, saveState, settingsDialog } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -102,7 +103,7 @@ test.describe('saving to a file (Chromium)', () => {
     await nextFileName(page, 'my-script.fountain');
     await saveButton(page).click();
 
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const first = await textOf(page, 'my-script.fountain');
     expect(first).toContain('Title: Untitled Screenplay');
     expect(first).toMatch(/FADE IN:$/);
@@ -114,9 +115,9 @@ test.describe('saving to a file (Chromium)', () => {
 
     // Typing makes it changed, and the next save writes the same file without asking.
     await typeAtEnd(page, ' SECOND');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await textOf(page, 'my-script.fountain')).toMatch(/FADE IN: SECOND$/);
     expect(await picks(page)).toHaveLength(1);
     expect(await files(page)).toEqual(['my-script.fountain']);
@@ -124,10 +125,10 @@ test.describe('saving to a file (Chromium)', () => {
     // The file is remembered across a reload, and the script still counts as saved.
     await page.reload();
     await expect(editor(page)).toContainText('SECOND');
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
     await typeAtEnd(page, ' THIRD');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await picks(page)).toHaveLength(0);
     expect(await textOf(page, 'my-script.fountain')).toMatch(/FADE IN: SECOND THIRD$/);
   });
@@ -137,7 +138,7 @@ test.describe('saving to a file (Chromium)', () => {
     await chooseNew(page, 'New screenplay');
     await page.keyboard.insertText('ONE');
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const saved = await mine(page);
     // The Save button has focus: back to the editor to type.
     await editor(page).focus();
@@ -148,13 +149,13 @@ test.describe('saving to a file (Chromium)', () => {
     expect(after?.savedAt).toBe(saved?.savedAt);
     expect(after?.fileName).toBe(saved?.fileName);
     expect(after?.fsHandleId).toBe(saved?.fsHandleId);
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     // Typed back to what was saved, it is saved again.
     await page.keyboard.press('Backspace');
     await page.keyboard.press('Backspace');
     await page.keyboard.press('Backspace');
     await page.keyboard.press('Backspace');
-    await expect(status(page)).toContainText('Saved');
+    await expectSaved(page);
   });
 
   test('saves as a new file', async ({ page }) => {
@@ -163,14 +164,14 @@ test.describe('saving to a file (Chromium)', () => {
     await page.keyboard.insertText('ALPHA');
     await nextFileName(page, 'one.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
 
     await page.keyboard.insertText(' BETA');
     await nextFileName(page, 'two.fountain');
     await openButton(page).click();
     await menu(page).getByRole('button', { name: 'Save As…' }).click();
     await expect(menu(page)).toBeHidden();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await files(page)).toEqual(['one.fountain', 'two.fountain']);
     expect(await textOf(page, 'two.fountain')).toMatch(/ALPHA BETA$/);
     // The first file keeps what it had, and the script follows the second.
@@ -180,7 +181,7 @@ test.describe('saving to a file (Chromium)', () => {
     await editor(page).focus();
     await page.keyboard.insertText(' GAMMA');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await textOf(page, 'two.fountain')).toMatch(/ALPHA BETA GAMMA$/);
     expect(await textOf(page, 'one.fountain')).toMatch(/ALPHA$/);
 
@@ -197,7 +198,7 @@ test.describe('saving to a file (Chromium)', () => {
     await page.keyboard.insertText('\nMY EDIT');
     await nextFileName(page, 'mine.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
 
     expect(await picks(page)).toEqual(['mine.fountain']);
     expect(await textOf(page, 'mine.fountain')).toContain('MY EDIT');
@@ -242,7 +243,7 @@ test.describe('saving to a file (Chromium)', () => {
     // Nothing changed, so saving still works afterwards.
     await nextFileName(page, 'later.fountain');
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
   });
 
   test('says so when the file can’t be written, and keeps the text', async ({ page }) => {
@@ -305,7 +306,7 @@ test.describe('saving to a file (Chromium)', () => {
     await second.getByRole('button', { name: 'Edit here instead' }).click();
     await expect(second.getByRole('alert').filter({ hasText: 'Edit here instead' })).toHaveCount(0);
     await second.keyboard.press('ControlOrMeta+s');
-    await expect(status(second)).toContainText('Saved just now');
+    await expectSaved(second);
     expect(await textOf(second, 'readonly.fountain')).toContain('HELD');
   });
 });
@@ -333,7 +334,7 @@ test.describe('saving where the browser can’t save in place', () => {
     expect(text).toMatch(/FADE IN:$/);
     // It is the editor's text, whole.
     await expect.poll(async () => (await mine(page))?.source).toBe(text);
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect((await mine(page))?.fileName).toBe('Untitled Screenplay.fountain');
 
     // Save As downloads again, under the same name.
@@ -351,7 +352,7 @@ test.describe('saving where the browser can’t save in place', () => {
     await page.evaluate(() => {
       const w = window as unknown as { __heard: string[] };
       w.__heard = [];
-      const region = document.querySelector('[data-tour="status"] [role="status"]');
+      const region = document.querySelector('[data-save-state] [role="status"]');
       new MutationObserver(() => {
         if (region?.textContent) w.__heard.push(region.textContent);
       }).observe(region as Node, { childList: true, characterData: true, subtree: true });
@@ -366,7 +367,7 @@ test.describe('saving where the browser can’t save in place', () => {
     await expect.poll(heard).toBe(2);
     await page.reload();
     await expect(editor(page)).toContainText('TWO');
-    await expect(status(page).locator('[role="status"]')).toHaveText('');
+    await expect(page.locator('[data-save-state] [role="status"]')).toHaveText('');
   });
 
   test('downloads a sample under its title and makes it the writer’s own', async ({
@@ -378,34 +379,45 @@ test.describe('saving where the browser can’t save in place', () => {
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
     expect((await download).suggestedFilename()).toBe('The Call.fountain');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await expect.poll(async () => (await stored(page)).length).toBe(2);
     expect((await mine(page))?.fileName).toBe('The Call.fountain');
   });
 
-  test('shows the save state in the status bar and the tab title', async ({ page, isMobile }) => {
+  test('shows the save state in the top bar and the tab title, and when it was saved in the file item’s tooltip', async ({
+    page,
+    isMobile,
+  }) => {
     test.skip(!!isMobile, 'same on a phone');
     await page.clock.install();
     await start(page);
     await chooseNew(page, 'New screenplay');
     await expect(status(page)).toContainText('Not saved to a file yet');
+    await expect(saveState(page)).toHaveAttribute('data-save-state', 'clean');
     await expect(page).toHaveTitle('Untitled Screenplay — Drafter');
     await page.keyboard.insertText('X');
+    await expectUnsaved(page);
     await expect(page).toHaveTitle('• Untitled Screenplay — Drafter');
 
     const download = page.waitForEvent('download');
     await saveButton(page).click();
     await download;
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await expect(page).toHaveTitle('Untitled Screenplay — Drafter');
+    // The status bar names the file, and says when it was saved only in the tooltip.
+    const file = status(page).locator('.history-button');
+    await expect(file).toHaveText('Untitled Screenplay.fountain');
+    await expect(file).toHaveAttribute('title', 'History · Saved just now');
 
     await page.clock.fastForward('05:00');
-    await expect(status(page)).toContainText('Saved 5 min ago', { timeout: 35_000 });
+    await expect(file).toHaveAttribute('title', 'History · Saved 5 min ago', { timeout: 35_000 });
     await page.clock.fastForward('01:10:00');
-    await expect(status(page)).toContainText(/Saved at \d{1,2}:\d{2}/, { timeout: 35_000 });
+    await expect(file).toHaveAttribute('title', /^History · Saved at \d{1,2}:\d{2}/, {
+      timeout: 35_000,
+    });
 
     await typeAtEnd(page, 'Y');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     await expect(page).toHaveTitle('• Untitled Screenplay — Drafter');
   });
 
@@ -440,7 +452,7 @@ test.describe('saving where the browser can’t save in place', () => {
     await page.keyboard.press('ControlOrMeta+s');
     await download;
     // From the status bar's button, and as Save As.
-    await page.getByRole('button', { name: /Recovery copy/ }).focus();
+    await status(page).locator('.history-button').focus();
     download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+Shift+s');
     await download;
@@ -454,10 +466,10 @@ test.describe('saving where the browser can’t save in place', () => {
     const download = page.waitForEvent('download');
     await saveButton(page).click();
     await download;
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await violations(page)).toEqual([]);
     await typeAtEnd(page, 'B');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Switch to light theme' }).click();
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
@@ -472,9 +484,161 @@ test('reads back the bytes of a saved file', async ({ page, browserName, isMobil
   await chooseNew(page, 'New screenplay');
   await nextFileName(page, 'bytes.fountain');
   await saveButton(page).click();
-  await expect(status(page)).toContainText('Saved just now');
+  await expectSaved(page);
   const bytes = await bytesOf(page, 'bytes.fountain');
   // No byte-order mark on a script that came from no file, and `\n` line breaks.
   expect(bytes?.slice(0, 3)).not.toEqual([0xef, 0xbb, 0xbf]);
   expect(bytes).not.toContain(13);
+});
+
+// The save state in the top bar (fresh-look Task 6; the maintainer, 2026-10-31): a red dot and
+// "Unsaved" right after the title while there are changes, which saves when clicked; a "Saved" for
+// a moment after a save, then nothing. The tab's icon gets the same red dot.
+test.describe('the unsaved indicator', () => {
+  const unsaved = (page: Page) => page.getByRole('button', { name: 'Unsaved changes — Save' });
+  const justSaved = (page: Page) => page.locator('[data-just-saved]');
+  const icons = (page: Page) =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]'))
+        .map((link) => link.getAttribute('href'))
+        .sort(),
+    );
+
+  test.beforeEach(async ({ page }) => {
+    await removePickers(page);
+  });
+
+  test('comes as the text changes, saves when clicked, and says Saved for a moment', async ({
+    page,
+    isMobile,
+  }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    // A new script, not yet edited: nothing.
+    await expect(unsaved(page)).toHaveCount(0);
+    await page.keyboard.insertText('X');
+    await expect(unsaved(page)).toBeVisible();
+    // Right after the title, in the top bar.
+    const order = await page.locator('header.toolbar').evaluate((bar) => {
+      const title = bar.querySelector('.title');
+      return title?.nextElementSibling?.matches('[data-save-state]') ?? false;
+    });
+    expect(order).toBe(true);
+    if (isMobile) {
+      // A phone: the dot alone.
+      await expect(unsaved(page).locator('.word')).toBeHidden();
+    } else {
+      await expect(unsaved(page)).toHaveText('Unsaved');
+    }
+    const download = page.waitForEvent('download');
+    await unsaved(page).click();
+    await download;
+    await expect(unsaved(page)).toHaveCount(0);
+    await expect(justSaved(page)).toBeVisible();
+    await expect(justSaved(page)).toHaveText('Saved');
+    // Gone after about two seconds.
+    await expect(justSaved(page)).toHaveCount(0, { timeout: 4000 });
+    await expect(page.locator('[data-save-state]')).toHaveAttribute('data-save-state', 'saved');
+    // Typing again brings it back at once.
+    await typeAtEnd(page, 'Y');
+    await expect(unsaved(page)).toBeVisible();
+  });
+
+  test('fades Saved out, and not with reduced motion', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'same on a phone');
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('X');
+    let download = page.waitForEvent('download');
+    await page.keyboard.press('ControlOrMeta+s');
+    await download;
+    await expect(justSaved(page)).toBeVisible();
+    expect(await justSaved(page).evaluate((el) => getComputedStyle(el).animationName)).not.toBe(
+      'none',
+    );
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await typeAtEnd(page, 'Y');
+    download = page.waitForEvent('download');
+    await page.keyboard.press('ControlOrMeta+s');
+    await download;
+    await expect(justSaved(page)).toBeVisible();
+    expect(await justSaved(page).evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+    await expect(justSaved(page)).toHaveCount(0, { timeout: 4000 });
+  });
+
+  test('says Saved to a screen reader only when a save lands', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'same on a phone');
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.evaluate(() => {
+      const w = window as unknown as { __heard: string[] };
+      w.__heard = [];
+      const region = document.querySelector('[data-save-state] [role="status"]');
+      new MutationObserver(() => {
+        if (region?.textContent) w.__heard.push(region.textContent);
+      }).observe(region as Node, { childList: true, characterData: true, subtree: true });
+    });
+    const heard = () => page.evaluate(() => (window as unknown as { __heard: string[] }).__heard);
+    await page.keyboard.insertText('ONE TWO');
+    await expect(unsaved(page)).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await heard()).toEqual([]);
+    const download = page.waitForEvent('download');
+    await page.keyboard.press('ControlOrMeta+s');
+    await download;
+    await expect.poll(heard).toEqual(['Saved']);
+  });
+
+  test('puts a red dot on the tab’s icon while there are changes', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    const clean = await icons(page);
+    expect(clean).toEqual(['/favicon.ico', '/favicon.svg']);
+    await page.keyboard.insertText('X');
+    await expect(page).toHaveTitle('• Untitled Screenplay — Drafter');
+    await expect.poll(() => icons(page)).toEqual(['/favicon-unsaved.svg', '/favicon-unsaved.svg']);
+    const icon = await page.request.get('/favicon-unsaved.svg');
+    expect(icon.status()).toBe(200);
+    expect(await icon.text()).toContain('fill="#E03E44"');
+    const download = page.waitForEvent('download');
+    await page.keyboard.press('ControlOrMeta+s');
+    await download;
+    await expect(page).toHaveTitle('Untitled Screenplay — Drafter');
+    await expect.poll(() => icons(page)).toEqual(clean);
+  });
+
+  test('never makes a phone’s page wider, with a module’s button in the bar too', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'a phone');
+    await start(page);
+    await openSettings(page);
+    await settingsDialog(page).getByRole('switch', { name: 'Scene list', exact: true }).click();
+    await settingsDialog(page).getByRole('button', { name: 'Done' }).click();
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('X');
+    await expect(unsaved(page)).toBeVisible();
+    const sizes = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      window.innerWidth,
+    ]);
+    expect(sizes[0]).toBeLessThanOrEqual(sizes[1] as number);
+    expect(sizes[1]).toBe(page.viewportSize()?.width);
+  });
+
+  test('has no accessibility violations while unsaved and just saved', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('X');
+    await expect(unsaved(page)).toBeVisible();
+    // The pointer is left where the Scripts menu was, over the editor's Line numbers button: away
+    // from it, so its tooltip isn't caught fading in.
+    await page.mouse.move(2, 400);
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await expect(page.locator('html')).toHaveClass(/\blight\b/);
+    expect(await violations(page)).toEqual([]);
+  });
 });

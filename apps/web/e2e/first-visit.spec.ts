@@ -32,7 +32,6 @@ const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
 // Help is its own menu in the top bar (fresh-look Task 3b).
 const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
 const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
-const status = (page: Page) => page.locator('[data-tour="status"]');
 /** Two panes, the full bar; below 1024px one pane and the bar's compact row. */
 const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
 
@@ -121,9 +120,10 @@ test.describe('a first visit', () => {
     await expect(page.locator('.cm-line', { hasText: `ZZ${HEADING}` })).toBeVisible();
     expect(await text(page)).toContain(`ZZ${HEADING}`);
 
-    // Ctrl+Home goes back to the very top: the title page.
+    // Ctrl+Home goes back to the very top: the title page. (The status bar no longer says which
+    // page the cursor is on; the Script's header does, fresh-look Task 6.)
     await page.keyboard.press('ControlOrMeta+Home');
-    await expect(status(page)).toContainText('Title page');
+    await expect(page.locator('.cm-line', { hasText: 'Title: The Call' })).toBeInViewport();
   });
 
   test('offers new scripts and Open from the sample chip, or a phone’s sample bar', async ({

@@ -67,6 +67,22 @@ describe('the tour’s steps', () => {
     }
   });
 
+  test('point the status step at the status bar from 640px up, and at the title below', () => {
+    // Below 640px there is no status bar (fresh-look Task 6): the title's red dot says "unsaved".
+    for (const wide of [true, false]) {
+      const bar = buildSteps(wide, true).find((s) => s.id === 'status');
+      expect(bar?.target).toBe('[data-tour="status"]');
+      expect(bar?.content).toMatch(/pages and running time/);
+      expect(bar?.content).not.toMatch(/saved/i);
+    }
+    const narrow = buildSteps(false, false);
+    expect(narrow).toHaveLength(10);
+    const title = narrow.find((s) => s.id === 'status');
+    expect(title?.target).toBe('[data-tour="title"]');
+    expect(title?.content).toMatch(/red dot/);
+    expect(title?.content.length).toBeLessThan(260);
+  });
+
   test('know which of them point at a pane', () => {
     expect(buildSteps(true).map((s) => paneOf(s))).toEqual([
       'source',

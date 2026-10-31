@@ -46,6 +46,7 @@ Both are under the SIL Open Font License 1.1. Inter Tight is in [`fonts/`](fonts
 | `logo-dark.svg`, `logo-light.svg` | 56 px tall | The navbar logo, for dark and light backgrounds. |
 | `mark.svg` | 56 × 56 | The mark alone. |
 | `favicon.svg`, `favicon.ico`, `favicon-32.png` | 32 × 32 (the .ico also holds 16 and 48) | Browser tabs. |
+| `favicon-unsaved.svg` | 32 × 32 | The tab's icon while a script has unsaved changes: the favicon with a red dot in its top-right corner. |
 | `apple-touch-icon.png` | 180 × 180 | iOS home screens, which round the corners themselves. |
 | `icon-192.png`, `icon-512.png` | 192, 512 | The installed app's icons. |
 | `icon-maskable-512.png` | 512 × 512 | Android's maskable icon: the bars stay inside the safe circle. |

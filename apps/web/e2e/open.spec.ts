@@ -12,6 +12,7 @@ import {
   stubPickers,
   watchAlerts,
 } from './fs-stub';
+import { expectSaved, expectUnsaved } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -170,7 +171,7 @@ test.describe('opening a file (Chromium, with the picker)', () => {
 
     await expect(editor(page)).toContainText('A door opens.');
     await expect(menu(page)).toBeHidden();
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
     const row = (await mine(page)).find((p) => p.title === 'The Open Door');
     expect(row?.fileName).toBe('Door.fountain');
     expect(row?.fsHandleId).toBeTruthy();
@@ -193,7 +194,7 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.insertText('MORE');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).not.toContainText('MORE');
     // A file nobody changed is not changed, so the save writes it again as it was. That a save
@@ -203,7 +204,7 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     const savedAt = (await mine(page)).find((p) => p.fileName === 'Crlf.fountain')?.savedAt ?? 0;
     await page.waitForTimeout(50);
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await expect
       .poll(async () => (await modifiedOf(page, 'Crlf.fountain')) ?? 0)
       .toBeGreaterThan(modified);
@@ -217,7 +218,7 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     // And an edit that stays is written with the file's line breaks.
     await page.keyboard.insertText('X');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const written = await bytesOf(page, 'Crlf.fountain');
     expect(written?.slice(0, 3)).toEqual([0xef, 0xbb, 0xbf]);
     expect(Buffer.from(written ?? []).toString('utf8')).toBe(`﻿${crlf(SCRIPT)}X`);
@@ -311,7 +312,7 @@ test.describe('opening a file where there is no picker', () => {
     // No handle without a picker, and it opens clean.
     expect(row?.fsHandleId).toBeUndefined();
     expect(row?.savedHash).toBeTruthy();
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
   });
 
   test('opens a file from the keyboard', async ({ page, isMobile }) => {
@@ -373,7 +374,7 @@ test.describe('opening a file where there is no picker', () => {
     await expect(editor(page)).toContainText('A door opens.');
     expect((await editor(page).textContent())?.split('DROPPEDFILEMARKER').length).toBe(2);
     // Unsaved changes would mean text was inserted after the file opened.
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
   });
 
   test('a refused file dropped on the editor inserts nothing', async ({ page }) => {
@@ -469,13 +470,13 @@ test.describe('opening a file where there is no picker', () => {
     );
     await dialog(page).getByRole('button', { name: 'Replace that script' }).click();
     await expect(editor(page)).toContainText('Waves.');
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
     await expect.poll(async () => (await mine(page)).length).toBe(3);
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).not.toContainText('Waves.');
     await expect(editor(page)).toContainText(/A door opens\.|Different words\./);
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
   });
 
   test('refuses a file that isn’t text', async ({ page }) => {

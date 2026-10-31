@@ -298,3 +298,30 @@ test('reopened without a restart, the window has the text, can be edited, and Qu
   await settle();
   expect(await windowCount(launched.app)).toBe(1);
 });
+
+test('marks the window edited while the script has unsaved changes', async ({ desktop }) => {
+  const { app, page } = await desktop();
+  const edited = () =>
+    app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .filter((window) => window.webContents.getURL() === 'app://drafter/')
+        .map((window) => window.isDocumentEdited()),
+    );
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page
+    .getByRole('group', { name: 'Scripts', exact: true })
+    .getByRole('button', { name: 'New screenplay' })
+    .click();
+  await expect.poll(edited).toEqual([false]);
+  await editor(page).click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('\nINT. LIGHTHOUSE - NIGHT\n');
+  await expect(page).toHaveTitle(/^• /);
+  await expect.poll(edited).toEqual([true]);
+  // Undone back to the text it started from: no unsaved changes.
+  for (let i = 0; i < 10 && (await page.title()).startsWith('• '); i++) {
+    await page.keyboard.press('Meta+z');
+  }
+  await expect(page).not.toHaveTitle(/^• /);
+  await expect.poll(edited).toEqual([false]);
+});

@@ -8,6 +8,7 @@ import {
   consentDialog,
   editor,
   fixtureSwitch,
+  openCountsPanel,
   openSettings,
   palette,
   paletteInput,
@@ -63,7 +64,6 @@ async function inTheme(page: Page, theme: Theme) {
 }
 
 const status = (page: Page) => page.locator('[data-tour="status"]');
-const countsButton = (page: Page) => status(page).locator('.counts-button');
 const countsPanel = (page: Page) => page.getByRole('dialog', { name: 'Counts' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 const appMenu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
@@ -216,7 +216,7 @@ for (const theme of THEMES) {
       await clean(page, 'typewriter scrolling');
 
       // A sprint, from the Counts panel.
-      await countsButton(page).click();
+      await openCountsPanel(page);
       await expect(countsPanel(page)).toBeVisible();
       await clean(page, 'the Counts panel');
       await countsPanel(page).getByRole('button', { name: '15 minutes', exact: true }).click();
@@ -233,7 +233,7 @@ for (const theme of THEMES) {
     test(`has no accessibility violations in the Stats tab: Overview and Characters (${theme})`, async ({
       page,
     }) => {
-      await countsButton(page).click();
+      await openCountsPanel(page);
       await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
       const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
       await expect(stats).toBeVisible();
@@ -256,7 +256,7 @@ for (const theme of THEMES) {
     test(`has no accessibility violations in the Stats tab: the grid and List (${theme})`, async ({
       page,
     }) => {
-      await countsButton(page).click();
+      await openCountsPanel(page);
       await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
       const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
       await (
@@ -549,10 +549,13 @@ test.describe('the accessibility tree', () => {
   test('has one banner, one main, and one contentinfo', async ({ page }) => {
     await expect(page.getByRole('banner')).toHaveCount(1);
     await expect(page.getByRole('main')).toHaveCount(1);
-    await expect(page.getByRole('contentinfo')).toHaveCount(1);
+    await expect(page.getByRole('contentinfo', { includeHidden: true })).toHaveCount(1);
     await expect(page.getByRole('banner')).toBeVisible();
     await expect(page.getByRole('main')).toBeVisible();
-    await expect(page.getByRole('contentinfo')).toBeVisible();
+    // The status bar is the contentinfo; below 640px it is hidden, but for a warning (Task 6).
+    if ((page.viewportSize()?.width ?? 0) >= 640) {
+      await expect(page.getByRole('contentinfo')).toBeVisible();
+    }
   });
 
   test("gives the Script region its scenes' headings", async ({ page }) => {
@@ -605,7 +608,7 @@ test.describe('the accessibility tree', () => {
     await openSettings(page);
     await check('Settings', settingsDialog(page));
     await closeSettings(page);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await check('the Counts panel', countsPanel(page));
     await page.keyboard.press('Escape');
     await expect(countsPanel(page)).toBeHidden();
@@ -663,7 +666,7 @@ test.describe('the accessibility tree', () => {
     );
   });
 
-  test('announces a save in the status bar', async ({ page }) => {
+  test('announces a save in the top bar’s save state', async ({ page }) => {
     // With no file picker, a save downloads, so nothing waits on a dialog.
     await removePickers(page);
     await page.reload();
@@ -673,7 +676,7 @@ test.describe('the accessibility tree', () => {
     await page.evaluate(() => {
       const w = window as unknown as { heard: string[] };
       w.heard = [];
-      const region = document.querySelector('[data-tour="status"] > [role="status"]');
+      const region = document.querySelector('[data-save-state] > [role="status"]');
       new MutationObserver(() => {
         if (region?.textContent) w.heard.push(region.textContent);
       }).observe(region as Node, { childList: true, characterData: true, subtree: true });
@@ -689,7 +692,7 @@ test.describe('the accessibility tree', () => {
     await page.clock.install({ time: new Date('2026-10-26T10:00:00') });
     await page.reload();
     await expect(editor(page)).toBeAttached();
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await countsPanel(page).getByRole('button', { name: '15 minutes', exact: true }).click();
     await expect(countsPanel(page)).toBeHidden();
     await page.clock.runFor(15 * 60_000 + 1000);

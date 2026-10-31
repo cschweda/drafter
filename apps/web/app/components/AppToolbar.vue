@@ -9,10 +9,10 @@ import { save } from '~/storage/save';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 
 // The top bar (fresh-look design §3.1): one quiet 44px row. The Drafter mark and wordmark open the
-// app menu, as they always have; then the script's title and its state (a sample's chip); Open,
-// Save, and Export (and any module's buttons); the command search; the Structure strip and Focus
-// as icon buttons; the Help menu (Task 3b); and the theme. The template is chosen in the Drafter
-// menu and the status bar.
+// app menu, as they always have; then the script's title, whether it has unsaved changes (Task 6),
+// and its state (a sample's chip); Open, Save, and Export (and any module's buttons); the command
+// search; the Structure strip and Focus as icon buttons; the Help menu (Task 3b); and the theme.
+// The template is chosen in the Drafter menu and the status bar.
 const colorMode = useColorMode();
 const focus = useFocusMode();
 const wide = useWideScreen();
@@ -53,7 +53,9 @@ function toggleStructure() {
     </AppMenu>
     <span class="sep" aria-hidden="true" />
     <!-- The title gives way first when the bar is short of room, cut short on screen; the tooltip has it whole. -->
-    <span class="title" :title="title">{{ title }}</span>
+    <span class="title" :title="title" data-tour="title">{{ title }}</span>
+    <!-- Unsaved changes, right after the title: a red dot and "Unsaved", which saves (Task 6). -->
+    <SaveState />
     <SampleChip v-if="wide" />
     <span class="sep before-actions" aria-hidden="true" />
     <div class="actions">
@@ -285,8 +287,12 @@ kbd {
 
 /* One pane, and a bar of icons, below 1024px: the labels drop and the tooltips name the buttons. */
 @media (max-width: 1023.98px) {
+  /* The bar never widens the page: with a module's buttons and the unsaved dot it may hold more
+     than a phone's width once the title has given way, and then it scrolls sideways itself. */
   .toolbar {
     padding: 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
   .sep.before-actions {
     display: none;

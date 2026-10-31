@@ -118,16 +118,26 @@ const files = {};
 files['mark.svg'] = svg(56, 56, `<defs>${gradient('g')}</defs>${mark({ id: 'g' })}`, 'Drafter');
 
 /** Drawn on a 32-pixel grid so it stays crisp at 32 and 16 pixels. */
-files['favicon.svg'] = svg(
-  32,
-  32,
+const FAVICON =
   `<defs>${gradient('g')}</defs><rect width="32" height="32" rx="7" fill="url(#g)"/>` +
-    `<g fill="${INK}">` +
-    '<rect x="6" y="8" width="8" height="2" rx="1"/><rect x="6" y="14" width="6" height="2" rx="1"/>' +
-    '<rect x="6" y="20" width="8" height="2" rx="1"/><rect x="15" y="6" width="2" height="18" opacity="0.35"/>' +
-    '<rect x="20" y="8" width="4" height="2" rx="1"/><rect x="18" y="14" width="8" height="2" rx="1"/>' +
-    '<rect x="18" y="20" width="6" height="2" rx="1"/></g>',
-  'Drafter',
+  `<g fill="${INK}">` +
+  '<rect x="6" y="8" width="8" height="2" rx="1"/><rect x="6" y="14" width="6" height="2" rx="1"/>' +
+  '<rect x="6" y="20" width="8" height="2" rx="1"/><rect x="15" y="6" width="2" height="18" opacity="0.35"/>' +
+  '<rect x="20" y="8" width="4" height="2" rx="1"/><rect x="18" y="14" width="8" height="2" rx="1"/>' +
+  '<rect x="18" y="20" width="6" height="2" rx="1"/></g>';
+files['favicon.svg'] = svg(32, 32, FAVICON, 'Drafter');
+
+/**
+ * The tab's icon while the script has unsaved changes (the web app swaps it in): the favicon with
+ * a red dot in its top-right corner, ringed in ink so it reads on a light tab strip and a dark one.
+ * The red is the app's --unsaved token (apps/web/app/assets/css/tokens.css).
+ */
+const UNSAVED = '#E03E44';
+files['favicon-unsaved.svg'] = svg(
+  32,
+  32,
+  `${FAVICON}<circle cx="24" cy="8" r="8" fill="${INK}"/><circle cx="24" cy="8" r="6" fill="${UNSAVED}"/>`,
+  'Drafter, unsaved changes',
 );
 
 /** The navbar logo: the mark and the wordmark, for dark and for light backgrounds. */

@@ -19,8 +19,14 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palett
 
 const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
 
-/** Each step's title and the `data-tour` value of what it lights, on a wide screen and a narrow one. */
-function plan(_isWide: boolean) {
+/** From 640px up there is a status bar (fresh-look Task 6). */
+const statusBar = (page: Page) => (page.viewportSize()?.width ?? 0) >= 640;
+
+/**
+ * Each step's title and the `data-tour` value of what it lights, with a status bar and without one
+ * (below 640px the status step lights the title, whose red dot says there are unsaved changes).
+ */
+function plan(bar: boolean) {
   return [
     ['You write here', 'source'],
     ['The real pages', 'script'],
@@ -29,7 +35,7 @@ function plan(_isWide: boolean) {
     // The template is chosen in the Drafter menu on every screen (fresh look, design §10).
     ['Screenplay or stage play', 'menu'],
     ['Save', 'save'],
-    ['The status bar', 'status'],
+    bar ? ['The status bar', 'status'] : ['Saved or not', 'title'],
     ['Export, and open almost anything', 'export'],
     ['Focus', 'focus'],
     ['Go anywhere', 'palette'],
@@ -73,7 +79,7 @@ test.describe('the welcome and the tour', () => {
     ).toBeVisible();
     await startTour(page);
 
-    const steps = plan(wide(page));
+    const steps = plan(statusBar(page));
     for (const [index, [title, target]] of steps.entries()) {
       await expect(step(page)).toContainText(`${index + 1} / 10`);
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
@@ -198,7 +204,7 @@ test.describe('the welcome and the tour', () => {
     await expect(page.getByRole('button', { name: 'Focus', exact: true })).toBeVisible();
 
     await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
-    const steps = plan(wide(page));
+    const steps = plan(statusBar(page));
     for (const [index, [title, target]] of steps.entries()) {
       await expect(step(page)).toContainText(`${index + 1} / 10`);
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
@@ -261,7 +267,7 @@ test.describe('the welcome and the tour', () => {
     await startTour(page);
     await expect(announcer(page)).toHaveAttribute('role', 'status');
     await expect(announcer(page)).toHaveAttribute('aria-live', 'polite');
-    const steps = plan(wide(page));
+    const steps = plan(statusBar(page));
     for (const [index, [title]] of steps.entries()) {
       await expect(announcer(page)).toContainText(`Tour step ${index + 1} of 10: ${title}.`);
       if (index < steps.length - 1) await page.keyboard.press('ArrowRight');

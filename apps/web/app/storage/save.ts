@@ -22,9 +22,15 @@ export const saveError = ref('');
  * the script's record of it, so opening a saved script says nothing.
  */
 export const saveAnnouncement = ref('');
+/**
+ * Counts the saves that landed in this visit: the top bar's save state shows "Saved" for a moment
+ * after each (fresh-look Task 6). Like the announcement, opening a saved script doesn't move it.
+ */
+export const savesLanded = ref(0);
 let clearing: ReturnType<typeof setTimeout> | undefined;
 let speaking: ReturnType<typeof setTimeout> | undefined;
 function announceSave() {
+  savesLanded.value++;
   clearTimeout(clearing);
   clearTimeout(speaking);
   saveAnnouncement.value = '';

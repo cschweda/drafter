@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { makeZip } from '../../../packages/archive/test/make-zip';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
-import { showView } from './modules';
+import { expectSaved, showView } from './modules';
 
 // Highland and Fade In files (Imports and Markdown out): each is a zip, opened as a new Fountain
 // script that is not the file's (Save asks for a .fountain, and the file is never written). The
@@ -137,7 +137,7 @@ test.describe('importing a Highland file (Chromium, with the picker)', () => {
 
     // Save asks where (the picker suggests a .fountain named after the title), never the .highland.
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect((await picks(page)).at(-1)).toBe('The Night Ferry.fountain');
     expect(await bytesOf(page, 'Ferry.highland')).toEqual(HIGHLAND);
     const saved = Buffer.from((await bytesOf(page, 'The Night Ferry.fountain')) ?? []).toString();

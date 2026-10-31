@@ -76,6 +76,13 @@ export function windowOptions(preload: string): BrowserWindowConstructorOptions 
 export function createMainWindow(preload: string): BrowserWindow {
   const window = new BrowserWindow(windowOptions(preload));
   window.once('ready-to-show', () => window.show());
+  // A Mac marks a window with unsaved changes (a dot in its close button, and the Dock's menu): the
+  // page's title starts with "• " while it has them (apps/web/app/pages/index.vue).
+  if (process.platform === 'darwin') {
+    window.on('page-title-updated', (_event, title) => {
+      window.setDocumentEdited(title.startsWith('• '));
+    });
+  }
   void window.loadURL(APP_URL);
   return window;
 }

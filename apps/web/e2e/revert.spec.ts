@@ -8,12 +8,12 @@ import {
   stubPickers,
   textOf,
 } from './fs-stub';
+import { expectSaved, expectUnsaved, saveState } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
 const revert = (page: Page) => menu(page).getByRole('menuitem', { name: /^Revert to Saved/ });
-const status = (page: Page) => page.locator('[data-tour="status"]');
 const notice = (page: Page) => page.locator('.notice [role="status"]');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
 const dialog = (page: Page) => page.getByRole('dialog');
@@ -59,11 +59,11 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'The Call.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const saved = await textOf(page, 'The Call.fountain');
 
     await typeAtEnd(page, ' MORE WORDS');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
 
     await openMenu(page);
     await expect(revert(page)).not.toHaveAttribute('aria-disabled', 'true');
@@ -72,7 +72,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     // The saved text is back, said once in a polite live region and shown as a toast.
     await expect(editor(page)).not.toContainText('MORE WORDS');
     await expect(editor(page)).toContainText('FADE IN:');
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
     await expect(notice(page)).toHaveText(MESSAGE('The Call.fountain'));
     await expect(notice(page)).toHaveAttribute('aria-live', 'polite');
     await expect(page.locator('.notice').filter({ hasText: 'Reverted' })).toBeVisible();
@@ -84,7 +84,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await expect(editor(page)).toBeFocused();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).toContainText('MORE WORDS');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     // Redo reverts again.
     await page.keyboard.press('ControlOrMeta+Shift+z');
     await expect(editor(page)).not.toContainText('MORE WORDS');
@@ -96,7 +96,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'The Call.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await typeAtEnd(page, ' MORE WORDS');
     await openMenu(page);
     await revert(page).click();
@@ -110,7 +110,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('ONE');
     await nextFileName(page, 'Palette.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
 
     const palette = page.getByRole('dialog', { name: 'Command palette' });
     const options = () => palette.getByRole('option', { name: /^Revert to Saved/ });
@@ -145,7 +145,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     // Saved, and not changed since.
     await nextFileName(page, 'Clean.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await openMenu(page);
     await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
     // Choosing a disabled item does nothing.
@@ -161,7 +161,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.press('Backspace');
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
+    await expectSaved(page);
     await openMenu(page);
     await expect(revert(page)).toHaveAttribute('aria-disabled', 'true');
   });
@@ -172,7 +172,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await expect(editor(page)).toContainText('# Untitled');
     await nextFileName(page, 'notes.md');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await typeAtEnd(page, 'More notes');
     await openMenu(page);
     await revert(page).click();
@@ -189,7 +189,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'Quiet.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const saved = await textOf(page, 'Quiet.fountain');
     await typeAtEnd(page, ' MORE');
     await openMenu(page);
@@ -229,7 +229,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'Again.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await typeAtEnd(page, ' MORE');
     await openMenu(page);
     await revert(page).click();
@@ -238,8 +238,8 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.reload();
     await expect(editor(page)).toContainText('FADE IN:');
     await expect(editor(page)).not.toContainText('MORE');
-    await expect(status(page)).toContainText(/Saved (just now|\d+ min ago)/);
-    await expect(status(page)).not.toContainText('Unsaved changes');
+    await expectSaved(page);
+    await expect(saveState(page)).not.toHaveAttribute('data-save-state', 'unsaved');
     await expect(dialog(page)).toBeHidden();
     // Nothing is left to revert.
     await openMenu(page);
@@ -252,7 +252,7 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'Kind.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await typeAtEnd(page, ' MORE');
 
     // Make it a Markdown document (the text is kept).
@@ -288,9 +288,9 @@ test.describe('Revert to Saved (Chromium)', () => {
     await page.keyboard.insertText('FADE IN:');
     await nextFileName(page, 'Shared.fountain');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await typeAtEnd(page, ' CHANGED');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     // The recovery copy is written a moment after typing; the second tab reads it.
     await page.waitForTimeout(1500);
 
@@ -318,16 +318,16 @@ test.describe('Revert to Saved where Save downloads', () => {
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
     const file = await download;
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
 
     await typeAtEnd(page, ' MORE');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     await openMenu(page);
     await revert(page).click();
     await expect(editor(page)).not.toContainText('MORE');
     await expect(editor(page)).toContainText('FADE IN:');
     await expect(notice(page)).toHaveText(MESSAGE(file.suggestedFilename()));
-    await expect(status(page)).not.toContainText('Unsaved changes');
+    await expect(saveState(page)).not.toHaveAttribute('data-save-state', 'unsaved');
     // Focus is back in the editor once the menu has gone (while it closes, focus can pass through
     // it), and one undo brings the change back.
     await expect(menu(page)).toHaveCount(0);

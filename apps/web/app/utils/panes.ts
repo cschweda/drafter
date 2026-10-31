@@ -172,6 +172,9 @@ export function dropTab(tabs: PaneTabs, tab: TabId): PaneTabs {
 /** The media query for two panes: 1024px, Tailwind's `lg`. */
 export const WIDE_QUERY = '(min-width: 1024px)';
 
+/** Screens with a status bar (fresh-look design §3.1, Task 6): 640px and up. */
+export const STATUS_BAR_QUERY = '(min-width: 640px)';
+
 export function clampSplit(ratio: number): number {
   if (Number.isNaN(ratio)) return SPLIT.initial;
   return Math.min(SPLIT.max, Math.max(SPLIT.min, ratio));

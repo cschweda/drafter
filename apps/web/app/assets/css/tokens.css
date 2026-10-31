@@ -77,6 +77,9 @@
   --r-lg: 12px;
   --dur: 140ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Unsaved changes (Task 6): the top bar's dot and the favicon's (public/favicon-unsaved.svg),
+     one clear red at 3:1 or more on every surface of both themes. */
+  --unsaved: #e03e44;
 }
 
 /* The script's own colors in the Source pane, and the theme's page. The syntax colors keep their

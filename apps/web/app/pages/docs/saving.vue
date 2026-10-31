@@ -40,7 +40,8 @@ useDocsHead({
     </p>
     <p>
       Either way, Drafter marks a script whose changes aren’t in its file yet: a dot in the tab’s
-      title, and a note in the status bar. If you close the tab or leave the site with changes that
+      title, a red dot on the tab’s icon, and a red dot with “Unsaved” after the script’s title at
+      the top, which saves when you click it (on a phone, the dot alone). If you close the tab or leave the site with changes that
       aren’t saved, your browser asks first. That question is the browser’s own and doesn’t always
       appear on phones and tablets; the recovery copy, below, is there for those times.
     </p>
@@ -410,7 +411,7 @@ useDocsHead({
     </p>
     <p>
       Open <strong>History…</strong> from the app menu (File, in the desktop app), the command palette,
-      or the save item in the status bar. Each snapshot can be restored (one undo takes the restore back, after a
+      or the file’s name in the status bar. Each snapshot can be restored (one undo takes the restore back, after a
       snapshot of what it replaced), labeled, saved as a file, deleted, or compared with the script
       as it is now or with another snapshot. <strong>Take snapshot…</strong> keeps one on request,
       with a label if you like. Snapshots are thinned as they age: every labeled one stays, all of

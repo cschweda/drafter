@@ -85,8 +85,20 @@ useSpell();
 const pageTitle = useScriptTitle();
 
 // The tab says which script this is, and whether it has changes that aren't in its file.
+// A tab's title can't be coloured, so its icon says so too, with a red dot (fresh-look Task 6): both
+// icons, whichever the browser chose. The "• " stays, for a reader who can't tell the red.
 useHead({
   title: computed(() => `${dirty.value ? '• ' : ''}${pageTitle.value} — Drafter`),
+  link: computed(() =>
+    dirty.value
+      ? ['icon-ico', 'icon-svg'].map((key) => ({
+          key,
+          rel: 'icon',
+          href: '/favicon-unsaved.svg',
+          type: 'image/svg+xml',
+        }))
+      : [],
+  ),
 });
 
 // The commands and their keys. The registry binds the keys that belong to the app (Save, Open,

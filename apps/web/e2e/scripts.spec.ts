@@ -13,6 +13,9 @@ const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exac
 const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
 const status = (page: Page) => page.locator('[data-tour="status"]');
+/** The sample's chip in the top bar (a wide screen) or its row (a phone). */
+const sampleShown = (page: Page) =>
+  page.locator('[data-sample-chip], section[aria-label="Sample"]').first();
 const chip = (page: Page) => page.locator('.chip.template');
 const row = (page: Page, title: string) => menu(page).locator('li', { hasText: title });
 const confirm = (page: Page) => page.getByRole('dialog');
@@ -200,7 +203,8 @@ test.describe('new scripts and switching', () => {
     await choose(page, 'Stage play', menu(page).getByRole('group', { name: 'Samples' }));
     await expect(editor(page)).toContainText('Title: The Call');
     await expect(chip(page)).toHaveText('Stage play');
-    await expect(status(page)).toContainText('Sample · your edits stay in this browser');
+    // The top bar's sample chip, or a phone's sample row, says so (the status bar doesn't, Task 6).
+    await expect(sampleShown(page)).toBeVisible();
     // A sample never asks before you leave it.
     await typeAtEnd(page, '\nEDITED SAMPLE');
     expect(await asks(page)).toBe(false);
@@ -261,7 +265,7 @@ test.describe('new scripts and switching', () => {
     // Nothing else is left, so the sample opens.
     await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     await expect(editor(page)).not.toContainText('DOOMED');
-    await expect(status(page)).toContainText('Sample ·');
+    await expect(sampleShown(page)).toBeVisible();
     await expect.poll(async () => (await stored(page)).length).toBe(1);
     await openMenu(page);
     await expect(menu(page)).toContainText('Scripts you start are kept here.');

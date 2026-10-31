@@ -138,7 +138,7 @@ test.describe('History', () => {
     await expect(history(page)).toBeVisible();
     await closeHistory(page);
 
-    // The save item is a button named for History and what it says.
+    // The file item is a button named for History and the file (none yet, here).
     await expect(statusButton(page)).toHaveAccessibleName('History, Not saved to a file yet');
     await statusButton(page).focus();
     await page.keyboard.press('Enter');

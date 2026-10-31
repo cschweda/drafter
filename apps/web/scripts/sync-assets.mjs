@@ -18,6 +18,7 @@ const DOCUMENT_STYLES = ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic'];
 const BRAND = [
   'favicon.svg',
   'favicon.ico',
+  'favicon-unsaved.svg',
   'apple-touch-icon.png',
   'icon-192.png',
   'icon-512.png',

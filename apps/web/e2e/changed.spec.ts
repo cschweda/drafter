@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { expectNewestThenCompare } from './bulk-snapshot';
 import { nextFileName, putFile, stubPickers, textOf } from './fs-stub';
+import { expectSaved, expectUnsaved } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -14,7 +15,6 @@ const editor = (page: Page) => page.locator('.cm-content');
 const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save', exact: true });
 const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
-const status = (page: Page) => page.locator('[data-tour="status"]');
 const dialog = (page: Page) => page.getByRole('dialog');
 const bar = (page: Page) => page.locator('[data-file-bar]');
 
@@ -103,7 +103,7 @@ async function openTheCall(page: Page) {
   await openButton(page).click();
   await menu(page).getByRole('button', { name: 'Open a file…' }).click();
   await expect(editor(page)).toContainText('A phone rings.');
-  await expect(status(page)).toContainText('Saved just now');
+  await expectSaved(page);
   await expect(menu(page)).toBeHidden();
 }
 
@@ -158,7 +158,7 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     const notice = bar(page).getByRole('status').filter({ hasText: 'Updated from' });
     await expect(notice).toHaveText('Updated from The Call.fountain.');
     // The file is now what was saved, so nothing is unsaved.
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await expect.poll(async () => (await byTitle(page, 'The Call'))?.source).toBe(V2);
 
     // It was one change: undo brings the previous text back.
@@ -166,7 +166,7 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor(page)).not.toContainText('Nobody answers.');
     await expect(editor(page)).toContainText('A phone rings.');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     // The file itself was not touched by any of it.
     expect(await textOf(page, NAME)).toBe(V2);
   });
@@ -234,7 +234,7 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await start(page);
     await openTheCall(page);
     await typeAtEnd(page, 'Mine.');
-    await expect(status(page)).toContainText('Unsaved changes');
+    await expectUnsaved(page);
     await changeFile(page, V2);
 
     await expect(dialog(page)).toBeVisible();
@@ -279,7 +279,7 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await focusWindow(page);
     await expect(dialog(page)).toBeHidden();
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await textOf(page, NAME)).toContain('Mine.');
     expect(await textOf(page, NAME)).not.toContain('Nobody answers.');
   });

@@ -1,5 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
-import { editor, openSettings, palette, paletteInput, setText, showSource, start } from './modules';
+import {
+  editor,
+  openCountsPanel,
+  openSettings,
+  palette,
+  paletteInput,
+  setText,
+  showSource,
+  start,
+} from './modules';
 
 // Sprints (Plan 5 Task 4), on Playwright's clock: it is stopped at the start of each test, and a
 // test moves it with `runFor` (every timer in between runs, as in a tab being used) or
@@ -9,7 +18,6 @@ import { editor, openSettings, palette, paletteInput, setText, showSource, start
 
 const MINUTE = 60_000;
 const status = (page: Page) => page.locator('[data-tour="status"]');
-const countsButton = (page: Page) => status(page).locator('.counts-button');
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Counts' });
 const inBar = (page: Page) => status(page).locator('[data-sprint]');
 const inMarker = (page: Page) => page.locator('[data-focus-marker] [data-sprint]');
@@ -27,7 +35,7 @@ async function begin(page: Page) {
 
 /** Starts a sprint from the Counts panel, with one of its length buttons. */
 async function startFromPanel(page: Page, name: string) {
-  await countsButton(page).click();
+  await openCountsPanel(page);
   await expect(panel(page)).toBeVisible();
   await panel(page).getByRole('button', { name, exact: true }).click();
   await expect(panel(page)).toBeHidden();
@@ -128,13 +136,13 @@ test.describe('sprints', () => {
     await page.clock.runFor(MINUTE);
     await expect(noticeText(page)).toHaveText('');
     const last = panel(page).locator('[data-last-sprint]');
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await expect(last).toHaveText(
       /^Last sprint: 3 words( \(\d+(\.\d)? pages?\))?, ended 10:15\sAM\.$/,
     );
     // A new sprint starts afresh: the panel no longer reports the last.
     await panel(page).getByRole('button', { name: '15 minutes', exact: true }).click();
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await expect(panel(page)).toBeVisible();
     await expect(last).toHaveCount(0);
   });
@@ -143,7 +151,7 @@ test.describe('sprints', () => {
     page,
   }) => {
     await begin(page);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     const minutes = panel(page).getByLabel('Minutes');
     const submit = panel(page).getByRole('button', { name: 'Start sprint', exact: true });
 
@@ -164,7 +172,7 @@ test.describe('sprints', () => {
   test('announces only the end', async ({ page }) => {
     await begin(page);
     await watchLiveRegions(page);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await panel(page).getByLabel('Minutes').fill('3');
     await panel(page).getByRole('button', { name: 'Start sprint', exact: true }).click();
     await expect(inBar(page)).toContainText('3:00 left');

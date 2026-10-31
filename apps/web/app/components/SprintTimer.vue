@@ -76,27 +76,30 @@ async function onShow() {
 <style scoped>
 .sprint {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0 10px;
+  gap: 0 2px;
+  white-space: nowrap;
 }
 .time {
+  padding: 0 4px;
   font-variant-numeric: tabular-nums;
 }
+/* Borderless buttons that fill on hover, as the status bar's are (fresh-look design §3.4, §5). */
 button {
-  /* A 24px target (WCAG 2.5.8): on a phone the status bar wraps, and its rows sit close. */
+  display: inline-flex;
+  align-items: center;
+  /* A 24px target (WCAG 2.5.8); the status bar's row draws them a little shorter, far apart. */
   min-height: 24px;
-  padding: 0;
+  padding: 0 6px;
   border: 0;
+  border-radius: var(--r-sm);
   background: none;
   color: inherit;
   font: inherit;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
   cursor: pointer;
 }
-button:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
+button:hover {
+  background: var(--raised);
+  color: var(--text);
 }
 </style>

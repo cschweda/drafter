@@ -226,6 +226,12 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'sprint-stop', title: 'Stop sprint', group: 'View' },
   { id: 'sprint-hide', title: 'Hide sprint countdown', group: 'View' },
   { id: 'sprint-show', title: 'Show sprint countdown', group: 'View' },
+  {
+    id: 'show-counts',
+    title: 'Counts and daily goal…',
+    group: 'View',
+    keywords: ['word count', 'page count', 'goal', 'sprint'],
+  },
   { id: 'show-stats', title: 'Show stats', group: 'View' },
   // Scaffold (seeing-the-script design §5.6): a tab beside the Source showing who is in the
   // cursor's scene. No key of its own; the palette finds it by these words too.

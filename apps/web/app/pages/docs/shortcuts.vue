@@ -116,7 +116,7 @@ const groups = shortcutGroups(COMMAND_DATA);
           or <kbd>Shift+F10</kbd> opens the note’s menu.
         </li>
         <li>
-          In History (the app menu’s History…, or the save item in the status bar),
+          In History (the app menu’s History…, or the file’s name in the status bar),
           <kbd>↑</kbd> and <kbd>↓</kbd> move between the snapshots, and <kbd>Home</kbd> and
           <kbd>End</kbd> go to the first and last. On a snapshot, <kbd>Enter</kbd> compares it with
           now, <kbd>C</kbd> compares it with another, <kbd>R</kbd> restores it, <kbd>L</kbd> labels

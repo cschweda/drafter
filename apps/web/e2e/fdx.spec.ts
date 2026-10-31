@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
-import { runCommand, showView } from './modules';
+import { expectSaved, runCommand, showView } from './modules';
 
 // Final Draft files (Phase 2 Plan FD): a .fdx opens as a new Fountain script that is not the
 // file's (Save asks for a .fountain, and the .fdx is never written), and a Fountain script exports
@@ -136,7 +136,7 @@ test.describe('importing a Final Draft file (Chromium, with the picker)', () => 
 
     // Save asks where (the picker suggests a .fountain named after the title), never the .fdx.
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect((await picks(page)).at(-1)).toBe('The Last Lamp.fountain');
     expect(await bytesOf(page, 'lamp.fdx')).toEqual(original);
     const saved = Buffer.from((await bytesOf(page, 'The Last Lamp.fountain')) ?? []).toString();

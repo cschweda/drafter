@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { editor, runCommand, setText, showSource, start } from './modules';
+import { editor, openCountsPanel, runCommand, setText, showSource, start } from './modules';
 
 // Counts and a daily goal (Plan 5 Task 3). The accessibility test the brief names is in
 // a11y.spec.ts; the panel's keyboard use is tested here.
@@ -30,10 +30,11 @@ async function ownScript(page: Page) {
 }
 
 test.describe('counts', () => {
-  test('opens the counts from the status bar', async ({ page }) => {
+  test('opens the counts from the status bar', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'a phone has no status bar: the palette opens them (status-bar.spec)');
     await start(page);
-    // A first visit puts the cursor on the sample's first scene heading, on page 1.
-    await expect(countsButton(page)).toHaveText('Page 1 of 2');
+    // The script's pages and running time (the page the cursor is on is the Script's header).
+    await expect(countsButton(page)).toHaveText('1.4 pages · About 1 min');
     await expect(countsButton(page)).toHaveAttribute('aria-expanded', 'false');
     await countsButton(page).click();
     await expect(panel(page)).toBeVisible();
@@ -50,7 +51,7 @@ test.describe('counts', () => {
 
   test('shows both times', async ({ page }) => {
     await start(page);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     // The sample: 1.4 pages at a minute a page, and its dialogue and action at about a minute.
     await expect(figure(page, 'Running time')).toHaveText('About 1 min');
     await expect(figure(page, 'Estimate from the dialogue')).toHaveText('About 1 min');
@@ -62,7 +63,9 @@ test.describe('counts', () => {
   test('opens and closes from the keyboard, and Escape returns focus', async ({
     page,
     browserName,
+    isMobile,
   }) => {
+    test.skip(!!isMobile, 'a phone has no status bar');
     const tab = tabKey(browserName);
     await start(page);
     await countsButton(page).focus();
@@ -92,18 +95,18 @@ test.describe('counts', () => {
     await expect(panel(page)).toBeHidden();
   });
 
-  test('follows the cursor to a page', async ({ page }) => {
+  test('counts the script, wherever the cursor is', async ({ page }) => {
     await start(page);
     await showSource(page);
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
-    await expect(countsButton(page)).toHaveText('Page 2 of 2');
+    await expect(countsButton(page)).toHaveText('1.4 pages · About 1 min');
   });
 
   test('sets a daily goal and shows progress', async ({ page, browserName }) => {
     const tab = tabKey(browserName);
     await ownScript(page);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await expect(panel(page)).toBeFocused();
     await expect(panel(page)).not.toContainText('This is a sample');
 
@@ -140,7 +143,7 @@ test.describe('counts', () => {
 
   test('says what a goal can’t be', async ({ page }) => {
     await ownScript(page);
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await target(page).fill('0');
     await panel(page).getByRole('button', { name: 'Set goal' }).click();
     await expect(panel(page).getByRole('alert')).toContainText('Enter a number of pages');
@@ -159,7 +162,7 @@ test.describe('counts', () => {
     await expect(editor(page)).toContainText('# Untitled');
     await setText(page, '# A title\n\nSome words here.\n');
     await expect(countsButton(page)).toHaveText('5 words');
-    await countsButton(page).click();
+    await openCountsPanel(page);
     await expect(figure(page, 'Words')).toHaveText('5');
     await expect(panel(page).locator('dt', { hasText: 'Pages' })).toHaveCount(0);
     await expect(unit(page)).toHaveValue('words');

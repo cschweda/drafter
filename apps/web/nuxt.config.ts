@@ -241,8 +241,10 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'canonical', href: `${SITE_URL}/` },
-        { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
-        { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+        // Keyed: while the script has unsaved changes, the app swaps both for the icon with a red dot
+        // (pages/index.vue).
+        { key: 'icon-ico', rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+        { key: 'icon-svg', rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
         ...(DESKTOP ? [] : [{ rel: 'manifest' as const, href: '/manifest.webmanifest' }]),
       ],

@@ -214,7 +214,7 @@ test.describe('the recovery copy', () => {
   });
 
   test.describe('its state in the status bar', () => {
-    test('says the recovery copy is kept when storage is persistent', async ({ page }) => {
+    test('says nothing of a recovery copy that is kept', async ({ page }) => {
       await stubPersistence(page, true);
       // A warning that appears for an instant is announced too, so watch from the first node.
       await page.addInitScript(() => {
@@ -225,9 +225,10 @@ test.describe('the recovery copy', () => {
         }).observe(document, { childList: true, subtree: true });
       });
       await page.goto('/');
-      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveText(
-        'Recovery copy: kept in this browser',
-      );
+      await expect(editor(page)).toContainText('Title: The Call');
+      // The chip is there only when it matters (fresh-look Task 6).
+      await page.waitForTimeout(500);
+      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveCount(0);
       await expect(warning(page)).toHaveCount(0);
       expect(
         await page.evaluate(() => (window as unknown as { sawWarning: boolean }).sawWarning),
@@ -352,7 +353,7 @@ test.describe('the recovery copy', () => {
         .toBe(1);
       // A second launch has a project already: no new request.
       await page.reload();
-      await expect(status(page)).toContainText('Recovery copy:');
+      await expect(editor(page)).toBeAttached();
       await expect
         .poll(() =>
           page.evaluate(() => (window as unknown as { persistCalls: number }).persistCalls),
@@ -390,7 +391,7 @@ test.describe('the recovery copy', () => {
       await typeAtEnd(page, '\n\nTyped while storage was down.');
       await mendIndexedDb(page);
       await page.clock.runFor(30_000);
-      await expect(status(page)).toContainText('Recovery copy: kept in this browser');
+      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveCount(0);
       // The text in the editor became a script of its own, and is still open.
       await expect(editor(page)).toContainText('Typed while storage was down.');
       await expect
@@ -435,6 +436,8 @@ test.describe('the recovery copy', () => {
         (window as unknown as { failWrites: boolean }).failWrites = value;
       }, on);
     const recovery = (page: Page) => status(page).getByRole('button', { name: /Recovery copy/ });
+    /** A copy that is kept has no chip (fresh-look Task 6). */
+    const kept = (page: Page) => expect(recovery(page)).toHaveCount(0);
 
     test('reports the recovery copy as unavailable, and clears when the next change is kept', async ({
       page,
@@ -442,7 +445,7 @@ test.describe('the recovery copy', () => {
       await stubPersistence(page, true);
       await failWritesOnDemand(page);
       await start(page);
-      await expect(recovery(page)).toHaveText('Recovery copy: kept in this browser');
+      await kept(page);
       await failWrites(page, true);
       await typeAtEnd(page, '\n\nNot written.');
       await expect(recovery(page)).toHaveText('Recovery copy: unavailable');
@@ -450,7 +453,7 @@ test.describe('the recovery copy', () => {
       // Storage works again; the next change writes the text that was waiting.
       await failWrites(page, false);
       await page.keyboard.insertText(' Written now.');
-      await expect(recovery(page)).toHaveText('Recovery copy: kept in this browser');
+      await kept(page);
       await expect(warning(page)).toHaveCount(0);
       await expect
         .poll(async () => (await stored(page))[0]?.source)
@@ -471,15 +474,17 @@ test.describe('the recovery copy', () => {
       await expect(recovery(page)).toHaveText('Recovery copy: unavailable');
       await failWrites(page, false);
       await page.clock.runFor(30_000);
-      await expect(recovery(page)).toHaveText('Recovery copy: kept in this browser');
+      await kept(page);
       await expect.poll(async () => (await stored(page))[0]?.source).toContain('Waiting.');
     });
   });
 
   test.describe('the first item of the status bar', () => {
-    test('says a sample keeps its edits in this browser', async ({ page }) => {
+    test('says nothing of a sample: the top bar does', async ({ page }) => {
       await page.goto('/');
-      await expect(status(page)).toContainText('Sample · your edits stay in this browser');
+      await expect(editor(page)).toContainText('Title: The Call');
+      await expect(status(page)).toContainText('Not saved to a file yet');
+      await expect(status(page)).not.toContainText(/sample/i);
     });
 
     test('says a script with no file is not saved to one', async ({ page }) => {

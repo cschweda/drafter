@@ -61,6 +61,7 @@ import { openSpellMenu } from '~/spell/menu';
 import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
 import { SPELLING_HEADING_ID } from '~/spell/rows';
 import { useSpell } from '~/spell/use-spell';
+import { openCounts } from '~/stats/counts-panel';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { showStats } from '~/stats/tab';
 import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
@@ -347,7 +348,7 @@ export function registerBuiltinCommands(): void {
         editor.goto(view.state.selection.main.head);
       },
     },
-    // History (§11.1): the script's snapshots, opened from here, the app menu, and the status bar's save item.
+    // History (§11.1): the script's snapshots, opened from here, the app menu, and the status bar's file item.
     // Take snapshot… opens it on its label field (Call 13); a read-only tab's says why it can't take one.
     history: {
       enabled: hasScript,
@@ -632,6 +633,11 @@ export function registerBuiltinCommands(): void {
     // and the Drafter menu open it too.
     'show-stats': {
       run: () => showStats(),
+    },
+    // The Counts panel (the status bar's counts item), from the palette: on a phone, which has no
+    // status bar (fresh-look Task 6), it is the way to the daily goal.
+    'show-counts': {
+      run: () => openCounts(),
     },
     // Scaffold (seeing-the-script design §5.6), beside the Source too. A Markdown document has no
     // scenes, so no Scaffold.

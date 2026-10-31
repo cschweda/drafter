@@ -123,7 +123,7 @@ test.describe('the Script pane on a desktop', () => {
     await expect(pages(page).first()).toBeVisible();
     // The first visit has opened the sample and put the cursor on its first scene heading (page 1):
     // the session is ready. A jump made before then is not what these tests are about.
-    await expect(status(page)).toContainText('Page 1 of');
+    await expect(slim(page).filter({ hasText: 'Page 1 of' }).first()).toBeAttached();
   });
 
   test('shows the sample’s pages', async ({ page }) => {
@@ -277,17 +277,17 @@ test.describe('the Script pane on a desktop', () => {
     await expect(lineOf(page, 'ZZ')).toBeInViewport({ ratio: 1 });
   });
 
-  test('shows the current page in the slim bar and the status bar', async ({ page }) => {
+  test('shows the current page in the slim bar, and not in the status bar', async ({ page }) => {
     // A first visit starts on the first scene heading, which is on page 1 (not the title page).
     await expect(slim(page).filter({ hasText: 'Page 1 of 2' })).toBeVisible();
-    await expect(status(page)).toContainText('Page 1 of 2');
+    // The status bar has the script's pages, and doesn't repeat this (fresh-look Task 6).
+    await expect(status(page)).not.toContainText(/Page \d/);
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+End');
     await expect(slim(page).filter({ hasText: 'Page 2 of 2' })).toBeVisible();
-    await expect(status(page)).toContainText('Page 2 of 2');
     // A blank line keeps the page it was on.
     await page.keyboard.insertText('\n\n');
-    await expect(status(page)).toContainText('Page 2 of 2');
+    await expect(slim(page).filter({ hasText: 'Page 2 of 2' })).toBeVisible();
     // Typing says it is updating, then settles.
     await expect(slim(page)).not.toContainText('Updating');
   });
@@ -460,7 +460,7 @@ test.describe('the Script pane on a phone', () => {
     await expect(pages(page).first()).toBeVisible();
     // The first visit has opened the sample and put the cursor on its first scene heading (page 1):
     // the session is ready. A jump made before then is not what these tests are about.
-    await expect(status(page)).toContainText('Page 1 of');
+    await expect(slim(page).filter({ hasText: 'Page 1 of' }).first()).toBeAttached();
   });
 
   test('opens on the script, fitted to the screen', async ({ page }) => {
@@ -476,7 +476,6 @@ test.describe('the Script pane on a phone', () => {
     expect(width).toBeGreaterThan(viewport * 0.8);
     // The first scene heading is on page 1; the cursor starts there.
     await expect(slim(page)).toContainText('Page 1 of 2');
-    await expect(status(page)).toContainText('Page 1 of 2');
   });
 
   test('jumps to the Source tab when a line is clicked', async ({ page }) => {

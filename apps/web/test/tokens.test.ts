@@ -88,6 +88,8 @@ const PAIRS: Array<[string, string, number]> = [
   // The spelling mark's dotted underline is a graphic, not text (Plan D, Call 17).
   ['--spelling', '--bg', 3],
   ['--spelling', '--surface', 3],
+  // The top bar's unsaved dot (Task 6), a graphic a reader needs, on every surface.
+  ...SURFACES.map((bg): [string, string, number] => ['--unsaved', bg, 3]),
 ];
 
 // Today's names, kept as aliases of the new ones until every component has moved over (fresh-look
@@ -267,6 +269,7 @@ describe('focus and motion', () => {
 // colours, so no circle, chip, or bar has a colour of its own.
 describe('the top bar', () => {
   const TOP_BAR = [
+    'AppStatusBar.vue',
     'AppToolbar.vue',
     'AppMenu.vue',
     'FileBar.vue',
@@ -275,6 +278,8 @@ describe('the top bar', () => {
     'ReadOnlyBar.vue',
     'SampleChip.vue',
     'SampleBar.vue',
+    'SaveState.vue',
+    'SprintTimer.vue',
     'StartBlankBar.vue',
     'StorageWarning.vue',
     'StructureStrip.vue',
@@ -288,6 +293,26 @@ describe('the top bar', () => {
     expect(style.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
     // Today's names are aliases on their way out; the moved components use the new ones.
     expect(style.match(/var\(--(chrome|chrome-2|line|heading|tab-on)\)/g) ?? []).toEqual([]);
+  });
+});
+
+// The unsaved dot (fresh-look Task 6; the maintainer, 2026-10-31): the top bar's dot and the
+// favicon's are one red, the same in both themes.
+describe('the unsaved dot', () => {
+  test('is one red in both themes, and the favicon’s dot is that red', () => {
+    const red = themeTokens('dark')['--unsaved'];
+    expect(red).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(themeTokens('light')['--unsaved']).toBe(red);
+    const icon = readFileSync(
+      new URL('../../../brand/favicon-unsaved.svg', import.meta.url),
+      'utf8',
+    );
+    expect(icon.toLowerCase()).toContain(`fill="${(red as string).toLowerCase()}"`);
+    // The dot is drawn on top of the favicon, which is otherwise the same.
+    const plain = readFileSync(new URL('../../../brand/favicon.svg', import.meta.url), 'utf8');
+    const body = (svg: string) =>
+      svg.replace(/<title>[^<]*<\/title>/, '').replace(/<circle[^>]*\/>/g, '');
+    expect(body(icon)).toBe(body(plain));
   });
 });
 

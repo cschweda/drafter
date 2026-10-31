@@ -46,9 +46,11 @@ const target = (name: string) => `[data-tour="${name}"]`;
 /**
  * The ten steps. The template step points at the Drafter menu's mark on every screen (fresh-look
  * design §10): the template chip has left the top bar, and the menu's Template section chooses it.
- * `wide` is kept for the steps that will differ by screen (the status bar, Task 6).
+ * `wide` is kept for the steps that will differ by screen. The status step points at the status bar
+ * from 640px up and, below that (where there is none, Task 6), at the title, whose red dot says
+ * there are unsaved changes.
  */
-export function buildSteps(_wide: boolean): TourStep[] {
+export function buildSteps(_wide: boolean, statusBar = true): TourStep[] {
   return [
     {
       id: 'source-write',
@@ -91,13 +93,21 @@ export function buildSteps(_wide: boolean): TourStep[] {
       content:
         'Saves a .fountain file. In Chrome and Edge on a computer it saves straight back to the file, so a script in a Dropbox or Google Drive folder syncs. Other browsers, and phones, download a copy.',
     },
-    {
-      id: 'status',
-      target: target('status'),
-      title: 'The status bar',
-      content:
-        'Whether the script is saved, the recovery copy this browser keeps as you type, and the page count.',
-    },
+    statusBar
+      ? {
+          id: 'status',
+          target: target('status'),
+          title: 'The status bar',
+          content:
+            'The file’s name (it opens History), the pages and running time, words, problems, and the template. A warning shows here if this browser may clear its recovery copy.',
+        }
+      : {
+          id: 'status',
+          target: target('title'),
+          title: 'Saved or not',
+          content:
+            'A red dot by the title means changes that aren’t in a file yet: tap it to save. The pages, words, and running time are in Stats.',
+        },
     {
       id: 'export',
       target: target('export'),

@@ -3,7 +3,7 @@ import type { TourStep } from 'nuxt-guided-tour/types';
 import { isApple, matchesKey } from '~/commands/keys';
 import { useCommands } from '~/commands/registry';
 import { usePanes } from '~/composables/usePanes';
-import { useWideScreen } from '~/composables/useWideScreen';
+import { useMatchMedia, useWideScreen } from '~/composables/useWideScreen';
 import { isFirstVisit, useScript } from '~/storage/script';
 import { announceTour } from '~/tour/announce';
 import { watchScrollFocus } from '~/tour/scroll-focus';
@@ -16,6 +16,7 @@ import {
   TOUR_VERSION,
   WELCOME,
 } from '~/tour/tour.config';
+import { STATUS_BAR_QUERY } from '~/utils/panes';
 
 // The welcome dialog, the "Fountain in 30 seconds" card, and the ten steps (Phase 1 design §4.4),
 // built from `nuxt-guided-tour`'s parts. The module keeps the steps, the highlight, the arrow keys,
@@ -31,7 +32,9 @@ const { ready } = useScript();
 const focus = useFocusMode();
 const apple = isApple();
 
-const steps = reactive<TourStep[]>(buildSteps(wide.value));
+// The status bar shows from 640px up (fresh-look Task 6); below, the status step points at the title.
+const statusBar = useMatchMedia(STATUS_BAR_QUERY);
+const steps = reactive<TourStep[]>(buildSteps(wide.value, statusBar.value));
 const {
   isActive,
   currentStep,
@@ -173,9 +176,9 @@ function reveal(step: TourStep | null) {
 watch(currentStep, (step) => reveal(step));
 
 // The steps are built for the screen's width (the template step points at the Drafter menu on
-// every width now; the status step may differ by width once the status bar does, Task 6).
-watch(wide, (now) => {
-  steps.splice(0, steps.length, ...buildSteps(now));
+// every width now; the status step at the status bar, or below 640px at the title).
+watch([wide, statusBar], ([now, bar]) => {
+  steps.splice(0, steps.length, ...buildSteps(now, bar));
   reveal(currentStep.value);
 });
 

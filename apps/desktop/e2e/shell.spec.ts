@@ -101,7 +101,9 @@ test('has no service worker and no storage warning', async ({ desktop }) => {
   });
   await page.reload();
   await expect(editor(page)).toBeVisible();
-  await expect(page.locator('[data-tour="status"]')).toContainText('may be cleared');
+  // Not in the status bar either: its warning chip is for a copy that may really go (Task 6).
+  await expect(page.locator('[data-tour="status"] .counts-button')).toContainText('pages');
+  await expect(page.locator('[data-tour="status"]')).not.toContainText('Recovery copy');
   await expect(page.locator('[data-warning]')).toHaveCount(0);
 
   const worker = await page.evaluate(async () => ({

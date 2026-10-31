@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { nextFileName, putFile, stubPickers, textOf } from './fs-stub';
-import { editor, textOf as shownText, showSource, start } from './modules';
+import { editor, expectSaved, textOf as shownText, showSource, start } from './modules';
 
 // Taking snapshots (Phase 2 design §11.1): every 10 minutes of active writing, on every save to a
 // file, and on opening one; none for a sample; and a snapshot that can't be stored never stops a save.
@@ -133,7 +133,7 @@ test.describe('snapshots and saving (Chromium)', () => {
     await typeAtEnd(page, '\n\nINT. HALL - DAY\n\nShe waits.');
     await nextFileName(page, 'Hall.fountain');
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const script = await mine(page);
     await expect.poll(async () => (await history(page, script.id)).length).toBe(1);
     const [saved] = await history(page, script.id);
@@ -143,14 +143,14 @@ test.describe('snapshots and saving (Chromium)', () => {
 
     // Saved again, unchanged: nothing new.
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await page.waitForTimeout(300);
     expect(await history(page, script.id)).toHaveLength(1);
 
     // Changed and saved: another, matching the new savedHash.
     await typeAtEnd(page, ' Then she leaves.');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await expect.poll(async () => (await history(page, script.id)).length).toBe(2);
     const after = await mine(page);
     expect((await history(page, script.id)).map((s) => s.hash)).toContain(after.savedHash);
@@ -165,7 +165,7 @@ test.describe('snapshots and saving (Chromium)', () => {
     await typeAtEnd(page, '\n\nMine now.');
     await nextFileName(page, 'Mine.fountain');
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const script = await mine(page);
     await expect
       .poll(async () => (await history(page, script.id)).map((s) => s.reason))
@@ -215,14 +215,14 @@ test.describe('snapshots and saving (Chromium)', () => {
     await typeAtEnd(page, '\n\nINT. HALL - DAY\n\nShe waits.');
     await nextFileName(page, 'Hall.fountain');
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await textOf(page, 'Hall.fountain')).toMatch(/She waits\.$/);
     await expect(status(page).getByRole('alert')).toHaveText(PROBLEM);
 
     // Saved again with a change: the file has it, and the line is said once, not twice.
     await typeAtEnd(page, ' Then she leaves.');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     expect(await textOf(page, 'Hall.fountain')).toMatch(/Then she leaves\.$/);
     await expect(status(page).getByText(PROBLEM)).toHaveCount(1);
     expect(await history(page, (await mine(page)).id)).toEqual([]);
@@ -234,10 +234,10 @@ test.describe('snapshots and saving (Chromium)', () => {
     await typeAtEnd(page, '\n\nINT. HALL - DAY\n\nShe waits.');
     await nextFileName(page, 'Hall.fountain');
     await saveButton(page).click();
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     await typeAtEnd(page, ' Then she leaves.');
     await page.keyboard.press('ControlOrMeta+s');
-    await expect(status(page)).toContainText('Saved just now');
+    await expectSaved(page);
     const script = await mine(page);
     await expect.poll(async () => (await history(page, script.id)).length).toBe(2);
     const file = await textOf(page, 'Hall.fountain');

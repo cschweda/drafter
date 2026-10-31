@@ -233,7 +233,8 @@ function onKeydown(event: KeyboardEvent) {
 <style scoped>
 .counts {
   position: absolute;
-  left: 8px;
+  /* Above the status bar's counts item, at its right end. */
+  right: 8px;
   bottom: calc(100% + 4px);
   z-index: 6;
   box-sizing: border-box;
