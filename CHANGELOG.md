@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-10-31
+
+**Free, with no catch, and a page to download it.** A Why Drafter page says what Drafter is (free, no login, private, offline) and how it compares with Final Draft and the others; a Download page has the Windows and Linux apps, ready for a Mac one; and the roadmap brings production features forward, free.
+
 ### Added
 
 - `apps/web`: a **Download page** ([drafter.dev/docs/download](https://drafter.dev/docs/download/)) for Windows (the x64 installer, with Windows on Arm and SmartScreen explained) and Linux (the `.deb` and the AppImage, each with its one-line how-to), and the Mac's build-it-yourself steps until a signed download comes. The links are made at build time from the version, so the page asks nothing of GitHub when it loads, with the latest release beside them; the reader's own system is outlined. **Help → Download the desktop app** opens it, on the web only (the desktop app leaves the entry out), and the help index lists it. README's Platforms badge and its Linux and Windows sections link to it.
@@ -935,7 +939,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.2...HEAD
+[0.22.2]: https://github.com/cschweda/drafter/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/cschweda/drafter/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/cschweda/drafter/compare/v0.21.1...v0.22.0
 [0.21.1]: https://github.com/cschweda/drafter/compare/v0.21.0...v0.21.1
