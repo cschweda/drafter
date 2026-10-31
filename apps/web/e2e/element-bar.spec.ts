@@ -34,6 +34,8 @@ async function press(page: Page, name: string) {
 test.beforeEach(async ({ page }) => {
   await start(page);
   await showSource(page);
+  // Side by side, the bar shows while focus is in the editor's pane (fresh-look design §3.2).
+  await editor(page).focus();
 });
 
 test('shows over the Source, and names the element the cursor is in', async ({ page }) => {
@@ -380,4 +382,246 @@ test('says why a key did nothing', async ({ page }) => {
   await expect(
     page.getByRole('status').filter({ hasText: 'under a character name' }),
   ).toBeVisible();
+});
+
+// Fresh-look design §3.2 and §10a: side by side, the bar sits in the editor's 36px header, never
+// clips (it folds its buttons into More instead), keeps the marks in its tooltips, and gives way to
+// the script's title while focus is elsewhere.
+test.describe('in the editor’s header', () => {
+  test.skip(({ isMobile }) => isMobile, 'two panes side by side');
+
+  const header = (page: Page) => page.locator('[data-pane="left"] .head');
+  const title = (page: Page) => header(page).locator('[data-script-title]');
+
+  /** What clips: the bar's and the header's overflow, and any item drawn past the bar's edges. */
+  async function clipping(page: Page) {
+    return bar(page).evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const head = el.closest('.head') as HTMLElement;
+      const out = [...el.querySelectorAll<HTMLElement>('[data-bar-item]')]
+        .filter((item) => getComputedStyle(item).visibility !== 'hidden')
+        .filter((item) => {
+          const r = item.getBoundingClientRect();
+          return r.left < box.left - 0.5 || r.right > box.right + 0.5;
+        })
+        .map((item) => item.dataset.barItem);
+      return {
+        bar: el.scrollWidth - el.clientWidth,
+        head: head.scrollWidth - head.clientWidth,
+        out,
+      };
+    });
+  }
+  /** The items drawn on the bar, by their ids. */
+  const drawn = (page: Page) =>
+    bar(page)
+      .locator('[data-bar-item]')
+      .evaluateAll((all) =>
+        all
+          .filter((el) => getComputedStyle(el).visibility !== 'hidden')
+          .map((el) => (el as HTMLElement).dataset.barItem),
+      );
+  async function textSize(page: Page, size: string) {
+    await openSettings(page);
+    await settingsDialog(page).getByLabel('Text size').selectOption(size);
+    await closeSettings(page);
+    await editor(page).focus();
+  }
+
+  test('never clips at 1280 and 1440 with two panes, at text size Large too', async ({ page }) => {
+    for (const size of ['1', '1.5']) {
+      if (size !== '1') await textSize(page, size);
+      for (const width of [1280, 1440]) {
+        await page.setViewportSize({ width, height: 800 });
+        for (const text of ['INT. HALL - DAY\n\nMARGARET\nHello.', 'She waits.\n\n']) {
+          await write(page, text);
+          await expect(bar(page)).toBeVisible();
+          await expect
+            .poll(() => clipping(page), `${width}px, text size ${size}`)
+            .toEqual({ bar: 0, head: 0, out: [] });
+        }
+        // In the header: the editor side has two bars above the writing, not three.
+        const [head, toolbar, text] = await Promise.all([
+          header(page).boundingBox(),
+          bar(page).boundingBox(),
+          page.locator('[data-pane="left"] .cm-scroller').boundingBox(),
+        ]);
+        expect(toolbar?.y ?? 0).toBeGreaterThanOrEqual(head?.y ?? 0);
+        expect((toolbar?.y ?? 0) + (toolbar?.height ?? 0)).toBeLessThanOrEqual(
+          (head?.y ?? 0) + (head?.height ?? 0) + 0.5,
+        );
+        expect(Math.abs((text?.y ?? 0) - ((head?.y ?? 0) + (head?.height ?? 0)))).toBeLessThan(2);
+      }
+    }
+  });
+
+  test('collapses to the current element and More when narrow', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await write(page, 'INT. HALL - DAY\n\nMARGARET\nHello.');
+    const divider = page.getByRole('separator', { name: 'Resize panes' });
+    await divider.focus();
+    await page.keyboard.press('Home');
+    await expect(divider).toHaveAttribute('aria-valuenow', '25');
+    await editor(page).focus();
+    await expect.poll(() => clipping(page)).toEqual({ bar: 0, head: 0, out: [] });
+    // The element the cursor is in, and More; the other buttons wait in More.
+    await expect(button(page, 'Dialogue')).toBeVisible();
+    await expect(button(page, 'Dialogue')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(page, 'More elements')).toBeVisible();
+    const items = await drawn(page);
+    expect(items).toContain('more');
+    expect(items).toContain('element-dialogue');
+    for (const id of [
+      'element-scene-heading',
+      'element-action',
+      'element-character',
+      'element-parenthetical',
+      'element-transition',
+    ]) {
+      expect(items, id).not.toContain(id);
+    }
+    // The arrow keys go only through what is drawn.
+    await button(page, 'Dialogue').focus();
+    await page.keyboard.press('End');
+    const lastId = await page.evaluate(
+      () => (document.activeElement as HTMLElement | null)?.dataset.barItem,
+    );
+    expect(items).toContain(lastId);
+    // More holds the folded buttons first, and they still work.
+    await button(page, 'More elements').click();
+    const menu = page.getByRole('menu');
+    for (const name of [
+      'Scene',
+      'Action',
+      'Character',
+      'Parenthetical',
+      'Transition',
+      'Centered',
+    ]) {
+      await expect(menu.getByRole('menuitem', { name: new RegExp(`^${name}\\b`) })).toBeVisible();
+    }
+    // The cheat sheet and the bar's options, folded too, are at its end.
+    await expect(menu.getByRole('menuitem', { name: 'Fountain cheat sheet' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Hide the element bar' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await write(page, 'She waits.\n\nkitchen - night');
+    await button(page, 'More elements').click();
+    await page.getByRole('menuitem', { name: /^Scene\b/ }).click();
+    await expect(editor(page)).toBeFocused();
+    expect(await textOf(page)).toBe('She waits.\n\nINT. KITCHEN - NIGHT');
+    // Given room again, every button comes back out of More.
+    await divider.focus();
+    await page.keyboard.press('End');
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await editor(page).focus();
+    await expect
+      .poll(() => drawn(page))
+      .toEqual(
+        expect.arrayContaining([
+          'element-scene-heading',
+          'element-action',
+          'element-character',
+          'element-dialogue',
+          'element-parenthetical',
+          'element-transition',
+          'more',
+        ]),
+      );
+    await expect.poll(() => clipping(page)).toEqual({ bar: 0, head: 0, out: [] });
+  });
+
+  test('marks show as tooltips, not inline', async ({ page }) => {
+    // The chips are their words alone.
+    await expect(button(page, 'Character')).toHaveText('Character');
+    await expect(button(page, 'Scene')).toHaveText('Scene');
+    await expect(button(page, 'Parenthetical')).toHaveText('Parenthetical');
+    await expect(bar(page).locator('.mark')).toHaveCount(0);
+    // 12px, weight 500.
+    const font = await button(page, 'Scene').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return [style.fontSize, style.fontWeight];
+    });
+    expect(font).toEqual(['12px', '500']);
+    await button(page, 'Character').hover();
+    const tip = page.getByRole('tooltip');
+    await expect(tip).toContainText('Mark: @');
+    await expect(tip).toContainText('A name in capitals');
+  });
+
+  test('the current element is drawn in the accent’s soft fill', async ({ page }) => {
+    await write(page, 'INT. HALL - DAY\n\nMARGARET\nHello.');
+    await expect(button(page, 'Dialogue')).toHaveAttribute('aria-pressed', 'true');
+    const fills = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.background = 'var(--accent-soft)';
+      document.body.append(probe);
+      const soft = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      const pressed = document.querySelector('[data-bar-item="element-dialogue"]') as HTMLElement;
+      const other = document.querySelector('[data-bar-item="element-action"]') as HTMLElement;
+      return {
+        soft,
+        pressed: getComputedStyle(pressed).backgroundColor,
+        other: getComputedStyle(other).backgroundColor,
+      };
+    });
+    expect(fills.pressed).toBe(fills.soft);
+    expect(fills.other).not.toBe(fills.soft);
+  });
+
+  test('hidden when the editor doesn’t have focus, replaced by the script’s title', async ({
+    page,
+  }) => {
+    const away = () =>
+      bar(page).evaluate((el) => el.getBoundingClientRect().width <= 1 && el.clientHeight <= 1);
+    await expect(bar(page)).toBeVisible();
+    await expect.poll(away).toBe(false);
+    await expect(title(page)).toBeHidden();
+    // Focus in the Inspector: the title takes the bar's place.
+    await page.locator('#tab-right-outline').click();
+    await expect.poll(away).toBe(true);
+    await expect(title(page)).toBeVisible();
+    await expect(title(page)).not.toHaveText('');
+    // Back in the editor, the bar again.
+    await editor(page).focus();
+    await expect.poll(away).toBe(false);
+    await expect(title(page)).toBeHidden();
+    // Keyboard users still reach it: focus anywhere in the editor's pane shows it, and Shift+Tab
+    // from the pane's toggles goes to it.
+    await page.locator('#tab-right-outline').focus();
+    await expect.poll(away).toBe(true);
+    const numbers = page
+      .getByRole('group', { name: 'Source view' })
+      .getByRole('button', { name: 'Line numbers' });
+    await numbers.focus();
+    await expect.poll(away).toBe(false);
+    await page.keyboard.press('Shift+Tab');
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => !!document.activeElement?.closest('[role="toolbar"][data-element-bar]'),
+        ),
+      )
+      .toBe(true);
+    await expect.poll(away).toBe(false);
+    // Its menus keep it: the More menu is drawn outside the pane.
+    await button(page, 'More elements').click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expect.poll(away).toBe(false);
+    await page.keyboard.press('Escape');
+    await expect(button(page, 'More elements')).toBeFocused();
+    await expect.poll(away).toBe(false);
+  });
+
+  test('a click on the header’s empty space keeps the editor’s focus', async ({ page }) => {
+    await write(page, 'She waits.');
+    const box = await bar(page).boundingBox();
+    const spacer = await bar(page).locator('.spacer').boundingBox();
+    expect(spacer?.width ?? 0).toBeGreaterThan(4);
+    await page.mouse.click(
+      (spacer?.x ?? 0) + (spacer?.width ?? 0) / 2,
+      (box?.y ?? 0) + (box?.height ?? 0) / 2,
+    );
+    await expect(editor(page)).toBeFocused();
+  });
 });

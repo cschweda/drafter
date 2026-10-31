@@ -16,6 +16,8 @@ import { useScrollSync } from '~/editor/use-scroll-sync';
 // text, its undo history, and its cursor wherever the Source tab goes. This
 // panel lends it a host while it shows, and parks it in index.vue's hidden
 // holder when the tab leaves or the layout changes.
+// Side by side the element bar is in the editor's header (AppPane), so this pane leaves it out.
+const props = withDefaults(defineProps<{ bar?: boolean }>(), { bar: true });
 const { view } = useEditor();
 const host = ref<HTMLElement>();
 const sync = useScrollSync();
@@ -47,7 +49,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="source">
-    <ElementBar />
+    <ElementBar v-if="props.bar" />
     <div ref="host" class="host" />
     <ElementAnnouncer />
   </div>

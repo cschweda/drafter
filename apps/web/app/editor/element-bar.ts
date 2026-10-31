@@ -12,7 +12,7 @@ type Kind = CursorElement['kind'];
 
 export interface BarButton {
   label: string;
-  /** The mark it writes, shown dimmed after the label in the monospace face. */
+  /** The mark it writes, shown in its tooltip (and beside it in More). */
   mark: string;
   /** The id of the command it runs. */
   command: string;
@@ -264,6 +264,10 @@ export const SPELLING_BUTTON: BarButton = {
   tip: 'Suggestions for the misspelled word at the cursor, and adding it to a dictionary.',
 };
 
+/** The mark a button writes, as the first line of its tooltip; null for one with no mark. */
+export const markLine = (button: BarButton): string | null =>
+  button.mark ? `Mark: ${button.mark}` : null;
+
 /** The tooltip, and the button's description: its sentence, and its key for this keyboard. */
 export function tipFor(button: BarButton, apple: boolean): string {
   const keys = COMMAND_DATA.find((c) => c.id === button.command)?.keys;
@@ -392,9 +396,19 @@ export function currentOf(
   };
 }
 
+/**
+ * The words at the bar's left in two parts: the lead-in, which a narrow bar leaves out, and the
+ * element itself, which stays.
+ */
+export function hereParts(name: string | null): { lead: string; name: string } {
+  return name ? { lead: 'You’re in: ', name } : { lead: 'You’re on a ', name: 'blank line' };
+}
+
 /** The words at the bar's left. */
-export const hereLabel = (name: string | null): string =>
-  name ? `You’re in: ${name}` : 'You’re on a blank line';
+export const hereLabel = (name: string | null): string => {
+  const parts = hereParts(name);
+  return `${parts.lead}${parts.name}`;
+};
 
 /** Where each element is on the Fountain cheat sheet (`/docs/fountain/#…`). */
 export const CHEAT_SHEET_ANCHORS: Record<Kind, string> = {

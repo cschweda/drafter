@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useCompare } from '~/compare/use-compare';
+import { useScriptTitle } from '~/composables/useScriptTitle';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { useDeleted } from '~/history/deleted';
@@ -47,7 +48,7 @@ const editorPane = computed(() => props.pane === 'left');
 const inspector = computed(() => props.pane === 'right');
 
 const { project } = useScript();
-const { kind } = useEditor();
+const { kind, view: editorView } = useEditor();
 const markdown = computed(() => kind.value === 'markdown');
 /** The Script tab is the Preview in a Markdown document. */
 const labelOf = (tab: { id: string; label: string }) =>
@@ -503,6 +504,8 @@ function onToolsKeydown(event: KeyboardEvent) {
 // ---- The editor's header -----------------------------------------------------------------
 
 const { settings, set } = useSettings();
+/** The script's title: the header shows it while focus is outside the editor's pane. */
+const scriptTitle = useScriptTitle();
 const fileLabel = computed(() => project.value?.fileName ?? project.value?.title ?? '');
 const TOGGLES = [
   { key: 'lineNumbers', label: 'Line numbers', icon: 'i-lucide-list-ordered' },
@@ -510,14 +513,58 @@ const TOGGLES = [
   { key: 'scrollSync', label: 'Sync scrolling', icon: 'i-lucide-arrow-down-up' },
 ] as const;
 
+// The element bar shows while focus is anywhere in the editor's pane (the editor, the bar, the
+// toggles), and gives way to the script's title when it goes elsewhere (design §3.2). A menu or a
+// dialog opened from there (drawn outside the pane) leaves things as they were. Worked out once
+// focus has settled: between a focusout and the focusin after it, focus is on the page's body.
+const editorSection = ref<HTMLElement>();
+const editing = ref(false);
+/** Where focus may go without being "elsewhere": menus, dialogs, and lists drawn over the page. */
+const OVERLAYS =
+  '[data-reka-menu-content], [role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"]';
+let focusTimer: ReturnType<typeof setTimeout> | undefined;
+function followFocus() {
+  clearTimeout(focusTimer);
+  focusTimer = setTimeout(() => {
+    const section = editorSection.value;
+    const active = document.activeElement;
+    if (!section) return;
+    if (active && section.contains(active)) editing.value = true;
+    else if (active && active !== document.body && active.closest(OVERLAYS)) return;
+    else editing.value = false;
+  });
+}
+/**
+ * A press on the header's empty space (between the chips, the title) keeps focus where it is, so
+ * the bar doesn't go from under the pointer; from elsewhere, it puts the cursor in the editor.
+ */
+function onEditorHeadMousedown(event: MouseEvent) {
+  const target = event.target as Element | null;
+  if (target?.closest('button, a, input, select, textarea, [tabindex]')) return;
+  event.preventDefault();
+  if (!editing.value) editorView.focus();
+}
+onMounted(() => {
+  if (!editorPane.value) return;
+  document.addEventListener('focusin', followFocus);
+  document.addEventListener('focusout', followFocus);
+  followFocus();
+});
+onBeforeUnmount(() => {
+  clearTimeout(focusTimer);
+  document.removeEventListener('focusin', followFocus);
+  document.removeEventListener('focusout', followFocus);
+});
+
 // ---- The panel -----------------------------------------------------------------------------
 
 // Side by side, a pane with a bar of its own under its header (the Source's element bar, the
 // Outline's filter) puts it in the row the panes share for it, and its text under it (index.vue).
 const barShown = useElementBarShown();
+// The editor's own element bar is in its header (Task 4), so the editor's pane has no second bar.
 const barred = computed(
   () =>
-    (props.selected === 'source' && barShown.value) ||
+    (props.selected === 'source' && barShown.value && !editorPane.value) ||
     (props.selected === 'outline' && !markdown.value),
 );
 /** A view on the desk: the band over it (in the shared bar row) is the desk's colour too. */
@@ -563,14 +610,21 @@ function onPanelKeydown(event: KeyboardEvent) {
   <!-- The editor, side by side: always on the left (Call 13). -->
   <section
     v-if="editorPane"
+    ref="editorSection"
     class="pane side editor-pane"
-    :class="{ barred }"
     data-pane="left"
     aria-label="Source"
   >
-    <div class="head">
-      <span class="name" :title="fileLabel">{{ fileLabel }}</span>
-      <span class="grow" />
+    <!-- The element bar while focus is in this pane, else the script's title (design §3.2). -->
+    <div class="head" @mousedown="onEditorHeadMousedown">
+      <ElementBar in-header :away="!editing" />
+      <span
+        v-show="!barShown || !editing"
+        class="name"
+        data-script-title
+        :title="scriptTitle"
+      >{{ scriptTitle }}</span>
+      <span v-show="!barShown || !editing" class="grow" />
       <div role="group" aria-label="Source view" class="toggles">
         <UTooltip v-for="toggle in TOGGLES" :key="toggle.key" :text="toggle.label" :delay-duration="400">
           <button
@@ -585,9 +639,9 @@ function onPanelKeydown(event: KeyboardEvent) {
         </UTooltip>
       </div>
     </div>
-    <div v-if="!barred" class="band" aria-hidden="true" />
+    <div class="band" aria-hidden="true" />
     <div id="panel-source" class="panel editing" data-tour="source" @keydown="onPanelKeydown">
-      <SourcePane />
+      <SourcePane :bar="false" />
     </div>
   </section>
 

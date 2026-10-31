@@ -174,6 +174,8 @@ for (const theme of THEMES) {
       page,
     }) => {
       await showSource(page);
+      // Side by side, the bar shows while focus is in the editor's pane.
+      await editor(page).focus();
       await elementBar(page).getByRole('button', { name: 'More elements' }).click();
       await expect(page.getByRole('menu')).toBeVisible();
       await clean(page, "the element bar's More menu");

@@ -10,7 +10,9 @@ import {
   FOUNTAIN_BUTTONS,
   FOUNTAIN_MORE,
   hereLabel,
+  hereParts,
   MARKDOWN_BUTTONS,
+  markLine,
   reasonFor,
   SPELLING_BUTTON,
   tipFor,
@@ -143,6 +145,27 @@ describe('the element bar', () => {
   test('names where the cursor is', () => {
     expect(hereLabel('Dialogue')).toBe('You’re in: Dialogue');
     expect(hereLabel(null)).toBe('You’re on a blank line');
+  });
+
+  // Fresh-look design §3.2: the marks move off the chips into their tooltips.
+  test('puts each mark in a line of its own for the tooltip', () => {
+    const character = FOUNTAIN_BUTTONS.find((b) => b.label === 'Character');
+    const dialogue = FOUNTAIN_BUTTONS.find((b) => b.label === 'Dialogue');
+    if (!character || !dialogue) throw new Error('no Character or Dialogue button');
+    expect(markLine(character)).toBe('Mark: @');
+    expect(markLine(dialogue)).toBeNull();
+    for (const button of all) {
+      if (button.mark) expect(markLine(button), button.label).toBe(`Mark: ${button.mark}`);
+    }
+  });
+
+  test('splits where the cursor is into words that can go and the element itself', () => {
+    expect(hereParts('Dialogue')).toEqual({ lead: 'You’re in: ', name: 'Dialogue' });
+    expect(hereParts(null)).toEqual({ lead: 'You’re on a ', name: 'blank line' });
+    for (const name of ['Scene heading', null]) {
+      const { lead, name: rest } = hereParts(name);
+      expect(lead + rest).toBe(hereLabel(name));
+    }
   });
 });
 
