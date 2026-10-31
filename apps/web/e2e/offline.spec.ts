@@ -29,6 +29,13 @@ const later = (page: Page) => update(page).getByRole('button', { name: 'Later' }
 const saveFirst = (page: Page) => update(page).getByRole('button', { name: 'Save first' });
 const reloadAnyway = (page: Page) => update(page).getByRole('button', { name: 'Reload anyway' });
 const cancel = (page: Page) => update(page).getByRole('button', { name: 'Cancel' });
+const updated = (page: Page) => page.getByRole('region', { name: 'Updated' });
+const VERSION = (
+  JSON.parse(readFileSync(new URL('../../desktop/package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  }
+).version;
+const GETTING = 'Getting the newest version…';
 const UNSAVED =
   'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.';
 
@@ -517,6 +524,54 @@ test.describe('a new version', () => {
     await reloaded(page);
     await expectAtEnd(page, 'Typed, and the worker never answers.');
     expect(asked).toEqual([]);
+  });
+
+  // The writer sees that the choice was taken: while the new version is fetched and takes over,
+  // the offer says so; once the page is back, a brief note says which version it is now.
+  test('says it is getting the newest version while it waits', async ({ page }) => {
+    await start(page);
+    await typeAtEnd(page, '\n\nTyped, then told.');
+    await mark(page);
+    await deployNewVersion(page);
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
+    // The waiting worker never hears "skip waiting", so the wait lasts until the page gives up on it.
+    await page.evaluate(() => {
+      ServiceWorker.prototype.postMessage = () => {};
+    });
+    await reload(page).click();
+    await reloadAnyway(page).click();
+    await expect(update(page)).toContainText(GETTING);
+    await expect(page.locator('[data-update-region]')).toContainText(GETTING);
+    for (const button of await update(page).getByRole('button').all()) {
+      await expect(button).toBeDisabled();
+    }
+    await reloaded(page);
+    await expectAtEnd(page, 'Typed, then told.');
+    // The new version never took over, so this is still the old one: it offers the update again,
+    // and doesn't claim to be up to date.
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
+    await expect(updated(page)).toHaveCount(0);
+  });
+
+  test('says Drafter is up to date once only, and never on an ordinary reload', async ({
+    page,
+  }) => {
+    await start(page);
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    await page.waitForTimeout(1000);
+    await expect(updated(page)).toHaveCount(0);
+    await deployNewVersion(page);
+    await reload(page).click();
+    await expect(updated(page)).toHaveText(`Drafter is up to date (v${VERSION})`);
+    await expect(page.locator('[data-updated-region]')).toContainText('Drafter is up to date');
+    // It goes by itself after a few seconds.
+    await expect(updated(page)).toHaveCount(0, { timeout: 8000 });
+    // The next reload is an ordinary one.
+    await page.reload();
+    await expect(editor(page)).toContainText('The Call');
+    await page.waitForTimeout(1000);
+    await expect(updated(page)).toHaveCount(0);
   });
 
   test('Save first saves, and reloads only after it has', async ({ page }) => {

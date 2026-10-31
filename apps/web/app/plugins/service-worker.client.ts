@@ -8,6 +8,7 @@ import {
   replaced,
   setUpdater,
 } from '~/update/state';
+import { justUpdated, markUpdating, sessionStore, takeUpdated } from '~/update/updated';
 
 // Registers the service worker (`@vite-pwa/nuxt` writes it at build time: nuxt.config.ts `pwa`) and
 // tells the page when a newer version is waiting. The module's own client plugin is off
@@ -26,11 +27,15 @@ export default defineNuxtPlugin(() => {
   // There is no worker in `nuxt dev`, and a registration there would only fail.
   if (import.meta.dev || !('serviceWorker' in navigator)) return;
 
+  // This load is the one an update the writer chose reloaded into: the toast says so, once.
+  if (takeUpdated(sessionStore())) justUpdated.value = true;
+
   let fallback: ReturnType<typeof setTimeout> | undefined;
   /** The reload the writer chose. If it was "Reload anyway", the browser's own question is skipped, from now. */
   const reload = () => {
     clearTimeout(fallback);
     if (leavingRequested()) allowLeaving();
+    markUpdating(sessionStore());
     window.location.reload();
   };
 

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
+  APPLYING_MESSAGE,
+  applyingMessage,
   createUpdateFlow,
   DOWNLOADING_MESSAGE,
   reloadAnywayLabel,
@@ -62,7 +64,7 @@ describe('Reload', () => {
     const { flow, calls } = setup();
     await flow.reload();
     expect(calls).toEqual(['apply']);
-    expect(flow.stage.value).toBe('toast');
+    expect(flow.stage.value).toBe('applying');
   });
 
   test('asks first when there are unsaved changes, and applies nothing yet', async () => {
@@ -232,5 +234,53 @@ describe('applying an update', () => {
     await applyUpdate();
     expect(leavingRequested()).toBe(false);
     expect(apply).toHaveBeenCalledTimes(2);
+  });
+});
+
+// While the new version is fetched and takes over (a few seconds at most), the offer says so, and
+// its buttons can't be pressed again.
+describe('while the new version is applied', () => {
+  test('Reload, Reload anyway, and Save first all say so before they apply', async () => {
+    const seen: string[] = [];
+    const make = (unsaved: boolean) => {
+      const flow = createUpdateFlow({
+        unsaved: () => unsaved,
+        save: async () => 'saved',
+        savedByDownload: () => false,
+        flush: async () => {},
+        apply: async () => {
+          seen.push(flow.stage.value);
+        },
+      });
+      return flow;
+    };
+    await make(false).reload();
+    const anyway = make(true);
+    await anyway.reload();
+    await anyway.reloadAnyway();
+    const first = make(true);
+    await first.reload();
+    await first.saveFirst();
+    expect(seen).toEqual(['applying', 'applying', 'applying']);
+  });
+
+  test('a desktop install that fails goes back to the offer (its error says why)', async () => {
+    const flow = createUpdateFlow({
+      unsaved: () => false,
+      save: async () => 'saved',
+      savedByDownload: () => false,
+      flush: async () => {},
+      apply: async () => {
+        throw new Error('no');
+      },
+    });
+    await flow.reload().catch(() => {});
+    expect(flow.stage.value).toBe('toast');
+  });
+
+  test('says what it is doing, in the app it is', () => {
+    expect(APPLYING_MESSAGE).toBe('Getting the newest version…');
+    expect(applyingMessage('reload')).toBe(APPLYING_MESSAGE);
+    expect(applyingMessage('restart')).toBe('Restarting Drafter…');
   });
 });
