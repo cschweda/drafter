@@ -257,11 +257,12 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 | 4 | Craft | Planned | Revision marks and production pages, alternate lines, a clean display mode, table read, a character pass, story order, a breakdown report, accepting a co-writer's changes, one character's dialogue for an actor, the remaining lint rules, a PWA install flow |
 | 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
 | Later | | Planned | Open from and save to Dropbox and Google Drive directly, signed in with them, never with Drafter |
+| Someday | | Possible, paid, optional | **Drafter Pro**: real-time co-writing through an end-to-end encrypted relay (the server sees only ciphertext; invite links, no account until billing needs one), and hosted links for readers' notes. Only things that need a server someone pays to run. Everything else, including revision marks, production pages, and breakdowns, stays in the free, MIT-licensed app, which never needs an account or a login |
 | Someday | | Possible future addition | A Windows on Arm (arm64) installer. Until then Windows 11 on Arm runs the x64 installer emulated |
 | Someday | | Possible, not planned | A Tauri desktop shell: smaller downloads and less memory, but Linux would use WebKitGTK. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open |
 | Last | | Planned | Testing with NVDA and VoiceOver, after every phase is built. Until then every view is built for screen readers and checked automatically, and Drafter claims no conformance with any standard |
 
-**Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
+**Not planned for the free app:** accounts, a Drafter server, or sync through Drafter (the optional Pro relay above would be separate, and opt-in). From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
 
 The full list for each phase, with what each item does and when Phase 0 counts as done, is in the [architecture document, §13](docs/drafter-architecture.md#13-phased-plan); the [Phase 1](docs/drafter-phase1-design.md) and [Phase 2](docs/drafter-phase2-design.md) designs have the details.
 

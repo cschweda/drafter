@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- README: the roadmap gains a **Someday** row for an optional, paid **Drafter Pro**: real-time co-writing through an end-to-end encrypted relay, and hosted links for readers' notes, only what needs a server to run. Everything else stays free, MIT-licensed, and free of accounts and logins.
+
 ## [0.22.1] - 2026-10-31
 
 **Reload lands on the newest version, and says so.** Choosing Reload on "A new version of Drafter is ready" no longer seems to do nothing; and the Windows on Arm installer is no longer built.
