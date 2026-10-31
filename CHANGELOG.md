@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-10-31
+
+**Reload lands on the newest version, and says so.** Choosing Reload on "A new version of Drafter is ready" no longer seems to do nothing; and the Windows on Arm installer is no longer built.
+
 ### Changed
 
 - `apps/desktop`: **the Windows on Arm (arm64) installer is no longer built**, for now; it may come back later. Windows 11 on Arm PCs (a Snapdragon laptop, or Windows 11 in a VM on an Apple silicon Mac) can use the x64 installer, which Windows runs under its built-in emulation. CI drops the `windows-arm` job, so a release waits for the Linux and Windows jobs and carries five files.
@@ -914,7 +918,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/cschweda/drafter/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/cschweda/drafter/compare/v0.21.1...v0.22.0
 [0.21.1]: https://github.com/cschweda/drafter/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/cschweda/drafter/compare/v0.20.0...v0.21.0
