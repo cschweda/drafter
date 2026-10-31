@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/DEFERRED.md`: a **Flaky tests seen in CI** list, starting with the desktop Linux accessibility test for the modules folder's settings, which failed once on the v0.22.2 tag and passed on a re-run.
+
 ## [0.22.2] - 2026-10-31
 
 **Free, with no catch, and a page to download it.** A Why Drafter page says what Drafter is (free, no login, private, offline) and how it compares with Final Draft and the others; a Download page has the Windows and Linux apps, ready for a Mac one; and the roadmap brings production features forward, free.

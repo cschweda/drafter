@@ -231,3 +231,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 
 - **A Windows on Arm (arm64) installer: a possible future addition.** Not built since 2026-10-31 (`docs/DECISIONS.md`, "Windows on Arm set aside"): it served only Windows 11 in a VM on an Apple silicon Mac and cost about 34 minutes of CI per release. Windows 11 on Arm runs the x64 installer emulated meanwhile.
 - **A Tauri desktop shell: possible, not planned.** Smaller downloads and less memory than Electron, but on Linux it would use WebKitGTK rather than Chromium. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open.
+
+## Flaky tests seen in CI
+
+- **Desktop, Linux: `a11y.spec.ts:78` (the modules folder's settings, light)** failed twice in one run on the v0.22.2 tag (Done didn't close Settings within 10 s, just after the "Broken code couldn't start" alert), while the same commit passed on main and on a re-run. Look at whether the alert or a module's start steals the click before Done.
