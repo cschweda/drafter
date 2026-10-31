@@ -226,3 +226,8 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **A `^` cue at the start of a section's own stretch** is counted as a speech of its own there, in full, since tallies never run across a section, while the layout pairs it with the speech before. Rare, and the words are counted once either way.
 - **Smaller edges, found in review:** one shared `isWide()` helper for the three places that ask the same media query (`stats/tab.ts`, `compare/use-compare.ts`, `history/deleted.ts`); one generator of invented words for the cast's tests (`names.test.ts`, the cast budget, `scaling`); a test for `whenIdle`'s `setTimeout` fallback; and the scene page's own table (In this scene) doesn't yet move focus to its heading when a focused row leaves, as the other Scaffold tables do.
 - **The screen-reader listening pass** (the final accessibility steps). Axe runs on every Stats section, the grid and its List, Scaffold's pages, and the Cast and Places, in both themes at both widths on every project.
+
+## The desktop app's future
+
+- **A Windows on Arm (arm64) installer: a possible future addition.** Not built since 2026-10-31 (`docs/DECISIONS.md`, "Windows on Arm set aside"): it served only Windows 11 in a VM on an Apple silicon Mac and cost about 34 minutes of CI per release. Windows 11 on Arm runs the x64 installer emulated meanwhile.
+- **A Tauri desktop shell: possible, not planned.** Smaller downloads and less memory than Electron, but on Linux it would use WebKitGTK rather than Chromium. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open.

@@ -4,13 +4,13 @@
 #   publish-release.sh <tag> <folder with the release's files>
 #
 # The folder holds the Linux packages (the .AppImage, the .deb, latest-linux.yml) and the Windows
-# installers (x64 and arm64, latest.yml), every one of them (apps/desktop/scripts/check-release-assets.mjs):
+# installer (x64, latest.yml), every one of them (apps/desktop/scripts/check-release-assets.mjs):
 # a release with one system's files missing is never made.
 #
 # Needs GH_TOKEN (contents: write), GH_REPO (owner/name), and jq, and runs from the repository root.
 #   1. latest-linux.yml and latest.yml must agree with the files (every url there exists here, sha512
 #      and size match) and give the same version, and latest.yml lists an installer for every
-#      processor (x64 and arm64).
+#      processor a release is built for (x64 only, for now).
 #   2. A release already PUBLISHED for the tag is never touched: its assets are compared with the
 #      local files (name, size, and the digest when the API gives one), and the script fails if they
 #      differ. A published release's files are what people have downloaded and what the updater

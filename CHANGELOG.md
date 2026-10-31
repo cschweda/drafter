@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- `apps/desktop`: **the Windows on Arm (arm64) installer is no longer built**, for now; it may come back later. Windows 11 on Arm PCs (a Snapdragon laptop, or Windows 11 in a VM on an Apple silicon Mac) can use the x64 installer, which Windows runs under its built-in emulation, and an arm64 Drafter already installed updates to the x64 build. CI drops the `windows-arm` job, so a release waits for the Linux and Windows jobs and carries five files.
+
 ## [0.22.0] - 2026-10-30
 
 **Export as HTML and EPUB, and open formats said plainly.** A script or document exports as one web page that opens anywhere with no connection (dark, with a light switch; the exact pages or a reading view), or as an e-book for an e-reader or a tablet; `drafter build --html` does the same from the command line; and a new Open formats help page, with About, links to the open, public-domain specification of the `.drafter` package.

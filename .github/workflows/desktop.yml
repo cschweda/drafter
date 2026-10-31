@@ -1,9 +1,9 @@
 # The desktop app (Phase 1 Plan 6): build it, test it, package it, and publish it on a release.
 #
 #   push to main or phase-1-desktop   build, package, test the packages and the shell, on Linux
-#                                     (xvfb) and Windows (x64, and the arm64 installer on Arm)
+#                                     (xvfb) and Windows (x64)
 #   push of a tag v*                  the same, then publish the AppImage, the .deb,
-#                                     latest-linux.yml, the two Windows installers, and latest.yml
+#                                     latest-linux.yml, the Windows installer, and latest.yml
 #                                     as that tag's GitHub Release, all of them or none
 #   workflow_dispatch                 the same as a branch push, for trying it by hand
 #
@@ -12,14 +12,14 @@
 # nothing for macOS is uploaded or published until the app can be signed and notarised, and
 # `publish` doesn't wait for it.
 #
-# The `windows` job builds both Windows installers (x64 and arm64) on x64 and tests the x64 one;
-# `windows-arm` tests the arm64 one on Windows on Arm. Both are unsigned for now
-# (docs/desktop-install-windows.md).
+# The `windows` job builds the Windows installer (x64) and tests it. It is unsigned for now
+# (docs/desktop-install-windows.md). There is no Windows on Arm installer for now: Windows 11 on Arm
+# runs the x64 one emulated (docs/DECISIONS.md).
 #
 # To release: bump apps/desktop/package.json, merge, then push the tag (vX.Y.Z). The workflow checks
 # the tag against the version, builds and tests, and makes the release itself: as a draft, with all
 # its files uploaded and checked, published only then (.github/scripts/publish-release.sh). It waits
-# for the Linux and both Windows jobs: if any fails, nothing is published.
+# for the Linux and Windows jobs: if either fails, nothing is published.
 #
 # There is no pull_request trigger, so nothing here runs on a fork's pull request, and no job gets a
 # secret other than the repository's own GITHUB_TOKEN (read-only, except in `publish`).
@@ -218,8 +218,7 @@ jobs:
           path: apps/desktop/test-results
 
   windows:
-    # Builds both installers (x64, and arm64 by cross-building, which electron-builder does on x64)
-    # and tests the x64 one here; `windows-arm` tests the arm64 one.
+    # Builds the x64 installer and tests it.
     runs-on: windows-latest
     timeout-minutes: 90
     defaults:
@@ -259,15 +258,13 @@ jobs:
         run: |
           pnpm --filter @drafter/desktop build
           pnpm --filter @drafter/desktop build:web
-      - name: Package (an NSIS installer for x64 and one for arm64)
+      - name: Package (an NSIS installer for x64)
         run: pnpm --filter @drafter/desktop package:win
       - name: The packages hold what they should (app.asar), and update from this repository's releases
         run: |
-          for unpacked in win-unpacked win-arm64-unpacked; do
-            node apps/desktop/scripts/check-asar.mjs "apps/desktop/release/$unpacked/resources/app.asar"
-            node apps/desktop/scripts/check-update-config.mjs "apps/desktop/release/$unpacked/resources/app-update.yml"
-            cat "apps/desktop/release/$unpacked/resources/app-update.yml"
-          done
+          node apps/desktop/scripts/check-asar.mjs apps/desktop/release/win-unpacked/resources/app.asar
+          node apps/desktop/scripts/check-update-config.mjs apps/desktop/release/win-unpacked/resources/app-update.yml
+          cat apps/desktop/release/win-unpacked/resources/app-update.yml
       # The build itself, not only its configuration: if anything that was built carries a signature,
       # app-update.yml must name its signer, or electron-updater would check no update's signature
       # (a custom signer, for one, leaves publisherName out).
@@ -275,8 +272,7 @@ jobs:
         shell: pwsh
         run: |
           $files = @(
-            'apps/desktop/release/win-unpacked/Drafter.exe',
-            'apps/desktop/release/win-arm64-unpacked/Drafter.exe'
+            'apps/desktop/release/win-unpacked/Drafter.exe'
           ) + (Get-ChildItem apps/desktop/release/*-setup.exe).FullName
           $signatures = @($files | ForEach-Object {
             $s = Get-AuthenticodeSignature -LiteralPath $_
@@ -284,17 +280,15 @@ jobs:
           })
           $signatures | Format-Table -AutoSize | Out-String -Width 200
           ConvertTo-Json -InputObject $signatures | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/signatures.json"
-          foreach ($unpacked in 'win-unpacked', 'win-arm64-unpacked') {
-            node apps/desktop/scripts/check-update-config.mjs "apps/desktop/release/$unpacked/resources/app-update.yml" --signatures "$env:RUNNER_TEMP/signatures.json"
-            if ($LASTEXITCODE -ne 0) { exit 1 }
-          }
+          node apps/desktop/scripts/check-update-config.mjs apps/desktop/release/win-unpacked/resources/app-update.yml --signatures "$env:RUNNER_TEMP/signatures.json"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
       - name: latest.yml agrees with the installers
         run: node apps/desktop/scripts/check-update-feed.mjs --release apps/desktop/release latest.yml
       - name: What was built
         working-directory: apps/desktop/release
         run: |
           {
-            echo "## Windows installers (unsigned)"
+            echo "## The Windows installer (x64, unsigned)"
             echo '```'
             ls -l ./*.exe latest.yml | awk '{print $5, $9}'
             echo '```'
@@ -306,7 +300,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
-            apps/desktop/release/*-windows-*-setup.exe
+            apps/desktop/release/*-windows-x64-setup.exe
             apps/desktop/release/latest.yml
       - name: The x64 installer (install, the file types, a file from the command line, uninstall)
         if: ${{ !cancelled() }}
@@ -357,72 +351,6 @@ jobs:
         if: failure()
         with:
           name: desktop-test-results-windows
-          retention-days: 7
-          path: apps/desktop/test-results
-
-  windows-arm:
-    # The arm64 installer, built by `windows`, on Windows on Arm: as on a Snapdragon laptop, or
-    # Windows 11 in a VM on an Apple silicon Mac. A release waits for it too.
-    needs: windows
-    runs-on: windows-11-arm
-    timeout-minutes: 90
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Check out without changing line endings
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - name: Cache Electron's and electron-builder's downloads
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/AppData/Local/electron/Cache
-            ~/AppData/Local/electron-builder/Cache
-          key: electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: electron-${{ runner.os }}-${{ runner.arch }}-
-      - name: Install the workspace
-        run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: desktop-windows
-          path: windows-release
-      - name: The arm64 installer, on Arm (install, the file types, a file from the command line, uninstall)
-        run: |
-          uname -m
-          DRAFTER_PACKAGED="$(cygpath -w "$(echo "$GITHUB_WORKSPACE"/windows-release/*-windows-arm64-setup.exe)")" \
-            pnpm --filter @drafter/desktop e2e:packaged
-      - name: Build the app, for the update test's installers
-        if: ${{ !cancelled() }}
-        run: |
-          pnpm --filter @drafter/desktop build
-          pnpm --filter @drafter/desktop build:web
-      - name: Two arm64 installers for the update test (1.0.0 and 1.0.1)
-        if: ${{ !cancelled() }}
-        working-directory: apps/desktop
-        run: |
-          for version in 1.0.0 1.0.1; do
-            DRAFTER_TEST_VERSION=$version DRAFTER_TEST_FEED=http://127.0.0.1:47614/ \
-              DRAFTER_TEST_OUTPUT="$RUNNER_TEMP/update-$version" \
-              pnpm exec electron-builder --config e2e/update-test.builder.cjs --win --publish never
-          done
-          node scripts/check-update-feed.mjs "$RUNNER_TEMP/update-1.0.1" latest.yml
-      - name: An installed Drafter updates itself on Restart, on Arm
-        if: ${{ !cancelled() }}
-        run: |
-          DRAFTER_UPDATE_OLD="$(cygpath -w "$RUNNER_TEMP/update-1.0.0")" DRAFTER_UPDATE_NEW="$(cygpath -w "$RUNNER_TEMP/update-1.0.1")" \
-            DRAFTER_UPDATE_PORT=47614 \
-            DRAFTER_PACKAGED="$(cygpath -w "$(echo "$GITHUB_WORKSPACE"/windows-release/*-windows-arm64-setup.exe)")" \
-            pnpm --filter @drafter/desktop e2e:packaged -g "updates itself"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure()
-        with:
-          name: desktop-test-results-windows-arm
           retention-days: 7
           path: apps/desktop/test-results
 
@@ -481,10 +409,10 @@ jobs:
           path: apps/desktop/test-results
 
   publish:
-    # Only for a tag, only after the Linux and both Windows jobs passed (the Mac job is a check, and
+    # Only for a tag, only after the Linux and Windows jobs passed (the Mac job is a check, and
     # publishes nothing). This is the one job that can write.
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, windows-arm]
+    needs: [linux, windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

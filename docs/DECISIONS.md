@@ -688,6 +688,10 @@ Guide: [`docs/desktop-install-windows.md`](desktop-install-windows.md). Design �
 - **2026-10-28, review M4, M5** — On Windows a module with a hard-linked file (`nlink > 1`) is skipped, since nothing compares owners there. Not changed: `%APPDATA%\Drafter` itself made a junction isn't detected (the note above).
 
 
+### Windows on Arm set aside (2026-10-31)
+
+- **2026-10-31** — **The Windows on Arm (arm64) installer is no longer built, for now** (the maintainer's call). It served only Windows 11 in Parallels on an Apple silicon Mac, and its `windows-arm` job cost about 34 minutes of every release. `win.target` is x64 only, the `windows-arm` job is gone, `publish` needs `linux` and `windows`, and a release is five files (the AppImage, the .deb, `latest-linux.yml`, the x64 installer, `latest.yml`). `WINDOWS_ARCHS` in `check-update-feed.mjs` is `['x64']`, so `--release` still wants an installer for every processor built, and refuses an arm64 one. Windows 11 on Arm runs the x64 installer and app under its built-in x64 emulation, slower than a native build. An arm64 Drafter installed from an earlier release finds no installer named for its processor in the next `latest.yml`, so electron-updater's `findFile` takes the first `.exe`, the x64 one, and installs it over itself in the same folder (review I2's fallback, now the way such an install moves to x64). That path is not tested on Arm in CI. A Windows on Arm installer is a possible future addition (`docs/DEFERRED.md`): restoring it means the arch, the job, the release file, and `WINDOWS_ARCHS` again.
+
 ## The accessibility pass (`apps/web`, `apps/desktop`)
 
 The last step of Phase 1 (Phase 1 design §1 item 5, §13, §16; Plan 5 Task 9). This is automated checking only. The NVDA and VoiceOver passes are still Phase 2's, and no user-facing text claims WCAG conformance.

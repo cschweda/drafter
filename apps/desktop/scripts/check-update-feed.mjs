@@ -14,8 +14,11 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** The processors a Windows installer is built for, as electron-updater matches them (`process.arch`). */
-export const WINDOWS_ARCHS = ['x64', 'arm64'];
+/**
+ * The processors a Windows installer is built for, as electron-updater matches them (`process.arch`).
+ * Only x64 for now: Windows on Arm (arm64) is not built (docs/DECISIONS.md).
+ */
+export const WINDOWS_ARCHS = ['x64'];
 
 /** The feed's lines, read as the small, flat YAML electron-builder writes. */
 function parse(text) {
@@ -91,8 +94,9 @@ function windowsProblems(files, version, release) {
       problems.push(`${file.url}: an installer's name must hold the feed's version (${version})`);
     }
   }
-  // A release has one for every processor: with none of its own, electron-updater takes the first
-  // .exe, and an arm64 Drafter would install the x64 build over itself without a word.
+  // A release has one for every processor it is built for: with none of its own, electron-updater
+  // takes the first .exe. (An arm64 Drafter installed from an earlier release does just that, and
+  // moves to the x64 build, which Windows 11 on Arm runs emulated.)
   if (release) {
     for (const arch of WINDOWS_ARCHS) {
       if (!byArch.has(arch)) problems.push(`latest.yml names no installer for ${arch}`);

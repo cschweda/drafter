@@ -536,9 +536,10 @@ useDocsHead({
 
     <h3 id="download-windows">Windows</h3>
     <p>
-      An installer for Windows 10 and 11: <code>…-windows-x64-setup.exe</code> for most PCs, and
-      <code>…-windows-arm64-setup.exe</code> for Windows on Arm (a Snapdragon laptop, or Windows in
-      a virtual machine on an Apple silicon Mac). It installs for you alone, without asking for an
+      An installer for Windows 10 and 11 on 64-bit Intel or AMD PCs:
+      <code>…-windows-x64-setup.exe</code>. There’s no Windows on Arm installer for now; on Windows
+      11 on Arm (a Snapdragon laptop, or Windows in a virtual machine on an Apple silicon Mac) the
+      x64 installer runs under Windows’ own emulation. It installs for you alone, without asking for an
       administrator, adds Drafter to the Start menu, and opens <code>.fountain</code> files with a
       double-click. It updates itself with <strong>Restart</strong>.
     </p>

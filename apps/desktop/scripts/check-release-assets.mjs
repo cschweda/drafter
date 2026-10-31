@@ -1,5 +1,5 @@
 // What a release carries, and whether a GitHub Release holds it. A release is the Linux packages
-// (the AppImage, the .deb, latest-linux.yml) and the Windows installers (x64 and arm64, latest.yml),
+// (the AppImage, the .deb, latest-linux.yml) and the Windows installer (x64, latest.yml): five files,
 // all built from one tag, and nothing goes up unless all of them are there.
 //   node scripts/check-release-assets.mjs --list <folder>
 //     checks the folder holds exactly one of each and prints their names, one a line (the files
@@ -20,7 +20,6 @@ export const RELEASE_FILES = [
   { what: 'a .deb', test: (name) => name.endsWith('.deb') },
   { what: 'latest-linux.yml', test: (name) => name === 'latest-linux.yml' },
   { what: 'the x64 Windows installer', test: (name) => /-windows-x64-setup\.exe$/.test(name) },
-  { what: 'the arm64 Windows installer', test: (name) => /-windows-arm64-setup\.exe$/.test(name) },
   { what: 'latest.yml', test: (name) => name === 'latest.yml' },
 ];
 

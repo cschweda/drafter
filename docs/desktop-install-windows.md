@@ -1,19 +1,16 @@
 # Installing Drafter on Windows
 
-Drafter for Windows is an installer, published with each release on GitHub: <https://github.com/cschweda/drafter/releases/latest>. There are two, one for each kind of processor:
+Drafter for Windows is an installer, published with each release on GitHub: <https://github.com/cschweda/drafter/releases/latest>. There is one, for 64-bit Intel and AMD PCs: `Drafter-<version>-windows-x64-setup.exe`. Windows 10 and 11 are supported.
 
-| Your PC | The installer |
-|---|---|
-| Most PCs: 64-bit Intel or AMD | `Drafter-<version>-windows-x64-setup.exe` |
-| Windows on Arm: a Snapdragon laptop, or Windows 11 in a virtual machine on an Apple silicon Mac (Parallels, VMware Fusion, UTM) | `Drafter-<version>-windows-arm64-setup.exe` |
+**Windows on Arm:** there's no Windows on Arm (arm64) installer for now; it may come later. On **Windows 11** on Arm (a Snapdragon laptop, or Windows 11 in a virtual machine on an Apple silicon Mac: Parallels, VMware Fusion, UTM), use the x64 installer: Windows 11 runs x64 apps on Arm under its built-in emulation, so Drafter works, a little slower than a native app would. Windows 10 on Arm can't run x64 apps, so Drafter doesn't run there. Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor".
 
-Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor". Windows 10 and 11 are supported. How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
+If you installed Drafter's arm64 installer from an earlier release, its next update installs the x64 build in its place, in the same folder, with your settings and scripts kept. How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
 
 ## Install
 
-1. Download the installer for your PC from the [latest release](https://github.com/cschweda/drafter/releases/latest) (under *Assets*).
+1. Download the installer from the [latest release](https://github.com/cschweda/drafter/releases/latest) (under *Assets*).
 2. Open it. Windows may stop it first: see the next section.
-3. It installs at once, with no questions and no administrator: Drafter is for you alone, in your own part of the PC. A progress bar shows, and then Drafter starts. On Windows on Arm the installer itself runs emulated, so this can take a few minutes; Drafter, once installed, is native.
+3. It installs at once, with no questions and no administrator: Drafter is for you alone, in your own part of the PC. A progress bar shows, and then Drafter starts. On Windows 11 on Arm the installer and Drafter run emulated, so installing can take a few minutes.
 
 You get **Drafter** in the Start menu and on the desktop, and `.fountain` files open in Drafter with a double-click. Markdown files (`.md`, `.markdown`) keep the app they open in now; Drafter is offered for them under **Open with**.
 
@@ -53,7 +50,7 @@ From a terminal, `"%LOCALAPPDATA%\Programs\drafter\Drafter.exe" "My Script.fount
 
 ## Updating
 
-A few seconds after it starts, Drafter checks GitHub once for a new version. If there is one, it downloads the installer for your PC's processor in the background, then says *"A new version of Drafter is ready"* with **Restart** and **Later**. It never installs or restarts by itself. **Restart** asks about unsaved changes first, then closes Drafter, runs the new installer (a progress bar shows for a few seconds), and starts the new version. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version. You can also update by hand at any time: download the new installer and run it over the old one.
+A few seconds after it starts, Drafter checks GitHub once for a new version. If there is one, it downloads the new installer in the background, then says *"A new version of Drafter is ready"* with **Restart** and **Later**. It never installs or restarts by itself. **Restart** asks about unsaved changes first, then closes Drafter, runs the new installer (a progress bar shows for a few seconds), and starts the new version. You can turn **Check for updates** off in Settings, and then Drafter makes no network request at all unless you ask: **Help → Check for Updates…** checks at any time, even with that setting off, and says whether you're up to date or offers the new version. You can also update by hand at any time: download the new installer and run it over the old one.
 
 ### What an update is checked for
 
@@ -75,13 +72,13 @@ A script module from the folder is code nobody at Drafter has reviewed, so Draft
 - Don't share the modules folder, or give other accounts on the PC access to it.
 - Administrators can change anything on the PC, and so can any program you run; that holds on every system.
 
-## Building the installers yourself
+## Building the installer yourself
 
-On a Windows PC with Node 22.13 or later and pnpm 10, in a clone of the repository: `pnpm install`, then `pnpm desktop:win`. The installers land in `apps/desktop/release/`.
+On a Windows PC with Node 22.13 or later and pnpm 10, in a clone of the repository: `pnpm install`, then `pnpm desktop:win`. The x64 installer lands in `apps/desktop/release/`.
 
 ## If something goes wrong
 
-- **The installer does nothing, or Drafter won't start:** check the processor (above). The Arm installer won't run on an x64 PC; the x64 one runs on Windows 11 on Arm only emulated, and slower, so use the Arm one there.
+- **The installer does nothing, or Drafter won't start:** check the processor and the Windows version (above). On Arm, Drafter needs Windows 11, which runs the x64 installer emulated; Windows 10 on Arm can't run it.
 - **An update fails partway:** run the latest installer from the [release page](https://github.com/cschweda/drafter/releases/latest) by hand. Your scripts and `%APPDATA%\Drafter` aren't affected.
 - **Drafter says it is "about to start without Chromium's sandbox":** something started it with `--no-sandbox` or `ELECTRON_DISABLE_SANDBOX`. Start it from the Start menu instead.
 - Anything else: [open an issue](https://github.com/cschweda/drafter/issues).

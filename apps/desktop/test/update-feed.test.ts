@@ -100,7 +100,7 @@ describe('checkFeed', () => {
 describe('checkFeed, for latest.yml (Windows)', () => {
   const X64 = 'Drafter-1.0.0-windows-x64-setup.exe';
   const ARM = 'Drafter-1.0.0-windows-arm64-setup.exe';
-  async function windows(names: string[] = [X64, ARM], options: { version?: string } = {}) {
+  async function windows(names: string[] = [X64], options: { version?: string } = {}) {
     for (const name of names) await writeFile(join(dir, name), `the ${name}`);
     const [first] = names;
     await writeFile(
@@ -115,23 +115,17 @@ releaseDate: '2026-10-27T12:22:14.158Z'
     );
   }
 
-  test('accepts an installer per processor, each named with its processor and the version', async () => {
+  test('accepts the x64 installer, named with its processor and the version', async () => {
     await windows();
     expect(checkFeed(dir, 'latest.yml')).toEqual([]);
   });
 
-  test('accepts a single installer (the update test builds only x64)', async () => {
-    await windows([X64]);
-    expect(checkFeed(dir, 'latest.yml')).toEqual([]);
-  });
-
-  test('for a release, wants an installer for every processor', async () => {
-    // electron-updater falls back to the first .exe when none holds the app's processor, so an
-    // arm64 Drafter would install the x64 build over itself without a word.
-    await windows([X64]);
-    expect(checkFeed(dir, 'latest.yml', { release: true }).join('\n')).toMatch(
-      /latest\.yml names no installer for arm64/,
-    );
+  test('for a release, wants an installer for every processor it is built for (x64)', async () => {
+    // An arm64 installer is not built for now (docs/DECISIONS.md): a feed holding only one is refused.
+    await windows([ARM]);
+    const problems = checkFeed(dir, 'latest.yml', { release: true }).join('\n');
+    expect(problems).toMatch(/latest\.yml names no installer for x64/);
+    expect(problems).toMatch(/arm64-setup\.exe: an installer's name must hold exactly one of x64/);
     await windows();
     expect(checkFeed(dir, 'latest.yml', { release: true })).toEqual([]);
     expect(checkFeeds(dir, ['latest.yml'], { release: true })).toEqual([]);
@@ -139,24 +133,24 @@ releaseDate: '2026-10-27T12:22:14.158Z'
 
   test('finds an installer that is missing or changed', async () => {
     await windows();
-    await writeFile(join(dir, ARM), 'something else');
+    await writeFile(join(dir, X64), 'something else');
     expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(
-      /arm64-setup\.exe: sha512 is .* but latest\.yml says/,
+      /x64-setup\.exe: sha512 is .* but latest\.yml says/,
     );
-    await rm(join(dir, ARM));
+    await rm(join(dir, X64));
     expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/named in latest\.yml but not in/);
   });
 
   test('wants each name to hold one processor, and no two the same', async () => {
     // electron-updater takes the first .exe whose name holds process.arch.
     await windows(['Drafter-1.0.0-windows-setup.exe']);
-    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/must hold exactly one of x64, arm64/);
+    expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/must hold exactly one of x64$/m);
     await windows([X64, 'Drafter-1.0.0-windows-x64-setup-2.exe']);
     expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(/is for x64 too/);
   });
 
   test('wants the version in each installer’s name', async () => {
-    await windows([X64, ARM], { version: '1.0.1' });
+    await windows([X64], { version: '1.0.1' });
     expect(checkFeed(dir, 'latest.yml').join('\n')).toMatch(
       /must hold the feed's version \(1\.0\.1\)/,
     );
@@ -173,9 +167,7 @@ releaseDate: '2026-10-27T12:22:14.158Z'
     await release();
     await windows();
     expect(checkFeeds(dir, ['latest-linux.yml', 'latest.yml'])).toEqual([]);
-    await windows([X64.replace('1.0.0', '1.0.1'), ARM.replace('1.0.0', '1.0.1')], {
-      version: '1.0.1',
-    });
+    await windows([X64.replace('1.0.0', '1.0.1')], { version: '1.0.1' });
     expect(checkFeeds(dir, ['latest-linux.yml', 'latest.yml']).join('\n')).toMatch(
       /different versions: latest-linux\.yml 1\.0\.0, latest\.yml 1\.0\.1/,
     );
@@ -211,10 +203,9 @@ describe('the packages’ names (electron-builder.config.cjs)', () => {
   test('the Windows installers keep their version, and name their processor', () => {
     const pattern = config.nsis?.artifactName ?? config.win?.artifactName ?? config.artifactName;
     expect(expand(pattern, 'x64', 'exe')).toBe('Drafter-1.2.3-windows-x64-setup.exe');
-    expect(expand(pattern, 'arm64', 'exe')).toBe('Drafter-1.2.3-windows-arm64-setup.exe');
-    // One installer per processor, not one holding both.
+    // One installer per processor, not one holding several; x64 only for now (no Windows on Arm).
     expect(config.nsis?.buildUniversalInstaller).toBe(false);
-    expect(config.win?.target).toEqual([{ target: 'nsis', arch: ['x64', 'arm64'] }]);
+    expect(config.win?.target).toEqual([{ target: 'nsis', arch: ['x64'] }]);
   });
 
   test('a per-user, one-click install that asks for no administrator', () => {
