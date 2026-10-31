@@ -28,6 +28,12 @@ describe('a card’s preview', () => {
     ]);
   });
 
+  test('is the first lyric when the scene opens with a song', () => {
+    expect(previews('INT. CLUB - NIGHT\n\nANN\n~Fly me to the moon\n')).toEqual([
+      'ANN: Fly me to the moon',
+    ]);
+  });
+
   test('is none for a scene with nothing in it, and stays inside its own scene', () => {
     expect(previews('INT. A - DAY\n\nINT. B - DAY\n\nSomething happens.\n')).toEqual([
       null,

@@ -28,7 +28,7 @@ function firstPrinted(block: Block): string | null {
 
 /**
  * What a card without a synopsis shows (fresh-look design §5), so no card is an empty box: the
- * scene's first line of action, or else its first speech ("BOB: Hi."), or null for a scene with
+ * scene's first line of action, or else its first speech or sung line ("BOB: Hi."), or null for a scene with
  * neither.
  */
 export function cardPreview(doc: Doc, scene: Scene): string | null {
@@ -42,7 +42,11 @@ export function cardPreview(doc: Doc, scene: Scene): string | null {
       if (text) return text;
     } else if (block.kind === 'character') {
       speaker = block.sem.name;
-    } else if (block.kind === 'dialogue' && speech === null && speaker) {
+    } else if (
+      (block.kind === 'dialogue' || block.kind === 'lyric') &&
+      speech === null &&
+      speaker
+    ) {
       const text = firstPrinted(block);
       if (text) speech = `${speaker}: ${text}`;
     }

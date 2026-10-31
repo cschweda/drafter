@@ -544,7 +544,8 @@ test('No problems is centred with a check', async ({ page }) => {
   await setText(page, 'INT. HALL - DAY\n\nShe waits.\n');
   await showProblems(page);
   const empty = list(page).locator('.d-empty');
-  await expect(empty).toHaveText('No problems — the script reads cleanly.');
+  // The spellcheck is on, and its list follows under Spelling: these are the script's checks.
+  await expect(empty).toHaveText('No script problems found.');
   const icon = empty.locator('[data-empty-icon]');
   await expect(icon).toBeVisible();
   await expect(icon).toHaveClass(/i-lucide[:-]check/);
@@ -561,4 +562,16 @@ test('No problems is centred with a check', async ({ page }) => {
     const middle = (box?.x ?? 0) + (box?.width ?? 0) / 2;
     expect(Math.abs(middle - ((panel?.x ?? 0) + (panel?.width ?? 0) / 2))).toBeLessThanOrEqual(12);
   }
+});
+
+// With the spellcheck off, nothing else is checked, so "problems" is the whole of it.
+test('No problems says no problems found with the spellcheck off', async ({ page }) => {
+  await setText(page, 'INT. HALL - DAY\n\nShe waits.\n');
+  await page.keyboard.press('ControlOrMeta+,');
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByRole('switch', { name: 'Spellcheck', exact: true }).uncheck();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toBeHidden();
+  await showProblems(page);
+  await expect(list(page).locator('.d-empty')).toHaveText('No problems found.');
 });

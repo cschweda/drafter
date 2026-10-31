@@ -529,17 +529,29 @@ h3 {
   flex-basis: 0;
   min-width: 2px;
 }
+/* The tones: one colour from dark to light (not hues that differ by hue alone, which light mode's
+   goldenrod made hard to tell apart), and every other one striped, as a second cue. */
 .tone-0 {
-  background: var(--accent);
+  background-color: var(--accent-text);
 }
 .tone-1 {
-  background: var(--muted);
+  background-color: color-mix(in srgb, var(--accent-text) 68%, var(--surface));
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 2px,
+    color-mix(in srgb, var(--surface) 55%, transparent) 2px 4px
+  );
 }
 .tone-2 {
-  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+  background-color: color-mix(in srgb, var(--accent-text) 42%, var(--surface));
 }
 .tone-3 {
-  background: var(--highlight);
+  background-color: color-mix(in srgb, var(--accent-text) 18%, var(--surface));
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 2px,
+    color-mix(in srgb, var(--accent-text) 45%, transparent) 2px 3px
+  );
   box-shadow: inset 0 0 0 1px var(--muted);
 }
 .legend {
@@ -640,9 +652,26 @@ h3 {
   .chart .cut {
     fill: CanvasText;
   }
+  /* The system's own colours, kept (forced-color-adjust), so the four still differ: solid text
+     colour, a stripe of it, the highlight, and the background with an edge. */
   .bar > span,
   .swatch {
+    forced-color-adjust: none;
+    box-sizing: border-box;
     border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+  .tone-0 {
+    background: CanvasText;
+  }
+  .tone-1 {
+    background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 4px);
+  }
+  .tone-2 {
+    background: Highlight;
+  }
+  .tone-3 {
+    background: Canvas;
   }
 }
 </style>

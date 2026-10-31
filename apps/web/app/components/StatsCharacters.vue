@@ -81,9 +81,14 @@ const scrolls = useScrollsSideways(region);
               <td class="num">{{ row.speaksIn }}</td>
               <td class="num">{{ row.words.toLocaleString('en-US') }}</td>
               <td class="num">{{ row.share }}</td>
-              <td class="num">
+              <td class="num screen-time">
                 <template v-if="row.screen">
-                  <span aria-hidden="true">{{ row.screen.text }}</span>
+                  <!-- "1 4/8 p · about 1 min" may break after its dot, never inside a part. -->
+                  <span aria-hidden="true" class="screen"
+                    ><template v-for="(part, i) in row.screen.text.split(' · ')" :key="i"
+                      ><template v-if="i > 0"> · </template><span class="part">{{ part }}</span></template
+                    ></span
+                  >
                   <span class="sr-only">{{ row.screen.words }}</span>
                 </template>
                 <template v-else>
@@ -106,10 +111,19 @@ const scrolls = useScrollsSideways(region);
   margin: 6px 0 0;
   color: var(--muted);
 }
-/* The names and "most often with" may wrap; the figures keep to one line. */
+/* The names and "most often with" may wrap, and the headers do (tables.css); the figures keep to
+   one line, but for screen time, which may break after its " · ". So the table fits a 720px column
+   at 1440 by 900, and scrolls sideways only in a pane narrower than that. */
 .d-table .often {
-  min-width: 9rem;
   padding-top: 8px;
   padding-bottom: 8px;
+}
+/* Two lines of 16px still fit the 36px row. */
+.d-table td.screen-time {
+  line-height: 16px;
+  white-space: normal;
+}
+.screen .part {
+  white-space: nowrap;
 }
 </style>

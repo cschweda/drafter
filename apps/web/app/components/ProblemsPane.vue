@@ -79,7 +79,11 @@ onBeforeUnmount(disarm);
           : 'No checks for Markdown documents.'
       }}
     </DEmpty>
-    <DEmpty v-else-if="rows.length === 0" icon="i-lucide-check">No problems — the script reads cleanly.</DEmpty>
+    <!-- Only what was checked: with the spellcheck on, its words follow under Spelling, so these
+         are the script's checks; with it off, the script's checks are all there are. -->
+    <DEmpty v-else-if="rows.length === 0" icon="i-lucide-check">
+      {{ settings.spellcheck ? 'No script problems found.' : 'No problems found.' }}
+    </DEmpty>
     <ul v-else class="problems problem-list">
       <li
         v-for="(problem, index) in rows"

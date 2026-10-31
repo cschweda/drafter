@@ -5,7 +5,9 @@ import { type StatsSection, sectionHeadingId, showStats } from '~/stats/tab';
 // The Stats page's contents (seeing-the-script design §4.1; fresh-look ruling for Task 3): a row at
 // the top of the page with a link to each section, which puts focus on its heading. It was the
 // slim bar's, and left the Inspector's header so the header keeps room for its tabs. A Markdown
-// document has the Overview alone, so no links.
+// document has the Overview alone, so no links. Every link's target (`sectionHeadingId`) is a
+// section's h2, which is what carries the `scroll-margin-top` (StatsPane) that keeps a jumped-to
+// heading clear of this row; a target of any other element would land under it.
 const { kind } = useEditor();
 const SECTIONS: ReadonlyArray<{ id: StatsSection; label: string }> = [
   { id: 'overview', label: 'Overview' },

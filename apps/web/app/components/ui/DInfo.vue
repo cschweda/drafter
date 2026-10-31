@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // An explanation behind an (i) button (fresh-look design §7): the disclosure pattern, so the text
-// follows its button for a screen reader and stays in the page, where search and a reader find it.
+// follows its button for a screen reader. Closed, it is `hidden="until-found"`: still in the page,
+// where the browser's find in page reaches it, and finding it opens it (beforematch). A browser
+// without until-found treats it as plain `hidden`, out of find's reach.
 // Enter or Space opens and closes it; Escape closes it and leaves focus on the button; a press
 // outside or focus moving away closes it too. The panel is placed under the nearest positioned
 // ancestor, across its whole width (a title row with `position: relative`), so it never runs past
@@ -51,7 +53,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown,
     >
       <UIcon name="i-lucide-info" aria-hidden="true" />
     </button>
-    <div :id="id" class="d-info-panel motion" :hidden="!open">
+    <div
+      :id="id"
+      class="d-info-panel motion"
+      :hidden="open ? false : 'until-found'"
+      @beforematch="open = true"
+    >
       <slot />
     </div>
   </span>
@@ -87,8 +94,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown,
   text-align: left;
   white-space: normal;
 }
-.d-info-panel[hidden] {
+/* A browser without until-found makes it plain `hidden`. With it, the browser hides the content
+   (content-visibility) but keeps the box, so the box draws nothing until it is found. */
+.d-info-panel[hidden]:not([hidden='until-found']) {
   display: none;
+}
+.d-info-panel[hidden='until-found'] {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  animation: none;
 }
 .d-info-panel > p {
   margin: 0;

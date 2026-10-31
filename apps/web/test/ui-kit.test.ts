@@ -297,8 +297,14 @@ describe('DInfo', () => {
     expect(templateOf(vue)).toMatch(/:aria-label="props\.label"/);
     expect(templateOf(vue)).toMatch(/:aria-expanded="open \? 'true' : 'false'"/);
     expect(templateOf(vue)).toMatch(/:aria-controls="id"/);
-    // The text stays in the page, hidden until opened, after its button.
-    expect(templateOf(vue)).toMatch(/:hidden="!open"/);
+    // The text stays in the page after its button, hidden until opened or found by find in page,
+    // which opens it (beforematch).
+    expect(templateOf(vue)).toMatch(/:hidden="open \? false : 'until-found'"/);
+    expect(templateOf(vue)).toMatch(/@beforematch="open = true"/);
+  });
+  test('hidden until found is not display: none, which find in page could not reach', () => {
+    expect(styleOf(vue)).not.toMatch(/\.d-info-panel\[hidden\]\s*\{\s*display: none/);
+    expect(styleOf(vue)).toMatch(/\.d-info-panel\[hidden\]:not\(\[hidden='until-found'\]\)/);
   });
   test('Escape closes it and leaves focus on its button', () => {
     expect(vue).toMatch(/event\.key !== 'Escape'/);
@@ -308,6 +314,36 @@ describe('DInfo', () => {
     expect(styleOf(vue)).toMatch(/background: var\(--overlay\)/);
     expect(templateOf(vue)).toMatch(/d-info-panel motion/);
     expect(styleOf(vue).match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
+  });
+});
+
+describe("Stats' split bars", () => {
+  const css = styleOf(read('components/StatsOverview.vue'));
+  const rule = (selector: string, within = css) => {
+    const at = within.indexOf(`${selector} {`);
+    return at < 0 ? '' : within.slice(at, within.indexOf('}', at));
+  };
+  test('the four tones are a ramp of one colour, darkest first, not hues alone', () => {
+    const mixes = [1, 2, 3].map(
+      (n) => rule(`.tone-${n}`).match(/var\(--accent-text\) (\d+)%/)?.[1],
+    );
+    expect(rule('.tone-0')).toMatch(/background-color: var\(--accent-text\)/);
+    expect(mixes.map(Number)).toEqual([...mixes.map(Number)].sort((a, b) => b - a));
+    expect(mixes.every((m) => m !== undefined)).toBe(true);
+  });
+  test('alternate tones are striped, a second cue beside the lightness', () => {
+    for (const n of [1, 3]) expect(rule(`.tone-${n}`)).toMatch(/repeating-linear-gradient/);
+    for (const n of [0, 2]) expect(rule(`.tone-${n}`)).not.toMatch(/gradient/);
+  });
+  test('in forced colours each tone and its swatch has its own system colour or pattern', () => {
+    const forced = css.slice(css.indexOf('@media (forced-colors: active)'));
+    expect(forced).toMatch(/forced-color-adjust: none/);
+    const fills = [0, 1, 2, 3].map((n) => rule(`.tone-${n}`, forced));
+    expect(fills[0]).toMatch(/CanvasText/);
+    expect(fills[1]).toMatch(/repeating-linear-gradient/);
+    expect(fills[2]).toMatch(/Highlight/);
+    expect(fills[3]).toMatch(/Canvas/);
+    expect(new Set(fills).size).toBe(4);
   });
 });
 

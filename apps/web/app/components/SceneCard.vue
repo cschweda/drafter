@@ -123,7 +123,8 @@ function onEditKeydown(event: KeyboardEvent) {
         :class="{ hidden: props.editing }"
         data-card-preview
       >
-        {{ props.preview }}
+        <!-- Its description says what it is: the scene's opening line, not a synopsis. -->
+        <span class="sr-only">Opens with: </span><span data-preview-text>{{ props.preview }}</span>
       </p>
       <p v-if="goal" class="goal">Goal: {{ goal }}</p>
     </div>

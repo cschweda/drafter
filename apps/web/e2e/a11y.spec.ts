@@ -209,7 +209,7 @@ for (const theme of THEMES) {
       // And its empty state, centred with its check.
       await setText(page, 'INT. HALL - DAY\n\nShe waits.\n');
       await showTab(page, 'Problems');
-      await expect(problemsList(page)).toContainText('No problems — the script reads cleanly.');
+      await expect(problemsList(page)).toContainText('No script problems found.');
       await clean(page, 'Problems with none');
     });
 

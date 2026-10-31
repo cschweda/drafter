@@ -427,10 +427,13 @@ test.describe('a card without a synopsis', () => {
   test('a card with no synopsis shows its first action line', async ({ page }) => {
     await openWith(page);
     const preview = (option: ReturnType<typeof card>) => option.locator('[data-card-preview]');
-    await expect(preview(shed(page))).toHaveText('Tools.');
-    await expect(preview(car(page))).toHaveText('Driving.');
+    // What shows is the line; a screen reader hears "Opens with:" before it.
+    const shown = (option: ReturnType<typeof card>) =>
+      preview(option).locator('[data-preview-text]');
+    await expect(shown(shed(page))).toHaveText('Tools.');
+    await expect(shown(car(page))).toHaveText('Driving.');
     // No action at all: the first speech.
-    await expect(preview(yard(page))).toHaveText('BOB: Hi.');
+    await expect(shown(yard(page))).toHaveText('BOB: Hi.');
     // A synopsis is shown instead, so no preview.
     await expect(preview(hall(page))).toHaveCount(0);
     await expect(hall(page)).toContainText('Ann arrives.');
@@ -447,6 +450,7 @@ test.describe('a card without a synopsis', () => {
       })(),
     }));
     expect(colors.preview).toBe(colors.muted);
-    await expect(shed(page)).toHaveAccessibleDescription('Tools.');
+    await expect(shed(page)).toHaveAccessibleDescription('Opens with: Tools.');
+    await expect(yard(page)).toHaveAccessibleDescription('Opens with: BOB: Hi.');
   });
 });

@@ -43,6 +43,13 @@
   text-align: right;
   white-space: nowrap;
 }
+/* A header may wrap to two lines rather than widen its table; 32px stays its least height. */
+.d-table thead th,
+.d-table thead th.num {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  white-space: normal;
+}
 .d-table a {
   color: var(--text);
   text-decoration: none;

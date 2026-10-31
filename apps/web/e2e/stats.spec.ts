@@ -695,6 +695,62 @@ test.describe('the Stats page, as designed', () => {
     await expect(about).toHaveAttribute('aria-expanded', 'false');
   });
 
+  test('an explanation can be found while it is closed, and finding it opens it', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium' || !!isMobile, "hidden=until-found is Chromium's so far");
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const about = stats(page).getByRole('button', { name: 'About the Characters table' });
+    const text = stats(page).getByText(/Scenes counts every scene a character is in/);
+    await expect(text).toBeHidden();
+    // Closed, it is still in the page for find in page: hidden until found, not display: none.
+    const panel = page.locator(`[id="${await about.getAttribute('aria-controls')}"]`);
+    await expect(panel).toHaveAttribute('hidden', 'until-found');
+    // The browser's own find: a link to the text (a text fragment), as a search result or a
+    // shared link would be. (Chromium's window.find() finds the text but doesn't reveal it.)
+    await page.evaluate(() => {
+      const link = document.createElement('a');
+      link.href = '#:~:text=counts%20every%20scene%20a%20character';
+      link.id = 'find-link';
+      link.textContent = 'Find';
+      link.style.cssText = 'position: fixed; top: 0; left: 0; z-index: 9999';
+      document.body.append(link);
+    });
+    await page.locator('#find-link').click();
+    // The browser shows it and says so (beforematch), and the button follows.
+    await expect(text).toBeVisible();
+    await expect(about).toHaveAttribute('aria-expanded', 'true');
+    // Closed again by its button, it is hidden until found again.
+    await about.click();
+    await expect(about).toHaveAttribute('aria-expanded', 'false');
+    await expect(panel).toHaveAttribute('hidden', 'until-found');
+    await panel.evaluate((el) => el.dispatchEvent(new Event('beforematch')));
+    await expect(about).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  test('the Characters table fits its column at 1440 by 900, with no sideways scroll', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone is narrower than the table, which scrolls sideways there');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await start(page);
+    await runCommand(page, 'Show stats');
+    await expect(characterTable(page)).toBeVisible();
+    const region = characterTable(page).locator('xpath=..');
+    const fit = await region.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+    expect(fit.scroll).toBeLessThanOrEqual(fit.client);
+    await expect(region).toHaveClass(/\bfits\b/);
+    // The headers wrap rather than widen the table, and keep at least their 32px.
+    const heights = await characterTable(page)
+      .locator('thead th')
+      .evaluateAll((cells) => cells.map((c) => c.getBoundingClientRect().height));
+    for (const h of heights) expect(h).toBeGreaterThanOrEqual(32);
+  });
+
   test('the page is a centred column with a 20px title', async ({ page, isMobile }) => {
     test.skip(!!isMobile, 'a phone is narrower than the column');
     await start(page);
