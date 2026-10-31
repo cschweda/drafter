@@ -309,7 +309,7 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
             <button
               type="button"
               class="settings-nav-item"
-              :aria-current="current === section.id ? 'true' : undefined"
+              :aria-current="current === section.id ? 'location' : undefined"
               @click="go(section.id)"
             >
               {{ section.name }}
@@ -433,7 +433,7 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
       </section>
       <section :id="sectionId('spelling')" class="section" aria-labelledby="settings-spelling-title">
         <h3 id="settings-spelling-title" class="section-title" tabindex="-1">Spelling</h3>
-        <div v-for="item in switchesIn('spelling').slice(0, 1)" :key="item.key" class="row">
+        <div v-for="item in switchesIn('spelling').filter((s) => s.key === 'spellcheck')" :key="item.key" class="row">
           <div class="text">
             <label :for="`settings-${item.key}`" class="name">{{ item.label }}</label>
             <p :id="`settings-${item.key}-why`" class="why">{{ item.why }}</p>
@@ -471,7 +471,7 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
             </option>
           </select>
         </div>
-        <div v-for="item in switchesIn('spelling').slice(1)" :key="item.key" class="row">
+        <div v-for="item in switchesIn('spelling').filter((s) => s.key !== 'spellcheck')" :key="item.key" class="row">
           <div class="text">
             <label :for="`settings-${item.key}`" class="name">{{ item.label }}</label>
             <p :id="`settings-${item.key}-why`" class="why">{{ item.why }}</p>
@@ -610,7 +610,7 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
   color: var(--text);
 }
 /* The current section: filled, and bold, not told by colour alone. */
-.settings-nav-item[aria-current='true'] {
+.settings-nav-item[aria-current='location'] {
   background: var(--overlay);
   color: var(--text);
   font-weight: 650;
@@ -713,7 +713,7 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
   .switch::after {
     background: CanvasText;
   }
-  .settings-nav-item[aria-current='true'] {
+  .settings-nav-item[aria-current='location'] {
     outline: 2px solid Highlight;
   }
 }

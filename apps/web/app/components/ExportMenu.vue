@@ -190,6 +190,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
 </template>
 
 <style scoped>
+/* Drawn as the menus are (assets/css/menus.css, Task 7 review): --overlay, radius 8, a hairline,
+   30px rows, and a row the pointer or the keyboard is on is --highlight with a 3px --focus bar at
+   its left, all its text --text; the bar, not the focus ring, says where the keyboard is. */
 .export {
   display: contents;
 }
@@ -199,22 +202,25 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   box-sizing: border-box;
   width: min(14rem, calc(100vw - 16px));
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--overlay);
   color: var(--text);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 8px 24px rgb(0 0 0 / 0.28);
   font-size: 13px;
+  animation: motion-in var(--dur) var(--ease) backwards;
 }
 .item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 32px;
-  padding: 4px 8px;
+  min-height: 30px;
+  padding: 5px 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   background: none;
   color: var(--text);
   font: inherit;
@@ -222,8 +228,14 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   text-align: left;
   cursor: pointer;
 }
-.item:hover:not([aria-disabled='true']) {
-  background: var(--chrome);
+.item:hover:not([aria-disabled='true']),
+.item:focus-visible {
+  outline: none;
+  background: var(--highlight);
+  box-shadow: inset 3px 0 0 var(--focus);
+}
+.item:is(:hover, :focus-visible) .icon {
+  color: var(--text);
 }
 .item[aria-disabled='true'] {
   color: var(--muted);
@@ -231,22 +243,19 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
 }
 .rule {
   height: 1px;
-  margin: 4px 2px;
-  background: var(--line);
+  margin: 4px -6px;
+  background: var(--border);
 }
 .why {
   margin: 0 8px 4px 30px;
   color: var(--muted);
   font-size: 12px;
 }
-.item:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
-}
 .icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex: none;
+  color: var(--muted);
 }
 .toast {
   position: fixed;
@@ -323,6 +332,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
 /* No motion: the bar fills in steps, and an unknown stage is the whole bar, still, in the muted
    gray (3:1 on the track, test/tokens.test.ts) rather than the gold of a known amount. */
 @media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
   .fill {
     transition: none;
   }

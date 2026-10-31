@@ -103,6 +103,10 @@ async function ask(p: Project, event: Event) {
   confirming.value = p;
 }
 
+// Safari doesn't focus a button on a click, so the dialog may have had no opener to give focus back
+// to: it falls back to the menu's first button that works (`fallback`; in a read-only tab the New
+// items are off), so focus stays in the menu while Remove finishes (the menu closes when focus
+// leaves it), and the menu then puts it where it goes.
 function onDialogClose() {
   // A close that comes after the dialog was opened again is the old close: it changes nothing.
   if (dialog.value?.open) return;
@@ -255,6 +259,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       class="confirm"
       aria-labelledby="remove-title"
       aria-describedby="remove-why"
+      fallback="#scripts-menu button:not(:disabled)"
       @close="onDialogClose"
     >
       <template v-if="confirming">
@@ -270,7 +275,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
         </p>
         <div class="d-dialog-footer">
           <DButton autofocus @click="cancel">Cancel</DButton>
-          <DButton variant="primary" @click="confirmRemove">Remove</DButton>
+          <DButton variant="primary" danger @click="confirmRemove">Remove</DButton>
         </div>
       </template>
     </DDialog>
@@ -278,6 +283,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
 </template>
 
 <style scoped>
+/* Drawn as the menus are (assets/css/menus.css, Task 7 review): --overlay, radius 8, a hairline,
+   30px rows, and a row the pointer or the keyboard is on is --highlight with a 3px --focus bar at
+   its left, all its text --text; the bar, not the focus ring, says where the keyboard is. */
 .scripts {
   display: contents;
 }
@@ -289,12 +297,15 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   max-height: calc(100dvh - 80px);
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--overlay);
   color: var(--text);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 8px 24px rgb(0 0 0 / 0.28);
   font-size: 13px;
+  animation: motion-in var(--dur) var(--ease) backwards;
 }
 .head {
   margin: 8px 8px 2px;
@@ -321,10 +332,10 @@ ul {
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 32px;
-  padding: 4px 8px;
+  min-height: 30px;
+  padding: 5px 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   background: none;
   color: var(--text);
   font: inherit;
@@ -336,15 +347,22 @@ ul {
   flex: 1;
   min-width: 0;
 }
-.item:hover:not(:disabled) {
-  background: var(--chrome);
+.item:hover:not(:disabled),
+.item:focus-visible {
+  outline: none;
+  background: var(--highlight);
+  box-shadow: inset 3px 0 0 var(--focus);
+}
+.item:is(:hover, :focus-visible) .icon,
+.item:is(:hover, :focus-visible) .meta {
+  color: var(--text);
 }
 .item:disabled {
   color: var(--muted);
   cursor: not-allowed;
 }
-.item[aria-current="true"] {
-  box-shadow: inset 3px 0 0 var(--heading);
+.item[aria-current="true"]:not(:hover, :focus-visible) {
+  box-shadow: inset 3px 0 0 var(--accent-text);
 }
 .title {
   min-width: 0;
@@ -360,15 +378,16 @@ ul {
   white-space: nowrap;
 }
 .icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex: none;
+  color: var(--muted);
 }
 .remove {
   min-height: 24px;
   padding: 0 10px;
   border: 1px solid var(--muted);
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   background: none;
   color: var(--text);
   font: inherit;
@@ -379,17 +398,20 @@ ul {
   flex: none;
   font-size: 12px;
 }
-.item:focus-visible,
-.remove:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
+.remove:hover {
+  background: var(--highlight);
 }
 .message {
   margin: 6px 8px 4px;
   padding-left: 8px;
-  border-left: 3px solid var(--heading);
+  border-left: 3px solid var(--accent-text);
 }
 .confirm p {
   margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
 }
 </style>

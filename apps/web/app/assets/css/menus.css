@@ -19,7 +19,7 @@
 }
 
 .d-menu[data-state="open"] {
-  animation: motion-in var(--dur) var(--ease) both;
+  animation: motion-in var(--dur) var(--ease) backwards;
 }
 
 .d-menu [data-slot="item"] {
@@ -85,6 +85,15 @@
   color: var(--text);
 }
 
+/* A row the keyboard reaches has the tint and the bar above; the global focus ring on top of them
+   would draw it twice. The bar (--focus, 3:1 on --highlight, test/tokens.test.ts) is the
+   indicator. */
+.d-menu [role="menuitem"]:focus-visible,
+.d-menu [role="menuitemcheckbox"]:focus-visible,
+.d-menu [role="menuitemradio"]:focus-visible {
+  outline: none;
+}
+
 /* ---- The command palette (components/CommandPalette.vue) -------------------------------------- */
 
 /* The modal is drawn outside the component, so every selector starts at a class only the palette
@@ -100,7 +109,7 @@
     0 2px 6px rgb(0 0 0 / 0.18),
     0 16px 48px rgb(0 0 0 / 0.38);
   --tw-ring-shadow: 0 0 #0000;
-  animation: motion-in var(--dur) var(--ease) both;
+  animation: motion-in var(--dur) var(--ease) backwards;
 }
 
 .palette {
@@ -191,6 +200,10 @@
     kbd
   ) {
   color: var(--text);
+}
+
+.palette [role="option"]:focus-visible {
+  outline: none;
 }
 
 .palette [data-slot="empty"] {

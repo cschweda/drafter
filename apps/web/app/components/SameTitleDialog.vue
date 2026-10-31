@@ -49,7 +49,7 @@ function onClose() {
       <div class="d-dialog-footer">
         <DButton autofocus @click="choose('cancel')">Cancel</DButton>
         <DButton @click="choose('beside')">Open beside it</DButton>
-        <DButton variant="primary" @click="choose('replace')">Replace that script</DButton>
+        <DButton variant="primary" danger @click="choose('replace')">Replace that script</DButton>
       </div>
     </template>
   </DDialog>

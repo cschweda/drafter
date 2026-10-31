@@ -57,7 +57,7 @@ function onClose() {
       </p>
       <div class="d-dialog-footer">
         <DButton autofocus @click="choose(false)">Cancel</DButton>
-        <DButton variant="primary" @click="choose(true)">Make it Markdown</DButton>
+        <DButton variant="primary" danger @click="choose(true)">Make it Markdown</DButton>
       </div>
     </template>
   </DDialog>

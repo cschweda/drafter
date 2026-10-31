@@ -72,6 +72,10 @@ async function openTab(context: BrowserContext): Promise<Page> {
 async function openMenu(page: Page) {
   if (!(await menu(page).isVisible())) await openButton(page).click();
   await expect(menu(page)).toBeVisible();
+  // It fades in (the one motion); what is measured is the menu at rest.
+  await menu(page).evaluate((el) =>
+    Promise.all(el.getAnimations().map((a) => a.finished.catch(() => {}))),
+  );
 }
 
 /** Chooses an item from the Open menu; the menu closes. */

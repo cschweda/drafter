@@ -45,6 +45,9 @@ async function clean(page: Page, state: string) {
       document
         .getAnimations()
         .filter((a) => a.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY)
+        // The editor's cursor blink is one round while the editor is out of focus and endless in
+        // it, so one caught as focus arrives (a dialog gives the editor focus as it closes) never ends.
+        .filter((a) => !(a instanceof CSSAnimation && a.animationName.startsWith('cm-blink')))
         .map((a) => a.finished.catch(() => {})),
     ),
   );

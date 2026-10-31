@@ -170,7 +170,7 @@ test.describe('the dialog', () => {
     // The first section is the current one to begin with.
     await expect(sections.getByRole('button', { name: 'General' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     );
     // Choosing a section brings it into view, says it is the current one, and moves focus to its
     // heading, so the next Tab is its first setting.
@@ -180,7 +180,7 @@ test.describe('the dialog', () => {
     await expect(spelling.getByRole('heading', { name: 'Spelling' })).toBeFocused();
     await expect(sections.getByRole('button', { name: 'Spelling' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     );
     if (!isMobile && browserName !== 'webkit') {
       await page.keyboard.press('Tab');
@@ -223,7 +223,7 @@ test.describe('the dialog', () => {
       .evaluate((el) => el.scrollIntoView({ block: 'start' }));
     await expect(sections.getByRole('button', { name: 'About' })).toHaveAttribute(
       'aria-current',
-      'true',
+      'location',
     );
   });
 

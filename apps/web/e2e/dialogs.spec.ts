@@ -134,6 +134,35 @@ test.describe('closing', () => {
       await expect(editor(page), command).toBeFocused();
     }
   });
+
+  test('a dialog opened from a menu gives focus to something real when it closes', async ({
+    page,
+  }) => {
+    // The menu's row had focus when Settings opened, and is gone by the time it closes, so the
+    // browser can't put focus back on it: the dialog falls back to the editor, or the Drafter menu.
+    await page.getByRole('button', { name: 'Drafter menu' }).click();
+    const menu = page.getByRole('menu', { name: 'Drafter menu' });
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: /^Settings/ }).click();
+    const dialog = dialogNamed(page, 'Settings');
+    await expect(dialog).toBeVisible();
+    await expect
+      .poll(() => dialog.evaluate((el) => el.contains(document.activeElement)))
+      .toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const active = document.activeElement;
+          if (!active || active === document.body) return 'body';
+          if (active.matches('.cm-content')) return 'editor';
+          if (active.matches('[data-tour="menu"]')) return 'menu';
+          return active.outerHTML.slice(0, 80);
+        }),
+      )
+      .toMatch(/^(editor|menu)$/);
+  });
 });
 
 test.describe('the motion', () => {

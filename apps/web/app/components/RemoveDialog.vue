@@ -84,7 +84,7 @@ async function confirm() {
       <p v-if="message" role="alert" class="message">{{ message }}</p>
       <div class="d-dialog-footer">
         <DButton autofocus @click="cancel">Cancel</DButton>
-        <DButton variant="primary" :disabled="working" @click="confirm">
+        <DButton variant="primary" danger :disabled="working" @click="confirm">
           Remove
         </DButton>
       </div>

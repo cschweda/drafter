@@ -173,7 +173,7 @@
 }
 :root:root:root:root
   :is(.welcome-fade-enter-active .welcome-dialog, .intro-fade-enter-active .intro-dialog) {
-  animation: motion-in var(--dur) var(--ease) both;
+  animation: motion-in var(--dur) var(--ease) backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   :root:root:root:root

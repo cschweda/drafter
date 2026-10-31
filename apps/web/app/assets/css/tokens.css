@@ -42,6 +42,10 @@
   --danger-bg: #2d272a;
   --danger-border: #c46a61;
   --danger-hover: #3e2e30;
+  /* A destructive confirm (Task 7 review): the danger tone as a primary button's fill, its label,
+     and its hovered fill, at 4.5:1 or more (test/tokens.test.ts). */
+  --on-danger: #111216;
+  --danger-fill-hover: #e89a91;
 }
 
 .light {
@@ -59,7 +63,7 @@
   --accent-text: #7a5200;
   --focus: #a06a00;
   --accent-hover: #d9a33c;
-  --highlight: #e2dfd9;
+  --highlight: #e4e1db;
   --desk: #e9e7e2;
   --paper: #ffffff;
   --paper-ink: #1c1c1c;
@@ -72,6 +76,8 @@
   --danger-bg: #f9eeed;
   --danger-border: #c4574d;
   --danger-hover: #f3dddb;
+  --on-danger: #ffffff;
+  --danger-fill-hover: #93302a;
 }
 
 /* The same in both themes: the radii, and the one motion (design §8), which main.css's `.motion`

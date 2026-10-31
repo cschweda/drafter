@@ -23,6 +23,12 @@ dialog:modal {
   margin: auto;
 }
 
+/* The page behind an open dialog stays still: the document is a pixel taller than the window, so
+   it can scroll, and a wheel over the backdrop would move it. */
+html:has(dialog:modal) {
+  overflow: hidden;
+}
+
 /* One focus ring for every control, in the brand's goldenrod (design §8, Call 11). */
 :focus-visible {
   outline: 2px solid var(--focus);
@@ -41,7 +47,8 @@ dialog:modal {
 }
 
 /* The one motion (design §2): a menu, a popover, or a dialog fades in as it rises 4 px. None with
-   reduced motion. */
+   reduced motion. Every use fills `backwards`, never `both`: a transform kept after the motion
+   would make the element the containing block of anything fixed inside it. */
 @keyframes motion-in {
   from {
     opacity: 0;
@@ -50,7 +57,7 @@ dialog:modal {
 }
 
 .motion {
-  animation: motion-in var(--dur) var(--ease) both;
+  animation: motion-in var(--dur) var(--ease) backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

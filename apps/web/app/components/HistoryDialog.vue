@@ -741,7 +741,7 @@ const nameOf = (row: HistoryRow) =>
         <p>It can’t be brought back.</p>
         <div class="d-dialog-footer">
           <DButton autofocus @click="askDialog?.close()">Cancel</DButton>
-          <DButton variant="primary" @click="confirmDelete">Delete</DButton>
+          <DButton variant="primary" danger @click="confirmDelete">Delete</DButton>
         </div>
       </template>
     </DDialog>

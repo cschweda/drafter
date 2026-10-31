@@ -75,6 +75,12 @@ describe('DDialog', () => {
     expect(reduced).toMatch(/animation: none;/);
   });
 
+  test('the page under an open dialog does not scroll', () => {
+    // The document is a pixel taller than the window (Task 7 review measured 721 in 720), so a
+    // wheel over the backdrop would move the page behind it.
+    expect(read('assets/css/main.css')).toMatch(/html:has\(dialog:modal\) \{\s*overflow: hidden;/);
+  });
+
   test('gives focus back to what had it', () => {
     expect(vue).toMatch(/opener/);
     expect(vue).toMatch(/\.focus\(/);
@@ -186,7 +192,100 @@ describe('menus', () => {
     );
   });
 
+  test('a row the keyboard reaches has the bar and the tint, not the focus ring as well', () => {
+    expect(css).toMatch(
+      /\.d-menu \[role=["']menuitem["']\]:focus-visible[^{]*\{[^}]*outline: none;/,
+    );
+    expect(css).toMatch(
+      /\.palette \[role=["']option["']\]:focus-visible[^{]*\{[^}]*outline: none;/,
+    );
+  });
+
   test('main.css takes in the menus', () => {
     expect(read('assets/css/main.css')).toMatch(/@import "\.\/menus\.css";/);
+  });
+});
+
+// The one motion keeps nothing when it ends (Task 7 review): `both` would leave a transform behind,
+// which makes the element the containing block of anything fixed inside it (a dialog's row menu).
+describe('the one motion', () => {
+  test.each([
+    'assets/css/main.css',
+    'assets/css/menus.css',
+    'assets/css/tour.css',
+    'components/ui/DDialog.vue',
+  ])('%s fills backwards, never both', (path) => {
+    const css = read(path);
+    expect(css).not.toMatch(/animation: motion-in [^;]*\bboth\b/);
+    expect(css).toMatch(/animation: motion-in var\(--dur\) var\(--ease\) backwards;/);
+  });
+});
+
+// A destructive confirm (Task 7 review, the controller's ruling) is still the primary button, in
+// the danger tone, so it doesn't look like an everyday OK; Cancel keeps the first focus.
+describe('destructive confirms', () => {
+  test('DButton has a danger modifier for the primary button, from the danger tokens', () => {
+    const vue = read('components/ui/DButton.vue');
+    expect(vue).toMatch(/danger\?: boolean/);
+    const style = styleOf(vue);
+    expect(style).toMatch(
+      /\.d-btn--primary\.d-btn--danger \{[^}]*background: var\(--danger\);[^}]*color: var\(--on-danger\);/,
+    );
+    expect(style).toMatch(
+      /\.d-btn--primary\.d-btn--danger:hover[^{]*\{[^}]*background: var\(--danger-fill-hover\);/,
+    );
+  });
+
+  test.each([
+    ['SameTitleDialog', 'Replace that script'],
+    ['ScriptsMenu', 'Remove'],
+    ['RemoveDialog', 'Remove'],
+    ['HistoryDialog', 'Delete'],
+    ['MarkdownDialog', 'Make it Markdown'],
+  ])('%s: "%s" is a danger button, and Cancel has the first focus', (name, label) => {
+    const template = templateOf(read(`components/${name}.vue`));
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    expect(template).toMatch(
+      new RegExp(
+        `<DButton[^>]*variant="primary"[^>]*\\bdanger\\b[^>]*>\\s*${escaped}\\s*</DButton>`,
+      ),
+    );
+    expect(template).toMatch(/<DButton[^>]*\bautofocus\b[^>]*>\s*Cancel\s*<\/DButton>/);
+  });
+});
+
+// The Scripts and Export popovers are drawn as the menus are (Task 7 review).
+describe('the popovers', () => {
+  test.each(['ScriptsMenu', 'ExportMenu'])('%s is drawn in the menu style', (name) => {
+    const style = styleOf(read(`components/${name}.vue`));
+    expect(style).toMatch(/\.panel \{[^}]*background: var\(--overlay\);/);
+    expect(style).toMatch(/\.panel \{[^}]*border: 1px solid var\(--border\);/);
+    expect(style).toMatch(/\.panel \{[^}]*border-radius: var\(--r\);/);
+    expect(style).toMatch(
+      /\.panel \{[^}]*animation: motion-in var\(--dur\) var\(--ease\) backwards;/,
+    );
+    expect(style).toMatch(/\.item \{[^}]*min-height: 30px;/);
+    expect(style).toMatch(/\.item:[^{]*focus-visible[^{]*\{[^}]*background: var\(--highlight\);/);
+    expect(style).toMatch(/box-shadow: inset 3px 0 0 var\(--focus\);/);
+    // The popover itself has no old token names (the export toast after it moves in Task 10).
+    const popover = style.slice(
+      0,
+      style.indexOf('.toast {') >= 0 ? style.indexOf('.toast {') : undefined,
+    );
+    expect(popover.match(/var\(--(chrome|chrome-2|line|heading)\)/g) ?? []).toEqual([]);
+    expect(style.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
+  });
+});
+
+describe('Settings', () => {
+  const template = templateOf(read('components/SettingsDialog.vue'));
+
+  test('the current section is aria-current="location"', () => {
+    expect(template).toMatch(/:aria-current="current === section\.id \? 'location' : undefined"/);
+  });
+
+  test('the Spelling switches are split by key, not by place', () => {
+    expect(template).not.toMatch(/switchesIn\('spelling'\)\.slice\(/);
+    expect(template).toMatch(/switchesIn\('spelling'\)\.filter\(/);
   });
 });

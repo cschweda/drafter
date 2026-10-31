@@ -9,8 +9,19 @@
 // Its ref is a stand-in for the element: `open`, `showModal()`, `close()`, `focus()`, and `el` for anything
 // else. Attributes and listeners (aria-labelledby, @close, @cancel) go on the <dialog> itself.
 // When it closes, focus goes back to what had it when it opened, unless something else has taken
-// it by then (a dialog that sends focus elsewhere on purpose still does).
-const props = withDefaults(defineProps<{ size?: 'sm' | 'md' | 'lg' }>(), { size: 'md' });
+// it by then (a dialog that sends focus elsewhere on purpose still does). When that can't take it
+// (it is gone, hidden, or was nothing: a menu's row, or the palette's), focus goes to `fallback`
+// (a selector), else the editor, else the Drafter menu, so it is never left on nothing.
+// `ref` is imported, not auto-imported, so test/ddialog.test.ts can mount the component as written.
+import { ref } from 'vue';
+
+const props = withDefaults(defineProps<{ size?: 'sm' | 'md' | 'lg'; fallback?: string }>(), {
+  size: 'md',
+  fallback: undefined,
+});
+
+/** Where focus goes when the opener can't take it back, after the caller's own `fallback`. */
+const FALLBACKS = ['.cm-content', '[data-tour="menu"]'];
 
 const el = ref<HTMLDialogElement>();
 /** What had focus when the dialog opened. */
@@ -28,15 +39,44 @@ function close(value?: string) {
   el.value?.close(value);
 }
 
+/** Whether focus can go to an element: it is one, still in the page, and drawn. */
+function canTake(target: Element | null): target is HTMLElement {
+  return (
+    target instanceof HTMLElement &&
+    target !== document.body &&
+    target.isConnected &&
+    target.getClientRects().length > 0
+  );
+}
+
+/** A menu's row goes when its menu closes, so it can't keep focus for long. (A listbox's row
+    stays: the Notes list and the cards are lists that stay put.) */
+const passing = (target: Element) => target.closest('[role="menu"]') !== null;
+
 // The browser puts focus back itself, as a rule; this catches the case where it can't (focus was
-// left on nothing), after the dialog's own close listeners have had their turn.
+// left on nothing), or where it put it on a menu's row that is about to go (a quick Escape, while
+// the menu that opened the dialog is still closing), after the dialog's own close listeners have
+// had their turn.
 function onClose() {
   const back = opener;
   setTimeout(() => {
-    if (el.value?.open || !back) return;
+    const dialog = el.value;
+    if (dialog?.open) return;
     const active = document.activeElement;
-    if (active && active !== document.body && !el.value?.contains(active)) return;
-    if (back.isConnected && back.getClientRects().length > 0) back.focus();
+    const placed = active && active !== document.body && !dialog?.contains(active);
+    if (placed && !passing(active)) return;
+    if (canTake(back) && !passing(back)) {
+      back.focus();
+      return;
+    }
+    // The first that takes it (a disabled button, say, doesn't).
+    const selectors = props.fallback ? [props.fallback, ...FALLBACKS] : FALLBACKS;
+    for (const selector of selectors) {
+      const target = document.querySelector(selector);
+      if (!canTake(target)) continue;
+      target.focus();
+      if (document.activeElement === target) return;
+    }
   });
 }
 

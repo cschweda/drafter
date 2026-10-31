@@ -95,6 +95,11 @@ const PAIRS: Array<[string, string, number]> = [
   ['--text', '--highlight', 4.5],
   ['--muted', '--highlight', 4.5],
   ['--on-accent', '--accent-hover', 4.5],
+  // ... and the keyboard's bar on that row, a graphic a reader needs.
+  ['--focus', '--highlight', 3],
+  // A destructive confirm (Task 7 review): the danger tone as a primary button, at rest and hovered.
+  ['--on-danger', '--danger', 4.5],
+  ['--on-danger', '--danger-fill-hover', 4.5],
 ];
 
 // Today's names, kept as aliases of the new ones until every component has moved over (fresh-look
@@ -147,6 +152,14 @@ describe('design tokens', () => {
         `${fg} on ${bg}: ${contrast(colors[fg] as string, colors[bg] as string).toFixed(2)} < ${min}`,
     );
     expect(short).toEqual([]);
+  });
+
+  test.each(THEMES)('--muted on a highlighted row has a margin over AA (%s)', (name) => {
+    // 4.52:1 in the light theme was too close to the line (Task 7 review).
+    const colors = themeTokens(name);
+    expect(
+      contrast(colors['--muted'] as string, colors['--highlight'] as string),
+    ).toBeGreaterThanOrEqual(4.6);
   });
 
   test.each(THEMES)('text is AA on the soft accent, over every surface (%s)', (name) => {
