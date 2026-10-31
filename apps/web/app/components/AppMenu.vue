@@ -136,6 +136,7 @@ const helpItems = computed<DropdownMenuItem[]>(() => [
       label: page.title,
     })),
   ),
+  ...entry('download-desktop', 'i-lucide-download'),
   {
     label: 'Sample scripts',
     icon: 'i-lucide-files',

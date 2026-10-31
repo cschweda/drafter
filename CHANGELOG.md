@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `apps/web`: a **Download page** ([drafter.dev/docs/download](https://drafter.dev/docs/download/)) for Windows (the x64 installer, with Windows on Arm and SmartScreen explained) and Linux (the `.deb` and the AppImage, each with its one-line how-to), and the Mac's build-it-yourself steps until a signed download comes. The links are made at build time from the version, so the page asks nothing of GitHub when it loads, with the latest release beside them; the reader's own system is outlined. **Help → Download the desktop app** opens it, on the web only (the desktop app leaves the entry out), and the help index lists it. README's Platforms badge and its Linux and Windows sections link to it.
 - `apps/web`: a **Why Drafter** help page ([drafter.dev/docs/why](https://drafter.dev/docs/why/)): free with no catch, no login ever, the big features, and How Drafter compares, the README's table as a real table that scrolls sideways on a phone, with ✓ and ✗ read as "yes" and "no". It is first in the help pages, so the help index, the docs bar, Help in the menu, and the palette list it. README's comparison links to it.
 
 ### Changed

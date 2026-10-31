@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HELP_PAGES, helpHref } from '~/commands/data';
+import { DOWNLOAD_PAGE, HELP_PAGES, helpHref } from '~/commands/data';
 import { PRESENCE_NOTE } from '~/scaffold/presence-note';
 
 definePageMeta({ layout: 'docs' });
@@ -36,6 +36,10 @@ const about: Record<string, string> = {
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
         <a :href="helpHref(page)">{{ page.title }}</a>: {{ about[page.id] }}
+      </li>
+      <li>
+        <a :href="helpHref(DOWNLOAD_PAGE)">{{ DOWNLOAD_PAGE.title }}</a>: the desktop app for Windows
+        and Linux, and how to build it on a Mac.
       </li>
     </ul>
     <p>

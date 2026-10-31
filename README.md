@@ -7,7 +7,7 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/8f82bb2b-72c2-41c4-b6b9-42537ea17bd6/deploy-status)](https://app.netlify.com/projects/my-drafter/deploys)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Write at drafter.dev](https://img.shields.io/badge/web-drafter.dev-0a7d5a)](https://drafter.dev)
-[![Platforms: web, Linux, Windows](https://img.shields.io/badge/platforms-web%20%7C%20Linux%20%7C%20Windows-555)](#drafter-for-linux)
+[![Platforms: web, Linux, Windows](https://img.shields.io/badge/platforms-web%20%7C%20Linux%20%7C%20Windows-555)](https://drafter.dev/docs/download/)
 [![Format: Fountain](https://img.shields.io/badge/format-Fountain-8a5a00)](https://fountain.io)
 
 **Drafter™ is an open-source, local-first, zero-login writing app, Fountain first: screenplays and stage plays in plain-text [Fountain](https://fountain.io), and novels and treatments in Markdown.** Write on the left; see the paginated, industry-formatted pages on the right, updating as you type.
@@ -362,7 +362,7 @@ The full policy is in the [architecture document, §6](docs/drafter-architecture
 
 ## Drafter for Linux
 
-The same editor as drafter.dev, in a window of its own, built with Electron. Get it from the [latest release](https://github.com/cschweda/drafter/releases/latest) on GitHub, for 64-bit Intel and AMD (x64):
+The same editor as drafter.dev, in a window of its own, built with Electron. Get it from the [Download page](https://drafter.dev/docs/download/) or the [latest release](https://github.com/cschweda/drafter/releases/latest) on GitHub, for 64-bit Intel and AMD (x64):
 
 | Package | Use it on | File |
 |---|---|---|
@@ -380,7 +380,7 @@ The AppImage needs FUSE 2 (`libfuse2`), and on Ubuntu 24.04 and later it needs a
 
 ## Drafter for Windows
 
-The same desktop app, for Windows 10 and 11. From the [latest release](https://github.com/cschweda/drafter/releases/latest), under *Assets*:
+The same desktop app, for Windows 10 and 11. From the [Download page](https://drafter.dev/docs/download/), or the [latest release](https://github.com/cschweda/drafter/releases/latest) under *Assets*:
 
 | Your PC | The installer |
 |---|---|
