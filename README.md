@@ -14,6 +14,17 @@
 
 **Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, plain text, a self-contained web page (HTML), and an e-book (EPUB), so it can go wherever it needs to go. See [Formats](#formats).
 
+**Open it and write.** No sign-up, no sign-in, no licence key, no activation, ever. Drafter is ready the moment the page loads or the app starts.
+
+- **No login, ever.** There is no account to make, and nothing to sign in to every time you start. Close it, open it again tomorrow, and you're back in your script.
+- **Instant.** [drafter.dev](https://drafter.dev) opens straight into a script, and the desktop app starts the same way. No installer is needed to begin, and no setup.
+- **Free.** No price, no trial, no subscription, and no features held back.
+- **Open.** The code is MIT-licensed and on GitHub, and your script is a plain `.fountain` text file you own, so a lapsed licence can never lock you out of your own work.
+- **Private.** No cookies, no analytics, no tracking, and no telemetry. Your script never leaves your device: Drafter has no server that could receive it. See [Privacy](https://drafter.dev/docs/privacy/).
+- **Works offline.** Once it has loaded, Drafter runs with no connection, on a plane or a train.
+- **No forced updates.** The web app updates when you reload. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
+- **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
+
 > [!NOTE]
 > **Status: v0.22.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way, now with **Export as HTML and EPUB** (a self-contained web page, or an e-book), **Scaffold** (who is in the scene you're writing), the **Stats tab** with a character-by-scene grid, version history, Highland and Fade In imports, footnotes in Markdown documents, and `drafter convert`. Next: **a fresh look** (v0.23.0), **Drafts and Cuts** (v0.24.0), **Novel**, for drafting a novel in Markdown (v0.25.0), storylines and pacing (v0.26.0), the **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.27.0), an optional one-file `.drafter` project (v0.28.0, open spec), then Plans G and H (v0.29.0 and v0.30.0); a signed macOS download follows. See the [roadmap](#roadmap).
 
