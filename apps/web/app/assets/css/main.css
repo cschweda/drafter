@@ -235,6 +235,14 @@ dialog:modal {
 .docs-scroll table {
   min-width: 40rem;
 }
+/* The comparison has eight columns, so it is wider still, and scrolls on anything narrower. Its
+   hidden "yes" and "no" are positioned, so the box holds them, or they would widen the page. */
+.docs-compare {
+  position: relative;
+}
+.docs-compare table {
+  min-width: 60rem;
+}
 .docs-note {
   margin: 0 0 12px;
   padding: 8px 12px;

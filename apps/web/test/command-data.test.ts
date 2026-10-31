@@ -103,8 +103,9 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the seven help pages, in the Help group', () => {
+  test('has the eight help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
+      '/docs/why',
       '/docs/fountain',
       '/docs/saving',
       '/docs/shortcuts',
@@ -159,6 +160,7 @@ describe('the command data', () => {
 
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
+      '/docs/why/',
       '/docs/fountain/',
       '/docs/saving/',
       '/docs/shortcuts/',

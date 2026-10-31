@@ -320,6 +320,52 @@ test.describe('without JavaScript', () => {
     }
   });
 
+  test('the Why Drafter page has its parts and the comparison as a real table', async ({
+    page,
+  }) => {
+    await page.goto('/docs/why');
+    await expect(heading(page)).toHaveText('Why Drafter');
+    await expect(page.locator('.docs-lead')).toContainText('Drafter™');
+    for (const [id, name] of [
+      ['free', 'Free, with no catch'],
+      ['no-login', 'No login, ever'],
+      ['big-features', 'The big features'],
+      ['compares', 'How Drafter compares'],
+      ['made-by', 'Made by'],
+    ]) {
+      await expect(
+        page.getByRole('heading', { level: 2, name, exact: true }),
+        name,
+      ).toHaveAttribute('id', id);
+    }
+    // The table scrolls inside its own region, has a caption, and labels its columns and rows.
+    const region = page.getByRole('region', { name: /How Drafter compares/ });
+    const table = region.getByRole('table');
+    await expect(table.locator('caption')).not.toBeEmpty();
+    await expect(table.locator('thead th[scope="col"]')).toHaveCount(8);
+    await expect(table.locator('tbody th[scope="row"]')).toHaveCount(25);
+    const row = (name: string) => table.getByRole('row').filter({ hasText: name });
+    await expect(row('Price')).toContainText('Free, forever');
+    await expect(row('Price')).toContainText('$249.99 once, or $99.99/yr');
+    // A planned feature shows its version, never a ✓.
+    await expect(row('Revision colors and marks').locator('td').first()).toHaveText(
+      'v0.26.0, free',
+    );
+    // ✓ and ✗ are read as words.
+    const open = row('Open source');
+    await expect(open.locator('td').first()).toContainText('yes');
+    await expect(open.locator('td').nth(1)).toContainText('no');
+    await expect(open.locator('[aria-hidden="true"]').first()).toHaveText('✓');
+    // The credit and the trademark line, with outside links that open safely.
+    for (const href of ['https://metaincognita.com', 'https://github.com/cschweda']) {
+      const link = page.locator(`main a[href="${href}"]`);
+      await expect(link, href).toHaveAttribute('rel', /noopener/);
+    }
+    expect(await mainText(page)).toContain(
+      'Drafter™ and the Drafter logo are trademarks of Christopher Schweda.',
+    );
+  });
+
   test('explains saving: the browser table, synced folders, the recovery copy, and installing', async ({
     page,
   }) => {

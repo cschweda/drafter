@@ -33,6 +33,7 @@ export interface HelpPage {
 
 /** The help pages (Phase 1 design §4.5): prerendered at `path`, and opened from Help and the palette. */
 export const HELP_PAGES: readonly HelpPage[] = [
+  { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },

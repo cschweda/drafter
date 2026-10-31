@@ -64,7 +64,7 @@ Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also 
 
 ## How Drafter compares
 
-What each app's maker says on its own site, as of October 2026, at list prices (sales come and go). ✓ means it's there; *paid* means a higher plan; ? means the maker doesn't say. Drafter's not-yet-shipped features show the version they're planned for, never a ✓. Corrections are welcome: [open an issue](https://github.com/cschweda/drafter/issues).
+What each app's maker says on its own site, as of October 2026, at list prices (sales come and go). ✓ means it's there; *paid* means a higher plan; ? means the maker doesn't say. Drafter's not-yet-shipped features show the version they're planned for, never a ✓. Corrections are welcome: [open an issue](https://github.com/cschweda/drafter/issues). The same table is on [Why Drafter](https://drafter.dev/docs/why/), with the reasons behind it.
 
 | | **Drafter** | Final Draft 13 | WriterDuet | Fade In | Highland Pro | Arc Studio | Celtx |
 |---|---|---|---|---|---|---|---|

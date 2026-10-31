@@ -119,6 +119,7 @@ const EXPORT_ICONS: Record<string, string> = {
 // scripts submenu (a tiny sample of each kind, then the guided starters, each opened as a new
 // script), Reset sample (off unless a sample is open), Check for updates…, and About Drafter last.
 const HELP_ICONS: Record<string, string> = {
+  'help-why': 'i-lucide-heart',
   'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
   'help-shortcuts': 'i-lucide-keyboard',

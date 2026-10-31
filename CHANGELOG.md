@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `apps/web`: a **Why Drafter** help page ([drafter.dev/docs/why](https://drafter.dev/docs/why/)): free with no catch, no login ever, the big features, and How Drafter compares, the README's table as a real table that scrolls sideways on a phone, with ✓ and ✗ read as "yes" and "no". It is first in the help pages, so the help index, the docs bar, Help in the menu, and the palette list it. README's comparison links to it.
+
 ### Changed
 
 - Roadmap: **production features are free, and come early**: revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides move from Phase 4 to **v0.26.0**, after Novel. Storylines and pacing, the Workbook, the `.drafter` package, and Plans G and H each move down one (v0.27.0 to v0.31.0). README, the architecture document, the Phase 2 design, and DECISIONS say so.
