@@ -1,6 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { closeSettings, openSettings, runCommand, setText, settingsDialog, start } from './modules';
+import { newScreenplay } from './bulk-snapshot';
+import {
+  closeSettings,
+  openSettings,
+  runCommand,
+  setText,
+  settingsDialog,
+  showView,
+  start,
+} from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -122,8 +131,8 @@ test.describe('on a desktop', () => {
   });
 
   test("the Inspector's tabs fold into More when narrow, at 200% zoom too", async ({ page }) => {
-    // At 200% zoom a 2048px window is 1024 CSS px wide; then the Inspector is made as narrow as
-    // the divider lets it be.
+    // The window is narrowed to 1024 CSS px (as wide as a 2048px window at 200% zoom; the zoom
+    // itself isn't emulated), then the Inspector is made as narrow as the divider lets it be.
     await page.setViewportSize({ width: 1024, height: 700 });
     const header = page.locator('[data-pane="right"] .head');
     const fits = () =>
@@ -457,6 +466,153 @@ test.describe('on a desktop', () => {
       return color;
     });
     expect(caret).toBe(focus);
+  });
+});
+
+// The Inspector's header, after review: the arrow keys follow the row as drawn, tools go icon-only
+// before they fold, Stats' contents are on its page, and More counts the problems it hides.
+test.describe("the Inspector's header", () => {
+  test.skip(({ isMobile }) => !!isMobile, 'the Inspector is on a wide screen');
+
+  test('the arrow keys go through every tab in order after a Markdown document, then a script', async ({
+    page,
+  }) => {
+    await start(page);
+    // The row is drawn again for each kind: Preview and Stats, then the script's five.
+    await runCommand(page, 'Open sample: Markdown');
+    const row = page.getByRole('tablist', { name: 'Inspector' }).getByRole('tab');
+    await expect(row).toHaveText(['Preview', 'Stats']);
+    await runCommand(page, 'Open sample: Screenplay');
+    const names = ['Script', 'Outline', 'Cards', 'Stats', 'Scaffold'];
+    await expect(row).toHaveText(names);
+    await row.first().focus();
+    for (const name of [...names.slice(1), names[0]]) {
+      await page.keyboard.press('ArrowRight');
+      await expect(row.filter({ hasText: name })).toBeFocused();
+    }
+    for (const name of [...names].reverse()) {
+      await page.keyboard.press('ArrowLeft');
+      await expect(row.filter({ hasText: name })).toBeFocused();
+    }
+    await page.keyboard.press('End');
+    await expect(row.last()).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(row.first()).toBeFocused();
+  });
+
+  test('at 1280, a tool with an icon goes icon-only before anything folds', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await start(page);
+    const tools = page.locator('#inspector-tools');
+    const changes = tools.getByRole('button', { name: 'Changes', exact: true });
+    // One click away, in the header: its label hidden, still its name, and its tooltip.
+    await expect(changes).toBeVisible();
+    await expect(tools).toHaveClass(/\bcompact\b/);
+    await expect(changes.locator('.tool-label')).toBeHidden();
+    await expect(changes.locator('.tool-icon')).toBeVisible();
+    await changes.hover();
+    await expect(page.getByRole('tooltip').filter({ hasText: 'Changes' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: 'Fit width' })).toBeVisible();
+    // Wider, the labels come back.
+    await page.setViewportSize({ width: 1600, height: 800 });
+    await expect(tools).not.toHaveClass(/\bcompact\b/);
+    await expect(changes.locator('.tool-label')).toBeVisible();
+  });
+
+  test('at 1280, Scaffold keeps Follow the cursor and Pages, and Fix all is one click away', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await start(page);
+    await newScreenplay(page);
+    await setText(page, 'INT. HALL - DAY\n\nMARGARET\nHi.\n');
+    await runCommand(page, 'Show Scaffold');
+    const tools = page.locator('#inspector-tools');
+    await expect(tools.getByRole('button', { name: 'Follow the cursor' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: 'Pages' })).toBeVisible();
+    // Fix all: Strict Fountain's fixable problems.
+    await openSettings(page);
+    await settingsDialog(page).getByRole('switch', { name: 'Strict Fountain' }).check();
+    await closeSettings(page);
+    await setText(page, 'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\nthen louder)\nHi.\n');
+    await showView(page, 'Problems');
+    await expect(tools.getByRole('button', { name: 'Fix all' })).toBeVisible();
+  });
+
+  test("Stats' contents are a row at the top of its page, not in the header", async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+    const contents = stats.getByRole('navigation', { name: 'Stats sections' });
+    await expect(contents).toBeVisible();
+    await expect(page.locator('#inspector-tools').getByRole('navigation')).toHaveCount(0);
+    await expect(contents.getByRole('link')).toHaveText([
+      'Overview',
+      'Characters',
+      'Character by scene',
+    ]);
+    // Above the first section.
+    const first = await stats.getByRole('heading', { name: 'Overview', level: 2 }).boundingBox();
+    const row = await contents.boundingBox();
+    expect((row?.y ?? 0) + (row?.height ?? 0)).toBeLessThanOrEqual(first?.y ?? 0);
+    await contents.getByRole('link', { name: 'Characters' }).click();
+    await expect(stats.getByRole('heading', { name: 'Characters', level: 2 })).toBeFocused();
+  });
+
+  test('with Problems under More, More shows the count, and says it', async ({ page }) => {
+    await start(page);
+    await newScreenplay(page);
+    await setText(page, 'INT. HALL\n\nShe waits.\n\nINT. YARD\n\nHe waits.\n');
+    const more = page.locator('[data-pane="right"]').getByRole('button', { name: /^More tabs/ });
+    await expect(more).toHaveAccessibleName('More tabs, 2 problems');
+    await expect(more.locator('[data-more-count]')).toHaveText('2');
+    await setText(page, 'INT. HALL\n\nShe waits.\n');
+    await expect(more).toHaveAccessibleName('More tabs, 1 problem');
+    // Problems showing: its own tab has the count, and More has none.
+    await showView(page, 'Problems');
+    await expect(more).toHaveAccessibleName('More tabs');
+    await expect(more.locator('[data-more-count]')).toHaveCount(0);
+    await setText(page, 'INT. HALL - DAY\n\nShe waits.\n');
+    await page.locator('#tab-right-script').click();
+    await expect(more).toHaveAccessibleName('More tabs');
+  });
+
+  test("Changes' reason is its description only, never read as text twice", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 700 });
+    await start(page);
+    await newScreenplay(page);
+    // Nothing saved or snapshotted yet: Changes says why it can't be on.
+    const fold = page.getByRole('button', { name: 'More tools' });
+    await fold.click();
+    const panel = page.getByRole('group', { name: 'View tools' });
+    const changes = panel.getByRole('button', { name: 'Changes', exact: true });
+    await expect(changes).toHaveAttribute('aria-disabled', 'true');
+    const id = (await changes.getAttribute('aria-describedby')) ?? '';
+    expect(id).not.toBe('');
+    await expect(changes).toHaveAccessibleDescription(/.+/);
+    const why = (await page.locator(`[id="${id}"]`).textContent())?.trim() ?? '';
+    // Both copies (the header's folded one and the panel's) keep it hidden: no text to meet.
+    await expect(page.getByText(why, { exact: true })).toHaveCount(2);
+    for (const copy of await page.getByText(why, { exact: true }).all()) {
+      await expect(copy).toBeHidden();
+    }
+  });
+
+  test('when the tools panel goes with focus in it, focus goes to the same tool in the header', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 700 });
+    await start(page);
+    await page.getByRole('button', { name: 'More tools' }).click();
+    const panel = page.getByRole('group', { name: 'View tools' });
+    await panel.getByRole('button', { name: 'Fit width' }).focus();
+    await expect(panel.getByRole('button', { name: 'Fit width' })).toBeFocused();
+    // Wide enough for every tool: the panel goes.
+    await page.setViewportSize({ width: 1800, height: 700 });
+    await expect(panel).toHaveCount(0);
+    await expect(
+      page.locator('#inspector-tools').getByRole('button', { name: 'Fit width' }),
+    ).toBeFocused();
   });
 });
 

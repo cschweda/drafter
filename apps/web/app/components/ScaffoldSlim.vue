@@ -55,46 +55,38 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="scaffold-bar" @keydown="onKeydown">
-    <button
-      type="button"
+  <!-- Separate items, so the Inspector's header can put them icon-only and fold them one by one
+       (Call 15); Back's key works on each of them. -->
+  <ToolButton
+    icon="i-lucide-arrow-left"
+    label="Back"
+    class="zoom-button"
+    :aria-disabled="canGoBack ? undefined : 'true'"
+    :aria-keyshortcuts="'Alt+ArrowLeft'"
+    @click="scaffoldBack"
+    @keydown="onKeydown"
+  />
+  <span class="name">{{ name }}</span>
+  <span class="spacer" />
+  <div v-if="page.kind === 'scene'" class="zoom">
+    <ToolButton
+      icon="i-lucide-locate-fixed"
+      label="Follow the cursor"
       class="zoom-button"
-      :aria-disabled="canGoBack ? undefined : 'true'"
-      :aria-keyshortcuts="'Alt+ArrowLeft'"
-      @click="scaffoldBack"
-    >
-      <UIcon name="i-lucide-arrow-left" class="icon" aria-hidden="true" />Back
-    </button>
-    <span class="name">{{ name }}</span>
-    <span class="spacer" />
-    <div v-if="page.kind === 'scene'" class="zoom">
-      <button
-        type="button"
-        class="zoom-button"
-        :aria-pressed="follow ? 'true' : 'false'"
-        @click="follow = !follow"
-      >
-        Follow the cursor
-      </button>
-    </div>
-    <MenuButton :items="items" :content="MENU_CONTENT">
-      <button type="button" class="zoom-button pages">
-        Pages
-        <UIcon name="i-lucide-chevron-down" class="icon" aria-hidden="true" />
-      </button>
-    </MenuButton>
+      :aria-pressed="follow ? 'true' : 'false'"
+      @click="follow = !follow"
+      @keydown="onKeydown"
+    />
   </div>
+  <MenuButton :items="items" :content="MENU_CONTENT">
+    <button type="button" class="zoom-button pages" @keydown="onKeydown">
+      Pages
+      <UIcon name="i-lucide-chevron-down" class="icon" aria-hidden="true" />
+    </button>
+  </MenuButton>
 </template>
 
 <style scoped>
-.scaffold-bar {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  min-width: 0;
-}
 .zoom-button {
   display: inline-flex;
   align-items: center;

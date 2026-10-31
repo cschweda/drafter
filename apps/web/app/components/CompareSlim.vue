@@ -25,45 +25,50 @@ function update() {
     <span class="what">Comparing {{ current.older.label }} with {{ current.newer.label }}</span>
     <span class="spacer" />
     <div v-if="hasPages" role="group" aria-label="View" class="choice">
-      <button
-        type="button"
-        class="slim-button"
+      <ToolButton
+        icon="i-lucide-diff"
+        label="Changes"
+        class="slim-button compare-tool"
         :aria-pressed="view === 'changes' ? 'true' : 'false'"
         @click="compare.setView('changes')"
-      >
-        Changes
-      </button>
-      <button
-        type="button"
-        class="slim-button"
+      />
+      <ToolButton
+        icon="i-lucide-files"
+        label="Pages"
+        class="slim-button compare-tool"
         :aria-pressed="view === 'pages' ? 'true' : 'false'"
         @click="compare.setView('pages')"
-      >
-        Pages
-      </button>
+      />
     </div>
     <div v-if="view === 'changes' && splitAllowed" role="group" aria-label="Layout" class="choice">
-      <button
-        type="button"
-        class="slim-button"
+      <ToolButton
+        icon="i-lucide-rows-2"
+        label="Unified"
+        class="slim-button compare-tool"
         :aria-pressed="layout === 'unified' ? 'true' : 'false'"
         @click="compare.setLayout('unified')"
-      >
-        Unified
-      </button>
-      <button
-        type="button"
-        class="slim-button"
+      />
+      <ToolButton
+        icon="i-lucide-columns-2"
+        label="Side by side"
+        class="slim-button compare-tool"
         :aria-pressed="layout === 'split' ? 'true' : 'false'"
         @click="compare.setLayout('split')"
-      >
-        Side by side
-      </button>
+      />
     </div>
-    <button v-if="current.newer.at === null" type="button" class="slim-button" @click="update">
-      Update
-    </button>
-    <button type="button" class="slim-button" @click="compare.close(true)">Close comparison</button>
+    <ToolButton
+      v-if="current.newer.at === null"
+      icon="i-lucide-refresh-cw"
+      label="Update"
+      class="slim-button compare-tool"
+      @click="update"
+    />
+    <ToolButton
+      icon="i-lucide-x"
+      label="Close comparison"
+      class="slim-button compare-tool"
+      @click="compare.close(true)"
+    />
   </template>
 </template>
 
@@ -77,17 +82,21 @@ function update() {
 .choice {
   display: inline-flex;
 }
-.choice .slim-button {
+</style>
+
+<style>
+/* Unscoped: each button is a ToolButton, whose root this component's scope doesn't reach. */
+.choice .slim-button.compare-tool {
   border-radius: 0;
 }
-.choice .slim-button:first-child {
+.choice .slim-button.compare-tool:first-child {
   border-radius: 5px 0 0 5px;
 }
-.choice .slim-button + .slim-button {
+.choice .slim-button.compare-tool + .slim-button.compare-tool {
   margin-left: -1px;
   border-radius: 0 5px 5px 0;
 }
-.slim-button {
+.slim-button.compare-tool {
   min-height: 24px;
   padding: 0 10px;
   border: 1px solid var(--heading);
@@ -99,7 +108,7 @@ function update() {
   white-space: nowrap;
   cursor: pointer;
 }
-.slim-button[aria-pressed='true'] {
+.slim-button.compare-tool[aria-pressed='true'] {
   background: var(--heading);
   color: var(--bg);
 }

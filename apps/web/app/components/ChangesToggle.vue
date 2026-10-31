@@ -39,17 +39,18 @@ const items = computed<DropdownMenuItem[][]>(() => [
 </script>
 
 <template>
-  <button
-    type="button"
+  <ToolButton
+    icon="i-lucide-diff"
+    label="Changes"
     class="zoom-button changes-toggle"
     :aria-pressed="on ? 'true' : 'false'"
     :aria-disabled="why ? 'true' : undefined"
     :aria-describedby="why ? whyId : undefined"
     @click="changes.toggle()"
-  >
-    Changes
-  </button>
-  <span v-if="why" :id="whyId" class="sr-only">{{ why }}</span>
+  />
+  <!-- Hidden, so it is only ever the button's description: the header and its "⋯" panel each draw
+       a copy of the tools, and a reading of the page meets neither. -->
+  <span v-if="why" :id="whyId" hidden>{{ why }}</span>
   <MenuButton v-if="on" :items="items" :content="{ align: 'start' }">
     <button type="button" class="zoom-button since">
       <span class="since-word">since: </span>{{ baselineLabel(baseline) }}

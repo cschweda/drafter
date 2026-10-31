@@ -52,6 +52,7 @@ const absences = computed(() => {
 
 <template>
   <div class="stats">
+    <StatsContents />
     <StatsOverview />
     <StatsCharacters v-if="!markdown" />
     <section v-if="!markdown" class="section" aria-labelledby="stats-grid">

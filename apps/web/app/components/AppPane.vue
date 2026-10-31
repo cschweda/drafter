@@ -161,10 +161,20 @@ const row = computed(() => {
     more: [...out, ...inspectorSet.value.more.filter((tab) => tab.id !== props.selected)],
   };
 });
-/** The tabs the arrow keys move along: the row's, less those folded into More. */
-const allTabs = computed(() => row.value.row.filter((tab, index) => !isFolded(tab, index)));
 const isFolded = (tab: Tab, index: number) => inspector.value && folded(tab, index);
 const moreTabs = computed(() => row.value.more);
+/**
+ * With Problems under More (the Inspector's row, Call 14), More carries its count, seen and in its
+ * name ("More tabs, 3 problems"), so a count isn't hidden behind a menu.
+ */
+const moreProblems = computed(() =>
+  count.value > 0 && moreTabs.value.some((tab) => tab.id === 'problems') ? count.value : 0,
+);
+/** More's name: "More tabs", and the problems it holds ("More tabs, 3 problems"). */
+const moreButtonName = computed(() => {
+  const n = moreProblems.value;
+  return n > 0 ? `More tabs, ${n} ${n === 1 ? 'problem' : 'problems'}` : 'More tabs';
+});
 
 /** A tab's name with its badge: "Notes, 3 open". */
 function tabName(tab: Tab): string {
@@ -177,7 +187,13 @@ function moreName(tab: Tab): string {
   return tabName({ ...tab, label: labelOf(tab) });
 }
 
-const tabButtons = ref<HTMLButtonElement[]>([]);
+/**
+ * The row's tab buttons in the order they are drawn. (A `ref` in a `v-for` keeps the order they were
+ * first made in, which a change of document kind leaves out of step with the row.)
+ */
+function tabButtons(): HTMLButtonElement[] {
+  return [...(head.value?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [])];
+}
 
 // More: a menu of the tabs that aren't in the row (MenuButton, as every menu is). Choosing one shows
 // it here, and focus goes to its tab rather than back to More.
@@ -204,9 +220,9 @@ function onMoreCloseAutoFocus(event: Event) {
 }
 
 // Manual activation: arrow keys move focus along the tabs, and Enter or Space chooses one.
-function onKeydown(event: KeyboardEvent, tab: Tab) {
-  const buttons = tabButtons.value.filter((button) => !button.dataset.folded);
-  const index = allTabs.value.findIndex((t) => t.id === tab.id);
+function onKeydown(event: KeyboardEvent) {
+  const buttons = tabButtons().filter((button) => !button.dataset.folded);
+  const index = buttons.indexOf(event.currentTarget as HTMLButtonElement);
   const lastIndex = buttons.length - 1;
   const moves: Record<string, number> = {
     ArrowRight: index === lastIndex ? 0 : index + 1,
@@ -221,13 +237,17 @@ function onKeydown(event: KeyboardEvent, tab: Tab) {
 }
 
 // ---- Fitting the Inspector's header (Call 15) ------------------------------------------------
-// When the tabs and the view's tools would collide, the tools fold into "⋯" first, one at a time
-// from the left (so Fit · 100%, Close, and the like stay longest), then tabs move into More from the
-// right; the one showing always stays. Measured, never a fixed count: every tab and tool stays drawn
+// When the tabs and the view's tools would collide, the tools that have an icon go icon-only first
+// (their labels stay their names and tooltips), then tools fold into "⋯", one at a time from the
+// left (so Fit · 100%, Close, and the like stay longest), then tabs move into More from the right;
+// the one showing always stays. Measured, never a fixed count: every tab and tool stays drawn
 // (a folded one hidden, out of the flow), so their widths are known without drawing them twice.
 
 const head = ref<HTMLElement>();
 const toolsBox = ref<HTMLElement>();
+const tablist = ref<HTMLElement>();
+/** The tools are icon-only (the stage before any folds). */
+const toolsCompact = ref(false);
 /** How many of the view's tools, from the left, are folded into "⋯". */
 const foldedTools = ref(0);
 const toolsFolded = computed(() => foldedTools.value > 0);
@@ -240,7 +260,7 @@ const FOLD_BUTTON = 34;
 /** The gap between tools in the header (`.head .tools`). */
 const TOOL_GAP = 8;
 /** Between the tabs and the tools, at least. */
-const SPARE = 8;
+const SPARE = 4;
 
 /** A view's tools, one by one: what it draws in the flow (not its words for a screen reader alone). */
 function toolItems(box: HTMLElement | null | undefined): HTMLElement[] {
@@ -271,7 +291,7 @@ function measure() {
     Number.parseFloat(style.paddingLeft) -
     Number.parseFloat(style.paddingRight);
   const gap = Number.parseFloat(style.columnGap) || 0;
-  const widths = tabButtons.value.map((button) => button.getBoundingClientRect().width);
+  const widths = tabButtons().map((button) => button.getBoundingClientRect().width);
   const more = header.querySelector<HTMLElement>('[data-more]')?.getBoundingClientRect().width ?? 0;
   const tools = toolItems(toolsBox.value).map((el) => el.getBoundingClientRect().width);
   const tabsWidth = widths.reduce((sum, w) => sum + w, 0) + Math.max(0, widths.length - 1) * 2;
@@ -283,6 +303,19 @@ function measure() {
       : rest.reduce((sum, w) => sum + w, 0) + (rest.length - 1) * TOOL_GAP + gap + SPARE;
   };
   const base = tabsWidth + gap + more;
+  if (
+    !toolsCompact.value &&
+    base + toolsFrom(0) > room &&
+    toolsBox.value?.querySelector('[data-tool-icon]')
+  ) {
+    // Icon-only first, measured again once drawn so.
+    toolsCompact.value = true;
+    foldedTools.value = 0;
+    fit.value = Number.POSITIVE_INFINITY;
+    applyFold();
+    void nextTick(measureSoon);
+    return;
+  }
   let k = 0;
   while (k < tools.length && base + toolsFrom(k) + (k > 0 ? FOLD_BUTTON : 0) > room) k++;
   foldedTools.value = k;
@@ -314,13 +347,34 @@ function measureSoon() {
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(measure);
 }
+/**
+ * Starts the fitting over: labels back, nothing folded, then measured. For a change that may give
+ * room back (a wider header, another view, other tabs); a change the fitting itself makes (a tool
+ * going icon-only, a tab moving into More) only measures again, or the two would chase each other.
+ */
+function refit() {
+  toolsCompact.value = false;
+  foldedTools.value = 0;
+  fit.value = Number.POSITIVE_INFINITY;
+  applyFold();
+  void nextTick(measureSoon);
+}
+let headWidth = -1;
 onMounted(() => {
   if (!inspector.value || typeof ResizeObserver === 'undefined') return;
   // Measured in the next frame: folding changes sizes the observer watches, which within its own
-  // callback is a loop (WebKit reports it).
-  observer = new ResizeObserver(() => measureSoon());
-  if (head.value) observer.observe(head.value);
-  if (toolsBox.value) observer.observe(toolsBox.value);
+  // callback is a loop (WebKit reports it). The tab list and More are watched too, so a web font
+  // that arrives late, or a badge, measures again.
+  observer = new ResizeObserver((entries) => {
+    const header = entries.find((entry) => entry.target === head.value);
+    if (header && Math.round(header.contentRect.width) !== headWidth) {
+      headWidth = Math.round(header.contentRect.width);
+      refit();
+    } else measureSoon();
+  });
+  for (const el of [head.value, toolsBox.value, tablist.value]) if (el) observer.observe(el);
+  const more = head.value?.querySelector('[data-more]');
+  if (more) observer.observe(more);
   measure();
 });
 onUpdated(() => {
@@ -340,12 +394,12 @@ watch(
   },
 );
 watch(
-  () => [
-    props.selected,
-    inspectorRow.value.map((tab) => tab.id + (tab.badge ?? '')).join(),
-    count.value,
-    kind.value,
-  ],
+  () => [props.selected, inspectorRow.value.map((tab) => tab.id).join(), kind.value],
+  () => refit(),
+);
+// A badge (Notes' open count, Problems' count) changes a width: measured again, from where it is.
+watch(
+  () => [inspectorRow.value.map((tab) => tab.badge ?? '').join(), count.value],
   () => void nextTick(measureSoon),
 );
 watch(toolsOpen, (open) => {
@@ -373,6 +427,29 @@ watch(toolsOpen, (open) => {
 watch(toolsFolded, (now) => {
   if (!now) toolsOpen.value = false;
 });
+// The panel going while focus is in it (the header grew, and the tools came back out): focus goes
+// to the same tool in the header, else to "⋯", never to the page's body.
+const panelShown = computed(() => inspector.value && toolsFolded.value && toolsOpen.value);
+watch(
+  panelShown,
+  (now, was) => {
+    const panel = toolsPanel.value;
+    const active = document.activeElement;
+    if (now || !was || !panel || !active || !panel.contains(active)) return;
+    const index = toolItems(panel).findIndex((item) => item.contains(active));
+    void nextTick(() => {
+      const item = index >= 0 ? toolItems(toolsBox.value)[index] : undefined;
+      const target =
+        item && !item.hasAttribute('data-tool-folded')
+          ? item.matches('button, a, input, select, [tabindex]')
+            ? item
+            : item.querySelector<HTMLElement>('button, a, input, select, [tabindex]')
+          : null;
+      (target ?? toolsButton.value)?.focus();
+    });
+  },
+  { flush: 'pre' },
+);
 /**
  * Focus gone from the panel to somewhere else (a Stats section's heading, the view): the panel
  * goes, as a popover does. A menu a tool opens (Changes' since:, Scaffold's Pages) keeps it.
@@ -497,12 +574,11 @@ function onPanelKeydown(event: KeyboardEvent) {
     :data-pane="props.pane"
   >
     <div ref="head" class="tabs" :class="{ head: inspector }">
-      <div role="tablist" :aria-label="props.label" class="tablist">
+      <div ref="tablist" role="tablist" :aria-label="props.label" class="tablist">
         <button
           v-for="(tab, index) in row.row"
           :id="`tab-${props.pane}-${tab.id}`"
           :key="tab.id"
-          ref="tabButtons"
           type="button"
           role="tab"
           class="tab"
@@ -513,7 +589,7 @@ function onPanelKeydown(event: KeyboardEvent) {
           :tabindex="tab.id === props.selected ? 0 : -1"
           :aria-label="tab.badge ? tabName(tab) : undefined"
           @click="emit('choose', tab.id)"
-          @keydown="onKeydown($event, tab)"
+          @keydown="onKeydown($event)"
         >
           <UIcon
             v-if="inspector && iconOf(tab)"
@@ -530,8 +606,11 @@ function onPanelKeydown(event: KeyboardEvent) {
         :items="moreItems"
         :content="{ align: 'start', onCloseAutoFocus: onMoreCloseAutoFocus }"
       >
-        <button type="button" class="tab more-button" data-more>
-          <span class="more-word">More</span><span class="sr-only"> tabs</span>
+        <button type="button" class="tab more-button" data-more :aria-label="moreButtonName">
+          <span class="more-word">More</span>
+          <span v-if="moreProblems > 0" class="badge" aria-hidden="true" data-more-count>{{
+            moreProblems
+          }}</span>
           <UIcon name="i-lucide-chevron-down" class="chevron" aria-hidden="true" />
         </button>
       </MenuButton>
@@ -543,8 +622,9 @@ function onPanelKeydown(event: KeyboardEvent) {
           :id="INSPECTOR_TOOLS_ID"
           ref="toolsBox"
           class="tools slim"
+          :class="{ compact: toolsCompact }"
         >
-          <InspectorTools :selected="props.selected" />
+          <InspectorTools :selected="props.selected" :compact="toolsCompact" />
         </div>
         <UTooltip v-if="toolsFolded" text="More tools" :delay-duration="400">
           <button
@@ -772,7 +852,7 @@ function onPanelKeydown(event: KeyboardEvent) {
   align-items: center;
   gap: 5px;
   height: 32px;
-  padding: 0 7px;
+  padding: 0 6px;
   border-radius: var(--r-sm);
   font-weight: 500;
 }
@@ -785,9 +865,9 @@ function onPanelKeydown(event: KeyboardEvent) {
 }
 .head .tab.on::after {
   position: absolute;
-  right: 7px;
+  right: 6px;
   bottom: -2px;
-  left: 7px;
+  left: 6px;
   height: 2px;
   border-radius: 2px;
   background: var(--accent-text);
@@ -859,6 +939,13 @@ function onPanelKeydown(event: KeyboardEvent) {
   border-radius: var(--r);
   background: var(--overlay);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+}
+/* Icon-only: the label stays the button's name and its tooltip (ToolButton). */
+.head .tools.compact :deep(.tool-label) {
+  display: none;
+}
+.head .tools.compact :deep(.tool-button) {
+  padding-inline: 6px;
 }
 /* `:deep`, so a view's own tools (CardsSlim) draw their buttons the same. */
 .slim :deep(.spacer) {

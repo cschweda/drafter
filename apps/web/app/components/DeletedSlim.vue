@@ -30,14 +30,13 @@ const count = computed(() => (filter.value.trim() === '' ? shown.value.length : 
   </template>
   <span v-else-if="listed">{{ countLabel(count) }}</span>
   <span class="spacer" />
-  <button
-    type="button"
-    class="slim-button"
+  <ToolButton
+    icon="i-lucide-x"
+    label="Close"
+    class="slim-button deleted-tool"
     aria-label="Close Deleted scenes"
     @click="deleted.close(true)"
-  >
-    Close
-  </button>
+  />
 </template>
 
 <style scoped>
@@ -46,7 +45,11 @@ const count = computed(() => (filter.value.trim() === '' ? shown.value.length : 
   height: 8px;
   accent-color: var(--heading);
 }
-.slim-button {
+</style>
+
+<style>
+/* Unscoped: each button is a ToolButton, whose root this component's scope doesn't reach. */
+.slim-button.deleted-tool {
   min-height: 24px;
   padding: 0 8px;
   border: 0;
@@ -57,7 +60,7 @@ const count = computed(() => (filter.value.trim() === '' ? shown.value.length : 
   font-weight: 600;
   cursor: pointer;
 }
-.slim-button:hover {
+.slim-button.deleted-tool:hover {
   background: var(--tab-on);
 }
 </style>
