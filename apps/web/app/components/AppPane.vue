@@ -316,7 +316,9 @@ function measureSoon() {
 }
 onMounted(() => {
   if (!inspector.value || typeof ResizeObserver === 'undefined') return;
-  observer = new ResizeObserver(() => measure());
+  // Measured in the next frame: folding changes sizes the observer watches, which within its own
+  // callback is a loop (WebKit reports it).
+  observer = new ResizeObserver(() => measureSoon());
   if (head.value) observer.observe(head.value);
   if (toolsBox.value) observer.observe(toolsBox.value);
   measure();
@@ -385,14 +387,16 @@ function onToolsFocusout(event: FocusEvent) {
 function onToolsKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || event.defaultPrevented) return;
   const target = event.target as Node | null;
-  const inside = !!target && (toolsPanel.value?.contains(target) || toolsButton.value === target);
+  // Safari and WebKit don't focus a clicked button: focus is then on the page itself.
+  const inside =
+    !!target &&
+    (toolsPanel.value?.contains(target) ||
+      toolsButton.value === target ||
+      target === document.body);
   if (!inside) return;
   event.preventDefault();
-  const hadFocus =
-    toolsPanel.value?.contains(document.activeElement) ||
-    toolsButton.value === document.activeElement;
   toolsOpen.value = false;
-  if (hadFocus) toolsButton.value?.focus();
+  toolsButton.value?.focus();
 }
 
 // ---- The editor's header -----------------------------------------------------------------

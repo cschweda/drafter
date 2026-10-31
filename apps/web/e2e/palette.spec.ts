@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, removePickers, stubPickers } from './fs-stub';
+import { showView } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const SAMPLE = readFileSync(
@@ -63,9 +64,7 @@ async function start(page: Page) {
 
 /** The Source tab, which a phone doesn't show to begin with. */
 async function showSource(page: Page) {
-  if (!(await editor(page).isVisible())) {
-    await page.getByRole('tab', { name: 'Source' }).first().click();
-  }
+  if (!(await editor(page).isVisible())) await showView(page, 'Source');
   await expect(editor(page)).toBeVisible();
 }
 

@@ -39,9 +39,7 @@ export async function start(page: Page) {
 
 /** The Source tab, which a phone doesn't show to begin with. */
 export async function showSource(page: Page) {
-  if (!(await editor(page).isVisible())) {
-    await page.getByRole('tab', { name: 'Source' }).first().click();
-  }
+  if (!(await editor(page).isVisible())) await showView(page, 'Source');
   await expect(editor(page)).toBeVisible();
 }
 
@@ -287,9 +285,8 @@ export async function viewTool(
  * pane's tabs.
  */
 export async function showView(page: Page, name: string) {
-  if (name === 'Source' && (await page.locator('[data-pane="left"] .cm-content').count()) > 0) {
-    return;
-  }
+  // A wide screen's editor is always there (it may still be mounting after a reload).
+  if (name === 'Source' && (page.viewportSize()?.width ?? 0) >= 1024) return;
   const pane = lastPane(page);
   const pattern = new RegExp(`^${name}\\b`);
   const shown = pane.getByRole('tab', { name: pattern, selected: true });

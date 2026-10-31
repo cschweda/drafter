@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { stored } from './modules';
+import { showView, stored } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
@@ -44,9 +44,7 @@ async function start(page: Page) {
 
 /** The Source tab, which a phone doesn't show to begin with. */
 async function showSource(page: Page) {
-  if (!(await editor(page).isVisible())) {
-    await page.getByRole('tab', { name: 'Source' }).first().click();
-  }
+  if (!(await editor(page).isVisible())) await showView(page, 'Source');
   await expect(editor(page)).toBeVisible();
 }
 

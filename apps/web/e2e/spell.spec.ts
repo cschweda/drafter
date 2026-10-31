@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { showView } from './modules';
 
 // Drafter's spellcheck (Phase 2 design §12; Plan D): the worker checks the text after a pause, and
 // the Source pane underlines what it marks. Every name, place, and misspelling here is invented.
@@ -24,9 +25,7 @@ async function start(page: Page) {
 
 /** The Source tab, which a phone doesn't show to begin with. */
 async function showSource(page: Page) {
-  if (!(await editor(page).isVisible())) {
-    await page.getByRole('tab', { name: 'Source' }).first().click();
-  }
+  if (!(await editor(page).isVisible())) await showView(page, 'Source');
   await expect(editor(page)).toBeVisible();
 }
 

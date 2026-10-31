@@ -4,6 +4,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
 import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
+import { showView } from './modules';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
 // They are prerendered, so they read without JavaScript, and they share the app's theme.
@@ -27,9 +28,7 @@ async function start(page: Page) {
 
 /** The Source tab, which a phone doesn't show to begin with. */
 async function showSource(page: Page) {
-  if (!(await editor(page).isVisible())) {
-    await page.getByRole('tab', { name: 'Source' }).first().click();
-  }
+  if (!(await editor(page).isVisible())) await showView(page, 'Source');
   await expect(editor(page)).toBeVisible();
 }
 
