@@ -14,11 +14,11 @@
 
 **Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, plain text, a self-contained web page (HTML), and an e-book (EPUB), so it can go wherever it needs to go. See [Formats](#formats).
 
-**Open it and write.** No sign-up, no sign-in, no licence key, no activation, ever. Drafter is ready the moment the page loads or the app starts.
+**Open it and write. It's free, and there's no catch.** No sign-up, no sign-in, no licence key, no activation, ever. Drafter is ready the moment the page loads or the app starts.
 
 - **No login, ever.** There is no account to make, and nothing to sign in to every time you start. Close it, open it again tomorrow, and you're back in your script.
 - **Instant.** [drafter.dev](https://drafter.dev) opens straight into a script, and the desktop app starts the same way. No installer is needed to begin, and no setup.
-- **Free.** No price, no trial, no subscription, and no features held back.
+- **Free, really. There's no catch.** No price, no trial, no subscription, no "free tier" with the good parts locked away, no ads, and nothing collected about you to sell. Drafter isn't a business: it's made by one writer, for writers, and given away. The production features professionals need are in it too.
 - **Open.** The code is MIT-licensed and on GitHub, and your script is a plain `.fountain` text file you own, so a lapsed licence can never lock you out of your own work.
 - **Private.** No cookies, no analytics, no tracking, and no telemetry. Your script never leaves your device: Drafter has no server that could receive it. See [Privacy](https://drafter.dev/docs/privacy/).
 - **Works offline.** Once it has loaded, Drafter runs with no connection, on a plane or a train.
