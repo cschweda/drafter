@@ -94,6 +94,9 @@ async function savedThenChanged(page: Page, before: string, after: string) {
 
 /** Turns Show changes on from the slim bar, and waits for the marks. */
 async function turnOn(page: Page, count?: number) {
+  // The save (or snapshot) it compares with is read a moment after it lands; until then the button
+  // only says why it can't be on.
+  await expect(toggle(page)).not.toHaveAttribute('aria-disabled', 'true');
   await toggle(page).click();
   await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
   if (count !== undefined) await expect(marked(page)).toHaveCount(count);

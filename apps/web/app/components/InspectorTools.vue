@@ -60,14 +60,16 @@ const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props
 </script>
 
 <template>
+  <!-- "Updating…" comes first: the tools sit at the header's right, so a word that comes and goes
+       moves only what is left of it, never a button under the pointer. -->
   <template v-if="props.selected === 'script' && markdown">
-    <span class="page">{{ wordsLabel(words) }}</span>
     <span v-if="previewing" class="updating">Updating…</span>
+    <span class="page">{{ wordsLabel(words) }}</span>
   </template>
   <template v-else-if="props.selected === 'script'">
+    <span v-if="updating" class="updating">Updating…</span>
     <span class="page">{{ pageLabel(page) }}</span>
     <ChangesToggle />
-    <span v-if="updating" class="updating">Updating…</span>
     <span class="spacer" />
     <div role="group" aria-label="Zoom" class="zoom">
       <button

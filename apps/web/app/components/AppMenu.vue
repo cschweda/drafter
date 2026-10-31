@@ -208,9 +208,21 @@ async function onOpen(open: boolean) {
 // mark as usual.
 let chosen = false;
 let toEditor = false;
+/**
+ * Where the chosen command put focus (Show stats, a section's heading), before the menu, which can
+ * take it back when the pointer leaves its item, closed: it gets it back then.
+ */
+let placed: HTMLElement | null = null;
+function onFocusWhileChosen(event: FocusEvent) {
+  const target = event.target as HTMLElement | null;
+  if (!target || target === mark.value || target.closest('[data-reka-menu-content]')) return;
+  placed = target;
+}
 function choose(shows: boolean) {
   chosen = true;
   toEditor = shows;
+  placed = null;
+  document.addEventListener('focusin', onFocusWhileChosen, true);
 }
 const mark = ref<HTMLElement | null>(null);
 function onCloseAutoFocus(event: Event) {
@@ -218,12 +230,25 @@ function onCloseAutoFocus(event: Event) {
   chosen = false;
   event.preventDefault();
   requestAnimationFrame(() => {
+    document.removeEventListener('focusin', onFocusWhileChosen, true);
     const active = document.activeElement;
+    const lost =
+      !active ||
+      active === document.body ||
+      active === mark.value ||
+      !!active.closest('[data-reka-menu-content]');
+    const target = placed;
+    placed = null;
+    if (target?.isConnected && lost) {
+      target.focus();
+      return;
+    }
     if (active && active !== document.body) return;
     if (toEditor) editor.goto(editor.view.state.selection.main.head);
     else mark.value?.focus();
   });
 }
+onBeforeUnmount(() => document.removeEventListener('focusin', onFocusWhileChosen, true));
 </script>
 
 <template>
