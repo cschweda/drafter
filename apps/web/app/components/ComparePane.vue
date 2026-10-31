@@ -280,6 +280,13 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
     0 0 0 1px var(--sheet-edge),
     var(--sheet-shadow);
 }
+/* Printed, a page is the paper itself: no hairline or shadow. */
+@media print {
+  .pages :deep(.drafter-page) {
+    border: 0;
+    box-shadow: none;
+  }
+}
 .pages :deep(.compare-mark:focus-visible),
 .pages :deep(.compare-mark:focus) {
   outline: 2px solid var(--focus);

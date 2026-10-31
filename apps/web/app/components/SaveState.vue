@@ -21,11 +21,14 @@ const state = computed(() =>
 const SAVED_MS = 2000;
 const justSaved = ref(false);
 let timer: ReturnType<typeof setTimeout> | undefined;
+// A save that lands as the bar goes (a phone turned, focus mode) starts no timer after it has gone.
+let alive = true;
 watch(savesLanded, () => {
   clearTimeout(timer);
   // Drawn again, so its fade starts over.
   justSaved.value = false;
   void nextTick(() => {
+    if (!alive) return;
     justSaved.value = true;
     timer = setTimeout(() => {
       justSaved.value = false;
@@ -39,7 +42,10 @@ watch(dirty, (now) => {
     justSaved.value = false;
   }
 });
-onBeforeUnmount(() => clearTimeout(timer));
+onBeforeUnmount(() => {
+  alive = false;
+  clearTimeout(timer);
+});
 </script>
 
 <template>
@@ -105,6 +111,8 @@ onBeforeUnmount(() => clearTimeout(timer));
   color: var(--muted);
   font: 500 12px/1 var(--font-sans);
   white-space: nowrap;
+  /* A deliberate exception to the 140ms motion rule: the maintainer asked for a brief fade, so
+     "Saved" fades over its last 500ms (2s × 25%). */
   animation: saved-fade 2s var(--ease) both;
 }
 .check {

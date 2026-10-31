@@ -227,3 +227,8 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **A `^` cue at the start of a section's own stretch** is counted as a speech of its own there, in full, since tallies never run across a section, while the layout pairs it with the speech before. Rare, and the words are counted once either way.
 - **Smaller edges, found in review:** one shared `isWide()` helper for the three places that ask the same media query (`stats/tab.ts`, `compare/use-compare.ts`, `history/deleted.ts`); one generator of invented words for the cast's tests (`names.test.ts`, the cast budget, `scaling`); a test for `whenIdle`'s `setTimeout` fallback; and the scene page's own table (In this scene) doesn't yet move focus to its heading when a focused row leaves, as the other Scaffold tables do.
 - **The screen-reader listening pass** (the final accessibility steps). Axe runs on every Stats section, the grid and its List, Scaffold's pages, and the Cast and Places, in both themes at both widths on every project.
+
+## Fresh look
+
+- **The phone's top bar scrolls sideways when it's full** (a module's buttons and the unsaved dot). That's a stopgap until Task 9 gives the phone layout an overflow menu.
+- **There's no "Saving…" state** (design §3.4). Saves are near-instant, so the top bar goes straight from "Unsaved" to "✓ Saved".

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { commandById } from '~/commands/registry';
+import { useLayout } from '~/editor/layout';
+import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { wordsLabel } from '~/markdown/preview';
@@ -25,7 +27,8 @@ import { useStorageNotice } from '~/storage/storage-notice';
 // the file's name, which opens History, and the recovery copy's state when it is a warning. Right,
 // pages · running time (which opens the Counts panel), words, problems (which opens Problems), and
 // the template. Nothing here repeats the top bar or the Inspector: the save state is the top bar's
-// (SaveState), the page the cursor is on is the Script's header, and a sample is the top bar's chip.
+// (SaveState), and a sample is the top bar's chip. The page the cursor is on is the Script's header,
+// so the bar says it only while the Script is out of sight.
 // Below 640px the bar is hidden, but for what can't wait: the recovery copy's warning, an error,
 // a running sprint, and the Counts panel opened from the palette.
 const { kind } = useEditor();
@@ -113,6 +116,18 @@ const explanation = computed(() => (warning.value ? RECOVERY[warning.value].why 
 
 // ---- The counts -------------------------------------------------------------------------------
 
+// The cursor's page ("Page 2 of 5", "Title page"): the Script's header says it, so the bar does only
+// while no Script is shown (the Inspector on another view, or the one pane on another tab).
+const { page } = useLayout();
+const { tabs, phoneTab } = usePanes();
+const wide = useWideScreen();
+const scriptShown = computed(() =>
+  wide.value ? tabs.value.right === 'script' : phoneTab.value === 'script',
+);
+const cursorPage = computed(() =>
+  markdown.value || scriptShown.value ? '' : pageLabel(page.value),
+);
+
 /** "1.4 pages · About 1 min" for a script, "1,204 words" for a Markdown document. */
 const countsLabel = computed(() => {
   // A Markdown document's words as the Markdown session counts them (a document too deep to preview
@@ -183,16 +198,18 @@ const errors = computed(() =>
     spellProblem.value,
   ].some(Boolean),
 );
-/** Something that can't wait for a wider screen: the bar shows it, and only it, on a phone. */
+/** Something that can't wait for a wider screen: the bar shows it, and only it, on a phone. (An
+    error is said, and shown, by the errors' region, which is never hidden.) */
 const urgent = computed(
-  () => !!warning.value || errors.value || sprint.state.value.status !== 'idle' || countsOpen.value,
+  () => !!warning.value || sprint.state.value.status !== 'idle' || countsOpen.value,
 );
 </script>
 
 <template>
-  <footer class="status" :class="{ urgent }" data-tour="status" @keydown="onKeydown">
-    <!-- Errors: each on a line of its own above the row, said at once. -->
-    <div v-if="errors" class="errors">
+  <div class="status-bar" data-tour="status" @keydown="onKeydown">
+    <!-- Errors: each on a line of its own above the row, said at once. The region is always there,
+         even on a phone where the bar is hidden, so a line added to it is announced. -->
+    <div class="errors" :class="{ shown: errors }">
       <p v-if="saveError" role="alert" class="failed">{{ saveError }}</p>
       <p v-if="openError" role="alert" class="failed">{{ openError }}</p>
       <p v-if="readOnlyHint" role="alert" class="failed">{{ readOnlyHint }}</p>
@@ -201,79 +218,81 @@ const urgent = computed(
       <p v-if="snapshotProblem" role="alert" class="failed">{{ snapshotProblem }}</p>
       <p v-if="spellProblem" role="alert" class="failed">{{ spellProblem }}</p>
     </div>
-    <div class="row">
-      <!-- The file item opens History (§11.1, Call 14): "History, my-script.fountain". -->
-      <button
-        type="button"
-        class="history-button item wide-only"
-        aria-haspopup="dialog"
-        :aria-label="`History, ${file}`"
-        :title="fileTitle"
-        @click="openHistory"
-      >
-        <span class="name">{{ file }}</span>
-      </button>
-      <button
-        v-if="warning"
-        type="button"
-        class="recovery item"
-        :class="warning === 'unavailable' ? 'danger' : 'warn'"
-        :aria-expanded="open ? 'true' : 'false'"
-        aria-controls="recovery-why"
-        @click="open = !open"
-      >
-        <UIcon name="i-lucide-triangle-alert" class="icon" />
-        {{ RECOVERY[warning].label }}
-      </button>
-      <span class="spacer" />
-      <span v-if="progress" class="wide-only" data-item="goal">{{ progressLabel(progress) }}</span>
-      <!-- Not live regions: a screen reader reads them when asked, not at every change. -->
-      <template v-if="writtenToday">
-        <span v-if="showWords" class="wide-only" data-stat="words-today">{{
-          wordsTodayLabel(writtenToday.words ?? 0)
-        }}</span>
-        <span class="wide-only" data-stat="time-today">{{ timeTodayLabel(writtenToday.ms) }}</span>
-      </template>
-      <!-- A sprint's time left (not a live region: only its end is announced). -->
-      <SprintTimer />
-      <!-- The counts item opens the Counts panel. A Markdown document has words, no pages, and no checks. -->
-      <span ref="countsWrap" class="counts-wrap" @focusout="onFocusOut">
+    <footer class="status" :class="{ urgent }">
+      <div class="row">
+        <!-- The file item opens History (§11.1, Call 14): "History, my-script.fountain". -->
         <button
-          ref="countsButton"
           type="button"
-          class="counts-button item wide-only"
-          title="Counts and daily goal"
+          class="history-button item wide-only"
           aria-haspopup="dialog"
-          :aria-expanded="countsOpen ? 'true' : 'false'"
-          aria-controls="counts-panel"
-          @click="countsOpen ? closeCounts(false) : (countsOpen = true)"
+          :aria-label="`History, ${file}`"
+          :title="fileTitle"
+          @click="openHistory"
         >
-          {{ countsLabel }}
+          <span class="name">{{ file }}</span>
         </button>
-        <CountsPanel v-if="countsOpen" id="counts-panel" @close="closeCounts()" @stats="openStats" />
-      </span>
-      <span v-if="scriptWords" class="wide-only" data-item="words">{{ scriptWords }}</span>
-      <button
-        v-if="!markdown"
-        type="button"
-        class="problems-button item wide-only"
-        title="Show Problems"
-        @click="showProblems"
-      >
-        {{ problemsLabel(count) }}
-      </button>
-      <!-- The template, and its menu. -->
-      <span class="wide-only template">
-        <TemplateChip />
-      </span>
-    </div>
-    <p v-show="open && warning" id="recovery-why" class="why">{{ explanation }}</p>
-  </footer>
+        <button
+          v-if="warning"
+          type="button"
+          class="recovery item"
+          :class="warning === 'unavailable' ? 'danger' : 'warn'"
+          :aria-expanded="open ? 'true' : 'false'"
+          aria-controls="recovery-why"
+          @click="open = !open"
+        >
+          <UIcon name="i-lucide-triangle-alert" class="icon" />
+          {{ RECOVERY[warning].label }}
+        </button>
+        <span class="spacer" />
+        <span v-if="progress" class="wide-only" data-item="goal">{{ progressLabel(progress) }}</span>
+        <!-- Not live regions: a screen reader reads them when asked, not at every change. -->
+        <template v-if="writtenToday">
+          <span v-if="showWords" class="wide-only" data-stat="words-today">{{
+            wordsTodayLabel(writtenToday.words ?? 0)
+          }}</span>
+          <span class="wide-only" data-stat="time-today">{{ timeTodayLabel(writtenToday.ms) }}</span>
+        </template>
+        <!-- A sprint's time left (not a live region: only its end is announced). -->
+        <SprintTimer />
+        <span v-if="cursorPage" class="wide-only" data-item="page">{{ cursorPage }}</span>
+        <!-- The counts item opens the Counts panel. A Markdown document has words, no pages, and no checks. -->
+        <span ref="countsWrap" class="counts-wrap" @focusout="onFocusOut">
+          <button
+            ref="countsButton"
+            type="button"
+            class="counts-button item wide-only"
+            title="Counts and daily goal"
+            aria-haspopup="dialog"
+            :aria-expanded="countsOpen ? 'true' : 'false'"
+            aria-controls="counts-panel"
+            @click="countsOpen ? closeCounts(false) : (countsOpen = true)"
+          >
+            {{ countsLabel }}
+          </button>
+          <CountsPanel v-if="countsOpen" id="counts-panel" @close="closeCounts()" @stats="openStats" />
+        </span>
+        <span v-if="scriptWords" class="wide-only" data-item="words">{{ scriptWords }}</span>
+        <button
+          v-if="!markdown"
+          type="button"
+          class="problems-button item wide-only"
+          title="Show Problems"
+          @click="showProblems"
+        >
+          {{ problemsLabel(count) }}
+        </button>
+        <!-- The template, and its menu. -->
+        <span class="wide-only template">
+          <TemplateChip />
+        </span>
+      </div>
+      <p v-show="open && warning" id="recovery-why" class="why">{{ explanation }}</p>
+    </footer>
+  </div>
 </template>
 
 <style scoped>
 .status {
-  position: relative;
   box-sizing: border-box;
   background: var(--surface);
   border-top: 1px solid var(--border);
@@ -367,11 +386,26 @@ const urgent = computed(
 .template {
   display: inline-flex;
 }
+/* The recovery copy's explanation opens above the whole bar, errors and all. */
+.status-bar {
+  position: relative;
+  min-width: 0;
+}
+/* Empty, it takes no room. With a line in it, it sits on the bar's surface above the row. */
 .errors {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  color: var(--muted);
+  font: 400 12px/16px var(--font-sans);
+}
+.errors.shown {
   padding: 4px 8px 2px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.errors.shown + .status {
+  border-top: 0;
 }
 .failed {
   margin: 0;

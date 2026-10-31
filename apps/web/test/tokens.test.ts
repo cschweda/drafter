@@ -314,6 +314,18 @@ describe('the unsaved dot', () => {
       svg.replace(/<title>[^<]*<\/title>/, '').replace(/<circle[^>]*\/>/g, '');
     expect(body(icon)).toBe(body(plain));
   });
+
+  test('has a raster .ico too, at the favicon’s sizes, for a browser that picks the .ico', () => {
+    const brand = (name: string) =>
+      readFileSync(new URL(`../../../brand/${name}`, import.meta.url));
+    const sizes = (ico: Buffer) =>
+      Array.from({ length: ico.readUInt16LE(4) }, (_, i) => ico.readUInt8(6 + i * 16));
+    const unsaved = brand('favicon-unsaved.ico');
+    const plain = brand('favicon.ico');
+    expect(unsaved.readUInt16LE(2)).toBe(1);
+    expect(sizes(unsaved)).toEqual(sizes(plain));
+    expect(unsaved.equals(plain)).toBe(false);
+  });
 });
 
 // The alerts' tones (fresh-look Task 3b, the maintainer, 2026-10-31): a caution is a warm amber, an

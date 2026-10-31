@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { removePickers } from './fs-stub';
 import { editor, problemsTab, runCommand, setText, showView, start } from './modules';
 
 // The status bar (fresh-look design §3.4, Task 6): one quiet 24px row of borderless buttons. On the
@@ -72,6 +73,31 @@ test.describe('on a wide screen', () => {
     // (Its file item says there is no file yet: that is the file, not the save state.)
     await expect(status(page)).not.toContainText(/Unsaved|Saved/);
     await expect(status(page).locator('[role="status"]')).toHaveCount(0);
+  });
+
+  test('says the cursor’s page only while the Script is out of sight', async ({ page }) => {
+    await start(page);
+    const pageItem = status(page).locator('[data-item="page"]');
+    // The Script is in the Inspector, and its header says the page.
+    await showView(page, 'Script');
+    await expect(pageItem).toHaveCount(0);
+    // With the Outline there instead, the bar says it, before the page total.
+    await showView(page, 'Outline');
+    await expect(pageItem).toHaveText(/^(Title page|Page 1 of 2)$/);
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect(pageItem).toHaveText('Page 2 of 2');
+    const before = await status(page).evaluate((footer) => {
+      const label = footer.querySelector('[data-item="page"]');
+      const counts = footer.querySelector('.counts-button');
+      return !!label && !!counts && !!(label.compareDocumentPosition(counts) & 4);
+    });
+    expect(before).toBe(true);
+    // The title page is named as the Script names it.
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect(pageItem).toHaveText('Title page');
+    await showView(page, 'Script');
+    await expect(pageItem).toHaveCount(0);
   });
 
   test('says pages · running time, words, problems, and the template', async ({ page }) => {
@@ -165,6 +191,20 @@ test.describe('on a wide screen', () => {
   });
 });
 
+test.describe('from 640px to 1023px', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'a desktop window, resized');
+
+  test('says the cursor’s page while the one pane is the Source', async ({ page }) => {
+    await page.setViewportSize({ width: 800, height: 900 });
+    await start(page);
+    const pageItem = status(page).locator('[data-item="page"]');
+    await showView(page, 'Source');
+    await expect(pageItem).toHaveText(/^(Title page|Page \d+ of 2)$/);
+    await showView(page, 'Script');
+    await expect(pageItem).toHaveCount(0);
+  });
+});
+
 test.describe('below 640px', () => {
   test('is hidden, from 640px up shown', async ({ page, isMobile }) => {
     test.skip(!!isMobile, 'a desktop window, resized');
@@ -199,6 +239,43 @@ test.describe('below 640px', () => {
     await chip.click();
     await expect(page.locator('#recovery-why')).toBeVisible();
     await expect(page.locator('#recovery-why')).toContainText('Save the script to a file');
+  });
+
+  test('keeps the errors’ region in place, so an error is said as it arrives', async ({
+    page,
+    isMobile,
+  }) => {
+    await storageKept(page);
+    // A file input, as every browser without a picker has.
+    await removePickers(page);
+    if (!isMobile) await page.setViewportSize({ width: 390, height: 800 });
+    await start(page);
+    await expect(status(page)).toBeHidden();
+    // The region is there before any error, and not taken out of the page with the bar.
+    const region = status(page).locator('.errors');
+    await expect(region).toHaveCount(1);
+    expect(await region.evaluate((el) => el.checkVisibility())).toBe(true);
+    await region.evaluate((el) => {
+      (window as unknown as { __region: Element }).__region = el;
+    });
+    // A refused file: its line goes into that same region.
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    const chooser = page.waitForEvent('filechooser');
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'Open a file…' })
+      .click();
+    await (await chooser).setFiles({
+      name: 'Picture.png',
+      mimeType: 'text/plain',
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0x02]),
+    });
+    const alert = region.getByRole('alert');
+    await expect(alert).toContainText('isn’t a script');
+    await expect(alert).toBeVisible();
+    expect(
+      await region.evaluate((el) => el === (window as unknown as { __region: Element }).__region),
+    ).toBe(true);
   });
 
   test('opens the counts from the palette', async ({ page, isMobile }) => {

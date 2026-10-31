@@ -113,7 +113,9 @@ function fillToBottom() {
   if (!(last instanceof HTMLElement) || !last.classList.contains('drafter-page')) return;
   const box = last.getBoundingClientRect();
   const bottom = box.bottom - pane.getBoundingClientRect().top - pane.clientTop + pane.scrollTop;
-  const room = Math.floor(pane.clientHeight - bottom);
+  // A pixel short of the bottom: at a fractional zoom the taller sheet can round up past it, and
+  // then Fit would gain a scrollbar (and lose it, and gain it, as the pane is resized).
+  const room = Math.floor(pane.clientHeight - bottom) - 1;
   if (room <= 0) return;
   const scale = Number(el.style.zoom) || 1;
   el.style.setProperty('--fill', `${(box.height + room) / scale}px`);
@@ -412,10 +414,15 @@ watch(cursorBlock, (block) => {
   -webkit-user-select: none;
   user-select: none;
 }
-/* Never printed: Show changes is something to look with (Call 1). */
+/* Never printed: Show changes is something to look with (Call 1). Nor the sheet's hairline and
+   shadow, which lift it off the screen's desk: a printed page is the paper itself. */
 @media print {
   .script-host :deep(:is(.live-band, .live-sign, .live-gap)) {
     display: none;
+  }
+  .script-host :deep(.drafter-page) {
+    border: 0;
+    box-shadow: none;
   }
 }
 </style>

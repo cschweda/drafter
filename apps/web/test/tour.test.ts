@@ -83,6 +83,16 @@ describe('the tour’s steps', () => {
     expect(title?.content.length).toBeLessThan(260);
   });
 
+  test('tell where the status bar is shown that the red dot means unsaved changes', () => {
+    // From 640px up the status step is about the bar, so the Save step says what the dot means.
+    const DOT = 'A red dot by the title means unsaved changes; click it to save.';
+    for (const wide of [true, false]) {
+      expect(buildSteps(wide, true).find((s) => s.id === 'save')?.content).toContain(DOT);
+    }
+    // Below 640px the status step is the dot's own.
+    expect(buildSteps(false, false).find((s) => s.id === 'save')?.content).not.toContain(DOT);
+  });
+
   test('know which of them point at a pane', () => {
     expect(buildSteps(true).map((s) => paneOf(s))).toEqual([
       'source',

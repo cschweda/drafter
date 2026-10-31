@@ -27,6 +27,7 @@ describe('syncAssets', () => {
       'favicon.svg',
       'favicon.ico',
       'favicon-unsaved.svg',
+      'favicon-unsaved.ico',
       'apple-touch-icon.png',
       'icon-192.png',
       'icon-512.png',

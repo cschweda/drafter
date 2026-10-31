@@ -90,8 +90,10 @@ export function buildSteps(_wide: boolean, statusBar = true): TourStep[] {
       id: 'save',
       target: target('save'),
       title: 'Save',
-      content:
-        'Saves a .fountain file. In Chrome and Edge on a computer it saves straight back to the file, so a script in a Dropbox or Google Drive folder syncs. Other browsers, and phones, download a copy.',
+      // Below 640px the status step says what the red dot means; from 640px up, this step does.
+      content: `Saves a .fountain file. In Chrome and Edge on a computer it saves straight back to the file, so a script in a Dropbox or Google Drive folder syncs. Other browsers, and phones, download a copy.${
+        statusBar ? ' A red dot by the title means unsaved changes; click it to save.' : ''
+      }`,
     },
     statusBar
       ? {

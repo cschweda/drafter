@@ -321,6 +321,12 @@ writeFileSync(
   ico([16, 32, 48].map((size) => ({ size, source: 'favicon.svg' }))),
 );
 
+/** The unsaved icon's raster twin, for a browser that picks the .ico over the SVG. */
+writeFileSync(
+  here('favicon-unsaved.ico'),
+  ico([16, 32, 48].map((size) => ({ size, source: 'favicon-unsaved.svg' }))),
+);
+
 /**
  * The Windows app's icon: the taskbar, the Start menu, Explorer, the installer. The favicon's
  * pixel grid up to 32 pixels, so the bars stay sharp at 16, 24, and 32; the mark above that.
@@ -334,5 +340,5 @@ writeFileSync(
 );
 
 console.log(
-  `Wrote ${Object.keys(files).length} SVGs, 7 PNGs, favicon.ico, and icon-windows.ico to brand/.`,
+  `Wrote ${Object.keys(files).length} SVGs, 7 PNGs, favicon.ico, favicon-unsaved.ico, and icon-windows.ico to brand/.`,
 );

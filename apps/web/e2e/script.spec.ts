@@ -218,11 +218,18 @@ test.describe('the Script pane on a desktop', () => {
       }
       return files;
     };
-    /** The first page's paper and type when printed. */
+    /** The first page's paper and type when printed: no hairline or shadow, which are the screen's. */
     const printed = async () => {
       await page.emulateMedia({ media: 'print' });
       const colors = await pageColors(page);
+      const edges = await pages(page)
+        .first()
+        .evaluate((el) => {
+          const css = getComputedStyle(el);
+          return { shadow: css.boxShadow, border: css.borderTopWidth };
+        });
       await page.emulateMedia({ media: 'screen' });
+      expect(edges).toEqual({ shadow: 'none', border: '0px' });
       return [colors.paper, colors.ink];
     };
     const paper = await exports();
@@ -541,7 +548,9 @@ test.describe('a short script', () => {
       await page.getByRole('button', { name: zoom, exact: true }).click();
       await expect
         .poll(async () => Math.abs((await lastPageReachesBottom(page)).under), zoom)
-        .toBeLessThan(1.5);
+        // The sheet stops a pixel short of the bottom, so rounding never adds a scrollbar; its
+        // hairline covers that pixel.
+        .toBeLessThan(2.5);
       expect((await lastPageReachesBottom(page)).scrolls, zoom).toBeLessThanOrEqual(1);
     }
     // A longer script is whole sheets again: its last page ends where a page ends.
@@ -554,6 +563,50 @@ test.describe('a short script', () => {
         els.map((el) => Math.round(el.getBoundingClientRect().height)),
       );
       expect(new Set(heights).size).toBe(1);
+    }
+  });
+});
+
+test.describe('a short script, at Fit width in odd sizes', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'a desktop window, resized');
+
+  test('never gains a scrollbar from rounding', async ({ page }) => {
+    // Odd widths and heights give Fit a fractional scale, where the taller last sheet could round
+    // a pixel past the pane's bottom.
+    await page.setViewportSize({ width: 1440, height: 1500 });
+    await page.goto('/');
+    await expect(pages(page).first()).toBeVisible();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText('INT. HALL - DAY\n\nShe waits.\n');
+    if (!(await script(page).isVisible())) await page.getByRole('tab', { name: 'Script' }).click();
+    await expect(pages(page)).toHaveCount(1);
+    await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+    const measure = () =>
+      script(page).evaluate((el) => {
+        const host = el.closest('.script-host') as HTMLElement;
+        const last = [...el.querySelectorAll('.drafter-page')].at(-1) as HTMLElement;
+        const box = host.getBoundingClientRect();
+        return {
+          under: box.top + host.clientTop + host.clientHeight - last.getBoundingClientRect().bottom,
+          scrolls: host.scrollHeight - host.clientHeight,
+        };
+      });
+    for (const [width, height] of [
+      [1301, 1333],
+      [1373, 1427],
+      [1447, 1501],
+      [1533, 1279],
+      [1187, 1609],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      // Settled: the last sheet has grown (or shrunk) to the new bottom.
+      await expect
+        .poll(async () => Math.abs((await measure()).under), `${width}×${height}`)
+        .toBeLessThan(2.5);
+      const { under, scrolls } = await measure();
+      expect(under, `${width}×${height}`).toBeGreaterThanOrEqual(0);
+      expect(scrolls, `${width}×${height}`).toBe(0);
     }
   });
 });

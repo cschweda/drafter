@@ -294,6 +294,10 @@ kbd {
     overflow-x: auto;
     scrollbar-width: none;
   }
+  /* Safari has no scrollbar-width. */
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
   .sep.before-actions {
     display: none;
   }

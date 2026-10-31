@@ -596,10 +596,15 @@ test.describe('the unsaved indicator', () => {
     expect(clean).toEqual(['/favicon.ico', '/favicon.svg']);
     await page.keyboard.insertText('X');
     await expect(page).toHaveTitle('• Untitled Screenplay — Drafter');
-    await expect.poll(() => icons(page)).toEqual(['/favicon-unsaved.svg', '/favicon-unsaved.svg']);
+    await expect.poll(() => icons(page)).toEqual(['/favicon-unsaved.ico', '/favicon-unsaved.svg']);
     const icon = await page.request.get('/favicon-unsaved.svg');
     expect(icon.status()).toBe(200);
     expect(await icon.text()).toContain('fill="#E03E44"');
+    // The raster one, for a browser that picks the .ico: served, and not the plain favicon.
+    const ico = await page.request.get('/favicon-unsaved.ico');
+    expect(ico.status()).toBe(200);
+    const plainIco = await page.request.get('/favicon.ico');
+    expect(Buffer.compare(await ico.body(), await plainIco.body())).not.toBe(0);
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
     await download;
