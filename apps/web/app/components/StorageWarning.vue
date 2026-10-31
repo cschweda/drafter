@@ -10,7 +10,22 @@ import { rememberStorageToast, storageToastSeen, useStorageNotice } from '~/stor
 const { mayBeCleared, unavailable, advice, dismiss } = useStorageNotice();
 const { readOnly } = useGuard();
 const toast = useToast();
+const wide = useWideScreen();
 const TOAST = 'storage-warning';
+
+/** Save to a file, unless the tab can't save (read-only). */
+function saveAction() {
+  return readOnly.value
+    ? []
+    : [
+        {
+          label: 'Save to a file',
+          color: 'neutral' as const,
+          variant: 'subtle' as const,
+          onClick: () => save().catch(() => {}),
+        },
+      ];
+}
 
 function show() {
   // A data attribute names the toast for the tests and the status bar; Nuxt UI passes it to the root.
@@ -18,11 +33,13 @@ function show() {
   // The close button is named for what it does here; Nuxt UI passes the attribute to the button
   // (its props' type has no place for an attribute).
   const dismissButton = { 'aria-label': 'Dismiss' } as unknown as ButtonProps;
+  // On a phone the advice is a paragraph that would cover half the screen: it waits behind "Why?".
+  const brief = !wide.value;
   toast.add({
     ...attrs,
     id: TOAST,
     title: 'Your recovery copy may be cleared',
-    description: advice(),
+    description: brief ? undefined : advice(),
     icon: 'i-lucide-triangle-alert',
     color: 'neutral',
     // It waits for the writer (no time limit to read it, WCAG 2.2.1), and is said politely.
@@ -30,20 +47,24 @@ function show() {
     progress: false,
     type: 'background',
     close: dismissButton,
-    actions: readOnly.value
-      ? []
-      : [
+    actions: brief
+      ? [
           {
-            label: 'Save to a file',
+            label: 'Why?',
             color: 'neutral',
             variant: 'subtle',
-            onClick: () => save().catch(() => {}),
+            closeOnClick: false,
+            onClick: () => toast.update(TOAST, { description: advice(), actions: saveAction() }),
           },
-        ],
+          ...saveAction(),
+        ]
+      : saveAction(),
     'onUpdate:open': (open: boolean) => {
       if (open) return;
       dismiss();
-      rememberStorageToast();
+      // Remembered on a wide screen only: a phone has no status bar to keep saying so (Task 6 hides
+      // it below 640px), so there the toast comes back at each visit.
+      if (wide.value) rememberStorageToast();
     },
   });
 }

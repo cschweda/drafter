@@ -47,10 +47,11 @@ async function saveElsewhere() {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  padding: 6px 14px;
-  background: var(--chrome-2);
-  border-bottom: 1px solid var(--line);
-  border-left: 3px solid var(--heading);
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 4px 14px;
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
   color: var(--text);
   font-size: 13px;
 }
@@ -69,16 +70,15 @@ async function saveElsewhere() {
 .action {
   min-height: 24px;
   padding: 0 10px;
-  border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: none;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--overlay);
   color: var(--text);
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
-.action:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
+.action:hover {
+  background: var(--border);
 }
 </style>

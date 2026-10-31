@@ -11,6 +11,38 @@ async function violations(page: Page) {
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const editor = (page: Page) => page.locator('.cm-content');
 const warning = (page: Page) => page.locator('[data-warning]');
+const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
+
+/** The "may be cleared" toast, with its advice showing: a phone's waits behind "Why?". */
+async function toastWithAdvice(page: Page) {
+  const toast = page.locator('[data-warning="not-persistent"]');
+  await expect(toast).toBeVisible();
+  const why = toast.getByRole('button', { name: 'Why?' });
+  if (!wide(page)) {
+    await expect(toast).not.toContainText('may clear your recovery copy');
+    await why.click();
+  } else await expect(why).toHaveCount(0);
+  await expect(toast).toContainText('may clear');
+  return toast;
+}
+
+/** Records what the page's live regions say, from the first node, with their politeness. */
+async function hearLiveRegions(page: Page) {
+  await page.addInitScript(() => {
+    const heard: string[] = [];
+    (window as unknown as { heard: string[] }).heard = heard;
+    new MutationObserver(() => {
+      for (const el of document.querySelectorAll('[aria-live], [role="status"]')) {
+        const text = el.textContent?.trim();
+        if (!text) continue;
+        const live =
+          el.getAttribute('aria-live') ?? (el.getAttribute('role') === 'status' ? 'polite' : '');
+        const line = `${live}: ${text}`;
+        if (!heard.includes(line)) heard.push(line);
+      }
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+}
 
 /**
  * Makes `navigator.storage.persisted` and `persist` answer `granted`. Not granted, the "may be
@@ -206,23 +238,27 @@ test.describe('the recovery copy', () => {
       page,
     }) => {
       await stubPersistence(page, false);
+      await hearLiveRegions(page);
       await page.goto('/');
       await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveText(
         'Recovery copy: may be cleared',
       );
       // A toast, with the advice and a way to save, not a bar above the panes.
-      const toast = page.locator('[data-warning="not-persistent"]');
-      await expect(toast).toBeVisible();
-      await expect(toast).toContainText('may clear');
+      const toast = await toastWithAdvice(page);
       await expect(toast.getByRole('button', { name: 'Save to a file' })).toBeVisible();
+      // Its text is said in a polite live region.
+      await expect
+        .poll(() => page.evaluate(() => (window as unknown as { heard: string[] }).heard))
+        .toContainEqual(expect.stringMatching(/^polite: .*may be cleared/));
       await expect(page.locator('.top [data-warning]')).toHaveCount(0);
       // Said politely: the alert region is for a copy that can't be kept at all.
       await expect(page.locator('[role="alert"] [data-warning]')).toHaveCount(0);
       await toast.getByRole('button', { name: 'Dismiss' }).click();
       await expect(warning(page)).toHaveCount(0);
-      // Dismissed once, it is not shown in this browser again.
+      // Dismissed once on a wide screen, it is not shown in this browser again. A phone has no
+      // status bar to keep saying so, so there it comes back at the next visit.
       expect(await page.evaluate(() => localStorage.getItem('drafter-storage-toast-v1'))).toBe(
-        'true',
+        wide(page) ? 'true' : null,
       );
       // The status bar still says so, and the toast doesn't come back in this visit.
       await expect(status(page)).toContainText('Recovery copy: may be cleared');
@@ -255,13 +291,43 @@ test.describe('the recovery copy', () => {
       await expect(page.locator('[data-warning="not-persistent"]')).toHaveCount(0);
     });
 
-    test('dismisses the warning from the keyboard', async ({ page }) => {
+    test('dismisses the warning from the keyboard: F8, Tab to Dismiss, and Enter', async ({
+      page,
+      browserName,
+    }) => {
+      await stubPersistence(page, false);
+      await page.goto('/');
+      const dismiss = warning(page).getByRole('button', { name: 'Dismiss' });
+      await expect(dismiss).toBeVisible();
+      // F8 goes to the notifications; Tab moves through the toast's buttons to Dismiss. (WebKit on
+      // macOS skips buttons on Tab, as Safari does; Option-Tab reaches them.)
+      await page.locator('.cm-content').first().focus();
+      await page.keyboard.press('F8');
+      // (The list inside the "Notifications (F8)" region takes the focus.)
+      await expect(
+        page.getByRole('region', { name: /^Notifications/ }).locator('[data-slot="viewport"]'),
+      ).toBeFocused();
+      const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+      for (
+        let i = 0;
+        i < 6 && !(await dismiss.evaluate((el) => el === document.activeElement));
+        i++
+      ) {
+        await page.keyboard.press(tab);
+      }
+      await expect(dismiss).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(warning(page)).toHaveCount(0);
+    });
+
+    test('closes the warning with Escape from inside the toast', async ({ page }) => {
       await stubPersistence(page, false);
       await page.goto('/');
       const dismiss = warning(page).getByRole('button', { name: 'Dismiss' });
       await dismiss.focus();
-      await page.keyboard.press('Space');
+      await page.keyboard.press('Escape');
       await expect(warning(page)).toHaveCount(0);
+      await expect(status(page)).toContainText('Recovery copy: may be cleared');
     });
 
     test('asks the browser to keep storage when the first script is created', async ({ page }) => {
@@ -527,8 +593,7 @@ test.describe('the install advice in the storage warning', () => {
     expect(expected, `advice for ${testInfo.project.name}`).toBeDefined();
     await stubPersistence(page, false);
     await page.goto('/');
-    const notice = page.locator('[data-warning="not-persistent"]');
-    await expect(notice).toBeVisible();
+    const notice = await toastWithAdvice(page);
     await expect(notice).toContainText(
       'This browser may clear your recovery copy. Save the script to a file',
     );
@@ -554,8 +619,7 @@ test.describe('the install advice in the storage warning', () => {
       };
     });
     await page.goto('/');
-    const notice = page.locator('[data-warning="not-persistent"]');
-    await expect(notice).toBeVisible();
+    const notice = await toastWithAdvice(page);
     await expect(notice).toContainText(
       'This browser may clear your recovery copy. Save the script to a file to keep it safe.',
     );
@@ -568,8 +632,7 @@ test.describe('the install advice in the storage warning', () => {
       Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
     });
     await page.goto('/');
-    const notice = page.locator('[data-warning="not-persistent"]');
-    await expect(notice).toBeVisible();
+    const notice = await toastWithAdvice(page);
     await expect(notice).not.toContainText(/install|Safari|Dock|Home Screen|address bar/i);
   });
 });

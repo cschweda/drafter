@@ -268,9 +268,12 @@ describe('the top bar', () => {
   const TOP_BAR = [
     'AppToolbar.vue',
     'AppMenu.vue',
+    'FileBar.vue',
     'ModuleButtons.vue',
+    'ReadOnlyBar.vue',
     'SampleChip.vue',
     'SampleBar.vue',
+    'StartBlankBar.vue',
     'StorageWarning.vue',
     'StructureStrip.vue',
     'TemplateChip.vue',

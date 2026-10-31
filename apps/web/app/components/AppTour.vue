@@ -159,7 +159,8 @@ function reveal(step: TourStep | null) {
 // Runs before the render, so the pane is there when the module highlights its target.
 watch(currentStep, (step) => reveal(step));
 
-// The template chip is hidden on a phone, so its step points at the menu there.
+// The steps are built for the screen's width (the template step points at the Drafter menu on
+// every width now; the status step may differ by width once the status bar does, Task 6).
 watch(wide, (now) => {
   steps.splice(0, steps.length, ...buildSteps(now));
   reveal(currentStep.value);

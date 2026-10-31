@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
 import { useGuard } from '~/storage/guard';
+import { kindOf } from '~/storage/projects';
 import { useScript } from '~/storage/script';
 
 // The chip after the title in the top bar (fresh-look design §3.1): what state the script is in.
 // A sample says so, and its menu is the sample bar of old: New screenplay, New stage play, New
 // Markdown document, Open a file…. A tab that only shows the script says "Read-only" (the bar under
-// the top bar says why, and offers to edit here). A phone has the sample bar's row instead
-// (SampleBar.vue), since this chip doesn't fit beside its icons.
-const { project } = useScript();
+// the top bar says why, and offers to edit here). A writer's first document of a kind, which opens
+// with that kind's sample text, says so and offers Start blank (the command of that name), with the
+// explanation as its tooltip. A phone has rows instead (SampleBar.vue, StartBlankBar.vue), since
+// this chip doesn't fit beside its icons.
+const { project, canStartBlank } = useScript();
 const { readOnly } = useGuard();
 const editor = useEditor();
 const { actions, off } = useStartActions();
@@ -26,6 +30,21 @@ function onCloseAutoFocus(event: Event) {
     if (active && active !== document.body) return;
     editor.goto(editor.view.state.selection.main.head);
   });
+}
+
+/** What the document is, in the tooltip's sentence. */
+const what = computed(() => {
+  const current = project.value;
+  if (!current) return 'document';
+  if (kindOf(current) === 'markdown') return 'Markdown document';
+  return current.templateId === 'stage-play-standard' ? 'stage play' : 'screenplay';
+});
+const startBlankWhy = computed(
+  () =>
+    `Your first ${what.value} starts with a sample that shows how one is written. It’s yours: keep it, change it, or start blank.`,
+);
+function startBlank() {
+  void commandById('start-blank')?.run();
 }
 
 const items = computed<DropdownMenuItem[]>(() =>
@@ -54,6 +73,18 @@ const items = computed<DropdownMenuItem[]>(() =>
     </button>
   </MenuButton>
   <span v-else-if="readOnly" class="chip state">Read-only</span>
+  <button
+    v-else-if="canStartBlank"
+    type="button"
+    class="chip"
+    aria-label="Sample text: start blank"
+    :title="startBlankWhy"
+    data-start-blank-chip
+    @click="startBlank"
+  >
+    <span class="what">Sample text ·</span>
+    <span class="do">Start blank</span>
+  </button>
 </template>
 
 <style scoped>

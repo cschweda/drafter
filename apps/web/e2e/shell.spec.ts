@@ -136,25 +136,26 @@ test.describe('on a desktop', () => {
   });
 
   test('no element above the panes is taller than the toolbar', async ({ page }) => {
-    // The sample bar has become the chip: on a wide screen there is no banner above the panes.
+    const measure = () =>
+      page.evaluate(() => {
+        const bar = document.querySelector('header.toolbar') as HTMLElement;
+        const top = document.querySelector('.top') as HTMLElement;
+        return {
+          bar: bar.getBoundingClientRect().height,
+          others: Array.from(top.children)
+            .filter((el) => el !== bar && !el.matches('[aria-label="Structure strip"], .strip'))
+            .map((el) => ({
+              what: el.className || el.tagName,
+              height: el.getBoundingClientRect().height,
+            }))
+            .filter((o) => o.height > 0),
+        };
+      });
+    // The sample: the sample bar has become the chip, so there is no banner above the panes.
     await expect(page.getByRole('region', { name: 'Sample' })).toHaveCount(0);
-    const heights = await page.evaluate(() => {
-      const bar = document.querySelector('header.toolbar') as HTMLElement;
-      const top = document.querySelector('.top') as HTMLElement;
-      return {
-        bar: bar.getBoundingClientRect().height,
-        others: Array.from(top.children)
-          .filter((el) => el !== bar && !el.matches('[aria-label="Structure strip"], .strip'))
-          .map((el) => ({
-            what: el.className || el.tagName,
-            height: el.getBoundingClientRect().height,
-          }))
-          .filter((o) => o.height > 0),
-      };
-    });
-    for (const other of heights.others) {
-      expect(other.height, other.what).toBeLessThanOrEqual(heights.bar);
-    }
+    const heights = await measure();
+    expect(heights.others).toEqual([]);
+    // The start-blank state is checked in first-samples.spec.ts, whose writer has met no sample.
   });
 
   test('swaps panes when a tab open in the other pane is chosen', async ({ page }) => {

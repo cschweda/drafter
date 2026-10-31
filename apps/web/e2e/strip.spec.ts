@@ -38,21 +38,23 @@ const withStrip = {
 };
 
 /**
- * Hovering a block. Headless Firefox reports the pointer leaving the page at once when a block
- * near the top of the window is hovered and its card appears (on main too, once the bars above the
- * strip went; decided in the fresh look's Task 2), so there the pointer's events are sent to the
- * block itself.
+ * Hovering a block. Headless Firefox reports the pointer leaving the page when it jumps straight
+ * from the window's corner onto a block near the top of the window and the card appears (on main
+ * too, once the bars above the strip went; fresh look, Task 2), so there the pointer comes up from
+ * below the strip in a few steps, as a hand would. A real desktop Firefox is checked by hand.
  */
 function pointerFor(page: Page, browserName: string) {
-  const synthetic = browserName === 'firefox';
   return {
     async enter(block: Locator) {
-      if (synthetic) await block.dispatchEvent('pointerenter');
-      else await block.hover();
+      if (browserName !== 'firefox') return block.hover();
+      const box = await block.boundingBox();
+      if (!box) throw new Error('the block is not on the screen');
+      const x = box.x + Math.min(40, box.width / 2);
+      await page.mouse.move(x, box.y + box.height + 300);
+      await page.mouse.move(x, box.y + box.height - 3, { steps: 4 });
     },
-    async leave(block: Locator) {
-      if (synthetic) await block.dispatchEvent('pointerleave');
-      else await page.mouse.move(5, 400);
+    async leave(_block: Locator) {
+      await page.mouse.move(5, 400);
     },
   };
 }

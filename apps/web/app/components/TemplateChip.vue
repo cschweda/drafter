@@ -36,7 +36,13 @@ const templateItems = computed(() =>
 
 <template>
   <MenuButton :items="templateItems" :content="{ align: 'end', onCloseAutoFocus }">
-    <button type="button" class="chip template" :aria-label="chipLabel" :title="templateName">
+    <button
+      type="button"
+      class="chip template"
+      :aria-label="chipLabel"
+      :title="templateName"
+      data-tour="template"
+    >
       <span class="name">{{ templateName }}</span>
     </button>
   </MenuButton>

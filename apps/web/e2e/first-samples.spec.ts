@@ -22,8 +22,17 @@ test.use({
 });
 
 const editor = (page: Page) => page.locator('.cm-content');
-const bar = (page: Page) => page.getByRole('region', { name: 'Starting text' });
-const startBlank = (page: Page) => bar(page).getByRole('button', { name: 'Start blank' });
+/** The top bar's "Sample text · Start blank" chip (a wide screen). */
+const blankChip = (page: Page) =>
+  page.getByRole('banner').getByRole('button', { name: 'Sample text: start blank' });
+/** Where the offer is: the chip, or a phone's "Starting text" row. */
+const bar = (page: Page) => blankChip(page).or(page.getByRole('region', { name: 'Starting text' }));
+const startBlank = (page: Page) =>
+  blankChip(page).or(
+    page
+      .getByRole('region', { name: 'Starting text' })
+      .getByRole('button', { name: 'Start blank' }),
+  );
 /** The sample's chip in the top bar (a wide screen), or a phone's sample bar. */
 const sampleBar = (page: Page) =>
   page
@@ -81,6 +90,36 @@ function seenRows(page: Page): Promise<Array<{ key: string; value: unknown }>> {
 }
 
 test.describe('the first New of a kind', () => {
+  test('on a wide screen the offer is the top bar’s chip, and nothing above the panes is taller than the bar', async ({
+    page,
+  }) => {
+    test.skip((page.viewportSize()?.width ?? 0) < 1024, 'a phone has the row');
+    await start(page);
+    await command(page, 'New stage play');
+    await expect(blankChip(page)).toBeVisible();
+    await expect(blankChip(page)).toHaveText(/Sample text\s*·\s*Start blank/);
+    await expect(blankChip(page)).toHaveAttribute(
+      'title',
+      /Your first stage play starts with a sample/,
+    );
+    await expect(page.getByRole('region', { name: 'Starting text' })).toHaveCount(0);
+    const heights = await page.evaluate(() => {
+      const bar = document.querySelector('header.toolbar') as HTMLElement;
+      const top = document.querySelector('.top') as HTMLElement;
+      return {
+        bar: bar.getBoundingClientRect().height,
+        others: Array.from(top.children)
+          .filter((el) => el !== bar && !el.matches('.strip'))
+          .map((el) => el.getBoundingClientRect().height)
+          .filter((h) => h > 0),
+      };
+    });
+    expect(heights.others).toEqual([]);
+    await blankChip(page).click();
+    await expect.poll(() => text(page)).toContain('Title: Untitled Play');
+    await expect(bar(page)).toHaveCount(0);
+  });
+
   test('a first stage play opens with the sample; Start blank empties it and one Undo brings it back', async ({
     page,
   }) => {

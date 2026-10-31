@@ -400,3 +400,49 @@ test.describe('a returning visit', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });
+
+// The "may be cleared" toast on a first visit at a phone's size (fresh-look design §3.5): the
+// welcome sits above it, and it leaves the bottom row (the status bar) to be tapped.
+test.describe('a first visit on a phone, with the storage toast', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('the welcome sits above the toast, and the bottom row stays clickable', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 740 });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'storage', {
+        configurable: true,
+        value: { persisted: async () => false, persist: async () => false },
+      });
+    });
+    await page.goto('/');
+    const welcome = page.getByRole('alertdialog', { name: 'Welcome to Drafter' });
+    const toast = page.locator('[data-warning="not-persistent"]');
+    await expect(welcome).toBeVisible();
+    await expect(toast).toBeVisible();
+    // Where the toast is, the welcome (or its backdrop) is on top.
+    const covered = await toast.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return !!top && !el.contains(top);
+    });
+    expect(covered).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(welcome).toBeHidden();
+    await expect(toast).toBeVisible();
+    // Every button in the status bar is the element at its own centre: nothing lies over it.
+    const blocked = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('[data-tour="status"] button'))
+        .filter((b) => b.offsetParent !== null)
+        .filter((b) => {
+          const r = b.getBoundingClientRect();
+          const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return !top || !b.contains(top);
+        })
+        .map((b) => b.textContent?.trim()),
+    );
+    expect(blocked).toEqual([]);
+    // And the status bar's recovery item opens with a tap.
+    await page.getByRole('button', { name: 'Recovery copy: may be cleared' }).click();
+    await expect(page.locator('#recovery-why')).toBeVisible();
+  });
+});
