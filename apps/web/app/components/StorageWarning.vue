@@ -7,6 +7,7 @@ import { rememberStorageToast, storageToastSeen, useStorageNotice } from '~/stor
 // The recovery copy's warnings (fresh-look design §3.5). "May be cleared" is a toast with the advice
 // and Save to a file, shown in a browser until it is dismissed once; the status bar's chip keeps
 // saying so. "Unavailable" is an alert above the panes while it lasts: the changes are only in memory.
+// The first is a caution (`tone-warn`), the second an error (`tone-danger`).
 const { mayBeCleared, unavailable, advice, dismiss } = useStorageNotice();
 const { readOnly } = useGuard();
 const toast = useToast();
@@ -38,6 +39,8 @@ function show() {
   toast.add({
     ...attrs,
     id: TOAST,
+    // A caution, in its quiet amber (main.css's tones).
+    class: 'tone-warn',
     title: 'Your recovery copy may be cleared',
     description: brief ? undefined : advice(),
     icon: 'i-lucide-triangle-alert',
@@ -87,8 +90,8 @@ watch(
   <!-- The alert region stays in the page and only its contents change, so a screen reader hears
        what is put in it. -->
   <div role="alert" data-warning-region="alert">
-    <div v-if="unavailable" class="warning" data-warning="unavailable">
-      <UIcon name="i-lucide-triangle-alert" class="icon" />
+    <div v-if="unavailable" class="warning tone-danger" data-warning="unavailable">
+      <UIcon name="i-lucide-triangle-alert" class="icon tone-icon" />
       <p>
         Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
         memory until you save the script to a file.
@@ -102,17 +105,15 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  background: var(--raised);
+  padding: 6px 14px 6px 11px;
   border-bottom: 1px solid var(--border);
-  color: var(--text);
   font-size: 13px;
 }
+/* An error: the tone (main.css) is its tint, its edge, and the icon's colour. */
 .icon {
   flex: none;
   width: 16px;
   height: 16px;
-  color: var(--accent-text);
 }
 p {
   margin: 0;

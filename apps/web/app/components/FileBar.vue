@@ -21,7 +21,8 @@ async function saveElsewhere() {
 </script>
 
 <template>
-  <div data-file-bar :class="{ bar: trouble || updatedNotice }">
+  <!-- A file that can't be checked is a caution (main.css's `tone-warn`); "loaded" is only news. -->
+  <div data-file-bar :class="{ bar: trouble || updatedNotice, 'tone-warn': trouble, news: !trouble }">
     <span role="status" class="message">
       <template v-if="trouble">{{ troubleMessage(trouble) }}</template>
     </span>
@@ -50,10 +51,15 @@ async function saveElsewhere() {
   box-sizing: border-box;
   min-height: 32px;
   padding: 4px 14px;
-  background: var(--raised);
   border-bottom: 1px solid var(--border);
-  color: var(--text);
   font-size: 13px;
+}
+.bar.tone-warn {
+  padding-left: 11px;
+}
+.bar.news {
+  background: var(--raised);
+  color: var(--text);
 }
 .message,
 .notice {
@@ -70,15 +76,15 @@ async function saveElsewhere() {
 .action {
   min-height: 24px;
   padding: 0 10px;
-  border: 0;
+  border: 1px solid var(--tone-border);
   border-radius: var(--r-sm);
-  background: var(--overlay);
+  background: transparent;
   color: var(--text);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 }
 .action:hover {
-  background: var(--border);
+  background: var(--tone-hover);
 }
 </style>

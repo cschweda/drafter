@@ -2,10 +2,11 @@
 import { useGuard } from '~/storage/guard';
 
 const { readOnly, failed, editHere } = useGuard();
+// A caution (main.css's `tone-warn`): the tab can't write until the writer takes the script back.
 </script>
 
 <template>
-  <div :class="{ bar: readOnly }">
+  <div :class="{ bar: readOnly, 'tone-warn': readOnly }">
     <!-- The status region stays in the page and only its text changes, so a screen reader hears it. -->
     <p role="status">
       <template v-if="readOnly">This script is open for editing in another tab.</template>
@@ -23,10 +24,8 @@ const { readOnly, failed, editHere } = useGuard();
   gap: 4px 12px;
   box-sizing: border-box;
   min-height: 32px;
-  padding: 4px 14px;
-  background: var(--raised);
+  padding: 4px 14px 4px 11px;
   border-bottom: 1px solid var(--border);
-  color: var(--text);
   font-size: 13px;
 }
 p {
@@ -40,15 +39,15 @@ p {
 .take {
   min-height: 24px;
   padding: 0 10px;
-  border: 0;
+  border: 1px solid var(--tone-border);
   border-radius: var(--r-sm);
-  background: var(--overlay);
+  background: transparent;
   color: var(--text);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 }
 .take:hover {
-  background: var(--border);
+  background: var(--tone-hover);
 }
 </style>

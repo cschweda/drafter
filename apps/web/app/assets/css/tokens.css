@@ -26,6 +26,18 @@
   /* The editor's current line, a faint accent tint (design §3.2): lighter in the light theme, so
      the syntax colours on it keep 4.5:1. */
   --current-line: rgb(229 176 74 / 0.07);
+  /* The alerts' two tones (Task 3b): a caution's quiet amber, an error's quiet red. The hue is
+     the icon and the dismiss button's icon (4.5:1 on the tint), -border the 3px edge, -bg about
+     10% of the edge's hue over --raised, and -hover a hovered button's tint on it. main.css's
+     .tone-warn and .tone-danger draw them. */
+  --warn: #d4ad62;
+  --warn-bg: #2c2b28;
+  --warn-border: #b8944d;
+  --warn-hover: #3b362c;
+  --danger: #e08a80;
+  --danger-bg: #2d272a;
+  --danger-border: #c46a61;
+  --danger-hover: #3e2e30;
 }
 
 .light {
@@ -46,6 +58,14 @@
   --paper: #ffffff;
   --paper-ink: #1c1c1c;
   --current-line: rgb(229 176 74 / 0.03);
+  --warn: #7d5a12;
+  --warn-bg: #f6f2ea;
+  --warn-border: #a87d2a;
+  --warn-hover: #eee5d4;
+  --danger: #a8392f;
+  --danger-bg: #f9eeed;
+  --danger-border: #c4574d;
+  --danger-hover: #f3dddb;
 }
 
 /* The same in both themes: the radii, and the one motion (design §8), which main.css's `.motion`

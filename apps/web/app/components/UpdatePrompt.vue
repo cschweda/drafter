@@ -82,9 +82,11 @@ function onKeydown(event: KeyboardEvent) {
       offer when it appears.
     -->
     <div role="status" data-update-region>
+      <!-- A caution in its quiet amber; an install that failed is an error (main.css's tones). -->
       <section
         v-if="shown"
         class="update"
+        :class="installError ? 'tone-danger' : 'tone-warn'"
         aria-label="Update"
         data-update
         @keydown="onKeydown"
@@ -153,10 +155,10 @@ function onKeydown(event: KeyboardEvent) {
   gap: 8px 14px;
   max-width: min(34rem, calc(100vw - 24px));
   padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--heading);
-  border-radius: 7px;
-  background: var(--chrome-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--tone-border);
+  border-radius: var(--r-sm);
+  background: var(--tone-bg);
   color: var(--text);
   font-size: 13px;
   line-height: 1.45;
@@ -174,25 +176,26 @@ p {
 .action {
   min-height: 24px;
   padding: 0 10px;
-  border: 1px solid var(--muted);
-  border-radius: 5px;
+  border: 1px solid var(--tone-border);
+  border-radius: var(--r-sm);
   background: none;
   color: var(--text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
+.action:hover:not(:disabled) {
+  background: var(--tone-hover);
+}
+/* Later and Cancel: the quiet choices, the dismiss of this toast, in the hue. */
 .action.quiet {
-  border-color: var(--line);
-  font-weight: 400;
+  border-color: transparent;
+  color: var(--tone);
+  font-weight: 500;
 }
 .action:disabled {
   opacity: 0.6;
   cursor: default;
-}
-.action:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
 }
 @media (max-width: 1023px) {
   .update {

@@ -58,6 +58,44 @@ dialog:modal {
   }
 }
 
+/* An alert's tone (fresh-look Task 3b; the maintainer, 2026-10-31: "nothing blaring"): a caution
+   (`tone-warn`) or an error (`tone-danger`) is a tinted background with a 3px edge in its hue; the
+   text stays --text, and the icon and the dismiss button's icon take the hue. On a bar, a toast of
+   Nuxt UI's (its icon and close button by their `data-slot`), or one of Drafter's own. */
+.tone-warn {
+  --tone: var(--warn);
+  --tone-bg: var(--warn-bg);
+  --tone-border: var(--warn-border);
+  --tone-hover: var(--warn-hover);
+}
+
+.tone-danger {
+  --tone: var(--danger);
+  --tone-bg: var(--danger-bg);
+  --tone-border: var(--danger-border);
+  --tone-hover: var(--danger-hover);
+}
+
+:is(.tone-warn, .tone-danger) {
+  background: var(--tone-bg);
+  border-left: 3px solid var(--tone-border);
+  color: var(--text);
+}
+
+:is(.tone-warn, .tone-danger) :is([data-slot="icon"], .tone-icon) {
+  color: var(--tone);
+}
+
+/* The dismiss button: its icon in the hue, a hover tinted to match. (A bar's own buttons use the
+   --tone- variables in their component.) */
+:is(.tone-warn, .tone-danger) :is([data-slot="close"], .tone-dismiss) {
+  color: var(--tone);
+}
+
+:is(.tone-warn, .tone-danger) :is([data-slot="close"], .tone-dismiss):hover {
+  background: var(--tone-hover);
+}
+
 /* A misspelled word in the Source pane (Plan D, Call 17): a dotted 2 px underline in --spelling,
    3:1 against the background in both themes (test/tokens.test.ts). The word keeps its own color,
    and an underline of its own (Fountain's _underline_) is drawn as well: decorations add up. */

@@ -269,6 +269,7 @@ describe('the top bar', () => {
     'AppToolbar.vue',
     'AppMenu.vue',
     'FileBar.vue',
+    'HelpMenu.vue',
     'ModuleButtons.vue',
     'ReadOnlyBar.vue',
     'SampleChip.vue',
@@ -277,6 +278,7 @@ describe('the top bar', () => {
     'StorageWarning.vue',
     'StructureStrip.vue',
     'TemplateChip.vue',
+    'UpdatePrompt.vue',
   ];
 
   test.each(TOP_BAR)('%s has no colour but the tokens', (name) => {
@@ -285,5 +287,74 @@ describe('the top bar', () => {
     expect(style.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
     // Today's names are aliases on their way out; the moved components use the new ones.
     expect(style.match(/var\(--(chrome|chrome-2|line|heading|tab-on)\)/g) ?? []).toEqual([]);
+  });
+});
+
+// The alerts' tones (fresh-look Task 3b, the maintainer, 2026-10-31): a caution is a warm amber, an
+// error a red, both desaturated and quiet: a tinted background, a 3px edge in the hue, the text
+// still --text, and the dismiss button's icon in the hue.
+describe('the alert tones', () => {
+  const TONES = ['warn', 'danger'] as const;
+  const TONE_TOKENS = TONES.flatMap((tone) =>
+    ['', '-bg', '-border', '-hover'].map((part) => `--${tone}${part}`),
+  );
+
+  test.each(THEMES)('both themes define every tone token (%s)', (name) => {
+    const tokens = themeTokens(name);
+    expect(TONE_TOKENS.filter((token) => !/^#[0-9a-f]{6}$/i.test(tokens[token] ?? ''))).toEqual([]);
+  });
+
+  test.each(THEMES)('each tone is AA, and its edge and the focus ring show, (%s)', (name) => {
+    const c = themeTokens(name);
+    const pairs: Array<[string, string, number]> = TONES.flatMap((tone) => [
+      // The text, on the tint and on a hovered button's tint.
+      ['--text', `--${tone}-bg`, 4.5],
+      ['--text', `--${tone}-hover`, 4.5],
+      ['--muted', `--${tone}-bg`, 4.5],
+      // The icon and the dismiss button's icon are read as text would be.
+      [`--${tone}`, `--${tone}-bg`, 4.5],
+      [`--${tone}`, `--${tone}-hover`, 4.5],
+      // The edge, against the tint and the bar beside it; the focus ring on the tint.
+      [`--${tone}-border`, `--${tone}-bg`, 3],
+      [`--${tone}-border`, '--raised', 3],
+      ['--focus', `--${tone}-bg`, 3],
+      ['--focus', `--${tone}-hover`, 3],
+    ]);
+    const short = pairs
+      .filter(([fg, bg, min]) => contrast(c[fg] as string, c[bg] as string) < min)
+      .map(
+        ([fg, bg, min]) =>
+          `${fg} on ${bg}: ${contrast(c[fg] as string, c[bg] as string).toFixed(2)} < ${min}`,
+      );
+    expect(short).toEqual([]);
+  });
+
+  test.each(THEMES)('the tints are quiet: close to the surface they sit on (%s)', (name) => {
+    // "Nothing blaring": a tint stays within a small step of --raised's lightness.
+    const c = themeTokens(name);
+    for (const tone of TONES) {
+      const ratio = contrast(c[`--${tone}-bg`] as string, c['--raised'] as string);
+      expect(ratio, tone).toBeLessThan(1.25);
+    }
+  });
+
+  // Each alert draws with a tone, by its class; the class's colours are main.css's.
+  test.each([
+    ['StorageWarning.vue', ['tone-warn', 'tone-danger']],
+    ['ReadOnlyBar.vue', ['tone-warn']],
+    ['UpdatePrompt.vue', ['tone-warn', 'tone-danger']],
+    ['FileBar.vue', ['tone-warn']],
+  ])('%s carries its tone', (name, tones) => {
+    const vue = readFileSync(join(APP, 'components', name), 'utf8');
+    for (const tone of tones) expect(vue, tone).toContain(tone);
+  });
+
+  test('main.css draws a tone from its tokens', () => {
+    for (const tone of TONES) {
+      expect(main).toMatch(new RegExp(`\\.tone-${tone} \\{[^}]*--tone: var\\(--${tone}\\);`));
+      expect(main).toMatch(new RegExp(`\\.tone-${tone} \\{[^}]*--tone-bg: var\\(--${tone}-bg\\);`));
+    }
+    expect(main).toMatch(/border-left: 3px solid var\(--tone-border\);/);
+    expect(main).toMatch(/background: var\(--tone-bg\);/);
   });
 });
