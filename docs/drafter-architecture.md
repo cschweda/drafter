@@ -410,10 +410,11 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - **A fresh look** (v0.23.0, [its design](drafter-fresh-look-design.md)): calm and paper-first, two bars, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, and a tab bar on a phone.
 - **Drafts and Cuts** (v0.24.0, [its design](drafter-drafts-and-cuts-design.md)): numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind.
 - **Novel** (v0.25.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
-- Plan E, part 2 (v0.26.0): storylines, the script map as the Structure strip's Color by, and pacing.
-- **The Workbook** (v0.27.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
-- **The `.drafter` project package** (v0.28.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
-- Plans G and H (v0.29.0 and v0.30.0; Phase 2 design §22): reader notes and the Reference tab.
+- **Production** (v0.26.0), free for everyone: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (A-scenes), scenes marked OMITTED, scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides (one character's scenes for an actor). Moved up from Phase 4 at the maintainer's word (2026-10-31: "Let's make it for pros"). To be designed.
+- Plan E, part 2 (v0.27.0): storylines, the script map as the Structure strip's Color by, and pacing.
+- **The Workbook** (v0.28.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
+- **The `.drafter` project package** (v0.29.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
+- Plans G and H (v0.30.0 and v0.31.0; Phase 2 design §22): reader notes and the Reference tab.
 
 **To come**
 
@@ -440,16 +441,13 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 4 — Craft
 
 - The remaining lint rules.
-- Revision marks and colored-page PDF.
-- Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
+- (Revision marks, colored-page PDF, and production revisions moved up to Phase 2 as v0.26.0.)
 - Alternate versions of a line, switchable in place.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
 - A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
 - Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
-- A breakdown report: locations, time of day, and cast for each scene, to export for production.
 - Accept or reject a co-writer's edited copy change by change, from Compare.
-- One character's dialogue, exported for an actor.
 - A PWA install flow. (Offline dictionary caching, planned here, shipped early with spellcheck in v0.14.0.)
 
 ### Phase 5 — Community
