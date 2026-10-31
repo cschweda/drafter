@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Roadmap: **production features are free, and come early**: revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides move from Phase 4 to **v0.26.0**, after Novel. Storylines and pacing, the Workbook, the `.drafter` package, and Plans G and H each move down one (v0.27.0 to v0.31.0). README, the architecture document, the Phase 2 design, and DECISIONS say so.
 - README: **"Open it and write"** near the top, saying plainly that Drafter is free with no catch (no tier, trial, ads, or data collected), and: no login ever, instant, open, private (no cookies, analytics, tracking, or telemetry), offline, no forced updates, and Final Draft files in and out.
-- README: the roadmap gains a **Someday** row for an optional, paid **Drafter Pro**: real-time co-writing through an end-to-end encrypted relay, and hosted links for readers' notes, only what needs a server to run. Everything else stays free, MIT-licensed, and free of accounts and logins.
+- README: **no paid version, ever**: everything Drafter does is free, so "Not planned" now lists a paid version alongside accounts and a Drafter server.
 
 ## [0.22.1] - 2026-10-31
 
