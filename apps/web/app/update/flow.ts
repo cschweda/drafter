@@ -70,7 +70,8 @@ export interface UpdateDeps {
   /** Writes the recovery copy's pending text now. Never rejects. */
   flush(): Promise<void>;
   /**
-   * Lets the new version take over and reloads. `anyway`: the writer chose to leave with changes
+   * Lets the new version take over and reloads, and never settles once a reload (or a restart) is
+   * under way: it settles only when nothing went. `anyway`: the writer chose to leave with changes
    * that aren't in a file, so the browser's own "leave this page?" question is not asked too.
    */
   apply(options?: { anyway?: boolean }): Promise<void> | void;
@@ -89,16 +90,16 @@ export function createUpdateFlow(deps: UpdateDeps) {
   const saving = ref(false);
 
   /**
-   * Says so, then applies. The page reloads (or the app restarts) and this never comes back; a
-   * desktop install that fails does, and its error is the toast's to say.
+   * Says so, then applies. When the page reloads (or the app restarts) `deps.apply` never comes
+   * back. When it does come back, or fails, nothing went (a desktop install that failed, whose
+   * error is the toast's to say), so the toast goes back to `back` and the editor can be typed in.
    */
   async function apply(back: UpdateStage, options?: { anyway?: boolean }): Promise<void> {
     stage.value = 'applying';
     try {
       await deps.apply(options);
-    } catch (error) {
+    } finally {
       stage.value = back;
-      throw error;
     }
   }
 
@@ -131,7 +132,6 @@ export function createUpdateFlow(deps: UpdateDeps) {
 
   async function reloadAnyway(): Promise<void> {
     if (stage.value !== 'confirm') return;
-    stage.value = 'applying';
     await deps.flush();
     await apply('confirm', { anyway: true });
   }

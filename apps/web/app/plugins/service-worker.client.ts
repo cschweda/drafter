@@ -3,6 +3,7 @@ import { allowLeaving } from '~/storage/leaving';
 import { fetchNewest } from '~/update/check';
 import {
   createControllerWatch,
+  flushBeforeReload,
   leavingRequested,
   needRefresh,
   replaced,
@@ -31,19 +32,30 @@ export default defineNuxtPlugin(() => {
   if (takeUpdated(sessionStore())) justUpdated.value = true;
 
   let fallback: ReturnType<typeof setTimeout> | undefined;
-  /** The reload the writer chose. If it was "Reload anyway", the browser's own question is skipped, from now. */
-  const reload = () => {
+  let reloading = false;
+  /**
+   * The reload the writer chose. The recovery copy is written first. If it was "Reload anyway",
+   * the browser's own question is skipped, from now. `updated`: the new version has taken over,
+   * so the next load says Drafter is up to date; a reload because it didn't (the fallback) says
+   * nothing of the kind.
+   */
+  const reload = async (updated: boolean) => {
     clearTimeout(fallback);
+    if (reloading) return;
+    reloading = true;
+    await flushBeforeReload();
     if (leavingRequested()) allowLeaving();
-    markUpdating(sessionStore());
+    if (updated) markUpdating(sessionStore());
     window.location.reload();
   };
+  /** What the updater returns once a reload is under way: it never settles (flow.ts says why). */
+  const away = () => new Promise<never>(() => {});
 
   // On a first visit the worker takes over a moment after it installs (`clientsClaim`): that first
   // change of controller is not an update (state.ts says how the rest are told apart).
   const watch = createControllerWatch({
     controlled: navigator.serviceWorker.controller !== null,
-    reload,
+    reload: () => void reload(true),
   });
   navigator.serviceWorker.addEventListener('controllerchange', () => watch.onChange());
 
@@ -59,21 +71,22 @@ export default defineNuxtPlugin(() => {
   });
 
   setUpdater(async () => {
+    // Another tab let the new version take over: it is this page's on a reload.
     if (replaced.value) {
-      reload();
-      return;
+      void reload(true);
+      return away();
     }
     // The newest version on the server, not only the one waiting when the offer appeared
     // (update/check.ts says why).
-    const registration = await navigator.serviceWorker.getRegistration().catch(() => undefined);
-    await fetchNewest(registration);
+    await fetchNewest(() => navigator.serviceWorker.getRegistration());
     // Another tab may have let it take over meanwhile.
     if (replaced.value) {
-      reload();
-      return;
+      void reload(true);
+      return away();
     }
     watch.apply();
     await skipWaiting(true);
-    fallback = setTimeout(reload, TAKEOVER_MS);
+    fallback = setTimeout(() => void reload(false), TAKEOVER_MS);
+    return away();
   });
 });

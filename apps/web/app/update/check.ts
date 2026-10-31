@@ -90,25 +90,32 @@ export const NEWEST_MS = 5000;
  * drafter.dev is deployed on every push and each build's worker differs, so the one that was
  * waiting when the offer appeared may be out of date already; reloading into it would only have
  * the reloaded page find the newer one and make the same offer again, as if Reload did nothing.
- * Waits `ms` at most, in all, and never rejects: offline, or slow, the waiting version is taken.
+ * Waits `ms` at most, in all (finding the registration too), and never rejects: offline, or slow,
+ * the waiting version is taken.
+ *
+ * What that costs, when it happens: a newer worker still installing at the deadline is left to
+ * finish, and the older one that was waiting takes over and the page reloads into it. The
+ * reloaded page then finds the newer one installed and waiting, and offers it, as before this
+ * check existed. It takes a very slow connection, or a very large deploy, for that to happen.
  */
 export async function fetchNewest(
-  registration: RegistrationLike | undefined,
+  getRegistration: () => Promise<RegistrationLike | undefined>,
   ms = NEWEST_MS,
 ): Promise<void> {
-  if (!registration) return;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<void>((resolve) => {
     timer = setTimeout(resolve, ms);
   });
   const look = async () => {
     try {
+      const registration = await getRegistration();
+      if (!registration) return;
       await registration.update();
+      const installing = registration.installing;
+      if (installing) await settled(installing, ms);
     } catch {
-      return;
+      // Offline, or drafter.dev didn't answer: the waiting version it is.
     }
-    const installing = registration.installing;
-    if (installing) await settled(installing, ms);
   };
   try {
     await Promise.race([look(), deadline]);

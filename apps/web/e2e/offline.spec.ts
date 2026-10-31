@@ -30,11 +30,6 @@ const saveFirst = (page: Page) => update(page).getByRole('button', { name: 'Save
 const reloadAnyway = (page: Page) => update(page).getByRole('button', { name: 'Reload anyway' });
 const cancel = (page: Page) => update(page).getByRole('button', { name: 'Cancel' });
 const updated = (page: Page) => page.getByRole('region', { name: 'Updated' });
-const VERSION = (
-  JSON.parse(readFileSync(new URL('../../desktop/package.json', import.meta.url), 'utf8')) as {
-    version: string;
-  }
-).version;
 const GETTING = 'Getting the newest version…';
 const UNSAVED =
   'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.';
@@ -545,12 +540,18 @@ test.describe('a new version', () => {
     for (const button of await update(page).getByRole('button').all()) {
       await expect(button).toBeDisabled();
     }
+    // Nothing can be typed meanwhile, so nothing is lost to the reload.
+    await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
     await reloaded(page);
     await expectAtEnd(page, 'Typed, then told.');
     // The new version never took over, so this is still the old one: it offers the update again,
     // and doesn't claim to be up to date.
     await expect(update(page)).toContainText('A new version of Drafter is ready');
     await expect(updated(page)).toHaveCount(0);
+    // Not a moment later either.
+    await page.waitForTimeout(1500);
+    await expect(updated(page)).toHaveCount(0);
+    await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
   });
 
   test('says Drafter is up to date once only, and never on an ordinary reload', async ({
@@ -563,7 +564,7 @@ test.describe('a new version', () => {
     await expect(updated(page)).toHaveCount(0);
     await deployNewVersion(page);
     await reload(page).click();
-    await expect(updated(page)).toHaveText(`Drafter is up to date (v${VERSION})`);
+    await expect(updated(page)).toHaveText('Drafter is up to date.');
     await expect(page.locator('[data-updated-region]')).toContainText('Drafter is up to date');
     // It goes by itself after a few seconds.
     await expect(updated(page)).toHaveCount(0, { timeout: 8000 });

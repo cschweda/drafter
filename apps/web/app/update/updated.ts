@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 
-// "Drafter is up to date (v…)" (UpdatePrompt.vue): said once, on the load that an update the
+// "Drafter is up to date." (UpdatePrompt.vue): said once, on the load that an update the
 // writer chose reloaded into, so the reload shows that it happened. The service-worker plugin
 // marks the tab's session storage just before that reload and takes the mark on the next load;
 // an ordinary load finds none. Storage that refuses (a private window, blocked site data) only
@@ -31,9 +31,8 @@ export function takeUpdated(storage: Pick<Storage, 'getItem' | 'removeItem'> | u
   }
 }
 
-export function upToDateMessage(version: string): string {
-  return `Drafter is up to date (v${version})`;
-}
+/** No version in it: a web deploy doesn't change the version number. */
+export const UP_TO_DATE = 'Drafter is up to date.';
 
 /** The tab's session storage, or nothing where reading it throws. */
 export function sessionStore(): Storage | undefined {

@@ -215,28 +215,32 @@ describe('fetching the newest version before a reload', () => {
   test('asks the server, and waits for a newer worker it finds to install', async () => {
     const reg = registration({ waiting: true, finds: 'installed' });
     const before = reg.waiting;
-    await fetchNewest(reg);
+    await fetchNewest(async () => reg);
     expect(reg.updates).toBe(1);
     expect(reg.waiting).not.toBe(before);
     expect(reg.installing).toBeNull();
   });
 
   test('goes on when there is nothing newer, the server can’t be reached, or there is no registration', async () => {
-    await fetchNewest(registration({ waiting: true }));
-    await fetchNewest(registration({ waiting: true, fails: true }));
-    await fetchNewest(registration({ waiting: true, finds: 'redundant' }));
-    await fetchNewest(undefined);
+    await fetchNewest(async () => registration({ waiting: true }));
+    await fetchNewest(async () => registration({ waiting: true, fails: true }));
+    await fetchNewest(async () => registration({ waiting: true, finds: 'redundant' }));
+    await fetchNewest(async () => undefined);
+    await fetchNewest(async () => {
+      throw new Error('no');
+    });
   });
 
-  test('waits only so long for an install, or for the server, then goes on', async () => {
+  test('waits only so long for the registration, the server, or an install, then goes on', async () => {
     const started = Date.now();
-    await fetchNewest(registration({ waiting: true, finds: 'never' }), 40);
+    await fetchNewest(async () => registration({ waiting: true, finds: 'never' }), 40);
+    await fetchNewest(() => new Promise(() => {}), 40);
     const hanging: RegistrationLike = {
       waiting: {},
       installing: null,
       update: () => new Promise(() => {}),
     };
-    await fetchNewest(hanging, 40);
+    await fetchNewest(async () => hanging, 40);
     expect(Date.now() - started).toBeLessThan(1000);
   });
 });

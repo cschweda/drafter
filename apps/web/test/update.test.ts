@@ -64,7 +64,8 @@ describe('Reload', () => {
     const { flow, calls } = setup();
     await flow.reload();
     expect(calls).toEqual(['apply']);
-    expect(flow.stage.value).toBe('applying');
+    // A reload under way never settles; this one did, so nothing went and the toast is back.
+    expect(flow.stage.value).toBe('toast');
   });
 
   test('asks first when there are unsaved changes, and applies nothing yet', async () => {
@@ -264,18 +265,57 @@ describe('while the new version is applied', () => {
     expect(seen).toEqual(['applying', 'applying', 'applying']);
   });
 
-  test('a desktop install that fails goes back to the offer (its error says why)', async () => {
+  test('stays busy while a reload is under way (the updater never settles then)', async () => {
     const flow = createUpdateFlow({
       unsaved: () => false,
       save: async () => 'saved',
       savedByDownload: () => false,
       flush: async () => {},
-      apply: async () => {
+      apply: () => new Promise<never>(() => {}),
+    });
+    void flow.reload();
+    await Promise.resolve();
+    expect(flow.stage.value).toBe('applying');
+  });
+
+  test('a desktop install that fails goes back to the offer (its error says why)', async () => {
+    // As desktop-source.ts's updater does: the install's failure is caught, said with
+    // `installError`, and the updater settles without throwing.
+    let installError = false;
+    for (const unsaved of [false, true]) {
+      const flow = createUpdateFlow({
+        unsaved: () => unsaved,
+        save: async () => 'saved',
+        savedByDownload: () => false,
+        flush: async () => {},
+        apply: async () => {
+          try {
+            throw new Error('The AppImage’s folder can’t be written.');
+          } catch {
+            installError = true;
+          }
+        },
+      });
+      await flow.reload();
+      if (unsaved) await flow.reloadAnyway();
+      expect(installError).toBe(true);
+      expect(flow.stage.value).toBe(unsaved ? 'confirm' : 'toast');
+    }
+  });
+
+  test('Reload anyway whose recovery copy can’t be written keeps the question, with its buttons', async () => {
+    const flow = createUpdateFlow({
+      unsaved: () => true,
+      save: async () => 'saved',
+      savedByDownload: () => false,
+      flush: async () => {
         throw new Error('no');
       },
+      apply: async () => {},
     });
-    await flow.reload().catch(() => {});
-    expect(flow.stage.value).toBe('toast');
+    await flow.reload();
+    await flow.reloadAnyway().catch(() => {});
+    expect(flow.stage.value).toBe('confirm');
   });
 
   test('says what it is doing, in the app it is', () => {

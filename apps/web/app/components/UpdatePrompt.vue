@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { currentAbout } from '~/about/info';
 import { useScript } from '~/storage/script';
 import { modalOpen, tourShowing } from '~/tour/state';
 import {
@@ -13,7 +12,7 @@ import {
 } from '~/update/flow';
 import { clear, later, useUpdateFlow } from '~/update/prompt';
 import { installError, needRefresh, updateKind } from '~/update/state';
-import { justUpdated, upToDateMessage } from '~/update/updated';
+import { justUpdated, UP_TO_DATE } from '~/update/updated';
 import { takeUpdate } from '~/update/use-check';
 
 // "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload (Restart on the desktop app, Get it for a .deb), shown when the
@@ -70,8 +69,8 @@ watch(flow.stage, async (now) => {
   (now === 'confirm' ? saveButton.value : reloadButton.value)?.focus();
 });
 
-// After a reload the writer chose, a brief note that it worked and which version this is now.
-const upToDate = upToDateMessage(currentAbout().version);
+// After a reload the writer chose, a brief note that it worked. Never while an offer is up: then
+// this is not the newest version (the new one never took over, or there is a newer one still).
 /** How long the note stays before it goes (it fades out, but not with reduced motion). */
 const UPDATED_MS = 4000;
 let updatedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -180,12 +179,12 @@ function onKeydown(event: KeyboardEvent) {
     <div role="status" data-updated-region>
       <Transition name="updated">
         <section
-          v-if="justUpdated && !shown"
+          v-if="justUpdated && !needRefresh"
           class="update updated"
           aria-label="Updated"
           data-updated
         >
-          <p>{{ upToDate }}</p>
+          <p>{{ UP_TO_DATE }}</p>
         </section>
       </Transition>
     </div>

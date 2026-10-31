@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { markUpdating, takeUpdated, upToDateMessage } from '../app/update/updated';
+import { markUpdating, takeUpdated, UP_TO_DATE } from '../app/update/updated';
 
-// "Drafter is up to date (v…)": said once, on the load that a chosen update reloaded into, and
+// "Drafter is up to date.": said once, on the load that a chosen update reloaded into, and
 // never on an ordinary load. The mark is in the tab's session storage, which may be refused.
 
 function storage(): Storage & { items: Map<string, string> } {
@@ -51,7 +51,7 @@ describe('the up-to-date note', () => {
     expect(takeUpdated(undefined)).toBe(false);
   });
 
-  test('names the version', () => {
-    expect(upToDateMessage('0.22.1')).toBe('Drafter is up to date (v0.22.1)');
+  test('names no version: a web deploy doesn’t change it', () => {
+    expect(UP_TO_DATE).toBe('Drafter is up to date.');
   });
 });
