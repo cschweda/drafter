@@ -8,6 +8,7 @@ import {
   start,
   stored,
   textOf,
+  viewTool,
 } from './modules';
 
 // The Cards tab (Phase 2 design §7, Plan B): every scene as a card under its section, one tab
@@ -179,7 +180,8 @@ test.describe('the Cards tab', () => {
 
   test('changes the card size from the slim bar', async ({ page }) => {
     await openWith(page);
-    const sizes = page.getByRole('group', { name: 'Card size' });
+    // In the Inspector's header, or behind its "⋯" when the header is narrow.
+    const sizes = await viewTool(page, page.getByRole('group', { name: 'Card size' }));
     const medium = sizes.getByRole('button', { name: 'Medium' });
     const large = sizes.getByRole('button', { name: 'Large' });
     await expect(medium).toHaveAttribute('aria-pressed', 'true');
@@ -196,24 +198,27 @@ test.describe('the Cards tab', () => {
     await expect(editor(page)).toBeAttached();
     await showCards(page);
     await expect(
-      page.getByRole('group', { name: 'Card size' }).getByRole('button', { name: 'Large' }),
+      (await viewTool(page, page.getByRole('group', { name: 'Card size' }))).getByRole('button', {
+        name: 'Large',
+      }),
     ).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('is not offered for a Markdown document', async ({ page }) => {
+  test('is not offered for a Markdown document', async ({ page, isMobile }) => {
     await openWith(page);
     await runCommand(page, 'New Markdown document');
     await expect(page.getByRole('tab', { name: 'Preview' }).first()).toBeVisible();
     await expect(cards(page)).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Cards' })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Notes' })).toHaveCount(0);
-    // Its one view tab is Stats, under More.
-    await expect(page.getByRole('tab', { name: 'Stats' })).toHaveCount(0);
-    const more = page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' });
+    // Its one view tab is Stats: under More on a phone, in the Inspector's row on a wide screen
+    // (Preview and Stats, with Problems under More).
+    await expect(page.getByRole('tab', { name: 'Stats' })).toHaveCount(isMobile ? 0 : 1);
+    const more = page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' });
     await more.click();
-    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
-      'Stats',
-    ]);
+    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
+      isMobile ? ['Stats'] : [/^Problems/],
+    );
     await page.keyboard.press('Escape');
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();

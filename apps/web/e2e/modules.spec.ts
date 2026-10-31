@@ -101,14 +101,13 @@ test.describe('script modules', () => {
     await closeSettings(page);
     await expect(countScenes(page)).toHaveCount(0);
     await expect(fixtureTab(page)).toHaveCount(0);
-    // Nor under More, which has only Cards, Notes, Stats, and Scaffold now.
-    await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
-    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
-      'Cards',
-      /^Notes, \d+ open$/,
-      'Stats',
-      'Scaffold',
-    ]);
+    // Nor under More, which has only the app's own tabs now: Cards, Notes, Stats, and Scaffold on a
+    // phone; Notes in the Inspector, with Problems showing (fresh-look design §3.3).
+    await page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' }).click();
+    const wide = (page.viewportSize()?.width ?? 0) >= 1024;
+    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
+      wide ? [/^Notes, \d+ open$/] : ['Cards', /^Notes, \d+ open$/, 'Stats', 'Scaffold'],
+    );
     await page.keyboard.press('Escape');
     await expect(page.getByText('Fixture Info:')).toHaveCount(0);
     await page.keyboard.press('ControlOrMeta+k');

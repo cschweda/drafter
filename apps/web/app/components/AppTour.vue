@@ -25,7 +25,7 @@ import {
 // - a step whose pane isn't showing brings it into view first, and the layout comes back after;
 // - while it is up, the app's own global keys (the palette, Save, Open) are held back.
 const wide = useWideScreen();
-const { tabs, phoneTab, choose } = usePanes();
+const { tabs, phoneTab, inspect } = usePanes();
 const commands = useCommands();
 const { ready } = useScript();
 const focus = useFocusMode();
@@ -150,7 +150,8 @@ function reveal(step: TourStep | null) {
   const tab = paneOf(step);
   if (!tab) return;
   if (wide.value) {
-    if (tabs.value.left !== tab && tabs.value.right !== tab) choose('right', tab);
+    // The editor is always on the left; any other pane a step points at shows in the Inspector.
+    if (tab !== 'source') inspect(tab);
   } else if (phoneTab.value !== tab) {
     phoneTab.value = tab;
   }

@@ -11,6 +11,7 @@ import {
   showSource,
   start,
   stored,
+  viewTool,
   wholeText,
 } from './modules';
 
@@ -116,10 +117,9 @@ const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
 test.describe("Compare's Changes view", () => {
   test('opens on Changes with + and − rows', async ({ page }) => {
     await compareWithNow(page, BASE, CHANGED);
-    await expect(viewGroup(page).getByRole('button', { name: 'Changes' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(
+      await viewTool(page, viewGroup(page).getByRole('button', { name: 'Changes' })),
+    ).toHaveAttribute('aria-pressed', 'true');
     await expect(diff(page).locator('.diff-summary')).toHaveText(
       '1 scene changed · 3 lines added, 1 removed',
     );
@@ -209,7 +209,9 @@ test.describe("Compare's Changes view", () => {
       await expect(diff(page)).toHaveClass(/diff-unified/);
       return;
     }
-    await layoutGroup(page).getByRole('button', { name: 'Side by side' }).click();
+    await (
+      await viewTool(page, layoutGroup(page).getByRole('button', { name: 'Side by side' }))
+    ).click();
     const table = diff(page).getByRole('table');
     await expect(table.getByRole('columnheader')).toHaveText([/^Before \d+:\d+/, /^After now/]);
     // The changed line: the older on the left, the newer on the right, in one row.
@@ -289,28 +291,29 @@ test.describe("Compare's Changes view", () => {
   test('the choice of view and layout is remembered', async ({ page, isMobile }) => {
     if (!isMobile) await page.setViewportSize({ width: 1700, height: 900 });
     await compareWithNow(page, BASE, CHANGED);
-    await viewGroup(page).getByRole('button', { name: 'Pages' }).click();
+    await (await viewTool(page, viewGroup(page).getByRole('button', { name: 'Pages' }))).click();
     await expect(panel(page).locator('section.pages .drafter-page').first()).toBeVisible();
     await expect(diff(page)).toHaveCount(0);
     await expect.poll(async () => (await stored(page)).compareView).toBe('pages');
-    await viewGroup(page).getByRole('button', { name: 'Changes' }).click();
+    await (await viewTool(page, viewGroup(page).getByRole('button', { name: 'Changes' }))).click();
     if (!isMobile) {
-      await layoutGroup(page).getByRole('button', { name: 'Side by side' }).click();
+      await (
+        await viewTool(page, layoutGroup(page).getByRole('button', { name: 'Side by side' }))
+      ).click();
       await expect.poll(async () => (await stored(page)).diffLayout).toBe('split');
     }
-    await viewGroup(page).getByRole('button', { name: 'Pages' }).click();
+    await (await viewTool(page, viewGroup(page).getByRole('button', { name: 'Pages' }))).click();
     await expect.poll(async () => (await stored(page)).compareView).toBe('pages');
     // A new visit opens Compare on the view, and the layout, chosen last.
     await page.reload();
     await expect(editor(page)).toBeAttached();
     await onRow(page, 0, 'Enter');
     await expect(shownCompareTab(page)).toBeVisible();
-    await expect(viewGroup(page).getByRole('button', { name: 'Pages' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(
+      await viewTool(page, viewGroup(page).getByRole('button', { name: 'Pages' })),
+    ).toHaveAttribute('aria-pressed', 'true');
     await expect(panel(page).locator('section.pages .drafter-page').first()).toBeVisible();
-    await viewGroup(page).getByRole('button', { name: 'Changes' }).click();
+    await (await viewTool(page, viewGroup(page).getByRole('button', { name: 'Changes' }))).click();
     if (!isMobile) await expect(diff(page).getByRole('table')).toBeVisible();
   });
 
@@ -449,14 +452,14 @@ test.describe("Compare's Changes view", () => {
 
   test('Pages keeps its asterisks', async ({ page }) => {
     await compareWithNow(page, BASE, CHANGED);
-    await viewGroup(page).getByRole('button', { name: 'Pages' }).click();
+    await (await viewTool(page, viewGroup(page).getByRole('button', { name: 'Pages' }))).click();
     await expect(panel(page).locator('.compare-mark')).toHaveText([
       'changed, She paces by the door.',
       'added, A dog barks.',
     ]);
     await expect(panel(page).locator('.compare-star')).toHaveCount(2);
     await expect(panel(page).locator('.diff-sign')).toHaveCount(0);
-    await viewGroup(page).getByRole('button', { name: 'Changes' }).click();
+    await (await viewTool(page, viewGroup(page).getByRole('button', { name: 'Changes' }))).click();
   });
 
   test('a Markdown document has only the Changes view', async ({ page }) => {
@@ -496,8 +499,10 @@ test.describe("the Changes view's accessibility", () => {
           await closeSettings(page);
         }
         expect(await violations(page), `unified, ${theme}, ${colors}`).toEqual([]);
-        if (await layoutGroup(page).isVisible()) {
-          await layoutGroup(page).getByRole('button', { name: 'Side by side' }).click();
+        if (await (await viewTool(page, layoutGroup(page), { optional: true })).isVisible()) {
+          await (
+            await viewTool(page, layoutGroup(page).getByRole('button', { name: 'Side by side' }))
+          ).click();
           await expect(diff(page).getByRole('table').first()).toBeVisible();
           expect(await violations(page), `side by side, ${theme}, ${colors}`).toEqual([]);
         }

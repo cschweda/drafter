@@ -186,7 +186,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'previous-misspelling', title: 'Previous misspelling', group: 'Go', keys: 'Mod-Shift-;' },
 
   // View
-  { id: 'show-source', title: 'Show Source', group: 'View' },
+  // The editor, always on the left on a wide screen (fresh-look design §3.2): "Write" finds it too.
+  { id: 'show-source', title: 'Show Source', group: 'View', keywords: ['write', 'editor'] },
   { id: 'show-script', title: 'Show Script', group: 'View' },
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },

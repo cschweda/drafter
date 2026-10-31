@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
-import { runCommand } from './modules';
+import { runCommand, showView } from './modules';
 
 // Final Draft files (Phase 2 Plan FD): a .fdx opens as a new Fountain script that is not the
 // file's (Save asks for a .fountain, and the .fdx is never written), and a Fountain script exports
@@ -188,10 +188,7 @@ test.describe('importing a Final Draft file where there is no picker', () => {
     await start(page);
     await drop(page, 'lamp.fdx', LAMP);
     await expectImported(page);
-    await page
-      .getByRole('tab', { name: /^Problems/ })
-      .last()
-      .click();
+    await showView(page, 'Problems');
     const problems = page.getByRole('tabpanel', { name: /^Problems/ });
     await expect(
       problems.getByText('This came in from Final Draft as “Cast List”', { exact: false }),

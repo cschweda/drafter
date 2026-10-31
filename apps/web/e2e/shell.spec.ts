@@ -14,21 +14,171 @@ test.describe('on a desktop', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('tablist', { name: 'Left pane' })).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Inspector' })).toBeVisible();
   });
 
-  test('shows Source on the left and Script on the right', async ({ page }) => {
-    const left = page.getByRole('tablist', { name: 'Left pane' });
-    const right = page.getByRole('tablist', { name: 'Right pane' });
-    await expect(left.getByRole('tab', { name: 'Source' })).toHaveAttribute(
+  test('shows the editor on the left and the Inspector, on Script, on the right', async ({
+    page,
+  }) => {
+    // The left pane is the editor, with no tabs of its own (fresh-look design §3.2).
+    await expect(page.getByRole('tablist')).toHaveCount(1);
+    const editor = page.getByRole('region', { name: 'Source' });
+    await expect(editor).toContainText('Title: The Call');
+    await expect(editor.getByRole('textbox', { name: 'Source' })).toBeVisible();
+    await expect(page.locator('[data-pane="left"] [data-tour="source"]')).toBeVisible();
+    const inspector = page.getByRole('tablist', { name: 'Inspector' });
+    await expect(inspector.getByRole('tab', { name: 'Script' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    await expect(right.getByRole('tab', { name: 'Script' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    await expect(page.getByRole('tabpanel', { name: 'Source' })).toContainText('Title: The Call');
+    // A script's row (Call 14), then More.
+    await expect(inspector.getByRole('tab')).toHaveText([
+      'Script',
+      'Outline',
+      'Cards',
+      'Stats',
+      'Scaffold',
+    ]);
+    await expect(
+      page.locator('[data-pane="right"]').getByRole('button', { name: 'More tabs' }),
+    ).toBeVisible();
+    await expect(page.locator('[data-pane="right"] [data-tour="script"]')).toBeVisible();
+  });
+
+  test('gives the editor a 36px header with its toggles as icon buttons', async ({ page }) => {
+    const header = page.locator('[data-pane="left"] .head');
+    const box = await header.boundingBox();
+    expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(36);
+    expect(Math.round(box?.height ?? 99)).toBeLessThanOrEqual(38);
+    const group = page.getByRole('group', { name: 'Source view' });
+    for (const name of ['Line numbers', 'Typewriter', 'Sync scrolling']) {
+      const button = group.getByRole('button', { name, exact: true });
+      await expect(button).toHaveAttribute('aria-pressed', /^(true|false)$/);
+      const b = await button.boundingBox();
+      expect(`${Math.round(b?.width ?? 0)}x${Math.round(b?.height ?? 0)}`, name).toBe('30x30');
+      // An icon, not words.
+      await expect(button).toHaveText('');
+    }
+    const numbers = group.getByRole('button', { name: 'Line numbers' });
+    const before = await numbers.getAttribute('aria-pressed');
+    await numbers.click();
+    await expect(numbers).toHaveAttribute('aria-pressed', before === 'true' ? 'false' : 'true');
+  });
+
+  test('Show Script keeps the editor on the left', async ({ page }) => {
+    // The bug (fresh-look review 1): from the Inspector, Show Script took the editor's pane.
+    await page.locator('#tab-right-outline').click();
+    await page.locator('#panel-outline').focus();
+    await runCommand(page, 'Show Script');
+    await expect(page.locator('#tab-right-script')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
+    await expect(page.locator('[data-pane="left"] #panel-script')).toHaveCount(0);
+    // And Show Source, from anywhere, only puts the cursor in the editor.
+    await runCommand(page, 'Show Source');
+    await expect(page.locator('.cm-content')).toBeFocused();
+    await expect(page.locator('#tab-right-script')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('a view opened from the palette appears once, in the Inspector', async ({ page }) => {
+    // The bug (fresh-look review 2): a palette view was added to both panes' strips.
+    for (const [command, name] of [
+      ['Show Cards', 'Cards'],
+      ['Show Notes', 'Notes'],
+      ['Show stats', 'Stats'],
+      ['Show Problems', 'Problems'],
+      ['Show Outline', 'Outline'],
+    ] as const) {
+      await runCommand(page, command);
+      const tab = page.getByRole('tab', { name: new RegExp(`^${name}\\b`) });
+      await expect(tab).toHaveCount(1);
+      await expect(tab).toHaveAttribute('aria-selected', 'true');
+      await expect(
+        page
+          .getByRole('tablist', { name: 'Inspector' })
+          .getByRole('tab', { name: new RegExp(`^${name}\\b`) }),
+      ).toHaveCount(1);
+      await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
+      await expect(page.locator('[data-pane="left"] [role="tabpanel"]')).toHaveCount(0);
+    }
+  });
+
+  test("the Script's tools sit in the Inspector header", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const header = page.locator('[data-pane="right"] .head');
+    const tools = header.locator('#inspector-tools');
+    await expect(tools.getByRole('group', { name: 'Zoom' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: 'Fit width' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: '100%' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: 'Changes', exact: true })).toBeVisible();
+    await expect(tools).toContainText('Page 1 of 2');
+    // One row: the tools are level with the tabs, and nothing sits between the header and the page.
+    const tab = await page.locator('#tab-right-script').boundingBox();
+    const zoom = await tools.getByRole('group', { name: 'Zoom' }).boundingBox();
+    expect(
+      Math.abs((tab?.y ?? 0) + (tab?.height ?? 0) / 2 - ((zoom?.y ?? 0) + (zoom?.height ?? 0) / 2)),
+    ).toBeLessThanOrEqual(2);
+    await expect(page.locator('[data-pane="right"] > .slim')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'More tools' })).toHaveCount(0);
+  });
+
+  test("the Inspector's tabs fold into More when narrow, at 200% zoom too", async ({ page }) => {
+    // At 200% zoom a 2048px window is 1024 CSS px wide; then the Inspector is made as narrow as
+    // the divider lets it be.
+    await page.setViewportSize({ width: 1024, height: 700 });
+    const header = page.locator('[data-pane="right"] .head');
+    const fits = () =>
+      header.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const shown = [...el.querySelectorAll<HTMLElement>('[role="tab"], button')].filter(
+          (b) => getComputedStyle(b).visibility !== 'hidden' && b.getClientRects().length > 0,
+        );
+        return {
+          overflow: el.scrollWidth > el.clientWidth,
+          clipped: shown
+            .filter((b) => {
+              const r = b.getBoundingClientRect();
+              return r.right > box.right + 0.5 || r.left < box.left - 0.5;
+            })
+            .map((b) => b.textContent?.trim()),
+        };
+      });
+    // The tools fold into "⋯" first.
+    const fold = page.getByRole('button', { name: 'More tools' });
+    await expect(fold).toBeVisible();
+    expect(await fits()).toEqual({ overflow: false, clipped: [] });
+    await fold.click();
+    await expect(fold).toHaveAttribute('aria-expanded', 'true');
+    const panel = page.getByRole('group', { name: 'View tools' });
+    await expect(panel.getByRole('button', { name: 'Fit width' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+    await expect(fold).toBeFocused();
+    // Then tabs move into More from the right; the one showing stays.
+    const divider = page.getByRole('separator', { name: 'Resize panes' });
+    await divider.focus();
+    await page.keyboard.press('End');
+    await expect(divider).toHaveAttribute('aria-valuenow', '75');
+    const row = page.getByRole('tablist', { name: 'Inspector' }).getByRole('tab');
+    await expect.poll(() => row.count()).toBeLessThan(5);
+    await expect(row.first()).toHaveText('Script');
+    expect(await fits()).toEqual({ overflow: false, clipped: [] });
+    const visible = await row.allTextContents();
+    await page.locator('[data-pane="right"]').getByRole('button', { name: 'More tabs' }).click();
+    const menu = page.getByRole('menu', { name: 'More tabs' });
+    const items = (await menu.getByRole('menuitem').allTextContents()).map((t) => t.trim());
+    for (const name of ['Outline', 'Cards', 'Stats', 'Scaffold']) {
+      expect(visible.map((t) => t.trim()).includes(name) || items.includes(name), name).toBe(true);
+    }
+    // A tab from More shows, and stays in the row while it shows.
+    const hidden = ['Scaffold', 'Stats', 'Cards', 'Outline'].find((name) => items.includes(name));
+    if (!hidden) throw new Error('no tab moved into More');
+    await menu.getByRole('menuitem', { name: hidden, exact: true }).click();
+    const chosen = page
+      .getByRole('tablist', { name: 'Inspector' })
+      .getByRole('tab', { name: hidden });
+    await expect(chosen).toHaveAttribute('aria-selected', 'true');
+    await expect(chosen).toBeFocused();
+    expect(await fits()).toEqual({ overflow: false, clipped: [] });
   });
 
   test('leaves room between the logo and the toolbar buttons', async ({ page }) => {
@@ -158,33 +308,25 @@ test.describe('on a desktop', () => {
     // The start-blank state is checked in first-samples.spec.ts, whose writer has met no sample.
   });
 
-  test('swaps panes when a tab open in the other pane is chosen', async ({ page }) => {
-    await page
-      .getByRole('tablist', { name: 'Right pane' })
-      .getByRole('tab', { name: 'Source' })
-      .click();
-    await expect(
-      page.getByRole('tablist', { name: 'Left pane' }).getByRole('tab', { name: 'Script' }),
-    ).toHaveAttribute('aria-selected', 'true');
-    await expect(
-      page.getByRole('tablist', { name: 'Right pane' }).getByRole('tab', { name: 'Source' }),
-    ).toHaveAttribute('aria-selected', 'true');
-  });
-
   test('chooses a tab with the keyboard, not by arrowing past it', async ({ page }) => {
-    const right = page.getByRole('tablist', { name: 'Right pane' });
+    const right = page.getByRole('tablist', { name: 'Inspector' });
     await right.getByRole('tab', { name: 'Script' }).focus();
     await page.keyboard.press('ArrowRight');
-    await expect(right.getByRole('tab', { name: 'Problems' })).toBeFocused();
+    await expect(right.getByRole('tab', { name: 'Outline' })).toBeFocused();
     await expect(right.getByRole('tab', { name: 'Script' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
     await page.keyboard.press('Enter');
-    await expect(right.getByRole('tab', { name: 'Problems' })).toHaveAttribute(
+    await expect(right.getByRole('tab', { name: 'Outline' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
+    // The arrows wrap, and the editor stays where it is.
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await expect(right.getByRole('tab').last()).toBeFocused();
+    await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
   });
 
   test('marks the selected tab in forced-colors mode', async ({ page, browserName }) => {
@@ -192,28 +334,36 @@ test.describe('on a desktop', () => {
     // Windows High Contrast drops backgrounds and box-shadows, which is how
     // the selected tab normally stands out; a border survives.
     await page.emulateMedia({ forcedColors: 'active' });
-    const right = page.getByRole('tablist', { name: 'Right pane' });
+    const right = page.getByRole('tablist', { name: 'Inspector' });
     const bottomBorder = (name: string) =>
       right.getByRole('tab', { name }).evaluate((el) => {
         const style = getComputedStyle(el);
         return `${style.borderBottomStyle} ${style.borderBottomWidth}`;
       });
     expect(await bottomBorder('Script')).toMatch(/^solid [1-9]/);
-    expect(await bottomBorder('Problems')).not.toMatch(/^solid/);
+    expect(await bottomBorder('Outline')).not.toMatch(/^solid/);
   });
 
-  test('moves focus between the panes with F6', async ({ page }) => {
-    await page.getByRole('tabpanel', { name: 'Source' }).focus();
+  test('F6 moves between the editor and the Inspector', async ({ page }) => {
+    const editor = page.getByRole('textbox', { name: 'Source' });
+    await editor.click();
     await page.keyboard.press('F6');
     await expect(page.getByRole('tabpanel', { name: 'Script' })).toBeFocused();
     await page.keyboard.press('F6');
-    await expect(page.getByRole('tabpanel', { name: 'Source' })).toBeFocused();
+    await expect(editor).toBeFocused();
+    // From another view in the Inspector, and from its tabs, too.
+    await page.locator('#tab-right-outline').click();
+    await expect(page.locator('#tab-right-outline')).toBeFocused();
+    await page.keyboard.press('F6');
+    await expect(editor).toBeFocused();
+    await page.keyboard.press('F6');
+    await expect(page.getByRole('tabpanel', { name: 'Outline' })).toBeFocused();
   });
 
   test('resizes the panes with the keyboard', async ({ page }) => {
     const divider = page.getByRole('separator', { name: 'Resize panes' });
     const leftWidth = async () =>
-      (await page.getByRole('tabpanel', { name: 'Source' }).boundingBox())?.width ?? 0;
+      (await page.getByRole('region', { name: 'Source' }).boundingBox())?.width ?? 0;
     await expect(divider).toHaveAttribute('aria-valuenow', '50');
     const before = await leftWidth();
     await divider.focus();
@@ -411,8 +561,10 @@ test.describe('on a phone', () => {
   });
 });
 
-// The tab row (Phase 2 design §5.8): Source, Script, Problems, and Outline, then one slot for
-// another tab (a module's), then More with the rest.
+// The tab row. On a phone (Phase 2 design §5.8): Source, Script, Problems, and Outline, then one
+// slot for another tab (a module's), then More with the rest. On a wide screen the Inspector's
+// (fresh-look design §3.3, Call 14): Script, Outline, Cards, Stats, Scaffold, then More with Notes,
+// Problems, and the modules' tabs; a tab from More shows after the row while it is the one showing.
 test.describe('the tab row', () => {
   /** Turns sample modules on in Settings. */
   async function turnOn(page: Page, names: string[]) {
@@ -424,64 +576,72 @@ test.describe('the tab row', () => {
     }
     await closeSettings(page);
   }
-  const firstPane = (page: Page) => page.locator('[data-pane]').first();
-  const row = (page: Page) => firstPane(page).getByRole('tablist');
-  const more = (page: Page) => firstPane(page).getByRole('button', { name: 'More tabs' });
+  /** The pane with the tabs: the Inspector, or a phone's one pane. */
+  const tabsPane = (page: Page) => page.locator('[data-pane]').last();
+  const row = (page: Page) => tabsPane(page).getByRole('tablist');
+  const more = (page: Page) => tabsPane(page).getByRole('button', { name: 'More tabs' });
   const menu = (page: Page) => page.getByRole('menu', { name: 'More tabs' });
 
-  test("shows Outline, then More, in each pane's tab row", async ({ page, isMobile }) => {
+  test("shows the row's tabs, then More", async ({ page, isMobile }) => {
     await start(page);
-    for (const list of await page.getByRole('tablist').all()) {
-      await expect(list.getByRole('tab')).toHaveText([
-        'Source',
-        'Script',
-        /^Problems(\s+\d+)?\s*$/,
-        'Outline',
-      ]);
-    }
-    await expect(page.getByRole('tablist')).toHaveCount(isMobile ? 1 : 2);
-    // Cards, Notes, and Stats wait under More until one is chosen (controller ruling 4).
-    await expect(page.getByRole('button', { name: 'More tabs' })).toHaveCount(isMobile ? 1 : 2);
+    await expect(page.getByRole('tablist')).toHaveCount(1);
+    await expect(row(page).getByRole('tab')).toHaveText(
+      isMobile
+        ? ['Source', 'Script', /^Problems(\s+\d+)?\s*$/, 'Outline']
+        : ['Script', 'Outline', 'Cards', 'Stats', 'Scaffold'],
+    );
+    // The rest wait under More until one is chosen (controller ruling 4).
+    await expect(page.getByRole('button', { name: 'More tabs' })).toHaveCount(1);
   });
 
-  test('chooses a module tab from More, which then takes the slot', async ({ page }) => {
+  test('chooses a module tab from More, which then takes the slot', async ({ page, isMobile }) => {
     await start(page);
     await turnOn(page, ['Scene list', 'Cast']);
     const tabs = row(page).getByRole('tab');
-    // No tab holds the slot until one is chosen; Cards, Notes, Stats, Scaffold, then the modules'
-    // tabs are in More.
-    await expect(tabs).toHaveText([/^Source/, /^Script/, /^Problems/, /^Outline/]);
+    const own = isMobile
+      ? [/^Source/, /^Script/, /^Problems/, /^Outline/]
+      : [/^Script/, /^Outline/, /^Cards/, /^Stats/, /^Scaffold/];
+    // No tab holds the slot until one is chosen; the others, then the modules' tabs, are in More.
+    await expect(tabs).toHaveText(own);
     await more(page).click();
     await expect(more(page)).toHaveAttribute('aria-expanded', 'true');
-    await expect(menu(page).getByRole('menuitem')).toHaveText([
-      'Cards',
-      // The sample's open notes are counted in Notes' name.
-      /^Notes, \d+ open$/,
-      'Stats',
-      'Scaffold',
-      /^(Scenes|Cast)$/,
-      /^(Scenes|Cast)$/,
-    ]);
+    await expect(menu(page).getByRole('menuitem')).toHaveText(
+      isMobile
+        ? [
+            'Cards',
+            // The sample's open notes are counted in Notes' name.
+            /^Notes, \d+ open$/,
+            'Stats',
+            'Scaffold',
+            /^(Scenes|Cast)$/,
+            /^(Scenes|Cast)$/,
+          ]
+        : [/^Notes, \d+ open$/, /^Problems(, \d+)?$/, /^(Scenes|Cast)$/, /^(Scenes|Cast)$/],
+    );
     await menu(page).getByRole('menuitem', { name: 'Cast' }).click();
     await expect(menu(page)).toBeHidden();
     const chosen = row(page).getByRole('tab', { name: 'Cast' });
     await expect(chosen).toHaveAttribute('aria-selected', 'true');
     await expect(chosen).toBeFocused();
-    await expect(tabs).toHaveCount(5);
-    // Back to a core tab: the one chosen keeps the slot.
+    await expect(tabs).toHaveCount(own.length + 1);
     await row(page).getByRole('tab', { name: 'Outline' }).click();
-    await expect(tabs.last()).toHaveText('Cast');
+    if (isMobile) {
+      // Back to a core tab: the one chosen keeps the slot.
+      await expect(tabs.last()).toHaveText('Cast');
+    } else {
+      // In the Inspector it goes back under More.
+      await expect(tabs).toHaveText(own);
+    }
   });
 
-  test('More works from the keyboard, and Escape returns focus', async ({ page }) => {
+  test('More works from the keyboard, and Escape returns focus', async ({ page, isMobile }) => {
     await start(page);
     await turnOn(page, ['Scene list', 'Cast']);
     const items = menu(page).getByRole('menuitem');
     await more(page).focus();
     await page.keyboard.press('Enter');
-    // Cards, Notes, and Stats first, then the modules' tabs.
     await expect(items.first()).toBeFocused();
-    await expect(items.first()).toHaveText('Cards');
+    await expect(items.first()).toHaveText(isMobile ? 'Cards' : /^Notes/);
     await page.keyboard.press('Escape');
     await expect(menu(page)).toBeHidden();
     await expect(more(page)).toBeFocused();
@@ -489,8 +649,21 @@ test.describe('the tab row', () => {
     await expect(items.first()).toBeFocused();
     await page.keyboard.press('ArrowDown');
     await expect(items.nth(1)).toBeFocused();
-    const name = ((await items.nth(1).textContent()) ?? '').trim();
+    const name = ((await items.nth(1).textContent()) ?? '').trim().replace(/, \d+$/, '');
     await page.keyboard.press('Enter');
-    await expect(row(page).getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
+    await expect(row(page).getByRole('tab', { name: new RegExp(`^${name}`) })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  test("a Markdown document's Inspector row is Preview and Stats", async ({ page, isMobile }) => {
+    test.skip(isMobile, 'the Inspector is on a wide screen');
+    await start(page);
+    await runCommand(page, 'Open sample: Markdown');
+    await expect(row(page).getByRole('tab')).toHaveText(['Preview', 'Stats']);
+    await more(page).click();
+    await expect(menu(page).getByRole('menuitem')).toHaveText([/^Problems/]);
+    await page.keyboard.press('Escape');
   });
 });

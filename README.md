@@ -75,7 +75,7 @@ Drafter does for screenwriting what the [Inform 7](https://ganelson.github.io/in
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The left pane is a [CodeMirror 6](https://codemirror.net) editor showing the raw Fountain, markup and all. The right pane is tabbed:
+The left pane is always a [CodeMirror 6](https://codemirror.net) editor showing the raw Fountain, markup and all. The right pane, the Inspector, has its own tabs, and every other view opens there:
 
 | Tab | What it shows | Arrives in |
 |---|---|---|

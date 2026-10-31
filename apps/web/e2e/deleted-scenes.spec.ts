@@ -8,6 +8,7 @@ import {
   setText,
   showSource,
   start,
+  viewTool,
   wholeText,
 } from './modules';
 
@@ -140,7 +141,11 @@ test.describe('Deleted scenes', () => {
       /^Last in today, \d+:\d\d.* \(Taken by you\)\. In 1 version, from \d+ \w+\.$/,
     );
     // The slim bar counts them.
-    await expect(page.locator('.slim', { hasText: '2 deleted scenes' })).toBeVisible();
+    // In the Inspector's header, or behind its "⋯" when the header is narrow.
+    await viewTool(
+      page,
+      page.getByText('2 deleted scenes', { exact: true }).filter({ visible: true }),
+    );
   });
 
   test('Put back puts it between its old neighbours and Undo takes it out', async ({ page }) => {
@@ -197,7 +202,11 @@ test.describe('Deleted scenes', () => {
     await expect(panel(page).locator('h3')).toHaveText(['EXT. COAL YARD - DAWN']);
     expect((await wholeText(page)).split('INT. CELLAR - NIGHT').length - 1).toBe(1);
     // The slim bar keeps its count while the list is read again.
-    await expect(page.locator('.slim', { hasText: '1 deleted scene' })).toBeVisible();
+    // In the Inspector's header, or behind its "⋯" when the header is narrow.
+    await viewTool(
+      page,
+      page.getByText('1 deleted scene', { exact: true }).filter({ visible: true }),
+    );
   });
 
   test('a read-only tab lists them, and Put back is off and says why', async ({
@@ -361,7 +370,9 @@ test.describe('Deleted scenes', () => {
 
   test('Close puts focus on the tab that replaces it', async ({ page }) => {
     await deletedSince(page);
-    await page.getByRole('button', { name: 'Close Deleted scenes' }).click();
+    await (
+      await viewTool(page, page.getByRole('button', { name: 'Close Deleted scenes' }))
+    ).click();
     await expect(page.getByRole('tab', { name: 'Deleted scenes' })).toHaveCount(0);
     await expect(page.locator('#panel-script')).toBeFocused();
   });

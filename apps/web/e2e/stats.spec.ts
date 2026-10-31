@@ -93,6 +93,12 @@ const dayStartWords = (page: Page) =>
 // 13 words: the headings' four each, the cues' one each, and the speeches'.
 const SCENES = '\n\nINT. HALL - DAY\n\nANN\nHello there.\n\nEXT. YARD - NIGHT\n\nBOB\nHi.\n';
 
+// A wide desktop, where this view's tools fit in the Inspector's header (fresh-look design §3.3):
+// at 1280 they fold behind its "⋯", which shell.spec.ts tries.
+test.beforeEach(async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1920, height: 1000 });
+});
+
 test.describe('writing stats', () => {
   test('the status bar shows the words and time of today, after the first edit', async ({
     page,
@@ -134,22 +140,22 @@ test.describe('writing stats', () => {
     await expect(timeToday(page)).toBeVisible();
   });
 
-  test('Show stats opens the Stats tab beside the Source', async ({ page, isMobile }) => {
+  test('Show stats opens the Stats tab in the Inspector, beside the editor', async ({
+    page,
+    isMobile,
+  }) => {
     test.skip(!!isMobile, 'a phone has one pane');
     await start(page);
     await showSource(page);
     await runCommand(page, 'Show stats');
-    // In the pane not showing Source, with focus on its first heading.
+    // In the Inspector, beside the editor, with focus on its first heading.
     const left = page.locator('[data-pane="left"]');
     const right = page.locator('[data-pane="right"]');
     await expect(right.getByRole('tab', { name: 'Stats', exact: true })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    await expect(left.getByRole('tab', { name: 'Source', exact: true })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    await expect(left.locator('.cm-content')).toBeVisible();
     await expect(heading(page, 'Overview')).toBeFocused();
     // No window opens.
     await expect(page.getByRole('dialog', { name: 'Stats' })).toHaveCount(0);

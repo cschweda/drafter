@@ -271,12 +271,32 @@ test.describe('sample modules', () => {
     await page.keyboard.insertText('>');
     await expect.poll(() => textOf(page)).toContain('>INT. HALL - DAY');
 
-    // The tab row: End reaches the module's tab (the last), and Enter chooses it.
     await showProblems(page);
-    await lastPane(page).getByRole('tab', { selected: true }).focus();
-    await page.keyboard.press('End');
-    await expect(moduleTab(page, 'Scenes').last()).toBeFocused();
-    await page.keyboard.press('Enter');
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      // The Inspector keeps a module's tab under More (fresh-look design §3.3): Enter opens it, the
+      // arrows reach the tab, and Enter chooses it, with focus on its tab.
+      await lastPane(page).getByRole('button', { name: 'More tabs' }).focus();
+      await page.keyboard.press('Enter');
+      const menu = page.getByRole('menu', { name: 'More tabs' });
+      await expect(menu.getByRole('menuitem').first()).toBeFocused();
+      const item = menu.getByRole('menuitem', { name: 'Scenes', exact: true });
+      for (
+        let i = 0;
+        i < 10 && !(await item.evaluate((el) => el === document.activeElement));
+        i++
+      ) {
+        await page.keyboard.press('ArrowDown');
+      }
+      await expect(item).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(moduleTab(page, 'Scenes').last()).toBeFocused();
+    } else {
+      // The tab row: End reaches the module's tab (the last), and Enter chooses it.
+      await lastPane(page).getByRole('tab', { selected: true }).focus();
+      await page.keyboard.press('End');
+      await expect(moduleTab(page, 'Scenes').last()).toBeFocused();
+      await page.keyboard.press('Enter');
+    }
     await expect(modulePanel(page, 'Scenes')).toBeVisible();
 
     // A command from the palette, with Notes, from the keyboard alone.

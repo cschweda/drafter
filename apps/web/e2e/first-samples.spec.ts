@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { showView } from './modules';
 
 // The first New of a kind opens with that kind's annotated sample, as the writer's own document,
 // with Start blank above it; every later New of the kind is blank (decided 2026-10-27). The other
@@ -64,8 +65,7 @@ async function command(page: Page, name: string) {
 }
 
 async function showTab(page: Page, name: 'Source' | 'Preview' | 'Script') {
-  const shown = page.locator('[role="tab"][aria-selected="true"]', { hasText: name });
-  if ((await shown.count()) === 0) await page.getByRole('tab', { name }).first().click();
+  await showView(page, name);
 }
 
 function seenRows(page: Page): Promise<Array<{ key: string; value: unknown }>> {

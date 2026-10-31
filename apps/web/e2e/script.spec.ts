@@ -268,6 +268,8 @@ test.describe('the Script pane on a desktop', () => {
   });
 
   test('marks the pressed zoom button with a line in the heading color', async ({ page }) => {
+    // Fit · 100% is a segmented control in the Inspector's header (fresh-look design §3.3): the
+    // pressed one is filled, and has a line in the heading colour under it, a cue beyond the fill.
     const cue = (name: string) =>
       page.getByRole('button', { name, exact: true }).evaluate((el) => {
         const probe = document.createElement('span');
@@ -275,21 +277,13 @@ test.describe('the Script pane on a desktop', () => {
         document.body.append(probe);
         const heading = getComputedStyle(probe).color;
         probe.remove();
-        const style = getComputedStyle(el);
-        return {
-          width: style.borderBottomWidth,
-          line: style.borderBottomStyle,
-          color: style.borderBottomColor,
-          heading,
-        };
+        return { shadow: getComputedStyle(el).boxShadow, heading };
       });
     const pressed = await cue('Fit width');
-    expect(pressed).toMatchObject({ width: '1px', line: 'solid' });
-    expect(pressed.color).toBe(pressed.heading);
-    // The other button keeps the room but not the color.
+    expect(pressed.shadow).toContain(pressed.heading);
+    expect(pressed.shadow).toMatch(/inset/);
     const other = await cue('100%');
-    expect(other.width).toBe('1px');
-    expect(other.color).not.toBe(other.heading);
+    expect(other.shadow).toBe('none');
   });
 
   test('has no accessibility violations in the Script pane in the dark theme', async ({ page }) => {

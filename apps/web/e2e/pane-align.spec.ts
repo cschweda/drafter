@@ -2,8 +2,9 @@ import { expect, type Page, test } from '@playwright/test';
 import { runCommand, setText, start, stored } from './modules';
 
 // With two panes side by side, the first line of text in each starts at the same height (decided
-// 2026-10-29): the panes share their bar rows, so the Source's two bars and the other pane's one
-// end at the same line, and each pane's text starts the same distance below that line. "The top
+// 2026-10-29): the editor and the Inspector share their header row and the row of a second bar (the
+// element bar, the Outline's filter), so the bars end at the same line, and each pane's text starts
+// the same distance below that line. "The top
 // of a line of text" is the top of its glyphs' box (a Range's rectangle), not of the line box, so
 // lines of different heights compare as they look. The Script's first line is on a page under a
 // page's margin: there, the top of the page stands level with the Source's first line.
@@ -79,12 +80,18 @@ test.describe('side by side', () => {
     await stopSync(page);
   });
 
-  test('a screenplay: the Source and the Script, either way round', async ({ page }) => {
+  test('a screenplay: the Source and the Script', async ({ page }) => {
     await expectLevel(page, 'source', 'page');
-    // The Script on the left, the Source on the right.
-    await page.locator('#tab-left-script').click();
-    await expect(page.locator('[data-pane="right"] .cm-line').first()).toBeVisible();
-    await expectLevel(page, 'page', 'source');
+    // The editor is always on the left (fresh-look design §3.2): no tab puts the Script there.
+    await expect(page.locator('#tab-left-script')).toHaveCount(0);
+    // The two headers are one height.
+    const heights = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-pane] > .head')].map((el) =>
+        Math.round(el.getBoundingClientRect().height),
+      ),
+    );
+    expect(heights).toHaveLength(2);
+    expect(heights[0]).toBe(heights[1]);
   });
 
   test('a Markdown document: the Source and the Preview', async ({ page }) => {

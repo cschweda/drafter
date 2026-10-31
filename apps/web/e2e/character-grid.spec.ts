@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { longScript } from './long-script';
-import { editor, runCommand, setText, start } from './modules';
+import { editor, runCommand, setText, start, viewTool } from './modules';
 
 // The Stats tab's Character by scene (seeing-the-script design §4.4): a row per character and a
 // column per scene, each cell the character's speeches there, a dot where they are there and
@@ -52,10 +52,14 @@ async function showGrid(page: Page, text: string) {
   await start(page);
   await setText(page, text);
   await runCommand(page, 'Show stats');
-  await page
-    .getByRole('navigation', { name: 'Stats sections' })
-    .getByRole('link', { name: 'Character by scene' })
-    .click();
+  await (
+    await viewTool(
+      page,
+      page
+        .getByRole('navigation', { name: 'Stats sections' })
+        .getByRole('link', { name: 'Character by scene' }),
+    )
+  ).click();
   await expect(
     stats(page).getByRole('heading', { name: 'Character by scene', level: 2 }),
   ).toBeFocused();

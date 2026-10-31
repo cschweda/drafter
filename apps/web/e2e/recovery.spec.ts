@@ -493,7 +493,10 @@ test.describe('the recovery copy', () => {
 
     test('shows the script’s title in the Source pane’s bar', async ({ page }) => {
       await page.goto('/');
-      await expect(page.locator('.slim').filter({ hasText: 'The Call' }).first()).toBeVisible();
+      // The editor's header on a wide screen, the one pane's bar on a phone.
+      await expect(
+        page.locator('[data-pane="left"] .head, .slim').filter({ hasText: 'The Call' }).first(),
+      ).toBeVisible();
     });
   });
 

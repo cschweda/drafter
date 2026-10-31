@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
+import { showView } from './modules';
 
 // A first visit (Phase 1 design §4): the screenplay sample, with the cursor on its first scene
 // heading and a bar offering the writer's own start. The welcome dialog is Task 6's; the
@@ -253,8 +254,7 @@ test.describe('a first visit', () => {
     await start(page);
     await expect(sample(page)).toBeVisible();
     for (const name of ['Source', 'Script', 'Problems']) {
-      await page.getByRole('tab', { name }).first().click();
-      await expect(page.getByRole('tab', { name, selected: true })).toBeVisible();
+      await showView(page, name);
       await expect(sample(page)).toBeVisible();
     }
   });

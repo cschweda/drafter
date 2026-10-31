@@ -6,6 +6,7 @@ import {
   setText,
   showSource,
   start,
+  viewTool,
 } from './modules';
 
 // Compare's Pages view (Phase 2 design §11.2): the newer of two versions as pages, changed and
@@ -72,10 +73,14 @@ async function onRow(page: Page, row: number, key: string) {
 
 /** Chooses the Pages view on Compare's slim bar. */
 async function showPages(page: Page) {
-  await comparePaneOf(page)
-    .getByRole('group', { name: 'View' })
-    .getByRole('button', { name: 'Pages' })
-    .click();
+  await (
+    await viewTool(
+      page,
+      comparePaneOf(page)
+        .getByRole('group', { name: 'View' })
+        .getByRole('button', { name: 'Pages' }),
+    )
+  ).click();
 }
 
 /** A script at `before`, snapshotted, then changed to `after`, compared with now, as pages. */
@@ -236,7 +241,9 @@ test.describe('Compare', () => {
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.insertText('\nRain.\n');
     await expect(panel(page)).not.toContainText('Rain.');
-    await comparePaneOf(page).getByRole('button', { name: 'Update' }).click();
+    await (
+      await viewTool(page, comparePaneOf(page).getByRole('button', { name: 'Update' }))
+    ).click();
     await expect(panel(page).locator('.compare-mark')).toHaveText([
       'added, A dog barks.',
       'added, Rain.',
@@ -252,7 +259,9 @@ test.describe('Compare', () => {
 
   test('Close comparison takes the tab away', async ({ page }) => {
     await compareWithNow(page, BASE, BASE.replace('Wind.', 'Wind.\n\nRain.'));
-    await comparePaneOf(page).getByRole('button', { name: 'Close comparison' }).click();
+    await (
+      await viewTool(page, comparePaneOf(page).getByRole('button', { name: 'Close comparison' }))
+    ).click();
     await expect(compareTab(page)).toHaveCount(0);
     await expect(page.locator('[data-pane="right"]').getByRole('tabpanel')).toBeFocused();
   });

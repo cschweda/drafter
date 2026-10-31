@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import {
-  chooseTab,
   clampSplit,
   coreTabs,
   DEFAULT_TABS,
   dropTab,
-  otherPane,
+  INSPECTOR_TOOLS_ID,
+  inspectorTabs,
   PHONE_DEFAULT_TAB,
-  revealTab,
   SPLIT,
+  showInInspector,
   TABS,
   tabRow,
   VIEW_TABS,
@@ -58,24 +58,64 @@ describe('panes', () => {
     expect(PHONE_DEFAULT_TAB).toBe('script');
   });
 
-  test('shows a tab in the chosen pane', () => {
-    expect(chooseTab(DEFAULT_TABS, 'right', 'problems')).toEqual({
-      left: 'source',
-      right: 'problems',
+  describe('the Inspector (fresh-look design §3.3, Call 14)', () => {
+    test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Problems, Compare, Deleted scenes, and module tabs", () => {
+      expect(inspectorTabs('fountain')).toEqual({
+        row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
+        more: ['notes', 'problems', 'compare', 'deleted'],
+      });
+      expect(inspectorTabs('fountain', ['module-a--x', 'module-b--y']).more).toEqual([
+        'notes',
+        'problems',
+        'compare',
+        'deleted',
+        'module-a--x',
+        'module-b--y',
+      ]);
     });
-  });
 
-  test('swaps when the tab is open in the other pane', () => {
-    expect(chooseTab(DEFAULT_TABS, 'right', 'source')).toEqual({ left: 'script', right: 'source' });
-    expect(chooseTab(DEFAULT_TABS, 'left', 'script')).toEqual({ left: 'script', right: 'source' });
-  });
+    test("a Markdown document's row is Preview and Stats; More holds Problems and Compare", () => {
+      // The Preview is the Script tab's id in a Markdown document (its panel is #panel-script).
+      expect(inspectorTabs('markdown')).toEqual({
+        row: ['script', 'stats'],
+        more: ['problems', 'compare'],
+      });
+      // A module's tab, which a module may draw for any document, goes after them.
+      expect(inspectorTabs('markdown', ['module-a--x']).more).toEqual([
+        'problems',
+        'compare',
+        'module-a--x',
+      ]);
+    });
 
-  test('changes nothing when the tab is already in that pane', () => {
-    expect(chooseTab(DEFAULT_TABS, 'left', 'source')).toEqual(DEFAULT_TABS);
-  });
+    test('showInInspector never touches the editor pane', () => {
+      for (const tab of [
+        'script',
+        'outline',
+        'cards',
+        'stats',
+        'scaffold',
+        'notes',
+        'problems',
+        'compare',
+        'deleted',
+        'module-a--x',
+      ] as const) {
+        expect(showInInspector(DEFAULT_TABS, tab)).toEqual({ left: 'source', right: tab });
+      }
+      // Already showing: nothing moves.
+      const showing = { left: 'source', right: 'outline' };
+      expect(showInInspector(showing, 'outline')).toBe(showing);
+      // An old layout with something else on the left is put right: the editor is on the left.
+      expect(showInInspector({ left: 'script', right: 'source' }, 'stats')).toEqual({
+        left: 'source',
+        right: 'stats',
+      });
+    });
 
-  test('names the other pane', () => {
-    expect([otherPane('left'), otherPane('right')]).toEqual(['right', 'left']);
+    test('the header owns one place for the view’s tools', () => {
+      expect(INSPECTOR_TOOLS_ID).toBe('inspector-tools');
+    });
   });
 
   test('keeps the split between a quarter and three quarters', () => {
@@ -83,27 +123,6 @@ describe('panes', () => {
     expect([clampSplit(0.1), clampSplit(0.9), clampSplit(0.5), clampSplit(Number.NaN)]).toEqual([
       0.25, 0.75, 0.5, 0.5,
     ]);
-  });
-
-  test('revealTab leaves the tabs alone when the tab is showing', () => {
-    expect(revealTab(DEFAULT_TABS, 'source')).toBe(DEFAULT_TABS);
-    expect(revealTab(DEFAULT_TABS, 'script', 'left')).toBe(DEFAULT_TABS);
-  });
-
-  test('revealTab opens the tab in the pane other than the one asking', () => {
-    // Problems is hidden. Asked from the left, it opens on the right; from the right, on the left.
-    expect(revealTab(DEFAULT_TABS, 'problems', 'left')).toEqual({
-      left: 'source',
-      right: 'problems',
-    });
-    expect(revealTab(DEFAULT_TABS, 'problems', 'right')).toEqual({
-      left: 'problems',
-      right: 'script',
-    });
-  });
-
-  test('revealTab opens it on the left when no pane is asking', () => {
-    expect(revealTab(DEFAULT_TABS, 'problems')).toEqual({ left: 'problems', right: 'script' });
   });
 
   describe('tabRow', () => {

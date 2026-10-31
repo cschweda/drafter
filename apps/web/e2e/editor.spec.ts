@@ -18,6 +18,20 @@ const drawn = (page: Page) =>
   page.locator('.cm-line').evaluateAll((lines) => lines.map((line) => line.textContent ?? ''));
 
 /** Replaces the text with `text`, typed in one go (a paste's clipboard can't be built in Firefox). */
+/**
+ * Moves the one editor out of the page and back (the pane model has no swap now, fresh-look design
+ * §3.2): at a phone's width the one pane shows the Script and the editor is parked; wide again, it
+ * is mounted in the left pane.
+ */
+async function moveEditor(page: Page) {
+  const size = page.viewportSize() ?? { width: 1280, height: 720 };
+  await page.setViewportSize({ width: 700, height: size.height });
+  await expect(page.locator('[data-pane="phone"]')).toBeVisible();
+  await expect(page.locator('[data-editor-holder] .cm-content')).toBeAttached();
+  await page.setViewportSize(size);
+  await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
+}
+
 async function setText(page: Page, text: string) {
   await page.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+A');
@@ -76,18 +90,12 @@ test.describe('on a desktop', () => {
     await expect(page.locator('.cm-line').last()).toHaveText('@');
   });
 
-  test('keeps the text and the undo history when the panes swap', async ({ page }) => {
+  test('keeps the text and the undo history when the editor moves', async ({ page }) => {
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.type('ZZZ');
     await expect(page.locator('.cm-content')).toContainText('ZZZ');
-    await page
-      .getByRole('tablist', { name: 'Right pane' })
-      .getByRole('tab', { name: 'Source' })
-      .click();
-    await expect(
-      page.getByRole('tablist', { name: 'Right pane' }).getByRole('tab', { name: 'Source' }),
-    ).toHaveAttribute('aria-selected', 'true');
+    await moveEditor(page);
     await expect(page.locator('.cm-content')).toContainText('ZZZ');
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+z');
@@ -97,7 +105,7 @@ test.describe('on a desktop', () => {
     expect(lines.findLast((line) => line !== '')).toBe(SAMPLE.trimEnd().split('\n').at(-1));
   });
 
-  test('keeps the scroll position when the panes swap', async ({ page }) => {
+  test('keeps the scroll position when the editor moves', async ({ page }) => {
     const lines = Array.from({ length: 400 }, (_, i) => `Line ${i + 1} of the action.`);
     await setText(page, lines.join('\n\n'));
     const scroller = page.locator('.cm-scroller');
@@ -107,13 +115,7 @@ test.describe('on a desktop', () => {
     await page.waitForTimeout(200);
     const before = await scroller.evaluate((el) => el.scrollTop);
     expect(before).toBeGreaterThan(1000);
-    await page
-      .getByRole('tablist', { name: 'Right pane' })
-      .getByRole('tab', { name: 'Source' })
-      .click();
-    await expect(
-      page.getByRole('tablist', { name: 'Right pane' }).getByRole('tab', { name: 'Source' }),
-    ).toHaveAttribute('aria-selected', 'true');
+    await moveEditor(page);
     // Within a line of where it was.
     await expect
       .poll(async () => Math.abs((await scroller.evaluate((el) => el.scrollTop)) - before))

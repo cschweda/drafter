@@ -35,8 +35,8 @@ import { useScript } from '../storage/script';
 import {
   COMPARE_TAB,
   dropTab,
-  openCompare,
   PHONE_DEFAULT_TAB,
+  showInInspector,
   type TabId,
   WIDE_QUERY,
 } from '../utils/panes';
@@ -285,7 +285,7 @@ function create(): CompareSession {
 
   function show(focusPanel = true) {
     focus.leave();
-    if (wide()) panes.tabs.value = openCompare(panes.tabs.value);
+    if (wide()) panes.tabs.value = showInInspector(panes.tabs.value, COMPARE_TAB.id);
     else panes.phoneTab.value = COMPARE_TAB.id;
     if (focusPanel) {
       void nextTick().then(() => document.getElementById(`panel-${COMPARE_TAB.id}`)?.focus());

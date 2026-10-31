@@ -1,7 +1,7 @@
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
-import { openBeside, SCAFFOLD_TAB_ID, WIDE_QUERY } from '~/utils/panes';
+import { SCAFFOLD_TAB_ID, showInInspector, WIDE_QUERY } from '~/utils/panes';
 import { type ScaffoldPage, useScaffold } from './session';
 
 // Opening Scaffold (seeing-the-script design §5.1, §5.6): Show Scaffold opens the tab beside the
@@ -49,7 +49,7 @@ export function showScaffold(
   useScaffold().open(page);
   const panes = usePanes();
   if (window.matchMedia(WIDE_QUERY).matches) {
-    panes.tabs.value = openBeside(panes.tabs.value, SCAFFOLD_TAB_ID);
+    panes.tabs.value = showInInspector(panes.tabs.value, SCAFFOLD_TAB_ID);
   } else {
     panes.phoneTab.value = SCAFFOLD_TAB_ID;
   }

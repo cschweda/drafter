@@ -380,25 +380,27 @@ test.describe('on a wide screen', () => {
     test.skip(!wide(page), 'a wide screen only');
   });
 
-  test('brings the Problems pane in for its step, and puts the writer’s panes back', async ({
-    page,
-  }) => {
+  test('brings the Problems pane in and puts the layout back', async ({ page }) => {
     await visit(page);
     await startTour(page);
-    // Problems isn't showing to begin with (Source and Script are).
+    // Problems isn't showing to begin with (the editor and the Script are).
     await expect(page.getByRole('tab', { name: 'Problems', selected: true })).toHaveCount(0);
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
     await expect(step(page)).toContainText('4 / 10');
     await expect(lit(page)).toHaveAttribute('data-tour', 'problems');
     await expect(lit(page)).toBeVisible();
+    // It shows in the Inspector; the editor stays on the left.
+    await expect(page.locator('[data-pane="right"] [data-tour="problems"]')).toBeVisible();
+    await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
     await page.keyboard.press('ArrowLeft');
     await expect(lit(page)).toHaveAttribute('data-tour', 'source');
     await expect(lit(page)).toBeVisible();
+    await expect(page.locator('[data-pane="left"] [data-tour="source"]')).toBeVisible();
     for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Escape');
     await expect(step(page)).toBeHidden();
     await expect(page.getByRole('tab', { name: 'Problems', selected: true })).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: 'Source', selected: true })).toBeVisible();
+    await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Script', selected: true })).toBeVisible();
   });
 });

@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { makeZip } from '../../../packages/archive/test/make-zip';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
+import { showView } from './modules';
 
 // Highland and Fade In files (Imports and Markdown out): each is a zip, opened as a new Fountain
 // script that is not the file's (Save asks for a .fountain, and the file is never written). The
@@ -174,10 +175,7 @@ test.describe('importing a Highland or Fade In file where there is no picker', (
       'Imported “Cabin.fadein”. 1 item came in as a note; Problems lists it.',
     );
     await expectNew(page, 'Cabin', 'Cabin.fadein');
-    await page
-      .getByRole('tab', { name: /^Problems/ })
-      .last()
-      .click();
+    await showView(page, 'Problems');
     const problems = page.getByRole('tabpanel', { name: /^Problems/ });
     await expect(
       problems.getByText('This came in from Fade In as “Cast List”', { exact: false }),

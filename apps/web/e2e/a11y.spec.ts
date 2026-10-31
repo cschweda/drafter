@@ -16,6 +16,7 @@ import {
   settingsDialog,
   showSource,
   start,
+  viewTool,
 } from './modules';
 
 // The accessibility suite (Phase 1 design §1 item 5, §16; Plan 5 Task 9): axe on every major state,
@@ -76,10 +77,16 @@ const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
 async function showTab(page: Page, name: string) {
   const panel = page.getByRole('tabpanel', { name: new RegExp(`^${name}`) });
   if (!(await panel.isVisible())) {
-    await page
-      .getByRole('tab', { name: new RegExp(`^${name}`) })
-      .first()
-      .click();
+    const tab = page.getByRole('tab', { name: new RegExp(`^${name}`) }).first();
+    if ((await tab.count()) > 0) await tab.click();
+    else {
+      // The Inspector keeps Problems under More (fresh-look design §3.3).
+      await page.getByRole('button', { name: 'More tabs' }).click();
+      await page
+        .getByRole('menu', { name: 'More tabs' })
+        .getByRole('menuitem', { name: new RegExp(`^${name}`) })
+        .click();
+    }
   }
   await expect(panel).toBeVisible();
 }
@@ -228,10 +235,14 @@ for (const theme of THEMES) {
       await expect(stats.getByRole('table', { name: /^Characters/ })).toBeVisible();
       await clean(page, 'the Stats tab, Overview and Characters');
       // Scrolled to Characters, by its link.
-      await page
-        .getByRole('navigation', { name: 'Stats sections' })
-        .getByRole('link', { name: 'Characters' })
-        .click();
+      await (
+        await viewTool(
+          page,
+          page
+            .getByRole('navigation', { name: 'Stats sections' })
+            .getByRole('link', { name: 'Characters' }),
+        )
+      ).click();
       await expect(stats.getByRole('heading', { name: 'Characters', level: 2 })).toBeFocused();
       await clean(page, 'the Stats tab at Characters');
     });
@@ -242,10 +253,14 @@ for (const theme of THEMES) {
       await countsButton(page).click();
       await countsPanel(page).getByRole('button', { name: 'Stats…' }).click();
       const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
-      await page
-        .getByRole('navigation', { name: 'Stats sections' })
-        .getByRole('link', { name: 'Character by scene' })
-        .click();
+      await (
+        await viewTool(
+          page,
+          page
+            .getByRole('navigation', { name: 'Stats sections' })
+            .getByRole('link', { name: 'Character by scene' }),
+        )
+      ).click();
       const grid = stats.getByRole('grid', { name: 'Character by scene' });
       await expect(grid).toBeVisible();
       // A cell with focus, so its ring is checked too: the grid's Tab stop comes after List.
@@ -276,7 +291,10 @@ for (const theme of THEMES) {
       await expect(scaffold.getByText('First seen here: WREN, ODO.')).toBeVisible();
       await clean(page, 'Scaffold, the scene page');
       // Follow the cursor off (pressed, then not), and Go to with focus.
-      const follow = page.getByRole('button', { name: 'Follow the cursor', exact: true });
+      const follow = await viewTool(
+        page,
+        page.getByRole('button', { name: 'Follow the cursor', exact: true }),
+      );
       await follow.click();
       await expect(follow).toHaveAttribute('aria-pressed', 'false');
       await scaffold.getByRole('button', { name: 'Go to scene 1' }).focus();
@@ -320,18 +338,20 @@ for (const theme of THEMES) {
       await expect(heading).toHaveText('Places');
       await expect(scaffold.getByRole('table', { name: /^Locations/ })).toBeVisible();
       await clean(page, 'Scaffold, Places');
-      await page.getByRole('button', { name: 'Pages', exact: true }).click();
+      await (
+        await viewTool(page, page.getByRole('button', { name: 'Pages', exact: true }))
+      ).click();
       await expect(page.getByRole('menuitem', { name: 'Cast', exact: true })).toBeVisible();
       await clean(page, 'Scaffold, its Pages menu');
       await page.keyboard.press('Escape');
       // A page whose character has gone.
-      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await (await viewTool(page, page.getByRole('button', { name: 'Back', exact: true }))).click();
       await scaffold.getByRole('searchbox', { name: 'Filter the cast' }).fill('');
       await scaffold.getByRole('link', { name: 'ODO', exact: true }).click();
       await expect(heading).toHaveText('ODO');
       await setText(page, 'INT. LAMP ROOM - NIGHT\n\nWREN\nAlone again.\n');
       await runCommand(page, 'Show Scaffold');
-      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await (await viewTool(page, page.getByRole('button', { name: 'Back', exact: true }))).click();
       await expect(scaffold.getByText('No longer in the script.')).toBeVisible();
       await clean(page, 'Scaffold, a character no longer in the script');
     });

@@ -19,10 +19,10 @@ import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { installDesktopUpdates } from '~/update/desktop-source';
 import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
-import { dropTab, otherPane, type PaneId, PHONE_DEFAULT_TAB } from '~/utils/panes';
+import { dropTab, PHONE_DEFAULT_TAB } from '~/utils/panes';
 
 const desktopBuild = isDesktopBuild();
-const { tabs, phoneTab, split, choose, resize } = usePanes();
+const { tabs, phoneTab, split, inspect, resize } = usePanes();
 const wide = useWideScreen();
 const focus = useFocusMode();
 const shown = computed(() => (wide.value ? [tabs.value.left, tabs.value.right] : [phoneTab.value]));
@@ -33,13 +33,14 @@ function skipToEditor() {
   void commandById('show-source')?.run();
 }
 
-// F6 moves focus to the other pane's panel (technical design §13).
+// F6 moves focus between the editor and the Inspector (technical design §13): from the editor
+// to the Inspector's panel, and from the Inspector, or anywhere else, to the editor.
 function onKeydown(event: KeyboardEvent) {
   if (event.key !== 'F6' || !wide.value || focus.on.value) return;
   event.preventDefault();
   const pane = (document.activeElement?.closest('[data-pane]') as HTMLElement | null)?.dataset.pane;
-  const target: PaneId = pane === 'left' || pane === 'right' ? otherPane(pane) : 'left';
-  document.getElementById(`panel-${tabs.value[target]}`)?.focus();
+  if (pane === 'left') document.getElementById(`panel-${tabs.value.right}`)?.focus();
+  else view.focus();
 }
 
 // Escape leaves focus mode when nothing else used it (CodeMirror's completion and search, the palette, a dialog).
@@ -54,7 +55,7 @@ function onEscape(event: KeyboardEvent) {
 const { view, kind } = useEditor();
 
 // A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
-// design §5.7; seeing-the-script design §10): a pane showing one shows another tab.
+// design §5.7; seeing-the-script design §10): the Inspector showing one shows the Preview.
 const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes', 'scaffold'];
 watch(
   kind,
@@ -207,20 +208,15 @@ onBeforeUnmount(() => {
     </main>
     <main v-else class="panes" :class="{ wide }">
       <template v-if="wide">
-        <AppPane
-          pane="left"
-          label="Left pane"
-          :selected="tabs.left"
-          :shown="shown"
-          @choose="choose('left', $event)"
-        />
+        <!-- The editor on the left, always; every other view in the Inspector (Calls 4, 13). -->
+        <AppPane pane="left" label="Source" selected="source" :shown="shown" />
         <PaneDivider :split="split" @resize="resize" />
         <AppPane
           pane="right"
-          label="Right pane"
+          label="Inspector"
           :selected="tabs.right"
           :shown="shown"
-          @choose="choose('right', $event)"
+          @choose="inspect($event)"
         />
       </template>
       <AppPane
@@ -279,10 +275,10 @@ onBeforeUnmount(() => {
 }
 .panes.wide {
   grid-template-columns: calc(var(--split) * 100%) 6px minmax(0, 1fr);
-  /* The tab row, the slim bar, a second bar (the element bar, the Outline's filter), and the text.
-     Each pane takes all four rows as its own (AppPane.vue), so a row is as tall as the taller
-     pane's part: the first lines of text in the two panes start at the same height. */
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  /* The 36px header, a second bar (the element bar, the Outline's filter), and the text. Each pane
+     takes all three rows as its own (AppPane.vue), so a row is as tall as the taller pane's part:
+     the first lines of text in the two panes start at the same height. */
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 .panes.wide > :deep(*) {
   grid-row: 1 / -1;

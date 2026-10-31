@@ -1,10 +1,10 @@
 import { nextTick } from 'vue';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
-import { openBeside, STATS_TAB_ID, WIDE_QUERY } from '~/utils/panes';
+import { STATS_TAB_ID, showInInspector, WIDE_QUERY } from '~/utils/panes';
 
 // Opening the Stats tab (seeing-the-script design §4.1): Show stats and the Counts panel's Stats…
-// open it in the pane not showing Source, as Compare opens, or as the one pane's tab on a phone,
+// open it in the Inspector beside the editor (fresh-look design §3.3), or as the one pane's tab on a phone,
 // and focus goes to a section's heading.
 
 export type StatsSection = 'overview' | 'characters' | 'grid';
@@ -18,7 +18,7 @@ export function showStats(section: StatsSection = 'overview'): void {
   useFocusMode().leave();
   const panes = usePanes();
   if (window.matchMedia(WIDE_QUERY).matches) {
-    panes.tabs.value = openBeside(panes.tabs.value, STATS_TAB_ID);
+    panes.tabs.value = showInInspector(panes.tabs.value, STATS_TAB_ID);
   } else {
     panes.phoneTab.value = STATS_TAB_ID;
   }

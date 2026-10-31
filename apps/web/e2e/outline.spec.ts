@@ -10,6 +10,7 @@ import {
   runCommand,
   setText,
   showSource,
+  showView,
   start,
   textOf,
 } from './modules';
@@ -703,10 +704,7 @@ test.describe('condense, expand, and treatments', () => {
         'Title: Plan\n\n# Act One\n\n= The setup.\n\nINT. LOCATION - DAY\n\n= Margaret waits.\n\nINT. LOCATION - DAY\n\n= Danny comes home.\n',
       );
     await expect(announcer(page)).toHaveText('Made 2 scene stubs. Problems lists them.');
-    await page
-      .getByRole('tab', { name: /^Problems/ })
-      .last()
-      .click();
+    await showView(page, 'Problems');
     const problems = page.getByRole('tabpanel', { name: /^Problems/ });
     await expect(problems.getByText(/still has the stand-in heading/)).toHaveCount(2);
     await undo(page);
@@ -739,10 +737,7 @@ test.describe('condense, expand, and treatments', () => {
       );
     await showOutline(page);
     await expect(tree(page).getByRole('treeitem')).toHaveCount(3);
-    await page
-      .getByRole('tab', { name: /^Problems/ })
-      .last()
-      .click();
+    await showView(page, 'Problems');
     await expect(
       page.getByRole('tabpanel', { name: /^Problems/ }).getByText(/still has the stand-in heading/),
     ).toHaveCount(2);
@@ -819,7 +814,7 @@ for (const theme of ['dark', 'light'] as const) {
         await settings.getByRole('switch', { name, exact: true }).click();
       }
       await settings.getByRole('button', { name: 'Done' }).click();
-      await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
+      await page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' }).click();
       await expect(page.getByRole('menu', { name: 'More tabs' })).toBeVisible();
       await clean(page, "the tabs' More");
     });

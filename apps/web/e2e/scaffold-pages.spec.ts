@@ -107,6 +107,12 @@ async function press(page: Page, target: Locator) {
   await page.keyboard.press('Enter');
 }
 
+// A wide desktop, where this view's tools fit in the Inspector's header (fresh-look design §3.3):
+// at 1280 they fold behind its "⋯", which shell.spec.ts tries.
+test.beforeEach(async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1920, height: 1000 });
+});
+
 test.describe('Scaffold’s pages', () => {
   test('a character’s name opens their page', async ({ page }) => {
     await showLighthouse(page);

@@ -2,41 +2,38 @@ import { describe, expect, test } from 'vitest';
 import { orderVersions } from '../app/compare/use-compare';
 import {
   COMPARE_TAB,
-  comparePane,
   DELETED_TAB,
   dropTab,
-  openBeside,
-  openCompare,
+  inspectorTabs,
+  showInInspector,
   TABS,
   tabRow,
   viewTabs,
 } from '../app/utils/panes';
 
 // Compare (Phase 2 design §5.8, §11.2, Call 16): a tab that exists only while a comparison is
-// open, first among the other tabs, in the pane that isn't showing Source.
+// open, first among the other tabs on a phone; on a wide screen it opens in the Inspector, beside
+// the editor (fresh-look design §3.3).
 
 const ids = (tabs: Array<{ id: string }>) => tabs.map((t) => t.id);
 
 describe('the Compare tab', () => {
-  test('Compare opens in the pane not showing Source', () => {
+  test('Compare opens in the Inspector, beside the editor', () => {
     expect(COMPARE_TAB).toEqual({ id: 'compare', label: 'Compare' });
-    expect(comparePane({ left: 'source', right: 'script' })).toBe('right');
-    expect(comparePane({ left: 'outline', right: 'source' })).toBe('left');
-    expect(openCompare({ left: 'outline', right: 'source' })).toEqual({
-      left: 'compare',
-      right: 'source',
+    expect(showInInspector({ left: 'source', right: 'script' }, COMPARE_TAB.id)).toEqual({
+      left: 'source',
+      right: 'compare',
     });
-  });
-
-  test('in the right pane when neither shows Source', () => {
-    expect(comparePane({ left: 'script', right: 'problems' })).toBe('right');
-    expect(openCompare({ left: 'script', right: 'problems' })).toEqual({
-      left: 'script',
+    expect(showInInspector({ left: 'source', right: 'problems' }, COMPARE_TAB.id)).toEqual({
+      left: 'source',
       right: 'compare',
     });
     // Already showing: nothing moves.
-    const showing = { left: 'compare', right: 'source' };
-    expect(openCompare(showing)).toBe(showing);
+    const showing = { left: 'source', right: 'compare' };
+    expect(showInInspector(showing, COMPARE_TAB.id)).toBe(showing);
+    // It waits under the Inspector's More, in a script and in a Markdown document.
+    expect(inspectorTabs('fountain').more).toContain('compare');
+    expect(inspectorTabs('markdown').more).toContain('compare');
   });
 
   test('Compare takes the slot while open and is gone when closed', () => {
@@ -67,18 +64,16 @@ describe('the Compare tab', () => {
 });
 
 describe('the Deleted scenes tab', () => {
-  test('opens, as Compare does, in the pane not showing Source, and goes as Compare does', () => {
+  test('opens, as Compare does, in the Inspector beside the editor, and goes as Compare does', () => {
     expect(DELETED_TAB).toEqual({ id: 'deleted', label: 'Deleted scenes' });
-    expect(openBeside({ left: 'source', right: 'script' }, DELETED_TAB.id)).toEqual({
+    expect(showInInspector({ left: 'source', right: 'script' }, DELETED_TAB.id)).toEqual({
       left: 'source',
       right: 'deleted',
     });
-    expect(openBeside({ left: 'outline', right: 'source' }, DELETED_TAB.id)).toEqual({
-      left: 'deleted',
-      right: 'source',
-    });
     const showing = { left: 'source', right: 'deleted' };
-    expect(openBeside(showing, DELETED_TAB.id)).toBe(showing);
+    expect(showInInspector(showing, DELETED_TAB.id)).toBe(showing);
     expect(dropTab(showing, DELETED_TAB.id)).toEqual({ left: 'source', right: 'script' });
+    expect(inspectorTabs('fountain').more).toContain('deleted');
+    expect(inspectorTabs('markdown').more).not.toContain('deleted');
   });
 });

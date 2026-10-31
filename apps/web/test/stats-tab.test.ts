@@ -4,7 +4,7 @@ import { nextTick, ref } from 'vue';
 import { type PaneTabs, STATS_TAB_ID, viewTabs } from '../app/utils/panes';
 
 // The Stats tab (seeing-the-script design §4.1): a view tab after Cards and Notes, which Show
-// stats and the Counts panel's Stats… open beside the Source, with focus on a section's heading.
+// stats and the Counts panel's Stats… open in the Inspector beside the editor, with focus on a section's heading.
 
 const env = vi.hoisted(() => ({
   tabs: null as unknown as { value: PaneTabs },
@@ -51,7 +51,7 @@ describe('the Stats tab', () => {
     expect(viewTabs('fountain').map((t) => t.id)).toEqual(['cards', 'notes', 'stats', 'scaffold']);
   });
 
-  test('showStats opens the tab beside the Source', async () => {
+  test('showStats opens the tab in the Inspector', async () => {
     const { showStats } = await import('../app/stats/tab');
     showStats();
     expect(env.tabs.value).toEqual({ left: 'source', right: 'stats' });
@@ -61,14 +61,15 @@ describe('the Stats tab', () => {
     // Focus goes to its first section's heading.
     expect(document.activeElement?.id).toBe('stats-overview');
 
-    // With the Source on the right, it opens on the left; where it shows already, nothing moves.
-    env.tabs.value = { left: 'outline', right: 'source' };
+    // From another Inspector view it takes the Inspector, never the editor's pane; where it shows
+    // already, nothing moves.
+    env.tabs.value = { left: 'source', right: 'outline' };
     showStats('characters');
-    expect(env.tabs.value).toEqual({ left: 'stats', right: 'source' });
+    expect(env.tabs.value).toEqual({ left: 'source', right: 'stats' });
     await nextTick();
     expect(document.activeElement?.id).toBe('stats-characters');
     showStats();
-    expect(env.tabs.value).toEqual({ left: 'stats', right: 'source' });
+    expect(env.tabs.value).toEqual({ left: 'source', right: 'stats' });
 
     // A section the tab doesn't draw: the panel has focus.
     showStats('grid');

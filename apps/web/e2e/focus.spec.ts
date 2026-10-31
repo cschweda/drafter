@@ -380,7 +380,7 @@ test.describe('focus mode, keys and layouts', () => {
     for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowLeft');
     // Wider than the phone layout: the editor is parked and mounted again, with focus.
     await page.setViewportSize({ width: 1400, height: 800 });
-    await expect(page.getByRole('tab', { name: 'Source' }).first()).toBeVisible();
+    await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
     await expect(editor(page)).toBeFocused();
     await page.keyboard.type('X');
     await expect(editor(page)).toContainText('hello Xworld');

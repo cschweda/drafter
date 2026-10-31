@@ -1,11 +1,11 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 import { expectNewestThenCompare, listedReasons, newScreenplay } from './bulk-snapshot';
-import { runCommand } from './modules';
+import { runCommand, showView, viewTool } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 
-/** The pane that holds Problems when it is chosen: the right pane, or the only one on a phone. */
+/** The pane that holds Problems when it is chosen: the Inspector, or the only one on a phone. */
 const lastPane = (page: Page) => page.locator('[data-pane]').last();
 const problemsTab = (page: Page) => lastPane(page).getByRole('tab', { name: /^Problems/ });
 const list = (page: Page) => page.getByRole('tabpanel', { name: /^Problems/ });
@@ -17,7 +17,7 @@ const HEADING_NO_TIME = /Warning: The scene heading "INT\. HALL" has no time of 
 /** The Source tab, which a phone doesn't show to begin with. */
 async function showSource(page: Page) {
   if (!(await editor(page).isVisible())) {
-    await page.getByRole('tab', { name: 'Source' }).first().click();
+    await showView(page, 'Source');
   }
   await expect(editor(page)).toBeVisible();
 }
@@ -30,8 +30,9 @@ async function setText(page: Page, text: string) {
   await page.keyboard.insertText(text);
 }
 
+/** Problems: a phone's tab, or under the Inspector's More (fresh-look design §3.3). */
 async function showProblems(page: Page) {
-  await problemsTab(page).click();
+  await showView(page, 'Problems');
   await expect(list(page)).toBeVisible();
 }
 
@@ -157,6 +158,8 @@ test('applies no fix to text that changed after linting', async ({ page, isMobil
 
 test('counts problems on the tab and in the status bar', async ({ page }) => {
   const status = page.locator('footer');
+  // The Inspector keeps Problems under More: shown, its tab is in the row with its count.
+  await showProblems(page);
   await setText(page, 'INT. HALL\n\nShe waits.\n\nINT. YARD\n\nHe waits.');
   await expect(problemsTab(page)).toHaveText(/^Problems\s+2$/, { timeout: 1000 });
   await expect(problemsTab(page)).toHaveAccessibleName('Problems 2');
@@ -189,7 +192,7 @@ test('fixes everything at once in Strict Fountain', async ({ page }) => {
   await showProblems(page);
   await expect(problemButton(page, /^Warning: .* Line 1$/)).toBeVisible({ timeout: 1000 });
   await expect(problemButton(page, /^Warning: .* Line 5$/)).toBeVisible();
-  await page.getByRole('button', { name: 'Fix all' }).click();
+  await (await viewTool(page, page.getByRole('button', { name: 'Fix all' }))).click();
   await expect
     .poll(() => text(page))
     .toBe('INT. HALL - DAY\n\nShe waits.\n\nMARGARET\n(quietly, then louder)\nHi.\n');
@@ -209,7 +212,7 @@ test('takes a snapshot before Fix all, and none when the text equals the newest'
   await setText(page, STRICT);
   await enableStrict(page);
   await showProblems(page);
-  await page.getByRole('button', { name: 'Fix all' }).click();
+  await (await viewTool(page, page.getByRole('button', { name: 'Fix all' }))).click();
   await expect
     .poll(() => text(page))
     .toBe('INT. HALL - DAY\n\nShe waits.\n\nMARGARET\n(quietly, then louder)\nHi.\n');
@@ -221,7 +224,7 @@ test('takes a snapshot before Fix all, and none when the text equals the newest'
   await page.keyboard.press('ControlOrMeta+Z');
   await expect.poll(() => text(page)).toBe(STRICT);
   await showProblems(page);
-  await page.getByRole('button', { name: 'Fix all' }).click();
+  await (await viewTool(page, page.getByRole('button', { name: 'Fix all' }))).click();
   await expect.poll(() => text(page)).not.toBe(STRICT);
   expect(await listedReasons(page)).toHaveLength(count);
 });
@@ -260,8 +263,7 @@ test('moves focus to the panel after Fix all', async ({ page }) => {
   await setText(page, STRICT);
   await enableStrict(page);
   await showProblems(page);
-  const fixAll = page.getByRole('button', { name: 'Fix all' });
-  await expect(fixAll).toBeVisible({ timeout: 1000 });
+  const fixAll = await viewTool(page, page.getByRole('button', { name: 'Fix all' }));
   await fixAll.focus();
   await page.keyboard.press('Enter');
   await expect(fixAll).toBeHidden();
@@ -391,7 +393,7 @@ test.describe('in a read-only tab', () => {
     await other.goto('/');
     await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
     await expect(other.locator('.cm-content')).toContainText('then louder');
-    await problemsTab(other).click();
+    await showView(other, 'Problems');
     const panel = other.getByRole('tabpanel', { name: /^Problems/ });
     const warning = panel.getByRole('button', { name: /^Warning: .* Line 5$/ });
     await expect(warning).toBeVisible({ timeout: 2000 });

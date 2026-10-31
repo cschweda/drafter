@@ -1,7 +1,8 @@
-// Which tab each pane shows, and how wide the left pane is. A tab shows in
-// one pane at a time (Phase 1 design §5.1): choosing a tab that's open in
-// the other pane swaps the two, so there's always one editor, one Script
-// view, and one Problems list.
+// Which tab each pane shows, and how wide the left pane is. On a wide screen the left pane is
+// always the editor and every other view lives in the right one, the Inspector (fresh-look design
+// §3.2, §3.3, Calls 4, 5, 13, 14): there is no swap rule and no choice of tab on the left. A phone
+// still shows one pane with the tab row below (`coreTabs`, `tabRow`), until its bottom tab bar
+// replaces it (Task 9).
 
 /** A tab's id: one of the core four, a view tab (Cards, Notes, Stats), or a script module's (`moduleTabId`). */
 export type TabId = string;
@@ -12,6 +13,59 @@ export interface PaneTabs {
   left: TabId;
   right: TabId;
 }
+/** What the panes show: on a wide screen `left` is always `source` and `right` the Inspector's view. */
+export type PaneState = PaneTabs;
+
+/**
+ * A view the Inspector shows. The Preview is the Script tab in a Markdown document, and keeps its
+ * id (`script`, `#panel-script`); a module's tab is `moduleTabId`'s `module-<module>--<tab>`.
+ */
+export type InspectorTabId =
+  | 'script'
+  | 'outline'
+  | 'cards'
+  | 'stats'
+  | 'scaffold'
+  | 'notes'
+  | 'problems'
+  | 'compare'
+  | 'deleted'
+  | `module-${string}`;
+
+/**
+ * The Inspector's tabs for a document of `kind` (Call 14): the row, and More with the rest, in
+ * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Problems, Compare,
+ * Deleted scenes, then the modules' tabs (`modules`) under More. A Markdown document: Preview and
+ * Stats; Problems, Compare, and the modules' tabs under More. Compare and Deleted scenes are listed only while open
+ * (AppPane leaves them out otherwise); when the Inspector is too narrow for its row, AppPane moves
+ * tabs from the row's right end into More, measured.
+ */
+export function inspectorTabs(
+  kind: 'fountain' | 'markdown',
+  modules: ReadonlyArray<string> = [],
+): { row: InspectorTabId[]; more: InspectorTabId[] } {
+  const own = modules as InspectorTabId[];
+  if (kind === 'markdown')
+    return { row: ['script', 'stats'], more: ['problems', 'compare', ...own] };
+  return {
+    row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
+    more: ['notes', 'problems', 'compare', 'deleted', ...own],
+  };
+}
+
+/**
+ * The panes with `tab` in the Inspector (Calls 4, 5): the editor stays on the left whatever is
+ * shown, and a view is only ever in the Inspector. Unchanged when it shows already.
+ */
+export function showInInspector(state: PaneState, tab: InspectorTabId | TabId): PaneState {
+  if (state.left === 'source' && (tab === 'source' || state.right === tab)) return state;
+  if (tab === 'source')
+    return { left: 'source', right: state.right === 'source' ? 'script' : state.right };
+  return { left: 'source', right: tab };
+}
+
+/** The id of the Inspector header's place for the view's tools (Call 15). */
+export const INSPECTOR_TOOLS_ID = 'inspector-tools';
 
 export interface Tab {
   id: TabId;
@@ -59,27 +113,11 @@ export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
  */
 export const COMPARE_TAB: Tab = { id: 'compare', label: 'Compare' };
 
-/** The pane Compare opens in: the one not showing Source; the right one when neither does. */
-export function comparePane(tabs: PaneTabs): PaneId {
-  return tabs.right === 'source' ? 'left' : 'right';
-}
-
 /**
  * Deleted scenes (version-history design §9, Call 34): a tab that exists only while it is open, as
  * Compare is, placed as Compare is, so the script can be seen beside it as scenes come back.
  */
 export const DELETED_TAB: Tab = { id: 'deleted', label: 'Deleted scenes' };
-
-/** The tabs with tab `id` showing: where it is, else in the pane `comparePane` picks. */
-export function openBeside(tabs: PaneTabs, id: TabId): PaneTabs {
-  if (tabs.left === id || tabs.right === id) return tabs;
-  return { ...tabs, [comparePane(tabs)]: id };
-}
-
-/** The tabs with Compare showing: where it is, else in the pane `comparePane` picks. */
-export function openCompare(tabs: PaneTabs): PaneTabs {
-  return openBeside(tabs, COMPARE_TAB.id);
-}
 
 /**
  * The view tabs a document of `kind` has, before any module's. A Markdown document has no scenes or
@@ -116,27 +154,6 @@ export const PHONE_DEFAULT_TAB: CoreTabId = 'script';
 /** The left pane's share of the width. */
 export const SPLIT = { min: 0.25, max: 0.75, step: 0.05, initial: 0.5 } as const;
 
-export function otherPane(pane: PaneId): PaneId {
-  return pane === 'left' ? 'right' : 'left';
-}
-
-export function chooseTab(tabs: PaneTabs, pane: PaneId, tab: TabId): PaneTabs {
-  if (tabs[pane] === tab) return tabs;
-  const other = otherPane(pane);
-  const swapped = tabs[other] === tab ? { [other]: tabs[pane] } : {};
-  return { ...tabs, ...swapped, [pane]: tab };
-}
-
-/**
- * The tabs with `tab` showing. If it isn't already, it opens in the pane other than `from`, the
- * pane asking (so the writer keeps what they were looking at), or in the left pane when no pane
- * is asking.
- */
-export function revealTab(tabs: PaneTabs, tab: TabId, from?: PaneId): PaneTabs {
-  if (tabs.left === tab || tabs.right === tab) return tabs;
-  return { ...tabs, [from ? otherPane(from) : 'left']: tab };
-}
-
 /**
  * The tabs with `tab` taken away (its module was turned off, or a Markdown document has no
  * Outline, Cards, or Notes): a pane that showed it shows the first core tab, in the order Source, Script,
@@ -146,7 +163,7 @@ export function dropTab(tabs: PaneTabs, tab: TabId): PaneTabs {
   const next = { ...tabs };
   for (const pane of ['left', 'right'] as const) {
     if (next[pane] !== tab) continue;
-    const other = next[otherPane(pane)];
+    const other = next[pane === 'left' ? 'right' : 'left'];
     next[pane] = (TABS.find((t) => t.id !== other && t.id !== tab) as { id: TabId }).id;
   }
   return next;

@@ -68,8 +68,8 @@ const groups = shortcutGroups(COMMAND_DATA);
       </p>
       <ul>
         <li>
-          <kbd>F6</kbd> moves between the two panes. It works where the two panes are side by side,
-          and not in focus mode.
+          <kbd>F6</kbd> moves between the editor and the Inspector, the pane beside it. It works
+          where the two panes are side by side, and not in focus mode.
         </li>
         <li>
           <kbd>Esc</kbd> leaves focus mode, once nothing else (the palette, a menu, a dialog,

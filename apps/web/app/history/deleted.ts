@@ -22,8 +22,8 @@ import { NOT_FOR_MARKDOWN } from '../strip/labels';
 import {
   DELETED_TAB,
   dropTab,
-  openBeside,
   PHONE_DEFAULT_TAB,
+  showInInspector,
   type TabId,
   WIDE_QUERY,
 } from '../utils/panes';
@@ -206,7 +206,7 @@ function create(): DeletedSession {
 
   function show(focusPanel: boolean) {
     focus.leave();
-    if (wide()) panes.tabs.value = openBeside(panes.tabs.value, DELETED_TAB.id);
+    if (wide()) panes.tabs.value = showInInspector(panes.tabs.value, DELETED_TAB.id);
     else panes.phoneTab.value = DELETED_TAB.id;
     if (focusPanel)
       void nextTick().then(() => document.getElementById(`panel-${DELETED_TAB.id}`)?.focus());

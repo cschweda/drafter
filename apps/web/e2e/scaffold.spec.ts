@@ -124,6 +124,12 @@ async function cursorLine(page: Page) {
   });
 }
 
+// A wide desktop, where this view's tools fit in the Inspector's header (fresh-look design §3.3):
+// at 1280 they fold behind its "⋯", which shell.spec.ts tries.
+test.beforeEach(async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1920, height: 1000 });
+});
+
 test.describe('Scaffold', () => {
   test.describe('beside the Source', () => {
     test.skip(({ isMobile }) => !!isMobile, 'two panes need a wide screen');
@@ -387,7 +393,7 @@ test.describe('Scaffold', () => {
     });
   });
 
-  test('a Markdown document has no Scaffold', async ({ page }) => {
+  test('a Markdown document has no Scaffold', async ({ page, isMobile }) => {
     await start(page);
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     await page
@@ -397,10 +403,11 @@ test.describe('Scaffold', () => {
     await expect(editor(page)).toContainText('# Untitled');
     // Not under More, and not in the palette.
     await expect(page.getByRole('tab', { name: 'Scaffold' })).toHaveCount(0);
-    await page.locator('[data-pane]').first().getByRole('button', { name: 'More tabs' }).click();
-    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText([
-      'Stats',
-    ]);
+    await page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' }).click();
+    // A phone has Stats under More; the Inspector has it in its row, and Problems under More.
+    await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
+      isMobile ? ['Stats'] : [/^Problems/],
+    );
     await page.keyboard.press('Escape');
     await page.keyboard.press('ControlOrMeta+k');
     await expect(paletteInput(page)).toBeFocused();

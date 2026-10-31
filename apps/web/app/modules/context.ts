@@ -8,7 +8,7 @@ import { useEditor } from '../editor/session';
 import { markdownTitle } from '../markdown/title';
 import { useScript } from '../storage/script';
 import { fileBaseName, titleOf } from '../storage/text';
-import { revealTab, WIDE_QUERY } from '../utils/panes';
+import { showInInspector, WIDE_QUERY } from '../utils/panes';
 import { askModule, dropQuestion } from './confirm';
 import { setModuleProblems } from './problems';
 import { announceNotice, moduleTabId, useModules } from './registry';
@@ -157,10 +157,8 @@ function createContext(module: ScriptModule, checkText: boolean): ModuleContext 
       // Focus mode shows only the Source, so the tab can't be seen from it.
       useFocusMode().leave();
       if (window.matchMedia(WIDE_QUERY).matches) {
-        // The Source pane stays: the tab takes the other one, unless Source is in neither.
-        const { left, right } = panes.tabs.value;
-        const source = left === 'source' ? 'left' : right === 'source' ? 'right' : undefined;
-        panes.tabs.value = revealTab(panes.tabs.value, tab, source);
+        // The editor stays on the left: the tab shows in the Inspector.
+        panes.tabs.value = showInInspector(panes.tabs.value, tab);
       } else {
         panes.phoneTab.value = tab;
       }

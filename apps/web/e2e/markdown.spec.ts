@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
+import { showView } from './modules';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -26,8 +27,7 @@ async function start(page: Page) {
 
 /** Shows a tab: on a phone one pane shows at a time; on a wide screen both of these are already up. */
 async function showTab(page: Page, name: 'Source' | 'Preview' | 'Script' | 'Problems') {
-  const shown = page.locator('[role="tab"][aria-selected="true"]', { hasText: name });
-  if ((await shown.count()) === 0) await page.getByRole('tab', { name }).first().click();
+  await showView(page, name);
 }
 
 /** Each pane has all the tabs, so a wide screen has two of each; a phone has one. */

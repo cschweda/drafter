@@ -23,6 +23,9 @@
   --desk: #0b0c0f;
   --paper: #e8e4da;
   --paper-ink: #1c1c1c;
+  /* The editor's current line, a faint accent tint (design §3.2): lighter in the light theme, so
+     the syntax colours on it keep 4.5:1. */
+  --current-line: rgb(229 176 74 / 0.07);
 }
 
 .light {
@@ -42,6 +45,7 @@
   --desk: #e9e7e2;
   --paper: #ffffff;
   --paper-ink: #1c1c1c;
+  --current-line: rgb(229 176 74 / 0.03);
 }
 
 /* The same in both themes: the radii, and the one motion (design §8), which main.css's `.motion`

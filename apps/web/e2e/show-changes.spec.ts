@@ -102,6 +102,12 @@ async function turnOn(page: Page, count?: number) {
 /** The texts of the marked lines, as a screen reader reads them. */
 const markedTexts = (page: Page) => marked(page).allTextContents();
 
+// A wide desktop, where this view's tools fit in the Inspector's header (fresh-look design §3.3):
+// at 1280 they fold behind its "⋯", which shell.spec.ts tries.
+test.beforeEach(async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1920, height: 1000 });
+});
+
 test.describe('Show changes on the Script pane', () => {
   test('marks an added line with + and a hidden "added, "', async ({ page }) => {
     await savedThenChanged(page, BASE, CHANGED);

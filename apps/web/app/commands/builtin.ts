@@ -73,7 +73,7 @@ import { useScript } from '~/storage/script';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { requestTour } from '~/tour/state';
 import { updateCheckOpen } from '~/update/use-check';
-import { type PaneId, revealTab, type TabId, WIDE_QUERY } from '~/utils/panes';
+import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { COMMAND_DATA, HELP_PAGES, helpHref, MARKDOWN_ACTIONS } from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
@@ -115,7 +115,7 @@ export function registerBuiltinCommands(): void {
   /** Whether a pane shows the Deleted scenes tab. */
   const deletedShown = () =>
     window.matchMedia(WIDE_QUERY).matches
-      ? panes.tabs.value.left === 'deleted' || panes.tabs.value.right === 'deleted'
+      ? panes.tabs.value.right === 'deleted'
       : panes.phoneTab.value === 'deleted';
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
@@ -146,14 +146,16 @@ export function registerBuiltinCommands(): void {
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
-  /** Shows `tab`; `focusPanel` false leaves focus to the caller (Next change puts it on a mark). */
+  /**
+   * Shows `tab`: on a wide screen the Source is the editor, always on the left, and any other view
+   * shows in the Inspector, never in both panes (fresh-look design §3.2, §3.3, Calls 4, 5).
+   * `focusPanel` false leaves focus to the caller (Next change puts it on a mark).
+   */
   function showTab(tab: TabId, focusPanel = true) {
     // Focus mode shows only the Source: any other tab is for the writer to see.
     if (tab !== 'source') focus.leave();
     if (window.matchMedia(WIDE_QUERY).matches) {
-      const held = document.activeElement?.closest<HTMLElement>('[data-pane]')?.dataset.pane;
-      const from: PaneId | undefined = held === 'left' || held === 'right' ? held : undefined;
-      panes.tabs.value = revealTab(panes.tabs.value, tab, from);
+      panes.tabs.value = showInInspector(panes.tabs.value, tab);
     } else {
       panes.phoneTab.value = tab;
     }
@@ -710,13 +712,8 @@ export function registerBuiltinCommands(): void {
         if (effects.length > 0) view.dispatch({ effects });
         focus.leave();
         if (window.matchMedia(WIDE_QUERY).matches) {
-          // The Source in one pane (where it is, or the left) and the Outline in the other.
-          const source: PaneId = panes.tabs.value.right === 'source' ? 'right' : 'left';
-          panes.tabs.value = {
-            ...panes.tabs.value,
-            [source]: 'source',
-            [source === 'left' ? 'right' : 'left']: 'outline',
-          };
+          // The editor on the left, as always, and the Outline in the Inspector.
+          panes.tabs.value = showInInspector(panes.tabs.value, 'outline');
         } else {
           panes.phoneTab.value = 'outline';
         }

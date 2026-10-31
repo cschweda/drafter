@@ -117,22 +117,38 @@ export async function runCommand(page: Page, title: string) {
   await expect(palette(page)).toBeHidden();
 }
 
-/** The pane that holds Problems when it is chosen: the right pane, or the only one on a phone. */
+/**
+ * The pane with the tabs: the Inspector on a wide screen (the editor's pane has none, fresh-look
+ * design §3.2), or a phone's one pane.
+ */
 export const lastPane = (page: Page) => page.locator('[data-pane]').last();
 export const problemsTab = (page: Page) => lastPane(page).getByRole('tab', { name: /^Problems/ });
 export const problemsList = (page: Page) => page.getByRole('tabpanel', { name: /^Problems/ });
 
+/** Shows Problems: its tab on a phone, or from the Inspector's More (Call 14), where it waits. */
 export async function showProblems(page: Page) {
-  await problemsTab(page).click();
+  if ((await problemsTab(page).count()) > 0) {
+    await problemsTab(page).click();
+  } else {
+    await lastPane(page).getByRole('button', { name: 'More tabs' }).click();
+    await page
+      .getByRole('menu', { name: 'More tabs' })
+      .getByRole('menuitem', { name: /^Problems/ })
+      .click();
+    // Focus goes to the chosen tab once the menu has closed; wait for it, so it can't take focus
+    // from whatever the test does next.
+    await expect(problemsTab(page)).toBeFocused();
+  }
   await expect(problemsList(page)).toBeVisible();
 }
 
 /**
- * Chooses the tab called `name` in the first pane: from the tab row, or from More when it isn't
- * in the row (Phase 2 design §5.8: the core tabs, one slot, then More).
+ * Chooses the tab called `name` in the pane with the tabs: from the tab row, or from More when it
+ * isn't in the row (the Inspector's row and More by kind, Call 14; a phone's core tabs, one slot,
+ * then More).
  */
 export async function chooseTab(page: Page, name: string) {
-  const pane = page.locator('[data-pane]').first();
+  const pane = lastPane(page);
   const tab = pane.getByRole('tab', { name, exact: true });
   if ((await tab.count()) > 0) {
     await tab.click();
@@ -149,11 +165,11 @@ export async function chooseTab(page: Page, name: string) {
 }
 
 /**
- * Expects the first pane to offer the tab called `name`: in its tab row, or under More (a tab
- * that isn't core takes the slot only once it is chosen). The More menu is closed again.
+ * Expects the pane with the tabs to offer the tab called `name`: in its tab row, or under More (a
+ * tab that isn't in the row shows there only once it is chosen). The More menu is closed again.
  */
 export async function expectTabOffered(page: Page, name: string) {
-  const pane = page.locator('[data-pane]').first();
+  const pane = lastPane(page);
   if ((await pane.getByRole('tab', { name, exact: true }).count()) > 0) return;
   const more = pane.getByRole('button', { name: 'More tabs' });
   const menu = page.getByRole('menu', { name: 'More tabs' });
@@ -238,4 +254,57 @@ export async function expectTypingLeavesScript(page: Page, panel: Locator) {
   await editor(page).focus();
   await page.keyboard.type('Q');
   await expect.poll(() => wholeText(page)).toBe(`${before}Q`);
+}
+
+/**
+ * Makes `tool`, one of the Inspector's view tools (fresh-look design §3.3, Call 15), reachable:
+ * it is in the header, or, when the header is too narrow for it, folded behind "⋯" (More tools),
+ * which is opened. Returns `tool`. A phone's slim bar has every tool; nothing is opened there.
+ * `optional`: a tool that may not be drawn at all (a layout a narrow pane hasn't room for).
+ */
+export async function viewTool(
+  page: Page,
+  tool: Locator,
+  { optional = false }: { optional?: boolean } = {},
+): Promise<Locator> {
+  // The header is measured a frame after a view shows.
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  if (await tool.isVisible()) return tool;
+  const fold = page.getByRole('button', { name: 'More tools' });
+  if ((await fold.isVisible()) && (await fold.getAttribute('aria-expanded')) !== 'true') {
+    await fold.click();
+  }
+  if (!optional) await expect(tool).toBeVisible();
+  return tool;
+}
+
+/**
+ * Shows the view called `name` ("Source", "Script", "Preview", "Problems", …) where it isn't up:
+ * on a wide screen the Source is the editor, always on the left, and the other views are the
+ * Inspector's tabs, in its row or under More (fresh-look design §3.2, §3.3); on a phone, the one
+ * pane's tabs.
+ */
+export async function showView(page: Page, name: string) {
+  if (name === 'Source' && (await page.locator('[data-pane="left"] .cm-content').count()) > 0) {
+    return;
+  }
+  const pane = lastPane(page);
+  const pattern = new RegExp(`^${name}\\b`);
+  const shown = pane.getByRole('tab', { name: pattern, selected: true });
+  if ((await shown.count()) > 0) return;
+  const tab = pane.getByRole('tab', { name: pattern });
+  if ((await tab.count()) > 0) {
+    await tab.first().click();
+  } else {
+    await pane.getByRole('button', { name: 'More tabs' }).click();
+    await page
+      .getByRole('menu', { name: 'More tabs' })
+      .getByRole('menuitem', { name: pattern })
+      .click();
+    // As chooseTab: focus goes to the chosen tab once the menu has closed.
+    await expect(pane.getByRole('tab', { name: pattern, selected: true })).toBeFocused();
+  }
+  await expect(pane.getByRole('tab', { name: pattern, selected: true })).toBeVisible();
 }

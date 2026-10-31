@@ -22,7 +22,11 @@ export const theme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-content:focus-visible': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
-  '&.cm-focused .cm-activeLine': { boxShadow: 'inset 3px 0 0 var(--focus)' },
+  // The current line (fresh-look design §3.2) is tinted faintly as well, while the editor has focus.
+  '&.cm-focused .cm-activeLine': {
+    boxShadow: 'inset 3px 0 0 var(--focus)',
+    backgroundColor: 'var(--current-line)',
+  },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
   '.cm-content': { padding: '12px 0', caretColor: 'var(--focus)' },
   '.cm-line': { padding: '0 16px 0 8px' },

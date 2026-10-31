@@ -432,10 +432,45 @@ test.describe('the read-only bar', () => {
   }
 });
 
-// The tab row (Phase 2 design §5.8): Cards, Notes, and Stats are not core tabs, so they share the
-// slot and More with module tabs, first in More.
+// The tab row. On a phone (Phase 2 design §5.8): Cards, Notes, and Stats are not core tabs, so they
+// share the slot and More with module tabs, first in More. On a wide screen the Inspector has Cards
+// in its row and Notes under More (fresh-look design §3.3, Call 14).
 test.describe('the tab row’s slot', () => {
-  test('chooses Cards from More, which then takes the slot', async ({ page }) => {
+  test('in the Inspector, chooses Notes from More, and it shows after the row while it shows', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'the Inspector is on a wide screen');
+    await start(page);
+    const pane = page.locator('[data-pane="right"]');
+    const row = pane.getByRole('tablist', { name: 'Inspector' });
+    const more = pane.getByRole('button', { name: 'More tabs' });
+    const menu = page.getByRole('menu', { name: 'More tabs' });
+    await expect(row.getByRole('tab')).toHaveText([
+      'Script',
+      'Outline',
+      'Cards',
+      'Stats',
+      'Scaffold',
+    ]);
+    await more.click();
+    await expect(menu.getByRole('menuitem')).toHaveText([/^Notes, \d+ open$/, /^Problems/]);
+    await menu.getByRole('menuitem', { name: /^Notes/ }).click();
+    await expect(menu).toBeHidden();
+    const notes = row.getByRole('tab', { name: /^Notes/ });
+    await expect(notes).toHaveAttribute('aria-selected', 'true');
+    await expect(notes).toBeFocused();
+    await more.click();
+    await expect(menu.getByRole('menuitem')).toHaveText([/^Problems/]);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    // Another tab: Notes goes back under More.
+    await row.getByRole('tab', { name: 'Outline' }).click();
+    await expect(row.getByRole('tab', { name: /^Notes/ })).toHaveCount(0);
+  });
+
+  test('chooses Cards from More, which then takes the slot', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'a phone has the slot');
     await start(page);
     const pane = page.locator('[data-pane]').first();
     const row = pane.getByRole('tablist');
@@ -474,20 +509,20 @@ test.describe('the tab row’s slot', () => {
     await expect(row.getByRole('tab').last()).toHaveText('Cards');
   });
 
-  test('Compare is in no pane’s row until a comparison opens', async ({ page }) => {
+  test('Compare is in no row or More until a comparison opens', async ({ page, isMobile }) => {
     await start(page);
-    const panes = page.locator('[data-pane]');
     const compare = page.getByRole('tab', { name: 'Compare', exact: true });
     const more = page.getByRole('menu', { name: 'More tabs' });
     await expect(compare).toHaveCount(0);
-    for (const pane of await panes.all()) {
-      await pane.getByRole('button', { name: 'More tabs' }).click();
+    // The one pane with tabs: the Inspector, or a phone's.
+    for (const button of await page.getByRole('button', { name: 'More tabs' }).all()) {
+      await button.click();
       await expect(more).toBeVisible();
       await expect(more.getByRole('menuitem', { name: 'Compare' })).toHaveCount(0);
       await page.keyboard.press('Escape');
       await expect(more).toBeHidden();
     }
-    // A comparison opens it, in the slot of the pane not showing Source; closing takes it away.
+    // A comparison opens it, in the Inspector (the slot on a phone); closing takes it away.
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     const scripts = page.getByRole('group', { name: 'Scripts', exact: true });
     await scripts.getByRole('button', { name: 'New screenplay' }).click();
@@ -504,6 +539,9 @@ test.describe('the tab row’s slot', () => {
     await expect(
       page.getByRole('tab', { name: 'Compare', exact: true, selected: true }),
     ).toBeVisible();
+    await expect(compare).toHaveCount(1);
+    if (!isMobile)
+      await expect(page.locator('[data-pane="right"] #tab-right-compare')).toBeVisible();
     await runCommand(page, 'Close comparison');
     await expect(compare).toHaveCount(0);
   });

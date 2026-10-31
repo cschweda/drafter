@@ -309,7 +309,7 @@ test.describe('the Notes tab', () => {
   test('shows the open count on the tab', async ({ page }) => {
     await start(page);
     await setText(page, SCRIPT);
-    const pane = page.locator('[data-pane]').first();
+    const pane = page.locator('[data-pane]').last();
     await pane.getByRole('button', { name: 'More tabs' }).click();
     const item = page
       .getByRole('menu', { name: 'More tabs' })

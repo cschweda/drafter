@@ -6,7 +6,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { nextTick, type ShallowRef, shallowRef } from 'vue';
 import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
-import { type PaneId, revealTab, WIDE_QUERY } from '~/utils/panes';
+import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
 import { applyEditorSettings } from './apply-settings';
 import { sayElement } from './element-notice';
@@ -245,13 +245,8 @@ function create(): EditorSession {
     view.dispatch({ selection: { anchor, head } });
 
     const wide = window.matchMedia(WIDE_QUERY).matches;
-    if (wide) {
-      const held = document.activeElement?.closest<HTMLElement>('[data-pane]')?.dataset.pane;
-      const from: PaneId | undefined = held === 'left' || held === 'right' ? held : undefined;
-      panes.tabs.value = revealTab(panes.tabs.value, 'source', from);
-    } else {
-      panes.phoneTab.value = 'source';
-    }
+    // On a wide screen the editor is always on the left (fresh-look design §3.2); a phone shows it.
+    if (!wide) panes.phoneTab.value = 'source';
     // The Source pane may have only just been chosen: scroll and focus once it's drawn.
     void nextTick().then(() => {
       view.dispatch({ effects: EditorView.scrollIntoView(head, { y: 'center' }) });
