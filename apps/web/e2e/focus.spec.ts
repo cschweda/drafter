@@ -127,9 +127,13 @@ test.describe('focus mode', () => {
     expect(await page.evaluate(() => document.fullscreenElement === null)).toBe(true);
   });
 
-  test('shows the source in a centered column 64 characters wide', async ({ page, isMobile }) => {
-    test.skip(!!isMobile, 'a phone is narrower than the column');
+  test('fits the source to the window, with even margins either side', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone has its own narrow margins');
     await start(page);
+    await page.setViewportSize({ width: 1400, height: 800 });
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await on(page);
     const m = await page.locator('.cm-scroller').evaluate((scroller) => {
@@ -142,15 +146,17 @@ test.describe('focus mode', () => {
       const text = (scroller.querySelector('.cm-content') as HTMLElement).getBoundingClientRect();
       return {
         ch64,
+        outer: outer.width,
         width: text.width,
         left: text.left - outer.left,
         right: outer.right - text.right,
       };
     });
-    // The lines carry 24px of padding; their text is 64 characters across.
-    expect(Math.abs(m.width - (m.ch64 + 24))).toBeLessThanOrEqual(1);
-    expect(Math.abs(m.left - m.right)).toBeLessThanOrEqual(1);
-    expect(m.left).toBeGreaterThan(40);
+    // Wider than the old 64-character column, centred, with margins that grow with the window.
+    expect(m.width).toBeGreaterThan(m.ch64 + 24);
+    expect(Math.abs(m.left - m.right)).toBeLessThanOrEqual(2);
+    expect(m.left).toBeGreaterThanOrEqual(24);
+    expect(m.left).toBeLessThanOrEqual(m.outer * 0.12);
   });
 
   test('closes completion before leaving focus mode', async ({ page }) => {
