@@ -335,7 +335,7 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 
 The ordering principle: **the reasons to choose Drafter over Beat must be on screen at the first public release.** That means the Problems pane, the stage-play template, and accessibility move up, Final Draft files follow the outline, and radio and TV formats come later. The [README's roadmap](../README.md#roadmap) has the summary, with what has shipped.
 
-**Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6). PDF import is out of scope through Phase 4.
+**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. (Later, free: real-time co-writing through a relay that passes only end-to-end encrypted changes, opt-in, self-hostable; the maintainer, 2026-10-31.) From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6). PDF import is out of scope through Phase 4.
 
 ### Phase 0 — Engine (no UI)
 

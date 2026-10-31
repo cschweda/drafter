@@ -270,12 +270,13 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 | 3 | Formats | Planned | Celtx import; TV, radio, UK/BBC, and graphic-novel templates; user templates; French scenes and doubling charts for plays; PDF with notes in the margin or a watermark; a self-contained reader file |
 | 4 | Craft | Planned | Alternate lines, a clean display mode, table read, a character pass, story order, accepting a co-writer's changes, the remaining lint rules, a PWA install flow (the production features moved up to v0.26.0) |
 | 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
+| Later | | Planned, free | **Real-time co-writing**: write in the same script at the same time, each on your own device, from an invite link, with no account. It goes through a small relay that passes only end-to-end encrypted changes, so it can never read the script; anyone can run their own. Optional, off until you invite someone, and free like everything else |
 | Later | | Planned | Open from and save to Dropbox and Google Drive directly, signed in with them, never with Drafter |
 | Someday | | Possible future addition | A Windows on Arm (arm64) installer. Until then Windows 11 on Arm runs the x64 installer emulated |
 | Someday | | Possible, not planned | A Tauri desktop shell: smaller downloads and less memory, but Linux would use WebKitGTK. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open |
 | Last | | Planned | Testing with NVDA and VoiceOver, after every phase is built. Until then every view is built for screen readers and checked automatically, and Drafter claims no conformance with any standard |
 
-**Not planned:** accounts, a Drafter server, sync through Drafter, or a paid version. Everything Drafter does is free. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
+**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. Everything Drafter does is free, including the big features: production, and real-time co-writing, whose relay only passes encrypted changes along and stores nothing it could read. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
 
 The full list for each phase, with what each item does and when Phase 0 counts as done, is in the [architecture document, §13](docs/drafter-architecture.md#13-phased-plan); the [Phase 1](docs/drafter-phase1-design.md) and [Phase 2](docs/drafter-phase2-design.md) designs have the details.
 
