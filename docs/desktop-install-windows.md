@@ -4,7 +4,7 @@ Drafter for Windows is an installer, published with each release on GitHub: <htt
 
 **Windows on Arm:** there's no Windows on Arm (arm64) installer for now; it may come later. On **Windows 11** on Arm (a Snapdragon laptop, or Windows 11 in a virtual machine on an Apple silicon Mac: Parallels, VMware Fusion, UTM), use the x64 installer: Windows 11 runs x64 apps on Arm under its built-in emulation, so Drafter works, a little slower than a native app would. Windows 10 on Arm can't run x64 apps, so Drafter doesn't run there. Not sure which you have? **Settings → System → About** shows it under *System type*: "x64-based processor" or "ARM-based processor".
 
-If you installed Drafter's arm64 installer from an earlier release, its next update installs the x64 build in its place, in the same folder, with your settings and scripts kept. How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
+How the desktop app differs from drafter.dev is in [Drafter on the web and on the desktop](web-and-desktop.md).
 
 ## Install
 
