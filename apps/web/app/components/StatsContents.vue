@@ -30,7 +30,7 @@ const SECTIONS: ReadonlyArray<{ id: StatsSection; label: string }> = [
 </template>
 
 <style scoped>
-/* Stuck at the top of the page as it scrolls (fresh-look design §7), one 41px row on the page's
+/* Stuck at the top of the page as it scrolls on a wide screen (fresh-look design §7), one 41px row on the page's
    own colour; StatsPane's headings keep clear of it (scroll-margin-top), and its tables' headers
    stick under it. A narrow pane scrolls the row sideways rather than wrapping it. */
 .sections {
@@ -57,7 +57,12 @@ const SECTIONS: ReadonlyArray<{ id: StatsSection; label: string }> = [
   font-size: 12px;
   font-weight: 500;
 }
-@media (max-width: 480px) {
+/* A phone keeps its little height for the page: the row scrolls away with it, and nothing is
+   ever half under it. */
+@media (max-width: 640px) {
+  .sections {
+    position: static;
+  }
   .contents-label {
     display: none;
   }

@@ -116,6 +116,13 @@ const absences = computed(() => {
   .stats {
     padding: 0 16px 24px;
   }
+  /* The contents row doesn't stick on a phone (StatsContents). */
+  .stats.with-contents {
+    --table-sticky-top: 0;
+  }
+  .stats :deep(h2) {
+    scroll-margin-top: 12px;
+  }
 }
 .stats:not(.with-contents) {
   padding-top: 20px;

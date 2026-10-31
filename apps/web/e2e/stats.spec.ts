@@ -608,19 +608,22 @@ test.describe('the Stats page, as designed', () => {
     });
   }
 
-  test('jumping to a section leaves its heading fully visible', async ({ page }) => {
+  test('jumping to a section leaves its heading fully visible', async ({ page, isMobile }) => {
     await start(page);
     await runCommand(page, 'Show stats');
     const contents = page.getByRole('navigation', { name: 'Stats sections' });
     for (const name of ['Characters', 'Character by scene']) {
       await contents.getByRole('link', { name, exact: true }).click();
       await expect(heading(page, name)).toBeFocused();
-      // The contents row stays at the top while the page scrolls, and the heading sits below it.
-      await expect(contents).toBeInViewport();
-      const nav = await contents.boundingBox();
-      const head = await heading(page, name).boundingBox();
-      expect(nav && head).toBeTruthy();
-      expect(head?.y ?? 0).toBeGreaterThanOrEqual((nav?.y ?? 0) + (nav?.height ?? 0));
+      // On a wide screen the contents row stays at the top while the page scrolls, and the
+      // heading sits below it. A phone's row scrolls away with the page.
+      if (!isMobile) {
+        await expect(contents).toBeInViewport();
+        const nav = await contents.boundingBox();
+        const head = await heading(page, name).boundingBox();
+        expect(nav && head).toBeTruthy();
+        expect(head?.y ?? 0).toBeGreaterThanOrEqual((nav?.y ?? 0) + (nav?.height ?? 0));
+      }
       await expect(heading(page, name)).toBeInViewport({ ratio: 1 });
     }
   });

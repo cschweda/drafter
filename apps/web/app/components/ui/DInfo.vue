@@ -59,9 +59,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown,
 
 <style>
 /* Unscoped, one class deep, as DButton's. */
+/* The icon button's 30 by 30, so a part of it scrolled under a sticky row still leaves a target
+   of 24 by 24 (WCAG 2.5.8). */
 .d-info-button {
-  width: 24px;
-  height: 24px;
   vertical-align: middle;
 }
 .d-info-button[aria-expanded='true'] {
