@@ -338,6 +338,50 @@ test.describe('the welcome and the tour', () => {
     expect(animations.some((name) => name !== 'none')).toBe(true);
   });
 
+  // The cards are the one dialog style (fresh-look design §5): --raised, no slate gradient, and
+  // the goldenrod primary button, not the tour module's blue one.
+  test('the tour’s buttons are the primary button, not blue', async ({ page }) => {
+    await visit(page);
+    const ACCENT = 'rgb(229, 176, 74)';
+    const ON_ACCENT = 'rgb(17, 18, 22)';
+    const RAISED = 'rgb(28, 31, 36)';
+    const card = page.locator('.welcome-card');
+    await expect(card).toHaveCSS('background-color', RAISED);
+    await expect(card).toHaveCSS('background-image', 'none');
+    const take = welcome(page).getByRole('button', { name: 'Take the tour' });
+    await expect(take).toHaveCSS('background-color', ACCENT);
+    await expect(take).toHaveCSS('color', ON_ACCENT);
+    await take.click();
+    await expect(page.locator('.intro-card')).toHaveCSS('background-image', 'none');
+    const next = intro(page).getByRole('button', { name: 'Start Guided Tour' });
+    await expect(next).toHaveCSS('background-color', ACCENT);
+    await expect(next).toHaveCSS('color', ON_ACCENT);
+    await page.keyboard.press('Enter');
+    await expect(step(page)).toBeVisible();
+    await expect(page.locator('.tour-card')).toHaveCSS('background-color', RAISED);
+    await expect(page.locator('.tour-card')).toHaveCSS('background-image', 'none');
+    const stepNext = step(page).getByRole('button', { name: 'Next' });
+    await expect(stepNext).toHaveCSS('background-color', ACCENT);
+    await expect(stepNext).toHaveCSS('background-image', 'none');
+    await expect(stepNext).toHaveCSS('color', ON_ACCENT);
+    // The badge is a quiet chip on the card, not a slate pill.
+    await expect(step(page).locator('.tour-progress-badge')).toHaveCSS('background-image', 'none');
+  });
+
+  test('the welcome card is 440px and sized to its content', async ({ page }) => {
+    await visit(page);
+    const card = page.locator('.welcome-card');
+    const box = await card.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box && viewport).toBeTruthy();
+    if (!box || !viewport) return;
+    expect(Math.round(box.width)).toBe(Math.min(440, viewport.width - 32));
+    // Sized to its content: nothing scrolls inside it, and it is shorter than the window.
+    expect(await card.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+    expect(box.height).toBeLessThan(viewport.height);
+    await expect(card).toHaveCSS('border-top-left-radius', '12px');
+  });
+
   test('lights the targets in the brand’s goldenrod', async ({ page }) => {
     await visit(page);
     await startTour(page);

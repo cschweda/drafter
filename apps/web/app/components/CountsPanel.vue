@@ -108,7 +108,7 @@ function onKeydown(event: KeyboardEvent) {
   <div
     :id="id"
     ref="root"
-    class="counts"
+    class="counts motion"
     role="dialog"
     aria-modal="false"
     :aria-labelledby="`${id}-title`"
@@ -171,8 +171,8 @@ function onKeydown(event: KeyboardEvent) {
               <option v-if="!markdown" value="pages">pages</option>
               <option value="words">words</option>
             </select>
-            <button type="submit" class="btn">Set goal</button>
-            <button v-if="goal" type="button" class="btn" @click="onClear">Clear goal</button>
+            <DButton type="submit">Set goal</DButton>
+            <DButton v-if="goal" @click="onClear">Clear goal</DButton>
           </div>
           <p v-if="problem" id="counts-goal-problem" class="problem" role="alert">{{ problem }}</p>
           <p class="sr-only" role="status">{{ said }}</p>
@@ -194,15 +194,9 @@ function onKeydown(event: KeyboardEvent) {
           A countdown while you write. It says what the sprint added when time is up, and nothing before.
         </p>
         <div class="lengths">
-          <button
-            v-for="length in SPRINT_MINUTES"
-            :key="length"
-            type="button"
-            class="btn"
-            @click="startSprint(length)"
-          >
+          <DButton v-for="length in SPRINT_MINUTES" :key="length" @click="startSprint(length)">
             {{ length }} minutes
-          </button>
+          </DButton>
         </div>
         <form class="sprint-form" @submit.prevent="onSprintSubmit">
           <label for="counts-sprint-minutes">Minutes</label>
@@ -216,7 +210,7 @@ function onKeydown(event: KeyboardEvent) {
               :aria-invalid="minutesProblem ? 'true' : 'false'"
               :aria-describedby="minutesProblem ? 'counts-sprint-problem' : undefined"
             >
-            <button type="submit" class="btn">Start sprint</button>
+            <DButton type="submit">Start sprint</DButton>
           </div>
           <p v-if="minutesProblem" id="counts-sprint-problem" class="problem" role="alert">{{ minutesProblem }}</p>
         </form>
@@ -224,8 +218,8 @@ function onKeydown(event: KeyboardEvent) {
     </section>
 
     <div class="buttons">
-      <button type="button" class="btn" @click="emit('stats')">Stats…</button>
-      <button type="button" class="btn" @click="emit('close')">Close</button>
+      <DButton @click="emit('stats')">Stats…</DButton>
+      <DButton @click="emit('close')">Close</DButton>
     </div>
   </div>
 </template>
@@ -242,15 +236,18 @@ function onKeydown(event: KeyboardEvent) {
   max-height: calc(100dvh - 80px);
   overflow: auto;
   padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--chrome-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--overlay);
   color: var(--text);
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 8px 24px rgb(0 0 0 / 0.28);
   font-size: 13px;
   line-height: 1.45;
 }
 .counts:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 h2 {
@@ -282,7 +279,7 @@ h3 {
 .goal {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
 }
 .today {
   margin: 0 0 6px;
@@ -291,7 +288,7 @@ h3 {
 .sprint {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
 }
 .lengths {
   display: flex;
@@ -326,7 +323,7 @@ select {
   padding: 0 6px;
   border: 1px solid var(--muted);
   border-radius: 5px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
@@ -336,7 +333,7 @@ input {
 .problem {
   margin: 6px 0 0;
   padding-left: 8px;
-  box-shadow: inset 3px 0 0 var(--heading);
+  box-shadow: inset 3px 0 0 var(--accent-text);
 }
 .buttons {
   display: flex;
@@ -344,20 +341,16 @@ input {
   gap: 6px;
   margin-top: 10px;
 }
-.btn {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
+/* On the panel's --overlay, a secondary button is a step further up. */
+.d-btn--secondary {
+  background: var(--highlight);
 }
-.btn:focus-visible,
+.d-btn--secondary:hover {
+  background: var(--raised);
+}
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 </style>

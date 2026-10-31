@@ -16,11 +16,6 @@
   outline-color: var(--focus);
 }
 
-/* A step's text must fit its card without scrolling: the module's body is a fixed height. */
-:root {
-  --tour-popover-body-height: 10rem;
-}
-
 /* The intro card's examples: a speech has two lines, so the line break in it shows. The extra
    classes beat the module's scoped rule. */
 .intro-dialog .intro-example .intro-example-syntax {
@@ -39,33 +34,152 @@
   }
 }
 
-/* The welcome and intro cards' colors: their text, their icon, and their buttons. The module colors
-   them with Nuxt UI's tokens, whose dimmed gray and amber fail WCAG contrast on its cards: a light card is #f8fafc, and a dark one is a gradient
-   from #475569 to #334155, which axe can't measure. These keep the cards' look and pass 4.5:1 on
-   every stop; test/tour-colors.test.ts checks them. The light theme's amber is Drafter's own
-   darkened goldenrod (--heading), which white button text also passes on. */
-.dark .welcome-card,
-.dark .intro-card {
-  --ui-text: #e4e4e7;
-  --ui-text-muted: #cbd5e1;
-  --ui-text-dimmed: #c8ced8;
-  --ui-primary: #ffb900;
-  --ui-text-inverted: #18181b;
-  --tour-primary-hover: #d1a01a;
+/* The welcome, intro, and step cards are the one dialog style (fresh-look design §5, Task 7), over
+   the tour module's own look: --raised with a hairline and a large shadow, radius 12, no slate
+   gradient; the tokens' text (--text, and --muted for what is quieter, both 4.5:1 on --raised); the
+   goldenrod primary button (--accent under --on-accent, --accent-hover hovered) instead of its blue
+   one; a quiet chip for the step count; and the one motion. The module's rules are scoped (a class
+   and an attribute, some !important), so these start at four :root to win (the module's dark card is `:root.dark .welcome-card[data-v-…]`).
+   test/tour-colors.test.ts checks that only the tokens are used here. */
+:root:root:root:root :is(.welcome-card, .intro-card, .tour-card) {
+  --ui-text: var(--text);
+  --ui-text-muted: var(--muted);
+  --ui-text-dimmed: var(--muted);
+  --ui-text-highlighted: var(--text);
+  --ui-text-inverted: var(--on-accent);
+  --ui-primary: var(--accent-text);
+  --ui-bg: var(--surface);
+  --ui-bg-muted: var(--surface);
+  --ui-bg-elevated: var(--overlay);
+  --ui-border: var(--border);
+  max-width: calc(100vw - 32px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
 }
-.light .welcome-card,
-.light .intro-card {
-  --ui-text: #3f3f46;
-  --ui-text-dimmed: #5f6575;
-  --ui-primary: #8a5a00;
-  --ui-text-inverted: #ffffff;
-  --tour-primary-hover: #6b4500;
+:root:root:root:root .welcome-card,
+:root:root:root:root .intro-card,
+:root:root:root:root .tour-card {
+  /* biome-ignore lint/complexity/noImportantStyles: the module's own card colour is !important. */
+  background: var(--raised) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: and so is its dark card's gradient. */
+  background-image: none !important;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.18),
+    0 24px 64px rgb(0 0 0 / 0.38);
 }
-/* A solid button's hover and press. Nuxt UI draws the primary color at 75% over the card, under
-   which white text falls to about 3.6:1 in the light theme; the hover is a darker shade instead. */
-:root .welcome-card .bg-primary:is(:hover, :active):not(:disabled),
-:root .intro-card .bg-primary:is(:hover, :active):not(:disabled) {
-  background-color: var(--tour-primary-hover);
+/* No rules between the header, body, and footer: one card. */
+:root:root:root:root :is(.welcome-card, .intro-card, .tour-card) > * {
+  border-color: transparent;
+}
+/* Sized to their content: the welcome and a step are a question's width, the intro a form's. */
+:root:root:root:root .welcome-card,
+:root:root:root:root .tour-card {
+  width: min(440px, calc(100vw - 32px));
+}
+:root:root:root:root .intro-card {
+  width: min(560px, calc(100vw - 32px));
+}
+:root:root:root:root .tour-card .tour-body {
+  height: auto;
+}
+:root:root:root:root :is(.welcome-title, .intro-title, .tour-title) {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+/* The primary button: Nuxt UI's (the welcome's and the intro's), and the step's own. */
+:root:root:root:root :is(.welcome-card, .intro-card) .bg-primary {
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+:root:root:root:root :is(.welcome-card, .intro-card) .bg-primary:is(:hover, :active):not(:disabled),
+:root:root:root:root .tour-card .tour-next-btn:is(:hover, :active) {
+  background: var(--accent-hover);
+}
+:root:root:root:root .tour-card .tour-next-btn {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+  transform: none;
+}
+/* Back is a secondary button, and Skip a borderless one. */
+:root:root:root:root .tour-card .tour-back-btn {
+  border: 0;
+  background: var(--overlay);
+  color: var(--text);
+}
+:root:root:root:root .tour-card .tour-back-btn:hover {
+  background: var(--highlight);
+}
+:root:root:root:root .tour-card .tour-skip-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+}
+:root:root:root:root .tour-card .tour-skip-btn:hover {
+  background: var(--overlay);
+}
+:root:root:root:root .tour-card :is(.tour-next-btn, .tour-back-btn, .tour-skip-btn) {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+:root:root:root:root .tour-card :is(.tour-next-btn, .tour-back-btn, .tour-skip-btn):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The step count: a quiet chip on the card, not a slate pill. */
+:root:root:root:root :is(.tour-progress-badge, .intro-progress-badge) {
+  border: 0;
+  background: var(--overlay);
+  background-image: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+/* The keys a step names, and the intro's examples, on the tokens. */
+:root:root:root:root .tour-card .shortcut-key {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  background-image: none;
+  box-shadow: none;
+  color: var(--text);
+}
+:root:root:root:root .tour-card .tour-shortcut-group {
+  border-bottom-color: var(--border);
+}
+:root:root:root:root .intro-card .intro-example-syntax {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+:root:root:root:root .intro-card :is(.intro-benefit-icon-wrapper, .intro-callout) {
+  background: var(--accent-soft);
+  background-image: none;
+}
+:root:root:root:root .intro-card :is(.intro-benefit, .intro-conversion):hover {
+  box-shadow: none;
+}
+
+/* The welcome's and the intro's backdrops are the dialogs' (a quarter in the light theme), and
+   they come in with the one motion. */
+.light .welcome-backdrop,
+.light .intro-backdrop {
+  background: rgb(0 0 0 / 0.25);
+}
+:root:root:root:root
+  :is(.welcome-fade-enter-active .welcome-dialog, .intro-fade-enter-active .intro-dialog) {
+  animation: motion-in var(--dur) var(--ease) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:root:root:root
+    :is(.welcome-fade-enter-active .welcome-dialog, .intro-fade-enter-active .intro-dialog) {
+    animation: none;
+  }
 }
 
 /* The intro card's text scrolls in its own box, up to 60% of the screen's height. On a phone that box

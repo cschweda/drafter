@@ -502,6 +502,9 @@ for (const theme of THEMES) {
       await page.keyboard.press('Enter');
       const intro = page.getByRole('dialog', { name: 'Fountain in 30 seconds' });
       await expect(intro).toBeVisible();
+      // The welcome fades out under the intro; it is measured once it has gone (a card on
+      // --raised is measured, and halfway through its fade its text is the fade's).
+      await expect(welcome).toBeHidden();
       await clean(page, 'Fountain in 30 seconds');
       await page.keyboard.press('Enter');
       const step = page.locator('.tour-dialog');
@@ -703,7 +706,7 @@ test.describe('the accessibility tree', () => {
 test.describe('the tour cards and the help pages', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('darkens the light card’s button on hover, so its text keeps 4.5:1', async ({
+  test('gives the card’s primary button a hover whose text keeps 4.5:1', async ({
     page,
     isMobile,
   }) => {
@@ -714,8 +717,9 @@ test.describe('the tour cards and the help pages', () => {
     const start = welcome.getByRole('button', { name: 'Take the tour' });
     await expect(start).toBeVisible();
     await start.hover();
-    // tour.css's --tour-primary-hover for the light theme, #6b4500.
-    await expect(start).toHaveCSS('background-color', 'rgb(107, 69, 0)');
+    // The primary button's hover, --accent-hover (#d9a33c in the light theme), under --on-accent.
+    await expect(start).toHaveCSS('background-color', 'rgb(217, 163, 60)');
+    await expect(start).toHaveCSS('color', 'rgb(17, 18, 22)');
   });
 
   test('scrolls the intro’s text in its own box on a wide screen, and the whole card on a phone', async ({

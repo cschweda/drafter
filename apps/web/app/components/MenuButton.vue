@@ -5,7 +5,10 @@
 // non-modal one lets Tab close it and drop focus on the page's body. So Tab and Shift+Tab are taken
 // here while the menu is open: the menu closes, and Reka gives focus back to the button that opened
 // it. Props, listeners, and slots pass through to UDropdownMenu.
+// Every menu has the one menu style (fresh-look design §5): `d-menu`, drawn in assets/css/menus.css.
 defineOptions({ inheritAttrs: false });
+
+const MENU_UI = { content: 'd-menu' };
 
 const open = defineModel<boolean>('open', { default: false });
 const attrs = useAttrs();
@@ -27,7 +30,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true));
 </script>
 
 <template>
-  <UDropdownMenu v-bind="attrs" v-model:open="open" :modal="false">
+  <UDropdownMenu v-bind="attrs" v-model:open="open" :modal="false" :ui="MENU_UI">
     <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData ?? {}" />
     </template>

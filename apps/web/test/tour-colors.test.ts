@@ -1,74 +1,56 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-// The welcome and intro cards' text colors (app/assets/css/tour.css), against the cards the tour
-// module draws: a light card is #f8fafc, and a dark one is a gradient from #475569 to #334155, which
-// axe can't measure, so this does, at both ends.
+// The welcome, intro, and step cards (app/assets/css/tour.css) are the one dialog style (fresh-look
+// design §5, Task 7): --raised with the tokens' text, no slate gradient, and the goldenrod primary
+// button instead of the tour module's blue one. The tokens' own contrast (--text and --muted on
+// --raised, --on-accent on --accent and --accent-hover) is measured in tokens.test.ts, so this
+// checks that the cards use the tokens and nothing else.
 const css = readFileSync(new URL('../app/assets/css/tour.css', import.meta.url), 'utf8').replace(
   /\/\*[\s\S]*?\*\//g,
   '',
 );
 
-function block(theme: 'dark' | 'light'): Record<string, string> {
-  const found = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(([, selector]) =>
-    selector.includes(`.${theme} .welcome-card`),
-  );
-  if (!found) throw new Error(`tour.css has no .${theme} .welcome-card block`);
-  return Object.fromEntries(
-    [...found[2].matchAll(/(--[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(([, k, v]) => [k, v]),
-  );
+/** The declarations of the rules whose selector names `part`. */
+function rulesFor(part: string): string {
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, selector]) => (selector as string).includes(part))
+    .map(([, , body]) => body as string)
+    .join('\n');
 }
-
-function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const c = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (light + 0.05) / (dark + 0.05);
-}
-
-const GRADIENT = ['#475569', '#334155'];
-const LIGHT_CARDS = ['#f8fafc', '#ffffff'];
 
 describe('the tour cards', () => {
-  test.each([
-    ['dark', ['--ui-text', '--ui-text-muted', '--ui-text-dimmed'], GRADIENT],
-    ['light', ['--ui-text', '--ui-text-dimmed', '--ui-primary'], LIGHT_CARDS],
-  ] as const)('give their text 4.5:1 in the %s theme', (theme, tokens, cards) => {
-    const colors = block(theme);
-    for (const token of tokens) {
-      for (const card of cards) {
-        expect(contrast(colors[token] ?? '', card), `${token} on ${card}`).toBeGreaterThanOrEqual(
-          4.5,
-        );
-      }
-    }
+  test('have no colour of their own: only the tokens', () => {
+    expect(css.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
   });
 
-  // The intro's icon is drawn in the primary color: a graphic, so 3:1 (WCAG 1.4.11).
-  test.each([
-    ['dark', GRADIENT],
-    ['light', LIGHT_CARDS],
-  ] as const)('give the icon 3:1 in the %s theme', (theme, cards) => {
-    const primary = block(theme)['--ui-primary'] ?? '';
-    for (const card of cards) {
-      expect(contrast(primary, card), `--ui-primary on ${card}`).toBeGreaterThanOrEqual(3);
-    }
+  test.each(['.welcome-card', '.intro-card', '.tour-card'])(
+    '%s is --raised, with no gradient, and a 12px radius',
+    (card) => {
+      const rules = rulesFor(card);
+      expect(rules).toMatch(/background: var\(--raised\) !important;/);
+      expect(rules).toMatch(/background-image: none !important;/);
+      expect(rules).toMatch(/border-radius: var\(--r-lg\)/);
+    },
+  );
+
+  test('their text is the tokens’ text', () => {
+    const rules = rulesFor('.welcome-card');
+    expect(rules).toMatch(/--ui-text: var\(--text\);/);
+    expect(rules).toMatch(/--ui-text-muted: var\(--muted\);/);
+    expect(rules).toMatch(/--ui-text-dimmed: var\(--muted\);/);
   });
 
-  // The solid buttons: --ui-text-inverted on the primary color, and on its hover color.
-  test.each(['dark', 'light'] as const)('give button text 4.5:1 in the %s theme', (theme) => {
-    const colors = block(theme);
-    for (const background of ['--ui-primary', '--tour-primary-hover']) {
-      expect(
-        contrast(colors['--ui-text-inverted'] ?? '', colors[background] ?? ''),
-        `--ui-text-inverted on ${background}`,
-      ).toBeGreaterThanOrEqual(4.5);
-    }
+  test('the primary button is the accent fill with --on-accent text, and its hover --accent-hover', () => {
+    const next = rulesFor('.tour-next-btn');
+    expect(next).toMatch(/background: var\(--accent\);/);
+    expect(next).toMatch(/color: var\(--on-accent\);/);
+    expect(rulesFor('.bg-primary')).toMatch(/background-color: var\(--accent\)/);
+    expect(rulesFor(':hover')).toMatch(/var\(--accent-hover\)/);
+  });
+
+  test('the welcome card is 440px wide, and no card is a fixed height', () => {
+    expect(rulesFor('.welcome-card')).toMatch(/width: min\(440px, calc\(100vw - 32px\)\)/);
+    expect(rulesFor('.tour-body')).toMatch(/height: auto/);
   });
 });
