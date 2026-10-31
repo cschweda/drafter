@@ -49,7 +49,7 @@
 
 [drafter.dev](https://drafter.dev) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
-Made by [cschweda](https://github.com/cschweda), who also builds [metaincognita](https://metaincognita.com): open-source casino simulators that show the math behind the games.
+Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also builds [metaincognita](https://metaincognita.com): open-source casino simulators that show the math behind the games.
 
 ## Contents
 
