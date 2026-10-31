@@ -12,7 +12,9 @@ const VERSION = (
 
 const editor = (page: Page) => page.locator('.cm-content');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
-const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+// Help is its own menu in the top bar (fresh-look Task 3b).
+const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
+const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
 const item = (page: Page, name: RegExp) => page.getByRole('menuitem', { name });
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const about = (page: Page) => page.getByRole('dialog', { name: 'Drafter', exact: true });
@@ -66,8 +68,8 @@ function stored(page: Page): Promise<Row[]> {
 test.describe('About Drafter', () => {
   test('shows the version, the app, and the links, which open in a new tab', async ({ page }) => {
     await start(page);
-    await mark(page).click();
-    await expect(menu(page)).toBeVisible();
+    await helpButton(page).click();
+    await expect(helpMenu(page)).toBeVisible();
     await item(page, /^About Drafter/).click();
     const dialog = about(page);
     await expect(dialog).toBeVisible();
@@ -109,7 +111,7 @@ test.describe('About Drafter', () => {
     await runCommand(page, 'About Drafter');
     const dialog = about(page);
     await dialog.getByRole('button', { name: 'Copy version info' }).click();
-    await expect(dialog.getByRole('status')).toHaveText('Copied.');
+    await expect(dialog.locator('[data-about-copied]')).toHaveText('Copied.');
     if (browserName === 'chromium') {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       expect(copied).toContain(`Drafter v${VERSION}`);
@@ -122,8 +124,8 @@ test.describe('About Drafter', () => {
 test.describe('Technical details', () => {
   test('Help → Technical details opens the page in a new tab', async ({ page }) => {
     await start(page);
-    await mark(page).click();
-    await expect(menu(page)).toBeVisible();
+    await helpButton(page).click();
+    await expect(helpMenu(page)).toBeVisible();
     const opened = page.context().waitForEvent('page');
     await item(page, /^Technical details/).click();
     const tab = await opened;
@@ -171,10 +173,10 @@ test.describe('the sample scripts', () => {
     });
   }
 
-  test('are in the app menu’s Help section, in a submenu', async ({ page, isMobile }) => {
+  test('are in the Help menu, in a submenu', async ({ page, isMobile }) => {
     test.skip(!!isMobile, 'a submenu is opened by pointer or keys here');
     await start(page);
-    await mark(page).click();
+    await helpButton(page).click();
     await item(page, /^Sample scripts/).hover();
     await item(page, /^Stage play$/).click();
     await expect.poll(() => text(page)).toContain('Sample: Stage play');
@@ -209,7 +211,7 @@ test.describe('the guided starters', () => {
     test.skip(!!isMobile, 'a submenu is opened by pointer or keys here');
     await start(page);
     const before = (await stored(page)).length;
-    await mark(page).click();
+    await helpButton(page).click();
     await item(page, /^Sample scripts/).hover();
     await item(page, /^Guided first screenplay$/).click();
     await expect.poll(() => text(page)).toContain('Title: Your Title Here');
@@ -335,9 +337,75 @@ test.describe('Check for updates', () => {
   test('says so when there is no service worker', async ({ page }) => {
     await fakeWorker(page, 'none');
     await start(page);
-    await mark(page).click();
+    await helpButton(page).click();
     await item(page, /^Check for updates…/).click();
     await expect(checkDialog(page).getByRole('status')).toHaveText(
+      /^This copy of Drafter has no service worker/,
+    );
+  });
+});
+
+test.describe('Check for updates in About', () => {
+  test('sits by the version, and says inline that this is the latest, keeping focus', async ({
+    page,
+  }) => {
+    await fakeWorker(page, 'nothing');
+    await start(page);
+    await runCommand(page, 'About Drafter');
+    const dialog = about(page);
+    const button = dialog.getByRole('button', { name: 'Check for updates…' });
+    await expect(button).toBeVisible();
+    // Beside the version line: on the same row.
+    const version = await dialog.locator('[data-about-version]').boundingBox();
+    const at = await button.boundingBox();
+    expect(
+      Math.abs(
+        (at?.y ?? 0) + (at?.height ?? 0) / 2 - ((version?.y ?? 0) + (version?.height ?? 0) / 2),
+      ),
+    ).toBeLessThan(12);
+    const said = dialog.locator('[data-about-update]');
+    await expect(said).toHaveAttribute('role', 'status');
+    await expect(said).toHaveText('');
+    // From the keyboard (Safari doesn't focus a clicked button), so focus can be followed.
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(said).toHaveText(`You’re on the latest version (v${VERSION}).`);
+    expect(await page.evaluate(() => (window as unknown as { updates: number }).updates)).toBe(1);
+    // Focus stays in About, on the button; no other dialog opened.
+    await expect(button).toBeFocused();
+    await expect(checkDialog(page)).toBeHidden();
+    await expect(dialog.getByRole('button', { name: 'Reload' })).toHaveCount(0);
+    // Closed and opened again, it says nothing until asked.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await runCommand(page, 'About Drafter');
+    await expect(about(page).locator('[data-about-update]')).toHaveText('');
+  });
+
+  test('offers the update it found, which is the offer’s own Reload', async ({ page }) => {
+    await fakeWorker(page, 'waiting');
+    await start(page);
+    await runCommand(page, 'About Drafter');
+    const dialog = about(page);
+    await dialog.getByRole('button', { name: 'Check for updates…' }).click();
+    await expect(dialog.locator('[data-about-update]')).toHaveText(
+      'A new version of Drafter is ready. Reload to use it.',
+    );
+    const reload = dialog.getByRole('button', { name: 'Reload' });
+    await expect(reload).toBeVisible();
+    // A sample has no changes to lose: Reload closes About, and the offer is up.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('[data-update]')).toContainText('Reload');
+  });
+
+  test('says so when there is no service worker', async ({ page }) => {
+    await fakeWorker(page, 'none');
+    await start(page);
+    await runCommand(page, 'About Drafter');
+    const dialog = about(page);
+    await dialog.getByRole('button', { name: 'Check for updates…' }).click();
+    await expect(dialog.locator('[data-about-update]')).toHaveText(
       /^This copy of Drafter has no service worker/,
     );
   });

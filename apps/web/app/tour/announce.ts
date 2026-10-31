@@ -1,13 +1,13 @@
 // The tour's announcements to screen readers. `nuxt-guided-tour` makes a polite live region itself
 // when it isn't given a function; this is the same region (its id, `role="status"`) so that one
 // message can say what Drafter does: the module's "Tour cancelled" points at a Tour button, and
-// Drafter's way back is the Help section of its menu.
+// Drafter's way back is the Help menu, in the top bar.
 const REGION = 'nuxt-guided-tour-announcer';
 
 /** The message as Drafter says it. */
 export function tourMessage(message: string): string {
   return message.startsWith('Tour cancelled')
-    ? 'Tour closed. You can take it again from Help, in the Drafter menu.'
+    ? 'Tour closed. You can take it again from the Help menu, at the top right.'
     : message;
 }
 

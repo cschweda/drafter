@@ -11,7 +11,9 @@ const step = (page: Page) => page.locator('.tour-dialog');
 const lit = (page: Page) => page.locator('[data-tour-active="true"]');
 const announcer = (page: Page) => page.locator('#nuxt-guided-tour-announcer');
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
-const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+// Help is its own menu in the top bar (fresh-look Task 3b).
+const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
+const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
 const editor = (page: Page) => page.locator('.cm-content');
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 
@@ -56,8 +58,8 @@ async function skipWelcome(page: Page) {
 }
 
 async function takeTourFromHelp(page: Page) {
-  await mark(page).click();
-  await menu(page).getByRole('menuitem', { name: 'Take the tour' }).click();
+  await helpButton(page).click();
+  await helpMenu(page).getByRole('menuitem', { name: 'Take the tour' }).click();
   await expect(intro(page)).toBeVisible();
 }
 
@@ -156,8 +158,8 @@ test.describe('the welcome and the tour', () => {
         .click();
     }
     await expect(step(page)).toBeHidden();
-    // Focus is back where the writer asked for it: the Drafter menu's mark.
-    await expect(mark(page)).toBeFocused();
+    // Focus is back where the writer asked for it: the Help menu's button.
+    await expect(helpButton(page)).toBeFocused();
   });
 
   test('replays the tour from the palette’s Take the tour', async ({ page }) => {
@@ -266,7 +268,7 @@ test.describe('the welcome and the tour', () => {
     }
     await page.keyboard.press('Escape');
     // Drafter's own words for how to come back.
-    await expect(announcer(page)).toContainText('Help, in the Drafter menu');
+    await expect(announcer(page)).toContainText('the Help menu');
   });
 
   test('does not start over a dialog, and starts when it closes', async ({ page }) => {

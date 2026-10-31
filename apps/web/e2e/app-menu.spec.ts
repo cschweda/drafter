@@ -8,6 +8,16 @@ const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
 const item = (page: Page, name: RegExp) => menu(page).getByRole('menuitem', { name });
 const status = (page: Page) => page.locator('[data-tour="status"]');
+const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
+const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
+const helpItem = (page: Page, name: RegExp) => helpMenu(page).getByRole('menuitem', { name });
+const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
+
+/** A rotation's angle in degrees, from a computed `transform` (`none` or a matrix). */
+const turned = (transform: string) => {
+  const m = /^matrix\(([^,]+), ([^,]+)/.exec(transform);
+  return m ? Math.round((Math.atan2(Number(m[2]), Number(m[1])) * 180) / Math.PI) : 0;
+};
 
 async function start(page: Page) {
   await page.goto('/');
@@ -88,28 +98,11 @@ test.describe('the app menu', () => {
     await page.keyboard.press('ArrowDown');
     await expect(menu(page)).toBeVisible();
     await page.keyboard.press('End');
-    // The last item is Help's About Drafter; above it Check for updates…, Reset sample (a sample is
-    // open), the Sample scripts submenu, the seven help pages, then Take the tour, and above that
-    // Settings….
-    await expect(item(page, /^About Drafter/)).toBeFocused();
-    for (const name of [
-      /^Check for updates…/,
-      /^Reset sample/,
-      /^Sample scripts/,
-      /^Technical details/,
-      /^Third-party licences/,
-      /^Open formats/,
-      /^Privacy/,
-      /^Keyboard shortcuts/,
-      /^Saving and your browser/,
-      /^Fountain cheat sheet/,
-    ]) {
-      await page.keyboard.press('ArrowUp');
-      await expect(item(page, name)).toBeFocused();
-    }
+    // Help has its own menu now (fresh-look Task 3b): the last item is Settings…, after Show stats.
+    await expect(item(page, /^Settings…/)).toBeFocused();
     await page.keyboard.press('ArrowUp');
-    await expect(item(page, /^Take the tour/)).toBeFocused();
-    await page.keyboard.press('ArrowUp');
+    await expect(item(page, /^Show stats/)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
     await expect(item(page, /^Settings…/)).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
@@ -232,5 +225,145 @@ test.describe('the app menu', () => {
     await openMenu(page);
     await expect(item(page, /^Revert to Saved/)).toHaveAttribute('aria-disabled', 'true');
     await expect(item(page, /^New screenplay/)).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('has no Help section: Help is its own menu', async ({ page }) => {
+    await start(page);
+    await openMenu(page);
+    await expect(menu(page).getByText('Help', { exact: true })).toHaveCount(0);
+    for (const name of [
+      /^Take the tour/,
+      /^Keyboard shortcuts/,
+      /^Fountain cheat sheet/,
+      /^Sample scripts/,
+      /^Reset sample/,
+      /^Check for updates…/,
+      /^About Drafter/,
+    ]) {
+      await expect(item(page, name), String(name)).toHaveCount(0);
+    }
+  });
+
+  test('shows it is a menu: a 14px chevron in the text colour, turned while open', async ({
+    page,
+  }) => {
+    await start(page);
+    await expect(mark(page)).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+    const caret = mark(page).locator('.caret');
+    await expect(caret).toBeVisible();
+    const box = await caret.boundingBox();
+    expect(Math.round(box?.width ?? 0)).toBe(14);
+    expect(Math.round(box?.height ?? 0)).toBe(14);
+    const text = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--text)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    await expect(caret).toHaveCSS('color', text);
+    expect(turned(await caret.evaluate((el) => getComputedStyle(el).transform))).toBe(0);
+    await openMenu(page);
+    await expect(mark(page)).toHaveAttribute('aria-expanded', 'true');
+    await expect
+      .poll(async () => turned(await caret.evaluate((el) => getComputedStyle(el).transform)))
+      .toBe(180);
+  });
+
+  test('turns the chevron without motion when motion is reduced', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await start(page);
+    const caret = mark(page).locator('.caret');
+    const duration = await caret.evaluate((el) => getComputedStyle(el).transitionDuration);
+    expect(duration.split(',').every((d) => Number.parseFloat(d) === 0)).toBe(true);
+  });
+});
+
+test.describe('the Help menu', () => {
+  test('is always in the top bar, as a menu button named Help', async ({ page }) => {
+    await start(page);
+    await expect(helpButton(page)).toBeVisible();
+    await expect(helpButton(page)).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(helpButton(page)).toHaveAttribute('aria-expanded', 'false');
+    if (wide(page)) {
+      // A text button with the same chevron as the Drafter menu's.
+      await expect(helpButton(page)).toContainText('Help');
+      await expect(helpButton(page).locator('.caret')).toBeVisible();
+    } else {
+      // A phone has the icon alone: a question mark, still named Help.
+      await expect(helpButton(page).locator('.help-icon')).toBeVisible();
+    }
+    const box = await helpButton(page).boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(24);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(24);
+  });
+
+  test('holds the tour, the help pages, the samples, Check for updates, and About, in order', async ({
+    page,
+  }) => {
+    await start(page);
+    await helpButton(page).click();
+    await expect(helpMenu(page)).toBeVisible();
+    await expect(helpButton(page)).toHaveAttribute('aria-expanded', 'true');
+    const names = (await helpMenu(page).getByRole('menuitem').allTextContents()).map((n) =>
+      n.trim(),
+    );
+    const expected = [
+      /^Take the tour/,
+      /^Fountain cheat sheet/,
+      /^Saving and your browser/,
+      /^Keyboard shortcuts/,
+      /^Privacy/,
+      /^Open formats/,
+      /^Third-party licences/,
+      /^Technical details/,
+      /^Sample scripts/,
+      /^Reset sample/,
+      /^Check for updates…/,
+      /^About Drafter/,
+    ];
+    expect(names).toHaveLength(expected.length);
+    for (const [i, name] of expected.entries()) expect(names[i], String(name)).toMatch(name);
+    await page.keyboard.press('Escape');
+    await expect(helpMenu(page)).toBeHidden();
+    await expect(helpButton(page)).toBeFocused();
+  });
+
+  test('works from the keyboard, and Tab closes it and gives focus back', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone has no keyboard');
+    await start(page);
+    await helpButton(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(helpItem(page, /^Take the tour/)).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(helpItem(page, /^About Drafter/)).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(helpItem(page, /^Check for updates…/)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(helpMenu(page)).toBeHidden();
+    await expect(helpButton(page)).toBeFocused();
+    // Enter on About Drafter opens it.
+    await page.keyboard.press('ArrowDown');
+    await expect(helpMenu(page)).toBeVisible();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Drafter', exact: true })).toBeVisible();
+  });
+
+  test('turns its chevron while open, as the Drafter menu does', async ({ page }) => {
+    test.skip(!wide(page), 'a phone shows the icon alone');
+    await start(page);
+    const caret = helpButton(page).locator('.caret');
+    const box = await caret.boundingBox();
+    expect(Math.round(box?.width ?? 0)).toBe(14);
+    await helpButton(page).click();
+    await expect
+      .poll(async () => turned(await caret.evaluate((el) => getComputedStyle(el).transform)))
+      .toBe(180);
   });
 });

@@ -414,6 +414,13 @@ for (const theme of THEMES) {
       await page.keyboard.press('Escape');
       await expect(appMenu(page)).toBeHidden();
 
+      // Help, its own menu in the top bar (fresh-look Task 3b).
+      await page.getByRole('banner').getByRole('button', { name: 'Help' }).click();
+      await expect(page.getByRole('menu', { name: 'Help' })).toBeVisible();
+      await clean(page, 'the Help menu');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu', { name: 'Help' })).toBeHidden();
+
       await page.getByRole('button', { name: 'Export', exact: true }).click();
       await expect(page.getByRole('group', { name: 'Export' })).toBeVisible();
       await clean(page, 'the Export menu');
@@ -627,6 +634,7 @@ test.describe('the accessibility tree', () => {
         - button /^Go to scene or command/
         - button "Structure" [pressed=false]
         - button "Focus"
+        - button "Help"
         - button "Switch to light theme"
     `);
   });

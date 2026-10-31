@@ -75,11 +75,22 @@ let offering = false;
 /** What had focus when the tour was asked for: it gets focus back when the tour is over. */
 let opener: HTMLElement | null = null;
 
+/**
+ * The button of the menu `el` is an item of (the Help menu's, the Drafter menu's), which the menu
+ * names in its `aria-controls` while it is open; else `el` itself. An item is gone once its menu
+ * closes, so the tour gives focus back to the button that opened the menu.
+ */
+function menuButtonOf(el: HTMLElement): HTMLElement {
+  const menu = el.closest<HTMLElement>('[data-reka-menu-content], [role="menu"]');
+  if (!menu?.id) return el;
+  return document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(menu.id)}"]`) ?? el;
+}
+
 async function offer(first: boolean) {
   if (offering || tourShowing.value) return;
   offering = true;
   const active = document.activeElement;
-  opener = active instanceof HTMLElement && active !== document.body ? active : null;
+  opener = active instanceof HTMLElement && active !== document.body ? menuButtonOf(active) : null;
   const clear = await whenClear(() => unmounted);
   offering = false;
   if (!clear || tourShowing.value) return;
@@ -120,7 +131,8 @@ function settle(tries = 0) {
     }
     if (active && active !== document.body) return;
     if (!opener) return;
-    // A menu item is gone once its menu closes (or is kept, hidden): then the menu's mark gets it.
+    // A menu item is gone once its menu closes (or is kept, hidden), and its button wasn't found:
+    // then the Drafter menu's mark gets it.
     const back =
       opener.isConnected && opener.getClientRects().length > 0
         ? opener

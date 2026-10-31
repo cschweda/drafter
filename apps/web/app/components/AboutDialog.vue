@@ -11,16 +11,34 @@ import {
   versionLine,
   versionText,
 } from '~/about/info';
+import { createAboutCheck } from '~/about/update-check';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { commandById } from '~/commands/registry';
+import { actionLabel } from '~/update/flow';
+import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
 
-// Help → About Drafter: the version (for a bug report, with Copy version info), which app this
-// is, and the links. Every link leaves the app: a new tab on the web, the system browser in the
-// desktop app (its window-open handler hands an https address to the browser and never
+// Help → About Drafter: the version (for a bug report, with Copy version info, and Check for
+// updates… beside it), which app this is, and the links. Every link leaves the app: a new tab on
+// the web, the system browser in the desktop app (its window-open handler hands an https address to the browser and never
 // navigates the app's window). The help pages open as the Help commands open them.
 const dialog = ref<HTMLDialogElement>();
 const info = ref<AboutInfo | null>(null);
 const copied = ref('');
+
+// Check for updates…, beside the version (Task 3b): the one check the Help menu's command runs,
+// said here under the version, so focus stays in About. A new version is offered by its own
+// action (Reload, Restart, Get it), which closes About and goes through the app's offer.
+const about = currentAbout();
+const update = createAboutCheck(useUpdateCheck(), runUpdateCheck, about.version, about.app);
+const { message: updateMessage, busy: checking, ready: updateReady, how: updateHow } = update;
+async function checkForUpdates() {
+  if (checking.value) return;
+  await update.run();
+}
+function takeFound() {
+  dialog.value?.close();
+  takeUpdate();
+}
 
 watch(aboutOpen, async (open) => {
   if (open) {
@@ -34,6 +52,7 @@ watch(aboutOpen, async (open) => {
 
 function onClose() {
   aboutOpen.value = false;
+  update.reset();
   // Its contents (and their status line) leave the page with it.
   info.value = null;
 }
@@ -85,7 +104,24 @@ function openHelp(id: string) {
   >
     <template v-if="info">
       <h2 id="about-title">Drafter</h2>
-      <p class="version" data-about-version>{{ versionLine(info) }}</p>
+      <div class="version-row">
+        <p class="version" data-about-version>{{ versionLine(info) }}</p>
+        <button
+          type="button"
+          class="btn small"
+          :aria-disabled="checking ? 'true' : undefined"
+          @click="checkForUpdates"
+        >
+          Check for updates…
+        </button>
+      </div>
+      <!-- What the check found, said politely; the region is there from the start, so it is heard. -->
+      <div class="update-row">
+        <p role="status" aria-live="polite" class="said" data-about-update>{{ updateMessage }}</p>
+        <button v-if="updateReady" type="button" class="btn primary small" @click="takeFound">
+          {{ actionLabel(updateHow) }}
+        </button>
+      </div>
       <p id="about-what">{{ ABOUT_DESCRIPTION }}</p>
       <dl class="facts">
         <dt>App</dt>
@@ -109,7 +145,7 @@ function openHelp(id: string) {
       </dl>
       <div class="copy">
         <button type="button" class="btn" @click="copy">Copy version info</button>
-        <span role="status" aria-live="polite" class="copied">{{ copied }}</span>
+        <span role="status" aria-live="polite" class="copied" data-about-copied>{{ copied }}</span>
       </div>
       <h3>Links</h3>
       <ul class="links">
@@ -155,9 +191,41 @@ h3 {
 p {
   margin: 0 0 8px;
 }
+.version-row,
+.update-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.version-row {
+  margin: 0 0 8px;
+}
+.version-row .version {
+  margin: 0;
+}
 .version {
   color: var(--heading);
   font-weight: 600;
+}
+.update-row {
+  margin: -2px 0 8px;
+}
+.update-row:has(.said:empty) {
+  margin: 0;
+}
+.said {
+  margin: 0;
+  color: var(--text);
+}
+.btn.small {
+  min-height: 26px;
+  padding: 0 10px;
+  font-weight: 500;
+}
+.btn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
 }
 #about-what {
   color: var(--muted);

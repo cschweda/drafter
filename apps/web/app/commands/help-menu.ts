@@ -1,0 +1,29 @@
+import { HELP_PAGES } from './data';
+
+// The Help menu (fresh-look Task 3b; the maintainer, 2026-10-31: Help "should be visible at all
+// times and not part of another (much larger) dropdown"): its own button in the top bar, after
+// Focus. These are the commands it lists, in order; the Sample scripts submenu (a tiny sample of
+// each kind, then the guided starters) comes after the help pages, before Reset sample.
+
+/** The Help menu's commands, top to bottom: the tour, the help pages, Reset sample, Check for updates…, About. */
+export const HELP_MENU_COMMANDS: readonly string[] = [
+  'take-the-tour',
+  ...HELP_PAGES.map((page) => page.id),
+  'reset-sample',
+  'check-for-updates',
+  'about-drafter',
+];
+
+/** Each Help item's icon. */
+export const HELP_MENU_ICONS: Record<string, string> = {
+  'take-the-tour': 'i-lucide-compass',
+  'help-fountain': 'i-lucide-book-open',
+  'help-saving': 'i-lucide-save',
+  'help-shortcuts': 'i-lucide-keyboard',
+  'help-privacy': 'i-lucide-shield-check',
+  'help-licences': 'i-lucide-scale',
+  'help-technical': 'i-lucide-cpu',
+  'reset-sample': 'i-lucide-rotate-ccw',
+  'check-for-updates': 'i-lucide-refresh-cw',
+  'about-drafter': 'i-lucide-info',
+};

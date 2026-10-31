@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { HELP_PAGES } from '~/commands/data';
-import { formatKeys, isApple } from '~/commands/keys';
-import { type Command, useCommands } from '~/commands/registry';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
 import { STARTER_KINDS } from '~/editor/starter-kinds';
@@ -15,43 +12,20 @@ import { revertNotice } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
 // The app menu (Phase 1 design §9.1): the Drafter mark opens it. Every item runs its registered
-// command (`commands/builtin.ts`), so this menu, the palette, and the keys never disagree; an item
+// command (`useCommandMenu`), so this menu, the palette, and the keys never disagree; an item
 // whose command is off shows disabled. The recent scripts are the one list that isn't commands:
-// they open a script by id, as the Scripts menu does. The Help section is the last group and is
-// built from commands too (`helpItems`): Take the tour and the help pages.
-const commands = useCommands();
+// they open a script by id, as the Scripts menu does. Help is a menu of its own in the top bar
+// (`HelpMenu.vue`, fresh-look Task 3b), so it isn't a section here.
 const script = useScript();
 const editor = useEditor();
 const { taking } = useGuard();
-const apple = isApple();
 
 /** How many recent scripts the menu lists. */
 const RECENT = 8;
 const recent = ref<Project[]>([]);
 
-/**
- * The item for a command. A missing command leaves no item (a hot reload may not have it yet).
- * `shows` is for the commands that show a script: the editor gets focus afterward, not the mark.
- */
-function entry(id: string, icon: string, shows = false): DropdownMenuItem[] {
-  const command: Command | undefined = commands.value.find((c) => c.id === id);
-  if (!command) return [];
-  const off = command.enabled ? !command.enabled() : false;
-  const why = off ? command.why?.() : undefined;
-  return [
-    {
-      label: command.title,
-      icon,
-      ...(why && { description: why }),
-      ...(command.keys && { kbds: [formatKeys(command.keys, apple)] }),
-      disabled: off,
-      onSelect: () => {
-        choose(shows);
-        command.run();
-      },
-    },
-  ];
-}
+const mark = ref<HTMLElement | null>(null);
+const { entry, choose, onCloseAutoFocus } = useCommandMenu(mark);
 
 // The Template section: the template is chosen here on every screen (fresh-look design §3.1), as
 // well as from the status bar's chip and the palette's Template: commands. It is the chip's own
@@ -114,51 +88,6 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-fdx': 'i-lucide-file-code',
 };
 
-// Help: the group at the end of the menu. Take the tour is first (always on), then the help pages
-// (each opens in a new tab, and is named by the page's title under the Help label), the Sample
-// scripts submenu (a tiny sample of each kind, then the guided starters, each opened as a new
-// script), Reset sample (off unless a sample is open), Check for updates…, and About Drafter last.
-const HELP_ICONS: Record<string, string> = {
-  'help-fountain': 'i-lucide-book-open',
-  'help-saving': 'i-lucide-save',
-  'help-shortcuts': 'i-lucide-keyboard',
-  'help-privacy': 'i-lucide-shield-check',
-  'help-licences': 'i-lucide-scale',
-  'help-technical': 'i-lucide-cpu',
-};
-const helpItems = computed<DropdownMenuItem[]>(() => [
-  { type: 'label', label: 'Help' },
-  ...entry('take-the-tour', 'i-lucide-compass'),
-  ...HELP_PAGES.flatMap((page) =>
-    entry(page.id, HELP_ICONS[page.id] ?? 'i-lucide-book-open').map((item) => ({
-      ...item,
-      label: page.title,
-    })),
-  ),
-  {
-    label: 'Sample scripts',
-    icon: 'i-lucide-files',
-    children: [
-      SAMPLES.flatMap((sample) =>
-        entry(`sample-script-${sample.kind}`, 'i-lucide-file-text', true).map((item) => ({
-          ...item,
-          label: sample.name,
-        })),
-      ),
-      // The guided starters, under the tiny samples, by the names a lesson goes by.
-      STARTER_KINDS.flatMap((starter) =>
-        entry(starter.command, 'i-lucide-graduation-cap', true).map((item) => ({
-          ...item,
-          label: starter.menuLabel,
-        })),
-      ),
-    ],
-  },
-  ...entry('reset-sample', 'i-lucide-rotate-ccw', true),
-  ...entry('check-for-updates', 'i-lucide-refresh-cw'),
-  ...entry('about-drafter', 'i-lucide-info'),
-]);
-
 const items = computed<DropdownMenuItem[][]>(() => [
   [
     ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
@@ -189,7 +118,6 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...entry('export-options', 'i-lucide-sliders-horizontal'),
   ],
   [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
-  helpItems.value,
 ]);
 
 async function onOpen(open: boolean) {
@@ -200,55 +128,6 @@ async function onOpen(open: boolean) {
     recent.value = [];
   }
 }
-
-// Choosing an item runs a command that may move focus itself (a dialog, a new script). The menu
-// holds focus until it has closed, so a command's own focus is lost to it; then the menu doesn't
-// hand focus back to the mark, and if nothing else has it, a command that shows a script puts it in
-// the editor and any other gives it to the mark. Escape, or leaving the menu, returns it to the
-// mark as usual.
-let chosen = false;
-let toEditor = false;
-/**
- * Where the chosen command put focus (Show stats, a section's heading), before the menu, which can
- * take it back when the pointer leaves its item, closed: it gets it back then.
- */
-let placed: HTMLElement | null = null;
-function onFocusWhileChosen(event: FocusEvent) {
-  const target = event.target as HTMLElement | null;
-  if (!target || target === mark.value || target.closest('[data-reka-menu-content]')) return;
-  placed = target;
-}
-function choose(shows: boolean) {
-  chosen = true;
-  toEditor = shows;
-  placed = null;
-  document.addEventListener('focusin', onFocusWhileChosen, true);
-}
-const mark = ref<HTMLElement | null>(null);
-function onCloseAutoFocus(event: Event) {
-  if (!chosen) return;
-  chosen = false;
-  event.preventDefault();
-  requestAnimationFrame(() => {
-    document.removeEventListener('focusin', onFocusWhileChosen, true);
-    const active = document.activeElement;
-    const lost =
-      !active ||
-      active === document.body ||
-      active === mark.value ||
-      !!active.closest('[data-reka-menu-content]');
-    const target = placed;
-    placed = null;
-    if (target?.isConnected && lost) {
-      target.focus();
-      return;
-    }
-    if (active && active !== document.body) return;
-    if (toEditor) editor.goto(editor.view.state.selection.main.head);
-    else mark.value?.focus();
-  });
-}
-onBeforeUnmount(() => document.removeEventListener('focusin', onFocusWhileChosen, true));
 </script>
 
 <template>
@@ -267,7 +146,8 @@ onBeforeUnmount(() => document.removeEventListener('focusin', onFocusWhileChosen
       data-tour="menu"
     >
       <slot />
-      <UIcon name="i-lucide-chevron-down" class="caret" />
+      <!-- The chevron says the mark is a menu (Task 3b): in the text colour, turned while open. -->
+      <UIcon name="i-lucide-chevron-down" class="caret" aria-hidden="true" />
     </button>
   </MenuButton>
   <!-- Revert to Saved says what it did here, as a toast and a polite live region. -->
@@ -281,7 +161,7 @@ onBeforeUnmount(() => document.removeEventListener('focusin', onFocusWhileChosen
   display: flex;
   flex: none;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   height: 30px;
   padding: 0 6px 0 4px;
   border: 0;
@@ -297,8 +177,18 @@ onBeforeUnmount(() => document.removeEventListener('focusin', onFocusWhileChosen
 }
 .caret {
   flex: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
+  color: var(--text);
+  transition: transform var(--dur) var(--ease);
+}
+.mark[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    transition: none;
+  }
 }
 .notice {
   position: fixed;

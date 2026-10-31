@@ -11,8 +11,9 @@ import { showView } from './modules';
 // (Their accessibility checks are in a11y.spec.ts.)
 
 const editor = (page: Page) => page.locator('.cm-content');
-const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
-const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+// The help pages are in the Help menu, in the top bar (fresh-look Task 3b).
+const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
+const menu = (page: Page) => page.getByRole('menu', { name: 'Help' });
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
@@ -33,7 +34,7 @@ async function showSource(page: Page) {
 }
 
 async function openMenu(page: Page) {
-  await mark(page).click();
+  await helpButton(page).click();
   await expect(menu(page)).toBeVisible();
 }
 
@@ -493,7 +494,7 @@ test.describe('from the app', () => {
     if (how === 'click') {
       await menu(page).getByRole('menuitem', { name: title }).click();
     } else {
-      // Arrow down to the item; it is in the menu's last group.
+      // Arrow down to the item.
       let found = false;
       for (let i = 0; i < 60 && !found; i += 1) {
         found = await page.evaluate(
@@ -534,7 +535,7 @@ test.describe('from the app', () => {
   test('reaches the pages from Help with the keyboard alone', async ({ page }) => {
     for (const { title, path } of HELP_PAGES) {
       await start(page);
-      await mark(page).focus();
+      await helpButton(page).focus();
       await page.keyboard.press('Enter');
       await expect(menu(page)).toBeVisible();
       const opened = page.context().waitForEvent('page');

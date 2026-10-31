@@ -210,6 +210,9 @@ test.describe('on a desktop', () => {
     expect(Math.round(box.height)).toBe(30);
     await expect(open).toHaveCSS('border-top-width', '0px');
     await expect(open).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    // Help is a text button with a chevron here (30px high, like Open); the rest are 30px squares.
+    const help = await banner.getByRole('button', { name: 'Help', exact: true }).boundingBox();
+    expect(Math.round(help?.height ?? 0)).toBe(30);
     for (const name of ['Structure', 'Focus', 'Switch to light theme']) {
       const b = await banner.getByRole('button', { name, exact: true }).boundingBox();
       expect(`${Math.round(b?.width ?? 0)}x${Math.round(b?.height ?? 0)}`, name).toBe('30x30');
@@ -222,7 +225,7 @@ test.describe('on a desktop', () => {
     expect(bar?.height ?? 99).toBeLessThanOrEqual(48);
   });
 
-  test('puts the mark, the title, the chip, Open, Save, Export, the search, Structure, Focus, and Theme in that order', async ({
+  test('puts the mark, the title, the chip, Open, Save, Export, the search, Structure, Focus, Help, and Theme in that order', async ({
     page,
   }) => {
     const banner = page.getByRole('banner');
@@ -237,6 +240,7 @@ test.describe('on a desktop', () => {
       banner.getByRole('button', { name: /^Go to scene or command/ }),
       banner.getByRole('button', { name: 'Structure', exact: true }),
       banner.getByRole('button', { name: 'Focus', exact: true }),
+      banner.getByRole('button', { name: 'Help', exact: true }),
       banner.getByRole('button', { name: 'Switch to light theme' }),
     ]) {
       xs.push((await target.boundingBox())?.x ?? -1);
@@ -537,6 +541,29 @@ test.describe("the Inspector's header", () => {
     await setText(page, 'INT. HALL - DAY\nShe waits.\n\nMARGARET\n(quietly,\nthen louder)\nHi.\n');
     await showView(page, 'Problems');
     await expect(tools.getByRole('button', { name: 'Fix all' })).toBeVisible();
+  });
+
+  test('at 1280, Scaffold folds its page name before Back, so Back stays one click away', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await start(page);
+    await runCommand(page, 'Show Scaffold');
+    const tools = page.locator('#inspector-tools');
+    // The header is short of room here: something has folded into "⋯".
+    const more = page.locator('[data-pane="right"]').getByRole('button', { name: 'More tools' });
+    await expect(more).toBeVisible();
+    // The name is what gave way: it is in the "⋯" panel, and Back isn't.
+    await expect(tools.locator('.name')).toBeHidden();
+    await expect(tools.getByRole('button', { name: 'Back' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: 'Follow the cursor' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: 'Pages' })).toBeVisible();
+    await more.click();
+    const panel = page.getByRole('group', { name: 'View tools' });
+    await expect(panel.locator('.name')).toHaveText('This scene');
+    await expect(panel.getByRole('button', { name: 'Back' })).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
   });
 
   test("Stats' contents are a row at the top of its page, not in the header", async ({ page }) => {

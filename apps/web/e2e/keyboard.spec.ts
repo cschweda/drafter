@@ -290,6 +290,11 @@ test.describe('a menu and Tab', () => {
   /** Each menu's button, and whether only a narrow screen has it. */
   const MENUS: Array<[string, Trigger, boolean]> = [
     ['the app menu', async (page) => page.getByRole('button', { name: 'Drafter menu' }), false],
+    [
+      'the Help menu',
+      async (page) => page.getByRole('banner').getByRole('button', { name: 'Help' }),
+      false,
+    ],
     ['the template chip', async (page) => page.getByRole('button', { name: /^Template:/ }), false],
     [
       'the sample chip',

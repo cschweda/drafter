@@ -64,8 +64,8 @@ test.describe('the toolbar at 320px', () => {
     });
     expect(layout.page).toBeLessThanOrEqual(320);
     expect(layout.bar[0]).toBeLessThanOrEqual(layout.bar[1] as number);
-    // The mark (the app menu), Open, Save, Export, the palette, Focus, and the theme (the top
-    // bar's order; Structure has no strip to show here).
+    // The mark (the app menu), Open, Save, Export, the palette, Focus, Help, and the theme (the
+    // top bar's order; Structure has no strip to show here).
     expect(layout.buttons.map((b) => b.name)).toEqual([
       'Drafter menu',
       'Open',
@@ -73,6 +73,7 @@ test.describe('the toolbar at 320px', () => {
       'Export',
       'Go to scene or command',
       'Focus',
+      'Help',
       'Switch to light theme',
     ]);
     for (const b of layout.buttons) {
@@ -81,6 +82,21 @@ test.describe('the toolbar at 320px', () => {
       expect(b.width, `${b.name} width`).toBeGreaterThanOrEqual(24);
       expect(b.height, `${b.name} height`).toBeGreaterThanOrEqual(24);
     }
+  });
+
+  test('shows the Drafter menu’s chevron, and Help as a question mark that opens its menu', async ({
+    page,
+  }) => {
+    const caret = mark(page).locator('.caret');
+    await expect(caret).toBeVisible();
+    expect(Math.round((await caret.boundingBox())?.width ?? 0)).toBe(14);
+    const help = page.getByRole('banner').getByRole('button', { name: 'Help', exact: true });
+    await expect(help.locator('.help-icon')).toBeVisible();
+    await help.click();
+    const menu = page.getByRole('menu', { name: 'Help' });
+    await expect(menu.getByRole('menuitem', { name: /^About Drafter/ })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
   });
 
   test('reaches every action: Open, Save, Export, Focus, the palette, the theme, and the menu', async ({

@@ -20,8 +20,8 @@ export function requestTour(): void {
  * Something else is modal: the command palette, the Settings dialog, a native `<dialog>` that
  * is open (the both-changed question, the same-title and Markdown questions, the remove and
  * module-confirm dialogs, the Open menu), or a menu that is still open or closing. (Take the tour
- * is chosen from the app menu, which returns focus to its mark as it goes: the tour waits for that
- * so its first dialog keeps focus.)
+ * is chosen from the Help menu, which returns focus to its button as it goes: the tour waits for
+ * that so its first dialog keeps focus.)
  */
 export function modalOpen(): boolean {
   return (

@@ -29,6 +29,9 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palett
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+// Help is its own menu in the top bar (fresh-look Task 3b).
+const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
+const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
 const status = (page: Page) => page.locator('[data-tour="status"]');
 /** Two panes, the full bar; below 1024px one pane and the bar's compact row. */
 const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
@@ -338,10 +341,9 @@ test.describe('a first visit', () => {
     page,
   }) => {
     await start(page);
-    await mark(page).click();
-    await expect(menu(page)).toBeVisible();
-    await expect(menu(page).getByText('Help', { exact: true })).toBeVisible();
-    const reset = menu(page).getByRole('menuitem', { name: /^Reset sample/ });
+    await helpButton(page).click();
+    await expect(helpMenu(page)).toBeVisible();
+    const reset = helpMenu(page).getByRole('menuitem', { name: /^Reset sample/ });
     await expect(reset).toBeEnabled();
     await page.keyboard.press('Escape');
 
@@ -353,8 +355,8 @@ test.describe('a first visit', () => {
     await palette(page).locator('input').fill('Reset sample');
     await expect(palette(page).getByRole('option', { name: /^Reset sample/ })).toHaveCount(0);
     await page.keyboard.press('Escape');
-    await mark(page).click();
-    await expect(menu(page).getByRole('menuitem', { name: /^Reset sample/ })).toBeDisabled();
+    await helpButton(page).click();
+    await expect(helpMenu(page).getByRole('menuitem', { name: /^Reset sample/ })).toBeDisabled();
   });
 
   test('resets from the Help menu and keeps the writer on the editor', async ({ page }) => {
@@ -363,8 +365,8 @@ test.describe('a first visit', () => {
     await editor(page).click();
     await page.keyboard.insertText('ZZ');
     await expect.poll(() => text(page)).toContain('ZZ');
-    await mark(page).click();
-    await menu(page)
+    await helpButton(page).click();
+    await helpMenu(page)
       .getByRole('menuitem', { name: /^Reset sample/ })
       .click();
     await expect.poll(() => text(page)).not.toContain('ZZ');

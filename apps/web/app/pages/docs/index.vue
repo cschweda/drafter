@@ -37,7 +37,7 @@ const about: Record<string, string> = {
       </li>
     </ul>
     <p>
-      In Drafter, the Help section of the menu (Help in the desktop app’s menu bar) has these pages,
+      In Drafter, the <strong>Help</strong> menu at the top right (Help in the desktop app’s menu bar too) has these pages,
       <strong>Take the tour</strong>, <strong>Sample scripts</strong> (a tiny screenplay, stage play,
       and Markdown document, and a guided first screenplay and stage play whose notes teach each
       element, each opened as a new script of your own),

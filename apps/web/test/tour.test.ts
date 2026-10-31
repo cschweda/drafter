@@ -123,9 +123,10 @@ describe('the tour’s steps', () => {
 
 describe('the tour’s announcements', () => {
   test('say how to come back, not the module’s "Tour button"', () => {
-    expect(tourMessage('Tour cancelled. You can restart it anytime from the Tour button.')).toMatch(
-      /Help.*Drafter menu/,
-    );
+    // Help is its own menu in the top bar now (fresh-look Task 3b), not a section of the Drafter menu.
+    const said = tourMessage('Tour cancelled. You can restart it anytime from the Tour button.');
+    expect(said).toMatch(/Help menu/);
+    expect(said).not.toMatch(/Drafter menu/);
     expect(tourMessage('Tour step 1 of 10: x. y')).toBe('Tour step 1 of 10: x. y');
   });
 });

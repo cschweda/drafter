@@ -10,8 +10,9 @@ import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 
 // The top bar (fresh-look design §3.1): one quiet 44px row. The Drafter mark and wordmark open the
 // app menu, as they always have; then the script's title and its state (a sample's chip); Open,
-// Save, and Export (and any module's buttons); the command search; and the Structure strip, Focus,
-// and the theme as icon buttons. The template is chosen in the Drafter menu and the status bar.
+// Save, and Export (and any module's buttons); the command search; the Structure strip and Focus
+// as icon buttons; the Help menu (Task 3b); and the theme. The template is chosen in the Drafter
+// menu and the status bar.
 const colorMode = useColorMode();
 const focus = useFocusMode();
 const wide = useWideScreen();
@@ -42,8 +43,8 @@ function toggleStructure() {
 <template>
   <header class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <!-- The mark opens the app menu. Below 400px the wordmark gives way to the mark, so the bar fits a
-         320px screen (WCAG 1.4.10). -->
+    <!-- The mark opens the app menu; its chevron says so, on every screen. Below 400px the wordmark
+         gives way to the mark, so the bar fits a 320px screen (WCAG 1.4.10). -->
     <AppMenu>
       <picture class="logo">
         <source media="(max-width: 399.98px)" srcset="/mark.svg">
@@ -133,6 +134,8 @@ function toggleStructure() {
     >
       <UIcon name="i-lucide-scan" class="icon" />
     </button>
+    <!-- Help, always in view: a menu of its own, not a section of the Drafter menu (Task 3b). -->
+    <HelpMenu />
     <button
       type="button"
       class="ib"
@@ -331,9 +334,6 @@ kbd {
   .search,
   .toolbar :deep(.act) {
     width: 26px;
-  }
-  .toolbar :deep(.mark .caret) {
-    display: none;
   }
 }
 </style>
