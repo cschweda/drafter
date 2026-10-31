@@ -4,6 +4,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/cschweda/drafter?label=release)](https://github.com/cschweda/drafter/releases/latest)
 [![Desktop build](https://github.com/cschweda/drafter/actions/workflows/desktop.yml/badge.svg?branch=main)](https://github.com/cschweda/drafter/actions/workflows/desktop.yml)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/8f82bb2b-72c2-41c4-b6b9-42537ea17bd6/deploy-status)](https://app.netlify.com/projects/my-drafter/deploys)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Write at drafter.dev](https://img.shields.io/badge/web-drafter.dev-0a7d5a)](https://drafter.dev)
 [![Platforms: web, Linux, Windows](https://img.shields.io/badge/platforms-web%20%7C%20Linux%20%7C%20Windows-555)](#drafter-for-linux)
