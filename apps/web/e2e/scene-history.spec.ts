@@ -349,7 +349,10 @@ test.describe("the strip's block menu", () => {
       origins: [
         {
           origin: `http://localhost:${Number(process.env.E2E_PORT ?? 4173)}`,
-          localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+          localStorage: [
+            { name: 'drafter-tour-v1', value: 'true' },
+            { name: 'drafter-storage-toast-v1', value: 'true' },
+          ],
           indexedDB: [drafterDatabase([...sampleSeenRows, { key: 'structureStrip', value: true }])],
         },
       ],

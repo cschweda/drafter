@@ -468,7 +468,11 @@ test.describe('new scripts and switching', () => {
   test('closes when you click elsewhere', async ({ page }) => {
     await start(page);
     await openMenu(page);
-    await script(page).click({ position: { x: 5, y: 5 } });
+    // Far from the menu, which opens under Open and may reach over the Script pane's corner.
+    const box = await script(page).boundingBox();
+    await script(page).click({
+      position: { x: (box?.width ?? 40) - 20, y: (box?.height ?? 40) - 20 },
+    });
     await expect(menu(page)).toBeHidden();
   });
 });

@@ -1,37 +1,77 @@
 <script setup lang="ts">
-import { desktop } from '~/desktop';
-import { installAdviceHere } from '~/storage/install-advice';
-import { useScript } from '~/storage/script';
+import type { ButtonProps } from '@nuxt/ui';
+import { useGuard } from '~/storage/guard';
+import { save } from '~/storage/save';
+import { rememberStorageToast, storageToastSeen, useStorageNotice } from '~/storage/storage-notice';
 
-const { warning, dismissWarning } = useScript();
-// The desktop app's profile is never cleared (no browser evicts it), so it never warns that the
-// recovery copy may be. That the copy can't be kept at all is still said: it is a real failure.
-const mayBeCleared = computed(() => warning.value === 'not-persistent' && desktop() === null);
-// What to say about installing depends on the browser (by feature, see install-advice.ts). Read
-// only when the warning shows, which is in the browser: the site is generated without a window.
-const advice = computed(() => (import.meta.client ? installAdviceHere() : ''));
+// The recovery copy's warnings (fresh-look design §3.5). "May be cleared" is a toast with the advice
+// and Save to a file, shown in a browser until it is dismissed once; the status bar's chip keeps
+// saying so. "Unavailable" is an alert above the panes while it lasts: the changes are only in memory.
+const { mayBeCleared, unavailable, advice, dismiss } = useStorageNotice();
+const { readOnly } = useGuard();
+const toast = useToast();
+const TOAST = 'storage-warning';
+
+function show() {
+  // A data attribute names the toast for the tests and the status bar; Nuxt UI passes it to the root.
+  const attrs = { 'data-warning': 'not-persistent' };
+  // The close button is named for what it does here; Nuxt UI passes the attribute to the button
+  // (its props' type has no place for an attribute).
+  const dismissButton = { 'aria-label': 'Dismiss' } as unknown as ButtonProps;
+  toast.add({
+    ...attrs,
+    id: TOAST,
+    title: 'Your recovery copy may be cleared',
+    description: advice(),
+    icon: 'i-lucide-triangle-alert',
+    color: 'neutral',
+    // It waits for the writer (no time limit to read it, WCAG 2.2.1), and is said politely.
+    duration: 0,
+    progress: false,
+    type: 'background',
+    close: dismissButton,
+    actions: readOnly.value
+      ? []
+      : [
+          {
+            label: 'Save to a file',
+            color: 'neutral',
+            variant: 'subtle',
+            onClick: () => save().catch(() => {}),
+          },
+        ],
+    'onUpdate:open': (open: boolean) => {
+      if (open) return;
+      dismiss();
+      rememberStorageToast();
+    },
+  });
+}
+
+watch(
+  mayBeCleared,
+  (now) => {
+    if (!import.meta.client) return;
+    // Shown while the warning stands, until the writer dismisses it (then it stays dismissed for the
+    // visit: the status bar's chip still says so).
+    const there = toast.toasts.value.some((t) => t.id === TOAST);
+    if (now && !there && !storageToastSeen()) show();
+    else if (!now && there) toast.remove(TOAST);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
-  <div>
-    <!--
-      Both live regions stay in the page and only their contents change, so a screen reader hears
-      what is put in them. Two regions, not one whose role changes: a region that turns into an
-      alert is not announced. "Unavailable" matters most, so it goes in the alert.
-    -->
-    <div role="status" data-warning-region="status">
-      <div v-if="mayBeCleared" class="warning" data-warning="not-persistent">
-        <p>{{ advice }}</p>
-        <button type="button" class="dismiss" @click="dismissWarning">Dismiss</button>
-      </div>
-    </div>
-    <div role="alert" data-warning-region="alert">
-      <div v-if="warning === 'unavailable'" class="warning" data-warning="unavailable">
-        <p>
-          Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
-          memory until you save the script to a file.
-        </p>
-      </div>
+  <!-- The alert region stays in the page and only its contents change, so a screen reader hears
+       what is put in it. -->
+  <div role="alert" data-warning-region="alert">
+    <div v-if="unavailable" class="warning" data-warning="unavailable">
+      <UIcon name="i-lucide-triangle-alert" class="icon" />
+      <p>
+        Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
+        memory until you save the script to a file.
+      </p>
     </div>
   </div>
 </template>
@@ -39,33 +79,21 @@ const advice = computed(() => (import.meta.client ? installAdviceHere() : ''));
 <style scoped>
 .warning {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
+  gap: 8px;
   padding: 6px 14px;
-  background: var(--chrome-2);
-  border-bottom: 1px solid var(--line);
-  border-left: 3px solid var(--heading);
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
   color: var(--text);
   font-size: 13px;
 }
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--accent-text);
+}
 p {
-  flex: 1 1 24rem;
   margin: 0;
-}
-.dismiss {
-  min-height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.dismiss:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
 }
 </style>

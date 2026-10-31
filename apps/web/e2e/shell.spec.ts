@@ -38,15 +38,123 @@ test.describe('on a desktop', () => {
     expect(open.x - (logo.x + logo.width)).toBeGreaterThanOrEqual(24);
   });
 
-  test('keeps the action icons smaller than the logo', async ({ page }) => {
-    const logo = await page.getByRole('img', { name: 'Drafter' }).boundingBox();
-    const circle = await page
-      .getByRole('button', { name: 'Open', exact: true })
-      .locator('.round')
+  test('draws the actions as 16px icons in borderless 30px buttons, no coloured circles', async ({
+    page,
+  }) => {
+    const banner = page.getByRole('banner');
+    await expect(banner.locator('.round')).toHaveCount(0);
+    const open = banner.getByRole('button', { name: 'Open', exact: true });
+    const icon = await open.locator('.icon').boundingBox();
+    const box = await open.boundingBox();
+    if (!icon || !box) throw new Error('the Open button or its icon is missing');
+    expect(Math.round(icon.width)).toBe(16);
+    expect(Math.round(box.height)).toBe(30);
+    await expect(open).toHaveCSS('border-top-width', '0px');
+    await expect(open).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    for (const name of ['Structure', 'Focus', 'Switch to light theme']) {
+      const b = await banner.getByRole('button', { name, exact: true }).boundingBox();
+      expect(`${Math.round(b?.width ?? 0)}x${Math.round(b?.height ?? 0)}`, name).toBe('30x30');
+    }
+  });
+
+  test('keeps the toolbar to one 44px bar', async ({ page }) => {
+    const bar = await page.getByRole('banner').boundingBox();
+    expect(bar?.height ?? 0).toBeGreaterThanOrEqual(40);
+    expect(bar?.height ?? 99).toBeLessThanOrEqual(48);
+  });
+
+  test('puts the mark, the title, the chip, Open, Save, Export, the search, Structure, Focus, and Theme in that order', async ({
+    page,
+  }) => {
+    const banner = page.getByRole('banner');
+    const xs = [];
+    for (const target of [
+      banner.getByRole('button', { name: 'Drafter menu' }),
+      banner.locator('.title'),
+      banner.getByRole('button', { name: 'Sample: start your own' }),
+      banner.getByRole('button', { name: 'Open', exact: true }),
+      banner.getByRole('button', { name: 'Save', exact: true }),
+      banner.getByRole('button', { name: 'Export', exact: true }),
+      banner.getByRole('button', { name: /^Go to scene or command/ }),
+      banner.getByRole('button', { name: 'Structure', exact: true }),
+      banner.getByRole('button', { name: 'Focus', exact: true }),
+      banner.getByRole('button', { name: 'Switch to light theme' }),
+    ]) {
+      xs.push((await target.boundingBox())?.x ?? -1);
+    }
+    expect(xs.every((x) => x >= 0)).toBe(true);
+    expect([...xs].sort((a, b) => a - b)).toEqual(xs);
+    await expect(banner.locator('.title')).toHaveText('The Call');
+    // The template chip has left the toolbar: the Drafter menu and the status bar have it.
+    await expect(banner.locator('.chip.template')).toHaveCount(0);
+  });
+
+  test('the title and chip truncate without pushing the search off-screen', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const long = `A ${'Very '.repeat(23)}Long Title`.slice(0, 120);
+    expect(long).toHaveLength(120);
+    await setText(page, `Title: ${long}\n\nINT. HALL - DAY\n\nShe waits.\n`);
+    const title = page.getByRole('banner').locator('.title');
+    await expect(title).toHaveText(long);
+    await expect(title).toHaveAttribute('title', long);
+    expect(await title.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    await expect(title).toHaveCSS('text-overflow', 'ellipsis');
+    const search = await page
+      .getByRole('banner')
+      .getByRole('button', { name: /^Go to scene or command/ })
       .boundingBox();
-    if (!logo || !circle) throw new Error('the logo or the Open icon is missing');
-    expect(circle.height).toBeLessThan(logo.height);
-    expect(circle.height).toBeGreaterThanOrEqual(24); // WCAG 2.5.8's minimum target
+    expect(search).not.toBeNull();
+    expect((search?.x ?? 0) + (search?.width ?? 0)).toBeLessThanOrEqual(1280);
+    expect(search?.width ?? 0).toBeGreaterThanOrEqual(200);
+    // Everything stays on one row.
+    const bar = await page.getByRole('banner').boundingBox();
+    expect(bar?.height ?? 99).toBeLessThanOrEqual(48);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      1280,
+    );
+  });
+
+  test('the sample chip offers New screenplay, New stage play, New Markdown document, and Open a file…', async ({
+    page,
+  }) => {
+    const chip = page.getByRole('banner').getByRole('button', { name: 'Sample: start your own' });
+    await expect(chip).toContainText('Sample');
+    await expect(chip).toContainText('Start your own');
+    await chip.click();
+    const items = page.getByRole('menu').getByRole('menuitem');
+    await expect(items).toHaveText([
+      'New screenplay',
+      'New stage play',
+      'New Markdown document',
+      'Open a file…',
+    ]);
+    await items.nth(1).click();
+    await expect(page.locator('.cm-content')).toContainText('Title: Untitled Play');
+    // A script of the writer's own: no sample chip, and the title says which script it is.
+    await expect(chip).toHaveCount(0);
+    await expect(page.getByRole('banner').locator('.title')).toHaveText('Untitled Play');
+  });
+
+  test('no element above the panes is taller than the toolbar', async ({ page }) => {
+    // The sample bar has become the chip: on a wide screen there is no banner above the panes.
+    await expect(page.getByRole('region', { name: 'Sample' })).toHaveCount(0);
+    const heights = await page.evaluate(() => {
+      const bar = document.querySelector('header.toolbar') as HTMLElement;
+      const top = document.querySelector('.top') as HTMLElement;
+      return {
+        bar: bar.getBoundingClientRect().height,
+        others: Array.from(top.children)
+          .filter((el) => el !== bar && !el.matches('[aria-label="Structure strip"], .strip'))
+          .map((el) => ({
+            what: el.className || el.tagName,
+            height: el.getBoundingClientRect().height,
+          }))
+          .filter((o) => o.height > 0),
+      };
+    });
+    for (const other of heights.others) {
+      expect(other.height, other.what).toBeLessThanOrEqual(heights.bar);
+    }
   });
 
   test('swaps panes when a tab open in the other pane is chosen', async ({ page }) => {
@@ -283,19 +391,17 @@ test.describe('on a phone', () => {
     expect(small).toEqual([]);
   });
 
-  test('sizes the search and theme buttons like the action circles', async ({ page }) => {
+  test('sizes the search and theme buttons like the action icons', async ({ page }) => {
     const banner = page.getByRole('banner');
     const size = async (target: Locator) => {
       const box = await target.boundingBox();
       if (!box) throw new Error('a toolbar button is missing');
       return `${Math.round(box.width)}x${Math.round(box.height)}`;
     };
-    const circle = await size(
-      banner.getByRole('button', { name: 'Open', exact: true }).locator('.round'),
-    );
-    expect(await size(banner.getByRole('button', { name: 'Go to scene or command' }))).toBe(circle);
+    const open = await size(banner.getByRole('button', { name: 'Open', exact: true }));
+    expect(await size(banner.getByRole('button', { name: /^Go to scene or command/ }))).toBe(open);
     expect(await size(banner.getByRole('button', { name: /^Switch to (light|dark) theme$/ }))).toBe(
-      circle,
+      open,
     );
   });
 

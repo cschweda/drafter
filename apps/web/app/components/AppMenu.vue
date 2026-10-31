@@ -53,10 +53,10 @@ function entry(id: string, icon: string, shows = false): DropdownMenuItem[] {
   ];
 }
 
-// The Template section: the toolbar's icon row has no room for the template chip below 1024px, so a
-// phone chooses the template here (the palette's Template: commands reach the same list). It is
-// the chip's own list, built once (`useTemplateMenu`), so the two agree on what is checked, what is
-// off, and what a template Drafter doesn't have is called. The editor gets focus after a choice.
+// The Template section: the template is chosen here on every screen (fresh-look design §3.1), as
+// well as from the status bar's chip and the palette's Template: commands. It is the chip's own
+// list, built once (`useTemplateMenu`), so the two agree on what is checked, what is off, and what
+// a template Drafter doesn't have is called. The editor gets focus after a choice.
 const {
   template,
   name: templateName,
@@ -233,8 +233,16 @@ function onCloseAutoFocus(event: Event) {
     :content="{ align: 'start', onCloseAutoFocus }"
     @update:open="onOpen"
   >
-    <button ref="mark" type="button" class="mark" aria-label="Drafter menu" data-tour="menu">
+    <button
+      ref="mark"
+      type="button"
+      class="mark"
+      aria-label="Drafter menu"
+      title="Drafter menu"
+      data-tour="menu"
+    >
       <slot />
+      <UIcon name="i-lucide-chevron-down" class="caret" />
     </button>
   </MenuButton>
   <!-- Revert to Saved says what it did here, as a toast and a polite live region. -->
@@ -245,17 +253,27 @@ function onCloseAutoFocus(event: Event) {
 
 <style scoped>
 .mark {
-  display: block;
+  display: flex;
   flex: none;
-  padding: 0;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 6px 0 4px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--r);
   background: none;
+  color: var(--muted);
   cursor: pointer;
 }
-.mark:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 4px;
+.mark:hover,
+.mark[aria-expanded="true"] {
+  background: var(--raised);
+  color: var(--text);
+}
+.caret {
+  flex: none;
+  width: 12px;
+  height: 12px;
 }
 .notice {
   position: fixed;
@@ -265,10 +283,10 @@ function onCloseAutoFocus(event: Event) {
   box-sizing: border-box;
   max-width: min(26rem, calc(100vw - 32px));
   padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--heading);
-  border-radius: 6px;
-  background: var(--chrome-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--overlay);
   color: var(--text);
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);

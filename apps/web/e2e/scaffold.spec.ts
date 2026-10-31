@@ -453,7 +453,10 @@ test.describe('Scaffold from the strip', () => {
       origins: [
         {
           origin: `http://localhost:${port}`,
-          localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+          localStorage: [
+            { name: 'drafter-tour-v1', value: 'true' },
+            { name: 'drafter-storage-toast-v1', value: 'true' },
+          ],
           indexedDB: [drafterDatabase([...sampleSeenRows, { key: 'structureStrip', value: true }])],
         },
       ],

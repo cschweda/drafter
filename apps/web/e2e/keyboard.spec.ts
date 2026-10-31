@@ -47,14 +47,18 @@ const noPointer = async (page: Page) =>
   ).toEqual([]);
 
 /**
- * Opens the page and waits until the app is ready for a first key: the sample is loaded, and its bar
- * (which shows once the project is) is up, so a shortcut finds the commands registered and the
- * script session settled.
+ * Opens the page and waits until the app is ready for a first key: the sample is loaded, and its
+ * chip (a phone's sample bar), which shows once the project is, is up, so a shortcut finds the
+ * commands registered and the script session settled.
  */
 async function open(page: Page) {
   await page.goto('/');
   await expect(editor(page)).toContainText('The Call');
-  await expect(page.getByRole('region', { name: 'Sample' })).toBeVisible();
+  await expect(
+    page
+      .getByRole('button', { name: 'Sample: start your own' })
+      .or(page.getByRole('region', { name: 'Sample' })),
+  ).toBeVisible();
 }
 
 /** The text of the lines CodeMirror has drawn: the whole script while it is this short. */
@@ -168,8 +172,9 @@ test('writes, finds, fixes, switches, saves, and exports with no pointer', async
   await noPointer(page);
 });
 
-// The toolbar by Tab alone, from a fresh page: the order is the mark, Open, Save, Export, Focus, the
-// template chip, the palette, and the theme. Each is reached, opened with Enter, and works.
+// The top bar by Tab alone, from a fresh page: the order is the mark, the sample chip, Open, Save,
+// Export, the palette, Structure, Focus, and the theme; the template chip is in the status bar. Each
+// is reached, opened with Enter, and works.
 test.describe('the toolbar by Tab', () => {
   test.skip(
     ({ browserName }) => browserName === 'webkit',
@@ -179,7 +184,8 @@ test.describe('the toolbar by Tab', () => {
   /** Tabs from where focus is until the button named `name` has it. */
   async function tabTo(page: Page, name: string | RegExp) {
     const target = page.getByRole('button', { name }).first();
-    for (let i = 0; i < 30; i++) {
+    // The template chip is in the status bar, past the panes' stops.
+    for (let i = 0; i < 80; i++) {
       await page.keyboard.press('Tab');
       if (await target.evaluate((el) => el === document.activeElement)) return;
     }
@@ -247,10 +253,13 @@ test.describe('the toolbar by Tab', () => {
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(3);
   });
 
-  test('starts a new screenplay from the sample bar, with the cursor in the editor', async ({
+  test('starts a new screenplay from the sample chip, with the cursor in the editor', async ({
     page,
   }) => {
-    await tabTo(page, 'New screenplay');
+    await tabTo(page, 'Sample: start your own');
+    await page.keyboard.press('Enter');
+    // The menu opens on its first item, New screenplay.
+    await expect(page.getByRole('menuitem', { name: 'New screenplay' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(editor(page)).toContainText('Untitled Screenplay');
     await expect(editor(page)).toBeFocused();
@@ -282,6 +291,11 @@ test.describe('a menu and Tab', () => {
   const MENUS: Array<[string, Trigger, boolean]> = [
     ['the app menu', async (page) => page.getByRole('button', { name: 'Drafter menu' }), false],
     ['the template chip', async (page) => page.getByRole('button', { name: /^Template:/ }), false],
+    [
+      'the sample chip',
+      async (page) => page.getByRole('button', { name: 'Sample: start your own' }),
+      false,
+    ],
     [
       "the element bar's More",
       async (page) =>

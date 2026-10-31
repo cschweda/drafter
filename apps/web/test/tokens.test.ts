@@ -261,3 +261,26 @@ describe('focus and motion', () => {
       expect(css, ui).toMatch(new RegExp(`${ui}: var\\(${token}\\);`));
   });
 });
+
+// The top bar and what moved into it (fresh-look design §3.1, §3.5): the tokens are its only
+// colours, so no circle, chip, or bar has a colour of its own.
+describe('the top bar', () => {
+  const TOP_BAR = [
+    'AppToolbar.vue',
+    'AppMenu.vue',
+    'ModuleButtons.vue',
+    'SampleChip.vue',
+    'SampleBar.vue',
+    'StorageWarning.vue',
+    'StructureStrip.vue',
+    'TemplateChip.vue',
+  ];
+
+  test.each(TOP_BAR)('%s has no colour but the tokens', (name) => {
+    const vue = readFileSync(join(APP, 'components', name), 'utf8');
+    const style = vue.slice(vue.indexOf('<style'));
+    expect(style.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
+    // Today's names are aliases on their way out; the moved components use the new ones.
+    expect(style.match(/var\(--(chrome|chrome-2|line|heading|tab-on)\)/g) ?? []).toEqual([]);
+  });
+});

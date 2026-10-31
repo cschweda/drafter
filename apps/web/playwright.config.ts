@@ -25,6 +25,11 @@ export default defineConfig({
     // page. The tour's "seen" key (nuxt-guided-tour: `drafter-tour-v1`, see app/tour/tour.config.ts)
     // is set in advance; e2e/tour.spec.ts starts with an empty storage instead.
     //
+    // The "recovery copy may be cleared" toast shows until it is dismissed once, and no test
+    // browser keeps storage for good, so it would sit over every test's page: its key
+    // (`drafter-storage-toast-v1`, app/storage/storage-notice.ts) is set too; e2e/recovery.spec.ts
+    // takes it away for its own tests.
+    //
     // In the same way, the writer's first New stage play or Markdown document opens with that
     // kind's sample (decided 2026-10-27), which most tests don't expect, so the database starts
     // holding the settings rows that say the samples were met (`sampleSeenRows`);
@@ -34,7 +39,10 @@ export default defineConfig({
       origins: [
         {
           origin: `http://localhost:${port}`,
-          localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+          localStorage: [
+            { name: 'drafter-tour-v1', value: 'true' },
+            { name: 'drafter-storage-toast-v1', value: 'true' },
+          ],
           indexedDB: [drafterDatabase(sampleSeenRows)],
         },
       ],

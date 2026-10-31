@@ -12,8 +12,14 @@ const status = (page: Page) => page.locator('[data-tour="status"]');
 const editor = (page: Page) => page.locator('.cm-content');
 const warning = (page: Page) => page.locator('[data-warning]');
 
-/** Makes `navigator.storage.persisted` and `persist` answer `granted`. */
+/**
+ * Makes `navigator.storage.persisted` and `persist` answer `granted`. Not granted, the "may be
+ * cleared" toast is also made due again (the tests' storage state says it was dismissed).
+ */
 async function stubPersistence(page: Page, granted: boolean) {
+  if (!granted) {
+    await page.addInitScript(() => localStorage.removeItem('drafter-storage-toast-v1'));
+  }
   await page.addInitScript((value) => {
     // The whole object: WebKit does not let a method be set on the real one.
     Object.defineProperty(navigator, 'storage', {
@@ -196,7 +202,7 @@ test.describe('the recovery copy', () => {
       ).toBe(false);
     });
 
-    test('warns that the recovery copy may be cleared, and the warning can be dismissed', async ({
+    test('the storage warning is a status chip and a one-time toast, not a banner', async ({
       page,
     }) => {
       await stubPersistence(page, false);
@@ -204,47 +210,41 @@ test.describe('the recovery copy', () => {
       await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveText(
         'Recovery copy: may be cleared',
       );
-      await expect(warning(page)).toBeVisible();
-      await expect(page.locator('[role="status"] [data-warning]')).toBeVisible();
-      await expect(warning(page)).toContainText('may clear');
-      await warning(page).getByRole('button', { name: 'Dismiss' }).click();
+      // A toast, with the advice and a way to save, not a bar above the panes.
+      const toast = page.locator('[data-warning="not-persistent"]');
+      await expect(toast).toBeVisible();
+      await expect(toast).toContainText('may clear');
+      await expect(toast.getByRole('button', { name: 'Save to a file' })).toBeVisible();
+      await expect(page.locator('.top [data-warning]')).toHaveCount(0);
+      // Said politely: the alert region is for a copy that can't be kept at all.
+      await expect(page.locator('[role="alert"] [data-warning]')).toHaveCount(0);
+      await toast.getByRole('button', { name: 'Dismiss' }).click();
       await expect(warning(page)).toHaveCount(0);
-      // The status bar still says so.
+      // Dismissed once, it is not shown in this browser again.
+      expect(await page.evaluate(() => localStorage.getItem('drafter-storage-toast-v1'))).toBe(
+        'true',
+      );
+      // The status bar still says so, and the toast doesn't come back in this visit.
       await expect(status(page)).toContainText('Recovery copy: may be cleared');
+      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await page
+        .getByRole('group', { name: 'Scripts', exact: true })
+        .getByRole('button', { name: 'New screenplay' })
+        .click();
+      await expect(editor(page)).toContainText('Title: Untitled Screenplay');
+      await page.waitForTimeout(500);
+      await expect(warning(page)).toHaveCount(0);
     });
 
-    test('keeps its live regions in the page, and puts each warning in the right one', async ({
+    test('keeps the alert region in the page, and puts only “unavailable” in it', async ({
       page,
     }) => {
       await stubPersistence(page, false);
-      // The regions have to be in the page before a warning is put in one, or it is not announced.
-      await page.addInitScript(() => {
-        const seen = window as unknown as { regionBeforeWarning: boolean };
-        seen.regionBeforeWarning = false;
-        new MutationObserver(() => {
-          if (
-            document.querySelector('[data-warning-region]') &&
-            !document.querySelector('[data-warning]')
-          ) {
-            seen.regionBeforeWarning = true;
-          }
-        }).observe(document, { childList: true, subtree: true });
-      });
       await page.goto('/');
-      const polite = page.locator('[role="status"][data-warning-region]');
       const urgent = page.locator('[role="alert"][data-warning-region]');
-      await expect(polite.locator('[data-warning="not-persistent"]')).toBeVisible();
+      await expect(page.locator('[data-warning="not-persistent"]')).toBeVisible();
       await expect(urgent).toHaveCount(1);
       await expect(urgent.locator('[data-warning]')).toHaveCount(0);
-      expect(
-        await page.evaluate(
-          () => (window as unknown as { regionBeforeWarning: boolean }).regionBeforeWarning,
-        ),
-      ).toBe(true);
-      // Dismissed, the region stays and only its text goes.
-      await warning(page).getByRole('button', { name: 'Dismiss' }).click();
-      await expect(polite).toHaveCount(1);
-      await expect(polite.locator('[data-warning]')).toHaveCount(0);
     });
 
     test('puts “unavailable” in an alert region that was already there', async ({ page }) => {
@@ -252,10 +252,7 @@ test.describe('the recovery copy', () => {
       await page.goto('/');
       const urgent = page.locator('[role="alert"][data-warning-region]');
       await expect(urgent.locator('[data-warning="unavailable"]')).toContainText('only in memory');
-      await expect(page.locator('[role="status"][data-warning-region]')).toHaveCount(1);
-      await expect(page.locator('[role="status"][data-warning-region] [data-warning]')).toHaveCount(
-        0,
-      );
+      await expect(page.locator('[data-warning="not-persistent"]')).toHaveCount(0);
     });
 
     test('dismisses the warning from the keyboard', async ({ page }) => {

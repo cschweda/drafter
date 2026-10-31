@@ -3,44 +3,22 @@ import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
 import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
-import { useTemplateMenu } from '~/editor/template-menu';
 import { useSettings } from '~/settings/settings';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 
+// The top bar (fresh-look design §3.1): one quiet 44px row. The Drafter mark and wordmark open the
+// app menu, as they always have; then the script's title and its state (a sample's chip); Open,
+// Save, and Export (and any module's buttons); the command search; and the Structure strip, Focus,
+// and the theme as icon buttons. The template is chosen in the Drafter menu and the status bar.
 const colorMode = useColorMode();
 const focus = useFocusMode();
+const wide = useWideScreen();
 const { readOnly } = useGuard();
 const editor = useEditor();
 const { settings } = useSettings();
-// A choice puts focus in the editor, where Mod+Z undoes it; Escape, or leaving the menu, returns it to the chip as usual.
-let chosen = false;
-function onCloseAutoFocus(event: Event) {
-  if (!chosen) return;
-  chosen = false;
-  event.preventDefault();
-  editor.goto(editor.view.state.selection.main.head);
-}
-// The chip's name is the script's template ("Screenplay (fallback)" for one Drafter doesn't have); a
-// Markdown document has no template, so its chip names the document, and the label says so.
-const {
-  template,
-  name: templateName,
-  noteItems,
-  items: typeItems,
-} = useTemplateMenu(() => {
-  chosen = true;
-});
-const chipLabel = computed(() =>
-  template.kind.value === 'markdown'
-    ? `Document: ${templateName.value}`
-    : `Template: ${templateName.value}`,
-);
-// The chip's menu: the note about an unknown template (if any), then the one list the app menu shows too.
-const templateItems = computed(() =>
-  noteItems.value.length > 0 ? [noteItems.value, typeItems.value] : typeItems.value,
-);
+const title = useScriptTitle();
 const paletteKeys = formatKeys('Mod-k', isApple());
 const dark = computed(() => colorMode.value !== 'light');
 
@@ -59,22 +37,12 @@ function toggleStructure() {
   const command = commandById('toggle-structure-strip');
   if (command && (!command.enabled || command.enabled())) void command.run();
 }
-
-// Open is the scripts menu, Save saves, Export is the export menu, Focus is focus mode, and
-// Structure is the Structure strip.
-const ACTIONS = [
-  { label: 'Open', icon: 'i-lucide-folder-open', kind: 'open', tour: undefined },
-  { label: 'Save', icon: 'i-lucide-save', kind: 'save', tour: 'save' },
-  { label: 'Export', icon: 'i-lucide-file-output', kind: 'export', tour: 'export' },
-  { label: 'Focus', icon: 'i-lucide-scan', kind: 'focus', tour: 'focus' },
-  { label: 'Structure', icon: 'i-lucide-panel-top', kind: 'structure', tour: undefined },
-];
 </script>
 
 <template>
   <header class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <!-- The mark opens the app menu. Below 400px the wordmark gives way to the mark, so the toolbar fits a
+    <!-- The mark opens the app menu. Below 400px the wordmark gives way to the mark, so the bar fits a
          320px screen (WCAG 1.4.10). -->
     <AppMenu>
       <picture class="logo">
@@ -82,95 +50,58 @@ const ACTIONS = [
         <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
       </picture>
     </AppMenu>
+    <span class="sep" aria-hidden="true" />
+    <!-- The title gives way first when the bar is short of room, cut short on screen; the tooltip has it whole. -->
+    <span class="title" :title="title">{{ title }}</span>
+    <SampleChip v-if="wide" />
+    <span class="sep before-actions" aria-hidden="true" />
     <div class="actions">
-      <template v-for="action in ACTIONS" :key="action.kind">
-        <ScriptsMenu v-if="action.kind === 'open'" v-slot="{ toggle, expanded, controls }">
-          <button
-            type="button"
-            class="act"
-            :aria-expanded="expanded ? 'true' : 'false'"
-            :aria-controls="expanded ? controls : undefined"
-            @click="toggle"
-          >
-            <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-            <span class="label">{{ action.label }}</span>
-          </button>
-        </ScriptsMenu>
-        <ExportMenu v-else-if="action.kind === 'export'" v-slot="{ toggle, expanded, controls }">
-          <button
-            type="button"
-            class="act"
-            :aria-expanded="expanded ? 'true' : 'false'"
-            :aria-controls="expanded ? controls : undefined"
-            :data-tour="action.tour"
-            @click="toggle"
-          >
-            <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-            <span class="label">{{ action.label }}</span>
-          </button>
-        </ExportMenu>
+      <ScriptsMenu v-slot="{ toggle, expanded, controls }">
         <button
-          v-else-if="action.kind === 'save'"
           type="button"
           class="act"
-          :aria-disabled="readOnly ? 'true' : undefined"
-          :data-tour="action.tour"
-          @click="save().catch(() => {})"
+          title="Open"
+          :aria-expanded="expanded ? 'true' : 'false'"
+          :aria-controls="expanded ? controls : undefined"
+          @click="toggle"
         >
-          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-          <span class="label">{{ action.label }}</span>
+          <UIcon name="i-lucide-folder-open" class="icon" />
+          <span class="label">Open</span>
         </button>
-        <button
-          v-else-if="action.kind === 'focus'"
-          id="focus-button"
-          type="button"
-          class="act"
-          :data-tour="action.tour"
-          @click="focus.toggle"
-        >
-          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-          <span class="label">{{ action.label }}</span>
-        </button>
-        <button
-          v-else-if="action.kind === 'structure'"
-          type="button"
-          class="act structure"
-          :aria-pressed="structurePressed ? 'true' : 'false'"
-          :aria-disabled="structureOff ? 'true' : undefined"
-          :title="structureOff ? NOT_FOR_MARKDOWN : undefined"
-          @click="toggleStructure"
-        >
-          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-          <span class="label">{{ action.label }}</span>
-        </button>
-        <button
-          v-else
-          type="button"
-          class="act"
-          aria-disabled="true"
-          :data-tour="action.tour"
-        >
-          <span class="round" :class="action.kind"><UIcon :name="action.icon" class="icon" /></span>
-          <span class="label">{{ action.label }}</span>
-        </button>
-      </template>
-      <ModuleButtons />
-    </div>
-    <MenuButton :items="templateItems" :content="{ align: 'start', onCloseAutoFocus }">
+      </ScriptsMenu>
       <button
         type="button"
-        class="chip template"
-        :aria-label="chipLabel"
-        :title="templateName"
-        data-tour="template"
+        class="act"
+        title="Save"
+        :aria-disabled="readOnly ? 'true' : undefined"
+        data-tour="save"
+        @click="save().catch(() => {})"
       >
-        <span class="name">{{ templateName }}</span>
+        <UIcon name="i-lucide-save" class="icon" />
+        <span class="label">Save</span>
       </button>
-    </MenuButton>
+      <ExportMenu v-slot="{ toggle, expanded, controls }">
+        <button
+          type="button"
+          class="act"
+          title="Export"
+          :aria-expanded="expanded ? 'true' : 'false'"
+          :aria-controls="expanded ? controls : undefined"
+          data-tour="export"
+          @click="toggle"
+        >
+          <UIcon name="i-lucide-file-output" class="icon" />
+          <span class="label">Export</span>
+          <UIcon name="i-lucide-chevron-down" class="caret" />
+        </button>
+      </ExportMenu>
+      <ModuleButtons />
+    </div>
     <span class="spacer" />
     <button
       type="button"
-      class="chip"
+      class="search"
+      title="Go to scene or command"
       data-tour="palette"
       aria-haspopup="dialog"
       @click="openPalette('all', $event.currentTarget as HTMLElement)"
@@ -179,14 +110,37 @@ const ACTIONS = [
       <span class="label">Go to scene or command</span>
       <kbd>{{ paletteKeys }}</kbd>
     </button>
+    <!-- A phone draws no Structure strip, so it has no button (Call 16). -->
     <button
       type="button"
-      class="chip"
+      class="ib structure"
+      aria-label="Structure"
+      :title="structureOff ? NOT_FOR_MARKDOWN : 'Structure strip'"
+      :aria-pressed="structurePressed ? 'true' : 'false'"
+      :aria-disabled="structureOff ? 'true' : undefined"
+      @click="toggleStructure"
+    >
+      <UIcon name="i-lucide-panel-top" class="icon" />
+    </button>
+    <button
+      id="focus-button"
+      type="button"
+      class="ib"
+      aria-label="Focus"
+      title="Focus"
+      data-tour="focus"
+      @click="focus.toggle"
+    >
+      <UIcon name="i-lucide-scan" class="icon" />
+    </button>
+    <button
+      type="button"
+      class="ib"
       :aria-label="dark ? 'Switch to light theme' : 'Switch to dark theme'"
+      :title="dark ? 'Switch to light theme' : 'Switch to dark theme'"
       @click="toggleTheme"
     >
       <UIcon :name="dark ? 'i-lucide-sun' : 'i-lucide-moon'" class="icon" />
-      <span class="label" aria-hidden="true">{{ dark ? 'Light' : 'Dark' }}</span>
     </button>
   </header>
 </template>
@@ -195,129 +149,144 @@ const ACTIONS = [
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
-  background: var(--chrome);
-  border-bottom: 1px solid var(--line);
+  gap: 4px;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 .logo {
+  display: block;
   flex: none;
-}
-/* The space after the mark is the menu button's, so its focus ring stays close to the logo. */
-.toolbar :deep(.mark) {
-  margin-right: 14px;
 }
 .logo img {
   display: block;
-  height: 28px;
+  height: 22px;
   width: auto;
 }
-.actions {
-  display: flex;
-  gap: 14px;
+.sep {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: var(--border);
 }
-.act {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: 600 13px/1 var(--font-sans);
-}
-.act[aria-disabled="true"] {
-  cursor: not-allowed;
-}
-.act[aria-disabled="true"] .round {
-  opacity: 0.6;
-}
-.round {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  color: #111216;
-}
-.round.open {
-  background: #9bd3a0;
-}
-.round.save {
-  background: #8db8e8;
-}
-.round.export {
-  background: #e5b04a;
-}
-.round.focus {
-  background: #f5a9c0;
-}
-.round.structure {
-  background: #b7a6e6;
-}
-.icon {
-  width: 13px;
-  height: 13px;
-}
-.chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 11px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--chrome-2);
-  color: var(--text);
-  font: 600 12.5px/1 var(--font-sans);
-  white-space: nowrap;
-  cursor: pointer;
-}
-/* The chip gives way first when the toolbar is short of room, cut short on screen; its name is whole. */
-.chip.template {
+.title {
+  flex: 0 1 auto;
   min-width: 0;
-}
-.chip.template .name {
-  min-width: 0;
+  margin-right: 4px;
   overflow: hidden;
+  color: var(--text);
+  font: 600 13px/18px var(--font-sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.chip[aria-disabled="true"] {
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+/* The four buttons: borderless, a 16px icon (and a label on a wide screen), --raised on hover. */
+.act,
+.ib,
+.search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
   color: var(--muted);
+  font: 500 13px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.act {
+  gap: 6px;
+  padding: 0 10px;
+}
+.ib {
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+}
+.act:hover,
+.ib:hover,
+.act[aria-expanded="true"] {
+  background: var(--raised);
+  color: var(--text);
+}
+.ib[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.act[aria-disabled="true"],
+.ib[aria-disabled="true"] {
   cursor: not-allowed;
 }
+.act[aria-disabled="true"] .icon,
+.ib[aria-disabled="true"] .icon {
+  opacity: 0.6;
+}
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.caret {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
+}
+/* The command search: a field-like button on --raised, 260px on a wide screen. */
+.search {
+  gap: 8px;
+  width: 260px;
+  margin-right: 4px;
+  padding: 0 10px;
+  border-radius: var(--r);
+  background: var(--raised);
+}
+.search:hover {
+  background: var(--overlay);
+  color: var(--text);
+}
+.search .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 kbd {
-  padding: 1px 4px;
-  border: 1px solid var(--line);
+  margin-left: auto;
+  padding: 1px 5px;
   border-radius: 4px;
-  font: 600 11px/1 var(--font-sans);
+  background: var(--overlay);
+  color: var(--muted);
+  font: 500 11px/16px var(--font-sans);
 }
 .spacer {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
-/* Five actions and a long chip need a little less space between them until 1200px. */
-@media (max-width: 1199.98px) {
-  .toolbar,
-  .actions {
-    gap: 10px;
+/* Under 1280px the search gives a little of its width. */
+@media (max-width: 1279.98px) {
+  .search {
+    width: 220px;
   }
 }
 
-/* One pane, and a toolbar of icons, below 1024px. */
+/* One pane, and a bar of icons, below 1024px: the labels drop and the tooltips name the buttons. */
 @media (max-width: 1023.98px) {
-  .toolbar,
-  .actions {
-    gap: 8px;
-  }
   .toolbar {
-    padding: 8px 10px;
+    padding: 0 8px;
   }
-  .toolbar :deep(.mark) {
-    margin-right: 6px;
-  }
-  .logo img {
-    height: 24px;
+  .sep.before-actions {
+    display: none;
   }
   .label {
     position: absolute;
@@ -327,18 +296,44 @@ kbd {
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  /* A phone draws no Structure strip, so it has no button (Call 16). */
-  .template,
-  .act.structure,
+  .act,
+  .search {
+    justify-content: center;
+    width: 30px;
+    margin: 0;
+    padding: 0;
+  }
+  .search {
+    border-radius: var(--r-sm);
+    background: none;
+  }
+  .search:hover {
+    background: var(--raised);
+  }
+  .act .caret,
+  .structure,
   kbd {
     display: none;
   }
-  /* Icons alone, the search and theme chips match the action circles. */
-  .chip {
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
+}
+
+/* The narrowest phones (320px, WCAG 1.4.10): a little less room for each button, never under 24px. */
+@media (max-width: 399.98px) {
+  .toolbar {
+    gap: 2px;
+    padding: 0 6px;
+  }
+  .sep {
+    margin: 0 2px;
+  }
+  .act,
+  .ib,
+  .search,
+  .toolbar :deep(.act) {
+    width: 26px;
+  }
+  .toolbar :deep(.mark .caret) {
+    display: none;
   }
 }
 </style>

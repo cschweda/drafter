@@ -444,9 +444,11 @@ test.describe('script modules', () => {
     await expect(button).toBeVisible();
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
-    // A round icon button, the size of the others.
-    expect(Math.round(box?.width ?? 0)).toBe(24);
-    expect(Math.round(box?.height ?? 0)).toBe(24);
+    // An icon button, the size of the others, and at least a 24px target.
+    const open = await page.getByRole('button', { name: 'Open', exact: true }).boundingBox();
+    expect(Math.round(box?.width ?? 0)).toBe(Math.round(open?.width ?? -1));
+    expect(Math.round(box?.height ?? 0)).toBe(Math.round(open?.height ?? -1));
+    expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(24);
     const overflow = await page.evaluate(() => {
       const toolbar = document.querySelector('header.toolbar') as HTMLElement;
       const right = Math.max(

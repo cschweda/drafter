@@ -12,7 +12,10 @@ test.use({
     origins: [
       {
         origin: `http://localhost:${port}`,
-        localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+        localStorage: [
+          { name: 'drafter-tour-v1', value: 'true' },
+          { name: 'drafter-storage-toast-v1', value: 'true' },
+        ],
       },
     ],
   },
@@ -21,7 +24,11 @@ test.use({
 const editor = (page: Page) => page.locator('.cm-content');
 const bar = (page: Page) => page.getByRole('region', { name: 'Starting text' });
 const startBlank = (page: Page) => bar(page).getByRole('button', { name: 'Start blank' });
-const sampleBar = (page: Page) => page.getByRole('region', { name: 'Sample', exact: true });
+/** The sample's chip in the top bar (a wide screen), or a phone's sample bar. */
+const sampleBar = (page: Page) =>
+  page
+    .getByRole('button', { name: 'Sample: start your own' })
+    .or(page.getByRole('region', { name: 'Sample', exact: true }));
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const preview = (page: Page) => page.getByRole('article', { name: 'Preview' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });

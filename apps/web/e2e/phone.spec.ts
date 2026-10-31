@@ -43,7 +43,8 @@ test.describe('the toolbar at 320px', () => {
       return {
         page: document.documentElement.scrollWidth,
         bar: [bar.scrollWidth, bar.clientWidth],
-        // The template chip is not in the toolbar at this width (display: none), so it has no box.
+        // The sample chip is not in the toolbar at this width (the sample bar's row has its
+        // actions), so it has no box.
         buttons: Array.from(bar.querySelectorAll('button'))
           .filter((b) => b.offsetWidth > 0)
           .map((b) => {
@@ -63,14 +64,15 @@ test.describe('the toolbar at 320px', () => {
     });
     expect(layout.page).toBeLessThanOrEqual(320);
     expect(layout.bar[0]).toBeLessThanOrEqual(layout.bar[1] as number);
-    // The mark (the app menu), Open, Save, Export, Focus, the palette, and the theme.
+    // The mark (the app menu), Open, Save, Export, the palette, Focus, and the theme (the top
+    // bar's order; Structure has no strip to show here).
     expect(layout.buttons.map((b) => b.name)).toEqual([
       'Drafter menu',
       'Open',
       'Save',
       'Export',
-      'Focus',
       'Go to scene or command',
+      'Focus',
       'Switch to light theme',
     ]);
     for (const b of layout.buttons) {
@@ -95,6 +97,17 @@ test.describe('the toolbar at 320px', () => {
     await expect(page.getByRole('group', { name: 'Export' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('group', { name: 'Export' })).toBeHidden();
+
+    // The sample's ways to start one's own: the chip's menu on a wide screen, the sample row here.
+    const sample = page.getByRole('region', { name: 'Sample' });
+    await expect(sample.getByRole('button', { name: 'New screenplay' })).toBeInViewport();
+    await sample.getByRole('button', { name: 'More' }).click();
+    await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
+      'New stage play',
+      'New Markdown document',
+      'Open a file…',
+    ]);
+    await page.keyboard.press('Escape');
 
     // Save: a download, where the browser has no file picker.
     const download = page.waitForEvent('download');

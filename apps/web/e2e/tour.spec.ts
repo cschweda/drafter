@@ -18,13 +18,14 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palett
 const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1024;
 
 /** Each step's title and the `data-tour` value of what it lights, on a wide screen and a narrow one. */
-function plan(isWide: boolean) {
+function plan(_isWide: boolean) {
   return [
     ['You write here', 'source'],
     ['The real pages', 'script'],
     ['Names and places come up', 'source'],
     ['Problems', 'problems'],
-    ['Screenplay or stage play', isWide ? 'template' : 'menu'],
+    // The template is chosen in the Drafter menu on every screen (fresh look, design §10).
+    ['Screenplay or stage play', 'menu'],
     ['Save', 'save'],
     ['The status bar', 'status'],
     ['Export, and open almost anything', 'export'],

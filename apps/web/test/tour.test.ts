@@ -21,7 +21,7 @@ describe('the tour’s steps', () => {
         'script',
         'source',
         'problems',
-        'template',
+        'menu',
         'save',
         'status',
         'export',
@@ -43,13 +43,14 @@ describe('the tour’s steps', () => {
     }
   });
 
-  test('point at the app menu on a phone, where the template chip is hidden, and say where to choose', () => {
-    const template = buildSteps(false)[4];
-    expect(template?.target).toBe('[data-tour="menu"]');
-    expect(template?.content).toMatch(/Drafter menu’s Template section/);
-    expect(template?.content).toMatch(/palette/);
-    expect(template?.content).toMatch(/Template:/);
-    expect(buildSteps(true)[4]?.target).toBe('[data-tour="template"]');
+  test('point at the app menu for the template on every screen, and say where to choose', () => {
+    for (const wide of [true, false]) {
+      const template = buildSteps(wide)[4];
+      expect(template?.target).toBe('[data-tour="menu"]');
+      expect(template?.content).toMatch(/Drafter menu’s Template section/);
+      expect(template?.content).toMatch(/palette/);
+      expect(template?.content).toMatch(/Template:/);
+    }
   });
 
   test('say what Save does where it does it, and where typewriter scrolling is', () => {

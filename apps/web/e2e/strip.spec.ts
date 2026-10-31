@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
   closeSettings,
   editor,
@@ -27,12 +27,35 @@ const withStrip = {
     origins: [
       {
         origin: `http://localhost:${port}`,
-        localStorage: [{ name: 'drafter-tour-v1', value: 'true' }],
+        localStorage: [
+          { name: 'drafter-tour-v1', value: 'true' },
+          { name: 'drafter-storage-toast-v1', value: 'true' },
+        ],
         indexedDB: [drafterDatabase([...sampleSeenRows, { key: 'structureStrip', value: true }])],
       },
     ],
   },
 };
+
+/**
+ * Hovering a block. Headless Firefox reports the pointer leaving the page at once when a block
+ * near the top of the window is hovered and its card appears (on main too, once the bars above the
+ * strip went; decided in the fresh look's Task 2), so there the pointer's events are sent to the
+ * block itself.
+ */
+function pointerFor(page: Page, browserName: string) {
+  const synthetic = browserName === 'firefox';
+  return {
+    async enter(block: Locator) {
+      if (synthetic) await block.dispatchEvent('pointerenter');
+      else await block.hover();
+    },
+    async leave(block: Locator) {
+      if (synthetic) await block.dispatchEvent('pointerleave');
+      else await page.mouse.move(5, 400);
+    },
+  };
+}
 
 const strip = (page: Page) => page.getByRole('group', { name: 'Structure strip' });
 const stripRow = (page: Page, name: string) =>
@@ -414,7 +437,11 @@ test.describe('going there, and where you are', () => {
     await expect(marker).toHaveCount(0);
   });
 
-  test('hovering and focusing show the card with the page, length, and goal', async ({ page }) => {
+  test('hovering and focusing show the card with the page, length, and goal', async ({
+    page,
+    browserName,
+  }) => {
+    const pointer = pointerFor(page, browserName);
     await start(page);
     await setText(
       page,
@@ -427,7 +454,7 @@ test.describe('going there, and where you are', () => {
     const card = strip(page).locator('.card');
     await expect(card).toHaveCount(0);
     const kitchen = scenes(page).first();
-    await kitchen.hover();
+    await pointer.enter(kitchen);
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute('aria-hidden', 'true');
     await expect(card).toContainText('Scene 1, INT. KITCHEN - NIGHT');
@@ -442,7 +469,7 @@ test.describe('going there, and where you are', () => {
     expect(c?.y ?? 0).toBeGreaterThanOrEqual((b?.y ?? 0) + (b?.height ?? 0));
     expect(c?.x ?? -1).toBeGreaterThanOrEqual((s?.x ?? 0) - 0.5);
     // Leaving takes it away.
-    await page.mouse.move(5, 400);
+    await pointer.leave(kitchen);
     await expect(card).toHaveCount(0);
     // Focus shows the last scene's, still inside the strip at its right edge.
     const porch = scenes(page).nth(1);
@@ -453,9 +480,9 @@ test.describe('going there, and where you are', () => {
       (after.s?.x ?? 0) + (after.s?.width ?? 0) + 0.5,
     );
     // Hovering another block shows its card; leaving it shows the focused block's again.
-    await kitchen.hover();
+    await pointer.enter(kitchen);
     await expect(card).toContainText('Scene 1, INT. KITCHEN - NIGHT');
-    await page.mouse.move(5, 400);
+    await pointer.leave(kitchen);
     await expect(card).toContainText('Scene 2, EXT. BACK PORCH - LATER');
     // A section's card: its title and its scenes.
     await page.keyboard.press('ArrowUp');
@@ -465,13 +492,17 @@ test.describe('going there, and where you are', () => {
     await expect(card).toHaveCount(0);
   });
 
-  test("the card shows a scene's time and its estimate from the dialogue", async ({ page }) => {
+  test("the card shows a scene's time and its estimate from the dialogue", async ({
+    page,
+    browserName,
+  }) => {
+    const pointer = pointerFor(page, browserName);
     await start(page);
     await setText(page, await readFile(SAMPLE, 'utf8'));
     await paged(page);
     const card = strip(page).locator('.card');
     const kitchen = scenes(page).first();
-    await kitchen.hover();
+    await pointer.enter(kitchen);
     // 1 1/8 pages at a minute a page; the dialogue's words at 150 a minute and its lines of action
     // at 1.5 s come to about 50 s.
     await expect(card).toContainText('page 1 · 1 1/8 pp · 1 min 10 s');
@@ -482,7 +513,7 @@ test.describe('going there, and where you are', () => {
     );
     // An act's are its scenes' totals.
     const act = stripRow(page, 'Sections marked #').getByRole('button').first();
-    await act.hover();
+    await pointer.enter(act);
     await expect(card).toContainText('2 scenes · 1 3/8 pp · 1 min 25 s');
     await expect(card).toContainText('Estimate from the dialogue: 1 min');
   });
@@ -583,13 +614,19 @@ test.describe('turning it on and off', () => {
     const button = structureButton(page);
     await expect(button).toBeVisible();
     await expect(button).toHaveAttribute('aria-pressed', 'false');
-    // The fifth round action, after Focus, in its own color (Call 30).
-    const labels = await page.getByRole('banner').locator('.actions .act .label').allTextContents();
-    expect(labels.slice(0, 5)).toEqual(['Open', 'Save', 'Export', 'Focus', 'Structure']);
-    await expect(button.locator('.round')).toHaveCSS('background-color', 'rgb(183, 166, 230)');
+    // An icon button in the top bar's right-hand group, just before Focus (design §3.1, Call 16),
+    // with no colour of its own until it is pressed.
+    const focusButton = page
+      .getByRole('banner')
+      .getByRole('button', { name: 'Focus', exact: true });
+    const [own, next] = [await button.boundingBox(), await focusButton.boundingBox()];
+    expect((own?.x ?? 0) + (own?.width ?? 0)).toBeLessThanOrEqual(next?.x ?? 0);
+    await expect(button).toHaveAttribute('title', 'Structure strip');
+    await expect(button).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await button.click();
     await expect(strip(page)).toBeVisible();
     await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(button).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await button.click();
     await expect(strip(page)).toHaveCount(0);
     await expect(button).toHaveAttribute('aria-pressed', 'false');
@@ -622,7 +659,8 @@ test.describe('turning it on and off', () => {
     await page.keyboard.press('ControlOrMeta+Alt+n');
     await expect(strip(page)).toBeVisible();
     await expect(button).toHaveAttribute('aria-pressed', 'true');
-    await expect(button).not.toHaveAttribute('title', /./);
+    // Its tooltip names it again (an icon button), no longer saying why it's off.
+    await expect(button).toHaveAttribute('title', 'Structure strip');
   });
 
   test('turned on after the Script pane has scrolled, the marker shows where it is', async ({
@@ -702,7 +740,7 @@ test.describe('on a phone', () => {
     await expect(editor(page)).toContainText('The Call');
     await expect(strip(page)).toHaveCount(0);
     // The button is there, but the phone's styles hide it.
-    const button = page.getByRole('banner').locator('.act.structure');
+    const button = page.getByRole('banner').locator('button.structure');
     await expect(button).toHaveCount(1);
     await expect(button).toHaveCSS('display', 'none');
     await expect(structureButton(page)).toBeHidden();
@@ -713,8 +751,8 @@ test.describe('on a phone', () => {
   });
 });
 
-// The Structure button is the fifth action, so at the narrowest wide screen the toolbar must still
-// fit one row: the template chip gives way first, cut short with an ellipsis.
+// At the narrowest wide screen the top bar must still fit one row: the title gives way first, cut
+// short with an ellipsis. (The template chip is in the status bar now.)
 test.describe('the toolbar at 1024 px', () => {
   test.beforeEach(() => {
     test.skip(test.info().project.name.startsWith('phone'), 'a phone has the icon toolbar');
@@ -723,7 +761,7 @@ test.describe('the toolbar at 1024 px', () => {
   async function fitsOneRow(page: Page) {
     const fit = await page.evaluate(() => {
       const toolbar = document.querySelector('header.toolbar') as HTMLElement;
-      const controls = Array.from(toolbar.querySelectorAll<HTMLElement>('.act, .chip')).filter(
+      const controls = Array.from(toolbar.querySelectorAll<HTMLElement>('button')).filter(
         (el) => el.offsetParent !== null,
       );
       const boxes = controls.map((el) => el.getBoundingClientRect());
@@ -750,8 +788,8 @@ test.describe('the toolbar at 1024 px', () => {
     await newMarkdown(page);
     await expect(structureButton(page)).toHaveAttribute('aria-disabled', 'true');
     await fitsOneRow(page);
-    // The chip is cut short on screen, but its name is whole.
-    await expect(page.getByRole('banner').locator('.chip.template')).toHaveAccessibleName(
+    // The template chip, in the status bar, has its whole name.
+    await expect(page.locator('[data-tour="status"] .chip.template')).toHaveAccessibleName(
       /^Document: /,
     );
   });
@@ -763,7 +801,7 @@ test.describe('the toolbar at 1024 px', () => {
       page,
       'INT. HALL - DAY\n\nShe waits.\n\n/* drafter\n{"v":1,"template":"my-own"}\n*/\n',
     );
-    const chip = page.getByRole('banner').locator('.chip.template');
+    const chip = page.locator('[data-tour="status"] .chip.template');
     await expect(chip).toHaveText('Screenplay (fallback)');
     await fitsOneRow(page);
     await expect(chip).toHaveAccessibleName('Template: Screenplay (fallback)');

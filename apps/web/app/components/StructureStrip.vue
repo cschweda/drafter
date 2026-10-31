@@ -425,8 +425,8 @@ watch(
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   min-height: 18px;
-  border-bottom: 1px solid var(--line);
-  background: var(--chrome);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   font-size: 11px;
   line-height: 18px;
@@ -449,7 +449,7 @@ watch(
   display: flex;
   flex-direction: column;
   padding: 0 8px 0 14px;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--border);
   color: var(--muted);
   font-family: ui-monospace, monospace;
 }
@@ -473,8 +473,8 @@ watch(
   padding: 0 4px;
   overflow: hidden;
   border: 0;
-  border-right: 1px solid var(--line);
-  background: var(--chrome-2);
+  border-right: 1px solid var(--border);
+  background: var(--raised);
   color: var(--text);
   font: inherit;
   line-height: 18px;
@@ -484,7 +484,7 @@ watch(
   cursor: pointer;
 }
 .block.alt {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .block.point {
   padding: 0;
@@ -492,7 +492,7 @@ watch(
 /* The cursor's scene and its sections (Call 10). */
 .block.current {
   z-index: 1;
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 /* Focus is the text color, inside a heading-colored ring when the block is current too. */
@@ -502,13 +502,13 @@ watch(
   outline-offset: -2px;
 }
 .block.current:focus-visible {
-  box-shadow: inset 0 0 0 4px var(--heading);
+  box-shadow: inset 0 0 0 4px var(--accent-text);
 }
 .ruler {
   position: relative;
   height: 14px;
   overflow: hidden;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   box-sizing: border-box;
   color: var(--muted);
   font-size: 9px;
@@ -516,14 +516,14 @@ watch(
 }
 .ruler-space {
   height: 14px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   box-sizing: border-box;
 }
 .tick {
   position: absolute;
   top: 0;
   height: 4px;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--border);
 }
 .tick.numbered {
   height: 100%;
@@ -539,7 +539,7 @@ watch(
   width: 0;
   height: 0;
   margin-left: -4px;
-  border-top: 6px solid var(--heading);
+  border-top: 6px solid var(--accent-text);
   border-right: 4px solid transparent;
   border-left: 4px solid transparent;
   pointer-events: none;
@@ -550,7 +550,7 @@ watch(
   max-width: min(360px, 100%);
   box-sizing: border-box;
   padding: 6px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--page);
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);

@@ -401,10 +401,17 @@ for (const theme of THEMES) {
       await expect(page.getByRole('group', { name: 'Export' })).toBeHidden();
 
       if (wide(page)) {
-        // The template chip, which a phone has in the app menu instead.
+        // The template chip, in the status bar; a phone has it in the app menu.
         await page.getByRole('button', { name: /^Template:/ }).click();
         await expect(page.getByRole('menu')).toBeVisible();
         await clean(page, 'the template menu');
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('menu')).toBeHidden();
+
+        // The sample chip's menu, the sample bar of old.
+        await page.getByRole('button', { name: 'Sample: start your own' }).click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await clean(page, "the sample chip's menu");
         await page.keyboard.press('Escape');
         await expect(page.getByRole('menu')).toBeHidden();
       }
@@ -592,12 +599,14 @@ test.describe('the accessibility tree', () => {
       - banner:
         - heading "Drafter" [level=1]
         - button "Drafter menu"
+        - text: The Call
+        - 'button "Sample: start your own"'
         - button "Open"
         - button "Save"
         - button "Export"
-        - button "Focus"
-        - 'button "Template: Screenplay"'
         - button /^Go to scene or command/
+        - button "Structure" [pressed=false]
+        - button "Focus"
         - button "Switch to light theme"
     `);
   });

@@ -3,7 +3,6 @@ import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
-import { templateIdOf, typeNameOf, unknownTemplateOf } from '~/editor/template';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { historyOpen } from '~/snapshots/history';
@@ -17,7 +16,7 @@ import { openError } from '~/storage/open';
 import { readOnlyHint, saveAnnouncement, saveError } from '~/storage/save';
 import { blankError, kindError, type RecoveryState, useScript } from '~/storage/script';
 
-const { doc, kind } = useEditor();
+const { kind } = useEditor();
 const { words } = useMarkdown();
 const { page } = useLayout();
 const { project, dirty, recovery, ready } = useScript();
@@ -31,10 +30,6 @@ const { today } = useWritingStats();
 const writtenToday = computed(() => (today.value && today.value.ms > 0 ? today.value : null));
 const showWords = computed(
   () => writtenToday.value?.words != null && !(progress.value && goal.value?.unit === 'words'),
-);
-// A template Drafter doesn't have is shown as a screenplay, and says so ("Screenplay (fallback)").
-const templateName = computed(() =>
-  typeNameOf(kind.value, templateIdOf(doc.value), unknownTemplateOf(doc.value) !== undefined),
 );
 
 // "Saved 4 min ago" is worked out from this, which moves every 30 seconds (and when a save lands).
@@ -192,7 +187,8 @@ function onKeydown(event: KeyboardEvent) {
         {{ RECOVERY[recovery].label }}
       </button>
     </template>
-    <span>{{ templateName }}</span>
+    <!-- The template, and its menu (the chip that was the top bar's). -->
+    <TemplateChip />
     <p v-show="open" id="recovery-why" class="why">{{ explanation }}</p>
   </footer>
 </template>

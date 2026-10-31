@@ -44,10 +44,11 @@ export const INTRO_SLIDES: IntroSlide[] = [
 const target = (name: string) => `[data-tour="${name}"]`;
 
 /**
- * The ten steps. The template step depends on the screen: below 1024px the template chip is hidden
- * (the toolbar is icons), so it points at the app menu's mark and says where the template is chosen.
+ * The ten steps. The template step points at the Drafter menu's mark on every screen (fresh-look
+ * design §10): the template chip has left the top bar, and the menu's Template section chooses it.
+ * `wide` is kept for the steps that will differ by screen (the status bar, Task 6).
  */
-export function buildSteps(wide: boolean): TourStep[] {
+export function buildSteps(_wide: boolean): TourStep[] {
   return [
     {
       id: 'source-write',
@@ -76,20 +77,13 @@ export function buildSteps(wide: boolean): TourStep[] {
       content:
         'Like spell-check for format: a note left open, a name with no dialogue under it. Click one to jump there. Many have a fix.',
     },
-    wide
-      ? {
-          id: 'template',
-          target: target('template'),
-          title: 'Screenplay or stage play',
-          content: 'The same text, in two formats. Choose the template here.',
-        }
-      : {
-          id: 'template',
-          target: target('menu'),
-          title: 'Screenplay or stage play',
-          content:
-            'The same text, in two formats. On a small screen, choose it in the Drafter menu’s Template section, or from the palette: Template: Stage play.',
-        },
+    {
+      id: 'template',
+      target: target('menu'),
+      title: 'Screenplay or stage play',
+      content:
+        'The same text, in two formats. Choose it in the Drafter menu’s Template section, or from the palette: Template: Stage play.',
+    },
     {
       id: 'save',
       target: target('save'),

@@ -8,7 +8,6 @@ import { commandById, installGlobalKeys } from '~/commands/registry';
 import { isDesktopBuild } from '~/desktop';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
-import { markdownTitle } from '~/markdown/title';
 import { startModules } from '~/modules/host';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
@@ -18,7 +17,6 @@ import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
-import { fileBaseName, titleOf } from '~/storage/text';
 import { installDesktopUpdates } from '~/update/desktop-source';
 import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
 import { dropTab, otherPane, type PaneId, PHONE_DEFAULT_TAB } from '~/utils/panes';
@@ -53,7 +51,7 @@ function onEscape(event: KeyboardEvent) {
 }
 
 // The editor is parked here whenever the Source tab isn't showing.
-const { view, doc, kind } = useEditor();
+const { view, kind } = useEditor();
 
 // A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
 // design §5.7; seeing-the-script design §10): a pane showing one shows another tab.
@@ -69,7 +67,7 @@ watch(
 );
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
-const { dirty, project } = useScript();
+const { dirty } = useScript();
 const { settings } = useSettings();
 // The Structure strip: when it is turned on, on a wide screen, for a Fountain script (structure
 // strip design §5). It sits in `.top`, which focus mode takes away.
@@ -82,19 +80,12 @@ useSnapshots();
 // open (Plan D): the Source pane's spelling marks.
 useSpell();
 
-/** The script's title, as its kind reads it. */
-function pageTitle(): string {
-  const fallback = fileBaseName(project.value?.fileName);
-  // The text changed: the Fountain parse is the signal, and the Markdown title is read from the text.
-  doc.value;
-  return kind.value === 'markdown'
-    ? (markdownTitle(view.state.doc.toString()) ?? fallback)
-    : titleOf(doc.value, fallback);
-}
+// The script's title, as its kind reads it: the browser tab and the top bar show it.
+const pageTitle = useScriptTitle();
 
 // The tab says which script this is, and whether it has changes that aren't in its file.
 useHead({
-  title: computed(() => `${dirty.value ? '• ' : ''}${pageTitle()} — Drafter`),
+  title: computed(() => `${dirty.value ? '• ' : ''}${pageTitle.value} — Drafter`),
 });
 
 // The commands and their keys. The registry binds the keys that belong to the app (Save, Open,
@@ -171,6 +162,10 @@ onBeforeUnmount(() => {
     <a v-if="!focus.on.value" href="#panel-source" class="skip" @click.prevent="skipToEditor">
       Skip to the editor
     </a>
+    <!-- The top bar, then only what can't wait (fresh-look design §3.5): a tab that can't edit, a
+         file that can't be checked, a recovery copy that can't be kept, and on a phone the sample's
+         row (a wide screen has it in the top bar's chip). The recovery copy that may be cleared is
+         a toast and the status bar's chip. -->
     <div v-if="!focus.on.value" class="top">
       <AppToolbar />
       <ReadOnlyBar />
@@ -269,6 +264,10 @@ onBeforeUnmount(() => {
 }
 .skip:focus {
   transform: none;
+}
+.top {
+  /* As wide as the window, never its content: a long title is cut short, not the window widened. */
+  min-width: 0;
 }
 .shell.focusing {
   grid-template-rows: minmax(0, 1fr);

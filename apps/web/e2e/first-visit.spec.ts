@@ -18,6 +18,12 @@ const HEADING_LINE = SAMPLE.split('\n').findIndex((l) => l.startsWith('INT.')) +
 const editor = (page: Page) => page.locator('.cm-content');
 const bar = (page: Page) => page.getByRole('region', { name: 'Sample' });
 const barButtons = (page: Page) => bar(page).getByRole('button');
+/** The sample chip in the top bar (a wide screen), whose menu is the sample bar of old. */
+const chip = (page: Page) =>
+  page.getByRole('banner').getByRole('button', { name: 'Sample: start your own' });
+const chipItems = (page: Page) => page.getByRole('menu').getByRole('menuitem');
+/** Where a sample offers the ways to start one's own: the chip, or a phone's sample bar. */
+const sample = (page: Page) => chip(page).or(bar(page));
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
@@ -118,23 +124,26 @@ test.describe('a first visit', () => {
     await expect(status(page)).toContainText('Title page');
   });
 
-  test('offers new scripts and Open from the sample bar', async ({ page }) => {
+  test('offers new scripts and Open from the sample chip, or a phone’s sample bar', async ({
+    page,
+  }) => {
     // Browsers without a picker read a file through an input, which every browser can do here.
     await removePickers(page);
     await start(page);
 
-    // The bar is above the panes, so it is there whichever tab is showing.
-    await expect(bar(page)).toBeVisible();
+    // It is above the panes, so it is there whichever tab is showing.
+    await expect(sample(page)).toBeVisible();
     if (wide(page)) {
-      await expect(bar(page)).toContainText('This is a sample. Start your own:');
-      // The New buttons are the document types, in their order, then Open.
-      await expect(barButtons(page)).toHaveText([
+      // No bar: the top bar's chip, whose menu is the document types' New, in their order, then Open.
+      await expect(bar(page)).toHaveCount(0);
+      await chip(page).click();
+      await expect(chipItems(page)).toHaveText([
         'New screenplay',
         'New stage play',
         'New Markdown document',
         'Open a file…',
       ]);
-      await barButtons(page).nth(1).click();
+      await chipItems(page).nth(1).click();
     } else {
       // A phone: one row, "Sample", the first button, and a menu with the rest.
       await expect(bar(page)).not.toContainText('Start your own');
@@ -149,7 +158,7 @@ test.describe('a first visit', () => {
     // alone doesn't say the new script has come, and a tap on the Source tab then would take focus
     // from the editor.
     await expect.poll(() => text(page)).toContain('Title: Untitled Play');
-    await expect(bar(page)).toHaveCount(0);
+    await expect(sample(page)).toHaveCount(0);
     await showSource(page);
     await expect(editor(page)).toBeFocused();
     // The sample stays where it was, and the new play is a script of the writer's own.
@@ -160,10 +169,11 @@ test.describe('a first visit', () => {
     await menu(page)
       .getByRole('menuitem', { name: /^Open sample: Screenplay/ })
       .click();
-    await expect(bar(page)).toBeVisible();
+    await expect(sample(page)).toBeVisible();
     const chooser = page.waitForEvent('filechooser');
     if (wide(page)) {
-      await bar(page).getByRole('button', { name: 'Open a file…' }).click();
+      await chip(page).click();
+      await page.getByRole('menuitem', { name: 'Open a file…' }).click();
     } else {
       await bar(page).getByRole('button', { name: 'More' }).click();
       await page.getByRole('menuitem', { name: 'Open a file…' }).click();
@@ -174,23 +184,25 @@ test.describe('a first visit', () => {
       buffer: Buffer.from('Title: The Open Door\n\nINT. HALL - DAY\n\nA door opens.\n'),
     });
     await expect.poll(() => text(page)).toContain('A door opens.');
-    await expect(bar(page)).toHaveCount(0);
+    await expect(sample(page)).toHaveCount(0);
   });
 
   test('shows a new script’s editor in the same step that replaces the sample', async ({
     page,
   }) => {
-    // The bar going away and the editor appearing are one change to the page. Between two changes
-    // a quick tap on the Source tab lands in the gap, and the tab then keeps the focus that the
-    // new script put in the editor (a phone shows one tab at a time).
+    // The sample's chip (or bar) going away and the editor appearing are one change to the page.
+    // Between two changes a quick tap on the Source tab lands in the gap, and the tab then keeps
+    // the focus that the new script put in the editor (a phone shows one tab at a time).
     await removePickers(page);
     await start(page);
-    await expect(bar(page)).toBeVisible();
+    await expect(sample(page)).toBeVisible();
     await page.evaluate(() => {
       const seen: string[] = [];
       (window as unknown as { __states: string[] }).__states = seen;
       new MutationObserver(() => {
-        const barShown = !!document.querySelector('section[aria-label="Sample"]');
+        const barShown = !!document.querySelector(
+          'section[aria-label="Sample"], [aria-label="Sample: start your own"]',
+        );
         const editorShown = !document.querySelector('.cm-content')?.closest('[data-editor-holder]');
         if (!barShown && !editorShown)
           seen.push('the sample is gone and the editor is not showing');
@@ -200,12 +212,14 @@ test.describe('a first visit', () => {
         attributes: true,
       });
     });
-    if (wide(page)) await barButtons(page).nth(1).click();
-    else {
+    if (wide(page)) {
+      await chip(page).click();
+      await page.getByRole('menuitem', { name: 'New stage play' }).click();
+    } else {
       await barButtons(page).last().click();
       await page.getByRole('menuitem', { name: 'New stage play' }).click();
     }
-    await expect(bar(page)).toHaveCount(0);
+    await expect(sample(page)).toHaveCount(0);
     await expect(editor(page)).toBeFocused();
     expect(
       await page.evaluate(() => (window as unknown as { __states: string[] }).__states),
@@ -235,13 +249,13 @@ test.describe('a first visit', () => {
     await expect(editor(page)).toBeFocused();
   });
 
-  test('shows the sample bar on every tab', async ({ page }) => {
+  test('shows the sample chip (or bar) on every tab', async ({ page }) => {
     await start(page);
-    await expect(bar(page)).toBeVisible();
+    await expect(sample(page)).toBeVisible();
     for (const name of ['Source', 'Script', 'Problems']) {
       await page.getByRole('tab', { name }).first().click();
       await expect(page.getByRole('tab', { name, selected: true })).toBeVisible();
-      await expect(bar(page)).toBeVisible();
+      await expect(sample(page)).toBeVisible();
     }
   });
 
@@ -258,29 +272,23 @@ test.describe('a first visit', () => {
     await expect(barButtons(page).last()).toBeInViewport();
   });
 
-  test('reaches the sample bar from the keyboard', async ({ page, browserName }) => {
+  test('reaches the sample chip’s menu from the keyboard', async ({ page, browserName }) => {
     test.skip(!wide(page), 'a phone has no keyboard');
     await start(page);
-    if (browserName === 'webkit') {
-      // Safari leaves buttons out of the Tab order unless the user asks for it, so the bar's
-      // buttons are focused directly and chosen with Enter.
-      await barButtons(page).nth(1).focus();
-      await expect(barButtons(page).nth(1)).toBeFocused();
-      await page.keyboard.press('Enter');
-      await expect.poll(() => text(page)).toContain('Title: Untitled Play');
-      await expect(bar(page)).toHaveCount(0);
-      return;
-    }
-    // From the toolbar's last control, Tab goes on to the sample bar, in order.
-    await page.getByRole('button', { name: /Switch to (light|dark) theme/ }).focus();
-    const reached: string[] = [];
-    for (let i = 0; i < 8 && reached.length < 4; i++) {
+    // In the top bar's order, the chip follows the Drafter menu. (Safari leaves buttons out of the
+    // Tab order unless the user asks for it, so the chip is focused directly there.)
+    if (browserName === 'webkit') await chip(page).focus();
+    else {
+      await page.getByRole('button', { name: 'Drafter menu' }).focus();
       await page.keyboard.press('Tab');
-      const name = await page.evaluate(() => {
-        const el = document.activeElement;
-        return el?.closest('[aria-label="Sample"]') ? (el.textContent?.trim() ?? '') : '';
-      });
-      if (name) reached.push(name);
+    }
+    await expect(chip(page)).toBeFocused();
+    // Enter opens the menu on its first item; the arrows move through it, in order.
+    await page.keyboard.press('Enter');
+    const reached: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      if (i > 0) await page.keyboard.press('ArrowDown');
+      reached.push(await page.evaluate(() => document.activeElement?.textContent?.trim() ?? ''));
     }
     expect(reached).toEqual([
       'New screenplay',
@@ -289,12 +297,12 @@ test.describe('a first visit', () => {
       'Open a file…',
     ]);
     // Enter chooses the focused one.
-    await page.keyboard.press('Shift+Tab');
-    await page.keyboard.press('Shift+Tab');
-    await expect(barButtons(page).nth(1)).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');
     await expect.poll(() => text(page)).toContain('Title: Untitled Play');
-    await expect(bar(page)).toHaveCount(0);
+    await expect(chip(page)).toHaveCount(0);
+    await expect(editor(page)).toBeFocused();
   });
 
   test('resets the sample, and undo brings the edits back', async ({ page }) => {
@@ -371,21 +379,24 @@ test.describe('a returning visit', () => {
     page,
   }) => {
     await start(page);
-    await expect(bar(page)).toBeVisible();
+    await expect(sample(page)).toBeVisible();
 
-    // The sample is the most recent script: it opens again, with its bar.
+    // The sample is the most recent script: it opens again, with its chip (or bar).
     await page.reload();
     await showSource(page);
     await expect(editor(page)).toContainText('The Call');
-    await expect(bar(page)).toBeVisible();
+    await expect(sample(page)).toBeVisible();
 
-    // A script of the writer's own: no bar.
-    await barButtons(page).first().click();
+    // A script of the writer's own: no chip or bar.
+    if (wide(page)) {
+      await chip(page).click();
+      await chipItems(page).first().click();
+    } else await barButtons(page).first().click();
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
     await page.reload();
     await showSource(page);
     await expect(editor(page)).toContainText('Title: Untitled Screenplay');
-    await expect(bar(page)).toHaveCount(0);
+    await expect(sample(page)).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });
