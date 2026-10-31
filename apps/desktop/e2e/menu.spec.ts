@@ -99,7 +99,7 @@ test('View › Show stats opens the Stats tab beside the script', async ({ deskt
     .poll(async () => (await menuItems(app)).some((i) => i.id === 'show-stats'))
     .toBe(true);
   await chooseMenuItem(app, ['View', 'Show stats']);
-  // A tab, not a window, in the pane not showing Source, with focus on its first heading.
+  // A tab, not a window, in the Inspector beside the editor, with focus on its first heading.
   const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
   await expect(stats).toBeVisible();
   await expect(stats.getByRole('heading', { name: 'Overview', level: 2 })).toBeFocused();
@@ -114,13 +114,17 @@ test('View › Show Scaffold opens Scaffold beside the script', async ({ desktop
   // Go has Scaffold for this scene too, for the cursor's scene.
   expect((await menuItems(app)).some((i) => i.id === 'scaffold-scene')).toBe(true);
   await chooseMenuItem(app, ['View', 'Show Scaffold']);
-  // A tab in the pane not showing the Source, with focus on its page's heading.
+  // A tab in the Inspector, beside the editor, with focus on its page's heading.
   const scaffold = page.getByRole('tabpanel', { name: 'Scaffold', exact: true });
   await expect(scaffold).toBeVisible();
   await expect(scaffold.getByRole('heading', { level: 2 })).toBeFocused();
-  await expect(
-    page.getByRole('button', { name: 'Follow the cursor', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  // Follow the cursor is in the Inspector's header, or behind its "⋯" (More tools) when the window
+  // is too narrow for Scaffold's tools (fresh-look design §3.3).
+  const follow = page.getByRole('button', { name: 'Follow the cursor', exact: true });
+  const moreTools = page.getByRole('button', { name: 'More tools' });
+  await expect(follow.or(moreTools).first()).toBeVisible();
+  if (!(await follow.isVisible())) await moreTools.click();
+  await expect(follow).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('follows what the page can do: undo, saving, and sprints', async ({ desktop }) => {
