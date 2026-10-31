@@ -40,6 +40,13 @@ export function unsavedMessage(
     : UNSAVED_MESSAGE;
 }
 
+export const APPLYING_MESSAGE = 'Getting the newest version…';
+
+/** What the toast says while the new version is fetched and takes over, or the app restarts. */
+export function applyingMessage(kind: UpdateKind): string {
+  return kind === 'restart' ? 'Restarting Drafter…' : APPLYING_MESSAGE;
+}
+
 export const DOWNLOADING_MESSAGE = 'Your script is downloading. Reload when it has finished.';
 
 /** The button that reloads with changes unsaved: with no recovery copy, it says what it costs. */
@@ -63,7 +70,8 @@ export interface UpdateDeps {
   /** Writes the recovery copy's pending text now. Never rejects. */
   flush(): Promise<void>;
   /**
-   * Lets the new version take over and reloads. `anyway`: the writer chose to leave with changes
+   * Lets the new version take over and reloads, and never settles once a reload (or a restart) is
+   * under way: it settles only when nothing went. `anyway`: the writer chose to leave with changes
    * that aren't in a file, so the browser's own "leave this page?" question is not asked too.
    */
   apply(options?: { anyway?: boolean }): Promise<void> | void;
@@ -72,12 +80,28 @@ export interface UpdateDeps {
 /**
  * `toast`: the offer, with Reload. `confirm`: the question that comes first when changes are
  * unsaved. `downloading`: Save first was a download, which has to finish before the page goes.
+ * `applying`: the new version is being fetched and is taking over (a few seconds at most), or the
+ * desktop app is restarting; its buttons can't be pressed again.
  */
-export type UpdateStage = 'toast' | 'confirm' | 'downloading';
+export type UpdateStage = 'toast' | 'confirm' | 'downloading' | 'applying';
 
 export function createUpdateFlow(deps: UpdateDeps) {
   const stage = ref<UpdateStage>('toast');
   const saving = ref(false);
+
+  /**
+   * Says so, then applies. When the page reloads (or the app restarts) `deps.apply` never comes
+   * back. When it does come back, or fails, nothing went (a desktop install that failed, whose
+   * error is the toast's to say), so the toast goes back to `back` and the editor can be typed in.
+   */
+  async function apply(back: UpdateStage, options?: { anyway?: boolean }): Promise<void> {
+    stage.value = 'applying';
+    try {
+      await deps.apply(options);
+    } finally {
+      stage.value = back;
+    }
+  }
 
   /** Reload: at once when nothing is unsaved, else the question first. */
   async function reload(): Promise<void> {
@@ -85,7 +109,7 @@ export function createUpdateFlow(deps: UpdateDeps) {
       stage.value = 'confirm';
       return;
     }
-    await deps.apply();
+    await apply('toast');
   }
 
   /** Saves, and reloads only if the save worked. A cancelled or failed save leaves the question up. */
@@ -97,7 +121,7 @@ export function createUpdateFlow(deps: UpdateDeps) {
         // A download starts and `save` is done at once; a reload within moments would lose its
         // blob (and a browser's "allow downloads?" question). The writer reloads when it's there.
         if (deps.savedByDownload()) stage.value = 'downloading';
-        else await deps.apply();
+        else await apply('toast');
       }
     } catch {
       // The save says what went wrong in the status bar; the question stays.
@@ -109,7 +133,7 @@ export function createUpdateFlow(deps: UpdateDeps) {
   async function reloadAnyway(): Promise<void> {
     if (stage.value !== 'confirm') return;
     await deps.flush();
-    await deps.apply({ anyway: true });
+    await apply('confirm', { anyway: true });
   }
 
   function cancel(): void {

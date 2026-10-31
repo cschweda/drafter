@@ -30,7 +30,28 @@ export interface ApplyOptions {
   anyway?: boolean;
 }
 
+/** The new version is being fetched and is taking over: the editor is read-only meanwhile. */
+export const applyingUpdate = ref(false);
+
 let updater: () => Promise<void> = async () => {};
+let beforeReload: () => Promise<void> = async () => {};
+
+/** What has to be written before the page reloads into a new version (the recovery copy). */
+export function setBeforeReload(flush: () => Promise<void>): void {
+  beforeReload = flush;
+}
+
+/** Writes it, waiting `ms` at most and never rejecting: the reload is not held up for long. */
+export async function flushBeforeReload(ms = 1000): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    beforeReload().catch(() => {}),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, ms);
+    }),
+  ]);
+  clearTimeout(timer);
+}
 let leaving = false;
 
 /** The plugin says how an update is applied. */

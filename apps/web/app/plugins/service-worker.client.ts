@@ -1,32 +1,61 @@
 import { registerSW } from 'virtual:pwa-register';
 import { allowLeaving } from '~/storage/leaving';
+import { fetchNewest } from '~/update/check';
 import {
   createControllerWatch,
+  flushBeforeReload,
   leavingRequested,
   needRefresh,
   replaced,
   setUpdater,
 } from '~/update/state';
+import { justUpdated, markUpdating, sessionStore, takeUpdated } from '~/update/updated';
 
 // Registers the service worker (`@vite-pwa/nuxt` writes it at build time: nuxt.config.ts `pwa`) and
 // tells the page when a newer version is waiting. The module's own client plugin is off
 // (`client.registerPlugin: false`), because with it a tab reloads itself as soon as ANY tab lets
 // a new version take over; here a reload happens only in the tab whose writer chose it.
+
+/**
+ * How long the page waits, after telling the new version to take over, for the change of
+ * controller that is its cue to reload. It takes moments; if it never comes (the waiting worker
+ * is gone, or never answers), the page reloads regardless rather than leaving the writer's choice
+ * looking ignored, and the new version is there on the next load.
+ */
+const TAKEOVER_MS = 3000;
+
 export default defineNuxtPlugin(() => {
   // There is no worker in `nuxt dev`, and a registration there would only fail.
   if (import.meta.dev || !('serviceWorker' in navigator)) return;
 
-  /** The reload the writer chose. If it was "Reload anyway", the browser's own question is skipped, from now. */
-  const reload = () => {
+  // This load is the one an update the writer chose reloaded into: the toast says so, once.
+  if (takeUpdated(sessionStore())) justUpdated.value = true;
+
+  let fallback: ReturnType<typeof setTimeout> | undefined;
+  let reloading = false;
+  /**
+   * The reload the writer chose. The recovery copy is written first. If it was "Reload anyway",
+   * the browser's own question is skipped, from now. `updated`: the new version has taken over,
+   * so the next load says Drafter is up to date; a reload because it didn't (the fallback) says
+   * nothing of the kind.
+   */
+  const reload = async (updated: boolean) => {
+    clearTimeout(fallback);
+    if (reloading) return;
+    reloading = true;
+    await flushBeforeReload();
     if (leavingRequested()) allowLeaving();
+    if (updated) markUpdating(sessionStore());
     window.location.reload();
   };
+  /** What the updater returns once a reload is under way: it never settles (flow.ts says why). */
+  const away = () => new Promise<never>(() => {});
 
   // On a first visit the worker takes over a moment after it installs (`clientsClaim`): that first
   // change of controller is not an update (state.ts says how the rest are told apart).
   const watch = createControllerWatch({
     controlled: navigator.serviceWorker.controller !== null,
-    reload,
+    reload: () => void reload(true),
   });
   navigator.serviceWorker.addEventListener('controllerchange', () => watch.onChange());
 
@@ -42,11 +71,22 @@ export default defineNuxtPlugin(() => {
   });
 
   setUpdater(async () => {
+    // Another tab let the new version take over: it is this page's on a reload.
     if (replaced.value) {
-      reload();
-      return;
+      void reload(true);
+      return away();
+    }
+    // The newest version on the server, not only the one waiting when the offer appeared
+    // (update/check.ts says why).
+    await fetchNewest(() => navigator.serviceWorker.getRegistration());
+    // Another tab may have let it take over meanwhile.
+    if (replaced.value) {
+      void reload(true);
+      return away();
     }
     watch.apply();
     await skipWaiting(true);
+    fallback = setTimeout(() => void reload(false), TAKEOVER_MS);
+    return away();
   });
 });

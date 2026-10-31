@@ -11,6 +11,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
+import { applyingUpdate } from '~/update/state';
 import { desktop } from '../desktop';
 import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
@@ -1110,10 +1111,11 @@ function create(): ScriptSession {
 
   // ---- Two tabs ------------------------------------------------------------------------------
 
-  // The editor follows the guard: read-only while another tab holds the script.
+  // The editor follows the guard: read-only while another tab holds the script (and while a new
+  // version is fetched and takes over, so nothing typed then is lost to the reload).
   effectScope(true).run(() => {
     watch(
-      () => guard.readOnly.value || switching.value || fileLocked.value,
+      () => guard.readOnly.value || switching.value || fileLocked.value || applyingUpdate.value,
       (on) => editor.setReadOnly(on),
       { immediate: true, flush: 'sync' },
     );
