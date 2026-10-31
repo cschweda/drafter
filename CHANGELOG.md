@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `apps/desktop`: **the Windows on Arm (arm64) installer is no longer built**, for now; it may come back later. Windows 11 on Arm PCs (a Snapdragon laptop, or Windows 11 in a VM on an Apple silicon Mac) can use the x64 installer, which Windows runs under its built-in emulation. CI drops the `windows-arm` job, so a release waits for the Linux and Windows jobs and carries five files.
 
+### Fixed
+
+- **Reload on "A new version of Drafter is ready" now always lands on the new version.** drafter.dev is updated often, and a tab that offered one version could find a newer one on the server by the time you chose Reload, Reload anyway, or Save first: the page reloaded into the version it had been offered, then found the newer one and made the same offer again, with your text back as it was, so it looked as if the button had done nothing. Reload now fetches the newest version first (waiting at most a few seconds, and going on with the one it has when offline), and if the new version doesn't take over within a few seconds the page reloads anyway, so a choice to reload is never left looking ignored. Your unsaved changes are still kept in the recovery copy, and the browser's own "leave this page?" question still doesn't appear after Reload anyway.
+
 ## [0.22.0] - 2026-10-30
 
 **Export as HTML and EPUB, and open formats said plainly.** A script or document exports as one web page that opens anywhere with no connection (dark, with a light switch; the exact pages or a reading view), or as an e-book for an e-reader or a tablet; `drafter build --html` does the same from the command line; and a new Open formats help page, with About, links to the open, public-domain specification of the `.drafter` package.

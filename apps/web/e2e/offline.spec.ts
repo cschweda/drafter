@@ -69,6 +69,11 @@ async function deployNewVersion(page: Page) {
   });
 }
 
+/** Deploys yet another version, without the page looking: only the server has it. */
+function deployAgain() {
+  writeFileSync(SW_FILE, `${SW_ORIGINAL}\n// a newer version still, ${Date.now()}\n`);
+}
+
 /** Marks this page load, so a reload shows as the mark going away. */
 async function mark(page: Page) {
   await page.evaluate(() => {
@@ -440,6 +445,77 @@ test.describe('a new version', () => {
     await reloadAnyway(page).click();
     await reloaded(page);
     await expectAtEnd(page, 'Typed in a script of my own.');
+    expect(asked).toEqual([]);
+  });
+
+  // drafter.dev is deployed on every push, and each build's worker is different (its build id is
+  // in the precache list). A tab offered one version may have a newer one on the server by the
+  // time the writer chooses: reloading into the older one would only bring the offer straight
+  // back, with the same text restored, as if the choice had done nothing.
+  for (const how of ['Reload', 'Reload anyway'] as const) {
+    test(`${how} reloads into the newest version, even one deployed after the offer appeared`, async ({
+      page,
+    }) => {
+      const asked: string[] = [];
+      page.on('dialog', (dialog) => {
+        asked.push(dialog.type());
+        void dialog.dismiss();
+      });
+      await start(page);
+      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await page
+        .getByRole('group', { name: 'Scripts', exact: true })
+        .getByRole('button', { name: 'New screenplay' })
+        .click();
+      if (how === 'Reload anyway') await typeAtEnd(page, '\n\nTyped before two deploys.');
+      await mark(page);
+      await deployNewVersion(page);
+      await expect(update(page)).toContainText('A new version of Drafter is ready');
+      // Another deploy: the server has a newer worker than the one waiting, and the tab hasn't looked.
+      deployAgain();
+      await reload(page).click();
+      if (how === 'Reload anyway') await reloadAnyway(page).click();
+      await reloaded(page);
+      await expect(editor(page)).toBeVisible();
+      await controlled(page);
+      // Long enough for the reloaded page's own look at the server to have found a newer worker.
+      await page.waitForTimeout(2500);
+      await expect(update(page)).toHaveCount(0);
+      expect(
+        await page.evaluate(async () => {
+          const registration = await navigator.serviceWorker.getRegistration();
+          return !!(registration?.waiting || registration?.installing);
+        }),
+      ).toBe(false);
+      if (how === 'Reload anyway') await expectAtEnd(page, 'Typed before two deploys.');
+      expect(asked).toEqual([]);
+    });
+  }
+
+  test('Reload anyway still reloads when the new version never takes over', async ({ page }) => {
+    const asked: string[] = [];
+    page.on('dialog', (dialog) => {
+      asked.push(dialog.type());
+      void dialog.dismiss();
+    });
+    await start(page);
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New screenplay' })
+      .click();
+    await typeAtEnd(page, '\n\nTyped, and the worker never answers.');
+    await mark(page);
+    await deployNewVersion(page);
+    await expect(update(page)).toContainText('A new version of Drafter is ready');
+    // The waiting worker never hears "skip waiting", so the page's controller never changes.
+    await page.evaluate(() => {
+      ServiceWorker.prototype.postMessage = () => {};
+    });
+    await reload(page).click();
+    await reloadAnyway(page).click();
+    await reloaded(page);
+    await expectAtEnd(page, 'Typed, and the worker never answers.');
     expect(asked).toEqual([]);
   });
 

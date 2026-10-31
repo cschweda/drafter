@@ -1,5 +1,6 @@
 import { registerSW } from 'virtual:pwa-register';
 import { allowLeaving } from '~/storage/leaving';
+import { fetchNewest } from '~/update/check';
 import {
   createControllerWatch,
   leavingRequested,
@@ -12,12 +13,23 @@ import {
 // tells the page when a newer version is waiting. The module's own client plugin is off
 // (`client.registerPlugin: false`), because with it a tab reloads itself as soon as ANY tab lets
 // a new version take over; here a reload happens only in the tab whose writer chose it.
+
+/**
+ * How long the page waits, after telling the new version to take over, for the change of
+ * controller that is its cue to reload. It takes moments; if it never comes (the waiting worker
+ * is gone, or never answers), the page reloads regardless rather than leaving the writer's choice
+ * looking ignored, and the new version is there on the next load.
+ */
+const TAKEOVER_MS = 3000;
+
 export default defineNuxtPlugin(() => {
   // There is no worker in `nuxt dev`, and a registration there would only fail.
   if (import.meta.dev || !('serviceWorker' in navigator)) return;
 
+  let fallback: ReturnType<typeof setTimeout> | undefined;
   /** The reload the writer chose. If it was "Reload anyway", the browser's own question is skipped, from now. */
   const reload = () => {
+    clearTimeout(fallback);
     if (leavingRequested()) allowLeaving();
     window.location.reload();
   };
@@ -46,7 +58,17 @@ export default defineNuxtPlugin(() => {
       reload();
       return;
     }
+    // The newest version on the server, not only the one waiting when the offer appeared
+    // (update/check.ts says why).
+    const registration = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+    await fetchNewest(registration);
+    // Another tab may have let it take over meanwhile.
+    if (replaced.value) {
+      reload();
+      return;
+    }
     watch.apply();
     await skipWaiting(true);
+    fallback = setTimeout(reload, TAKEOVER_MS);
   });
 });
