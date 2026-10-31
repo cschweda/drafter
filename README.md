@@ -2,6 +2,13 @@
 
 # Drafter
 
+[![Latest release](https://img.shields.io/github/v/release/cschweda/drafter?label=release)](https://github.com/cschweda/drafter/releases/latest)
+[![Desktop build](https://github.com/cschweda/drafter/actions/workflows/desktop.yml/badge.svg?branch=main)](https://github.com/cschweda/drafter/actions/workflows/desktop.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Write at drafter.dev](https://img.shields.io/badge/web-drafter.dev-0a7d5a)](https://drafter.dev)
+[![Platforms: web, Linux, Windows](https://img.shields.io/badge/platforms-web%20%7C%20Linux%20%7C%20Windows-555)](#drafter-for-linux)
+[![Format: Fountain](https://img.shields.io/badge/format-Fountain-8a5a00)](https://fountain.io)
+
 **An open-source, local-first, zero-login writing app, Fountain first: screenplays and stage plays in plain-text [Fountain](https://fountain.io), and novels and treatments in Markdown.** Write on the left; see the paginated, industry-formatted pages on the right, updating as you type.
 
 **Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, plain text, a self-contained web page (HTML), and an e-book (EPUB), so it can go wherever it needs to go. See [Formats](#formats).
