@@ -419,3 +419,34 @@ test.describe('moving cards', () => {
     expect(await textOf(second)).toBe(before);
   });
 });
+
+// Cards that are never empty (fresh-look design §5): a card without a synopsis shows the scene's
+// first action line, or else its first speech, in the muted colour; the synopsis wins when there is
+// one.
+test.describe('a card without a synopsis', () => {
+  test('a card with no synopsis shows its first action line', async ({ page }) => {
+    await openWith(page);
+    const preview = (option: ReturnType<typeof card>) => option.locator('[data-card-preview]');
+    await expect(preview(shed(page))).toHaveText('Tools.');
+    await expect(preview(car(page))).toHaveText('Driving.');
+    // No action at all: the first speech.
+    await expect(preview(yard(page))).toHaveText('BOB: Hi.');
+    // A synopsis is shown instead, so no preview.
+    await expect(preview(hall(page))).toHaveCount(0);
+    await expect(hall(page)).toContainText('Ann arrives.');
+    // In --muted, and read as the card's description, as a synopsis is.
+    const colors = await shed(page).evaluate((el) => ({
+      preview: getComputedStyle(el.querySelector('[data-card-preview]') as Element).color,
+      muted: (() => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--muted)';
+        el.append(probe);
+        const c = getComputedStyle(probe).color;
+        probe.remove();
+        return c;
+      })(),
+    }));
+    expect(colors.preview).toBe(colors.muted);
+    await expect(shed(page)).toHaveAccessibleDescription('Tools.');
+  });
+});

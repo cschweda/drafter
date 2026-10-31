@@ -86,11 +86,16 @@ function go(line: SpokenLine) {
 
 <template>
   <div ref="root" class="page">
-    <h2 :id="SCAFFOLD_HEADING_ID" tabindex="-1">{{ figures?.character.name ?? props.characterKey }}</h2>
+    <div class="title-row">
+      <h2 :id="SCAFFOLD_HEADING_ID" tabindex="-1">{{ figures?.character.name ?? props.characterKey }}</h2>
+      <DInfo v-if="cast && !gone && figures" label="Who counts as in a scene">
+        <p>{{ PRESENCE_NOTE }}</p>
+      </DInfo>
+    </div>
     <p v-if="!cast" class="note">Counting…</p>
     <template v-else-if="gone">
       <p class="note">{{ NO_LONGER }}</p>
-      <button v-if="canGoBack" type="button" class="action" @click="scaffoldBack">Back</button>
+      <DButton v-if="canGoBack" class="action" @click="scaffoldBack">Back</DButton>
     </template>
     <template v-else-if="figures">
       <p class="summary">{{ summary }}</p>
@@ -112,7 +117,6 @@ function go(line: SpokenLine) {
           </dd>
         </div>
       </dl>
-      <p class="note">{{ PRESENCE_NOTE }}</p>
 
       <p v-if="figures.sharedWith.length === 0" class="note">Shares no scene with anyone.</p>
       <ScaffoldTable v-else heading-id="scaffold-shared" :caption="`Shares scenes with (${figures.sharedWith.length})`">

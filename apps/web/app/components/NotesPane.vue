@@ -620,7 +620,7 @@ watch(
 
 <template>
   <div class="notes-pane">
-    <p v-if="markdown" class="empty">Not available for Markdown documents.</p>
+    <DEmpty v-if="markdown" icon="i-lucide-sticky-note">Not available for Markdown documents.</DEmpty>
     <template v-else>
       <div class="bar">
         <div role="group" aria-label="Notes to show" class="chips">
@@ -677,10 +677,10 @@ watch(
         />
       </div>
       <p v-if="why" id="notes-why" class="why">{{ why }}</p>
-      <p v-if="notes.entries.value.length === 0" class="empty">
+      <DEmpty v-if="notes.entries.value.length === 0" icon="i-lucide-sticky-note">
         No notes yet. A note is words in double brackets, <code>[[like this]]</code>; it never prints.
-      </p>
-      <p v-else-if="items.length === 0" class="empty">No notes match.</p>
+      </DEmpty>
+      <DEmpty v-else-if="items.length === 0" icon="i-lucide-search">No notes match.</DEmpty>
       <div v-else role="listbox" aria-label="Notes" class="list">
         <template v-if="filter.group === 'setups'">
           <div
@@ -786,11 +786,6 @@ watch(
 <style scoped>
 .notes-pane {
   font-size: 13px;
-}
-.empty {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
 }
 .bar {
   display: flex;

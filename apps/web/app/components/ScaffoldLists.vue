@@ -61,13 +61,13 @@ const waiting = computed(() =>
   <div class="page">
     <h2 :id="SCAFFOLD_HEADING_ID" tabindex="-1">{{ title }}</h2>
     <p v-if="!cast" class="note">Counting…</p>
-    <p v-else-if="total === 0" class="note">
+    <DEmpty v-else-if="total === 0" :icon="props.kind === 'cast' ? 'i-lucide-users' : 'i-lucide-map-pin'">
       {{
         props.kind === 'cast'
           ? 'No one speaks yet. A character’s cue starts their row.'
           : 'No scene heading names a place yet.'
       }}
-    </p>
+    </DEmpty>
     <template v-else>
       <div class="filter">
         <label :for="filterId">Filter {{ props.kind === 'cast' ? 'the cast' : 'the places' }}</label>
@@ -153,7 +153,7 @@ const waiting = computed(() =>
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  margin: 4px 0 0;
+  margin: 12px 0 0;
 }
 .filter input {
   min-height: 28px;
@@ -162,13 +162,13 @@ const waiting = computed(() =>
   max-width: 20rem;
   padding: 2px 8px;
   border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: var(--chrome);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
 .filter input:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 </style>

@@ -356,10 +356,16 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
   /* Its own scrolling region, both ways; the cells are placed in it, so their hidden words never
      widen the page. The scroll padding keeps a focused cell clear of the names and numbers. */
   position: relative;
+  /* As wide as its columns, up to the section's width: a short script's grid is no mostly-empty
+     box (fresh-look design §7). */
+  width: fit-content;
+  max-width: 100%;
   max-height: min(70vh, 34rem);
   overflow: auto;
   scroll-padding: var(--row) 0 0 var(--head);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
   font-variant-numeric: tabular-nums;
 }
 .row {
@@ -370,8 +376,8 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 .name {
   position: sticky;
@@ -382,8 +388,8 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
   height: var(--row);
   padding: 0 8px;
   overflow: hidden;
-  background: var(--bg);
-  border-right: 1px solid var(--line);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   line-height: var(--row);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -391,6 +397,8 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
 .corner {
   z-index: 3;
   color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
 }
 .scene,
 .cell {
@@ -404,6 +412,8 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
 }
 .scene {
   color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
 }
 .cell {
   border: 1px solid transparent;
@@ -428,19 +438,19 @@ const gridWidth = computed(() => `calc(var(--head) + ${columns.value * COLUMN_PX
 }
 /* A long absence: its empty cells outlined as one band. */
 .cell.gap {
-  border-top: 2px dashed var(--heading);
-  border-bottom: 2px dashed var(--heading);
+  border-top: 2px dashed var(--accent-text);
+  border-bottom: 2px dashed var(--accent-text);
 }
 .cell.gap-start {
-  border-left: 2px dashed var(--heading);
+  border-left: 2px dashed var(--accent-text);
 }
 .cell.gap-end {
-  border-right: 2px dashed var(--heading);
+  border-right: 2px dashed var(--accent-text);
 }
 .cell:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: -2px;
-  box-shadow: inset 0 0 0 4px var(--bg);
+  box-shadow: inset 0 0 0 4px var(--surface);
 }
 .menu-anchor {
   position: absolute;

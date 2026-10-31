@@ -15,12 +15,13 @@ keepFocusOnRemoval(region, () => document.getElementById(props.headingId));
 <template>
   <div
     ref="region"
-    class="scaffold-scroll"
+    class="d-table-scroll"
+    :class="{ fits: !scrolls }"
     :role="scrolls ? 'region' : undefined"
     :aria-labelledby="scrolls ? props.headingId : undefined"
     :tabindex="scrolls ? 0 : undefined"
   >
-    <table class="scaffold-table">
+    <table class="d-table">
       <caption>
         <h3 :id="props.headingId" tabindex="-1">{{ props.caption }}</h3>
       </caption>

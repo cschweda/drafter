@@ -41,14 +41,9 @@ function showAll() {
         </li>
       </ul>
     </template>
-    <button
-      v-if="!all && props.lines.length > LINES_SHOWN"
-      type="button"
-      class="action more"
-      @click="showAll"
-    >
+    <DButton v-if="!all && props.lines.length > LINES_SHOWN" class="action more" @click="showAll">
       Show all {{ props.lines.length.toLocaleString('en-US') }} speeches
-    </button>
+    </DButton>
   </section>
 </template>
 
@@ -71,7 +66,7 @@ ul {
   min-height: 24px;
   padding: 2px 4px;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: none;
   color: var(--text);
   font-family: var(--font-mono);
@@ -81,10 +76,10 @@ ul {
   cursor: pointer;
 }
 .line:hover {
-  background: var(--chrome-2);
+  background: var(--raised);
 }
 .line:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 .more {

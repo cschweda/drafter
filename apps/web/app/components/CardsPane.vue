@@ -10,6 +10,7 @@ import {
 } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { cardsKey, rowMoveTarget } from '~/cards/grid';
+import { cardPreview } from '~/cards/labels';
 import type { DropSide } from '~/components/SceneCard.vue';
 import { useEditor } from '~/editor/session';
 import { openSceneHistory } from '~/history/scene-history';
@@ -39,6 +40,8 @@ const isPlay = computed(() => editor.template.value.id === 'stage-play-standard'
 interface Card {
   id: string;
   scene: Scene;
+  /** A card with no synopsis: its scene's first line, so it is never an empty box. */
+  preview: string | null;
   /**
    * Everything a card draws, as one string: a card whose `sig` is the same isn't drawn again while
    * the writer types elsewhere (`v-memo`, as the Outline's rows). Handlers look it up by id.
@@ -60,7 +63,9 @@ const titleOf = (block: number) =>
 /** The scenes in script order, a group for each run of scenes in the same innermost section. */
 const groups = computed<Group[]>(() => {
   const out: Group[] = [];
+  const doc = editor.doc.value;
   for (const scene of index.value.scenes) {
+    const preview = scene.synopses.length > 0 ? null : cardPreview(doc, scene);
     const inner = scene.sections.at(-1);
     const section = inner === undefined ? 'none' : String(inner);
     const sig = JSON.stringify([
@@ -71,8 +76,9 @@ const groups = computed<Group[]>(() => {
       scene.synopses.map((s) => s.text),
       scene.fields.goal?.body,
       scene.pages?.eighths,
+      preview,
     ]);
-    const card = { id: idOf(scene), scene, sig };
+    const card = { id: idOf(scene), scene, preview, sig };
     const last = out.at(-1);
     if (last?.section === section) last.cards.push(card);
     else {
@@ -369,12 +375,12 @@ watch(cards, async () => {
 
 <template>
   <div class="cards-pane">
-    <p v-if="markdown" class="empty">Not available for Markdown documents.</p>
-    <p v-else-if="cards.length === 0" class="empty">
+    <DEmpty v-if="markdown" icon="i-lucide-layout-grid">Not available for Markdown documents.</DEmpty>
+    <DEmpty v-else-if="cards.length === 0" icon="i-lucide-layout-grid">
       No scenes yet.
       <template v-if="isPlay">A scene starts with <code>##</code> and its title.</template>
       <template v-else>A scene starts with a heading such as <code>INT. KITCHEN - NIGHT</code>.</template>
-    </p>
+    </DEmpty>
     <div
       v-else
       role="listbox"
@@ -406,6 +412,7 @@ watch(cards, async () => {
             ]"
             v-model:draft="draft"
             :scene="card.scene"
+            :preview="card.preview"
             :dom-id="domId(card.id)"
             :current="card.id === current"
             :editing="editing === card.id"
@@ -436,11 +443,6 @@ watch(cards, async () => {
 .cards-pane {
   font-size: 13px;
 }
-.empty {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
-}
 .cards {
   --card-width: 13rem;
   --card-height: 9rem;
@@ -461,7 +463,7 @@ watch(cards, async () => {
 }
 .section-title {
   margin: 12px 0 6px;
-  color: var(--heading);
+  color: var(--accent-text);
   font-weight: 700;
 }
 .group:first-child .section-title {

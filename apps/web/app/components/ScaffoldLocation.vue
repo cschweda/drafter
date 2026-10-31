@@ -50,7 +50,7 @@ const scenes = computed(() => {
     <p v-if="!cast" class="note">Counting…</p>
     <template v-else-if="gone">
       <p class="note">{{ NO_LONGER }}</p>
-      <button v-if="canGoBack" type="button" class="action" @click="scaffoldBack">Back</button>
+      <DButton v-if="canGoBack" class="action" @click="scaffoldBack">Back</DButton>
     </template>
     <template v-else-if="figures">
       <p class="summary">{{ summary }}</p>

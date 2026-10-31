@@ -1,5 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
-import { editor, openCountsPanel, runCommand, showSource, start } from './modules';
+import {
+  closeSettings,
+  editor,
+  openCountsPanel,
+  openSettings,
+  runCommand,
+  settingsDialog,
+  showSource,
+  start,
+} from './modules';
+import { expectTableStyle } from './table-style';
 
 // Writing stats (docs/drafter-stats-design.md): words and time today in the status bar, and the
 // Stats tab (seeing-the-script design §4), which replaced the Stats window: Overview (the window's
@@ -205,7 +215,7 @@ test.describe('writing stats', () => {
     await expect(figure(page, 'This script', 'Days written')).toHaveText('1');
     await expect(minutesField(page)).toHaveValue('1');
     await expect(wordsField(page)).toHaveValue('150');
-    const headings = stats(page).getByRole('table', { name: 'Scene headings' });
+    const headings = stats(page).getByRole('figure', { name: 'Scene headings' });
     await expect(headings).toContainText('Interior');
     await expect(headings).toContainText('Night');
     await expect(figure(page, 'Last 30 days', 'Days written')).toHaveText('1');
@@ -380,7 +390,7 @@ test.describe('writing stats', () => {
       '—',
     ]);
     // A play has no INT./EXT. headings to divide.
-    await expect(stats(page).getByRole('table', { name: 'Scene headings' })).toHaveCount(0);
+    await expect(stats(page).getByRole('figure', { name: 'Scene headings' })).toHaveCount(0);
   });
 
   test('removing the open script removes its stats for good', async ({ page }) => {
@@ -431,6 +441,8 @@ test.describe('writing stats', () => {
   test('a rate set in Stats is kept for that script only, after a reload', async ({ page }) => {
     await newScript(page, 'New screenplay');
     await typeAtEnd(page, SCENES);
+    // The edit marks the title as unsaved (a moment later on a slow phone); the rates don't.
+    await expect(page).toHaveTitle(/^• /);
     const title = await page.title();
     await runCommand(page, 'Show stats');
     await minutesField(page).fill('1.5');
@@ -547,5 +559,180 @@ test.describe('writing stats', () => {
     );
     await expect(stats(other)).not.toContainText('Nothing written yet today.');
     await expect(figure(other, 'Last 30 days', 'Days written')).toHaveText('1');
+  });
+});
+
+// The Stats page as designed (fresh-look design §7, plan Task 8): a centred column, tiles for the
+// four figures a writer looks for first, the headings' split as two bars with their numbers as
+// text, explanations behind an (i) button, and the review's two bugs: headers that ran together
+// ("Screen timeMost often with") and a heading half hidden after a jump.
+test.describe('the Stats page, as designed', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    test(`Stats column headers never overlap (${theme})`, async ({ page, isMobile }) => {
+      await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
+      if (!isMobile) await page.setViewportSize({ width: 1280, height: 900 });
+      await start(page);
+      await openSettings(page);
+      await settingsDialog(page).getByLabel('Text size').selectOption('1.5');
+      await closeSettings(page);
+      await runCommand(page, 'Show stats');
+      await expect(characterTable(page)).toBeVisible();
+      // Each header's text, as drawn: the next one starts at least 8px after it ends.
+      const boxes = await characterTable(page)
+        .locator('thead th')
+        .evaluateAll((cells) =>
+          cells.map((cell) => {
+            // The text a reader sees: not the header's hidden words for a screen reader.
+            const rects: DOMRect[] = [];
+            const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              if (node.parentElement?.closest('.sr-only') || !node.textContent?.trim()) continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              rects.push(...Array.from(range.getClientRects()).filter((r) => r.width > 1));
+            }
+            return {
+              left: Math.min(...rects.map((r) => r.left)),
+              right: Math.max(...rects.map((r) => r.right)),
+            };
+          }),
+        );
+      expect(boxes).toHaveLength(8);
+      for (let i = 1; i < boxes.length; i++) {
+        const gap = (boxes[i]?.left ?? 0) - (boxes[i - 1]?.right ?? 0);
+        expect(
+          gap,
+          `header ${i} starts ${gap}px after header ${i - 1} ends`,
+        ).toBeGreaterThanOrEqual(8);
+      }
+    });
+  }
+
+  test('jumping to a section leaves its heading fully visible', async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const contents = page.getByRole('navigation', { name: 'Stats sections' });
+    for (const name of ['Characters', 'Character by scene']) {
+      await contents.getByRole('link', { name, exact: true }).click();
+      await expect(heading(page, name)).toBeFocused();
+      // The contents row stays at the top while the page scrolls, and the heading sits below it.
+      await expect(contents).toBeInViewport();
+      const nav = await contents.boundingBox();
+      const head = await heading(page, name).boundingBox();
+      expect(nav && head).toBeTruthy();
+      expect(head?.y ?? 0).toBeGreaterThanOrEqual((nav?.y ?? 0) + (nav?.height ?? 0));
+      await expect(heading(page, name)).toBeInViewport({ ratio: 1 });
+    }
+  });
+
+  test('stat tiles show pages, scenes, words, running time', async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const tiles = stats(page).locator('[data-stat-tile]');
+    await expect(tiles.locator('dt')).toHaveText(['Pages', 'Scenes', 'Words', 'Running time']);
+    await expect(tiles.nth(1).locator('dd')).toHaveText('2');
+    // The value large, the label small and muted, and a screen reader hears the label first.
+    const sizes = await tiles.first().evaluate((tile) => ({
+      value: getComputedStyle(tile.querySelector('.tile-value') as Element).fontSize,
+      label: getComputedStyle(tile.querySelector('dt') as Element).fontSize,
+    }));
+    expect(sizes).toEqual({ value: '22px', label: '12px' });
+    await expect(figure(page, 'This script', 'Running time')).toHaveText(
+      'About 1 min, at 1 minute a page',
+    );
+    // The figures that aren't tiles are still listed under them.
+    await expect(figure(page, 'This script', 'Estimate from the dialogue')).toHaveText(
+      'About 1 min',
+    );
+    await expect(figure(page, 'This script', 'Characters')).toHaveText(/^\d+$/);
+  });
+
+  test('the INT/EXT and DAY/NIGHT bars have their numbers as text', async ({ page }) => {
+    await newScript(page, 'New screenplay');
+    await typeAtEnd(page, SCENES);
+    await runCommand(page, 'Show stats');
+    const split = stats(page).getByRole('figure', { name: 'Scene headings' });
+    const place = split.getByRole('group', { name: 'Place' });
+    const time = split.getByRole('group', { name: 'Time' });
+    await expect(place.getByRole('listitem')).toHaveText([
+      'Interior 1 (50%)',
+      'Exterior 1 (50%)',
+      'Interior and exterior 0 (0%)',
+      'Other place 0 (0%)',
+    ]);
+    await expect(time.getByRole('listitem')).toHaveText([
+      'Day 1 (50%)',
+      'Night 1 (50%)',
+      'Other time 0 (0%)',
+    ]);
+    // Each bar is a picture of its list, at 100%: two halves.
+    const widths = await place
+      .locator('.bar > span')
+      .evaluateAll((parts) => parts.map((p) => Math.round(p.getBoundingClientRect().width)));
+    expect(widths).toHaveLength(2);
+    expect(Math.abs((widths[0] ?? 0) - (widths[1] ?? 0))).toBeLessThanOrEqual(2);
+    await expect(place.locator('.bar')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('an explanation is behind its (i) button, which the keyboard opens and closes', async ({
+    page,
+  }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const about = stats(page).getByRole('button', { name: 'About the Characters table' });
+    const text = stats(page).getByText(/Scenes counts every scene a character is in/);
+    await expect(text).toBeHidden();
+    await about.focus();
+    await page.keyboard.press('Enter');
+    await expect(about).toHaveAttribute('aria-expanded', 'true');
+    await expect(text).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(text).toBeHidden();
+    await expect(about).toBeFocused();
+    await expect(about).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('the page is a centred column with a 20px title', async ({ page, isMobile }) => {
+    test.skip(!!isMobile, 'a phone is narrower than the column');
+    await start(page);
+    await runCommand(page, 'Show stats');
+    const column = stats(page).locator('.stats');
+    const box = await column.boundingBox();
+    const panel = await stats(page).boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(720);
+    // As far from the panel's left as from its right (its scroll bar aside).
+    const left = (box?.x ?? 0) - (panel?.x ?? 0);
+    const right = (panel?.x ?? 0) + (panel?.width ?? 0) - (box?.x ?? 0) - (box?.width ?? 0);
+    expect(Math.abs(left - right)).toBeLessThanOrEqual(20);
+    const size = await heading(page, 'Overview').evaluate((h) => {
+      const s = getComputedStyle(h);
+      return `${s.fontSize}/${s.fontWeight}`;
+    });
+    expect(size).toBe('20px/600');
+  });
+
+  test('the Characters table is drawn in the one table style', async ({ page }) => {
+    await start(page);
+    await runCommand(page, 'Show stats');
+    await expectTableStyle(characterTable(page));
+    // The header sits on the table's first row, whether the table scrolls sideways or not.
+    for (const width of ['4000px', '300px']) {
+      await characterTable(page)
+        .locator('xpath=..')
+        .evaluate((el, w) => {
+          (el as HTMLElement).style.width = w;
+        }, width);
+      await expect
+        .poll(() =>
+          characterTable(page).evaluate((table) => {
+            const head = table.querySelector('thead th') as Element;
+            return Math.round(head.getBoundingClientRect().top - table.getBoundingClientRect().top);
+          }),
+        )
+        .toBe(0);
+    }
+    // Named by its section's heading, not by a second "Characters" under it.
+    await expect(characterTable(page).locator('caption')).toHaveCount(0);
+    await expect(characterTable(page)).toHaveAccessibleName('Characters');
   });
 });

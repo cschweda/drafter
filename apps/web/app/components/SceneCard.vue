@@ -16,6 +16,8 @@ import { goalLine } from '~/outline/scene-details';
 
 const props = defineProps<{
   scene: Scene;
+  /** With no synopsis: the scene's first line, shown in --muted (CardsPane's `cardPreview`). */
+  preview?: string | null;
   /** The element id; the synopsis field and the description hang off it. */
   domId: string;
   /** The one tab stop, and the selected card. */
@@ -62,7 +64,13 @@ function onEditKeydown(event: KeyboardEvent) {
     :style="{ '--stripe': swatch }"
     :tabindex="props.current ? 0 : -1"
     :aria-selected="props.current ? 'true' : 'false'"
-    :aria-describedby="props.scene.synopses.length > 0 ? `${props.domId}-synopsis` : undefined"
+    :aria-describedby="
+      props.scene.synopses.length > 0
+        ? `${props.domId}-synopsis`
+        : props.preview
+          ? `${props.domId}-preview`
+          : undefined
+    "
   >
     <span class="sr-only">{{ cardName(props.scene) }}</span>
     <div class="stripe" aria-hidden="true">
@@ -108,6 +116,15 @@ function onEditKeydown(event: KeyboardEvent) {
           {{ synopsis.text }}
         </p>
       </div>
+      <p
+        v-else-if="props.preview"
+        :id="`${props.domId}-preview`"
+        class="preview"
+        :class="{ hidden: props.editing }"
+        data-card-preview
+      >
+        {{ props.preview }}
+      </p>
       <p v-if="goal" class="goal">Goal: {{ goal }}</p>
     </div>
     <div v-if="props.scene.pages" class="foot" aria-hidden="true">
@@ -124,19 +141,19 @@ function onEditKeydown(event: KeyboardEvent) {
   min-width: 0;
   min-height: var(--card-height, 9rem);
   padding: 0 10px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
   color: var(--text);
   overflow: hidden;
   cursor: default;
 }
 .card:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 .card[aria-selected='true'] {
-  border-color: var(--heading);
+  border-color: var(--accent-text);
 }
 /* The color as a stripe across the top, and its name on it: the name is never left to the color. */
 .stripe {
@@ -149,7 +166,7 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 .colored .stripe {
   min-height: 18px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .color {
   color: var(--muted);
@@ -186,7 +203,7 @@ function onEditKeydown(event: KeyboardEvent) {
   cursor: pointer;
 }
 .more:hover {
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
 }
 .body {
@@ -198,8 +215,13 @@ function onEditKeydown(event: KeyboardEvent) {
   -webkit-line-clamp: var(--card-lines, 6);
   line-clamp: var(--card-lines, 6);
 }
-.synopses.hidden {
+.synopses.hidden,
+.preview.hidden {
   display: none;
+}
+.preview {
+  margin: 0;
+  color: var(--muted);
 }
 .synopsis,
 .goal {
@@ -218,7 +240,7 @@ function onEditKeydown(event: KeyboardEvent) {
   width: 100%;
   min-height: 26px;
   padding: 2px 6px;
-  border: 1px solid var(--heading);
+  border: 1px solid var(--accent-text);
   border-radius: 4px;
   background: var(--bg);
   color: var(--text);
@@ -229,16 +251,16 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 /* The drop line, in the gap on the side the card will land. */
 .card.drop-left {
-  box-shadow: -5px 0 0 -1px var(--heading);
+  box-shadow: -5px 0 0 -1px var(--accent-text);
 }
 .card.drop-right {
-  box-shadow: 5px 0 0 -1px var(--heading);
+  box-shadow: 5px 0 0 -1px var(--accent-text);
 }
 .card.drop-above {
-  box-shadow: 0 -5px 0 -1px var(--heading);
+  box-shadow: 0 -5px 0 -1px var(--accent-text);
 }
 .card.drop-below {
-  box-shadow: 0 5px 0 -1px var(--heading);
+  box-shadow: 0 5px 0 -1px var(--accent-text);
 }
 @media (forced-colors: active) {
   .card.drop-left {

@@ -462,7 +462,7 @@ const nameOfRow = (row: Row) =>
 
 <template>
   <div class="outline">
-    <p v-if="markdown" class="empty">Not available for Markdown documents.</p>
+    <DEmpty v-if="markdown" icon="i-lucide-list-tree">Not available for Markdown documents.</DEmpty>
     <template v-else>
       <div class="tools" data-pane-bar>
         <label class="filter">
@@ -475,12 +475,12 @@ const nameOfRow = (row: Row) =>
           />
         </label>
       </div>
-      <p v-if="index.items.length === 0" class="empty">
+      <DEmpty v-if="index.items.length === 0" icon="i-lucide-list-tree">
         No scenes yet.
         <template v-if="isPlay">A scene starts with <code>##</code> and its title.</template>
         <template v-else>A scene starts with a heading such as <code>INT. KITCHEN - NIGHT</code>.</template>
-      </p>
-      <p v-else-if="rows.length === 0" class="empty">No scene matches “{{ filter.trim() }}”.</p>
+      </DEmpty>
+      <DEmpty v-else-if="rows.length === 0" icon="i-lucide-search">No scene matches “{{ filter.trim() }}”.</DEmpty>
       <ul v-else role="tree" aria-label="Outline" class="tree">
         <li
           v-for="row in rows"
@@ -630,11 +630,6 @@ const nameOfRow = (row: Row) =>
   background: var(--chrome);
   color: var(--text);
   font: inherit;
-}
-.empty {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
 }
 .tree {
   margin: 0;

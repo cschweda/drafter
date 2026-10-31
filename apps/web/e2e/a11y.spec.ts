@@ -206,6 +206,11 @@ for (const theme of THEMES) {
         problemsList(page).getByRole('button', { name: "Remove (CONT'D)" }),
       ).toBeVisible();
       await clean(page, 'the Problems list');
+      // And its empty state, centred with its check.
+      await setText(page, 'INT. HALL - DAY\n\nShe waits.\n');
+      await showTab(page, 'Problems');
+      await expect(problemsList(page)).toContainText('No problems — the script reads cleanly.');
+      await clean(page, 'Problems with none');
     });
 
     test(`has no accessibility violations in focus mode, with typewriter scrolling and a sprint (${theme})`, async ({
@@ -243,6 +248,11 @@ for (const theme of THEMES) {
       await expect(stats.getByRole('heading', { name: 'Overview', level: 2 })).toBeFocused();
       await expect(stats.getByRole('table', { name: /^Characters/ })).toBeVisible();
       await clean(page, 'the Stats tab, Overview and Characters');
+      // An explanation open behind its (i) button.
+      await stats.getByRole('button', { name: 'About the Characters table' }).click();
+      await expect(stats.getByText(/Scenes counts every scene/)).toBeVisible();
+      await clean(page, 'the Stats tab, an explanation open');
+      await page.keyboard.press('Escape');
       // Scrolled to Characters, by its link.
       await (
         await viewTool(

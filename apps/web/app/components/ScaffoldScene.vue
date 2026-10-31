@@ -65,17 +65,23 @@ function goTo() {
   <div class="scene-page">
     <div class="title-row">
       <h2 :id="SCAFFOLD_HEADING_ID" tabindex="-1">{{ scene ? sceneTitle(scene) : 'This scene' }}</h2>
-      <button v-if="scene" ref="goButton" type="button" class="action" @click="goTo">
+      <DInfo v-if="scene && rows" label="Who counts as in a scene">
+        <p>{{ PRESENCE_NOTE }}</p>
+      </DInfo>
+      <!-- A plain button with the button classes: its ref is focused (DButton's would be the component). -->
+      <button v-if="scene" ref="goButton" type="button" class="d-btn d-btn--secondary go-to" @click="goTo">
         Go to<span class="sr-only"> scene {{ scene.number ?? scene.ordinal }}</span>
       </button>
     </div>
-    <template v-if="why">
-      <p class="note">{{ why }}</p>
-      <p v-if="why === BEFORE_FIRST" class="lists">
-        <ScaffoldLink :to="{ kind: 'cast' }">Cast</ScaffoldLink>
-        <ScaffoldLink :to="{ kind: 'places' }">Places</ScaffoldLink>
-      </p>
-    </template>
+    <DEmpty v-if="why" :icon="why === BEFORE_FIRST ? 'i-lucide-arrow-down' : 'i-lucide-clapperboard'">
+      {{ why }}
+      <template v-if="why === BEFORE_FIRST" #action>
+        <p class="lists">
+          <ScaffoldLink :to="{ kind: 'cast' }">Cast</ScaffoldLink>
+          <ScaffoldLink :to="{ kind: 'places' }">Places</ScaffoldLink>
+        </p>
+      </template>
+    </DEmpty>
     <template v-else-if="scene">
       <dl class="facts">
         <div v-for="fact in facts" :key="fact.term" class="fact">
@@ -108,12 +114,13 @@ function goTo() {
         <div
           v-else
           ref="region"
-          class="scroll"
+          class="d-table-scroll"
+          :class="{ fits: !scrolls }"
           :role="scrolls ? 'region' : undefined"
           :aria-labelledby="scrolls ? 'scaffold-here' : undefined"
           :tabindex="scrolls ? 0 : undefined"
         >
-          <table class="people">
+          <table class="d-table people">
             <!-- The caption is the section's heading too, so the heading list finds it. -->
             <caption>
               <h3 id="scaffold-here">In this scene ({{ rows.length }})</h3>
@@ -163,7 +170,6 @@ function goTo() {
           </table>
         </div>
         <p v-if="firsts.length > 0" class="firsts">First seen here: {{ firsts.join(', ') }}.</p>
-        <p class="note">{{ PRESENCE_NOTE }}</p>
       </template>
     </template>
   </div>
@@ -171,38 +177,32 @@ function goTo() {
 
 <style scoped>
 .title-row {
+  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 6px;
 }
 .title-row h2 {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.action {
-  min-height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.action:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
+.go-to {
+  flex: none;
 }
 .facts {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 2px 12px;
-  margin: 4px 0 0;
+  gap: 0 16px;
+  margin: 12px 0 0;
 }
 .fact {
   display: contents;
+}
+.facts dt,
+.facts dd {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
 }
 .facts dt {
   color: var(--muted);
@@ -212,61 +212,38 @@ function goTo() {
   overflow-wrap: anywhere;
 }
 h3 {
-  margin: 16px 0 4px;
-  font-size: 13px;
-}
-.people caption {
-  text-align: left;
-}
-.scroll {
-  /* Holds the cells' hidden words, which are positioned, inside its own scrolling. */
-  position: relative;
-  overflow-x: auto;
-}
-.scroll:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
-}
-.people {
-  width: 100%;
-  border-collapse: collapse;
-}
-.people th,
-.people td {
-  padding: 2px 0;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  font-weight: normal;
-  vertical-align: top;
-}
-.people thead th {
-  color: var(--muted);
-}
-.people .num {
-  padding-left: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
+  margin: 20px 0 6px;
+  font-size: 15px;
+  font-weight: 600;
 }
 .tag {
   display: inline-block;
-  margin-left: 4px;
+  margin-left: 6px;
   padding: 0 6px;
-  border: 1px solid var(--heading);
   border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--text);
   font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
   white-space: nowrap;
 }
 .firsts {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
 }
 .lists {
   display: flex;
-  gap: 12px;
-  margin: 8px 0 0;
+  justify-content: center;
+  gap: 16px;
+  margin: 0;
 }
 .note {
   margin: 6px 0 0;
   color: var(--muted);
+}
+@media (forced-colors: active) {
+  .tag {
+    border: 1px solid CanvasText;
+  }
 }
 </style>

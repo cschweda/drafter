@@ -642,9 +642,9 @@ const nameOf = (row: HistoryRow) =>
         </DButton>
       </div>
       <p v-if="rows === null" class="empty">Reading the snapshots…</p>
-      <p v-else-if="items.length === 0" class="empty">
+      <DEmpty v-else-if="items.length === 0" icon="i-lucide-history">
         No snapshots yet. One is taken every 10 minutes of writing, and each time you save to a file.
-      </p>
+      </DEmpty>
       <div
         v-else-if="picking"
         ref="pickList"
@@ -823,12 +823,16 @@ h2 {
   padding: 16px 4px;
   color: var(--muted);
 }
+/* The list in the table style (fresh-look design §5): 36px rows on --surface, hairlines, the
+   day's title stuck at the top as the list scrolls, and the times in tabular figures. */
 .list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r);
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
 }
 .pick {
   padding: 8px 10px;
@@ -855,18 +859,30 @@ h2 {
   cursor: pointer;
 }
 .choice:hover {
-  background: var(--surface);
+  background: var(--overlay);
 }
 .day-title {
-  padding: 8px 10px 4px;
-  color: var(--accent-text);
-  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 .row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 4px 12px;
   border-bottom: 1px solid var(--border);
   cursor: default;
 }
@@ -875,7 +891,7 @@ h2 {
   outline-offset: -2px;
 }
 .row[aria-selected='true'] {
-  background: var(--surface);
+  background: var(--highlight);
 }
 .drawn {
   display: flex;
@@ -885,7 +901,7 @@ h2 {
   min-width: 0;
 }
 .time {
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .said {
@@ -930,7 +946,7 @@ h2 {
 }
 .act:hover,
 .more:hover {
-  background: var(--surface);
+  background: var(--overlay);
   color: var(--text);
 }
 .notice {

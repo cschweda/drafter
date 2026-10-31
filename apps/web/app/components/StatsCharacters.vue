@@ -20,23 +20,37 @@ const scrolls = useScrollsSideways(region);
 
 <template>
   <section class="section" aria-labelledby="stats-characters">
-    <h2 id="stats-characters" tabindex="-1">Characters</h2>
+    <div class="title-row">
+      <h2 id="stats-characters" tabindex="-1">Characters</h2>
+      <DInfo v-if="rows && rows.length > 0" label="About the Characters table">
+        <p>
+          Scenes counts every scene a character is in, speaking or not; Speaks in, the scenes they
+          speak in. Words are their dialogue and lyrics, and the dialogue shares are of those words.
+          A character is counted once, whatever the extension, such as (V.O.). Each name opens the
+          character’s page in Scaffold.
+        </p>
+      </DInfo>
+    </div>
     <p v-if="!rows" class="note">Counting…</p>
-    <p v-else-if="rows.length === 0" class="note">No one speaks yet. A character’s cue starts their row.</p>
+    <DEmpty v-else-if="rows.length === 0" icon="i-lucide-users">No one speaks yet. A character’s cue starts their row.</DEmpty>
     <template v-else>
       <!-- Its own scrolling region on a narrow screen, which the keyboard can scroll too; a named
            region only while it scrolls. -->
       <div
         ref="region"
-        class="scroll"
+        class="d-table-scroll"
+        :class="{ fits: !scrolls }"
         :role="scrolls ? 'region' : undefined"
-        :aria-labelledby="scrolls ? 'stats-characters-caption' : undefined"
+        :aria-labelledby="scrolls ? 'stats-characters' : undefined"
         :tabindex="scrolls ? 0 : undefined"
       >
-        <table class="tally">
-          <caption id="stats-characters-caption">
-            Characters<span v-if="waiting" class="caption-note"> Screen time waits for the pages.</span>
-          </caption>
+        <!-- Named by the section's heading, rather than a caption that would say "Characters"
+             again under it; until the pages are in, described by the line that says so. -->
+        <table
+          class="d-table"
+          aria-labelledby="stats-characters"
+          :aria-describedby="waiting ? 'stats-characters-waiting' : undefined"
+        >
           <thead>
             <tr>
               <th scope="col">Character</th>
@@ -77,17 +91,12 @@ const scrolls = useScrollsSideways(region);
                   <span class="sr-only">When the pages are ready</span>
                 </template>
               </td>
-              <td>{{ row.often || '—' }}</td>
+              <td class="often">{{ row.often || '—' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="note">
-        Scenes counts every scene a character is in, speaking or not; Speaks in, the scenes they
-        speak in. Words are their dialogue and lyrics, and the dialogue shares are of those words.
-        A character is counted once, whatever the extension, such as (V.O.). Each name opens the
-        character’s page in Scaffold.
-      </p>
+      <p v-if="waiting" id="stats-characters-waiting" class="note">Screen time waits for the pages.</p>
     </template>
   </section>
 </template>
@@ -97,57 +106,10 @@ const scrolls = useScrollsSideways(region);
   margin: 6px 0 0;
   color: var(--muted);
 }
-.scroll {
-  /* Holds the cells' hidden words, which are positioned, inside its own scrolling: else they sit
-     where the cell is, past the screen's edge, and widen the page on a phone. */
-  position: relative;
-  overflow-x: auto;
-}
-.scroll:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
-}
-.tally {
-  width: 100%;
-  margin-top: 4px;
-  border-collapse: collapse;
-}
-.tally caption {
-  margin-bottom: 4px;
-  font-weight: 600;
-  text-align: left;
-}
-.caption-note {
-  color: var(--muted);
-  font-weight: normal;
-}
-.tally th,
-.tally td {
-  padding: 2px 0;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  font-weight: normal;
-  vertical-align: top;
-}
-.tally thead th {
-  color: var(--muted);
-}
-.tally .num {
-  padding-left: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-.name-link {
-  color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.name-link:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
-}
-.tally td:last-child {
-  padding-left: 12px;
+/* The names and "most often with" may wrap; the figures keep to one line. */
+.d-table .often {
+  min-width: 9rem;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 </style>

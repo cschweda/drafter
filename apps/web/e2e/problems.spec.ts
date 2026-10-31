@@ -538,3 +538,27 @@ function holdDictionary(context: BrowserContext): () => void {
   });
   return release;
 }
+
+// Calm empty states (fresh-look design §5): centred, a 20px icon in --muted, one sentence.
+test('No problems is centred with a check', async ({ page }) => {
+  await setText(page, 'INT. HALL - DAY\n\nShe waits.\n');
+  await showProblems(page);
+  const empty = list(page).locator('.d-empty');
+  await expect(empty).toHaveText('No problems — the script reads cleanly.');
+  const icon = empty.locator('[data-empty-icon]');
+  await expect(icon).toBeVisible();
+  await expect(icon).toHaveClass(/i-lucide[:-]check/);
+  await expect(icon).toHaveAttribute('aria-hidden', 'true');
+  const drawn = await icon.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { width: s.width, height: s.height };
+  });
+  expect(drawn).toEqual({ width: '20px', height: '20px' });
+  // Centred across the panel.
+  const panel = await list(page).boundingBox();
+  for (const part of [icon, empty.locator('p')]) {
+    const box = await part.boundingBox();
+    const middle = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    expect(Math.abs(middle - ((panel?.x ?? 0) + (panel?.width ?? 0) / 2))).toBeLessThanOrEqual(12);
+  }
+});

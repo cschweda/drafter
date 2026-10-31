@@ -581,9 +581,9 @@ const reading = computed(() => !done.value && rows.value === null);
       <p v-else-if="reading" class="empty">
         {{ progress ? progressLabel(progress.read, progress.total) : 'Reading versions…' }}
       </p>
-      <p v-else-if="done && items.length === 0" class="empty">
+      <DEmpty v-else-if="done && items.length === 0" icon="i-lucide-history">
         Nothing to compare with yet: save, or take a snapshot.
-      </p>
+      </DEmpty>
       <div v-else class="body">
         <div ref="listEl" role="listbox" aria-label="Versions" class="list">
           <div

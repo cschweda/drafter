@@ -289,3 +289,58 @@ describe('Settings', () => {
     expect(template).toMatch(/switchesIn\('spelling'\)\.filter\(/);
   });
 });
+
+// Task 8: the Stats and Scaffold pages, the empty states, and the one table style.
+describe('DInfo', () => {
+  const vue = read('components/ui/DInfo.vue');
+  test('is a disclosure: a named button that says whether its text is shown, and controls it', () => {
+    expect(templateOf(vue)).toMatch(/:aria-label="props\.label"/);
+    expect(templateOf(vue)).toMatch(/:aria-expanded="open \? 'true' : 'false'"/);
+    expect(templateOf(vue)).toMatch(/:aria-controls="id"/);
+    // The text stays in the page, hidden until opened, after its button.
+    expect(templateOf(vue)).toMatch(/:hidden="!open"/);
+  });
+  test('Escape closes it and leaves focus on its button', () => {
+    expect(vue).toMatch(/event\.key !== 'Escape'/);
+    expect(vue).toMatch(/close\(true\)/);
+  });
+  test('is drawn as a popover from the tokens, with the one motion', () => {
+    expect(styleOf(vue)).toMatch(/background: var\(--overlay\)/);
+    expect(templateOf(vue)).toMatch(/d-info-panel motion/);
+    expect(styleOf(vue).match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
+  });
+});
+
+describe('DEmpty', () => {
+  const vue = read('components/ui/DEmpty.vue');
+  test('is centred, with a 20px icon in --muted that is only decoration', () => {
+    expect(styleOf(vue)).toMatch(/text-align: center/);
+    expect(styleOf(vue)).toMatch(/width: 20px;\s*height: 20px;\s*color: var\(--muted\)/);
+    expect(templateOf(vue)).toMatch(/aria-hidden="true"/);
+  });
+  const PANES = ['ProblemsPane', 'CardsPane', 'OutlinePane', 'NotesPane', 'DeletedPane'];
+  test.each(PANES)('%s draws its empty states with it', (name) => {
+    const template = templateOf(read(`components/${name}.vue`));
+    expect(template).toMatch(/<DEmpty/);
+    expect(template).not.toMatch(/class="empty"/);
+  });
+});
+
+describe('the table style', () => {
+  const css = read('assets/css/tables.css');
+  test('36px rows on --surface, hairlines, a sticky header, tabular figures', () => {
+    expect(css).toMatch(/height: 36px/);
+    expect(css).toMatch(/background: var\(--surface\)/);
+    expect(css).toMatch(/border-bottom: 1px solid var\(--border\)/);
+    expect(css).toMatch(/position: sticky/);
+    expect(css).toMatch(/font-variant-numeric: tabular-nums/);
+    expect(css.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
+  });
+  test('links are underlined on hover only', () => {
+    expect(css).toMatch(/\.d-table a \{[^}]*text-decoration: none/);
+    expect(css).toMatch(/\.d-table a:hover \{[^}]*text-decoration: underline/);
+  });
+  test.each(['StatsCharacters', 'ScaffoldTable', 'ScaffoldScene'])('%s uses it', (name) => {
+    expect(templateOf(read(`components/${name}.vue`))).toMatch(/class="d-table/);
+  });
+});

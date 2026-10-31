@@ -9,6 +9,7 @@ import {
   start,
 } from './modules';
 import { drafterDatabase, sampleSeenRows } from './seed';
+import { expectTableStyle } from './table-style';
 
 // Scaffold (seeing-the-script design §5): a tab beside the Source showing who is in the cursor's
 // scene, following the cursor as it rests (or a scene pinned from the Outline, the Cards, the strip,
@@ -482,5 +483,42 @@ test.describe('Scaffold from the strip', () => {
     await expect(heading(page)).toHaveText(DECK);
     await expect(heading(page)).toBeFocused();
     await expect(followButton(page)).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+// Scaffold as a designed page (fresh-look design §7, plan Task 8).
+test.describe('Scaffold, as designed', () => {
+  test('its page is a centred column, its tables in the one table style', async ({
+    page,
+    isMobile,
+  }) => {
+    await showFerry(page);
+    await cursorOn(page, 'Are we nearly there?');
+    // A phone's Go to line shows the Source: Scaffold again.
+    if (isMobile) await runCommand(page, 'Show Scaffold');
+    await expect(heading(page)).toHaveText(CABIN);
+    await expectTableStyle(people(page), { wraps: !!isMobile });
+    const size = await heading(page).evaluate((h) => {
+      const s = getComputedStyle(h);
+      return `${s.fontSize}/${s.fontWeight}`;
+    });
+    expect(size).toBe('20px/600');
+    // The scene's Go to is the one secondary button.
+    await expect(scaffold(page).getByRole('button', { name: /^Go to scene/ })).toHaveClass(
+      /d-btn--secondary/,
+    );
+    if (!isMobile) {
+      const column = await scaffold(page).locator('.scaffold').boundingBox();
+      expect(column?.width ?? 0).toBeLessThanOrEqual(720);
+    }
+    // A character's page and the cast list too.
+    await scaffold(page).getByRole('link', { name: 'INES', exact: true }).first().click();
+    await expectTableStyle(scaffold(page).getByRole('table', { name: /^Scenes/ }), {
+      wraps: !!isMobile,
+    });
+    await runCommand(page, 'Show the cast');
+    await expectTableStyle(scaffold(page).getByRole('table', { name: /^Characters/ }), {
+      wraps: !!isMobile,
+    });
   });
 });

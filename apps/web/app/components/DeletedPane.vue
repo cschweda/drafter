@@ -301,7 +301,7 @@ const whyId = `${uid}-why`;
 
 <template>
   <div class="deleted">
-    <p v-if="why" class="empty">{{ why }}</p>
+    <DEmpty v-if="why">{{ why }}</DEmpty>
     <template v-else>
       <div class="tools" data-pane-bar>
         <label class="filter">
@@ -321,19 +321,19 @@ const whyId = `${uid}-why`;
       </p>
       <p v-if="progress?.capped" class="note">Only the newest 1,000 versions were read.</p>
       <p v-if="failed" class="note">Couldn’t read the versions: {{ failed }}</p>
-      <p v-if="rows.length === 0 && done && progress?.total === 0" class="empty">
+      <DEmpty v-if="rows.length === 0 && done && progress?.total === 0" icon="i-lucide-history">
         No versions yet. Save, or take a snapshot, and a scene you delete after it is listed here.
-      </p>
-      <p v-else-if="rows.length === 0 && done" class="empty">
+      </DEmpty>
+      <DEmpty v-else-if="rows.length === 0 && done" icon="i-lucide-check">
         No deleted scenes. Every scene in your versions is still in the script.
-      </p>
-      <p v-else-if="rows.length === 0" class="empty">Reading versions…</p>
-      <p v-else-if="shown.length === 0 && filter.trim() === ''" class="empty">
+      </DEmpty>
+      <DEmpty v-else-if="rows.length === 0">Reading versions…</DEmpty>
+      <DEmpty v-else-if="shown.length === 0 && filter.trim() === ''" icon="i-lucide-check">
         No deleted scenes. Every scene in your versions is still in the script.
-      </p>
-      <p v-else-if="shown.length === 0" class="empty">
+      </DEmpty>
+      <DEmpty v-else-if="shown.length === 0" icon="i-lucide-search">
         No deleted scene matches “{{ filter.trim() }}”.
-      </p>
+      </DEmpty>
       <div v-else ref="list" role="list" aria-label="Deleted scenes" class="list">
         <div v-for="(row, i) in shown" :key="row.key" role="listitem" class="item">
           <div
@@ -451,11 +451,6 @@ const whyId = `${uid}-why`;
   background: var(--chrome);
   color: var(--text);
   font: inherit;
-}
-.empty {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
 }
 .note {
   margin: 8px 12px 0;

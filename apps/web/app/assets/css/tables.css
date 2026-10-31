@@ -1,0 +1,77 @@
+/* The one table style (fresh-look design §5): Stats, Scaffold, and History's list. Rows of 36px on
+   --surface with hairline dividers, a header that stays put while its scroller scrolls (at
+   --table-sticky-top, under a sticky row of the page's own), numbers right-aligned in tabular
+   figures, and links in --text, underlined on hover (their focus ring is the control's). A table's
+   wrapper that scrolls sideways is its own scroller; one that fits leaves the header to stick to
+   the page's (`.d-table-scroll.fits`). */
+.d-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.d-table caption {
+  margin-bottom: 6px;
+  text-align: left;
+}
+.d-table th,
+.d-table td {
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: normal;
+  text-align: left;
+  vertical-align: middle;
+}
+.d-table thead th {
+  position: sticky;
+  top: var(--table-sticky-top, 0);
+  z-index: 1;
+  height: 32px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.d-table tbody th[scope="row"] {
+  font-weight: 500;
+}
+.d-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.d-table a {
+  color: var(--text);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+.d-table a:hover {
+  text-decoration: underline;
+}
+.d-table a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.d-table-scroll {
+  position: relative;
+  overflow-x: auto;
+  /* Its own scroller: the header sticks to its top, not under the page's sticky row. */
+  --table-sticky-top: 0;
+}
+.d-table-scroll.fits {
+  overflow: visible;
+  --table-sticky-top: inherit;
+}
+.d-table-scroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .d-table a {
+    text-decoration: underline;
+  }
+}

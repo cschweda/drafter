@@ -30,7 +30,12 @@ const lines = computed(() =>
   list-style: none;
 }
 .lines li {
-  padding: 3px 0;
-  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
 }
 </style>

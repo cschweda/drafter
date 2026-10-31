@@ -72,18 +72,32 @@ const characterCount = computed(() => cast.value?.characters.length ?? null);
 const screenplay = computed(() => !markdown.value && templateIdOf(doc.value) === 'us-screenplay');
 const split = computed(() => (screenplay.value ? headingSplit(doc.value) : null));
 const percent = (n: number, total: number) => `${Math.round((n / total) * 100)}%`;
-const splitRows = computed(() => {
+/** The headings' split (fresh-look design §7): two 100% bars, Place and Time, each a picture of its
+ * list, which says every count and share as text. A part of none isn't drawn in the bar. */
+const splits = computed(() => {
   const s = split.value;
   if (!s || s.total === 0) return [];
+  const parts = (rows: Array<{ label: string; n: number }>) =>
+    rows.map((row, i) => ({ ...row, tone: i, share: percent(row.n, s.total) }));
   return [
-    { label: 'Interior', n: s.place.interior },
-    { label: 'Exterior', n: s.place.exterior },
-    { label: 'Interior and exterior', n: s.place.both },
-    { label: 'Other place', n: s.place.other },
-    { label: 'Day', n: s.time.day },
-    { label: 'Night', n: s.time.night },
-    { label: 'Other time', n: s.time.other },
-  ].map((row) => ({ ...row, share: percent(row.n, s.total) }));
+    {
+      name: 'Place',
+      parts: parts([
+        { label: 'Interior', n: s.place.interior },
+        { label: 'Exterior', n: s.place.exterior },
+        { label: 'Interior and exterior', n: s.place.both },
+        { label: 'Other place', n: s.place.other },
+      ]),
+    },
+    {
+      name: 'Time',
+      parts: parts([
+        { label: 'Day', n: s.time.day },
+        { label: 'Night', n: s.time.night },
+        { label: 'Other time', n: s.time.other },
+      ]),
+    },
+  ];
 });
 const headings = computed(() => headingCount(tree.value));
 
@@ -198,25 +212,59 @@ function dayLabel(day: DayFigure): string {
     </div>
 
     <div class="part">
-      <h3 id="stats-script-title">This script</h3>
-      <dl class="figures">
+      <div class="title-row">
+        <h3 id="stats-script-title">This script</h3>
+        <DInfo label="About these figures">
+          <p v-if="markdown">Reading time is 230 words a minute.</p>
+          <template v-else>
+            <p>Running time is the pages at the script’s rate.</p>
+            <p>{{ estimateNote(rates) }}</p>
+          </template>
+        </DInfo>
+      </div>
+      <!-- The four figures a writer looks for first, as tiles: each a term and its value, the
+           value drawn large above its label. -->
+      <dl class="tiles">
         <template v-if="markdown">
-          <dt>Words</dt>
-          <dd>{{ markdownWords.toLocaleString('en-US') }}</dd>
-          <dt>Headings</dt>
-          <dd>{{ headings }}</dd>
-          <dt>Reading time</dt>
-          <dd>{{ runningTime(readingMinutes(markdownWords)) }}</dd>
+          <div class="tile" data-stat-tile>
+            <dt>Words</dt>
+            <dd><span class="tile-value">{{ markdownWords.toLocaleString('en-US') }}</span></dd>
+          </div>
+          <div class="tile" data-stat-tile>
+            <dt>Headings</dt>
+            <dd><span class="tile-value">{{ headings }}</span></dd>
+          </div>
+          <div class="tile" data-stat-tile>
+            <dt>Reading time</dt>
+            <dd><span class="tile-value">{{ runningTime(readingMinutes(markdownWords)) }}</span></dd>
+          </div>
         </template>
         <template v-else-if="counts">
-          <dt>Pages</dt>
-          <dd>{{ known.pages === null ? 'Counting…' : counts.pages }}</dd>
-          <dt>Scenes</dt>
-          <dd>{{ counts.scenes }}</dd>
-          <dt>Words</dt>
-          <dd>{{ counts.words.toLocaleString('en-US') }}</dd>
-          <dt>Running time</dt>
-          <dd>{{ known.pages === null ? 'Counting…' : `${runningTime(runMinutes)}, at ${pageRatePhrase(rates.minutesPerPage)}` }}</dd>
+          <div class="tile" data-stat-tile>
+            <dt>Pages</dt>
+            <dd><span class="tile-value">{{ known.pages === null ? 'Counting…' : counts.pages }}</span></dd>
+          </div>
+          <div class="tile" data-stat-tile>
+            <dt>Scenes</dt>
+            <dd><span class="tile-value">{{ counts.scenes }}</span></dd>
+          </div>
+          <div class="tile" data-stat-tile>
+            <dt>Words</dt>
+            <dd><span class="tile-value">{{ counts.words.toLocaleString('en-US') }}</span></dd>
+          </div>
+          <div class="tile" data-stat-tile>
+            <dt>Running time</dt>
+            <dd>
+              <template v-if="known.pages === null"><span class="tile-value">Counting…</span></template>
+              <template v-else>
+                <span class="tile-value">{{ runningTime(runMinutes) }}</span><span class="tile-sub"><span class="sr-only">, </span>at {{ pageRatePhrase(rates.minutesPerPage) }}</span>
+              </template>
+            </dd>
+          </div>
+        </template>
+      </dl>
+      <dl v-if="!markdown && counts || (!sample && totals && totals.daysWritten > 0)" class="figures">
+        <template v-if="!markdown && counts">
           <dt>{{ ESTIMATE_LABEL }}</dt>
           <dd>{{ runningTime(estimateMinutes) }}</dd>
           <dt>Characters</dt>
@@ -231,8 +279,7 @@ function dayLabel(day: DayFigure): string {
           <dd>{{ totals.firstDay ? DATE.format(dateOf(totals.firstDay)) : '' }}</dd>
         </template>
       </dl>
-      <p v-if="markdown" class="note">Reading time is 230 words a minute.</p>
-      <template v-else>
+      <template v-if="!markdown">
         <form class="rates" aria-labelledby="stats-rates-title" @submit.prevent>
           <h4 id="stats-rates-title" class="sr-only">Rates</h4>
           <p v-if="readOnly" class="note">{{ RATES_READ_ONLY }}</p>
@@ -268,26 +315,35 @@ function dayLabel(day: DayFigure): string {
             </div>
           </fieldset>
         </form>
-        <p class="note">{{ estimateNote(rates) }}</p>
       </template>
 
-      <table v-if="splitRows.length > 0" class="tally">
-        <caption>Scene headings</caption>
-        <thead>
-          <tr>
-            <th scope="col">Heading</th>
-            <th scope="col" class="num">Scenes</th>
-            <th scope="col" class="num">Share</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in splitRows" :key="row.label">
-            <th scope="row">{{ row.label }}</th>
-            <td class="num">{{ row.n }}</td>
-            <td class="num">{{ row.share }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <figure v-if="splits.length > 0" class="splits" aria-labelledby="stats-split-title">
+        <figcaption id="stats-split-title">Scene headings</figcaption>
+        <div
+          v-for="bar in splits"
+          :key="bar.name"
+          class="split"
+          role="group"
+          :aria-labelledby="`stats-split-${bar.name}`"
+        >
+          <div :id="`stats-split-${bar.name}`" class="split-name">{{ bar.name }}</div>
+          <!-- A picture of the list under it, which is what a screen reader reads. -->
+          <div class="bar" aria-hidden="true">
+            <span
+              v-for="part in bar.parts.filter((p) => p.n > 0)"
+              :key="part.label"
+              :class="`tone-${part.tone}`"
+              :style="{ flexGrow: part.n }"
+            />
+          </div>
+          <ul class="legend">
+            <li v-for="part in bar.parts" :key="part.label" :class="{ none: part.n === 0 }">
+              <span class="swatch" :class="`tone-${part.tone}`" aria-hidden="true" />
+              {{ part.label }} <span class="count">{{ part.n }}</span> ({{ part.share }})
+            </li>
+          </ul>
+        </div>
+      </figure>
     </div>
 
     <div v-if="!sample" class="part">
@@ -356,23 +412,86 @@ function dayLabel(day: DayFigure): string {
 
 <style scoped>
 h3 {
-  margin: 0 0 6px;
-  font-size: 13px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
 }
 .part {
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.part > h3 {
+  margin-bottom: 10px;
+}
+.title-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+/* The tiles (fresh-look design §7): the value 22/650, its label 12/500 in --muted under it. The
+   label comes first in the page, so a screen reader hears "Pages, 2". */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.tile {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.tile dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.tile dd {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.tile-value {
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+.tile-sub {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
 }
 .figures {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 2px 16px;
+  gap: 0;
   margin: 0;
 }
+.figures dt,
+.figures dd {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  border-bottom: 1px solid var(--border);
+}
 .figures dt {
+  padding-right: 16px;
   color: var(--muted);
 }
 .figures dd {
+  justify-content: flex-end;
   margin: 0;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -381,30 +500,72 @@ h3 {
   margin: 6px 0 0;
   color: var(--muted);
 }
-.tally {
-  width: 100%;
-  margin-top: 10px;
-  border-collapse: collapse;
+/* The headings' split: two 100% bars with their lists. */
+.splits {
+  margin: 16px 0 0;
 }
-.tally caption {
-  margin-bottom: 4px;
+.splits figcaption {
+  margin-bottom: 8px;
   font-weight: 600;
-  text-align: left;
 }
-.tally th,
-.tally td {
-  padding: 2px 0;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  font-weight: normal;
+.split + .split {
+  margin-top: 12px;
 }
-.tally thead th {
+.split-name {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--raised);
+}
+.bar > span {
+  flex-basis: 0;
+  min-width: 2px;
+}
+.tone-0 {
+  background: var(--accent);
+}
+.tone-1 {
+  background: var(--muted);
+}
+.tone-2 {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+.tone-3 {
+  background: var(--highlight);
+  box-shadow: inset 0 0 0 1px var(--muted);
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend li.none {
   color: var(--muted);
 }
-.tally .num {
-  padding-left: 12px;
+.count {
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
 }
 .chart {
   display: block;
@@ -413,12 +574,12 @@ h3 {
   margin-top: 4px;
 }
 .chart .zero {
-  stroke: var(--line);
+  stroke: var(--border);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 .chart .grew {
-  fill: var(--heading);
+  fill: var(--accent);
 }
 .chart .cut {
   fill: var(--muted);
@@ -453,13 +614,13 @@ h3 {
   min-height: 28px;
   padding: 0 6px;
   border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: var(--chrome);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
 .rate input:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 .rate input:disabled {
@@ -472,12 +633,16 @@ h3 {
 .problem {
   margin: 6px 0 0;
   padding-left: 8px;
-  box-shadow: inset 3px 0 0 var(--heading);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 @media (forced-colors: active) {
   .chart .grew,
   .chart .cut {
     fill: CanvasText;
+  }
+  .bar > span,
+  .swatch {
+    border: 1px solid CanvasText;
   }
 }
 </style>

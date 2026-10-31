@@ -72,14 +72,14 @@ onBeforeUnmount(disarm);
 
 <template>
   <div ref="root">
-    <p v-if="kind === 'markdown' && rows.length === 0" class="empty">
+    <DEmpty v-if="kind === 'markdown' && rows.length === 0" icon="i-lucide-info">
       {{
         settings.spellcheck
           ? 'No script checks for Markdown documents.'
           : 'No checks for Markdown documents.'
       }}
-    </p>
-    <p v-else-if="rows.length === 0" class="empty">No problems found.</p>
+    </DEmpty>
+    <DEmpty v-else-if="rows.length === 0" icon="i-lucide-check">No problems — the script reads cleanly.</DEmpty>
     <ul v-else class="problems problem-list">
       <li
         v-for="(problem, index) in rows"
@@ -129,11 +129,6 @@ onBeforeUnmount(disarm);
 </template>
 
 <style scoped>
-.empty {
-  margin: 0;
-  padding: 24px 16px;
-  color: var(--muted);
-}
 .problems {
   display: flex;
   flex-direction: column;
@@ -164,10 +159,6 @@ onBeforeUnmount(disarm);
   border-bottom: 1px solid var(--line);
   font-size: 13px;
   font-weight: 700;
-}
-.spelling-title:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: -2px;
 }
 .jump {
   display: flex;

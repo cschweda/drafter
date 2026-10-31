@@ -30,29 +30,56 @@ const SECTIONS: ReadonlyArray<{ id: StatsSection; label: string }> = [
 </template>
 
 <style scoped>
+/* Stuck at the top of the page as it scrolls (fresh-look design §7), one 41px row on the page's
+   own colour; StatsPane's headings keep clear of it (scroll-margin-top), and its tables' headers
+   stick under it. A narrow pane scrolls the row sideways rather than wrapping it. */
 .sections {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 2px 14px;
-  padding-bottom: 10px;
+  gap: 4px;
+  box-sizing: border-box;
+  height: 41px;
+  margin: 0 -4px;
+  padding: 0 4px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
   font-size: 13px;
+  white-space: nowrap;
+  scrollbar-width: none;
 }
 .contents-label {
+  margin-right: 6px;
   color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+@media (max-width: 480px) {
+  .contents-label {
+    display: none;
+  }
 }
 .section-link {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  min-height: 24px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
   color: var(--text);
-  font-weight: 600;
+  font-weight: 500;
+  text-decoration: none;
+}
+.section-link:hover {
+  background: var(--raised);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .section-link:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
 }
 </style>
