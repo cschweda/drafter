@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
+import { showSource } from './modules';
 
 // The keyboard-only journey (Phase 1 design §1, item 5): everything a writer does from a new script
 // to a PDF, with no pointer. The page records every pointer event it is sent, and the test ends by
@@ -309,13 +310,16 @@ test.describe('a menu and Tab', () => {
           .getByRole('button', { name: 'More elements' }),
       false,
     ],
+    // Side by side the options are in More; a phone's bar has its own ⋯ button.
     [
       "the element bar's options",
-      async (page) =>
-        page
+      async (page) => {
+        await showSource(page);
+        return page
           .getByRole('toolbar', { name: 'Element bar' })
-          .getByRole('button', { name: 'Element bar options' }),
-      false,
+          .getByRole('button', { name: 'Element bar options' });
+      },
+      true,
     ],
     [
       "the sample bar's More",

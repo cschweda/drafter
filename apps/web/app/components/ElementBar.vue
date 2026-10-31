@@ -26,9 +26,10 @@ import {
   SPELLING_BUTTON,
   tipFor,
 } from '~/editor/element-bar';
+import { ELEMENT_NAMES } from '~/editor/element-names';
 import { elementNotice, sayElement } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
-import { markdownElement } from '~/markdown/commands';
+import { MARKDOWN_ELEMENT_NAMES, markdownElement } from '~/markdown/commands';
 import { useSettings } from '~/settings/settings';
 import { openSpellMenu } from '~/spell/menu';
 import { NO_MARK_HERE, saySpell } from '~/spell/notice';
@@ -43,12 +44,12 @@ import { scrollbarsFloat } from '~/utils/scrollbars';
 // tab that only shows the script, and when Settings turns it off.
 //
 // Side by side (`inHeader`, fresh-look design §3.2) it sits in the editor's 36px header, as compact
-// chips: where the cursor is becomes an icon (its words are its name and its tooltip, and the
-// pressed chip shows the element), and the bar never clips, but folds its buttons into More from
-// the right, then the cheat sheet's ?, the ⋯ menu, the icon, and last the pressed chip, measured
-// rather than counted. While focus is elsewhere (`away`) the header shows the script's title
-// instead, and the bar is drawn out of sight but stays in the tab order, so a keyboard user who
-// Tabs to it brings it back.
+// chips: first a chip that names the element the cursor is in (any element, a note or a blank line
+// too), then the buttons, then More, which also holds the cheat sheet and the bar's options. It
+// never clips: the buttons fold into More from the right, measured rather than counted, by the
+// width alone, so nothing moves as the cursor does. While focus is in another region (`away`) the
+// header shows the script's title over it; it stays laid out and in the tab order, so a keyboard
+// user who Tabs to it brings it back.
 const props = defineProps<{
   /** In the editor's header, side by side: folds to fit, rather than scrolling. */
   inHeader?: boolean;
@@ -141,7 +142,7 @@ const why = computed(() => {
   const reason = reasonFor(kind, !!block.value?.forced, context, onName.value ? null : role.value);
   return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}. Opens the Fountain cheat sheet there.`;
 });
-/** The icon's tooltip in the header: where the cursor is, then why. */
+/** The chip's tooltip in the header: where the cursor is, then why. */
 const hereTip = computed(() =>
   props.inHeader ? `${here.value.lead}${here.value.name}. ${why.value}` : why.value,
 );
@@ -190,14 +191,14 @@ const moreItem = (button: BarButton): DropdownMenuItem => ({
 const more = computed<DropdownMenuItem[][]>(() => {
   const folded = buttons.value.filter((button) => isFolded(button.command)).map(moreItem);
   const extra: DropdownMenuItem[] = [];
-  if (isFolded('help')) {
+  if (props.inHeader && !markdown.value) {
     extra.push({
       label: 'Fountain cheat sheet',
       icon: 'i-lucide-circle-help',
       onSelect: () => openCheatSheet(false),
     });
   }
-  if (isFolded('options')) extra.push(hideItem);
+  if (props.inHeader) extra.push(hideItem);
   return [folded, bar.value.more.map(moreItem), extra].filter((group) => group.length > 0);
 });
 
@@ -310,42 +311,46 @@ function onFocusin(event: FocusEvent) {
 const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
 
 // ---- Fitting the editor's header (fresh-look design §3.2, §10a) -----------------------------
-// Everything stays laid out, a folded item hidden and out of the flow, so every width is known
+// Everything stays laid out, a folded button hidden and out of the flow, so every width is known
 // at any time: the fit is worked out from them, never by drawing and trying again, and folding
-// changes nothing the observer measures by (the bar's own width is the header's to give).
+// changes nothing the observer measures by (the bar's own width is the header's to give). What
+// folds depends on the width alone, never on the cursor, so nothing moves as the writer types: the
+// buttons fold from the right, and the chip at the left, which names the element the cursor is in,
+// keeps one width (its widest name's) and never folds.
 
-/** How many items of `foldOrder` have folded. */
+/** How many buttons have folded, from the right. */
 const fold = ref(0);
-/**
- * What folds, in order: the buttons from the right (the one pressed waits), the cheat sheet's ?,
- * the ⋯ menu, where the cursor is, and last the button pressed: what is left is the element the
- * cursor is in and More.
- */
-const foldOrder = computed<string[]>(() => {
-  if (!props.inHeader) return [];
-  const on = buttons.value.find((button) => !markdown.value && pressed(button))?.command;
-  const rest = buttons.value.map((button) => button.command).filter((id) => id !== on);
-  return [
-    ...rest.reverse(),
-    ...(markdown.value ? [] : ['help']),
-    'options',
-    'here',
-    ...(on ? [on] : []),
-  ];
-});
+const foldOrder = computed<string[]>(() =>
+  props.inHeader ? buttons.value.map((button) => button.command).reverse() : [],
+);
 const foldedIds = computed(() => new Set(foldOrder.value.slice(0, fold.value)));
-const isFolded = (id: string) => foldedIds.value.has(id);
-/** A Markdown bar has no More until something folds; side by side it is laid out, to be measured. */
-const moreShown = computed(() => !markdown.value || (!!props.inHeader && fold.value > 0));
-const moreLaidOut = computed(() => !markdown.value || !!props.inHeader);
+/** Side by side the cheat sheet's ? and the ⋯ menu are in More (the chip opens the sheet too). */
+const isFolded = (id: string) =>
+  (!!props.inHeader && (id === 'help' || id === 'options')) || foldedIds.value.has(id);
+/** Side by side More is always there: it holds the ? and ⋯ items. A phone's Markdown bar has none. */
+const moreShown = computed(() => !markdown.value || !!props.inHeader);
+/** The chip's least width, so it stays as wide whatever the cursor is in (0: its own). */
+const hereMin = ref(0);
+const hereStyle = computed(() => (hereMin.value ? { minWidth: `${hereMin.value}px` } : undefined));
+
+/** Every name the chip can show for this kind of document. */
+const hereNames = computed(() => {
+  if (markdown.value) return [...MARKDOWN_ELEMENT_NAMES, 'Blank line'];
+  const roles = structure.value.headings ? [] : ['Act', 'Scene', 'Stage direction'];
+  return [...Object.values(ELEMENT_NAMES), ...roles, 'Blank line'];
+});
+let canvas: CanvasRenderingContext2D | null | undefined;
+function textWidth(text: string, font: string): number {
+  if (canvas === undefined) canvas = document.createElement('canvas').getContext('2d');
+  if (!canvas) return 0;
+  canvas.font = font;
+  return canvas.measureText(text).width;
+}
+const capital = (name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 
 function measure() {
   const el = toolbar.value;
-  if (!props.inHeader || props.away || !el) return;
-  if (el.clientWidth !== barWidth) {
-    barWidth = el.clientWidth;
-    hereRoom = 0;
-  }
+  if (!props.inHeader || !el) return;
   const style = getComputedStyle(el);
   const room =
     el.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
@@ -362,32 +367,45 @@ function measure() {
     );
   };
   const item = (id: string) => widthOf(`[data-bar-item="${CSS.escape(id)}"]`);
-  // Where the cursor is takes the widest it has been: a Markdown document's words change with the
-  // line, and a fold that came and went as the cursor moved would move the buttons under it.
-  hereRoom = Math.max(hereRoom, widthOf('[data-here]'));
+  // The chip's widths, from its font: the widest name it can show, and the one it shows now.
+  const chip = el.querySelector<HTMLElement>('[data-here]');
+  const name = el.querySelector<HTMLElement>('[data-here-name]');
+  let widest = 0;
+  let own = 0;
+  if (chip && name) {
+    const box = getComputedStyle(chip);
+    const text = getComputedStyle(name);
+    const font = `${text.fontStyle} ${text.fontWeight} ${text.fontSize} ${text.fontFamily}`;
+    const edges =
+      Number.parseFloat(box.paddingLeft) +
+      Number.parseFloat(box.paddingRight) +
+      Number.parseFloat(box.borderLeftWidth) +
+      Number.parseFloat(box.borderRightWidth);
+    const width = (n: string) => Math.ceil(textWidth(capital(n), font) + edges);
+    widest = Math.max(...hereNames.value.map(width));
+    own = width(here.value.name);
+  }
   const order = foldOrder.value;
-  const total = (k: number) => {
+  const total = (k: number, chipWidth: number) => {
     const gone = new Set(order.slice(0, k));
-    const parts = gone.has('here') ? [] : [hereRoom, widthOf('.rule')];
-    for (const button of buttons.value)
+    const parts = [chipWidth, widthOf('.rule')];
+    for (const button of buttons.value) {
       if (!gone.has(button.command)) parts.push(item(button.command));
+    }
     if (spellingShown.value) parts.push(item(SPELLING_BUTTON.command));
-    if (!markdown.value || k > 0) parts.push(item('more'));
-    parts.push(SPACER);
-    if (!markdown.value && !gone.has('help')) parts.push(item('help'));
-    if (!gone.has('options')) parts.push(item('options'));
+    parts.push(item('more'), SPACER);
     return parts.reduce((sum, w) => sum + w, 0) + (parts.length - 1) * gap;
   };
   // A pixel to spare: widths are fractions, and a scroll width is rounded.
   let k = 0;
-  while (k < order.length && total(k) > room - 1) k++;
+  while (k < order.length && total(k, widest) > room - 1) k++;
+  // Last resort, with every button in More: the chip as wide as its own name.
+  const min = total(k, widest) > room - 1 ? 0 : widest;
   if (fold.value !== k) fold.value = k;
+  if (hereMin.value !== min) hereMin.value = min;
 }
 /** The spacer's least width (`.spacer`). */
 const SPACER = 8;
-/** The widest the words at the left have been (reset when the bar's width or kind changes). */
-let hereRoom = 0;
-let barWidth = -1;
 
 let observer: ResizeObserver | undefined;
 let frame = 0;
@@ -399,13 +417,10 @@ function measureSoon() {
 }
 function observe(el: HTMLElement | undefined) {
   observer?.disconnect();
-  if (!el) return;
-  // The bar's width, and the words at its left (they change with the cursor, and a web font that
-  // arrives late changes every width).
-  observer?.observe(el);
-  const words = el.querySelector('[data-here]');
-  if (words) observer?.observe(words);
+  // The bar's width: the header's to give, so folding never changes it.
+  if (el) observer?.observe(el);
 }
+// A web font that arrives late changes every width.
 const onFonts = () => measureSoon();
 onMounted(() => {
   if (!props.inHeader) return;
@@ -419,18 +434,23 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
   document.fonts?.removeEventListener('loadingdone', onFonts);
 });
-// The bar drawn again (shown, or another kind of document), or what it holds changed.
+// The bar drawn again (shown, or another kind of document), or what it holds changed. (The name
+// the chip shows matters only once it is as wide as its own name.)
 watch(
   [toolbar, markdown],
   () =>
     void nextTick(() => {
-      hereRoom = 0;
       observe(toolbar.value);
       measureSoon();
     }),
 );
 watch(
-  () => [foldOrder.value.join(), spellingShown.value, props.away, settings.value.textSize],
+  () => [
+    foldOrder.value.join(),
+    spellingShown.value,
+    settings.value.textSize,
+    hereMin.value === 0 ? here.value.name : '',
+  ],
   () => void nextTick(measureSoon),
 );
 </script>
@@ -451,10 +471,12 @@ watch(
     <span
       v-if="markdown"
       class="here"
+      :class="{ chip: props.inHeader }"
+      :style="hereStyle"
       data-here
-      :data-folded="isFolded('here') ? '' : undefined"
     ><span :class="{ 'sr-only': props.inHeader }">{{ here.lead }}</span><span
       class="here-name"
+      data-here-name
       :class="{ short: props.inHeader }"
     >{{ here.name }}</span></span>
     <UTooltip
@@ -468,25 +490,24 @@ watch(
       <button
         type="button"
         class="here"
-        :class="{ 'here-icon': props.inHeader }"
+        :class="{ chip: props.inHeader }"
+        :style="hereStyle"
         data-here
         data-bar-item="here"
-        :data-folded="isFolded('here') ? '' : undefined"
         :tabindex="stopOf('here')"
         aria-describedby="element-bar-here-tip"
         @pointerdown="onPointerDown($event, 'here')"
         @pointerup="onPointerEnd"
         @pointercancel="onPointerEnd"
         @click="longPressed ? (longPressed = false) : openCheatSheet(true)"
-      ><UIcon
-        v-if="props.inHeader"
-        name="i-lucide-info"
-        class="here-glyph"
-        aria-hidden="true"
-      /><span :class="{ 'sr-only': props.inHeader }">{{ here.lead }}{{ here.name }}</span></button>
+      ><span :class="{ 'sr-only': props.inHeader }">{{ here.lead }}</span><span
+        class="here-name"
+        data-here-name
+        :class="{ short: props.inHeader }"
+      >{{ here.name }}</span></button>
     </UTooltip>
     <span v-if="!markdown" id="element-bar-here-tip" class="sr-only">{{ why }}</span>
-    <span class="rule" aria-hidden="true" :data-folded="isFolded('here') ? '' : undefined" />
+    <span class="rule" aria-hidden="true" />
     <UTooltip
       v-for="button in buttons"
       :key="button.command"
@@ -548,12 +569,11 @@ watch(
         {{ tipFor(SPELLING_BUTTON, apple) }}
       </span>
     </template>
-    <MenuButton v-if="moreLaidOut" :items="more" :content="{ align: 'start', onCloseAutoFocus }">
+    <MenuButton v-if="moreShown" :items="more" :content="{ align: 'start', onCloseAutoFocus }">
       <button
         type="button"
         class="button more"
         data-bar-item="more"
-        :data-folded="moreShown ? undefined : ''"
         :tabindex="stopOf('more')"
         :aria-label="markdown ? 'More formatting' : 'More elements'"
       >
@@ -562,11 +582,10 @@ watch(
     </MenuButton>
     <span class="spacer" />
     <button
-      v-if="!markdown"
+      v-if="!markdown && !props.inHeader"
       type="button"
       class="button icon"
       data-bar-item="help"
-      :data-folded="isFolded('help') ? '' : undefined"
       :tabindex="stopOf('help')"
       aria-label="Fountain cheat sheet"
       title="Fountain cheat sheet"
@@ -575,12 +594,11 @@ watch(
     >
       ?
     </button>
-    <MenuButton :items="options" :content="{ align: 'end', onCloseAutoFocus }">
+    <MenuButton v-if="!props.inHeader" :items="options" :content="{ align: 'end', onCloseAutoFocus }">
       <button
         type="button"
         class="button icon"
         data-bar-item="options"
-        :data-folded="isFolded('options') ? '' : undefined"
         :tabindex="stopOf('options')"
         aria-label="Element bar options"
         title="Element bar options"
@@ -644,14 +662,11 @@ watch(
   visibility: hidden;
   pointer-events: none;
 }
-/* Focus is elsewhere: out of sight (the header shows the script's title), still in the tab order,
-   so Tab brings it back, as a skip link comes into view. */
+/* Focus is in another region: unseen under the script's title (AppPane), but laid out, so it is
+   measured and folded already, and still in the tab order, so Tab brings it back. */
 .element-bar.away {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
 }
 .here {
   flex: none;
@@ -667,20 +682,19 @@ watch(
 button.here {
   cursor: help;
 }
-.here-icon {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  padding: 0;
-  color: var(--muted);
-}
-.here-icon:hover {
+/* Side by side, the element the cursor is in is a chip of its own at the left (a stable width,
+   from its widest name), in the text colour on the raised fill, where the buttons are muted on
+   none: the bar's one passive item. */
+.here.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 6px;
   background: var(--raised);
-  color: var(--text);
+  font-weight: 500;
 }
-.here-glyph {
-  width: 15px;
-  height: 15px;
+button.here.chip:hover {
+  background: var(--overlay);
 }
 /* In the header, a Markdown document's "You're on a blank line" reads "Blank line". */
 .here-name.short {
@@ -734,6 +748,9 @@ button.here {
   justify-content: center;
   min-width: 24px;
   padding: 0 6px;
+}
+.in-header .button {
+  padding: 0 5px;
 }
 .button.more {
   padding-right: 4px;

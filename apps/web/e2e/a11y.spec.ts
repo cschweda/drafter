@@ -181,10 +181,14 @@ for (const theme of THEMES) {
       await clean(page, "the element bar's More menu");
       await page.keyboard.press('Escape');
       await expect(page.getByRole('menu')).toBeHidden();
-      await elementBar(page).getByRole('button', { name: 'Element bar options' }).click();
-      await expect(page.getByRole('menu')).toBeVisible();
-      await clean(page, "the element bar's options menu");
-      await page.keyboard.press('Escape');
+      // A phone's bar has its own options menu (side by side, they are in More).
+      const options = elementBar(page).getByRole('button', { name: 'Element bar options' });
+      if ((await options.count()) > 0) {
+        await options.click();
+        await expect(page.getByRole('menu')).toBeVisible();
+        await clean(page, "the element bar's options menu");
+        await page.keyboard.press('Escape');
+      }
       // A button that does nothing says why, in the bar's toast.
       await setText(page, 'MARGARET\n');
       await elementBar(page).getByRole('button', { name: 'Dialogue', exact: true }).click();

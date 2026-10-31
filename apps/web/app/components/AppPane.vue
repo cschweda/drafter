@@ -514,11 +514,13 @@ const TOGGLES = [
 ] as const;
 
 // The element bar shows while focus is anywhere in the editor's pane (the editor, the bar, the
-// toggles), and gives way to the script's title when it goes elsewhere (design §3.2). A menu or a
-// dialog opened from there (drawn outside the pane) leaves things as they were. Worked out once
-// focus has settled: between a focusout and the focusin after it, focus is on the page's body.
+// toggles), or nowhere (the page's body: after a load, or a click on the Script's pages), and gives
+// way to the script's title while focus is in another region, such as the Inspector or the top bar
+// (design §3.2; docs/DECISIONS.md). A menu or a dialog drawn over the page leaves things as they
+// were, so the bar's own menus keep it. Worked out once focus has settled: between a focusout and
+// the focusin after it, focus is on the page's body.
 const editorSection = ref<HTMLElement>();
-const editing = ref(false);
+const editing = ref(true);
 /** Where focus may go without being "elsewhere": menus, dialogs, and lists drawn over the page. */
 const OVERLAYS =
   '[data-reka-menu-content], [role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"]';
@@ -529,8 +531,8 @@ function followFocus() {
     const section = editorSection.value;
     const active = document.activeElement;
     if (!section) return;
-    if (active && section.contains(active)) editing.value = true;
-    else if (active && active !== document.body && active.closest(OVERLAYS)) return;
+    if (!active || active === document.body || section.contains(active)) editing.value = true;
+    else if (active.closest(OVERLAYS)) return;
     else editing.value = false;
   });
 }
@@ -617,14 +619,16 @@ function onPanelKeydown(event: KeyboardEvent) {
   >
     <!-- The element bar while focus is in this pane, else the script's title (design §3.2). -->
     <div class="head" @mousedown="onEditorHeadMousedown">
-      <ElementBar in-header :away="!editing" />
-      <span
-        v-show="!barShown || !editing"
-        class="name"
-        data-script-title
-        :title="scriptTitle"
-      >{{ scriptTitle }}</span>
-      <span v-show="!barShown || !editing" class="grow" />
+      <div class="bar-slot">
+        <ElementBar in-header :away="!editing" />
+        <span
+          v-show="!barShown || !editing"
+          class="name"
+          :class="{ over: barShown }"
+          data-script-title
+          :title="scriptTitle"
+        >{{ scriptTitle }}</span>
+      </div>
       <div role="group" aria-label="Source view" class="toggles">
         <UTooltip v-for="toggle in TOGGLES" :key="toggle.key" :text="toggle.label" :delay-duration="400">
           <button
@@ -826,6 +830,22 @@ function onPanelKeydown(event: KeyboardEvent) {
   color: var(--muted);
   font-size: 12px;
   text-overflow: ellipsis;
+}
+.bar-slot {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  align-self: stretch;
+  min-width: 0;
+}
+/* The title over the (unseen) element bar while focus is in another region. */
+.name.over {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  transform: translateY(-50%);
 }
 .toggles {
   display: flex;

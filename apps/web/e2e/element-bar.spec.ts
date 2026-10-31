@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
   closeSettings,
   editor,
@@ -216,7 +216,7 @@ test('has the rest in More', async ({ page }) => {
   expect(await textOf(page)).toBe('a **word**');
 });
 
-test('moves along the bar with the arrow keys, as one tab stop', async ({ page }) => {
+test('moves along the bar with the arrow keys, as one tab stop', async ({ page, isMobile }) => {
   await write(page, 'She waits.');
   await here(page).focus();
   await page.keyboard.press('ArrowRight');
@@ -224,7 +224,10 @@ test('moves along the bar with the arrow keys, as one tab stop', async ({ page }
   await expect(button(page, 'Scene')).toHaveAttribute('tabindex', '0');
   await expect(here(page)).toHaveAttribute('tabindex', '-1');
   await page.keyboard.press('End');
-  await expect(bar(page).getByRole('button', { name: 'Element bar options' })).toBeFocused();
+  // Side by side, More is last: it holds the cheat sheet and the bar's options there.
+  await expect(
+    bar(page).getByRole('button', { name: isMobile ? 'Element bar options' : 'More elements' }),
+  ).toBeFocused();
   await page.keyboard.press('Home');
   await expect(here(page)).toBeFocused();
   // Enter on a button runs it, and the editor has focus after.
@@ -235,9 +238,18 @@ test('moves along the bar with the arrow keys, as one tab stop', async ({ page }
   await expect(editor(page)).toBeFocused();
 });
 
-test('opens the Fountain cheat sheet from ?', async ({ page, context }) => {
+/** Side by side, More holds the cheat sheet and the bar's options; a phone's bar has ? and ⋯. */
+async function fromBar(page: Page, isMobile: boolean, phoneButton: string, item: string) {
+  if (isMobile) {
+    await bar(page).getByRole('button', { name: phoneButton }).click();
+    if (phoneButton === 'Fountain cheat sheet') return;
+  } else await button(page, 'More elements').click();
+  await page.getByRole('menuitem', { name: item }).click();
+}
+
+test('opens the Fountain cheat sheet from ?', async ({ page, context, isMobile }) => {
   const opened = context.waitForEvent('page');
-  await bar(page).getByRole('button', { name: 'Fountain cheat sheet' }).click();
+  await fromBar(page, isMobile, 'Fountain cheat sheet', 'Fountain cheat sheet');
   const sheet = await opened;
   await sheet.waitForLoadState();
   expect(new URL(sheet.url()).pathname).toBe('/docs/fountain/');
@@ -245,9 +257,8 @@ test('opens the Fountain cheat sheet from ?', async ({ page, context }) => {
   await expect(sheet.locator('#character')).toContainText('@');
 });
 
-test('hides from its ⋯ menu, and Settings brings it back', async ({ page }) => {
-  await bar(page).getByRole('button', { name: 'Element bar options' }).click();
-  await page.getByRole('menuitem', { name: 'Hide the element bar' }).click();
+test('hides from its ⋯ menu, and Settings brings it back', async ({ page, isMobile }) => {
+  await fromBar(page, isMobile, 'Element bar options', 'Hide the element bar');
   await expect(bar(page)).toHaveCount(0);
   await expect(page.getByRole('status').filter({ hasText: 'element bar is hidden' })).toContainText(
     'Turn it back on in Settings',
@@ -385,26 +396,29 @@ test('says why a key did nothing', async ({ page }) => {
 });
 
 // Fresh-look design §3.2 and §10a: side by side, the bar sits in the editor's 36px header, never
-// clips (it folds its buttons into More instead), keeps the marks in its tooltips, and gives way to
-// the script's title while focus is elsewhere.
+// clips (it folds its buttons into More instead, by the width alone), names the element the cursor
+// is in in a chip at its left, keeps the marks in its tooltips, and gives way to the script's title
+// while focus is in another region.
 test.describe('in the editor’s header', () => {
   test.skip(({ isMobile }) => isMobile, 'two panes side by side');
 
   const header = (page: Page) => page.locator('[data-pane="left"] .head');
   const title = (page: Page) => header(page).locator('[data-script-title]');
+  const markdownBar = (page: Page) => page.getByRole('toolbar', { name: 'Markdown bar' });
+  const chip = (page: Page) => header(page).locator('[data-here-name]');
 
   /** What clips: the bar's and the header's overflow, and any item drawn past the bar's edges. */
-  async function clipping(page: Page) {
-    return bar(page).evaluate((el) => {
+  async function clipping(toolbar: Locator) {
+    return toolbar.evaluate((el) => {
       const box = el.getBoundingClientRect();
       const head = el.closest('.head') as HTMLElement;
-      const out = [...el.querySelectorAll<HTMLElement>('[data-bar-item]')]
+      const out = [...el.querySelectorAll<HTMLElement>('[data-bar-item], [data-here]')]
         .filter((item) => getComputedStyle(item).visibility !== 'hidden')
         .filter((item) => {
           const r = item.getBoundingClientRect();
           return r.left < box.left - 0.5 || r.right > box.right + 0.5;
         })
-        .map((item) => item.dataset.barItem);
+        .map((item) => item.dataset.barItem ?? 'here');
       return {
         bar: el.scrollWidth - el.clientWidth,
         head: head.scrollWidth - head.clientWidth,
@@ -412,21 +426,45 @@ test.describe('in the editor’s header', () => {
       };
     });
   }
-  /** The items drawn on the bar, by their ids. */
-  const drawn = (page: Page) =>
-    bar(page)
+  const NONE = { bar: 0, head: 0, out: [] };
+  /** The items drawn on a bar, by their ids. */
+  const drawn = (toolbar: Locator) =>
+    toolbar
       .locator('[data-bar-item]')
       .evaluateAll((all) =>
         all
           .filter((el) => getComputedStyle(el).visibility !== 'hidden')
           .map((el) => (el as HTMLElement).dataset.barItem),
       );
+  /** The bar is out of sight, under the script's title. */
+  const away = (page: Page) =>
+    page.locator('[data-element-bar]').evaluate((el) => getComputedStyle(el).opacity === '0');
   async function textSize(page: Page, size: string) {
     await openSettings(page);
     await settingsDialog(page).getByLabel('Text size').selectOption(size);
     await closeSettings(page);
     await editor(page).focus();
   }
+  async function narrowest(page: Page) {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    const divider = page.getByRole('separator', { name: 'Resize panes' });
+    await divider.focus();
+    await page.keyboard.press('Home');
+    await expect(divider).toHaveAttribute('aria-valuenow', '25');
+    await editor(page).focus();
+  }
+  async function newMarkdown(page: Page) {
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New Markdown document' })
+      .click();
+    await expect(editor(page)).toContainText('# Untitled');
+    await editor(page).focus();
+    await expect(markdownBar(page)).toBeVisible();
+  }
+  const STAGE_PLAY =
+    '# ACT ONE\n\n## Scene 1\n\nMargaret waits.\n\nMARGARET\n(quietly)\nHello?\n\n/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/';
 
   test('never clips at 1280 and 1440 with two panes, at text size Large too', async ({ page }) => {
     for (const size of ['1', '1.5']) {
@@ -437,8 +475,8 @@ test.describe('in the editor’s header', () => {
           await write(page, text);
           await expect(bar(page)).toBeVisible();
           await expect
-            .poll(() => clipping(page), `${width}px, text size ${size}`)
-            .toEqual({ bar: 0, head: 0, out: [] });
+            .poll(() => clipping(bar(page)), `${width}px, text size ${size}`)
+            .toEqual(NONE);
         }
         // In the header: the editor side has two bars above the writing, not three.
         const [head, toolbar, text] = await Promise.all([
@@ -455,40 +493,57 @@ test.describe('in the editor’s header', () => {
     }
   });
 
-  test('collapses to the current element and More when narrow', async ({ page }) => {
-    await page.setViewportSize({ width: 1024, height: 800 });
+  test('a screenplay’s six buttons all show at 1280', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'the widths are Chromium’s; elsewhere a fold is allowed');
+    await page.setViewportSize({ width: 1280, height: 800 });
     await write(page, 'INT. HALL - DAY\n\nMARGARET\nHello.');
-    const divider = page.getByRole('separator', { name: 'Resize panes' });
-    await divider.focus();
-    await page.keyboard.press('Home');
-    await expect(divider).toHaveAttribute('aria-valuenow', '25');
-    await editor(page).focus();
-    await expect.poll(() => clipping(page)).toEqual({ bar: 0, head: 0, out: [] });
-    // The element the cursor is in, and More; the other buttons wait in More.
-    await expect(button(page, 'Dialogue')).toBeVisible();
-    await expect(button(page, 'Dialogue')).toHaveAttribute('aria-pressed', 'true');
-    await expect(button(page, 'More elements')).toBeVisible();
-    const items = await drawn(page);
-    expect(items).toContain('more');
-    expect(items).toContain('element-dialogue');
-    for (const id of [
-      'element-scene-heading',
-      'element-action',
-      'element-character',
-      'element-parenthetical',
-      'element-transition',
-    ]) {
-      expect(items, id).not.toContain(id);
+    await expect
+      .poll(() => drawn(bar(page)))
+      .toEqual([
+        'here',
+        'element-scene-heading',
+        'element-action',
+        'element-character',
+        'element-dialogue',
+        'element-parenthetical',
+        'element-transition',
+        'more',
+      ]);
+  });
+
+  test('never clips at 1280 and 1440 on a stage play or a Markdown document', async ({ page }) => {
+    await setText(page, STAGE_PLAY);
+    await page.keyboard.press('ControlOrMeta+Home');
+    // A stage play's bar (its Act button folds last, being the leftmost).
+    await expect(button(page, 'Act')).toBeVisible();
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      await editor(page).focus();
+      await expect.poll(() => clipping(bar(page)), `stage play, ${width}px`).toEqual(NONE);
     }
+    await newMarkdown(page);
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      await editor(page).focus();
+      await expect.poll(() => clipping(markdownBar(page)), `Markdown, ${width}px`).toEqual(NONE);
+    }
+  });
+
+  test('collapses to the current element and More when narrow', async ({ page }) => {
+    await write(page, 'INT. HALL - DAY\n\nMARGARET\nHello.');
+    await narrowest(page);
+    await expect.poll(() => clipping(bar(page))).toEqual(NONE);
+    // The element the cursor is in, and More; the buttons wait in More.
+    await expect(chip(page)).toBeVisible();
+    await expect(chip(page)).toHaveText('Dialogue');
+    await expect(button(page, 'More elements')).toBeVisible();
+    await expect.poll(() => drawn(bar(page))).toEqual(['here', 'more']);
     // The arrow keys go only through what is drawn.
-    await button(page, 'Dialogue').focus();
-    await page.keyboard.press('End');
-    const lastId = await page.evaluate(
-      () => (document.activeElement as HTMLElement | null)?.dataset.barItem,
-    );
-    expect(items).toContain(lastId);
-    // More holds the folded buttons first, and they still work.
-    await button(page, 'More elements').click();
+    await here(page).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(button(page, 'More elements')).toBeFocused();
+    // More holds the folded buttons first, then the rest, the cheat sheet, and the options.
+    await page.keyboard.press('Enter');
     const menu = page.getByRole('menu');
     for (const name of [
       'Scene',
@@ -500,7 +555,6 @@ test.describe('in the editor’s header', () => {
     ]) {
       await expect(menu.getByRole('menuitem', { name: new RegExp(`^${name}\\b`) })).toBeVisible();
     }
-    // The cheat sheet and the bar's options, folded too, are at its end.
     await expect(menu.getByRole('menuitem', { name: 'Fountain cheat sheet' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Hide the element bar' })).toBeVisible();
     await page.keyboard.press('Escape');
@@ -510,12 +564,13 @@ test.describe('in the editor’s header', () => {
     await expect(editor(page)).toBeFocused();
     expect(await textOf(page)).toBe('She waits.\n\nINT. KITCHEN - NIGHT');
     // Given room again, every button comes back out of More.
+    const divider = page.getByRole('separator', { name: 'Resize panes' });
     await divider.focus();
     await page.keyboard.press('End');
     await page.setViewportSize({ width: 1440, height: 800 });
     await editor(page).focus();
     await expect
-      .poll(() => drawn(page))
+      .poll(() => drawn(bar(page)))
       .toEqual(
         expect.arrayContaining([
           'element-scene-heading',
@@ -527,7 +582,82 @@ test.describe('in the editor’s header', () => {
           'more',
         ]),
       );
-    await expect.poll(() => clipping(page)).toEqual({ bar: 0, head: 0, out: [] });
+    await expect.poll(() => clipping(bar(page))).toEqual(NONE);
+  });
+
+  test('folds by the width alone: moving the cursor moves nothing', async ({ page }) => {
+    // At 1024 with the panes half and half, some buttons are in More.
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await setText(page, 'INT. HALL - DAY\n\nMARGARET\n(quietly)\nHello.\n\nShe waits.');
+    await editor(page).focus();
+    const lines: Array<[number, string]> = [
+      [2, 'Character'],
+      [3, 'Parenthetical'],
+      [4, 'Dialogue'],
+      [6, 'Action'],
+    ];
+    let first: Array<string | undefined> | undefined;
+    let chipBox: { x: number; width: number } | null | undefined;
+    for (const [line, name] of lines) {
+      await page.keyboard.press('ControlOrMeta+Home');
+      for (let i = 0; i < line; i++) await page.keyboard.press('ArrowDown');
+      await expect(chip(page)).toHaveText(name);
+      await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done(null))));
+      const items = await drawn(bar(page));
+      const box = await here(page).boundingBox();
+      if (!first) {
+        first = items;
+        chipBox = box;
+        expect(items.length, 'something folds at 1024').toBeLessThan(8);
+        continue;
+      }
+      expect(items, name).toEqual(first);
+      expect(box?.width, name).toBe(chipBox?.width);
+      expect(box?.x, name).toBe(chipBox?.x);
+    }
+  });
+
+  test('names the element the cursor is in, a note or a blank line too', async ({ page }) => {
+    await setText(
+      page,
+      'Title: Test\n\n# Act one\n\n= A synopsis\n\n[[A note]]\n\n>THE END<\n\n~La la la\n\n!INT. HALL\n',
+    );
+    await editor(page).focus();
+    const lines: Array<[number, string]> = [
+      [0, 'Title page'],
+      [1, 'Blank line'],
+      [2, 'Section'],
+      [4, 'Synopsis'],
+      [6, 'Note'],
+      [8, 'Centered'],
+      [10, 'Lyric'],
+      [12, 'Action'],
+    ];
+    for (const [line, name] of lines) {
+      await page.keyboard.press('ControlOrMeta+Home');
+      for (let i = 0; i < line; i++) await page.keyboard.press('ArrowDown');
+      // As drawn: a blank line's "blank line" is capitalized by its style.
+      await expect(chip(page), `line ${line}`).toHaveText(name, { useInnerText: true });
+      await expect(chip(page)).toBeVisible();
+    }
+    // Its name for a screen reader says where the cursor is in full.
+    await expect(here(page)).toHaveAccessibleName('You’re in: Action');
+  });
+
+  test('a Markdown document’s formatting folds into More when narrow', async ({ page }) => {
+    await newMarkdown(page);
+    await narrowest(page);
+    await expect.poll(() => clipping(markdownBar(page))).toEqual(NONE);
+    const more = markdownBar(page).getByRole('button', { name: 'More formatting' });
+    await expect(more).toBeVisible();
+    const items = await drawn(markdownBar(page));
+    expect(items).not.toContain('markdown-code');
+    await more.click();
+    const menu = page.getByRole('menu');
+    for (const name of ['Code', 'Link', 'Quote']) {
+      await expect(menu.getByRole('menuitem', { name: new RegExp(`^${name}\\b`) })).toBeVisible();
+    }
+    await expect(menu.getByRole('menuitem', { name: 'Hide the element bar' })).toBeVisible();
   });
 
   test('marks show as tooltips, not inline', async ({ page }) => {
@@ -569,48 +699,76 @@ test.describe('in the editor’s header', () => {
     expect(fills.other).not.toBe(fills.soft);
   });
 
-  test('hidden when the editor doesn’t have focus, replaced by the script’s title', async ({
-    page,
-  }) => {
-    const away = () =>
-      bar(page).evaluate((el) => el.getBoundingClientRect().width <= 1 && el.clientHeight <= 1);
-    await expect(bar(page)).toBeVisible();
-    await expect.poll(away).toBe(false);
+  test('gives way to the script’s title while focus is in another region', async ({ page }) => {
+    await expect.poll(() => away(page)).toBe(false);
     await expect(title(page)).toBeHidden();
     // Focus in the Inspector: the title takes the bar's place.
     await page.locator('#tab-right-outline').click();
-    await expect.poll(away).toBe(true);
+    await expect.poll(() => away(page)).toBe(true);
     await expect(title(page)).toBeVisible();
     await expect(title(page)).not.toHaveText('');
     // Back in the editor, the bar again.
     await editor(page).focus();
-    await expect.poll(away).toBe(false);
+    await expect.poll(() => away(page)).toBe(false);
     await expect(title(page)).toBeHidden();
-    // Keyboard users still reach it: focus anywhere in the editor's pane shows it, and Shift+Tab
-    // from the pane's toggles goes to it.
+    // Focus anywhere in the editor's pane shows it, and Shift+Tab from the toggles goes to it.
     await page.locator('#tab-right-outline').focus();
-    await expect.poll(away).toBe(true);
+    await expect.poll(() => away(page)).toBe(true);
     const numbers = page
       .getByRole('group', { name: 'Source view' })
       .getByRole('button', { name: 'Line numbers' });
     await numbers.focus();
-    await expect.poll(away).toBe(false);
+    await expect.poll(() => away(page)).toBe(false);
     await page.keyboard.press('Shift+Tab');
     await expect
-      .poll(() =>
-        page.evaluate(
-          () => !!document.activeElement?.closest('[role="toolbar"][data-element-bar]'),
-        ),
-      )
+      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-element-bar]')))
       .toBe(true);
-    await expect.poll(away).toBe(false);
+    await expect.poll(() => away(page)).toBe(false);
     // Its menus keep it: the More menu is drawn outside the pane.
-    await button(page, 'More elements').click();
+    await button(page, 'More elements').focus();
+    await page.keyboard.press('Enter');
     await expect(page.getByRole('menu')).toBeVisible();
-    await expect.poll(away).toBe(false);
+    await expect.poll(() => away(page)).toBe(false);
     await page.keyboard.press('Escape');
     await expect(button(page, 'More elements')).toBeFocused();
-    await expect.poll(away).toBe(false);
+    await expect.poll(() => away(page)).toBe(false);
+    // Focus on nothing (a click on the Script's pages): the bar, not an empty-looking header.
+    await page.locator('#tab-right-outline').click();
+    await expect.poll(() => away(page)).toBe(true);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await expect.poll(() => away(page)).toBe(false);
+  });
+
+  test('shows the bar after a load, with focus on nothing', async ({ page }) => {
+    await page.reload();
+    await expect(editor(page)).toBeVisible();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+    await expect.poll(() => away(page)).toBe(false);
+    await expect(title(page)).toBeHidden();
+    await expect(chip(page)).toBeVisible();
+  });
+
+  test('Tab from the top bar reaches the bar, folded already, and shows it', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    // Focus in the top bar: the title shows, the bar is unseen but laid out and measured.
+    const last = page.getByRole('banner').getByRole('button').last();
+    await last.focus();
+    await expect.poll(() => away(page)).toBe(true);
+    const unseen = await drawn(bar(page));
+    expect(unseen.length, 'something folds at 1024, while unseen too').toBeLessThan(8);
+    let reached = false;
+    for (let i = 0; i < 8 && !reached; i++) {
+      await page.keyboard.press('Tab');
+      reached = await page.evaluate(() => !!document.activeElement?.closest('[data-element-bar]'));
+    }
+    expect(reached, 'Tab reaches the element bar').toBe(true);
+    await expect.poll(() => away(page)).toBe(false);
+    const focused = page.locator('[data-element-bar] :focus-visible');
+    await expect(focused).toHaveCount(1);
+    const box = await bar(page).boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThan(100);
+    // The fold it was measured to while unseen is the one it shows.
+    expect(await drawn(bar(page))).toEqual(unseen);
   });
 
   test('a click on the header’s empty space keeps the editor’s focus', async ({ page }) => {

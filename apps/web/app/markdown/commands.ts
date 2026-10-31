@@ -163,6 +163,16 @@ export const MARKDOWN_COMMANDS: Record<MarkdownAction, StateCommand> = {
   code: wrap('`', '`'),
 };
 
+/** Every name `markdownElement` gives (the element bar keeps its chip as wide as the widest). */
+export const MARKDOWN_ELEMENT_NAMES: readonly string[] = [
+  ...[1, 2, 3, 4, 5, 6].map((level) => `Heading ${level}`),
+  'Code block',
+  'Numbered list item',
+  'List item',
+  'Quote',
+  'Paragraph',
+];
+
 /**
  * The element of the cursor's line in a Markdown document, in words ("Heading 2", "List item"),
  * from the Markdown grammar's tree; null on a blank line, or before the grammar has loaded.

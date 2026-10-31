@@ -104,7 +104,7 @@ test.describe('side by side', () => {
   test('with the element bar hidden', async ({ page }) => {
     // The bar shows while focus is in the editor's pane (fresh-look design §3.2).
     await editor(page).focus();
-    await page.getByRole('button', { name: 'Element bar options' }).click();
+    await page.getByRole('button', { name: 'More elements' }).click();
     await page.getByRole('menuitem', { name: 'Hide the element bar' }).click();
     await expect(page.getByRole('toolbar', { name: 'Element bar' })).toHaveCount(0);
     await expect.poll(async () => (await stored(page)).elementBar).toBe(false);
