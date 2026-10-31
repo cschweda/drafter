@@ -283,8 +283,8 @@ onBeforeUnmount(() => {
 .panes.wide > :deep(*) {
   grid-row: 1 / -1;
 }
-/* The Source alone: the text is a column 64 characters wide (the lines carry 24px of padding of their
-   own), centered, with no gutters, and room under the last line for the marker. */
+/* The Source alone: the text fits the window, with even margins that grow with it (the lines carry
+   24px of padding of their own), with no gutters, and room under the last line for the marker. */
 .focus {
   min-height: 0;
   animation: focus-in 0.18s ease-out;
@@ -293,8 +293,8 @@ onBeforeUnmount(() => {
   display: none;
 }
 .focus :deep(.cm-content) {
-  max-width: calc(64ch + 24px);
-  margin-inline: auto;
+  margin-inline: clamp(0px, 8vw - 24px, 120px);
+  padding-top: clamp(16px, 5vh, 48px);
   padding-bottom: 56px;
 }
 @keyframes focus-in {
