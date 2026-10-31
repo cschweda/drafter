@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `apps/desktop`: **the Windows on Arm (arm64) installer is no longer built**, for now; it may come back later. Windows 11 on Arm PCs (a Snapdragon laptop, or Windows 11 in a VM on an Apple silicon Mac) can use the x64 installer, which Windows runs under its built-in emulation. CI drops the `windows-arm` job, so a release waits for the Linux and Windows jobs and carries five files.
 - README: **badges at the top**: the latest release, the desktop build, the Netlify deploy, the licence (MIT), drafter.dev, the platforms, and Fountain.
+- `apps/desktop`: the spelling test no longer looks for the dictionary's request, which the checker could make before the test was listening (it failed now and then on the Mac and Windows runners); the misspelling mark still shows the bundled dictionary loaded.
 
 ### Fixed
 
