@@ -10,7 +10,7 @@
 [![Platforms: web, Linux, Windows](https://img.shields.io/badge/platforms-web%20%7C%20Linux%20%7C%20Windows-555)](#drafter-for-linux)
 [![Format: Fountain](https://img.shields.io/badge/format-Fountain-8a5a00)](https://fountain.io)
 
-**An open-source, local-first, zero-login writing app, Fountain first: screenplays and stage plays in plain-text [Fountain](https://fountain.io), and novels and treatments in Markdown.** Write on the left; see the paginated, industry-formatted pages on the right, updating as you type.
+**Drafter™ is an open-source, local-first, zero-login writing app, Fountain first: screenplays and stage plays in plain-text [Fountain](https://fountain.io), and novels and treatments in Markdown.** Write on the left; see the paginated, industry-formatted pages on the right, updating as you type.
 
 **Fountain first, every main format out.** Drafter is built around Fountain, plain text that any app can open and that will still open in fifty years. But a script is never locked in: Drafter opens Final Draft, Highland, Fade In, Markdown, and plain-text files, and exports PDF, Final Draft (`.fdx`), Markdown, plain text, a self-contained web page (HTML), and an e-book (EPUB), so it can go wherever it needs to go. See [Formats](#formats).
 
@@ -504,3 +504,5 @@ The architecture and technical design are drafts (v0.2) and will change as each 
 ## License
 
 [MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/).
+
+**Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own.
