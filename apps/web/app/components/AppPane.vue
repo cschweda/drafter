@@ -239,7 +239,8 @@ function onKeydown(event: KeyboardEvent) {
 // ---- Fitting the Inspector's header (Call 15) ------------------------------------------------
 // When the tabs and the view's tools would collide, the tools that have an icon go icon-only first
 // (their labels stay their names and tooltips), then tools fold into "⋯", one at a time from the
-// left (so Fit · 100%, Close, and the like stay longest), then tabs move into More from the right;
+// left (so Fit · 100%, Close, and the like stay longest; a tool marked `data-fold-first` goes
+// before them all), then tabs move into More from the right;
 // the one showing always stays. Measured, never a fixed count: every tab and tool stays drawn
 // (a folded one hidden, out of the flow), so their widths are known without drawing them twice.
 
@@ -248,7 +249,7 @@ const toolsBox = ref<HTMLElement>();
 const tablist = ref<HTMLElement>();
 /** The tools are icon-only (the stage before any folds). */
 const toolsCompact = ref(false);
-/** How many of the view's tools, from the left, are folded into "⋯". */
+/** How many of the view's tools, in their fold order (`foldOrder`), are folded into "⋯". */
 const foldedTools = ref(0);
 const toolsFolded = computed(() => foldedTools.value > 0);
 const toolsOpen = ref(false);
@@ -272,13 +273,33 @@ function toolItems(box: HTMLElement | null | undefined): HTMLElement[] {
   });
 }
 
+/**
+ * The order the tools fold in: one marked `data-fold-first` (Scaffold's page name, so Back stays
+ * one click away) before the rest, then from the left. Indexes into `toolItems`.
+ */
+function foldOrder(items: HTMLElement[]): number[] {
+  const indexes = items.map((_, i) => i);
+  const first = indexes.filter((i) => items[i]?.hasAttribute('data-fold-first'));
+  return [...first, ...indexes.filter((i) => !first.includes(i))];
+}
+
+/** The first `k` tools to fold, by index. */
+function foldedSet(items: HTMLElement[], k: number): Set<number> {
+  return new Set(foldOrder(items).slice(0, k));
+}
+
 /** Marks the header's tools folded (hidden, still measured) and the panel's others hidden. */
 function applyFold() {
-  toolItems(toolsBox.value).forEach((el, i) => {
-    el.toggleAttribute('data-tool-folded', i < foldedTools.value);
+  const header = toolItems(toolsBox.value);
+  const folded = foldedSet(header, foldedTools.value);
+  header.forEach((el, i) => {
+    el.toggleAttribute('data-tool-folded', folded.has(i));
   });
-  toolItems(toolsPanel.value).forEach((el, i) => {
-    el.toggleAttribute('data-tool-shown-above', i >= foldedTools.value);
+  // The panel draws the same tools, in the same order.
+  const panel = toolItems(toolsPanel.value);
+  const shown = foldedSet(panel, foldedTools.value);
+  panel.forEach((el, i) => {
+    el.toggleAttribute('data-tool-shown-above', !shown.has(i));
   });
 }
 
@@ -293,11 +314,14 @@ function measure() {
   const gap = Number.parseFloat(style.columnGap) || 0;
   const widths = tabButtons().map((button) => button.getBoundingClientRect().width);
   const more = header.querySelector<HTMLElement>('[data-more]')?.getBoundingClientRect().width ?? 0;
-  const tools = toolItems(toolsBox.value).map((el) => el.getBoundingClientRect().width);
+  const items = toolItems(toolsBox.value);
+  const tools = items.map((el) => el.getBoundingClientRect().width);
+  const order = foldOrder(items);
   const tabsWidth = widths.reduce((sum, w) => sum + w, 0) + Math.max(0, widths.length - 1) * 2;
-  /** The tools from the `k`th on, as wide as they draw. */
+  /** The tools left in the header once `k` have folded, as wide as they draw. */
   const toolsFrom = (k: number) => {
-    const rest = tools.slice(k);
+    const gone = new Set(order.slice(0, k));
+    const rest = tools.filter((_, i) => !gone.has(i));
     return rest.length === 0
       ? 0
       : rest.reduce((sum, w) => sum + w, 0) + (rest.length - 1) * TOOL_GAP + gap + SPARE;

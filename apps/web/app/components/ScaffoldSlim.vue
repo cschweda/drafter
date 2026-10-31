@@ -66,7 +66,8 @@ function onKeydown(event: KeyboardEvent) {
     @click="scaffoldBack"
     @keydown="onKeydown"
   />
-  <span class="name">{{ name }}</span>
+  <!-- The name folds into "⋯" before Back does, so Back stays one click away (Task 3b). -->
+  <span class="name" data-fold-first>{{ name }}</span>
   <span class="spacer" />
   <div v-if="page.kind === 'scene'" class="zoom">
     <ToolButton
