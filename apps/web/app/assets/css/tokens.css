@@ -20,6 +20,10 @@
   --on-accent: #111216;
   --accent-text: #e5b04a;
   --focus: #f2cb7a;
+  /* A hovered primary button, and a highlighted or chosen row in a menu or the palette (Task 7):
+     --on-accent on the one, --text and --muted on the other keep 4.5:1. */
+  --accent-hover: #edc06a;
+  --highlight: #2c3038;
   --desk: #0b0c0f;
   --paper: #e8e4da;
   --paper-ink: #1c1c1c;
@@ -54,6 +58,8 @@
   --on-accent: #111216;
   --accent-text: #7a5200;
   --focus: #a06a00;
+  --accent-hover: #d9a33c;
+  --highlight: #e2dfd9;
   --desk: #e9e7e2;
   --paper: #ffffff;
   --paper-ink: #1c1c1c;

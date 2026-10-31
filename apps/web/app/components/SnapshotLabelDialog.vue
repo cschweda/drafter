@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DDialog from '~/components/ui/DDialog.vue';
 import { snapshotTime } from '~/snapshots/history';
 import type { SnapshotInfo } from '~/storage/snapshots';
 
@@ -11,7 +12,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ save: [label: string]; close: [] }>();
 
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const label = ref('');
 
 watch(
@@ -38,7 +39,7 @@ function onClose() {
 </script>
 
 <template>
-  <dialog
+  <DDialog size="sm"
     ref="dialog"
     class="snapshot-label"
     aria-labelledby="snapshot-label-title"
@@ -46,7 +47,7 @@ function onClose() {
     @close="onClose"
   >
     <form v-if="props.snapshot" @submit="onSubmit">
-      <h2 id="snapshot-label-title">Label the snapshot from {{ snapshotTime(props.snapshot.createdAt) }}</h2>
+      <h2 id="snapshot-label-title" class="d-dialog-title">Label the snapshot from {{ snapshotTime(props.snapshot.createdAt) }}</h2>
       <p id="snapshot-label-help" class="help">
         A labeled snapshot is always kept. Leave it empty to take the label off.
       </p>
@@ -54,71 +55,36 @@ function onClose() {
         <span>Label</span>
         <input v-model="label" type="text" autocomplete="off" maxlength="200" autofocus />
       </label>
-      <div class="buttons">
-        <button type="button" class="btn" @click="dialog?.close()">Cancel</button>
-        <button type="submit" class="btn primary">Save</button>
+      <div class="d-dialog-footer">
+        <DButton @click="dialog?.close()">Cancel</DButton>
+        <DButton variant="primary" type="submit">Save</DButton>
       </div>
     </form>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
-.snapshot-label {
-  box-sizing: border-box;
-  width: min(26rem, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-}
 h2 {
-  margin: 0 0 6px;
-  font-size: 16px;
   overflow-wrap: anywhere;
 }
 .help {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--muted);
-  font-size: 13px;
 }
 .field {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
 }
 .field input {
   flex: 1;
   min-width: 0;
-  min-height: 28px;
+  min-height: 30px;
   padding: 2px 8px;
-  border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-.btn {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn.primary {
-  border-color: var(--heading);
 }
 </style>

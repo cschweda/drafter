@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SceneNumbering, TitlePageMode } from '@drafter/layout';
+import DDialog from '~/components/ui/DDialog.vue';
 import { useEditor } from '~/editor/session';
 import {
   EXPORT_OPTION_HINTS,
@@ -22,7 +23,7 @@ import type { ExportOptions } from '~/workers/export-compute';
 // Each choice is kept the moment it is made, on the script's project, never in its text; Done
 // closes.
 // Export as PDF still saves at once, with the options the script has.
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const script = useScript();
 const { readOnly } = useGuard();
 const { kind, view } = useEditor();
@@ -78,14 +79,14 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
 </script>
 
 <template>
-  <dialog
+  <DDialog size="md"
     ref="dialog"
     class="export-options"
     aria-labelledby="export-options-title"
     aria-describedby="export-options-what"
     @close="onClose"
   >
-    <h2 id="export-options-title">Export options</h2>
+    <h2 id="export-options-title" class="d-dialog-title">Export options</h2>
     <p id="export-options-what">
       How this script prints and exports: as a PDF, an HTML page, an EPUB, plain text, a Final Draft
       file, or Markdown. The script itself doesn’t change.
@@ -156,27 +157,15 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
     <p v-if="failed" role="alert" class="failed">
       Couldn’t keep that choice in this browser. Try again.
     </p>
-    <div class="buttons">
-      <button type="button" class="btn primary" autofocus @click="dialog?.close()">Done</button>
+    <div class="d-dialog-footer">
+      <DButton variant="primary" autofocus @click="dialog?.close()">Done</DButton>
     </div>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
 .export-options {
-  box-sizing: border-box;
-  width: min(30rem, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
   overflow-y: auto;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-}
-h2 {
-  margin: 0 0 6px;
-  font-size: 16px;
 }
 p {
   margin: 0 0 12px;
@@ -189,7 +178,7 @@ p {
 fieldset {
   margin: 0 0 12px;
   padding: 8px 12px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 legend {
@@ -224,26 +213,5 @@ fieldset:disabled label {
 }
 .failed {
   color: var(--text);
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 4px;
-}
-.btn {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn.primary {
-  border-color: var(--heading);
 }
 </style>

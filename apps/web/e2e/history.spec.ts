@@ -411,6 +411,10 @@ test.describe('History on a phone', () => {
     await newScreenplay(page);
     await runCommand(page, 'History…');
     await expect(history(page)).toBeVisible();
+    // Once it has risen into place (the one motion).
+    await history(page).evaluate((el) =>
+      Promise.all(el.getAnimations().map((a) => a.finished.catch(() => {}))),
+    );
     const box = await history(page).boundingBox();
     const size = page.viewportSize();
     expect(box && size).toBeTruthy();

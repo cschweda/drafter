@@ -17,6 +17,7 @@ import {
 } from '@drafter/notes';
 import type { Scene } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
+import DDialog from '~/components/ui/DDialog.vue';
 import { useLayout } from '~/editor/layout';
 import { pageOf } from '~/editor/pages';
 import { useEditor } from '~/editor/session';
@@ -505,7 +506,7 @@ function menuItems(item: Item): DropdownMenuItem[][] {
 
 const toResolve = computed(() => items.value.map((item) => item.entry).filter(isOpen));
 const asking = shallowRef<NoteEntry[] | null>(null);
-const askDialog = ref<HTMLDialogElement>();
+const askDialog = ref<InstanceType<typeof DDialog>>();
 const resolveButton = ref<HTMLButtonElement>();
 const notesWord = (n: number) => `${n} ${n === 1 ? 'note' : 'notes'}`;
 
@@ -763,21 +764,22 @@ watch(
       @save="onCategorySave"
       @close="onCategoryClose"
     />
-    <dialog
+    <DDialog
       ref="askDialog"
+      size="sm"
       class="ask"
       aria-labelledby="notes-ask-title"
       @close="onAskClose"
     >
       <template v-if="asking">
-        <h2 id="notes-ask-title">Resolve {{ notesWord(asking.length) }}?</h2>
+        <h2 id="notes-ask-title" class="d-dialog-title">Resolve {{ notesWord(asking.length) }}?</h2>
         <p>Each gets <code>#resolved</code>; one undo takes them all back.</p>
-        <div class="buttons">
-          <button type="button" class="btn" autofocus @click="askDialog?.close()">Cancel</button>
-          <button type="button" class="btn primary" @click="confirmResolveAll">Resolve</button>
+        <div class="d-dialog-footer">
+          <DButton autofocus @click="askDialog?.close()">Cancel</DButton>
+          <DButton variant="primary" @click="confirmResolveAll">Resolve</DButton>
         </div>
       </template>
-    </dialog>
+    </DDialog>
   </div>
 </template>
 
@@ -848,28 +850,9 @@ watch(
   color: var(--heading);
   font-weight: 700;
 }
-.ask {
-  box-sizing: border-box;
-  width: min(24rem, calc(100vw - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-}
-.ask h2 {
-  margin: 0 0 6px;
-  font-size: 16px;
-}
 .ask p {
   margin: 0;
   color: var(--muted);
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
 }
 @media (forced-colors: active) {
   .chip[aria-pressed='true'] {

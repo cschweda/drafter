@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { SCENE_COLORS, type SceneDetails } from '@drafter/outline';
+import DDialog from '~/components/ui/DDialog.vue';
 import { useEditor } from '~/editor/session';
 import { sayOutline } from '~/outline/notice';
 import {
@@ -17,7 +18,7 @@ import { useOutline } from '~/outline/use-outline';
 
 const outline = useOutline();
 const { view } = useEditor();
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 
 const scene = computed(() => {
   const id = sceneDetailsFor.value;
@@ -111,14 +112,14 @@ function onClose() {
 </script>
 
 <template>
-  <dialog
+  <DDialog size="md"
     ref="dialog"
     class="scene-details"
     aria-labelledby="scene-details-title"
     @close="onClose"
   >
     <form v-if="sceneDetailsFor" @submit="onSubmit">
-      <h2 id="scene-details-title">Scene details for {{ heading }}</h2>
+      <h2 id="scene-details-title" class="d-dialog-title">Scene details for {{ heading }}</h2>
       <p v-if="readOnly" id="scene-details-why" class="why">
         {{ outline.readOnly.value }}
       </p>
@@ -150,35 +151,23 @@ function onClose() {
           :readonly="readOnly"
         />
       </label>
-      <div class="buttons">
-        <button type="button" class="btn" @click="dialog?.close()">Cancel</button>
-        <button
+      <div class="d-dialog-footer">
+        <DButton @click="dialog?.close()">Cancel</DButton>
+        <DButton
+          variant="primary"
           type="submit"
-          class="btn primary"
           :aria-disabled="readOnly ? 'true' : undefined"
           :aria-describedby="readOnly ? 'scene-details-why' : undefined"
         >
           Save
-        </button>
+        </DButton>
       </div>
     </form>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
-.scene-details {
-  box-sizing: border-box;
-  width: min(32rem, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-}
 h2 {
-  margin: 0 0 12px;
-  font-size: 16px;
   overflow-wrap: anywhere;
 }
 .why {
@@ -209,33 +198,13 @@ h2 {
   color: var(--muted);
 }
 @media (max-width: 30rem) {
-  .field {
+.field {
     grid-template-columns: 1fr;
     gap: 2px;
   }
+
 }
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-.btn {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn.primary {
-  border-color: var(--heading);
-}
-.btn[aria-disabled='true'] {
+.d-btn[aria-disabled='true'] {
   opacity: 0.6;
   cursor: not-allowed;
 }

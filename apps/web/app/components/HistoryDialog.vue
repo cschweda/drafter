@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { commandById } from '~/commands/registry';
 import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
+import DDialog from '~/components/ui/DDialog.vue';
 import { useEditor } from '~/editor/session';
 import { useDeleted } from '~/history/deleted';
 import { noticeWhileOpen, sayOutline } from '~/outline/notice';
@@ -41,7 +42,7 @@ import { encodeFile, fileBaseName, titleFileOf, titleFor } from '~/storage/text'
 const notice = noticeWhileOpen(() => historyOpen.value !== null);
 
 const DIALOG_ID = 'history-dialog';
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const editor = useEditor();
 const script = useScript();
 const snapshots = useSnapshots();
@@ -179,7 +180,7 @@ async function focusRow(i: number) {
   await nextTick();
   const el = document.getElementById(domId(current.value));
   if (el) el.focus();
-  else dialog.value?.focus();
+  else dialog.value?.el?.focus();
 }
 
 /** After an action on the row with `id`: that row if it is still there, else the row now where it was. */
@@ -387,7 +388,7 @@ async function saveAsFile(row: HistoryRow) {
 
 // Delete asks first: "Delete the snapshot from 10:42?"
 const asking = shallowRef<HistoryRow | null>(null);
-const askDialog = ref<HTMLDialogElement>();
+const askDialog = ref<InstanceType<typeof DDialog>>();
 let askAt = 0;
 
 async function askDelete(row: HistoryRow) {
@@ -592,9 +593,10 @@ const nameOf = (row: HistoryRow) =>
 </script>
 
 <template>
-  <dialog
+  <DDialog
     :id="DIALOG_ID"
     ref="dialog"
+    size="md"
     class="history"
     tabindex="-1"
     aria-labelledby="history-title"
@@ -604,17 +606,12 @@ const nameOf = (row: HistoryRow) =>
   >
     <template v-if="historyOpen">
       <div class="head">
-        <h2 id="history-title">History</h2>
+        <h2 id="history-title" class="d-dialog-title">History</h2>
         <span class="head-buttons">
-          <button
-            v-if="editor.kind.value === 'fountain'"
-            type="button"
-            class="btn"
-            @click="openDeleted"
-          >
+          <DButton v-if="editor.kind.value === 'fountain'" @click="openDeleted">
             Deleted scenes
-          </button>
-          <button type="button" class="btn" @click="close">Close</button>
+          </DButton>
+          <DButton @click="close">Close</DButton>
         </span>
       </div>
       <p class="help">
@@ -635,15 +632,14 @@ const nameOf = (row: HistoryRow) =>
             @keydown="onTakeKeydown"
           />
         </label>
-        <button
-          type="button"
-          class="btn primary"
+        <DButton
+          variant="primary"
           :aria-disabled="takeWhy ? 'true' : undefined"
           :aria-describedby="takeWhy ? 'history-why' : undefined"
           @click="take"
         >
           Take snapshot
-        </button>
+        </DButton>
       </div>
       <p v-if="rows === null" class="empty">Reading the snapshots…</p>
       <p v-else-if="items.length === 0" class="empty">
@@ -667,7 +663,7 @@ const nameOf = (row: HistoryRow) =>
             </button>
           </li>
         </ul>
-        <button type="button" class="btn" @click="cancelPick">Cancel</button>
+        <DButton @click="cancelPick">Cancel</DButton>
       </div>
       <div v-else role="listbox" aria-label="Snapshots" class="list">
         <div
@@ -733,36 +729,29 @@ const nameOf = (row: HistoryRow) =>
       <!-- The page behind a modal dialog is inert, so what History's actions say is said here too. -->
       <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ notice }}</p>
     </template>
-    <dialog
+    <DDialog
       ref="askDialog"
+      size="sm"
       class="ask"
       aria-labelledby="history-ask-title"
       @close="onAskClose"
     >
       <template v-if="asking">
-        <h2 id="history-ask-title">Delete the snapshot from {{ snapshotTime(asking.createdAt) }}?</h2>
+        <h2 id="history-ask-title" class="d-dialog-title">Delete the snapshot from {{ snapshotTime(asking.createdAt) }}?</h2>
         <p>It can’t be brought back.</p>
-        <div class="buttons">
-          <button type="button" class="btn" autofocus @click="askDialog?.close()">Cancel</button>
-          <button type="button" class="btn primary" @click="confirmDelete">Delete</button>
+        <div class="d-dialog-footer">
+          <DButton autofocus @click="askDialog?.close()">Cancel</DButton>
+          <DButton variant="primary" @click="confirmDelete">Delete</DButton>
         </div>
       </template>
-    </dialog>
-  </dialog>
+    </DDialog>
+  </DDialog>
   <SnapshotLabelDialog :snapshot="labelFor" @save="onLabelSave" @close="onLabelClose" />
 </template>
 
 <style scoped>
 .history {
-  box-sizing: border-box;
-  width: min(36rem, calc(100vw - 32px));
   max-height: min(44rem, calc(100dvh - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-  font-size: 13px;
 }
 .history[open] {
   display: flex;
@@ -795,7 +784,6 @@ const nameOf = (row: HistoryRow) =>
 }
 h2 {
   margin: 0;
-  font-size: 16px;
 }
 .help,
 .why {
@@ -839,7 +827,7 @@ h2 {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 .pick {
@@ -867,11 +855,11 @@ h2 {
   cursor: pointer;
 }
 .choice:hover {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .day-title {
   padding: 8px 10px 4px;
-  color: var(--heading);
+  color: var(--accent-text);
   font-weight: 700;
 }
 .row {
@@ -879,15 +867,15 @@ h2 {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   cursor: default;
 }
 .row:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 .row[aria-selected='true'] {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .drawn {
   display: flex;
@@ -942,7 +930,7 @@ h2 {
 }
 .act:hover,
 .more:hover {
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
 }
 .notice {
@@ -950,44 +938,16 @@ h2 {
   margin: 8px 0 0;
   color: var(--muted);
 }
-.btn {
-  min-height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn.primary {
-  border-color: var(--heading);
-}
-.btn[aria-disabled='true'] {
+.d-btn[aria-disabled='true'] {
   opacity: 0.6;
   cursor: not-allowed;
 }
-.ask {
-  box-sizing: border-box;
-  width: min(24rem, calc(100vw - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-}
 .ask h2 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
 }
 .ask p {
   margin: 0;
   color: var(--muted);
-}
-.ask .buttons {
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
 }
 @media (forced-colors: active) {
   .row[aria-selected='true'] {

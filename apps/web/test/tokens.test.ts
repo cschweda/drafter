@@ -90,6 +90,11 @@ const PAIRS: Array<[string, string, number]> = [
   ['--spelling', '--surface', 3],
   // The top bar's unsaved dot (Task 6), a graphic a reader needs, on every surface.
   ...SURFACES.map((bg): [string, string, number] => ['--unsaved', bg, 3]),
+  // A highlighted or chosen row in a menu or the palette (Task 7): its label, and what stays
+  // --muted beside it, on --highlight; and a hovered primary button's label.
+  ['--text', '--highlight', 4.5],
+  ['--muted', '--highlight', 4.5],
+  ['--on-accent', '--accent-hover', 4.5],
 ];
 
 // Today's names, kept as aliases of the new ones until every component has moved over (fresh-look

@@ -14,6 +14,7 @@ import {
 import { createAboutCheck } from '~/about/update-check';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { commandById } from '~/commands/registry';
+import DDialog from '~/components/ui/DDialog.vue';
 import { actionLabel } from '~/update/flow';
 import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
 
@@ -21,7 +22,7 @@ import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
 // updates… beside it), which app this is, and the links. Every link leaves the app: a new tab on
 // the web, the system browser in the desktop app (its window-open handler hands an https address to the browser and never
 // navigates the app's window). The help pages open as the Help commands open them.
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const info = ref<AboutInfo | null>(null);
 const copied = ref('');
 
@@ -73,7 +74,7 @@ async function writeClipboard(text: string): Promise<boolean> {
   field.setAttribute('readonly', '');
   field.style.position = 'fixed';
   field.style.opacity = '0';
-  (dialog.value ?? document.body).append(field);
+  (dialog.value?.el ?? document.body).append(field);
   field.select();
   try {
     return document.execCommand('copy');
@@ -97,7 +98,7 @@ function openHelp(id: string) {
 </script>
 
 <template>
-  <dialog
+  <DDialog size="md"
     ref="dialog"
     class="about"
     aria-labelledby="about-title"
@@ -106,24 +107,19 @@ function openHelp(id: string) {
     @close="onClose"
   >
     <template v-if="info">
-      <h2 id="about-title">Drafter</h2>
+      <h2 id="about-title" class="d-dialog-title">Drafter</h2>
       <div class="version-row">
         <p class="version" data-about-version>{{ versionLine(info) }}</p>
-        <button
-          type="button"
-          class="btn small"
-          :aria-disabled="checking ? 'true' : undefined"
-          @click="checkForUpdates"
-        >
+        <DButton :aria-disabled="checking ? 'true' : undefined" @click="checkForUpdates">
           Check for updates…
-        </button>
+        </DButton>
       </div>
       <!-- What the check found, said politely; the region is there from the start, so it is heard. -->
       <div class="update-row">
         <p role="status" aria-live="polite" class="said" data-about-update>{{ updateMessage }}</p>
-        <button v-if="updateReady" type="button" class="btn primary small" @click="takeFound">
+        <DButton v-if="updateReady" variant="primary" @click="takeFound">
           {{ actionLabel(updateHow) }}
-        </button>
+        </DButton>
       </div>
       <p id="about-what">{{ ABOUT_DESCRIPTION }}</p>
       <dl class="facts">
@@ -147,7 +143,7 @@ function openHelp(id: string) {
         <dd>{{ ABOUT_LICENSE }}</dd>
       </dl>
       <div class="copy">
-        <button type="button" class="btn" @click="copy">Copy version info</button>
+        <DButton @click="copy">Copy version info</DButton>
         <span role="status" aria-live="polite" class="copied" data-about-copied>{{ copied }}</span>
       </div>
       <h3>Links</h3>
@@ -164,32 +160,18 @@ function openHelp(id: string) {
           }}</a>
         </li>
       </ul>
-      <div class="buttons">
-        <button type="button" class="btn primary" autofocus @click="dialog?.close()">Close</button>
+      <div class="d-dialog-footer">
+        <DButton variant="primary" autofocus @click="dialog?.close()">Close</DButton>
       </div>
     </template>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
-.about {
-  box-sizing: border-box;
-  width: min(30rem, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-  font-size: 13px;
-}
-h2 {
-  margin: 0;
-  font-size: 18px;
-}
 h3 {
-  margin: 14px 0 4px;
+  margin: 16px 0 4px;
   font-size: 13px;
+  font-weight: 600;
 }
 p {
   margin: 0 0 8px;
@@ -208,7 +190,7 @@ p {
   margin: 0;
 }
 .version {
-  color: var(--heading);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .update-row {
@@ -221,12 +203,7 @@ p {
   margin: 0;
   color: var(--text);
 }
-.btn.small {
-  min-height: 26px;
-  padding: 0 10px;
-  font-weight: 500;
-}
-.btn[aria-disabled="true"] {
+.d-btn[aria-disabled="true"] {
   opacity: 0.6;
   cursor: default;
 }
@@ -267,30 +244,5 @@ p {
 .links a {
   color: var(--text);
   text-decoration: underline;
-}
-.links a:focus-visible,
-.btn:focus-visible {
-  outline: 2px solid var(--heading);
-  outline-offset: 2px;
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-.btn {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn.primary {
-  border-color: var(--heading);
 }
 </style>

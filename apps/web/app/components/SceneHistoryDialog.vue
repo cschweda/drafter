@@ -2,6 +2,7 @@
 import type { SceneVersion, VersionRow } from '@drafter/history';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { diffModel } from '~/compare/rows';
+import DDialog from '~/components/ui/DDialog.vue';
 import { useEditor } from '~/editor/session';
 import { type HistoryClient, sceneText, useHistoryClient } from '~/history/client';
 import { progressLabel } from '~/history/labels';
@@ -42,7 +43,7 @@ import { listSnapshots, type SnapshotInfo } from '~/storage/snapshots';
 const notice = noticeWhileOpen(() => sceneHistoryOpen.value !== null);
 
 const DIALOG_ID = 'scene-history-dialog';
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const editor = useEditor();
 const outline = useOutline();
 const script = useScript();
@@ -555,9 +556,10 @@ const reading = computed(() => !done.value && rows.value === null);
 </script>
 
 <template>
-  <dialog
+  <DDialog
     :id="DIALOG_ID"
     ref="dialog"
+    size="lg"
     class="scene-history"
     tabindex="-1"
     aria-labelledby="scene-history-title"
@@ -569,10 +571,10 @@ const reading = computed(() => !done.value && rows.value === null);
     <template v-if="sceneHistoryOpen">
       <div class="head">
         <div class="titles">
-          <h2 id="scene-history-title">History of this scene</h2>
+          <h2 id="scene-history-title" class="d-dialog-title">History of this scene</h2>
           <p id="scene-history-heading" class="scene">{{ heading }}</p>
         </div>
-        <button type="button" class="btn" @click="close">Close</button>
+        <DButton @click="close">Close</DButton>
       </div>
       <p v-if="notRead" class="empty">{{ notRead }}</p>
       <p v-else-if="failed" class="empty">Couldn’t read the versions: {{ failed }}</p>
@@ -652,24 +654,20 @@ const reading = computed(() => !done.value && rows.value === null);
               </button>
             </div>
             <span class="spacer" />
-            <button
-              type="button"
-              class="btn"
+            <DButton
               :aria-disabled="useWhy || !selected || !isVersion(selected) ? 'true' : undefined"
               :aria-describedby="useWhy || onGap ? 'scene-history-why' : undefined"
               @click="use(selected)"
             >
               Use this version
-            </button>
-            <button
-              type="button"
-              class="btn"
+            </DButton>
+            <DButton
               :aria-disabled="!selected || !isVersion(selected) ? 'true' : undefined"
               :aria-describedby="onGap ? 'scene-history-why' : undefined"
               @click="copyText(selected)"
             >
               Copy text
-            </button>
+            </DButton>
           </div>
           <p v-if="useWhy || onGap" id="scene-history-why" class="why">
             {{ onGap ? NOT_IN_VERSION : useWhy }}
@@ -690,20 +688,14 @@ const reading = computed(() => !done.value && rows.value === null);
       <!-- The page behind a modal dialog is inert, so what the dialog's actions say is said here too. -->
       <p class="notice" role="status" aria-live="polite" aria-atomic="true">{{ notice }}</p>
     </template>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
+/* Wider than the largest dialog: a version's list beside its changes. */
 .scene-history {
-  box-sizing: border-box;
   width: min(72rem, calc(100vw - 32px));
   height: min(48rem, calc(100dvh - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-  font-size: 13px;
 }
 .scene-history[open] {
   display: flex;
@@ -723,7 +715,6 @@ const reading = computed(() => !done.value && rows.value === null);
 }
 h2 {
   margin: 0;
-  font-size: 16px;
 }
 .scene {
   margin: 2px 0 0;
@@ -751,7 +742,7 @@ h2 {
 .list {
   min-height: 0;
   overflow-y: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 .row {
@@ -759,15 +750,15 @@ h2 {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   cursor: default;
 }
 .row:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 .row[aria-selected='true'] {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .drawn {
   display: flex;
@@ -826,7 +817,7 @@ h2 {
 }
 .segmented {
   display: inline-flex;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -834,18 +825,18 @@ h2 {
   min-height: 28px;
   padding: 0 10px;
   border: 0;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 .segmented button + button {
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--border);
 }
 .segmented button[aria-pressed='true'] {
-  background: var(--tab-on);
-  box-shadow: inset 0 -2px 0 var(--heading);
+  background: var(--overlay);
+  box-shadow: inset 0 -2px 0 var(--accent-text);
 }
 .diff {
   flex: 1;
@@ -858,18 +849,7 @@ h2 {
   margin: 8px 0 0;
   color: var(--muted);
 }
-.btn {
-  min-height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn[aria-disabled='true'] {
+.d-btn[aria-disabled='true'] {
   opacity: 0.6;
   cursor: not-allowed;
 }

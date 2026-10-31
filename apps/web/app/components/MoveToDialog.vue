@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MoveTarget, OutlineItem, SceneIndex } from '@drafter/outline';
+import DDialog from '~/components/ui/DDialog.vue';
 import { sceneNumber } from '~/outline/labels';
 
 // Move to… (Phase 2 design §6.2): "Put INT. HALL after:", with every place it can go: the start
@@ -9,7 +10,7 @@ import { sceneNumber } from '~/outline/labels';
 const props = defineProps<{ item: OutlineItem | null; index: SceneIndex }>();
 const emit = defineEmits<{ choose: [target: MoveTarget]; close: [] }>();
 
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const filter = ref('');
 const nameOf = (item: OutlineItem) =>
   (item.kind === 'scene' ? item.heading : item.title) || 'Untitled';
@@ -79,7 +80,7 @@ function onClose() {
 </script>
 
 <template>
-  <dialog
+  <DDialog size="md"
     ref="dialog"
     class="move-to"
     aria-labelledby="move-to-title"
@@ -87,7 +88,7 @@ function onClose() {
     @close="onClose"
   >
     <template v-if="props.item">
-      <h2 id="move-to-title">Move {{ nameOf(props.item) }}</h2>
+      <h2 id="move-to-title" class="d-dialog-title">Move {{ nameOf(props.item) }}</h2>
       <p id="move-to-help">Put it after:</p>
       <label class="filter">
         <span>Filter</span>
@@ -99,31 +100,22 @@ function onClose() {
         </li>
         <li v-if="shown.length === 0" class="none">No place matches.</li>
       </ul>
-      <div class="buttons">
-        <button type="button" class="btn" @click="dialog?.close()">Cancel</button>
+      <div class="d-dialog-footer">
+        <DButton @click="dialog?.close()">Cancel</DButton>
       </div>
     </template>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
 .move-to {
-  box-sizing: border-box;
-  width: min(30rem, calc(100vw - 32px));
   max-height: min(36rem, calc(100dvh - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
 }
 .move-to[open] {
   display: flex;
   flex-direction: column;
 }
 h2 {
-  margin: 0 0 4px;
-  font-size: 16px;
   overflow-wrap: anywhere;
 }
 p {
@@ -155,7 +147,7 @@ p {
   padding: 0;
   overflow-y: auto;
   list-style: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 .options li {
@@ -173,31 +165,15 @@ p {
   cursor: pointer;
 }
 .option:hover {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .option:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 .none {
   padding: 8px 10px;
   color: var(--muted);
   font-size: 13px;
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-.btn {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
 }
 </style>

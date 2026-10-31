@@ -42,6 +42,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-10-25',
   // The sample scripts live at the repository root, in samples/.
   alias: { '#samples': fileURLToPath(new URL('../../samples', import.meta.url)) },
+  // components/ui/ holds the shared pieces (DButton, DSegmented, DDialog): named by their file, as
+  // every other component is, not prefixed with their folder.
+  components: [{ path: '~/components', pathPrefix: false }],
   modules: ['@nuxt/ui', 'nuxt-guided-tour', ...(DESKTOP ? [] : ['@vite-pwa/nuxt'])],
   // The guided tour (app/tour/tour.config.ts). The highlight is the brand's goldenrod. The module's inline
   // `<style>` for it is fixed text at build time, which `style-src 'unsafe-inline'` allows (Plan 1).

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DDialog from '~/components/ui/DDialog.vue';
 import { SAMPLES, type SampleKind } from '~/editor/sample-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useGuard } from '~/storage/guard';
@@ -25,7 +26,7 @@ const message = ref('');
 const confirming = ref<Project | null>(null);
 const changedSince = ref(false);
 const root = ref<HTMLElement>();
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const place = reactive({ top: 0, left: 0 });
 let trigger: HTMLElement | null = null;
 
@@ -248,15 +249,16 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <p v-if="message" role="alert" class="message">{{ message }}</p>
     </div>
 
-    <dialog
+    <DDialog
       ref="dialog"
+      size="sm"
       class="confirm"
       aria-labelledby="remove-title"
       aria-describedby="remove-why"
       @close="onDialogClose"
     >
       <template v-if="confirming">
-        <h2 id="remove-title">Remove “{{ confirming.title }}” from this browser?</h2>
+        <h2 id="remove-title" class="d-dialog-title">Remove “{{ confirming.title }}” from this browser?</h2>
         <p id="remove-why">
           Drafter forgets this script and its recovery copy. A file you saved it to isn’t touched.
           <template v-if="neverSaved">
@@ -266,12 +268,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
             Changes since you last saved it to a file are lost.
           </template>
         </p>
-        <div class="buttons">
-          <button type="button" class="btn" autofocus @click="cancel">Cancel</button>
-          <button type="button" class="btn danger" @click="confirmRemove">Remove</button>
+        <div class="d-dialog-footer">
+          <DButton autofocus @click="cancel">Cancel</DButton>
+          <DButton variant="primary" @click="confirmRemove">Remove</DButton>
         </div>
       </template>
-    </dialog>
+    </DDialog>
   </div>
 </template>
 
@@ -362,8 +364,7 @@ ul {
   height: 14px;
   flex: none;
 }
-.remove,
-.btn {
+.remove {
   min-height: 24px;
   padding: 0 10px;
   border: 1px solid var(--muted);
@@ -379,8 +380,7 @@ ul {
   font-size: 12px;
 }
 .item:focus-visible,
-.remove:focus-visible,
-.btn:focus-visible {
+.remove:focus-visible {
   outline: 2px solid var(--heading);
   outline-offset: 2px;
 }
@@ -389,34 +389,7 @@ ul {
   padding-left: 8px;
   border-left: 3px solid var(--heading);
 }
-.confirm {
-  box-sizing: border-box;
-  width: min(26rem, calc(100vw - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-  font-size: 13px;
-}
-.confirm::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-h2 {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
 .confirm p {
-  margin: 0 0 14px;
-  line-height: 1.45;
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.danger {
-  border-color: var(--heading);
-  box-shadow: inset 0 -2px 0 var(--heading);
+  margin: 0;
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DDialog from '~/components/ui/DDialog.vue';
 import { desktop } from '~/desktop';
 import { contextFor, contextGeneration } from '~/modules/context';
 import { folderFailures, folderIdOf } from '~/modules/folder';
@@ -25,7 +26,7 @@ const skipped = computed(() => folderModuleProblems.value);
 const firstFolder = computed(() => modules.value.findIndex((m) => isFolderModule(m.id)));
 
 const asking = ref<{ module: ScriptModule; question: string } | null>(null);
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 
 watch(asking, async (question) => {
   if (!question) return;
@@ -71,7 +72,7 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
 
 <template>
   <section v-if="modules.length > 0" class="modules" aria-labelledby="modules-title">
-    <h3 id="modules-title">Modules</h3>
+    <h3 id="modules-title" tabindex="-1">Modules</h3>
     <p class="intro">Optional features built into Drafter. Each is off until you turn it on.</p>
     <template v-for="(module, i) in modules" :key="module.id">
     <div v-if="i === firstFolder" class="folder-intro">
@@ -133,33 +134,33 @@ const isOn = (module: ScriptModule) => enabled.value.includes(module.id);
     <ul v-if="hasFolder && skipped.length > 0" class="skipped" data-folder-problems>
       <li v-for="problem in skipped" :key="problem">{{ problem }}</li>
     </ul>
-    <dialog
+    <DDialog
       ref="dialog"
+      size="sm"
       class="confirm"
       aria-labelledby="module-consent-title"
       aria-describedby="module-consent-why"
       @close="onClose"
     >
       <template v-if="asking">
-        <h2 id="module-consent-title">Turn on {{ asking.module.name }}?</h2>
+        <h2 id="module-consent-title" class="d-dialog-title">Turn on {{ asking.module.name }}?</h2>
         <p id="module-consent-why">{{ asking.question }}</p>
-        <div class="buttons">
-          <button type="button" class="btn" autofocus @click="answer(false)">Cancel</button>
-          <button type="button" class="btn" @click="answer(true)">Turn on</button>
+        <div class="d-dialog-footer">
+          <DButton autofocus @click="answer(false)">Cancel</DButton>
+          <DButton variant="primary" @click="answer(true)">Turn on</DButton>
         </div>
       </template>
-    </dialog>
+    </DDialog>
   </section>
 </template>
 
 <style scoped>
-.modules {
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
+/* A section of Settings, under its heading (SettingsDialog.vue draws the rule above it). */
 h3 {
-  margin: 0;
-  font-size: 14px;
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
 }
 .intro {
   margin: 2px 0 4px;
@@ -172,7 +173,7 @@ h3 {
 .folder-intro {
   margin-top: 8px;
   padding-top: 10px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
 }
 h4 {
   margin: 0;
@@ -181,7 +182,7 @@ h4 {
 .warning {
   margin: 4px 0;
   padding: 6px 8px;
-  border-left: 3px solid var(--heading);
+  border-left: 3px solid var(--accent-text);
   line-height: 1.4;
 }
 .skipped {
@@ -223,7 +224,7 @@ h4 {
   margin: 0;
   border: 1px solid var(--muted);
   border-radius: 999px;
-  background: var(--chrome);
+  background: var(--surface);
   cursor: pointer;
 }
 .switch::after {
@@ -238,11 +239,11 @@ h4 {
   transition: transform 0.12s;
 }
 .switch:checked {
-  border-color: var(--heading);
-  background: color-mix(in srgb, var(--heading) 30%, var(--chrome));
+  border-color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 30%, var(--surface));
 }
 .switch:checked::after {
-  background: var(--heading);
+  background: var(--accent-text);
   transform: translateX(16px);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -258,42 +259,7 @@ h4 {
     background: CanvasText;
   }
 }
-.confirm {
-  box-sizing: border-box;
-  width: min(26rem, calc(100vw - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-  font-size: 13px;
-}
-.confirm::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-h2 {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
 .confirm p {
-  margin: 0 0 14px;
-  line-height: 1.45;
-}
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.btn {
-  min-height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--muted);
-  border-radius: 5px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
+  margin: 0;
 }
 </style>

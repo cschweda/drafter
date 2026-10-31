@@ -32,9 +32,9 @@ const { words, updating: previewing } = useMarkdown();
 const { page, updating } = useLayout();
 const zoom = useScriptZoom();
 // "Fit" is short for its name, Fit width (design §3.3's Fit · 100%).
-const ZOOMS = [
-  { id: 'fit', label: 'Fit', name: 'Fit width' },
-  { id: 'full', label: '100%', name: undefined },
+const ZOOM_OPTIONS = [
+  { value: 'fit', label: 'Fit', name: 'Fit width' },
+  { value: 'full', label: '100%' },
 ] as const;
 
 const { problems, count, canFixAll, fixAll } = useProblems();
@@ -71,19 +71,7 @@ const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props
     <span class="page">{{ pageLabel(page) }}</span>
     <ChangesToggle />
     <span class="spacer" />
-    <div role="group" aria-label="Zoom" class="zoom">
-      <button
-        v-for="option in ZOOMS"
-        :key="option.id"
-        type="button"
-        class="zoom-button"
-        :aria-label="option.name"
-        :aria-pressed="zoom === option.id ? 'true' : 'false'"
-        @click="zoom = option.id"
-      >
-        {{ option.label }}
-      </button>
-    </div>
+    <DSegmented v-model="zoom" label="Zoom" :options="ZOOM_OPTIONS" />
   </template>
   <template v-else-if="moduleTab">
     <span>{{ moduleTab.module.name }}</span>

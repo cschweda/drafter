@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { isTagWord, type NoteEntry } from '@drafter/notes';
+import DDialog from '~/components/ui/DDialog.vue';
 
 // Set category… (Phase 2 design §8): a note's category tags, chosen from those in use and the
 // starting set, or a new one typed. Only the tags change (Call 5); a category head (`TODO:`) is
@@ -12,7 +13,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ save: [tags: string[]]; close: [] }>();
 
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof DDialog>>();
 const chosen = ref<string[]>([]);
 const typed = ref('');
 const problem = ref('');
@@ -68,14 +69,14 @@ function onClose() {
 </script>
 
 <template>
-  <dialog
+  <DDialog size="md"
     ref="dialog"
     class="note-category"
     aria-labelledby="note-category-title"
     @close="onClose"
   >
     <form v-if="props.entry" @submit="onSubmit">
-      <h2 id="note-category-title">Categories for this note</h2>
+      <h2 id="note-category-title" class="d-dialog-title">Categories for this note</h2>
       <p v-if="headCategory" class="help">
         Its head makes it {{ headCategory }}; that stays.
       </p>
@@ -96,29 +97,15 @@ function onClose() {
         <input v-model="typed" type="text" autocomplete="off" @input="problem = ''" />
       </label>
       <p v-if="problem" class="problem" role="alert">{{ problem }}</p>
-      <div class="buttons">
-        <button type="button" class="btn" @click="dialog?.close()">Cancel</button>
-        <button type="submit" class="btn primary">Save</button>
+      <div class="d-dialog-footer">
+        <DButton @click="dialog?.close()">Cancel</DButton>
+        <DButton variant="primary" type="submit">Save</DButton>
       </div>
     </form>
-  </dialog>
+  </DDialog>
 </template>
 
 <style scoped>
-.note-category {
-  box-sizing: border-box;
-  width: min(26rem, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--chrome-2);
-  color: var(--text);
-}
-h2 {
-  margin: 0 0 8px;
-  font-size: 16px;
-}
 .help {
   margin: 0 0 8px;
   color: var(--muted);
@@ -160,26 +147,5 @@ h2 {
   margin: 8px 0 0;
   font-size: 13px;
   font-weight: 600;
-}
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-.btn {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--chrome);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn.primary {
-  border-color: var(--heading);
 }
 </style>

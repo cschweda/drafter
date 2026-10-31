@@ -129,12 +129,15 @@ test.describe('the dialog', () => {
     const inside = () => dialog(page).evaluate((d) => d.contains(document.activeElement));
     expect(await inside()).toBe(true);
     await expect(textSize(page)).toBeFocused();
-    // Tab goes through the dialog's controls (the text size, the switches, the spelling language,
-    // the licences link, a switch for each module, Done) without leaving it. (WebKit's Tab skips
-    // buttons and checkboxes unless the system asks otherwise.)
+    // Tab goes through the settings (the text size, the switches, the spelling language, the
+    // licences link, a switch for each module, the About section's button, Done) without leaving
+    // the dialog. The section list comes before them, so it is Shift+Tab from the first. (WebKit's
+    // Tab skips buttons and checkboxes unless the system asks otherwise.)
     if (browserName !== 'webkit') {
       const controls = await dialog(page)
-        .locator('select, input[type="checkbox"], button, a[href]')
+        .locator(
+          '.settings-body :is(select, input[type="checkbox"], button, a[href]), .settings-foot button',
+        )
         .count();
       for (let i = 1; i < controls; i++) {
         await page.keyboard.press('Tab');
@@ -151,8 +154,94 @@ test.describe('the dialog', () => {
     await expect(editor(page)).toBeFocused();
   });
 
+  // Settings in sections (fresh-look design §5): a list of the sections beside the settings,
+  // which all stay in one column, so none is hidden and each is reached by Tab as before.
+  test('Settings has sections and every setting is still reachable by keyboard', async ({
+    page,
+    isMobile,
+    browserName,
+  }) => {
+    await openSettings(page);
+    const sections = dialog(page).getByRole('navigation', { name: 'Settings sections' });
+    const NAMES = ['General', 'Writing', 'Script', 'Spelling', 'Files', 'Modules', 'About'];
+    await expect(sections.getByRole('button')).toHaveText(NAMES);
+    for (const name of NAMES)
+      await expect(dialog(page).getByRole('region', { name, exact: true })).toBeAttached();
+    // The first section is the current one to begin with.
+    await expect(sections.getByRole('button', { name: 'General' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    // Choosing a section brings it into view, says it is the current one, and moves focus to its
+    // heading, so the next Tab is its first setting.
+    await sections.getByRole('button', { name: 'Spelling' }).click();
+    const spelling = dialog(page).getByRole('region', { name: 'Spelling', exact: true });
+    await expect(spelling.getByRole('heading', { name: 'Spelling' })).toBeInViewport();
+    await expect(spelling.getByRole('heading', { name: 'Spelling' })).toBeFocused();
+    await expect(sections.getByRole('button', { name: 'Spelling' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    if (!isMobile && browserName !== 'webkit') {
+      await page.keyboard.press('Tab');
+      await expect(toggle(page, 'spellcheck')).toBeFocused();
+    }
+    // Every setting is in the dialog, shown (none behind a section that isn't chosen).
+    for (const name of Object.values(SWITCHES))
+      await expect(dialog(page).getByRole('switch', { name })).toBeVisible();
+    for (const label of [
+      'Text size',
+      'Page colour',
+      'Colors for changes',
+      'Spelling language',
+      'Paper for Markdown PDFs',
+    ])
+      await expect(dialog(page).getByLabel(label)).toBeVisible();
+    // Where each one lives.
+    const where: Array<[string, string]> = [
+      ['General', 'Text size'],
+      ['General', 'Page colour'],
+      ['General', 'Match system appearance'],
+      ['Writing', 'Typewriter scrolling'],
+      ['Writing', 'Element bar'],
+      ['Writing', 'Structure strip'],
+      ['Writing', 'Sprint sound'],
+      ['Script', 'Strict Fountain'],
+      ['Script', 'Colors for changes'],
+      ['Spelling', 'Spellcheck'],
+      ['Spelling', 'Spelling language'],
+      ['Files', 'Paper for Markdown PDFs'],
+    ];
+    for (const [section, label] of where)
+      await expect(
+        dialog(page).getByRole('region', { name: section, exact: true }).getByLabel(label),
+        `${label} in ${section}`,
+      ).toBeAttached();
+    // Scrolling the settings by hand moves the current section along.
+    await dialog(page)
+      .getByRole('region', { name: 'About', exact: true })
+      .evaluate((el) => el.scrollIntoView({ block: 'start' }));
+    await expect(sections.getByRole('button', { name: 'About' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  test('the About section says which version this is', async ({ page }) => {
+    await openSettings(page);
+    const about = dialog(page).getByRole('region', { name: 'About', exact: true });
+    await expect(about).toContainText(/Drafter v\d+\.\d+\.\d+/);
+    await about.getByRole('button', { name: 'About Drafter…' }).click();
+    await expect(dialog(page)).toBeHidden();
+    await expect(page.getByRole('dialog', { name: 'Drafter', exact: true })).toBeVisible();
+  });
+
   test('opens in the middle of the window', async ({ page }) => {
     await openSettings(page);
+    // Once it has risen into place (the one motion).
+    await dialog(page).evaluate((el) =>
+      Promise.all(el.getAnimations().map((a) => a.finished.catch(() => {}))),
+    );
     const box = await dialog(page).boundingBox();
     const viewport = page.viewportSize();
     expect(box).not.toBeNull();
