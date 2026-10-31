@@ -84,7 +84,8 @@ const items = computed<DropdownMenuItem[][]>(() => {
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--muted);
+  /* The word and its chevron both --text, as the Drafter menu's chevron is (it says: a menu). */
+  color: var(--text);
   font: 500 13px/1 var(--font-sans);
   white-space: nowrap;
   cursor: pointer;
@@ -92,7 +93,6 @@ const items = computed<DropdownMenuItem[][]>(() => {
 .help:hover,
 .help[aria-expanded="true"] {
   background: var(--raised);
-  color: var(--text);
 }
 .help-icon {
   display: none;

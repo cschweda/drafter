@@ -154,7 +154,8 @@ test.describe('on a desktop', () => {
     // The tools fold into "⋯" first.
     const fold = page.getByRole('button', { name: 'More tools' });
     await expect(fold).toBeVisible();
-    expect(await fits()).toEqual({ overflow: false, clipped: [] });
+    // Measured after a frame or two, under load later still: asked until it holds.
+    await expect.poll(fits).toEqual({ overflow: false, clipped: [] });
     await fold.click();
     await expect(fold).toHaveAttribute('aria-expanded', 'true');
     const panel = page.getByRole('group', { name: 'View tools' });
@@ -170,7 +171,7 @@ test.describe('on a desktop', () => {
     const row = page.getByRole('tablist', { name: 'Inspector' }).getByRole('tab');
     await expect.poll(() => row.count()).toBeLessThan(5);
     await expect(row.first()).toHaveText('Script');
-    expect(await fits()).toEqual({ overflow: false, clipped: [] });
+    await expect.poll(fits).toEqual({ overflow: false, clipped: [] });
     const visible = await row.allTextContents();
     await page.locator('[data-pane="right"]').getByRole('button', { name: 'More tabs' }).click();
     const menu = page.getByRole('menu', { name: 'More tabs' });
@@ -187,7 +188,7 @@ test.describe('on a desktop', () => {
       .getByRole('tab', { name: hidden });
     await expect(chosen).toHaveAttribute('aria-selected', 'true');
     await expect(chosen).toBeFocused();
-    expect(await fits()).toEqual({ overflow: false, clipped: [] });
+    await expect.poll(fits).toEqual({ overflow: false, clipped: [] });
   });
 
   test('leaves room between the logo and the toolbar buttons', async ({ page }) => {

@@ -81,6 +81,7 @@ What the Help menu's About Drafter, Sample scripts, and Check for updates (after
 - **A sample script that can't be stored fails silently.** When the browser's storage is full, opening a sample script makes nothing and says nothing (the command's error is swallowed, as New's is). It should say why, as a failed save does.
 - **A sample script stays a sample script.** `sampleScript` stays on the project after the writer edits or saves it, so it never counts as their own document of that kind for the first New's annotated sample. Clearing it on the first edit or save would be more exact.
 - **axe on About and Check for updates** (the final accessibility steps).
+- **The desktop app's native About box has no Check for updates button.** The in-app About Drafter has one beside the version (fresh-look Task 3b); the native box (shown only when the page can't show its own, and on a Mac with no window) doesn't.
 
 ## Plan D: Spellcheck
 

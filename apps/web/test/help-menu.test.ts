@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { HELP_PAGES } from '../app/commands/data';
-import { HELP_MENU_COMMANDS } from '../app/commands/help-menu';
+import { HELP_MENU_COMMANDS, HELP_MENU_ICONS } from '../app/commands/help-menu';
 
 // Help is its own menu in the top bar (fresh-look Task 3b; the maintainer, 2026-10-31: "should be
 // visible at all times and not part of another (much larger) dropdown"). It has everything the
@@ -19,6 +19,12 @@ describe('the Help menu', () => {
       'check-for-updates',
       'about-drafter',
     ]);
+  });
+
+  test('gives every item an icon of its own', () => {
+    const icons = HELP_MENU_COMMANDS.map((id) => HELP_MENU_ICONS[id]);
+    expect(icons.filter((icon) => !icon)).toEqual([]);
+    expect(new Set(icons).size).toBe(icons.length);
   });
 
   test('is drawn from that list, with the Sample scripts submenu', () => {

@@ -71,4 +71,31 @@ describe('About’s update check', () => {
     about.reset();
     expect(about.message.value).toBe('');
   });
+
+  test('runs once for two presses, or a press while the Help menu’s check is under way, and says what it found', async () => {
+    let calls = 0;
+    let answer: (value: { status: 'latest' }) => void = () => {};
+    const check = createUpdateCheck({
+      current: '0.22.0',
+      desktop: {
+        check: () => {
+          calls += 1;
+          return new Promise((resolve) => {
+            answer = resolve;
+          });
+        },
+      },
+      offered: () => null,
+    });
+    const about = createAboutCheck(check, check.run, '0.22.0', 'desktop');
+    // The Help menu's Check for updates… is under way; About's button is pressed twice meanwhile.
+    const fromMenu = check.run();
+    const first = about.run();
+    const second = about.run();
+    expect(about.message.value).toBe('Checking for updates…');
+    answer({ status: 'latest' });
+    await Promise.all([fromMenu, first, second]);
+    expect(calls).toBe(1);
+    expect(about.message.value).toBe('Drafter v0.22.0 is up to date.');
+  });
 });

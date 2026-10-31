@@ -31,8 +31,11 @@ const copied = ref('');
 const about = currentAbout();
 const update = createAboutCheck(useUpdateCheck(), runUpdateCheck, about.version, about.app);
 const { message: updateMessage, busy: checking, ready: updateReady, how: updateHow } = update;
+/**
+ * Always runs: a check already under way (the Help menu's, or a second press) is that one
+ * (`createUpdateCheck` joins them), and About says what it finds.
+ */
 async function checkForUpdates() {
-  if (checking.value) return;
   await update.run();
 }
 function takeFound() {
