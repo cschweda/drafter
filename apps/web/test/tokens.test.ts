@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
+import { DIFF_COLORS, DIFF_TOKENS } from '../app/compare/colors';
 import { aliasOf, themeTokens } from './css-tokens';
 
 // The design tokens (fresh-look design §2), read straight from the stylesheet the app uses, with
@@ -69,7 +70,7 @@ const PAIRS: Array<[string, string, number]> = [
   // A primary button's label, and the script on paper.
   ['--on-accent', '--accent', 4.5],
   ['--paper-ink', '--paper', 4.5],
-  // Today's page (the Page colour setting's Dark, design §4), until the paper replaces it.
+  // Today's page, which Compare's Changes view and the Markdown preview are still drawn on.
   ['--ink', '--page', 4.5],
   ['--ink-muted', '--page', 4.5],
   // The Source pane's syntax colors, on the pane and on the surface beside it.
@@ -356,5 +357,174 @@ describe('the alert tones', () => {
     }
     expect(main).toMatch(/border-left: 3px solid var\(--tone-border\);/);
     expect(main).toMatch(/background: var\(--tone-bg\);/);
+  });
+});
+
+// The pages (fresh-look design §4): paper on the desk in both themes; Page colour Dark draws
+// today's dark page instead. `data-page-color` on the root picks it (settings/apply.ts), and the
+// pages' own region (`.on-sheet`) takes its colours, Show changes' among them, from it.
+describe('the pages', () => {
+  const tokensCss = readFileSync(
+    new URL('../app/assets/css/tokens.css', import.meta.url),
+    'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//g, '');
+
+  /** The declarations of the block whose selector list holds `selector` exactly. */
+  function block(selector: string): Record<string, string> {
+    const norm = (text: string) => text.trim().replaceAll("'", '"').replace(/\s+/g, ' ');
+    const found = [...tokensCss.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(([, list]) =>
+      (list as string).split(',').some((part) => norm(part) === norm(selector)),
+    );
+    if (!found) throw new Error(`tokens.css has no ${selector} block`);
+    return Object.fromEntries(
+      [...(found[2] as string).matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(([, token, value]) => [
+        token as string,
+        (value as string).trim(),
+      ]),
+    );
+  }
+
+  /** `value`, with a `var()` followed through the theme's tokens. */
+  const resolve = (name: 'dark' | 'light', value: string) => {
+    const alias = /^var\((--[\w-]+)\)$/.exec(value);
+    return alias ? (themeTokens(name)[alias[1] as string] as string) : value;
+  };
+
+  const PAGE_COLORS = ['paper', 'dark'] as const;
+
+  /** The page, its type, and its focus ring, for a page colour in a theme. */
+  function sheet(name: 'dark' | 'light', color: (typeof PAGE_COLORS)[number]) {
+    const own = color === 'paper' ? themeTokens(name) : block(':root[data-page-color="dark"]');
+    return {
+      page: resolve(name, own['--sheet'] as string),
+      ink: resolve(name, own['--sheet-ink'] as string),
+      focus: resolve(name, own['--sheet-focus'] as string),
+    };
+  }
+
+  /** Show changes' colours on a page colour, with a palette, as `.on-sheet` gets them. */
+  function marks(color: (typeof PAGE_COLORS)[number], palette: (typeof DIFF_COLORS)[number]) {
+    const selector = {
+      paper: {
+        'red-green': '.on-sheet',
+        'blue-orange': ':root[data-diff-colors="blue-orange"] .on-sheet',
+      },
+      dark: {
+        'red-green': ':root[data-page-color="dark"] .on-sheet',
+        'blue-orange': ':root[data-page-color="dark"][data-diff-colors="blue-orange"] .on-sheet',
+      },
+    }[color][palette];
+    return block(selector);
+  }
+
+  test.each(THEMES)('the page is paper on the desk in both themes (%s)', (name) => {
+    const tokens = themeTokens(name);
+    expect(aliasOf(name, '--sheet')).toBe('--paper');
+    expect(aliasOf(name, '--sheet-ink')).toBe('--paper-ink');
+    expect(tokens['--sheet']).toBe(name === 'dark' ? '#e8e4da' : '#ffffff');
+    // A hairline and a soft two-layer shadow, on a desk that isn't the paper.
+    expect(tokens['--sheet-edge']).toBeTruthy();
+    expect(tokens['--sheet-shadow']?.split(/,(?![^(]*\))/)).toHaveLength(2);
+    expect(tokens['--desk']).not.toBe(tokens['--paper']);
+    // The pages' region draws with them.
+    const own = block('.on-sheet');
+    expect(own['--drafter-page']).toBe('var(--sheet)');
+    expect(own['--drafter-ink']).toBe('var(--sheet-ink)');
+    expect(own['--focus']).toBe('var(--sheet-focus)');
+  });
+
+  test.each(THEMES)("Page colour Dark gives today's dark page (%s)", (name) => {
+    expect(sheet(name, 'dark')).toMatchObject({ page: '#1b1e25', ink: '#e8eaee' });
+    // The same page the dark theme drew before the paper.
+    expect(themeTokens('dark')['--page']).toBe('#1b1e25');
+    expect(themeTokens('dark')['--ink']).toBe('#e8eaee');
+  });
+
+  test.each(DIFF_COLORS.flatMap((p) => PAGE_COLORS.map((c) => [p, c] as const)))(
+    'Show changes on %s takes its colours from the page colour (%s)',
+    (palette, color) => {
+      // Paper is a light page and the dark page a dark one, in either theme: their marks are the
+      // Changes view's light and dark values (compare/colors.ts).
+      const values = marks(color, palette);
+      const want = DIFF_TOKENS[palette][color === 'paper' ? 'light' : 'dark'];
+      for (const [token, value] of Object.entries(want))
+        expect(values[token]?.toLowerCase(), `${token} (${palette}, ${color})`).toBe(value);
+    },
+  );
+
+  const combos = THEMES.flatMap((name) =>
+    PAGE_COLORS.flatMap((color) => DIFF_COLORS.map((palette) => [name, color, palette] as const)),
+  );
+
+  test.each(combos)(
+    'Show changes marks, scene numbers, and notes on pages are AA on both page colours in both themes (%s, %s, %s)',
+    (name, color, palette) => {
+      const { page, ink, focus } = sheet(name, color);
+      const t = marks(color, palette);
+      const pairs: Array<[string, string, string, string, number]> = [
+        // The script's text, scene numbers, and the page's furniture (a page number, MORE and
+        // CONT'D) are the ink, on the page and on a marked line's band.
+        ['ink', ink, 'page', page, 4.5],
+        ...['--diff-add-bg', '--diff-del-bg', '--diff-add-word', '--diff-del-word'].map(
+          (tint): [string, string, string, string, number] => [
+            'ink',
+            ink,
+            tint,
+            t[tint] as string,
+            4.5,
+          ],
+        ),
+        // The + in the margin and a removed-lines button's words are text on the page; their bar
+        // and rule are graphics; the focus ring on a marked line or a button shows.
+        ...['--diff-add-sign', '--diff-del-sign'].flatMap(
+          (sign): Array<[string, string, string, string, number]> => [
+            [sign, t[sign] as string, 'page', page, 4.5],
+            [
+              sign,
+              t[sign] as string,
+              sign.replace('sign', 'bg'),
+              t[sign.replace('sign', 'bg')] as string,
+              3,
+            ],
+          ],
+        ),
+        ['focus', focus, 'page', page, 3],
+        ...['--diff-add-bg', '--diff-del-bg'].map(
+          (tint): [string, string, string, string, number] => [
+            'focus',
+            focus,
+            tint,
+            t[tint] as string,
+            3,
+          ],
+        ),
+      ];
+      const short = pairs
+        .filter(([, a, , b, min]) => contrast(a, b) < min)
+        .map(([fg, a, bg, b, min]) => `${fg} on ${bg}: ${contrast(a, b).toFixed(2)} < ${min}`);
+      expect(short).toEqual([]);
+    },
+  );
+
+  test.each(['ScriptPane.vue', 'ComparePane.vue'])(
+    '%s draws its pages on the desk, from the tokens',
+    (name) => {
+      const vue = readFileSync(join(APP, 'components', name), 'utf8');
+      expect(vue).toContain('on-sheet');
+      const style = vue.slice(vue.indexOf('<style'));
+      expect(style).toMatch(/background: var\(--desk\);/);
+      expect(style).toMatch(
+        /box-shadow:\s*0 0 0 1px var\(--sheet-edge\),\s*var\(--sheet-shadow\);/,
+      );
+      // The page's own colours come from the region, never the theme's page.
+      expect(style.match(/var\(--(page|ink|ink-muted)\)/g) ?? []).toEqual([]);
+      expect(style.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
+    },
+  );
+
+  test('print and exports never see the page colour', () => {
+    // Print draws the paper white with black type, whatever the setting.
+    const print = tokensCss.slice(tokensCss.indexOf('@media print'));
+    expect(print).toMatch(/\.on-sheet \{[^}]*--drafter-page: #ffffff;[^}]*--drafter-ink: #000000;/);
   });
 });

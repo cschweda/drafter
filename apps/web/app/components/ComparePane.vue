@@ -38,8 +38,8 @@ const sheet = ref<HTMLElement>();
 const probe = ref<HTMLElement>();
 const columns = computed(() => pages.value?.template.page.width ?? 85);
 
-/** The margin around the pages, in pixels, as the Script pane's. */
-const GUTTER = 16;
+/** The desk around the pages, in pixels, as the Script pane's. */
+const GUTTER = 24;
 
 /** Fit width, as the Script pane's: CSS `zoom`, so a page fills the pane and the layout never changes. */
 function applyZoom() {
@@ -48,6 +48,8 @@ function applyZoom() {
   const room = root.value.clientWidth - 2 * GUTTER;
   const scale = natural > 0 && room > 0 ? room / natural : 1;
   sheet.value.style.zoom = scale === 1 ? '' : String(scale);
+  // The gaps between the pages are inside the zoom: divided by it, they stay 24px on the screen.
+  sheet.value.style.setProperty('--scale', String(scale));
 }
 
 function draw() {
@@ -197,7 +199,7 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
     <section
       v-show="view === 'pages'"
       ref="sheet"
-      class="drafter-script pages"
+      class="drafter-script pages on-sheet"
       aria-label="The newer version"
     />
   </div>
@@ -207,13 +209,11 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
 .compare-host {
   position: relative;
   height: 100%;
-  padding: 16px;
+  padding: 24px;
   box-sizing: border-box;
   overflow: auto;
   background: var(--desk);
   color: var(--text);
-  --drafter-page: var(--page);
-  --drafter-ink: var(--ink);
 }
 .changes {
   margin: 0 auto 12px;
@@ -273,11 +273,16 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
   margin: 0 auto;
 }
 .pages :deep(.drafter-page) {
-  margin-bottom: 16px;
+  /* Paper on the desk, as the Script pane's (design §4): 24px apart whatever the zoom, a hairline
+     and a soft shadow. */
+  margin-bottom: calc(24px / var(--scale, 1));
+  box-shadow:
+    0 0 0 1px var(--sheet-edge),
+    var(--sheet-shadow);
 }
 .pages :deep(.compare-mark:focus-visible),
 .pages :deep(.compare-mark:focus) {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 .pages :deep(.compare-star) {
@@ -303,7 +308,7 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
   padding: 0 4px;
   border: 1px solid currentColor;
   border-radius: 3px;
-  background: var(--drafter-page, #fff);
+  background: var(--drafter-page);
   color: inherit;
   font: 600 9pt/1.4 var(--font-sans);
   white-space: nowrap;
@@ -317,7 +322,7 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
   box-shadow:
     0 0 0 1px currentColor,
     0 2px 6px rgb(0 0 0 / 20%);
-  background: var(--drafter-page, #fff);
+  background: var(--drafter-page);
 }
 .pages :deep(.compare-gap-lines ins),
 .pages :deep(.compare-gap-lines del) {

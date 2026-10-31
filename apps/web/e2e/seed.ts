@@ -37,3 +37,23 @@ export function drafterDatabase(settings: Array<{ key: string; value: unknown }>
     ],
   };
 }
+
+/**
+ * The tests' storage state (playwright.config.ts) with these settings rows as well, for
+ * `test.use({ storageState })`.
+ */
+export function stateWithSettings(settings: Array<{ key: string; value: unknown }>) {
+  return {
+    cookies: [],
+    origins: [
+      {
+        origin: `http://localhost:${Number(process.env.E2E_PORT ?? 4173)}`,
+        localStorage: [
+          { name: 'drafter-tour-v1', value: 'true' },
+          { name: 'drafter-storage-toast-v1', value: 'true' },
+        ],
+        indexedDB: [drafterDatabase([...sampleSeenRows, ...settings])],
+      },
+    ],
+  };
+}

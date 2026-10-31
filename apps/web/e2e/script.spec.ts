@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { drafterDatabase, sampleSeenRows } from './seed';
+import { removePickers } from './fs-stub';
+import { drafterDatabase, sampleSeenRows, stateWithSettings } from './seed';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const SAMPLE = readFileSync(
@@ -27,6 +29,38 @@ async function useLightTheme(page: Page) {
   await page.getByRole('button', { name: 'Switch to light theme' }).click();
   await expect(page.locator('html')).toHaveClass(/\blight\b/);
 }
+
+/** Chooses a Page colour in Settings (fresh-look design §4). */
+async function choosePageColor(page: Page, color: 'paper' | 'dark') {
+  await page.keyboard.press('ControlOrMeta+,');
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await expect(settings).toBeVisible();
+  await settings.getByLabel('Page colour').selectOption(color);
+  await settings.getByRole('button', { name: 'Done' }).click();
+  await expect(settings).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('data-page-color', color);
+}
+
+/** A token's color, as the page's root computes it. */
+const tokenColor = (page: Page, token: string) =>
+  page.evaluate((name) => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+
+/** The first page's paper and type, and the desk around it. */
+const pageColors = (page: Page) =>
+  pages(page)
+    .first()
+    .evaluate((el) => ({
+      paper: getComputedStyle(el).backgroundColor,
+      ink: getComputedStyle(el).color,
+      desk: getComputedStyle(el.closest('.script-host') as Element).backgroundColor,
+    }));
 
 /**
  * Types a phrase, a letter at a time, at the start of a 120-page script, and expects no long task
@@ -103,17 +137,102 @@ test.describe('the Script pane on a desktop', () => {
     await expect(headings).toHaveText(['INT. KITCHEN - NIGHT', 'EXT. BACK PORCH - LATER']);
   });
 
-  test('draws the pages in the theme’s paper and ink', async ({ page }) => {
-    const colors = () =>
-      pages(page)
-        .first()
-        .evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]);
-    const dark = await colors();
+  test('the page is paper on the desk in both themes', async ({ page }) => {
+    for (const theme of ['dark', 'light'] as const) {
+      if (theme === 'light') await useLightTheme(page);
+      const colors = await pageColors(page);
+      expect(colors.paper, theme).toBe(await tokenColor(page, '--paper'));
+      expect(colors.ink, theme).toBe(await tokenColor(page, '--paper-ink'));
+      expect(colors.desk, theme).toBe(await tokenColor(page, '--desk'));
+      expect(colors.paper, theme).not.toBe(colors.desk);
+    }
+    // Dark mode's paper is dim, not white (design §4); the light theme's is white.
+    await expect.poll(async () => (await pageColors(page)).paper).toBe('rgb(255, 255, 255)');
+    // A hairline and a soft two-layer shadow on each sheet.
+    const shadow = await pages(page)
+      .first()
+      .evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(shadow.match(/rgba?\(/g)).toHaveLength(3);
+    expect(shadow).toMatch(/0px 0px 0px 1px/);
+    // 24px of desk between the pages, whatever the zoom. Above the first page, side by side, the
+    // page's top stands level with the Source's first line (pane-align.spec.ts, decided
+    // 2026-10-29); a phone's one pane has 24px there (the short script below).
+    for (const zoom of ['Fit width', '100%']) {
+      await page.getByRole('button', { name: zoom, exact: true }).click();
+      const gaps = await script(page).evaluate((el) => {
+        const host = el.closest('.script-host') as HTMLElement;
+        const [a, b] = [...el.querySelectorAll('.drafter-page')].map((p) =>
+          p.getBoundingClientRect(),
+        );
+        return {
+          top: (a as DOMRect).top - host.getBoundingClientRect().top + host.scrollTop,
+          between: (b as DOMRect).top - (a as DOMRect).bottom,
+        };
+      });
+      expect(gaps.top, `${zoom} top`).toBeGreaterThanOrEqual(12);
+      expect(Math.abs(gaps.between - 24), `${zoom} gap ${gaps.between}`).toBeLessThan(1.5);
+    }
+  });
+
+  test("Page colour Dark gives today's dark page", async ({ page }) => {
+    // Paper by default, with no setting stored.
+    await expect
+      .poll(async () => (await pageColors(page)).paper)
+      .toBe(await tokenColor(page, '--paper'));
+    await choosePageColor(page, 'dark');
+    // The page the dark theme drew before the paper, in both themes.
+    const dark = { paper: 'rgb(27, 30, 37)', ink: 'rgb(232, 234, 238)' };
+    await expect.poll(() => pageColors(page)).toMatchObject(dark);
     await useLightTheme(page);
-    const light = await colors();
-    expect(dark).not.toEqual(light);
-    // The page token's own color, which the light theme makes white.
-    expect(light[0]).toBe('rgb(255, 255, 255)');
+    await expect.poll(() => pageColors(page)).toMatchObject(dark);
+    // Kept with the other settings.
+    await page.reload();
+    await expect(pages(page).first()).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-page-color', 'dark');
+    await expect.poll(() => pageColors(page)).toMatchObject(dark);
+    await choosePageColor(page, 'paper');
+    await expect.poll(async () => (await pageColors(page)).paper).toBe('rgb(255, 255, 255)');
+  });
+
+  test('print and the PDF are unchanged', async ({ page }) => {
+    test.setTimeout(120_000);
+    // Every browser downloads (no save picker), from the next load on.
+    await removePickers(page);
+    await page.reload();
+    await expect(pages(page).first()).toBeVisible();
+    // Every export of the sample, as bytes, under one page colour and theme.
+    const exports = async () => {
+      const files: string[] = [];
+      for (const name of ['PDF', 'HTML (.html)', 'Plain text (.txt)']) {
+        const menu = page.getByRole('group', { name: 'Export' });
+        // Opened, and seen open, before an item is chosen.
+        await expect(async () => {
+          if (!(await menu.isVisible()))
+            await page.getByRole('button', { name: 'Export', exact: true }).click();
+          await expect(menu).toBeVisible({ timeout: 1000 });
+        }).toPass();
+        const download = page.waitForEvent('download');
+        await menu.getByRole('button', { name }).click();
+        files.push((await readFile(await (await download).path())).toString('base64'));
+        await expect(menu).toBeHidden();
+      }
+      return files;
+    };
+    /** The first page's paper and type when printed. */
+    const printed = async () => {
+      await page.emulateMedia({ media: 'print' });
+      const colors = await pageColors(page);
+      await page.emulateMedia({ media: 'screen' });
+      return [colors.paper, colors.ink];
+    };
+    const paper = await exports();
+    expect(await printed()).toEqual(['rgb(255, 255, 255)', 'rgb(0, 0, 0)']);
+    await choosePageColor(page, 'dark');
+    expect(await exports()).toEqual(paper);
+    expect(await printed()).toEqual(['rgb(255, 255, 255)', 'rgb(0, 0, 0)']);
+    await useLightTheme(page);
+    expect(await exports()).toEqual(paper);
+    expect(await printed()).toEqual(['rgb(255, 255, 255)', 'rgb(0, 0, 0)']);
   });
 
   test('updates the pages as you type', async ({ page }) => {
@@ -182,8 +301,9 @@ test.describe('the Script pane on a desktop', () => {
 
     await expect(fit).toHaveAttribute('aria-pressed', 'true');
     await expect(full).toHaveAttribute('aria-pressed', 'false');
-    // Fit width: the page fills the pane (less its margins), so it is narrower than 8.5 in.
-    await expect.poll(async () => Math.abs((await width()) - (await paneWidth()))).toBeLessThan(40);
+    // Fit width: the page fills the pane (less its 24px of desk each side), so it is narrower
+    // than 8.5 in.
+    await expect.poll(async () => Math.abs((await width()) - (await paneWidth()))).toBeLessThan(56);
     expect(await width()).toBeLessThan(8.5 * 96);
 
     // The buttons work from the keyboard.
@@ -374,6 +494,81 @@ test.describe('the Script pane on a phone', () => {
   });
 
   test('has no accessibility violations in the Script tab, in both themes', async ({ page }) => {
+    expect(await violations(page)).toEqual([]);
+    await useLightTheme(page);
+    expect(await violations(page)).toEqual([]);
+  });
+});
+
+// The paper runs to the bottom (design §4, the maintainer: "extend the script all the way to the
+// bottom … It's a page of paper — even if it's not full, that's fine"): no desk under a short script.
+test.describe('a short script', () => {
+  const lastPageReachesBottom = (page: Page) =>
+    script(page).evaluate((el) => {
+      const host = el.closest('.script-host') as HTMLElement;
+      const last = [...el.querySelectorAll('.drafter-page')].at(-1) as HTMLElement;
+      const box = host.getBoundingClientRect();
+      return {
+        under: box.top + host.clientTop + host.clientHeight - last.getBoundingClientRect().bottom,
+        scrolls: host.scrollHeight - host.clientHeight,
+      };
+    });
+
+  test('is drawn on paper that runs to the bottom of the pane', async ({ page, isMobile }) => {
+    // Tall enough that one whole page, even at 100%, ends above the pane's bottom.
+    const width = isMobile ? (page.viewportSize()?.width ?? 390) : 1440;
+    await page.setViewportSize({ width, height: isMobile ? 900 : 1500 });
+    await page.goto('/');
+    await expect(pages(page).first()).toBeVisible();
+    if (!(await page.locator('.cm-content').isVisible()))
+      await page.getByRole('tab', { name: 'Source' }).click();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText('INT. HALL - DAY\n\nShe waits.\n');
+    if (!(await script(page).isVisible())) await page.getByRole('tab', { name: 'Script' }).click();
+    await expect(pages(page)).toHaveCount(1);
+    if (isMobile) {
+      // One pane: 24px of desk above the first page.
+      const top = await pages(page)
+        .first()
+        .evaluate(
+          (el) =>
+            el.getBoundingClientRect().top -
+            (el.closest('.script-host') as HTMLElement).getBoundingClientRect().top,
+        );
+      expect(Math.abs(top - 24)).toBeLessThan(1.5);
+    }
+    for (const zoom of isMobile ? ['Fit width'] : ['100%', 'Fit width']) {
+      await page.getByRole('button', { name: zoom, exact: true }).click();
+      await expect
+        .poll(async () => Math.abs((await lastPageReachesBottom(page)).under), zoom)
+        .toBeLessThan(1.5);
+      expect((await lastPageReachesBottom(page)).scrolls, zoom).toBeLessThanOrEqual(1);
+    }
+    // A longer script is whole sheets again: its last page ends where a page ends.
+    if (!isMobile) {
+      await page.locator('.cm-content').click();
+      await page.keyboard.press('ControlOrMeta+A');
+      await page.keyboard.insertText(SAMPLE);
+      await expect(pages(page)).toHaveCount(3);
+      const heights = await pages(page).evaluateAll((els) =>
+        els.map((el) => Math.round(el.getBoundingClientRect().height)),
+      );
+      expect(new Set(heights).size).toBe(1);
+    }
+  });
+});
+
+test.describe('with Page colour Dark stored', () => {
+  test.use({ storageState: stateWithSettings([{ key: 'pageColor', value: 'dark' }]) });
+
+  test('opens on the dark page, with no accessibility violations in either theme', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(pages(page).first()).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-page-color', 'dark');
+    await expect.poll(async () => (await pageColors(page)).paper).toBe('rgb(27, 30, 37)');
     expect(await violations(page)).toEqual([]);
     await useLightTheme(page);
     expect(await violations(page)).toEqual([]);

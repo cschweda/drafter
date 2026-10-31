@@ -92,6 +92,13 @@ test.describe('the dialog', () => {
       '130%',
       '150%',
     ]);
+    // Page colour (fresh-look design §4): paper by default, in both themes; on screen only.
+    const pageColor = dialog(page).getByLabel('Page colour');
+    await expect(pageColor).toHaveValue('paper');
+    await expect(pageColor.locator('option')).toHaveText(['Paper', 'Dark']);
+    await expect(pageColor).toHaveAccessibleDescription(
+      'The pages drawn beside your writing: paper, or a dark page for writing at night. Printing, the PDF, and every export are always on white paper.',
+    );
     const paper = dialog(page).getByLabel('Paper for Markdown PDFs');
     await expect(paper).toHaveValue('letter');
     await expect(paper.locator('option')).toHaveText(['US Letter', 'A4']);
@@ -196,6 +203,22 @@ test('remembers settings after a reload', async ({ page }) => {
   await expect(toggle(page, 'lineNumbers')).toBeChecked();
   await expect(toggle(page, 'matchSystem')).toBeChecked();
   await expect(textSize(page)).toHaveValue('1.3');
+});
+
+test('Page colour is kept, and an older visit without it opens on paper', async ({ page }) => {
+  // The settings an older Drafter kept: none of them is Page colour.
+  expect(Object.keys(await stored(page))).not.toContain('pageColor');
+  await expect(page.locator('html')).toHaveAttribute('data-page-color', 'paper');
+  await openSettings(page);
+  await dialog(page).getByLabel('Page colour').selectOption('dark');
+  await expect(page.locator('html')).toHaveAttribute('data-page-color', 'dark');
+  await closeSettings(page);
+  await expect.poll(() => stored(page)).toEqual({ pageColor: 'dark' });
+  await page.reload();
+  await expect(editor(page)).toBeAttached();
+  await expect(page.locator('html')).toHaveAttribute('data-page-color', 'dark');
+  await openSettings(page);
+  await expect(dialog(page).getByLabel('Page colour')).toHaveValue('dark');
 });
 
 test("the browser's spellcheck stays off in the Source pane, and the switch turns Drafter's on and off", async ({

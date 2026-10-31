@@ -45,12 +45,22 @@ export interface Settings {
   diffLayout: DiffLayout;
   /** The Stats tab's Character by scene as a List of text, not the grid: the last chosen, off by default (seeing-the-script design §4.4). */
   gridAsList: boolean;
+  /**
+   * The pages on screen (the Script tab, Compare's Pages, Show changes): paper on the desk by
+   * default, in both themes, or the dark page for writing at night (fresh-look design §4). Never
+   * print, the PDF, or an export.
+   */
+  pageColor: PageColor;
 }
 
 export type CompareView = 'changes' | 'pages';
 export type DiffLayout = 'unified' | 'split';
 export const COMPARE_VIEWS: readonly CompareView[] = ['changes', 'pages'];
 export const DIFF_LAYOUTS: readonly DiffLayout[] = ['unified', 'split'];
+
+export type PageColor = 'paper' | 'dark';
+/** The page colours, as Settings lists them. */
+export const PAGE_COLORS: readonly PageColor[] = ['paper', 'dark'];
 
 export type CardSize = 'small' | 'medium' | 'large';
 /** The card sizes, smallest first. */
@@ -79,6 +89,7 @@ export const DEFAULT_SETTINGS: Settings = {
   compareView: 'changes',
   diffLayout: 'unified',
   gridAsList: false,
+  pageColor: 'paper',
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -95,6 +106,7 @@ function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'markdownPaper') return (PAPERS as readonly unknown[]).includes(value);
   if (key === 'diffColors') return (DIFF_COLORS as readonly unknown[]).includes(value);
   if (key === 'compareView') return (COMPARE_VIEWS as readonly unknown[]).includes(value);
+  if (key === 'pageColor') return (PAGE_COLORS as readonly unknown[]).includes(value);
   if (key === 'diffLayout') return (DIFF_LAYOUTS as readonly unknown[]).includes(value);
   if (key === 'spellLanguage') return (SPELL_LANGUAGES as readonly unknown[]).includes(value);
   if (key === 'personalDictionary') {

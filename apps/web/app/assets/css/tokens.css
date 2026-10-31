@@ -79,13 +79,14 @@
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* The script's own colors in the Source pane, and today's page. The syntax colors keep their hues
-   (design §2), measured on the new surfaces. --page, --ink, and --ink-muted are the page as it is
-   drawn today, which becomes the Page colour setting's Dark when the paper arrives (plan, Task 5). */
+/* The script's own colors in the Source pane, and the theme's page. The syntax colors keep their
+   hues (design §2), measured on the new surfaces. --page, --ink, and --ink-muted are the page as it
+   was drawn before the paper: Compare's Changes view and the Markdown preview are still drawn on
+   it, and its dark value is the Page colour setting's Dark (below). */
 :root,
 .dark {
-  --page: #1b1e25;
-  --ink: #e8eaee;
+  --page: var(--page-dark);
+  --ink: var(--page-dark-ink);
   --ink-muted: #9aa1ae;
   --cue: #8db8e8;
   --trans: #f5a9c0;
@@ -103,6 +104,101 @@
   --note: #2e7d4f;
   --title: #b5502f;
   --spelling: #c62828;
+}
+
+/* The pages drawn on screen (design §4): paper on the desk in both themes, with a hairline and a
+   soft two-layer shadow. Page colour Dark (`data-page-color` on the root, settings/apply.ts) draws
+   the dark page instead, in either theme. The pages' region (`.on-sheet`: the Script tab's pages
+   and Compare's Pages) takes the page, its type, and a focus ring that shows on it from here, and
+   Show changes' colours from the page colour, not the theme: paper is a light page and the dark
+   page a dark one, so they are compare/colors.ts's light and dark values (test/tokens.test.ts
+   checks both, and their contrast). Print, the PDF, and every export never see any of this. */
+:root {
+  --page-dark: #1b1e25;
+  --page-dark-ink: #e8eaee;
+  --page-dark-focus: #f2cb7a;
+  --paper-focus: #a06a00;
+}
+
+:root,
+.dark,
+.light {
+  --sheet: var(--paper);
+  --sheet-ink: var(--paper-ink);
+  --sheet-focus: var(--paper-focus);
+}
+
+:root[data-page-color="dark"] {
+  --sheet: var(--page-dark);
+  --sheet-ink: var(--page-dark-ink);
+  --sheet-focus: var(--page-dark-focus);
+}
+
+:root,
+.dark {
+  --sheet-edge: rgb(0 0 0 / 0.6);
+  --sheet-shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+.light {
+  --sheet-edge: rgb(28 28 28 / 0.12);
+  --sheet-shadow: 0 1px 2px rgb(28 28 28 / 0.06), 0 6px 20px rgb(28 28 28 / 0.08);
+}
+
+/* The dark page on the dark desk: an edge a step lighter than the page, so the sheet still reads. */
+:root[data-page-color="dark"]:not(.light) {
+  --sheet-edge: var(--border);
+}
+
+.on-sheet {
+  --drafter-page: var(--sheet);
+  --drafter-ink: var(--sheet-ink);
+  --focus: var(--sheet-focus);
+  --diff-add-bg: #e3f3e7;
+  --diff-del-bg: #fbe7e5;
+  --diff-add-word: #bfe5c9;
+  --diff-del-word: #f5c9c4;
+  --diff-add-sign: #17663a;
+  --diff-del-sign: #a8322b;
+  --diff-fold-bg: #eef1f5;
+}
+
+:root[data-diff-colors="blue-orange"] .on-sheet {
+  --diff-add-bg: #e2ecfb;
+  --diff-del-bg: #fcebdc;
+  --diff-add-word: #bfd5f6;
+  --diff-del-word: #f6d0ad;
+  --diff-add-sign: #1d559e;
+  --diff-del-sign: #8f4700;
+  --diff-fold-bg: #eef1f5;
+}
+
+:root[data-page-color="dark"] .on-sheet {
+  --diff-add-bg: #1c3124;
+  --diff-del-bg: #3a2225;
+  --diff-add-word: #2a5236;
+  --diff-del-word: #5e2f34;
+  --diff-add-sign: #7fd99a;
+  --diff-del-sign: #ffa39b;
+  --diff-fold-bg: #242934;
+}
+
+:root[data-page-color="dark"][data-diff-colors="blue-orange"] .on-sheet {
+  --diff-add-bg: #1c2a40;
+  --diff-del-bg: #372919;
+  --diff-add-word: #2b4870;
+  --diff-del-word: #5c4122;
+  --diff-add-sign: #9cc2f7;
+  --diff-del-sign: #f2b06c;
+  --diff-fold-bg: #242934;
+}
+
+/* Printed, a page is white with black type (render-html's own colours), whatever the setting. */
+@media print {
+  .on-sheet {
+    --drafter-page: #ffffff;
+    --drafter-ink: #000000;
+  }
 }
 
 /* Today's names, as aliases of the new ones, until every component has moved over (plan, Task 10,

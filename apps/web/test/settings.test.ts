@@ -1,6 +1,12 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { createSettings, DEFAULT_SETTINGS, PAPERS, TEXT_SIZES } from '../app/settings/settings';
+import {
+  createSettings,
+  DEFAULT_SETTINGS,
+  PAGE_COLORS,
+  PAPERS,
+  TEXT_SIZES,
+} from '../app/settings/settings';
 import { db } from '../app/storage/db';
 
 beforeEach(async () => {
@@ -33,6 +39,7 @@ describe('settings', () => {
       compareView: 'changes',
       diffLayout: 'unified',
       gridAsList: false,
+      pageColor: 'paper',
     });
   });
 
@@ -40,6 +47,7 @@ describe('settings', () => {
     ['diffColors', 'red-green', 'blue-orange', ['blue', 'red', true, null]],
     ['compareView', 'changes', 'pages', ['lines', 'Pages', 1, null]],
     ['diffLayout', 'unified', 'split', ['side-by-side', 'Split', false, null]],
+    ['pageColor', 'paper', 'dark', ['light', 'Dark', true, null]],
   ] as const)(
     '%s is %s by default, and a stored %s is kept, and anything else isn’t',
     async (key, byDefault, other, wrong) => {
@@ -83,6 +91,26 @@ describe('settings', () => {
       await store.ready;
       expect(store.settings.value.markdownPaper, String(value)).toBe('letter');
     }
+  });
+
+  test('settings saved before Page colour existed load, with the pages on paper', async () => {
+    // An older visit's rows: no pageColor among them (fresh-look design §4).
+    await db.settings.bulkPut([
+      { key: 'textSize', value: 1.15 },
+      { key: 'diffColors', value: 'blue-orange' },
+      { key: 'lineNumbers', value: true },
+    ]);
+    const store = createSettings();
+    await store.ready;
+    expect(store.read.value).toBe(true);
+    expect(store.settings.value).toEqual({
+      ...DEFAULT_SETTINGS,
+      textSize: 1.15,
+      diffColors: 'blue-orange',
+      lineNumbers: true,
+    });
+    expect(store.settings.value.pageColor).toBe('paper');
+    expect(PAGE_COLORS).toEqual(['paper', 'dark']);
   });
 
   test('the structure strip is off by default, and a stored true is kept', async () => {

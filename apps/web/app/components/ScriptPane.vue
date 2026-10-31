@@ -28,8 +28,8 @@ const host = ref<HTMLElement>();
 const probe = ref<HTMLElement>();
 const columns = computed(() => layoutTemplate.value?.page.width ?? 85);
 
-/** The margin around the pages, in pixels. */
-const GUTTER = 16;
+/** The desk around the pages, and between them, in pixels on the screen (design §4). */
+const GUTTER = 24;
 /** `render-html` waits for the font with no limit: a load that never settles mustn't leave the pane blank. */
 const FONT_WAIT_MS = 3000;
 /** How long after the first draw a change of scale from a resize still keeps the cursor's line in view. */
@@ -77,8 +77,15 @@ function applyZoom(reveal = true) {
   const fit = zoom.value === 'fit';
   const scale = fit ? (natural > 0 && room > 0 ? room / natural : 1) : settings.value.textSize;
   const zoomed = scale === 1 ? '' : String(scale);
-  if (view.element.style.zoom === zoomed) return;
+  // The gaps between the pages are inside the zoom: they are divided by it, so they stay 24px.
+  if (view.element.style.getPropertyValue('--scale') !== String(scale))
+    view.element.style.setProperty('--scale', String(scale));
+  if (view.element.style.zoom === zoomed) {
+    fillToBottom();
+    return;
+  }
   view.element.style.zoom = zoomed;
+  fillToBottom();
   // Zoom moves every line, so the one the cursor is on may have left the pane (the first visit
   // is drawn before the font settles the scale). `reveal` leaves a reader who has scrolled alone.
   // A resize (the observer) doesn't bring it back, so a pane being dragged wider doesn't yank a
@@ -86,6 +93,31 @@ function applyZoom(reveal = true) {
   // With scroll sync on, any change of scale puts the pages back in step with the Source instead.
   if (sync.placeView()) return;
   if (reveal) view.reveal(cursorBlock.value);
+}
+
+/**
+ * The paper runs to the pane's bottom (design §4, the maintainer: "extend the script all the way to
+ * the bottom … It's a page of paper"): where the pages end above it (a short script at 100%, a tall
+ * window, a phone), the last sheet is drawn taller, so no desk shows under it. Measured on the
+ * screen and set inside the zoom, so it is divided by the scale.
+ */
+function fillToBottom() {
+  const el = view?.element;
+  const pane = host.value;
+  if (!el || !pane) return;
+  // A script longer than the pane, the usual case, is only read: a long one is never laid out twice.
+  if (!('fill' in el.dataset) && pane.scrollHeight > pane.clientHeight) return;
+  delete el.dataset.fill;
+  el.style.removeProperty('--fill');
+  const last = el.lastElementChild;
+  if (!(last instanceof HTMLElement) || !last.classList.contains('drafter-page')) return;
+  const box = last.getBoundingClientRect();
+  const bottom = box.bottom - pane.getBoundingClientRect().top - pane.clientTop + pane.scrollTop;
+  const room = Math.floor(pane.clientHeight - bottom);
+  if (room <= 0) return;
+  const scale = Number(el.style.zoom) || 1;
+  el.style.setProperty('--fill', `${(box.height + room) / scale}px`);
+  el.dataset.fill = '';
 }
 
 /**
@@ -118,6 +150,7 @@ async function draw() {
   await current.update(next, template);
   if (view !== current) return;
   syncPane?.invalidate();
+  // Pages may have come or gone, which moves where the last one ends.
   applyZoom();
   // The first draw, and the settling after it, is put in step with the Source when sync is on (on a
   // phone, where the Source was); after that a drawing follows the cursor, which sync keeps in view.
@@ -132,6 +165,8 @@ onMounted(() => {
     fontsReady: fontsReady(),
     decorate: liveDecorate(() => view),
   });
+  // The pages' region takes the page colour's paper, type, focus ring, and marks (tokens.css).
+  view.element.classList.add('on-sheet');
   host.value.addEventListener('keydown', onKeydown);
   view.element.addEventListener(GOTO_EVENT, (event) => {
     goto((event as CustomEvent<{ offset: number }>).detail.offset);
@@ -245,16 +280,15 @@ watch(cursorBlock, (block) => {
 .script-host {
   position: relative;
   height: 100%;
-  padding: 16px;
+  /* Paper on a desk (design §4): 24px of desk above the first page and beside the pages; none
+     under a short script, whose last sheet runs to the bottom (fillToBottom). */
+  padding: 24px 24px 0;
   box-sizing: border-box;
   overflow: auto;
   background: var(--desk);
-  /* The paper and the type follow the theme. */
-  --drafter-page: var(--page);
-  --drafter-ink: var(--ink);
 }
 .script-host:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 .failed {
@@ -274,7 +308,15 @@ watch(cursorBlock, (block) => {
   margin: 0 auto;
 }
 .script-host :deep(.drafter-page) {
-  margin-bottom: 16px;
+  /* 24px on the screen, whatever the zoom; a hairline and a soft shadow lift each sheet. */
+  margin-bottom: calc(24px / var(--scale, 1));
+  box-shadow:
+    0 0 0 1px var(--sheet-edge),
+    var(--sheet-shadow);
+}
+.script-host :deep(.drafter-script[data-fill] > .drafter-page:last-child) {
+  min-height: var(--fill);
+  margin-bottom: 0;
 }
 /* Show changes (version-history design §4.3): the Changes view's colors, whole lines only. A band
    in the row tint behind a changed line, a bar at the page's edge, and a + in the left margin. */
@@ -298,7 +340,7 @@ watch(cursorBlock, (block) => {
 .script-host :deep(.live-mark:focus-visible),
 .script-host :deep(.live-mark:focus),
 .script-host :deep(.live-gap-button:focus-visible) {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 /* Removed lines (or new ones that print nothing): a rule in the blank row above the line they were
@@ -328,7 +370,7 @@ watch(cursorBlock, (block) => {
   padding: 0 6px;
   border: 1px solid var(--diff-del-sign);
   border-radius: 3px;
-  background: var(--drafter-page, #fff);
+  background: var(--drafter-page);
   color: var(--diff-del-sign);
   font: 600 9pt/1.4 var(--font-sans);
   white-space: nowrap;
@@ -347,14 +389,14 @@ watch(cursorBlock, (block) => {
   box-shadow:
     0 0 0 1px var(--diff-del-sign),
     0 2px 6px rgb(0 0 0 / 20%);
-  background: linear-gradient(var(--diff-del-bg), var(--diff-del-bg)), var(--drafter-page, #fff);
-  color: var(--drafter-ink, #000);
+  background: linear-gradient(var(--diff-del-bg), var(--diff-del-bg)), var(--drafter-page);
+  color: var(--drafter-ink);
 }
 .script-host :deep(.live-gap-unprinted .live-gap-lines) {
   box-shadow:
     0 0 0 1px var(--diff-add-sign),
     0 2px 6px rgb(0 0 0 / 20%);
-  background: linear-gradient(var(--diff-add-bg), var(--diff-add-bg)), var(--drafter-page, #fff);
+  background: linear-gradient(var(--diff-add-bg), var(--diff-add-bg)), var(--drafter-page);
 }
 .script-host :deep(.live-gap-lines del),
 .script-host :deep(.live-gap-lines ins) {

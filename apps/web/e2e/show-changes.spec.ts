@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 import { editor, runCommand, setText, showSource, start } from './modules';
+import { stateWithSettings } from './seed';
 
 // Show changes on the Script pane (version-history design §4): off on every visit; on, the pages
 // are marked against the last save (or a chosen version) with the Changes view's colors, whole
@@ -430,20 +431,46 @@ test.describe('Show changes in a long script', () => {
   });
 });
 
-test.describe("Show changes' accessibility", () => {
-  const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-  for (const theme of ['dark', 'light'] as const) {
-    test(`has no accessibility violations (${theme})`, async ({ page }) => {
-      await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
-      const after = BASE.replace('She waits', 'She paces').replace('Nobody answers it.\n\n', '');
-      await savedThenChanged(page, BASE, after);
-      await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
-      await turnOn(page, 1);
-      await scriptRegion(page).getByRole('button', { name: '1 line removed' }).click();
-      const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
-      expect(
-        violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`),
-      ).toEqual([]);
-    });
-  }
-});
+// Review focus 4 (fresh-look plan): the marks stay AA on both page colours, in both themes: the
+// light theme with Page colour Dark, and the dark theme with paper, included.
+for (const pageColor of ['paper', 'dark'] as const) {
+  test.describe(`Show changes' accessibility on ${pageColor === 'paper' ? 'paper' : 'the dark page'}`, () => {
+    test.use({ storageState: stateWithSettings([{ key: 'pageColor', value: pageColor }]) });
+    const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+    for (const theme of ['dark', 'light'] as const) {
+      test(`has no accessibility violations (${theme})`, async ({ page }) => {
+        await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
+        // A changed line, and removed lines behind a button. (Scene numbers aren't drawn on the
+        // screen's pages; they are the page's type, which test/tokens.test.ts measures.)
+        const after = BASE.replace('She waits', 'She paces').replace('Nobody answers it.\n\n', '');
+        await savedThenChanged(page, BASE, after);
+        await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
+        await expect(page.locator('html')).toHaveAttribute('data-page-color', pageColor);
+        await turnOn(page, 1);
+        // The page the marks are on is the page colour's, whatever the theme.
+        const paper = await scriptRegion(page)
+          .locator('.drafter-page')
+          .first()
+          .evaluate((el) => getComputedStyle(el).backgroundColor);
+        const want = {
+          paper: theme === 'dark' ? 'rgb(232, 228, 218)' : 'rgb(255, 255, 255)',
+          dark: 'rgb(27, 30, 37)',
+        };
+        expect(paper).toBe(want[pageColor]);
+        await scriptRegion(page).getByRole('button', { name: '1 line removed' }).click();
+        const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+        expect(
+          violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`),
+        ).toEqual([]);
+        // A marked line's focus ring, in the page's own focus colour, shows on it.
+        await page.keyboard.press('Escape');
+        await scriptRegion(page).locator('.live-mark').first().focus();
+        const ring = await scriptRegion(page)
+          .locator('.live-mark')
+          .first()
+          .evaluate((el) => getComputedStyle(el).outlineColor);
+        expect(ring).toBe(pageColor === 'paper' ? 'rgb(160, 106, 0)' : 'rgb(242, 203, 122)');
+      });
+    }
+  });
+}

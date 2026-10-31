@@ -5,7 +5,14 @@ import { HELP_PAGES, helpHref } from '~/commands/data';
 import { DIFF_COLOR_NAMES, DIFF_COLORS, type DiffColors } from '~/compare/colors';
 import { desktop } from '~/desktop';
 import { settingsOpen } from '~/settings/dialog';
-import { PAPERS, type Settings, TEXT_SIZES, useSettings } from '~/settings/settings';
+import {
+  PAGE_COLORS,
+  PAPERS,
+  type PageColor,
+  type Settings,
+  TEXT_SIZES,
+  useSettings,
+} from '~/settings/settings';
 
 // The Settings dialog (Phase 1 design §8): a labeled switch for each on/off setting, a select
 // for the text size. A change takes effect and is kept at once, so there is nothing to confirm.
@@ -123,6 +130,14 @@ function onSize(event: Event) {
   void set('textSize', Number((event.target as HTMLSelectElement).value));
 }
 
+// ---- Page colour (fresh-look design §4) -----------------------------------------------------
+
+const PAGE_COLOR_NAMES: Readonly<Record<PageColor, string>> = { paper: 'Paper', dark: 'Dark' };
+
+function onPageColor(event: Event) {
+  void set('pageColor', (event.target as HTMLSelectElement).value as PageColor);
+}
+
 // ---- Colors for changes (version-history design §7) -----------------------------------------
 
 function onDiffColors(event: Event) {
@@ -188,6 +203,26 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
       >
         <option v-for="size in TEXT_SIZES" :key="size" :value="String(size)">
           {{ percent(size) }}
+        </option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="text">
+        <label for="settings-page-color" class="name">Page colour</label>
+        <p id="settings-page-color-why" class="why">
+          The pages drawn beside your writing: paper, or a dark page for writing at night. Printing,
+          the PDF, and every export are always on white paper.
+        </p>
+      </div>
+      <select
+        id="settings-page-color"
+        class="size"
+        aria-describedby="settings-page-color-why"
+        :value="settings.pageColor"
+        @change="onPageColor"
+      >
+        <option v-for="color in PAGE_COLORS" :key="color" :value="color">
+          {{ PAGE_COLOR_NAMES[color] }}
         </option>
       </select>
     </div>

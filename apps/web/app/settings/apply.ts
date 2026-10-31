@@ -14,6 +14,8 @@ import { useSettings } from './settings';
  *   spellcheck's language, Check notes and boneyard, and My dictionary are the spellcheck's own to
  *   watch (`spell/use-spell.ts`): each one checks the text again in its worker.
  * - Colors for changes is `data-diff-colors` on the root, which picks Compare's diff tokens.
+ * - Page colour is `data-page-color` on the root, which picks the pages' colours (tokens.css); until
+ *   the settings are read there is none, and the pages are paper, the default.
  * - The text size is `--text-scale` on the root, which the Source pane's theme and the Script
  *   pane's 100% zoom multiply by.
  * - Match system appearance sets the color mode's preference to `system`, and turning it off
@@ -46,6 +48,14 @@ export function applySettings(): () => void {
         () => settings.value.diffColors,
         (colors) => {
           document.documentElement.dataset.diffColors = colors;
+        },
+        { immediate: true },
+      ),
+      // The pages on screen take their colours from tokens chosen by this attribute.
+      watch(
+        () => settings.value.pageColor,
+        (color) => {
+          document.documentElement.dataset.pageColor = color;
         },
         { immediate: true },
       ),

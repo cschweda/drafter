@@ -130,6 +130,29 @@ test.describe('Compare', () => {
     await expect(panel(page).getByRole('heading', { name: 'EXT. ROOF - NIGHT' })).toHaveCount(1);
   });
 
+  test('draws the pages as paper on the desk, or as the dark page', async ({ page }) => {
+    await compareWithNow(page, BASE, BASE.replace('She waits', 'She paces'));
+    const looks = () =>
+      pages(page)
+        .first()
+        .evaluate((el) => ({
+          paper: getComputedStyle(el).backgroundColor,
+          shadow: getComputedStyle(el).boxShadow !== 'none',
+          desk: getComputedStyle(el.closest('.compare-host') as Element).backgroundColor,
+        }));
+    // The dark theme's dim paper on its desk (design §4).
+    await expect.poll(looks).toEqual({
+      paper: 'rgb(232, 228, 218)',
+      shadow: true,
+      desk: 'rgb(11, 12, 15)',
+    });
+    await page.keyboard.press('ControlOrMeta+,');
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    await settings.getByLabel('Page colour').selectOption('dark');
+    await settings.getByRole('button', { name: 'Done' }).click();
+    await expect.poll(async () => (await looks()).paper).toBe('rgb(27, 30, 37)');
+  });
+
   test('shows a removed-lines marker that reveals the struck-through lines', async ({ page }) => {
     await compareWithNow(page, BASE, BASE.replace('The phone rings.\n\n', ''));
     const gap = panel(page).getByRole('button', { name: '1 line removed', exact: true });
