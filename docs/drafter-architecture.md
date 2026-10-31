@@ -168,7 +168,7 @@ Drafter saves the way a desktop app does: the file is the document, and Drafter 
 
 1. **The file** — a script is a `.fountain` file you save, like any document. `Mod+S` saves and `Mod+Shift+S` saves as. Where the browser allows it, Drafter writes straight back to the file you opened or saved, such as `~/scripts/boca.fountain`. Where it doesn't, Save downloads a fresh copy of the file.
 2. **The recovery copy: IndexedDB (Dexie)** — kept in every browser, whether or not the script has a file, and written as you type. Holds the project list, each project's source, a rolling snapshot history, templates, and UI state. It's what brings your work back after a crash, a killed tab, or a closed window, and it makes "close the tab, come back tomorrow" work without any file dialog.
-3. **Export** — one-click to `.fountain` (canonical), `.fdx` (Final Draft), `.pdf`, `.html` (standalone, self-contained), `.txt` (fixed-width), `.md` outline, `.json` (CST). Import from `.fountain`, `.fdx`, `.txt`. PDF import is out of scope through Phase 4 — it is a bottomless well.
+3. **Export** — one-click to `.fountain` (canonical), `.fdx` (Final Draft), `.pdf`, `.html` (standalone, self-contained), `.txt` (fixed-width), `.md` outline, `.json` (CST). Import from `.fountain`, `.fdx`, `.txt`. PDF import, for a script PDF with real text (not a scan), is planned for Phase 3 (the maintainer, 2026-10-31: every app Drafter is compared with imports PDF); scanned PDFs and OCR stay out of scope.
 
 **6.1 The honest browser table.** "Local-first forever" is only as strong as the browser's storage guarantees, and those differ a lot. This table is also user documentation; it should appear in the app's docs.
 
@@ -335,7 +335,7 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 
 The ordering principle: **the reasons to choose Drafter over Beat must be on screen at the first public release.** That means the Problems pane, the stage-play template, and accessibility move up, Final Draft files follow the outline, and radio and TV formats come later. The [README's roadmap](../README.md#roadmap) has the summary, with what has shipped.
 
-**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. (Later, free: real-time co-writing through a relay that passes only end-to-end encrypted changes, opt-in, self-hostable; the maintainer, 2026-10-31.) From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6). PDF import is out of scope through Phase 4.
+**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. (Later, free: real-time co-writing through a relay that passes only end-to-end encrypted changes, opt-in, self-hostable; the maintainer, 2026-10-31.) From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6).
 
 ### Phase 0 — Engine (no UI)
 

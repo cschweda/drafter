@@ -26,6 +26,17 @@
 - **Built for working writers, free.** Production features, the kind a script needs once it's greenlit, come to the free app in v0.26.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers, OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. There is no paid version, and there won't be one.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
 
+**The big features, all free**
+
+- **Industry-standard pages.** Screenplay and stage-play formatting laid out live as you type, with page counts you can trust, and a PDF that looks like what readers, agents, and productions expect.
+- **Final Draft files in and out.** Open the `.fdx` a producer sends and hand one back; Highland, Fade In, Fountain, and Markdown open too.
+- **Structure tools.** Outline, index cards, the Structure strip, scene colors, synopses, notes with readers' names, setups and payoffs, and running times by scene and act.
+- **See the script.** Scaffold follows your cursor and shows who is in the scene; the Stats tab has each character's screen time, dialogue share, and a character-by-scene grid.
+- **Every draft kept.** Version history, Compare with a GitHub-style view of what changed, Show changes on the pages, deleted scenes you can put back, and the history of one scene.
+- **Production, coming free in v0.26.0.** Colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides.
+- **Writing help.** Focus mode, typewriter scrolling, daily goals, sprints, writing stats, and its own offline spellcheck.
+- **Everywhere you write.** A web app, desktop apps for Windows and Linux (and a Mac build), and it works on a phone, offline.
+
 > [!NOTE]
 > **Status: v0.22.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](#drafter-for-linux) or [on Windows](#drafter-for-windows), or [build it on your Mac](#drafter-on-a-mac).** Phase 1's web app is done, with its accessibility pass, and Phase 2 is under way, now with **Export as HTML and EPUB** (a self-contained web page, or an e-book), **Scaffold** (who is in the scene you're writing), the **Stats tab** with a character-by-scene grid, version history, Highland and Fade In imports, footnotes in Markdown documents, and `drafter convert`. Next: **a fresh look** (v0.23.0), **Drafts and Cuts** (v0.24.0), **Novel**, for drafting a novel in Markdown (v0.25.0), **Production**, free: revision colors, locked pages, OMITTED scenes, revised pages, breakdowns, and sides (v0.26.0), storylines and pacing (v0.27.0), the **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.28.0), an optional one-file `.drafter` project (v0.29.0, open spec), then Plans G and H (v0.30.0 and v0.31.0); a signed macOS download follows. See the [roadmap](#roadmap).
 
@@ -51,8 +62,43 @@
 
 Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also builds [metaincognita](https://metaincognita.com): open-source casino simulators that show the math behind the games.
 
+## How Drafter compares
+
+What each app's maker says on its own site, as of October 2026, at list prices (sales come and go). ✓ means it's there; *paid* means a higher plan; ? means the maker doesn't say. Drafter's not-yet-shipped features show the version they're planned for, never a ✓. Corrections are welcome: [open an issue](https://github.com/cschweda/drafter/issues).
+
+| | **Drafter** | Final Draft 13 | WriterDuet | Fade In | Highland Pro | Arc Studio | Celtx |
+|---|---|---|---|---|---|---|---|
+| **Price** | **Free, forever** | $249.99 once, or $99.99/yr | from $9.99/mo | $99.95 once | $59.99/yr | from $69/yr | from $11.24/mo |
+| **Free version** | **Everything** | 5-day trial | 3 projects | Watermarked demo | 30-day trial | 2 scripts, watermark | 1 project |
+| **Account or sign-in** | **Never** | Store sign-in, 2 computers | Yes | Registration key | App Store | Yes | Yes |
+| **Open source** | **✓ MIT** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Your data** | **Stays on your device; no tracking** | On your computer | Cloud | On your computer | On your computer | Cloud | Cloud |
+| Mac / Windows / Linux | build it / ✓ / ✓ | ✓ / ✓ / ✗ | ✓ / ✓ / ✓ | ✓ / ✓ / ✓ | ✓ / ✗ / ✗ | ✓ / ✓ / web | web; Mac app |
+| Web, and phones | ✓ web, works on phones | iPhone app | ✓ | mobile apps | iPhone, iPad | ✓ | ✓ web |
+| Works fully offline | ✓ | ✓ | paid plans | ✓ | ? | ✓ | ✗ |
+| Final Draft (.fdx) open / save | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | open / ? |
+| Fountain open / save | ✓ / ✓ (its own format) | as plain text only | ✓ / ✓ | open / ? | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ |
+| PDF import | planned, free | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Outline and index cards | ✓ | ✓ | ✓ | partial | partial | *paid* outline | ✓ |
+| Notes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | *paid* |
+| Version history and Compare | ✓ / ✓ | ✓ / ? | ✓ / partial | ✓ / ✓ | ? | *paid* | *paid* |
+| Character and scene stats | ✓ | ✓ reports | *paid* reports | ✓ reports | partial | ✓ reports | *paid* |
+| Revision colors and marks | v0.26.0, free | ✓ | *paid* | ✓ | ✓ | *paid* | *paid* |
+| Locked pages and scene numbers, OMITTED | v0.26.0, free | ✓ | *paid* | ✓ | ? | ✓ | ? |
+| Breakdown report and sides | v0.26.0, free | ✓ / ? | ✓ / partial | ✓ / ? | ✗ | partial | *paid* |
+| Stage play | ✓ | ✓ | ✓ | ✓ | ✓ | ? | ✓ |
+| TV templates | Phase 3, free | ✓ | ✓ | ✓ | ✓ | ✓ | *paid* |
+| Spellcheck | ✓ offline | ? | ? | ✓ | ? | ✓ | ? |
+| Focus mode, goals, sprints | ✓ | ✓ | ✓ | partial | ✓ | ✓ | ? |
+| Read aloud (table read) | Phase 4, free | ✓ | *paid* | ✓ | ? | *paid* credits | ? |
+| Dark mode | ✓ | ✓ | ✓ | page colors | ✓ | ✓ | page colors |
+| Real-time co-writing | later, free | each writer needs a licence | inviter pays | ✓ | ✗ | *paid* | *paid* |
+
+Sources: each maker's own pricing, features, and help pages (Final Draft, WriterDuet, Fade In, Quote-Unquote Apps for Highland Pro, Arc Studio, Celtx), read on 31 October 2026. Every app here is good at what it does; Drafter's difference is that all of it is free, open, and never asks you to sign in.
+
 ## Contents
 
+- [How Drafter compares](#how-drafter-compares)
 - [The idea](#the-idea)
 - [Principles](#principles)
 - [What makes it different](#what-makes-it-different)
@@ -267,7 +313,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 | 0 | Engine: parser, templates, pagination, PDF, CLI | **Done** | |
 | 1 | Minimum IDE: the first public release | **Live at drafter.dev**; the desktop app for Linux (v0.4.0) and Windows (v0.8.0), and a Mac build (v0.7.0) | A signed macOS download |
 | 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0); guided starters, export options, running times by scene, and a Technical details page (v0.17.0); version history with deleted scenes, Show changes, and GitHub-style diffs (v0.18.0); Highland, Fade In, and Markdown imports, Open as screenplay, and Export as Markdown (v0.19.0); `drafter convert` and footnotes in Markdown documents (v0.20.0); Scaffold, the Stats tab, and the character grid (v0.21.0); Export as HTML and EPUB (v0.22.0) | **Next:** a fresh look (v0.23.0); HTML and EPUB exports that Drafter can reopen (v0.23.1); Drafts and Cuts (v0.24.0); Novel, for drafting novels in Markdown (v0.25.0); **Production, free for everyone**: revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides for actors (v0.26.0); storylines, the strip's Color by, and pacing (v0.27.0); the Workbook: a story bible and scene cards, a place for pasted notes, a watched Dropbox, Google Drive, or OneDrive folder for notes, and voice notes kept on your device (v0.28.0); an optional `.drafter` project package (v0.29.0, open spec); then reader notes with no account and the Reference tab (v0.30.0 and v0.31.0) |
-| 3 | Formats | Planned | Celtx import; TV, radio, UK/BBC, and graphic-novel templates; user templates; French scenes and doubling charts for plays; PDF with notes in the margin or a watermark; a self-contained reader file |
+| 3 | Formats | Planned | Celtx import; **PDF import** (a script PDF with real text, so you can bring in a draft from any app); TV, radio, UK/BBC, and graphic-novel templates; user templates; French scenes and doubling charts for plays; PDF with notes in the margin or a watermark; a self-contained reader file |
 | 4 | Craft | Planned | Alternate lines, a clean display mode, table read, a character pass, story order, accepting a co-writer's changes, the remaining lint rules, a PWA install flow (the production features moved up to v0.26.0) |
 | 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
 | Later | | Planned, free | **Real-time co-writing**: write in the same script at the same time, each on your own device, from an invite link, with no account. It goes through a small relay that passes only end-to-end encrypted changes, so it can never read the script; anyone can run their own. Optional, off until you invite someone, and free like everything else |
@@ -276,7 +322,7 @@ The ordering principle: the reasons to choose Drafter must be on screen at the f
 | Someday | | Possible, not planned | A Tauri desktop shell: smaller downloads and less memory, but Linux would use WebKitGTK. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open |
 | Last | | Planned | Testing with NVDA and VoiceOver, after every phase is built. Until then every view is built for screen readers and checked automatically, and Drafter claims no conformance with any standard |
 
-**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. Everything Drafter does is free, including the big features: production, and real-time co-writing, whose relay only passes encrypted changes along and stores nothing it could read. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place. PDF import is out of scope through Phase 4.
+**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. Everything Drafter does is free, including the big features: production, and real-time co-writing, whose relay only passes encrypted changes along and stores nothing it could read. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place.
 
 The full list for each phase, with what each item does and when Phase 0 counts as done, is in the [architecture document, §13](docs/drafter-architecture.md#13-phased-plan); the [Phase 1](docs/drafter-phase1-design.md) and [Phase 2](docs/drafter-phase2-design.md) designs have the details.
 
