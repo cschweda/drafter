@@ -1,3 +1,4 @@
+import { sourceElement } from '@drafter/archive';
 import type { MdNode } from '@drafter/markdown';
 // The parser-free entries: the file is built from a tree the caller parsed, so importing this
 // package (as `drafter build --html` will, for scripts) loads no Markdown parser.
@@ -15,6 +16,8 @@ export interface DocumentHtmlInput {
   lang: string;
   /** For `<meta name="generator">`, e.g. "Drafter 0.22.0". */
   generator: string;
+  /** The document's exact text, to carry inside the file so Drafter can reopen it, or absent. */
+  source?: string;
 }
 
 /** Reading speed for the header's "N min read" (design §4). */
@@ -532,5 +535,6 @@ export function renderDocumentHtml(input: DocumentHtmlInput): string {
     body,
     fontFaces: '',
     rules: '',
+    ...(input.source === undefined ? {} : { source: sourceElement('markdown', input.source) }),
   });
 }

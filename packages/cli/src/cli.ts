@@ -59,6 +59,7 @@ interface BuildOptions {
   html?: string;
   template?: string;
   sceneNumbers?: boolean;
+  reopenable?: boolean;
 }
 
 /**
@@ -112,6 +113,10 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
       '--html <file>',
       'write a self-contained HTML page: printed pages and a reading view, dark and light (notes left out)',
     )
+    .option(
+      '--reopenable',
+      'let Drafter reopen the HTML page: it carries the full script, notes and all',
+    )
     .option('--template <id|file>', templateHelp)
     .option('--scene-numbers', 'print scene numbers')
     .option('--no-scene-numbers', "don't print scene numbers, whatever the template says")
@@ -128,7 +133,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
   program
     .command('convert')
     .description(
-      'Convert Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files to Fountain, as the app imports them. Exits 1 if any is refused.',
+      'Convert Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files to Fountain, as the app imports them, and get the script back out of a Drafter HTML or EPUB export made with "Let Drafter reopen this file". Exits 1 if any is refused.',
     )
     .argument(
       '<path...>',
@@ -139,7 +144,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
     .option('--recursive', "convert the scripts in a folder's subfolders too")
     .addHelpText(
       'after',
-      '\nEach file becomes <name>.fountain. A .fountain already there is skipped, unless --force.\nThe file converted is never written.',
+      '\nEach file becomes <name>.fountain (a Markdown document from an export, <name>.md). One already there is skipped, unless --force.\nThe file converted is never written. A folder is searched for .fdx, .highland, and .fadein files only; name an .html or .epub file to convert it.',
     )
     .action(handle((paths: string[], options: ConvertOptions) => convert(paths, options, io)));
 
@@ -158,6 +163,9 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     const target = options[kind];
     if (target !== undefined) outputs.push([kind, target]);
   }
+  if (options.reopenable && options.html === undefined) {
+    throw new CliError('--reopenable needs --html: only the HTML page can carry the script');
+  }
   if (outputs.length === 0) outputs.push(['pdf', defaultPdf(input)]);
   if (outputs.filter(([, target]) => target === '-').length > 1) {
     throw new CliError('only one output can go to standard output (-)');
@@ -175,6 +183,9 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
   }
 
   const { doc, template, layout, text } = await load(input, options, io);
+  // The page carries the file exactly, so a file that isn't UTF-8 (read with U+FFFD in its
+  // place) can't be carried.
+  if (options.reopenable) await exactly(input, io);
   // Errors and warnings go to standard error as the script builds; notes are for `check`.
   const at = locator(text);
   for (const problem of problemsOf(doc, layout)) {
@@ -185,7 +196,7 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
       kind === 'pdf'
         ? await renderPdf(layout, template, { fonts: await loadFonts() })
         : kind === 'html'
-          ? await scriptHtml(input, doc, template, layout)
+          ? await scriptHtml(input, doc, template, layout, options.reopenable ? text : undefined)
           : kind === 'txt'
             ? renderText(layout, template)
             : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
@@ -198,7 +209,7 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
 
 /**
  * The script as one HTML page: both views, the notes left out, and Courier Prime embedded in the
- * styles the pages use. The CLI has no per-script rate, so the header's running time is a page a
+ * styles the pages use; with `--reopenable`, the file's whole text inside it, notes and all. The CLI has no per-script rate, so the header's running time is a page a
  * minute (the app's default).
  */
 async function scriptHtml(
@@ -206,6 +217,8 @@ async function scriptHtml(
   doc: Doc,
   template: Template,
   layout: Layout,
+  /** The file's exact text, to carry inside the page (`--reopenable`), or none. */
+  source: string | undefined,
 ): Promise<string> {
   const fonts = await loadFonts();
   const used = Object.fromEntries(
@@ -226,7 +239,25 @@ async function scriptHtml(
     lang: 'en',
     generator: `Drafter ${pkg.version}`,
     kindLine: kindLine(layout, template, 1),
+    ...(source === undefined ? {} : { source }),
   });
+}
+
+/** Refuses `--reopenable` for a file that isn't UTF-8 text, whose text can't be carried as it is. */
+async function exactly(input: string, io: IO): Promise<void> {
+  let bytes: Uint8Array;
+  try {
+    bytes = await readFile(resolve(io.cwd, input));
+  } catch (error) {
+    throw new CliError(`can't read ${input}: ${reason(error)}`);
+  }
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw new CliError(
+      `--reopenable can't carry ${input}: it isn’t UTF-8 text, so its text wouldn’t come back as it is`,
+    );
+  }
 }
 
 async function check(input: string, options: BuildOptions, io: IO): Promise<number> {

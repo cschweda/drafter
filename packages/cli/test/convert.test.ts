@@ -371,7 +371,7 @@ describe('drafter convert', () => {
     const result = await drafter('convert', at('notes.txt'), at('script.fountain'));
     expect(result.code).toBe(1);
     expect(result.out).toMatch(
-      /notes\.txt: refused: drafter convert reads Final Draft \(\.fdx\), Highland \(\.highland\), and Fade In \(\.fadein\) files$/m,
+      /notes\.txt: refused: drafter convert reads Final Draft \(\.fdx\), Highland \(\.highland\), and Fade In \(\.fadein\) files, and Drafter HTML and EPUB exports made with “Let Drafter reopen this file”$/m,
     );
     expect(result.out).toMatch(/script\.fountain: refused: /);
     expect(read('script.fountain')).toBe('INT. HALL - DAY\n');

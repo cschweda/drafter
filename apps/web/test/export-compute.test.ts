@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { listZip, readEntry } from '@drafter/archive';
+import { embeddedSource, listZip, readEntry } from '@drafter/archive';
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate, titlePageFor } from '@drafter/layout';
@@ -918,5 +918,72 @@ describe('fetching the fonts', () => {
         ? new Response('no', { status: 404 })
         : body(1);
     await expect(fetchFonts(fetcher)).rejects.toThrow('CourierPrime-Italic.ttf');
+  });
+});
+
+describe('Let Drafter reopen this file', () => {
+  const { createExporter } = compute;
+  // An original script whose text is markup in places, carried whole and read back.
+  const TEXT = [
+    'Title: The Tide Clock',
+    '',
+    'INT. CLOCK ROOM - DUSK',
+    '',
+    'Gears turn. [[Louder gears?]]',
+    '',
+    '/* </script><!-- a cut line --> */',
+    '',
+  ].join('\r\n');
+  const meta = { title: 'The Tide Clock', lang: 'en', generator: 'Drafter 9.9.9' };
+  const back = async (data: Uint8Array | string) => {
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    const found = await embeddedSource(bytes);
+    if (!found) throw new Error('no source inside');
+    return {
+      kind: found.kind,
+      text: new TextDecoder('utf-8', { ignoreBOM: true }).decode(found.bytes),
+    };
+  };
+
+  test('each of the four files carries `embed` exactly', async () => {
+    const exporter = createExporter(realFonts);
+    const source = TEXT.replace(/\r\n/g, '\n');
+    const replies = [
+      await exporter({ kind: 'html', source, template, minutesPerPage: 1, embed: TEXT, ...meta }),
+      await exporter({ kind: 'epub', source, template, modified: 0, embed: TEXT, ...meta }),
+      await exporter({ kind: 'markdown-html', source: '# A\n', embed: '# A\r\n', ...meta }),
+      await exporter({
+        kind: 'markdown-epub',
+        source: '# A\n',
+        modified: 0,
+        embed: '# A\r\n',
+        ...meta,
+      }),
+    ];
+    const read = await Promise.all(
+      replies.map((reply) => {
+        if (!('data' in reply)) throw new Error(reply.error);
+        return back(reply.data);
+      }),
+    );
+    expect(read).toEqual([
+      { kind: 'fountain', text: TEXT },
+      { kind: 'fountain', text: TEXT },
+      { kind: 'markdown', text: '# A\r\n' },
+      { kind: 'markdown', text: '# A\r\n' },
+    ]);
+  });
+
+  test('without `embed`, nothing is inside', async () => {
+    const exporter = createExporter(realFonts);
+    const reply = await exporter({
+      kind: 'html',
+      source: TEXT,
+      template,
+      minutesPerPage: 1,
+      ...meta,
+    });
+    if (!('data' in reply)) throw new Error(reply.error);
+    expect(await embeddedSource(new TextEncoder().encode(reply.data as string))).toBeNull();
   });
 });

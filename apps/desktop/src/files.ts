@@ -159,8 +159,18 @@ export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fade
  * a page or a book picked with All files) is never written.
  */
 export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html', '.epub'];
-/** The extensions of the files the app opens: scripts, and the files it imports. */
-export const OPEN_EXTENSIONS: readonly string[] = [...SCRIPT_EXTENSIONS, ...IMPORT_EXTENSIONS];
+/**
+ * The extensions of Drafter's own exports that Open can read back (reopenable exports): an HTML
+ * page or an EPUB made with "Let Drafter reopen this file". The page reads the script inside as
+ * text and opens it as a new script; the file itself is never written (`EXPORT_ONLY_EXTENSIONS`).
+ */
+export const REOPEN_EXTENSIONS: readonly string[] = ['.html', '.htm', '.epub'];
+/** The extensions of the files the app opens: scripts, the files it imports, and its exports. */
+export const OPEN_EXTENSIONS: readonly string[] = [
+  ...SCRIPT_EXTENSIONS,
+  ...IMPORT_EXTENSIONS,
+  ...REOPEN_EXTENSIONS,
+];
 /** The extensions of the files the app writes: scripts, and the exports. */
 export const WRITE_EXTENSIONS: readonly string[] = [
   ...SCRIPT_EXTENSIONS,

@@ -717,11 +717,11 @@ describe('choosing a file to open in a browser', () => {
       click.mockRestore();
     }
     expect(accept).toBe(
-      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown',
+      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,.html,.epub,text/plain,text/markdown',
     );
   });
 
-  test('the picker offers every type Drafter opens, as one', async () => {
+  test('the picker offers every type Drafter opens: scripts and imports, then its own exports', async () => {
     const { browserFiles } = await import('../app/storage/files');
     let asked: unknown;
     vi.stubGlobal('showOpenFilePicker', async (options: unknown) => {
@@ -739,6 +739,10 @@ describe('choosing a file to open in a browser', () => {
             'application/xml': ['.fdx'],
             'application/zip': ['.highland', '.fadein'],
           },
+        },
+        {
+          description: 'Drafter HTML or EPUB export',
+          accept: { 'text/html': ['.html'], 'application/epub+zip': ['.epub'] },
         },
       ],
     });

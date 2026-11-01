@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
-import { listZip, readEntry } from '@drafter/archive';
+import { embeddedSource, listZip, readEntry } from '@drafter/archive';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
@@ -601,6 +601,10 @@ const optionsItem = (page: Page) => menu(page).getByRole('button', { name: 'Expo
 const sceneNumbers = (page: Page) =>
   optionsDialog(page).getByRole('group', { name: 'Scene numbers' });
 const titlePage = (page: Page) => optionsDialog(page).getByRole('group', { name: 'Title page' });
+const reopenBox = (page: Page) =>
+  optionsDialog(page).getByRole('checkbox', {
+    name: 'Let Drafter reopen this file (includes the full script, notes and all)',
+  });
 
 /** Opens Export options from the end of the toolbar's Export menu. */
 async function openOptions(page: Page) {
@@ -755,46 +759,62 @@ test.describe('export options', () => {
     await expect(ready(page)).toHaveText('Exported The Call.txt, with no title page.');
   });
 
-  test('is disabled for a Markdown document, with the reason', async ({ page }) => {
+  test('for a Markdown document, offers only Let Drafter reopen this file, with the reason', async ({
+    page,
+  }) => {
     await start(page);
     await openMarkdownSample(page);
-    await exportButton(page).click();
-    await expect(optionsItem(page)).toBeDisabled();
-    await expect(menu(page)).toContainText(
-      'A Markdown document has no scene numbers, title page, or notes to choose.',
+    await openOptions(page);
+    await expect(optionsDialog(page)).toContainText(
+      'A Markdown document has no scene numbers, title page, or notes to choose; it can still carry its text for Drafter to reopen.',
     );
-    await page.keyboard.press('Escape');
-    // The palette doesn't offer it.
-    await page.keyboard.press('ControlOrMeta+k');
-    await palette(page).locator('input').fill('Export options');
-    await expect(palette(page).getByRole('option', { name: /^Export options/ })).toHaveCount(0);
+    await expect(sceneNumbers(page).getByRole('radio').first()).toBeDisabled();
+    await expect(titlePage(page).getByRole('radio').first()).toBeDisabled();
+    await expect(reopenBox(page)).toBeEnabled();
+    await expect(reopenBox(page)).not.toBeChecked();
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
+    await expect(optionsDialog(page)).toBeHidden();
   });
 
-  test('a Markdown document’s Export options… is reached from the keyboard and says why it is off', async ({
+  test('Let Drafter reopen this file is off by default, says what goes in, and its files open again', async ({
     page,
-    isMobile,
-    browserName,
   }) => {
-    test.skip(!!isMobile, 'there is no keyboard on a phone');
     await start(page);
-    await openMarkdownSample(page);
-    await exportButton(page).focus();
-    await page.keyboard.press('Enter');
-    await expect(pdfItem(page)).toBeFocused();
-    // Safari's Tab skips buttons unless the user has turned that on: there, focus it directly.
-    if (browserName === 'webkit') await optionsItem(page).focus();
-    else for (let i = 0; i < 5; i++) await page.keyboard.press('Tab');
-    await expect(optionsItem(page)).toBeFocused();
-    await expect(optionsItem(page)).toHaveAttribute('aria-disabled', 'true');
-    await expect(optionsItem(page)).toHaveAccessibleDescription(
-      'A Markdown document has no scene numbers, title page, or notes to choose.',
+    await openOptions(page);
+    await expect(reopenBox(page)).not.toBeChecked();
+    await expect(reopenBox(page)).toHaveAccessibleDescription(
+      /full script.*Drafter can only reopen HTML or EPUB files it saved itself, with this turned on/,
     );
-    // Choosing it does nothing: no dialog, and the menu stays.
-    await page.keyboard.press('Enter');
-    // A click too (Playwright's own waits for an enabled item, so the event is sent directly).
-    await optionsItem(page).dispatchEvent('click');
+    await reopenBox(page).check();
+    await expect(reopenBox(page)).toBeChecked();
+    await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
     await expect(optionsDialog(page)).toBeHidden();
-    await expect(optionsItem(page)).toBeVisible();
+
+    // Both files first: a reopened script is a new one, with the usual options.
+    const made: { name: string; bytes: Buffer }[] = [];
+    for (const kind of ['HTML (.html)', 'EPUB (.epub)']) {
+      const download = page.waitForEvent('download');
+      await chooseExport(page, kind);
+      const file = await download;
+      await expect(ready(page)).toContainText('with the full script inside');
+      made.push({ name: file.suggestedFilename(), bytes: await readFile(await file.path()) });
+    }
+    for (const { name, bytes } of made) {
+      // The script is inside, whole.
+      const found = await embeddedSource(new Uint8Array(bytes));
+      expect(found?.kind).toBe('fountain');
+      expect(new TextDecoder().decode(found?.bytes)).toContain('INT. KITCHEN - NIGHT');
+      // The file opens again: the script inside comes in as a new script, as it was.
+      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      const chooser = page.waitForEvent('filechooser');
+      await page
+        .getByRole('group', { name: 'Scripts', exact: true })
+        .getByRole('button', { name: 'Open a file…' })
+        .click();
+      await (await chooser).setFiles({ name, mimeType: 'application/octet-stream', buffer: bytes });
+      await expect(toast(page)).toHaveText(`Reopened “${name}”.`);
+      await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
+    }
   });
 
   test('gives focus back to the Export button, or to the script, when the dialog closes', async ({
@@ -1033,11 +1053,16 @@ test.describe('a script as Markdown', () => {
       ).toEqual([]);
       // Last, so the choice it makes is not the next pass's start.
       if (!isMobile && theme === 'light') {
-        // Done has focus; one step back is the Include notes choice, and an arrow changes it.
+        // Done has focus; one step back is Let Drafter reopen this file, and one more the Include
+        // notes choice, which an arrow changes.
         await expect(optionsDialog(page).getByRole('button', { name: 'Done' })).toBeFocused();
         // Safari's Tab skips form controls unless the user has turned that on: there, focus it.
         if (browserName === 'webkit') await leaveOut.focus();
-        else await page.keyboard.press('Shift+Tab');
+        else {
+          await page.keyboard.press('Shift+Tab');
+          await expect(reopenBox(page)).toBeFocused();
+          await page.keyboard.press('Shift+Tab');
+        }
         await expect(leaveOut).toBeFocused();
         await page.keyboard.press('ArrowDown');
         await expect(include).toBeChecked();

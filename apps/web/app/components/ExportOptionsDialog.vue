@@ -12,6 +12,8 @@ import {
   NOTES_ONLY_MARKDOWN,
   OPTIONS_NOT_FOR_MARKDOWN,
   OPTIONS_READ_ONLY,
+  REOPEN_HINT,
+  REOPEN_LABEL,
   setExportOption,
 } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
@@ -20,6 +22,8 @@ import type { ExportOptions } from '~/workers/export-compute';
 
 // Export options (out-the-door design §2.4): how the open script's exports print its scene numbers
 // and its title page, and whether its Markdown, HTML, and EPUB files carry its notes (Call 28).
+// "Let Drafter reopen this file" puts the whole script in its HTML and EPUB files (reopenable
+// exports), for a Markdown document too, whose dialog offers only that.
 // Each choice is kept the moment it is made, on the script's project, never in its text; Done
 // closes.
 // Export as PDF still saves at once, with the options the script has.
@@ -67,7 +71,10 @@ function onClose() {
 // Bumped when a choice couldn't be kept, so the radios are drawn again from what is stored.
 const drawn = ref(0);
 
-async function choose<K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) {
+async function choose<K extends keyof ExportOptions>(
+  key: K,
+  value: ExportOptions[K] | (K extends 'reopenable' ? false : never),
+) {
   failed.value = false;
   try {
     await setExportOption(key, value);
@@ -150,6 +157,22 @@ async function choose<K extends keyof ExportOptions>(key: K, value: ExportOption
           <span :id="`export-notes-${choice}-hint`" class="hint">{{
             EXPORT_OPTION_HINTS.notes[choice]
           }}</span>
+        </div>
+      </div>
+    </fieldset>
+    <fieldset :key="`reopen-${drawn}`" :disabled="readOnly" class="reopen">
+      <legend>HTML and EPUB</legend>
+      <div class="choice">
+        <input
+          id="export-reopenable"
+          type="checkbox"
+          :checked="options.reopenable === true"
+          aria-describedby="export-reopenable-hint"
+          @change="choose('reopenable', ($event.target as HTMLInputElement).checked || false)"
+        />
+        <div>
+          <label for="export-reopenable">{{ REOPEN_LABEL }}</label>
+          <span id="export-reopenable-hint" class="hint">{{ REOPEN_HINT }}</span>
         </div>
       </div>
     </fieldset>

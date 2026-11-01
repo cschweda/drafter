@@ -6,11 +6,22 @@ export {
   importKindOf,
   MAX_SCRIPT_BYTES,
   notAScript,
+  REOPEN_ADVICE,
   type Refusal,
   refusalMessage,
   SNIFF_BYTES,
 } from './formats';
 export { fromHighland, HIGHLAND_METADATA } from './highland';
+export {
+  type EmbeddedSource,
+  embeddedSource,
+  REOPEN_MAX_BYTES,
+  reopenFormatOf,
+  SOURCE_ENTRY,
+  SOURCE_ID,
+  type SourceKind,
+  sourceElement,
+} from './reopen';
 export { candidates, pickEntry, scriptText } from './text';
 export {
   listZip,

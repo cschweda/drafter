@@ -512,7 +512,7 @@ test.describe('opening a file where there is no picker', () => {
     await expect(editor(page)).toContainText('INT.');
   });
 
-  test('refuses a web page, an exported one or one named as a script, and opens nothing', async ({
+  test('refuses a web page with no script inside, one named as a script too, and opens nothing', async ({
     page,
   }) => {
     await start(page);
@@ -520,19 +520,19 @@ test.describe('opening a file where there is no picker', () => {
     const PAGE = '<!DOCTYPE html>\n<html lang="en"><head><title>The Call</title></head></html>\n';
     await chooseWithInput(page, 'The Call.html', PAGE);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open a web page (The Call.html). Open the script it was made from instead.',
+      'Drafter can’t open a web page (The Call.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
     );
     // Named as a script, it is still known by its first text.
     await chooseWithInput(page, 'The Call.fountain', PAGE);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open a web page (The Call.fountain). Open the script it was made from instead.',
+      'Drafter can’t open a web page (The Call.fountain). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
     );
     expect((await stored(page)).length).toBe(before);
     await expect(editor(page)).not.toContainText('DOCTYPE');
     await expect(editor(page)).toContainText('INT.');
   });
 
-  test('refuses an e-book, an exported one or one named as a script, and opens nothing', async ({
+  test('refuses an e-book with no script inside, one named as a script too, and opens nothing', async ({
     page,
   }) => {
     await start(page);
@@ -546,12 +546,12 @@ test.describe('opening a file where there is no picker', () => {
     ];
     await chooseWithInput(page, 'The Call.epub', BOOK);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open an e-book (The Call.epub). Open the script it was made from instead.',
+      'Drafter can’t open an e-book (The Call.epub). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
     );
     // Named as a script, it is still known by its mimetype entry.
     await chooseWithInput(page, 'The Call.fountain', BOOK);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open an e-book (The Call.fountain). Open the script it was made from instead.',
+      'Drafter can’t open an e-book (The Call.fountain). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
     );
     expect((await stored(page)).length).toBe(before);
     await expect(editor(page)).not.toContainText('epub');

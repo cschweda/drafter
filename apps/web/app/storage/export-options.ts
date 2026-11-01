@@ -35,8 +35,20 @@ export function exportOptionsOf(
     notes: NOTES.includes(stored?.notes as Notes)
       ? (stored?.notes as Notes)
       : DEFAULT_EXPORT_OPTIONS.notes,
+    // Off unless the writer turned it on: anything but `true` is off.
+    ...(stored?.reopenable === true ? { reopenable: true as const } : {}),
   };
 }
+
+/**
+ * "Let Drafter reopen this file" (reopenable exports): its name in the Export options dialog,
+ * which says plainly that the whole script goes in, and the help under it, which says which HTML
+ * and EPUB files Drafter can reopen.
+ */
+export const REOPEN_LABEL =
+  'Let Drafter reopen this file (includes the full script, notes and all)';
+export const REOPEN_HINT =
+  'For the HTML and EPUB exports. The file carries your full script as you wrote it, notes, boneyard, and all, even when the notes option leaves them off the page, so anyone you send it to can read them. Drafter can only reopen HTML or EPUB files it saved itself, with this turned on: not files from other apps or sites, and not Drafter exports made with it off.';
 
 /** What each choice is called in the dialog, in the order it lists them (the default first). */
 export const EXPORT_OPTION_LABELS: {
@@ -102,6 +114,7 @@ export function optionsPhrase(options: ExportOptions): string {
   if (options.sceneNumbers !== 'none') parts.push(SCENE_PHRASE[options.sceneNumbers]);
   if (options.titlePage !== 'full') parts.push(TITLE_PHRASE[options.titlePage]);
   if (options.notes === 'include') parts.push('notes');
+  if (options.reopenable) parts.push('the full script inside');
   if (parts.length === 0) return '';
   if (parts.length < 3) return `with ${parts.join(' and ')}`;
   return `with ${parts.slice(0, -1).join(', ')}, and ${parts.at(-1)}`;
@@ -110,14 +123,14 @@ export function optionsPhrase(options: ExportOptions): string {
 export const FDX_NOTE =
   'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them.';
 export const OPTIONS_NOT_FOR_MARKDOWN =
-  'A Markdown document has no scene numbers, title page, or notes to choose.';
+  'A Markdown document has no scene numbers, title page, or notes to choose; it can still carry its text for Drafter to reopen.';
 export const OPTIONS_READ_ONLY =
   'Another tab has this script open, so its export options can’t be changed here.';
 
 /** Keeps one option on the open script's project (no-op in a read-only tab). */
 export async function setExportOption<K extends keyof ExportOptions>(
   key: K,
-  value: ExportOptions[K],
+  value: ExportOptions[K] | (K extends 'reopenable' ? false : never),
 ): Promise<void> {
   const script = useScript();
   if (!script.project.value || useGuard().readOnly.value) return;

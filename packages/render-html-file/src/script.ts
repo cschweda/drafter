@@ -1,3 +1,4 @@
+import { sourceElement } from '@drafter/archive';
 import type { Doc, TitleField } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
@@ -25,6 +26,11 @@ export interface ScriptHtmlInput {
   generator: string;
   /** The header's small line, made by the caller, e.g. "Stage play · 94 pages · About 1 h 50 min". */
   kindLine: string;
+  /**
+   * The script's exact text, to carry inside the file so Drafter can reopen it ("Let Drafter
+   * reopen this file"), or absent for none. All of it goes in, notes and boneyard too.
+   */
+  source?: string;
 }
 
 /** A title-page field's text, its value lines joined by a space; '' when it has none. */
@@ -80,5 +86,6 @@ export function renderScriptHtml(input: ScriptHtmlInput): string {
     body: pages.html + reading.html,
     fontFaces: fontFaces(input.fonts, stylesUsed(layout)),
     rules: [pages.rules, band.rules, reading.rules].filter(Boolean).join('\n'),
+    ...(input.source === undefined ? {} : { source: sourceElement('fountain', input.source) }),
   });
 }

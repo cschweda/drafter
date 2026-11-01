@@ -1016,6 +1016,128 @@ describe('a file that isn’t a script', () => {
   });
 });
 
+describe('reopening a Drafter HTML or EPUB export', () => {
+  // Made as an export made with "Let Drafter reopen this file" makes them, with the archive's own
+  // writer, and original text.
+  const LAMP_SOURCE = [
+    'Title: The Lamp Room',
+    '',
+    'INT. LAMP ROOM - NIGHT',
+    '',
+    'Brigid trims the wick. [[Brass, not tin.]]',
+    '',
+    '/* A cut line. */',
+    '',
+    'BRIGID',
+    '</script><script>window.ran = true</script> <!-- only words --> 灯台 🕯️',
+    '',
+    '[[drafter:',
+    '{"template":"screenplay"}',
+    ']]',
+    '',
+  ].join('\n');
+  const utf8 = (text: string) => new TextEncoder().encode(text);
+  const page = async (source: string) => {
+    const { sourceElement } = await import('@drafter/archive');
+    const element = sourceElement('fountain', source);
+    return `<!DOCTYPE html>\n<html lang="en"><head><title>The Lamp Room</title></head><body><main></main>${element}</body></html>\n`;
+  };
+  const book = async (kind: 'fountain' | 'markdown', source: string) => {
+    const { SOURCE_ENTRY, zipStored } = await import('@drafter/archive');
+    return zipStored([
+      { name: 'mimetype', data: utf8('application/epub+zip') },
+      { name: SOURCE_ENTRY[kind], data: utf8(source) },
+    ]);
+  };
+
+  test('opens the script inside as a new script with no file, byte for byte, nothing run', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('The Lamp Room.html', await page(LAMP_SOURCE), 41));
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toBe(LAMP_SOURCE);
+    expect((globalThis as { ran?: boolean }).ran).toBeUndefined();
+    const row = t.script.project.value;
+    expect(row?.title).toBe('The Lamp Room');
+    expect(row?.kind ?? 'fountain').toBe('fountain');
+    expect(row?.fileName).toBeUndefined();
+    expect(row?.fsHandleId).toBeUndefined();
+    expect(t.script.dirty.value).toBe(true);
+    expect(t.exportNotice.value).toBe('Reopened “The Lamp Room.html”.');
+    expect(t.writes).toEqual([]);
+  });
+
+  test('keeps CRLF line breaks and a BOM, as Open does, so Save writes them back', async () => {
+    const t = await fresh();
+    t.access.pickToSave = async (name) => ({ id: 44, name }) as unknown as FileRef;
+    const saved = `﻿${crlf(LAMP_SOURCE)}`;
+    await t.openFile(t.picked('Lamp.html', await page(saved), 43));
+    expect(t.shown()).toBe(LAMP_SOURCE);
+    expect(t.script.project.value?.lineBreak).toBe('\r\n');
+    expect(t.script.project.value?.bom).toBe(true);
+    expect(await t.save()).toBe('saved');
+    expect(t.stored.get(44)).toEqual(utf8(saved));
+  });
+
+  test('opens an EPUB’s Markdown document as Markdown', async () => {
+    const t = await fresh();
+    const md = '# Field Notes\n\nA [[note]] and </script>.\n';
+    await t.openFile(t.picked('Notes.epub', await book('markdown', md)));
+    expect(t.openError.value).toBe('');
+    expect(t.shown()).toBe(md);
+    expect(t.editor.kind.value).toBe('markdown');
+    expect(t.script.project.value?.kind).toBe('markdown');
+    expect(t.script.project.value?.title).toBe('Field Notes');
+  });
+
+  test('reads an export renamed as a script by its content', async () => {
+    const t = await fresh();
+    await t.openFile(t.picked('Lamp.fountain', await page(LAMP_SOURCE)));
+    expect(t.shown()).toBe(LAMP_SOURCE);
+    expect(t.script.project.value?.fileName).toBeUndefined();
+  });
+
+  test('refuses a page or a book with no script inside, saying only Drafter’s own reopen', async () => {
+    const t = await fresh();
+    const was = t.script.project.value?.id;
+    await t.openFile(
+      t.picked('Site.html', '<!DOCTYPE html><html><body><p>From a site.</p></body></html>'),
+    );
+    expect(t.openError.value).toBe(
+      'Drafter can’t open a web page (Site.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+    );
+    const { zipStored } = await import('@drafter/archive');
+    await t.openFile(
+      t.picked('Book.epub', zipStored([{ name: 'mimetype', data: utf8('application/epub+zip') }])),
+    );
+    expect(t.openError.value).toMatch(
+      /^Drafter can’t open an e-book \(Book\.epub\)\. Drafter can only reopen HTML or EPUB files it saved itself/,
+    );
+    expect(t.script.project.value?.id).toBe(was);
+    expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('refuses a malformed block, and a script inside that isn’t text, without a throw', async () => {
+    const t = await fresh();
+    const bad =
+      '<!DOCTYPE html><html><body><script type="text/plain" id="drafter-source" data-kind="fountain" data-encoding="base64">%%%</script></body></html>';
+    await t.openFile(t.picked('Bad.html', bad));
+    expect(t.openError.value).toMatch(/can only reopen HTML or EPUB files it saved itself/);
+    await t.openFile(t.picked('Nul.html', await page('INT. A\u0000B')));
+    expect(t.openError.value).toBe(
+      'This file isn’t a script: it holds more than text, so Drafter didn’t open it.',
+    );
+    expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('a read-only tab reopens nothing', async () => {
+    const t = await fresh();
+    const { useGuard } = await import('../app/storage/guard');
+    (useGuard().readOnly as { value: boolean }).value = true;
+    await t.openFile(t.picked('Lamp.html', await page(LAMP_SOURCE)));
+    expect(await t.mine()).toHaveLength(0);
+  });
+});
+
 describe('opening a file the system named (the desktop app)', () => {
   /** A bridge that lets the test make the system name a file, or say it can't open one. */
   function bridge() {

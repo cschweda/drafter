@@ -33,6 +33,8 @@ const OPEN_FILTERS: FileFilter[] = [
     name: 'Script, Markdown document, or a Final Draft, Highland, or Fade In file',
     extensions: ['fountain', 'md', 'markdown', 'txt', 'fdx', 'highland', 'fadein'],
   },
+  // Drafter's own exports, made with "Let Drafter reopen this file": the script inside opens.
+  { name: 'Drafter HTML or EPUB export', extensions: ['html', 'htm', 'epub'] },
   ALL_FILES,
 ];
 
@@ -44,8 +46,8 @@ export interface FileAccessMain {
   /**
    * Grants an existing script the writer named outside the page (the command line, a second
    * launch, a file double-clicked): the page may then open and save it. Rejects anything that
-   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`) or a file to import (`.fdx`,
-   * `.highland`, `.fadein`).
+   * isn't a readable script (`.fountain`, `.md`, `.markdown`, `.txt`), a file to import (`.fdx`,
+   * `.highland`, `.fadein`), or a Drafter export to reopen (`.html`, `.epub`).
    */
   grant(path: string): Promise<string>;
 }

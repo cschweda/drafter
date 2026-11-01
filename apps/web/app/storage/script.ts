@@ -187,12 +187,13 @@ export interface ScriptSession {
    * saved, so Save asks for a `.fountain`, and never writes the file it came from. A script with no
    * title is called after the file. `format` keeps a text file's line break and BOM (Open as
    * screenplay), so Save writes them as the file had them; an import from another app has none.
-   * Resolves false if another switch was under way (nothing is made then).
+   * `format.kind` is a reopened export's (a Markdown document's comes back as Markdown); else
+   * Fountain. Resolves false if another switch was under way (nothing is made then).
    */
   openImported(
     text: string,
     importedFrom: string,
-    format?: { lineBreak?: LineBreak; bom?: boolean },
+    format?: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind },
   ): Promise<boolean>;
   /**
    * Puts a file's text in script `id`, in place of what it holds: one undoable change in the
@@ -1018,12 +1019,12 @@ function create(): ScriptSession {
   function openImported(
     text: string,
     importedFrom: string,
-    format: { lineBreak?: LineBreak; bom?: boolean } = {},
+    format: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind } = {},
   ): Promise<boolean> {
     return switchTo(() =>
       createProject({
         source: text,
-        kind: 'fountain',
+        kind: format.kind ?? 'fountain',
         importedFrom,
         ...(format.lineBreak === undefined ? {} : { lineBreak: format.lineBreak }),
         ...(format.bom === undefined ? {} : { bom: format.bom }),

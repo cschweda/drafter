@@ -19,13 +19,16 @@ import { basename, dirname, join, resolve } from 'node:path';
 import {
   ArchiveError,
   type ArchiveFormat,
+  embeddedSource,
   fromFadeIn,
   fromHighland,
   type ImportKind,
   importKindOf,
   MAX_SCRIPT_BYTES,
   notAScript,
+  REOPEN_MAX_BYTES,
   refusalMessage,
+  reopenFormatOf,
   SNIFF_BYTES,
   ZIP_LIMITS,
 } from '@drafter/archive';
@@ -58,7 +61,15 @@ const FORMAT: Record<'highland' | 'fadein', ArchiveFormat> = {
 };
 
 const WHAT_IT_READS =
-  'drafter convert reads Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files';
+  'drafter convert reads Final Draft (.fdx), Highland (.highland), and Fade In (.fadein) files, and Drafter HTML and EPUB exports made with “Let Drafter reopen this file”';
+
+/** A file's script, ready to write: its text, the notes an import made, and what kind it is. */
+interface Read {
+  text: string;
+  notes: number;
+  /** A Markdown document, from an export, is written as `.md`. */
+  markdown: boolean;
+}
 
 /** One file to convert: where it is and where its Fountain goes, each as printed and as resolved. */
 interface Job {
@@ -169,7 +180,22 @@ const fileKey = (info: { dev: bigint; ino: bigint }) => `${info.dev}:${info.ino}
  * Converts `job`, unless its `.fountain` is one this run already wrote: the same path, or, however
  * the disk folds names, the same file. Records what it writes.
  */
-async function convertOnce(job: Job, force: boolean, written: Written): Promise<Outcome> {
+async function convertOnce(given: Job, force: boolean, written: Written): Promise<Outcome> {
+  let read: Read;
+  try {
+    read = await readScript(given.source);
+  } catch (error) {
+    if (error instanceof Refused || error instanceof FdxError || error instanceof ArchiveError)
+      return { kind: 'refused', reason: error.message };
+    throw error;
+  }
+  const job = read.markdown
+    ? {
+        ...given,
+        target: given.target.replace(/\.fountain$/, '.md'),
+        targetShown: given.targetShown.replace(/\.fountain$/, '.md'),
+      }
+    : given;
   const there = await lstat(job.target, { bigint: true }).catch(() => null);
   const earlier =
     written.paths.get(job.target) ?? (there ? written.files.get(fileKey(there)) : undefined);
@@ -179,7 +205,7 @@ async function convertOnce(job: Job, force: boolean, written: Written): Promise<
       reason: `${job.targetShown} was already written from ${earlier} in this run`,
     };
   }
-  const outcome = await convertOne(job, force);
+  const outcome = await convertOne(job, read, force);
   if (outcome.kind === 'converted') {
     written.paths.set(job.target, job.shown);
     const made = await lstat(job.target, { bigint: true }).catch(() => null);
@@ -198,7 +224,13 @@ function jobFor(
 ): Job {
   const base = basename(source);
   const kind = importKindOf(base);
-  const name = `${kind ? base.slice(0, -kind.length - 1) : base}.fountain`;
+  const exported = /\.(?:html?|epub)$/i.exec(base);
+  const stem = kind
+    ? base.slice(0, -kind.length - 1)
+    : exported
+      ? base.slice(0, exported.index)
+      : base;
+  const name = `${stem}.fountain`;
   if (outDir === undefined || outShown === undefined) {
     return {
       source,
@@ -251,17 +283,53 @@ async function isFile(entry: Dirent, path: string): Promise<boolean> {
   return (await stat(path).catch(() => null))?.isFile() === true;
 }
 
-async function convertOne(job: Job, force: boolean): Promise<Outcome> {
-  let imported: FdxImport;
-  try {
-    imported = await importFile(job.source);
-  } catch (error) {
-    if (error instanceof Refused || error instanceof FdxError || error instanceof ArchiveError)
-      return { kind: 'refused', reason: error.message };
-    throw error;
+/**
+ * A file's script: an import's, as the app imports it, with every line break a line feed (as the
+ * editor holds it); or a Drafter export's, exactly as it was saved inside it.
+ */
+async function readScript(source: string): Promise<Read> {
+  const reopened = await reopenFile(source);
+  if (reopened) return reopened;
+  const imported = await importFile(source);
+  return {
+    text: imported.text.replace(/\r\n?/g, '\n'),
+    notes: imported.mapped.reduce((sum, { count }) => sum + count, 0),
+    markdown: false,
+  };
+}
+
+/**
+ * A Drafter HTML or EPUB export's script (reopenable exports), by its name: its exact text, read
+ * only as text; undefined for a file not named as one. A page or a book with no script inside, or
+ * a malformed one, is refused, and so is a script that isn't UTF-8 text, as Open refuses them.
+ */
+async function reopenFile(source: string): Promise<Read | undefined> {
+  const name = basename(source);
+  if (!reopenFormatOf(name, new Uint8Array(0))) return undefined;
+  const bytes = await readCapped(
+    source,
+    REOPEN_MAX_BYTES,
+    () => new Refused('it is larger than 32 MB'),
+  );
+  const found = await embeddedSource(bytes);
+  if (!found) {
+    const refusal = notAScript(name, bytes) ?? notAScript(name, new Uint8Array(0));
+    throw new Refused(refusal ? refusalMessage(name, refusal) : WHAT_IT_READS);
   }
-  // As the editor holds it: every line break a line feed.
-  const text = imported.text.replace(/\r\n?/g, '\n');
+  if (found.bytes.subarray(0, SNIFF_BYTES).includes(0))
+    throw new Refused('it holds more than text');
+  let text: string;
+  try {
+    // Exactly as saved: its byte order mark and its line breaks too.
+    text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(found.bytes);
+  } catch {
+    throw new Refused('it isn’t UTF-8 text');
+  }
+  return { text, notes: 0, markdown: found.kind === 'markdown' };
+}
+
+async function convertOne(job: Job, read: Read, force: boolean): Promise<Outcome> {
+  const { text } = read;
   if (new TextEncoder().encode(text).byteLength > MAX_SCRIPT_BYTES) {
     return { kind: 'refused', reason: 'the script in it is larger than 5 MB' };
   }
@@ -278,8 +346,7 @@ async function convertOne(job: Job, force: boolean): Promise<Outcome> {
   } catch (error) {
     return { kind: 'refused', reason: `can't write ${job.targetShown}: ${reason(error)}` };
   }
-  const notes = imported.mapped.reduce((sum, { count }) => sum + count, 0);
-  return { kind: 'converted', notes };
+  return { kind: 'converted', notes: read.notes };
 }
 
 const codeOf = (error: unknown) => (error as { code?: string }).code;
@@ -343,7 +410,11 @@ async function importFile(source: string): Promise<FdxImport> {
   if (named) throw new Refused(refusalMessage(name, named));
   const kind = importKindOf(name);
   if (!kind) throw new Refused(WHAT_IT_READS);
-  const bytes = await readCapped(source, MAX_BYTES[kind], kind);
+  const bytes = await readCapped(source, MAX_BYTES[kind], () =>
+    kind === 'fdx'
+      ? new Refused('it is larger than 5 MB')
+      : new ArchiveError(FORMAT[kind], 'too-big'),
+  );
   const refusal = notAScript(name, bytes);
   if (refusal) throw new Refused(refusalMessage(name, refusal));
   if (kind === 'highland') return fromHighland(bytes);
@@ -365,11 +436,7 @@ function fdxText(bytes: Uint8Array): string {
 }
 
 /** The file's bytes, or a refusal when it is over `cap`: never more than `cap` + 1 bytes are read. */
-async function readCapped(source: string, cap: number, kind: ImportKind): Promise<Uint8Array> {
-  const tooBig = () =>
-    kind === 'fdx'
-      ? new Refused('it is larger than 5 MB')
-      : new ArchiveError(FORMAT[kind], 'too-big');
+async function readCapped(source: string, cap: number, tooBig: () => Error): Promise<Uint8Array> {
   let handle: Awaited<ReturnType<typeof open>>;
   try {
     // Non-blocking, so a pipe put in the file's place after it was checked can't hang the open;

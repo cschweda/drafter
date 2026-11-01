@@ -125,7 +125,8 @@ function pickWithInput(): Promise<PickedFile | null> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown';
+    input.accept =
+      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,.html,.epub,text/plain,text/markdown';
     input.hidden = true;
     const done = () => input.remove();
     input.addEventListener('change', () => {
@@ -166,6 +167,11 @@ export const browserFiles: FileAccess = {
               'application/xml': ['.fdx'],
               'application/zip': ['.highland', '.fadein'],
             },
+          },
+          // Drafter's own exports, made with "Let Drafter reopen this file": the script inside opens.
+          {
+            description: 'Drafter HTML or EPUB export',
+            accept: { 'text/html': ['.html'], 'application/epub+zip': ['.epub'] },
           },
         ],
       });

@@ -6,7 +6,11 @@ import { previewProblem } from '../markdown/preview';
 import { markdownTitle } from '../markdown/title';
 import { type Settings, useSettings } from '../settings/settings';
 import { ratesOf } from '../stats/timing';
-import type { ExportOptions, ExportRequest } from '../workers/export-compute';
+import {
+  DEFAULT_EXPORT_OPTIONS,
+  type ExportOptions,
+  type ExportRequest,
+} from '../workers/export-compute';
 import { renderExport } from './export-client';
 import { exportOptionsOf, optionsPhrase } from './export-options';
 import { useFiles } from './files';
@@ -130,15 +134,24 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
  * HTML export design §3.3, §10a), so only their toasts say "notes".
  */
 function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
-  if (markdown) return '';
+  // Only an HTML file and an EPUB carry the script inside (reopenable exports), a document's too.
+  const inside = options.reopenable && carriesSource(kind) ? { reopenable: true as const } : {};
+  if (markdown) {
+    return inside.reopenable ? `, ${optionsPhrase({ ...DEFAULT_EXPORT_OPTIONS, ...inside })}` : '';
+  }
+  const { reopenable: _, ...rest } = options;
   const honoured: ExportOptions = {
-    ...options,
+    ...rest,
     sceneNumbers: kind === 'fdx' ? 'none' : options.sceneNumbers,
     notes: kind === 'md' || kind === 'html' || kind === 'epub' ? options.notes : 'leave-out',
+    ...inside,
   };
   const phrase = optionsPhrase(honoured);
   return phrase ? `, ${phrase}` : '';
 }
+
+/** The exports that can carry the script inside, for Drafter to reopen: the HTML file and the EPUB. */
+const carriesSource = (kind: ExportKind) => kind === 'html' || kind === 'epub';
 
 /**
  * What the worker is asked to make. A Markdown PDF carries the title the file is named by, and the
@@ -158,12 +171,17 @@ function requestFor(
     markdown: boolean;
     /** The open project's id, an EPUB's identity; none when nothing is saved. */
     projectId: string | undefined;
+    /** The text to carry inside an HTML file or an EPUB, as Save writes it; none when off. */
+    embed: string | undefined;
   },
 ): ExportRequest {
   const { kind } = asked;
   const { source, template, options, title, markdown } = open;
   // Only when there is one, so a request without a project has no such key.
-  const work = open.projectId === undefined ? {} : { projectId: open.projectId };
+  const work = {
+    ...(open.projectId === undefined ? {} : { projectId: open.projectId }),
+    ...(open.embed === undefined || !carriesSource(kind) ? {} : { embed: open.embed }),
+  };
   const lang = asked.lang;
   if (markdown) {
     if (kind === 'epub') {
@@ -177,8 +195,9 @@ function requestFor(
         ...work,
       };
     }
+    const inside = work.embed === undefined ? {} : { embed: work.embed };
     return kind === 'html'
-      ? { kind: 'markdown-html', source, title, lang, generator: generator() }
+      ? { kind: 'markdown-html', source, title, lang, generator: generator(), ...inside }
       : { kind: 'markdown-pdf', source, paper: asked.paper, title, lang };
   }
   if (kind === 'epub') {
@@ -195,6 +214,7 @@ function requestFor(
       lang,
       generator: generator(),
       minutesPerPage: asked.minutesPerPage,
+      ...(work.embed === undefined ? {} : { embed: work.embed }),
     };
   }
   return { kind, source, template, options };
@@ -278,8 +298,21 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
         script.project.value?.bom ?? false,
       );
     } else {
-      const projectId = script.project.value?.id;
-      const request = requestFor(asked, { source, template, options, title, markdown, projectId });
+      const project = script.project.value;
+      const projectId = project?.id;
+      // "Let Drafter reopen this file": the text as Save would write it, line breaks and BOM too.
+      const embed = options.reopenable
+        ? encodeFile(source, project?.lineBreak ?? '\n', project?.bom ?? false)
+        : undefined;
+      const request = requestFor(asked, {
+        source,
+        template,
+        options,
+        title,
+        markdown,
+        projectId,
+        embed,
+      });
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -326,6 +359,8 @@ interface Asked {
   sceneNumbers: ExportOptions['sceneNumbers'];
   titlePage: ExportOptions['titlePage'];
   notes: ExportOptions['notes'];
+  /** "Let Drafter reopen this file": an export with the script inside is never joined to one without. */
+  reopenable: boolean;
   paper: Settings['markdownPaper'];
   lang: Settings['spellLanguage'];
   /** The script's own page rate, for an HTML file's running time. */
@@ -345,6 +380,7 @@ function askedFor(kind: ExportKind): Asked {
     sceneNumbers: options.sceneNumbers,
     titlePage: options.titlePage,
     notes: options.notes,
+    reopenable: options.reopenable === true,
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
     minutesPerPage: ratesOf(project).minutesPerPage,

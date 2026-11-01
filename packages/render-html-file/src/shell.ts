@@ -29,6 +29,11 @@ export interface ShellInput {
    * go after the stylesheet, in the same `<style>`: the CSP allows no style attribute.
    */
   rules: string;
+  /**
+   * The script's own text, for Drafter to reopen the file (`sourceElement`), as markup, or
+   * absent. It goes last in the body, after `<main>`.
+   */
+  source?: string;
 }
 
 /** A language tag as BCP 47 spells one: letters, then letter-or-digit subtags. */
@@ -141,7 +146,8 @@ export function htmlShell(input: ShellInput): string {
       'main',
       { id: 'main', class: input.kind, 'data-view': script ? 'pages' : undefined },
       input.body,
-    );
+    ) +
+    (input.source ?? '');
 
   return `<!DOCTYPE html>\n${el(
     'html',

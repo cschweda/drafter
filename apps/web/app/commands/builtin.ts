@@ -66,7 +66,7 @@ import { openCounts } from '~/stats/counts-panel';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { showStats } from '~/stats/tab';
 import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
-import { exportOptionsOpen, OPTIONS_NOT_FOR_MARKDOWN } from '~/storage/export-options';
+import { exportOptionsOpen } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
@@ -490,11 +490,11 @@ export function registerBuiltinCommands(): void {
     },
     // How the open script's exports come out (out-the-door design §2.4): scene numbers and the title
     // page for its PDF, plain text, Final Draft file, and Markdown, and notes for its Markdown alone
-    // (Call 28). At the end of the Export menu. On in a read-only tab, whose dialog shows the choices
-    // it can't change; off for a Markdown document, which has none of them.
+    // (Call 28), and "Let Drafter reopen this file" for its HTML and EPUB (reopenable exports). At
+    // the end of the Export menu. On in a read-only tab, whose dialog shows the choices it can't
+    // change; on for a Markdown document too, whose dialog offers only the last.
     'export-options': {
-      enabled: () => hasScript() && isFountain(),
-      why: () => (isMarkdown() ? OPTIONS_NOT_FOR_MARKDOWN : undefined),
+      enabled: () => hasScript(),
       run: () => {
         exportOptionsOpen.value = true;
       },
