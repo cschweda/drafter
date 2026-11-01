@@ -300,7 +300,7 @@ test.describe('the Help menu', () => {
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(24);
   });
 
-  test('holds the tour, the help pages, the samples, Check for updates, and About, in order', async ({
+  test('holds the tour, the help pages, Download, the samples, Check for updates, and About, in order', async ({
     page,
   }) => {
     await start(page);
@@ -312,6 +312,7 @@ test.describe('the Help menu', () => {
     );
     const expected = [
       /^Take the tour/,
+      /^Why Drafter/,
       /^Fountain cheat sheet/,
       /^Saving and your browser/,
       /^Keyboard shortcuts/,
@@ -319,6 +320,7 @@ test.describe('the Help menu', () => {
       /^Open formats/,
       /^Third-party licences/,
       /^Technical details/,
+      /^Download the desktop app/,
       /^Sample scripts/,
       /^Reset sample/,
       /^Check for updates…/,
