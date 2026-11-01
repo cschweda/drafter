@@ -67,7 +67,7 @@ No `.xml` is `no-script`, several with no single OSF root is `many-scripts` (nam
 
 `notAScript(name, bytes)` names a file that is a known kind other than a script, so the app's Open and `drafter convert` turn it away with the same words: by extension, in any case (`.rtf`, `.doc`, `.docx`, `.odt`, `.pages`, `.pdf`, `.fdr`, `.celtx`, `.zip`, `.html`, `.htm`, `.epub`), or, whatever its name, by its first bytes (an e-book first, whatever its name: a zip whose first entry is `mimetype` holding `application/epub+zip`; then RTF, PDF, an OLE compound file, a zip, unless it is named `.highland` or `.fadein`, and a web page: `<!DOCTYPE html` or `<html` first, after a byte order mark and white space). It returns a `Refusal` (what the file is, and what to do instead) or null, and `refusalMessage(name, refusal)` says it: "Drafter can’t open a Word document (Notes.docx). Save it as plain text or Fountain in the app that made it, then open that."
 
-`importKindOf(name)` is the import a file's name says it is (`'fdx'`, `'highland'`, or `'fadein'`, in any case), or null. `MAX_SCRIPT_BYTES` (5 MB) is the most a script's text may be, and `SNIFF_BYTES` (8 KB) how far Open looks for a NUL byte, which means the file isn't text.
+`importKindOf(name)` is the import a file's name says it is (`'fdx'`, `'highland'`, or `'fadein'`, in any case), or null. `MAX_SCRIPT_BYTES` (5 MB) is the most a script's text may be, and `SNIFF_BYTES` (8 KB) how far Open looks for a NUL byte, which means the file isn't text. `isUtf16(bytes)` says whether the bytes start with UTF-16's byte order mark, so the app and `drafter convert` can say such a file isn't UTF-8 rather than calling it more than text.
 
 ## License
 

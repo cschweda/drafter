@@ -24,6 +24,7 @@ import {
   fromHighland,
   type ImportKind,
   importKindOf,
+  isUtf16,
   MAX_SCRIPT_BYTES,
   notAScript,
   REOPEN_MAX_BYTES,
@@ -316,6 +317,7 @@ async function reopenFile(source: string): Promise<Read | undefined> {
     const refusal = notAScript(name, bytes) ?? notAScript(name, new Uint8Array(0));
     throw new Refused(refusal ? refusalMessage(name, refusal) : WHAT_IT_READS);
   }
+  if (isUtf16(found.bytes)) throw new Refused('it isn’t UTF-8 text');
   if (found.bytes.subarray(0, SNIFF_BYTES).includes(0))
     throw new Refused('it holds more than text');
   let text: string;
@@ -424,6 +426,7 @@ async function importFile(source: string): Promise<FdxImport> {
 
 /** A Final Draft file's text, as Open decodes it: no NUL up front, strict UTF-8, no BOM, `\n`. */
 function fdxText(bytes: Uint8Array): string {
+  if (isUtf16(bytes)) throw new Refused('it isn’t UTF-8 text');
   if (bytes.subarray(0, SNIFF_BYTES).includes(0)) throw new Refused('it holds more than text');
   let text: string;
   try {

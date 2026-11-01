@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **A UTF-16 file is now said to be "not UTF-8 text"**, with how to fix it, instead of "it holds more than text", in the app and in `drafter convert`.
+
 ## [0.23.1] - 2026-11-01
 
 **Exports Drafter can reopen, and dark by default.** An HTML or EPUB export can carry the full script, so Drafter can open it again exactly as it was; it's off by default. Drafter opens dark again on a first visit.

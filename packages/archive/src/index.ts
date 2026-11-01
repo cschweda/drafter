@@ -4,6 +4,7 @@ export { fromFadeIn } from './fadein';
 export {
   type ImportKind,
   importKindOf,
+  isUtf16,
   MAX_SCRIPT_BYTES,
   notAScript,
   REOPEN_ADVICE,

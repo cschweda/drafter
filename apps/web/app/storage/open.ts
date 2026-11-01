@@ -3,6 +3,7 @@ import {
   embeddedSource,
   fromFadeIn,
   fromHighland,
+  isUtf16,
   MAX_SCRIPT_BYTES as MAX_BYTES,
   notAScript,
   REOPEN_MAX_BYTES,
@@ -69,6 +70,8 @@ const MESSAGES = {
 /** What a file is: the problem with it, or null when it can be opened. */
 function problemWith(bytes: Uint8Array): string | null {
   if (bytes.byteLength > MAX_BYTES) return MESSAGES.tooBig;
+  // UTF-16 is text, but not UTF-8: said so, not "more than text" for its zero bytes.
+  if (isUtf16(bytes)) return MESSAGES.notUtf8;
   if (bytes.subarray(0, SNIFF_BYTES).includes(0)) return MESSAGES.binary;
   return null;
 }
