@@ -1,0 +1,52 @@
+# Drafter's roadmap
+
+The [README](../README.md#roadmap) has the short list: what's next, and what comes later. This page has the whole plan, phase by phase. Everything on it is free.
+
+## Where things stand
+
+Drafter is at **v0.23.2**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+
+Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
+
+- **a fresh look**: paper pages, a quiet status bar, and one pane with a bottom tab bar on a phone;
+- a [**Why Drafter**](https://drafter.dev/docs/why/) page and a [**Download**](https://drafter.dev/docs/download/) page;
+- **Export as HTML and EPUB**: a self-contained web page, or an e-book;
+- **Scaffold**, which shows who is in the scene you're writing;
+- the **Stats tab**, with a character-by-scene grid;
+- version history, Highland and Fade In imports, footnotes in Markdown documents, and `drafter convert`;
+- **HTML and EPUB exports Drafter can reopen** (v0.23.1).
+
+Next, in order:
+
+1. **Drafts and Cuts** (v0.24.0).
+2. **A visual page of your script to send to anyone** (v0.24.1; a working name).
+3. **Novel**, for drafting a novel in Markdown (v0.25.0).
+4. **Production**, free: revision colors, locked pages, OMITTED scenes, revised pages, breakdowns, and sides (v0.26.0).
+5. Storylines and pacing (v0.27.0).
+6. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.28.0).
+7. An optional one-file `.drafter` project (v0.29.0, open spec).
+8. Plans G and H (v0.30.0 and v0.31.0).
+
+A signed macOS download follows. The phases below have the detail.
+
+## The phases
+
+The ordering principle: the reasons to choose Drafter must be on screen at the first public release. That's why the Problems pane, the stage-play template, and accessibility come early, Final Draft files follow the outline, and radio and TV formats come later.
+
+| Phase | Theme | Shipped | Still to come |
+|---|---|---|---|
+| 0 | Engine: parser, templates, pagination, PDF, CLI | **Done** | |
+| 1 | Minimum IDE: the first public release | **Live at drafter.dev**; the desktop app for Linux (v0.4.0) and Windows (v0.8.0), and a Mac build (v0.7.0) | A signed macOS download |
+| 2 | Structure | **Under way**: writing stats by day (v0.5.0), the Outline (v0.10.0), Final Draft import and export (v0.11.0), Cards and Notes with scene goals and setups and payoffs (v0.12.0), History and Compare (v0.13.0), spellcheck (v0.14.0), the Structure strip (v0.15.0), PDF export for Markdown documents (v0.16.0); guided starters, export options, running times by scene, and a Technical details page (v0.17.0); version history with deleted scenes, Show changes, and GitHub-style diffs (v0.18.0); Highland, Fade In, and Markdown imports, Open as screenplay, and Export as Markdown (v0.19.0); `drafter convert` and footnotes in Markdown documents (v0.20.0); Scaffold, the Stats tab, and the character grid (v0.21.0); Export as HTML and EPUB (v0.22.0); a fresh look (v0.23.0); HTML and EPUB exports Drafter can reopen (v0.23.1) | **Next:** Drafts and Cuts (v0.24.0); a visual page of your script to send to anyone (v0.24.1, a working name); Novel, for drafting novels in Markdown (v0.25.0); **Production, free for everyone**: revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides for actors (v0.26.0); storylines, the strip's Color by, and pacing (v0.27.0); the Workbook: a story bible and scene cards, a place for pasted notes, a watched Dropbox, Google Drive, or OneDrive folder for notes, and voice notes kept on your device (v0.28.0); an optional `.drafter` project package (v0.29.0, open spec); then reader notes with no account and the Reference tab (v0.30.0 and v0.31.0) |
+| 3 | Formats | Planned | Celtx import; **PDF import** (a script PDF with real text, so you can bring in a draft from any app); TV, radio, UK/BBC, and graphic-novel templates; user templates; French scenes and doubling charts for plays; PDF with notes in the margin or a watermark; a self-contained reader file |
+| 4 | Craft | Planned | Alternate lines, a clean display mode, table read, a character pass, story order, accepting a co-writer's changes, the remaining lint rules, a PWA install flow (the production features moved up to v0.26.0) |
+| 5 | Community | Planned | npm packages and the CLI, a VS Code extension, a template gallery and docs site, a plugin API only if there's demand |
+| Later | | Planned, free | **Real-time co-writing**: write in the same script at the same time, each on your own device, from an invite link, with no account. It goes through a small relay that passes only end-to-end encrypted changes, so it can never read the script; anyone can run their own. Optional, off until you invite someone, and free like everything else |
+| Later | | Planned | Open from and save to Dropbox and Google Drive directly, signed in with them, never with Drafter |
+| Someday | | Possible future addition | A Windows on Arm (arm64) installer. Until then Windows 11 on Arm runs the x64 installer emulated |
+| Someday | | Possible, not planned | A Tauri desktop shell: smaller downloads and less memory, but Linux would use WebKitGTK. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open |
+| Last | | Planned | Testing with NVDA and VoiceOver, after every phase is built. Until then every view is built for screen readers and checked automatically, and Drafter claims no conformance with any standard |
+
+**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. Everything Drafter does is free, including the big features: production, and real-time co-writing, whose relay only passes encrypted changes along and stores nothing it could read. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place.
+
+The full list for each phase, with what each item does and when Phase 0 counts as done, is in the [architecture document, §13](drafter-architecture.md#13-phased-plan); the [Phase 1](drafter-phase1-design.md) and [Phase 2](drafter-phase2-design.md) designs have the details.

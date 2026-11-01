@@ -1,0 +1,309 @@
+Title: Signal Hill
+Credit: Written by
+Author: A. Writer
+Draft date: November 2026
+
+[[Written for Drafter's README screenshots only (scripts/ui-shots.mjs --readme). Every line is original. It is not an in-app sample.]]
+
+# Act One
+
+INT. JUNE'S KITCHEN - NIGHT
+
+= June hears a dead station come back to life.
+[[Color: blue]]
+
+A farmhouse kitchen. A shortwave set on the counter, older than the fridge. JUNE (71), reading glasses on a cord, turns the dial the way other people knit.
+
+Static. Then a voice, warm and a little tinny.
+
+ANNOUNCER (V.O.)
+This is KSGH, Signal Hill, with the morning news for Thursday.
+
+June freezes. She looks at the calendar on the wall. It is Wednesday.
+
+JUNE
+(to the radio)
+You've been off the air since 1996.
+
+ANNOUNCER (V.O.)
+The Pruitt barn goes up at six-fifteen. No one is hurt.
+
+She writes it on the back of an envelope. Her hand is steady. Her breathing isn't.
+
+EXT. PRUITT FARM - DAWN
+
+= The barn burns, exactly on time.
+[[Color: red]]
+
+ELI (16), hoodie, bike thrown in the ditch, stands at the fence with his phone up. June beside him in a coat over her nightgown.
+
+The barn is quiet. Then it isn't. Smoke, then flame, all at once.
+
+ELI
+Gran. It's six-fifteen.
+
+JUNE
+I know what time it is.
+
+ELI
+How did you know?
+
+JUNE
+I didn't. The radio did.
+
+Sirens in the distance. A cruiser crests the hill.
+
+EXT. PRUITT FARM - CONTINUOUS
+
+= The sheriff wants to know why they got here first.
+[[Color: red]]
+
+WES (50s), sheriff, hat in hand, walks over slowly. He has known June all his life and it shows in how carefully he speaks.
+
+WES
+June. You're up early.
+
+JUNE
+So's the barn.
+
+WES
+Eli called it in at six-oh-nine. Six minutes before it lit.
+
+ELI
+I can explain.
+
+WES
+Good. Somebody should.
+
+[[Wes isn't hostile. He's scared, and he handles fear by being official.]]
+
+INT. RAY'S WORKSHOP - DAY
+
+= June asks the man who built the station what it could be.
+[[Color: blue]]
+
+Tubes, coils, a soldering iron in a coffee can. RAY (70s), the station's old engineer, doesn't look up from a radio in pieces.
+
+RAY
+The transmitter melted, June. I carried what was left of it out in a bucket.
+
+JUNE
+Then who's broadcasting?
+
+RAY
+Somebody with a sense of humour.
+
+JUNE
+It read the barn before it burned, Ray.
+
+Ray sets the iron down. Finally looks at her.
+
+RAY
+Say that again. Slower.
+
+# Act Two
+
+EXT. SIGNAL HILL - DAY
+
+= The ruin of the station, and a stranger already there.
+[[Color: green]]
+
+A bald hilltop. A concrete pad, a twisted mast lying in the grass like a dropped pencil. AMARA (30s), physicist, kneels beside a laptop wired to a coil of copper.
+
+June, Eli, and Ray climb the last of the path.
+
+AMARA
+Don't step on the cable. Please.
+
+ELI
+Who are you?
+
+AMARA
+Amara. University. I've been picking up a carrier wave from this hill for three weeks.
+
+RAY
+There's nothing here to carry it.
+
+AMARA
+I noticed.
+
+INT. AMARA'S VAN - NIGHT
+
+= The signal arrives about eighteen hours early, every time.
+[[Color: green]]
+
+Equipment racked to the ceiling. Eli is wedged between a printer and a cooler. Amara points at a jagged line on a screen.
+
+AMARA
+Every broadcast lands about eighteen hours before the thing it describes.
+
+ELI
+So it's the future.
+
+AMARA
+It's a recording of the future. Those are different.
+
+ELI
+How?
+
+AMARA
+A recording can be wrong.
+
+INT. SHERIFF'S OFFICE - DAY
+
+= Wes is told the truth and doesn't like it.
+[[Color: yellow]]
+
+A small office, a big map of the county. Wes listens. June, Amara, and Eli sit in mismatched chairs.
+
+WES
+A radio that reads tomorrow's paper.
+
+AMARA
+Not the paper. A station. A specific one.
+
+WES
+KSGH burned when I was a deputy. I pulled Ray out of it myself.
+
+JUNE
+Then you know it didn't sign off properly.
+
+Wes looks at the map for a long moment.
+
+WES
+What does it say about tomorrow?
+
+INT. TOWN HALL - NIGHT
+
+= Marcus sells the town a new tower on the hill.
+[[Color: purple]]
+
+Folding chairs, half full. MARCUS (40s), developer, good suit, easy smile, stands beside an easel with a drawing of a gleaming cell tower.
+
+MARCUS
+Signal Hill has been empty for thirty years. Let's give it something to do.
+
+Polite applause. June, near the back, does not clap.
+
+MARCUS (CONT'D)
+Better coverage. Faster internet. Jobs.
+
+JUNE
+And the old foundation?
+
+MARCUS
+Gone by Friday.
+
+Eli turns to her, alarmed. Friday is two days away.
+
+INT. JUNE'S KITCHEN - LATER
+
+= The radio reads a fire that hasn't happened yet: the hill.
+[[Color: blue]]
+
+The shortwave hisses. June, Eli, and Ray around the table, mugs going cold.
+
+ANNOUNCER (V.O.)
+Fire crews are at Signal Hill tonight, where the new construction site is lost.
+
+RAY
+That's not an accident. Nobody burns a site they're about to build on.
+
+ELI
+Unless they want the insurance.
+
+JUNE
+Or they want something on that hill gone for good.
+
+[[This is the midpoint turn. Keep the three of them still; let the radio do the moving.]]
+
+# Act Three
+
+INT. MARCUS'S OFFICE - DAY
+
+= Eli finds out what Marcus is really clearing.
+[[Color: purple]]
+
+Glass walls, a framed photograph of the old station. Eli waits by the desk, too polite to sit. Marcus comes in, distracted.
+
+MARCUS
+You're June's grandson.
+
+ELI
+Why do you have a picture of KSGH?
+
+MARCUS
+My father worked there. Nights.
+
+ELI
+Was he there when it burned?
+
+Marcus takes the photograph down and puts it face first in a drawer.
+
+MARCUS
+Tell your grandmother the hearing is at nine.
+
+EXT. SIGNAL HILL - NIGHT
+
+= Everyone ends up on the hill at once.
+[[Color: red]]
+
+Wind. A bulldozer parked on the concrete pad. Amara's coil hums. June and Ray at the edge of the slab. Wes's headlights sweep across them.
+
+A gas can tips over in the dark. Marcus stands beside it, empty-handed.
+
+WES
+Step away from that, Marcus.
+
+MARCUS
+I wasn't going to light it.
+
+JUNE
+The radio says you were.
+
+MARCUS
+Then the radio was wrong.
+
+AMARA
+(quietly)
+A recording can be wrong.
+
+INT. JUNE'S KITCHEN - DAWN
+
+= The station reads one last bulletin: the one that didn't happen.
+[[Color: blue]]
+
+Grey light. Everyone crowded into the kitchen: June, Eli, Ray, Amara. Wes in the doorway. The shortwave crackles.
+
+ANNOUNCER (V.O.)
+Signal Hill is quiet this morning. No fire was reported.
+
+A long silence. Ray laughs, once, surprised at himself.
+
+RAY
+It caught up.
+
+ELI
+With what?
+
+JUNE
+With us.
+
+The voice says the date: today's. Then the static comes back, and stays.
+
+EXT. SIGNAL HILL - DAY
+
+= June stands where the station was, and lets it go.
+[[Color: green]]
+
+Sun on the concrete. The mast still in the grass. June alone, then Eli beside her.
+
+ELI
+Do you think it'll come back?
+
+JUNE
+I think it said what it needed to.
+
+She takes the envelope from her coat, the one with the barn's time written on it, and lets the wind take it down the hill.
+
+FADE OUT.

@@ -13,7 +13,7 @@ export const WELCOME = {
   title: 'Welcome to Drafter™',
   description:
     'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
-  // What Drafter promises, as README's "Open it and write" says it, in two short lines.
+  // What Drafter promises, as the README's "Free, no login, private" says it, in two short lines.
   subdescription:
     'Free, with no catch, and no login, ever. Private (no cookies, no tracking), it works offline, and Final Draft files go in and out.',
   startLabel: 'Take the tour',
