@@ -18,11 +18,13 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { cleanWorkName } from '../../../packages/history/src/draft-file';
-import { besideHandlers, checkRel } from '../src/beside';
+import { besideHandlers, besideNames, checkRel } from '../src/beside';
 import { FileError, MAX_READ_BYTES } from '../src/files';
 import { Grants } from '../src/grants';
+import { cleanWorkName as mainCleanWorkName } from '../src/work-names';
 
 const posix = process.platform !== 'win32';
 const bytes = (text: string) => new TextEncoder().encode(text);
@@ -74,9 +76,13 @@ describe('writeBeside', () => {
   test('writes the cuts file beside the script, and a Markdown draft', async () => {
     expect(await beside.writeBeside(script, CUTS, bytes('# Cuts'), 'replace')).toBe('written');
     expect(await readFile(at(CUTS), 'utf8')).toBe('# Cuts');
-    const md = 'Notes drafts/Notes – Draft 01.md';
+    // A Markdown draft of the same work (Boca.md would share the folder).
+    const md = 'Boca drafts/Boca – Draft 01.md';
     expect(await beside.writeBeside(script, md, bytes('# Notes'), 'create')).toBe('written');
     expect(await readFile(at(md), 'utf8')).toBe('# Notes');
+    // Another computer's Draft 01, kept beside this one's.
+    const two = 'Boca drafts/Boca – Draft 01 (2).fountain';
+    expect(await beside.writeBeside(script, two, bytes('theirs'), 'create')).toBe('written');
   });
 
   test('create never overwrites', async () => {
@@ -200,14 +206,92 @@ describe('writeBeside', () => {
   test('accepts every name `cleanWorkName` leaves as it is', () => {
     for (const work of ['Boca', 'The Long Goodbye (2)', 'Ünïcödé – ✓', 'a.b', '#1 Hit']) {
       expect(cleanWorkName(work)).toBe(work);
-      expect(() => checkRel(`${work} drafts/${work} – Draft 01.fountain`)).not.toThrow();
-      expect(() => checkRel(`${work}.fountain.cuts.md`)).not.toThrow();
+      const names = besideNames(`/w/${work}.fountain`);
+      expect(() => checkRel(`${work} drafts/${work} – Draft 01.fountain`, names)).not.toThrow();
+      expect(() => checkRel(`${work} drafts/${work} – Draft 100.md`, names)).not.toThrow();
+      expect(() => checkRel(`${work}.fountain.cuts.md`, names)).not.toThrow();
     }
     // And refuses what it would change.
     for (const work of ['a:b', 'a?b', '.hidden', 'trail.', 'a"b', 'a|b']) {
       expect(cleanWorkName(work)).not.toBe(work);
-      expect(() => checkRel(`${work}.fountain.cuts.md`), work).toThrow(FileError);
+      expect(
+        () => checkRel(`${work}.fountain.cuts.md`, besideNames('/w/x.fountain')),
+        work,
+      ).toThrow(FileError);
     }
+  });
+
+  test('the main process cleans a name exactly as the page does', () => {
+    fc.assert(
+      fc.property(fc.string({ unit: 'grapheme', maxLength: 200 }), (work) => {
+        let page: string | Error;
+        let main: string | Error;
+        try {
+          page = cleanWorkName(work);
+        } catch (error) {
+          page = error as Error;
+        }
+        try {
+          main = mainCleanWorkName(work);
+        } catch (error) {
+          main = error as Error;
+        }
+        if (page instanceof Error) expect(main).toBeInstanceOf(RangeError);
+        else expect(main).toBe(page);
+      }),
+      { numRuns: 500 },
+    );
+  });
+
+  test('the names are the granted script’s: as `cleanWorkName` makes them', () => {
+    for (const name of ['Boca.fountain', 'The Long Goodbye (2).md', 'a:b?.fountain', 'x.txt']) {
+      const stem = name.slice(0, name.lastIndexOf('.'));
+      expect(besideNames(`/w/${name}`)).toEqual({
+        cuts: `${cleanWorkName(name)}.cuts.md`,
+        folder: `${cleanWorkName(stem)} drafts`,
+        draft: `${cleanWorkName(stem)} – Draft `,
+      });
+    }
+  });
+
+  test('refuses names of another work: its cuts file, its drafts folder, its drafts', async () => {
+    const other = [
+      'Other.fountain.cuts.md',
+      'Boca.md.cuts.md',
+      'Boca.fountain.cuts.md.cuts.md',
+      'Other drafts/Other – Draft 01.fountain',
+      'Other drafts/Boca – Draft 01.fountain',
+      'Boca drafts/Other – Draft 01.fountain',
+      'Boca drafts/Boca – Draft 1.fountain',
+      'Boca drafts/Boca – Draft 001.fountain',
+      'Boca drafts/Boca – Draft 00.fountain',
+      'Boca drafts/Boca – Draft 01 (x).fountain',
+      'Boca drafts/Boca – Draft 01 (0).fountain',
+      'Boca drafts/Boca – Draft 01x.fountain',
+      'Boca drafts/Boca – Draft .fountain',
+      'Boca drafts/Boca – Draft 01.fountain.md',
+      'Boca drafts/notes.md',
+      'Boca drafts/Boca.fountain',
+      'Boca drafts/Boca - Draft 01.fountain',
+    ];
+    for (const rel of other) {
+      expect(await codeOf(beside.writeBeside(script, rel, bytes('x'), 'create')), rel).toBe(
+        'not-allowed',
+      );
+      expect(await codeOf(beside.readBeside(script, rel)), rel).toBe('not-allowed');
+    }
+    expect(await codeOf(beside.listBeside(script, 'Other drafts'))).toBe('not-allowed');
+    expect(readdirSync(at(''))).toEqual(['Boca.fountain']);
+    // Another granted script has its own names, and only those.
+    const other2 = join(dir, 'Scripts', 'Other.fountain');
+    await writeFile(other2, 'x');
+    await grants.grant(other2);
+    expect(await beside.writeBeside(other2, 'Other.fountain.cuts.md', bytes('x'), 'replace')).toBe(
+      'written',
+    );
+    expect(await codeOf(beside.writeBeside(other2, CUTS, bytes('x'), 'replace'))).toBe(
+      'not-allowed',
+    );
   });
 
   describe.runIf(posix)('never follows a link', () => {
@@ -337,5 +421,89 @@ describe('listBeside', () => {
   test('refuses a file in the folder’s place', async () => {
     await writeFile(at('Boca drafts'), 'x');
     expect(await codeOf(beside.listBeside(script, 'Boca drafts'))).toBe('not-a-file');
+  });
+});
+
+// Windows has no O_NOFOLLOW: the open there follows a link. These run with the flag as 0, so the
+// lstat before the open, and the open handle's identity after it, are what refuse a link.
+describe.runIf(posix)('without O_NOFOLLOW, as on Windows', () => {
+  let swap: ((path: string) => Promise<void>) | null;
+  let plain: ReturnType<typeof besideHandlers>;
+  beforeEach(() => {
+    swap = null;
+    plain = besideHandlers(grants, {
+      noFollow: 0,
+      afterCheck: async (path) => {
+        await swap?.(path);
+      },
+    });
+  });
+
+  test('a link at the file is refused before it is opened', async () => {
+    const victim = join(dir, 'victim.txt');
+    await writeFile(victim, 'secret');
+    await symlink(victim, at(CUTS));
+    expect(await codeOf(plain.readBeside(script, CUTS))).toBe('not-allowed');
+    await mkdir(at('Boca drafts'));
+    await symlink(victim, at(DRAFT));
+    expect(await codeOf(plain.readBeside(script, DRAFT))).toBe('not-allowed');
+    expect(await codeOf(plain.writeBeside(script, DRAFT, bytes('x'), 'create'))).toBe(
+      'not-allowed',
+    );
+    expect(await codeOf(plain.writeBeside(script, CUTS, bytes('x'), 'replace'))).toBe(
+      'not-allowed',
+    );
+    expect(await readFile(victim, 'utf8')).toBe('secret');
+  });
+
+  test('a file swapped for a link between the check and the open is refused', async () => {
+    const victim = join(dir, 'victim.txt');
+    await writeFile(victim, 'secret');
+    await writeFile(at(CUTS), 'mine');
+    swap = async (path) => {
+      if (!path.endsWith(CUTS)) return;
+      await rm(path);
+      await symlink(victim, path);
+    };
+    expect(await codeOf(plain.readBeside(script, CUTS))).toBe('not-allowed');
+  });
+
+  test('a drafts folder swapped for a link during a read or a write is refused', async () => {
+    const outside = join(dir, 'outside');
+    await mkdir(outside);
+    await writeFile(join(outside, 'Boca – Draft 01.fountain'), 'theirs');
+    await beside.writeBeside(script, DRAFT, bytes('mine'), 'create');
+    swap = async (path) => {
+      if (!path.endsWith('Boca – Draft 01.fountain') && !path.endsWith('Boca – Draft 02.fountain'))
+        return;
+      swap = null;
+      await rename(at('Boca drafts'), at('Moved'));
+      await symlink(outside, at('Boca drafts'));
+    };
+    expect(await codeOf(plain.readBeside(script, DRAFT))).toBe('not-allowed');
+    await rm(at('Boca drafts'));
+    await rename(at('Moved'), at('Boca drafts'));
+    swap = async (path) => {
+      if (!path.endsWith('Boca – Draft 02.fountain')) return;
+      swap = null;
+      await rename(at('Boca drafts'), at('Moved2'));
+      await symlink(outside, at('Boca drafts'));
+    };
+    const second = 'Boca drafts/Boca – Draft 02.fountain';
+    expect(await codeOf(plain.writeBeside(script, second, bytes('x'), 'create'))).toBe(
+      'not-allowed',
+    );
+    expect(readdirSync(outside)).toEqual(['Boca – Draft 01.fountain']);
+  });
+
+  test('reads and writes as usual when nothing is swapped', async () => {
+    expect(await plain.writeBeside(script, DRAFT, bytes('one'), 'create')).toBe('written');
+    expect(await plain.writeBeside(script, CUTS, bytes('cuts'), 'replace')).toBe('written');
+    expect(new TextDecoder().decode((await plain.readBeside(script, DRAFT)) ?? undefined)).toBe(
+      'one',
+    );
+    expect(new TextDecoder().decode((await plain.readBeside(script, CUTS)) ?? undefined)).toBe(
+      'cuts',
+    );
   });
 });
