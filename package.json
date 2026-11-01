@@ -12,6 +12,8 @@
     "test": "vitest run",
     "bench": "vitest bench --run",
     "check": "biome check .",
+    "test-counts": "node scripts/test-counts.mjs",
+    "diagrams": "node scripts/diagrams.mjs",
     "drafter": "node packages/cli/dist/index.js",
     "dev": "pnpm --filter @drafter/web dev",
     "e2e": "pnpm --filter @drafter/web e2e",
