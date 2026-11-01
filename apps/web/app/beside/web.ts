@@ -75,11 +75,34 @@ export async function storedFolder(projectId: string): Promise<FileSystemDirecto
     : null;
 }
 
+/** The settings row holding the ID of a project's folder grant. */
+export const grantKey = (projectId: string): string => `folder-grant:${projectId}`;
+
+/**
+ * Keeps `folder` as the project's. A folder that isn't the one kept before (by `isSameEntry`, not
+ * by its name: two folders called "Scripts" are two places) gets a new grant ID, so what was
+ * written in the old one is written again in it.
+ */
 export async function storeFolder(
   projectId: string,
   folder: FileSystemDirectoryHandle,
 ): Promise<void> {
+  const before = await storedFolder(projectId);
+  const same = before ? await before.isSameEntry(folder).catch(() => false) : false;
   await db.handles.put({ id: folderKey(projectId), ref: folder as unknown as FileRef });
+  if (!same) await db.settings.put({ key: grantKey(projectId), value: crypto.randomUUID() });
+}
+
+/**
+ * The ID of the project's folder grant: the place drafts and cuts were written is this, never the
+ * folder's name. Made the first time it is asked for.
+ */
+export async function folderGrant(projectId: string): Promise<string> {
+  const row = await db.settings.get(grantKey(projectId)).catch(() => undefined);
+  if (typeof row?.value === 'string' && row.value !== '') return row.value;
+  const id = crypto.randomUUID();
+  await db.settings.put({ key: grantKey(projectId), value: id });
+  return id;
 }
 
 /** Whether Drafter may write in the folder now; `ask` asks (it needs the writer's click). */

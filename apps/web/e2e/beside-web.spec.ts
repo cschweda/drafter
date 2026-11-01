@@ -244,6 +244,36 @@ test.describe('in Chromium, beside the script', () => {
     expect(read.facts?.id).toBe(sha(BOCA));
   });
 
+  test('Save As into another folder of the same name writes the drafts there too', async ({
+    page,
+  }) => {
+    await stubPickers(page);
+    await start(page);
+    await putAt(page, 'one/Scripts/Boca.fountain', BOCA);
+    await nextFileName(page, 'one/Scripts/Boca.fountain');
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await menu(page).getByRole('button', { name: 'Open a file…' }).click();
+    await expect.poll(() => wholeText(page)).toBe(BOCA);
+    await startDraft(page);
+    await nextFolder(page, 'one/Scripts');
+    await offer(page).getByRole('button', { name: 'Choose folder…' }).click();
+    await expect
+      .poll(() => filesIn(page, 'one/Scripts/Boca drafts'))
+      .toEqual(['Boca – Draft 01.fountain']);
+    await nextFileName(page, 'two/Scripts/Boca.fountain');
+    await page.keyboard.press('ControlOrMeta+Shift+s');
+    await expect.poll(() => textAt(page, 'two/Scripts/Boca.fountain')).toBe(BOCA);
+    // Another folder, though named the same: asked for again, and the drafts written there.
+    await openDrafts(page);
+    await drafts(page).getByRole('button', { name: 'Keep next to Boca.fountain…' }).click();
+    await nextFolder(page, 'two/Scripts');
+    await offer(page).getByRole('button', { name: 'Choose folder…' }).click();
+    await expect
+      .poll(() => filesIn(page, 'two/Scripts/Boca drafts'))
+      .toEqual(['Boca – Draft 01.fountain']);
+    await expect(drafts(page)).toContainText('Saved beside Boca.fountain.');
+  });
+
   test('another computer’s drafts and cuts beside the work are read into the lists', async ({
     page,
   }) => {

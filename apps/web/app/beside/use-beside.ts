@@ -41,6 +41,7 @@ import { besideFailure } from './failure';
 import { skippedLine } from './read';
 import {
   canPickFolder,
+  folderGrant,
   folderHolds,
   folderPermission,
   pickFolder,
@@ -141,7 +142,8 @@ async function placeOf(project: Project, ask = false): Promise<Place> {
     kind: 'beside',
     folder: webFolder(folder),
     names,
-    where: `web:${folder.name}/${ref.name}`,
+    // The grant's ID, not the folder's name: another folder called the same is another place.
+    where: `web:${await folderGrant(project.id)}/${ref.name}`,
   };
 }
 

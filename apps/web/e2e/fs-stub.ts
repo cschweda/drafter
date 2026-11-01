@@ -23,8 +23,12 @@ export async function stubPickers(page: Page): Promise<void> {
       const name = w.__nextFileName ?? options?.suggestedName ?? 'Untitled.fountain';
       w.__nextFileName = undefined;
       w.__picks.push(name);
-      const root = await navigator.storage.getDirectory();
-      const handle = await root.getFileHandle(name, { create: true });
+      // A name with folders in it (`one/Scripts/Boca.fountain`) picks a file in those folders.
+      let dir = await navigator.storage.getDirectory();
+      const parts = name.split('/');
+      for (const part of parts.slice(0, -1))
+        dir = await dir.getDirectoryHandle(part, { create: true });
+      const handle = await dir.getFileHandle(parts.at(-1) as string, { create: true });
       if (w.__failWrites) {
         // A file the page may not write to; the app's write is refused, and nothing is stored.
         return Object.assign(handle, {
@@ -45,10 +49,12 @@ export async function stubPickers(page: Page): Promise<void> {
         throw new DOMException('The user aborted a request.', 'AbortError');
       }
       dirs.__folderPicks++;
-      const root = await navigator.storage.getDirectory();
+      let dir = await navigator.storage.getDirectory();
       const name = dirs.__nextFolder;
       dirs.__nextFolder = undefined;
-      return name ? root.getDirectoryHandle(name, { create: true }) : root;
+      for (const part of name ? name.split('/') : [])
+        dir = await dir.getDirectoryHandle(part, { create: true });
+      return dir;
     };
   });
 }
