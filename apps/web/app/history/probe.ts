@@ -48,13 +48,14 @@ export function installHistoryProbe(): void {
             result.progress = reply;
             return;
           }
-          if (reply.kind === 'place') return;
           if (reply.kind === 'error') {
             result.error = reply.message;
             result.doneMs = at;
             resolve(result);
             return;
           }
+          // The probe times the two scans; any other reply (a place, cuts, a step) is not one.
+          if (reply.kind !== 'deleted' && reply.kind !== 'versions') return;
           result.updates++;
           const list = reply.kind === 'deleted' ? reply.scenes : reply.rows;
           if (list.length > 0 && result.firstRowsMs === null) result.firstRowsMs = at;
