@@ -5,7 +5,7 @@ import { cutText } from './cuts-file';
 import type { WorkKind } from './draft-file';
 import { hash32, hash53 } from './hash';
 import { coveredBy } from './match';
-import { headingKey, type ScenePrint, scenePrints, sketchOf } from './print';
+import { headingKey, type ScenePrint, type SceneSlot, scenePrints, sketchOf } from './print';
 
 // Finding what left a text (drafts-and-cuts design §3.1): the scenes, chapters and sections that
 // were in `before` and are not in `after`, and every passage that left a scene or section still
@@ -67,13 +67,15 @@ function sceneCuts(before: string, after: string): FoundCut[] {
   const wasPrints = new Map(was.prints.map((p) => [p.hash, p]));
   const candidates = new Candidates<ScenePrint>();
   for (const p of now.prints) candidates.add(p, p);
+  const nowPrints = new Map(now.prints.map((p) => [p.hash, p]));
   const coverOf = new Map<string, ScenePrint | null>();
   const scale = now.prints.length / Math.max(1, was.slots.length);
   const cover = (print: ScenePrint, near: number): ScenePrint | null => {
     let found = coverOf.get(print.hash);
     if (found === undefined) {
-      found = null;
-      for (const p of candidates.of(print, near)) {
+      // The same version now is its own cover, before any merely like it.
+      found = nowPrints.get(print.hash) ?? null;
+      for (const p of found ? [] : candidates.of(print, near)) {
         if (coveredBy(print, p)) {
           found = p;
           break;
@@ -86,30 +88,52 @@ function sceneCuts(before: string, after: string): FoundCut[] {
   const covers = was.slots.map((slot, i) =>
     cover(wasPrints.get(slot.hash) as ScenePrint, i * scale),
   );
+  /** The scenes now under each print, by their place, for the scene a covered one is diffed with. */
+  const nowSlots = new Map<string, number[]>();
+  const nowByKey = new Map<string, number[]>();
+  now.slots.forEach((slot, k) => {
+    file(nowSlots, slot.hash, k);
+    file(nowByKey, (nowPrints.get(slot.hash) as ScenePrint).headingKey, k);
+  });
+  const nowScale = now.slots.length / Math.max(1, was.slots.length);
+  /** The scene now each scene was is diffed with: the nearest under its covering print. */
+  const there = covers.map((covering, i) => {
+    if (!covering) return -1;
+    const places = nowSlots.get(covering.hash) ?? [];
+    const target = i * nowScale;
+    let k = places[0] as number;
+    for (const place of places) if (Math.abs(place - target) < Math.abs(k - target)) k = place;
+    return k;
+  });
+  // A scene no scene covers, with a scene of its heading now at about its place that has words
+  // and holds no other: the same scene, rewritten or cut hard (a stock line replaced, say), so
+  // what left it is found passage by passage rather than the whole scene with its kept lines.
+  const taken = new Set(there.filter((k) => k >= 0));
+  covers.forEach((covering, i) => {
+    if (covering) return;
+    const print = wasPrints.get((was.slots[i] as SceneSlot).hash) as ScenePrint;
+    if (print.shingles === 0) return;
+    for (const k of nearestOf(nowByKey.get(print.headingKey) ?? [], i * nowScale)) {
+      const p = nowPrints.get((now.slots[k] as SceneSlot).hash) as ScenePrint;
+      if (taken.has(k) || p.shingles === 0) continue;
+      covers[i] = p;
+      there[i] = k;
+      taken.add(k);
+      return;
+    }
+  });
   const names = covers.map((p) => p?.heading ?? null);
   const { prev, next } = neighbours(names);
   const wasSide = side(before);
   const nowSide = side(after);
   const finder = new PassageFinder(wasSide, nowSide);
-  /** The scenes now under each print, by their place, for the scene a covered one is diffed with. */
-  const nowSlots = new Map<string, number[]>();
-  now.slots.forEach((slot, k) => {
-    const list = nowSlots.get(slot.hash);
-    if (list) list.push(k);
-    else nowSlots.set(slot.hash, [k]);
-  });
-  const nowScale = now.slots.length / Math.max(1, was.slots.length);
   const found: { at: number; cut: FoundCut }[] = [];
   was.slots.forEach((slot, i) => {
     const heading = (wasPrints.get(slot.hash) as ScenePrint).heading.trim();
     const covering = covers[i];
     if (covering) {
       // The scene is still there: what left it, passage by passage.
-      const places = nowSlots.get(covering.hash) ?? [];
-      const target = i * nowScale;
-      let k = places[0] as number;
-      for (const place of places) if (Math.abs(place - target) < Math.abs(k - target)) k = place;
-      const there = now.slots[k] as (typeof now.slots)[number];
+      const scene = now.slots[there[i] as number] as SceneSlot;
       const where = {
         after: covering.heading,
         before: next[i] ?? null,
@@ -117,7 +141,7 @@ function sceneCuts(before: string, after: string): FoundCut[] {
       };
       for (const [at, text] of finder.find(
         span(wasSide, slot.from, slot.to),
-        span(nowSide, there.from, there.to),
+        span(nowSide, scene.from, scene.to),
       )) {
         found.push({ at, cut: { title: firstWords(text), text, where } });
       }
@@ -137,6 +161,34 @@ function sceneCuts(before: string, after: string): FoundCut[] {
     });
   });
   return inOrder(found);
+}
+
+/** Files `item` under `key`. */
+function file<K, T>(map: Map<K, T[]>, key: K, item: T): void {
+  const list = map.get(key);
+  if (list) list.push(item);
+  else map.set(key, [item]);
+}
+
+/** Up to `SAME_HEADING_LOOK` of `places` (ascending), nearest `target` first. */
+function nearestOf(places: readonly number[], target: number): number[] {
+  let lo = 0;
+  let hi = places.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((places[mid] as number) < target) lo = mid + 1;
+    else hi = mid;
+  }
+  let left = lo - 1;
+  let right = lo;
+  const out: number[] = [];
+  while (out.length < SAME_HEADING_LOOK && (left >= 0 || right < places.length)) {
+    const takeRight =
+      right < places.length &&
+      (left < 0 || (places[right] as number) - target <= target - (places[left] as number));
+    out.push(places[takeRight ? right++ : left--] as number);
+  }
+  return out;
 }
 
 /** The cuts in `before`'s order, their text with `\n` line breaks, the same text once. */
@@ -469,24 +521,8 @@ function markdownCuts(before: string, after: string): FoundCut[] {
     const target = index * scale;
     const look = new Set(candidates.of(u.print, target));
     const same = byKey.get(u.key) ?? [];
-    if (same.length > 0) {
-      // The nearest under the same heading, by where it would be now.
-      let lo = 0;
-      let hi = same.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if ((same[mid] as number) < target) lo = mid + 1;
-        else hi = mid;
-      }
-      let left = lo - 1;
-      let right = lo;
-      for (let k = 0; k < SAME_HEADING_LOOK && (left >= 0 || right < same.length); k++) {
-        const takeRight =
-          right < same.length &&
-          (left < 0 || (same[right] as number) - target <= target - (same[left] as number));
-        look.add(nowUnits[same[takeRight ? right++ : left--] as number] as Unit);
-      }
-    }
+    // The nearest under the same heading, by where it would be now.
+    for (const k of nearestOf(same, target)) look.add(nowUnits[k] as Unit);
     // Nearest first, at most CANDIDATES_MAX, and none after one that is surely it.
     const order = [...look].sort(
       (a, b) =>
@@ -757,9 +793,12 @@ class PassageFinder {
 
   /** A removed piece at `at` in `before`, with `put` in its place: a cut, or not. */
   private consider(span: Span, at: number, piece: string, put: string, out: [number, string][]) {
-    const text = piece.trim();
+    // On a word at both ends: in the middle of a line, past the ", " "; " or "— " it followed.
+    const midLine = this.was.text.slice(this.was.starts[lineOf(this.was, at)], at).trim() !== '';
+    const lead = (midLine ? /^[\s,;:.!?…—–-]*/u : /^\s*/u).exec(piece)?.[0].length ?? 0;
+    const text = piece.slice(lead).trimEnd();
     if (!HAS_WORD.test(text)) return;
-    const from = at + piece.indexOf(text);
+    const from = at + lead;
     const words = wordsIn(text);
     const cut = HAS_WORD.test(put)
       ? words >= CUT_MIN_WORDS && pairsKept(text, pairSet(put)) < CUT_KEEP_SHARE

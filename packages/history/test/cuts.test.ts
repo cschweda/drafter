@@ -129,6 +129,52 @@ describe('findCuts in a script', () => {
     for (const word of S.cabin.split(/\s+/)) if (!kept.has(word)) expect(cutWords).toContain(word);
   });
 
+  describe('a short scene heavily rewritten under its own heading', () => {
+    const stock =
+      'The rain keeps on falling past the window while the old radio hums its tired old song.';
+    const other =
+      'Somebody has left a pink umbrella dripping on the bench beside the stuffed heron.';
+    const scenes = (line: string) =>
+      Array.from(
+        { length: 30 },
+        (_, i) => `INT. ROOM ${i + 1} - NIGHT\n\n${line}\n\nMara counts to ${i + 1}.`,
+      );
+    const script = (line: string) => `${scenes(line).join('\n\n')}\n`;
+
+    test('a stock line replaced across 30 scenes is 1 cut, the line', () => {
+      expect(stock.split(' ').length).toBe(17);
+      expect(findCuts(script(stock), script(other), 'fountain').map((c) => c.text)).toEqual([
+        stock,
+      ]);
+    });
+
+    test('gives passage cuts only, never its kept lines', () => {
+      const before = `INT. SHED - DAY\n\n${stock}\n\n${other}\n\nMara waits.\n\nEXT. YARD - DAY\n\nGeese.\n`;
+      const after = 'INT. SHED - DAY\n\nMara waits.\n\nEXT. YARD - DAY\n\nGeese.\n';
+      const cuts = findCuts(before, after, 'fountain');
+      expect(cuts.map((c) => c.text)).toEqual([`${stock}\n\n${other}`]);
+      for (const cut of cuts) {
+        expect(cut.text).not.toContain('Mara waits.');
+        expect(cut.where.within).toEqual({ heading: 'INT. SHED - DAY', ordinal: 1 });
+      }
+    });
+
+    test('a scene truly removed is still a whole-scene cut', () => {
+      // A scene of its own (near-identical templated scenes read as one: see DEFERRED).
+      const all = scenes(stock);
+      all[4] = `INT. ROOM 5 - NIGHT\n\n${other}\n\nMara counts to 5.`;
+      const before = `${all.join('\n\n')}\n`;
+      const after = `${[...all.slice(0, 4), ...all.slice(5)].join('\n\n')}\n`;
+      expect(findCuts(before, after, 'fountain')).toEqual([
+        {
+          title: 'INT. ROOM 5 - NIGHT',
+          text: all[4],
+          where: { after: 'INT. ROOM 4 - NIGHT', before: 'INT. ROOM 6 - NIGHT', within: null },
+        },
+      ]);
+    });
+  });
+
   describe('passages that leave a scene still there', () => {
     const jetty = S.jetty;
     const swap = (from: string, to: string) => LAST_FERRY.replace(jetty, jetty.replace(from, to));
@@ -377,6 +423,24 @@ describe('findCuts in a Markdown document', () => {
     expect(findCuts(doc(`${twelve} `), doc(''), 'markdown').map((c) => c.text)).toEqual([twelve]);
     const eleven = prose(CUT_MIN_WORDS - 1, 53).slice(0, -1);
     expect(findCuts(doc(`${eleven} `), doc(''), 'markdown')).toEqual([]);
+  });
+
+  test('a passage cut starts and ends on a word', () => {
+    const kept = 'She looked out of the window';
+    const gone = ', and the street was empty and the lamps were out along the pier';
+    const before = keeper(['# A', KEEPER.intro, `${kept}${gone}.`]);
+    const after = keeper(['# A', KEEPER.intro, `${kept}.`]);
+    expect(findCuts(before, after, 'markdown').map((c) => c.text)).toEqual([
+      'and the street was empty and the lamps were out along the pier',
+    ]);
+    const dash = keeper([
+      '# A',
+      KEEPER.intro,
+      `${kept} — and the street was empty and the lamps were out along the pier.`,
+    ]);
+    expect(findCuts(dash, after, 'markdown').map((c) => c.text)).toEqual([
+      'and the street was empty and the lamps were out along the pier',
+    ]);
   });
 
   test('a list item removed is a cut, however short', () => {
