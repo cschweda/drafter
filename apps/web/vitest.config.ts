@@ -27,6 +27,7 @@ export default mergeConfig(
         },
       ],
     },
-    test: { name: 'web', include: ['test/**/*.test.ts'] },
+    // `gc`, so the trap documents' test measures what a file keeps, not the garbage made so far.
+    test: { name: 'web', include: ['test/**/*.test.ts'], execArgv: ['--expose-gc'] },
   }),
 );

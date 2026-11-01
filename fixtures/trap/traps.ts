@@ -1,0 +1,2376 @@
+// The trap documents: deliberately broken and hostile files for every format Drafter opens or
+// imports, each with the one outcome every entry point must give it. This file is the manifest and
+// the generator at once: a trap's bytes are a committed file under `files/` (small, readable text)
+// or made here, deterministically, when a test asks (anything large, binary, or packed). Every
+// byte is the suite's own (docs/clean-room.md): no fixture, sample, or test file of another app,
+// converter, or corpus. Element and attribute names are Drafter's own readers' (packages/fdx).
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync, symlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { deflateRawSync } from 'node:zlib';
+import { SOURCE_ENTRY, sourceElement } from '../../packages/archive/src/reopen';
+import type { Entry } from './entry-points';
+import { SYMLINK_ATTRS, type TrapEntry, trapZip } from './zip';
+
+export type Format =
+  | 'text'
+  | 'fountain'
+  | 'markdown'
+  | 'fdx'
+  | 'highland'
+  | 'fadein'
+  | 'html'
+  | 'epub'
+  | 'files'
+  | 'modules';
+
+/**
+ * What an entry point must do with a trap. `opens`: the script opens, its text exactly `text`, or
+ * holding every one of `lines`, or `chars` long. `refused`: nothing opens, and the message holds
+ * `says`. `opens-with-warning`: it opens, and a message (a note count, a notice) holds `says`.
+ */
+export type Outcome =
+  | { kind: 'opens'; text?: string; lines?: readonly string[]; chars?: number }
+  | { kind: 'refused'; says: string }
+  | {
+      kind: 'opens-with-warning';
+      says: string;
+      text?: string;
+      lines?: readonly string[];
+      chars?: number;
+    };
+
+export interface Trap {
+  id: string;
+  format: Format;
+  /** The file's name, as it is opened. */
+  name: string;
+  /** What it tests, in a sentence. */
+  tests: string;
+  /** Its bytes; generated when it is large or binary, else read from `files/`. */
+  bytes?: () => Uint8Array;
+  /** A special file (a pipe, a link, a folder) made in `dir`; returns its path. POSIX only. */
+  place?: (dir: string) => string;
+  /** The outcome at each entry point it goes through: its keys are the entry points. */
+  expect: Partial<Record<Entry, Outcome>>;
+  /** Its text, opened, is written into an HTML export too, which must hold nothing live. */
+  inert?: boolean;
+  /** The time it may take at one entry point, in ms (default `LIMIT_MS`). */
+  limitMs?: number;
+  /** Generated at test time because it is large (over 1 MB). */
+  large?: boolean;
+  /**
+   * The memory it may take at one entry point, in MB, when a parser's own tree makes the default
+   * (a few copies of its bytes) too small; see docs/DEFERRED.md for the Markdown parser's.
+   */
+  memoryMB?: number;
+}
+
+/** The time one trap may take at one entry point, by default. */
+export const LIMIT_MS = 2000;
+
+export const KiB = 1024;
+export const MiB = 1024 * 1024;
+/** The caps the traps sit either side of: a script's text, an archive or export, an entry. */
+export const SCRIPT_CAP = 5 * MiB;
+export const ARCHIVE_CAP = 32 * MiB;
+export const DESKTOP_READ_CAP = 64 * MiB;
+export const MANIFEST_CAP = 64 * KiB;
+
+// ---- Outcomes ----------------------------------------------------------------------------------
+
+export const opens = (text?: string, more: { lines?: string[]; chars?: number } = {}): Outcome => ({
+  kind: 'opens',
+  ...(text === undefined ? {} : { text }),
+  ...more,
+});
+export const opensWith = (...lines: string[]): Outcome => ({ kind: 'opens', lines });
+export const refused = (says: string): Outcome => ({ kind: 'refused', says });
+export const warns = (
+  says: string,
+  more: { text?: string; lines?: string[]; chars?: number } = {},
+): Outcome => ({ kind: 'opens-with-warning', says, ...more });
+
+/** The messages, as the app and the command line say them (the phrase each holds). */
+export const SAYS = {
+  binary: 'holds more than text',
+  notUtf8: 'isn’t UTF-8 text',
+  tooBig: 'too big to be a script (over 5 MB)',
+  importTooBig: 'script in this file is too big (over 5 MB)',
+  unreadable: 'too big to open (over 32 MB)',
+  pdf: 'Drafter can’t open a PDF',
+  packed: 'a Word, OpenDocument, or other packed file',
+  webPage: 'Drafter can’t open a web page',
+  eBook: 'Drafter can’t open an e-book',
+  ole: 'an older Office or Final Draft file',
+  rtf: 'an RTF document',
+  note: 'came in as a note',
+  notes: 'items came in as notes',
+  fdx: (reason: string) => `This isn’t a Final Draft file: ${reason}`,
+  highland: (reason: string) => `This isn’t a Highland file Drafter can read: ${reason}`,
+  fadeIn: (reason: string) => `This isn’t a Fade In file Drafter can read: ${reason}`,
+  notAFile: 'it isn’t a file',
+  notAScript: 'it isn’t a script',
+  cliTooBig: 'it is larger than 5 MB',
+  cliNotAFile: 'it isn’t a file',
+  cliCantRead: 'can’t read it',
+  /** Nothing opens and nothing is said: a command line's flag, not a file. */
+  silent: '',
+} as const;
+
+// ---- Bytes -------------------------------------------------------------------------------------
+
+const utf8 = new TextEncoder();
+const enc = (text: string) => utf8.encode(text);
+/** The committed fixtures. A path, not a URL: a jsdom test's global URL isn't Node's. */
+const FILES = join(dirname(fileURLToPath(import.meta.url)), 'files');
+const file = (path: string) => (): Uint8Array => new Uint8Array(readFileSync(join(FILES, path)));
+const text = (path: string) => new TextDecoder().decode(file(path)());
+
+const concat = (...parts: (Uint8Array | string | number[])[]): Uint8Array => {
+  const chunks = parts.map((p) =>
+    typeof p === 'string' ? enc(p) : Array.isArray(p) ? Uint8Array.from(p) : p,
+  );
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.length;
+  }
+  return out;
+};
+
+/** `size` bytes: `head`, then `fill` repeated, then `tail`. */
+function sized(size: number, head: string, fill: string, tail = ''): Uint8Array {
+  const out = new Uint8Array(size);
+  const h = enc(head);
+  const t = enc(tail);
+  const f = enc(fill);
+  out.set(h, 0);
+  for (let at = h.length; at < size - t.length; at++)
+    out[at] = f[(at - h.length) % f.length] as number;
+  out.set(t, size - t.length);
+  return out;
+}
+
+const SCRIPT = 'Title: The Signal Box\n\nINT. SIGNAL BOX - NIGHT\n\nA lever waits.\n';
+const SCRIPT_LINES = ['INT. SIGNAL BOX - NIGHT', 'A lever waits.'];
+const NOTES = '# The Signal Box\n\nA lever waits, and a *bell* rings.\n';
+
+/** UTF-16 with its BOM, little- or big-endian. */
+function utf16(textIn: string, big: boolean): Uint8Array {
+  const out = new Uint8Array(2 + textIn.length * 2);
+  out[0] = big ? 0xfe : 0xff;
+  out[1] = big ? 0xff : 0xfe;
+  for (let i = 0; i < textIn.length; i++) {
+    const c = textIn.charCodeAt(i);
+    out[2 + i * 2] = big ? c >> 8 : c & 0xff;
+    out[3 + i * 2] = big ? c & 0xff : c >> 8;
+  }
+  return out;
+}
+
+/** A Windows executable's first bytes: "MZ", the DOS header's fields, and its stub's message. */
+const EXE = () =>
+  concat(
+    [0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0, 0],
+    new Uint8Array(48),
+    'This program cannot be run in DOS mode.\r\r\n$',
+  );
+/** A PNG's signature and the start of its IHDR chunk. */
+const PNG = () =>
+  concat(
+    [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52],
+    [0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0],
+  );
+/** The start of a PDF, as text: its header, one object, and an end marker. */
+const PDF = () =>
+  enc(
+    '%PDF-1.4\n%\u00e2\u00e3\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n',
+  );
+
+// ---- FDX and OSF -------------------------------------------------------------------------------
+
+const FD = '<FinalDraft DocumentType="Script" Template="No" Version="5">';
+const fdx = (content: string, before = '') =>
+  `<?xml version="1.0"?>\n${before}${FD}<Content>${content}</Content></FinalDraft>\n`;
+const para = (type: string, body: string) =>
+  `<Paragraph Type="${type}"><Text>${body}</Text></Paragraph>`;
+
+const osfPara = (style: string, body: string) =>
+  `<para><style basestyle="${style}"/><text>${body}</text></para>`;
+const OSF = `<?xml version="1.0" encoding="UTF-8"?>
+<document type="Open Screenplay Format document" version="40">
+  <paragraphs>
+    ${osfPara('Scene Heading', 'INT. SIGNAL BOX - NIGHT')}
+    ${osfPara('Action', 'A lever waits.')}
+  </paragraphs>
+</document>
+`;
+
+// ---- Zips --------------------------------------------------------------------------------------
+
+const highland = (entries: TrapEntry[], options?: Parameters<typeof trapZip>[1]) => () =>
+  trapZip(entries, options);
+const TEXT_ENTRY: TrapEntry = { name: 'text.fountain', data: SCRIPT };
+const INFO: TrapEntry = { name: 'info.json', data: '{"version":1}' };
+
+/** A deflate stream that inflates to `size` zero bytes, as a bomb is made. */
+const zeros = (size: number) => deflateRawSync(new Uint8Array(size), { level: 9 });
+
+/** An EPUB: `mimetype` first and stored, a container, a page, and `more` entries. */
+function epub(more: TrapEntry[], options: { first?: TrapEntry[]; mimetype?: string } = {}) {
+  return (): Uint8Array =>
+    trapZip([
+      ...(options.first ?? []),
+      { name: 'mimetype', data: options.mimetype ?? 'application/epub+zip', method: 0 },
+      {
+        name: 'META-INF/container.xml',
+        data: '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="EPUB/package.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+      },
+      {
+        name: 'EPUB/page.xhtml',
+        data: '<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Page</title></head><body><p>A page.</p></body></html>',
+      },
+      ...more,
+    ]);
+}
+const source = (
+  kind: 'fountain' | 'markdown',
+  data: string | Uint8Array,
+  extra: Partial<TrapEntry> = {},
+) => ({
+  name: SOURCE_ENTRY[kind],
+  data,
+  ...extra,
+});
+
+// ---- HTML --------------------------------------------------------------------------------------
+
+/** A page like a Drafter export: a doctype, a head, and `body`. */
+const page = (body: string, head = '') =>
+  `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>The Signal Box</title>\n${head}</head>\n<body>\n${body}\n</body>\n</html>\n`;
+const block = (textIn: string, kind: 'fountain' | 'markdown' = 'fountain') =>
+  sourceElement(kind, textIn);
+const b64 = (bytes: Uint8Array) => Buffer.from(bytes).toString('base64');
+const rawBlock = (kind: string, body: string) =>
+  `<script type="text/plain" id="drafter-source" data-kind="${kind}" data-encoding="base64">\n${body}\n</script>`;
+
+const HOSTILE_HEAD = `<meta http-equiv="refresh" content="0; url=https://example.invalid/">
+<link rel="stylesheet" href="https://example.invalid/trap.css">
+<script src="https://example.invalid/trap.js"></script>
+<script>window.__trapped = 'page-script'; fetch('https://example.invalid/beacon');</script>
+`;
+const HOSTILE_BODY = `<iframe src="https://example.invalid/frame"></iframe>
+<img src="https://example.invalid/pixel.png" onerror="window.__trapped = 'img'">
+<object data="https://example.invalid/x.swf"></object>
+<form action="https://example.invalid/steal"><input name="x"></form>
+<a href="javascript:window.__trapped='link'">Open</a>`;
+
+// ---- Text traps for each text format ----------------------------------------------------------
+
+type TextKind = { ext: string; format: Format; name: string };
+const TEXT_KINDS: readonly TextKind[] = [
+  { ext: 'fountain', format: 'fountain', name: 'Fountain' },
+  { ext: 'md', format: 'markdown', name: 'Markdown' },
+  { ext: 'txt', format: 'text', name: 'plain text' },
+];
+
+const BIDI = '\u202e';
+/** 9,000 bytes of text, then a NUL past the first 8 KB, then a line break. */
+const NUL_LATE = concat(sized(9000, 'Title: Late Nul\n\n', 'A lever waits. '), [0], '\n');
+const FLOOD = `Title: Z${'\u0301'.repeat(200_000)}\n\nINT. HALL - DAY\n\nA${'\u0308'.repeat(200_000)}\n`;
+const LONG = `INT. ${'VERY '.repeat(40_000)}LONG HALL - DAY\n\n${'W'.repeat(200_000)}\nA lever waits.\n`;
+const ZW = '\u200b\u200d\ufeff';
+
+/** The traps every text format shares, for one of them. */
+function textTraps({ ext, format, name }: TextKind): Trap[] {
+  const id = (s: string) => `${ext}-${s}`;
+  const n = (s: string) => `${s}.${ext}`;
+  const sample = ext === 'md' ? NOTES : SCRIPT;
+  const markdown = ext === 'md';
+  return [
+    {
+      id: id('empty'),
+      format,
+      name: n('empty'),
+      tests: `A 0-byte ${name} file opens as an empty script.`,
+      bytes: () => new Uint8Array(),
+      expect: { 'web-open': opens('') },
+    },
+    {
+      id: id('whitespace'),
+      format,
+      name: n('whitespace'),
+      tests: `A ${name} file of spaces, tabs, and blank lines opens exactly.`,
+      bytes: () => enc(' \t \n\n   \n\t\n'),
+      expect: { 'web-open': opens(' \t \n\n   \n\t\n') },
+    },
+    {
+      id: id('bom'),
+      format,
+      name: n('bom'),
+      tests: 'A UTF-8 byte order mark is taken off, not shown.',
+      bytes: () => concat([0xef, 0xbb, 0xbf], sample),
+      expect: { 'web-open': opens(sample) },
+    },
+    {
+      id: id('utf16le'),
+      format,
+      name: n('utf16le'),
+      tests: 'UTF-16 (little-endian, with its BOM) is refused as not UTF-8, not opened as garbage.',
+      bytes: () => utf16(sample, false),
+      expect: { 'web-open': refused(SAYS.notUtf8) },
+    },
+    {
+      id: id('utf16be'),
+      format,
+      name: n('utf16be'),
+      tests: 'UTF-16 (big-endian, with its BOM) is refused as not UTF-8.',
+      bytes: () => utf16(sample, true),
+      expect: { 'web-open': refused(SAYS.notUtf8) },
+    },
+    {
+      id: id('invalid-utf8'),
+      format,
+      name: n('invalid-utf8'),
+      tests:
+        'Bytes that are not UTF-8 (Latin-1 é, a lone continuation byte) are refused, so saving can’t change them.',
+      bytes: () => concat('Title: Caf', [0xe9], '\n\nINT. ', [0x80], 'HALL\n'),
+      expect: { 'web-open': refused(SAYS.notUtf8), 'cli-build': opens() },
+    },
+    {
+      id: id('nul-early'),
+      format,
+      name: n('nul-early'),
+      tests: 'A NUL byte near the start means it isn’t text.',
+      bytes: () => concat('Title: Nul\n\n', [0], 'INT. HALL\n'),
+      expect: { 'web-open': refused(SAYS.binary) },
+    },
+    {
+      id: id('nul-late'),
+      format,
+      name: n('nul-late'),
+      tests:
+        'A NUL byte past the first 8 KB opens, as Open’s 8 KB rule allows (docs/DEFERRED.md asks whether it should).',
+      bytes: () => NUL_LATE,
+      expect: { 'web-open': opens(new TextDecoder().decode(NUL_LATE)) },
+    },
+    {
+      id: id('cr-only'),
+      format,
+      name: n('cr-only'),
+      tests: 'Old Mac line breaks (CR alone) become line feeds.',
+      bytes: () => enc(sample.replace(/\n/g, '\r')),
+      expect: { 'web-open': opens(sample) },
+    },
+    {
+      id: id('mixed-breaks'),
+      format,
+      name: n('mixed-breaks'),
+      tests: 'CRLF, CR, and LF in one file all become line feeds.',
+      bytes: () => enc('Title: Mixed\r\n\rINT. HALL - DAY\n\r\nA lever waits.\r'),
+      expect: { 'web-open': opens('Title: Mixed\n\nINT. HALL - DAY\n\nA lever waits.\n') },
+    },
+    {
+      id: id('10mb-line'),
+      format,
+      name: n('10mb-line'),
+      tests: 'A 10 MB file of one line is refused by size before it is decoded.',
+      bytes: () => sized(10 * MiB, '', 'a'),
+      expect: { 'web-open': refused(SAYS.tooBig), 'cli-build': refused(SAYS.cliTooBig) },
+      large: true,
+    },
+    {
+      id: id('at-cap'),
+      format,
+      name: n('at-cap'),
+      tests: 'A file of exactly 5 MB, the cap, opens.',
+      bytes: () =>
+        sized(
+          SCRIPT_CAP,
+          markdown ? '# At the Cap\n\n' : 'Title: At the Cap\n\n',
+          'A lever waits.\n',
+        ),
+      expect: { 'web-open': opens(undefined, { chars: SCRIPT_CAP }) },
+      large: true,
+      limitMs: 10_000,
+      memoryMB: 1024,
+    },
+    {
+      id: id('over-cap'),
+      format,
+      name: n('over-cap'),
+      tests: 'A file one byte over 5 MB is refused.',
+      bytes: () => sized(SCRIPT_CAP + 1, 'Title: Over the Cap\n\n', 'A lever waits.\n'),
+      expect: { 'web-open': refused(SAYS.tooBig), 'cli-build': refused(SAYS.cliTooBig) },
+      large: true,
+    },
+    {
+      id: id('bidi-zero-width'),
+      format,
+      name: n('bidi-zero-width'),
+      tests:
+        'Zero-width and bidi-override characters in a title and a character name are kept as they are.',
+      bytes: () =>
+        enc(
+          markdown
+            ? `# The ${BIDI}xob langiS${ZW}\n\n${BIDI}WREN${ZW}: a lever waits.\n`
+            : `Title: The ${BIDI}xob langiS${ZW}\n\nINT. HALL - DAY\n\n${BIDI}WREN${ZW}\nA lever waits.\n`,
+        ),
+      expect: {
+        'web-open': opens(
+          markdown
+            ? `# The ${BIDI}xob langiS${ZW}\n\n${BIDI}WREN${ZW}: a lever waits.\n`
+            : `Title: The ${BIDI}xob langiS${ZW}\n\nINT. HALL - DAY\n\n${BIDI}WREN${ZW}\nA lever waits.\n`,
+        ),
+      },
+      inert: true,
+    },
+    {
+      id: id('combining-flood'),
+      format,
+      name: n('combining-flood'),
+      tests: 'A letter carrying 200,000 combining marks opens without stalling.',
+      bytes: () => enc(FLOOD),
+      expect: { 'web-open': opens(FLOOD) },
+      inert: true,
+    },
+    {
+      id: id('emoji'),
+      format,
+      name: n('emoji'),
+      tests: 'Emoji, flags, skin tones, and joined families open exactly.',
+      bytes: () =>
+        enc(
+          `Title: 🚂 The Signal Box 🇬🇧\n\nINT. HALL - DAY\n\n👩🏽‍🔧 WREN pulls a lever. 👨‍👩‍👧‍👦\n`,
+        ),
+      expect: {
+        'web-open': opens(
+          `Title: 🚂 The Signal Box 🇬🇧\n\nINT. HALL - DAY\n\n👩🏽‍🔧 WREN pulls a lever. 👨‍👩‍👧‍👦\n`,
+        ),
+      },
+      inert: true,
+    },
+    {
+      id: id('long-heading'),
+      format,
+      name: n('long-heading'),
+      tests: 'A 200,000-character scene heading and character name open without stalling.',
+      bytes: () => enc(LONG),
+      expect: { 'web-open': opens(LONG) },
+      inert: true,
+    },
+    {
+      id: id('exe'),
+      format,
+      name: n('program'),
+      tests: `A Windows program renamed .${ext} is refused as not text.`,
+      bytes: EXE,
+      expect: { 'web-open': refused(SAYS.binary) },
+    },
+    {
+      id: id('png'),
+      format,
+      name: n('picture'),
+      tests: `A PNG renamed .${ext} is refused as not text.`,
+      bytes: PNG,
+      expect: { 'web-open': refused(SAYS.binary) },
+    },
+    {
+      id: id('pdf'),
+      format,
+      name: n('printed'),
+      tests: `A PDF renamed .${ext} is named a PDF, by its first bytes.`,
+      bytes: PDF,
+      expect: { 'web-open': refused(SAYS.pdf) },
+    },
+  ];
+}
+
+// ---- Every trap --------------------------------------------------------------------------------
+
+const FOUNTAIN_TRAPS: Trap[] = [
+  {
+    id: 'fountain-title-page-html',
+    format: 'fountain',
+    name: 'title-page-html.fountain',
+    tests:
+      '<script>, <img onerror>, a javascript: link, and an HTML comment on the title page stay text.',
+    bytes: file('fountain/title-page-html.fountain'),
+    expect: { 'web-open': opens(text('fountain/title-page-html.fountain')) },
+    inert: true,
+  },
+  {
+    id: 'fountain-action-html',
+    format: 'fountain',
+    name: 'action-html.fountain',
+    tests:
+      'Script, image, link, iframe, style, and comment markup in action and dialogue stays text.',
+    bytes: file('fountain/action-html.fountain'),
+    expect: { 'web-open': opens(text('fountain/action-html.fountain')) },
+    inert: true,
+  },
+  {
+    id: 'fountain-notes-html',
+    format: 'fountain',
+    name: 'notes-html.fountain',
+    tests: 'Markup inside notes and a boneyard stays text.',
+    bytes: file('fountain/notes-html.fountain'),
+    expect: { 'web-open': opens(text('fountain/notes-html.fountain')) },
+    inert: true,
+  },
+  {
+    id: 'fountain-unclosed-boneyard',
+    format: 'fountain',
+    name: 'unclosed-boneyard.fountain',
+    tests: 'A /* that is never closed opens; the rest is hidden, not lost.',
+    bytes: file('fountain/unclosed-boneyard.fountain'),
+    expect: { 'web-open': opens(text('fountain/unclosed-boneyard.fountain')) },
+  },
+  {
+    id: 'fountain-unclosed-note',
+    format: 'fountain',
+    name: 'unclosed-note.fountain',
+    tests: 'A [[ that is never closed opens as text.',
+    bytes: file('fountain/unclosed-note.fountain'),
+    expect: { 'web-open': opens(text('fountain/unclosed-note.fountain')) },
+  },
+  {
+    id: 'fountain-nested-emphasis',
+    format: 'fountain',
+    name: 'nested-emphasis.fountain',
+    tests: 'Ten thousand nested emphasis markers open, parse, and export in time.',
+    bytes: () =>
+      enc(
+        `Title: Nested\n\nINT. HALL - DAY\n\n${'*_**'.repeat(2500)}lever${'**_*'.repeat(2500)}\n\n${'*'.repeat(10_000)}\n`,
+      ),
+    expect: { 'web-open': opensWith('INT. HALL - DAY') },
+    inert: true,
+  },
+  {
+    id: 'fountain-unbalanced-emphasis',
+    format: 'fountain',
+    name: 'unbalanced-emphasis.fountain',
+    tests: 'Ten thousand openers with no closers parse in linear time.',
+    bytes: () => enc(`INT. HALL - DAY\n\n${'*a _b **c '.repeat(10_000)}\n`),
+    expect: { 'web-open': opensWith('INT. HALL - DAY') },
+    inert: true,
+  },
+  {
+    id: 'fountain-10000-keys',
+    format: 'fountain',
+    name: 'many-keys.fountain',
+    tests: 'A title page with 10,000 keys opens in time.',
+    bytes: () =>
+      enc(
+        `${Array.from({ length: 10_000 }, (_, i) => `Key${i}: Value ${i}`).join('\n')}\n\nINT. HALL - DAY\n\nA lever waits.\n`,
+      ),
+    expect: { 'web-open': opensWith('Key9999: Value 9999', 'A lever waits.') },
+  },
+  {
+    id: 'fountain-meta-malformed',
+    format: 'fountain',
+    name: 'meta-malformed.fountain',
+    tests: 'A Drafter metadata block that isn’t JSON opens, and is kept as written.',
+    bytes: file('fountain/meta-malformed.fountain'),
+    expect: { 'web-open': opens(text('fountain/meta-malformed.fountain')) },
+  },
+  {
+    id: 'fountain-meta-duplicated',
+    format: 'fountain',
+    name: 'meta-duplicated.fountain',
+    tests: 'Two metadata blocks, one with a __proto__ key, open without polluting anything.',
+    bytes: file('fountain/meta-duplicated.fountain'),
+    expect: { 'web-open': opens(text('fountain/meta-duplicated.fountain')) },
+  },
+  {
+    id: 'fountain-meta-hostile',
+    format: 'fountain',
+    name: 'meta-hostile-values.fountain',
+    tests: 'A metadata block of wrong types, an unknown version, and markup in the template opens.',
+    bytes: file('fountain/meta-hostile-values.fountain'),
+    expect: { 'web-open': opens(text('fountain/meta-hostile-values.fountain')) },
+    inert: true,
+  },
+  {
+    id: 'fountain-meta-huge',
+    format: 'fountain',
+    name: 'meta-huge.fountain',
+    tests: 'A 3 MB metadata block opens in time.',
+    bytes: () =>
+      enc(
+        `Title: Huge Block\n\nINT. HALL - DAY\n\nA lever waits.\n\n/* drafter\n{"v":1,"template":"us-screenplay","x":"${'y'.repeat(3 * MiB)}"}\n*/\n`,
+      ),
+    expect: { 'web-open': opensWith('A lever waits.') },
+    large: true,
+    limitMs: 5000,
+  },
+  {
+    id: 'fountain-many-boneyards',
+    format: 'fountain',
+    name: 'many-boneyards.fountain',
+    tests: '50,000 boneyard openers and closers in a row parse in time.',
+    bytes: () => enc(`INT. HALL - DAY\n\n${'/* */ '.repeat(25_000)}${'/*'.repeat(25_000)}\n`),
+    expect: { 'web-open': opensWith('INT. HALL - DAY') },
+  },
+  {
+    id: 'fountain-many-notes',
+    format: 'fountain',
+    name: 'many-notes.fountain',
+    tests: '50,000 note openers with no closers parse in time.',
+    bytes: () => enc(`INT. HALL - DAY\n\n${'[[ '.repeat(50_000)}\n`),
+    expect: { 'web-open': opensWith('INT. HALL - DAY') },
+    // `build` prints all 50,000 warnings.
+    memoryMB: 512,
+  },
+  {
+    id: 'fountain-is-fdx',
+    format: 'fountain',
+    name: 'final-draft.fountain',
+    tests: 'A Final Draft file named .fountain opens as the text it is (Fountain reads any text).',
+    bytes: file('fdx/valid.fdx'),
+    expect: { 'web-open': opens(text('fdx/valid.fdx')) },
+  },
+  {
+    id: 'fountain-is-highland',
+    format: 'fountain',
+    name: 'packed.fountain',
+    tests: 'A Highland zip named .fountain is named a packed file, by its first bytes.',
+    bytes: highland([TEXT_ENTRY]),
+    expect: { 'web-open': refused(SAYS.packed) },
+  },
+  {
+    id: 'fountain-is-rtf',
+    format: 'fountain',
+    name: 'rich.fountain',
+    tests: 'An RTF document named .fountain is named an RTF document.',
+    bytes: () => enc('{\\rtf1\\ansi INT. HALL - DAY\\par A lever waits.}'),
+    expect: { 'web-open': refused(SAYS.rtf) },
+  },
+  {
+    id: 'fountain-is-ole',
+    format: 'fountain',
+    name: 'older.fountain',
+    tests:
+      'An OLE compound file (an older Office or Final Draft file) named .fountain is named so.',
+    bytes: () => concat([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], new Uint8Array(504)),
+    expect: { 'web-open': refused(SAYS.ole) },
+  },
+  {
+    id: 'fountain-is-export',
+    format: 'fountain',
+    name: 'export.fountain',
+    tests:
+      'A Drafter HTML export named .fountain is reopened by its content: the script inside opens.',
+    bytes: () => enc(page(`<main>…</main>\n${block(SCRIPT)}`)),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+];
+
+const deepList = (depth: number) =>
+  Array.from({ length: depth }, (_, i) => `${'  '.repeat(i)}- level ${i}`).join('\n');
+
+const MARKDOWN_TRAPS: Trap[] = [
+  {
+    id: 'md-raw-html',
+    format: 'markdown',
+    name: 'raw-html.md',
+    tests:
+      'Raw HTML (script, iframe, img onerror, object, meta refresh, style, svg onload) stays text.',
+    bytes: file('markdown/raw-html.md'),
+    expect: { 'web-open': opens(text('markdown/raw-html.md')) },
+    inert: true,
+  },
+  {
+    id: 'md-hostile-links',
+    format: 'markdown',
+    name: 'hostile-links.md',
+    tests:
+      'javascript:, data:, and vbscript: links and images, encoded and by reference, never become links.',
+    bytes: file('markdown/hostile-links.md'),
+    expect: { 'web-open': opens(text('markdown/hostile-links.md')) },
+    inert: true,
+  },
+  {
+    id: 'md-reference-loop',
+    format: 'markdown',
+    name: 'reference-loop.md',
+    tests: 'Reference links that point at each other open and render.',
+    bytes: file('markdown/reference-loop.md'),
+    expect: { 'web-open': opens(text('markdown/reference-loop.md')) },
+    inert: true,
+  },
+  {
+    id: 'md-footnote-loop',
+    format: 'markdown',
+    name: 'footnote-loop.md',
+    tests: 'Footnotes that cite each other, and themselves, open and render.',
+    bytes: file('markdown/footnote-loop.md'),
+    expect: { 'web-open': opens(text('markdown/footnote-loop.md')) },
+    inert: true,
+  },
+  {
+    id: 'md-front-matter',
+    format: 'markdown',
+    name: 'front-matter.md',
+    tests: 'YAML front matter with anchor bombs and a tag that would run a command is only text.',
+    bytes: file('markdown/front-matter.md'),
+    expect: { 'web-open': opens(text('markdown/front-matter.md')) },
+    inert: true,
+  },
+  {
+    id: 'md-deep-lists',
+    format: 'markdown',
+    name: 'deep-lists.md',
+    tests:
+      'Lists nested 300 deep open; the reader says it is nested too deeply instead of stalling.',
+    bytes: () => enc(`# Deep\n\n${deepList(300)}\n`),
+    expect: {
+      'web-open': opensWith('# Deep', '- level 299'),
+      package: warns('nested too deeply'),
+    },
+  },
+  {
+    id: 'md-deep-quotes',
+    format: 'markdown',
+    name: 'deep-quotes.md',
+    tests: 'Block quotes nested 100,000 deep open; the reader refuses to parse them.',
+    bytes: () => enc(`# Deep\n\n${'>'.repeat(100_000)} the bottom\n`),
+    expect: { 'web-open': opensWith('the bottom'), package: warns('nested too deeply') },
+  },
+  {
+    id: 'md-deep-emphasis',
+    format: 'markdown',
+    name: 'deep-emphasis.md',
+    tests: 'Emphasis nested 3,000 deep parses and exports in time.',
+    bytes: () => enc(`# Deep\n\n${'*a '.repeat(3000)}b${' a*'.repeat(3000)}\n`),
+    expect: { 'web-open': opensWith('# Deep') },
+    inert: true,
+  },
+  {
+    id: 'md-huge-table',
+    format: 'markdown',
+    name: 'huge-table.md',
+    tests: 'A pipe table of 20,000 rows by 50 columns opens and renders in time.',
+    bytes: () =>
+      enc(
+        `# Table\n\n|${' h |'.repeat(50)}\n|${' - |'.repeat(50)}\n${`|${' <b>x</b> |'.repeat(50)}\n`.repeat(4000)}`,
+      ),
+    expect: { 'web-open': opensWith('# Table') },
+    inert: true,
+    limitMs: 5000,
+    memoryMB: 1536,
+  },
+  {
+    id: 'md-many-footnotes',
+    format: 'markdown',
+    name: 'many-footnotes.md',
+    tests: '30,000 footnote definitions and references parse in linear time.',
+    bytes: () =>
+      enc(
+        `# Notes\n\n${Array.from({ length: 30_000 }, (_, i) => `x[^${i}]`).join(' ')}\n\n${Array.from({ length: 30_000 }, (_, i) => `[^${i}]: n${i}`).join('\n')}\n`,
+      ),
+    expect: { 'web-open': opensWith('# Notes') },
+    limitMs: 5000,
+  },
+  {
+    id: 'md-is-epub',
+    format: 'markdown',
+    name: 'book.md',
+    tests: 'An EPUB named .md is named an e-book by its content, whatever its name.',
+    bytes: epub([]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+];
+
+const FDX_TRAPS: Trap[] = [
+  {
+    id: 'fdx-valid',
+    format: 'fdx',
+    name: 'valid.fdx',
+    tests: 'The baseline: a small, well-formed Final Draft file imports.',
+    bytes: file('fdx/valid.fdx'),
+    expect: { 'web-open': opensWith(...SCRIPT_LINES) },
+  },
+  {
+    id: 'fdx-billion-laughs',
+    format: 'fdx',
+    name: 'billion-laughs.fdx',
+    tests: 'Nested entity expansion is never expanded: a DOCTYPE is refused outright.',
+    bytes: file('fdx/billion-laughs.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A DOCTYPE is not allowed')) },
+  },
+  {
+    id: 'fdx-xxe-file',
+    format: 'fdx',
+    name: 'xxe-file.fdx',
+    tests: 'An external entity naming file:///etc/passwd is refused, never read.',
+    bytes: file('fdx/xxe-file.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A DOCTYPE is not allowed')) },
+  },
+  {
+    id: 'fdx-xxe-http',
+    format: 'fdx',
+    name: 'xxe-http.fdx',
+    tests: 'An external entity naming an http:// URL is refused, never fetched.',
+    bytes: file('fdx/xxe-http.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A DOCTYPE is not allowed')) },
+  },
+  {
+    id: 'fdx-external-dtd',
+    format: 'fdx',
+    name: 'external-dtd.fdx',
+    tests: 'A DOCTYPE naming an external DTD is refused, never fetched.',
+    bytes: file('fdx/external-dtd.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A DOCTYPE is not allowed')) },
+  },
+  {
+    id: 'fdx-parameter-entity',
+    format: 'fdx',
+    name: 'parameter-entity.fdx',
+    tests: 'A parameter entity naming a local file is refused, never read.',
+    bytes: file('fdx/parameter-entity.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A DOCTYPE is not allowed')) },
+  },
+  {
+    id: 'fdx-deep-nesting',
+    format: 'fdx',
+    name: 'deep.fdx',
+    tests: 'Elements nested 200,000 deep are refused at depth 65, without recursion.',
+    bytes: () =>
+      enc(`${FD}<Content>${'<a>'.repeat(200_000)}${'</a>'.repeat(200_000)}</Content></FinalDraft>`),
+    expect: { 'web-open': refused(SAYS.fdx('Elements nest deeper than 64')) },
+    large: true,
+  },
+  {
+    id: 'fdx-huge-attribute',
+    format: 'fdx',
+    name: 'huge-attribute.fdx',
+    tests: 'A 4 MB attribute value is read once, in linear time, and left out.',
+    bytes: () =>
+      enc(
+        fdx(para('Action', 'A lever waits.')).replace(
+          FD,
+          `${FD.slice(0, -1)} Junk="${'j'.repeat(4 * MiB)}">`,
+        ),
+      ),
+    expect: { 'web-open': opensWith('A lever waits.') },
+    large: true,
+    limitMs: 5000,
+  },
+  {
+    id: 'fdx-huge-type',
+    format: 'fdx',
+    name: 'huge-type.fdx',
+    tests: 'A paragraph type 1 MB long comes in as a note without the note holding all of it.',
+    bytes: () => enc(fdx(para('T'.repeat(MiB), 'A lever waits.'))),
+    expect: { 'web-open': warns(SAYS.note, { lines: ['A lever waits.'] }) },
+    large: true,
+  },
+  {
+    id: 'fdx-malformed',
+    format: 'fdx',
+    name: 'malformed.fdx',
+    tests: 'A mismatched closing tag is refused, and the message says where.',
+    bytes: file('fdx/malformed.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('</Paragraph> closes <Text>')) },
+  },
+  {
+    id: 'fdx-wrong-root',
+    format: 'fdx',
+    name: 'wrong-root.fdx',
+    tests: 'Well-formed XML whose root isn’t FinalDraft is refused.',
+    bytes: file('fdx/wrong-root.fdx'),
+    expect: {
+      'web-open': refused(SAYS.fdx('it has no FinalDraft root holding a Content element.')),
+    },
+  },
+  {
+    id: 'fdx-empty-content',
+    format: 'fdx',
+    name: 'empty-content.fdx',
+    tests: 'An empty Content imports as an empty script.',
+    bytes: file('fdx/empty-content.fdx'),
+    expect: { 'web-open': opens('') },
+  },
+  {
+    id: 'fdx-unknown-types',
+    format: 'fdx',
+    name: 'unknown-types.fdx',
+    tests:
+      'Paragraph types Drafter has no element for (one of them markup) come in as counted notes.',
+    bytes: file('fdx/unknown-types.fdx'),
+    expect: {
+      'web-open': warns(SAYS.notes, {
+        lines: ['INT. SIGNAL BOX - NIGHT', 'A shimmer. [[fdx: Hologram]]', 'Odd type.'],
+      }),
+    },
+    inert: true,
+  },
+  {
+    id: 'fdx-cdata-script',
+    format: 'fdx',
+    name: 'cdata-script.fdx',
+    tests: 'A <script> inside CDATA, and an escaped <img onerror>, come in as text.',
+    bytes: file('fdx/cdata-script.fdx'),
+    expect: {
+      'web-open': opensWith(
+        // Fountain's own escape: an underscore would start emphasis.
+        "<script>window.\\_\\_trapped = 'cdata'</script>",
+        '<img src=x onerror="window.\\_\\_trapped = \'escaped\'">',
+      ),
+    },
+    inert: true,
+  },
+  {
+    id: 'fdx-processing-instruction',
+    format: 'fdx',
+    name: 'processing-instruction.fdx',
+    tests: 'An xml-stylesheet processing instruction is refused, never fetched.',
+    bytes: file('fdx/processing-instruction.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A processing instruction is not allowed')) },
+  },
+  {
+    id: 'fdx-encoding-mismatch',
+    format: 'fdx',
+    name: 'encoding-mismatch.fdx',
+    tests: 'A declaration saying UTF-16 over UTF-8 bytes: the bytes decide, and it imports.',
+    bytes: file('fdx/encoding-mismatch.fdx'),
+    expect: { 'web-open': opensWith('Café, naïve, résumé.') },
+  },
+  {
+    id: 'fdx-latin1',
+    format: 'fdx',
+    name: 'latin1.fdx',
+    tests: 'A file declared ISO-8859-1 and holding Latin-1 bytes is refused as not UTF-8.',
+    bytes: () =>
+      concat(
+        '<?xml version="1.0" encoding="ISO-8859-1"?>\n',
+        FD,
+        '<Content><Paragraph Type="Action"><Text>Caf',
+        [0xe9],
+        '</Text></Paragraph></Content></FinalDraft>\n',
+      ),
+    expect: { 'web-open': refused(SAYS.notUtf8) },
+  },
+  {
+    id: 'fdx-utf16',
+    format: 'fdx',
+    name: 'utf16.fdx',
+    tests: 'A UTF-16 Final Draft file is refused as not UTF-8.',
+    bytes: () => utf16(text('fdx/valid.fdx'), false),
+    expect: { 'web-open': refused(SAYS.notUtf8) },
+  },
+  {
+    id: 'fdx-undeclared-entity',
+    format: 'fdx',
+    name: 'undeclared-entity.fdx',
+    tests: 'An HTML entity XML doesn’t define (&nbsp;) is refused.',
+    bytes: file('fdx/undeclared-entity.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('The entity &nbsp; is not allowed')) },
+  },
+  {
+    id: 'fdx-proto-attribute',
+    format: 'fdx',
+    name: 'proto-attribute.fdx',
+    tests: 'Attributes named __proto__ and constructor are plain keys, and it imports.',
+    bytes: file('fdx/proto-attribute.fdx'),
+    expect: { 'web-open': opensWith('A lever waits.') },
+  },
+  {
+    id: 'fdx-second-root',
+    format: 'fdx',
+    name: 'second-root.fdx',
+    tests: 'Two root elements are refused.',
+    bytes: file('fdx/second-root.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A second root element')) },
+  },
+  {
+    id: 'fdx-char-reference-nul',
+    format: 'fdx',
+    name: 'char-reference-nul.fdx',
+    tests: 'A character reference to NUL (&#0;) is refused.',
+    bytes: file('fdx/char-reference-nul.fdx'),
+    expect: { 'web-open': refused(SAYS.fdx('A character reference to a character XML forbids')) },
+  },
+  {
+    id: 'fdx-many-comments',
+    format: 'fdx',
+    name: 'many-comments.fdx',
+    tests: '100,000 empty comments before the root are read in linear time.',
+    bytes: () =>
+      enc(
+        `<?xml version="1.0"?>\n${'<!---->'.repeat(100_000)}${fdx(para('Action', 'A lever waits.')).slice(22)}`,
+      ),
+    expect: { 'web-open': opensWith('A lever waits.') },
+  },
+  {
+    id: 'fdx-unclosed-cdata',
+    format: 'fdx',
+    name: 'unclosed-cdata.fdx',
+    tests: 'A CDATA section that never closes is refused.',
+    bytes: () =>
+      enc(
+        fdx(`<Paragraph Type="Action"><Text><![CDATA[${'x'.repeat(100_000)}`).replace(
+          /<\/Content>.*$/s,
+          '',
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.fdx('A CDATA section is not closed')) },
+  },
+  {
+    id: 'fdx-at-cap',
+    format: 'fdx',
+    name: 'at-cap.fdx',
+    tests: 'A Final Draft file of exactly 5 MB imports.',
+    bytes: () => {
+      const head = `<?xml version="1.0"?>\n${FD}<Content><Paragraph Type="Action"><Text>A lever waits.</Text></Paragraph></Content>`;
+      const tail = '</FinalDraft>\n';
+      return sized(SCRIPT_CAP, `${head}<!--`, ' ', `-->${tail}`);
+    },
+    expect: { 'web-open': opensWith('A lever waits.') },
+    large: true,
+    limitMs: 5000,
+  },
+  {
+    id: 'fdx-over-cap',
+    format: 'fdx',
+    name: 'over-cap.fdx',
+    tests: 'A Final Draft file one byte over 5 MB is refused by size.',
+    bytes: () =>
+      sized(
+        SCRIPT_CAP + 1,
+        `<?xml version="1.0"?>\n${FD}<Content><!--`,
+        ' ',
+        '--></Content></FinalDraft>\n',
+      ),
+    expect: {
+      'web-open': refused(SAYS.tooBig),
+      'cli-convert': refused(SAYS.cliTooBig),
+      package: refused(SAYS.fdx('The file is larger than 5 MB')),
+    },
+    large: true,
+  },
+  {
+    id: 'fdx-binary',
+    format: 'fdx',
+    name: 'program.fdx',
+    tests: 'A program renamed .fdx is refused as not text.',
+    bytes: EXE,
+    expect: { 'web-open': refused(SAYS.binary) },
+  },
+  {
+    id: 'fdx-is-fountain',
+    format: 'fdx',
+    name: 'fountain.fdx',
+    tests: 'A Fountain script named .fdx is refused: it isn’t XML.',
+    bytes: () => enc(SCRIPT),
+    expect: { 'web-open': refused(SAYS.fdx('Text before the root element')) },
+  },
+  {
+    id: 'fdx-is-highland',
+    format: 'fdx',
+    name: 'packed.fdx',
+    tests: 'A zip named .fdx is named a packed file by its first bytes.',
+    bytes: highland([TEXT_ENTRY]),
+    expect: { 'web-open': refused(SAYS.packed), package: refused(SAYS.binary) },
+  },
+  {
+    id: 'fdx-empty',
+    format: 'fdx',
+    name: 'empty.fdx',
+    tests: 'A 0-byte Final Draft file is refused.',
+    bytes: () => new Uint8Array(),
+    expect: { 'web-open': refused(SAYS.fdx('The file has no root element')) },
+  },
+];
+
+const MANY = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({ name: `assets/${i}.png`, data: '', method: 0 }));
+
+const HIGHLAND_TRAPS: Trap[] = [
+  {
+    id: 'highland-valid',
+    format: 'highland',
+    name: 'valid.highland',
+    tests: 'The baseline: a TextBundle zip with its text.fountain and info.json imports.',
+    bytes: highland([TEXT_ENTRY, INFO]),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'highland-bomb',
+    format: 'highland',
+    name: 'bomb.highland',
+    tests:
+      'A 64 MB script squeezed into 64 KB (a ratio of a thousand) is refused before it is unpacked.',
+    bytes: highland([
+      { name: 'text.fountain', data: '', raw: zeros(64 * MiB), declaredSize: 64 * MiB },
+    ]),
+    expect: { 'web-open': refused(SAYS.highland('its script is larger than 5 MB.')) },
+  },
+  {
+    id: 'highland-bomb-lying',
+    format: 'highland',
+    name: 'bomb-lying.highland',
+    tests:
+      'A bomb that declares a small size is walked first and refused as damaged, never inflated past it.',
+    bytes: highland([{ name: 'text.fountain', data: '', raw: zeros(64 * MiB), declaredSize: 100 }]),
+    expect: { 'web-open': refused(SAYS.highland('it is damaged.')) },
+  },
+  {
+    id: 'highland-bomb-total',
+    format: 'highland',
+    name: 'bomb-total.highland',
+    tests: 'Entries whose declared sizes sum past 256 MB are refused before anything is read.',
+    bytes: highland([
+      TEXT_ENTRY,
+      ...Array.from({ length: 60 }, (_, i) => ({
+        name: `assets/${i}.bin`,
+        data: '',
+        raw: new Uint8Array(),
+        declaredSize: 5 * MiB,
+      })),
+    ]),
+    expect: { 'web-open': refused(SAYS.highland('it unpacks to more than 256 MB.')) },
+  },
+  {
+    id: 'highland-nested-bomb',
+    format: 'highland',
+    name: 'nested.highland',
+    tests: 'A zip inside the zip is never opened: it is named in a note, not unpacked.',
+    bytes: highland([
+      TEXT_ENTRY,
+      {
+        name: 'assets/inner.zip',
+        data: trapZip([{ name: 'zeros', data: '', raw: zeros(MiB), declaredSize: MiB }]),
+        method: 0,
+      },
+    ]),
+    expect: { 'web-open': warns(SAYS.note, { lines: [...SCRIPT_LINES, 'assets/inner.zip'] }) },
+  },
+  {
+    id: 'highland-larger-than-declared',
+    format: 'highland',
+    name: 'larger.highland',
+    tests: 'An entry that inflates to more than its declared size is refused as damaged.',
+    bytes: highland([{ name: 'text.fountain', data: SCRIPT, declaredSize: 10 }]),
+    expect: { 'web-open': refused(SAYS.highland('it is damaged.')) },
+  },
+  {
+    id: 'highland-smaller-than-declared',
+    format: 'highland',
+    name: 'smaller.highland',
+    tests: 'An entry that inflates to less than its declared size is refused as damaged.',
+    bytes: highland([{ name: 'text.fountain', data: SCRIPT, declaredSize: SCRIPT.length + 50 }]),
+    expect: { 'web-open': refused(SAYS.highland('it is damaged.')) },
+  },
+  {
+    id: 'highland-bad-crc',
+    format: 'highland',
+    name: 'crc.highland',
+    tests: 'A wrong CRC-32 is refused as damaged.',
+    bytes: highland([{ ...TEXT_ENTRY, declaredCrc: 0xdeadbeef }]),
+    expect: { 'web-open': refused(SAYS.highland('it is damaged.')) },
+  },
+  {
+    id: 'highland-truncated',
+    format: 'highland',
+    name: 'truncated.highland',
+    tests: 'An archive cut off before its end record is refused as not a zip.',
+    bytes: () => highland([TEXT_ENTRY, INFO])().subarray(0, 80),
+    expect: { 'web-open': refused(SAYS.highland('it isn’t a zip archive.')) },
+  },
+  {
+    id: 'highland-no-central',
+    format: 'highland',
+    name: 'no-central.highland',
+    tests: 'Local headers with no central directory are refused.',
+    bytes: highland([TEXT_ENTRY], { noCentral: true }),
+    expect: { 'web-open': refused(SAYS.highland('it isn’t a zip archive.')) },
+  },
+  {
+    id: 'highland-duplicate',
+    format: 'highland',
+    name: 'duplicate.highland',
+    tests: 'Two entries with the same name are refused.',
+    bytes: highland([TEXT_ENTRY, { name: 'text.fountain', data: 'INT. ELSEWHERE - DAY\n' }]),
+    expect: { 'web-open': refused(SAYS.highland('it holds two files with the same name.')) },
+  },
+  ...(
+    [
+      ['dotdot', '../text.fountain'],
+      ['dotdot-inner', 'assets/../../text.fountain'],
+      ['absolute', '/etc/text.fountain'],
+      ['backslash', '..\\text.fountain'],
+      ['drive', 'C:/text.fountain'],
+      ['control', 'text\u0007.fountain'],
+      ['bidi', `text${BIDI}.fountain`],
+    ] as const
+  ).map(
+    ([kind, entryName]): Trap => ({
+      id: `highland-traversal-${kind}`,
+      format: 'highland',
+      name: `traversal-${kind}.highland`,
+      tests: `An entry named ${JSON.stringify(entryName)} is refused as unsafe, never used as a path.`,
+      bytes: highland([TEXT_ENTRY, { name: entryName, data: 'x' }]),
+      expect: { 'web-open': refused(SAYS.highland('it holds a file with an unsafe name.')) },
+    }),
+  ),
+  {
+    id: 'highland-symlink',
+    format: 'highland',
+    name: 'symlink.highland',
+    tests: 'A symlink entry is never followed: its stored bytes (a path) are all that is read.',
+    bytes: highland([
+      { name: 'text.fountain', data: '/etc/passwd', method: 0, madeBy: 3, external: SYMLINK_ATTRS },
+    ]),
+    expect: { 'web-open': opens('/etc/passwd') },
+  },
+  {
+    id: 'highland-encrypted',
+    format: 'highland',
+    name: 'encrypted.highland',
+    tests: 'An encrypted entry is refused.',
+    bytes: highland([{ ...TEXT_ENTRY, flags: 1 }]),
+    expect: { 'web-open': refused(SAYS.highland('it is encrypted.')) },
+  },
+  {
+    id: 'highland-method',
+    format: 'highland',
+    name: 'method.highland',
+    tests: 'A script compressed with an unsupported method (bzip2, 12) is refused.',
+    bytes: highland([{ ...TEXT_ENTRY, method: 12 }]),
+    expect: {
+      'web-open': refused(SAYS.highland('its script is compressed in a way Drafter doesn’t read.')),
+    },
+  },
+  {
+    id: 'highland-zip64-locator',
+    format: 'highland',
+    name: 'zip64.highland',
+    tests: 'A zip64 locator is refused, not half-read.',
+    bytes: highland([TEXT_ENTRY], { zip64Locator: true }),
+    expect: { 'web-open': refused(SAYS.highland('it is stored in a form Drafter doesn’t read.')) },
+  },
+  {
+    id: 'highland-zip64-sizes',
+    format: 'highland',
+    name: 'zip64-sizes.highland',
+    tests: 'Sizes of 0xFFFFFFFF (zip64 markers) are refused.',
+    bytes: highland([{ ...TEXT_ENTRY, declaredSize: 0xffffffff }]),
+    expect: { 'web-open': refused(SAYS.highland('it is stored in a form Drafter doesn’t read.')) },
+  },
+  {
+    id: 'highland-zip64-extra',
+    format: 'highland',
+    name: 'zip64-extra.highland',
+    tests: 'A zip64 extra field with no markers is ignored, as it should be, and the script opens.',
+    bytes: highland([
+      {
+        ...TEXT_ENTRY,
+        extra: Uint8Array.of(
+          0x01,
+          0x00,
+          0x08,
+          0x00,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0x7f,
+        ),
+      },
+    ]),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'highland-count-lies',
+    format: 'highland',
+    name: 'count.highland',
+    tests: 'An end record whose count disagrees with the directory is refused as damaged.',
+    bytes: highland([TEXT_ENTRY, INFO], { declaredCount: 3 }),
+    expect: { 'web-open': refused(SAYS.highland('it is damaged.')) },
+  },
+  {
+    id: 'highland-many-entries',
+    format: 'highland',
+    name: 'many.highland',
+    tests: '1,001 entries are refused before any is read.',
+    bytes: highland([TEXT_ENTRY, ...MANY(1000)]),
+    expect: { 'web-open': refused(SAYS.highland('it holds more than 1,000 files.')) },
+  },
+  {
+    id: 'highland-at-entry-cap',
+    format: 'highland',
+    name: 'thousand.highland',
+    tests: 'Exactly 1,000 entries open, and the note names 50 of them and counts the rest.',
+    bytes: highland([TEXT_ENTRY, ...MANY(999)]),
+    expect: { 'web-open': warns(SAYS.note, { lines: ['assets/0.png', 'and 949 more'] }) },
+  },
+  {
+    id: 'highland-empty',
+    format: 'highland',
+    name: 'empty.highland',
+    tests: 'A 0-byte Highland file is refused as not a zip.',
+    bytes: () => new Uint8Array(),
+    expect: { 'web-open': refused(SAYS.highland('it isn’t a zip archive.')) },
+  },
+  {
+    id: 'highland-junk',
+    format: 'highland',
+    name: 'junk.highland',
+    tests: 'Junk before the archive that its offsets don’t count is refused.',
+    bytes: highland([TEXT_ENTRY], { junk: enc('GIF89a junk before the archive') }),
+    expect: { 'web-open': refused(SAYS.highland('it isn’t a zip archive.')) },
+  },
+  {
+    id: 'highland-stub',
+    format: 'highland',
+    name: 'stub.highland',
+    tests:
+      'A self-extractor’s stub, counted in the offsets, is still refused: nothing may come first.',
+    bytes: highland([TEXT_ENTRY], { stub: EXE() }),
+    expect: { 'web-open': refused(SAYS.highland('it isn’t a zip archive.')) },
+  },
+  {
+    id: 'highland-html-polyglot',
+    format: 'highland',
+    name: 'polyglot.highland',
+    tests:
+      'A web page with a zip after it, named .highland, is taken as the web page it starts as.',
+    bytes: highland([TEXT_ENTRY], {
+      junk: enc('<!DOCTYPE html><html><body>hello</body></html>\n'),
+    }),
+    expect: {
+      'web-open': refused(SAYS.webPage),
+      package: refused(SAYS.highland('it isn’t a zip archive.')),
+    },
+  },
+  {
+    id: 'highland-no-script',
+    format: 'highland',
+    name: 'no-script.highland',
+    tests: 'An archive with no text.* or .fountain entry is refused.',
+    bytes: highland([INFO, { name: 'assets/a.png', data: 'x' }]),
+    expect: { 'web-open': refused(SAYS.highland('it holds no script.')) },
+  },
+  {
+    id: 'highland-two-scripts',
+    format: 'highland',
+    name: 'two.highland',
+    tests: 'Two text.* entries at the top (neither .fountain) are refused as many scripts.',
+    bytes: highland([
+      { name: 'text.md', data: 'a' },
+      { name: 'text.txt', data: 'b' },
+    ]),
+    expect: { 'web-open': refused(SAYS.highland('it holds more than one script.')) },
+  },
+  {
+    id: 'highland-not-utf8',
+    format: 'highland',
+    name: 'latin1.highland',
+    tests: 'A script inside that isn’t UTF-8 is refused.',
+    bytes: highland([{ name: 'text.fountain', data: concat('Caf', [0xe9], '\n') }]),
+    expect: { 'web-open': refused(SAYS.highland('its script isn’t UTF-8 text.')) },
+  },
+  {
+    id: 'highland-nul',
+    format: 'highland',
+    name: 'nul.highland',
+    tests: 'A script inside holding a NUL is refused.',
+    bytes: highland([{ name: 'text.fountain', data: concat('INT. HALL\n', [0], '\n') }]),
+    expect: { 'web-open': refused(SAYS.highland('its script holds more than text.')) },
+  },
+  {
+    id: 'highland-hostile-names',
+    format: 'highland',
+    name: 'names.highland',
+    tests: 'Entry names that would close a note or open a boneyard are defused in the note.',
+    bytes: highland([TEXT_ENTRY, { name: 'assets/[[x]]/*y*/z.png', data: 'x' }]),
+    expect: { 'web-open': warns(SAYS.note, { lines: ['assets/[ [x] ]/ *y* /z.png'] }) },
+  },
+  {
+    id: 'highland-entry-at-cap',
+    format: 'highland',
+    name: 'entry-at-cap.highland',
+    tests: 'A script inside of exactly 5 MB opens.',
+    bytes: () =>
+      trapZip([
+        { name: 'text.fountain', data: sized(SCRIPT_CAP, 'Title: Big\n\n', 'A lever waits.\n') },
+      ]),
+    expect: { 'web-open': opens(undefined, { chars: SCRIPT_CAP }) },
+    large: true,
+    limitMs: 10_000,
+    memoryMB: 512,
+  },
+  {
+    id: 'highland-entry-over-cap',
+    format: 'highland',
+    name: 'entry-over-cap.highland',
+    tests: 'A script inside one byte over 5 MB is refused.',
+    bytes: () =>
+      trapZip([
+        {
+          name: 'text.fountain',
+          data: sized(SCRIPT_CAP + 1, 'Title: Big\n\n', 'A lever waits.\n'),
+        },
+      ]),
+    expect: { 'web-open': refused(SAYS.highland('its script is larger than 5 MB.')) },
+    large: true,
+  },
+  {
+    id: 'highland-archive-at-cap',
+    format: 'highland',
+    name: 'archive-at-cap.highland',
+    tests: 'An archive of exactly 32 MB (a big picture beside the script) opens.',
+    bytes: () => {
+      const small = trapZip([
+        TEXT_ENTRY,
+        { name: 'assets/big.bin', data: new Uint8Array(0), method: 0 },
+      ]);
+      const pad = ARCHIVE_CAP - small.length;
+      return trapZip([
+        TEXT_ENTRY,
+        { name: 'assets/big.bin', data: new Uint8Array(pad), method: 0 },
+      ]);
+    },
+    expect: { 'web-open': warns(SAYS.note, { lines: ['assets/big.bin'] }) },
+    large: true,
+    limitMs: 10_000,
+  },
+  {
+    id: 'highland-archive-over-cap',
+    format: 'highland',
+    name: 'archive-over-cap.highland',
+    tests: 'An archive one byte over 32 MB is refused before it is read.',
+    bytes: () => {
+      const small = trapZip([
+        TEXT_ENTRY,
+        { name: 'assets/big.bin', data: new Uint8Array(0), method: 0 },
+      ]);
+      const pad = ARCHIVE_CAP + 1 - small.length;
+      return trapZip([
+        TEXT_ENTRY,
+        { name: 'assets/big.bin', data: new Uint8Array(pad), method: 0 },
+      ]);
+    },
+    expect: {
+      'web-open': refused(SAYS.unreadable),
+      // The desktop app reads up to 64 MB, and the zip reader's own cap says it.
+      'desktop-open': refused(SAYS.highland('it is larger than 32 MB.')),
+      'cli-convert': refused(SAYS.highland('it is larger than 32 MB.')),
+      package: refused(SAYS.highland('it is larger than 32 MB.')),
+    },
+    large: true,
+  },
+  {
+    id: 'highland-is-fountain',
+    format: 'highland',
+    name: 'fountain.highland',
+    tests: 'A Fountain script named .highland is refused as not a zip.',
+    bytes: () => enc(SCRIPT),
+    expect: { 'web-open': refused(SAYS.highland('it isn’t a zip archive.')) },
+  },
+  {
+    id: 'highland-is-epub',
+    format: 'highland',
+    name: 'book.highland',
+    tests: 'An EPUB named .highland is taken as the e-book it is.',
+    bytes: epub([]),
+    expect: {
+      'web-open': refused(SAYS.eBook),
+      package: refused(SAYS.highland('it holds no script.')),
+    },
+  },
+];
+
+const fadeIn = (entries: TrapEntry[]) => () => trapZip(entries);
+
+const FADE_IN_TRAPS: Trap[] = [
+  {
+    id: 'fadein-valid',
+    format: 'fadein',
+    name: 'valid.fadein',
+    tests: 'The baseline: a zip holding one OSF document imports.',
+    bytes: fadeIn([{ name: 'document.xml', data: OSF }]),
+    expect: { 'web-open': opensWith(...SCRIPT_LINES) },
+  },
+  {
+    id: 'fadein-xxe',
+    format: 'fadein',
+    name: 'xxe.fadein',
+    tests: 'An OSF document with an external entity is refused, never read.',
+    bytes: fadeIn([
+      {
+        name: 'document.xml',
+        data: OSF.replace(
+          '<document',
+          '<!DOCTYPE document [ <!ENTITY x SYSTEM "file:///etc/passwd"> ]>\n<document',
+        ),
+      },
+    ]),
+    expect: {
+      'web-open': refused(
+        SAYS.fadeIn('its script isn’t in a form Drafter reads (A DOCTYPE is not allowed'),
+      ),
+    },
+  },
+  {
+    id: 'fadein-bomb',
+    format: 'fadein',
+    name: 'bomb.fadein',
+    tests: 'A deflate bomb as the document is refused before it is unpacked.',
+    bytes: fadeIn([
+      { name: 'document.xml', data: '', raw: zeros(64 * MiB), declaredSize: 64 * MiB },
+    ]),
+    expect: { 'web-open': refused(SAYS.fadeIn('its script is larger than 5 MB.')) },
+  },
+  {
+    id: 'fadein-two-documents',
+    format: 'fadein',
+    name: 'two.fadein',
+    tests: 'Two OSF documents at the top are refused, naming both.',
+    bytes: fadeIn([
+      { name: 'a.xml', data: OSF },
+      { name: 'b.xml', data: OSF },
+    ]),
+    expect: { 'web-open': refused(SAYS.fadeIn('it holds more than one script (a.xml, b.xml).')) },
+  },
+  {
+    id: 'fadein-decoy',
+    format: 'fadein',
+    name: 'decoy.fadein',
+    tests:
+      'Of two .xml entries, the one whose root is OSF’s is read; a bomb beside it is passed over.',
+    bytes: fadeIn([
+      { name: 'decoy.xml', data: '', raw: zeros(64 * MiB), declaredSize: 64 * MiB },
+      { name: 'document.xml', data: OSF },
+    ]),
+    expect: { 'web-open': opensWith(...SCRIPT_LINES) },
+  },
+  {
+    id: 'fadein-comment-prolog',
+    format: 'fadein',
+    name: 'comments.fadein',
+    tests:
+      'Of two .xml entries, one with thousands of empty comments before its root is looked at in linear time.',
+    bytes: fadeIn([
+      { name: 'a.xml', data: `<?xml version="1.0"?>${'<!---->'.repeat(20_000)}<other/>` },
+      { name: 'b.xml', data: OSF },
+    ]),
+    expect: { 'web-open': opensWith(...SCRIPT_LINES) },
+  },
+  {
+    id: 'fadein-no-xml',
+    format: 'fadein',
+    name: 'no-xml.fadein',
+    tests: 'An archive with no .xml is refused.',
+    bytes: fadeIn([{ name: 'readme.txt', data: 'hi' }]),
+    expect: { 'web-open': refused(SAYS.fadeIn('it holds no script.')) },
+  },
+  {
+    id: 'fadein-wrong-root',
+    format: 'fadein',
+    name: 'wrong-root.fadein',
+    tests: 'An .xml whose root isn’t OSF’s document is refused.',
+    bytes: fadeIn([{ name: 'document.xml', data: text('fdx/valid.fdx') }]),
+    expect: {
+      'web-open': refused(
+        SAYS.fadeIn(
+          'its script isn’t in a form Drafter reads (it has no document root holding paragraphs)',
+        ),
+      ),
+    },
+  },
+  {
+    id: 'fadein-traversal',
+    format: 'fadein',
+    name: 'traversal.fadein',
+    tests: 'A document entry named ../document.xml is refused as unsafe.',
+    bytes: fadeIn([{ name: '../document.xml', data: OSF }]),
+    expect: { 'web-open': refused(SAYS.fadeIn('it holds a file with an unsafe name.')) },
+  },
+  {
+    id: 'fadein-script-in-text',
+    format: 'fadein',
+    name: 'script.fadein',
+    tests: 'Escaped markup in an OSF paragraph comes in as text.',
+    bytes: fadeIn([
+      {
+        name: 'document.xml',
+        data: OSF.replace('A lever waits.', '&lt;script&gt;window.__trapped = 1&lt;/script&gt;'),
+      },
+    ]),
+    expect: { 'web-open': opensWith('<script>window.\\_\\_trapped = 1</script>') },
+    inert: true,
+  },
+  {
+    id: 'fadein-empty',
+    format: 'fadein',
+    name: 'empty.fadein',
+    tests: 'A 0-byte Fade In file is refused as not a zip.',
+    bytes: () => new Uint8Array(),
+    expect: { 'web-open': refused(SAYS.fadeIn('it isn’t a zip archive.')) },
+  },
+];
+
+const HTML_TRAPS: Trap[] = [
+  {
+    id: 'html-valid',
+    format: 'html',
+    name: 'valid.html',
+    tests: 'The baseline: a page carrying one well-formed block reopens with its script.',
+    bytes: () => enc(page(block(SCRIPT))),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'html-valid-markdown',
+    format: 'html',
+    name: 'notes.html',
+    tests: 'A block of kind markdown reopens as a Markdown document.',
+    bytes: () => enc(page(block(NOTES, 'markdown'))),
+    expect: { 'web-open': opens(NOTES) },
+  },
+  {
+    id: 'html-no-source',
+    format: 'html',
+    name: 'no-source.html',
+    tests: 'A page with no block is refused as a web page, with what to do.',
+    bytes: () => enc(page('<p>Just a page.</p>')),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-two-blocks',
+    format: 'html',
+    name: 'two.html',
+    tests: 'Two blocks are refused: there is no telling which is the script.',
+    bytes: () => enc(page(`${block(SCRIPT)}\n${block('INT. ELSEWHERE - DAY\n')}`)),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-block-in-comment',
+    format: 'html',
+    name: 'commented.html',
+    tests:
+      'The only block inside an HTML comment is still read: the reader never parses the page, and the text is checked as any opened text.',
+    bytes: () => enc(page(`<!-- ${block(SCRIPT)} -->`)),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'html-block-in-comment-and-real',
+    format: 'html',
+    name: 'commented-twice.html',
+    tests: 'A commented-out block beside a real one makes two, and is refused.',
+    bytes: () => enc(page(`<!-- ${block('INT. DECOY - DAY\n')} -->\n${block(SCRIPT)}`)),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-block-in-js-string',
+    format: 'html',
+    name: 'js-string.html',
+    tests:
+      'The opening text inside a JavaScript string, with no real block: the string’s own quote and the page’s </script> leave no well-formed block, so it is refused, and nothing runs.',
+    bytes: () =>
+      enc(
+        page(
+          `<script>var s = '${block(SCRIPT).replace(/\n/g, '\\n').replace('</script>', '<\\/script>')}';</script>`,
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-kind-injection',
+    format: 'html',
+    name: 'kind-injection.html',
+    tests: 'A data-kind with an attribute smuggled after it (onload) is refused.',
+    bytes: () =>
+      enc(
+        page(
+          block(SCRIPT).replace(
+            'data-kind="fountain"',
+            'data-kind="fountain" onload="window.__trapped=1"',
+          ),
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-kind-unknown',
+    format: 'html',
+    name: 'kind-unknown.html',
+    tests: 'An unknown data-kind (html) is refused.',
+    bytes: () => enc(page(rawBlock('html', b64(enc(SCRIPT))))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-kind-quote',
+    format: 'html',
+    name: 'kind-quote.html',
+    tests: 'A data-kind holding an escaped quote is refused.',
+    bytes: () => enc(page(rawBlock('fountain\\', b64(enc(SCRIPT))))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-base64-invalid',
+    format: 'html',
+    name: 'base64-invalid.html',
+    tests: 'Characters outside base64’s alphabet are refused.',
+    bytes: () => enc(page(rawBlock('fountain', 'SU5ULiBIQUxM!!!!'))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-base64-padding',
+    format: 'html',
+    name: 'base64-padding.html',
+    tests: 'Padding in the middle of the base64 is refused.',
+    bytes: () => enc(page(rawBlock('fountain', 'SU5U=CBIQUxM'))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-base64-bits',
+    format: 'html',
+    name: 'base64-bits.html',
+    tests: 'Padding whose left-over bits aren’t zero (a second spelling) is refused.',
+    bytes: () => enc(page(rawBlock('fountain', 'QR=='))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-base64-length',
+    format: 'html',
+    name: 'base64-length.html',
+    tests: 'Base64 whose length isn’t a multiple of four is refused.',
+    bytes: () => enc(page(rawBlock('fountain', 'SU5ULi'))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-base64-unicode',
+    format: 'html',
+    name: 'base64-unicode.html',
+    tests: 'Non-ASCII look-alikes in the base64 are refused.',
+    bytes: () => enc(page(rawBlock('fountain', 'SU5ULi\uff22IQUxM'))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-base64-spaced',
+    format: 'html',
+    name: 'base64-spaced.html',
+    tests: 'White space between the base64 characters is skipped, and it reopens.',
+    bytes: () => enc(page(rawBlock('fountain', b64(enc(SCRIPT)).split('').join(' \t')))),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'html-not-utf8',
+    format: 'html',
+    name: 'not-utf8.html',
+    tests: 'A block of base64 whose bytes aren’t UTF-8 is refused as not UTF-8.',
+    bytes: () => enc(page(rawBlock('fountain', b64(concat('Caf', [0xe9, 0x80], '\n'))))),
+    expect: { 'web-open': refused(SAYS.notUtf8) },
+  },
+  {
+    id: 'html-nul',
+    format: 'html',
+    name: 'nul.html',
+    tests: 'A block whose bytes hold a NUL is refused as not text.',
+    bytes: () => enc(page(rawBlock('fountain', b64(concat('INT. HALL\n', [0], '\n'))))),
+    expect: { 'web-open': refused(SAYS.binary) },
+  },
+  {
+    id: 'html-unclosed',
+    format: 'html',
+    name: 'unclosed.html',
+    tests: 'A block with no </script> is refused.',
+    bytes: () => enc(page(block(SCRIPT).replace('</script>', ''))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-hostile-page',
+    format: 'html',
+    name: 'hostile.html',
+    tests:
+      'A valid block in a page of scripts, a meta refresh, iframes, a form, and remote images: the script opens, and nothing on the page is run or fetched.',
+    bytes: () => enc(page(`${HOSTILE_BODY}\n${block(SCRIPT)}`, HOSTILE_HEAD)),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'html-hostile-source',
+    format: 'html',
+    name: 'hostile-source.html',
+    tests: 'A block whose script is itself markup opens as text, and stays text.',
+    bytes: () => enc(page(block(text('fountain/action-html.fountain')))),
+    expect: { 'web-open': opens(text('fountain/action-html.fountain')) },
+    inert: true,
+  },
+  {
+    id: 'html-reordered',
+    format: 'html',
+    name: 'reordered.html',
+    tests:
+      'A block whose attributes are in another order isn’t Drafter’s exact opening, and is refused.',
+    bytes: () =>
+      enc(
+        page(
+          `<script id="drafter-source" type="text/plain" data-kind="fountain" data-encoding="base64">\n${b64(enc(SCRIPT))}\n</script>`,
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-uppercase',
+    format: 'html',
+    name: 'uppercase.html',
+    tests: 'A block in upper case isn’t Drafter’s exact opening, and is refused.',
+    bytes: () =>
+      enc(
+        page(
+          block(SCRIPT)
+            .replace(
+              '<script type="text/plain" id="drafter-source"',
+              '<SCRIPT TYPE="text/plain" ID="drafter-source"',
+            )
+            .replace('</script>', '</SCRIPT>'),
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-entity-encoded',
+    format: 'html',
+    name: 'entities.html',
+    tests:
+      'A block written with HTML entities (&lt;script …) is text, not a block, and is refused.',
+    bytes: () =>
+      enc(
+        page(
+          `<pre>${block(SCRIPT).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}</pre>`,
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-bom-doctype',
+    format: 'html',
+    name: 'bom.htm',
+    tests: 'A .htm page with a byte order mark before its doctype reopens.',
+    bytes: () => concat([0xef, 0xbb, 0xbf], page(block(SCRIPT))),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'html-empty',
+    format: 'html',
+    name: 'empty.html',
+    tests: 'A 0-byte .html file is refused as a web page.',
+    bytes: () => new Uint8Array(),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-utf16',
+    format: 'html',
+    name: 'utf16.html',
+    tests: 'A UTF-16 page is refused: its block can’t be found in UTF-8.',
+    bytes: () => utf16(page(block(SCRIPT)), false),
+    expect: { 'web-open': refused(SAYS.webPage) },
+  },
+  {
+    id: 'html-block-at-cap',
+    format: 'html',
+    name: 'block-at-cap.html',
+    tests: 'A block whose script is exactly 5 MB reopens.',
+    bytes: () =>
+      enc(
+        page(
+          block(new TextDecoder().decode(sized(SCRIPT_CAP, 'Title: Big\n\n', 'A lever waits.\n'))),
+        ),
+      ),
+    expect: { 'web-open': opens(undefined, { chars: SCRIPT_CAP }) },
+    large: true,
+    limitMs: 10_000,
+    memoryMB: 512,
+  },
+  {
+    id: 'html-block-over-cap',
+    format: 'html',
+    name: 'block-over-cap.html',
+    tests: 'A block whose script is one byte over 5 MB is refused.',
+    bytes: () =>
+      enc(
+        page(
+          block(
+            new TextDecoder().decode(sized(SCRIPT_CAP + 1, 'Title: Big\n\n', 'A lever waits.\n')),
+          ),
+        ),
+      ),
+    expect: { 'web-open': refused(SAYS.webPage) },
+    large: true,
+    limitMs: 5000,
+  },
+  {
+    id: 'html-file-over-cap',
+    format: 'html',
+    name: 'file-over-cap.html',
+    tests: 'A page over 32 MB is refused before it is read, whatever it carries.',
+    bytes: () => enc(page(`${block(SCRIPT)}\n<!--${' '.repeat(ARCHIVE_CAP)}-->`)),
+    expect: {
+      'web-open': refused(SAYS.unreadable),
+      'desktop-open': refused('too big to be a Drafter export (over 32 MB)'),
+      'cli-convert': refused('it is larger than 32 MB'),
+    },
+    large: true,
+  },
+  {
+    id: 'html-padded-oversized',
+    format: 'html',
+    name: 'padded.html',
+    tests: '20 MB of white space inside the base64 is given up on early, not decoded.',
+    bytes: () => enc(page(rawBlock('fountain', `${b64(enc(SCRIPT))}${' '.repeat(20 * MiB)}`))),
+    expect: { 'web-open': refused(SAYS.webPage) },
+    large: true,
+  },
+];
+
+const EPUB_TRAPS: Trap[] = [
+  {
+    id: 'epub-valid',
+    format: 'epub',
+    name: 'valid.epub',
+    tests: 'The baseline: an EPUB carrying EPUB/drafter-source.fountain reopens with its script.',
+    bytes: epub([source('fountain', SCRIPT)]),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'epub-valid-markdown',
+    format: 'epub',
+    name: 'notes.epub',
+    tests: 'An EPUB carrying drafter-source.md reopens as Markdown.',
+    bytes: epub([source('markdown', NOTES)]),
+    expect: { 'web-open': opens(NOTES) },
+  },
+  {
+    id: 'epub-no-source',
+    format: 'epub',
+    name: 'no-source.epub',
+    tests: 'An EPUB with no source entry is refused as an e-book.',
+    bytes: epub([]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-both-sources',
+    format: 'epub',
+    name: 'both.epub',
+    tests: 'Both a .fountain and a .md source are refused.',
+    bytes: epub([source('fountain', SCRIPT), source('markdown', NOTES)]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-source-traversal',
+    format: 'epub',
+    name: 'traversal.epub',
+    tests: 'A source entry named with ../ is refused, never used as a path.',
+    bytes: epub([{ name: `EPUB/../${SOURCE_ENTRY.fountain}`, data: SCRIPT }]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-source-elsewhere',
+    format: 'epub',
+    name: 'elsewhere.epub',
+    tests: 'A drafter-source.fountain anywhere but EPUB/ isn’t the source, and is refused.',
+    bytes: epub([{ name: 'OEBPS/drafter-source.fountain', data: SCRIPT }]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-source-bomb',
+    format: 'epub',
+    name: 'bomb.epub',
+    tests: 'A deflate bomb as the source entry is refused before it is unpacked.',
+    bytes: epub([source('fountain', '', { raw: zeros(64 * MiB), declaredSize: 64 * MiB })]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-source-bomb-lying',
+    format: 'epub',
+    name: 'bomb-lying.epub',
+    tests: 'A source bomb declaring a small size is refused as damaged.',
+    bytes: epub([source('fountain', '', { raw: zeros(64 * MiB), declaredSize: 100 })]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-scripts',
+    format: 'epub',
+    name: 'scripts.epub',
+    tests: 'An EPUB whose pages hold scripts and remote images: only the source is read.',
+    bytes: epub([
+      {
+        name: 'EPUB/evil.xhtml',
+        data: `<html xmlns="http://www.w3.org/1999/xhtml"><body>${HOSTILE_BODY}<script>window.__trapped=1</script></body></html>`,
+      },
+      source('fountain', SCRIPT),
+    ]),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'epub-broken-but-source',
+    format: 'epub',
+    name: 'broken.epub',
+    tests:
+      'A valid source in an otherwise broken EPUB (no container, no package, broken pages) reopens.',
+    bytes: () =>
+      trapZip([
+        { name: 'mimetype', data: 'application/epub+zip', method: 0 },
+        { name: 'EPUB/page.xhtml', data: '<html><body><p>unclosed' },
+        { name: SOURCE_ENTRY.fountain, data: SCRIPT },
+      ]),
+    expect: { 'web-open': opens(SCRIPT) },
+  },
+  {
+    id: 'epub-mimetype-second',
+    format: 'epub',
+    name: 'mimetype-second.epub',
+    tests:
+      'An EPUB whose mimetype entry isn’t first is not an EPUB by EPUB’s own rule, and is refused.',
+    bytes: epub([source('fountain', SCRIPT)], { first: [{ name: 'README', data: 'x' }] }),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-mimetype-wrong',
+    format: 'epub',
+    name: 'mimetype-wrong.epub',
+    tests: 'An EPUB whose mimetype says application/zip is refused.',
+    bytes: epub([source('fountain', SCRIPT)], { mimetype: 'application/zip' }),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-source-not-utf8',
+    format: 'epub',
+    name: 'latin1.epub',
+    tests: 'A source that isn’t UTF-8 is refused as not UTF-8.',
+    bytes: epub([source('fountain', concat('Caf', [0xe9], '\n'))]),
+    expect: { 'web-open': refused(SAYS.notUtf8) },
+  },
+  {
+    id: 'epub-source-nul',
+    format: 'epub',
+    name: 'nul.epub',
+    tests: 'A source holding a NUL is refused as not text.',
+    bytes: epub([source('fountain', concat('INT. HALL\n', [0], '\n'))]),
+    expect: { 'web-open': refused(SAYS.binary) },
+  },
+  {
+    id: 'epub-source-encrypted',
+    format: 'epub',
+    name: 'encrypted.epub',
+    tests: 'An encrypted source entry is refused.',
+    bytes: epub([source('fountain', SCRIPT, { flags: 1 })]),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-source-symlink',
+    format: 'epub',
+    name: 'symlink.epub',
+    tests: 'A source entry that is a symlink is never followed: its stored path is the text.',
+    bytes: epub([
+      source('fountain', '/etc/passwd', { method: 0, madeBy: 3, external: SYMLINK_ATTRS }),
+    ]),
+    expect: { 'web-open': opens('/etc/passwd') },
+  },
+  {
+    id: 'epub-empty',
+    format: 'epub',
+    name: 'empty.epub',
+    tests: 'A 0-byte .epub is refused as an e-book.',
+    bytes: () => new Uint8Array(),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+  {
+    id: 'epub-truncated',
+    format: 'epub',
+    name: 'truncated.epub',
+    tests: 'An EPUB cut short is refused.',
+    bytes: () => epub([source('fountain', SCRIPT)])().subarray(0, 120),
+    expect: { 'web-open': refused(SAYS.eBook) },
+  },
+];
+
+/** A named pipe at `dir/name`, made with the system's mkfifo. */
+const fifo = (dir: string, name: string) => {
+  const path = join(dir, name);
+  execFileSync('mkfifo', [path]);
+  return path;
+};
+/** A symbolic link at `dir/name` to `target`. */
+const link = (dir: string, name: string, target: string) => {
+  const path = join(dir, name);
+  symlinkSync(target, path);
+  return path;
+};
+/** A folder at `dir/name`. */
+const folder = (dir: string, name: string) => {
+  const path = join(dir, name);
+  mkdirSync(path);
+  return path;
+};
+
+/** Special files: made on disk, so only the desktop app and the command line meet them. */
+const FILE_TRAPS: Trap[] = [
+  {
+    id: 'files-unicode-name',
+    format: 'files',
+    name: 'Ünïcödé 🚂 名前.fountain',
+    tests: 'A name with accents, emoji, and CJK opens.',
+    bytes: () => enc(SCRIPT),
+    expect: { 'desktop-open': opens(SCRIPT), 'cli-build': opens() },
+  },
+  {
+    id: 'files-spaces-name',
+    format: 'files',
+    name: '  a script with   spaces .fountain',
+    tests: 'A name with leading, inner, and trailing spaces opens.',
+    bytes: () => enc(SCRIPT),
+    expect: { 'desktop-open': opens(SCRIPT), 'cli-build': opens() },
+  },
+  {
+    id: 'files-dash-name',
+    format: 'files',
+    name: '-rf.fountain',
+    tests:
+      'A name starting with a dash is a flag on a command line, left out in silence (after -- it is a file).',
+    bytes: () => enc(SCRIPT),
+    expect: { 'desktop-open': refused(SAYS.silent), 'cli-build': opens() },
+  },
+  {
+    id: 'files-long-name',
+    format: 'files',
+    name: `${'L'.repeat(240)}.fountain`,
+    tests: 'A name of 249 bytes, near the longest a disk allows, opens.',
+    bytes: () => enc(SCRIPT),
+    expect: { 'desktop-open': opens(SCRIPT), 'cli-build': opens() },
+  },
+  {
+    id: 'files-directory',
+    format: 'files',
+    name: 'folder.fountain',
+    tests: 'A folder named like a script is refused, not read.',
+    place: (dir) => folder(dir, 'folder.fountain'),
+    expect: { 'desktop-open': refused(SAYS.notAFile), 'cli-build': refused("it's a folder") },
+  },
+  {
+    id: 'files-directory-fdx',
+    format: 'files',
+    name: 'folder.fdx',
+    tests:
+      'A folder named like a Final Draft file is searched as a folder, holding nothing to convert.',
+    place: (dir) => folder(dir, 'folder.fdx'),
+    expect: { 'cli-convert': refused('nothing to convert') },
+  },
+  {
+    id: 'files-fifo',
+    format: 'files',
+    name: 'pipe.fountain',
+    tests: 'A named pipe is refused at once, never opened (opening one would wait for a writer).',
+    place: (dir) => fifo(dir, 'pipe.fountain'),
+    expect: { 'desktop-open': refused(SAYS.notAFile), 'cli-build': refused(SAYS.cliNotAFile) },
+  },
+  {
+    id: 'files-fifo-fdx',
+    format: 'files',
+    name: 'pipe.fdx',
+    tests: 'A named pipe named .fdx is refused by convert without hanging.',
+    place: (dir) => fifo(dir, 'pipe.fdx'),
+    expect: { 'cli-convert': refused(SAYS.cliNotAFile), 'desktop-open': refused(SAYS.notAFile) },
+  },
+  {
+    id: 'files-dev-zero',
+    format: 'files',
+    name: 'zero.fountain',
+    tests: 'A link to /dev/zero, an endless device, is refused, not read until memory runs out.',
+    place: (dir) => link(dir, 'zero.fountain', '/dev/zero'),
+    expect: { 'desktop-open': refused(SAYS.notAFile), 'cli-build': refused(SAYS.cliNotAFile) },
+  },
+  {
+    id: 'files-passwd-link',
+    format: 'files',
+    name: 'passwd.fountain',
+    tests:
+      'A link named .fountain to /etc/passwd: the desktop app judges a file by where it leads and refuses it; the command line reads what it was named, as any tool does.',
+    place: (dir) => link(dir, 'passwd.fountain', '/etc/passwd'),
+    expect: { 'desktop-open': refused(SAYS.notAScript), 'cli-build': opens() },
+  },
+  {
+    id: 'files-passwd-link-fdx',
+    format: 'files',
+    name: 'passwd.fdx',
+    tests: 'A link named .fdx to /etc/passwd is read only as XML, and refused.',
+    place: (dir) => link(dir, 'passwd.fdx', '/etc/passwd'),
+    expect: { 'cli-convert': refused(SAYS.fdx('Text before the root element')) },
+  },
+  {
+    id: 'files-dangling-link',
+    format: 'files',
+    name: 'dangling.fountain',
+    tests: 'A link to nothing is said to be missing.',
+    place: (dir) => link(dir, 'dangling.fountain', join(dir, 'nothing-here.fountain')),
+    expect: { 'desktop-open': refused('it isn’t there'), 'cli-build': refused('no such file') },
+  },
+  {
+    id: 'files-over-desktop-cap',
+    format: 'files',
+    name: 'huge.fountain',
+    tests: 'A 65 MB file is refused by the desktop app’s read cap before it reaches the page.',
+    bytes: () => sized(DESKTOP_READ_CAP + MiB, 'Title: Huge\n\n', 'A lever waits.\n'),
+    expect: { 'desktop-open': refused('it can’t be read'), 'cli-build': refused(SAYS.cliTooBig) },
+    large: true,
+    limitMs: 10_000,
+  },
+];
+
+/** A module folder's manifest, for the desktop app's modules folder. */
+const manifest = (value: unknown) => () =>
+  enc(typeof value === 'string' ? value : JSON.stringify(value));
+const MODULE = {
+  id: 'trap-module',
+  name: 'Trap',
+  description: 'A module of the traps.',
+  permissions: {},
+};
+
+const MODULE_TRAPS: Trap[] = [
+  {
+    id: 'module-valid',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'The baseline: a well-formed module.json with an index.js loads.',
+    bytes: manifest(MODULE),
+    expect: { 'desktop-modules': opens() },
+  },
+  {
+    id: 'module-not-json',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'A module.json that isn’t JSON is skipped, naming why.',
+    bytes: manifest('{"id": "trap-module", '),
+    expect: { 'desktop-modules': refused('isn’t valid JSON') },
+  },
+  {
+    id: 'module-too-big',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'A module.json one byte over 64 KB is skipped before it is read.',
+    bytes: () => sized(MANIFEST_CAP + 1, '{"id":"trap-module","x":"', 'x', '"}'),
+    expect: { 'desktop-modules': refused('larger than 64 KB') },
+  },
+  {
+    id: 'module-traversal-id',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'An id of ../../evil is refused: an id is a host name.',
+    bytes: manifest({ ...MODULE, id: '../../evil' }),
+    expect: { 'desktop-modules': refused('its id must be') },
+  },
+  {
+    id: 'module-wildcard-origin',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'A network origin of https://* (a CSP wildcard) is refused.',
+    bytes: manifest({ ...MODULE, permissions: { network: ['https://*'] } }),
+    expect: { 'desktop-modules': refused('is not an origin') },
+  },
+  {
+    id: 'module-csp-injection',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'An origin carrying a ; to end the CSP source list is refused.',
+    bytes: manifest({
+      ...MODULE,
+      permissions: { network: ["https://a.example; script-src 'unsafe-inline'"] },
+    }),
+    expect: { 'desktop-modules': refused('is not an origin') },
+  },
+  {
+    id: 'module-drafter-name',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'A module calling itself Drafter is refused.',
+    bytes: manifest({ ...MODULE, name: 'Drafter Updater' }),
+    expect: { 'desktop-modules': refused('can’t be “Drafter”') },
+  },
+  {
+    id: 'module-proto',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'A module.json that is an array, or whose permissions is __proto__-shaped, is refused.',
+    bytes: manifest(
+      '{"id":"trap-module","name":"Trap","description":"d","__proto__":{"permissions":{"network":["https://evil.example"]}}}',
+    ),
+    expect: { 'desktop-modules': refused('no permissions object') },
+  },
+  {
+    id: 'module-manifest-fifo',
+    format: 'modules',
+    name: 'module.json',
+    tests: 'A module.json that is a named pipe is skipped without hanging.',
+    place: (dir) => fifo(dir, 'module.json'),
+    expect: { 'desktop-modules': refused('it has no module.json') },
+  },
+];
+
+export const TRAPS: readonly Trap[] = [
+  ...TEXT_KINDS.flatMap(textTraps),
+  ...FOUNTAIN_TRAPS,
+  ...MARKDOWN_TRAPS,
+  ...FDX_TRAPS,
+  ...HIGHLAND_TRAPS,
+  ...FADE_IN_TRAPS,
+  ...HTML_TRAPS,
+  ...EPUB_TRAPS,
+  ...FILE_TRAPS,
+  ...MODULE_TRAPS,
+].map(withDefaults);
+
+/**
+ * Fills in the entry points a trap goes through, from what it is: every file the app opens goes
+ * through the web app's Open and the desktop app's (with the web app's outcome unless it says
+ * otherwise); a file `convert` reads, through `convert`; a Fountain file, through `build`; and each
+ * format with a reader of its own, through it.
+ */
+function withDefaults(trap: Trap): Trap {
+  const expect = { ...trap.expect };
+  const web = expect['web-open'];
+  if (web) {
+    expect['desktop-open'] ??= web;
+    if (/\.(fdx|highland|fadein|html?|epub)$/i.test(trap.name)) expect['cli-convert'] ??= web;
+    if (/\.fountain$/i.test(trap.name)) expect['cli-build'] ??= buildOutcome(web);
+    if (trap.format !== 'text' && trap.format !== 'files' && !expect.package) {
+      const outcome = packageOutcome(trap, web);
+      if (outcome) expect.package = outcome;
+    }
+  }
+  return { ...trap, expect };
+}
+
+/**
+ * What `build` does with a file the app opens or refuses: it lays out any regular file of at most
+ * 5 MB as text, whatever it holds (it never writes over its input, so a file that isn't UTF-8 or
+ * holds a NUL can't be harmed; docs/DEFERRED.md asks whether it should refuse them as Open does).
+ */
+function buildOutcome(web: Outcome): Outcome {
+  if (web.kind === 'refused' && web.says === SAYS.tooBig) return refused(SAYS.cliTooBig);
+  return opens();
+}
+
+/** A format's reader on its own: an import's outcome is its reader's; text always parses. */
+function packageOutcome(trap: Trap, web: Outcome): Outcome | undefined {
+  if (trap.format === 'fountain' || trap.format === 'markdown') {
+    // Text the app refuses (too big, not UTF-8, not text) never reaches the reader.
+    return web.kind === 'refused' ? undefined : opens();
+  }
+  return web;
+}
+
+/** The entry points a trap must go through. */
+export const via = (trap: Trap): Entry[] => Object.keys(trap.expect) as Entry[];
+
+/** The traps going through `entry`. */
+export const trapsFor = (entry: Entry): Trap[] => TRAPS.filter((t) => entry in t.expect);

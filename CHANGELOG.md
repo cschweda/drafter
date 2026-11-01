@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Drafter is now tested against a set of deliberately broken and hostile files**, the trap documents: 244 of them, for every format it opens (Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB), and the pipes, links, and folders a desktop meets. Each has the one outcome it must have, opened with its text or refused with a plain message, and the tests check that none of them crashes, hangs, runs anything, fetches anything, or uses too much memory, in the web app, the desktop app, and the command line. See `fixtures/trap/README.md`.
+- **A Security section** near the top of the README, and a fuller one on the Technical details page (Help → Technical details): what Drafter does to keep a file from harming you, in plain words, then in detail. **SECURITY.md** says how to report a security problem privately.
+
 ### Fixed
 
 - **`drafter build` and `drafter check` no longer hang on a named pipe**, or read an endless device such as `/dev/zero` until they run out of memory. They take a regular file of at most 5 MB, the app's own limit for a script, and say why when it isn't one; a very large file no longer crashes them.

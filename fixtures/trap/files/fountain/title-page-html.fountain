@@ -1,0 +1,8 @@
+Title: <script>window.__trapped = 'title'</script>
+Credit: <img src="x" onerror="window.__trapped = 'credit'">
+Author: [Pat](javascript:window.__trapped='author')
+Contact: <!-- a comment on the title page -->
+
+INT. SIGNAL BOX - NIGHT
+
+A lever waits.

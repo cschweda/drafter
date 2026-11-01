@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<FinalDraft DocumentType="Script" Template="No" Version="5" __proto__="polluted" constructor="x">
+  <Content>
+    <Paragraph Type="Action" __proto__="polluted"><Text>A lever waits.</Text></Paragraph>
+  </Content>
+</FinalDraft>

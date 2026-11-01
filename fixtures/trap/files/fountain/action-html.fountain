@@ -1,0 +1,17 @@
+Title: Markup in the Action
+
+INT. SIGNAL BOX - NIGHT
+
+<script>window.__trapped = 'action'</script>
+
+<img src="x" onerror="window.__trapped = 'img'"> sits on the desk.
+
+<a href="javascript:window.__trapped='link'">Press here</a> says the sign.
+
+<!-- an HTML comment where action goes -->
+
+<iframe src="https://example.invalid/"></iframe>
+
+WREN
+<style>body { display: none }</style>
+Nothing here runs.

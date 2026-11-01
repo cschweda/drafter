@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!DOCTYPE FinalDraft [ <!ENTITY % remote SYSTEM "file:///etc/hostname"> %remote; ]>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content/>
+</FinalDraft>
