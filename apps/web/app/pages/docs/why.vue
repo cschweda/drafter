@@ -131,11 +131,11 @@ const ROWS: readonly Row[] = [
     '✓ reports',
     '*paid*',
   ],
-  ['Revision colors and marks', 'v0.26.0, free', '✓', '*paid*', '✓', '✓', '*paid*', '*paid*'],
-  ['Locked pages and scene numbers, OMITTED', 'v0.26.0, free', '✓', '*paid*', '✓', '?', '✓', '?'],
+  ['Revision colors and marks', 'v0.27.0, free', '✓', '*paid*', '✓', '✓', '*paid*', '*paid*'],
+  ['Locked pages and scene numbers, OMITTED', 'v0.27.0, free', '✓', '*paid*', '✓', '?', '✓', '?'],
   [
     'Breakdown report and sides',
-    'v0.26.0, free',
+    'v0.27.0, free',
     '✓ / ?',
     '✓ / partial',
     '✓ / ?',
@@ -227,7 +227,7 @@ function parts(cell: string): Part[] {
       </li>
       <li>
         <strong>Built for working writers, free.</strong> Production features, the kind a script
-        needs once it’s greenlit, come to the free app in v0.26.0: colored revision sets with marks in
+        needs once it’s greenlit, come to the free app in v0.27.0: colored revision sets with marks in
         the margin, locked pages (12A) and scene numbers, OMITTED scenes, revised pages to send out, a
         breakdown report, and sides for actors. There is no paid version, and there won’t be one.
       </li>
@@ -270,7 +270,7 @@ function parts(cell: string): Part[] {
         scene.
       </li>
       <li>
-        <strong>Production, coming free in v0.26.0.</strong> Colored revision sets with marks in the
+        <strong>Production, coming free in v0.27.0.</strong> Colored revision sets with marks in the
         margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out,
         a breakdown report, and sides.
       </li>

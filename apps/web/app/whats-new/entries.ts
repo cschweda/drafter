@@ -43,6 +43,15 @@ const release = (version: string): WhatsNewLink => ({
 /** Every item, newest first: by release, and in each release the most important first. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    id: 'v0.23.3-what-is-drafter',
+    date: '2026-11-01',
+    version: '0.23.3',
+    kind: 'New',
+    title: 'What is Drafter?, and this page',
+    text: 'A new help page says what Drafter is for anyone you show it to: why writers pick it over Final Draft, what producers and directors get, whether you can trust it, and, for technical people, how it works and how many tests it passes. This What\u2019s new page keeps every change, newest first.',
+    link: { href: '/docs/what-is-drafter/', label: 'What is Drafter?' },
+  },
+  {
     id: 'v0.23.2-trap-documents',
     date: '2026-11-01',
     version: '0.23.2',

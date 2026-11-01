@@ -15,7 +15,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.23.2.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Next up is Drafts and Cuts (v0.24.0); see the [roadmap](#roadmap).
+> **Status: v0.23.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Next up is Drafts and Cuts (v0.24.0); see the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -28,7 +28,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
-- **Built for working writers.** The production features a greenlit script needs come to the free app in v0.26.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors.
+- **Built for working writers.** The production features a greenlit script needs come to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors.
 
 ## Contents
 
@@ -124,9 +124,9 @@ What each app's maker says on its own site, as of October 2026, at list prices (
 | Notes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | *paid* |
 | Version history and Compare | ✓ / ✓ | ✓ / ? | ✓ / partial | ✓ / ✓ | ? | *paid* | *paid* |
 | Character and scene stats | ✓ | ✓ reports | *paid* reports | ✓ reports | partial | ✓ reports | *paid* |
-| Revision colors and marks | v0.26.0, free | ✓ | *paid* | ✓ | ✓ | *paid* | *paid* |
-| Locked pages and scene numbers, OMITTED | v0.26.0, free | ✓ | *paid* | ✓ | ? | ✓ | ? |
-| Breakdown report and sides | v0.26.0, free | ✓ / ? | ✓ / partial | ✓ / ? | ✗ | partial | *paid* |
+| Revision colors and marks | v0.27.0, free | ✓ | *paid* | ✓ | ✓ | *paid* | *paid* |
+| Locked pages and scene numbers, OMITTED | v0.27.0, free | ✓ | *paid* | ✓ | ? | ✓ | ? |
+| Breakdown report and sides | v0.27.0, free | ✓ / ? | ✓ / partial | ✓ / ? | ✗ | partial | *paid* |
 | Stage play | ✓ | ✓ | ✓ | ✓ | ✓ | ? | ✓ |
 | TV templates | Phase 3, free | ✓ | ✓ | ✓ | ✓ | ✓ | *paid* |
 | Spellcheck | ✓ offline | ? | ? | ✓ | ? | ✓ | ? |
@@ -203,15 +203,16 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **v0.24.0: Drafts and Cuts.** Numbered drafts, and a permanent file of everything you cut.
 - **v0.24.1: Story map**, a visual page of your script or play to send to anyone.
 - **v0.24.2: Drafter for Claude**, a local MCP server so Claude (or another AI app you use) can read your scripts, drafts, and cuts: storyboards, notes, and insights across a series. Nothing in Drafter itself ever calls an AI.
-- **v0.25.0: Novel**, a comfortable place to draft a novel in Markdown.
+- **v0.25.0: Classic Mode**, for writers who know Final Draft rather than Fountain. Enter and Tab move between elements the way most screenwriting apps work, and the left side looks like a script, with the marks hidden. It's not Fountain typing, but the file is still plain Fountain underneath. Fountain Mode stays the default, and one switch changes it.
+- **v0.26.0: Novel**, a comfortable place to draft a novel in Markdown.
 
 **Later:**
 
-- **Production, free (v0.26.0):** revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides.
-- Storylines, the strip's Color by, and pacing (v0.27.0).
-- The **Workbook** (v0.28.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
-- An optional one-file `.drafter` project (v0.29.0, open spec).
-- Reader notes with no account, and the Reference tab (v0.30.0 and v0.31.0).
+- **Production, free (v0.27.0):** revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides.
+- Storylines, the strip's Color by, and pacing (v0.28.0).
+- The **Workbook** (v0.29.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
+- An optional one-file `.drafter` project (v0.30.0, open spec).
+- Reader notes with no account, and the Reference tab (v0.31.0 and v0.32.0).
 - A signed Mac download, **PDF import**, **real-time co-writing** (free, end-to-end encrypted, no account), and testing with NVDA and VoiceOver, last of all.
 
 **Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. The [full roadmap](docs/ROADMAP.md) has every phase.

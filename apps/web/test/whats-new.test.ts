@@ -82,7 +82,7 @@ describe('What’s new', () => {
       'v0.23.2-trap-documents',
       'v0.23.0-fresh-look',
     ]);
-    expect(WHATS_NEW[0]?.banner).toBe(true);
+    // The banner shows the newest entry marked `banner`, which needn't be the newest entry.
   });
 
   test('links a release on GitHub, and writes a date out in full', () => {

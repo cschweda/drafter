@@ -191,7 +191,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
       <ul>
         <li>
           <strong>Production features</strong>: revision colors and marks, locked pages and scene
-          numbers, OMITTED scenes, and a breakdown report. Coming in v0.26.0, with sides.
+          numbers, OMITTED scenes, and a breakdown report. Coming in v0.27.0, with sides.
         </li>
         <li><strong>PDF import</strong>: planned, in Phase 3.</li>
         <li><strong>TV templates</strong>: Phase 3.</li>
@@ -243,7 +243,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           anyone.
         </li>
         <li>
-          <strong>Production, free</strong> (v0.26.0): colored revision sets with marks in the
+          <strong>Production, free</strong> (v0.27.0): colored revision sets with marks in the
           margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send
           out, a breakdown report, and sides for actors.
         </li>

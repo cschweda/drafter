@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.23.3] - 2026-11-01
+
+**What is Drafter?, and What's new.** A help page for anyone: why writers choose Drafter, what industry readers get, whether you can trust it, and how it works for technical people, with live test counts and diagrams. A What's new page keeps every change, and a one-line banner on the writing screen mentions a big change or a security update once.
+
+### Changed
+
+- **The roadmap adds Classic Mode** (v0.25.0): typing the way many screenwriters expect from apps like Final Draft, with Fountain Mode still the default. Novel, Production, storylines, the Workbook, `.drafter`, and Plans G and H each move one release later.
+- **The share image** (what a link to drafter.dev shows in a message or post) still says **Fountain first**, now explains that Fountain is a plain-text script format for screenplays and stage plays, adds that novels and notes are written in Markdown, and says **Classic mode: coming soon**.
+
 ### Added
 
 - **What is Drafter?**, a help page for everyone (`/docs/what-is-drafter/`): what Drafter is in one minute, and what a screenplay and a stage play are; for writers, why Drafter over Final Draft, and what Final Draft has that Drafter doesn't yet, with when each is planned; for producers, directors, and script coordinators; Can I trust this?, with the security section; and for technical people, how many tests there are of each kind, the stack, four diagrams of how it works, and the trap documents. It is first in Help, in the help pages' list, in About, and in the desktop app's Help menu, and the README links it at the top. Why Drafter stays as the full comparison, and links to it.
@@ -1044,7 +1053,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.2...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.3...HEAD
+[0.23.3]: https://github.com/cschweda/drafter/compare/v0.23.2...v0.23.3
 [0.23.2]: https://github.com/cschweda/drafter/compare/v0.23.1...v0.23.2
 [0.23.1]: https://github.com/cschweda/drafter/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/cschweda/drafter/compare/v0.22.2...v0.23.0
