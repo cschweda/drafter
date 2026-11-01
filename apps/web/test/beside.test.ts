@@ -18,7 +18,7 @@ import {
 } from '../app/beside/beside';
 import { openedDraft } from '../app/beside/draft-open';
 import { exportDraftsAndCuts } from '../app/beside/export';
-import { besideFailure } from '../app/beside/failure';
+import { besideFailure, renamedLine } from '../app/beside/failure';
 import { readCutsBytes, readDraftBytes } from '../app/beside/read';
 import { listCuts, recordCuts } from '../app/cuts/store';
 import { draftText, freezeDraft, listDrafts } from '../app/drafts/store';
@@ -595,5 +595,19 @@ describe('when a write beside the work fails', () => {
     expect(other).toMatch(/something went wrong \(EIO\)/);
     expect(other).toContain('Not written: Draft 01, Draft 03.');
     expect(other).toContain('tries again');
+  });
+});
+
+describe('a script renamed outside Drafter', () => {
+  const FERRY = besideNames('Ferry.fountain') as NonNullable<ReturnType<typeof besideNames>>;
+  test('says so once, naming the old files and the new', () => {
+    expect(renamedLine('Boca.fountain', FERRY, 'open')).toBe(
+      'Boca.fountain is now Ferry.fountain, so its drafts and cuts are written beside it as “Ferry drafts” and “Ferry.fountain.cuts.md”. “Boca drafts” and “Boca.fountain.cuts.md” are left as they were.',
+    );
+  });
+  test('says nothing the first time, for the same name, or after a Save As', () => {
+    expect(renamedLine(undefined, FERRY, 'open')).toBeNull();
+    expect(renamedLine('Ferry.fountain', FERRY, 'open')).toBeNull();
+    expect(renamedLine('Boca.fountain', FERRY, 'saved')).toBeNull();
   });
 });

@@ -37,7 +37,7 @@ import {
 } from './beside';
 import { desktopFolder } from './desktop';
 import { exportDraftsAndCuts, exportName } from './export';
-import { besideFailure } from './failure';
+import { besideFailure, renamedLine } from './failure';
 import { skippedLine } from './read';
 import {
   canPickFolder,
@@ -59,6 +59,9 @@ type Place =
 
 /** The settings row saying the writer said Not now to the folder (per project). */
 export const declinedKey = (projectId: string): string => `beside-declined:${projectId}`;
+
+/** The settings row naming the file a project's drafts and cuts were last written beside. */
+export const namesKey = (projectId: string): string => `beside-names:${projectId}`;
 
 /** How long the page must have been away before showing it reads the files again. */
 export const AWAY_MS = 30_000;
@@ -273,6 +276,18 @@ function create(): BesideSession {
       // is a full one again.
       lastWhere.set(project.id, place.where);
       wroteAt.set(project.id, place.where);
+      // The file renamed outside Drafter (not by a Save As): said once, as the name is kept.
+      const before = (await db.settings.get(namesKey(project.id)).catch(() => undefined))?.value;
+      const renamed = renamedLine(
+        typeof before === 'string' ? before : undefined,
+        place.names,
+        how,
+      );
+      if (before !== place.names.file)
+        await db.settings
+          .put({ key: namesKey(project.id), value: place.names.file })
+          .catch(() => {});
+      if (renamed) void sayOutline(renamed);
       said.delete(project.id);
       if (script.project.value?.id === project.id) {
         where.value = 'beside';

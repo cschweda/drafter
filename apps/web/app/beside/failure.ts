@@ -1,6 +1,7 @@
 // What the app says when drafts or cuts couldn't be written beside the work: why, in plain words,
 // and how to put it right. The desktop app's errors arrive as a code (`disk-full`,
 // `not-allowed: a link`, …, apps/desktop/src/beside.ts); the browser's as a DOMException.
+import { besideNames as besideNamesOf } from './beside';
 
 /** The message of an error, after whatever Electron puts before one from the main process. */
 function messageOf(error: unknown): string {
@@ -49,4 +50,19 @@ export function besideFailure(
   const [reason, fix] = explain(errors[0], file);
   const missing = drafts.length > 0 ? ` Not written: ${drafts.join(', ')}.` : '';
   return `Couldn’t write beside ${file}: ${reason}.${missing} ${fix}`;
+}
+
+/**
+ * Said once when the script's file has a new name that no Save As gave it (renamed outside
+ * Drafter): its drafts and cuts are written beside it under the new name, and the old ones are
+ * left. `before` is the file name they were last written beside; null when there is nothing to say.
+ */
+export function renamedLine(
+  before: string | undefined,
+  now: { file: string; folder: string; cuts: string },
+  how: string,
+): string | null {
+  if (before === undefined || before === now.file || how === 'saved') return null;
+  const old = besideNamesOf(before);
+  return `${before} is now ${now.file}, so its drafts and cuts are written beside it as “${now.folder}” and “${now.cuts}”. ${old ? `“${old.folder}” and “${old.cuts}” are left as they were.` : 'The old ones are left as they were.'}`;
 }
