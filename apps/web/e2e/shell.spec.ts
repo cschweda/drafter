@@ -359,6 +359,39 @@ test.describe('on a desktop', () => {
     expect(await bottomBorder('Outline')).not.toMatch(/^solid/);
   });
 
+  test('draws the icons of icon-only buttons in forced-colors mode', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'forced colors are emulated in Chromium');
+    // An icon is a mask over its background colour, which forced colours turn into Canvas, the
+    // page's colour, so an icon-only button would be empty (main.css draws it in CanvasText).
+    await page.emulateMedia({ forcedColors: 'active' });
+    const canvas = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.backgroundColor = 'Canvas';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    const iconBackground = (button: Locator) =>
+      button.locator('.iconify').evaluate((el) => getComputedStyle(el).backgroundColor);
+    // The top bar's Structure, Focus, and theme, and the editor's toggles.
+    const names = [
+      'Structure',
+      'Focus',
+      /^Switch to (light|dark) theme$/,
+      'Line numbers',
+      'Typewriter',
+    ];
+    for (const name of names) {
+      const button = page.getByRole('button', { name, exact: true });
+      await expect(button).toBeVisible();
+      expect(await iconBackground(button), String(name)).not.toBe(canvas);
+    }
+  });
+
   test('F6 moves between the editor and the Inspector', async ({ page }) => {
     const editor = page.getByRole('textbox', { name: 'Source' });
     await editor.click();

@@ -406,6 +406,12 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
   background: var(--accent-soft);
   color: var(--text);
 }
+/* Forced colors drop the fill, so a border marks the pressed one (Structure). */
+@media (forced-colors: active) {
+  .ib[aria-pressed="true"] {
+    border: 1px solid CanvasText;
+  }
+}
 .act[aria-disabled="true"],
 .ib[aria-disabled="true"] {
   cursor: not-allowed;

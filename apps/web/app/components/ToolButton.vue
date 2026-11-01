@@ -33,4 +33,11 @@ const name = computed(() => (attrs['aria-label'] as string | undefined) ?? props
   width: 14px;
   height: 14px;
 }
+/* Forced colors drop the fill that marks a pressed tool (Changes, Compare's views, Follow), so an
+   outline marks it, as DSegmented's does. */
+@media (forced-colors: active) {
+  .tool-button[aria-pressed='true'] {
+    outline: 2px solid Highlight;
+  }
+}
 </style>

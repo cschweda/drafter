@@ -30,6 +30,25 @@ html:has(dialog:modal) {
   overflow: hidden;
 }
 
+/* Forced colors (Windows High Contrast). Every icon (`UIcon`, `.iconify`) is a mask over its
+   background colour, and forced colours turn that background into Canvas, the page's own colour:
+   the icon vanishes, and an icon-only button (Structure, Focus, Theme, the editor's toggles, More
+   actions, the bars below 1024px) is left empty. The icon keeps its background, drawn in the text
+   colour. `currentColor` can't be used: an element out of forced colours reads the author's colour,
+   not the forced one. A disabled control's icon is GrayText, as its text is. A pressed or selected
+   control is marked by its own border or outline (each component's forced-colors rule), never by
+   the icon, so the icon stays CanvasText there too. */
+@media (forced-colors: active) {
+  .iconify {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+  :disabled .iconify,
+  [aria-disabled="true"] .iconify {
+    background-color: GrayText;
+  }
+}
+
 /* One focus ring for every control, in the brand's goldenrod (design §8, Call 11). */
 :focus-visible {
   outline: 2px solid var(--focus);
