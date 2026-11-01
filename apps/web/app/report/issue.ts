@@ -128,7 +128,16 @@ export function issueBody(fields: readonly IssueField[]): string {
   return fields.map((field) => `### ${field.label}\n\n${field.value}`).join('\n\n');
 }
 
-/** Everything, untrimmed, as Copy copies it: the title, then the fields. */
+/** Whether the writer has typed anything: a title or any field. */
+export function hasText(draft: IssueDraft): boolean {
+  return [draft.title, draft.happened, draft.expected, draft.idea].some((text) => text.trim());
+}
+
+/**
+ * The whole report, never trimmed: the title, then the fields under their headings. The preview
+ * shows it, and Copy report, Write an email, and Open on GitHub each put it on the clipboard, so
+ * a report is never lost to a link cut short or an app that didn't open.
+ */
 export function fullText(draft: IssueDraft, versionInfo: string): string {
   const title = issueTitle(draft);
   const body = issueBody(issueFields(draft, versionInfo));

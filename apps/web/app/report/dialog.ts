@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { EMPTY_DRAFT, type IssueDraft, type IssueKind } from './issue';
+import { EMPTY_DRAFT, hasText, type IssueDraft, type IssueKind } from './issue';
 
 /**
  * Whether Report a problem or Suggest an idea is open, and as which: the Help commands (and About's
@@ -7,12 +7,17 @@ import { EMPTY_DRAFT, type IssueDraft, type IssueKind } from './issue';
  */
 export const reportOpen = ref<IssueKind | null>(null);
 
-/** Where the dialog keeps what the writer typed for the visit, so a reload or going offline loses nothing. */
+/**
+ * Where the dialog keeps the report until the writer clears it (localStorage), so closing the tab,
+ * a reload, or the desktop app restarting loses nothing. Drafter can't know whether GitHub or an
+ * email app got the report, so it never clears it by itself. Only the report's own fields are
+ * kept: never the script.
+ */
 export const REPORT_DRAFT_KEY = 'drafter-report-v1';
 
 const store = (): Storage | undefined => {
   try {
-    return typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
+    return typeof localStorage === 'undefined' ? undefined : localStorage;
   } catch {
     return undefined;
   }
@@ -38,9 +43,18 @@ export function loadDraft(): IssueDraft {
   }
 }
 
+/** Keeps the report's fields (and nothing else); an empty report is nothing to keep. */
 export function saveDraft(draft: IssueDraft): void {
+  if (!hasText(draft)) {
+    clearDraft();
+    return;
+  }
+  const { kind, title, happened, expected, idea, includeVersion } = draft;
   try {
-    store()?.setItem(REPORT_DRAFT_KEY, JSON.stringify(draft));
+    store()?.setItem(
+      REPORT_DRAFT_KEY,
+      JSON.stringify({ kind, title, happened, expected, idea, includeVersion }),
+    );
   } catch {
     // Blocked or full: the draft holds while the dialog is open.
   }

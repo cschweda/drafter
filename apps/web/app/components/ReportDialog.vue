@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { currentAbout, versionText } from '~/about/info';
+import { formatKeys, isApple } from '~/commands/keys';
 import DDialog from '~/components/ui/DDialog.vue';
 import DSegmented from '~/components/ui/DSegmented.vue';
 import { desktop } from '~/desktop';
-import { loadDraft, reportOpen, saveDraft } from '~/report/dialog';
+import { clearDraft, loadDraft, reportOpen, saveDraft } from '~/report/dialog';
 import {
   CONTACT_EMAIL,
   EMPTY_DRAFT,
   fullText,
+  hasText,
   type IssueDraft,
   type IssueKind,
-  issueBody,
   issueLink,
   mailLink,
   SECURITY_URL,
@@ -23,8 +24,12 @@ import { writeClipboard } from '~/utils/clipboard';
 // page with that text filled in (a new tab; the desktop app's system browser), where they review
 // it and submit it with their own account. Copy, and an email from their own email app, are the
 // ways without an account, or offline. Nothing from the script goes in: no text, title, file
-// name, or note. What was typed is kept for the visit (sessionStorage), so going offline, or
-// closing the dialog, loses nothing.
+// name, or note.
+//
+// A report is never lost (the maintainer: "I don't want the reports lost and have to type over"):
+// Copy report, Write an email, and Open on GitHub each put the whole report on the clipboard, and
+// the report is kept on this device (localStorage) until the writer clears it, since Drafter
+// can't know whether GitHub or the email app got it.
 const dialog = ref<InstanceType<typeof DDialog>>();
 const shown = ref(false);
 const draft = reactive<IssueDraft>({ ...EMPTY_DRAFT });
@@ -45,12 +50,21 @@ const KIND_OPTIONS: { value: IssueKind; label: string }[] = [
 
 const link = computed(() => issueLink(draft, versionInfo));
 const mail = computed(() => mailLink(draft, versionInfo));
-/** Exactly what the link carries: its title, then its fields under their headings. */
-const preview = computed(() =>
-  [link.value.title && `Title: ${link.value.title}`, issueBody(link.value.fields)]
-    .filter(Boolean)
-    .join('\n\n'),
-);
+/** The whole report, never trimmed: what every copy copies. */
+const preview = computed(() => fullText(draft, versionInfo));
+const typed = computed(() => hasText(draft));
+const previewText = ref<HTMLElement>();
+const titleField = ref<HTMLInputElement>();
+/** The platform's own copy key: ⌘C on a Mac, Ctrl+C elsewhere. */
+const copyKey = formatKeys('Mod-c', isApple());
+
+const SAID = {
+  copy: 'Copied.',
+  github: 'The report is also copied, in case GitHub doesn’t fill it in.',
+  mail: 'The report is also copied, in case your email app doesn’t open.',
+  mailTrimmed:
+    'Your email app has the start of the report. The whole report is copied, so paste it into the email.',
+} as const;
 const heading = computed(() => (draft.kind === 'problem' ? 'Report a problem' : 'Suggest an idea'));
 
 const onLine = () => {
@@ -93,7 +107,54 @@ function onClose() {
 
 async function copy(text: string, what: string) {
   const ok = await writeClipboard(text, dialog.value?.el);
-  copied.value = ok ? `Copied ${what}.` : 'Couldn’t copy. Select the text and copy it.';
+  copied.value = ok ? `Copied ${what}.` : `Press ${copyKey} to copy.`;
+}
+
+/** Selects the preview's text, for the writer's own copy key. */
+function selectPreview() {
+  const text = previewText.value;
+  const selection = window.getSelection();
+  if (!text || !selection) return;
+  text.parentElement?.focus();
+  const range = document.createRange();
+  range.selectNodeContents(text);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+/**
+ * Puts the whole report on the clipboard, and says so: for Copy report, and first thing when
+ * Write an email or Open on GitHub is clicked (their link opens as usual; this never stops it).
+ * Where the clipboard can't be reached, the preview is selected for the writer to copy.
+ */
+async function copyReport(why: 'copy' | 'github' | 'mail') {
+  if (!typed.value) return;
+  const said =
+    why === 'copy'
+      ? SAID.copy
+      : why === 'github'
+        ? SAID.github
+        : mail.value.trimmed
+          ? SAID.mailTrimmed
+          : SAID.mail;
+  const ok = await writeClipboard(preview.value, dialog.value?.el);
+  if (ok) {
+    copied.value = said;
+    return;
+  }
+  selectPreview();
+  copied.value =
+    why === 'mail' && mail.value.trimmed
+      ? `Your email app has the start of the report. The whole report is selected: press ${copyKey} to copy it, and paste it into the email.`
+      : `The report is selected. Press ${copyKey} to copy.`;
+}
+
+/** Empties the report, here and on this device. */
+function clearReport() {
+  Object.assign(draft, { ...EMPTY_DRAFT, kind: draft.kind });
+  clearDraft();
+  copied.value = '';
+  titleField.value?.focus();
 }
 </script>
 
@@ -109,6 +170,10 @@ async function copy(text: string, what: string) {
   >
     <template v-if="shown">
       <h2 id="report-title" class="d-dialog-title">{{ heading }}</h2>
+      <div v-if="typed" class="kept" data-report-kept>
+        <span>Kept on this device until you clear it.</span>
+        <DButton variant="borderless" class="clear" @click="clearReport">Clear</DButton>
+      </div>
       <p v-if="!online" class="offline" data-report-offline>
         You’re offline. Copy this and file it when you’re back online.
       </p>
@@ -119,6 +184,7 @@ async function copy(text: string, what: string) {
       <label class="field">
         <span class="label">Title</span>
         <input
+          ref="titleField"
           v-model="draft.title"
           type="text"
           maxlength="256"
@@ -146,8 +212,8 @@ async function copy(text: string, what: string) {
         Include version info
       </label>
 
-      <h3 id="report-preview-title">What will be sent</h3>
-      <!-- Focusable, so a keyboard can scroll it; named by its heading. -->
+      <h3 id="report-preview-title">The report</h3>
+      <!-- Focusable, so a keyboard can scroll it; named by its heading. Selectable, to copy by hand. -->
       <div
         class="preview"
         role="region"
@@ -155,12 +221,12 @@ async function copy(text: string, what: string) {
         aria-labelledby="report-preview-title"
         data-report-preview
       >
-        <pre v-if="preview">{{ preview }}</pre>
+        <pre v-if="typed" ref="previewText">{{ preview }}</pre>
         <p v-else class="empty">Nothing yet. What you type above shows here.</p>
       </div>
       <p v-if="link.trimmed" class="trimmed" data-report-trimmed>
-        It’s too long for one link, so the end is trimmed. Paste the rest on GitHub: Copy has all
-        of it.
+        It’s too long for one link, so GitHub gets the start of it. Paste the rest on GitHub: Copy
+        report has all of it.
       </p>
 
       <p id="report-note" class="note">
@@ -181,27 +247,24 @@ async function copy(text: string, what: string) {
             :target="mailTarget"
             class="d-btn d-btn--secondary"
             data-report-mailto
+            @click="copyReport('mail')"
             >Write an email</a
           >
           <DButton @click="copy(CONTACT_EMAIL, 'the address')">Copy address</DButton>
         </div>
-        <p v-if="mail.trimmed" class="trimmed" data-report-mail-trimmed>
-          The email is trimmed to fit. Paste the rest: Copy has all of it.
-        </p>
       </div>
 
       <p role="status" aria-live="polite" class="copied" data-report-copied>{{ copied }}</p>
       <div class="d-dialog-footer">
         <DButton @click="dialog?.close()">Close</DButton>
-        <DButton :disabled="!preview" @click="copy(fullText(draft, versionInfo), 'all of it')">
-          Copy
-        </DButton>
+        <DButton :disabled="!typed" @click="copyReport('copy')">Copy report</DButton>
         <a
           :href="link.url"
           target="_blank"
           rel="noopener noreferrer"
           class="d-btn d-btn--primary"
           data-report-open
+          @click="copyReport('github')"
           >Open on GitHub</a
         >
       </div>
@@ -259,6 +322,18 @@ p {
 .field input::placeholder {
   color: var(--muted);
 }
+.kept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: -2px 0 10px;
+  color: var(--muted);
+}
+.clear {
+  min-height: 24px;
+  padding: 0 8px;
+}
 .check {
   display: flex;
   align-items: center;
@@ -274,6 +349,8 @@ p {
 }
 .preview pre {
   margin: 0;
+  user-select: text;
+  cursor: text;
   font: 12px/1.45 var(--font-mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

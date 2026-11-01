@@ -82,9 +82,8 @@ useDocsHead({
     <h2 id="reporting">Reporting a problem or suggesting an idea</h2>
     <p>
       <strong>Help → Report a problem…</strong> and <strong>Suggest an idea…</strong> send nothing
-      by themselves. What you type stays on this device (kept for the visit in the browser’s
-      sessionStorage, so closing the dialog loses nothing) until you choose
-      <strong>Open on GitHub</strong>. Only then does it leave, and only the text the dialog shows
+      by themselves. What you type stays on this device until you choose
+      <strong>Open on GitHub</strong>. Only then does it leave, and only the report the dialog shows
       you: GitHub’s new-issue page opens with it filled in, in your browser, and you review it and
       submit it there yourself, with your own GitHub account. Drafter has no server and no token, so
       it can’t post anything for you. Your script is never included: not its text, its title, its
@@ -94,8 +93,15 @@ useDocsHead({
     </p>
     <p>
       With no GitHub account, you can email cschweda@gmail.com instead. That email goes from your
-      own email app, like any other, and Drafter itself sends nothing. <strong>Copy</strong> puts the
-      same text on your clipboard, to paste wherever you like.
+      own email app, like any other, and Drafter itself sends nothing. <strong>Copy report</strong>
+      puts the whole report on your clipboard, to paste wherever you like, and
+      <strong>Write an email</strong> and <strong>Open on GitHub</strong> copy it too.
+    </p>
+    <p>
+      The report is kept in this browser’s localStorage (in the desktop app, its own) until you
+      choose <strong>Clear</strong>, so closing the tab or restarting loses nothing. Only the
+      report’s own fields are kept, never your script. Drafter can’t tell whether GitHub or your
+      email app got it, so it never clears it by itself.
     </p>
 
     <h2 id="updates">Updates in the desktop app</h2>

@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { type AboutInfo, versionText } from '../app/about/info';
+import { clearDraft, loadDraft, REPORT_DRAFT_KEY, saveDraft } from '../app/report/dialog';
 import {
   CONTACT_EMAIL,
   clean,
   EMPTY_DRAFT,
   fullText,
+  hasText,
   type IssueDraft,
   issueBody,
   issueFields,
@@ -232,5 +234,77 @@ describe('the GitHub issue forms', () => {
     const security = repoFile('SECURITY.md');
     expect(security).toContain(`Email ${CONTACT_EMAIL} with the details`);
     expect(security).not.toContain('please contact me');
+  });
+});
+
+describe('the whole report', () => {
+  test('is what the preview shows: the title, then every field under its heading', () => {
+    const d = draft({ title: 'T & #', happened: 'Line one\nLine two', expected: 'A PDF' });
+    expect(fullText(d, VERSION)).toBe(`Title: T & #\n\n${issueBody(issueFields(d, VERSION))}`);
+  });
+
+  test('is never trimmed, when the link and the email are', () => {
+    const long = 'word & # é 🎬 '.repeat(4000);
+    const d = draft({ title: 'Long', happened: long, expected: long });
+    expect(issueLink(d, VERSION).trimmed).toBe(true);
+    expect(mailLink(d, VERSION).trimmed).toBe(true);
+    const text = fullText(d, VERSION);
+    expect(text).not.toContain(TRIMMED_NOTE);
+    expect(text.split(long.trim()).length - 1).toBe(2);
+    expect(text).toContain(VERSION);
+  });
+
+  test('knows when nothing is typed yet', () => {
+    expect(hasText(draft())).toBe(false);
+    expect(hasText(draft({ idea: '  \n ' }))).toBe(false);
+    expect(hasText(draft({ expected: 'x' }))).toBe(true);
+  });
+});
+
+describe('the kept report', () => {
+  const memory = new Map<string, string>();
+  const fake = {
+    getItem: (key: string) => memory.get(key) ?? null,
+    setItem: (key: string, value: string) => void memory.set(key, value),
+    removeItem: (key: string) => void memory.delete(key),
+  };
+  beforeEach(() => {
+    memory.clear();
+    vi.stubGlobal('localStorage', fake);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  test('is kept in localStorage, its fields only, until cleared', () => {
+    const d = { ...draft({ title: 'Kept', happened: 'h' }), script: 'INT. HOUSE' } as IssueDraft;
+    saveDraft(d);
+    const stored = JSON.parse(memory.get(REPORT_DRAFT_KEY) as string);
+    expect(Object.keys(stored).sort()).toEqual(
+      ['expected', 'happened', 'idea', 'includeVersion', 'kind', 'title'].sort(),
+    );
+    expect(loadDraft()).toEqual(draft({ title: 'Kept', happened: 'h' }));
+    clearDraft();
+    expect(memory.has(REPORT_DRAFT_KEY)).toBe(false);
+    expect(loadDraft()).toEqual(EMPTY_DRAFT);
+  });
+
+  test('keeps nothing for an empty report, and survives broken or blocked storage', () => {
+    saveDraft(draft({ title: 'x' }));
+    saveDraft(draft());
+    expect(memory.has(REPORT_DRAFT_KEY)).toBe(false);
+    memory.set(REPORT_DRAFT_KEY, '{not json');
+    expect(loadDraft()).toEqual(EMPTY_DRAFT);
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {
+        throw new Error('blocked');
+      },
+      removeItem: () => {
+        throw new Error('blocked');
+      },
+    });
+    expect(() => saveDraft(draft({ title: 'x' }))).not.toThrow();
+    expect(loadDraft()).toEqual(EMPTY_DRAFT);
   });
 });

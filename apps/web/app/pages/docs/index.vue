@@ -68,8 +68,14 @@ const about: Record<string, string> = {
       includes your script.
     </p>
     <p>
-      No GitHub account, or offline? <strong>Copy</strong> it, or email cschweda@gmail.com. An email
-      goes from your own email app; Drafter itself sends nothing. For a security problem, please
+      Your report is never lost. <strong>Copy report</strong>, <strong>Write an email</strong>, and
+      <strong>Open on GitHub</strong> each put the whole report on your clipboard, so if GitHub
+      doesn’t fill it in, or your email app gets only the start, you paste it. And Drafter keeps it
+      on this device until you choose <strong>Clear</strong>.
+    </p>
+    <p>
+      No GitHub account, or offline? Copy it, or email cschweda@gmail.com. An email goes from your
+      own email app; Drafter itself sends nothing. For a security problem, please
       don’t open a public issue:
       <a
         href="https://github.com/cschweda/drafter/blob/main/SECURITY.md#reporting-a-problem"
