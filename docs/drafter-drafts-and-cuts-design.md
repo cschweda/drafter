@@ -36,38 +36,38 @@ Each choice open to the designer is marked **Call:**; they are listed in §11.
 ## 2. Drafts
 
 ### 2.1 Starting a draft
-- **Start new draft…** (File menu, palette, desktop File menu; no default key) freezes the text as it is now as **Draft N** and the writer carries on in **Draft N+1**. A script with no drafts yet is in Draft 1; starting the first new draft freezes Draft 1.
-- **A work in progress works the same way.** Open any existing script or Markdown file — one written before this release, in another app, or imported from Final Draft, Highland, or Fade In — and choose Start new draft: what is there becomes **Draft 1**, and the writer carries on in **Draft 2**. Nothing has to be set up first.
-- **The draft marker.** Starting a draft records a **marker**: "Draft 2 begins — builds on Draft 1 (a3f9c2e)", with the writer's note ("from Sam's notes"). The marker is what says *this is a new version*: it heads the draft in the Drafts list, and appears as a milestone wherever versions are listed (History's list of snapshots, Compare's version pickers), so the major shifts stand out from the automatic snapshots between them.
+- **Start new draft…** (File menu, palette, desktop File menu; no default key) freezes the text as it is now as **Draft N** and the writer carries on in **Draft N+1**. A script with no drafts yet is in Draft 01; starting the first new draft freezes Draft 01.
+- **A work in progress works the same way.** Open any existing script or Markdown file — one written before this release, in another app, or imported from Final Draft, Highland, or Fade In — and choose Start new draft: what is there becomes **Draft 01**, and the writer carries on in **Draft 02**. Nothing has to be set up first.
+- **The draft marker.** Starting a draft records a **marker**: "Draft 02 begins — builds on Draft 01 (a3f9c2e)", with the writer's note ("from Sam's notes"). The marker is what says *this is a new version*: it heads the draft in the Drafts list, and appears as a milestone wherever versions are listed (History's list of snapshots, Compare's version pickers), so the major shifts stand out from the automatic snapshots between them.
 - A small dialog offers a **note** for the draft being frozen ("sent to Sam for notes"), optional, one line, editable later. Confirm with Enter; Escape cancels and nothing changes.
 - **Call:** Drafter never starts a draft by itself. The number only goes up; it is never reused or renumbered.
 - **Call:** freezing an unchanged text (the same ID as the last draft) asks "This text is the same as Draft N. Start Draft N+1 anyway?" — allowed (the writer may want a fresh number after notes), recorded as the same ID.
 
 ### 2.2 The ID
 - **Call:** a draft's ID is the **SHA-256** of its exact text as UTF-8 (the text Save writes, line endings as stored), written in lowercase hex. The UI shows the first **7** characters; the full ID is stored and copied with "Copy full ID". Identical text always gives the same ID; any change gives another. It is the same hash every snapshot row already stores (`hash`, from `storage/hash.ts`'s `hashText`, Web Crypto), so a draft frozen from a snapshot's text has that snapshot's hash as its ID; no new hashing code.
-- **Open by ID:** typing at least 4 hex characters of an ID in the palette lists the matching drafts ("Draft 2 · a3f9c2e · 12 Oct"); an ambiguous prefix lists all matches.
+- **Open by ID:** typing at least 4 hex characters of an ID in the palette lists the matching drafts ("Draft 02 · a3f9c2e · 12 Oct"); an ambiguous prefix lists all matches.
 
 ### 2.3 The Drafts list
 **Drafts…** (File menu, palette, the status bar's draft label) opens a list, newest first: number, short ID, date and time, words (scripts also pages), note, and the current draft at the top marked "now". For each frozen draft:
-- **Read** — opens it read-only beside the current text (the second pane), so any passage can be selected and copied across; its header says "Draft 2 · a3f9c2e · read-only".
+- **Read** — opens it read-only beside the current text (the second pane), so any passage can be selected and copied across; its header says "Draft 02 · a3f9c2e · read-only".
 - **Compare** — with now, or with another draft (a second picker), in Compare's Changes view (v0.18.0), GitHub-style.
-- **Restore as a new draft** — **Call:** never overwrites: the current text is first frozen as a draft (note "before restoring Draft 3"), then Draft 3's text becomes the current text in a new number, noted "from Draft 3 (a3f9c2e)". One undo reverses it.
+- **Restore as a new draft** — **Call:** never overwrites: the current text is first frozen as a draft (note "before restoring Draft 03"), then Draft 03's text becomes the current text in a new number, noted "from Draft 03 (a3f9c2e)". One undo reverses it.
 - **Copy full ID**, **Edit note**.
 - **Call:** **no Delete for drafts** in this release. A draft is the writer's milestone; deleting it is the failure the anti-goals name. (Deleting a whole script's history stays where it is today, with its confirmation.)
 
 ### 2.4 Draft by draft: how the work changed over time
 
-**Draft by draft…** (the Drafts list's header, the palette) steps through the drafts in order — Draft 1 → 2, 2 → 3, 3 → 4 … up to now — one change at a time:
+**Draft by draft…** (the Drafts list's header, the palette) steps through the drafts in order — Draft 01 → 02, 02 → 03, 03 → 04 … up to now — one change at a time:
 - A **summary row for each step**: the marker and note, the date, and what changed in numbers — words and pages (scripts) or words (documents), scenes / chapters and sections added, cut, and changed, the share of the text that is new — so the whole history reads as a short timeline at a glance.
 - **Open a step** to see it in Compare's Changes view (red/green, grouped by scene or section), with **Next step** / **Previous step** to walk the history, and the step's cuts listed beside it (from Cuts, §3).
-- **Call:** steps are always between consecutive drafts; comparing any two (Draft 1 with Draft 5) stays in the Drafts list's Compare (§2.3).
+- **Call:** steps are always between consecutive drafts; comparing any two (Draft 01 with Draft 05) stays in the Drafts list's Compare (§2.3).
 
 ### 2.5 Draft, or version?
 
-**Call:** the interface says **Draft**, the writer's word: "Start new draft", "Draft 3", "Drafts". Help and the first Start-new-draft dialog say once what it means: "A draft is a version you name: Drafter keeps it exactly as it is, for good." Search finds the commands by "version" and "new version" too (palette keywords).
+**Call:** the interface says **Draft**, the writer's word: "Start new draft", "Draft 03", "Drafts". Help and the first Start-new-draft dialog say once what it means: "A draft is a version you name: Drafter keeps it exactly as it is, for good." Search finds the commands by "version" and "new version" too (palette keywords). **Numbers have a leading zero** (the maintainer, 2026-11-01): "Draft 01", "Draft 02" … two digits, and three only past 99, everywhere a draft is named (the Drafts list, the reader, the status bar, History, the palette, Start new draft, the cuts' "cut while writing Draft 08"), as the files are named. Typing "2", "02", "draft 2" or "Draft 02" finds Draft 02.
 
 ### 2.6 Where the draft shows
-- Outside Zen, the status bar shows **Draft 8** quietly (a button that opens the Drafts list). Never in Zen, never on the pages, never in exports.
+- Outside Zen, the status bar shows **Draft 08** quietly (a button that opens the Drafts list). Never in Zen, never on the pages, never in exports.
 - **Call:** exports are unchanged. (A "draft line" on a title page is a writer's own text, already possible in Fountain's title page; Drafter adds nothing automatically.)
 
 ## 3. Cuts
@@ -76,7 +76,7 @@ Each choice open to the designer is marked **Call:**; they are listed in §11.
 - **Scripts:** a scene that was in the text and is no longer — the same matching Deleted scenes uses today (`@drafter/history`'s anchors and shingles), so a moved or lightly edited scene is not a cut.
 - **Markdown documents:** a chapter (`#`) or section (`##`, `###`) that left the text, matched the same way by heading and content; and any **passage of 50 words or more** removed, so prose cut without a heading is kept too. **Call:** "removed" means a contiguous run of at least 50 words present in the comparison point (the last snapshot) and absent now, by a word-level diff of the two texts; a paragraph replaced by a different one counts when the removed side is 50+ words and shares under half its word pairs with what replaced it (so a light rewrite isn't a cut). Smaller deletions stay in snapshots only.
 - **When:** **Call:** a cut is found whenever a snapshot is kept (every 10 minutes of active writing, on save and open, on Take snapshot, and before bulk operations — `keepSnapshot`'s moments), by comparing the snapshot's text with the comparison point (the previous kept text); never on every keystroke. A snapshot whose reason is a whole-text replacement (`before-restore`, `before-reload`, `opened`, `imported`, and a restored draft) moves the comparison point without looking for cuts. A cut is recorded once; if the same text comes back and is cut again later, it is one entry with both dates.
-- Each cut records: its text, a title (the scene heading, chapter or section heading, or the first words of a passage), **the draft number it was cut while writing** ("cut while writing Draft 8"; the current draft has no ID until it is frozen, so a cut names the number, and the Cuts list adds that draft's short ID once it is frozen), when, and where it was (the neighbours, as Put back already uses).
+- Each cut records: its text, a title (the scene heading, chapter or section heading, or the first words of a passage), **the draft number it was cut while writing** ("cut while writing Draft 08"; the current draft has no ID until it is frozen, so a cut names the number, and the Cuts list adds that draft's short ID once it is frozen), when, and where it was (the neighbours, as Put back already uses).
 - **Call:** a cut's own ID is the **SHA-256 of its text alone**, so the same text cut again (in this draft or a later one) is one entry with every date and draft it was cut in, and copies of the cuts file from two computers merge by that ID.
 - **Call: nothing before this release is lost either.** On the first run of v0.24.0, Drafter scans each script's existing snapshots once (in the history worker, as Deleted scenes does today) and records every scene, chapter, or section found there but not in the text now as a cut, marked "cut before drafts" (draft number none). After that, cuts are recorded as they happen.
 - **Call: a whole-text replacement makes no cuts.** Restore as a new draft, Restore from a snapshot (`snapshots/restore.ts`), Open, reload, an import, and New all reset the comparison point to the new text instead of comparing with the old: what left is already safe in the frozen draft or snapshot taken just before, and recording it would flood Cuts with a whole draft.
@@ -106,7 +106,7 @@ The heart of "nothing lost": everything above is also kept as ordinary text file
 
 ### 4.2 Opening a work that has them
 - Opening `Boca.fountain` (desktop, or web with folder access) reads `Boca drafts/` and `Boca.fountain.cuts.md` if they are there and merges them into the lists (by ID: nothing duplicated, nothing dropped). A draft file whose text no longer matches its ID is listed with a warning ("changed outside Drafter") and kept.
-- Opening a draft file itself (`Boca – Draft 03.fountain`) opens it as a normal script, read-write — it is just a file — with a note bar: "This is Draft 3 of Boca. Open Boca instead?".
+- Opening a draft file itself (`Boca – Draft 03.fountain`) opens it as a normal script, read-write — it is just a file — with a note bar: "This is Draft 03 of Boca. Open Boca instead?".
 
 ## 5. Retention
 
@@ -128,7 +128,7 @@ No new default keys (as v0.18.0). Help: a "Drafts and cuts" page in the writer's
 
 ## 7. Accessibility
 
-As the rest of the app: WCAG 2.2 AA, axe in both themes on every project, every action by keyboard, lists as real lists with named actions ("Read Draft 3", "Insert cut 'The ferry' at the cursor"), focus returned sensibly after each dialog, the read-only draft pane announced as read-only, and nothing conveyed by colour alone (Compare's existing rules).
+As the rest of the app: WCAG 2.2 AA, axe in both themes on every project, every action by keyboard, lists as real lists with named actions ("Read Draft 03", "Insert cut 'The ferry' at the cursor"), focus returned sensibly after each dialog, the read-only draft pane announced as read-only, and nothing conveyed by colour alone (Compare's existing rules).
 
 ## 8. Safety
 

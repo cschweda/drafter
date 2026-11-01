@@ -7,11 +7,10 @@ import {
   usePalette,
 } from '~/commands/palette';
 import { type Command, type CommandGroup, useCommands } from '~/commands/registry';
+import { findDrafts } from '~/drafts/find';
 import { paletteLabel } from '~/drafts/labels';
-import { draftsByPrefix, isIdPrefix } from '~/drafts/store';
 import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
-import { listProjects } from '~/storage/projects';
 import { useScript } from '~/storage/script';
 
 // The command palette (Phase 1 design §6): scenes by name, "Go to line N" when the query is a
@@ -110,7 +109,8 @@ const lineItem = computed<Item[]>(() => {
 });
 
 // Open draft by ID (drafts-and-cuts design §2.2): 4 or more hex characters list every draft whose
-// ID begins with them, of any script ("Draft 2 · a3f9c2e · 12 Oct 2026"), each opening read-only.
+// ID begins with them, of any script still here, and a number ("2", "Draft 02") the open script's
+// ("Draft 02 · a3f9c2e · 12 Oct 2026"), each opening read-only (`findDrafts`).
 const drafts = useDrafts();
 const script = useScript();
 const draftItems = shallowRef<Item[]>([]);
@@ -126,22 +126,14 @@ async function readDraft(projectId: string, n: number) {
 }
 
 watch([search, open, mode], async ([typed, on, shownMode]) => {
-  const query = typed.trim();
   const mine = ++lookups;
-  if (!on || shownMode !== 'all' || !isIdPrefix(query)) {
-    // Only when there were some: a new empty list would draw the palette's rows again, and the
-    // row the keys had highlighted with them.
-    if (draftItems.value.length > 0) draftItems.value = [];
-    return;
-  }
-  const found = await draftsByPrefix(query).catch(() => []);
-  const titles = found.some((hit) => hit.projectId !== script.project.value?.id)
-    ? new Map((await listProjects().catch(() => [])).map((p) => [p.id, p.title]))
-    : new Map<string, string>();
+  const openId = script.project.value?.id ?? null;
+  const found = on && shownMode === 'all' ? await findDrafts(typed, openId).catch(() => []) : [];
   if (mine !== lookups) return;
-  const openId = script.project.value?.id;
-  draftItems.value = found.map(({ projectId, row }) => ({
-    label: paletteLabel(row, projectId === openId ? undefined : titles.get(projectId)),
+  // A new empty list would draw the palette's rows again, and lose the row the keys highlighted.
+  if (found.length === 0 && draftItems.value.length === 0) return;
+  draftItems.value = found.map(({ projectId, row, title }) => ({
+    label: paletteLabel(row, title),
     icon: 'i-lucide-milestone',
     onSelect: () => choose(() => void readDraft(projectId, row.n).catch(() => {})),
   }));
@@ -164,11 +156,12 @@ function itemOf(c: Command): Item {
 
 const groups = computed(() => {
   const out: Array<{ id: string; label: string; ignoreFilter?: boolean; items: Item[] }> = [];
-  if (mode.value === 'all' && draftItems.value.length) {
-    out.push({ id: 'drafts', label: 'Drafts', ignoreFilter: true, items: draftItems.value });
-  }
   if (mode.value !== 'scene' && lineItem.value.length) {
     out.push({ id: 'line', label: 'Line', ignoreFilter: true, items: lineItem.value });
+  }
+  // After Go to line: a number typed is a line first, and its draft second.
+  if (mode.value === 'all' && draftItems.value.length) {
+    out.push({ id: 'drafts', label: 'Drafts', ignoreFilter: true, items: draftItems.value });
   }
   if (mode.value !== 'line' && kind.value === 'fountain') {
     out.push({ id: 'scenes', label: 'Scenes', items: scenes.value });

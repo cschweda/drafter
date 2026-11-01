@@ -4,7 +4,7 @@ import { commandById } from '~/commands/registry';
 import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import DDialog from '~/components/ui/DDialog.vue';
-import { compareLabel, draftWhen, milestoneLabel } from '~/drafts/labels';
+import { compareLabel, draftName, draftWhen, milestoneLabel } from '~/drafts/labels';
 import type { DraftRow } from '~/drafts/store';
 import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
@@ -260,7 +260,7 @@ const draftRows = draftsSession.rows;
 async function draftVersion(row: DraftRow): Promise<Version | null> {
   const text = await draftsSession.textOf(row.n);
   if (text === null) {
-    tell(`Draft ${row.n} can’t be read.`);
+    tell(`${draftName(row.n)} can’t be read.`);
     return null;
   }
   return { label: compareLabel(row), at: row.frozenAt, text };
@@ -678,13 +678,14 @@ const nameOf = (row: HistoryRow) =>
         aria-labelledby="history-drafts-title"
       >
         <h3 id="history-drafts-title" class="milestones-title">Drafts</h3>
+        <span id="history-drafts-act" class="sr-only">Compare with now</span>
         <ul>
           <li v-for="draft in draftRows" :key="draft.key">
             <button
               type="button"
               class="milestone"
-              :aria-label="`Compare ${milestoneLabel(draft)} with now`"
-              :title="`Compare with now`"
+              aria-describedby="history-drafts-act"
+              title="Compare with now"
               @click="compareDraftNow(draft)"
             >
               <UIcon name="i-lucide-milestone" class="milestone-icon" aria-hidden="true" />

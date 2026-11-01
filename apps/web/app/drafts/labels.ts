@@ -9,7 +9,25 @@ export const SHORT_ID = 7;
 
 export const shortId = (id: string): string => id.slice(0, SHORT_ID);
 
-export const draftName = (n: number): string => `Draft ${n}`;
+/**
+ * A draft's number as shown (the maintainer, 2026-11-01): two digits, three only past 99, as its
+ * file is named (`draftFileName`): "01", "12", "100".
+ */
+export const padDraft = (n: number): string => String(n).padStart(2, '0');
+
+/** "Draft 01": every place a draft is named goes through this. */
+export const draftName = (n: number): string => `Draft ${padDraft(n)}`;
+
+/**
+ * The draft number a writer typed, or null: "2", "02", "draft 2", "Draft 02" all mean Draft 02.
+ * At most 6 digits; anything else (an ID, a word) is not a number.
+ */
+export function typedDraftNumber(typed: string): number | null {
+  const found = /^(?:draft\s*)?(\d{1,6})$/i.exec(typed.trim());
+  if (!found) return null;
+  const n = Number(found[1]);
+  return n >= 1 ? n : null;
+}
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

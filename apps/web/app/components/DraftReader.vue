@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { draftWhen, readerHeader } from '~/drafts/labels';
+import { draftName, draftWhen, readerHeader } from '~/drafts/labels';
 import { useDrafts } from '~/drafts/use-drafts';
 
 // A draft read beside the Source (drafts-and-cuts design §2.3): read-only, its header "Draft 2 ·
@@ -28,7 +28,7 @@ const uid = useId();
         role="textbox"
         aria-readonly="true"
         aria-multiline="true"
-        :aria-label="`Text of Draft ${reading.row.n}, read-only`"
+        :aria-label="`Text of ${draftName(reading.row.n)}, read-only`"
         data-draft-text
       >{{ reading.text }}</pre>
     </section>

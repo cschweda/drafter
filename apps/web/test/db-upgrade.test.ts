@@ -123,6 +123,40 @@ describe('upgrading Drafter’s database from v0.23.1', () => {
     expect(await draftsByPrefix(id.slice(0, 8))).toHaveLength(1);
   });
 
+  test('v0.23.1 still opens a database v0.24.0 has upgraded, and changes nothing', async () => {
+    // A tab of v0.23.1 left open, or a writer who goes back: its Dexie declares version 1 only.
+    vi.resetModules();
+    await deleteDrafter();
+    {
+      const { db } = await import('../app/storage/db');
+      const { createProject } = await import('../app/storage/projects');
+      const { freezeDraft } = await import('../app/drafts/store');
+      const p = await createProject({ source: 'Title: Kept\n' });
+      await freezeDraft(p.id, 'Title: Kept\n', 'one');
+      db.close();
+    }
+    const { default: Dexie } = await import('dexie');
+    const old = new Dexie('drafter');
+    old.version(1).stores({
+      projects: 'id, title, updatedAt',
+      snapshots: 'id, projectId, createdAt',
+      templates: 'id',
+      handles: 'id',
+      settings: 'key',
+    });
+    await old.open();
+    expect(old.isOpen()).toBe(true);
+    expect((await old.table('projects').toArray()).map((p) => p.title)).toEqual(['Kept']);
+    await old.table('settings').put({ key: 'from-old', value: 1 });
+    old.close();
+    // Its drafts are still there for v0.24.0.
+    vi.resetModules();
+    const { db } = await import('../app/storage/db');
+    await db.open();
+    expect(await db.drafts.count()).toBe(1);
+    expect(await db.settings.get('from-old')).toEqual({ key: 'from-old', value: 1 });
+  });
+
   test('a database already at version 2 opens as it is', async () => {
     vi.resetModules();
     await deleteDrafter();

@@ -13,6 +13,7 @@ import { useEditor } from '../editor/session';
 import { sayOutline } from '../outline/notice';
 import { historyReadOnly } from '../snapshots/restore';
 import { useSnapshots } from '../snapshots/use-snapshots';
+import { useGuard } from '../storage/guard';
 import { hashText } from '../storage/hash';
 import { useScript } from '../storage/script';
 import {
@@ -27,6 +28,7 @@ import {
   type DraftFrom,
   type DraftRow,
   draftFrom,
+  draftRow,
   draftText,
   freezeDraft,
   listDrafts,
@@ -165,7 +167,7 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
     busy = true;
     try {
       const target = await draftText(projectId, n);
-      const row = (await listDrafts(projectId)).find((r) => r.n === n);
+      const row = await draftRow(projectId, n);
       if (target === null || !row) {
         deps.say(DRAFT_GONE);
         return false;
@@ -207,8 +209,8 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
   async function read(n: number): Promise<void> {
     const projectId = deps.projectId();
     if (projectId === null) return;
-    const row =
-      rows.value.find((r) => r.n === n) ?? (await listDrafts(projectId)).find((r) => r.n === n);
+    // By its key: the row and the text are this script's Draft n, whatever `rows` holds meanwhile.
+    const row = await draftRow(projectId, n);
     const text = row ? await draftText(projectId, n) : null;
     if (!row || text === null) {
       deps.say('That draft can’t be read.');
@@ -280,6 +282,7 @@ function createApp(): AppDrafts {
   const editor = useEditor();
   const script = useScript();
   const snapshots = useSnapshots();
+  const guard = useGuard();
   const replacedListeners = new Set<() => void>();
   const notKept = computed(() => {
     const open = script.project.value;
@@ -320,7 +323,15 @@ function createApp(): AppDrafts {
         void session.load();
       },
     );
+    // Another tab may have started drafts meanwhile: read again when this tab is handed the
+    // editing, and when the page is shown again.
+    watch(guard.readOnly, () => void session.load());
   });
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) void session.load();
+    });
+  }
   void session.load();
 
   return {

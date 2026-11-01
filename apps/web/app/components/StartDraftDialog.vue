@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DDialog from '~/components/ui/DDialog.vue';
 import { draftName, EXPLAINER, sameQuestion } from '~/drafts/labels';
+import { createStartFlow } from '~/drafts/start-flow';
 import { NOTE_MAX } from '~/drafts/store';
 import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
@@ -16,8 +17,9 @@ const editor = useEditor();
 const dialog = ref<InstanceType<typeof DDialog>>();
 const input = ref<HTMLInputElement>();
 const note = ref('');
-/** The last draft when the text is the same as it; null otherwise, and while it's checked. */
-const same = shallowRef<{ n: number } | null>(null);
+// The same-text question; a submit waits for its check (`start-flow.ts`).
+const flow = createStartFlow({ sameAs: () => drafts.sameAs(), start: (n) => drafts.start(n) });
+const same = flow.same;
 const first = computed(() => rows.value.length === 0);
 const starting = ref(false);
 /** The draft that is kept: the one being written, as the dialog opened. */
@@ -29,12 +31,10 @@ watch(asking, async (open) => {
   if (!el) return;
   if (open && !el.open) {
     note.value = '';
-    same.value = null;
     keeping.value = current.value;
+    flow.open();
     el.showModal();
     input.value?.focus();
-    const last = await drafts.sameAs();
-    if (asking.value) same.value = last ? { n: last.n } : null;
   } else if (!open && el.open) el.close();
 });
 
@@ -43,9 +43,11 @@ async function onSubmit(event: Event) {
   if (starting.value) return;
   starting.value = true;
   try {
-    const done = await drafts.start(note.value);
+    const done = await flow.submit(note.value);
+    // The text is the same as the last draft: the question shows, and the dialog stays.
+    if (done === 'asked') return;
     dialog.value?.close();
-    if (done && editor.view.dom.offsetParent !== null) editor.view.focus();
+    if (done === 'started' && editor.view.dom.offsetParent !== null) editor.view.focus();
   } finally {
     starting.value = false;
   }

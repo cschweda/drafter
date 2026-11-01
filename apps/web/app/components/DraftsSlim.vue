@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { readerHeader } from '~/drafts/labels';
+import { draftName, readerHeader } from '~/drafts/labels';
 import { useDrafts } from '~/drafts/use-drafts';
 
 // The slim bar of the Drafts list and of the draft being read (drafts-and-cuts design §2.3): the
@@ -40,7 +40,7 @@ const count = computed(() => {
       icon="i-lucide-x"
       label="Close"
       class="slim-button drafts-tool"
-      :aria-label="reading ? `Close Draft ${reading.row.n}` : 'Close the draft'"
+      :aria-label="reading ? `Close ${draftName(reading.row.n)}` : 'Close the draft'"
       @click="drafts.closeReading(true)"
     />
   </template>

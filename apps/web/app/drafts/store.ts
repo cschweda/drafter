@@ -141,6 +141,12 @@ export async function listDrafts(projectId: string): Promise<DraftRow[]> {
   return rows.reverse().map(withoutText);
 }
 
+/** This script's Draft `n`, without its text, or null. */
+export async function draftRow(projectId: string, n: number): Promise<DraftRow | null> {
+  const row = await db.drafts.get(draftKey(projectId, n));
+  return row && row.projectId === projectId ? withoutText(row) : null;
+}
+
 /** Draft `n`'s text, or null when there is no such draft or it can't be read. */
 export async function draftText(projectId: string, n: number): Promise<string | null> {
   try {

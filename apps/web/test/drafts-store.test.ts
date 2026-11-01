@@ -59,6 +59,22 @@ describe('the drafts store', () => {
     expect((await frozen(q.id, ONE)).n).toBe(1);
   });
 
+  test('two freezes at once take two numbers, and neither is lost', async () => {
+    const p = await createProject({ source: ONE });
+    const [a, b] = await Promise.all([
+      freezeDraft(p.id, ONE, 'one'),
+      freezeDraft(p.id, TWO, 'two'),
+    ]);
+    expect(a?.result).toBe('frozen');
+    expect(b?.result).toBe('frozen');
+    const listed = await listDrafts(p.id);
+    expect(listed.map((row) => row.n)).toEqual([2, 1]);
+    expect(new Set(listed.map((row) => row.note))).toEqual(new Set(['one', 'two']));
+    const textOf = new Map(listed.map((row) => [row.note, row.n]));
+    expect(await draftText(p.id, textOf.get('one') as number)).toBe(ONE);
+    expect(await draftText(p.id, textOf.get('two') as number)).toBe(TWO);
+  });
+
   test('the same text frozen again gets a new number and the same ID', async () => {
     const p = await createProject({ source: ONE });
     const a = await frozen(p.id, ONE);

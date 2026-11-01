@@ -51,9 +51,24 @@ async function scriptWith(page: Page, text: string) {
   await expect.poll(() => wholeText(page)).toBe(text);
 }
 
+/**
+ * Runs a command from the palette. In Firefox, the palette now and then lets an Enter go by with
+ * its row highlighted (seen with Take snapshot… too, on a script opened at start, so not the
+ * drafts' commands; DEFERRED): it is closed and the command run again.
+ */
+async function command(page: Page, title: string) {
+  await expect(async () => {
+    if (await palette(page).isVisible()) {
+      await page.keyboard.press('Escape');
+      await expect(palette(page)).toBeHidden({ timeout: 1000 });
+    }
+    await runCommand(page, title);
+  }).toPass({ timeout: 15_000 });
+}
+
 /** Start new draft…, with `note`, from the palette; the dialog closes. */
 async function startDraft(page: Page, note = '') {
-  await runCommand(page, 'Start new draft…');
+  await command(page, 'Start new draft…');
   await expect(startDialog(page)).toBeVisible();
   const field = startDialog(page).getByRole('textbox', { name: /^Note for Draft/ });
   await expect(field).toBeFocused();
@@ -65,38 +80,38 @@ async function startDraft(page: Page, note = '') {
 /** Opens the Drafts list, unless it shows already (its command is Close Drafts then). */
 async function openDrafts(page: Page) {
   if (await list(page).isVisible()) return;
-  await runCommand(page, 'Drafts…');
+  await command(page, 'Drafts…');
   await expect(list(page)).toBeVisible();
 }
 
 test.describe('drafts', () => {
-  test('Start new draft with a note shows Draft 1 in the list and Draft 2 in the status bar', async ({
+  test('Start new draft with a note shows Draft 01 in the list and Draft 02 in the status bar', async ({
     page,
     isMobile,
   }) => {
     await scriptWith(page, ONE);
-    if (!isMobile) await expect(statusDraft(page)).toHaveText('Draft 1');
-    await runCommand(page, 'Start new draft…');
+    if (!isMobile) await expect(statusDraft(page)).toHaveText('Draft 01');
+    await command(page, 'Start new draft…');
     // The first time, it says what a draft is.
     await expect(startDialog(page)).toContainText(
       'A draft is a version you name: Drafter keeps it exactly as it is, for good.',
     );
     await expect(startDialog(page)).toContainText(
-      'The text as it is now is kept as Draft 1, and you carry on writing in Draft 2.',
+      'The text as it is now is kept as Draft 01, and you carry on writing in Draft 02.',
     );
     await page.keyboard.insertText('sent to Sam for notes');
     await page.keyboard.press('Enter');
     await expect(startDialog(page)).toBeHidden();
     if (!isMobile) {
-      await expect(statusDraft(page)).toHaveText('Draft 2');
+      await expect(statusDraft(page)).toHaveText('Draft 02');
       await statusDraft(page).click();
     } else {
-      await runCommand(page, 'Drafts…');
+      await command(page, 'Drafts…');
     }
     await expect(list(page)).toBeVisible();
-    await expect(list(page).locator('.item.now')).toContainText('Draft 2');
+    await expect(list(page).locator('.item.now')).toContainText('Draft 02');
     await expect(list(page).locator('.item.now')).toContainText(
-      `Draft 2 begins — builds on Draft 1 (${short(ONE)})`,
+      `Draft 02 begins — builds on Draft 01 (${short(ONE)})`,
     );
     await expect(draftItem(page, 1)).toContainText(short(ONE));
     await expect(draftItem(page, 1)).toContainText('sent to Sam for notes');
@@ -107,9 +122,9 @@ test.describe('drafts', () => {
   test('the same text asks before a new number', async ({ page }) => {
     await scriptWith(page, ONE);
     await startDraft(page);
-    await runCommand(page, 'Start new draft…');
+    await command(page, 'Start new draft…');
     await expect(startDialog(page)).toContainText(
-      'This text is the same as Draft 1. Start Draft 2 anyway?',
+      'This text is the same as Draft 01. Start Draft 02 anyway?',
     );
     await expect(startDialog(page).getByRole('button', { name: 'Start anyway' })).toBeVisible();
     // Escape cancels, and nothing changes.
@@ -119,7 +134,7 @@ test.describe('drafts', () => {
     await expect(list(page).locator('[data-draft]')).toHaveCount(1);
   });
 
-  test('a work in progress opened from a file starts at Draft 1', async ({ page, isMobile }) => {
+  test('a work in progress opened from a file starts at Draft 01', async ({ page, isMobile }) => {
     await removePickers(page);
     await start(page);
     await page.getByRole('button', { name: 'Open', exact: true }).click();
@@ -132,13 +147,13 @@ test.describe('drafts', () => {
     });
     await showSource(page);
     await expect(editor(page)).toContainText('Ropes.');
-    if (!isMobile) await expect(statusDraft(page)).toHaveText('Draft 1');
+    if (!isMobile) await expect(statusDraft(page)).toHaveText('Draft 01');
     await openDrafts(page);
-    await expect(list(page).locator('.item.now')).toContainText('Draft 1');
+    await expect(list(page).locator('.item.now')).toContainText('Draft 01');
     await expect(list(page)).toContainText('No drafts yet.');
     await startDraft(page, 'as it came');
     await expect(draftItem(page, 1)).toContainText(short(TWO));
-    await expect(list(page).locator('.item.now')).toContainText('Draft 2');
+    await expect(list(page).locator('.item.now')).toContainText('Draft 02');
   });
 
   test('the palette opens a draft by its short ID', async ({ page }) => {
@@ -149,18 +164,42 @@ test.describe('drafts', () => {
     await expect(paletteInput(page)).toBeFocused();
     await page.keyboard.insertText(sha(ONE).slice(0, 5));
     const option = palette(page).getByRole('option', {
-      name: new RegExp(`^Draft 1 · ${short(ONE)} · `),
+      name: new RegExp(`^Draft 01 · ${short(ONE)} · `),
     });
     await expect(option).toBeVisible();
     await option.click();
     await expect(palette(page)).toBeHidden();
     await expect(reader(page)).toBeVisible();
     await expect(
-      reader(page).getByRole('heading', { name: `Draft 1 · ${short(ONE)} · read-only` }),
+      reader(page).getByRole('heading', { name: `Draft 01 · ${short(ONE)} · read-only` }),
     ).toBeVisible();
     await expect(reader(page).locator('[data-draft-text]')).toHaveText(ONE.replace(/\n$/, ''), {
       useInnerText: false,
     });
+  });
+
+  test('the palette finds a draft by its number: 2, 02, Draft 02', async ({ page }) => {
+    await scriptWith(page, ONE);
+    await startDraft(page);
+    await setText(page, TWO);
+    await startDraft(page);
+    for (const typed of ['draft 2', 'Draft 02']) {
+      await page.keyboard.press('ControlOrMeta+k');
+      await expect(paletteInput(page)).toBeFocused();
+      await page.keyboard.insertText(typed);
+      await expect(
+        palette(page).getByRole('option', { name: new RegExp(`^Draft 02 · ${short(TWO)} · `) }),
+      ).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(palette(page)).toBeHidden();
+    }
+    await openDrafts(page);
+    const filter = list(page).getByRole('searchbox', { name: 'Filter' });
+    for (const typed of ['2', '02', 'draft 2', 'Draft 02']) {
+      await filter.fill(typed);
+      await expect(list(page).locator('[data-draft]')).toHaveCount(1);
+      await expect(draftItem(page, 2)).toBeVisible();
+    }
   });
 
   test('Read shows the draft read-only beside the Source and a line can be copied across', async ({
@@ -171,9 +210,9 @@ test.describe('drafts', () => {
     await startDraft(page);
     await setText(page, TWO);
     await openDrafts(page);
-    await draftItem(page, 1).getByRole('button', { name: 'Read Draft 1' }).click();
+    await draftItem(page, 1).getByRole('button', { name: 'Read Draft 01' }).click();
     await expect(reader(page)).toBeVisible();
-    const text = reader(page).getByRole('textbox', { name: 'Text of Draft 1, read-only' });
+    const text = reader(page).getByRole('textbox', { name: 'Text of Draft 01, read-only' });
     await expect(text).toHaveAttribute('aria-readonly', 'true');
     await expect(text).toContainText('The gulls follow the wake.');
     // Beside the Source on a wide screen.
@@ -207,9 +246,12 @@ test.describe('drafts', () => {
     await setText(page, TWO);
     await startDraft(page);
     await openDrafts(page);
-    await draftItem(page, 2).getByRole('button', { name: 'More for Draft 2' }).click();
-    await page.getByRole('menuitem', { name: 'Compare with another draft' }).click();
-    await page.getByRole('menuitem', { name: new RegExp(`^Draft 1 · ${short(ONE)}`) }).click();
+    await draftItem(page, 2).getByRole('button', { name: 'More for Draft 02' }).click();
+    await page.getByRole('menuitem', { name: 'Compare with another draft…' }).click();
+    const picker = list(page).getByRole('group', { name: 'Compare Draft 02 with' });
+    const choice = picker.getByRole('button', { name: new RegExp(`^Draft 01 · ${short(ONE)}`) });
+    await expect(choice).toBeFocused();
+    await choice.click();
     const compare = page.locator('#panel-compare');
     await expect(compare).toBeVisible();
     await expect(compare).toContainText('Ropes.');
@@ -220,7 +262,7 @@ test.describe('drafts', () => {
     await startDraft(page);
     await setText(page, TWO);
     await openDrafts(page);
-    await draftItem(page, 1).getByRole('button', { name: 'Compare Draft 1 with now' }).click();
+    await draftItem(page, 1).getByRole('button', { name: 'Compare Draft 01 with now' }).click();
     await expect(page.locator('#panel-compare')).toContainText('EXT. PIER - DAY');
   });
 
@@ -228,7 +270,7 @@ test.describe('drafts', () => {
     await scriptWith(page, ONE);
     await startDraft(page, 'from Sam’s notes');
     await setText(page, TWO);
-    await runCommand(page, 'Take snapshot…');
+    await command(page, 'Take snapshot…');
     await expect(history(page)).toBeVisible();
     await expect(history(page).getByRole('textbox', { name: 'Label' })).toBeFocused();
     await page.keyboard.press('Enter');
@@ -236,14 +278,15 @@ test.describe('drafts', () => {
     await expect(options.first()).toBeVisible();
     const milestones = history(page).getByRole('region', { name: 'Drafts' });
     const milestone = milestones.getByRole('button', {
-      name: `Compare Draft 1 · ${short(ONE)} — from Sam’s notes with now`,
+      name: new RegExp(`^Draft 01 · ${short(ONE)} — from Sam’s notes \\d+ \\w+ 20\\d\\d`),
     });
     await expect(milestone).toBeVisible();
+    await expect(milestone).toHaveAccessibleDescription('Compare with now');
     // Compare with… on a snapshot offers the drafts too.
     await options.first().focus();
     await page.keyboard.press('c');
     const choice = history(page).getByRole('button', {
-      name: `Draft 1 · ${short(ONE)} — from Sam’s notes`,
+      name: `Draft 01 · ${short(ONE)} — from Sam’s notes`,
     });
     await expect(choice).toBeVisible();
     await choice.click();
@@ -257,15 +300,15 @@ test.describe('drafts', () => {
     await setText(page, TWO);
     await openDrafts(page);
     await draftItem(page, 1)
-      .getByRole('button', { name: 'Restore Draft 1 as a new draft' })
+      .getByRole('button', { name: 'Restore Draft 01 as a new draft' })
       .click();
     await expect.poll(() => wholeText(page)).toBe(ONE);
     await openDrafts(page);
-    await expect(draftItem(page, 2)).toContainText('before restoring Draft 1');
+    await expect(draftItem(page, 2)).toContainText('before restoring Draft 01');
     await expect(list(page).locator('.item.now')).toContainText(
-      `Draft 3 begins — from Draft 1 (${short(ONE)})`,
+      `Draft 03 begins — from Draft 01 (${short(ONE)})`,
     );
-    if (!isMobile) await expect(statusDraft(page)).toHaveText('Draft 3');
+    if (!isMobile) await expect(statusDraft(page)).toHaveText('Draft 03');
     // One undo brings back what it replaced.
     await showSource(page);
     await editor(page).click();
@@ -276,21 +319,21 @@ test.describe('drafts', () => {
   test('the status bar label is gone in Zen', async ({ page, isMobile }) => {
     test.skip(!!isMobile, 'a phone has no status bar');
     await scriptWith(page, ONE);
-    await expect(statusDraft(page)).toHaveText('Draft 1');
+    await expect(statusDraft(page)).toHaveText('Draft 01');
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await expect(statusDraft(page)).toHaveCount(0);
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
-    await expect(statusDraft(page)).toHaveText('Draft 1');
+    await expect(statusDraft(page)).toHaveText('Draft 01');
   });
 
   test('Close takes the tabs away', async ({ page }) => {
     await scriptWith(page, ONE);
     await startDraft(page);
     await openDrafts(page);
-    await draftItem(page, 1).getByRole('button', { name: 'Read Draft 1' }).click();
+    await draftItem(page, 1).getByRole('button', { name: 'Read Draft 01' }).click();
     await expect(reader(page)).toBeVisible();
-    await page.getByRole('button', { name: 'Close Draft 1' }).click();
+    await page.getByRole('button', { name: 'Close Draft 01' }).click();
     await expect(reader(page)).toHaveCount(0);
     await openDrafts(page);
     await page.getByRole('button', { name: 'Close Drafts' }).click();
@@ -313,10 +356,10 @@ test.describe('drafts', () => {
         return violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`);
       };
       expect(await check()).toEqual([]);
-      await draftItem(page, 1).getByRole('button', { name: 'Read Draft 1' }).click();
+      await draftItem(page, 1).getByRole('button', { name: 'Read Draft 01' }).click();
       await expect(reader(page)).toBeVisible();
       expect(await check()).toEqual([]);
-      await runCommand(page, 'Start new draft…');
+      await command(page, 'Start new draft…');
       await expect(startDialog(page)).toBeVisible();
       expect(await check()).toEqual([]);
     });
@@ -385,7 +428,7 @@ test.describe('a database from v0.23.1', () => {
       version: 20,
       stores: ['cuts', 'drafts', 'handles', 'projects', 'settings', 'snapshots', 'templates'],
     });
-    await runCommand(page, 'History…');
+    await command(page, 'History…');
     await expect(history(page).getByRole('option', { name: /Before the flood/ })).toBeVisible();
     await history(page).getByRole('button', { name: 'Close' }).click();
     await startDraft(page, 'after the upgrade');

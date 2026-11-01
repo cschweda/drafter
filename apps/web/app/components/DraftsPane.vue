@@ -9,6 +9,7 @@ import {
   KEPT_HERE,
   markerLine,
   shortId,
+  typedDraftNumber,
   wordsOf,
 } from '~/drafts/labels';
 import { type DraftRow, isIdPrefix, NOTE_MAX } from '~/drafts/store';
@@ -35,10 +36,10 @@ const filter = ref('');
 const shown = computed(() => {
   const typed = filter.value.trim().toLowerCase();
   if (!typed) return rows.value;
-  const number = /^(?:draft\s*)?(\d+)$/.exec(typed)?.[1];
+  const number = typedDraftNumber(typed);
   return rows.value.filter(
     (row) =>
-      (number !== undefined && String(row.n) === number) ||
+      row.n === number ||
       (isIdPrefix(typed) && row.id.startsWith(typed)) ||
       row.note.toLowerCase().includes(typed),
   );
@@ -131,6 +132,45 @@ function onNoteClose() {
   noteFor.value = null;
 }
 
+// Compare with another draft…: a list in the pane of the other drafts, as History's Compare with…
+// is (a submenu would be a popover on a phone, growing with every draft). Escape or Cancel goes back.
+const picking = shallowRef<DraftRow | null>(null);
+const pickList = ref<HTMLElement>();
+const choices = computed(() =>
+  picking.value ? rows.value.filter((other) => other.n !== picking.value?.n) : [],
+);
+
+// Another script's drafts: its picker goes.
+watch(rows, (now) => {
+  if (picking.value && !now.some((r) => r.key === picking.value?.key)) picking.value = null;
+});
+
+async function pickOther(row: DraftRow) {
+  picking.value = row;
+  await nextTick();
+  pickList.value?.querySelector<HTMLElement>('button')?.focus();
+}
+
+async function cancelPick() {
+  const was = picking.value;
+  picking.value = null;
+  await nextTick();
+  if (was) document.querySelector<HTMLElement>(`[data-draft="${was.n}"] button`)?.focus();
+}
+
+function pick(other: DraftRow) {
+  const row = picking.value;
+  picking.value = null;
+  if (row) void compareWith(row, other);
+}
+
+function onPickKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  event.stopPropagation();
+  void cancelPick();
+}
+
 // ---- The row's More menu ------------------------------------------------------------------------
 
 const menuFor = ref<string | null>(null);
@@ -145,13 +185,10 @@ function menuItems(row: DraftRow): DropdownMenuItem[][] {
   return [
     [
       {
-        label: 'Compare with another draft',
+        label: 'Compare with another draft…',
         icon: 'i-lucide-git-compare-arrows',
         disabled: others.length === 0,
-        children: others.map((other) => ({
-          label: `${compareLabel(other)}${other.note ? ` — ${other.note}` : ''}`,
-          onSelect: later(() => void compareWith(row, other)),
-        })),
+        onSelect: later(() => void pickOther(row)),
       },
     ],
     [
@@ -191,7 +228,25 @@ const metaOf = (row: DraftRow) =>
         </label>
       </div>
       <p v-if="readOnly" :id="`${uid}-why`" class="note">{{ readOnly }}</p>
-      <ol class="list" aria-label="Drafts">
+      <div
+        v-if="picking"
+        ref="pickList"
+        role="group"
+        :aria-labelledby="`${uid}-pick`"
+        class="pick"
+        @keydown="onPickKeydown"
+      >
+        <h3 :id="`${uid}-pick`" class="pick-title">Compare {{ draftName(picking.n) }} with</h3>
+        <ul>
+          <li v-for="other in choices" :key="other.key">
+            <button type="button" class="choice" @click="pick(other)">
+              {{ compareLabel(other) }}<template v-if="other.note"> — {{ other.note }}</template>
+            </button>
+          </li>
+        </ul>
+        <DButton @click="cancelPick">Cancel</DButton>
+      </div>
+      <ol v-else class="list" aria-label="Drafts">
         <li class="item now">
           <h3 :id="`${uid}-now`" class="heading">
             {{ draftName(current) }} <span class="now-mark">now</span>
@@ -255,11 +310,11 @@ const metaOf = (row: DraftRow) =>
           </div>
         </li>
       </ol>
-      <DEmpty v-if="rows.length === 0" icon="i-lucide-milestone">
+      <DEmpty v-if="!picking && rows.length === 0" icon="i-lucide-milestone">
         No drafts yet. Start new draft keeps the text as it is now as {{ draftName(current) }}, for
         good.
       </DEmpty>
-      <DEmpty v-else-if="shown.length === 0" icon="i-lucide-search">
+      <DEmpty v-else-if="!picking && shown.length === 0" icon="i-lucide-search">
         No draft matches “{{ filter.trim() }}”.
       </DEmpty>
     </template>
@@ -347,6 +402,42 @@ const metaOf = (row: DraftRow) =>
   background: var(--surface);
   list-style: none;
   font-variant-numeric: tabular-nums;
+}
+.pick {
+  margin: 0 16px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.pick-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.pick ul {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.choice {
+  width: 100%;
+  min-height: 30px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.choice:hover {
+  background: var(--overlay);
+}
+.choice:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 .item {
   display: flex;

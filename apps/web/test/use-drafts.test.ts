@@ -40,8 +40,9 @@ async function setup(text = ONE, options: { readOnly?: string; notKept?: string 
   views.push(view);
   const said: string[] = [];
   const events: string[] = [];
+  const open = { id: p.id };
   const deps: DraftsDeps = {
-    projectId: () => p.id,
+    projectId: () => open.id,
     text: () => view.state.doc.toString(),
     readOnly: () => options.readOnly ?? null,
     notKept: () => options.notKept ?? null,
@@ -55,7 +56,7 @@ async function setup(text = ONE, options: { readOnly?: string; notKept?: string 
   await drafts.load();
   const type = (insert: string) =>
     view.dispatch({ changes: { from: view.state.doc.length, insert }, userEvent: 'input.type' });
-  return { p, view, said, events, drafts, type };
+  return { p, view, said, events, drafts, type, open };
 }
 
 describe('the drafts session', () => {
@@ -71,7 +72,7 @@ describe('the drafts session', () => {
     expect(drafts.current.value).toBe(2);
     expect(drafts.rows.value.map((row) => [row.n, row.note])).toEqual([[1, 'sent to Sam']]);
     expect(drafts.rows.value[0]?.id).toBe(await hashText(ONE));
-    expect(said.at(-1)).toBe('Draft 1 is kept. You’re writing Draft 2 now.');
+    expect(said.at(-1)).toBe('Draft 01 is kept. You’re writing Draft 02 now.');
     type('More.\n');
     const version = drafts.version.value;
     expect(await drafts.start('')).toBe(true);
@@ -100,7 +101,7 @@ describe('the drafts session', () => {
     // The text as it was is Draft 2, noted; the editor has Draft 1's text in Draft 3.
     const rows = await listDrafts(p.id);
     expect(rows.map((row) => [row.n, row.note])).toEqual([
-      [2, 'before restoring Draft 1'],
+      [2, 'before restoring Draft 01'],
       [1, 'first'],
     ]);
     expect(await draftText(p.id, 2)).toBe(now);
@@ -109,7 +110,7 @@ describe('the drafts session', () => {
     expect(drafts.from.value).toEqual({ n: 1, id: one?.id });
     expect(await draftFrom(p.id)).toEqual({ n: 1, id: one?.id });
     expect(events).toEqual(['before-restore', 'replaced']);
-    expect(said.at(-1)).toBe('Draft 1’s text is now Draft 3. Undo brings back what it replaced.');
+    expect(said.at(-1)).toBe('Draft 01’s text is now Draft 03. Undo brings back what it replaced.');
     // The next draft frozen records where it came from.
     await drafts.start('');
     expect(drafts.rows.value[0]).toMatchObject({ n: 3, from: { n: 1, id: one?.id } });
@@ -176,6 +177,19 @@ describe('the drafts session', () => {
     expect(await drafts.start('')).toBe(false);
     expect(said.at(-1)).toBe('Not for a sample.');
     expect(drafts.rows.value).toEqual([]);
+  });
+
+  test('read takes the row and the text of the open script’s draft, whatever the list holds', async () => {
+    const { p, drafts, open } = await setup();
+    await drafts.start('mine');
+    const q = await createProject({ source: TWO });
+    await freezeDraft(q.id, TWO, 'theirs');
+    // Another script is open, and the list hasn't been read again yet: it still holds p's Draft 01.
+    open.id = q.id;
+    expect(drafts.rows.value[0]?.projectId).toBe(p.id);
+    await drafts.read(1);
+    expect(drafts.reading.value?.row).toMatchObject({ projectId: q.id, n: 1, note: 'theirs' });
+    expect(drafts.reading.value?.text).toBe(TWO);
   });
 
   test('read opens the draft read-only', async () => {
