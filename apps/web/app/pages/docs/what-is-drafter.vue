@@ -270,7 +270,12 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         <li>
           <strong>Open source.</strong> The code is MIT-licensed and
           <a :href="REPO" target="_blank" rel="noopener noreferrer">on GitHub</a>, for anyone to
-          read. It is written from scratch, with no code from any other screenwriting app.
+          read. It is written from scratch, with no code from any other screenwriting app, and
+          audits check that it stays so:
+          <a :href="repoHref('docs/AUDITS.md')" target="_blank" rel="noopener noreferrer"
+            >Audits</a
+          >
+          lists every one, newest first.
         </li>
         <li>
           <strong>No forced updates.</strong> The web app updates when you reload. The desktop app
@@ -439,6 +444,11 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a :href="repoHref('docs/DEVELOPMENT.md')" target="_blank" rel="noopener noreferrer"
             >Developing Drafter</a
           >: building it, the packages, and releasing.
+        </li>
+        <li>
+          <a :href="repoHref('docs/AUDITS.md')" target="_blank" rel="noopener noreferrer"
+            >Audits</a
+          >: every security, clean-room, and accessibility audit, newest first.
         </li>
         <li>
           <a :href="repoHref('docs/ROADMAP.md')" target="_blank" rel="noopener noreferrer"

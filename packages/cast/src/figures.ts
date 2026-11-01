@@ -14,7 +14,7 @@ import { type IsWord, mentions, type Presence, sceneBlocks } from './presence';
 export interface Character {
   /** The name in capitals: names that differ only in case are one character. */
   key: string;
-  /** As first typed: a forced `@McCLANE` keeps its capitals. */
+  /** As first typed: a forced `@McBRIDE` keeps its capitals. */
   name: string;
   /** 0 for the first to have a cue, 1 for the next, and so on. */
   order: number;

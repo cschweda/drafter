@@ -39,7 +39,10 @@ export class FdxError extends Error {
 /**
  * The elements of a Final Draft file that hold its formatting and settings rather than its
  * writing: page layout, element settings, header and footer, fonts, smart type lists, revisions,
- * macros, and the like. They are reported by name in `ignored`, not brought in as notes.
+ * macros, and the like. They are reported by name in `ignored`, not brought in as notes. The
+ * names come from the structure of Final Draft's own published sample scripts, supplied by the
+ * maintainer for structure only and never committed (docs/DECISIONS.md, "Final Draft settings
+ * elements"); none of their text is used.
  */
 export const IGNORED: ReadonlySet<string> = new Set([
   'ElementSettings',

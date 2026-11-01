@@ -19,7 +19,7 @@ describe('presence', () => {
     });
     // The dual pair: both sides speak.
     expect(presence('TOM', 4)?.speaking).toBe(true);
-    expect(presence('MCCLANE', 4)).toMatchObject({ speaking: true, speeches: 1, words: 2 });
+    expect(presence('MCBRIDE', 4)).toMatchObject({ speaking: true, speeches: 1, words: 2 });
   });
 
   test('a name in the action in capitals puts them in', () => {
@@ -34,7 +34,7 @@ describe('presence', () => {
     expect(presence('WILL', 10)?.firstMention).toBe(doc.source.indexOf("WILL'S truck"));
     expect(presence('WILL', 1)?.firstMention).toBe(doc.source.indexOf('WILL (40s)'));
     // As the cue spells it, with a possessive.
-    expect(scenesOf(cast, 'MCCLANE')).toEqual([4, 8, 10]);
+    expect(scenesOf(cast, 'MCBRIDE')).toEqual([4, 8, 10]);
   });
 
   test('Tom capitalised counts', () => {
@@ -84,13 +84,13 @@ describe('presence', () => {
       'WILL',
       'ANN',
       'ANN LEE',
-      'MCCLANE',
+      'MCBRIDE',
       'TOM',
       'THE DRIVER',
     ]);
-    expect(cast.characters.find((c) => c.key === 'MCCLANE')).toEqual({
-      key: 'MCCLANE',
-      name: 'McCLANE',
+    expect(cast.characters.find((c) => c.key === 'MCBRIDE')).toEqual({
+      key: 'MCBRIDE',
+      name: 'McBRIDE',
       order: 5,
     });
     expect(cast.characters.find((c) => c.key === 'WILL')?.order).toBe(0);
@@ -136,7 +136,7 @@ describe('presence', () => {
   test('undefined from isWord reads as a word', () => {
     const strict = build(HARBOR, { isWord: notKnown }).cast;
     expect(scenesOf(strict, 'TOM')).toEqual([2, 4, 11]);
-    expect(scenesOf(strict, 'MCCLANE')).toEqual([4, 10]);
+    expect(scenesOf(strict, 'MCBRIDE')).toEqual([4, 10]);
     expect(scenesOf(strict, 'ANN LEE')).toEqual([3, 14]);
     expect(scenesOf(strict, 'WILL')).toEqual([1, 7, 10, 13]);
   });

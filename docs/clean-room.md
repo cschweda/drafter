@@ -63,7 +63,16 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 
 **The short version: Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library.**
 
-On 27 October 2026 the whole repository was audited against these rules: `main` at commit `6af51a7`, and the branches about to merge into it (the desktop app). [The full audit](clean-room-audit.md) has the method and evidence for each check. It found:
+Drafter has been audited against these rules twice. [Audits](AUDITS.md) lists every audit, newest first.
+
+**1 November 2026** ([the full audit](clean-room-audit-2026-11-01.md)): everything added since the first audit, v0.3.1 to v0.24.0, on `main` at commit `aa6a817`, and the Story map plan about to merge. It found:
+
+- **Still no code from screenwriting software, and no Fountain or screenwriting package** among the 1,223 in the lockfile. The new packages (the Final Draft, Highland, and Fade In importers, the zip reader, version history, drafts and cuts) follow Drafter's own designs, and each file format's names come from public descriptions or files the maintainer owns, recorded in [`DECISIONS.md`](DECISIONS.md).
+- **No copied code from anywhere, and no GPL code in the app.** The new libraries (the spellchecker and its dictionaries, Markdown footnotes, Electron's updater) are general-purpose and permissive, and each is in [`docs/DEPENDENCIES.md`](DEPENDENCIES.md).
+- **Original test content.** Every Final Draft, Highland, and Fade In test file is synthetic, written by hand or made by Drafter's own code; none is anyone else's.
+- **Findings:** a film catchphrase the first audit removed came back in one test, and the source of 18 Final Draft settings element names wasn't recorded. Both are listed to fix, with a few smaller recommendations.
+
+**27 October 2026** ([the full audit](clean-room-audit-2026-10-27.md)): the whole repository, `main` at commit `6af51a7`, and the branches about to merge into it (the desktop app). It found:
 
 - **No code from screenwriting software.** Nothing names, ports, imports, or depends on another screenwriting or playwriting application or Fountain library. Of more than 700 installed packages, none is a Fountain or screenwriting package. The parser follows the [technical design](drafter-technical-design.md), not any existing parser.
 - **No copied code from anywhere.** No source file carries another project's license header or a note that it was adapted from elsewhere, nothing is vendored or minified, and the git history has no foreign files added and later removed. Every commit has one author.
@@ -72,4 +81,4 @@ On 27 October 2026 the whole repository was audited against these rules: `main` 
 
 Most of Drafter's code was written by an AI coding assistant working under these rules, which forbid reading other implementations, and reviewed by the maintainer.
 
-**Limits.** An audit finds copying that leaves traces. It can't prove that something was never read or remembered, or rule out what an AI model learned in training. It covers the commits named above, and it isn't legal advice.
+**Limits.** An audit finds copying that leaves traces. It can't prove that something was never read or remembered, or rule out what an AI model learned in training. Each covers the commits it names, and neither is legal advice.

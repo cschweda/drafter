@@ -257,8 +257,8 @@ describe('character names', () => {
     expect(ask(script('She sees Zed|'), true)).toBeNull();
     expect(ask(script('She sees MARGARET|'), true)).toBeNull();
     // A name that needs an @ to be a cue is a name all the same, in the middle of a line.
-    const odd = text('@McCLANE', 'Got it.', '', 'Then Mc|');
-    expect(ask(odd, true)).toEqual({ labels: ['McCLANE'], replaces: 'Mc' });
+    const odd = text('@McBRIDE', 'Got it.', '', 'Then Mc|');
+    expect(ask(odd, true)).toEqual({ labels: ['McBRIDE'], replaces: 'Mc' });
     // An apostrophe is part of a word, a space or punctuation is not.
     expect(ask(script('Marge, Mar|'), true)).toEqual({ labels: ['MARGARET'], replaces: 'Mar' });
     // With no word yet, the cast is listed after a space but not after punctuation.
@@ -274,16 +274,16 @@ describe('character names', () => {
 
   it('leaves out the names that need an @ unless the cue has one', () => {
     const script = (cue: string) =>
-      text('MARGARET', 'Hello.', '', '@McCLANE', 'Got it.', '', '@田中一郎', 'はい。', '', cue);
+      text('MARGARET', 'Hello.', '', '@McBRIDE', 'Got it.', '', '@田中一郎', 'はい。', '', cue);
     // Without an @ the cue would not be a cue: a name with lower case, or with no case at all.
     expect(ask(script('MC|'))).toBeNull();
     expect(ask(script('田中|'))).toBeNull();
     expect(ask(script('|'), true)).toEqual({ labels: ['MARGARET'], replaces: '' });
     // With one, any name will do.
-    expect(ask(script('@MC|'))).toEqual({ labels: ['McCLANE'], replaces: 'MC' });
+    expect(ask(script('@MC|'))).toEqual({ labels: ['McBRIDE'], replaces: 'MC' });
     expect(ask(script('@田中|'))).toEqual({ labels: ['田中一郎'], replaces: '田中' });
     expect(ask(script('@|'), true)).toEqual({
-      labels: ['田中一郎', 'McCLANE', 'MARGARET'],
+      labels: ['田中一郎', 'McBRIDE', 'MARGARET'],
       replaces: '',
     });
   });

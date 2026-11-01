@@ -255,11 +255,11 @@ Drafter's own packages are MIT.
 
 ### Clean-room verification
 
-On 27 October 2026 we audited Drafter at commit `6af51a7` on `main`, and the desktop branches about to merge, against the [clean-room rules](#clean-room-implementation). The audit found the following:
+On 27 October 2026 we audited Drafter at commit `6af51a7` on `main`, and the desktop branches about to merge, against the [clean-room rules](clean-room.md). The audit found the following:
 
 - **No copied code.** No source file carries another project's licence header or a note that it was adapted from somewhere else. No file is vendored or minified. The git history contains no foreign files that were added and later removed, and every commit has a single author.
-- **Nothing from screenwriting software.** No code names, ports or imports any other screenwriting application or Fountain library. The parser's structure and patterns follow the [technical design](docs/drafter-technical-design.md), not any existing parser we know of.
-- **General-purpose dependencies only.** Drafter uses open-source libraries such as CodeMirror, Vue, Nuxt, pdf-lib and Electron. Each is listed with its purpose in [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md). Of more than 700 installed packages, none is a Fountain or screenwriting package. No GPL code ships in the app.
+- **Nothing from screenwriting software.** No code names, ports or imports any other screenwriting application or Fountain library. The parser's structure and patterns follow the [technical design](drafter-technical-design.md), not any existing parser we know of.
+- **General-purpose dependencies only.** Drafter uses open-source libraries such as CodeMirror, Vue, Nuxt, pdf-lib and Electron. Each is listed with its purpose in [`docs/DEPENDENCIES.md`](DEPENDENCIES.md). Of more than 700 installed packages, none is a Fountain or screenwriting package. No GPL code ships in the app.
 - **Original test content.** The fixtures and samples were written for Drafter. A few test inputs reuse example names from the Fountain specification itself.
 
 Most of Drafter's code was written by an AI coding assistant working under these rules, which forbid it to read other implementations, and reviewed by the maintainer.

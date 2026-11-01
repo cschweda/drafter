@@ -88,7 +88,7 @@ const joined = ({ words, gaps }: Phrase) =>
 
 /**
  * The spellings `name` counts in, as text: in capitals; and, unless it is an ordinary word, with
- * the first letter of each word capitalised, and as the cue spells it (`McCLANE`).
+ * the first letter of each word capitalised, and as the cue spells it (`McBRIDE`).
  */
 export function spellings(name: string, word: boolean): string[] {
   return phrases(name, word).map(joined);
