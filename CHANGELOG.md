@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+**Drafts and Cuts.** Start new draft keeps your script as Draft 01, 02, and so on, each with an ID of its own, and Draft by draft shows how it changed. Cuts keeps everything you cut, for good, to browse for ideas, and replaces Deleted scenes. **The desktop app now writes `<script>.cuts.md` and a `<script> drafts` folder beside your script, without asking** (for `Boca.fountain`: `Boca.fountain.cuts.md` and `Boca drafts/`); Chrome and Edge ask once for the script's folder, and other browsers keep them in the browser, with Export drafts and cuts.
+
 ### Added
 
 - **Drafts.** **Start new draft…** (the Drafter menu, the command palette, the Drafts list, and the desktop app's File menu) keeps your script as it is now as a numbered draft, with an optional note such as "sent to Sam for notes", and you carry on writing the next one. Drafts are numbered Draft 01, Draft 02, and so on; a number is never used twice, and Drafter never starts a draft by itself. Any script works this way, including one written before this release or opened from Final Draft, Highland, or Fade In: what is there becomes Draft 01. Freezing text that hasn't changed since the last draft asks first.
@@ -20,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **Chrome and Edge on a computer** ask once, at your first new draft, for the folder that holds the script ("Keep drafts and cuts next to Boca.fountain?"), check that it does, and remember it for that script. Not now keeps them in the browser, and the lists' **Keep next to Boca.fountain…** asks again.
   - **Firefox, Safari, and phones** keep them in the browser. **Export drafts and cuts**, in both lists and in every browser, downloads `Boca drafts and cuts.zip`.
 - **Two computers.** Opening a script, or coming back to Drafter after a while away, reads its drafts folder and cuts file and adds what another computer kept, through Dropbox, Google Drive, OneDrive, or any synced folder: every cut once, and every draft. If both computers started a Draft 04, both are kept ("Draft 04 (from another computer)", written as `Boca – Draft 04 (2).fountain`), and a draft file changed in another program is listed as "changed outside Drafter". Opening a draft file itself opens it read-only, as it was frozen, says "This is Draft 03 of Boca.", and offers **Open a copy to keep writing** (Save asks where to keep the copy; the draft file is never changed) and **Open Boca instead**.
+- **When they can't be written beside the script**, the Drafts and Cuts lists say so instead of "Saved beside": "Couldn't write beside Boca.fountain: the disk is full.", with how to put it right, said once. One draft file that can't be written doesn't stop the rest, or the cuts file. A cut in the cuts file Drafter can't read (damaged by hand, say) is kept in the file as it is, never dropped, and a script renamed outside Drafter says once that its drafts and cuts now go under the new name.
 - **A help page, Drafts and cuts** (Help, and the desktop app's Help menu), in plain words.
 - 14 more trap documents, for hostile and damaged draft and cuts files (258 in all).
 - `.gitignore` also allows a `.env.sample` (as well as `.env.example`); every other `.env` file stays out of the repository.

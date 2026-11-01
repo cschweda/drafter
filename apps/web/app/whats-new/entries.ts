@@ -43,6 +43,25 @@ const release = (version: string): WhatsNewLink => ({
 /** Every item, newest first: by release, and in each release the most important first. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    id: 'v0.24.0-drafts-and-cuts',
+    date: '2026-11-01',
+    version: '0.24.0',
+    kind: 'New',
+    title: 'Drafts and Cuts: numbered drafts, and everything you cut, kept for good',
+    text: 'Start new draft keeps your script as Draft 01, 02, and so on, and Cuts keeps everything you cut (a whole speech or paragraph, or 12 or more words) for you to browse for ideas, in place of Deleted scenes. In the desktop app, and in Chrome or Edge, both are saved beside your script as well.',
+    link: { href: '/docs/drafts-and-cuts/', label: 'Drafts and cuts' },
+    banner: true,
+  },
+  {
+    id: 'v0.24.0-cuts-replaces-deleted-scenes',
+    date: '2026-11-01',
+    version: '0.24.0',
+    kind: 'Improved',
+    title: 'Cuts replaces Deleted scenes; nothing you cut ages out',
+    text: 'Deleted scenes could show a scene only while a snapshot still held it. Cuts keeps every cut with its own text, for good, in Markdown documents too.',
+    link: { href: '/docs/drafts-and-cuts/', label: 'Drafts and cuts' },
+  },
+  {
     id: 'v0.23.3-what-is-drafter',
     date: '2026-11-01',
     version: '0.23.3',

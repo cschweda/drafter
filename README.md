@@ -200,11 +200,10 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, and HTML and EPUB export. Drafts and Cuts (v0.24.0) is built and ready, but not yet released.
+**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, and Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut.
 
 **Next:**
 
-- **v0.24.0: Drafts and Cuts** (ready, not yet released). Numbered drafts, and a permanent file of everything you cut.
 - **v0.24.1: Story map**, a visual page of your script or play to send to anyone.
 - **v0.24.2: Drafter for Claude**, a local MCP server so Claude (or another AI app you use) can read your scripts, drafts, and cuts: storyboards, notes, and insights across a series. Nothing in Drafter itself ever calls an AI.
 - **v0.25.0: Classic Mode**, for writers who know Final Draft rather than Fountain. Enter and Tab move between elements the way most screenwriting apps work, and the left side looks like a script, with the marks hidden. It's not Fountain typing, but the file is still plain Fountain underneath. Fountain Mode stays the default, and one switch changes it.

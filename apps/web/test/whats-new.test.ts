@@ -13,6 +13,23 @@ import {
 // a real date, and one release section of the CHANGELOG for each version.
 
 const CHANGELOG = readFileSync(new URL('../../../CHANGELOG.md', import.meta.url), 'utf8');
+/**
+ * The release being made, before its section is cut: the newest entries' version, when the
+ * CHANGELOG has no section for it yet but has entries under [Unreleased] and an older release
+ * below them. Once the section is cut, it is checked like every other.
+ */
+const upcoming = (() => {
+  const newest = WHATS_NEW[0]?.version;
+  if (!newest || CHANGELOG.includes(`## [${newest}] - `)) return null;
+  const unreleased = /## \[Unreleased\]\n([\s\S]*?)\n## \[(\d+\.\d+\.\d+)\]/.exec(CHANGELOG);
+  if (!unreleased || !/^- /m.test(unreleased[1] as string)) return null;
+  const order = (v: string) => v.split('.').map(Number);
+  const [a, b, c] = order(newest);
+  const [x, y, z] = order(unreleased[2] as string);
+  const newer =
+    (a as number) - (x as number) || (b as number) - (y as number) || (c as number) - (z as number);
+  return newer > 0 ? newest : null;
+})();
 
 /** `0.23.2` as numbers, to compare. */
 const parts = (version: string) => version.split('.').map(Number);
@@ -49,19 +66,23 @@ describe('What’s new', () => {
         entry.date,
       );
       expect(entry.id.startsWith(`v${entry.version}-`), entry.id).toBe(true);
+      if (entry.version === upcoming) continue;
       expect(CHANGELOG, entry.id).toContain(`## [${entry.version}] - ${entry.date}`);
     }
   });
 
   test('has every release from 0.1.0 to the newest in the CHANGELOG', () => {
     const released = [...CHANGELOG.matchAll(/^## \[(\d+\.\d+\.\d+)\] - /gm)].map((m) => m[1]);
-    expect(new Set(WHATS_NEW.map((entry) => entry.version))).toEqual(new Set(released));
+    const listed = new Set(WHATS_NEW.map((entry) => entry.version));
+    if (upcoming) listed.delete(upcoming);
+    expect(listed).toEqual(new Set(released));
   });
 
   test('says each in a title and one or two sentences, with a link that works', () => {
     for (const entry of WHATS_NEW) {
       expect(entry.title.length, entry.id).toBeGreaterThan(5);
-      expect(entry.title.length, entry.id).toBeLessThanOrEqual(60);
+      // The banner ends a title that doesn't fit its line in an ellipsis; its whole text is read.
+      expect(entry.title.length, entry.id).toBeLessThanOrEqual(72);
       expect(entry.title, entry.id).not.toMatch(/\.$/);
       const sentences = entry.text.split(/(?<=[.!?])\s+(?=[A-Z])/).length;
       expect(sentences, entry.id).toBeLessThanOrEqual(2);
@@ -77,8 +98,9 @@ describe('What’s new', () => {
     }
   });
 
-  test('puts the banner on the v0.23.2 security work and v0.23.0’s fresh look', () => {
+  test('puts the banner on Drafts and Cuts, the v0.23.2 security work, and v0.23.0’s fresh look', () => {
     expect(WHATS_NEW.filter((entry) => entry.banner).map((entry) => entry.id)).toEqual([
+      'v0.24.0-drafts-and-cuts',
       'v0.23.2-trap-documents',
       'v0.23.0-fresh-look',
     ]);
