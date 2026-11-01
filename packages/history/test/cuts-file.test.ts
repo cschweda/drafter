@@ -1,7 +1,15 @@
 import { createHash } from 'node:crypto';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { type CutEntry, cutsFile, mergeCuts, readCutsFile } from '../src';
+import {
+  type CutEntry,
+  cutsFile,
+  MAX_CUTS_PER_ENTRY,
+  MAX_VERSIONS_PER_ID,
+  mergeCuts,
+  readCutsFile,
+  verifyCuts,
+} from '../src';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const hashText = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
@@ -259,4 +267,123 @@ describe('mergeCuts', () => {
       { numRuns: 300 },
     );
   });
+});
+
+describe('review fixes', () => {
+  test('a cut with no dates isn\u2019t written', () => {
+    const e = { ...scene('X.', 'X', '2026-11-01T10:00:00.000Z'), cuts: [] };
+    expect(() => cutsFile('Boca.fountain', [e])).toThrow(TypeError);
+  });
+
+  test('the same moment at another precision is one date, not two', () => {
+    const a = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z');
+    const b = { ...a, cuts: [{ at: '2026-11-03T10:00:00Z', draft: 12 }] };
+    expect(mergeCuts([a], [b])[0]?.cuts).toEqual([{ at: '2026-11-03T10:00:00.000Z', draft: 12 }]);
+    // Read from a file edited by hand, the date comes back as toISOString writes it.
+    const file = cutsFile('Boca.fountain', [a]).replace('10:00:00.000Z', '10:00:00Z');
+    const read = readCutsFile(file);
+    expect(read.entries[0]?.cuts[0]?.at).toBe('2026-11-03T10:00:00.000Z');
+    expect(mergeCuts(read.entries, [a])[0]?.cuts).toHaveLength(1);
+  });
+
+  test('an impossible date is skipped, and isn\u2019t written', () => {
+    const a = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z');
+    const file = cutsFile('Boca.fountain', [a]);
+    for (const at of ['2026-02-30T10:00:00.000Z', '2026-11-31T10:00:00.000Z']) {
+      expect(readCutsFile(file.replace('2026-11-03T10:00:00.000Z', at))).toEqual({
+        entries: [],
+        skipped: 1,
+      });
+      expect(() => cutsFile('Boca.fountain', [{ ...a, cuts: [{ at, draft: 1 }] }])).toThrow(
+        TypeError,
+      );
+    }
+  });
+
+  test('verifyCuts keeps only cuts whose text gives their id', async () => {
+    const good = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z');
+    const forged = { ...good, text: 'Something else.', title: 'Forged' };
+    expect(await verifyCuts([good, forged])).toEqual({ entries: [good], skipped: 1 });
+    expect(await verifyCuts([{ ...good, id: 'not hex' }])).toEqual({ entries: [], skipped: 1 });
+  });
+
+  test('a forged text under a good id never replaces the good text', async () => {
+    await fc.assert(
+      fc.asyncProperty(anyEntry, anyText, fc.boolean(), async (good, other, first) => {
+        fc.pre(other !== good.text);
+        // The forgery claims the good cut's id, and to be cut earlier, so it would win unverified.
+        const forged: CutEntry = {
+          ...good,
+          text: other,
+          cuts: [{ at: '2020-01-01T00:00:00.000Z', draft: 1 }],
+        };
+        const mine = await verifyCuts([good]);
+        const theirs = await verifyCuts([forged]);
+        expect(theirs).toEqual({ entries: [], skipped: 1 });
+        const merged = first
+          ? mergeCuts(mine.entries, theirs.entries)
+          : mergeCuts(theirs.entries, mine.entries);
+        expect(merged).toHaveLength(1);
+        expect(merged[0]?.text).toBe(good.text);
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  test('caps the dates per cut and the versions of one cut', () => {
+    const a = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z');
+    const many = Array.from({ length: MAX_CUTS_PER_ENTRY + 1 }, (_, i) => ({
+      at: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(),
+      draft: 1,
+    }));
+    const json = JSON.stringify({ ...a, cuts: many });
+    expect(readCutsFile(`<!-- drafter-cut ${json} -->\n`)).toEqual({ entries: [], skipped: 1 });
+    const exact = JSON.stringify({ ...a, cuts: many.slice(1) });
+    expect(readCutsFile(`<!-- drafter-cut ${exact} -->\n`).entries).toHaveLength(1);
+    // A merge never holds more dates than the cap, keeping the newest.
+    const left = { ...a, cuts: many.slice(0, MAX_CUTS_PER_ENTRY) };
+    const right = { ...a, cuts: many.slice(1) };
+    const merged = mergeCuts([left], [right])[0] as CutEntry;
+    expect(merged.cuts).toHaveLength(MAX_CUTS_PER_ENTRY);
+    expect(merged.cuts.at(-1)).toEqual(many.at(-1));
+    // Versions past the cap are ignored.
+    const versions = Array.from({ length: MAX_VERSIONS_PER_ID + 5 }, (_, i) => ({
+      ...a,
+      cuts: [{ at: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(), draft: 1 }],
+    }));
+    expect(mergeCuts(versions, [])[0]?.cuts).toHaveLength(MAX_VERSIONS_PER_ID);
+  });
+
+  test(
+    'merges hostile duplicate ids in linear time',
+    () => {
+      const big = 'x'.repeat(200_000);
+      const sameId = scaling(
+        (n) =>
+          Array.from({ length: n }, (_, i) => ({
+            id: 'a'.repeat(64),
+            title: `T${i}`,
+            text: big,
+            kind: 'fountain' as const,
+            cuts: [{ at: '2026-11-03T10:00:00.000Z', draft: (i % 50) + 1 }],
+            where: { after: null, before: null },
+          })),
+        (entries) => mergeCuts(entries, entries),
+        2_000,
+        3,
+      );
+      expect(sameId.growth).toBeLessThan(MAX_GROWTH);
+      const distinct = scaling(
+        (n) =>
+          Array.from({ length: n }, (_, i) =>
+            scene(`Scene ${i}.`, `S${i}`, new Date(Date.UTC(2026, 0, 1) + i).toISOString()),
+          ),
+        (entries) => mergeCuts(entries, entries),
+        5_000,
+        3,
+      );
+      expect(distinct.growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 });

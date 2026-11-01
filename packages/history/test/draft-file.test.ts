@@ -3,7 +3,14 @@ import { parse } from '@drafter/fountain';
 import { readMarkdownMeta } from '@drafter/markdown';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { type DraftFacts, draftFile, draftFileName, readDraftFile, type WorkKind } from '../src';
+import {
+  cleanWorkName,
+  type DraftFacts,
+  draftFile,
+  draftFileName,
+  readDraftFile,
+  type WorkKind,
+} from '../src';
 
 const hashText = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -76,6 +83,36 @@ describe('draftFileName', () => {
     for (const n of [0, -1, 1.5, Number.NaN]) {
       expect(() => draftFileName('Boca', n, 'fountain')).toThrow(RangeError);
     }
+  });
+});
+
+describe('cleanWorkName', () => {
+  test('replaces what a file name can\u2019t hold', () => {
+    expect(draftFileName('Boca: the "movie"?', 1, 'fountain')).toBe(
+      'Boca_ the _movie__ – Draft 01.fountain',
+    );
+    expect(cleanWorkName('a/b\\c*d<e>f|g')).toBe('a_b_c_d_e_f_g');
+    expect(cleanWorkName('a\u0000b\u001fc\u007fd\te')).toBe('a_b_c_d_e');
+  });
+
+  test('drops leading dots and trailing dots and spaces', () => {
+    expect(cleanWorkName('.hidden')).toBe('hidden');
+    expect(cleanWorkName('. .x')).toBe('x');
+    expect(cleanWorkName('Boca. ')).toBe('Boca');
+  });
+
+  test('refuses "..", and a name with nothing left', () => {
+    for (const bad of ['..', 'a..b', '../etc', '', '   ', '.', '...']) {
+      expect(() => cleanWorkName(bad)).toThrow(RangeError);
+      expect(() => draftFileName(bad, 1, 'fountain')).toThrow(RangeError);
+    }
+  });
+
+  test('caps the length without splitting a character', () => {
+    expect(cleanWorkName('x'.repeat(500))).toBe('x'.repeat(120));
+    const clef = cleanWorkName('𝄞'.repeat(100));
+    expect(clef).toBe('𝄞'.repeat(60));
+    expect(cleanWorkName(`${'x'.repeat(119)}𝄞`)).toBe('x'.repeat(119));
   });
 });
 
@@ -222,7 +259,7 @@ describe('Markdown draft files', () => {
   });
 
   test('a document’s own trailing comment is merged, and the text comes back exactly', () => {
-    const text = 'The pier.\n\n<!-- drafter { "draft": 2, "keep": "me" } -->\n';
+    const text = 'The pier.\n\n<!-- drafter { "v": 2, "keep": "me" } -->\n';
     const file = draftFile(text, facts(text), kind);
     expect(file.match(/<!-- drafter/g)).toHaveLength(1);
     expect(readMarkdownMeta(file).meta).toMatchObject({ keep: 'me', draft: 3 });
@@ -241,6 +278,65 @@ describe('Markdown draft files', () => {
       expect(back.facts).toBeNull();
       expect((back as { problem: string }).problem).toMatch(/\S/);
       expect(back.text).toBe(file);
+    }
+  });
+});
+
+describe('freezing again, dates, and the byte order mark', () => {
+  for (const kind of ['fountain', 'markdown'] as const) {
+    test(`a ${kind} draft file frozen 30 times over stays a bounded size beyond its text`, () => {
+      let text =
+        kind === 'fountain'
+          ? 'INT. FERRY - DAWN\n\n/* drafter\n{"template":"stage-play"}\n*/\n'
+          : 'The pier.\n\n<!-- drafter {"keep":"me"} -->\n';
+      for (let round = 1; round <= 30; round++) {
+        const f = facts(text, { draft: round, note: `round ${round}` });
+        const file = draftFile(text, f, kind);
+        expect(readDraftFile(file, kind)).toEqual({ text, facts: f });
+        expect(hashText(text)).toBe(f.id);
+        // The block is the facts and the writer's own keys, never the old blocks again.
+        expect(file.length - text.length).toBeLessThan(400);
+        if (kind === 'fountain') expect(parse(file).meta).toMatchObject({ template: 'stage-play' });
+        else expect(readMarkdownMeta(file).meta).toMatchObject({ keep: 'me' });
+        text = file;
+      }
+    });
+  }
+
+  test('a date is read as the moment it names, whatever its precision', () => {
+    const text = 'Nell.';
+    const good = draftFile(text, facts(text), 'fountain');
+    const back = readDraftFile(good.replace('14:05:00.000Z', '14:05:00Z'), 'fountain');
+    expect(back.facts?.frozen).toBe('2026-11-03T14:05:00.000Z');
+    expect(
+      readDraftFile(good.replace('14:05:00.000Z', '14:05:00.5Z'), 'fountain').facts?.frozen,
+    ).toBe('2026-11-03T14:05:00.500Z');
+  });
+
+  test('an impossible date is a problem, and isn\u2019t written', () => {
+    const text = 'Nell.';
+    const good = draftFile(text, facts(text), 'fountain');
+    for (const at of [
+      '2026-02-30T10:00:00.000Z',
+      '2026-13-01T10:00:00.000Z',
+      '2026-11-03T24:30:00.000Z',
+    ]) {
+      const back = readDraftFile(good.replace('2026-11-03T14:05:00.000Z', at), 'fountain');
+      expect(back.facts).toBeNull();
+      expect(() => draftFile(text, facts(text, { frozen: at }), 'fountain')).toThrow(TypeError);
+    }
+    // Written by Drafter means written as toISOString writes it.
+    expect(() =>
+      draftFile(text, facts(text, { frozen: '2026-11-03T14:05:00Z' }), 'fountain'),
+    ).toThrow(TypeError);
+  });
+
+  test('a text that starts with a byte order mark keeps it', () => {
+    for (const kind of ['fountain', 'markdown'] as const) {
+      const text = '\uFEFFINT. FERRY - DAWN\n';
+      const back = readDraftFile(draftFile(text, facts(text), kind), kind);
+      expect(back).toEqual({ text, facts: facts(text) });
+      expect(hashText(back.text)).toBe(hashText(text));
     }
   });
 });

@@ -7,6 +7,7 @@
 
 import { commentJson } from '@drafter/markdown';
 import type { WorkKind } from './draft-file';
+import { isCanonicalIso, isoInstant } from './iso';
 
 /** One cut: a piece of text that left the work, and every time it did. */
 export interface CutEntry {
@@ -28,34 +29,43 @@ export interface CutEntry {
 const COMMENT_OPENER = '<!-- drafter-cut ';
 const COMMENT_CLOSER = ' -->';
 
+/**
+ * The most dates one cut keeps. Reading refuses an entry with more, and a merge keeps the newest
+ * this many. A writer cutting the same text a thousand times is far past anything real.
+ */
+export const MAX_CUTS_PER_ENTRY = 1000;
+/**
+ * The most versions of one cut (entries with the same ID) a merge looks at. Each side of a merge
+ * has one per ID when it comes from Drafter; more are a damaged or hostile file, and past this
+ * many the rest are ignored.
+ */
+export const MAX_VERSIONS_PER_ID = 64;
+
 const ID = /^[0-9a-f]{64}$/;
-const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const isIso = (at: unknown): at is string =>
-  typeof at === 'string' && ISO.test(at) && !Number.isNaN(Date.parse(at));
 const isStringOrNull = (s: unknown): s is string | null => s === null || typeof s === 'string';
 
-/** The newest date the entry was cut. */
-function latest(entry: CutEntry): string {
-  let at = '';
-  for (const cut of entry.cuts) if (cut.at > at) at = cut.at;
-  return at;
+/** The newest and earliest dates the entry was cut, found once. */
+function span(entry: CutEntry): { earliest: string; latest: string } {
+  let earliest = '';
+  let latest = '';
+  for (const cut of entry.cuts) {
+    if (earliest === '' || cut.at < earliest) earliest = cut.at;
+    if (cut.at > latest) latest = cut.at;
+  }
+  return { earliest, latest };
 }
 
-/** The earliest date the entry was cut. */
-function earliest(entry: CutEntry): string {
-  let at = '';
-  for (const cut of entry.cuts) if (at === '' || cut.at < at) at = cut.at;
-  return at;
-}
-
-/** Newest cut first; the same moment, by ID. */
-function newestFirst(a: CutEntry, b: CutEntry): number {
-  const la = latest(a);
-  const lb = latest(b);
-  if (la !== lb) return la > lb ? -1 : 1;
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+/** Entries newest cut first (the same moment, by ID), each entry's newest date found once. */
+function sortNewestFirst(entries: readonly CutEntry[]): CutEntry[] {
+  return entries
+    .map((entry) => ({ entry, latest: span(entry).latest }))
+    .sort((a, b) => {
+      if (a.latest !== b.latest) return a.latest > b.latest ? -1 : 1;
+      return a.entry.id < b.entry.id ? -1 : a.entry.id > b.entry.id ? 1 : 0;
+    })
+    .map(({ entry }) => entry);
 }
 
 /** "3 Nov 2026", in UTC so every computer writes the same file. */
@@ -171,7 +181,8 @@ function entryJson(entry: CutEntry): string {
 
 /**
  * The cuts file for a work (named by its whole file name, `Boca.fountain`): a header, then every
- * entry, newest cut first.
+ * entry, newest cut first. An entry with no dates, or a date not written as `toISOString` writes
+ * it, is refused with a TypeError: the file never holds an entry Drafter would skip.
  */
 export function cutsFile(work: string, entries: readonly CutEntry[]): string {
   const name = oneLine(work) || 'this work';
@@ -179,7 +190,18 @@ export function cutsFile(work: string, entries: readonly CutEntry[]): string {
     `# Cuts from ${name}`,
     `Everything cut from ${name} while writing, newest first. Drafter keeps this file next to the work and only ever adds to it. The comment after each cut holds it exactly, for Drafter to read back.`,
   ];
-  for (const entry of [...entries].sort(newestFirst)) {
+  for (const entry of entries) {
+    if (entry.cuts.length === 0)
+      throw new TypeError(`The cut "${oneLine(entry.title)}" has no dates.`);
+    for (const cut of entry.cuts) {
+      if (!isCanonicalIso(cut.at))
+        throw new TypeError(`Not a date as Drafter writes it: ${cut.at}`);
+    }
+    if (entry.putBack !== undefined && !isCanonicalIso(entry.putBack)) {
+      throw new TypeError(`Not a date as Drafter writes it: ${entry.putBack}`);
+    }
+  }
+  for (const entry of sortNewestFirst(entries)) {
     parts.push(
       `## ${oneLine(entry.title) || 'Untitled cut'}`,
       cutLine(entry),
@@ -198,11 +220,13 @@ function entryOf(value: unknown): CutEntry | null {
   if (typeof v.title !== 'string' || typeof v.text !== 'string') return null;
   if (v.kind !== 'fountain' && v.kind !== 'markdown') return null;
   if (!Array.isArray(v.cuts) || v.cuts.length === 0) return null;
+  if (v.cuts.length > MAX_CUTS_PER_ENTRY) return null;
   const cuts: CutEntry['cuts'] = [];
   for (const c of v.cuts as unknown[]) {
     if (c === null || typeof c !== 'object') return null;
-    const { at, draft } = c as Record<string, unknown>;
-    if (!isIso(at)) return null;
+    const { at: written, draft } = c as Record<string, unknown>;
+    const at = isoInstant(written);
+    if (at === null) return null;
     if (
       draft !== null &&
       !(typeof draft === 'number' && Number.isSafeInteger(draft) && draft >= 1)
@@ -214,7 +238,8 @@ function entryOf(value: unknown): CutEntry | null {
   const where = v.where as Record<string, unknown> | null;
   if (where === null || typeof where !== 'object' || Array.isArray(where)) return null;
   if (!isStringOrNull(where.after) || !isStringOrNull(where.before)) return null;
-  if (v.putBack !== undefined && !isIso(v.putBack)) return null;
+  const putBack = v.putBack === undefined ? undefined : isoInstant(v.putBack);
+  if (putBack === null) return null;
   const entry: CutEntry = {
     id: v.id,
     title: v.title,
@@ -223,7 +248,7 @@ function entryOf(value: unknown): CutEntry | null {
     cuts,
     where: { after: where.after, before: where.before },
   };
-  if (v.putBack !== undefined) entry.putBack = v.putBack as string;
+  if (putBack !== undefined) entry.putBack = putBack;
   return entry;
 }
 
@@ -260,51 +285,93 @@ export function readCutsFile(file: string): { entries: CutEntry[]; skipped: numb
   return { entries, skipped };
 }
 
-/** A stable order for two versions of one entry: the first cut, then the JSON. */
-function earlierVersion(a: CutEntry, b: CutEntry): CutEntry {
-  const ea = earliest(a);
-  const eb = earliest(b);
-  if (ea !== eb) return ea < eb ? a : b;
-  return entryJson(a) <= entryJson(b) ? a : b;
+/** The SHA-256 of the text's UTF-8 bytes, as lower-case hex (as the app's `hashText`). */
+async function sha256(text: string): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * The cuts whose text gives their ID (its SHA-256), and how many didn't. Run it on every list
+ * read from outside Drafter's own storage (a cuts file beside the work, from another computer, or
+ * edited by hand) before `mergeCuts`: a merge keeps one text per ID and can't hash, so an entry
+ * with someone else's text under a good cut's ID would otherwise take that cut's place. Async,
+ * because SHA-256 in the browser is (Web Crypto).
+ */
+export async function verifyCuts(
+  entries: readonly CutEntry[],
+): Promise<{ entries: CutEntry[]; skipped: number }> {
+  const kept: CutEntry[] = [];
+  let skipped = 0;
+  for (const entry of entries) {
+    if (ID.test(entry.id) && (await sha256(entry.text)) === entry.id) kept.push(entry);
+    else skipped++;
+  }
+  return { entries: kept, skipped };
+}
+
+/** One version of a cut, with what choosing among versions needs, worked out once. */
+interface Version {
+  entry: CutEntry;
+  earliest: string;
+  json: string;
+}
+
+/** The version first cut; the same moment, the smaller JSON. A total order, so any order of input agrees. */
+function earlier(a: Version, b: Version): Version {
+  if (a.earliest !== b.earliest) return a.earliest < b.earliest ? a : b;
+  return a.json <= b.json ? a : b;
 }
 
 /**
  * Two lists of cuts as one (two computers' copies of a cuts file, say): every entry of either, one
- * per ID, with every date it was cut on either side (once each, oldest first), the earliest Put
- * back, and the title, text and place of the version first cut. Newest cut first. The same
- * whichever way round, and merging again changes nothing.
+ * per ID, with every date it was cut on either side (once each, oldest first, the newest
+ * `MAX_CUTS_PER_ENTRY` kept), the earliest Put back, and the title, text and place of the version
+ * first cut. Newest cut first. The same whichever way round, and merging again changes nothing.
+ * Dates are compared as the moments they name. At most `MAX_VERSIONS_PER_ID` versions of one ID
+ * are looked at. Linear in the size of the lists (each version's JSON is made once).
+ *
+ * Both lists must be verified (`verifyCuts`) when either came from outside Drafter's storage.
  */
 export function mergeCuts(a: readonly CutEntry[], b: readonly CutEntry[]): CutEntry[] {
   const byId = new Map<string, CutEntry[]>();
   for (const entry of [...a, ...b]) {
     const list = byId.get(entry.id);
-    if (list) list.push(entry);
-    else byId.set(entry.id, [entry]);
+    if (!list) byId.set(entry.id, [entry]);
+    else if (list.length < MAX_VERSIONS_PER_ID) list.push(entry);
   }
   const merged: CutEntry[] = [];
   for (const versions of byId.values()) {
-    const base = versions.reduce(earlierVersion);
     const seen = new Map<string, { at: string; draft: number | null }>();
     let putBack: string | undefined;
+    let base: Version | null = null;
     for (const v of versions) {
-      for (const c of v.cuts) seen.set(`${c.at}|${c.draft}`, { at: c.at, draft: c.draft });
-      if (v.putBack !== undefined && (putBack === undefined || v.putBack < putBack)) {
-        putBack = v.putBack;
-      }
+      const cuts = v.cuts.map((c) => ({ at: isoInstant(c.at) ?? c.at, draft: c.draft }));
+      for (const c of cuts) seen.set(`${c.at}|${c.draft}`, c);
+      const back = v.putBack === undefined ? undefined : (isoInstant(v.putBack) ?? v.putBack);
+      if (back !== undefined && (putBack === undefined || back < putBack)) putBack = back;
+      const version: Version = {
+        entry: v,
+        earliest: span({ ...v, cuts }).earliest,
+        json: entryJson(v),
+      };
+      base = base === null ? version : earlier(base, version);
     }
-    const cuts = [...seen.values()].sort((x, y) =>
-      x.at !== y.at ? (x.at < y.at ? -1 : 1) : (x.draft ?? 0) - (y.draft ?? 0),
-    );
+    if (base === null) continue;
+    const cuts = [...seen.values()]
+      .sort((x, y) => (x.at !== y.at ? (x.at < y.at ? -1 : 1) : (x.draft ?? 0) - (y.draft ?? 0)))
+      .slice(-MAX_CUTS_PER_ENTRY);
+    const { entry: first } = base;
     const entry: CutEntry = {
-      id: base.id,
-      title: base.title,
-      text: base.text,
-      kind: base.kind,
+      id: first.id,
+      title: first.title,
+      text: first.text,
+      kind: first.kind,
       cuts,
-      where: { after: base.where.after, before: base.where.before },
+      where: { after: first.where.after, before: first.where.before },
     };
     if (putBack !== undefined) entry.putBack = putBack;
     merged.push(entry);
   }
-  return merged.sort(newestFirst);
+  return sortNewestFirst(merged);
 }

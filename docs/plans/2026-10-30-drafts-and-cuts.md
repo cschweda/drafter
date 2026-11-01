@@ -10,7 +10,7 @@
 
 **Spec:** `docs/drafter-drafts-and-cuts-design.md` (approved 2026-10-30; its 26 Calls bind).
 
-**Starts from:** main after v0.22.0 (Export as HTML and EPUB) is merged: it needs that release's zip writer in `@drafter/archive` (`zipStored`) and `@drafter/markdown`. Ships as v0.23.0.
+**Starts from:** main after v0.22.0 (Export as HTML and EPUB) is merged: it needs that release's zip writer in `@drafter/archive` (`zipStored`) and `@drafter/markdown`. Ships as v0.24.0 (it was planned as v0.23.0; the fresh look took that number).
 
 ## Global Constraints
 
@@ -30,7 +30,7 @@
 
 ## Review Focus
 
-1. **Two computers, one Dropbox folder:** a cuts file edited on two machines merges without losing or duplicating an entry, and a draft number frozen on both (Draft 4 here and Draft 4 there, different texts) never overwrites either file. → Task 3 (`mergeCutsFiles`, name clash), Task 7 (the writer).
+1. **Two computers, one Dropbox folder:** a cuts file edited on two machines merges without losing or duplicating an entry, and a draft number frozen on both (Draft 4 here and Draft 4 there, different texts) never overwrites either file. → Task 3 (`mergeCuts`, Task 1; name clash, Task 3), Task 7 (the writer).
 2. **A draft or cuts file edited outside Drafter** (a writer tidies `Boca.fountain.cuts.md` in a text editor, or changes a draft file): nothing crashes, the edited draft is listed "changed outside Drafter", the cuts file's readable entries are kept. → Task 3, Task 7.
 3. **Storage full while freezing a draft:** the freeze reports it, the current text is untouched, and the draft is not half-recorded. → Task 2.
 4. **First run on a long history** (1,000 snapshots, 300 scenes): the backfill of old cuts runs in the history worker, once, without a long task, and is resumable if the tab closes. → Task 4.
@@ -225,6 +225,7 @@ export async function exportDraftsAndCuts(projectId: string): Promise<Uint8Array
 - Web Chromium: `askForFolder()` runs `showDirectoryPicker`, checks the folder contains the script's file (`isSameEntry` over its entries), else explains and asks again; remembers it per project; the first freeze or cut that needs writing asks once ("Keep drafts and cuts next to Boca.fountain?"). Declined or other browsers: `where = 'browser'`, and the panes offer **Export drafts and cuts** (`files.download`).
 - Opening a work merges what's beside it: draft files verified by ID (a mismatch is listed "changed outside Drafter", kept), cuts merged by ID.
 - **Save As** to a new name or place writes the complete set again beside the new file (every draft file and the merged cuts file) and leaves the old ones; the project remembers the new names. A work whose file was renamed outside Drafter: on open, no folder of the new stem exists, so the full set is written beside it and the panes say so once.
+- **From the Task 1 review:** (a) Opening a draft file as a work (`Boca – Draft 03.fountain` itself) strips the draft keys (`draft`, `id`, `frozen`, `note`, `from`, `ownBlock`) from its metadata block before it becomes the editor text, so freezing it later starts clean. (`draftFile` also copes if they are left: it writes a fresh block after a block that already holds facts, instead of nesting.) (b) Every list of cuts read from outside Drafter's storage (the cuts file beside the work) goes through `verifyCuts` before `mergeCuts`, and what it skipped is counted with `readCutsFile`'s `skipped`; an unverified entry must never replace a verified one's text. (c) Draft and cuts files are decoded with `new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })`, as `drafter convert` does, so a byte order mark stays in the text and a draft's hash still matches. (d) The drafts folder and cuts file names use `cleanWorkName` (Task 1), as `draftFileName` does.
 - **Opening a draft file itself** (`Boca – Draft 03.fountain`, recognised by its block's `draft` and `id`) opens it as a normal script with a note bar: "This is Draft 3 of Boca. Open Boca instead?" (the button opens the work's file beside it if there is one).
 
 - [ ] **Step 1: Write the failing tests.** `beside.test.ts` (fake handles): `a freeze writes its draft file once`; `the cuts file is merged with what is on disk before writing` (an entry only on disk survives); `another computer's Draft 4 is kept as "(2)"`; `an edited draft file is listed as changed outside Drafter`; `the export zip holds the drafts folder and the cuts file` (read back with `listZip`). e2e `beside-web.spec.ts` (chromium): `granting the script's folder writes drafts and cuts beside it`; `picking a folder without the script asks again`; `declining keeps them in the browser and says so`; (firefox) `Export drafts and cuts downloads a zip`; `Save As writes the full set beside the new file and leaves the old`; `opening a draft file shows the note bar and Open Boca instead works`.
@@ -236,7 +237,7 @@ export async function exportDraftsAndCuts(projectId: string): Promise<Uint8Array
 ### Task 8: Docs, help, and the release gates
 
 **Files:**
-- Modify: `README.md` (What you can do today: drafts and cuts; status; roadmap; Formats mentions the drafts folder and cuts file), help pages (a "Drafts and cuts" page in the writer's words: what a draft is, starting one, Draft by draft, Cuts, where they're kept, two computers), `docs/DECISIONS.md` (every Call as it landed, with measured numbers), `docs/DEFERRED.md` (§10's list), `CHANGELOG.md` `[Unreleased]`, `docs/drafter-phase2-design.md` §22 (built), `docs/drafter-architecture.md`, `apps/web/app/about/tech.ts` + `docs/technical-details.md`, `packages/history/README.md`, `packages/markdown/README.md`, `docs/drafter-version-history-design.md` (a note that Cuts replaced Deleted scenes in v0.23.0)
+- Modify: `README.md` (What you can do today: drafts and cuts; status; roadmap; Formats mentions the drafts folder and cuts file), help pages (a "Drafts and cuts" page in the writer's words: what a draft is, starting one, Draft by draft, Cuts, where they're kept, two computers), `docs/DECISIONS.md` (every Call as it landed, with measured numbers), `docs/DEFERRED.md` (§10's list), `CHANGELOG.md` `[Unreleased]`, `docs/drafter-phase2-design.md` §22 (built), `docs/drafter-architecture.md`, `apps/web/app/about/tech.ts` + `docs/technical-details.md`, `packages/history/README.md`, `packages/markdown/README.md`, `docs/drafter-version-history-design.md` (a note that Cuts replaced Deleted scenes in v0.24.0)
 
 - [ ] **Step 1: Write the docs** above; README stays concise.
 - [ ] **Step 2: Full gates:** `set -e; pnpm install; pnpm -r --filter "./packages/*" build; pnpm check; pnpm -r typecheck; pnpm test` (re-run load-sensitive failures alone and record both), the web e2e on all five projects, `pnpm --filter @drafter/desktop e2e`.

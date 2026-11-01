@@ -93,9 +93,16 @@ export function readMarkdownMeta(text: string): {
  * with the text's own line break.
  */
 export function setMarkdownMeta(text: string, meta: Record<string, unknown>): string {
-  const line = `${OPENER}${commentJson(meta)}${CLOSER}`;
   const block = findMarkdownMeta(text);
-  if (block) return text.slice(0, block.from) + line + text.slice(block.to);
+  if (!block) return appendMarkdownMeta(text, meta);
+  return text.slice(0, block.from) + OPENER + commentJson(meta) + CLOSER + text.slice(block.to);
+}
+
+/**
+ * The text, one blank line, a new metadata block, and a line break, whatever the text ends with:
+ * a block already at its end stays as the writer's text, and the new one is read instead.
+ */
+export function appendMarkdownMeta(text: string, meta: Record<string, unknown>): string {
   const nl = lineBreakOf(text);
-  return `${text}${nl}${nl}${line}${nl}`;
+  return `${text}${nl}${nl}${OPENER}${commentJson(meta)}${CLOSER}${nl}`;
 }

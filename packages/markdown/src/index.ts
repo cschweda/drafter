@@ -1,5 +1,6 @@
 export { containerDepth, MAX_NESTING } from './depth';
 export {
+  appendMarkdownMeta,
   commentJson,
   findMarkdownMeta,
   type MarkdownMetaBlock,

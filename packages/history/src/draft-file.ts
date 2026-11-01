@@ -7,10 +7,13 @@
 // A text that already ends with its own metadata block (a script's template choice, say) has the
 // draft's facts merged into that block, so other apps and Drafter still read one block with every
 // key. The block as it was is kept, whole, in the merged block's `ownBlock`, and reading the file
-// puts it back, so the ID is of the text before merging.
+// puts it back, so the ID is of the text before merging. A block that already holds a draft's
+// facts (a draft file reopened and frozen again) isn't merged, or it would nest, doubling each
+// time: a fresh block goes after it with the writer's own keys and the new facts.
 
 import { type Doc, parse, setMeta } from '@drafter/fountain';
-import { findMarkdownMeta, setMarkdownMeta } from '@drafter/markdown';
+import { appendMarkdownMeta, findMarkdownMeta, setMarkdownMeta } from '@drafter/markdown';
+import { isCanonicalIso, isoInstant } from './iso';
 
 /** A frozen draft's facts. */
 export interface DraftFacts {
@@ -35,30 +38,56 @@ const FOUNTAIN_OPENER = '/* drafter';
 const FOUNTAIN_CLOSER = '*/';
 
 const ID = /^[0-9a-f]{64}$/;
-const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const LINE_BREAK = /[\r\n\u2028\u2029]/;
 
 const isDraftNumber = (n: unknown): n is number =>
   typeof n === 'number' && Number.isSafeInteger(n) && n >= 1;
 const isId = (id: unknown): id is string => typeof id === 'string' && ID.test(id);
-const isIso = (at: unknown): at is string =>
-  typeof at === 'string' && ISO.test(at) && !Number.isNaN(Date.parse(at));
+/** The longest work name in a file name, in UTF-16 units, before " – Draft NN.fountain". */
+export const MAX_WORK_NAME = 120;
 
-/** The draft's file name: `Boca – Draft 01.fountain`, two digits, three past 99. */
+/**
+ * The work's name made safe for a file or folder name on any system: every \ / : * ? " < > | and
+ * control character becomes `_`, leading dots and spaces and trailing dots and spaces go, and it
+ * is cut to `MAX_WORK_NAME` units without splitting a character. A name with `..` in it, or with
+ * nothing left, is refused with a RangeError.
+ */
+export function cleanWorkName(work: string): string {
+  if (work.includes('..')) throw new RangeError('A work\u2019s name can\u2019t hold "..".');
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it removes
+  let name = work.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '_');
+  name = name.replace(/^[. ]+/, '');
+  if (name.length > MAX_WORK_NAME) {
+    const high = name.charCodeAt(MAX_WORK_NAME - 1);
+    name = name.slice(0, high >= 0xd800 && high <= 0xdbff ? MAX_WORK_NAME - 1 : MAX_WORK_NAME);
+  }
+  let end = name.length;
+  while (end > 0 && (name[end - 1] === '.' || name[end - 1] === ' ')) end--;
+  name = name.slice(0, end);
+  if (name === '') throw new RangeError('A work\u2019s name has nothing a file name can hold.');
+  return name;
+}
+
+/**
+ * The draft's file name: `Boca – Draft 01.fountain`, two digits, three past 99, the work's name
+ * cleaned by `cleanWorkName`.
+ */
 export function draftFileName(work: string, n: number, kind: WorkKind): string {
   if (!isDraftNumber(n)) throw new RangeError(`Not a draft number: ${n}`);
-  return `${work} – Draft ${String(n).padStart(2, '0')}.${kind === 'fountain' ? 'fountain' : 'md'}`;
+  const ext = kind === 'fountain' ? 'fountain' : 'md';
+  return `${cleanWorkName(work)} – Draft ${String(n).padStart(2, '0')}.${ext}`;
 }
 
 /** What is wrong with these facts, or null when nothing is. */
-function factsProblem(value: unknown): string | null {
+function factsProblem(value: unknown, writing: boolean): string | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return 'The draft facts aren’t a set of named values.';
   }
   const v = value as Record<string, unknown>;
   if (!isDraftNumber(v.draft)) return 'The draft number isn’t a whole number from 1 up.';
   if (!isId(v.id)) return 'The draft ID isn’t 64 lower-case hex characters.';
-  if (!isIso(v.frozen)) return 'The date the draft was frozen isn’t a date.';
+  if (writing ? !isCanonicalIso(v.frozen) : isoInstant(v.frozen) === null)
+    return 'The date the draft was frozen isn’t a date.';
   if (typeof v.note !== 'string' || LINE_BREAK.test(v.note)) {
     return 'The draft’s note isn’t one line of text.';
   }
@@ -77,7 +106,7 @@ function factsOf(value: DraftFacts | Record<string, unknown>): DraftFacts {
   const facts: DraftFacts = {
     draft: v.draft as number,
     id: v.id as string,
-    frozen: v.frozen as string,
+    frozen: isoInstant(v.frozen) ?? (v.frozen as string),
     note: v.note as string,
   };
   if (v.from !== undefined) {
@@ -120,37 +149,43 @@ function ownBlockSpan(doc: Doc): { from: number; to: number } | null {
   return region ? region.span : null;
 }
 
+/** Whether a block already holds a draft's facts: the text is a draft file, reopened. */
+function holdsFacts(meta: Record<string, unknown>): boolean {
+  return 'draft' in meta || 'id' in meta || OWN_BLOCK in meta;
+}
+
 function fountainDraft(text: string, facts: DraftFacts): string {
   const doc = parse(text);
   const span = ownBlockSpan(doc);
-  if (span) {
-    const own = text.slice(span.from, span.to);
-    const [change] = setMeta(doc, {
-      ...withoutFacts(doc.meta as Record<string, unknown>),
-      ...factsOf(facts),
-      [OWN_BLOCK]: own,
-    });
+  const own = (doc.meta ?? {}) as Record<string, unknown>;
+  if (span && !holdsFacts(own)) {
+    const block = text.slice(span.from, span.to);
+    const [change] = setMeta(doc, { ...own, ...factsOf(facts), [OWN_BLOCK]: block });
     if (change && change.from === span.from && change.to === span.to) {
       return text.slice(0, change.from) + change.insert + text.slice(change.to);
     }
   }
-  // No block of its own: the text, one blank line, the block, a line break. Every `/` in the JSON
-  // is written `\/`, as `setMeta` does, so nothing in it can close the block.
+  // No block of its own, or one that already holds a draft's facts (a draft file reopened, whose
+  // block nested again would double each time): the text, one blank line, a fresh block with the
+  // text's own keys and these facts, a line break. Every `/` in the JSON is written `\/`, as
+  // `setMeta` does, so nothing in it can close the block.
   const nl = lineBreakOf(text);
-  const json = JSON.stringify({ v: 1, ...factsOf(facts) }).replaceAll('/', '\\/');
+  const keys = span ? withoutFacts(own) : {};
+  const json = JSON.stringify({ v: 1, ...keys, ...factsOf(facts) }).replaceAll('/', '\\/');
   return `${text}${nl}${nl}${FOUNTAIN_OPENER}${nl}${json}${nl}${FOUNTAIN_CLOSER}${nl}`;
 }
 
 function markdownDraft(text: string, facts: DraftFacts): string {
   const own = findMarkdownMeta(text);
-  if (own) {
-    return setMarkdownMeta(text, {
-      ...withoutFacts(own.meta),
-      ...factsOf(facts),
-      [OWN_BLOCK]: text.slice(own.from, own.to),
-    });
+  if (!own) return appendMarkdownMeta(text, { ...factsOf(facts) });
+  if (holdsFacts(own.meta)) {
+    return appendMarkdownMeta(text, { ...withoutFacts(own.meta), ...factsOf(facts) });
   }
-  return setMarkdownMeta(text, { ...factsOf(facts) });
+  return setMarkdownMeta(text, {
+    ...own.meta,
+    ...factsOf(facts),
+    [OWN_BLOCK]: text.slice(own.from, own.to),
+  });
 }
 
 /**
@@ -159,7 +194,7 @@ function markdownDraft(text: string, facts: DraftFacts): string {
  * TypeError: a draft file is never written that Drafter would call damaged.
  */
 export function draftFile(text: string, facts: DraftFacts, kind: WorkKind): string {
-  const problem = factsProblem(facts);
+  const problem = factsProblem(facts, true);
   if (problem) throw new TypeError(problem);
   return kind === 'fountain' ? fountainDraft(text, facts) : markdownDraft(text, facts);
 }
@@ -235,7 +270,7 @@ export function readDraftFile(file: string, kind: WorkKind): Read {
   const found = kind === 'fountain' ? findFountainBlock(file) : findMarkdownBlock(file);
   if (typeof found === 'string') return { text: file, facts: null, problem: found };
   const { meta } = found;
-  const problem = factsProblem(meta);
+  const problem = factsProblem(meta, false);
   if (problem) return { text: file, facts: null, problem };
   const own = meta[OWN_BLOCK];
   if (own !== undefined) {
