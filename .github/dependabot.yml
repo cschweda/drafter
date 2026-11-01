@@ -1,0 +1,38 @@
+# Dependabot (security audit 2026-11-01, F4). Weekly version updates for the pnpm workspace (one
+# lockfile at the root, which covers every package and app) and for the pinned GitHub Actions,
+# whose update PRs keep the full commit SHA with its tag in a comment. Minor and patch updates come
+# grouped, so a week brings a PR or two, not dozens; a major update comes on its own.
+#
+# Security updates are a repository setting (Settings → Code security → Dependabot security
+# updates), turned on by the maintainer; the groups below with `applies-to: security-updates` keep
+# those PRs few too. The workflow has no pull_request trigger, so these PRs run no CI here: run the
+# gates locally before merging one.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        update-types: [minor, patch]

@@ -62,8 +62,14 @@ export interface DesktopFilesBridge {
   readBeside(script: string, rel: string): Promise<Uint8Array | null>;
   /** The draft files' names in the drafts folder `folder` (`Boca drafts`) beside `script`, sorted. */
   listBeside(script: string, folder: string): Promise<string[]>;
-  /** The path on disk of a dropped (or input-picked) file; empty for one that has none. */
-  pathOfDropped(file: File): string;
+  /**
+   * The grant id of a file from the last real drop (the preload saw the browser's own drop event
+   * and told the main process its path); `''` for a file that wasn't in one, or has no place on
+   * disk. The page never sends a dropped file's path itself.
+   */
+  dropGrant(file: File): Promise<string>;
+  /** Claims a drop by its grant id, once: its path, granted like an Open's (`not-allowed` if not). */
+  claimDrop(id: string): Promise<string>;
   /**
    * Calls `onChange` (debounced, ~300 ms) when the file changes, including when another program
    * replaces it by renaming a new file over it. Returns the function that stops watching.

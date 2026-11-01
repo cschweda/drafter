@@ -16,8 +16,13 @@ export const CHANNELS = {
   filesReadBeside: 'drafter:files:read-beside',
   /** `(script, folder)`: the draft files' names in the drafts folder. */
   filesListBeside: 'drafter:files:list-beside',
-  /** preload → main: a dropped file's path, to be granted if it is a script (grants.ts). */
-  filesGrantDropped: 'drafter:files:grant-dropped',
+  /**
+   * preload → main, from the preload's own listener on a trusted `drop` event: the dropped files'
+   * paths. Answered with an opaque id for each; nothing is granted yet (file-handlers.ts).
+   */
+  filesDropped: 'drafter:files:dropped',
+  /** preload → main: the page claims a drop by its id; answered with its path, now granted. */
+  filesClaimDrop: 'drafter:files:claim-drop',
   /** preload → main: watch `(id, path)`; stop `(id)`. */
   filesWatch: 'drafter:files:watch',
   filesUnwatch: 'drafter:files:unwatch',

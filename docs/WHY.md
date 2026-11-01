@@ -97,7 +97,7 @@ The README's opening, as it read at v0.23.2, before it was cut down to one list.
 - **Open.** The code is MIT-licensed and on GitHub, and your script is a plain `.fountain` text file you own, so a lapsed licence can never lock you out of your own work.
 - **Private.** No cookies, no analytics, no tracking, and no telemetry. Your script never leaves your device: Drafter has no server that could receive it. See [Privacy](https://drafter.dev/docs/privacy/).
 - **Works offline.** Once it has loaded, Drafter runs with no connection, on a plane or a train.
-- **No forced updates.** The web app updates when you reload. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
+- **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Built for working writers, free.** Production features, the kind a script needs once it's greenlit, come to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers, OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. There is no paid version, and there won't be one.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
 

@@ -278,9 +278,10 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           lists every one, newest first.
         </li>
         <li>
-          <strong>No forced updates.</strong> The web app updates when you reload. The desktop app
-          asks GitHub once at start-up whether there’s a new version, never installs or restarts by
-          itself, and can be told not to check at all.
+          <strong>No forced updates.</strong> The web app updates when you reload, or the next time
+          you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up
+          whether there’s a new version, never installs or restarts by itself, and can be told not
+          to check at all.
         </li>
       </ul>
       <p>
@@ -313,9 +314,14 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a href="#traps">More below</a>.
         </li>
         <li>
-          <strong>Found a security problem?</strong> Please report it privately:
-          <a :href="repoHref('SECURITY.md')" target="_blank" rel="noopener noreferrer">SECURITY.md</a>
-          says how. Or email cschweda@gmail.com with the details. Never in a public issue.
+          <strong>Found a security problem?</strong> Please report it privately: choose
+          <strong>Report a vulnerability</strong> on the repository’s
+          <a :href="`${REPO}/security`" target="_blank" rel="noopener noreferrer">Security tab</a>
+          (<a :href="repoHref('SECURITY.md')" target="_blank" rel="noopener noreferrer"
+            >SECURITY.md</a
+          >
+          says what to include), or email cschweda@gmail.com with the details. Never in a public
+          issue.
         </li>
       </ul>
       <p>

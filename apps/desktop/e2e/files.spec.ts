@@ -14,6 +14,8 @@ import {
   answerDialogs,
   chooseMenuItem,
   dialogsAsked,
+  dispatchDropFromPage,
+  dropFiles,
   editor,
   expect,
   type Launched,
@@ -345,33 +347,33 @@ test('opens a dropped file', async ({ desktop, profile }) => {
   writeFileSync(path, 'Title: Dropped\n\nEXT. FIELD - DAY\n\nWind.\n');
   const app = await desktop();
   const { page } = app;
-  // A file from disk, as the OS hands one to a drop: a file input gives the page a real one.
-  await page.evaluate(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.id = 'e2e-drop-source';
-    input.hidden = true;
-    document.body.append(input);
-  });
-  await page.setInputFiles('#e2e-drop-source', path);
-  await page.evaluate(() => {
-    const input = document.getElementById('e2e-drop-source') as HTMLInputElement;
-    const file = input.files?.[0] as File;
-    input.remove();
-    const data = new DataTransfer();
-    data.items.add(file);
-    for (const type of ['dragenter', 'dragover', 'drop']) {
-      document.body.dispatchEvent(
-        new DragEvent(type, { dataTransfer: data, bubbles: true, cancelable: true }),
-      );
-    }
-  });
+  // A real drop, as the OS hands one over: the preload sees it and tells main.
+  await dropFiles(page, [path]);
   await expect(editor(page)).toContainText('EXT. FIELD - DAY');
   // It came with its path, so it saves in place, with no dialog.
   await typeAtEnd(page, '\nThe grass bends.\n');
   await saveNow(page);
   await expect.poll(() => text(path)).toContain('The grass bends.');
   expect(dialogsAsked(profile)).toEqual([]);
+});
+
+test('opens a drop the page dispatched itself unbound: main grants only what was really dropped', async ({
+  desktop,
+  profile,
+}) => {
+  const path = join(folder(profile), 'Made Up.md');
+  writeFileSync(path, '# Made up\n\nThe page dropped this itself.\n');
+  const app = await desktop();
+  const { page } = app;
+  await dispatchDropFromPage(page, path);
+  await expect(editor(page)).toContainText('The page dropped this itself.');
+  // Its text opened, but not its file: Save asks where, and the file is untouched.
+  answerDialogs(profile, [null]);
+  await typeAtEnd(page, '\nChanged.\n');
+  await saveNow(page);
+  await expect.poll(() => dialogsAsked(profile).length).toBe(1);
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save' });
+  expect(text(path)).toBe('# Made up\n\nThe page dropped this itself.\n');
 });
 
 test('says so when the file can’t be written, and leaves it as it was', async ({

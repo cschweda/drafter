@@ -221,9 +221,10 @@ function parts(cell: string): Part[] {
         plane or a train.
       </li>
       <li>
-        <strong>No forced updates.</strong> The web app updates when you reload. The desktop app asks
-        GitHub once at start-up whether there’s a new version, never installs or restarts by itself,
-        and can be told not to check at all.
+        <strong>No forced updates.</strong> The web app updates when you reload, or the next time you
+        open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether
+        there’s a new version, never installs or restarts by itself, and can be told not to check at
+        all.
       </li>
       <li>
         <strong>Built for working writers, free.</strong> Production features, the kind a script

@@ -311,6 +311,9 @@ test.describe('the command palette', () => {
     await expect(rows.first()).toHaveAttribute('data-highlighted', '');
   });
 
+  // Nuxt UI's UCommandPalette draws `labelHtml` with v-html; CommandPalette.vue's own `item-label`
+  // slot draws the label as text instead. This pins it (security audit 2026-11-01, F5), so a
+  // Nuxt UI update or a lost slot can't undo it silently.
   test('shows a scene named like HTML as text', async ({ page }) => {
     const alerts: string[] = [];
     page.on('dialog', (dialog) => {
@@ -327,6 +330,15 @@ test.describe('the command palette', () => {
     expect(await palette(page).locator('img').count()).toBe(0);
     // The label is text, whatever was typed to find it.
     await expect(scene.locator('mark')).toHaveCount(0);
+    await expect(scene.locator('.palette-label')).toHaveText(
+      'INT. <img src=x onerror=alert(1)> - DAY',
+    );
+    // Found by a word inside the tag, too, which Nuxt UI would highlight: still text, no image.
+    await query(page).fill('onerror');
+    await expect(scene).toBeVisible();
+    expect(await palette(page).locator('img').count()).toBe(0);
+    await expect(scene.locator('mark')).toHaveCount(0);
+    await query(page).fill('img');
     expect(alerts).toEqual([]);
     await expect(palette(page).locator('[role="option"][data-highlighted]')).toHaveCount(1);
     await page.keyboard.press('Enter');

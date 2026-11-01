@@ -15,8 +15,8 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { type FileEvent, fileHandlers } from '../src/file-handlers';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { type FileEvent, type FileHandlers, fileHandlers } from '../src/file-handlers';
 import { FileError } from '../src/files';
 import { Grants } from '../src/grants';
 
@@ -50,6 +50,15 @@ function fakeEvent(): FileEvent & { sent: unknown[][] } {
     on: () => sender,
   };
   return { sender, sent } as unknown as FileEvent & { sent: unknown[][] };
+}
+
+/**
+ * A real drop: the preload's own listener saw the native drop and told main its paths
+ * (`registerDrop`), and the page claims it by the grant id it was given, never by a path.
+ */
+async function drop(handlers: FileHandlers, event: FileEvent, path: string): Promise<string> {
+  const [id] = handlers.registerDrop(event, [path]);
+  return handlers.claimDrop(event, id);
 }
 
 /** The handlers over a grants file in `dir`, with dialogs that answer from `answers`. */
@@ -108,15 +117,70 @@ describe('what a page may read and write', () => {
     await writeFile(script, 'DROPPED');
     const other = join(dir, 'photo.jpg');
     await writeFile(other, 'JPEG');
-    // The preload hands main the path of a dropped File; the read that follows waits for it.
-    void handlers.grantDropped(event, script);
+    // The preload saw the drop and told main; the page claims it by its id, and gets the path.
+    expect(await drop(handlers, event, script)).toBe(script);
     expect((await handlers.read(event, script)).bytes).toEqual(bytes('DROPPED'));
-    void handlers.grantDropped(event, other);
+    expect(await codeOf(drop(handlers, event, other))).toBe('not-allowed');
     expect(await codeOf(handlers.read(event, other))).toBe('not-allowed');
-    void handlers.grantDropped(event, dir);
+    expect(await codeOf(drop(handlers, event, dir))).toBe('not-allowed');
     expect(await codeOf(handlers.read(event, dir))).toBe('not-allowed');
-    void handlers.grantDropped(event, join(dir, 'missing.fountain'));
-    expect(await codeOf(handlers.read(event, join(dir, 'missing.fountain')))).toBe('not-allowed');
+    const missing = join(dir, 'missing.fountain');
+    expect(await codeOf(drop(handlers, event, missing))).toBe('gone');
+    expect(await codeOf(handlers.read(event, missing))).toBe('not-allowed');
+  });
+
+  test('refuses a path the page sends as a drop: only a drop main was told of is granted', async () => {
+    const { handlers, event } = setUp();
+    const notes = join(dir, 'README.md');
+    await writeFile(notes, 'NOTES');
+    const script = join(dir, 'Any.fountain');
+    await writeFile(script, 'ANY');
+    // The page has no call that takes a dropped path: the old grant-dropped call is gone.
+    expect('grantDropped' in handlers).toBe(false);
+    // Claiming with a path, or with an id main never gave out, is refused, and grants nothing.
+    for (const asked of [notes, script, 'not-an-id', '', 42, null, { path: notes }]) {
+      expect(await codeOf(handlers.claimDrop(event, asked)), String(asked)).toBe('not-allowed');
+    }
+    expect(await codeOf(handlers.read(event, notes))).toBe('not-allowed');
+    expect(await codeOf(handlers.write(event, notes, bytes('X')))).toBe('not-allowed');
+    expect(await codeOf(handlers.read(event, script))).toBe('not-allowed');
+    expect(await readFile(notes, 'utf8')).toBe('NOTES');
+  });
+
+  test('a drop is claimed once, by the page it was dropped on, and soon', async () => {
+    const { handlers, event } = setUp();
+    const script = join(dir, 'Once.fountain');
+    await writeFile(script, 'ONCE');
+    const [id] = handlers.registerDrop(event, [script]);
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    // Another page (another window) can't claim it.
+    expect(await codeOf(handlers.claimDrop(fakeEvent(), id))).toBe('not-allowed');
+    expect(await handlers.claimDrop(event, id)).toBe(script);
+    // Used once.
+    expect(await codeOf(handlers.claimDrop(event, id))).toBe('not-allowed');
+    // One left unclaimed goes stale.
+    vi.useFakeTimers({ now: Date.now(), toFake: ['Date'] });
+    try {
+      const [late] = handlers.registerDrop(event, [script]);
+      vi.setSystemTime(Date.now() + 5 * 60_000);
+      expect(await codeOf(handlers.claimDrop(event, late))).toBe('not-allowed');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('takes only absolute paths from the drop, and only so many', async () => {
+    const { handlers, event } = setUp();
+    const script = join(dir, 'Many.fountain');
+    await writeFile(script, 'MANY');
+    // Anything that isn't a list of paths gets no ids.
+    for (const sent of [script, null, 42, [42], ['relative.fountain'], [`${dir}/a\0b`]]) {
+      expect(handlers.registerDrop(event, sent), String(sent)).toEqual(
+        Array.isArray(sent) ? [''] : [],
+      );
+    }
+    const ids = handlers.registerDrop(event, Array(300).fill(script));
+    expect(ids.filter(Boolean)).toHaveLength(64);
   });
 
   test('grants a dropped or named file by its real type, not the name of the link to it', async () => {
@@ -140,12 +204,12 @@ describe('what a page may read and write', () => {
     await symlink(script, toScript);
 
     for (const link of [toKey, toPhoto, toKeyViaLink]) {
-      void handlers.grantDropped(event, link);
+      expect(await codeOf(drop(handlers, event, link)), link).toBe('not-allowed');
       expect(await codeOf(handlers.read(event, link)), link).toBe('not-allowed');
       expect(await codeOf(handlers.grantScript(link)), link).toBe('not-allowed');
     }
     expect(await codeOf(handlers.read(event, key))).toBe('not-allowed');
-    void handlers.grantDropped(event, toScript);
+    expect(await drop(handlers, event, toScript)).toBe(toScript);
     expect((await handlers.read(event, toScript)).bytes).toEqual(bytes('REAL'));
   });
 
@@ -332,7 +396,7 @@ describe('what a page may read and write', () => {
     const imported = join(dir, 'The Call.fdx');
     await writeFile(imported, '<FinalDraft/>');
     // Dropped (or named on the command line): granted, and read …
-    void handlers.grantDropped(event, imported);
+    expect(await drop(handlers, event, imported)).toBe(imported);
     expect((await handlers.read(event, imported)).bytes).toEqual(bytes('<FinalDraft/>'));
     expect(await handlers.grantScript(imported)).toBe(imported);
     // … but never written: an import is a new script, saved as a .fountain.
@@ -399,7 +463,7 @@ describe('what a page may read and write', () => {
       const imported = join(dir, name);
       await writeFile(imported, 'PK');
       // Dropped or named: granted, and read …
-      void handlers.grantDropped(event, imported);
+      expect(await drop(handlers, event, imported), name).toBe(imported);
       expect((await handlers.read(event, imported)).bytes, name).toEqual(bytes('PK'));
       expect(await handlers.grantScript(imported), name).toBe(imported);
       // … but never written.

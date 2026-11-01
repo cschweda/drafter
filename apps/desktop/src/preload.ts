@@ -36,6 +36,40 @@ ipcRenderer.on(CHANNELS.filesChanged, (_event, id: unknown) => {
   if (typeof id === 'number') watchers.get(id)?.();
 });
 
+/**
+ * The files of the last real drop, by path: the grant id main gave each. A dropped file's path is
+ * known only here, in the renderer (Electron removed `File.path`), and only for a real file on disk.
+ * This listener is the preload's own, added before the page's scripts run, on the window in the
+ * capture phase, so it sees the drop first; and it takes only a trusted event, one the browser made
+ * from a real drop, never one a page dispatched.
+ */
+const dropped = new Map<string, Promise<string>>();
+window.addEventListener(
+  'drop',
+  (event) => {
+    if (!event.isTrusted) return;
+    dropped.clear();
+    const paths: string[] = [];
+    for (const file of Array.from(event.dataTransfer?.files ?? [])) {
+      try {
+        const path = webUtils.getPathForFile(file);
+        if (path) paths.push(path);
+      } catch {
+        // No place on disk: it opens from its bytes.
+      }
+    }
+    if (paths.length === 0) return;
+    const ids = invoke<string[]>(CHANNELS.filesDropped, paths).catch(() => [] as string[]);
+    paths.forEach((path, index) => {
+      dropped.set(
+        path,
+        ids.then((list) => (typeof list[index] === 'string' ? list[index] : '')),
+      );
+    });
+  },
+  true,
+);
+
 const files: DesktopFilesBridge = {
   showOpen: () => invoke(CHANNELS.filesShowOpen),
   showSave: (suggestedName, extension) => invoke(CHANNELS.filesShowSave, suggestedName, extension),
@@ -46,19 +80,18 @@ const files: DesktopFilesBridge = {
     invoke(CHANNELS.filesWriteBeside, script, rel, bytes, mode),
   readBeside: (script, rel) => invoke(CHANNELS.filesReadBeside, script, rel),
   listBeside: (script, folder) => invoke(CHANNELS.filesListBeside, script, folder),
-  // A dropped file's path is known only here, in the renderer (Electron removed `File.path`), and
-  // only for a real file on disk: a page can't make a File with a path. The main process is told,
-  // so it may grant it (if it is a script) before the page reads it; the read waits for that.
-  pathOfDropped: (file) => {
+  // A drop's grant id: only for a file in the last real drop, which the listener below saw and
+  // told main of before the page's own listeners ran. The page never hands main a path for a drop.
+  dropGrant: (file) => {
     let path = '';
     try {
       path = webUtils.getPathForFile(file);
     } catch {
-      return '';
+      return Promise.resolve('');
     }
-    if (path) invoke(CHANNELS.filesGrantDropped, path).catch(() => {});
-    return path;
+    return (path && dropped.get(path)) || Promise.resolve('');
   },
+  claimDrop: (id) => invoke(CHANNELS.filesClaimDrop, id),
   watch(path, onChange) {
     const id = ++lastWatch;
     watchers.set(id, onChange);

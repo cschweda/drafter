@@ -211,7 +211,10 @@ async function desktopApp(t: App, cwd: string): Promise<(args: string[]) => Prom
         throw new Error('not-allowed');
       },
       realPath: ipc((path: string) => handlers.realPath(event, path)),
-      pathOfDropped: () => '',
+      dropGrant: async () => '',
+      claimDrop: async () => {
+        throw new Error('not-allowed');
+      },
       watch: () => () => {},
     }),
   );
