@@ -247,6 +247,11 @@ p {
   opacity: 0.6;
   cursor: default;
 }
+/* "Drafter is up to date": news, not a caution, so the raised surface with an accent edge. */
+.updated {
+  --tone-bg: var(--raised);
+  --tone-border: var(--accent-text);
+}
 .updated-leave-active {
   transition: opacity 0.6s ease;
 }

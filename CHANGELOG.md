@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Paper pages.** The Script tab, Compare's Pages, and Show changes draw each page as a sheet of paper on a desk, at its full height, so the paper always runs to the bottom of the window. A new setting, **Page colour** (Paper or Dark), keeps the dark page for writing at night. Printing, the PDF, and every export are still on white paper.
 - **"Unsaved", right after the title.** While there are changes to save, a red dot and **Unsaved** sit after the script's title. Click it to save. After a save, **✓ Saved** shows for two seconds and fades. The tab's icon gets a red dot too, and the title keeps its "• ". On a phone, the dot shows alone.
-- **A Help menu at the top right**, with the help pages, the tour, the sample scripts, Check for updates…, and About Drafter. It used to be part of the Drafter menu.
+- **A Help menu at the top right**, with the help pages, the tour, Download the desktop app (on the web), the sample scripts, Check for updates…, and About Drafter. It used to be part of the Drafter menu.
 - **About Drafter checks for updates** with a button beside the version, and says what it found right there.
 - **About Drafter says who made it**: "Made by Christopher Schweda (cschweda) · metaincognita.com", with links that open in a new tab. It also says that Drafter™ and the Drafter logo are trademarks of Christopher Schweda. Every help page ends with the same credit line.
 - **The welcome says what Drafter promises**: free, with no catch, no login, ever, private (no cookies, no tracking), works offline, and Final Draft files in and out.

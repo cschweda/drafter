@@ -150,7 +150,7 @@ onMounted(() => {
       A few seconds after it starts, the desktop app asks GitHub once whether there’s a new version.
       It never installs or restarts by itself: it says a new version is ready, or available, and
       waits for you. Turn off <strong>Check for updates</strong> in Settings and it makes no network
-      request at all, unless you choose <strong>Help → Check for Updates…</strong>. See
+      request at all, unless you choose <strong>Help → Check for updates…</strong>. See
       <a href="/docs/privacy/#updates">Privacy</a>.
     </p>
 
@@ -172,12 +172,12 @@ onMounted(() => {
 .download-platform {
   margin: 24px 0 0;
   padding: 0 16px 4px;
-  border: 2px solid var(--line);
-  border-radius: 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--r);
 }
 /* The visitor's system: the same border, in the accent color, so nothing moves. */
 .download-platform[data-yours="true"] {
-  border-color: var(--heading);
+  border-color: var(--accent-text);
 }
 .download-platform h2 {
   margin-top: 16px;
@@ -193,8 +193,8 @@ onMounted(() => {
   display: inline-block;
   margin-bottom: 4px;
   padding: 8px 14px;
-  border: 1px solid var(--heading);
-  border-radius: 6px;
+  border: 1px solid var(--accent-text);
+  border-radius: var(--r-sm);
   font-weight: 600;
 }
 .download-detail {
