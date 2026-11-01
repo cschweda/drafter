@@ -1,20 +1,36 @@
 <script setup lang="ts">
 import { draftName } from '@drafter/history';
 import { draftNotice } from '~/beside/draft-open';
+import { useEditor } from '~/editor/session';
+import { sayOutline } from '~/outline/notice';
 import { pickAndOpen } from '~/storage/open';
 import { listProjects } from '~/storage/projects';
 import { useScript } from '~/storage/script';
 
 // The note bar over a draft file opened as a script (drafts-and-cuts design §4.2): "This is
-// Draft 03 of Boca. Open Boca instead?". The button opens the work: the script of that file in
-// this browser if there is one, else Open, to choose it (the browser, and the desktop app's
-// grants, can't reach a file beside another by its name alone).
+// Draft 03 of Boca. It is read-only, as it was frozen." The editor stays read-only while it shows.
+// Open a copy to keep writing makes the text editable: it is already a copy, never bound to the
+// draft file, so Save asks where to keep it. Open Boca instead opens the work: the script of that
+// file in this browser if there is one, else Open, to choose it (the browser, and the desktop
+// app's grants, can't reach a file beside another by its name alone).
 
 const script = useScript();
+const editor = useEditor();
 const shown = computed(() => {
   const notice = draftNotice.value;
   return notice && notice.projectId === script.project.value?.id ? notice : null;
 });
+watch(
+  () => shown.value?.readOnly === true,
+  (on) => editor.setFrozen(on),
+  { immediate: true },
+);
+
+function keepWriting() {
+  draftNotice.value = null;
+  editor.view.focus();
+  void sayOutline('This is a copy of the draft now. Save asks where to keep it.');
+}
 
 async function openWork() {
   const notice = shown.value;
@@ -38,9 +54,12 @@ async function openWork() {
 
 <template>
   <section v-if="shown" class="bar" aria-label="Draft file">
-    <p class="text">This is {{ draftName(shown.n) }} of {{ shown.work }}.</p>
+    <p class="text">
+      This is {{ draftName(shown.n) }} of {{ shown.work }}.<template v-if="shown.readOnly"> It is read-only, as it was frozen.</template>
+    </p>
+    <button v-if="shown.readOnly" type="button" class="action" @click="keepWriting">Open a copy to keep writing</button>
     <button type="button" class="action" @click="openWork">Open {{ shown.work }} instead</button>
-    <button type="button" class="action" aria-label="Close the note about this draft" @click="draftNotice = null">
+    <button v-if="!shown.readOnly" type="button" class="action" aria-label="Close the note about this draft" @click="draftNotice = null">
       <UIcon name="i-lucide-x" aria-hidden="true" />
     </button>
   </section>

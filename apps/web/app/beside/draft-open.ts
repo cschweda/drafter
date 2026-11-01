@@ -1,8 +1,9 @@
-// Opening a draft file itself (`Boca – Draft 03.fountain`, drafts-and-cuts design §4.2): it is just
-// a file, so it opens as a normal script, read-write, but with its draft facts taken out of its
-// metadata block first (`readDraftFile`), so freezing it later starts clean; and a note bar says
-// what it is: "This is Draft 03 of Boca. Open Boca instead?". It is recognised by its name and by
-// its block's `draft` and `id`, both.
+// Opening a draft file itself (`Boca – Draft 03.fountain`, drafts-and-cuts design §4.2): it opens
+// read-only, as it was frozen, with its draft facts taken out of its metadata block
+// (`readDraftFile`), as a new script that is never bound to the file, so no save can write over it
+// or strip its facts. A note bar says what it is: "This is Draft 03 of Boca. It is read-only, as it
+// was frozen.", with Open a copy to keep writing and Open Boca instead. It is recognised by its
+// name and by its block's `draft` and `id`, both.
 import { readDraftFile, type WorkKind } from '@drafter/history';
 import { shallowRef } from 'vue';
 
@@ -33,4 +34,6 @@ export const draftNotice = shallowRef<{
   work: string;
   n: number;
   kind: WorkKind;
+  /** Read-only until Open a copy to keep writing. */
+  readOnly: boolean;
 } | null>(null);

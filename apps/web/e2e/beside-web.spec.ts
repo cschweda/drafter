@@ -357,6 +357,40 @@ test.describe('in Chromium, beside the script', () => {
     await expect.poll(() => wholeText(page)).toBe(BOCA);
     await expect(bar).toBeHidden();
   });
+
+  test('a draft file opens read-only, and Open a copy to keep writing never writes over it', async ({
+    page,
+  }) => {
+    await stubPickers(page);
+    await start(page);
+    const file = draftFile(
+      BOCA_CUT,
+      { draft: 3, id: sha(BOCA_CUT), frozen: '2026-10-01T09:00:00.000Z', note: 'n' },
+      'fountain',
+    );
+    await putFile(page, 'Boca – Draft 03.fountain', file);
+    await nextFileName(page, 'Boca – Draft 03.fountain');
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await menu(page).getByRole('button', { name: 'Open a file…' }).click();
+    const bar = page.getByRole('region', { name: 'Draft file' });
+    await expect(bar).toContainText('This is Draft 03 of Boca. It is read-only, as it was frozen.');
+    await expect.poll(() => wholeText(page)).toBe(BOCA_CUT);
+    // Typing changes nothing.
+    await page.locator('.cm-content').click();
+    await page.keyboard.insertText('MORE');
+    await expect.poll(() => wholeText(page)).toBe(BOCA_CUT);
+    await bar.getByRole('button', { name: 'Open a copy to keep writing' }).click();
+    await expect(bar).toBeHidden();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.insertText('\nMORE\n');
+    await expect.poll(() => wholeText(page)).toContain('MORE');
+    await nextFileName(page, 'Boca copy.fountain');
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect.poll(() => textAt(page, 'Boca copy.fountain')).toContain('MORE');
+    // The draft file is as it was, facts and all.
+    expect(await textAt(page, 'Boca – Draft 03.fountain')).toBe(file);
+  });
 });
 
 test('Export drafts and cuts downloads a zip where nothing can be written beside the script', async ({

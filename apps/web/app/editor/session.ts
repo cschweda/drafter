@@ -52,6 +52,11 @@ export interface EditorSession {
   /** Turns editing off (or on): the script is open for editing in another tab. `load` keeps it. */
   setReadOnly(on: boolean): void;
   /**
+   * Turns editing off (or on) for the script shown, apart from `setReadOnly`: a draft file opened
+   * itself is read-only, as it was frozen (beside/draft-open.ts). Either one keeps it read-only.
+   */
+  setFrozen(on: boolean): void;
+  /**
    * Calls `listener` after every change to the text or the selection, and after `load`, with the
    * state the editor now has. Update listeners in the state itself are lost when `load` replaces
    * it; these are not. Returns a function that removes it.
@@ -105,6 +110,8 @@ function create(): EditorSession {
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
   const locked = shallowRef(false);
+  /** Read-only for a frozen draft's text (`setFrozen`), apart from the tab lock. */
+  let frozen = false;
   const kind = shallowRef<DocumentKind>('fountain');
   const loaded = shallowRef(0);
   /** Changes with every load and change of kind: a Markdown mode that arrives late checks it is still wanted. */
@@ -189,7 +196,8 @@ function create(): EditorSession {
     if (next === 'markdown') ensureMarkdownMode();
     // The compartments start from their first values again, so read-only is put back, and so
     // are the settings that live in them (spellcheck, line numbers) and Strict Fountain's lint.
-    if (locked.value) view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
+    if (locked.value || frozen)
+      view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
     applyEditorSettings(view, settings.value);
     follow(view.state);
     // There are no elements in a Markdown document.
@@ -216,7 +224,13 @@ function create(): EditorSession {
   function setReadOnly(on: boolean) {
     if (on === locked.value) return;
     locked.value = on;
-    view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on)) });
+    view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on || frozen)) });
+  }
+
+  function setFrozen(on: boolean) {
+    if (on === frozen) return;
+    frozen = on;
+    view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on || locked.value)) });
   }
 
   function onState(listener: (state: EditorState) => void) {
@@ -268,6 +282,7 @@ function create(): EditorSession {
     load,
     setKind,
     setReadOnly,
+    setFrozen,
     onState,
     onUpdate,
     onChange,

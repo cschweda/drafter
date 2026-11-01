@@ -241,9 +241,10 @@ useDocsHead({
       the other.
     </p>
     <p>
-      Opening a draft file itself, such as <code>Boca – Draft 03.fountain</code>, opens it as an
-      ordinary script, with a bar that says “This is Draft 03 of Boca.” and offers
-      <strong>Open Boca instead</strong>.
+      Opening a draft file itself, such as <code>Boca – Draft 03.fountain</code>, opens it
+      read-only, as it was frozen, with a bar that says “This is Draft 03 of Boca.” Choose
+      <strong>Open a copy to keep writing</strong> to write on from it (Save then asks where to keep
+      the copy, and the draft file is never changed), or <strong>Open Boca instead</strong>.
     </p>
   </article>
 </template>

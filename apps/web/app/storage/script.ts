@@ -265,11 +265,6 @@ export interface OpenedFile {
   ref: FileRef | null;
   /** What the file is: by its name when it is opened, the script's own when it is read again. */
   kind?: DocumentKind;
-  /**
-   * The file's own text, when the script opens with other text (a draft file, its draft facts
-   * taken out): what is saved in it, so the script opens changed and the file reads as unchanged.
-   */
-  fileText?: string;
 }
 
 /** How long a failing recovery copy waits before it tries again on its own. */
@@ -991,7 +986,7 @@ function create(): ScriptSession {
   }
 
   async function openedFile(file: OpenedFile): Promise<boolean> {
-    const onDisk = file.fileText ?? file.text;
+    const onDisk = file.text;
     const hash = await hashText(onDisk);
     let made: string | undefined;
     const opened = await switchTo(async () => {

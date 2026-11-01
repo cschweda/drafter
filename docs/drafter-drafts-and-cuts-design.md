@@ -109,7 +109,7 @@ The heart of "nothing lost": everything above is also kept as ordinary text file
 
 ### 4.2 Opening a work that has them
 - Opening `Boca.fountain` (desktop, or web with folder access) reads `Boca drafts/` and `Boca.fountain.cuts.md` if they are there and merges them into the lists (by ID: nothing duplicated, nothing dropped). A draft file whose text no longer matches its ID is listed with a warning ("changed outside Drafter") and kept.
-- Opening a draft file itself (`Boca – Draft 03.fountain`) opens it as a normal script, read-write — it is just a file — with a note bar: "This is Draft 03 of Boca. Open Boca instead?".
+- Opening a draft file itself (`Boca – Draft 03.fountain`) opens it read-only, as it was frozen, as a copy never bound to the file, with a note bar: "This is Draft 03 of Boca. It is read-only, as it was frozen.", Open a copy to keep writing, and Open Boca instead. (As built: the design first had it read-write; the final review found that saving it stripped its facts block. DECISIONS.)
 
 ## 5. Retention
 
