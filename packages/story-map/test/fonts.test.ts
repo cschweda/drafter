@@ -34,11 +34,11 @@ describe('the story map fonts', () => {
     }
   });
 
-  it('the four faces together are under 60 KB', () => {
+  it('the four faces together are under 70 KB', () => {
     const fonts = realFonts();
     const total = Object.values(fonts).reduce((n, bytes) => n + bytes.length, 0);
     console.log(`story map fonts: ${total} bytes`);
-    expect(total).toBeLessThan(60_000);
+    expect(total).toBeLessThan(70_000);
   });
 
   it('each face carries its copyright comment', () => {

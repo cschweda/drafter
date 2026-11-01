@@ -25,9 +25,13 @@ export type Section = (map: StoryMap) => {
   rules: string;
 };
 
-/** The kind line, verbatim (Global Constraints). */
+/**
+ * The kind line, verbatim (Global Constraints). A play with exactly one act marked is "a one-act
+ * play": the only words about acts a one-act play shows.
+ */
 export function kindLine(map: StoryMap): string {
-  const what = map.kind === 'play' ? 'stage play' : 'screenplay';
+  const what =
+    map.kind === 'play' ? (map.acts.length === 1 ? 'one-act play' : 'stage play') : 'screenplay';
   return map.status === 'finished' ? `A finished ${what}` : `A ${what} in progress`;
 }
 
@@ -90,9 +94,10 @@ function meterHtml(map: StoryMap): string {
     el('b', {}, label) +
       el('span', {}, `${Math.round(written)} of ${Math.round(plannedPages)} planned pages`),
   );
+  // The words beside it say the number: the bar is decoration, so it isn't read twice.
   const bar = el(
     'svg',
-    { width: '100%', height: 14, role: 'img', 'aria-label': label },
+    { width: '100%', height: 14, 'aria-hidden': 'true' },
     el('rect', { class: 'mbg', width: '100%', height: 14, rx: 7 }) +
       el('rect', { class: 'mfg', width: `${share}%`, height: 14, rx: 7 }),
   );

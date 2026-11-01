@@ -13,51 +13,73 @@ import type { Scene, SceneIndex, Section } from '@drafter/outline';
 import type { Template } from '@drafter/templates';
 import { isStub } from './gaps';
 import { sentenceEnd } from './summaries';
-import type { MapAct, MapCharacter, MapPair, StageLine } from './types';
+import type { MapAct, MapCharacter, MapInterval, MapPair, MapScene, StageLine } from './types';
 import { placeWords } from './words';
 
 // A play's own parts (story-map design §5.1; Calls 16, 27, 28): the interval, each scene's
 // setting, who's on stage from when to when, the sentence that says who moves, and the pairs who
 // share the stage most. Every scan is one pass over the writer's text.
 
-/** The acts: the top-level sections (the smallest depth used), in order. */
+/** A heading that names an act: "Act One", "ACT 2: …"; never "Actors". */
+const ACT_HEADING = /^act\b/i;
+
+/**
+ * The acts, only as the writer marks them ("Maybe be cautious in dividing into acts until more is
+ * written or the acts are specified"): the `#` sections, in order; else the sections whose heading
+ * starts "Act" (at the shallowest depth they use). Sequences at `##` alone are no acts, and a
+ * play of scenes with no act marked is one run.
+ */
 export function topSections(index: SceneIndex): Section[] {
-  if (index.sections.length === 0) return [];
-  const depth = Math.min(...index.sections.map((s) => s.depth));
-  return index.sections.filter((s) => s.depth === depth);
+  const top = index.sections.filter((s) => s.depth === 1);
+  if (top.length > 0) return top;
+  const named = index.sections.filter((s) => ACT_HEADING.test(s.title.trim()));
+  if (named.length === 0) return [];
+  const depth = Math.min(...named.map((s) => s.depth));
+  return named.filter((s) => s.depth === depth);
 }
 
 /**
- * The interval (Call 27): a play of two acts or more has one, after Act 1. The first
+ * The interval (Call 27). A play of two acts or more has one by default, after Act 1; the first
  * `[[Interval]]` note moves it to the end of the act that holds it (a note before the first act is
- * Act 1's); none comes after the last act, so a mark there means none. Any `[[No interval]]`
+ * Act 1's), and none comes after the last act, so a mark there means none. A play of one act, or
+ * with none marked, has one only where an `[[Interval]]` note is, after the scene it is in (or
+ * the last before it), and never before the first scene or after the last. Any `[[No interval]]`
  * turns it off. The caller asks only for a play: a screenplay never has one.
  */
 export function intervalOf(
   doc: Doc,
   index: SceneIndex,
   acts: readonly MapAct[],
-): { afterAct: number } | null {
-  if (acts.length < 2) return null;
-  const sections = topSections(index);
+): MapInterval | null {
   let first: number | null = null;
   for (const entry of noteEntries(doc)) {
     const mark = wholeMarkOf(entry.note);
     if (mark === 'no-interval') return null;
     if (mark === 'interval' && first === null) first = entry.span.from;
   }
-  if (first === null) return { afterAct: 1 };
+  if (acts.length < 2) {
+    if (first === null) return null;
+    const at = first;
+    const after = index.scenes.filter((scene) => scene.span.from < at).length;
+    return after > 0 && after < index.scenes.length ? { afterAct: null, afterScene: after } : null;
+  }
+  const lastScene = (n: number) =>
+    acts
+      .filter((act) => act.n <= n)
+      .reduce((most, act) => Math.max(most, ...act.scenes.map((s) => s + 1)), 0);
+  if (first === null) return { afterAct: 1, afterScene: lastScene(1) };
+  const sections = topSections(index);
   let act = 1;
   sections.forEach((section, a) => {
     if (section.span.from <= (first as number)) act = a + 1;
   });
-  return act < acts.length ? { afterAct: act } : null;
+  return act < acts.length ? { afterAct: act, afterScene: lastScene(act) } : null;
 }
 
 /** Words that bring a character on: whole words, any case. "comes in" is two. */
 const ENTER = new Set(['enters', 'enter', 'appears', 'arrives']);
-/** Words that take a character off. "goes out" starts with "goes". */
-const LEAVE = new Set(['exits', 'exit', 'leaves', 'goes']);
+/** Words that take a character off; "goes" only as "goes out", "goes off", or last. */
+const LEAVE = new Set(['exits', 'exit', 'leaves']);
 
 type Verb = 'enter' | 'leave' | 'all-leave';
 
@@ -72,7 +94,10 @@ function verbsOf(words: readonly string[]): Array<{ at: number; verb: Verb }> {
       if (word === 'all') w++;
     } else if (ENTER.has(word) || (word === 'comes' && next === 'in')) {
       out.push({ at: w, verb: 'enter' });
-    } else if (LEAVE.has(word)) {
+    } else if (
+      LEAVE.has(word) ||
+      (word === 'goes' && (next === undefined || next === 'out' || next === 'off'))
+    ) {
       out.push({ at: w, verb: 'leave' });
     }
   }
@@ -214,12 +239,18 @@ function actOn(
     while (w < words.length && (words[w] as { at: number }).at < at) w++;
     found.push({ row, word: w, capitals: capitalsAt(sentence, at) });
   });
+  // A verb before a name is theirs only when it opens the sentence ("Exit ROOK") or no name
+  // before them took it: in "PELL leaves ROOK alone", only Pell leaves.
+  const claimed = new Set<number>();
   for (let i = 0; i < found.length; i++) {
     const name = found[i] as (typeof found)[number];
     const nextName = found[i + 1]?.word ?? Number.POSITIVE_INFINITY;
     const after = verbs.find((v) => v.at > name.word && v.at < nextName && v.verb !== 'all-leave');
-    const before = [...verbs].reverse().find((v) => v.at < name.word && v.verb !== 'all-leave');
-    const verb = after?.verb ?? before?.verb ?? null;
+    const last = [...verbs].reverse().find((v) => v.at < name.word && v.verb !== 'all-leave');
+    const before = last && (last.at === 0 || !claimed.has(last.at)) ? last : undefined;
+    const taken = after ?? before;
+    if (taken) claimed.add(taken.at);
+    const verb = taken?.verb ?? null;
     if (verb === 'enter') arrive(name.row, atStart, true);
     else if (name.capitals) arrive(name.row, atStart, false);
     if (verb === 'leave') leave(name.row, atEnd);
@@ -341,17 +372,44 @@ export function settingOf(
 }
 
 /**
- * The pairs (Call 28): a play's leads ranked by the scenes they share, most first, up to 8, none
- * that share no scene; a screenplay's every pair of leads, in order (the half-matrix). `a` comes
- * before `b` in `characters`.
+ * The pairs (Call 28). A play's leads ranked by the scenes they share the stage in (their stage
+ * lines overlap), most first, up to 8, none that never share it; a screenplay's every pair of
+ * leads, in order (the half-matrix), by the scenes they are both in (`figures.sharedWith`). `a`
+ * comes before `b` in `characters`; `scenes` are the map's, with their stage lines.
  */
 export function pairsOf(
   kind: 'play' | 'screenplay',
   characters: readonly MapCharacter[],
   cast: Cast,
+  scenes: readonly MapScene[] = [],
 ): MapPair[] {
   const leads = characters.flatMap((c, i) => (c.lead ? [i] : []));
   const out: MapPair[] = [];
+  if (kind === 'play') {
+    const together = new Map<string, number>();
+    for (const scene of scenes) {
+      const lines = scene.stage ?? [];
+      for (const x of lines) {
+        for (const y of lines) {
+          if (x.character >= y.character || x.from >= y.to || y.from >= x.to) continue;
+          const key = `${x.character} ${y.character}`;
+          together.set(key, (together.get(key) ?? 0) + 1);
+        }
+      }
+    }
+    for (let x = 0; x < leads.length; x++) {
+      for (let y = x + 1; y < leads.length; y++) {
+        const a = leads[x] as number;
+        const b = leads[y] as number;
+        out.push({ a, b, scenes: together.get(`${a} ${b}`) ?? 0 });
+      }
+    }
+    // Stable: ties keep the leads' order.
+    return out
+      .filter((p) => p.scenes > 0)
+      .sort((p, q) => q.scenes - p.scenes)
+      .slice(0, 8);
+  }
   for (let x = 0; x < leads.length; x++) {
     const a = leads[x] as number;
     const shared = cast.figures.get((characters[a] as MapCharacter).key)?.sharedWith ?? [];
@@ -361,10 +419,5 @@ export function pairsOf(
       out.push({ a, b, scenes: shared.find((s) => s.key === key)?.scenes ?? 0 });
     }
   }
-  if (kind === 'screenplay') return out;
-  // Stable: ties keep the leads' order.
-  return out
-    .filter((p) => p.scenes > 0)
-    .sort((p, q) => q.scenes - p.scenes)
-    .slice(0, 8);
+  return out;
 }

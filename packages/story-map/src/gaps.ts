@@ -1,7 +1,8 @@
 import type { Doc } from '@drafter/fountain';
 import { noteEntries } from '@drafter/notes';
 import { type Scene, type SceneIndex, STAGE_STUB, STUB_HEADING, wordsIn } from '@drafter/outline';
-import type { MapAct, MapGaps, MapScene, MapStatus, StoryMap } from './types';
+import { STORY_MAP_LIMITS } from './limits';
+import type { MapAct, MapGaps, MapKind, MapScene, MapStatus, StoryMap } from './types';
 
 // What isn't written yet (story-map design §6; Call 17): an act with no scenes, a planned scene,
 // a to-do in a scene, and the planned length, with nothing guessed. The progress read, the
@@ -77,45 +78,74 @@ function stateOf(
   return parts.length === 0 ? { kind: 'written' } : { kind: 'under-way', parts };
 }
 
+/** The written acts, or the acts still to come, together: "Acts 1 and 2 are written." */
+function together(numbers: readonly string[], what: string): string[] {
+  if (numbers.length === 0) return [];
+  return numbers.length === 1
+    ? [`Act ${numbers[0]} is ${what}.`]
+    : [`Acts ${listWords(numbers)} are ${what}.`];
+}
+
+/** What the sentence is built from. */
+interface SentenceInput {
+  kind: MapKind;
+  acts: readonly MapAct[];
+  scenes: number;
+  planned: ReadonlySet<number>;
+  todo: ReadonlySet<number>;
+  tail: boolean;
+  pages: number;
+  plannedPages: number | null;
+}
+
 /**
- * The sentence (design §6.3): the written acts together, then each act under way with what it
- * still lacks, then the acts still to come. With no acts, the same for "the story".
+ * The sentence (design §6.3), which never says more than the numbers do:
+ * - An early draft (under `earlyPages` pages or `earlyScenes` scenes written) gives only its pages
+ *   and scenes: "4 of 40 planned pages · 6 scenes so far".
+ * - One act or none: the play or the script as a whole ("The play is under way: …").
+ * - With pages still to write, no act is written: "The writing has reached Act 3: 14 scenes so
+ *   far.", then each act with gaps, then the acts still to come.
+ * - Else the written acts together (an act is written only with no planned scene and no to-do),
+ *   each act under way with what it lacks, then the acts still to come. Only the acts the writer
+ *   marked are named.
  */
-function sentenceOf(
-  acts: readonly MapAct[],
-  scenes: number,
-  planned: ReadonlySet<number>,
-  todo: ReadonlySet<number>,
-  tail: boolean,
-): string {
-  if (acts.length === 0) {
-    const all = Array.from({ length: scenes }, (_, s) => s);
-    const state = stateOf(all, planned, todo, tail);
-    if (state.kind === 'written') return 'The story is written.';
-    if (state.kind === 'to-come') return 'The story is still to come.';
-    return `The story is under way: ${listWords(state.parts)}.`;
+function sentenceOf(input: SentenceInput): string {
+  const { kind, acts, planned, todo, tail, pages, plannedPages } = input;
+  const written = input.scenes - planned.size;
+  if (pages < STORY_MAP_LIMITS.earlyPages || written < STORY_MAP_LIMITS.earlyScenes) {
+    const length =
+      plannedPages === null
+        ? plural(pages, 'page', 'pages')
+        : `${pages} of ${plannedPages} planned pages`;
+    return `${length} · ${plural(written, 'scene', 'scenes')} so far`;
   }
-  // The tail belongs to the last act that has a scene: it comes after the last scene.
-  let last = -1;
-  acts.forEach((act, a) => {
-    if (act.scenes.length > 0) last = a;
-  });
-  const states = acts.map((act, a) => stateOf(act.scenes, planned, todo, tail && a === last));
-  const numbers = (kind: ActState['kind']) =>
-    acts.filter((_, a) => states[a]?.kind === kind).map((act) => String(act.n));
-  const out: string[] = [];
-  const written = numbers('written');
-  if (written.length === 1) out.push(`Act ${written[0]} is written.`);
-  if (written.length > 1) out.push(`Acts ${listWords(written)} are written.`);
-  acts.forEach((act, a) => {
+  if (acts.length <= 1) {
+    const whole = kind === 'play' ? 'The play' : 'The script';
+    const all = Array.from({ length: input.scenes }, (_, s) => s);
+    const state = stateOf(all, planned, todo, tail);
+    if (state.kind === 'written') return `${whole} is written.`;
+    if (state.kind === 'to-come') return `${whole} is still to come.`;
+    return `${whole} is under way: ${listWords(state.parts)}.`;
+  }
+  const states = acts.map((act) => stateOf(act.scenes, planned, todo, false));
+  const numbers = (state: ActState['kind']) =>
+    acts.filter((_, a) => states[a]?.kind === state).map((act) => String(act.n));
+  const underWay = acts.flatMap((act, a) => {
     const state = states[a];
-    if (state?.kind === 'under-way') {
-      out.push(`Act ${act.n} is under way: ${listWords(state.parts)}.`);
-    }
+    return state?.kind === 'under-way'
+      ? [`Act ${act.n} is under way: ${listWords(state.parts)}.`]
+      : [];
   });
-  const toCome = numbers('to-come');
-  if (toCome.length === 1) out.push(`Act ${toCome[0]} is still to come.`);
-  if (toCome.length > 1) out.push(`Acts ${listWords(toCome)} are still to come.`);
+  const out: string[] = [];
+  if (tail) {
+    const reached = acts.filter((act) => act.scenes.length > 0).at(-1) as MapAct;
+    out.push(
+      `The writing has reached Act ${reached.n}: ${plural(written, 'scene', 'scenes')} so far.`,
+    );
+  } else {
+    out.push(...together(numbers('written'), 'written'));
+  }
+  out.push(...underWay, ...together(numbers('to-come'), 'still to come'));
   return out.join(' ');
 }
 
@@ -132,6 +162,7 @@ export function gapsOf(
   scenes: readonly MapScene[],
   plannedPages: number | null,
   written: number,
+  kind: MapKind = 'screenplay',
 ): MapGaps {
   const planned = new Set<number>();
   index.scenes.forEach((scene, s) => {
@@ -155,7 +186,16 @@ export function gapsOf(
     percent,
     written,
     plannedPages: length,
-    sentence: sentenceOf(acts, scenes.length, planned, todo, tail !== null),
+    sentence: sentenceOf({
+      kind,
+      acts,
+      scenes: scenes.length,
+      planned,
+      todo,
+      tail: tail !== null,
+      pages: written,
+      plannedPages: length,
+    }),
   };
 }
 
@@ -167,7 +207,8 @@ export function defaultStatus(gaps: MapGaps): MapStatus {
 /**
  * The map as Finished shows it (design §6.4): the planned scenes left out (the rest numbered 1, 2,
  * 3 again, and every index into the scenes moved with them), no to-do marks, no tail, no percent,
- * and no sentence. Acts that only held planned scenes are empty now.
+ * and no sentence. Acts that only held planned scenes are empty now. The kept scenes run end to
+ * end again from where the first one started, so the strip has no hole, and the axis ends with them.
  */
 export function finishedMap(map: StoryMap): StoryMap {
   const kept: number[] = [];
@@ -177,11 +218,14 @@ export function finishedMap(map: StoryMap): StoryMap {
     moved.set(s, kept.length);
     kept.push(s);
   });
-  const scenes = kept.map((s, i) => ({
-    ...(map.scenes[s] as MapScene),
-    n: i + 1,
-    todo: false,
-  }));
+  // End to end again from where the first scene starts, each its own length: no holes.
+  let at = map.scenes[0]?.from ?? 0;
+  const scenes = kept.map((s, i) => {
+    const scene = map.scenes[s] as MapScene;
+    const from = at;
+    at += scene.to - scene.from;
+    return { ...scene, n: i + 1, todo: false, from, to: at };
+  });
   const acts = map.acts.map((act) => {
     const mine = act.scenes.flatMap((s) => (moved.has(s) ? [moved.get(s) as number] : []));
     return { ...act, scenes: mine, empty: mine.length === 0 };
@@ -212,6 +256,7 @@ export function finishedMap(map: StoryMap): StoryMap {
     quotes,
     threads,
     facts: { ...map.facts, scenes: scenes.length },
+    axis: scenes.at(-1)?.to ?? 0,
     gaps: {
       ...map.gaps,
       planned: [],

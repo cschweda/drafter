@@ -44,6 +44,7 @@ export type {
   MapAct,
   MapCharacter,
   MapGaps,
+  MapInterval,
   MapKind,
   MapOptions,
   MapPair,

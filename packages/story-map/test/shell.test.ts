@@ -78,6 +78,19 @@ describe('the page frame', () => {
     expect(text(play.querySelector('.status .pill'))).toBe('A stage play in progress');
     const playDone = dom(BOATHOUSE, { title: 'The Boathouse', status: 'finished' });
     expect(text(playDone.querySelector('.status .pill'))).toBe('A finished stage play');
+    // Exactly one act marked: a one-act play, the only act words on the page.
+    const oneAct = BOATHOUSE.replace('# Act Two\n\n', '');
+    expect(text(dom(oneAct, { status: 'in-progress' }).querySelector('.status .pill'))).toBe(
+      'A one-act play in progress',
+    );
+    expect(text(dom(oneAct, { status: 'finished' }).querySelector('.status .pill'))).toBe(
+      'A finished one-act play',
+    );
+    // No act marked: a stage play.
+    const noActs = BOATHOUSE.replace('# Act One\n\n', '').replace('# Act Two\n\n', '');
+    expect(text(dom(noActs, { status: 'in-progress' }).querySelector('.status .pill'))).toBe(
+      'A stage play in progress',
+    );
   });
 
   it('no author, no disc, and no Written by', () => {
@@ -98,18 +111,19 @@ describe('the page frame', () => {
     const meter = planned.querySelector('.meter');
     expect(text(meter?.querySelector('.mrow b'))).toBe('About 10% written');
     expect(text(meter?.querySelector('.mrow span'))).toBe('4 of 40 planned pages');
+    // The bar is drawn beside the words that say the number, so it isn't read twice.
     const bar = meter?.querySelector('svg');
-    expect(bar?.getAttribute('role')).toBe('img');
-    expect(bar?.getAttribute('aria-label')).toBe('About 10% written');
+    expect(bar?.getAttribute('aria-hidden')).toBe('true');
+    expect(bar?.getAttribute('role')).toBeNull();
+    expect(bar?.getAttribute('aria-label')).toBeNull();
     expect(bar?.querySelector('.mfg')?.getAttribute('width')).toBe('10%');
-    expect(text(meter?.querySelector('.mnote'))).toBe(
-      'Acts 1 and 2 are written. Act 3 is under way: the ending still to come.',
-    );
+    // An early draft: pages and scenes only.
+    expect(text(meter?.querySelector('.mnote'))).toBe('4 of 40 planned pages · 14 scenes so far');
 
     // In progress without a length: the sentence alone, and never a percentage.
     const loose = dom(`${HARBOUR}\nEXT. CLIFF PATH - NIGHT\n\n= Mara climbs to the old light.\n`);
     const alone = loose.querySelector('.meter');
-    expect(text(alone?.querySelector('.mnote'))).toMatch(/Act 3 is under way: 1 scene planned/);
+    expect(text(alone?.querySelector('.mnote'))).toBe('4 pages · 14 scenes so far');
     expect(alone?.querySelector('svg')).toBeNull();
     expect(alone?.querySelector('.mrow')).toBeNull();
     expect(text(alone)).not.toMatch(/%/);
@@ -198,7 +212,27 @@ describe('the page frame', () => {
 
   it('contact is off by default, a mailto only when it validates', () => {
     expect(mailtoOf('sam@example.com')).toBe('mailto:sam@example.com');
-    for (const bad of ['a@b@c', 'x y@z', 's@x?cc=y', 's@x&a', '@x', 'x@', '', 'a\u0001@b']) {
+    expect(mailtoOf('wren.a@mail.example.org')).toBe('mailto:wren.a@mail.example.org');
+    for (const bad of [
+      'a@b@c',
+      'x y@z',
+      's@x?cc=y',
+      's@x&a',
+      '@x',
+      'x@',
+      '',
+      'a\u0001@b',
+      'javascript:alert(1)"<x>@e.com',
+      'sam@localhost',
+      'sam@example.',
+      'sam@.com',
+      'a"b@e.com',
+      'a<b@e.com',
+      'a>b@e.com',
+      'a:b@e.com',
+      'a\\b@e.com',
+      'a/b@e.com',
+    ]) {
       expect(mailtoOf(bad), bad).toBeNull();
     }
     expect(text(dom(HARBOUR).querySelector('.soon'))).not.toContain('Say hello');
@@ -240,5 +274,31 @@ describe('the page frame', () => {
     expect(doc.title).toBe(`${hostile} – story map`);
     expect(text(doc.querySelector('h1'))).toBe(hostile);
     expect(text(doc.querySelector('.log'))).toBe(hostile);
+  });
+});
+
+describe('print', () => {
+  /** WCAG contrast of two `#rrggbb` colours. */
+  function contrast(a: string, b: string): number {
+    const lum = (hex: string) => {
+      const [r, g, bl] = [1, 3, 5].map((i) => {
+        const c = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * (r as number) + 0.7152 * (g as number) + 0.0722 * (bl as number);
+    };
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x) as [number, number];
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  it('the initials disc keeps 4.5:1 on paper', async () => {
+    const { STORY_MAP_STYLESHEET } = await import('../src/render/style');
+    const print = STORY_MAP_STYLESHEET.slice(STORY_MAP_STYLESHEET.indexOf('@media print'));
+    const value = (name: string) => new RegExp(`--${name}:(#[0-9a-f]{6})`).exec(print)?.[1];
+    const coral = value('coral');
+    const ink = value('ink');
+    expect(coral).toBeDefined();
+    expect(ink).toBeDefined();
+    expect(contrast(coral as string, ink as string)).toBeGreaterThanOrEqual(4.5);
   });
 });

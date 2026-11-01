@@ -12,6 +12,7 @@ import {
 import { scriptAuthor } from '@drafter/render-html-file';
 import type { Template } from '@drafter/templates';
 import { defaultStatus, finishedMap, gapsOf, isPlanned, isStub } from './gaps';
+import { STORY_MAP_LIMITS } from './limits';
 import { pickQuotes, quoteCandidates, signatureLines } from './lines';
 import { mailtoOf } from './mailto';
 import { intervalOf, movesSentence, pairsOf, settingOf, stageLines, topSections } from './stage';
@@ -51,16 +52,7 @@ export interface MapInput {
   options: MapOptions;
 }
 
-export const STORY_MAP_LIMITS = Object.freeze({
-  leads: 8,
-  ranked: 12,
-  rest: 8,
-  places: 24,
-  arcs: 12,
-  quotes: 12,
-  foldOver: 80,
-  minWidth: 0.0015,
-} as const);
+export { STORY_MAP_LIMITS } from './limits';
 
 /** The palette slots a lead's colour comes from (design §4.1); the white ring is apart. */
 const SLOTS = 7;
@@ -461,7 +453,7 @@ export function buildStoryMap(input: MapInput): StoryMap {
 
   // The gaps, and the status they give unless the writer chose one (design §6).
   const pages = layout.pages.filter((p) => p.number > 0).length;
-  const gaps = gapsOf(index, doc, acts, scenes, options.plannedPages, pages);
+  const gaps = gapsOf(index, doc, acts, scenes, options.plannedPages, pages, kind);
   const status = options.status ?? defaultStatus(gaps);
   const todo = new Set(gaps.todo);
   for (const scene of scenes) scene.todo = todo.has(scene.n);
@@ -497,7 +489,7 @@ export function buildStoryMap(input: MapInput): StoryMap {
     split,
     pace: paceOf(scenes.filter((scene) => !scene.planned)),
     characters,
-    pairs: pairsOf(kind, characters, cast),
+    pairs: pairsOf(kind, characters, cast, scenes),
     places,
     placesMore: more,
     quotes,

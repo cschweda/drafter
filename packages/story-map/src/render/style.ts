@@ -84,7 +84,7 @@ nav{margin-inline:-28px;padding-inline:28px}
 
 /** Ink on white, the nav hidden, and nothing broken across sheets (design §10.6). */
 const PRINT = `@media print{
-:root{--bg:#fff;--panel:#fff;--panel2:#f1f3f2;--line:#c9d1cf;--fg:#111;--mute:#444;--dim:#666;--coral:#c2412f;--aqua:#13786b;--sand:#8a6414;--ember:#b65a00;color-scheme:light}
+:root{--bg:#fff;--panel:#fff;--panel2:#f1f3f2;--line:#c9d1cf;--fg:#111;--mute:#444;--dim:#666;--coral:#c2412f;--ink:#ffffff;--aqua:#13786b;--sand:#8a6414;--ember:#b65a00;color-scheme:light}
 body{font-size:12pt}
 nav{display:none}
 .hero{padding-top:0}

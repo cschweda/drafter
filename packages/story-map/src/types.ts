@@ -169,6 +169,14 @@ export interface MapGaps {
   sentence: string;
 }
 
+/** Where the interval falls: after an act (or null within one act or none), and after a scene. */
+export interface MapInterval {
+  /** The act it closes; null in a play of one act or none. */
+  afterAct: number | null;
+  /** The number (1-based) of the last scene before it; 0 when an empty first act comes first. */
+  afterScene: number;
+}
+
 export interface StoryMap {
   kind: MapKind;
   status: MapStatus;
@@ -200,6 +208,6 @@ export interface StoryMap {
   quotes: MapQuote[];
   threads: MapThread[];
   gaps: MapGaps;
-  interval: { afterAct: number } | null;
+  interval: MapInterval | null;
   contact: { text: string; mailto: string | null } | null;
 }

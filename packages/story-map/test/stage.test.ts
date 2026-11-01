@@ -139,18 +139,23 @@ const intervalIn = (source: string) => build(source).map.interval;
 describe('the interval', () => {
   test('a two-act play has an interval after Act 1', () => {
     expect(ferry.map.kind).toBe('play');
-    expect(ferry.map.interval).toEqual({ afterAct: 1 });
-    expect(build(BOATHOUSE).map.interval).toEqual({ afterAct: 1 });
+    expect(ferry.map.interval).toMatchObject({ afterAct: 1 });
+    expect(build(BOATHOUSE).map.interval).toMatchObject({ afterAct: 1 });
     const { doc, template, layout, map } = ferry;
-    expect(intervalOf(doc, sceneIndex(doc, template, layout), map.acts)).toEqual({ afterAct: 1 });
+    expect(intervalOf(doc, sceneIndex(doc, template, layout), map.acts)).toEqual({
+      afterAct: 1,
+      afterScene: 2,
+    });
   });
 
   test('[[Interval]] moves it and [[No interval]] turns it off', () => {
-    expect(intervalIn(acts(3, { 1: '[[Interval]]' }))).toEqual({ afterAct: 2 });
+    expect(intervalIn(acts(3, { 1: '[[Interval]]' }))).toMatchObject({ afterAct: 2 });
     expect(intervalIn(acts(2, { 0: '[[No interval]]' }))).toBeNull();
     // Any case and spacing; a note with more in it is no mark.
-    expect(intervalIn(acts(3, { 1: '[[  interval ]]' }))).toEqual({ afterAct: 2 });
-    expect(intervalIn(acts(3, { 1: '[[Interval: after the storm]]' }))).toEqual({ afterAct: 1 });
+    expect(intervalIn(acts(3, { 1: '[[  interval ]]' }))).toMatchObject({ afterAct: 2 });
+    expect(intervalIn(acts(3, { 1: '[[Interval: after the storm]]' }))).toMatchObject({
+      afterAct: 1,
+    });
   });
 
   test('interval notes in odd places', () => {
@@ -158,9 +163,9 @@ describe('the interval', () => {
     expect(intervalIn(acts(1))).toBeNull();
     expect(intervalIn(acts(1, { 0: '[[Interval]]' }))).toBeNull();
     // Inside a scene of Act 2 of three: after Act 2.
-    expect(intervalIn(acts(3, { 1: 'HESTER sits. [[Interval]]' }))).toEqual({ afterAct: 2 });
+    expect(intervalIn(acts(3, { 1: 'HESTER sits. [[Interval]]' }))).toMatchObject({ afterAct: 2 });
     // Twice: the first.
-    expect(intervalIn(acts(3, { 1: '[[Interval]]', 2: '[[Interval]]' }))).toEqual({
+    expect(intervalIn(acts(3, { 1: '[[Interval]]', 2: '[[Interval]]' }))).toMatchObject({
       afterAct: 2,
     });
     // In the last act: never after it, so none.
@@ -168,7 +173,32 @@ describe('the interval', () => {
     // [[No interval]] anywhere wins.
     expect(intervalIn(acts(3, { 0: '[[Interval]]', 2: '[[No interval]]' }))).toBeNull();
     // Before the first act: Act 1's.
-    expect(intervalIn(`[[Interval]]\n\n${acts(3)}`)).toEqual({ afterAct: 1 });
+    expect(intervalIn(`[[Interval]]\n\n${acts(3)}`)).toMatchObject({ afterAct: 1 });
+  });
+
+  test('a one-act play, or one with no acts, has an interval only where it is marked', () => {
+    const scenes = (extra = '') =>
+      [1, 2, 3]
+        .map(
+          (n) =>
+            `## Scene ${n}\n\nHESTER waits.\n\nHESTER\nStill here.\n${n === 2 ? `\n${extra}\n` : ''}`,
+        )
+        .join('\n');
+    // One act marked.
+    expect(intervalIn(`# Act One\n\n${scenes()}${PLAY_META}`)).toBeNull();
+    expect(intervalIn(`# Act One\n\n${scenes('[[Interval]]')}${PLAY_META}`)).toEqual({
+      afterAct: null,
+      afterScene: 2,
+    });
+    // No acts at all.
+    expect(intervalIn(`${scenes()}${PLAY_META}`)).toBeNull();
+    expect(intervalIn(`${scenes('[[Interval]]')}${PLAY_META}`)).toEqual({
+      afterAct: null,
+      afterScene: 2,
+    });
+    // Never before the first scene or after the last.
+    expect(intervalIn(`[[Interval]]\n\n${scenes()}${PLAY_META}`)).toBeNull();
+    expect(intervalIn(`${scenes()}\n[[Interval]]\n${PLAY_META}`)).toBeNull();
   });
 
   test('a screenplay never has an interval', () => {
@@ -177,7 +207,53 @@ describe('the interval', () => {
   });
 });
 
+describe('acts, only as the writer marks them', () => {
+  test('acts are the # sections, or headings that start "Act"', () => {
+    expect(build(HARBOUR).map.acts).toHaveLength(3);
+    // Sequences at ## only: no acts.
+    const sequences = build(
+      `## The Harbour\n\nINT. ROOM - DAY\n\nA chair.\n\n## The Storm\n\nEXT. WALL - NIGHT\n\nRain.\n`,
+    ).map;
+    expect(sequences.acts).toEqual([]);
+    expect(sequences.scenes.every((s) => s.act === null)).toBe(true);
+    // A heading that says "Act", at any level, is an act.
+    const named = build(
+      `## Act One\n\nINT. ROOM - DAY\n\nA chair.\n\n## Act Two\n\nEXT. WALL - NIGHT\n\nRain.\n`,
+    ).map;
+    expect(named.acts.map((a) => a.scenes)).toEqual([[0], [1]]);
+    // "Actors" is not "Act".
+    expect(build(`## Actors Arrive\n\nINT. ROOM - DAY\n\nA chair.\n`).map.acts).toEqual([]);
+    // A play of ## scenes and no # acts is one run.
+    const play = build(
+      `## Scene 1\n\nHESTER waits.\n\n## Scene 2\n\nFINCH waits.\n${PLAY_META}`,
+    ).map;
+    expect(play.acts).toEqual([]);
+    expect(play.interval).toBeNull();
+  });
+});
+
 describe("who's on stage", () => {
+  test('"goes" is an exit only as "goes out", "goes off", or at the end', () => {
+    const scene = (direction: string) =>
+      build(
+        `## Scene 1\n\nPELL and ROOK wait.\n\nPELL\nHm.\n\n${direction}\n\nROOK\nWell.\n\nROOK\nWell then.\n${PLAY_META}`,
+      ).map;
+    const pell = (direction: string) => lineOf(scene(direction), 0, 'PELL');
+    expect(pell('PELL goes to the window.')).toMatchObject({ from: 0, to: 1 });
+    expect(pell('PELL goes out.')?.to).toBeLessThan(1);
+    expect(pell('PELL goes off into the rain.')?.to).toBeLessThan(1);
+    expect(pell('PELL goes.')?.to).toBeLessThan(1);
+  });
+
+  test('a verb before a name counts only when it opens the sentence or is unclaimed', () => {
+    const map = build(
+      `## Scene 1\n\nPELL and ROOK wait.\n\nPELL\nHm.\n\nPELL leaves ROOK alone.\n\nROOK\nWell.\n\nExit ROOK.\n\nINES\nGone.\n${PLAY_META}`,
+    ).map;
+    // Lines: 0 wait, 1–2 Pell, 3 leaves, 4–5 Rook, 6 exit, 7–8 Ines: 9 in all.
+    expect(lineOf(map, 0, 'PELL')).toMatchObject({ from: 0, to: 4 / 9 });
+    expect(lineOf(map, 0, 'ROOK')).toMatchObject({ from: 0, to: 7 / 9 });
+  });
+
   test('on stage from first speech or mention to "exits"', () => {
     const { map } = ferry;
     const at = (n: number) => n / 16;
@@ -241,11 +317,11 @@ describe('settings and pairs', () => {
     const { doc, template, layout, map } = ferry;
     const index = sceneIndex(doc, template, layout);
     const scene = (s: number) => index.scenes[s] as (typeof index.scenes)[number];
-    expect(settingOf(scene(0), doc, template, null)).toEqual({
+    expect(settingOf(scene(0), doc, template, null)).toMatchObject({
       name: 'The waiting room',
       time: null,
     });
-    expect(settingOf(scene(2), doc, template, null)).toEqual({
+    expect(settingOf(scene(2), doc, template, null)).toMatchObject({
       name: 'A bench on the quay',
       time: 'dusk',
     });
@@ -275,21 +351,26 @@ describe('settings and pairs', () => {
     const { doc, template, layout } = ferry;
     const index = sceneIndex(doc, template, layout);
     const second = index.scenes[1] as (typeof index.scenes)[number];
-    expect(settingOf(second, doc, template, 'The waiting room')).toEqual({
+    expect(settingOf(second, doc, template, 'The waiting room')).toMatchObject({
       name: 'The waiting room',
       time: null,
     });
     expect(settingOf(second, doc, template, null)).toBeNull();
   });
 
-  test('pairs are ranked by scenes shared', () => {
+  test("a play's pairs are ranked by the scenes they share the stage in", () => {
     const { map } = ferry;
     const name = (i: number) => map.characters[i]?.key;
-    expect(map.pairs.map((p) => [[name(p.a), name(p.b)].sort().join('+'), p.scenes])).toEqual([
-      ['PELL+ROOK', 5],
-      ['INES+PELL', 4],
-      ['INES+ROOK', 3],
-    ]);
+    // On stage together, not just in the same scene: in Scene 3, Rook comes on as the others go.
+    const pairs = map.pairs.map((p) => [[name(p.a), name(p.b)].sort().join('+'), p.scenes]);
+    expect(pairs.map(([, n]) => n)).toEqual([3, 3, 2]);
+    expect(new Map(pairs as Array<[string, number]>)).toEqual(
+      new Map([
+        ['PELL+ROOK', 3],
+        ['INES+PELL', 3],
+        ['INES+ROOK', 2],
+      ]),
+    );
     // A screenplay's pairs are every pair of leads.
     const screen = build(HARBOUR).map;
     const leads = screen.characters.filter((c) => c.lead).length;

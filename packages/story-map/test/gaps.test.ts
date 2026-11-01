@@ -1,7 +1,7 @@
 import { sceneIndex } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { defaultStatus, gapsOf, isPlanned, type MapGaps } from '../src';
-import { build, HARBOUR, NO_ACTS } from './scripts';
+import { defaultStatus, gapsOf, isPlanned, type MapGaps, STORY_MAP_LIMITS } from '../src';
+import { build, HARBOUR } from './scripts';
 
 // What isn't written yet (story-map design §6): empty acts, planned scenes, to-dos, and the
 // planned length; the progress read, the sentence, and the status they give.
@@ -101,6 +101,35 @@ function numbers(value: unknown, out: number[] = []): number[] {
   else if (value && typeof value === 'object')
     for (const v of Object.values(value)) numbers(v, out);
   return out;
+}
+
+/**
+ * An original script of acts split by `|`, each a run of scenes: `w` written (about `pages` pages
+ * of action), `p` planned (a heading and a synopsis), `t` written with a TODO, `-` an empty act.
+ * One act or more, as `#` acts, unless `acts` is false; a play with `play`.
+ */
+function drafted(spec: string, pages = 1, play = false, acts = true): string {
+  const words = ['One', 'Two', 'Three', 'Four', 'Five'];
+  const out: string[] = ['Title: Long Reach', ''];
+  let n = 0;
+  spec.split('|').forEach((act, a) => {
+    if (acts) out.push(`# Act ${words[a]}`, '');
+    for (const kind of act.trim().split(/\s+/)) {
+      if (kind === '-' || kind === '') continue;
+      n++;
+      out.push(play ? `## Scene ${n}` : `INT. ROOM NUMBER ${n} - DAY`, '');
+      if (kind === 'p') {
+        out.push('= Somebody finds the key.', '');
+        continue;
+      }
+      out.push(`GRETA opens window ${n}.${kind === 't' ? ' [[TODO: tighten]]' : ''}`, '');
+      for (let l = 0; l < pages * 50; l++)
+        out.push(`The rain keeps on, a little harder, ${l + 1}.`);
+      out.push('', 'GRETA', 'Still raining.', '');
+    }
+  });
+  if (play) out.push('/* drafter', '{"v":1,"template":"stage-play-standard"}', '*/');
+  return out.join('\n');
 }
 
 describe('gaps', () => {
@@ -203,31 +232,69 @@ Late again.
   });
 
   test('the sentence names written, under way, and still to come', () => {
-    expect(build(SHIPYARD).map.gaps.sentence).toBe(
-      'Act 1 is under way: 1 scene planned. Act 2 is under way: 2 scenes planned and 1 to do. Act 3 is still to come.',
-    );
-    expect(build(TWO_WRITTEN).map.gaps.sentence).toBe(
+    expect(build(drafted('w w w w | w w w w | w w p p t')).map.gaps.sentence).toBe(
       'Acts 1 and 2 are written. Act 3 is under way: 2 scenes planned and 1 to do.',
     );
-    expect(build(HARBOUR, { status: 'in-progress' }).map.gaps.sentence).toBe(
-      'Acts 1, 2 and 3 are written.',
+    expect(build(drafted('w w w w | w w w w | w w w | -')).map.gaps.sentence).toBe(
+      'Acts 1, 2 and 3 are written. Act 4 is still to come.',
     );
-    const one = `# Act One\n\nINT. KILN - DAY\n\nABEL stacks bricks.\n\n# Act Two\n`;
-    expect(build(one).map.gaps.sentence).toBe('Act 1 is written. Act 2 is still to come.');
-    // The tail after the last scene is the last act's.
-    const tail = `# Act One\n\nINT. KILN - DAY\n\nABEL stacks bricks.\n\nINT. KILN - NIGHT\n\nEXT. YARD - DAY\n`;
-    expect(build(tail, { plannedPages: 100 }).map.gaps.sentence).toBe(
-      'Act 1 is under way: 2 scenes planned and the ending still to come.',
-    );
-    // No acts: the story.
-    expect(build(NO_ACTS, { status: 'in-progress' }).map.gaps.sentence).toBe(
-      'The story is written.',
-    );
-    expect(build(NO_ACTS, { plannedPages: 100 }).map.gaps.sentence).toBe(
-      'The story is under way: the ending still to come.',
+    expect(
+      build(drafted('w w w w w w w w w w | -'), { status: 'in-progress' }).map.gaps.sentence,
+    ).toBe('Act 1 is written. Act 2 is still to come.');
+    // An act is written only with no gap in it: never while its scenes are planned or to do.
+    expect(build(drafted('w w w w w w w w w p | w t')).map.gaps.sentence).toBe(
+      'Act 1 is under way: 1 scene planned. Act 2 is under way: 1 to do.',
     );
     // Finished: no sentence.
     expect(build(SHIPYARD, { status: 'finished' }).map.gaps.sentence).toBe('');
+  });
+
+  test('with pages still to write, no act is called written', () => {
+    const { map } = build(drafted('w w w w | w w w w | w w w | -'), { plannedPages: 200 });
+    expect(map.gaps.tail).not.toBeNull();
+    expect(map.gaps.sentence).toBe(
+      'The writing has reached Act 3: 11 scenes so far. Act 4 is still to come.',
+    );
+    expect(map.gaps.sentence).not.toMatch(/written/);
+    const gappy = build(drafted('w w w w w p | w w w w w t'), { plannedPages: 200 }).map;
+    expect(gappy.gaps.sentence).toBe(
+      'The writing has reached Act 2: 11 scenes so far. Act 1 is under way: 1 scene planned. Act 2 is under way: 1 to do.',
+    );
+  });
+
+  test('an early draft says only its pages and scenes', () => {
+    expect(STORY_MAP_LIMITS.earlyPages).toBe(10);
+    expect(STORY_MAP_LIMITS.earlyScenes).toBe(6);
+    const small = build(SHIPYARD).map;
+    expect(small.facts.pages).toBeLessThan(10);
+    expect(small.gaps.sentence).toBe(`${small.facts.pages} page · 2 scenes so far`);
+    const planned = build(SHIPYARD, { plannedPages: 40 }).map;
+    expect(planned.gaps.sentence).toBe(
+      `${planned.facts.pages} of 40 planned pages · 2 scenes so far`,
+    );
+    // Ten pages or more, but under six scenes written.
+    const few = build(drafted('w w w w w', 3), { status: 'in-progress' }).map;
+    expect(few.facts.pages).toBeGreaterThanOrEqual(10);
+    expect(few.gaps.sentence).toBe(`${few.facts.pages} pages · 5 scenes so far`);
+    expect(few.gaps.sentence).not.toMatch(/Act|written/);
+  });
+
+  test('one act or none: the play or the script as a whole', () => {
+    // One act marked.
+    const one = build(drafted('w w w w w w w w w w p')).map;
+    expect(one.acts).toHaveLength(1);
+    expect(one.gaps.sentence).toBe('The script is under way: 1 scene planned.');
+    const play = build(drafted('w w w w w w w w w w p', 1, true)).map;
+    expect(play.kind).toBe('play');
+    expect(play.gaps.sentence).toBe('The play is under way: 1 scene planned.');
+    // No acts.
+    const none = build(drafted('w w w w w w w w w w', 1, false, false), {
+      status: 'in-progress',
+    }).map;
+    expect(none.acts).toEqual([]);
+    expect(none.gaps.sentence).toBe('The script is written.');
+    const tail = build(drafted('w w w w w w w w w w', 1, false, false), { plannedPages: 300 }).map;
+    expect(tail.gaps.sentence).toBe('The script is under way: the ending still to come.');
   });
 
   test('a script of planned scenes only', () => {
@@ -238,7 +305,9 @@ Late again.
     expect(map.split).toBeNull();
     expect(map.facts.minutes).toBe(0);
     expect(map.acts[0]?.pages).toBe(0);
-    expect(map.gaps.sentence).toBe('Act 1 is under way: 4 scenes planned.');
+    expect(map.gaps.sentence).toBe(
+      `${map.facts.pages} ${map.facts.pages === 1 ? 'page' : 'pages'} · 0 scenes so far`,
+    );
     expect(map.status).toBe('in-progress');
     // With a length, the percent is a number, never NaN.
     const planned = build(PLANNED_ONLY, { plannedPages: 90 }).map;
@@ -246,7 +315,7 @@ Late again.
     // Only act headings.
     const bare = build('# Act One\n\n# Act Two\n').map;
     for (const n of numbers(bare)) expect(Number.isFinite(n), String(n)).toBe(true);
-    expect(bare.gaps.sentence).toBe('Acts 1 and 2 are still to come.');
+    expect(bare.gaps.sentence).toMatch(/^\d+ pages? · 0 scenes so far$/);
   });
 
   test('the default status is in progress when a gap is found, else finished', () => {
@@ -278,5 +347,24 @@ Late again.
     expect(long.gaps.percent).toBeNull();
     // In progress keeps everything.
     expect(build(SHIPYARD).map.scenes).toHaveLength(5);
+  });
+
+  test('finished lays the kept scenes end to end, with no hole where a planned one was', () => {
+    const source = drafted('w p w | p w w | w');
+    const progress = build(source).map;
+    const { map } = build(source, { status: 'finished' });
+    expect(map.scenes).toHaveLength(5);
+    expect(map.scenes[0]?.from).toBeCloseTo(progress.scenes[0]?.from as number);
+    for (let i = 1; i < map.scenes.length; i++) {
+      expect(map.scenes[i]?.from).toBeCloseTo(map.scenes[i - 1]?.to as number);
+    }
+    // Each keeps its own length, and the axis ends where the last one does.
+    const kept = progress.scenes.filter((s) => !s.planned);
+    map.scenes.forEach((scene, i) => {
+      const was = kept[i] as (typeof kept)[number];
+      expect(scene.to - scene.from).toBeCloseTo(was.to - was.from);
+    });
+    expect(map.axis).toBeCloseTo(map.scenes.at(-1)?.to as number);
+    expect(map.axis).toBeLessThan(progress.axis);
   });
 });

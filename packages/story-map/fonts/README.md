@@ -34,16 +34,16 @@ fonttools varLib.instancer "Archivo[wdth,wght].ttf" wght=400 wdth=100 -o Archivo
 fonttools varLib.instancer "Archivo[wdth,wght].ttf" wght=600 wdth=100 -o Archivo-600.ttf
 ```
 
-Then each face is subset to Latin, Latin-1, and common punctuation (dashes, quotes, the ellipsis, arrows, the euro and trade marks, the minus sign), keeping kerning and ligatures, the copyright, and the licence, and written as WOFF2:
+Then each face is subset to Latin, Latin-1, Latin Extended-A (U+0100–017F, so names such as Dvořák, Łukasz, or Şahin stay in one face), and common punctuation (dashes, quotes, the ellipsis, arrows, the euro and trade marks, the minus sign), keeping kerning and ligatures, the copyright, and the licence, and written as WOFF2:
 
 ```sh
 pyftsubset <in>.ttf \
-  --unicodes="U+0020-007E,U+00A0-00FF,U+2010-2027,U+2030-203A,U+20AC,U+2122,U+2190-2193,U+2212" \
+  --unicodes="U+0020-007E,U+00A0-00FF,U+0100-017F,U+2010-2027,U+2030-203A,U+20AC,U+2122,U+2190-2193,U+2212" \
   --layout-features="kern,liga" --name-IDs="0,1,2,3,4,5,6,13,14" \
   --flavor=woff2 --output-file=<out>.woff2
 ```
 
-The same inputs give the same bytes. A letter outside the subset (a name in Greek, a line in Japanese) is drawn in the reader's own fonts, through each family's fallback list.
+The same inputs give the same bytes (checked on 2026-11-01: the old command still gives the old Anton file byte for byte). Anton and both Archivo faces cover all of Latin Extended-A; Courier Prime has all of it but three letters it never drew (ĸ, ŉ, ſ), which fall back. A letter outside the subset (a name in Greek, a line in Japanese) is drawn in the reader's own fonts, through each family's fallback list.
 
 The Archivo instancer keeps the variable font's naming of the default instance, so both Archivo files call themselves "Archivo SemiBold" inside. The page never reads that name: each `@font-face` sets its own family and weight.
 
@@ -51,14 +51,14 @@ The Archivo instancer keeps the variable font's naming of the default instance, 
 
 | File | Bytes | SHA-256 |
 |---|---|---|
-| `Anton-Regular.woff2` | 15040 | `078fd606075a2d4778236b930d002d6ff78481ae09119b1bb063eb13f996267e` |
-| `Archivo-Regular.woff2` | 11012 | `1f329a8800368424d15ffefe144bc067dd86817a514db8c8f9947fecce85658f` |
-| `Archivo-SemiBold.woff2` | 10572 | `de8360058fae2935e36b0aa5870a1f83d847ae2ce2e0c52b9c3d683028cbfafe` |
-| `CourierPrime-Regular.woff2` | 18048 | `8d4a2cc182bb09d72809161285b5c635d9c70b95304e9a5e7691d1335c2fe4f5` |
+| `Anton-Regular.woff2` | 17876 | `b9c43d67e208995087e4f87a7ad2ba5f89b751cd10447ee1ed4c672684537ce2` |
+| `Archivo-Regular.woff2` | 13676 | `d55a9457e30e86b7a0ebe31c8271e19068e114589dc6dd149d8592a6e7cdcbb5` |
+| `Archivo-SemiBold.woff2` | 12884 | `2e8fa539e5113de77c224bdac851734c17f0cb155483b0b348d3d3653d4986c7` |
+| `CourierPrime-Regular.woff2` | 22424 | `3eba5720e98da51e8d4bef80264271f9e59fb58c5990a4e19d5994ef7a99167e` |
 | `OFL-Anton.txt` | 4484 | `ee67e6ee22790b7929f1a3769ca2801d565c64b5a9096942c1adf5596de9c9e4` |
 | `OFL-Archivo.txt` | 4388 | `108b4e57c9c796d3d38d0428ca7ee39de47ad93187302718d9b2d8864b9b716b` |
 | `OFL-CourierPrime.txt` | 4403 | `9a755af092b494944c99f471be6fddd19b006a448fefdc4717e4ee0aa09a97b0` |
 
-The four faces are 54,672 bytes in all (53.4 KB), about 73 KB as base64.
+The four faces are 66,860 bytes in all (65.3 KB), about 89 KB as base64. Latin Extended-A added 12,188 bytes to the 54,672 of the Latin-1 cut.
 
 `@drafter/story-map` never reads these files itself. Callers pass the bytes in (`STORY_MAP_FONT_FILES` names them), so the package runs in a browser worker as well as in Node.
