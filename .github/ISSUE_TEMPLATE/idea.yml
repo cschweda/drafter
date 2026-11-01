@@ -1,0 +1,27 @@
+# Suggest an idea. Drafter's Help → Suggest an idea… fills these fields from the link it opens
+# (`?template=idea.yml&title=…&idea=…&version=…`), by each field's id, so the ids here and in
+# apps/web/app/report/issue.ts must match (apps/web/test/report-issue.test.ts).
+name: Suggest an idea
+description: Something you'd like Drafter to do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Drafter is free for good, with no accounts and no server, so ideas
+        that need one may not fit, but every idea is read.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you'd like
+      description: What you want to do, and what's in the way now.
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version info
+      description: Help → About Drafter → Copy version info, or Suggest an idea… adds it for you.
+      render: text
+    validations:
+      required: false

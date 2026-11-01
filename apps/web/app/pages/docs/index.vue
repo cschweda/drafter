@@ -54,9 +54,38 @@ const about: Record<string, string> = {
       <strong>Take the tour</strong>, <strong>Sample scripts</strong> (a tiny screenplay, stage play,
       and Markdown document, and a guided first screenplay and stage play whose notes teach each
       element, each opened as a new script of your own),
+      <strong>Report a problem…</strong> and <strong>Suggest an idea…</strong>,
       <strong>Check for updates…</strong>, and <strong>About Drafter</strong>: the version you’re
       on, with a button that copies it for a bug report, and links to the source code, the
       releases, the changelog, and the open specification of the <code>.drafter</code> file.
+    </p>
+
+    <h2 id="reporting">Reporting a problem</h2>
+    <p>
+      Found something wrong, or have an idea? Choose <strong>Help → Report a problem…</strong> or
+      <strong>Suggest an idea…</strong> (in the search too, and in About). Write a title and a few
+      lines, and the dialog shows exactly what will be sent, with your version info if you leave it
+      on. <strong>Open on GitHub</strong> opens GitHub’s new-issue page with it all filled in, and you
+      submit it there. That needs a free GitHub account. Drafter sends nothing itself, and never
+      includes your script.
+    </p>
+    <p>
+      Your report is never lost. <strong>Copy report</strong>, <strong>Write an email</strong>, and
+      <strong>Open on GitHub</strong> each put the whole report on your clipboard, so if GitHub
+      doesn’t fill it in, or your email app gets only the start, you paste it. And Drafter keeps it
+      on this device until you choose <strong>Clear</strong>.
+    </p>
+    <p>
+      No GitHub account, or offline? Copy it, or email cschweda@gmail.com. An email goes from your
+      own email app; Drafter itself sends nothing. For a security problem, please
+      don’t open a public issue:
+      <a
+        href="https://github.com/cschweda/drafter/blob/main/SECURITY.md#reporting-a-problem"
+        target="_blank"
+        rel="noopener noreferrer"
+        >report it privately</a
+      >, or email the details. The privacy page says
+      <a href="/docs/privacy/#reporting">what leaves your device, and when</a>.
     </p>
 
     <h2 id="finding-your-way">Finding your way around</h2>

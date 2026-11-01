@@ -22,6 +22,7 @@ const DIALOGS = [
   'NoteCategoryDialog',
   'NoteFiltersDialog',
   'RemoveDialog',
+  'ReportDialog',
   'SameTitleDialog',
   'SceneDetailsDialog',
   'SceneHistoryDialog',

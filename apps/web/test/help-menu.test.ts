@@ -11,12 +11,14 @@ const source = (name: string) =>
   readFileSync(new URL(`../app/components/${name}`, import.meta.url), 'utf8');
 
 describe('the Help menu', () => {
-  test('lists the tour, every help page, Download, the samples, Check for updates, and About, in that order', () => {
+  test('lists the tour, every help page, Download, the samples, Report a problem, Suggest an idea, Check for updates, and About, in that order', () => {
     expect(HELP_MENU_COMMANDS).toEqual([
       'take-the-tour',
       ...HELP_PAGES.map((page) => page.id),
       DOWNLOAD_PAGE.id,
       'reset-sample',
+      'report-problem',
+      'suggest-idea',
       'check-for-updates',
       'about-drafter',
     ]);
@@ -39,6 +41,7 @@ describe('the Help menu', () => {
     expect(vue).toContain('HELP_MENU_COMMANDS');
     expect(vue).toContain("'Sample scripts'");
     expect(vue).toContain('aria-label="Help"');
+    expect(vue).toContain("item('report-problem'), ...item('suggest-idea')");
   });
 
   test('is not in the Drafter menu any more', () => {

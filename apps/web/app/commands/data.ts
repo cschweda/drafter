@@ -194,6 +194,22 @@ export const COMMAND_DATA: readonly CommandData[] = [
       group: 'Help',
     }),
   ),
+  // Report a problem and Suggest an idea: a dialog that fills in GitHub's new-issue page (or an
+  // email), which the writer submits there themselves. Drafter never sends anything.
+  {
+    id: 'report-problem',
+    title: 'Report a problem…',
+    group: 'Help',
+    icon: 'i-lucide-bug',
+    keywords: ['bug', 'issue', 'feedback', 'github', 'contact', 'email'],
+  },
+  {
+    id: 'suggest-idea',
+    title: 'Suggest an idea…',
+    group: 'Help',
+    icon: 'i-lucide-lightbulb',
+    keywords: ['feature', 'request', 'feedback', 'github', 'contact', 'email'],
+  },
   { id: 'check-for-updates', title: 'Check for updates…', group: 'Help' },
   { id: 'about-drafter', title: 'About Drafter', group: 'Help', icon: 'i-lucide-info' },
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },

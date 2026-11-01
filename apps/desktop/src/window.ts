@@ -88,7 +88,8 @@ export function createMainWindow(preload: string): BrowserWindow {
 }
 
 /**
- * Hands an https address to the system browser, and nothing else. An unpackaged app run by the
+ * Hands an https address to the system browser (and an email to the maintainer to the email app,
+ * `navigationFor`), and nothing else. An unpackaged app run by the
  * e2e suite writes it to `DRAFTER_E2E_EXTERNAL_LOG` instead, so a test never opens a browser.
  */
 export function openExternal(url: string): void {

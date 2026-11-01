@@ -26,6 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **A help page, Drafts and cuts** (Help, and the desktop app's Help menu), in plain words.
 - 14 more trap documents, for hostile and damaged draft and cuts files (258 in all).
 - `.gitignore` also allows a `.env.sample` (as well as `.env.example`); every other `.env` file stays out of the repository.
+- **Report a problem… and Suggest an idea…**, in Help, the search, About, and the desktop app's Help menu. A dialog asks for a title and a few lines (what happened and what you expected, or what you'd like), adds your version info if you leave it on, and shows exactly what will be sent. **Open on GitHub** opens GitHub's new-issue page with it filled in, through new issue forms (`.github/ISSUE_TEMPLATE/bug.yml`, `idea.yml`, and `config.yml`), and you submit it there with a free GitHub account. Drafter sends nothing itself and never includes your script. A report is never lost: **Copy report**, **Write an email**, and **Open on GitHub** each put the whole report on the clipboard (the preview, never trimmed, and selectable to copy by hand), and say so, since a long one is trimmed to fit the link or the email; and the report is kept on this device until you choose **Clear**, through a closed tab, a reload, or a restart. Offline, it says to copy it and file it later. No GitHub account? Email cschweda@gmail.com from your own email app (the desktop app hands that one address to the email app, and no other `mailto:`). About has a contact line, and the help index and Privacy say what leaves your device, and when.
 - **An animated banner at the top of the README:** the script page fans out into the colored revision pages, once. It's an SVG with CSS only, so it plays on GitHub, and it holds still for anyone who asks their computer for less motion.
 
 ### Changed
@@ -34,6 +35,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Drafter's database gains two tables, `drafts` and `cuts`. Every script, snapshot, and setting from v0.23 is kept as it is, and a tab of v0.23 left open still reads it.
 - Drafter keeps a snapshot just before it starts a draft ("Before starting a draft") and before Restore as a new draft keeps your text as a draft, so cuts made just before are kept, with the draft they were made in.
 - The Saving and your browser help page's Deleted scenes section is now Drafts and Cuts, and points to the new page; Why Drafter and Technical details say where drafts and cuts are kept.
+- **SECURITY.md's fallback is an email now:** if GitHub's private report isn't there, email cschweda@gmail.com with the details, never a public issue. The README's Security section, What is Drafter?, and the new dialog say the same.
 
 ### Removed
 

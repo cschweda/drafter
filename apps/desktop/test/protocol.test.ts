@@ -242,4 +242,22 @@ describe('navigationFor', () => {
       expect(navigationFor(url), url).toBe('refuse');
     }
   });
+
+  test('sends an email to the maintainer to the email app, and no other mailto:', () => {
+    expect(navigationFor('mailto:cschweda@gmail.com')).toBe('external');
+    expect(navigationFor('mailto:cschweda@gmail.com?subject=Drafter%3A%20x&body=a%0Ab')).toBe(
+      'external',
+    );
+    for (const url of [
+      'mailto:someone@example.com?subject=x',
+      'mailto:cschweda@gmail.com,someone@example.com',
+      'mailto:cschweda@gmail.com?cc=someone@example.com',
+      'mailto:cschweda@gmail.com?subject=x&bcc=someone@example.com',
+      'mailto:cschweda@gmail.com?to=someone@example.com',
+      'mailto:cschweda@gmail.com?attach=/etc/passwd',
+      'mailto:cschweda%40gmail.com',
+    ]) {
+      expect(navigationFor(url), url).toBe('refuse');
+    }
+  });
 });

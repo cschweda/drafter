@@ -134,6 +134,8 @@ describe('the command data', () => {
       expect.arrayContaining([
         ['about-drafter', 'About Drafter'],
         ['check-for-updates', 'Check for updates…'],
+        ['report-problem', 'Report a problem…'],
+        ['suggest-idea', 'Suggest an idea…'],
         ['sample-script-screenplay', 'Sample script: Screenplay'],
         ['sample-script-stage-play', 'Sample script: Stage play'],
         ['sample-script-markdown', 'Sample script: Markdown'],
