@@ -60,9 +60,11 @@ function applyFold(items: readonly ToolbarItem[]) {
   for (const item of TOOLBAR_FOLD_ORDER) el.classList.toggle(`fold-${item}`, items.includes(item));
   el.classList.toggle('folding', items.length > 0);
 }
+/** More actions is open; the bar isn't fitted again until it closes, so its items stay put. */
+const overflowOpen = ref(false);
 function fit() {
   const el = bar.value;
-  if (!el) return;
+  if (!el || overflowOpen.value) return;
   const items: ToolbarItem[] = [];
   applyFold(items);
   if (!wide.value) {
@@ -109,6 +111,43 @@ const exportIds = computed(() =>
     (kind) => `export-${kind}`,
   ),
 );
+/** The class on More actions' Export item, which opens the exports as a submenu. */
+const EXPORT_ITEM = 'more-export';
+
+// Reka keeps a submenu open while the pointer leaves its item only if the pointer is heading for
+// it, judged by the way the pointer last moved across the menu, which starts as "right". Below
+// 1024px there is no room on the right, so Export's submenu opens on the left, and a mouse that
+// went straight to it counted as leaving: the submenu closed before it could be used. Firefox also
+// reports a leave with nothing under the pointer while it is still on the item, near the top of the
+// window, which stopped a hover or a click from opening it at all. (A tap and the keyboard never
+// ask, so they worked.) While More actions is open, a leave from Export into its own submenu, or
+// one that finds the pointer still on Export, isn't passed on.
+function keepExportOpen(event: PointerEvent) {
+  const item = event.target;
+  if (event.pointerType !== 'mouse' || !(item instanceof HTMLElement)) return;
+  if (!item.classList.contains(EXPORT_ITEM)) return;
+  const submenu = document.getElementById(item.getAttribute('aria-controls') ?? '');
+  const to = event.relatedTarget;
+  const box = item.getBoundingClientRect();
+  const intoSubmenu =
+    item.dataset.state === 'open' && to instanceof Node && !!submenu?.contains(to);
+  const stillOn =
+    to === null &&
+    event.clientX >= box.left &&
+    event.clientX <= box.right &&
+    event.clientY >= box.top &&
+    event.clientY <= box.bottom;
+  if (intoSubmenu || stillOn) event.stopPropagation();
+}
+watch(overflowOpen, (open) => {
+  if (open) document.addEventListener('pointerleave', keepExportOpen, true);
+  else {
+    document.removeEventListener('pointerleave', keepExportOpen, true);
+    fitSoon();
+  }
+});
+onBeforeUnmount(() => document.removeEventListener('pointerleave', keepExportOpen, true));
+
 const overflowItems = computed<DropdownMenuItem[]>(() => {
   const out: DropdownMenuItem[] = [];
   const has = (item: ToolbarItem) => folded.value.includes(item);
@@ -118,6 +157,7 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
     out.push({
       label: 'Export',
       icon: 'i-lucide-file-output',
+      class: EXPORT_ITEM,
       children: [
         ...exportIds.value.flatMap((id) => entry(id, 'i-lucide-file-output')),
         ...entry('export-options', 'i-lucide-sliders-horizontal'),
@@ -269,7 +309,11 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
       <UIcon :name="dark ? 'i-lucide-sun' : 'i-lucide-moon'" class="icon" />
     </button>
     <!-- What didn't fit, below 1024px: shown only while something is folded into it. -->
-    <MenuButton :items="overflowItems" :content="{ align: 'end', onCloseAutoFocus }">
+    <MenuButton
+      v-model:open="overflowOpen"
+      :items="overflowItems"
+      :content="{ align: 'end', onCloseAutoFocus }"
+    >
       <button
         ref="overflowButton"
         type="button"

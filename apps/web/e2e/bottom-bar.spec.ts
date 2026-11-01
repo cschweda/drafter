@@ -333,6 +333,41 @@ test.describe('the top bar on a phone', () => {
     await page.setViewportSize({ width: 800, height: 800 });
     await expect(overflow).toBeHidden();
   });
+  // A mouse opens More actions' Export submenu (Task 10): at 412px it opens on the left, which
+  // Reka took for the pointer leaving, and Firefox's leave near the window's top closed it too.
+  test('a mouse click opens the Export submenu at 412px, and it stays to be used', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone has no mouse');
+    await page.setViewportSize({ width: 412, height: 800 });
+    await start(page);
+    await editor(page).click();
+    await page.keyboard.type('x');
+    const overflow = page.locator('header.toolbar').getByRole('button', { name: 'More actions' });
+    await expect(overflow).toBeVisible();
+    await overflow.click();
+    const menu = page.getByRole('menu', { name: 'More actions' });
+    const exportItem = menu.getByRole('menuitem', { name: 'Export', exact: true });
+    await expect(exportItem).toBeVisible();
+    // A real mouse click, which goes straight to the item, as a quick hand does.
+    await exportItem.click();
+    const options = page.getByRole('menuitem', { name: 'Export options…' });
+    await expect(options).toBeVisible();
+    await expect(exportItem).toHaveAttribute('aria-expanded', 'true');
+    // It stays open while the pointer rests on Export...
+    await page.waitForTimeout(400);
+    await expect(options).toBeVisible();
+    // ... and while the pointer goes straight across to the submenu, which is on the left here.
+    const target = await options.boundingBox();
+    if (!target) throw new Error('Export options… has no box');
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+    await page.waitForTimeout(400);
+    await expect(options).toBeVisible();
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(page.getByRole('dialog', { name: 'Export options' })).toBeVisible();
+  });
 
   // The title used to give way first, down to "T…", and nothing ever folded (Task 9 review): it
   // keeps a few letters, and the buttons fold into More actions before it is cut down further.
