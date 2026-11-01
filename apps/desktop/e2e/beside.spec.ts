@@ -278,6 +278,31 @@ test('Start new draft writes the draft beside the script, and it verifies', asyn
   await expect(page.locator('#panel-drafts')).toContainText('Saved beside Boca.fountain.');
 });
 
+test('a link where the drafts go: the list says why nothing was written, never “Saved beside”', async ({
+  desktop,
+  profile,
+}) => {
+  test.skip(!posix, 'a symbolic link needs privileges on Windows');
+  const { folder, script } = boca(profile);
+  const outside = join(profile.home, 'Outside');
+  mkdirSync(outside);
+  symlinkSync(outside, join(folder, DRAFTS));
+  const page = await opened(desktop, script);
+  await command(page, 'Start new draft…');
+  const dialog = page.getByRole('dialog', { name: 'Start new draft' });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeHidden();
+  await command(page, 'Drafts…');
+  const panel = page.locator('#panel-drafts');
+  await expect(panel).toContainText(
+    'Couldn’t write beside Boca.fountain: a link is where Drafter would write.',
+  );
+  await expect(panel).toContainText('Drafter never writes through a link.');
+  await expect(panel).not.toContainText('Saved beside');
+  expect(readdirSync(outside)).toEqual([]);
+});
+
 test('a cut kept at a save is written to the cuts file beside the script', async ({
   desktop,
   profile,

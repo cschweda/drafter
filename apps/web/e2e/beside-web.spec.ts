@@ -132,6 +132,72 @@ test.describe('in Chromium, beside the script', () => {
     expect(await folderPicks(page)).toBe(1);
   });
 
+  /** Makes every write to a file whose name matches `pattern` fail with `name` (a DOMException). */
+  function failWritesTo(page: Page, pattern: string, name: string) {
+    return page.evaluate(
+      ([pattern, name]) => {
+        const proto = FileSystemFileHandle.prototype as unknown as Record<string, unknown>;
+        const w = window as unknown as { __realCreateWritable?: unknown };
+        w.__realCreateWritable ??= proto.createWritable;
+        const real = w.__realCreateWritable as (this: FileSystemFileHandle) => Promise<unknown>;
+        proto.createWritable = function (this: FileSystemFileHandle) {
+          if (new RegExp(pattern as string).test(this.name))
+            return Promise.reject(new DOMException('No.', name as string));
+          return real.call(this);
+        };
+      },
+      [pattern, name],
+    );
+  }
+
+  test('a full disk: the lists say so, once, and how to fix it, never “Saved beside”', async ({
+    page,
+  }) => {
+    await bocaWithOffer(page);
+    await offer(page).getByRole('button', { name: 'Choose folder…' }).click();
+    await expect.poll(() => filesIn(page, 'Boca drafts')).toEqual(['Boca – Draft 01.fountain']);
+    await openDrafts(page);
+    await expect(drafts(page)).toContainText('Saved beside Boca.fountain.');
+    await failWritesTo(page, '\\.cuts\\.md$', 'QuotaExceededError');
+    await setText(page, BOCA_CUT);
+    await takeSnapshot(page);
+    await openDrafts(page);
+    await expect(drafts(page)).toContainText(
+      'Couldn’t write beside Boca.fountain: the disk is full. Free some space.',
+    );
+    await expect(drafts(page)).not.toContainText('Saved beside');
+    // Room again: Keep next to Boca.fountain… tries again now, and the line comes back.
+    await page.evaluate(() => {
+      const w = window as unknown as { __realCreateWritable: unknown };
+      (FileSystemFileHandle.prototype as unknown as Record<string, unknown>).createWritable =
+        w.__realCreateWritable;
+    });
+    await drafts(page).getByRole('button', { name: 'Keep next to Boca.fountain…' }).click();
+    await offer(page).getByRole('button', { name: 'Choose folder…' }).click();
+    await expect(drafts(page)).toContainText('Saved beside Boca.fountain.');
+    await expect
+      .poll(async () =>
+        readCutsFile((await textAt(page, 'Boca.fountain.cuts.md')) ?? '').entries.map(
+          (e) => e.title,
+        ),
+      )
+      .toEqual(['INT. CELLAR - NIGHT']);
+  });
+
+  test('a permission taken back: the lists say so, and how to allow it again', async ({ page }) => {
+    await bocaWithOffer(page);
+    await offer(page).getByRole('button', { name: 'Choose folder…' }).click();
+    await expect.poll(() => filesIn(page, 'Boca drafts')).toEqual(['Boca – Draft 01.fountain']);
+    await failWritesTo(page, 'Draft 02', 'NotAllowedError');
+    await startDraft(page);
+    await openDrafts(page);
+    await expect(drafts(page)).toContainText(
+      'Couldn’t write beside Boca.fountain: Drafter isn’t allowed to write in its folder any more. Not written: Draft 02.',
+    );
+    await expect(drafts(page)).toContainText('Choose Keep next to Boca.fountain…');
+    await expect(drafts(page)).not.toContainText('Saved beside');
+  });
+
   test('picking a folder without the script asks again', async ({ page }) => {
     await bocaWithOffer(page);
     await nextFolder(page, 'Elsewhere');

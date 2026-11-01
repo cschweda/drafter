@@ -18,6 +18,7 @@ import {
 } from '../app/beside/beside';
 import { openedDraft } from '../app/beside/draft-open';
 import { exportDraftsAndCuts } from '../app/beside/export';
+import { besideFailure } from '../app/beside/failure';
 import { readCutsBytes, readDraftBytes } from '../app/beside/read';
 import { listCuts, recordCuts } from '../app/cuts/store';
 import { draftText, freezeDraft, listDrafts } from '../app/drafts/store';
@@ -501,5 +502,98 @@ describe('opening a draft file itself', () => {
     // Either alone is not enough.
     expect(openedDraft('Boca.fountain', file, 'fountain')).toBeNull();
     expect(openedDraft('Boca – Draft 03.fountain', ONE, 'fountain')).toBeNull();
+  });
+});
+
+describe('when a write beside the work fails', () => {
+  test('one bad draft file doesn’t stop the others or the cuts file, and is reported', async () => {
+    const p = await createProject({ source: ONE });
+    await freeze(p.id, ONE);
+    await freeze(p.id, TWO);
+    await recordCuts(
+      p.id,
+      'fountain',
+      [
+        {
+          title: 'MINE',
+          text: 'A speech cut here on this computer today.',
+          where: { after: null, before: null },
+        },
+      ],
+      2,
+      NOW - 1000,
+    );
+    const { folder, files } = memoryFolder();
+    const failing: BesideFolder = {
+      ...folder,
+      async create(rel, bytes) {
+        if (rel.endsWith('Draft 01.fountain')) throw new Error('disk-full');
+        return folder.create(rel, bytes);
+      },
+    };
+    const out = await sync(p.id, failing);
+    expect(out.draftsWritten).toBe(1);
+    expect(out.failed.map((f) => f.what)).toEqual(['Draft 01']);
+    expect(files.has('Boca drafts/Boca – Draft 02.fountain')).toBe(true);
+    expect(files.has(NAMES.cuts)).toBe(true);
+    // The next sync, with room again, writes the one that failed.
+    const again = await sync(p.id, folder);
+    expect(again.failed).toEqual([]);
+    expect(again.draftsWritten).toBe(1);
+  });
+
+  test('a cuts file that can’t be written is reported, not thrown', async () => {
+    const p = await createProject({ source: ONE });
+    await recordCuts(
+      p.id,
+      'fountain',
+      [
+        {
+          title: 'MINE',
+          text: 'A speech cut here on this computer today.',
+          where: { after: null, before: null },
+        },
+      ],
+      1,
+      NOW - 1000,
+    );
+    const { folder } = memoryFolder();
+    const failing: BesideFolder = {
+      ...folder,
+      replace: async () => Promise.reject(new DOMException('No room.', 'QuotaExceededError')),
+    };
+    const out = await sync(p.id, failing);
+    expect(out.failed.map((f) => f.what)).toEqual([NAMES.cuts]);
+  });
+
+  test('says why, and how to put it right', () => {
+    const full = besideFailure('Boca.fountain', [
+      new DOMException('No room.', 'QuotaExceededError'),
+    ]);
+    expect(full).toMatch(/^Couldn’t write beside Boca\.fountain: the disk is full\./);
+    expect(full).toContain('Free some space');
+    expect(
+      besideFailure('Boca.fountain', [
+        new Error("Error invoking remote method 'x': Error: disk-full"),
+      ]),
+    ).toMatch(/the disk is full/);
+    const revoked = besideFailure('Boca.fountain', [new DOMException('No.', 'NotAllowedError')]);
+    expect(revoked).toMatch(
+      /^Couldn’t write beside Boca\.fountain: Drafter isn’t allowed to write in its folder any more\./,
+    );
+    expect(revoked).toContain('Keep next to Boca.fountain…');
+    const link = besideFailure('Boca.fountain', [new Error('not-allowed: a link')]);
+    expect(link).toMatch(
+      /^Couldn’t write beside Boca\.fountain: a link is where Drafter would write/,
+    );
+    expect(link).toContain('never writes through a link');
+    const other = besideFailure(
+      'Boca.fountain',
+      [new Error('failed: EIO')],
+      ['Draft 01', 'Draft 03'],
+    );
+    expect(other).toMatch(/something went wrong \(EIO\)/);
+    expect(other).toContain('Not written: Draft 01, Draft 03.');
+    expect(other).toContain('tries again');
   });
 });

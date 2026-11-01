@@ -37,6 +37,7 @@ import {
 } from './beside';
 import { desktopFolder } from './desktop';
 import { exportDraftsAndCuts, exportName } from './export';
+import { besideFailure } from './failure';
 import { skippedLine } from './read';
 import {
   canPickFolder,
@@ -68,6 +69,8 @@ export interface BesideSession {
   file: Readonly<Ref<string>>;
   /** Whether the script's folder can be asked for here (Chromium, a script with a file). */
   canAsk: Readonly<Ref<boolean>>;
+  /** Why the last write beside the script failed, and how to fix it; null when it didn't. */
+  failure: Readonly<Ref<string | null>>;
   /** The line the Drafts and Cuts lists show. */
   line: Readonly<Ref<string>>;
   /** The question "Keep drafts and cuts next to Boca.fountain?" while it is asked. */
@@ -155,9 +158,14 @@ function create(): BesideSession {
   /** Per script this visit: the place last written, and whether the question was asked. */
   const lastWhere = new Map<string, string>();
   const offered = new Set<string>();
+  /** Per script this visit: the place last written in full, and the failure last said. */
+  const wroteAt = new Map<string, string>();
+  const said = new Map<string, string>();
+  const failure = ref<string | null>(null);
   let queue: Promise<unknown> = Promise.resolve();
 
   const line = computed(() => {
+    if (failure.value) return failure.value;
     if (where.value === 'beside') return `Saved beside ${file.value}.`;
     return 'In this browser only.';
   });
@@ -165,7 +173,10 @@ function create(): BesideSession {
   async function refresh(project: Project | null): Promise<Place> {
     const place: Place = project ? await placeOf(project) : { kind: 'browser' };
     if (project?.id !== script.project.value?.id) return place;
-    where.value = place.kind === 'beside' ? 'beside' : 'browser';
+    // "Saved beside" only once a write there has worked: until then, and after one fails, not.
+    const wrote = place.kind === 'beside' && project && wroteAt.get(project.id) === place.where;
+    where.value = wrote ? 'beside' : 'browser';
+    failure.value = place.kind === 'beside' && project ? (said.get(project.id) ?? null) : null;
     canAsk.value = place.kind === 'ask';
     file.value =
       place.kind === 'beside'
@@ -218,6 +229,19 @@ function create(): BesideSession {
     if (place.kind !== 'beside') return null;
     const moved = lastWhere.get(project.id) !== place.where;
     const full = how === 'open' || moved;
+    const failed = (errors: unknown[], drafts: string[] = []) => {
+      wroteAt.delete(project.id);
+      const message = besideFailure(place.names.file, errors, drafts);
+      if (script.project.value?.id === project.id) {
+        where.value = 'browser';
+        failure.value = message;
+        // In Chromium, the lists' Keep next to … asks for the folder again: a way to retry now.
+        if (!desktop()) canAsk.value = true;
+      }
+      // Said once: the same failure again (at the next cut, say) is only in the lists' line.
+      if (said.get(project.id) !== message) void sayOutline(message);
+      said.set(project.id, message);
+    };
     let out: Synced;
     try {
       out = await syncBeside(
@@ -232,11 +256,27 @@ function create(): BesideSession {
           now: new Date(),
         },
       );
-    } catch {
+    } catch (error) {
       // Not written this time: they are in the browser, and the next freeze, cut or open tries again.
+      failed([error]);
       return null;
     }
-    lastWhere.set(project.id, place.where);
+    if (out.failed.length > 0) {
+      failed(
+        out.failed.map((f) => f.error),
+        out.failed.filter((f) => f.what !== place.names.cuts).map((f) => f.what),
+      );
+    } else {
+      // Only a sync that wrote everything counts as written here: after a failure, the next one
+      // is a full one again.
+      lastWhere.set(project.id, place.where);
+      wroteAt.set(project.id, place.where);
+      said.delete(project.id);
+      if (script.project.value?.id === project.id) {
+        where.value = 'beside';
+        failure.value = null;
+      }
+    }
     if (out.draftsAdded > 0 || out.draftsWritten > 0) await drafts.load();
     if (out.cutsAdded > 0) await cuts.load();
     tell(out, place.names);
@@ -314,6 +354,7 @@ function create(): BesideSession {
     where,
     file,
     canAsk,
+    failure,
     line,
     offer,
     showOffer() {

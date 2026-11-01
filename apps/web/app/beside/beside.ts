@@ -21,6 +21,7 @@ import {
   type DraftFacts,
   draftFile,
   draftFileName,
+  draftName as draftLabel,
   mergeCuts,
   type WorkKind,
 } from '@drafter/history';
@@ -221,6 +222,11 @@ export interface Synced {
   changed: string[];
   /** Why the cuts file couldn't be read, or null. */
   problem: string | null;
+  /**
+   * What couldn't be written this time ("Draft 03", or the cuts file's name), each with its error;
+   * the next sync tries again. One failing never stops the rest.
+   */
+  failed: { what: string; error: unknown }[];
 }
 
 /** How `syncBeside` runs. */
@@ -253,6 +259,7 @@ export async function syncBeside(
     skipped: 0,
     changed: [],
     problem: null,
+    failed: [],
   };
   if (options.readDrafts) {
     for (const found of await readDraftsFolder(folder, names, kind)) {
@@ -278,14 +285,26 @@ export async function syncBeside(
     if (row.written?.startsWith(place)) continue;
     const text = await draftText(projectId, row.key);
     if (text === null) continue;
-    const name = await writeDraft(folder, names, row, text, kind);
-    if (name === null) continue;
-    await setDraftWritten(row.key, `${place}${name}`);
-    out.draftsWritten++;
+    // One draft that can't be written (a full disk, a name refused) leaves the rest, and the cuts
+    // file, to be written: it is reported, and tried again at the next sync.
+    try {
+      const name = await writeDraft(folder, names, row, text, kind);
+      if (name === null) continue;
+      await setDraftWritten(row.key, `${place}${name}`);
+      out.draftsWritten++;
+    } catch (error) {
+      out.failed.push({ what: draftLabel(row.n), error });
+    }
   }
   if (options.cuts) {
     const local = (await listCuts(projectId)).map(entryOf);
-    const merged = await mergeCutsFile(folder, names, local, kind, options.now);
+    let merged: CutsMerged;
+    try {
+      merged = await mergeCutsFile(folder, names, local, kind, options.now);
+    } catch (error) {
+      out.failed.push({ what: names.cuts, error });
+      return out;
+    }
     out.skipped = merged.skipped;
     out.problem = merged.problem;
     out.cutsAdded = await mergeIntoCuts(projectId, kind, merged.incoming, options.now);
