@@ -33,6 +33,7 @@ import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { isDesktopBuild } from '~/desktop';
+import { useDrafts } from '~/drafts/use-drafts';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
 import { firstSceneStart } from '~/editor/first-scene';
@@ -121,6 +122,7 @@ export function registerBuiltinCommands(): void {
   const comparing = () => compare.current.value !== null;
   const showChanges = useShowChanges();
   const deleted = useDeleted();
+  const drafts = useDrafts();
   /** Whether a pane shows the Deleted scenes tab. */
   const deletedShown = () =>
     window.matchMedia(WIDE_QUERY).matches
@@ -373,6 +375,20 @@ export function registerBuiltinCommands(): void {
       run: () => {
         if (deleted.isOpen.value && deletedShown()) deleted.close(true);
         else deleted.open();
+      },
+    },
+    // Start new draft… (drafts-and-cuts design §2.1): its dialog; for a sample or in a read-only
+    // tab it says why. Drafts… opens the list, or shows it; shown, it closes.
+    'start-draft': {
+      enabled: hasScript,
+      run: () => drafts.ask(),
+    },
+    drafts: {
+      enabled: hasScript,
+      liveTitle: () => (drafts.shown() ? 'Close Drafts' : 'Drafts…'),
+      run: () => {
+        if (drafts.shown()) drafts.close(true);
+        else drafts.open();
       },
     },
     'take-snapshot': {

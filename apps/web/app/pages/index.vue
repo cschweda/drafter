@@ -214,6 +214,7 @@ onBeforeUnmount(() => {
     <NewNoteDialog />
     <SettingsDialog />
     <HistoryDialog />
+    <StartDraftDialog />
     <SceneHistoryDialog />
     <AboutDialog />
     <UpdateCheckDialog />

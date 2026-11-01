@@ -76,6 +76,16 @@ describe('panes', () => {
         more: ['stats', 'problems', 'history'],
       });
     });
+    test('Drafts and the draft being read lead More after Compare while open', () => {
+      expect(phoneTabs('markdown', [], { compare: true, drafts: true, draft: true }).more).toEqual([
+        'compare',
+        'drafts',
+        'draft',
+        'stats',
+        'problems',
+        'history',
+      ]);
+    });
     test("the modules' tabs follow Problems, and Compare and Deleted scenes lead while open", () => {
       expect(phoneTabs('fountain', ['module-a--t'], { compare: true, deleted: true }).more).toEqual(
         [
@@ -97,13 +107,15 @@ describe('panes', () => {
     test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Problems, Compare, Deleted scenes, and module tabs", () => {
       expect(inspectorTabs('fountain')).toEqual({
         row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-        more: ['notes', 'problems', 'compare', 'deleted'],
+        more: ['notes', 'problems', 'compare', 'deleted', 'drafts', 'draft'],
       });
       expect(inspectorTabs('fountain', ['module-a--x', 'module-b--y']).more).toEqual([
         'notes',
         'problems',
         'compare',
         'deleted',
+        'drafts',
+        'draft',
         'module-a--x',
         'module-b--y',
       ]);
@@ -113,12 +125,14 @@ describe('panes', () => {
       // The Preview is the Script tab's id in a Markdown document (its panel is #panel-script).
       expect(inspectorTabs('markdown')).toEqual({
         row: ['script', 'stats'],
-        more: ['problems', 'compare'],
+        more: ['problems', 'compare', 'drafts', 'draft'],
       });
       // A module's tab, which a module may draw for any document, goes after them.
       expect(inspectorTabs('markdown', ['module-a--x']).more).toEqual([
         'problems',
         'compare',
+        'drafts',
+        'draft',
         'module-a--x',
       ]);
     });

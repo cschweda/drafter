@@ -128,6 +128,8 @@ const LAYOUT: Record<Group, Section[]> = {
       strip: /^(Template|Document): /,
     },
     { pick: ['save', 'save-as', 'revert-to-saved'] },
+    // Drafts (drafts-and-cuts design §6): after Revert to Saved. Cuts… joins them with Task 4.
+    { pick: ['start-draft', 'drafts'] },
     { pick: prefix('export-'), submenu: 'Export', strip: /^Export as / },
     { pick: ['remove'] },
     { pick: ['settings'] },
@@ -214,6 +216,7 @@ const LABELS: Record<string, string> = {
   'help-technical': 'Technical Details',
   'check-for-updates': 'Check for Updates…',
   'open-as-screenplay': 'Open as Screenplay…',
+  'start-draft': 'Start New Draft…',
 };
 
 /**

@@ -113,8 +113,8 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/history',
-    does: 'Version history: which scenes of past versions are gone now, one scene’s versions, and where Put back goes.',
-    uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
+    does: 'Version history: which scenes of past versions are gone now, one scene’s versions, where Put back goes, and the draft and cuts files.',
+    uses: ['@drafter/fountain', '@drafter/markdown', '@drafter/outline', '@drafter/templates'],
   },
   {
     name: '@drafter/cast',

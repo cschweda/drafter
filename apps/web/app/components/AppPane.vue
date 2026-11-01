@@ -2,6 +2,8 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useCompare } from '~/compare/use-compare';
 import { useScriptTitle } from '~/composables/useScriptTitle';
+import { draftName } from '~/drafts/labels';
+import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { useDeleted } from '~/history/deleted';
@@ -66,6 +68,8 @@ const ICONS: Record<string, string> = {
   problems: 'i-lucide-triangle-alert',
   compare: 'i-lucide-git-compare',
   deleted: 'i-lucide-archive-restore',
+  drafts: 'i-lucide-milestone',
+  draft: 'i-lucide-book-open',
   module: 'i-lucide-puzzle',
 };
 const iconOf = (tab: Tab) =>
@@ -80,14 +84,21 @@ const openNotes = computed(() => openCount(noteEntries.value));
 // design §9, Call 34).
 const { current: comparison } = useCompare();
 const { isOpen: deletedOpen } = useDeleted();
+// The Drafts list and the draft being read, while open (drafts-and-cuts design §2.3).
+const { isOpen: draftsOpen, reading } = useDrafts();
 const moduleTabs = useModuleTabs();
 const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
 
 /** Every tab's label, by its id. */
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB].map((tab) => [tab.id, tab.label]),
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB, DRAFTS_TAB, READER_TAB].map((tab) => [
+    tab.id,
+    tab.label,
+  ]),
 );
 function tabOf(id: TabId): Tab {
+  // The draft being read is named by its number: "Draft 3".
+  if (id === READER_TAB.id && reading.value) return { id, label: draftName(reading.value.row.n) };
   if (id === 'notes' && openNotes.value > 0) {
     return {
       id,
@@ -108,8 +119,13 @@ const inspectorSet = computed(() => {
     kind.value,
     moduleTabs.value.map((tab) => tab.id),
   );
-  const open = (id: TabId) =>
-    id === COMPARE_TAB.id ? !!comparison.value : id === DELETED_TAB.id ? deletedOpen.value : true;
+  const open = (id: TabId) => {
+    if (id === COMPARE_TAB.id) return !!comparison.value;
+    if (id === DELETED_TAB.id) return deletedOpen.value;
+    if (id === DRAFTS_TAB.id) return draftsOpen.value;
+    if (id === READER_TAB.id) return !!reading.value;
+    return true;
+  };
   return { row: row.map(tabOf), more: more.filter(open).map(tabOf) };
 });
 /** The tabs drawn in the Inspector's row: the row's own, and the view showing if it isn't one. */
@@ -784,6 +800,8 @@ function onPanelKeydown(event: KeyboardEvent) {
       <ScaffoldPane v-else-if="props.selected === 'scaffold'" />
       <ComparePane v-else-if="props.selected === 'compare'" />
       <DeletedPane v-else-if="props.selected === 'deleted'" />
+      <DraftsPane v-else-if="props.selected === 'drafts'" />
+      <DraftReader v-else-if="props.selected === 'draft'" />
       <ProblemsPane v-else />
     </div>
     <BottomTabBar

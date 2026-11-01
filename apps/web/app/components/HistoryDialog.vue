@@ -4,6 +4,9 @@ import { commandById } from '~/commands/registry';
 import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import DDialog from '~/components/ui/DDialog.vue';
+import { compareLabel, draftWhen, milestoneLabel } from '~/drafts/labels';
+import type { DraftRow } from '~/drafts/store';
+import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
 import { useDeleted } from '~/history/deleted';
 import { noticeWhileOpen, sayOutline } from '~/outline/notice';
@@ -107,6 +110,7 @@ watch(historyOpen, async (open) => {
     readWhy();
     el.showModal();
     el.focus();
+    void draftsSession.load();
     await load();
     await nextTick();
     if (!historyOpen.value) return;
@@ -246,6 +250,33 @@ async function showChangesSince(row: HistoryRow) {
   close();
   showChanges.since({ kind: 'snapshot', id: row.id, label: sinceLabel(row) });
   void commandById('show-script')?.run();
+}
+
+// Drafts as milestones (drafts-and-cuts design §2.1): listed above the snapshots, set apart from
+// them, so the major shifts stand out; each compares with now, and Compare with… offers them too.
+const draftsSession = useDrafts();
+const draftRows = draftsSession.rows;
+
+async function draftVersion(row: DraftRow): Promise<Version | null> {
+  const text = await draftsSession.textOf(row.n);
+  if (text === null) {
+    tell(`Draft ${row.n} can’t be read.`);
+    return null;
+  }
+  return { label: compareLabel(row), at: row.frozenAt, text };
+}
+
+async function compareDraftNow(row: DraftRow) {
+  const version = await draftVersion(row);
+  if (version) startCompare(version, nowVersion());
+}
+
+async function pickDraft(other: DraftRow) {
+  const row = picking.value;
+  if (!row) return;
+  const version = await versionOf(row);
+  const second = version && (await draftVersion(other));
+  if (version && second) startCompare(version, second);
 }
 
 // Deleted scenes (version-history design §8): History closes, and the tab opens beside the script.
@@ -641,6 +672,28 @@ const nameOf = (row: HistoryRow) =>
           Take snapshot
         </DButton>
       </div>
+      <section
+        v-if="!picking && draftRows.length > 0"
+        class="milestones"
+        aria-labelledby="history-drafts-title"
+      >
+        <h3 id="history-drafts-title" class="milestones-title">Drafts</h3>
+        <ul>
+          <li v-for="draft in draftRows" :key="draft.key">
+            <button
+              type="button"
+              class="milestone"
+              :aria-label="`Compare ${milestoneLabel(draft)} with now`"
+              :title="`Compare with now`"
+              @click="compareDraftNow(draft)"
+            >
+              <UIcon name="i-lucide-milestone" class="milestone-icon" aria-hidden="true" />
+              <span class="milestone-name">{{ milestoneLabel(draft) }}</span>
+              <span class="milestone-when">{{ draftWhen(draft.frozenAt) }}</span>
+            </button>
+          </li>
+        </ul>
+      </section>
       <p v-if="rows === null" class="empty">Reading the snapshots…</p>
       <DEmpty v-else-if="items.length === 0" icon="i-lucide-history">
         No snapshots yet. One is taken every 10 minutes of writing, and each time you save to a file.
@@ -663,6 +716,17 @@ const nameOf = (row: HistoryRow) =>
             </button>
           </li>
         </ul>
+        <template v-if="draftRows.length > 0">
+          <h4 class="pick-title">Drafts</h4>
+          <ul>
+            <li v-for="draft in draftRows" :key="draft.key">
+              <button type="button" class="choice milestone-choice" @click="pickDraft(draft)">
+                <UIcon name="i-lucide-milestone" class="milestone-icon" aria-hidden="true" />
+                {{ milestoneLabel(draft) }}
+              </button>
+            </li>
+          </ul>
+        </template>
         <DButton @click="cancelPick">Cancel</DButton>
       </div>
       <div v-else role="listbox" aria-label="Snapshots" class="list">
@@ -860,6 +924,80 @@ h2 {
 }
 .choice:hover {
   background: var(--overlay);
+}
+/* Drafts, the writer's milestones, set apart from the snapshots: an accent edge and the milestone
+   icon (drafts-and-cuts design §2.1). */
+.milestones {
+  flex: none;
+  max-height: 9.5rem;
+  margin: 0 0 8px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.milestones-title {
+  margin: 0;
+  padding: 6px 12px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.milestones ul {
+  margin: 0;
+  padding: 0 0 4px;
+  list-style: none;
+}
+.milestone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 2px 12px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.milestone:hover {
+  background: var(--overlay);
+}
+.milestone:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.milestone-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--accent-text);
+}
+.milestone-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.milestone-when {
+  flex: none;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+.milestone-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+@media (forced-colors: active) {
+  .milestones {
+    border-left: 3px solid Highlight;
+  }
 }
 .day-title {
   position: sticky;

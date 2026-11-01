@@ -71,6 +71,7 @@ flowchart BT
   layout --> outline
   notes --> outline
   layout --> compare
+  markdown --> history
   outline --> history
   outline --> cast
   layout --> render_pdf

@@ -136,6 +136,22 @@ export const COMMAND_DATA: readonly CommandData[] = [
     keywords: ['show all versions', 'versions', 'deleted', 'cut scenes', 'put back'],
   },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
+  // Drafts (drafts-and-cuts design §2, §6): the writer's word is Draft, and the palette finds them
+  // by "version" too (§2.5, Call 26). No default key (as v0.18.0).
+  {
+    id: 'start-draft',
+    title: 'Start new draft…',
+    group: 'File',
+    icon: 'i-lucide-milestone',
+    keywords: ['new version', 'version', 'freeze', 'milestone'],
+  },
+  {
+    id: 'drafts',
+    title: 'Drafts…',
+    group: 'File',
+    icon: 'i-lucide-milestone',
+    keywords: ['versions', 'version', 'open draft by ID', 'draft history'],
+  },
   ...SAMPLES.map(
     (sample): CommandData => ({
       id: `open-sample-${sample.kind}`,

@@ -209,8 +209,9 @@ describe('directUses', () => {
     }
     const edges = direct.reduce((n, p) => n + p.uses.length, 0);
     expect(edges).toBeLessThan(PACKAGES.reduce((n, p) => n + p.uses.length, 0));
-    // A drawing that stays readable: 32 lines since the CLI writes the HTML export too.
-    expect(edges).toBeLessThanOrEqual(33);
+    // A drawing that stays readable: 32 lines since the CLI writes the HTML export too, and one
+    // more since the draft and cuts files (history reads Markdown's metadata comment).
+    expect(edges).toBeLessThanOrEqual(34);
   });
 });
 

@@ -29,13 +29,22 @@ export type InspectorTabId =
   | 'problems'
   | 'compare'
   | 'deleted'
+  | 'drafts'
+  | 'draft'
   | `module-${string}`;
+
+/**
+ * The Drafts list and the draft being read (drafts-and-cuts design §2.3): tabs that exist only while
+ * open, as Compare is, for scripts and Markdown documents alike.
+ */
+const DRAFT_TABS: InspectorTabId[] = ['drafts', 'draft'];
 
 /**
  * The Inspector's tabs for a document of `kind` (Call 14): the row, and More with the rest, in
  * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Problems, Compare,
- * Deleted scenes, then the modules' tabs (`modules`) under More. A Markdown document: Preview and
- * Stats; Problems, Compare, and the modules' tabs under More. Compare and Deleted scenes are listed only while open
+ * Deleted scenes, Drafts, the draft being read, then the modules' tabs (`modules`) under More. A
+ * Markdown document: Preview and Stats; Problems, Compare, Drafts, the draft being read, and the
+ * modules' tabs under More. Compare, Deleted scenes, and the drafts' two are listed only while open
  * (AppPane leaves them out otherwise); when the Inspector is too narrow for its row, AppPane moves
  * tabs from the row's right end into More, measured.
  */
@@ -45,10 +54,10 @@ export function inspectorTabs(
 ): { row: InspectorTabId[]; more: InspectorTabId[] } {
   const own = modules as InspectorTabId[];
   if (kind === 'markdown')
-    return { row: ['script', 'stats'], more: ['problems', 'compare', ...own] };
+    return { row: ['script', 'stats'], more: ['problems', 'compare', ...DRAFT_TABS, ...own] };
   return {
     row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-    more: ['notes', 'problems', 'compare', 'deleted', ...own],
+    more: ['notes', 'problems', 'compare', 'deleted', ...DRAFT_TABS, ...own],
   };
 }
 
@@ -162,15 +171,20 @@ export const HISTORY_ITEM = 'history';
 /**
  * The bottom tab bar (fresh-look design §6): Write, Script (a Markdown document's Preview), and
  * Outline (not in a Markdown document), then More with Cards, Stats, Scaffold, Notes, Problems,
- * the modules' tabs, and History, which opens its dialog. Compare and Deleted scenes lead More
- * while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
+ * the modules' tabs, and History, which opens its dialog. Compare, Deleted scenes, Drafts, and the
+ * draft being read lead More while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
  */
 export function phoneTabs(
   kind: 'fountain' | 'markdown',
   modules: ReadonlyArray<string> = [],
-  open: { compare?: boolean; deleted?: boolean } = {},
+  open: { compare?: boolean; deleted?: boolean; drafts?: boolean; draft?: boolean } = {},
 ): { row: TabId[]; more: TabId[] } {
-  const lead = [...(open.compare ? ['compare'] : []), ...(open.deleted ? ['deleted'] : [])];
+  const lead = [
+    ...(open.compare ? ['compare'] : []),
+    ...(open.deleted ? ['deleted'] : []),
+    ...(open.drafts ? ['drafts'] : []),
+    ...(open.draft ? ['draft'] : []),
+  ];
   if (kind === 'markdown') {
     return {
       row: ['source', 'script'],

@@ -2,6 +2,8 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { commandById } from '~/commands/registry';
 import { useCompare } from '~/compare/use-compare';
+import { draftName } from '~/drafts/labels';
+import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { useDeleted } from '~/history/deleted';
@@ -43,6 +45,7 @@ const { entries: noteEntries } = useNotes();
 const openNotes = computed(() => openCount(noteEntries.value));
 const { current: comparison } = useCompare();
 const { isOpen: deletedOpen } = useDeleted();
+const { isOpen: draftsOpen, reading } = useDrafts();
 const moduleTabs = useModuleTabs();
 
 const ICONS: Record<string, string> = {
@@ -53,13 +56,15 @@ const ICONS: Record<string, string> = {
   more: 'i-lucide-ellipsis',
 };
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB].map((tab) => [tab.id, tab.label]),
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB, DRAFTS_TAB].map((tab) => [tab.id, tab.label]),
 );
 
 /** A tab's label on the bar and in More: Write for the Source, Preview for a Markdown Script. */
 function labelOf(id: TabId): string {
   if (id === 'script' && markdown.value) return 'Preview';
   if (id === HISTORY_ITEM) return 'History';
+  if (id === READER_TAB.id)
+    return reading.value ? draftName(reading.value.row.n) : READER_TAB.label;
   return (
     PHONE_LABELS[id] ?? moduleTabs.value.find((tab) => tab.id === id)?.label ?? LABELS[id] ?? id
   );
@@ -71,7 +76,12 @@ const set = computed(() =>
   phoneTabs(
     kind.value,
     moduleTabs.value.map((tab) => tab.id),
-    { compare: !!comparison.value, deleted: deletedOpen.value },
+    {
+      compare: !!comparison.value,
+      deleted: deletedOpen.value,
+      drafts: draftsOpen.value,
+      draft: !!reading.value,
+    },
   ),
 );
 /** The bar's tabs: its own, then the one showing, if it came from More. */

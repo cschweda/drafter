@@ -169,7 +169,7 @@ describe('projects', () => {
     expect((await getProject(withBom.id))?.bom).toBe(true);
     await updateProject(withBom.id, { bom: false });
     expect((await getProject(withBom.id))?.bom).toBe(false);
-    expect(db.verno).toBe(1);
+    expect(db.verno).toBe(2);
     expect(db.table('projects').schema.idxByName.bom).toBeUndefined();
   });
 
@@ -183,12 +183,14 @@ describe('projects', () => {
     expect((await getProject(plain.id))?.baseline).toBeUndefined();
     await updateProject(started.id, { source: 'Title: Untitled\n\nTyped.' });
     expect((await getProject(started.id))?.baseline).toBe('Title: Untitled\n\n');
-    expect(db.verno).toBe(1);
+    expect(db.verno).toBe(2);
     expect(db.table('projects').schema.idxByName.baseline).toBeUndefined();
   });
 
-  test('has the whole version-1 schema', () => {
+  test('has the whole version-2 schema: version 1’s, with drafts and cuts', () => {
     expect(db.tables.map((t) => t.name).sort()).toEqual([
+      'cuts',
+      'drafts',
       'handles',
       'projects',
       'settings',
@@ -200,6 +202,13 @@ describe('projects', () => {
       'createdAt',
       'projectId',
     ]);
+    expect(db.drafts.schema.primKey.keyPath).toBe('key');
+    expect(db.drafts.schema.indexes.map((i) => i.name).sort()).toEqual([
+      '[projectId+n]',
+      'id',
+      'projectId',
+    ]);
+    expect(db.cuts.schema.indexes.map((i) => i.name).sort()).toEqual(['id', 'projectId']);
   });
 
   test('writes the recovery copy over the stored project, keeping what else was recorded', async () => {

@@ -90,6 +90,28 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
+  test('File lists Start New Draft… and Drafts… after Revert to Saved, in a section of their own', () => {
+    const m = menus(
+      menuTemplate(
+        [
+          ...COMMANDS,
+          cmd('revert-to-saved', 'File', 'Revert to Saved'),
+          cmd('start-draft', 'File', 'Start new draft…'),
+          cmd('drafts', 'File', 'Drafts…'),
+        ],
+        () => {},
+        { platform: 'linux' },
+      ),
+    );
+    const file = submenu(m.File);
+    const at = file.findIndex((i) => i.id === 'revert-to-saved');
+    expect(file[at + 1]?.type).toBe('separator');
+    expect(file[at + 2]?.id).toBe('start-draft');
+    expect(file[at + 3]?.id).toBe('drafts');
+    expect(labelOf(file[at + 2] as MenuItemConstructorOptions)).toBe('Start New Draft…');
+    expect(labelOf(file[at + 3] as MenuItemConstructorOptions)).toBe('Drafts…');
+  });
+
   test('File lists Open as Screenplay… after Open', () => {
     const m = menus(menuTemplate(COMMANDS, () => {}, { platform: 'linux' }));
     const file = submenu(m.File);

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { commandById } from '~/commands/registry';
+import { draftName } from '~/drafts/labels';
+import { useDrafts } from '~/drafts/use-drafts';
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
@@ -87,6 +89,18 @@ const fileTitle = computed(() => {
 
 function openHistory() {
   historyOpen.value = { focusLabel: false };
+}
+
+// ---- The draft ------------------------------------------------------------------------------
+
+// The draft being written, quietly (drafts-and-cuts design §2.6): a button that opens the Drafts
+// list. Not for a sample, which keeps no drafts; never in focus mode, where the bar is hidden.
+const drafts = useDrafts();
+const draftLabel = computed(() =>
+  project.value && !project.value.sample ? draftName(drafts.current.value) : '',
+);
+function openDrafts() {
+  drafts.open();
 }
 
 // ---- The recovery copy ------------------------------------------------------------------------
@@ -230,6 +244,17 @@ const urgent = computed(
           @click="openHistory"
         >
           <span class="name">{{ file }}</span>
+        </button>
+        <button
+          v-if="draftLabel"
+          type="button"
+          class="draft-button item wide-only"
+          title="Drafts"
+          :aria-label="`Drafts, writing ${draftLabel}`"
+          data-item="draft"
+          @click="openDrafts"
+        >
+          {{ draftLabel }}
         </button>
         <button
           v-if="warning"
