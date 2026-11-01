@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The desktop build makes the history package and the packages it needs before the desktop tests, which read it from its source.
+
 ## [0.24.0] - 2026-11-01
 
 **Drafts and Cuts.** Start new draft keeps your script as Draft 01, 02, and so on, each with an ID of its own, and Draft by draft shows how it changed. Cuts keeps everything you cut, for good, to browse for ideas, and replaces Deleted scenes. **The desktop app now writes `<script>.cuts.md` and a `<script> drafts` folder beside your script, without asking** (for `Boca.fountain`: `Boca.fountain.cuts.md` and `Boca drafts/`); Chrome and Edge ask once for the script's folder, and other browsers keep them in the browser, with Export drafts and cuts.
