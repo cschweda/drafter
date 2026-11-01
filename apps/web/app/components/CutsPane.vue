@@ -15,7 +15,6 @@ import {
 } from '~/cuts/labels';
 import type { CutRow } from '~/cuts/store';
 import { useCuts } from '~/cuts/use-cuts';
-import { KEPT_HERE } from '~/drafts/labels';
 import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
 import { sayOutline } from '~/outline/notice';
@@ -158,7 +157,7 @@ const textId = (row: CutRow) => `${titleId(row)}-text`;
     <DEmpty v-if="notKept" icon="i-lucide-scissors">{{ notKept }}</DEmpty>
     <template v-else>
       <div class="tools">
-        <p class="where">{{ KEPT_HERE }}</p>
+        <BesideLine />
         <div v-if="rows.length > 0" class="controls">
           <label class="filter">
             <span>Filter</span>

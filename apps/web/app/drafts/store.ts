@@ -30,13 +30,57 @@ export interface DraftRow {
   gz?: Uint8Array;
   /** The text, where the browser can't compress. */
   source?: string;
-  /** Where its file was written beside the work (Task 7), or undefined. */
+  /**
+   * Where its file was written beside the work: `<where>|<file name>` (`beside/beside.ts`), so a
+   * move (Save As, another folder) writes it again; undefined until it is written.
+   */
   written?: string;
+  /**
+   * A draft found beside the work that isn't this browser's own: another computer's draft of the
+   * same number (`another-computer`), or a draft file whose text no longer matches its ID
+   * (`changed`, "changed outside Drafter"). Kept beside the browser's own, never over it.
+   */
+  outside?: DraftOutside;
+  /** The draft file it was read from, for an outside draft. */
+  file?: string;
 }
+
+/** Why a draft found beside the work is listed apart (`DraftRow.outside`). */
+export type DraftOutside = 'another-computer' | 'changed';
+
+/** A draft as read from a file beside the work (`addDraftFromFile`). */
+export interface DraftFromFile {
+  n: number;
+  /** The hash of its text as it is now. */
+  id: string;
+  text: string;
+  frozenAt: number;
+  note: string;
+  from?: DraftFrom;
+  /** Its ID didn't match its text. */
+  changed: boolean;
+  /** The file's name in the drafts folder. */
+  file: string;
+  /** Where that folder is (`DraftRow.written`'s first part). */
+  where: string;
+}
+
+/** Which draft: its number (the script's own Draft n) or a row's key (any draft, outside ones too). */
+export type DraftWhich = number | string;
 
 export type FreezeResult = { result: 'frozen'; row: DraftRow } | { result: 'failed'; why: string };
 
 export const draftKey = (projectId: string, n: number): string => `${projectId}:${n}`;
+
+/** The key of an outside draft: its number and the start of its ID, so each text is one row. */
+export const outsideKey = (projectId: string, n: number, id: string): string =>
+  `${projectId}:${n}:${id.slice(0, 16)}`;
+
+/** The row key for `which`, or null when it isn't one of this script's. */
+function keyOf(projectId: string, which: DraftWhich): string | null {
+  if (typeof which === 'number') return draftKey(projectId, which);
+  return which.startsWith(`${projectId}:`) ? which : null;
+}
 
 /** The settings row holding where the draft being written came from (Restore as a new draft). */
 export const draftFromKey = (projectId: string): string => `draft-from:${projectId}`;
@@ -141,17 +185,19 @@ export async function listDrafts(projectId: string): Promise<DraftRow[]> {
   return rows.reverse().map(withoutText);
 }
 
-/** This script's Draft `n`, without its text, or null. */
-export async function draftRow(projectId: string, n: number): Promise<DraftRow | null> {
-  const row = await db.drafts.get(draftKey(projectId, n));
+/** This script's Draft `n` (or the draft keyed `which`), without its text, or null. */
+export async function draftRow(projectId: string, which: DraftWhich): Promise<DraftRow | null> {
+  const key = keyOf(projectId, which);
+  const row = key ? await db.drafts.get(key) : undefined;
   return row && row.projectId === projectId ? withoutText(row) : null;
 }
 
-/** Draft `n`'s text, or null when there is no such draft or it can't be read. */
-export async function draftText(projectId: string, n: number): Promise<string | null> {
+/** Draft `n`'s text (or the draft keyed `which`), or null when there is none or it can't be read. */
+export async function draftText(projectId: string, which: DraftWhich): Promise<string | null> {
   try {
-    const row = await db.drafts.get(draftKey(projectId, n));
-    if (!row) return null;
+    const key = keyOf(projectId, which);
+    const row = key ? await db.drafts.get(key) : undefined;
+    if (!row || row.projectId !== projectId) return null;
     if (row.gz) return canDecompress() ? await gunzip(row.gz) : null;
     return typeof row.source === 'string' ? row.source : null;
   } catch {
@@ -160,8 +206,71 @@ export async function draftText(projectId: string, n: number): Promise<string | 
 }
 
 /** Changes draft `n`'s note (one line; '' takes it off). A draft that isn't there is left alone. */
-export async function setDraftNote(projectId: string, n: number, note: string): Promise<void> {
-  await db.drafts.update(draftKey(projectId, n), { note: cleanNote(note) });
+export async function setDraftNote(
+  projectId: string,
+  which: DraftWhich,
+  note: string,
+): Promise<void> {
+  const key = keyOf(projectId, which);
+  if (key) await db.drafts.update(key, { note: cleanNote(note) });
+}
+
+/** Records where the draft keyed `key` was written beside the work. */
+export async function setDraftWritten(key: string, written: string): Promise<void> {
+  await db.drafts.update(key, { written });
+}
+
+/**
+ * Keeps a draft read from a file beside the work (drafts-and-cuts design §4.2), never over one of
+ * the script's own: a number this script hasn't got yet becomes its Draft n; the same text as a
+ * draft it has is nothing new; any other text of a number it has (another computer's Draft 04, or
+ * a file changed outside Drafter) is kept beside it, as an outside draft. Resolves with whether a
+ * row was added.
+ */
+export async function addDraftFromFile(projectId: string, found: DraftFromFile): Promise<boolean> {
+  const body: Pick<DraftRow, 'gz' | 'source'> = canCompress()
+    ? { gz: await gzip(found.text) }
+    : { source: found.text };
+  const words = wordsIn(found.text);
+  return db.transaction('rw', db.drafts, db.projects, async () => {
+    if (!(await db.projects.get(projectId))) return false;
+    const same = await db.drafts
+      .where('id')
+      .equals(found.id)
+      .filter((row) => row.projectId === projectId)
+      .first();
+    if (same) {
+      if (!same.written)
+        await db.drafts.update(same.key, { written: `${found.where}|${found.file}` });
+      return false;
+    }
+    const own = await db.drafts.get(draftKey(projectId, found.n));
+    const outside: DraftOutside | undefined = found.changed
+      ? 'changed'
+      : own
+        ? 'another-computer'
+        : undefined;
+    const key =
+      own || found.changed
+        ? outsideKey(projectId, found.n, found.id)
+        : draftKey(projectId, found.n);
+    if (await db.drafts.get(key)) return false;
+    const row: DraftRow = {
+      key,
+      projectId,
+      n: found.n,
+      id: found.id,
+      frozenAt: found.frozenAt,
+      note: cleanNote(found.note),
+      words,
+      ...(found.from ? { from: { n: found.from.n, id: found.from.id } } : {}),
+      written: `${found.where}|${found.file}`,
+      ...(outside ? { outside, file: found.file } : {}),
+      ...body,
+    };
+    await db.drafts.add(row);
+    return true;
+  });
 }
 
 /** Whether `prefix` can find drafts by their ID: 4 to 64 hex characters, any case. */

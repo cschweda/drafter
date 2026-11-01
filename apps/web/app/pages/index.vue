@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { EditorView } from '@codemirror/view';
+import { installBeside } from '~/beside/use-beside';
 import { installTestCastProbe } from '~/cast/probe-hook';
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
@@ -83,6 +84,7 @@ const stripShown = computed(
 useSnapshots();
 // Cuts are recorded at each snapshot, and those from before drafts are found once (drafts-and-cuts §3.1).
 installCuts();
+installBeside();
 // Starts the spellcheck, which makes its worker once the settings are read and the first script is
 // open (Plan D): the Source pane's spelling marks.
 useSpell();
@@ -196,6 +198,7 @@ onBeforeUnmount(() => {
       <StorageWarning />
       <SampleBar />
       <StartBlankBar />
+      <DraftFileBar />
       <!-- Its region has no height; the offer itself is fixed in place. In the shell's grid it would be a row. -->
       <UpdatePrompt />
       <StructureStrip v-if="stripShown" />
@@ -218,6 +221,7 @@ onBeforeUnmount(() => {
     <SettingsDialog />
     <HistoryDialog />
     <StartDraftDialog />
+    <BesideDialog />
     <SceneHistoryDialog />
     <AboutDialog />
     <UpdateCheckDialog />

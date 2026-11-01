@@ -5,9 +5,10 @@ import DDialog from '~/components/ui/DDialog.vue';
 import {
   compareLabel,
   draftName,
+  draftRowName,
   draftWhen,
-  KEPT_HERE,
   markerLine,
+  OUTSIDE_LABEL,
   shortId,
   typedDraftNumber,
   wordsOf,
@@ -60,9 +61,9 @@ const tell = (message: string) => void sayOutline(message);
 // ---- Actions ----------------------------------------------------------------------------------
 
 async function versionOf(row: DraftRow): Promise<Version | null> {
-  const text = await drafts.textOf(row.n);
+  const text = await drafts.textOf(row.key);
   if (text === null) {
-    tell(`${draftName(row.n)} can’t be read.`);
+    tell(`${draftRowName(row)} can’t be read.`);
     return null;
   }
   return { label: compareLabel(row), at: row.frozenAt, text };
@@ -87,15 +88,15 @@ async function compareWith(row: DraftRow, other: DraftRow) {
 async function restore(row: DraftRow) {
   readWhy();
   if (readOnly.value) return tell(readOnly.value);
-  if (await drafts.restore(row.n)) editor.goto(editor.view.state.selection.main.head);
+  if (await drafts.restore(row.key)) editor.goto(editor.view.state.selection.main.head);
 }
 
 async function copyId(row: DraftRow) {
   try {
     await navigator.clipboard.writeText(row.id);
-    tell(`Copied the full ID of ${draftName(row.n)}.`);
+    tell(`Copied the full ID of ${draftRowName(row)}.`);
   } catch {
-    tell(`Couldn’t copy. The full ID of ${draftName(row.n)} is ${row.id}.`);
+    tell(`Couldn’t copy. The full ID of ${draftRowName(row)} is ${row.id}.`);
   }
 }
 
@@ -120,11 +121,11 @@ async function saveNote(event: Event) {
   noteDialog.value?.close();
   if (!row) return;
   try {
-    await drafts.setNote(row.n, noteText.value);
+    await drafts.setNote(row.key, noteText.value);
     tell(
       noteText.value.trim()
-        ? `Changed the note of ${draftName(row.n)}.`
-        : `Took the note off ${draftName(row.n)}.`,
+        ? `Changed the note of ${draftRowName(row)}.`
+        : `Took the note off ${draftRowName(row)}.`,
     );
   } catch {
     tell('Couldn’t change the note.');
@@ -140,7 +141,7 @@ function onNoteClose() {
 const picking = shallowRef<DraftRow | null>(null);
 const pickList = ref<HTMLElement>();
 const choices = computed(() =>
-  picking.value ? rows.value.filter((other) => other.n !== picking.value?.n) : [],
+  picking.value ? rows.value.filter((other) => other.key !== picking.value?.key) : [],
 );
 
 // Another script's drafts: its picker goes.
@@ -184,7 +185,7 @@ const later = (act: () => void) => () => {
 const NO_ITEMS: DropdownMenuItem[][] = [];
 
 function menuItems(row: DraftRow): DropdownMenuItem[][] {
-  const others = rows.value.filter((other) => other.n !== row.n);
+  const others = rows.value.filter((other) => other.key !== row.key);
   return [
     [
       {
@@ -219,7 +220,7 @@ const metaOf = (row: DraftRow) =>
     <DEmpty v-if="notKept" icon="i-lucide-milestone">{{ notKept }}</DEmpty>
     <template v-else>
       <div class="tools">
-        <p class="where">{{ KEPT_HERE }}</p>
+        <BesideLine />
         <DButton v-if="rows.length > 0" variant="borderless" class="steps-link" @click="steps.open()">
           <UIcon name="i-lucide-git-commit-vertical" aria-hidden="true" />Draft by draft
         </DButton>
@@ -269,8 +270,9 @@ const metaOf = (row: DraftRow) =>
           class="item"
           :data-draft="row.n"
         >
-          <h3 :id="`${uid}-h-${row.n}`" class="heading">
+          <h3 class="heading">
             {{ draftName(row.n) }} <code class="id">{{ shortId(row.id) }}</code>
+            <span v-if="row.outside" class="outside">{{ OUTSIDE_LABEL[row.outside] }}</span>
           </h3>
           <p class="marker">{{ markerLine(row.n, row.from, rows) }}</p>
           <p class="meta">{{ metaOf(row) }}</p>
@@ -278,15 +280,15 @@ const metaOf = (row: DraftRow) =>
             <button
               type="button"
               class="act"
-              :aria-label="`Read ${draftName(row.n)}`"
-              @click="drafts.read(row.n)"
+              :aria-label="`Read ${draftRowName(row)}`"
+              @click="drafts.read(row.key)"
             >
               Read
             </button>
             <button
               type="button"
               class="act"
-              :aria-label="`Compare ${draftName(row.n)} with now`"
+              :aria-label="`Compare ${draftRowName(row)} with now`"
               title="Compare with now"
               @click="compareNow(row)"
             >
@@ -295,7 +297,7 @@ const metaOf = (row: DraftRow) =>
             <button
               type="button"
               class="act"
-              :aria-label="`Restore ${draftName(row.n)} as a new draft`"
+              :aria-label="`Restore ${draftRowName(row)} as a new draft`"
               :aria-disabled="readOnly ? 'true' : undefined"
               :aria-describedby="readOnly ? `${uid}-why` : undefined"
               title="Restore as a new draft"
@@ -309,7 +311,7 @@ const metaOf = (row: DraftRow) =>
               :content="MENU_CONTENT"
               @update:open="(open: boolean) => (menuFor = open ? row.key : null)"
             >
-              <button type="button" class="act more" :aria-label="`More for ${draftName(row.n)}`">
+              <button type="button" class="act more" :aria-label="`More for ${draftRowName(row)}`">
                 <UIcon name="i-lucide-ellipsis" aria-hidden="true" />
               </button>
             </MenuButton>
@@ -475,6 +477,14 @@ const metaOf = (row: DraftRow) =>
   padding: 0 6px;
   border-radius: var(--r-sm);
   background: var(--accent-soft);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+.outside {
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  background: var(--warn-bg);
   color: var(--text);
   font-size: 11px;
   font-weight: 600;

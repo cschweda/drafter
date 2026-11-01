@@ -27,6 +27,7 @@ import {
 import {
   type DraftFrom,
   type DraftRow,
+  type DraftWhich,
   draftFrom,
   draftRow,
   draftText,
@@ -91,17 +92,20 @@ export interface DraftsSession {
   sameAs(): Promise<DraftRow | null>;
   /** Freezes the editor's text as Draft `current` with `note`; false (and why said) when it can't. */
   start(note: string): Promise<boolean>;
-  /** Restore as a new draft (Call 4): freezes the text now, then puts Draft `n`'s in as one undo. */
-  restore(n: number): Promise<boolean>;
-  /** Opens Draft `n` read-only beside the Source. */
-  read(n: number): Promise<void>;
+  /**
+   * Restore as a new draft (Call 4): freezes the text now, then puts Draft `n`'s in as one undo.
+   * `which` is a number (the script's own Draft n) or a row's key (an outside draft too).
+   */
+  restore(which: DraftWhich): Promise<boolean>;
+  /** Opens Draft `n` (or the draft keyed `which`) read-only beside the Source. */
+  read(which: DraftWhich): Promise<void>;
   /** The draft being read, or null. */
   reading: Readonly<ShallowRef<DraftReading | null>>;
   closeReader(): void;
   /** Changes draft `n`'s note. */
-  setNote(n: number, note: string): Promise<void>;
+  setNote(which: DraftWhich, note: string): Promise<void>;
   /** Draft `n`'s text, or null. */
-  textOf(n: number): Promise<string | null>;
+  textOf(which: DraftWhich): Promise<string | null>;
 }
 
 export function createDrafts(deps: DraftsDeps): DraftsSession {
@@ -165,18 +169,19 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
     }
   }
 
-  async function restore(n: number): Promise<boolean> {
+  async function restore(which: DraftWhich): Promise<boolean> {
     if (busy || refused()) return false;
     const projectId = deps.projectId();
     if (projectId === null) return false;
     busy = true;
     try {
-      const target = await draftText(projectId, n);
-      const row = await draftRow(projectId, n);
+      const target = await draftText(projectId, which);
+      const row = await draftRow(projectId, which);
       if (target === null || !row) {
         deps.say(DRAFT_GONE);
         return false;
       }
+      const n = row.n;
       // The reads took a moment: the script and the tab are checked again before anything changes.
       if (deps.projectId() !== projectId || refused()) return false;
       const now = deps.text();
@@ -212,12 +217,12 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
     }
   }
 
-  async function read(n: number): Promise<void> {
+  async function read(which: DraftWhich): Promise<void> {
     const projectId = deps.projectId();
     if (projectId === null) return;
     // By its key: the row and the text are this script's Draft n, whatever `rows` holds meanwhile.
-    const row = await draftRow(projectId, n);
-    const text = row ? await draftText(projectId, n) : null;
+    const row = await draftRow(projectId, which);
+    const text = row ? await draftText(projectId, row.key) : null;
     if (!row || text === null) {
       deps.say('That draft can’t be read.');
       return;
@@ -227,16 +232,16 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
     deps.showReader();
   }
 
-  async function setNote(n: number, note: string) {
+  async function setNote(which: DraftWhich, note: string) {
     const projectId = deps.projectId();
     if (projectId === null) return;
-    await setDraftNote(projectId, n, note);
+    await setDraftNote(projectId, which, note);
     await load();
   }
 
-  async function textOf(n: number): Promise<string | null> {
+  async function textOf(which: DraftWhich): Promise<string | null> {
     const projectId = deps.projectId();
-    return projectId === null ? null : draftText(projectId, n);
+    return projectId === null ? null : draftText(projectId, which);
   }
 
   return {

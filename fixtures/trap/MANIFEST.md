@@ -2,7 +2,7 @@
 
 Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project trap -u` after changing a trap). Each row is one file; each entry point it goes through has the outcome it must give. See README.md for the entry points.
 
-244 traps: fountain 39, markdown 31, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9.
+258 traps: fountain 39, markdown 31, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
 
 ## fountain
 
@@ -297,3 +297,27 @@ Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project t
 | `module-drafter-name` | `module.json` | A module calling itself Drafter is refused. | **desktop-modules**: refused: “can’t be “Drafter”” |
 | `module-proto` | `module.json` | A module.json whose permissions come only under a __proto__ key is refused: in JSON that is a plain key, not the prototype. | **desktop-modules**: refused: “no permissions object” |
 | `module-manifest-fifo` | `module.json` | A module.json that is a named pipe is skipped without hanging. | **desktop-modules**: refused: “it has no module.json” |
+
+## cuts
+
+| id | file | what it tests | entry points and outcomes |
+| --- | --- | --- | --- |
+| `cuts-valid` | `Boca.fountain.cuts.md` | The baseline: a cuts file as Drafter writes it reads back with its one cut. | **beside-read**: opens, exactly its text |
+| `cuts-forged-id` | `Boca.fountain.cuts.md` | An entry whose text was changed under its ID (a forged ID) is left out, and said so; the good one is kept. | **beside-read**: opens with a warning: “1 cut in “Boca.fountain.cuts.md” couldn’t be read”, exactly its text |
+| `cuts-huge` | `Boca.fountain.cuts.md` (generated, large) | A cuts file over 32 MB is refused before it is read, and left as it is. | **beside-read**: refused: “it is too big (over 32 MB)” |
+| `cuts-duplicates` | `Boca.fountain.cuts.md` | The same entry 5,000 times over is one cut, read in linear time, its dates capped as a merge caps them. | **beside-read**: opens, exactly its text |
+| `cuts-far-future` | `Boca.fountain.cuts.md` | A cut dated in the year 2999 (a clock far ahead, or a forged date to win the newest place) is dropped by the merge; one with a real date beside it keeps only that. | **beside-read**: opens, exactly its text |
+| `cuts-wrong-kind` | `Boca.fountain.cuts.md` | A Markdown cut in a screenplay’s cuts file is left out, and said so. | **beside-read**: opens with a warning: “1 cut in “Boca.fountain.cuts.md” couldn’t be read”, exactly its text |
+| `cuts-comment-injection` | `Boca.fountain.cuts.md` | A cut whose text holds “<!--”, “-->” and a whole forged drafter-cut comment is written so none of it closes or opens an entry; a forged comment added by hand at the start of a line is read, fails its ID, and is left out. | **beside-read**: opens with a warning: “1 cut in “Boca.fountain.cuts.md” couldn’t be read”, with 2 key lines |
+| `cuts-not-utf8` | `Boca.fountain.cuts.md` | A cuts file saved as Latin-1 is refused, and left as it is (never written over). | **beside-read**: refused: “it isn’t UTF-8 text” |
+
+## draft
+
+| id | file | what it tests | entry points and outcomes |
+| --- | --- | --- | --- |
+| `draft-valid` | `Boca – Draft 03.fountain` | The baseline: a draft file as Drafter writes it reads back with its exact text, its ID holding. | **beside-read**: opens, exactly its text |
+| `draft-wrong-hash` | `Boca – Draft 03.fountain` | A draft file whose text no longer matches its ID is kept, listed as changed outside Drafter, never taken as Draft 03 itself. | **beside-read**: opens with a warning: “changed outside Drafter”, exactly its text |
+| `draft-nested-blocks` | `Boca – Draft 03.fountain` | A draft block written inside another by hand (a /* drafter block whose JSON holds another) is a problem, not a crash, and nothing is read as a draft. | **beside-read**: refused: “isn’t” |
+| `draft-refrozen` | `Boca – Draft 03.fountain` | A draft of a draft file (its text ends with an older draft block) keeps the older block as text, and its own ID holds. | **beside-read**: opens, with 2 key lines |
+| `draft-crlf` | `Boca – Draft 03.fountain` | A draft file with CRLF line breaks (written on Windows, or by an editor) still verifies: its ID is of the text with line feeds. | **beside-read**: opens, exactly its text |
+| `draft-no-block` | `Boca – Draft 03.fountain` | A file named as a draft but with no draft block is not read as a draft. | **beside-read**: refused: “block” |

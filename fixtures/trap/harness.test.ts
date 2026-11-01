@@ -344,3 +344,14 @@ describe('desktop-modules: the modules folder', () => {
     },
   );
 });
+
+// ---- Drafts and cuts read back from beside the work -------------------------------------------
+
+describe('beside-read: drafts and cuts beside the work', () => {
+  test.each(trapsFor('beside-read').map((t) => [t.id, t] as const))('%s', async (_id, trap) => {
+    const bytes = trap.bytes?.() as Uint8Array;
+    const job = { kind: 'beside', format: trap.format, bytes } as const;
+    const answer = checkRan(trap, bytes.length, await ran(trap, job), 'beside-read');
+    checkOutcome(trap, trap.expect['beside-read'] as Outcome, answer.happened, 'beside-read');
+  });
+});

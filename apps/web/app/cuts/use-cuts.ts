@@ -37,8 +37,6 @@ export interface CutsSession {
   filter: Ref<string>;
   /** How the list groups them: by scene or chapter (the default), or by draft. */
   groupBy: Ref<GroupBy>;
-  /** Where they are kept: in this browser until Task 7 writes them beside the work. */
-  where: Readonly<Ref<'beside' | 'browser'>>;
   /** Why no cuts are kept here (none open, a sample), or null. */
   notKept: Readonly<ComputedRef<string | null>>;
   /** Why the text can't be changed from the list now, or null. */
@@ -74,7 +72,6 @@ function create(): CutsSession {
   const loaded = ref(false);
   const filter = ref('');
   const groupBy = ref<GroupBy>('scene');
-  const where = ref<'beside' | 'browser'>('browser');
   const isOpen = ref(false);
   const pendingFind = ref<string | null>(null);
   const notKept = computed(() => {
@@ -160,7 +157,6 @@ function create(): CutsSession {
     loaded,
     filter,
     groupBy,
-    where,
     notKept,
     readOnly,
     isOpen,

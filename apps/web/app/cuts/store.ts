@@ -7,6 +7,7 @@ import {
   type CutWhere,
   cutText,
   MAX_CUTS_PER_ENTRY,
+  mergeCuts,
   type WorkKind,
 } from '@drafter/history';
 import { db, type SettingRow } from '../storage/db';
@@ -137,3 +138,37 @@ export async function markPutBack(projectId: string, id: string, at: number): Pr
 /** Whether the cut was put back after it was last cut. */
 export const isPutBack = (row: Pick<CutEntry, 'cuts' | 'putBack'>): boolean =>
   row.putBack !== undefined && row.putBack >= lastCut(row);
+
+/** A row as a cuts file's entry: without the storage's own keys. */
+export function entryOf(row: CutRow): CutEntry {
+  const { key: _key, projectId: _projectId, ...entry } = row;
+  return entry;
+}
+
+/**
+ * Merges cuts read from the file beside the work into the script's (`mergeCuts`): the stored
+ * cuts are the trusted side, so for a cut in both, its title, text, kind, place and Put back stay
+ * as stored, and only dates are added; a cut only in the file is added. `incoming` must have been
+ * through `verifyCuts` (`beside/read.ts`). Resolves with how many rows were added or changed.
+ */
+export async function mergeIntoCuts(
+  projectId: string,
+  kind: WorkKind,
+  incoming: readonly CutEntry[],
+  now: Date,
+): Promise<number> {
+  if (incoming.length === 0) return 0;
+  return db.transaction('rw', db.cuts, db.projects, async () => {
+    if (!(await db.projects.get(projectId))) return 0;
+    const rows = (await db.cuts.where('projectId').equals(projectId).toArray()) as CutRow[];
+    const had = new Map(rows.map((row) => [row.id, JSON.stringify(entryOf(row))]));
+    const merged = mergeCuts(rows.map(entryOf), incoming, { kind, now });
+    let changed = 0;
+    for (const entry of merged) {
+      if (had.get(entry.id) === JSON.stringify(entry)) continue;
+      await db.cuts.put({ ...entry, key: cutKey(projectId, entry.id), projectId });
+      changed++;
+    }
+    return changed;
+  });
+}

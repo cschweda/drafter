@@ -14,6 +14,7 @@ import {
 } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
+import { draftNotice, openedDraft } from '../beside/draft-open';
 import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
 import { type DocumentKind, type ImportKind, importKindOf, kindOfFileName } from '../markdown/kind';
@@ -297,7 +298,19 @@ export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void
       return;
     }
     const script = useScript();
-    const opened = { ...decoded, fileName: file.name, ref: file.ref, kind };
+    // A draft file itself (`Boca – Draft 03.fountain`): its draft facts come out of the text.
+    const draft = openedDraft(
+      file.name,
+      decoded.text,
+      kind === 'markdown' ? 'markdown' : 'fountain',
+    );
+    const opened = {
+      ...decoded,
+      ...(draft ? { text: draft.text, fileText: decoded.text } : {}),
+      fileName: file.name,
+      ref: file.ref,
+      kind,
+    };
 
     // The same file on disk is the same script.
     const already = await openedAlready(file);
@@ -332,6 +345,14 @@ export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void
       return;
     }
     if (!openError.value) useEditor().view.focus();
+    const now = script.project.value;
+    if (draft && now)
+      draftNotice.value = {
+        projectId: now.id,
+        work: draft.work,
+        n: draft.n,
+        kind: kind === 'markdown' ? 'markdown' : 'fountain',
+      };
     if (file.notice) await say(openError, file.notice);
   } catch {
     await say(openError, MESSAGES.failed);

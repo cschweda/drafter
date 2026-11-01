@@ -97,10 +97,21 @@ export const restoredLine = (n: number, m: number): string =>
 /** The note of the draft frozen before a restore (§2.3, Call 4). */
 export const beforeRestoreNote = (n: number): string => `before restoring ${draftName(n)}`;
 
-/** Where the drafts are kept, until files beside the work (Task 7). */
-export const KEPT_HERE = 'Kept in this browser.';
-
 export const NOT_KEPT_SAMPLE =
   'Drafts aren’t kept for a sample. Save it to a file, and it becomes a script of your own that keeps them.';
 export const NO_SCRIPT = 'No script is open yet.';
 export const DRAFT_GONE = 'That draft can’t be read, so nothing was changed.';
+
+/** Why an outside draft is listed apart, as its row says it. */
+export const OUTSIDE_LABEL = {
+  'another-computer': 'from another computer',
+  changed: 'changed outside Drafter',
+} as const;
+
+/**
+ * A draft as its row names it: "Draft 04", or for an outside draft (found beside the work)
+ * "Draft 04 (from another computer)" or "Draft 04 (changed outside Drafter)".
+ */
+export function draftRowName(row: Pick<DraftRow, 'n' | 'outside'>): string {
+  return row.outside ? `${draftName(row.n)} (${OUTSIDE_LABEL[row.outside]})` : draftName(row.n);
+}
