@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { CutRow } from '../cuts/store';
 import type { DraftRow } from '../drafts/store';
 import type { FileRef } from './files';
 import type { Project } from './projects';
@@ -43,16 +44,10 @@ export interface HandleRow {
 }
 
 /**
- * A cut (drafts-and-cuts design §3): something that left the text, kept for good. Keyed
- * `${projectId}:${id}`, where `id` is the SHA-256 of its text. Version 2 makes the table; the cuts
- * recorder (Task 4) fills it and adds its fields, all unindexed.
+ * A cut (drafts-and-cuts design §3): something that left the text, kept for good (`cuts/store.ts`).
+ * Keyed `${projectId}:${id}`, where `id` is the SHA-256 of its text; its other fields are unindexed.
  */
-export interface CutRow {
-  key: string;
-  projectId: string;
-  id: string;
-  [field: string]: unknown;
-}
+export type { CutRow };
 
 export interface SettingRow {
   key: string;

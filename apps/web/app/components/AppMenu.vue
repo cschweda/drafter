@@ -108,7 +108,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     ...entry('history', 'i-lucide-history'),
     ...entry('start-draft', 'i-lucide-milestone'),
     ...entry('drafts', 'i-lucide-milestone'),
-    ...entry('deleted-scenes', 'i-lucide-archive-restore'),
+    ...entry('cuts', 'i-lucide-scissors'),
     // File, as in the palette: Start blank only while a first document still has its sample's untouched text.
     ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],

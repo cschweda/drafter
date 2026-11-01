@@ -63,15 +63,31 @@ const anyEntry: fc.Arbitrary<CutEntry> = fc
     cuts: fc.array(anyCut, { minLength: 1, maxLength: 3 }),
     after: fc.option(anyText, { nil: null }),
     before: fc.option(anyText, { nil: null }),
+    within: fc.option(
+      fc.option(
+        fc.record({
+          heading: fc.string({ maxLength: 20 }).map((s) => s.replace(/[\r\n]/g, ' ')),
+          ordinal: fc.nat(500),
+        }),
+        { nil: null },
+      ),
+      { nil: undefined },
+    ),
+    ordinal: fc.option(fc.nat(500), { nil: undefined }),
     putBack: fc.option(iso, { nil: undefined }),
   })
-  .map(({ text, title, kind, cuts, after, before, putBack }) => ({
+  .map(({ text, title, kind, cuts, after, before, within, ordinal, putBack }) => ({
     id: hashText(text),
     title,
     text,
     kind,
     cuts,
-    where: { after, before },
+    where: {
+      after,
+      before,
+      ...(within === undefined ? {} : { within }),
+      ...(ordinal === undefined ? {} : { ordinal }),
+    },
     ...(putBack === undefined ? {} : { putBack }),
   }));
 /** Entries with different texts, so different IDs. */
@@ -151,6 +167,42 @@ describe('the cuts file', () => {
     recut.cuts = [...recut.cuts, { at: '2026-11-05T10:00:00.000Z', draft: 15 }];
     const { entries } = readCutsFile(cutsFile('Boca.fountain', [old, mid, recut]));
     expect(entries.map((e) => e.title)).toEqual(['Recut', 'Mid', 'Old']);
+  });
+
+  test('a cut keeps the scene or section it left, and its place, and older entries still read', () => {
+    const passage: CutEntry = {
+      ...scene('Marra keeps the key.', 'Marra keeps the key.', '2026-11-01T10:00:00.000Z'),
+      where: {
+        after: 'INT. HALL - DAY',
+        before: 'INT. CELLAR - NIGHT',
+        within: { heading: 'INT. HALL - DAY', ordinal: 3 },
+        ordinal: 3,
+      },
+    };
+    const old = scene('Old.', 'Old', '2026-11-02T10:00:00.000Z');
+    const { entries } = readCutsFile(cutsFile('Boca.fountain', [passage, old]));
+    expect(entries.find((e) => e.title === 'Old')?.where).toEqual(old.where);
+    expect(entries.find((e) => e.id === passage.id)?.where).toEqual(passage.where);
+    const [merged] = mergeCuts([passage], [], { kind: 'fountain', now: new Date() });
+    expect(merged?.where).toEqual(passage.where);
+  });
+
+  test('a damaged place is dropped, and the cut is kept', () => {
+    const good = scene('Kept.', 'Kept', '2026-11-01T10:00:00.000Z');
+    const file = cutsFile('Boca.fountain', [good]);
+    for (const bad of [
+      '{"heading":"A\\nB","ordinal":1}',
+      '{"heading":"A","ordinal":-1}',
+      '{"heading":"A","ordinal":1.5}',
+      '{"heading":7,"ordinal":1}',
+      '"INT. HALL"',
+    ]) {
+      const damaged = file.replace('"where":{', `"where":{"within":${bad},"ordinal":-2,`);
+      expect(damaged).not.toBe(file);
+      const { entries, skipped } = readCutsFile(damaged);
+      expect(skipped).toBe(0);
+      expect(entries[0]?.where).toEqual(good.where);
+    }
   });
 
   test('an empty list is a file with just its header', () => {

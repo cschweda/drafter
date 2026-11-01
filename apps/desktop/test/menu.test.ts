@@ -90,7 +90,7 @@ describe('menuTemplate', () => {
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
   });
 
-  test('File lists Start New Draft… and Drafts… after Revert to Saved, in a section of their own', () => {
+  test('File lists Start New Draft…, Drafts… and Cuts… after Revert to Saved, in a section of their own', () => {
     const m = menus(
       menuTemplate(
         [
@@ -98,6 +98,7 @@ describe('menuTemplate', () => {
           cmd('revert-to-saved', 'File', 'Revert to Saved'),
           cmd('start-draft', 'File', 'Start new draft…'),
           cmd('drafts', 'File', 'Drafts…'),
+          cmd('cuts', 'File', 'Cuts…'),
         ],
         () => {},
         { platform: 'linux' },
@@ -110,6 +111,9 @@ describe('menuTemplate', () => {
     expect(file[at + 3]?.id).toBe('drafts');
     expect(labelOf(file[at + 2] as MenuItemConstructorOptions)).toBe('Start New Draft…');
     expect(labelOf(file[at + 3] as MenuItemConstructorOptions)).toBe('Drafts…');
+    expect(file[at + 4]?.id).toBe('cuts');
+    expect(labelOf(file[at + 4] as MenuItemConstructorOptions)).toBe('Cuts…');
+    expect(file[at + 5]?.type).toBe('separator');
   });
 
   test('File lists Open as Screenplay… after Open', () => {

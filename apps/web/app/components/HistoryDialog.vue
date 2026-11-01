@@ -4,11 +4,11 @@ import { commandById } from '~/commands/registry';
 import { useShowChanges } from '~/compare/baseline';
 import { nowLabel, useCompare, type Version } from '~/compare/use-compare';
 import DDialog from '~/components/ui/DDialog.vue';
+import { useCuts } from '~/cuts/use-cuts';
 import { compareLabel, draftName, draftWhen, milestoneLabel } from '~/drafts/labels';
 import type { DraftRow } from '~/drafts/store';
 import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
-import { useDeleted } from '~/history/deleted';
 import { noticeWhileOpen, sayOutline } from '~/outline/notice';
 import {
   type HistoryAction,
@@ -279,12 +279,12 @@ async function pickDraft(other: DraftRow) {
   if (version && second) startCompare(version, second);
 }
 
-// Deleted scenes (version-history design §8): History closes, and the tab opens beside the script.
-const deleted = useDeleted();
-function openDeleted() {
+// Cuts (drafts-and-cuts design §3.2): History closes, and the list opens beside the script.
+const cuts = useCuts();
+function openCuts() {
   keepFocus = true;
   close();
-  deleted.open();
+  cuts.open();
 }
 
 async function compareNow(row: HistoryRow) {
@@ -639,9 +639,7 @@ const nameOf = (row: HistoryRow) =>
       <div class="head">
         <h2 id="history-title" class="d-dialog-title">History</h2>
         <span class="head-buttons">
-          <DButton v-if="editor.kind.value === 'fountain'" @click="openDeleted">
-            Deleted scenes
-          </DButton>
+          <DButton @click="openCuts">Cuts</DButton>
           <DButton @click="close">Close</DButton>
         </span>
       </div>

@@ -16,6 +16,7 @@ import {
 } from '../history/protocol';
 import { db } from '../storage/db';
 import { canDecompress, gunzip } from '../storage/gzip';
+import { backfill, foundCuts } from './cuts-compute';
 
 // The history worker's logic (version-history design §3.4, Calls 9 and 10), kept apart from the
 // worker so it runs in Node: snapshots are read newest first, and only on a miss in the cache is a
@@ -107,7 +108,7 @@ export function createHistoryCompute(
 ): HistoryCompute {
   let cache = store;
   /** The request running in each kind's lane. */
-  const lanes = new Map<Scan['kind'], number>();
+  const lanes = new Map<Scan['kind'] | 'backfill', number>();
   /** One script's at a time: another script's request starts over. */
   let memory: Memory | null = null;
   /** What was read and isn't in the cache yet. */
@@ -318,6 +319,22 @@ export function createHistoryCompute(
   return {
     async handle(request, post) {
       if (request.kind === 'place') return place(request, post);
+      if (request.kind === 'cuts') {
+        try {
+          post({
+            seq: request.seq,
+            kind: 'cuts',
+            cuts: foundCuts(request.before, request.after, request.docKind),
+          });
+        } catch (error) {
+          post({
+            seq: request.seq,
+            kind: 'error',
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+        return;
+      }
       if (request.kind === 'cancel') {
         for (const [kind, seq] of lanes) if (seq === request.seq) lanes.delete(kind);
         return;
@@ -326,7 +343,8 @@ export function createHistoryCompute(
       lanes.set(kind, seq);
       const live = () => lanes.get(kind) === seq;
       try {
-        await scan(request, post, live);
+        if (request.kind === 'backfill') await backfill(request, source, post, live);
+        else await scan(request, post, live);
       } catch (error) {
         if (live())
           post({

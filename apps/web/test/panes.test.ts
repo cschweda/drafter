@@ -86,34 +86,32 @@ describe('panes', () => {
         'history',
       ]);
     });
-    test("the modules' tabs follow Problems, and Compare and Deleted scenes lead while open", () => {
-      expect(phoneTabs('fountain', ['module-a--t'], { compare: true, deleted: true }).more).toEqual(
-        [
-          'compare',
-          'deleted',
-          'cards',
-          'stats',
-          'scaffold',
-          'notes',
-          'problems',
-          'module-a--t',
-          'history',
-        ],
-      );
+    test("the modules' tabs follow Problems, and Compare and Cuts lead while open", () => {
+      expect(phoneTabs('fountain', ['module-a--t'], { compare: true, cuts: true }).more).toEqual([
+        'compare',
+        'cuts',
+        'cards',
+        'stats',
+        'scaffold',
+        'notes',
+        'problems',
+        'module-a--t',
+        'history',
+      ]);
     });
   });
 
   describe('the Inspector (fresh-look design §3.3, Call 14)', () => {
-    test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Problems, Compare, Deleted scenes, and module tabs", () => {
+    test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Problems, Compare, Cuts, and module tabs", () => {
       expect(inspectorTabs('fountain')).toEqual({
         row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-        more: ['notes', 'problems', 'compare', 'deleted', 'drafts', 'draft'],
+        more: ['notes', 'problems', 'compare', 'cuts', 'drafts', 'draft'],
       });
       expect(inspectorTabs('fountain', ['module-a--x', 'module-b--y']).more).toEqual([
         'notes',
         'problems',
         'compare',
-        'deleted',
+        'cuts',
         'drafts',
         'draft',
         'module-a--x',
@@ -121,16 +119,17 @@ describe('panes', () => {
       ]);
     });
 
-    test("a Markdown document's row is Preview and Stats; More holds Problems and Compare", () => {
+    test("a Markdown document's row is Preview and Stats; More holds Problems, Compare, and Cuts", () => {
       // The Preview is the Script tab's id in a Markdown document (its panel is #panel-script).
       expect(inspectorTabs('markdown')).toEqual({
         row: ['script', 'stats'],
-        more: ['problems', 'compare', 'drafts', 'draft'],
+        more: ['problems', 'compare', 'cuts', 'drafts', 'draft'],
       });
       // A module's tab, which a module may draw for any document, goes after them.
       expect(inspectorTabs('markdown', ['module-a--x']).more).toEqual([
         'problems',
         'compare',
+        'cuts',
         'drafts',
         'draft',
         'module-a--x',
@@ -147,7 +146,7 @@ describe('panes', () => {
         'notes',
         'problems',
         'compare',
-        'deleted',
+        'cuts',
         'module-a--x',
       ] as const) {
         expect(showInInspector(DEFAULT_TABS, tab)).toEqual({ left: 'source', right: tab });

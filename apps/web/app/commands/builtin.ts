@@ -32,6 +32,7 @@ import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
+import { useCuts } from '~/cuts/use-cuts';
 import { isDesktopBuild } from '~/desktop';
 import { useDrafts } from '~/drafts/use-drafts';
 import { applyTextChanges } from '~/editor/apply-changes';
@@ -43,7 +44,6 @@ import { useEditor } from '~/editor/session';
 import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
-import { useDeleted } from '~/history/deleted';
 import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
@@ -121,13 +121,8 @@ export function registerBuiltinCommands(): void {
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
   const showChanges = useShowChanges();
-  const deleted = useDeleted();
+  const cuts = useCuts();
   const drafts = useDrafts();
-  /** Whether a pane shows the Deleted scenes tab. */
-  const deletedShown = () =>
-    window.matchMedia(WIDE_QUERY).matches
-      ? panes.tabs.value.right === 'deleted'
-      : panes.phoneTab.value === 'deleted';
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -366,15 +361,14 @@ export function registerBuiltinCommands(): void {
         historyOpen.value = { focusLabel: false };
       },
     },
-    // Deleted scenes (version-history design §8, §9): opens the tab, or shows it; shown, it closes.
-    'deleted-scenes': {
-      enabled: () => hasScript() && isFountain(),
-      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
-      liveTitle: () =>
-        deleted.isOpen.value && deletedShown() ? 'Close Deleted scenes' : 'Deleted scenes',
+    // Cuts (drafts-and-cuts design §3.2): opens the list, or shows it; shown, it closes. Scripts
+    // and Markdown documents alike.
+    cuts: {
+      enabled: hasScript,
+      liveTitle: () => (cuts.shown() ? 'Close Cuts' : 'Cuts…'),
       run: () => {
-        if (deleted.isOpen.value && deletedShown()) deleted.close(true);
-        else deleted.open();
+        if (cuts.shown()) cuts.close(true);
+        else cuts.open();
       },
     },
     // Start new draft… (drafts-and-cuts design §2.1): its dialog; for a sample or in a read-only

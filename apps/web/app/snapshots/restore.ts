@@ -1,3 +1,4 @@
+import { useCutRecorder } from '../cuts/use-recorder';
 import { replaceText } from '../editor/replace-text';
 import { useEditor } from '../editor/session';
 import { sayOutline } from '../outline/notice';
@@ -63,6 +64,8 @@ export async function restoreSnapshot(id: string): Promise<boolean> {
   // The text as it is now, captured before it is replaced and kept in the background.
   useSnapshots().before('before-restore');
   if (!replaceText(editor.view, text)) return stop('The script can’t be changed now.');
+  // A whole-text replacement makes no cuts (drafts-and-cuts design §3.1).
+  if (project) void useCutRecorder().replaced(project, text);
   await sayOutline(`Restored the snapshot from ${when}. Undo brings back what it replaced.`);
   return true;
 }

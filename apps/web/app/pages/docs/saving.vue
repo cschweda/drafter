@@ -454,14 +454,20 @@ useDocsHead({
       <strong>Blue and orange</strong> under <strong>Colors for changes</strong> in Settings.
     </p>
 
-    <h3 id="deleted-scenes">Deleted scenes</h3>
+    <h3 id="cuts">Cuts</h3>
     <p>
-      <strong>Deleted scenes</strong> (in the app menu after History…, in History, or in the command
-      palette) lists every scene that is in one of your snapshots but not in the script now, the most
-      recently cut first, with when it was last there and its first lines.
-      <strong>Put back</strong> puts a scene back where it was, after the scene that came before it;
-      one undo takes it out again. It reads your snapshots in the background, and keeps a note of each
-      scene in them in this browser, so the next look is quick.
+      <strong>Cuts…</strong> (in the app menu after History…, in History, or in the command palette,
+      where “deleted scenes” finds it too) keeps everything you cut, for good: a whole scene, chapter,
+      or section, and a speech, a paragraph, or a dozen words or more taken out of one. A cut is
+      found each time a snapshot is kept, by comparing it with the snapshot before, so text you type
+      and take out again in between isn’t one. Each cut is listed under the scene or chapter it came
+      from, newest first, with when it was cut and the draft you were writing then, so you can look
+      back through them for ideas. The filter finds words, headings, and draft numbers.
+      <strong>Put back</strong> puts a cut back where it was, <strong>Insert at cursor</strong> puts it
+      in at the next scene or paragraph after your cursor, and one undo takes either out again. A cut
+      you put back stays in the list, marked. Restoring a draft or a snapshot, opening a file, and
+      reloading it make no cuts. The first time this version runs, it looks through the snapshots you
+      already have, and keeps what was cut there too, as “cut before drafts”.
     </p>
 
     <h3 id="show-changes">Show changes</h3>
@@ -477,8 +483,7 @@ useDocsHead({
     <h3 id="scene-history">History of this scene</h3>
     <p>
       <strong>History of this scene</strong> (a scene’s menu in the Outline or the Cards, the
-      Structure strip’s menu on a scene, the command palette for the scene your cursor is in, or
-      Deleted scenes) lists every different version of one scene in your snapshots, newest first,
+      Structure strip’s menu on a scene, or the command palette for the scene your cursor is in) lists every different version of one scene in your snapshots, newest first,
       and shows what changed against now or against the version before.
       <strong>Use this version</strong> puts the scene back as it was, after keeping a snapshot
       called “Before restoring a scene”; one undo brings back what it replaced.

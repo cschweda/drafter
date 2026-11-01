@@ -99,8 +99,8 @@ export interface CompareSession {
   /** Orders the two by time (now is newest), diffs them, and shows the tab. */
   open(a: Version, b: Version): void;
   /**
-   * Opens on the Changes view at the group of the scene headed `heading` (from Deleted scenes and
-   * History of this scene): the view scrolls to it and focuses its header.
+   * Opens on the Changes view at the group of the scene headed `heading` (from History of this
+   * scene): the view scrolls to it and focuses its header.
    */
   openAt(a: Version, b: Version, heading: string): void;
   /** The heading `openAt` asked for, until the view has focused its group. */

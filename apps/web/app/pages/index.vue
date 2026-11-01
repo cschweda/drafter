@@ -5,6 +5,7 @@ import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
 import { commandById, installGlobalKeys } from '~/commands/registry';
+import { installCuts } from '~/cuts/install';
 import { isDesktopBuild } from '~/desktop';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
@@ -80,6 +81,8 @@ const stripShown = computed(
 );
 // Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
 useSnapshots();
+// Cuts are recorded at each snapshot, and those from before drafts are found once (drafts-and-cuts §3.1).
+installCuts();
 // Starts the spellcheck, which makes its worker once the settings are read and the first script is
 // open (Plan D): the Source pane's spelling marks.
 useSpell();

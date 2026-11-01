@@ -17,12 +17,15 @@ describe('the command data', () => {
     }
   });
 
-  test('Deleted scenes is in File, after History, and found by "show all versions"', () => {
+  test('Cuts is in File, after History, and found by "deleted scenes" and "show all versions"', () => {
     const ids = COMMAND_DATA.map((c) => c.id);
-    expect(ids.indexOf('deleted-scenes')).toBe(ids.indexOf('history') + 1);
-    const deleted = COMMAND_DATA.find((c) => c.id === 'deleted-scenes');
-    expect(deleted).toMatchObject({ title: 'Deleted scenes', group: 'File' });
-    expect(deleted?.keywords).toEqual(expect.arrayContaining(['show all versions', 'versions']));
+    expect(ids).not.toContain('deleted-scenes');
+    expect(ids.indexOf('cuts')).toBe(ids.indexOf('history') + 1);
+    const cuts = COMMAND_DATA.find((c) => c.id === 'cuts');
+    expect(cuts).toMatchObject({ title: 'Cuts…', group: 'File' });
+    expect(cuts?.keywords).toEqual(
+      expect.arrayContaining(['deleted scenes', 'show all versions', 'versions', 'cuts']),
+    );
   });
 
   test('has Show Scaffold after Show stats, found by its words, and Scaffold for this scene in Go', () => {

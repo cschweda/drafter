@@ -20,10 +20,29 @@ export interface CutEntry {
   kind: WorkKind;
   /** When it was cut, and in which draft (null before the first draft was started). */
   cuts: { at: string; draft: number | null }[];
-  /** What it was between: the heading or words before and after it, null at the start or end. */
-  where: { after: string | null; before: string | null };
+  /** Where it was: the headings either side of it, null at the start or end. */
+  where: CutWhere;
   /** When it was put back, if it was. */
   putBack?: string;
+}
+
+/** Where a cut was (`findCuts`' `where`, and the cut's own place). */
+export interface CutWhere {
+  /** The headings either side of it, as they were when it was cut; null at the start or end. */
+  after: string | null;
+  before: string | null;
+  /**
+   * For a passage, the scene or section it was cut from (its heading as it was, and its number:
+   * a scene's 1, 2, 3…, a Markdown section's 1, 2, 3…, 0 for the opening), so Cuts can group it
+   * there; null for a whole scene or section. Missing on a cut kept before it was recorded.
+   */
+  within?: { heading: string; ordinal: number } | null;
+  /**
+   * Its place in the text it left, numbered as `within` is: for a whole scene or section its own
+   * number, for a passage that of the one it was cut from. Put back takes the neighbour nearest
+   * it when several have the same heading.
+   */
+  ordinal?: number;
 }
 
 const COMMENT_OPENER = '<!-- drafter-cut ';
@@ -167,6 +186,47 @@ function markdownShown(text: string): string {
   return out.join('\n');
 }
 
+/** A cut's place, its keys in a fixed order, its optional ones only when set. */
+function whereJson(where: CutWhere): CutWhere {
+  const out: CutWhere = { after: where.after, before: where.before };
+  if (where.within !== undefined)
+    out.within =
+      where.within === null
+        ? null
+        : { heading: where.within.heading, ordinal: where.within.ordinal };
+  if (where.ordinal !== undefined) out.ordinal = where.ordinal;
+  return out;
+}
+
+const isOrdinal = (n: unknown): n is number =>
+  typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
+
+/** The longest heading `within` keeps. */
+const WITHIN_MAX = 500;
+
+/**
+ * A place read strictly: `after` and `before` must read, and `within` (one line, a number from
+ * 0) and `ordinal` are dropped when they don't, so the cut itself is never lost over them.
+ */
+function whereOf(where: Record<string, unknown>): CutWhere | null {
+  if (!isStringOrNull(where.after) || !isStringOrNull(where.before)) return null;
+  const out: CutWhere = { after: where.after, before: where.before };
+  const w = where.within;
+  if (w === null) out.within = null;
+  else if (typeof w === 'object' && w !== undefined && !Array.isArray(w)) {
+    const { heading, ordinal } = w as Record<string, unknown>;
+    if (
+      typeof heading === 'string' &&
+      heading.length <= WITHIN_MAX &&
+      !/[\r\n]/.test(heading) &&
+      isOrdinal(ordinal)
+    )
+      out.within = { heading, ordinal };
+  }
+  if (isOrdinal(where.ordinal)) out.ordinal = where.ordinal;
+  return out;
+}
+
 /** The entry as JSON, its keys in a fixed order. */
 function entryJson(entry: CutEntry): string {
   const value: Record<string, unknown> = {
@@ -175,7 +235,7 @@ function entryJson(entry: CutEntry): string {
     text: entry.text,
     kind: entry.kind,
     cuts: entry.cuts.map((c) => ({ at: c.at, draft: c.draft })),
-    where: { after: entry.where.after, before: entry.where.before },
+    where: whereJson(entry.where),
   };
   if (entry.putBack !== undefined) value.putBack = entry.putBack;
   return commentJson(value);
@@ -239,7 +299,8 @@ function entryOf(value: unknown): CutEntry | null {
   }
   const where = v.where as Record<string, unknown> | null;
   if (where === null || typeof where !== 'object' || Array.isArray(where)) return null;
-  if (!isStringOrNull(where.after) || !isStringOrNull(where.before)) return null;
+  const place = whereOf(where);
+  if (place === null) return null;
   const putBack = v.putBack === undefined ? undefined : isoInstant(v.putBack);
   if (putBack === null) return null;
   const entry: CutEntry = {
@@ -248,7 +309,7 @@ function entryOf(value: unknown): CutEntry | null {
     text: v.text,
     kind: v.kind,
     cuts,
-    where: { after: where.after, before: where.before },
+    where: place,
   };
   if (putBack !== undefined) entry.putBack = putBack;
   return entry;
@@ -465,7 +526,7 @@ export function mergeCuts(
       text: first.text,
       kind: first.kind,
       cuts,
-      where: { after: first.where.after, before: first.where.before },
+      where: whereJson(first.where),
     };
     if (putBack !== undefined) entry.putBack = putBack;
     merged.push(entry);

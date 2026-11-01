@@ -1,4 +1,5 @@
-import type { DeletedScene, Place, VersionRow } from '@drafter/history';
+import type { DeletedScene, Place, VersionRow, WorkKind } from '@drafter/history';
+import type { FoundCutAt } from '../cuts/store';
 
 // What the page and the history worker say to each other (version-history design §3.4).
 
@@ -21,6 +22,26 @@ export type HistoryRequest =
    * §3.5): answered once, from what the worker has read. It runs beside the scans, stopping none.
    */
   | { seq: number; kind: 'place'; projectId: string; now: string; snapshot: string; slot: number }
+  /**
+   * What left `before` in `after` (drafts-and-cuts design §3.1): the cuts recorder's question at
+   * each kept snapshot, answered once, beside the scans.
+   */
+  | { seq: number; kind: 'cuts'; before: string; after: string; docKind: WorkKind }
+  /**
+   * The first-run backfill (§3.1, Call 18): the cuts between each two consecutive snapshots taken
+   * before `since` (v0.24.0's first run), oldest first, skipping pairs whose later snapshot is at
+   * or before `upTo` (done before the tab closed); then, if `end` is given, between the newest of
+   * them and `end`. One pair's cuts per reply, so the page writes them as they come.
+   */
+  | {
+      seq: number;
+      kind: 'backfill';
+      projectId: string;
+      docKind: WorkKind;
+      since: number;
+      upTo: number | null;
+      end: string | null;
+    }
   | { seq: number; kind: 'cancel' };
 
 /**
@@ -44,6 +65,20 @@ export type HistoryReply =
   | { seq: number; kind: 'versions'; rows: VersionRow[]; start: string | null; done: boolean }
   /** Where Put back puts the scene; null when the snapshot is gone or can't be read. */
   | { seq: number; kind: 'place'; place: Place | null }
+  | { seq: number; kind: 'cuts'; cuts: FoundCutAt[] }
+  /**
+   * One pair of a backfill: its cuts, and `at`, when the later version of the pair was taken (the
+   * cuts' date, and the progress to store). `read` of `total` pairs are done.
+   */
+  | {
+      seq: number;
+      kind: 'backfill';
+      at: number;
+      cuts: FoundCutAt[];
+      read: number;
+      total: number;
+      done: boolean;
+    }
   | { seq: number; kind: 'error'; message: string };
 
 /** The newest snapshots a scan reads, at most (Call 10). */

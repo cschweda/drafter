@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import { orderVersions } from '../app/compare/use-compare';
 import {
   COMPARE_TAB,
-  DELETED_TAB,
   dropTab,
   inspectorTabs,
   showInInspector,
@@ -63,17 +62,18 @@ describe('the Compare tab', () => {
   });
 });
 
-describe('the Deleted scenes tab', () => {
+describe('the Cuts tab', () => {
   test('opens, as Compare does, in the Inspector beside the editor, and goes as Compare does', () => {
-    expect(DELETED_TAB).toEqual({ id: 'deleted', label: 'Deleted scenes' });
-    expect(showInInspector({ left: 'source', right: 'script' }, DELETED_TAB.id)).toEqual({
+    expect(showInInspector({ left: 'source', right: 'script' }, 'cuts')).toEqual({
       left: 'source',
-      right: 'deleted',
+      right: 'cuts',
     });
-    const showing = { left: 'source', right: 'deleted' };
-    expect(showInInspector(showing, DELETED_TAB.id)).toBe(showing);
-    expect(dropTab(showing, DELETED_TAB.id)).toEqual({ left: 'source', right: 'script' });
-    expect(inspectorTabs('fountain').more).toContain('deleted');
-    expect(inspectorTabs('markdown').more).not.toContain('deleted');
+    const showing = { left: 'source', right: 'cuts' };
+    expect(showInInspector(showing, 'cuts')).toBe(showing);
+    expect(dropTab(showing, 'cuts')).toEqual({ left: 'source', right: 'script' });
+    // Scripts and Markdown documents alike (drafts-and-cuts design §3.2).
+    expect(inspectorTabs('fountain').more).toContain('cuts');
+    expect(inspectorTabs('markdown').more).toContain('cuts');
+    expect(inspectorTabs('fountain').more).not.toContain('deleted');
   });
 });

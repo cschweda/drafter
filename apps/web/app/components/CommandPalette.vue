@@ -180,7 +180,7 @@ const groups = computed(() => {
 });
 
 // Every group is searched by its label, and a command by its keywords too ("show all versions"
-// finds Deleted scenes, Call 39); a scene's line number is not part of the search, and a long
+// finds Cuts, Call 39); a scene's line number is not part of the search, and a long
 // script's scenes all show: Nuxt UI's own limit is twelve.
 const FUSE = {
   resultLimit: 1000,

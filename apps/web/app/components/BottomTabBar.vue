@@ -2,17 +2,16 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { commandById } from '~/commands/registry';
 import { useCompare } from '~/compare/use-compare';
+import { CUTS_TAB, useCuts } from '~/cuts/use-cuts';
 import { draftName } from '~/drafts/labels';
 import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
-import { useDeleted } from '~/history/deleted';
 import { useModuleTabs } from '~/modules/host';
 import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
 import {
   COMPARE_TAB,
-  DELETED_TAB,
   HISTORY_ITEM,
   PHONE_LABELS,
   phoneTabs,
@@ -44,7 +43,7 @@ const { count } = useProblems();
 const { entries: noteEntries } = useNotes();
 const openNotes = computed(() => openCount(noteEntries.value));
 const { current: comparison } = useCompare();
-const { isOpen: deletedOpen } = useDeleted();
+const { isOpen: cutsOpen } = useCuts();
 const { isOpen: draftsOpen, reading } = useDrafts();
 const moduleTabs = useModuleTabs();
 
@@ -56,7 +55,7 @@ const ICONS: Record<string, string> = {
   more: 'i-lucide-ellipsis',
 };
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB, DRAFTS_TAB].map((tab) => [tab.id, tab.label]),
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB].map((tab) => [tab.id, tab.label]),
 );
 
 /** A tab's label on the bar and in More: Write for the Source, Preview for a Markdown Script. */
@@ -78,7 +77,7 @@ const set = computed(() =>
     moduleTabs.value.map((tab) => tab.id),
     {
       compare: !!comparison.value,
-      deleted: deletedOpen.value,
+      cuts: cutsOpen.value,
       drafts: draftsOpen.value,
       draft: !!reading.value,
     },

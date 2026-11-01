@@ -70,6 +70,36 @@ describe('the history client', () => {
     expect(scan).toHaveLength(1);
   });
 
+  test('two cuts questions at once are both answered: neither stops the other', () => {
+    const { workers, clients } = setup();
+    const view = clients.use();
+    const heard: number[] = [];
+    const ask = { kind: 'cuts', before: 'a', after: 'b', docKind: 'fountain' } as const;
+    const one = view.request(ask, (r) => heard.push(r.seq));
+    const two = view.request(ask, (r) => heard.push(r.seq));
+    const worker = workers[0] as FakeWorker;
+    worker.reply({ seq: two, kind: 'cuts', cuts: [] });
+    worker.reply({ seq: one, kind: 'cuts', cuts: [] });
+    worker.reply({ seq: one, kind: 'cuts', cuts: [] });
+    expect(heard).toEqual([two, one]);
+  });
+
+  test('a backfill streams its pairs until the last', () => {
+    const { workers, clients } = setup();
+    const view = clients.use();
+    const heard: HistoryReply[] = [];
+    const n = view.request(
+      { kind: 'backfill', projectId: 'p1', docKind: 'fountain', since: 1, upTo: null, end: null },
+      (r) => heard.push(r),
+    );
+    const worker = workers[0] as FakeWorker;
+    const pair = { seq: n, kind: 'backfill', at: 1, cuts: [], read: 1, total: 2 } as const;
+    worker.reply({ ...pair, done: false });
+    worker.reply({ ...pair, done: true });
+    worker.reply({ ...pair, done: true });
+    expect(heard).toHaveLength(2);
+  });
+
   test('each request hears only its own replies, until it is done', () => {
     const { workers, clients } = setup();
     const view = clients.use();

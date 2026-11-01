@@ -12,7 +12,7 @@ import {
 } from '../utils/panes';
 
 // The Drafts list and the draft being read are tabs that exist only while open, placed as Compare
-// and Deleted scenes are (version-history design §9): in the Inspector beside the Source on a wide
+// and Cuts are (version-history design §9): in the Inspector beside the Source on a wide
 // screen, the one pane on a phone.
 
 const wide = () => window.matchMedia(WIDE_QUERY).matches;

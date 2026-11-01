@@ -1,4 +1,5 @@
 import { type ComputedRef, computed, effectScope, type Ref, ref, shallowRef, watch } from 'vue';
+import { useCutRecorder } from '../cuts/use-recorder';
 import { useEditor } from '../editor/session';
 import { writersEdit } from '../stats/writing';
 import { useGuard } from '../storage/guard';
@@ -26,7 +27,7 @@ export interface SnapshotSession {
   notKept: Readonly<ComputedRef<string | null>>;
   /**
    * Why no snapshots are read here, or null: no script, or a sample. A read-only tab keeps none but
-   * reads the ones the editing tab keeps (Deleted scenes, History of this scene: design §10).
+   * reads the ones the editing tab keeps (Cuts, History of this scene: design §10).
    */
   notRead: Readonly<ComputedRef<string | null>>;
 }
@@ -84,6 +85,9 @@ function create(): SnapshotSession {
   ): Promise<TakeResult> {
     // Any snapshot of a script starts its count again, so no timed one follows a save.
     scheduleOf(id).taken();
+    // What left the text since the last snapshot is a cut (drafts-and-cuts design §3.1). Asked now,
+    // in order, so a replacement that follows (Restore) moves the comparison point after it.
+    void useCutRecorder().kept(id, captured, reason);
     return keepSnapshot(id, captured, reason, extra)
       .catch(() => ({ result: 'failed' as const, full: false }))
       .then(({ result, full }) => {

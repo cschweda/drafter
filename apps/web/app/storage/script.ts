@@ -12,6 +12,7 @@ import {
   watch,
 } from 'vue';
 import { applyingUpdate } from '~/update/state';
+import { useCutRecorder } from '../cuts/use-recorder';
 import { desktop } from '../desktop';
 import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
@@ -1047,6 +1048,8 @@ function create(): ScriptSession {
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
       annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
+    // A whole-text replacement makes no cuts (drafts-and-cuts design §3.1).
+    void useCutRecorder().replaced(id, file.text);
     await saved(file);
     return 'replaced';
   }

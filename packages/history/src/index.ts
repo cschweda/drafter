@@ -2,6 +2,7 @@ export { type Anchor, sceneAnchors } from './anchors';
 export { CUT_KEEP_SHARE, CUT_MIN_WORDS, type FoundCut, findCuts } from './cuts';
 export {
   type CutEntry,
+  type CutWhere,
   cutsFile,
   cutText,
   FUTURE_SLACK_MS,

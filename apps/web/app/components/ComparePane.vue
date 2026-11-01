@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
 watch(pages, draw);
 watch([compare.pendingFocus, compare.at, view, stops], () => void focusPending());
 
-/** Opened at a scene (from Deleted scenes or History of this scene): its group's header gets focus. */
+/** Opened at a scene (from History of this scene): its group's header gets focus. */
 async function focusScene() {
   const heading = compare.focusScene.value;
   if (heading === null || view.value !== 'changes' || !diffView.value) return;

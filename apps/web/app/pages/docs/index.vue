@@ -65,7 +65,7 @@ const about: Record<string, string> = {
       On a wide screen the editor is always on the left, with the element bar and its own buttons
       (line numbers, typewriter scrolling, sync scrolling) at its top. Everything else opens on the
       right, in the <strong>Inspector</strong>: Script, Outline, Cards, Stats, and Scaffold are tabs
-      there, and <strong>More</strong> holds Notes, Problems, Compare, Deleted scenes, and the tabs of
+      there, and <strong>More</strong> holds Notes, Problems, Compare, Cuts, Drafts, and the tabs of
       any modules you turn on. Each tab’s own buttons sit at the right of the Inspector’s header. The
       status bar at the bottom has the file’s name (which opens History), the pages and running
       time, the words, the problems, and the template.

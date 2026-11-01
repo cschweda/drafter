@@ -126,14 +126,23 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
   { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
-  // Deleted scenes (version-history design §3.3, §8, §9): a tab, opened and closed from here. The
-  // maintainer looks for it as "show all versions".
+  // Cuts (drafts-and-cuts design §3.2, §6, Call 16): a tab, opened and closed from here. It
+  // replaced Deleted scenes, whose name it keeps as a keyword; the maintainer looks for it as
+  // "show all versions".
   {
-    id: 'deleted-scenes',
-    title: 'Deleted scenes',
+    id: 'cuts',
+    title: 'Cuts…',
     group: 'File',
-    icon: 'i-lucide-archive-restore',
-    keywords: ['show all versions', 'versions', 'deleted', 'cut scenes', 'put back'],
+    icon: 'i-lucide-scissors',
+    keywords: [
+      'deleted scenes',
+      'show all versions',
+      'versions',
+      'deleted',
+      'cut scenes',
+      'cuts',
+      'put back',
+    ],
   },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
   // Drafts (drafts-and-cuts design §2, §6): the writer's word is Draft, and the palette finds them

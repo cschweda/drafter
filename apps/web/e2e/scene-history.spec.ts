@@ -8,7 +8,7 @@ import { drafterDatabase, sampleSeenRows } from './seed';
 // first, one row per distinct version, followed through a renamed heading; the diff of the
 // selected one with now or with the version before; Use this version (a "Before restoring a
 // scene" snapshot, then one undo); opened from the Outline's and the Cards' menus, the Structure
-// strip's new block menu, the palette, and Deleted scenes; one Tab stop with History's keys; the
+// strip's new block menu, and the palette; one Tab stop with History's keys; the
 // whole screen on a phone; and axe in both themes.
 
 const READ_ONLY = 'This script is open for editing in another tab.';
@@ -212,32 +212,6 @@ test.describe('History of this scene', () => {
     await expect.poll(() => wholeText(page)).toBe(script(HALL_V1, ROOF));
     await runCommand(page, 'History…');
     await expect(snapshotOptions(page).first()).toContainText('Before restoring a scene');
-  });
-
-  test('a deleted scene opens from Deleted scenes with H, and Use this version is off', async ({
-    page,
-  }) => {
-    await versionsOf(page, [script(HALL_V1, ROOF)], script(ROOF));
-    await runCommand(page, 'Deleted scenes');
-    const entry = page
-      .locator('#panel-deleted')
-      .getByRole('group', { name: 'INT. HALL - DAY', exact: true });
-    await entry.focus();
-    await page.keyboard.press('h');
-    await expect(dialog(page)).toBeVisible();
-    await expect(versions(page)).toHaveCount(1);
-    const use = dialog(page).getByRole('button', { name: 'Use this version' });
-    await expect(use).toHaveAttribute('aria-disabled', 'true');
-    // Off, it still says why when pressed.
-    await use.dispatchEvent('click');
-    await expect(dialog(page).getByRole('status')).toContainText(
-      'That scene isn’t in the script now.',
-    );
-    await page.keyboard.press('Escape');
-    await expect(entry).toBeFocused();
-    // Its button too.
-    await entry.getByRole('button', { name: 'History of INT. HALL - DAY' }).click();
-    await expect(dialog(page)).toBeVisible();
   });
 
   test('a row without the scene says why Use this version and Copy text do nothing', async ({

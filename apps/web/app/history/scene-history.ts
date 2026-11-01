@@ -52,7 +52,7 @@ export function closeOnScriptSwitch(project: () => string | null | undefined): W
 }
 
 /** Use this version's words for a deleted scene, whose action is Put back. */
-export const NOT_NOW = 'That scene isn’t in the script now. Put it back from Deleted scenes.';
+export const NOT_NOW = 'That scene isn’t in the script now. Put it back from Cuts.';
 
 /** Why Use this version and Copy text do nothing on a "Not in n versions" row. */
 export const NOT_IN_VERSION =
