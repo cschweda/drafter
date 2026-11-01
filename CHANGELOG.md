@@ -26,6 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Desktop: a dropped file is granted only when the preload saw the browser's own drop event and told the main process; the page then claims it by an opaque id, once, and can no longer hand the main process a path for a drop (security audit F2).
 - CI: the Linux, Windows, and Mac jobs check out with `persist-credentials: false`, as `publish` already did, so no job leaves its token in `.git/config`. The workflow stays `contents: read`, with `contents: write` on `publish` alone, which makes the release (security audit F7).
+- Dependabot: weekly version updates for npm and GitHub Actions, minor and patch grouped into one PR each (`.github/dependabot.yml`). Dependabot alerts and security updates are on in the repository's settings (security audit F4).
 
 ## [0.24.0] - 2026-11-01
 
