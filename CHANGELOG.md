@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **Drafter opens dark again on a first visit,** whatever your computer is set to. Pick light with the theme button, or turn on **Match system appearance** in Settings to follow your computer. This undoes v0.23.0's first visit that followed the system.
+
 ## [0.23.0] - 2026-11-01
 
 **A fresh look.** The script sits on paper pages, the status bar goes quiet, and "Unsaved" shows right after the title. Dialogs, menus and Settings share one style. Stats, Scaffold and Cards are easier to read. On a phone or a narrow window there is one pane at a time and a bottom tab bar, and the element row stays above the keyboard. Drafter now follows your system's light or dark setting on a first visit, and icons show in high-contrast mode.

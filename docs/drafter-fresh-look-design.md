@@ -158,7 +158,7 @@ The sample bar becomes the top bar's chip (§3.1). Below 1024px, where the chip 
 9. Four button variants, one dialog style, Settings with sections (§5).
 10. Phone opens on Write; bottom tab bar; element bar above the keyboard; sheets (§6).
 11. Focus rings on controls only; no outline on programmatically focused non-controls (§8).
-12. Dark default; a fresh visit matches the system (§9).
+12. Dark default; a fresh visit matches the system (§9). *Superseded 2026-11-01: every first visit opens dark; see DECISIONS.*
 13. The left pane is always the editor; no swap rule; old layouts migrated once (§3.2).
 14. The Inspector's tab row and More ▾ by document kind; overflow measured (§3.3).
 15. View tools teleport into the Inspector header; fold into "⋯" when tight (§3.3).

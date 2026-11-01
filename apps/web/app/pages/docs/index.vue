@@ -83,8 +83,8 @@ const about: Record<string, string> = {
       and About. Choose a section to jump to it; nothing is hidden, so you can also just scroll, or
       Tab through every setting. <strong>Page colour</strong> there chooses paper pages (the
       default) or a dark page for writing at night; printing and every export stay on white paper.
-      On a first visit Drafter follows your system’s light or dark appearance; once you pick a theme,
-      it keeps yours.
+      Drafter opens dark. Pick light with the theme button, or turn on
+      <strong>Match system appearance</strong> to follow your computer; Drafter keeps your choice.
     </p>
 
     <h2 id="stats-and-scaffold">Stats and Scaffold</h2>

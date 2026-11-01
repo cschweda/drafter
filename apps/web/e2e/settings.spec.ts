@@ -415,30 +415,25 @@ test.describe('a fresh visit', () => {
     },
   });
 
-  test('a fresh visit on a light system opens light', async ({ page }) => {
-    // Fresh-look design §9: Match system appearance is on for a first visit with no theme stored.
-    await expect(page.locator('html')).toHaveClass(/\blight\b/);
-    await openSettings(page);
-    await expect(toggle(page, 'matchSystem')).toBeChecked();
-    await closeSettings(page);
-    await expect.poll(async () => (await stored(page)).matchSystem).toBe(true);
-    // It keeps following the system, and still does after a reload.
-    await page.emulateMedia({ colorScheme: 'dark' });
+  test('a fresh visit on a light system opens dark', async ({ page }) => {
+    // Dark is the default on every first visit, whatever the system says (2026-11-01), and Match
+    // system appearance stays off until the writer turns it on.
     await expect(page.locator('html')).toHaveClass(/\bdark\b/);
-    await page.emulateMedia({ colorScheme: 'light' });
+    await openSettings(page);
+    await expect(toggle(page, 'matchSystem')).not.toBeChecked();
+    await closeSettings(page);
     await page.reload();
     await expect(editor(page)).toBeAttached();
-    await expect(page.locator('html')).toHaveClass(/\blight\b/);
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
   });
 
   test('a theme picked by hand wins from then on', async ({ page }) => {
-    await expect(page.locator('html')).toHaveClass(/\blight\b/);
-    await pressToolbarButton(page, 'Switch to dark theme');
     await expect(page.locator('html')).toHaveClass(/\bdark\b/);
-    await expect.poll(async () => (await stored(page)).matchSystem).toBe(false);
+    await pressToolbarButton(page, 'Switch to light theme');
+    await expect(page.locator('html')).toHaveClass(/\blight\b/);
     await page.reload();
     await expect(editor(page)).toBeAttached();
-    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+    await expect(page.locator('html')).toHaveClass(/\blight\b/);
     await openSettings(page);
     await expect(toggle(page, 'matchSystem')).not.toBeChecked();
   });

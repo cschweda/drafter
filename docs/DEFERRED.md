@@ -238,7 +238,6 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Compare's Pages don't grow to the bottom** (Task 5), as the Script tab's last sheet does; the Changes list sits above them.
 - **The dark page on the dark desk** has a weak edge (1.17:1, decorative); a lighter hairline or a stronger shadow would show it better.
 - **A writer with Page colour Dark may see paper for a moment** as the page loads, until the settings are read. If it shows, keep the setting in localStorage too, as the theme is.
-- **A fresh visit on a light system paints dark for a moment** before the scripts are read and Match system appearance turns on. It happens once, on a first visit only.
 - **Submenus that open on the left.** Reka keeps a submenu open as the pointer leaves its item only if the pointer last moved toward it, which starts as "right". More actions' Export submenu is patched for this (DECISIONS, Task 10); another submenu that opens on the left in a narrow window (Help's Sample scripts, an Outline row's Color…) could close the same way under a mouse that goes straight to it. A fix in Reka, or one shared helper, would cover them all.
 - **Bottom sheets override Reka's popper placement** with `!important` on its wrapper (Task 9). A Nuxt UI or Reka upgrade that changes the wrapper's attribute would undo them; the sheet test would catch it.
 
