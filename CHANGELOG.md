@@ -22,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Two computers.** Opening a script, or coming back to Drafter after a while away, reads its drafts folder and cuts file and adds what another computer kept, through Dropbox, Google Drive, OneDrive, or any synced folder: every cut once, and every draft. If both computers started a Draft 04, both are kept ("Draft 04 (from another computer)", written as `Boca – Draft 04 (2).fountain`), and a draft file changed in another program is listed as "changed outside Drafter". Opening a draft file itself says "This is Draft 03 of Boca." and offers **Open Boca instead**.
 - **A help page, Drafts and cuts** (Help, and the desktop app's Help menu), in plain words.
 - 14 more trap documents, for hostile and damaged draft and cuts files (258 in all).
+- `.gitignore` also allows a `.env.sample` (as well as `.env.example`); every other `.env` file stays out of the repository.
 - **An animated banner at the top of the README:** the script page fans out into the colored revision pages, once. It's an SVG with CSS only, so it plays on GitHub, and it holds still for anyone who asks their computer for less motion.
 
 ### Changed
