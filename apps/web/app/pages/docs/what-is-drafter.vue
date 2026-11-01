@@ -278,9 +278,10 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           lists every one, newest first.
         </li>
         <li>
-          <strong>No forced updates.</strong> The web app updates when you reload. The desktop app
-          asks GitHub once at start-up whether there’s a new version, never installs or restarts by
-          itself, and can be told not to check at all.
+          <strong>No forced updates.</strong> The web app updates when you reload, or the next time
+          you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up
+          whether there’s a new version, never installs or restarts by itself, and can be told not
+          to check at all.
         </li>
       </ul>
       <p>

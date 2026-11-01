@@ -174,7 +174,7 @@ flowchart TD
 
 After your first visit, Drafter opens with no internet at all: your browser keeps its own copy of the app. You can also install it, so it opens in a window of its own like any other app. When a new version is out, Drafter tells you, and waits for you to choose when to reload.
 
-A service worker (`/sw.js`, written at build time by `@vite-pwa/nuxt` and Workbox) precaches the app’s own files: the pages, scripts, styles, workers, fonts, dictionaries, and icons, and nothing else. A web app manifest makes it installable (a PWA). A new version waits until you reload; it never reloads a tab by itself. The site sends a strict content security policy, so a page may only load scripts from drafter.dev itself.
+A service worker (`/sw.js`, written at build time by `@vite-pwa/nuxt` and Workbox) precaches the app’s own files: the pages, scripts, styles, workers, fonts, dictionaries, and icons, and nothing else. A web app manifest makes it installable (a PWA). A new version waits until you reload, or until Drafter is next opened after every one of its tabs was closed; it never reloads a tab by itself. The site sends a strict content security policy, so a page may only load scripts from drafter.dev itself.
 
 ## The desktop app
 
