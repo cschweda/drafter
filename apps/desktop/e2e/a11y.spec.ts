@@ -40,10 +40,18 @@ async function clean(page: Page, state: string) {
   ).toEqual([]);
 }
 
-/** Switches the window to `theme` with the toolbar's button, as a writer does (dark is the default). */
+/**
+ * Switches the window to `theme` with the toolbar's button, as a writer does. A fresh profile
+ * follows the system's appearance (fresh-look design §9), so either theme may be the one it opens
+ * in; the button is pressed only when it isn't `theme` already.
+ */
 async function useTheme(page: Page, theme: 'dark' | 'light') {
-  if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
-  await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
+  const html = page.locator('html');
+  const toggle = page.getByRole('button', { name: /^Switch to (dark|light) theme$/ });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute('aria-label')) === `Switch to ${theme} theme`)
+    await toggle.click();
+  await expect(html).toHaveClass(new RegExp(`\\b${theme}\\b`));
 }
 
 const modulesDir = (profile: Profile) => join(profile.userData, 'modules');
