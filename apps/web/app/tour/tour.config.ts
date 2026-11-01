@@ -9,10 +9,13 @@ export const TOUR_VERSION = 1;
 export const TOUR_STORAGE_PREFIX = 'drafter-tour';
 
 export const WELCOME = {
-  title: 'Welcome to Drafter',
+  // Drafter™ at its first prominent use; the name is a trademark (the About dialog says so).
+  title: 'Welcome to Drafter™',
   description:
     'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
-  subdescription: 'Your scripts stay on this device.',
+  // What Drafter promises, as README's "Open it and write" says it, in two short lines.
+  subdescription:
+    'Free, with no catch, and no login, ever. Private (no cookies, no tracking), it works offline, and Final Draft files go in and out.',
   startLabel: 'Take the tour',
   skipLabel: "No thanks, I'll look around.",
 } as const;

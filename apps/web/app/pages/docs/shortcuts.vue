@@ -104,7 +104,7 @@ const groups = shortcutGroups(COMMAND_DATA);
         </li>
         <li>
           In Scaffold, <kbd>Alt+←</kbd> (<kbd>⌥←</kbd> on a Mac) goes back to the page before, as
-          the Back button on its bar does, while focus is anywhere in the tab except a filter field,
+          the Back button at the top of the Inspector does, while focus is anywhere in the tab except a filter field,
           where it moves by a word.
         </li>
         <li>

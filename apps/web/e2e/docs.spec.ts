@@ -80,6 +80,25 @@ test.describe('without JavaScript', () => {
     expect(descriptions.size).toBe(HELP_PAGES.length);
   });
 
+  test('ends every help page with who made Drafter, linked in a new tab', async ({ page }) => {
+    for (const path of ['/docs', ...HELP_PAGES.map((p) => p.path)]) {
+      await page.goto(path);
+      const foot = page.getByRole('contentinfo');
+      await expect(foot, path).toHaveText(
+        'Made by Christopher Schweda (cschweda) · metaincognita.com',
+      );
+      for (const [name, href] of [
+        ['cschweda', 'https://github.com/cschweda'],
+        ['metaincognita.com', 'https://metaincognita.com'],
+      ]) {
+        const link = foot.getByRole('link', { name, exact: true });
+        await expect(link, path).toHaveAttribute('href', href as string);
+        await expect(link, path).toHaveAttribute('target', '_blank');
+        await expect(link, path).toHaveAttribute('rel', 'noopener noreferrer');
+      }
+    }
+  });
+
   test('prerenders a help index that links every help page', async ({ page }) => {
     for (const address of ['/docs', '/docs/']) {
       await page.goto(address);

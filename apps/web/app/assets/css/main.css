@@ -223,6 +223,14 @@ html:has(dialog:modal) {
   font-weight: 700;
   text-decoration: none;
 }
+/* Every help page ends with who made Drafter (MadeBy.vue). */
+.docs-foot {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 16px 16px 32px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
 .docs-main {
   box-sizing: border-box;
   max-width: 48rem;

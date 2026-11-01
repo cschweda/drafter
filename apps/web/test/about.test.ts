@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
   ABOUT_LINKS,
+  ABOUT_TRADEMARK,
   aboutInfo,
   browserOf,
+  MAKER,
   platformOf,
   versionLine,
   versionText,
@@ -113,5 +115,22 @@ describe('About Drafter', () => {
       'https://github.com/cschweda/drafter/blob/main/docs/spec/drafter-package.md',
       'https://drafter.dev/',
     ]);
+  });
+});
+
+describe('who made Drafter', () => {
+  test('credits the maker as the README does, with https links and nothing to track', () => {
+    expect(`Made by ${MAKER.name} (${MAKER.handle.label}) · ${MAKER.site.label}`).toBe(
+      'Made by Christopher Schweda (cschweda) · metaincognita.com',
+    );
+    expect(MAKER.handle.href).toBe('https://github.com/cschweda');
+    expect(MAKER.site.href).toBe('https://metaincognita.com');
+    for (const href of [MAKER.handle.href, MAKER.site.href]) expect(href).not.toMatch(/[?#]/);
+  });
+
+  test('says whose trademark the name is', () => {
+    expect(ABOUT_TRADEMARK).toBe(
+      'Drafter™ and the Drafter logo are trademarks of Christopher Schweda.',
+    );
   });
 });

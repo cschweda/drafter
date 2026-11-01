@@ -71,5 +71,8 @@ function onBack(event: MouseEvent) {
     <main class="docs-main">
       <slot />
     </main>
+    <footer class="docs-foot">
+      <MadeBy />
+    </footer>
   </div>
 </template>

@@ -20,11 +20,12 @@
 - **Time it:** the running time at your own minutes a page and an estimate from the dialogue, set per script in Stats, with each scene's and act's time in the Outline and the Structure strip.
 - **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; every main format in and out, from Final Draft to Markdown, and `drafter convert` for a folder at once (see [Formats](#formats)); **Export as HTML**, one page that opens in any browser with no connection, and **Export as EPUB**, an e-book for an e-reader or a tablet; a progress bar on a long export; and **export options** per script for scene numbers, the title page, and notes.
 - **Get started:** a welcome and a guided tour on a first visit; a **guided first screenplay** and **stage play** (File → New guided screenplay) that teach each element as you read; offline use and installing as an app; help pages, among them **Technical details** (how Drafter is built, with diagrams); and, in the **Help** menu at the top right, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
+- **Make it yours:** a calm light or dark theme (a first visit follows your system), paper pages or a dark page for night, five text sizes, and Settings in sections; below 1024 pixels, one pane at a time with Write, Script, Outline, and More along the bottom, made for a phone.
 - **On the desktop:** an app for Linux (an AppImage or a `.deb`) and Windows (an installer) that always saves in place and loads script modules from a folder. It builds on a Mac with one command.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
-  <img src="docs/images/drafter-ide-dark.png" alt="Drafter's editor: the Fountain source of a short screenplay on the left, with scene headings, notes, and markers colored, and the same scene laid out as a printed page on the right.">
+  <img src="docs/images/drafter-ide-dark.png" alt="Drafter's fresh look: the Fountain source of a short screenplay in the editor on the left, with scene headings, notes, and character names colored and the element bar above, and the same scene laid out on a sheet of paper in the Inspector's Script tab on the right.">
 </picture>
 
 [drafter.dev](https://drafter.dev) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)

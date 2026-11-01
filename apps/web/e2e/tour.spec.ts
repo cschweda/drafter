@@ -87,6 +87,15 @@ async function takeTourFromHelp(page: Page) {
 }
 
 test.describe('the welcome and the tour', () => {
+  test('the welcome marks the name and says what Drafter promises', async ({ page }) => {
+    await page.goto('/');
+    await expect(welcome(page)).toBeVisible();
+    await expect(welcome(page).getByRole('heading')).toHaveText('Welcome to Drafter™');
+    await expect(welcome(page)).toContainText(
+      'Free, with no catch, and no login, ever. Private (no cookies, no tracking), it works offline, and Final Draft files go in and out.',
+    );
+  });
+
   test('welcomes a first visit and takes the tour with the keyboard', async ({ page }) => {
     await visit(page);
     await expect(

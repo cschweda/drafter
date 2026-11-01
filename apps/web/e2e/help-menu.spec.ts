@@ -89,6 +89,23 @@ test.describe('About Drafter', () => {
       await expect(link).toHaveAttribute('href', href as string);
       await expect(link).toHaveAttribute('target', '_blank');
     }
+    // The name is marked as a trademark at its first use, and About says whose it is, and who made
+    // Drafter, with links that open in a new tab and send no referrer.
+    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('Drafter™');
+    await expect(dialog.locator('[data-about-trademark]')).toHaveText(
+      'Drafter™ and the Drafter logo are trademarks of Christopher Schweda.',
+    );
+    const credit = dialog.locator('[data-made-by]');
+    await expect(credit).toHaveText('Made by Christopher Schweda (cschweda) · metaincognita.com');
+    for (const [name, href] of [
+      ['cschweda', 'https://github.com/cschweda'],
+      ['metaincognita.com', 'https://metaincognita.com'],
+    ]) {
+      const link = credit.getByRole('link', { name, exact: true });
+      await expect(link).toHaveAttribute('href', href as string);
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
     await expect(dialog.getByRole('link', { name: 'Keyboard shortcuts' })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Technical details' })).toHaveAttribute(
       'href',

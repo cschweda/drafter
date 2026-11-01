@@ -6,6 +6,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Paper pages.** The Script tab, Compare's Pages, and Show changes draw each page as a sheet of paper on a desk, at its full height, so the paper always runs to the bottom of the window. A new setting, **Page colour** (Paper or Dark), keeps the dark page for writing at night. Printing, the PDF, and every export are still on white paper.
+- **"Unsaved", right after the title.** While there are changes to save, a red dot and **Unsaved** sit after the script's title. Click it to save. After a save, **✓ Saved** shows for two seconds and fades. The tab's icon gets a red dot too, and the title keeps its "• ". On a phone, the dot shows alone.
+- **A Help menu at the top right**, with the help pages, the tour, the sample scripts, Check for updates…, and About Drafter. It used to be part of the Drafter menu.
+- **About Drafter checks for updates** with a button beside the version, and says what it found right there.
+- **About Drafter says who made it**: "Made by Christopher Schweda (cschweda) · metaincognita.com", with links that open in a new tab. It also says that Drafter™ and the Drafter logo are trademarks of Christopher Schweda. Every help page ends with the same credit line.
+- **The welcome says what Drafter promises**: free, with no catch, no login, ever, private (no cookies, no tracking), works offline, and Final Draft files in and out.
+- **A phone layout.** Below 1024 pixels Drafter shows one thing at a time, with a bar at the bottom: **Write**, **Script**, **Outline**, and **More** (Cards, Stats, Scaffold, Notes, Problems, History). A phone opens on Write. Menus and the command palette rise from the bottom of the screen. When the top bar is full, its buttons move into **More actions** (⋯) instead of being cut off.
+- **The element bar sits above the on-screen keyboard** while you type on a phone or tablet, so the marks are one tap away.
+- **Counts and daily goal…** in the command palette, for screens with no status bar.
+- **Stats pages that are easy to read**: tiles for pages, scenes, words, and running time; Interior and Exterior, and Day and Night, as two bars with every count written out; and the longer explanations behind an (i) button.
+- **Cards are never empty.** A card with no synopsis shows the scene's first line of action (or its first speech) in grey.
+- **A help section, "Finding your way around"**, on the help index: where the menus, the Inspector, the status bar, the phone's bottom bar, and Settings' sections are.
+- `apps/web`: `scripts/ui-shots.mjs`, a screenshot sweep of every screen in both themes, at 1440×900 and on an iPhone 14. The README's screenshots come from it.
+
+### Changed
+
+- **One calm look.** New colours in both themes, one goldenrod accent, one kind of button, one style of menu, and one style of dialog. Icons are plain outlines; the coloured circles are gone.
+- **A new top bar.** From left to right: the Drafter mark (still the app's menu, now with a clear arrow), the script's title, the sample chip (**Sample · Start your own**), Open, Save, and Export, the search, and buttons for the Structure strip, focus mode, Help, and the theme. The template moved into the Drafter menu and the status bar. Below 1024 pixels the buttons show their icons only.
+- **The editor is always on the left.** Everything else opens on the right, in the **Inspector**, which has its own tabs (Script, Outline, Cards, Stats, Scaffold) and a **More** menu (Notes, Problems, Compare, Deleted scenes, and modules' tabs). Each tab's buttons sit at the right of its header; when they don't fit, they show icons only, then fold into "⋯". **F6** moves between the editor and the Inspector.
+- **The element bar lives in the editor's header** and never gets cut off: when it's short of room, buttons fold into **More**. A chip at its left names the element the cursor is in. The marks (such as `@` for a character) moved into the tooltips. "Paren" now reads **Parenthetical**.
+- **A quiet status bar.** It shows the file's name (which opens History), the pages and running time, the words, the problems, and the template, and repeats nothing from the top bar. It is hidden on a phone, except for a warning that needs you.
+- **Warnings are calmer.** The "browser may clear your work" warning is a toast you can put away, plus a small chip in the status bar, not a banner over the panes. Warnings are a soft amber, and errors a soft red.
+- **Settings has sections**: General, Writing, Script, Spelling, Files, Modules, and About, in a list beside one scrolling column. Choosing a section jumps to it. Nothing is hidden behind a tab, so you can still scroll or Tab through every setting.
+- **Stats and Scaffold are laid out as pages**, in a centred column, with tables that keep their headings in view. Stats' section links are a contents row at the top of the page.
+- **Focus mode fits the window.** On a narrow window the margins shrink instead of squeezing the text, and the text starts a little lower on the page.
+- **Focus rings only on what you can press.** Buttons, links, tabs, and fields still show a clear ring. A heading or the editor that Drafter moves focus to for a screen reader no longer gets a gold box. The editor shows its focus with a wider goldenrod cursor and a bar beside the current line.
+- **A first visit follows your system's light or dark appearance.** Dark is still the default. Once you pick a theme, Drafter keeps yours, and returning visitors are left as they were.
+- **The guided tour** still has ten steps, now pointing at the new places. On a phone, a step whose button has folded away points at More actions.
+- `modules`: a module's frame gets the new colour names (`--surface`, `--raised`, `--border`, `--accent-text`), and still gets the old ones (`--chrome`, `--chrome-2`, `--line`, `--heading`), so older modules keep their colours. The app itself no longer has the old names.
+- README: new screenshots of the fresh look.
+
+### Fixed
+
+- **Show Script no longer takes the editor away**, and a view opened from the palette shows once, in the Inspector, not in both panes.
+- **A phone opens on the editor**, not on the Script tab.
+- **The element bar's `?` and `⋯` are no longer cut off** on a narrow pane.
+- **Stats' column headings no longer overlap**, and a heading you jump to is no longer half hidden.
+- **A browser set to light no longer opens dark** on a first visit.
+- **In Firefox, replacing a stage play's text no longer leaves the editor blank.** Pasting or typing over the whole of a stage play, which Firefox sends as one composition, lost the new text.
+- **Focus stays in a menu you open just as a dialog closes**, instead of jumping to the Drafter menu.
+- **The Export submenu in More actions opens with a mouse.** On a phone-sized window it opens to the left, and a mouse that went straight to it, or a click in Firefox, closed it again. A tap and the keyboard always worked.
+
 ## [0.22.0] - 2026-10-30
 
 **Export as HTML and EPUB, and open formats said plainly.** A script or document exports as one web page that opens anywhere with no connection (dark, with a light switch; the exact pages or a reading view), or as an e-book for an e-reader or a tablet; `drafter build --html` does the same from the command line; and a new Open formats help page, with About, links to the open, public-domain specification of the `.drafter` package.

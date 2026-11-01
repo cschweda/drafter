@@ -37,6 +37,20 @@ export const ABOUT_DESCRIPTION = 'Screenplays and stage plays, written in plain 
 /** The licence About names. */
 export const ABOUT_LICENSE = 'Free and open source, under the MIT License.';
 
+/**
+ * Who made Drafter, as the README credits him: About and the help pages' footer say "Made by
+ * Christopher Schweda (cschweda) · metaincognita.com", each link opening in a new tab.
+ */
+export const MAKER = {
+  name: 'Christopher Schweda',
+  handle: { label: 'cschweda', href: 'https://github.com/cschweda' },
+  site: { label: 'metaincognita.com', href: 'https://metaincognita.com' },
+} as const;
+
+/** The trademark line About shows (the README's License section says the same). */
+export const ABOUT_TRADEMARK =
+  'Drafter™ and the Drafter logo are trademarks of Christopher Schweda.';
+
 export interface BuildInfo {
   /** `0.13.1`, or '' when the build defined none. */
   version: string;

@@ -4,6 +4,7 @@ import {
   ABOUT_DESCRIPTION,
   ABOUT_LICENSE,
   ABOUT_LINKS,
+  ABOUT_TRADEMARK,
   type AboutInfo,
   buildLine,
   currentAbout,
@@ -107,7 +108,8 @@ function openHelp(id: string) {
     @close="onClose"
   >
     <template v-if="info">
-      <h2 id="about-title" class="d-dialog-title">Drafter</h2>
+      <!-- Drafter™ at its first use here; its name stays "Drafter" (the mark is for the eye). -->
+      <h2 id="about-title" class="d-dialog-title">Drafter<span aria-hidden="true">™</span></h2>
       <div class="version-row">
         <p class="version" data-about-version>{{ versionLine(info) }}</p>
         <DButton :aria-disabled="checking ? 'true' : undefined" @click="checkForUpdates">
@@ -142,6 +144,8 @@ function openHelp(id: string) {
         <dt>Licence</dt>
         <dd>{{ ABOUT_LICENSE }}</dd>
       </dl>
+      <MadeBy />
+      <p class="trademark" data-about-trademark>{{ ABOUT_TRADEMARK }}</p>
       <div class="copy">
         <DButton @click="copy">Copy version info</DButton>
         <span role="status" aria-live="polite" class="copied" data-about-copied>{{ copied }}</span>
@@ -209,6 +213,11 @@ p {
 }
 #about-what {
   color: var(--muted);
+}
+.trademark {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 .facts {
   display: grid;

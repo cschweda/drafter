@@ -443,7 +443,7 @@ useDocsHead({
 
     <h3 id="show-changes">Show changes</h3>
     <p>
-      The <strong>Changes</strong> button on the Script tab’s bar marks the pages with what you have
+      The <strong>Changes</strong> button at the top of the Script tab, beside Fit and 100%, marks the pages with what you have
       changed since you last saved: a changed or added line gets a colored band and a
       <strong>+</strong>, and where lines were taken out a thin rule with a button shows them. To
       compare with a snapshot instead, choose it from <strong>since</strong>, or use

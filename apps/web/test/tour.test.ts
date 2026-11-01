@@ -132,6 +132,15 @@ describe('the tour’s steps', () => {
     expect(WELCOME.skipLabel).toBe("No thanks, I'll look around.");
   });
 
+  test('the welcome marks the name and says what Drafter promises, briefly', () => {
+    expect(WELCOME.title).toBe('Welcome to Drafter™');
+    expect(WELCOME.subdescription).toBe(
+      'Free, with no catch, and no login, ever. Private (no cookies, no tracking), it works offline, and Final Draft files go in and out.',
+    );
+    // One or two short lines on the 440px card.
+    expect(WELCOME.subdescription.length).toBeLessThanOrEqual(140);
+  });
+
   test('say Drafter is Fountain-first and open to other formats, and claim no export it lacks', () => {
     expect(WELCOME.description).toBe(
       'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
