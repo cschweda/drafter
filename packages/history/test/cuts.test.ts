@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { CUT_MIN_WORDS, findCuts } from '../src';
 import {
+  CABIN_TRIMMED,
   CAR,
   LANTERN_ROOM,
   LAST_FERRY,
@@ -94,7 +95,7 @@ describe('findCuts in a script', () => {
       {
         title: headingOf(S.water),
         text: S.water,
-        where: { after: headingOf(S.wheelhouse), before: headingOf(S.coastguard) },
+        where: { after: headingOf(S.wheelhouse), before: headingOf(S.coastguard), within: null },
       },
     ]);
   });
@@ -103,11 +104,75 @@ describe('findCuts in a script', () => {
     expect(findCuts(LAST_FERRY, V.moved, 'fountain')).toEqual([]);
   });
 
-  test('a scene lightly edited, trimmed, or renamed is not a cut', () => {
-    expect(findCuts(LAST_FERRY, V.trimmed, 'fountain')).toEqual([]);
+  test('a scene lightly edited or renamed is not a cut', () => {
     expect(findCuts(LAST_FERRY, V.renamed, 'fountain')).toEqual([]);
     const edited = LAST_FERRY.replace('counts the float twice', 'counts the float three times');
     expect(findCuts(LAST_FERRY, edited, 'fountain')).toEqual([]);
+  });
+
+  test('a scene trimmed by most of its words: what left it is cut, passage by passage', () => {
+    const cuts = findCuts(LAST_FERRY, V.trimmed, 'fountain');
+    expect(cuts.length).toBeGreaterThan(0);
+    for (const cut of cuts) {
+      expect(S.cabin).toContain(cut.text);
+      expect(cut.text).not.toBe(S.cabin);
+      // Nothing kept is in a cut.
+      for (const line of CABIN_TRIMMED.split('\n').slice(1)) {
+        if (line.trim() !== '' && line !== 'NELL') expect(cut.text).not.toContain(line);
+      }
+      expect(cut.where.within).toEqual({ heading: headingOf(S.cabin), ordinal: 4 });
+      expect(cut.where.after).toBe(headingOf(S.cabin));
+    }
+    // Every word that left is in a cut.
+    const kept = new Set(CABIN_TRIMMED.split(/\s+/));
+    const cutWords = new Set(cuts.flatMap((c) => c.text.split(/\s+/)));
+    for (const word of S.cabin.split(/\s+/)) if (!kept.has(word)) expect(cutWords).toContain(word);
+  });
+
+  describe('passages that leave a scene still there', () => {
+    const jetty = S.jetty;
+    const swap = (from: string, to: string) => LAST_FERRY.replace(jetty, jetty.replace(from, to));
+    const one = (after: string) => {
+      const cuts = findCuts(LAST_FERRY, after, 'fountain');
+      for (const c of cuts)
+        expect(c.where.within).toEqual({ heading: headingOf(jetty), ordinal: 2 });
+      return cuts.map((c) => c.text);
+    };
+    test('a dropped speech is a cut', () => {
+      const speech = 'SCHOOLBOY\nIs it running today or is it broken like Tuesday?';
+      expect(one(swap(`${speech}\n\n`, ''))).toEqual([speech]);
+    });
+    test('a dropped action paragraph is a cut, however short', () => {
+      const action =
+        'Gulls argue over a split bag of chips. The ferry, a stubby green boat called the MARGARET ROSE, knocks against old tyres roped to the pilings.';
+      expect(one(swap(`${action}\n\n`, ''))).toEqual([action]);
+      const short = LAST_FERRY.replace(jetty, `${jetty}\n\nNell nods.`);
+      expect(findCuts(short, LAST_FERRY, 'fountain').map((c) => c.text)).toEqual(['Nell nods.']);
+    });
+    test('12 words taken out of a paragraph are a cut; 11 are not', () => {
+      const twelve = ' elbow, while a SCHOOLBOY in an oversized blazer waits with a bicycle';
+      expect(twelve.trim().split(/\s+/)).toHaveLength(12);
+      expect(one(swap(twelve, ''))).toEqual([twelve.trim()]);
+      const eleven = ' while a SCHOOLBOY in an oversized blazer waits with a bicycle';
+      expect(eleven.trim().split(/\s+/)).toHaveLength(11);
+      expect(one(swap(eleven, ''))).toEqual([]);
+    });
+    test('a typo fixed or a word changed is not a cut', () => {
+      expect(one(swap('Gulls argue', 'Gulls argeu'))).toEqual([]);
+      expect(one(swap('split bag of chips', 'torn bag of chips'))).toEqual([]);
+    });
+    test('an element moved within the scene is not a cut', () => {
+      const speech = 'SCHOOLBOY\nIs it running today or is it broken like Tuesday?';
+      const moved = jetty.replace(`${speech}\n\n`, '').concat(`\n\n${speech}`);
+      expect(one(LAST_FERRY.replace(jetty, moved))).toEqual([]);
+    });
+    test('a paragraph replaced by a different one of 12 words or more is a cut of the old one', () => {
+      const old =
+        'Nell coils a mooring line, hand over elbow, while a SCHOOLBOY in an oversized blazer waits with a bicycle.';
+      const other =
+        'A dog sleeps under the bench by the ticket hut, dreaming of the gulls it never catches.';
+      expect(one(swap(old, other))).toEqual([old]);
+    });
   });
 
   test('a scene split in two, or two merged into one, is not a cut', () => {
@@ -130,7 +195,11 @@ describe('findCuts in a script', () => {
     const cuts = findCuts(before, after, 'fountain');
     expect(cuts).toHaveLength(1);
     expect(cuts[0]?.text).toBe(CAR[2]);
-    expect(cuts[0]?.where).toEqual({ after: 'INT. CAR - NIGHT', before: 'INT. CAR - NIGHT' });
+    expect(cuts[0]?.where).toEqual({
+      after: 'INT. CAR - NIGHT',
+      before: 'INT. CAR - NIGHT',
+      within: null,
+    });
   });
 
   test('where names the surviving neighbours, skipping scenes cut beside it', () => {
@@ -138,11 +207,19 @@ describe('findCuts in a script', () => {
     const cuts = findCuts(LAST_FERRY, after, 'fountain');
     const jetty = cuts.find((c) => c.title === headingOf(S.jetty));
     const car = cuts.find((c) => c.title === headingOf(S.arrival));
-    expect(jetty?.where).toEqual({ after: headingOf(S.office), before: headingOf(S.cabin) });
-    expect(car?.where).toEqual({ after: headingOf(S.office), before: headingOf(S.cabin) });
+    expect(jetty?.where).toEqual({
+      after: headingOf(S.office),
+      before: headingOf(S.cabin),
+      within: null,
+    });
+    expect(car?.where).toEqual({
+      after: headingOf(S.office),
+      before: headingOf(S.cabin),
+      within: null,
+    });
     // Act two cut whole: the last scene kept is the pub, and nothing comes after it.
     const morning = cuts.find((c) => c.title === headingOf(S.morning));
-    expect(morning?.where).toEqual({ after: headingOf(S.pub), before: null });
+    expect(morning?.where).toEqual({ after: headingOf(S.pub), before: null, within: null });
     // In the order they stood.
     expect(cuts.map((c) => c.title)[0]).toBe(headingOf(S.jetty));
   });
@@ -161,7 +238,7 @@ describe('findCuts in a script', () => {
       {
         title: headingOf(S.office),
         text: S.office,
-        where: { after: null, before: headingOf(S.jetty) },
+        where: { after: null, before: headingOf(S.jetty), within: null },
       },
     ]);
   });
@@ -202,7 +279,11 @@ describe('findCuts in a Markdown document', () => {
       KEEPER.winter,
     ]);
     expect(findCuts(YEAR, after, 'markdown')).toEqual([
-      { title: 'Summer', text: KEEPER.summer, where: { after: 'Spring', before: 'Autumn' } },
+      {
+        title: 'Summer',
+        text: KEEPER.summer,
+        where: { after: 'Spring', before: 'Autumn', within: null },
+      },
     ]);
   });
 
@@ -216,7 +297,11 @@ describe('findCuts in a Markdown document', () => {
     ]);
     const after = keeper([YEAR.trimEnd(), '# Afterword', 'Mara keeps the last ledger in a tin.']);
     expect(findCuts(before, after, 'markdown')).toEqual([
-      { title: 'The Second Year', text: second, where: { after: 'Winter', before: 'Afterword' } },
+      {
+        title: 'The Second Year',
+        text: second,
+        where: { after: 'Winter', before: 'Afterword', within: null },
+      },
     ]);
   });
 
@@ -263,21 +348,41 @@ describe('findCuts in a Markdown document', () => {
     const before = keeper(['# Notes kept', ...notes]);
     const after = keeper(['# Notes kept', notes[0] as string, notes[2] as string]);
     expect(findCuts(before, after, 'markdown')).toEqual([
-      { title: 'Notes', text: notes[1], where: { after: 'Notes', before: 'Notes' } },
+      { title: 'Notes', text: notes[1], where: { after: 'Notes', before: 'Notes', within: null } },
     ]);
   });
 
-  test(`a removed paragraph of ${CUT_MIN_WORDS} words is a cut, of ${CUT_MIN_WORDS - 1} is not`, () => {
+  test('a removed paragraph is a cut, whatever its length', () => {
     const long = prose(CUT_MIN_WORDS, 1);
-    const short = prose(CUT_MIN_WORDS - 1, 2);
+    const short = 'Fog again.';
     const kept = 'The lamp is lit at dusk.';
     const before = keeper(['# A', KEEPER.intro, long, kept, short, KEEPER.spring]);
     const after = keeper(['# A', KEEPER.intro, kept, KEEPER.spring]);
     const cuts = findCuts(before, after, 'markdown');
-    expect(cuts.map((c) => c.text)).toEqual([long]);
+    expect(cuts.map((c) => c.text)).toEqual([long, short]);
     const words = long.split(' ');
     expect(cuts[0]?.title).toBe(`${words.slice(0, 8).join(' ')}…`);
-    expect(cuts[0]?.where).toEqual({ after: 'A', before: 'Spring' });
+    expect(cuts[0]?.where).toEqual({
+      after: 'A',
+      before: 'Spring',
+      within: { heading: 'A', ordinal: 1 },
+    });
+  });
+
+  test(`${CUT_MIN_WORDS} words taken from inside a paragraph are a cut; ${CUT_MIN_WORDS - 1} are not`, () => {
+    const start = prose(20, 50);
+    const end = prose(20, 51);
+    const doc = (middle: string) => keeper(['# A', `${start} ${middle}${end}`]);
+    const twelve = prose(CUT_MIN_WORDS, 52).slice(0, -1);
+    expect(findCuts(doc(`${twelve} `), doc(''), 'markdown').map((c) => c.text)).toEqual([twelve]);
+    const eleven = prose(CUT_MIN_WORDS - 1, 53).slice(0, -1);
+    expect(findCuts(doc(`${eleven} `), doc(''), 'markdown')).toEqual([]);
+  });
+
+  test('a list item removed is a cut, however short', () => {
+    const before = keeper(['# A', KEEPER.intro, '- Paraffin.\n- Flour and tea.\n- Rope.']);
+    const after = keeper(['# A', KEEPER.intro, '- Paraffin.\n- Rope.']);
+    expect(findCuts(before, after, 'markdown').map((c) => c.text)).toEqual(['- Flour and tea.']);
   });
 
   test('two short paragraphs removed together are one passage', () => {
@@ -313,14 +418,19 @@ describe('findCuts in a Markdown document', () => {
     expect(cuts.map((c) => c.text)).toEqual([middle]);
   });
 
-  test('a sentence under 50 words deleted from the end of the last paragraph is no cut', () => {
+  test('a sentence deleted from the end of the last paragraph is exactly that sentence', () => {
     const kept = prose(40, 30);
-    const gone = prose(46, 31);
-    const before = keeper(['# A', KEEPER.intro, `${kept} ${gone}`]);
-    expect(findCuts(before, keeper(['# A', KEEPER.intro, kept]), 'markdown')).toEqual([]);
-    // Just before a heading, too.
-    const mid = keeper(['# A', `${kept} ${gone}`, KEEPER.spring]);
-    expect(findCuts(mid, keeper(['# A', kept, KEEPER.spring]), 'markdown')).toEqual([]);
+    for (const n of [CUT_MIN_WORDS - 1, CUT_MIN_WORDS]) {
+      const gone = prose(n, 31);
+      const expected = n >= CUT_MIN_WORDS ? [gone] : [];
+      const before = keeper(['# A', KEEPER.intro, `${kept} ${gone}`]);
+      const at = findCuts(before, keeper(['# A', KEEPER.intro, kept]), 'markdown');
+      expect(at.map((c) => c.text)).toEqual(expected);
+      // Just before a heading, too.
+      const mid = keeper(['# A', `${kept} ${gone}`, KEEPER.spring]);
+      const there = findCuts(mid, keeper(['# A', kept, KEEPER.spring]), 'markdown');
+      expect(there.map((c) => c.text)).toEqual(expected);
+    }
   });
 
   test('60 words deleted from the end of a 150-word last paragraph are exactly those 60', () => {
@@ -379,7 +489,7 @@ describe('findCuts in a Markdown document', () => {
   });
 
   describe('a short section rewritten under its own heading is never lost', () => {
-    const body = prose(40, 40);
+    const body = prose(10, 40);
     const notes = `## Notes\n\n${body}`;
     const before = keeper(['# A', KEEPER.spring, notes, KEEPER.summer]);
     const now = (newBody: string) =>
@@ -390,18 +500,34 @@ describe('findCuts in a Markdown document', () => {
       );
     test('replaced by a few words', () => {
       expect(now('TBD more later.')).toEqual([
-        { title: 'Notes', text: notes, where: { after: 'Spring', before: 'Summer' } },
+        { title: 'Notes', text: notes, where: { after: 'Spring', before: 'Summer', within: null } },
       ]);
     });
     test('replaced by a different paragraph of the same length', () => {
-      expect(now(prose(40, 41)).map((c) => c.text)).toEqual([notes]);
+      expect(now(prose(10, 41)).map((c) => c.text)).toEqual([notes]);
     });
-    test('trimmed to 10 words', () => {
-      expect(now(`${body.split(' ').slice(0, 10).join(' ')}.`).map((c) => c.text)).toEqual([notes]);
+    test('trimmed to 3 words', () => {
+      expect(now(`${body.split(' ').slice(0, 3).join(' ')}.`).map((c) => c.text)).toEqual([notes]);
     });
     test('but grown, or lightly edited, it is no cut', () => {
       expect(now(`${body} ${prose(200, 42)}`)).toEqual([]);
       expect(now(body.replace(/^\S+/, 'And'))).toEqual([]);
+    });
+    test('a longer body replaced or cut down is a passage cut in its section', () => {
+      const long = prose(40, 43);
+      const was = keeper(['# A', KEEPER.spring, `## Notes\n\n${long}`, KEEPER.summer]);
+      const to = (b: string) => keeper(['# A', KEEPER.spring, `## Notes\n\n${b}`, KEEPER.summer]);
+      expect(findCuts(was, to('TBD more later.'), 'markdown')).toEqual([
+        {
+          title: `${long.split(' ').slice(0, 8).join(' ')}…`,
+          text: long,
+          where: { after: 'Notes', before: 'Summer', within: { heading: 'Notes', ordinal: 3 } },
+        },
+      ]);
+      const words = long.split(' ');
+      const trimmed = findCuts(was, to(`${words.slice(0, 10).join(' ')}.`), 'markdown');
+      // The full stop stays, after the words kept.
+      expect(trimmed.map((c) => c.text)).toEqual([words.slice(10).join(' ').slice(0, -1)]);
     });
   });
 

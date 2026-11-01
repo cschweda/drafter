@@ -251,7 +251,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 ## Drafts and cuts
 
 - **M3: many sections merged into one.** Merging hundreds of Markdown sections into one huge section reports most of them as cuts: each is held only by containment, and past the candidate cap, or with too little of it left in the merged section, it reads as gone. It leans toward keeping, so nothing is lost, but the Cuts list fills.
-- **M4: long paragraphs in a big rewrite.** Above `MAX_TOKENS` (2,000 tokens a side), the word-level diff inside a lightly rewritten block falls back to whole lines, so a 50+ word removal from inside a very long paragraph in such a block can be missed.
+- **M4: long paragraphs in a big rewrite.** Above `MAX_TOKENS` (2,000 tokens a side), the word-level diff inside a lightly rewritten block falls back to whole lines, so a removal of 12 or more words from inside a very long paragraph in such a block can be missed.
 - **M5: Put back with duplicate headings.** When duplicate headings make both of a cut's neighbours the same text, Put back (Task 4) must break the tie by position. Noted in the plan's Task 4.
 
 ## Flaky tests seen in CI

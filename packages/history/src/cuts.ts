@@ -7,22 +7,39 @@ import { hash32, hash53 } from './hash';
 import { coveredBy } from './match';
 import { headingKey, type ScenePrint, scenePrints, sketchOf } from './print';
 
-// Finding what left a text (drafts-and-cuts design §3.1): the scenes of a script, and the
-// chapters, sections and passages of a Markdown document, that were in `before` and are not in
-// `after`. Moved text is never a cut, nor is text lightly edited.
+// Finding what left a text (drafts-and-cuts design §3.1): the scenes, chapters and sections that
+// were in `before` and are not in `after`, and every passage that left a scene or section still
+// there. The maintainer (2026-11-01): "I've found myself always going back to what I've cut for
+// ideas of what to include. So 'cuts' should include all cuts." Moved text is never a cut, nor
+// are word-level tweaks, typo fixes, or light rewrites.
 
 /** A piece of `before` that is not in `after`. */
 export interface FoundCut {
   /** The scene, chapter or section heading; for a passage, its first 8 words and "…". */
   title: string;
-  /** Exactly as it was in `before`, from its first word to its last. */
+  /** Exactly as it was in `before`, from its first word to its last, with `\n` line breaks. */
   text: string;
-  /** The headings either side of it, as they are in `after`; null at the start or the end. */
-  where: { after: string | null; before: string | null };
+  where: {
+    /** The headings either side of it, as they are in `after`; null at the start or the end. */
+    after: string | null;
+    before: string | null;
+    /**
+     * For a passage, the scene or section it was cut from, so Cuts can group it there: its
+     * heading in `before` ('' for a Markdown document's opening) and its place, the scene's
+     * number (1, 2, 3…) or the section's (1, 2, 3… in document order; 0 for the opening). Null
+     * for a whole scene, chapter or section.
+     */
+    within: { heading: string; ordinal: number } | null;
+  };
 }
 
-/** The fewest words a passage removed without its heading has to have to be a cut. */
-export const CUT_MIN_WORDS = 50;
+/**
+ * A passage removed from a scene or section still there is a cut when it is a whole element or
+ * paragraph (a speech, an action paragraph, a transition, a Markdown paragraph or list item)
+ * taken out with nothing in its place, or a run of at least this many words: deleted, or
+ * replaced by text that keeps under `CUT_KEEP_SHARE` of its word pairs.
+ */
+export const CUT_MIN_WORDS = 12;
 
 /**
  * A replaced passage is a cut when it shares under this share of its word pairs with what
@@ -39,8 +56,10 @@ export function findCuts(before: string, after: string, kind: WorkKind): FoundCu
 
 /**
  * Every scene of `before` no scene of `after` covers, judged exactly as Deleted scenes judges
- * (`coveredBy`, looked for among only the scenes that could match). The same text twice is one
- * cut. Its neighbours are the nearest scenes either side that are still there, by their heading now.
+ * (`coveredBy`, looked for among only the scenes that could match), and every passage that left a
+ * scene still covered (`PassageFinder`, against the scene now under the covering print nearest
+ * its place). A scene's neighbours are the nearest scenes either side still there, by their
+ * heading now. A scene whose every line is still in `after` is not a cut.
  */
 function sceneCuts(before: string, after: string): FoundCut[] {
   const was = scenePrints(before);
@@ -69,23 +88,68 @@ function sceneCuts(before: string, after: string): FoundCut[] {
   );
   const names = covers.map((p) => p?.heading ?? null);
   const { prev, next } = neighbours(names);
-  const out: FoundCut[] = [];
-  const seen = new Set<string>();
-  const nowLines = new Set(splitLines(after).lines.filter((line) => HAS_WORD.test(line)));
+  const wasSide = side(before);
+  const nowSide = side(after);
+  const finder = new PassageFinder(wasSide, nowSide);
+  /** The scenes now under each print, by their place, for the scene a covered one is diffed with. */
+  const nowSlots = new Map<string, number[]>();
+  now.slots.forEach((slot, k) => {
+    const list = nowSlots.get(slot.hash);
+    if (list) list.push(k);
+    else nowSlots.set(slot.hash, [k]);
+  });
+  const nowScale = now.slots.length / Math.max(1, was.slots.length);
+  const found: { at: number; cut: FoundCut }[] = [];
   was.slots.forEach((slot, i) => {
-    if (covers[i] !== null) return;
-    const text = cutText(before.slice(slot.from, slot.to));
-    // Every line of it is still in the text, elsewhere: nothing of it left.
-    if (splitLines(text).lines.every((line) => !HAS_WORD.test(line) || nowLines.has(line))) return;
-    if (seen.has(text)) return;
-    seen.add(text);
     const heading = (wasPrints.get(slot.hash) as ScenePrint).heading.trim();
-    out.push({
-      title: heading || firstWords(text),
-      text,
-      where: { after: prev[i] ?? null, before: next[i] ?? null },
+    const covering = covers[i];
+    if (covering) {
+      // The scene is still there: what left it, passage by passage.
+      const places = nowSlots.get(covering.hash) ?? [];
+      const target = i * nowScale;
+      let k = places[0] as number;
+      for (const place of places) if (Math.abs(place - target) < Math.abs(k - target)) k = place;
+      const there = now.slots[k] as (typeof now.slots)[number];
+      const where = {
+        after: covering.heading,
+        before: next[i] ?? null,
+        within: { heading, ordinal: slot.ordinal },
+      };
+      for (const [at, text] of finder.find(
+        span(wasSide, slot.from, slot.to),
+        span(nowSide, there.from, there.to),
+      )) {
+        found.push({ at, cut: { title: firstWords(text), text, where } });
+      }
+      return;
+    }
+    // Every line of it is still in the text, elsewhere: nothing of it left.
+    const lines = span(wasSide, slot.from, slot.to);
+    if (finder.linesThere(lines.first, lines.end)) return;
+    const text = before.slice(slot.from, slot.to);
+    found.push({
+      at: slot.from,
+      cut: {
+        title: heading || firstWords(text),
+        text,
+        where: { after: prev[i] ?? null, before: next[i] ?? null, within: null },
+      },
     });
   });
+  return inOrder(found);
+}
+
+/** The cuts in `before`'s order, their text with `\n` line breaks, the same text once. */
+function inOrder(found: { at: number; cut: FoundCut }[]): FoundCut[] {
+  found.sort((a, b) => a.at - b.at);
+  const seen = new Set<string>();
+  const out: FoundCut[] = [];
+  for (const { cut } of found) {
+    const text = cutText(cut.text);
+    if (seen.has(text)) continue;
+    seen.add(text);
+    out.push({ ...cut, text });
+  }
   return out;
 }
 
@@ -144,11 +208,43 @@ interface Unit {
   pairSet?: Set<number>;
 }
 
-interface Parsed {
+/** A text's lines, without their breaks, and where each starts. */
+interface Side {
   text: string;
   lines: string[];
   starts: number[];
+}
+
+interface Parsed extends Side {
   units: Unit[];
+}
+
+function side(text: string): Side {
+  return { text, ...splitLines(text) };
+}
+
+/** Lines `[first, end)` of a text, and whether the first is a heading (a boundary, not text). */
+interface Span {
+  first: number;
+  end: number;
+  headed: boolean;
+}
+
+/** The line that offset `at` of `side` is on. */
+function lineOf(side: Side, at: number): number {
+  let lo = 0;
+  let hi = side.starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if ((side.starts[mid] as number) <= at) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
+
+/** The lines a scene's span `[from, to)` covers, its heading first. */
+function span(side: Side, from: number, to: number): Span {
+  return { first: lineOf(side, from), end: lineOf(side, Math.max(from, to - 1)) + 1, headed: true };
 }
 
 function parseMarkdown(text: string): Parsed {
@@ -310,10 +406,10 @@ function pairsKept(text: string, pairs: ReadonlySet<number>): number {
   return n / mine.length;
 }
 
-/** Whether `at` falls inside a word of `s`: between two characters that aren't spaces. */
+/** Whether `at` falls inside a word of `s`: between two letters or digits. */
 function midWord(s: string, at: number): boolean {
   return (
-    at > 0 && at < s.length && !/\s/u.test(s[at - 1] as string) && !/\s/u.test(s[at] as string)
+    at > 0 && at < s.length && HAS_WORD.test(s[at - 1] as string) && HAS_WORD.test(s[at] as string)
   );
 }
 
@@ -334,20 +430,14 @@ function trimCommon(a: string, b: string): { a: [number, number]; b: [number, nu
 
 /**
  * Every chapter (`#`) and section (`##`, `###`) of `before` that no unit of `after` holds, and
- * every passage of `CUT_MIN_WORDS` words or more removed from the rest.
+ * every passage that left one still there (`PassageFinder`).
  *
  * Sections: each is looked for by its exact text, then among the units of `after` that could
  * hold it (by a sketch value in common, as scenes are; the nearest `SAME_HEADING_LOOK` under the
- * same heading; an empty one under its heading), so the work grows with the sections, not their
- * square. A unit with no words under its heading is never a cut on its own; it is gone when no
- * heading of `after` folds to its own. A gone chapter whose sections are all gone is one cut.
- *
- * Passages: each unit still there is diffed line by line with the unit that holds it. A run of
- * removed lines (blank lines in between don't break it; a line still somewhere in `after` does)
- * of `CUT_MIN_WORDS` words or more, less what it shares at its start and end with what replaced
- * it, is a cut when nothing replaced it or the replacement shares under `CUT_KEEP_SHARE` of its
- * word pairs. Otherwise (a light rewrite) a word-level diff finds any long run taken out of it.
- * A passage with half its word triples somewhere in `after` moved, and is not a cut.
+ * same heading; an empty one under its heading), nearest first and at most `CANDIDATES_MAX`, so
+ * the work grows with the sections, not their square. A unit with no words under its heading is
+ * never a cut on its own; it is gone when no heading of `after` folds to its own. A gone chapter
+ * whose sections are all gone is one cut. A unit whose every line is still in `after` is not.
  */
 function markdownCuts(before: string, after: string): FoundCut[] {
   const was = parseMarkdown(before);
@@ -451,15 +541,8 @@ function markdownCuts(before: string, after: string): FoundCut[] {
 
   const found: { at: number; cut: FoundCut }[] = [];
   const inCut = new Array<boolean>(units.length).fill(false);
-  const nowLines = new Set(now.lines.filter((line) => HAS_WORD.test(line)));
-  /** Whether every line with words of `was`'s lines `[first, end)` is a line of `after` too. */
-  const linesThere = (first: number, end: number): boolean => {
-    for (let k = first; k < end; k++) {
-      const line = was.lines[k] as string;
-      if (HAS_WORD.test(line) && !nowLines.has(line)) return false;
-    }
-    return true;
-  };
+  const finder = new PassageFinder(was, now);
+  const linesThere = (first: number, end: number) => finder.linesThere(first, end);
   /** A unit (and those under it to `last`) as a cut, unless all its words moved elsewhere. */
   const sectionCut = (i: number, last: number) => {
     const u = units[i] as Unit;
@@ -470,7 +553,7 @@ function markdownCuts(before: string, after: string): FoundCut[] {
       cut: {
         title: u.title.trim() || firstWords(text),
         text,
-        where: { after: prev[i] ?? null, before: next[last] ?? null },
+        where: { after: prev[i] ?? null, before: next[last] ?? null, within: null },
       },
     });
   };
@@ -491,87 +574,132 @@ function markdownCuts(before: string, after: string): FoundCut[] {
   }
 
   // Passages, in the units still there.
-  let triples: Set<number> | null = null;
-  const moved = (text: string): boolean => {
-    const mine = grams(lowerWords(text), 3);
-    if (mine.length === 0) return false;
-    triples ??= new Set(grams(lowerWords(after), 3));
-    let n = 0;
-    for (const g of mine) if (triples.has(g)) n++;
-    return n / mine.length >= CUT_KEEP_SHARE;
-  };
   units.forEach((u, i) => {
     const m = matches[i];
     if (!m || inCut[i]) return;
     const where = {
       after: u.level === 0 ? null : (names[i] ?? null),
       before: next[i] ?? null,
+      within: { heading: u.title, ordinal: i },
     };
     let any = false;
-    if (wordsIn(before.slice(u.from, u.to)) >= CUT_MIN_WORDS) {
-      for (const [from, text] of passages(was, u, now, m, nowLines)) {
-        if (moved(text)) continue;
-        found.push({ at: from, cut: { title: firstWords(text), text, where } });
-        any = true;
-      }
+    const from = { first: u.first, end: u.end, headed: u.level > 0 };
+    const to = { first: m.first, end: m.end, headed: m.level > 0 };
+    for (const [at, text] of finder.find(from, to)) {
+      found.push({ at, cut: { title: firstWords(text), text, where } });
+      any = true;
     }
-    // Held only by a rule that lets most of its words go, with no passage long enough to keep:
-    // when under half its word pairs are still in the unit that holds it, the unit is the cut,
-    // so a short section rewritten or cut down under its own heading is never lost.
+    // Held only by a rule that lets most of its words go, with no passage to keep: when under
+    // half its word pairs are still in the unit that holds it, the unit is the cut, so a short
+    // section rewritten or cut down under its own heading is never lost.
     if (!any && held[i]?.sure === false && pairShare(u, m) < CUT_KEEP_SHARE) sectionCut(i, i);
   });
-
-  found.sort((a, b) => a.at - b.at);
-  const seen = new Set<string>();
-  const out: FoundCut[] = [];
-  for (const { cut } of found) {
-    const text = cutText(cut.text);
-    if (seen.has(text)) continue;
-    seen.add(text);
-    out.push({ ...cut, text });
-  }
-  return out;
+  return inOrder(found);
 }
 
-/** Where line `i` of a parsed text ends, before its line break. */
-const endOfLine = (p: Parsed, i: number) => (p.starts[i] as number) + (p.lines[i] as string).length;
+/** Where line `i` of a text ends, before its line break. */
+const endOfLine = (p: Side, i: number) => (p.starts[i] as number) + (p.lines[i] as string).length;
+
+/** A line that starts a list item, which is an element of its own. */
+const LIST_ITEM = /^\s{0,3}(?:[-*+]|\d{1,9}[.)])\s/;
 
 /**
- * The passages of `u` (in `was`) that are not in `m` (in `now`), as [offset in `was`, text]: see
- * `markdownCuts`. A line diff of the two units, so the work is the units' lines plus the
- * changes; a word-level diff only inside a change, and only up to `MAX_TOKENS` tokens a side.
+ * The passages that left a scene or section still there (see `CUT_MIN_WORDS`), as
+ * [offset in `before`, text]. The scene or section is diffed line by line with the one that holds
+ * it now, so the work is their lines plus the changes; a word-level diff runs only inside a
+ * change, and only up to `MAX_TOKENS` tokens a side.
+ *
+ * A change is a run of removed and added lines; unchanged blank lines don't end it. Its removed
+ * lines are split at lines that moved (a line is there as often in `after` as in `before`), so
+ * moved text is never a cut. A passage with half its word triples somewhere in `after` moved too.
  */
-function passages(
-  was: Parsed,
-  u: Unit,
-  now: Parsed,
-  m: Unit,
-  nowLines: ReadonlySet<string>,
-): [number, string][] {
-  const a = was.lines.slice(u.first, u.end);
-  const b = now.lines.slice(m.first, m.end);
-  const out: [number, string][] = [];
+class PassageFinder {
+  private readonly wasCounts: Map<string, number>;
+  private readonly nowCounts: Map<string, number>;
+  private triples: Set<number> | null = null;
+  private lined: string | null = null;
 
-  /** Lines `[i0, i1)` of `was` removed, `[j0, j1)` of `now` added in their place. */
-  const change = (i0: number, i1: number, j0: number, j1: number) => {
+  constructor(
+    private readonly was: Side,
+    private readonly now: Side,
+  ) {
+    this.wasCounts = lineCounts(was.lines);
+    this.nowCounts = lineCounts(now.lines);
+  }
+
+  /** Whether every line with words of `before`'s lines `[first, end)` is a line of `after` too. */
+  linesThere(first: number, end: number): boolean {
+    for (let k = first; k < end; k++) {
+      const line = this.was.lines[k] as string;
+      if (HAS_WORD.test(line) && !this.nowCounts.has(line)) return false;
+    }
+    return true;
+  }
+
+  find(from: Span, to: Span): [number, string][] {
+    const { was, now } = this;
+    const out: [number, string][] = [];
+    const a = was.lines.slice(from.first, from.end);
+    const b = now.lines.slice(to.first, to.end);
+    // Changes, joined across unchanged runs of blank lines.
+    let open: [number, number, number, number] | null = null;
+    const close = () => {
+      if (open) this.change(from, ...open, out);
+      open = null;
+    };
+    for (const run of diffLines(a, b)) {
+      const i0 = from.first + run.old[0];
+      const i1 = from.first + run.old[1];
+      const j0 = to.first + run.new[0];
+      const j1 = to.first + run.new[1];
+      if (run.kind === 'same') {
+        let blank = true;
+        for (let i = i0; i < i1 && blank; i++) blank = !HAS_WORD.test(was.lines[i] as string);
+        if (!blank) close();
+        else if (open) {
+          open[1] = i1;
+          open[3] = j1;
+        }
+        continue;
+      }
+      if (!open) open = [i0, i1, j0, j1];
+      else {
+        open[1] = Math.max(open[1], i1);
+        open[3] = Math.max(open[3], j1);
+      }
+    }
+    close();
+    return out;
+  }
+
+  /** Whether a line with words moved: it is there as often in `after` as in `before`. */
+  private moved(line: string): boolean {
+    return (this.nowCounts.get(line) ?? 0) >= (this.wasCounts.get(line) ?? 0);
+  }
+
+  /** Lines `[i0, i1)` of `before` removed, `[j0, j1)` of `after` added in their place. */
+  private change(
+    span: Span,
+    i0: number,
+    i1: number,
+    j0: number,
+    j1: number,
+    out: [number, string][],
+  ): void {
+    const { was, now } = this;
     // Blank lines at either end of what was added are where the change met unchanged ones.
     const added = j1 > j0 ? now.text.slice(now.starts[j0], endOfLine(now, j1 - 1)).trim() : '';
-    let addedPairs: Set<number> | null = null;
-    // Runs of lines gone from everywhere; a blank line neither breaks nor starts one.
     let start = -1;
     let last = -1;
     const flush = () => {
-      if (start >= 0) {
-        const from = was.starts[start] as number;
-        addedPairs ??= pairSet(added);
-        removed(from, was.text.slice(from, endOfLine(was, last)), added, addedPairs);
-      }
+      if (start >= 0)
+        this.removed(span, was.starts[start] as number, endOfLine(was, last), added, out);
       start = -1;
     };
     for (let i = i0; i < i1; i++) {
       const line = was.lines[i] as string;
       if (!HAS_WORD.test(line)) continue;
-      if (nowLines.has(line)) {
+      if (this.moved(line)) {
         flush();
         continue;
       }
@@ -579,94 +707,129 @@ function passages(
       last = i;
     }
     flush();
-  };
+  }
 
-  const removed = (from: number, text: string, added: string, addedPairs: ReadonlySet<number>) => {
-    if (wordsIn(text) < CUT_MIN_WORDS) return;
-    const {
-      a: [p, q],
-      b: [r, s],
-    } = trimCommon(text, added);
-    const gone = text.slice(p, q);
+  /** The text `before[start, end)` removed, with `added` written in its place. */
+  private removed(
+    span: Span,
+    start: number,
+    end: number,
+    added: string,
+    out: [number, string][],
+  ): void {
+    const text = this.was.text.slice(start, end);
+    const common = trimCommon(text, added);
+    let [p, q] = common.a;
+    const [r, s] = common.b;
     const instead = added.slice(r, s);
-    const take = (at: number, piece: string) => {
-      const trimmed = piece.trim();
-      if (wordsIn(trimmed) < CUT_MIN_WORDS) return;
-      out.push([from + p + at + piece.indexOf(trimmed), trimmed]);
-    };
-    if (!HAS_WORD.test(instead) || pairsKept(gone, addedPairs) < CUT_KEEP_SHARE) {
-      take(0, gone);
+    if (!HAS_WORD.test(instead)) {
+      this.consider(span, start + p, text.slice(p, q), '', out);
       return;
     }
-    // A light rewrite: only a long run taken out of it is a cut.
+    // Replaced: out to the spaces either side, so its own punctuation goes with it.
+    while (p > 0 && !/\s/u.test(text[p - 1] as string)) p--;
+    while (q < text.length && !/\s/u.test(text[q] as string)) q++;
+    const gone = text.slice(p, q);
     const x = gone.match(TOKEN) ?? [];
     const y = instead.match(TOKEN) ?? [];
+    // Replaced by something else: short unchanged runs between its changes are part of it.
+    const replaced = pairsKept(gone, pairSet(instead)) < CUT_KEEP_SHARE;
     if (x.length <= MAX_TOKENS && y.length <= MAX_TOKENS) {
-      for (const [at, piece, put] of wordChanges(x, y)) {
-        if (wordsIn(piece) >= CUT_MIN_WORDS && pairsKept(piece, pairSet(put)) < CUT_KEEP_SHARE) {
-          take(at, piece);
-        }
+      for (const [at, piece, put] of wordChanges(x, y, replaced)) {
+        this.consider(span, start + p + at, piece, put, out);
       }
       return;
     }
-    // Too long for a word diff: lines that are mostly gone, in runs.
-    let runFrom = -1;
-    let runTo = -1;
+    // Too long for a word diff: the whole of it when replaced, else the lines mostly gone.
+    if (replaced) {
+      this.consider(span, start + p, gone, instead, out);
+      return;
+    }
+    const pairs = pairSet(instead);
     let offset = 0;
-    const end = () => {
-      if (runFrom >= 0) take(runFrom, gone.slice(runFrom, runTo));
-      runFrom = -1;
-    };
     for (const line of gone.split('\n')) {
-      if (HAS_WORD.test(line)) {
-        if (pairsKept(line, addedPairs) < CUT_KEEP_SHARE) {
-          if (runFrom < 0) runFrom = offset;
-          runTo = offset + line.length;
-        } else end();
+      if (HAS_WORD.test(line) && pairsKept(line, pairs) < CUT_KEEP_SHARE) {
+        this.consider(span, start + p + offset, line, instead, out);
       }
       offset += line.length + 1;
     }
-    end();
-  };
-
-  // Changes, joined across unchanged runs of blank lines.
-  let open: [number, number, number, number] | null = null;
-  const close = () => {
-    if (open) change(...open);
-    open = null;
-  };
-  for (const run of diffLines(a, b)) {
-    const i0 = u.first + run.old[0];
-    const i1 = u.first + run.old[1];
-    const j0 = m.first + run.new[0];
-    const j1 = m.first + run.new[1];
-    if (run.kind === 'same') {
-      let blank = true;
-      for (let i = i0; i < i1 && blank; i++) blank = !HAS_WORD.test(was.lines[i] as string);
-      if (!blank) close();
-      else if (open) {
-        open[1] = i1;
-        open[3] = j1;
-      }
-      continue;
-    }
-    if (!open) open = [i0, i1, j0, j1];
-    else {
-      open[1] = Math.max(open[1], i1);
-      open[3] = Math.max(open[3], j1);
-    }
   }
-  close();
-  return out;
+
+  /** A removed piece at `at` in `before`, with `put` in its place: a cut, or not. */
+  private consider(span: Span, at: number, piece: string, put: string, out: [number, string][]) {
+    const text = piece.trim();
+    if (!HAS_WORD.test(text)) return;
+    const from = at + piece.indexOf(text);
+    const words = wordsIn(text);
+    const cut = HAS_WORD.test(put)
+      ? words >= CUT_MIN_WORDS && pairsKept(text, pairSet(put)) < CUT_KEEP_SHARE
+      : words >= CUT_MIN_WORDS || this.whole(span, from, from + text.length);
+    if (cut && !this.elsewhere(text) && !this.verbatim(text)) out.push([from, text]);
+  }
+
+  /**
+   * Whether `before[from, to)` is whole elements: it starts at the start of an element (after a
+   * blank line, the heading, or the start of the span, or at a list item) and ends at the end of
+   * one (before a blank line, a list item, or the end of the span).
+   */
+  private whole(span: Span, from: number, to: number): boolean {
+    const { was } = this;
+    const first = lineOf(was, from);
+    const last = lineOf(was, Math.max(from, to - 1));
+    if (was.text.slice(was.starts[first], from).trim() !== '') return false;
+    if (was.text.slice(to, endOfLine(was, last)).trim() !== '') return false;
+    const edge = (i: number) =>
+      i < span.first ||
+      i >= span.end ||
+      (span.headed && i === span.first) ||
+      !/\S/.test(was.lines[i] as string);
+    const startsHere = edge(first - 1) || LIST_ITEM.test(was.lines[first] as string);
+    const endsHere = edge(last + 1) || LIST_ITEM.test(was.lines[last + 1] ?? '');
+    return startsHere && endsHere;
+  }
+
+  /**
+   * Whether `text` is in `after` as it is, as whole lines (a copy of it kept elsewhere). Looked
+   * for only when each of its lines is a line of `after`, which a cut's lines rarely all are.
+   */
+  private verbatim(text: string): boolean {
+    const lines = text.split(/\r?\n/);
+    if (!lines.every((line) => !HAS_WORD.test(line) || this.nowCounts.has(line))) return false;
+    this.lined ??= `\n${cutText(this.now.text)}\n`;
+    return this.lined.includes(`\n${cutText(text)}\n`);
+  }
+
+  /** Half its word triples are somewhere in `after`: it moved, and is not a cut. */
+  private elsewhere(text: string): boolean {
+    const mine = grams(lowerWords(text), 3);
+    if (mine.length === 0) return false;
+    this.triples ??= new Set(grams(lowerWords(this.now.text), 3));
+    let n = 0;
+    for (const g of mine) if (this.triples.has(g)) n++;
+    return n / mine.length >= CUT_KEEP_SHARE;
+  }
+}
+
+/** How often each line with words occurs. */
+function lineCounts(lines: readonly string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const line of lines) if (HAS_WORD.test(line)) counts.set(line, (counts.get(line) ?? 0) + 1);
+  return counts;
 }
 
 /**
  * The changes of a word-level diff of two token lists (as `diffWords` makes them), each as
  * [offset in the first text, what it took out, what it put in]. Unchanged runs of only spaces,
- * or of one or two characters, between two changes are part of the change, as in `diffWords`.
+ * or of one or two characters, between two changes are part of the change, as in `diffWords`;
+ * with `foldWords` (a replacement), so are unchanged runs of under three words, the words two
+ * different texts happen to share.
  * (`diffWords` itself gives each side's parts but not which removal went with which addition.)
  */
-function wordChanges(x: readonly string[], y: readonly string[]): [number, string, string][] {
+function wordChanges(
+  x: readonly string[],
+  y: readonly string[],
+  foldWords: boolean,
+): [number, string, string][] {
   const offsets = [0];
   for (const t of x) offsets.push((offsets[offsets.length - 1] as number) + t.length);
   const runs = diffLines(x, y);
@@ -685,11 +848,17 @@ function wordChanges(x: readonly string[], y: readonly string[]): [number, strin
   runs.forEach((run, k) => {
     if (run.kind === 'same') {
       const text = x.slice(run.old[0], run.old[1]).join('');
-      const small = /^\s+$/u.test(text) || [...text].length <= 2;
-      if (cur && small && k + 1 < runs.length) {
+      const small =
+        /^\s+$/u.test(text) ||
+        [...text].length <= 2 ||
+        (foldWords && (text.match(WORD) ?? []).length < 3);
+      // A replacement takes the punctuation at its very start or end with it ("WORD." for "word.").
+      const edge = foldWords && !HAS_WORD.test(text);
+      if (cur && (small || edge) && (k + 1 < runs.length || edge)) {
         cur.i1 = run.old[1];
         cur.j1 = run.new[1];
       } else flush();
+      if (k === 0 && edge) cur = { i0: run.old[0], i1: run.old[1], j0: run.new[0], j1: run.new[1] };
       return;
     }
     if (!cur) cur = { i0: run.old[0], i1: run.old[1], j0: run.new[0], j1: run.new[1] };

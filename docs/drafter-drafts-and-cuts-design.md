@@ -73,8 +73,11 @@ Each choice open to the designer is marked **Call:**; they are listed in §11.
 ## 3. Cuts
 
 ### 3.1 What counts as a cut
-- **Scripts:** a scene that was in the text and is no longer — the same matching Deleted scenes uses today (`@drafter/history`'s anchors and shingles), so a moved or lightly edited scene is not a cut.
-- **Markdown documents:** a chapter (`#`) or section (`##`, `###`) that left the text, matched the same way by heading and content; and any **passage of 50 words or more** removed, so prose cut without a heading is kept too. **Call:** "removed" means a contiguous run of at least 50 words present in the comparison point (the last snapshot) and absent now, by a word-level diff of the two texts; a paragraph replaced by a different one counts when the removed side is 50+ words and shares under half its word pairs with what replaced it (so a light rewrite isn't a cut). Smaller deletions stay in snapshots only.
+- **Call: every real cut is kept** (the maintainer, 2026-11-01: "I've found myself always going back to what I've cut for ideas of what to include. So 'cuts' should include all cuts.").
+- **Scripts:** a scene that was in the text and is no longer — the same matching Deleted scenes uses today (`@drafter/history`'s anchors and shingles), so a moved or lightly edited scene is not a cut. **And what left a scene that is still there**, by the passage rule below: a trimmed scene's removed speeches and paragraphs are cuts too.
+- **Markdown documents:** a chapter (`#`) or section (`##`, `###`) that left the text, matched the same way by heading and content; and what left a chapter or section that is still there, by the passage rule.
+- **Passages. Call:** within a scene or section still there, a removal is a cut when it is either **(a) a whole element or paragraph** taken out with nothing in its place — a speech (the character and their dialogue), an action paragraph, a transition, a Markdown paragraph or list item — whatever its length; or **(b) a run of 12 or more words** (`CUT_MIN_WORDS`) removed from inside one, by a word-level diff against the comparison point (the last snapshot). A run of 12+ words replaced by different text counts as a cut of the old text when it shares under half its word pairs with what replaced it. Word-level tweaks, typo fixes, rewordings under 12 words, and light rewrites are not cuts, and neither is text moved elsewhere. A cut's text is an exact slice of the earlier text (with `\n` line breaks), never with kept text in it, and the same text is one cut.
+- **Grouping:** a passage records the scene or section it was cut from (its heading and its number), so the Cuts list can group passages under their scene or chapter.
 - **When:** **Call:** a cut is found whenever a snapshot is kept (every 10 minutes of active writing, on save and open, on Take snapshot, and before bulk operations — `keepSnapshot`'s moments), by comparing the snapshot's text with the comparison point (the previous kept text); never on every keystroke. A snapshot whose reason is a whole-text replacement (`before-restore`, `before-reload`, `opened`, `imported`, and a restored draft) moves the comparison point without looking for cuts. A cut is recorded once; if the same text comes back and is cut again later, it is one entry with both dates.
 - Each cut records: its text, a title (the scene heading, chapter or section heading, or the first words of a passage), **the draft number it was cut while writing** ("cut while writing Draft 08"; the current draft has no ID until it is frozen, so a cut names the number, and the Cuts list adds that draft's short ID once it is frozen), when, and where it was (the neighbours, as Put back already uses).
 - **Call:** a cut's own ID is the **SHA-256 of its text alone**, so the same text cut again (in this draft or a later one) is one entry with every date and draft it was cut in, and copies of the cuts file from two computers merge by that ID.
@@ -138,7 +141,7 @@ As the rest of the app: WCAG 2.2 AA, axe in both themes on every project, every 
 
 ## 9. Testing
 
-- Unit: the ID (known vectors; same text → same ID; one character → different); draft numbering never reuses; restore freezes first; cut detection (scene moved ≠ cut; scene cut → one entry; section cut; 50-word passage cut; re-cut → one entry two dates); the cuts file round-trips and merges two copies without loss or duplicates; metadata parsing refuses bad fields; linear-time parsing on hostile input.
+- Unit: the ID (known vectors; same text → same ID; one character → different); draft numbering never reuses; restore freezes first; cut detection (scene moved ≠ cut; scene cut → one entry; section cut; a dropped speech or paragraph, and 12 words removed, are passage cuts, 11 words and a typo fix are not; re-cut → one entry two dates); the cuts file round-trips and merges two copies without loss or duplicates; metadata parsing refuses bad fields; linear-time parsing on hostile input.
 - e2e: start a draft with a note; the list shows it with its short ID; open by ID from the palette; Read beside, copy a line across; Compare two drafts; Restore as a new draft and undo; cut a scene, find it in Cuts, Insert at cursor elsewhere, Put back; on the desktop, the drafts folder and cuts file appear beside the script, and reopening merges them; on web Chromium with folder access granted (the existing file-picker stubs); in Firefox, the "In this browser only — Export" state and the zip export.
 - Desktop e2e: files written atomically; a pre-existing draft file is never overwritten; a symlinked target isn't followed.
 
@@ -154,7 +157,7 @@ Deleting drafts or cuts; branching; per-draft revision colours or printed marks 
 4. Restore never overwrites: freeze first, then a new number "from Draft N" (§2.3).
 5. No Delete for drafts or cuts (§2.3, §3.2).
 6. Exports unchanged by drafts (§2.4).
-7. A Markdown passage of 50+ words removed in one change is a cut (§3.1).
+7. A passage is a cut when it is a whole element or paragraph removed, or 12+ words removed from inside one, in scripts and Markdown alike (§3.1; the maintainer, 2026-11-01, replacing "a Markdown passage of 50+ words").
 8. Cuts found when the text settles, not per keystroke (§3.1).
 9. Put back leaves the cut in the list, marked (§3.2).
 10. A script cut inserted at the cursor goes in at the nearest scene boundary after it (§3.2).
@@ -167,7 +170,7 @@ Deleting drafts or cuts; branching; per-draft revision colours or printed marks 
 17. A cut names the draft number it was cut while writing; its ID is the SHA-256 of its text alone (§3.1).
 18. Existing snapshots are scanned once on first run, so cuts from before this release are kept, "cut before drafts" (§3.1).
 19. A whole-text replacement (restore, open, import, New) resets the comparison point and makes no cuts (§3.1).
-20. "Removed 50+ words": a contiguous run absent now by a word-level diff; a rewritten paragraph counts only if it shares under half its word pairs with its replacement (§3.1).
+20. "Removed": a whole element absent now, or a contiguous run of 12+ words absent now by a word-level diff; a replaced run counts only if it shares under half its word pairs with its replacement (§3.1).
 21. Draft facts live in Drafter's existing `/* drafter … */` metadata block (Markdown: a trailing comment); the ID is of the editor text; one fixed blank line before the block (§4).
 22. The cuts file is named after the whole file name (`Boca.fountain.cuts.md`) (§4).
 23. Drafts and cuts belong to the project; Save As writes the full set beside the new file and leaves the old (§4).

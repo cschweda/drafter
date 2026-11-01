@@ -19,7 +19,7 @@
 - Draft numbers start at 1, only go up, are never reused or renumbered; Drafter never starts a draft by itself.
 - A cut's ID = `hashText(cut text)`; the same text cut again is one entry with every date and draft number.
 - A whole-text replacement (`before-restore`, `before-reload`, `opened`, `imported`, a restored draft, New) makes no cuts; it moves the comparison point.
-- Markdown passage cut: a contiguous run of ≥ 50 words absent now (word-level diff against the comparison point); a replaced paragraph counts only if it shares under half its word pairs with its replacement.
+- Passage cut (scripts and Markdown, the maintainer 2026-11-01: "'cuts' should include all cuts"): within a scene or section still there, a whole element or paragraph removed (any length), or a run of ≥ `CUT_MIN_WORDS` = 12 words removed from inside one (word-level diff against the comparison point); a replaced run counts only if it shares under half its word pairs with its replacement.
 - Draft facts in Fountain go in the existing `/* drafter … */` block via `setMeta` (keys `draft`, `id`, `frozen`, `note`); in Markdown, a trailing `<!-- drafter {json} -->`; the text, then exactly one blank line, then the block.
 - Files: `<Work> drafts/<Work> – Draft NN.<ext>` (NN two digits, three past 99) and `<work file name>.cuts.md` (e.g. `Boca.fountain.cuts.md`), beside the work's file.
 - The interface word is **Draft**; palette keywords add "version", "new version", "versions", "how it changed"; Cuts keeps "deleted scenes", "show all versions".
@@ -40,7 +40,7 @@
 
 ## File Structure
 
-- `packages/history/src/cuts.ts` — `findCuts`: what left between two texts (scenes via `scenePrints`/`sameScene`/`coveredBy`; Markdown sections via `@drafter/compare`'s `markdownAnchors`; 50-word passages via `diffWords`).
+- `packages/history/src/cuts.ts` — `findCuts`: what left between two texts (scenes via `scenePrints`/`sameScene`/`coveredBy`; Markdown sections via `@drafter/compare`'s `markdownAnchors`; passages, in scenes and sections still there, via a line diff and a word diff inside each change).
 - `packages/history/src/draft-file.ts` — `draftFile`, `readDraftFile`, `draftFileName`.
 - `packages/history/src/cuts-file.ts` — `cutsFile`, `readCutsFile`, `mergeCuts`.
 - `packages/markdown/src/meta.ts` — `readMarkdownMeta`, `setMarkdownMeta` for the trailing `<!-- drafter … -->`.
@@ -126,13 +126,14 @@ export function useDrafts(): DraftsSession;
 **Interfaces — Produces:**
 ```ts
 export interface FoundCut { title: string; text: string; where: { after: string | null; before: string | null } }
-export const CUT_MIN_WORDS = 50;
+export const CUT_MIN_WORDS = 12; // and a whole element or paragraph removed, at any length
 export function findCuts(before: string, after: string, kind: WorkKind): FoundCut[];
 ```
 - Fountain: a scene in `before` with no match in `after` (`scenePrints` + `sameScene`/`coveredBy`, exactly as `deletedScenes` judges) is a cut; its title is the heading; `where` names the headings of its nearest neighbours in `before` that still exist in `after`.
 - Markdown: a `#`–`###` section (by `markdownAnchors`) whose heading and content have no match in `after` (same heading key and ≥ 0.5 `lineSimilarity` of its body, or body similarity ≥ 0.75 under any heading) is a cut, title = heading; plus passages: word-level diff (`diffWords`, falling back to a line diff when it returns null) of the text outside matched sections, each contiguous removed run of ≥ `CUT_MIN_WORDS` words that isn't inside a section already cut, and — for a replaced run — only when the removed and inserted runs share under half their word pairs (Dice on word bigrams); title = the first 8 words + "…".
 - Never reports text that moved (a section or scene elsewhere in `after`).
 
+- **As built (Task 3 and its follow-up, the maintainer 2026-11-01):** a script's covered scenes and a document's held sections are diffed with what holds them, and their passages are cuts by the rule above (Global Constraints). `FoundCut.where.within` = `{ heading, ordinal }` of the scene or section a passage was cut from (null for a whole scene or section). Text is `cutText` (LF).
 - [ ] **Step 1: Write the failing tests.** `cuts.test.ts`: `a scene deleted is one cut, titled by its heading`; `a scene moved is not a cut`; `a scene lightly edited is not a cut`; `a section cut from a Markdown document is one cut`; `a moved chapter is not a cut`; `a removed paragraph of 50 words is a cut, of 49 is not`; `a paragraph rewritten lightly is not a cut; replaced by something else, it is`; `where names the surviving neighbours`; `nothing is reported when nothing left`. `cuts.properties.test.ts`: `a text never cuts from itself`; `appending never cuts`; `every cut's text occurs in before`; `findCuts is linear enough` (n and 8n scenes, best-of-3, < 20×) and handles 300 scenes / 200,000 words under 1 s.
 - [ ] **Step 2: Run them.** → FAIL.
 - [ ] **Step 3: Implement** `findCuts`.
@@ -161,6 +162,7 @@ export function useCuts(): CutsSession;
 - The recorder keeps a comparison point per project (in memory, and the last kept text's snapshot id in `settings` so a reload resumes): on `kept` with a whole-text reason (`opened`, `imported`, `before-restore`, `before-reload`) or after `replaced()`, it only moves the point; otherwise it runs `findCuts(point, text, kind)` (in the history worker for texts over 200 KB) and records each with the current draft number.
 - Backfill: once per project (flag in `settings`), in the history worker, walks the stored snapshots oldest → newest calling `findCuts` on each consecutive pair and on the newest vs now, recording each cut with `draft: null` ("cut before drafts"); progress stored after each pair so a closed tab resumes; no long task (the worker does the work; the main thread only writes rows in batches).
 - Insert at cursor: one undo; blank lines around; for a script, at the start of the scene after the cursor (or the end of the body, before the metadata block, via `bodyEnd`); for Markdown, at the start of the paragraph after the cursor. Put back: scripts via the existing `putBack` machinery (snapshot slot → place); Markdown via `where` (after the surviving `after` heading, else before `before`, else the end). Both mark the entry "put back on <date>" and keep it.
+- **From Task 3 (grouping):** `findCuts` gives each passage `where.within`: the heading (as it was) and number of the scene or section it was cut from, `null` for a whole scene or section. The Cuts list groups passages under it (by draft first, then scene or chapter). `CutEntry.where` (the cuts file and the store) must carry `within` too: add it as an optional field, read strictly (a one-line heading, an integer ≥ 0), so older entries still read.
 - **From the Task 3 review (M5):** duplicate headings can make `where.after` and `where.before` the same text (five `INT. CAR - NIGHT` scenes, three `## Notes`). Put back must break such ties by position: take the occurrence nearest the cut's old place (its ordinal among the cut's neighbours), never simply the first match.
 
 - [ ] **Step 1: Write the failing tests.** `cuts-store.test.ts`: `the same text cut twice is one entry with both dates and drafts`; `cuts survive thinning and have no delete`. `cuts-recorder.test.ts`: `a scene deleted between two kept snapshots is recorded with the current draft`; `opening, importing, reloading, restoring a snapshot, and restoring a draft record nothing`; `a Markdown section cut is recorded`; `the comparison point survives a reload`. `cuts-backfill.test.ts`: `old snapshots' deleted scenes become cuts before drafts`; `it runs once and resumes after an interruption` (stop after pair 3, restart, no duplicates, finishes); `1,000 snapshots, 300 scenes: the main thread never blocks for 50 ms` (measure the write batches). e2e `cuts.spec.ts`: `cutting a scene shows it in Cuts after a snapshot`; `Insert at cursor puts it at the next scene boundary as one undo`; `Put back restores it between its old neighbours and keeps it listed`; `a Markdown chapter cut can be inserted elsewhere`; `Copy puts the text on the clipboard`; `restoring a draft adds no cuts`; `the palette's "deleted scenes" finds Cuts`; a11y `Cuts has no accessibility violations` both themes.

@@ -138,10 +138,11 @@ describe('findCuts properties', () => {
     );
   });
 
-  test('a cut’s text is never in after unchanged', () => {
+  test('a cut’s text is never in after unchanged, as whole lines', () => {
     const check = (before: string, after: string, kind: WorkKind) => {
+      const lines = `\n${cutText(after)}\n`;
       for (const cut of findCuts(before, after, kind)) {
-        expect(cutText(after).includes(cut.text), cut.text).toBe(false);
+        expect(lines.includes(`\n${cut.text}\n`), cut.text).toBe(false);
       }
     };
     fc.assert(fc.property(markdownPair, ([before, after]) => check(before, after, 'markdown')));
