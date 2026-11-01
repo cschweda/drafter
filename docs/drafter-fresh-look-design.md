@@ -50,7 +50,7 @@ motion:  140ms cubic-bezier(.2,.8,.2,1): fade + 4px slide for menus, popovers, d
 
 ### 3.1 Top bar (44px)
 
-Left to right: **the Drafter mark and wordmark, which open the app menu, as they do today** (the maintainer, 2026-10-30: "i still want the drafter icon at the top -- with the button options"; the menu keeps every item it has now: New, Open, Save, Export, Template, History, Settings, Help, and the rest) · the script's title (13/600) · a **chip** for the script's state (a sample: "Sample · Start your own ▾", whose menu is New screenplay / New stage play / New Markdown document / Open a file…; a read-only tab; a draft label once Drafts and Cuts lands) · a separator · **Open**, **Save**, **Export ▾** as borderless buttons (icon + label) · (flexible space) · the command search ("Go to scene or command ⌘K", 260px, `--raised`) · icon buttons: **Structure strip**, **Focus**, **Theme**. There is no separate menu button: the Drafter mark at the left is the menu.
+Left to right: **the Drafter mark and wordmark, which open the app menu, as they do today** (the maintainer, 2026-10-30: "i still want the drafter icon at the top -- with the button options"; the menu keeps every item it has now: New, Open, Save, Export, Template, History, Settings, Help, and the rest) · the script's title (13/600) · a **chip** for the script's state (a sample: "Sample · Start your own ▾", whose menu is New screenplay / New stage play / New Markdown document / Open a file…; a writer's first document of a kind, opened with sample text: "Sample text · Start blank", which empties that document in place, so it has words of its own; a read-only tab; a draft label once Drafts and Cuts lands) · a separator · **Open**, **Save**, **Export ▾** as borderless buttons (icon + label) · (flexible space) · the command search ("Go to scene or command ⌘K", 260px, `--raised`) · icon buttons: **Structure strip**, **Focus**, **Theme**. There is no separate menu button: the Drafter mark at the left is the menu.
 
 - The template switcher ("Screenplay") moves into the Menu and the status bar (§3.4). **Call:** the Structure strip toggle becomes an icon button in the top bar's right-hand group (beside Focus), always visible whatever the Inspector shows, and stays in the palette and Settings.
 - **Call:** below 1024px the labels on Open/Save/Export drop (icons stay, with tooltips), and the app shows **one pane at a time with the bottom tab bar of §6** (Write · Script · Outline · More), as a phone does; the status bar stays from 640px up and is hidden below. (Today below 1024px is already one pane switched by tabs; the bottom bar replaces those tabs.)
@@ -77,7 +77,7 @@ Left: save state with a dot (Saved / Unsaved / Saving…) and the file name; the
 
 ### 3.5 Banners
 
-The sample bar becomes the top bar's chip (§3.1). The storage warning ("This browser may clear your recovery copy…") becomes a **status-bar warning chip** plus a one-time toast with the same Install/Save actions. **Call:** no full-width banner above the panes in normal use; a banner remains only for something that blocks writing (an error loading the script).
+The sample bar becomes the top bar's chip (§3.1). Below 1024px, where the chip doesn't fit, a row above the pane says the same words, "Sample · Start your own", and its one button opens the same menu (final review). The storage warning ("This browser may clear your recovery copy…") becomes a **status-bar warning chip** plus a one-time toast with the same Install/Save actions. **Call:** no full-width banner above the panes in normal use; a banner remains only for something that blocks writing (an error loading the script).
 
 ## 4. The page
 
@@ -102,7 +102,8 @@ The sample bar becomes the top bar's chip (§3.1). The storage warning ("This br
 
 - One 44px top bar: the Drafter mark (the app menu, as on a wide screen), title, search. (The same one-pane layout serves every width below 1024px; §3.1.)
 - A **56px bottom tab bar**: Write · Script · Outline · More (More: Cards, Stats, Scaffold, Notes, Problems, History). **Call:** a phone opens on **Write** (fixes "the phone opened on the Script tab"); the tab isn't stored between visits today and stays unstored.
-- The element bar is a row **above the on-screen keyboard** while typing (positioned with `visualViewport`), scrolling horizontally, never cut mid-word.
+- The element bar is a row **above the on-screen keyboard** while typing (positioned with `visualViewport`), never cut mid-word: over the keyboard it folds into More; with no keyboard it scrolls sideways, fades at the edge with more of it, and snaps so a chip never rests half cut.
+- The editor's slim row holds only its toggles: the top bar names the script, so the row doesn't repeat it.
 - Menus and the palette open as **bottom sheets**; dialogs full-height sheets.
 - No status bar; save state is the top bar's title colour/dot, and the counts live in Stats.
 

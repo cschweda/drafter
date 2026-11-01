@@ -558,6 +558,20 @@ test.describe("the Inspector's header", () => {
     await expect(changes.locator('.tool-label')).toBeVisible();
   });
 
+  test('at 1440, the labels come back after a screenplay, then New stage play', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await start(page);
+    await newScreenplay(page);
+    await runCommand(page, 'New stage play');
+    const tools = page.locator('#inspector-tools');
+    const changes = tools.getByRole('button', { name: 'Changes', exact: true });
+    await expect(changes).toBeVisible();
+    await expect(tools).not.toHaveClass(/\bcompact\b/);
+    await expect(changes.locator('.tool-label')).toBeVisible();
+  });
+
   test('at 1280, Scaffold keeps Follow the cursor and Pages, and Fix all is one click away', async ({
     page,
   }) => {

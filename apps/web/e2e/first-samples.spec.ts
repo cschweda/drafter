@@ -34,11 +34,8 @@ const startBlank = (page: Page) =>
       .getByRole('region', { name: 'Starting text' })
       .getByRole('button', { name: 'Start blank' }),
   );
-/** The sample's chip in the top bar (a wide screen), or a phone's sample bar. */
-const sampleBar = (page: Page) =>
-  page
-    .getByRole('button', { name: 'Sample: start your own' })
-    .or(page.getByRole('region', { name: 'Sample', exact: true }));
+/** The sample's chip in the top bar (a wide screen), or the button of a phone's sample bar. */
+const sampleBar = (page: Page) => page.getByRole('button', { name: 'Sample: start your own' });
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const preview = (page: Page) => page.getByRole('article', { name: 'Preview' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });

@@ -49,17 +49,13 @@ const noPointer = async (page: Page) =>
 
 /**
  * Opens the page and waits until the app is ready for a first key: the sample is loaded, and its
- * chip (a phone's sample bar), which shows once the project is, is up, so a shortcut finds the
+ * chip (a phone's sample bar's button), which shows once the project is, is up, so a shortcut finds the
  * commands registered and the script session settled.
  */
 async function open(page: Page) {
   await page.goto('/');
   await expect(editor(page)).toContainText('The Call');
-  await expect(
-    page
-      .getByRole('button', { name: 'Sample: start your own' })
-      .or(page.getByRole('region', { name: 'Sample' })),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sample: start your own' })).toBeVisible();
 }
 
 /** The text of the lines CodeMirror has drawn: the whole script while it is this short. */
@@ -322,11 +318,11 @@ test.describe('a menu and Tab', () => {
       true,
     ],
     [
-      "the sample bar's More",
+      "the sample bar's Start your own",
       async (page) =>
         page
           .getByRole('region', { name: 'Sample' })
-          .getByRole('button', { name: 'More ways to start your own' }),
+          .getByRole('button', { name: 'Sample: start your own' }),
       true,
     ],
   ];

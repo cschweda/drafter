@@ -118,9 +118,10 @@ test.describe('the toolbar at 320px', () => {
 
     // The sample's ways to start one's own: the chip's menu on a wide screen, the sample row here.
     const sample = page.getByRole('region', { name: 'Sample' });
-    await expect(sample.getByRole('button', { name: 'New screenplay' })).toBeInViewport();
-    await sample.getByRole('button', { name: 'More' }).click();
+    await expect(sample.getByRole('button', { name: 'Sample: start your own' })).toBeInViewport();
+    await sample.getByRole('button', { name: 'Sample: start your own' }).click();
     await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
+      'New screenplay',
       'New stage play',
       'New Markdown document',
       'Open a file…',

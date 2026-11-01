@@ -140,7 +140,7 @@ Drafter does for screenwriting what the [Inform 7](https://ganelson.github.io/in
 │ You said you'd call.         │        You said you'd call.      │
 │                              │                                  │
 ├──────────────────────────────┴──────────────────────────────────┤
-│ p. 7 of 94 · 2 problems · saved 2 min ago · US Screenplay       │
+│ The Call.fountain         94 pages · 2 problems · US Screenplay │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -160,7 +160,7 @@ The left pane is always a [CodeMirror 6](https://codemirror.net) editor showing 
 
 Above both panes, the **Structure strip** (Phase 2, built) shows the whole script at once: your sections and scenes as a band of blocks, each as wide as its share of the pages and tinted by its scene color, with a page ruler. Click a block, or press Enter on it, to go there. It's off until you turn it on from the toolbar, the palette, Settings, or Ctrl+Alt+O (⌘⌥O on a Mac).
 
-Either pane can be collapsed, for "just write" or "just read."
+The editor stays on the left and can't be closed. To just write, turn on focus mode (Ctrl+Shift+Enter, ⌘⇧Enter on a Mac), which hides everything but the text. To just read, drag the divider toward the editor and give the Inspector most of the window.
 
 ## Principles
 

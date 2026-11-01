@@ -477,11 +477,11 @@ for (const theme of THEMES) {
 
       const more = page
         .getByRole('region', { name: 'Sample' })
-        .getByRole('button', { name: 'More' });
+        .getByRole('button', { name: 'Sample: start your own' });
       if (await more.isVisible()) {
         await more.click();
         await expect(page.getByRole('menu')).toBeVisible();
-        await clean(page, "the sample bar's More menu");
+        await clean(page, "the sample bar's menu");
         await page.keyboard.press('Escape');
       }
     });

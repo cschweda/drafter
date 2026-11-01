@@ -356,9 +356,26 @@ function textWidth(text: string, font: string): number {
 }
 const capital = (name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 
+// Where the row scrolls (a phone with no on-screen keyboard), the edge with more of it fades, and
+// the chips snap to the left edge as the row comes to rest, so no word is left cut at an edge
+// (design §6; DECISIONS, final review).
+/** More of the row is out of sight to the left. */
+const moreBefore = ref(false);
+/** More of the row is out of sight to the right. */
+const moreAfter = ref(false);
+function followEdges() {
+  const el = toolbar.value;
+  const scrolls = !!el && !folds.value && el.scrollWidth > el.clientWidth + 1;
+  const before = scrolls && el.scrollLeft > 1;
+  const after = scrolls && el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+  if (moreBefore.value !== before) moreBefore.value = before;
+  if (moreAfter.value !== after) moreAfter.value = after;
+}
+
 function measure() {
   const el = toolbar.value;
   if (!el) return;
+  followEdges();
   if (!folds.value) {
     fold.value = 0;
     hereMin.value = 0;
@@ -482,11 +499,18 @@ watch(
     role="toolbar"
     :aria-label="markdown ? 'Markdown bar' : 'Element bar'"
     class="element-bar"
-    :class="{ 'no-scrollbar': floatingScrollbar, 'in-header': props.inHeader, away: props.away }"
+    :class="{
+      'no-scrollbar': floatingScrollbar,
+      'in-header': props.inHeader,
+      away: props.away,
+      'more-before': moreBefore,
+      'more-after': moreAfter,
+    }"
     data-element-bar
     :data-pane-bar="props.inHeader ? undefined : ''"
     @keydown="onKeydown"
     @focusin="onFocusin"
+    @scroll.passive="followEdges"
   >
     <span
       v-if="markdown"
@@ -651,6 +675,25 @@ watch(
   border-bottom: 1px solid var(--border);
   color: var(--muted);
   font-size: 12px;
+}
+/* A row that scrolls (a phone, with no on-screen keyboard) comes to rest with a chip at its left
+   edge, never half of one, and fades at the edge, or edges, with more of it out of sight, so a word
+   is never cut off sharp (design §6). Over the keyboard and in the header the row folds instead. */
+.element-bar:not(.in-header) {
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 8px;
+}
+.element-bar:not(.in-header) > :is(button, .here) {
+  scroll-snap-align: start;
+}
+.element-bar.more-after {
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.element-bar.more-before {
+  mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+}
+.element-bar.more-before.more-after {
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
 }
 /* Where scrollbars float, the row still scrolls by swipe, trackpad, and the arrow keys. */
 .element-bar.no-scrollbar {

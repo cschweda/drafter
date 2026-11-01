@@ -9,6 +9,8 @@ import { useScript } from '~/storage/script';
 // (`commands/builtin.ts`), so it agrees with the palette and the app menu. It shows while the
 // command applies, and goes once the document is emptied or saved to a file. It is one row: a name
 // and the button. A wide screen has this in the top bar's state chip instead (SampleChip.vue).
+// Its words differ from the sample's "Sample · Start your own" on purpose: this is the writer's own
+// document, and Start blank empties it in place, where the sample's menu starts another script.
 const { project, canStartBlank } = useScript();
 const wide = useWideScreen();
 const commands = useCommands();

@@ -73,6 +73,9 @@ const items = computed<DropdownMenuItem[]>(() =>
     </button>
   </MenuButton>
   <span v-else-if="readOnly" class="chip state">Read-only</span>
+  <!-- Not "Sample · Start your own": this is the writer's own document, opened with sample text,
+       and the action empties it in place rather than starting another script, so it keeps words
+       of its own (as StartBlankBar does on a phone). -->
   <button
     v-else-if="canStartBlank"
     type="button"

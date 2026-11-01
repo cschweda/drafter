@@ -271,9 +271,15 @@ function applyFold() {
   });
 }
 
+/**
+ * The tools box's width once the tools are icon-only and folded as measured; -1 with labels. A box
+ * narrower than this later lost a tool, not a label, so the fitting starts over.
+ */
+let compactWidth = -1;
 function measure() {
   const header = head.value;
   if (!inspector.value || !header) return;
+  compactWidth = -1;
   const style = getComputedStyle(header);
   const room =
     header.clientWidth -
@@ -331,6 +337,7 @@ function measure() {
     fit.value = n;
   }
   applyFold();
+  if (toolsCompact.value) compactWidth = toolsBox.value?.getBoundingClientRect().width ?? -1;
 }
 
 let observer: ResizeObserver | undefined;
@@ -359,8 +366,17 @@ onMounted(() => {
   // that arrives late, or a badge, measures again.
   observer = new ResizeObserver((entries) => {
     const header = entries.find((entry) => entry.target === head.value);
+    const box = entries.find((entry) => entry.target === toolsBox.value);
     if (header && Math.round(header.contentRect.width) !== headWidth) {
       headWidth = Math.round(header.contentRect.width);
+      refit();
+    } else if (
+      box &&
+      toolsCompact.value &&
+      compactWidth >= 0 &&
+      box.target.getBoundingClientRect().width < compactWidth - 1
+    ) {
+      // Icon-only, the tools got fewer or narrower (a button gone): their labels may fit now.
       refit();
     } else measureSoon();
   });
@@ -385,8 +401,17 @@ watch(
     toolsOpen.value = false;
   },
 );
+// Another script (New stage play over a screenplay), or another template, draws other tools: the
+// labels come back and the fitting starts over, or tools left icon-only by the last script stay so.
+const { template } = useEditor();
 watch(
-  () => [props.selected, inspectorRow.value.map((tab) => tab.id).join(), kind.value],
+  () => [
+    props.selected,
+    inspectorRow.value.map((tab) => tab.id).join(),
+    kind.value,
+    project.value?.id,
+    template.value,
+  ],
   () => refit(),
 );
 // A badge (Notes' open count, Problems' count) changes a width: measured again, from where it is.
@@ -473,7 +498,6 @@ function onToolsKeydown(event: KeyboardEvent) {
 const { settings, set } = useSettings();
 /** The script's title: the header shows it while focus is outside the editor's pane. */
 const scriptTitle = useScriptTitle();
-const fileLabel = computed(() => project.value?.fileName ?? project.value?.title ?? '');
 const TOGGLES = [
   { key: 'lineNumbers', label: 'Line numbers', icon: 'i-lucide-list-ordered' },
   { key: 'typewriter', label: 'Typewriter', icon: 'i-lucide-text-cursor' },
@@ -701,10 +725,11 @@ function onPanelKeydown(event: KeyboardEvent) {
     >
       <InspectorTools :selected="props.selected" />
     </div>
-    <!-- The phone's slim bar: the Source's name and toggles, or the view's tools. -->
+    <!-- The slim bar below 1024px: the Source's toggles, or the view's tools. The top bar names
+         the script already, so the Source's row doesn't, and a long title never makes the row
+         taller. -->
     <div v-if="!inspector" class="slim">
       <template v-if="props.selected === 'source'">
-        {{ fileLabel }}
         <span class="spacer" />
         <div role="group" aria-label="Source view" class="toggles">
           <button

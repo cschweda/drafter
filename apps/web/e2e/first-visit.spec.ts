@@ -18,7 +18,8 @@ const HEADING_LINE = SAMPLE.split('\n').findIndex((l) => l.startsWith('INT.')) +
 
 const editor = (page: Page) => page.locator('.cm-content');
 const bar = (page: Page) => page.getByRole('region', { name: 'Sample' });
-const barButtons = (page: Page) => bar(page).getByRole('button');
+/** A phone's sample bar's one button, "Start your own", whose menu is the chip's. */
+const barButton = (page: Page) => bar(page).getByRole('button', { name: 'Sample: start your own' });
 /** The sample chip in the top bar (a wide screen), whose menu is the sample bar of old. */
 const chip = (page: Page) =>
   page.getByRole('banner').getByRole('button', { name: 'Sample: start your own' });
@@ -148,13 +149,17 @@ test.describe('a first visit', () => {
       ]);
       await chipItems(page).nth(1).click();
     } else {
-      // A phone: one row, "Sample", the first button, and a menu with the rest.
-      await expect(bar(page)).not.toContainText('Start your own');
-      await expect(barButtons(page)).toHaveText(['New screenplay', 'More']);
-      await barButtons(page).last().click();
-      const items = page.getByRole('menu').getByRole('menuitem');
-      await expect(items).toHaveText(['New stage play', 'New Markdown document', 'Open a file…']);
-      await items.first().click();
+      // A phone: one row, in the chip's words, and its one button opens the chip's menu.
+      await expect(bar(page)).toHaveText(/Sample\s*·\s*Start your own/);
+      await expect(bar(page).getByRole('button')).toHaveCount(1);
+      await barButton(page).click();
+      await expect(chipItems(page)).toHaveText([
+        'New screenplay',
+        'New stage play',
+        'New Markdown document',
+        'Open a file…',
+      ]);
+      await chipItems(page).nth(1).click();
     }
     // The new script first: while the menu closes, the page behind it is hidden from the
     // accessibility tree (the bar is "gone" to a role query though it is still there), so the bar
@@ -178,7 +183,7 @@ test.describe('a first visit', () => {
       await chip(page).click();
       await page.getByRole('menuitem', { name: 'Open a file…' }).click();
     } else {
-      await bar(page).getByRole('button', { name: 'More' }).click();
+      await barButton(page).click();
       await page.getByRole('menuitem', { name: 'Open a file…' }).click();
     }
     await (await chooser).setFiles({
@@ -219,7 +224,7 @@ test.describe('a first visit', () => {
       await chip(page).click();
       await page.getByRole('menuitem', { name: 'New stage play' }).click();
     } else {
-      await barButtons(page).last().click();
+      await barButton(page).click();
       await page.getByRole('menuitem', { name: 'New stage play' }).click();
     }
     await expect(sample(page)).toHaveCount(0);
@@ -271,7 +276,7 @@ test.describe('a first visit', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       320,
     );
-    await expect(barButtons(page).last()).toBeInViewport();
+    await expect(barButton(page)).toBeInViewport();
   });
 
   test('reaches the sample chip’s menu from the keyboard', async ({ page, browserName }) => {
@@ -392,7 +397,10 @@ test.describe('a returning visit', () => {
     if (wide(page)) {
       await chip(page).click();
       await chipItems(page).first().click();
-    } else await barButtons(page).first().click();
+    } else {
+      await barButton(page).click();
+      await chipItems(page).first().click();
+    }
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
     await page.reload();
     await showSource(page);

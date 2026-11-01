@@ -28,6 +28,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **A new top bar.** From left to right: the Drafter mark (still the app's menu, now with a clear arrow), the script's title, the sample chip (**Sample · Start your own**), Open, Save, and Export, the search, and buttons for the Structure strip, focus mode, Help, and the theme. The template moved into the Drafter menu and the status bar. Below 1024 pixels the buttons show their icons only.
 - **The editor is always on the left.** Everything else opens on the right, in the **Inspector**, which has its own tabs (Script, Outline, Cards, Stats, Scaffold) and a **More** menu (Notes, Problems, Compare, Deleted scenes, and modules' tabs). Each tab's buttons sit at the right of its header; when they don't fit, they show icons only, then fold into "⋯". **F6** moves between the editor and the Inspector.
 - **The element bar lives in the editor's header** and never gets cut off: when it's short of room, buttons fold into **More**. A chip at its left names the element the cursor is in. The marks (such as `@` for a character) moved into the tooltips. "Paren" now reads **Parenthetical**.
+- **Below 1024 pixels the editor's row no longer repeats the script's title**, which the top bar already shows. Its buttons stay, and a long title no longer makes the row taller.
+- **The sample says the same thing everywhere: "Sample · Start your own".** On a phone, its row now has one button that opens the same menu as the top bar's chip: New screenplay, New stage play, New Markdown document, and Open a file….
 - **A quiet status bar.** It shows the file's name (which opens History), the pages and running time, the words, the problems, and the template, and repeats nothing from the top bar. It is hidden on a phone, except for a warning that needs you.
 - **Warnings are calmer.** The "browser may clear your work" warning is a toast you can put away, plus a small chip in the status bar, not a banner over the panes. Warnings are a soft amber, and errors a soft red.
 - **Settings has sections**: General, Writing, Script, Spelling, Files, Modules, and About, in a list beside one scrolling column. Choosing a section jumps to it. Nothing is hidden behind a tab, so you can still scroll or Tab through every setting.
@@ -38,7 +40,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **The guided tour** still has ten steps, now pointing at the new places. On a phone, a step whose button has folded away points at More actions.
 - `modules`: a module's frame gets the new colour names (`--surface`, `--raised`, `--border`, `--accent-text`), and still gets the old ones (`--chrome`, `--chrome-2`, `--line`, `--heading`), so older modules keep their colours. The app itself no longer has the old names.
 - README: new screenshots of the fresh look.
-- `docs/DEFERRED.md`: a **Flaky tests seen in CI** list, starting with the desktop Linux accessibility test for the modules folder's settings, which failed once on the v0.22.2 tag and passed on a re-run.
+- `docs/DEFERRED.md`: a **Flaky tests seen in CI** list, starting with the desktop Linux accessibility test for the modules folder's settings, which failed once on the v0.22.2 tag and passed on a re-run, and a Markdown preview test that fails now and then under load.
+- `docs/DEFERRED.md`: three checks moved to after v0.23.0: a real phone's keyboard, hover in a real desktop Firefox, and why the command palette sometimes closes slowly in Firefox's tests. Also noted: the Markdown preview, Compare's Changes view, and Deleted scenes don't follow Page colour yet.
+- README: says how to just write or just read now that the editor is always there, and its sketch shows the new status bar.
 
 ### Fixed
 
@@ -49,6 +53,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **A browser set to light no longer opens dark** on a first visit.
 - **In Firefox, replacing a stage play's text no longer leaves the editor blank.** Pasting or typing over the whole of a stage play, which Firefox sends as one composition, lost the new text.
 - **Focus stays in a menu you open just as a dialog closes**, instead of jumping to the Drafter menu.
+- **Icons show in high-contrast mode** (Windows' forced colours). Icon-only buttons, such as Structure, Focus, the theme, the editor's toggles, More actions, and every button below 1024 pixels, were blank there. A pressed button, such as Structure or Changes, is now outlined there too.
+- **The Inspector's buttons get their labels back after you switch scripts.** Opening a stage play after a screenplay could leave Changes and the others as icons only, even with room to spare.
+- **On a phone, the element row no longer cuts a word at the edge.** When it scrolls sideways, it fades at the edge with more to see, and settles with a whole chip at its start.
 - **The Export submenu in More actions opens with a mouse.** On a phone-sized window it opens to the left, and a mouse that went straight to it, or a click in Firefox, closed it again. A tap and the keyboard always worked.
 
 ## [0.22.2] - 2026-10-31

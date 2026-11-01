@@ -3,17 +3,18 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { useWideScreen } from '~/composables/useWideScreen';
 import { useScript } from '~/storage/script';
 
-// A phone's row above the pane while a sample is open (Phase 1 design §4.2): "Sample", the first way
-// to start one's own, and a "More" menu with the rest. A wide screen has these in the top bar's
-// sample chip (SampleChip.vue, fresh-look design §3.5), and no bar.
+// A phone's row above the pane while a sample is open (Phase 1 design §4.2): "Sample ·" and
+// "Start your own", whose menu holds every way to start one's own, as the top bar's sample chip
+// does on a wide screen (SampleChip.vue, fresh-look design §3.5). The same words and the same menu
+// in both places (final review, M4).
 const { project } = useScript();
 const wide = useWideScreen();
 const { actions, off } = useStartActions();
 
-/** The menu: every action after the first. */
-const more = computed<DropdownMenuItem[]>(() =>
-  actions.value.slice(1).map((action) => ({
+const items = computed<DropdownMenuItem[]>(() =>
+  actions.value.map((action) => ({
     label: action.label,
+    icon: action.id === 'open' ? 'i-lucide-folder-open' : 'i-lucide-file-plus',
     disabled: off(action),
     onSelect: () => action.command?.run(),
   })),
@@ -22,18 +23,12 @@ const more = computed<DropdownMenuItem[]>(() =>
 
 <template>
   <section v-if="project?.sample && !wide" class="bar" aria-label="Sample">
-    <strong class="name">Sample</strong>
-    <button
-      v-if="actions[0]"
-      type="button"
-      class="action"
-      :disabled="off(actions[0])"
-      @click="actions[0].command?.run()"
-    >
-      {{ actions[0].label }}
-    </button>
-    <MenuButton :items="more" :content="{ align: 'end' }">
-      <button type="button" class="action" aria-label="More ways to start your own">More</button>
+    <strong class="name" aria-hidden="true">Sample ·</strong>
+    <MenuButton :items="items" :content="{ align: 'end' }">
+      <button type="button" class="action" aria-label="Sample: start your own">
+        Start your own
+        <UIcon name="i-lucide-chevron-down" class="caret" aria-hidden="true" />
+      </button>
     </MenuButton>
   </section>
 </template>
@@ -50,10 +45,12 @@ const more = computed<DropdownMenuItem[]>(() =>
   font-size: 13px;
 }
 .name {
-  margin-right: auto;
   font-weight: 600;
 }
 .action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   min-height: 24px;
   padding: 0 10px;
   border: 0;
@@ -70,5 +67,10 @@ const more = computed<DropdownMenuItem[]>(() =>
 .action:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.caret {
+  flex: none;
+  width: 12px;
+  height: 12px;
 }
 </style>

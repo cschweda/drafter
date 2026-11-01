@@ -151,7 +151,9 @@ const SCREENS = [
     'focus',
     async (page) => {
       await page.locator('.cm-content').click();
-      await page.keyboard.press('ControlOrMeta+Shift+F');
+      // Focus mode's key (commands/data.ts): Mod-Shift-Enter.
+      await page.keyboard.press('ControlOrMeta+Shift+Enter');
+      await page.getByRole('group', { name: 'Focus mode' }).waitFor();
       await page.waitForTimeout(500);
     },
   ],
