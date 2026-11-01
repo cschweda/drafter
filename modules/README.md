@@ -78,15 +78,15 @@ All are optional except the first five fields.
 | Field | What it does |
 | --- | --- |
 | `id`, `name`, `description`, `icon`, `permissions` | Who it is, shown in Settings → Modules. `permissions.network` lists the origins it may send the script to. |
-| `action` | A round button in the toolbar, after Focus, while the module is on. |
-| `tab` | A tab beside Source, Script, and Problems, in either pane. `component` is a Vue component, given the module's context as its `context` prop. |
+| `action` | A button in the top bar, after Export, while the module is on (in More actions when the bar is full). |
+| `tab` | A tab in the Inspector's More menu (in More on the phone's bottom bar). `component` is a Vue component, given the module's context as its `context` prop. |
 | `commands(ctx)` | Commands for the palette, listed under the module's name. Their `group` is replaced with the name, and their `keys` are not bound. |
 | `settings` | A Vue component shown in the module's section of Settings → Modules while it is on (where a key would be entered). It is given `context` as a prop. |
 
 A Vue component can be a `.vue` file in the module's folder, or a plain object with a `setup()` that
 returns a render function (`h` from `vue`). The samples use the second, which a test can draw without
 a browser. Tailwind reads this folder, so a component can use its classes; the app's colors are CSS
-variables (`var(--text)`, `var(--muted)`, `var(--line)`, `var(--chrome-2)`) that follow the theme.
+variables (`var(--text)`, `var(--muted)`, `var(--border)`, `var(--raised)`) that follow the theme.
 
 ### The context
 
@@ -212,8 +212,9 @@ export default {
 
 A tab and a settings section are drawn by the module into `root`, an element in its own frame, with
 whatever it was built with (plain DOM, or a framework bundled into `index.js`). The frame has the
-app's colors as CSS variables (`var(--text)`, `var(--muted)`, `var(--line)`, `var(--chrome-2)`,
-`var(--heading)`, `var(--font-sans)`), and its body has no margin. `mount` may return a function,
+app's colors as CSS variables (`var(--text)`, `var(--muted)`, `var(--border)`, `var(--raised)`,
+`var(--accent-text)`, `var(--font-sans)`), and its body has no margin. (A module written before
+v0.23.0 used `--line`, `--chrome-2`, and `--heading`; the frame still sets them.) `mount` may return a function,
 called when the tab goes. A settings section grows to fit what it draws, up to 800 pixels.
 
 ### The context

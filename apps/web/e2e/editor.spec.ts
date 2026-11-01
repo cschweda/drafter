@@ -63,7 +63,7 @@ test.describe('on a desktop', () => {
     });
     const goldenrod = await page.evaluate(() => {
       const probe = document.createElement('i');
-      probe.style.color = 'var(--heading)';
+      probe.style.color = 'var(--accent-text)';
       document.body.append(probe);
       const resolved = getComputedStyle(probe).color;
       probe.remove();

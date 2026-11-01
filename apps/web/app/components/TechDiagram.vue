@@ -83,9 +83,9 @@ function usesText(p: PackageNote): string {
 .tech-diagram {
   margin: 16px 0 20px;
   padding: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--chrome-2);
+  background: var(--raised);
   break-inside: avoid;
 }
 figcaption {
@@ -111,9 +111,9 @@ figcaption {
   width: 100%;
   max-width: 26rem;
   padding: 8px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--chrome);
+  background: var(--surface);
   text-align: center;
 }
 .tech-detail {

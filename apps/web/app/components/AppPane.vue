@@ -886,9 +886,9 @@ function onPanelKeydown(event: KeyboardEvent) {
   cursor: pointer;
 }
 .tab.on {
-  background: var(--tab-on);
+  background: var(--overlay);
   color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--heading);
+  box-shadow: inset 0 -2px 0 var(--accent-text);
 }
 /* The Inspector's tabs (design §3.3): icon + label, 32px, the one showing in the text colour over a
    2px accent line, no fill. */
@@ -949,8 +949,8 @@ function onPanelKeydown(event: KeyboardEvent) {
   gap: 4px 10px;
   min-height: 24px;
   padding: 5px 12px;
-  background: var(--chrome-2);
-  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
   color: var(--muted);
   font-size: 12px;
 }
@@ -1020,9 +1020,9 @@ function onPanelKeydown(event: KeyboardEvent) {
   cursor: pointer;
 }
 .slim :deep(.zoom-button[aria-pressed='true']) {
-  background: var(--tab-on);
+  background: var(--overlay);
   color: var(--text);
-  border-bottom-color: var(--heading);
+  border-bottom-color: var(--accent-text);
 }
 /* In the header, a choice of two (Fit · 100%, the card sizes) is a segmented control. */
 .head .tools :deep(.zoom),
@@ -1055,7 +1055,7 @@ function onPanelKeydown(event: KeyboardEvent) {
 .slim :deep(.fix-all) {
   min-height: 24px;
   padding: 0 10px;
-  border: 1px solid var(--heading);
+  border: 1px solid var(--accent-text);
   border-radius: 5px;
   background: none;
   color: var(--text);
@@ -1081,7 +1081,7 @@ function onPanelKeydown(event: KeyboardEvent) {
   margin-left: 4px;
   padding: 1px 6px;
   border-radius: 9px;
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
   font-size: 11px;
 }
@@ -1092,7 +1092,7 @@ function onPanelKeydown(event: KeyboardEvent) {
   background: var(--raised);
 }
 .tab.on .badge {
-  background: var(--chrome);
+  background: var(--surface);
 }
 @media (forced-colors: active) {
   .badge {

@@ -28,19 +28,31 @@ const title = computed(() =>
 /** The colors and fonts the frame draws with: the page's own, so it follows the theme. */
 const THEME_VARIABLES = [
   '--bg',
-  '--chrome',
-  '--chrome-2',
-  '--line',
+  '--surface',
+  '--raised',
+  '--overlay',
+  '--border',
   '--text',
   '--muted',
-  '--heading',
+  '--accent-text',
   '--font-sans',
   '--font-mono',
 ];
+/**
+ * The names a module's frame was given before v0.23.0, each with the token it is now. The app no
+ * longer has them, but a module written for them still gets its colours.
+ */
+const OLD_NAMES: Record<string, string> = {
+  '--chrome': '--surface',
+  '--chrome-2': '--raised',
+  '--line': '--border',
+  '--heading': '--accent-text',
+};
 function theme(): Theme {
   const style = getComputedStyle(document.documentElement);
   const out: Theme = { 'color-scheme': style.colorScheme || 'normal' };
   for (const name of THEME_VARIABLES) out[name] = style.getPropertyValue(name).trim();
+  for (const [old, now] of Object.entries(OLD_NAMES)) out[old] = out[now] ?? '';
   return out;
 }
 

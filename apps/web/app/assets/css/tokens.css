@@ -221,21 +221,6 @@
   }
 }
 
-/* Today's names, as aliases of the new ones, until every component has moved over (plan, Task 10,
-   removes them). Line numbers and parentheticals are read, so they are --muted, not --faint. On
-   each theme's selector too, so an alias follows its theme wherever the class is. */
-:root,
-.dark,
-.light {
-  --chrome: var(--surface);
-  --chrome-2: var(--raised);
-  --line: var(--border);
-  --tab-on: var(--overlay);
-  --heading: var(--accent-text);
-  --gutter: var(--muted);
-  --paren: var(--muted);
-}
-
 /* Nuxt UI's colors (its menus, the command palette, tooltips) are the tokens. Its own are in a
    cascade layer, so these, outside any, win in both themes. Its dimmed text is read (a menu item's
    description, a placeholder), so it is --muted too. */

@@ -268,9 +268,9 @@ onBeforeUnmount(() => {
   top: 6px;
   left: 6px;
   padding: 6px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
   font-size: 14px;
   font-weight: 600;

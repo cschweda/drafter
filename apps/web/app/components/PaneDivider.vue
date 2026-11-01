@@ -56,7 +56,7 @@ function onPointerdown(event: PointerEvent) {
 .divider {
   display: grid;
   place-items: center;
-  background: var(--line);
+  background: var(--border);
   cursor: col-resize;
   touch-action: none;
 }

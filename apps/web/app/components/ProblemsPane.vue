@@ -146,12 +146,12 @@ onBeforeUnmount(disarm);
   align-items: flex-start;
   gap: 4px 8px;
   padding: 4px 12px 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   /* The severity is in words too; the bar is for scanning. */
-  box-shadow: inset 3px 0 0 var(--heading);
+  box-shadow: inset 3px 0 0 var(--accent-text);
 }
 .problem[data-severity='info'] {
-  box-shadow: inset 3px 0 0 var(--line);
+  box-shadow: inset 3px 0 0 var(--border);
 }
 /* A misspelling: the mark's own color, as the Source pane underlines it. */
 .problem.spelling {
@@ -160,7 +160,7 @@ onBeforeUnmount(disarm);
 .spelling-title {
   margin: 0;
   padding: 12px 16px 6px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
   font-weight: 700;
 }
@@ -182,7 +182,7 @@ onBeforeUnmount(disarm);
   cursor: pointer;
 }
 .jump:hover {
-  background: var(--chrome-2);
+  background: var(--raised);
 }
 .severity {
   font-weight: 700;
@@ -190,7 +190,7 @@ onBeforeUnmount(disarm);
 /* The module that found it. */
 .source {
   padding: 0 6px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 9px;
   color: var(--muted);
   font-size: 12px;
@@ -207,9 +207,9 @@ onBeforeUnmount(disarm);
   min-height: 32px;
   margin-top: 2px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -218,13 +218,13 @@ onBeforeUnmount(disarm);
   cursor: pointer;
 }
 .fix:hover {
-  border-color: var(--heading);
+  border-color: var(--accent-text);
 }
 .fix[aria-disabled='true'] {
   color: var(--muted);
   cursor: not-allowed;
 }
 .fix[aria-disabled='true']:hover {
-  border-color: var(--line);
+  border-color: var(--border);
 }
 </style>

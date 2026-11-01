@@ -265,10 +265,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   box-sizing: border-box;
   max-width: min(26rem, calc(100vw - 32px));
   padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--heading);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-text);
   border-radius: 6px;
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
@@ -292,12 +292,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
   overflow: hidden;
   border: 1px solid var(--muted);
   border-radius: 4px;
-  background: var(--chrome);
+  background: var(--surface);
 }
 .fill {
   height: 100%;
   border-radius: 3px;
-  background: var(--heading);
+  background: var(--accent-text);
   transition: width 0.2s linear;
 }
 /* A stage that can't say how far it is: a short piece of the bar sweeps across. */

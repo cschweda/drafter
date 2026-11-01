@@ -51,6 +51,7 @@ export function stateWithSettings(settings: Array<{ key: string; value: unknown 
         localStorage: [
           { name: 'drafter-tour-v1', value: 'true' },
           { name: 'drafter-storage-toast-v1', value: 'true' },
+          { name: 'nuxt-color-mode', value: 'dark' },
         ],
         indexedDB: [drafterDatabase([...sampleSeenRows, ...settings])],
       },

@@ -219,9 +219,9 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
   margin: 0 auto 12px;
   max-width: 48rem;
   padding: 8px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--chrome-2);
+  background: var(--raised);
   font-size: 13px;
 }
 .changes summary {
@@ -253,7 +253,7 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
   cursor: pointer;
 }
 .change:hover {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .note {
   margin: 0 auto 12px;

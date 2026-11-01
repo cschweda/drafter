@@ -198,7 +198,7 @@ defineExpose({ revealChange, focusHeading, focusGroup });
 }
 .diff-group {
   margin: 0 0 16px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
   background: var(--page);
@@ -213,7 +213,7 @@ defineExpose({ revealChange, focusHeading, focusGroup });
   gap: 4px 10px;
   padding: 6px 10px;
   background: var(--diff-fold-bg);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   font: 13px/1.5 var(--font-sans);
 }
 .diff-group-title {
@@ -224,7 +224,7 @@ defineExpose({ revealChange, focusHeading, focusGroup });
   overflow-wrap: anywhere;
 }
 .diff-group-title:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 .diff-heading {
@@ -272,7 +272,7 @@ defineExpose({ revealChange, focusHeading, focusGroup });
   min-height: 24px;
   padding: 2px 10px;
   border: 0;
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--border);
   background: var(--diff-fold-bg);
   color: var(--ink);
   font: 600 12px/1.5 var(--font-sans);
@@ -283,7 +283,7 @@ defineExpose({ revealChange, focusHeading, focusGroup });
 .diff-row:focus-visible,
 .diff-cell:focus-visible,
 .diff-button:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 .diff-row,
@@ -355,13 +355,13 @@ defineExpose({ revealChange, focusHeading, focusGroup });
 }
 .diff-split th {
   padding: 4px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   color: var(--ink);
   font: 600 12px/1.5 var(--font-sans);
   text-align: left;
 }
 .diff-split td {
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--border);
 }
 .diff-split td:first-child {
   border-left: 0;

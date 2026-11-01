@@ -37,3 +37,23 @@ export function appearanceStep(input: AppearanceInput): AppearanceStep | null {
   if (preference !== 'system') return null;
   return chosen ? { preference: chosen, chosen } : { preference: current };
 }
+
+export interface FreshVisitInput {
+  /** The browser had no scripts when the page opened (`isFirstVisit()` in storage/script.ts). */
+  firstVisit: boolean;
+  /** A theme is stored under `nuxt-color-mode`: the writer has chosen one in this browser. */
+  themeStored: boolean;
+  /** Match system appearance is on already. */
+  matchSystem: boolean;
+}
+
+/**
+ * Whether to turn Match system appearance on for this visit (fresh-look design §9). A fresh visit
+ * (no scripts yet, and no theme ever chosen) follows the system, so a reader with a light system
+ * isn't met by a dark screen. Dark stays the default, and a visitor who has been here before is
+ * left exactly as they are. Once the writer picks a theme by hand, that choice wins (`applySettings`
+ * turns the setting off again).
+ */
+export function freshVisitMatchesSystem(input: FreshVisitInput): boolean {
+  return input.firstVisit && !input.themeStored && !input.matchSystem;
+}

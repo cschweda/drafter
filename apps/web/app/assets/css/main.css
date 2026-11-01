@@ -195,8 +195,8 @@ html:has(dialog:modal) {
   align-items: baseline;
   gap: 8px 24px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--chrome);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 .docs-back {
   font-weight: 700;
@@ -210,7 +210,7 @@ html:has(dialog:modal) {
   list-style: none;
 }
 .docs a {
-  color: var(--heading);
+  color: var(--accent-text);
   text-underline-offset: 3px;
 }
 /* A link in the text is underlined, so it's told from the words around it without color
@@ -268,9 +268,9 @@ html:has(dialog:modal) {
 }
 .docs-main kbd {
   padding: 1px 6px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--chrome-2);
+  background: var(--raised);
   font-family: var(--font-sans);
   font-size: 0.9em;
   white-space: nowrap;
@@ -288,20 +288,20 @@ html:has(dialog:modal) {
 .docs-main th,
 .docs-main td {
   padding: 8px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
   overflow-wrap: anywhere;
 }
 .docs-main thead th {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .docs-main tbody th {
-  background: var(--chrome-2);
+  background: var(--raised);
   font-weight: 600;
 }
 .docs-main td {
-  background: var(--chrome-2);
+  background: var(--raised);
 }
 /* A table too wide for a phone scrolls inside its own box, which a keyboard can reach. */
 .docs-scroll {
@@ -315,8 +315,8 @@ html:has(dialog:modal) {
 .docs-note {
   margin: 0 0 12px;
   padding: 8px 12px;
-  border-left: 3px solid var(--heading);
-  background: var(--chrome-2);
+  border-left: 3px solid var(--accent-text);
+  background: var(--raised);
 }
 /* On a phone the shortcuts table fits by wrapping: the Windows keys break where they must, and the
    cells are tighter. */

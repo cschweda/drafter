@@ -37,18 +37,18 @@ export const theme = EditorView.theme({
   },
   '.cm-gutters': {
     backgroundColor: 'var(--bg)',
-    color: 'var(--gutter)',
+    color: 'var(--muted)',
     border: 'none',
   },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 16px' },
 
   // The highlighting classes of @drafter/cm-fountain.
-  '.cm-f-scene_heading': { color: 'var(--heading)', fontWeight: '700' },
+  '.cm-f-scene_heading': { color: 'var(--accent-text)', fontWeight: '700' },
   '.cm-f-character': { color: 'var(--cue)', fontWeight: '700' },
   '.cm-f-transition': { color: 'var(--trans)', fontWeight: '700' },
   '.cm-f-note': { color: 'var(--note)', fontStyle: 'italic' },
   '.cm-f-section, .cm-f-title-key': { color: 'var(--title)' },
-  '.cm-f-parenthetical, .cm-f-synopsis': { color: 'var(--paren)', fontStyle: 'italic' },
+  '.cm-f-parenthetical, .cm-f-synopsis': { color: 'var(--muted)', fontStyle: 'italic' },
   // Boneyard is cut and never prints: struck through, as well as quiet, so it isn't told apart
   // by its color alone.
   '.cm-f-boneyard': {
@@ -62,57 +62,57 @@ export const theme = EditorView.theme({
   '.cm-f-marker': { color: 'var(--muted)' },
 
   // The highlighting classes of the Markdown mode (markdown/editor.ts).
-  '.cm-md-heading': { color: 'var(--heading)', fontWeight: '700' },
+  '.cm-md-heading': { color: 'var(--accent-text)', fontWeight: '700' },
   '.cm-md-b': { fontWeight: '700' },
   '.cm-md-i': { fontStyle: 'italic' },
   '.cm-md-code': { color: 'var(--cue)' },
-  '.cm-md-quote': { color: 'var(--paren)', fontStyle: 'italic' },
+  '.cm-md-quote': { color: 'var(--muted)', fontStyle: 'italic' },
   '.cm-md-marker': { color: 'var(--muted)' },
   '.cm-md-link': { color: 'var(--title)' },
   '.cm-md-url': { color: 'var(--muted)' },
-  '.cm-md-footnote': { color: 'var(--paren)' },
+  '.cm-md-footnote': { color: 'var(--muted)' },
   '.cm-md-html': { color: 'var(--note)' },
 
   // Folding, search, tooltips, and the completion list.
   '.cm-foldPlaceholder': {
-    backgroundColor: 'var(--chrome-2)',
+    backgroundColor: 'var(--raised)',
     color: 'var(--muted)',
-    border: '1px solid var(--line)',
+    border: '1px solid var(--border)',
   },
   '.cm-panels': {
-    backgroundColor: 'var(--chrome)',
+    backgroundColor: 'var(--surface)',
     color: 'var(--text)',
-    borderColor: 'var(--line)',
+    borderColor: 'var(--border)',
     fontFamily: 'var(--font-sans)',
   },
   '.cm-panels input, .cm-panels button, .cm-panels label': { fontFamily: 'inherit' },
   '.cm-panel.cm-search input.cm-textfield': {
-    backgroundColor: 'var(--chrome-2)',
+    backgroundColor: 'var(--raised)',
     color: 'var(--text)',
-    border: '1px solid var(--line)',
+    border: '1px solid var(--border)',
   },
   '.cm-panel.cm-search button': {
     backgroundImage: 'none',
-    backgroundColor: 'var(--chrome-2)',
+    backgroundColor: 'var(--raised)',
     color: 'var(--text)',
-    border: '1px solid var(--line)',
+    border: '1px solid var(--border)',
   },
   '.cm-panel.cm-search [name=close]': { color: 'var(--text)' },
-  '.cm-searchMatch': { backgroundColor: 'color-mix(in srgb, var(--heading) 30%, transparent)' },
+  '.cm-searchMatch': { backgroundColor: 'color-mix(in srgb, var(--accent-text) 30%, transparent)' },
   '.cm-searchMatch.cm-searchMatch-selected': {
-    backgroundColor: 'color-mix(in srgb, var(--heading) 55%, transparent)',
+    backgroundColor: 'color-mix(in srgb, var(--accent-text) 55%, transparent)',
   },
   '.cm-tooltip': {
-    backgroundColor: 'var(--chrome-2)',
+    backgroundColor: 'var(--raised)',
     color: 'var(--text)',
-    border: '1px solid var(--line)',
+    border: '1px solid var(--border)',
     fontFamily: 'var(--font-sans)',
   },
   '.cm-tooltip-autocomplete ul': { fontFamily: 'var(--font-mono)' },
   '& .cm-tooltip-autocomplete ul li[aria-selected]': {
-    backgroundColor: 'var(--tab-on)',
+    backgroundColor: 'var(--overlay)',
     color: 'var(--text)',
   },
   '.cm-completionDetail': { color: 'var(--muted)' },
-  '.cm-diagnostic': { borderLeftColor: 'var(--line)' },
+  '.cm-diagnostic': { borderLeftColor: 'var(--border)' },
 });

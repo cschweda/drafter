@@ -1,8 +1,10 @@
 import { watch } from 'vue';
 import { applyEditorSettings } from '~/editor/apply-settings';
 import { useEditor } from '~/editor/session';
-import { appearanceStep } from './appearance';
+import { isFirstVisit, useScript } from '~/storage/script';
+import { appearanceStep, freshVisitMatchesSystem } from './appearance';
 import { useSettings } from './settings';
+import { themeWasStored } from './theme-stored';
 
 /**
  * Puts the settings into effect, and keeps them in effect as they change. It starts once the
@@ -21,11 +23,15 @@ import { useSettings } from './settings';
  * - Match system appearance sets the color mode's preference to `system`, and turning it off
  *   puts back the theme that was chosen last. The theme stays in localStorage (Plan 1), so the
  *   first paint has no flash. Choosing a theme by hand while it is on turns it off.
+ * - A fresh visit (no scripts yet, and no theme stored under `nuxt-color-mode`) turns Match system
+ *   appearance on, so a light system opens light (fresh-look design §9). Anyone who has been here
+ *   before is left as they are.
  */
 export function applySettings(): () => void {
   const { settings, set, ready, read } = useSettings();
   const { view } = useEditor();
   const colorMode = useColorMode();
+  const script = useScript();
   const stops: Array<() => void> = [];
   let stopped = false;
 
@@ -99,6 +105,20 @@ export function applySettings(): () => void {
           chosen = preference as 'light' | 'dark';
           void set('matchSystem', false);
         },
+      ),
+      // A first visit is known once the first project is open.
+      watch(
+        () => script.ready.value,
+        (ready) => {
+          if (!ready) return;
+          const fresh = freshVisitMatchesSystem({
+            firstVisit: isFirstVisit(),
+            themeStored: themeWasStored(),
+            matchSystem: settings.value.matchSystem,
+          });
+          if (fresh) void set('matchSystem', true);
+        },
+        { immediate: true },
       ),
     );
   });

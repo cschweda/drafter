@@ -51,8 +51,8 @@ export function castText(rows: readonly CastRow[]): string {
 
 const row = [
   'flex w-full min-h-8 flex-wrap items-baseline gap-x-2 px-3 py-1.5 text-left text-[13px]',
-  'bg-transparent border-0 border-b border-[var(--line)] text-[var(--text)] cursor-pointer',
-  'hover:bg-[var(--chrome-2)]',
+  'bg-transparent border-0 border-b border-[var(--border)] text-[var(--text)] cursor-pointer',
+  'hover:bg-[var(--raised)]',
 ].join(' ');
 const note = 'm-0 px-4 py-6 text-[var(--muted)]';
 

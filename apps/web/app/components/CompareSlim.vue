@@ -99,7 +99,7 @@ function update() {
 .slim-button.compare-tool {
   min-height: 24px;
   padding: 0 10px;
-  border: 1px solid var(--heading);
+  border: 1px solid var(--accent-text);
   border-radius: 5px;
   background: none;
   color: var(--text);
@@ -109,7 +109,7 @@ function update() {
   cursor: pointer;
 }
 .slim-button.compare-tool[aria-pressed='true'] {
-  background: var(--heading);
+  background: var(--accent-text);
   color: var(--bg);
 }
 </style>

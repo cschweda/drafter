@@ -793,7 +793,7 @@ watch(
   align-items: center;
   gap: 8px 12px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .chips,
 .actions {
@@ -804,7 +804,7 @@ watch(
 .chip {
   min-height: 26px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 13px;
   background: none;
   color: var(--muted);
@@ -813,23 +813,23 @@ watch(
   cursor: pointer;
 }
 .chip[aria-pressed='true'] {
-  border-color: var(--heading);
-  background: var(--tab-on);
+  border-color: var(--accent-text);
+  background: var(--overlay);
   color: var(--text);
 }
 .btn {
   min-height: 26px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 .btn.primary {
-  border-color: var(--heading);
+  border-color: var(--accent-text);
 }
 .btn[aria-disabled='true'] {
   opacity: 0.6;
@@ -842,7 +842,7 @@ watch(
 }
 .thread-title {
   padding: 10px 10px 4px;
-  color: var(--heading);
+  color: var(--accent-text);
   font-weight: 700;
 }
 .ask p {

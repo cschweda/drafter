@@ -433,7 +433,7 @@ const whyId = `${uid}-why`;
   z-index: 1;
   padding: 8px 12px;
   background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .filter {
   display: flex;
@@ -448,7 +448,7 @@ const whyId = `${uid}-why`;
   padding: 2px 8px;
   border: 1px solid var(--muted);
   border-radius: 5px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
@@ -460,13 +460,13 @@ const whyId = `${uid}-why`;
   padding: 8px 0;
 }
 .item {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .entry {
   padding: 8px 12px;
 }
 .entry:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 .heading {
@@ -495,9 +495,9 @@ const whyId = `${uid}-why`;
   min-width: 24px;
   min-height: 24px;
   padding: 0 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -509,12 +509,12 @@ const whyId = `${uid}-why`;
   opacity: 0.6;
 }
 .act:hover {
-  background: var(--chrome-2);
+  background: var(--raised);
 }
 .text {
   margin: 0 12px 10px;
   padding: 8px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 5px;
   background: var(--page);
   color: var(--ink);

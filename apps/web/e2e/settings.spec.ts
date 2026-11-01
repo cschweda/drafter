@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { pressToolbarButton, showView, stored } from './modules';
+import { drafterDatabase, sampleSeenRows } from './seed';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
@@ -395,8 +396,68 @@ test.describe('the text size', () => {
   });
 });
 
+test.describe('a fresh visit', () => {
+  // Like every test's storage, but with no theme chosen yet: a browser Drafter has never seen.
+  test.use({
+    colorScheme: 'light',
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${Number(process.env.E2E_PORT ?? 4173)}`,
+          localStorage: [
+            { name: 'drafter-tour-v1', value: 'true' },
+            { name: 'drafter-storage-toast-v1', value: 'true' },
+          ],
+          indexedDB: [drafterDatabase(sampleSeenRows)],
+        },
+      ],
+    },
+  });
+
+  test('a fresh visit on a light system opens light', async ({ page }) => {
+    // Fresh-look design §9: Match system appearance is on for a first visit with no theme stored.
+    await expect(page.locator('html')).toHaveClass(/\blight\b/);
+    await openSettings(page);
+    await expect(toggle(page, 'matchSystem')).toBeChecked();
+    await closeSettings(page);
+    await expect.poll(async () => (await stored(page)).matchSystem).toBe(true);
+    // It keeps following the system, and still does after a reload.
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await expect(page.locator('html')).toHaveClass(/\blight\b/);
+  });
+
+  test('a theme picked by hand wins from then on', async ({ page }) => {
+    await expect(page.locator('html')).toHaveClass(/\blight\b/);
+    await pressToolbarButton(page, 'Switch to dark theme');
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+    await expect.poll(async () => (await stored(page)).matchSystem).toBe(false);
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+    await openSettings(page);
+    await expect(toggle(page, 'matchSystem')).not.toBeChecked();
+  });
+});
+
 test.describe('the appearance', () => {
   test.use({ colorScheme: 'light' });
+
+  test("a returning visitor's theme is untouched", async ({ page }) => {
+    // The first load stored the sample, so a reload is no first visit, even once no theme is
+    // stored: Drafter stays dark, its default, on a light system, and the setting stays off.
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+    await page.evaluate(() => localStorage.removeItem('nuxt-color-mode'));
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+    await openSettings(page);
+    await expect(toggle(page, 'matchSystem')).not.toBeChecked();
+  });
 
   test('follows the system appearance when asked', async ({ page }) => {
     const html = page.locator('html');

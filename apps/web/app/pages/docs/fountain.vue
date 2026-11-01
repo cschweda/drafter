@@ -24,7 +24,7 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
     <p class="docs-lead">
       A Fountain script is plain text: what a line looks like decides what it is. Most elements need
       no mark at all, and a mark at the start of a line forces it to be one thing when it would
-      otherwise read as another. The element bar above the Source writes these marks for you, only
+      otherwise read as another. The element bar at the top of the editor writes these marks for you, only
       where they’re needed, and so do <kbd>⌘⌥1</kbd> to <kbd>⌘⌥7</kbd> on a Mac
       (<kbd>Ctrl+Alt+1</kbd> to <kbd>Ctrl+Alt+7</kbd> elsewhere): a scene heading, action, a
       character, a parenthetical, a transition, centered text, and a lyric.
@@ -71,13 +71,13 @@ pre {
   margin: 0.5em 0 0;
   padding: 10px 12px;
   overflow-x: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--chrome-2);
+  background: var(--raised);
   font: 13px/1.5 var(--font-mono, monospace);
 }
 pre:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 </style>

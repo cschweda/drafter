@@ -34,6 +34,14 @@ export default defineConfig({
     // kind's sample (decided 2026-10-27), which most tests don't expect, so the database starts
     // holding the settings rows that say the samples were met (`sampleSeenRows`);
     // e2e/first-samples.spec.ts starts without them.
+    //
+    // A fresh visit follows the system's appearance (fresh-look design §9), and every test is a
+    // first visit, so the theme is stored as Drafter's default, dark, as a returning writer's
+    // would be; e2e/settings.spec.ts's "a fresh visit" tests start without it. The system is dark
+    // too, so a test that starts with empty storage still opens dark, except in Firefox, which
+    // ignores this setting (and `emulateMedia` before the first load): a test there that needs dark
+    // stores the theme instead (tour.spec.ts).
+    colorScheme: 'dark',
     storageState: {
       cookies: [],
       origins: [
@@ -42,6 +50,7 @@ export default defineConfig({
           localStorage: [
             { name: 'drafter-tour-v1', value: 'true' },
             { name: 'drafter-storage-toast-v1', value: 'true' },
+            { name: 'nuxt-color-mode', value: 'dark' },
           ],
           indexedDB: [drafterDatabase(sampleSeenRows)],
         },

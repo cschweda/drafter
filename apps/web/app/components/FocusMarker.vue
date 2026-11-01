@@ -61,15 +61,15 @@ const label = computed(() =>
   max-width: calc(100vw - 24px);
   /* Its buttons are 24px targets (WCAG 2.5.8): on a narrow phone the marker wraps. */
   padding: 1px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--muted);
   font: 600 12px/1.3 var(--font-sans);
 }
 .failed {
   color: var(--text);
-  box-shadow: inset 3px 0 0 var(--heading);
+  box-shadow: inset 3px 0 0 var(--accent-text);
   padding-left: 8px;
 }
 .leave {
@@ -84,7 +84,7 @@ const label = computed(() =>
   cursor: pointer;
 }
 .leave:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 @media (forced-colors: active) {

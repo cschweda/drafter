@@ -95,9 +95,9 @@ p {
   max-width: 100%;
   margin: 0;
   padding: 28px 36px;
-  border: 2px dashed var(--heading);
+  border: 2px dashed var(--accent-text);
   border-radius: 12px;
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
   font-size: 18px;
   font-weight: 600;

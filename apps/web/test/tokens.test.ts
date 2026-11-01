@@ -74,17 +74,17 @@ const PAIRS: Array<[string, string, number]> = [
   ['--ink', '--page', 4.5],
   ['--ink-muted', '--page', 4.5],
   // The Source pane's syntax colors, on the pane and on the surface beside it.
-  ...['--heading', '--cue', '--paren', '--trans', '--note', '--title', '--gutter'].flatMap((fg) =>
+  ...['--accent-text', '--cue', '--trans', '--note', '--title'].flatMap((fg) =>
     ['--bg', '--surface'].map((bg): [string, string, number] => [fg, bg, 4.5]),
   ),
   // The focus ring, on every surface (WCAG 2.4.11, and 1.4.11's 3:1).
   ...SURFACES.map((bg): [string, string, number] => ['--focus', bg, 3]),
   // The active tab's underline is a control's edge.
-  ['--heading', '--chrome', 3],
+  ['--accent-text', '--surface', 3],
   // An export's progress bar (ExportMenu.vue): the track's edge on the toast, and the still fill
   // of a stage that can't say how far it is, with reduced motion, on the track. Graphics: 3:1.
-  ['--muted', '--chrome-2', 3],
-  ['--muted', '--chrome', 3],
+  ['--muted', '--raised', 3],
+  ['--muted', '--surface', 3],
   // The spelling mark's dotted underline is a graphic, not text (Plan D, Call 17).
   ['--spelling', '--bg', 3],
   ['--spelling', '--surface', 3],
@@ -102,9 +102,9 @@ const PAIRS: Array<[string, string, number]> = [
   ['--on-danger', '--danger-fill-hover', 4.5],
 ];
 
-// Today's names, kept as aliases of the new ones until every component has moved over (fresh-look
-// plan, Task 10, removes them).
-const ALIASES: Record<string, string> = {
+// The names before the fresh look, gone now that every component uses the new ones (fresh-look
+// plan, Task 10). Each is listed with the token it became.
+const OLD_NAMES: Record<string, string> = {
   '--chrome': '--surface',
   '--chrome-2': '--raised',
   '--line': '--border',
@@ -139,8 +139,8 @@ describe('design tokens', () => {
     expect(tokens['--ease']).toBe('cubic-bezier(0.2, 0.8, 0.2, 1)');
   });
 
-  test.each(THEMES)("today's names are aliases of the new ones (%s)", (name) => {
-    for (const [old, now] of Object.entries(ALIASES)) expect(aliasOf(name, old), old).toBe(now);
+  test.each(THEMES)('the old names are gone from the stylesheet (%s)', (name) => {
+    for (const old of Object.keys(OLD_NAMES)) expect(aliasOf(name, old), old).toBeUndefined();
   });
 
   test.each(THEMES)('every text token is AA on every surface it sits on (%s)', (name) => {
@@ -185,8 +185,8 @@ describe('design tokens', () => {
       expect(start).toBeGreaterThan(-1);
       return vue.slice(start, vue.indexOf('}', start));
     };
-    // The track has an edge you can see (its fill is --chrome, on the toast's --chrome-2).
-    expect(rule('.bar')).toMatch(/background: var\(--chrome\);/);
+    // The track has an edge you can see (its fill is --surface, on the toast's --raised).
+    expect(rule('.bar')).toMatch(/background: var\(--surface\);/);
     expect(rule('.bar')).toMatch(/border: 1px solid var\(--muted\);/);
     // With reduced motion, an unknown stage's still fill is solid --muted, never faded.
     const still = rule('.bar.unknown .fill', vue.indexOf('prefers-reduced-motion'));
@@ -245,6 +245,45 @@ describe('--faint', () => {
       '.b > .c',
     ]);
     expect(faintRules("  '.cm-x': { color: 'var(--faint)' },")).toEqual(['.cm-x']);
+  });
+});
+
+describe('the old token names', () => {
+  // render-html's pages have a `--line` of their own (one line of type), which the Script and
+  // Compare panes' overlays measure with: that one stays.
+  const PAGE_LINE = /calc\([^;]*var\(--line\)|(height|line-height): var\(--line\)/;
+
+  test('no component uses an old token name', () => {
+    const names = Object.keys(OLD_NAMES)
+      .map((n) => n.slice(2))
+      .join('|');
+    const pattern = new RegExp(`var\\(--(${names})\\)`);
+    const used = files(APP).flatMap((path) =>
+      readFileSync(path, 'utf8')
+        .split('\n')
+        .map((line, i) => ({ line, i }))
+        .filter(({ line }) => pattern.test(line) && !PAGE_LINE.test(line))
+        .map(({ line, i }) => `${relative(APP, path)}:${i + 1} ${line.trim()}`),
+    );
+    expect(used).toEqual([]);
+  });
+
+  test('the bundled modules use the new names too', () => {
+    const MODULES = fileURLToPath(new URL('../../../modules', import.meta.url));
+    const names = Object.keys(OLD_NAMES)
+      .map((n) => n.slice(2))
+      .join('|');
+    const pattern = new RegExp(`var\\(--(${names})\\)`);
+    const used = ['cast/index.ts', 'scene-list/index.ts', 'notes/index.ts']
+      .map((path) => join(MODULES, path))
+      .filter((path) => {
+        try {
+          return pattern.test(readFileSync(path, 'utf8'));
+        } catch {
+          return false;
+        }
+      });
+    expect(used).toEqual([]);
   });
 });
 
@@ -309,7 +348,7 @@ describe('the top bar', () => {
     const vue = readFileSync(join(APP, 'components', name), 'utf8');
     const style = vue.slice(vue.indexOf('<style'));
     expect(style.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
-    // Today's names are aliases on their way out; the moved components use the new ones.
+    // The old names are gone; the components use the new ones.
     expect(style.match(/var\(--(chrome|chrome-2|line|heading|tab-on)\)/g) ?? []).toEqual([]);
   });
 });

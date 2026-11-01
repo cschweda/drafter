@@ -647,8 +647,8 @@ watch(
   overflow-x: auto;
   white-space: nowrap;
   scrollbar-width: thin;
-  background: var(--chrome-2);
-  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
   color: var(--muted);
   font-size: 12px;
 }
@@ -731,7 +731,7 @@ button.here.chip:hover {
   width: 1px;
   height: 16px;
   margin: 0 4px;
-  background: var(--line);
+  background: var(--border);
 }
 /* The chips (design §3.2): 12px, weight 500; the element the cursor is in in the accent's soft fill,
    its words in the accent's text colour, a second cue where the light theme's fill is faint. */
@@ -813,10 +813,10 @@ button.here.chip:hover {
   box-sizing: border-box;
   max-width: min(26rem, calc(100vw - 32px));
   padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--heading);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-text);
   border-radius: 6px;
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
   font-size: 13px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);

@@ -201,7 +201,7 @@ function onEditFocusout(event: FocusEvent) {
   align-items: flex-start;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   color: var(--text);
   cursor: default;
 }
@@ -209,11 +209,11 @@ function onEditFocusout(event: FocusEvent) {
   padding-left: 32px;
 }
 .note-row:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 .note-row[aria-selected='true'] {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .drawn,
 .edit {
@@ -253,7 +253,7 @@ function onEditFocusout(event: FocusEvent) {
   gap: 4px;
   min-height: 22px;
   padding: 0 7px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 11px;
   background: var(--bg);
   color: var(--text);
@@ -299,7 +299,7 @@ function onEditFocusout(event: FocusEvent) {
 }
 .act:hover,
 .more:hover {
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
 }
 .edit {
@@ -328,7 +328,7 @@ function onEditFocusout(event: FocusEvent) {
   box-sizing: border-box;
   min-height: 26px;
   padding: 2px 6px;
-  border: 1px solid var(--heading);
+  border: 1px solid var(--accent-text);
   border-radius: 4px;
   background: var(--bg);
   color: var(--text);

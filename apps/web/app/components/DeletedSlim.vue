@@ -43,7 +43,7 @@ const count = computed(() => (filter.value.trim() === '' ? shown.value.length : 
 .reading {
   width: 6rem;
   height: 8px;
-  accent-color: var(--heading);
+  accent-color: var(--accent-text);
 }
 </style>
 
@@ -61,6 +61,6 @@ const count = computed(() => (filter.value.trim() === '' ? shown.value.length : 
   cursor: pointer;
 }
 .slim-button.deleted-tool:hover {
-  background: var(--tab-on);
+  background: var(--overlay);
 }
 </style>

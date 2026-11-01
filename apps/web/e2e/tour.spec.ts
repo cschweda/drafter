@@ -54,6 +54,12 @@ async function litTarget(page: Page, target: string) {
 }
 
 async function visit(page: Page) {
+  // A first visit follows the system's appearance (fresh-look design §9), and Firefox here ignores
+  // the config's dark colorScheme, so the theme is stored: Drafter's default, dark. The tour still
+  // sees a first visit, as it asks only whether there are scripts and whether it has been seen.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('nuxt-color-mode')) localStorage.setItem('nuxt-color-mode', 'dark');
+  });
   await page.goto('/');
   await expect(welcome(page)).toBeVisible();
 }

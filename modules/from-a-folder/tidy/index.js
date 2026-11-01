@@ -95,7 +95,7 @@ export default {
           button.type = 'button';
           button.textContent = `Line ${s.line}`;
           button.style.cssText =
-            'display: block; width: 100%; padding: 6px 16px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer';
+            'display: block; width: 100%; padding: 6px 16px; border: 0; border-bottom: 1px solid var(--border); background: none; text-align: left; cursor: pointer';
           button.addEventListener('click', () => ctx.goto(s.from));
           item.append(button);
           list.append(item);

@@ -412,7 +412,7 @@ test.describe('the Script pane on a desktop', () => {
     const cue = (name: string) =>
       page.getByRole('button', { name, exact: true }).evaluate((el) => {
         const probe = document.createElement('span');
-        probe.style.color = 'var(--heading)';
+        probe.style.color = 'var(--accent-text)';
         document.body.append(probe);
         const heading = getComputedStyle(probe).color;
         probe.remove();

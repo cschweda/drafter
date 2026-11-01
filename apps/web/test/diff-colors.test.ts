@@ -97,13 +97,18 @@ describe("the Changes view's colors", () => {
   );
 
   test.each(cases)('focus outlines are at least 3:1 on every tint (%s, %s)', (palette, theme) => {
-    // A focused row, fold, button, or group title is outlined in `--heading`, over its own tint.
+    // A focused row, fold, button, or group title is outlined in `--accent-text`, over its own tint.
     const t = DIFF_TOKENS[palette][theme];
-    const heading = page[theme]['--heading'] as string;
+    const heading = page[theme]['--accent-text'] as string;
     const pairs: [string, string, string, string][] = [
-      ['--heading', heading, '--page', page[theme]['--page'] as string],
+      ['--accent-text', heading, '--page', page[theme]['--page'] as string],
       ...['--diff-add-bg', '--diff-del-bg', '--diff-fold-bg'].map(
-        (tint): [string, string, string, string] => ['--heading', heading, tint, t[tint] as string],
+        (tint): [string, string, string, string] => [
+          '--accent-text',
+          heading,
+          tint,
+          t[tint] as string,
+        ],
       ),
     ];
     expect(short(pairs, 3)).toEqual([]);

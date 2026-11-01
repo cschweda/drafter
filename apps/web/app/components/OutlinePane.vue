@@ -612,7 +612,7 @@ const nameOfRow = (row: Row) =>
   z-index: 1;
   padding: 8px 12px;
   background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .filter {
   display: flex;
@@ -627,7 +627,7 @@ const nameOfRow = (row: Row) =>
   padding: 2px 8px;
   border: 1px solid var(--muted);
   border-radius: 5px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
@@ -643,20 +643,20 @@ const nameOfRow = (row: Row) =>
   cursor: pointer;
 }
 .row:hover {
-  background: var(--chrome);
+  background: var(--surface);
 }
 .row:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 .row.dragging {
   opacity: 0.5;
 }
 .row.drop-above {
-  border-top-color: var(--heading);
+  border-top-color: var(--accent-text);
 }
 .row.drop-below {
-  border-bottom-color: var(--heading);
+  border-bottom-color: var(--accent-text);
 }
 .line {
   display: flex;
@@ -684,14 +684,14 @@ const nameOfRow = (row: Row) =>
   overflow-wrap: anywhere;
 }
 .section .heading {
-  color: var(--heading);
+  color: var(--accent-text);
 }
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 0 6px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 9px;
   color: var(--text);
   font-size: 12px;
@@ -720,7 +720,7 @@ const nameOfRow = (row: Row) =>
   cursor: pointer;
 }
 .more:hover {
-  background: var(--chrome-2);
+  background: var(--raised);
   color: var(--text);
 }
 .details {
@@ -745,9 +745,9 @@ const nameOfRow = (row: Row) =>
   margin: 2px 0 2px 24px;
   min-height: 26px;
   padding: 2px 6px;
-  border: 1px solid var(--heading);
+  border: 1px solid var(--accent-text);
   border-radius: 4px;
-  background: var(--chrome);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }

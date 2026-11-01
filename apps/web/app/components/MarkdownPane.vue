@@ -76,7 +76,7 @@ watch(tree, draw);
   background: var(--desk);
 }
 .preview:focus-visible {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 /* One flowing column at page width: the six inches of text on a letter page. */
@@ -167,14 +167,14 @@ watch(tree, draw);
   border: 0;
   border-radius: 3px;
   background: none;
-  color: var(--heading);
+  color: var(--accent-text);
   font: inherit;
   /* The raised number keeps its line's height (the sup has none), but the button needs its own. */
   line-height: 1;
   cursor: pointer;
 }
 .body :deep(:is(.md-fnref-button, .md-note-back):focus) {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: 1px;
 }
 /* The notes at the end, smaller, after a short rule. */
@@ -199,7 +199,7 @@ watch(tree, draw);
 /* Where a click on a reference or a note's button took focus: outlined, and lit for a moment
    (the code panel's background, which the text reads on in both themes). */
 .body :deep(.md-notes li:focus) {
-  outline: 2px solid var(--heading);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 .body :deep(:is(.md-notes li, .md-fnref-button):focus) {
