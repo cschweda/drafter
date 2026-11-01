@@ -1,0 +1,14 @@
+Title: Markup in the Notes
+
+INT. SIGNAL BOX - NIGHT
+
+A lever waits. [[<script>window.__trapped = 'note'</script>]]
+
+[[<img src="x" onerror="window.__trapped = 'note-img'">]]
+
+[[javascript:window.__trapped='note-link']]
+
+/* <script>window.__trapped = 'boneyard'</script> */
+
+WREN
+Still nothing runs. [[<svg onload="window.__trapped = 'svg'"></svg>]]

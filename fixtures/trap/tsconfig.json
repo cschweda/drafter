@@ -1,0 +1,16 @@
+{
+  // The suite isn't a package, so the packages are found by path, at their source, as the tests
+  // import them (vitest.shared.ts). `pnpm check` doesn't run this; `npx tsc -p fixtures/trap` does.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@drafter/cli": ["../../packages/cli/src/cli.ts"],
+      "@drafter/*": ["../../packages/*/src/index.ts"]
+    }
+  },
+  "include": ["*.ts"],
+  "exclude": ["vitest.config.ts"]
+}

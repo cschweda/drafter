@@ -78,9 +78,9 @@ describe('the data, against the repository', () => {
     }
   });
 
-  test('has the ten parts, each with plain words first and details after', () => {
-    expect(TECH_SECTIONS).toHaveLength(10);
-    expect(new Set(TECH_SECTIONS.map((s) => s.id)).size).toBe(10);
+  test('has the eleven parts, each with plain words first and details after', () => {
+    expect(TECH_SECTIONS).toHaveLength(11);
+    expect(new Set(TECH_SECTIONS.map((s) => s.id)).size).toBe(11);
     for (const section of TECH_SECTIONS) {
       expect(section.plain[0]?.kind, section.id).toBe('p');
       expect(section.details.length, section.id).toBeGreaterThan(0);

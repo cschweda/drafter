@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, extname, resolve } from 'node:path';
+import { MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
 import { type Layout, paginate, UnsupportedTemplateError } from '@drafter/layout';
 import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
@@ -9,7 +10,7 @@ import { renderText } from '@drafter/render-text';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
 import { Command, CommanderError } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
-import { ConvertError, type ConvertOptions, convert, reason } from './convert';
+import { ConvertError, type ConvertOptions, convert, Refused, readCapped, reason } from './convert';
 
 /** Where the CLI reads and writes: the process's own streams, or a test's. */
 export interface IO {
@@ -182,10 +183,10 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     }
   }
 
-  const { doc, template, layout, text } = await load(input, options, io);
+  const { doc, template, layout, text, bytes } = await load(input, options, io);
   // The page carries the file exactly, so a file that isn't UTF-8 (read with U+FFFD in its
   // place) can't be carried.
-  if (options.reopenable) await exactly(input, io);
+  if (options.reopenable) exactly(input, bytes);
   // Errors and warnings go to standard error as the script builds; notes are for `check`.
   const at = locator(text);
   for (const problem of problemsOf(doc, layout)) {
@@ -244,13 +245,7 @@ async function scriptHtml(
 }
 
 /** Refuses `--reopenable` for a file that isn't UTF-8 text, whose text can't be carried as it is. */
-async function exactly(input: string, io: IO): Promise<void> {
-  let bytes: Uint8Array;
-  try {
-    bytes = await readFile(resolve(io.cwd, input));
-  } catch (error) {
-    throw new CliError(`can't read ${input}: ${reason(error)}`);
-  }
+function exactly(input: string, bytes: Uint8Array): void {
   try {
     new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
@@ -271,19 +266,34 @@ async function check(input: string, options: BuildOptions, io: IO): Promise<numb
   return problems.some((problem) => problem.severity === 'error') ? 1 : 0;
 }
 
+/**
+ * A file's bytes for `build`, `check`, or `--template`: a regular file (never a folder, a pipe,
+ * which would wait for a writer, or a device such as /dev/zero, which never ends) of at most 5 MB,
+ * the app's own cap for a script, so neither a hang nor an unbounded read can happen.
+ */
+async function readInput(input: string, io: IO): Promise<Uint8Array> {
+  try {
+    return await readCapped(
+      resolve(io.cwd, input),
+      MAX_SCRIPT_BYTES,
+      () => new Refused('it is larger than 5 MB'),
+    );
+  } catch (error) {
+    if (!(error instanceof Refused)) throw error;
+    throw new CliError(`can't read ${input}: ${error.message.replace(/^can't read it: /, '')}`);
+  }
+}
+
 /** Reads, parses, and lays out a script with the template the options and the file choose. */
 async function load(input: string, options: BuildOptions, io: IO) {
-  let text: string;
-  try {
-    text = await readFile(resolve(io.cwd, input), 'utf8');
-  } catch (error) {
-    throw new CliError(`can't read ${input}: ${reason(error)}`);
-  }
+  const bytes = await readInput(input, io);
+  // As Node's `utf8` reads it: a byte that isn't UTF-8 is U+FFFD, and a BOM is kept (`locator` skips it).
+  const text = new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes);
   const doc = parse(text);
   const template = await chooseTemplate(input, options.template, doc, io);
   const { sceneNumbers } = options;
   const layout = paginate(doc, template, sceneNumbers === undefined ? {} : { sceneNumbers });
-  return { doc, template, layout, text };
+  return { doc, template, layout, text, bytes };
 }
 
 const builtin = (id: string): Template | undefined =>
@@ -305,12 +315,7 @@ async function chooseTemplate(
         `there's no built-in template "${flag}". The built-in templates are ${names}; or pass a template's JSON file.`,
       );
     }
-    let text: string;
-    try {
-      text = await readFile(resolve(io.cwd, flag), 'utf8');
-    } catch (error) {
-      throw new CliError(`can't read ${flag}: ${reason(error)}`);
-    }
+    const text = new TextDecoder().decode(await readInput(flag, io));
     let json: unknown;
     try {
       json = JSON.parse(text);
@@ -375,10 +380,29 @@ interface Problem {
 const problemsOf = (doc: Doc, layout: Layout): Problem[] =>
   [...doc.diagnostics, ...layout.diagnostics].sort((a, b) => a.span.from - b.span.from);
 
-/** Maps an offset to a 1-based line and column, counting code points and skipping a byte-order mark. */
+const isHigh = (c: number) => c >= 0xd800 && c <= 0xdbff;
+const isLow = (c: number) => c >= 0xdc00 && c <= 0xdfff;
+
+/** How many code points are in `text` from `from` to `to`, as `[...text]` counts them. */
+function codePoints(text: string, from: number, to: number): number {
+  let n = 0;
+  for (let i = from; i < to; i++) {
+    // The second half of a pair is the same code point as the first.
+    if (!(isLow(text.charCodeAt(i)) && i > 0 && isHigh(text.charCodeAt(i - 1)))) n++;
+  }
+  return n;
+}
+
+/**
+ * Maps an offset to a 1-based line and column, counting code points and skipping a byte-order mark.
+ * The problems come in order, so the column of one on the same line as the last is counted on from
+ * the last one's: many problems on one long line (thousands of unclosed notes) cost the line's
+ * length once, not once each.
+ */
 function locator(text: string) {
   const starts = [text.charCodeAt(0) === 0xfeff ? 1 : 0];
   for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) starts.push(i + 1);
+  let last = { start: -1, offset: 0, col: 1 };
   return (offset: number) => {
     let lo = 0;
     let hi = starts.length - 1;
@@ -388,7 +412,13 @@ function locator(text: string) {
       else hi = mid - 1;
     }
     const start = starts[lo] as number;
-    return { line: lo + 1, col: [...text.slice(start, Math.max(start, offset))].length + 1 };
+    const end = Math.max(start, offset);
+    const col =
+      last.start === start && last.offset <= end
+        ? last.col + codePoints(text, last.offset, end)
+        : codePoints(text, start, end) + 1;
+    last = { start, offset: end, col };
+    return { line: lo + 1, col };
   };
 }
 

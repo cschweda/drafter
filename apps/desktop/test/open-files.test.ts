@@ -5,9 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { FileError } from '../src/files';
 import {
   filesFromArgv,
+  grantRefusal,
   heldOpenFiles,
+  NOT_A_SCRIPT,
   OpenInbox,
   type OpenItem,
   type Refusal,
@@ -383,5 +386,14 @@ describe('heldOpenFiles', () => {
       held.listener(event(), bad as never);
     }
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+describe('grantRefusal', () => {
+  test('says why a file the system named was not granted', () => {
+    expect(grantRefusal(new FileError('not-allowed', 'not a script'))).toBe(NOT_A_SCRIPT);
+    expect(grantRefusal(new FileError('too-big'))).toBe('it is too big (over 64 MB)');
+    expect(grantRefusal(new FileError('failed', 'EIO'))).toBe('it can’t be read');
+    expect(grantRefusal(new Error('anything'))).toBe('it can’t be read');
   });
 });
