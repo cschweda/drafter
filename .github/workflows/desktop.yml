@@ -84,6 +84,13 @@ jobs:
         run: |
           pnpm --filter @drafter/desktop build
           pnpm --filter @drafter/desktop build:web
+      # Every trap through the packages, the command line (built: the special files go to the real
+      # `drafter`), the modules folder, and the app's own Open, web and desktop.
+      - name: The trap documents (fixtures/trap/README.md)
+        run: |
+          pnpm --filter "@drafter/cli..." build
+          pnpm exec vitest run --project trap
+          pnpm exec vitest run --project web trap-open.test.ts
       - name: Package (AppImage and .deb)
         run: pnpm --filter @drafter/desktop package
       - name: The package holds what it should (app.asar)

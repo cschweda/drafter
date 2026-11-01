@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Drafter is now tested against a set of deliberately broken and hostile files**, the trap documents: 244 of them, for every format it opens (Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB), and the pipes, links, and folders a desktop meets. Each has the one outcome it must have, opened with its text or refused with a plain message, and the tests check that none of them crashes, hangs, runs anything, fetches anything, or uses too much memory, in the web app, the desktop app, and the command line. See `fixtures/trap/README.md`.
+- **A Security section** near the top of the README, and a fuller one on the Technical details page (Help → Technical details): what Drafter does to keep a file from harming you, in plain words, then in detail. **SECURITY.md** says how to report a security problem privately.
+
+### Fixed
+
+- **`drafter build` and `drafter check` no longer hang on a named pipe**, or read an endless device such as `/dev/zero` until they run out of memory. They take a regular file of at most 5 MB, the app's own limit for a script, and say why when it isn't one; a very large file no longer crashes them.
+- **`drafter build` and `drafter check` are fast again on a script with thousands of problems on one line**, such as many unclosed notes: 50,000 of them took about nine seconds, and now take a moment.
+- **`drafter convert` names the file it really wrote** for a Markdown document from an HTML or EPUB export (`notes.md`, not `notes.fountain`).
+- **A Drafter HTML or EPUB export whose script is over 5 MB** is now said to be too big to open, rather than not being a Drafter export, in the app and in `drafter convert`.
+- **The desktop app says a file over 64 MB is too big** when it is named on the command line or by a second launch, instead of "it can’t be read", and reads a file in a way that can't be made to wait (a file swapped for a pipe just as it is opened).
+- **A UTF-16 file is now said to be "not UTF-8 text"**, with how to fix it, instead of "it holds more than text", in the app and in `drafter convert`.
+
 ## [0.23.1] - 2026-11-01
 
 **Exports Drafter can reopen, and dark by default.** An HTML or EPUB export can carry the full script, so Drafter can open it again exactly as it was; it's off by default. Drafter opens dark again on a first visit.

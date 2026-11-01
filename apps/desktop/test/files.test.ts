@@ -1,6 +1,7 @@
 // The main process's file operations (src/files.ts), on real temp folders: what a writer's
 // script goes through every time it is opened, saved, or exported.
-import { existsSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, truncateSync, writeFileSync } from 'node:fs';
 import {
   chmod,
   lstat,
@@ -24,6 +25,7 @@ import {
   checkPath,
   dialogHook,
   FileError,
+  MAX_READ_BYTES,
   nextDialogAnswer,
   readFileAt,
   realPathOf,
@@ -268,6 +270,34 @@ describe('readFileAt', () => {
 
   test('refuses a folder', async () => {
     expect(await codeOf(readFileAt(dir))).toBe('not-a-file');
+  });
+
+  test.skipIf(!posix)(
+    'refuses a named pipe at once, from the open handle, without waiting',
+    async () => {
+      const pipe = join(dir, 'pipe.fountain');
+      execFileSync('mkfifo', [pipe]);
+      const start = performance.now();
+      expect(await codeOf(readFileAt(pipe))).toBe('not-a-file');
+      expect(performance.now() - start).toBeLessThan(1000);
+    },
+  );
+
+  test.skipIf(!posix)('refuses a device, which never ends', async () => {
+    await symlink('/dev/zero', join(dir, 'zero.fountain'));
+    expect(await codeOf(readFileAt(join(dir, 'zero.fountain')))).toBe('not-a-file');
+  });
+
+  test('reads a file of exactly the cap, and refuses one a byte over as too big', async () => {
+    // Sparse, so neither takes the disk space it says.
+    const at = join(dir, 'at.fountain');
+    await writeFile(at, '');
+    truncateSync(at, MAX_READ_BYTES);
+    expect((await readFileAt(at)).bytes.byteLength).toBe(MAX_READ_BYTES);
+    const over = join(dir, 'over.fountain');
+    await writeFile(over, '');
+    truncateSync(over, MAX_READ_BYTES + 1);
+    expect(await codeOf(readFileAt(over))).toBe('too-big');
   });
 });
 

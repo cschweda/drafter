@@ -3,12 +3,14 @@ import {
   embeddedSource,
   fromFadeIn,
   fromHighland,
+  isUtf16,
   MAX_SCRIPT_BYTES as MAX_BYTES,
   notAScript,
   REOPEN_MAX_BYTES,
   refusalMessage,
   reopenFormatOf,
   SNIFF_BYTES,
+  sourceTooBig,
 } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
@@ -69,6 +71,8 @@ const MESSAGES = {
 /** What a file is: the problem with it, or null when it can be opened. */
 function problemWith(bytes: Uint8Array): string | null {
   if (bytes.byteLength > MAX_BYTES) return MESSAGES.tooBig;
+  // UTF-16 is text, but not UTF-8: said so, not "more than text" for its zero bytes.
+  if (isUtf16(bytes)) return MESSAGES.notUtf8;
   if (bytes.subarray(0, SNIFF_BYTES).includes(0)) return MESSAGES.binary;
   return null;
 }
@@ -185,6 +189,11 @@ async function reopenExport(file: PickedFile): Promise<void> {
   }
   const found = await embeddedSource(file.bytes);
   if (!found) {
+    // A Drafter export, but its script is past Open's own 5 MB.
+    if (sourceTooBig(file.bytes)) {
+      await say(openError, MESSAGES.importTooBig);
+      return;
+    }
     // By its content or its name, it is a web page or an e-book (`reopenFormatOf`).
     const refusal = notAScript(file.name, file.bytes) ?? notAScript(file.name, new Uint8Array());
     if (refusal) await say(openError, refusalMessage(file.name, refusal));

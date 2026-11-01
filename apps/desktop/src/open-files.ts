@@ -12,7 +12,7 @@
 import { type Stats, statSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { hasExtension, OPEN_EXTENSIONS } from './files';
+import { FileError, hasExtension, MAX_READ_BYTES, OPEN_EXTENSIONS } from './files';
 
 /** Why an argument wasn't opened. */
 export interface Refusal {
@@ -30,6 +30,18 @@ export interface OpenRequests {
 
 export const NOT_A_SCRIPT =
   'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html, .htm, or .epub export)';
+
+/**
+ * Why a file the system named couldn't be granted, said after its name: not a script (by where it
+ * leads), too big to read, or anything else, which can't be read.
+ */
+export function grantRefusal(error: unknown): string {
+  if (error instanceof FileError && error.code === 'not-allowed') return NOT_A_SCRIPT;
+  if (error instanceof FileError && error.code === 'too-big') {
+    return `it is too big (over ${MAX_READ_BYTES / (1024 * 1024)} MB)`;
+  }
+  return 'it can’t be read';
+}
 
 /** The status-bar message for a refusal. */
 export const refusalMessage = ({ name, reason }: Refusal) =>

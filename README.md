@@ -63,6 +63,21 @@
 
 Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also builds [metaincognita](https://metaincognita.com): open-source casino simulators that show the math behind the games.
 
+## Security
+
+Drafter is built to open files from anyone without putting you at risk.
+
+- **Drafter never runs anything in a file it opens.** A script is read as text, and your words are shown as words, never as web code.
+- **A strict content security policy.** The web app tells your browser to run only Drafter's own scripts, so nothing slipped into a page or a file can run there.
+- **No accounts, no server keeping your scripts, no cookies, no analytics, no tracking.** Your files stay on your device.
+- **Size limits are checked before anything is unpacked.** A Highland, Fade In, or EPUB file's entries can't point outside their archive, and a Final Draft file never makes Drafter fetch or read anything else: the outside references XML allows are refused.
+- **The desktop app** never loads an opened file into a window. It reads the file's bytes and hands them to the editor, and only files you chose.
+- **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control: treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
+- **The trap documents.** Drafter is tested against [244 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have, opened with its text or refused with a plain message, and the suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test; the app's own Open, run in the test's thread, is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). It runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
+- **Found a security problem?** Please report it privately: see [SECURITY.md](SECURITY.md).
+
+The [Technical details](docs/technical-details.md#security) give the specifics.
+
 ## How Drafter compares
 
 What each app's maker says on its own site, as of October 2026, at list prices (sales come and go). ✓ means it's there; *paid* means a higher plan; ? means the maker doesn't say. Drafter's not-yet-shipped features show the version they're planned for, never a ✓. Corrections are welcome: [open an issue](https://github.com/cschweda/drafter/issues). The same table is on [Why Drafter](https://drafter.dev/docs/why/), with the reasons behind it.
@@ -99,6 +114,7 @@ Sources: each maker's own pricing, features, and help pages (Final Draft, Writer
 
 ## Contents
 
+- [Security](#security)
 - [How Drafter compares](#how-drafter-compares)
 - [The idea](#the-idea)
 - [Principles](#principles)
@@ -496,7 +512,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Seeing the script design](docs/drafter-seeing-the-script-design.md): who is in a scene, the Stats tab and the character grid, Scaffold and its pages, and, next, storylines, the strip's Color by, and pacing.
 - [HTML and EPUB export design](docs/drafter-html-export-design.md): one offline web page with Pages and Reading views, dark by default, and an EPUB e-book from the same Reading view.
 - **[The `.drafter` package format](docs/spec/drafter-package.md)** — an open specification (CC0) for a whole project in one file, so any screenwriting app can read and write it.
-- [Technical details](docs/technical-details.md): how Drafter is put together, in plain words first, with diagrams: the packages, from a keystroke to the page, storage, export, offline use, the desktop app, the clean-room rule, releases, and every dependency. The same page is in the app, under Help.
+- [Technical details](docs/technical-details.md): how Drafter is put together, in plain words first, with diagrams: the packages, from a keystroke to the page, storage, export, offline use, the desktop app, security, the clean-room rule, releases, and every dependency. The same page is in the app, under Help.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.
 

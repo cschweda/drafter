@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE FinalDraft SYSTEM "http://127.0.0.1:9/trap.dtd">
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Action"><Text>A lever waits.</Text></Paragraph>
+  </Content>
+</FinalDraft>

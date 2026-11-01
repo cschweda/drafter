@@ -165,6 +165,15 @@ export function importKindOf(name: string | undefined): ImportKind | null {
   return match ? (match[1]?.toLowerCase() as ImportKind) : null;
 }
 
+/**
+ * Whether the bytes start with UTF-16's byte order mark, either way round (UTF-32's little-endian
+ * one starts the same). Such a file is text, just not UTF-8, so it is said to be that rather than
+ * "more than text", which its zero bytes would otherwise make it.
+ */
+export function isUtf16(bytes: Uint8Array): boolean {
+  return startsWith(bytes, [0xff, 0xfe]) || startsWith(bytes, [0xfe, 0xff]);
+}
+
 /** The most a script's text may be, in bytes: a feature film is well under 1 MB. */
 export const MAX_SCRIPT_BYTES = 5 * 1024 * 1024;
 

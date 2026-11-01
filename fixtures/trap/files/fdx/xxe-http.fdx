@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE FinalDraft [ <!ENTITY remote SYSTEM "http://127.0.0.1:9/trap.xml"> ]>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Action"><Text>&remote;</Text></Paragraph>
+  </Content>
+</FinalDraft>

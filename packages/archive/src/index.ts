@@ -4,6 +4,7 @@ export { fromFadeIn } from './fadein';
 export {
   type ImportKind,
   importKindOf,
+  isUtf16,
   MAX_SCRIPT_BYTES,
   notAScript,
   REOPEN_ADVICE,
@@ -21,6 +22,7 @@ export {
   SOURCE_ID,
   type SourceKind,
   sourceElement,
+  sourceTooBig,
 } from './reopen';
 export { candidates, pickEntry, scriptText } from './text';
 export {
