@@ -74,9 +74,13 @@ const anyEntry: fc.Arbitrary<CutEntry> = fc
       { nil: undefined },
     ),
     ordinal: fc.option(fc.nat(500), { nil: undefined }),
+    lineAfter: fc.option(
+      fc.string({ maxLength: 30 }).map((t) => t.replace(/[\r\n]/g, ' ')),
+      { nil: undefined },
+    ),
     putBack: fc.option(iso, { nil: undefined }),
   })
-  .map(({ text, title, kind, cuts, after, before, within, ordinal, putBack }) => ({
+  .map(({ text, title, kind, cuts, after, before, within, ordinal, lineAfter, putBack }) => ({
     id: hashText(text),
     title,
     text,
@@ -87,6 +91,7 @@ const anyEntry: fc.Arbitrary<CutEntry> = fc
       before,
       ...(within === undefined ? {} : { within }),
       ...(ordinal === undefined ? {} : { ordinal }),
+      ...(lineAfter === undefined ? {} : { lineAfter }),
     },
     ...(putBack === undefined ? {} : { putBack }),
   }));
@@ -177,6 +182,7 @@ describe('the cuts file', () => {
         before: 'INT. CELLAR - NIGHT',
         within: { heading: 'INT. HALL - DAY', ordinal: 3 },
         ordinal: 3,
+        lineAfter: 'Marra waits by the door.',
       },
     };
     const old = scene('Old.', 'Old', '2026-11-02T10:00:00.000Z');
@@ -197,7 +203,10 @@ describe('the cuts file', () => {
       '{"heading":7,"ordinal":1}',
       '"INT. HALL"',
     ]) {
-      const damaged = file.replace('"where":{', `"where":{"within":${bad},"ordinal":-2,`);
+      const damaged = file.replace(
+        '"where":{',
+        `"where":{"within":${bad},"ordinal":-2,"lineAfter":"two\\nlines",`,
+      );
       expect(damaged).not.toBe(file);
       const { entries, skipped } = readCutsFile(damaged);
       expect(skipped).toBe(0);

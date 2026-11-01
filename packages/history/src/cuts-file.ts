@@ -43,6 +43,11 @@ export interface CutWhere {
    * it when several have the same heading.
    */
   ordinal?: number;
+  /**
+   * For a passage, the line just before it in the text it left (one line, trimmed), so Put back
+   * can put it right after that line while it is still there.
+   */
+  lineAfter?: string;
 }
 
 const COMMENT_OPENER = '<!-- drafter-cut ';
@@ -195,6 +200,7 @@ function whereJson(where: CutWhere): CutWhere {
         ? null
         : { heading: where.within.heading, ordinal: where.within.ordinal };
   if (where.ordinal !== undefined) out.ordinal = where.ordinal;
+  if (where.lineAfter !== undefined) out.lineAfter = where.lineAfter;
   return out;
 }
 
@@ -206,7 +212,7 @@ const WITHIN_MAX = 500;
 
 /**
  * A place read strictly: `after` and `before` must read, and `within` (one line, a number from
- * 0) and `ordinal` are dropped when they don't, so the cut itself is never lost over them.
+ * 0), `ordinal` and `lineAfter` (one line) are dropped when they don't, so the cut itself is never lost over them.
  */
 function whereOf(where: Record<string, unknown>): CutWhere | null {
   if (!isStringOrNull(where.after) || !isStringOrNull(where.before)) return null;
@@ -224,6 +230,9 @@ function whereOf(where: Record<string, unknown>): CutWhere | null {
       out.within = { heading, ordinal };
   }
   if (isOrdinal(where.ordinal)) out.ordinal = where.ordinal;
+  const line = where.lineAfter;
+  if (typeof line === 'string' && line.length <= WITHIN_MAX && !/[\r\n]/.test(line))
+    out.lineAfter = line;
   return out;
 }
 
