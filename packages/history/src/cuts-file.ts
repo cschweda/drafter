@@ -6,7 +6,7 @@
 // and an entry whose comment was damaged loses only itself.
 
 import { commentJson } from '@drafter/markdown';
-import type { WorkKind } from './draft-file';
+import { draftName, type WorkKind } from './draft-file';
 import { isCanonicalIso, isoInstant } from './iso';
 
 /** One cut: a piece of text that left the work, and every time it did. */
@@ -79,10 +79,12 @@ function oneLine(s: string): string {
   return s.replace(/[\r\n]+/g, ' ').trim();
 }
 
-/** "Cut while writing Draft 12, 3 Nov 2026 (and Draft 14, 9 Nov 2026) · from between … · id …". */
+/** "Cut while writing Draft 03, 3 Nov 2026 (and Draft 14, 9 Nov 2026) · from between … · id …". */
 function cutLine(entry: CutEntry): string {
   const sorted = [...entry.cuts].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-  const when = sorted.map((c) => (c.draft === null ? day(c.at) : `Draft ${c.draft}, ${day(c.at)}`));
+  const when = sorted.map((c) =>
+    c.draft === null ? day(c.at) : `${draftName(c.draft)}, ${day(c.at)}`,
+  );
   const [first = '', ...rest] = when;
   let line = sorted[0]?.draft != null ? `Cut while writing ${first}` : `Cut ${first}`;
   if (rest.length > 0) line += ` (and ${rest.join('; ')})`;

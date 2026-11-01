@@ -1,3 +1,4 @@
+import { draftName } from '@drafter/history';
 import { snapshotTime } from '../snapshots/history';
 import type { DraftFrom, DraftRow } from './store';
 
@@ -11,12 +12,10 @@ export const shortId = (id: string): string => id.slice(0, SHORT_ID);
 
 /**
  * A draft's number as shown (the maintainer, 2026-11-01): two digits, three only past 99, as its
- * file is named (`draftFileName`): "01", "12", "100".
+ * file is named: "01", "12", "100". `draftName` gives "Draft 01": every place a draft is named goes
+ * through it. Both come from `@drafter/history`, so the cuts file and the file names agree.
  */
-export const padDraft = (n: number): string => String(n).padStart(2, '0');
-
-/** "Draft 01": every place a draft is named goes through this. */
-export const draftName = (n: number): string => `Draft ${padDraft(n)}`;
+export { draftName, padDraft } from '@drafter/history';
 
 /**
  * The draft number a writer typed, or null: "2", "02", "draft 2", "Draft 02" all mean Draft 02.

@@ -103,6 +103,18 @@ describe('the cuts file', () => {
     expect(file).toContain('````fountain\nINT. ATTIC - NIGHT\n\nNell finds the ```box```.\n````');
   });
 
+  test('names each draft as the app does: two digits, three past 99', () => {
+    const a = scene(
+      'INT. ATTIC - NIGHT\n\nDust.\n',
+      'INT. ATTIC - NIGHT',
+      '2026-11-03T10:00:00.000Z',
+      3,
+    );
+    a.cuts.push({ at: '2026-11-09T10:00:00.000Z', draft: 120 });
+    const file = cutsFile('Boca.fountain', [a]);
+    expect(file).toContain('Cut while writing Draft 03, 3 Nov 2026 (and Draft 120, 9 Nov 2026)');
+  });
+
   test('a Markdown cut is shown as it is, its headings one level down', () => {
     const text = '# Part one\n\nThe pier.\n\n###### Deep\n\n```\n# not a heading\n```\n';
     const e: CutEntry = {

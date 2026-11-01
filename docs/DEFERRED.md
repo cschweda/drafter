@@ -252,3 +252,4 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 
 - **Desktop, Linux: `a11y.spec.ts:78` (the modules folder's settings, light)** failed twice in one run on the v0.22.2 tag (Done didn't close Settings within 10 s, just after the "Broken code couldn't start" alert), while the same commit passed on main and on a re-run. Look at whether the alert or a module's start steals the click before Done.
 - **Web: `markdown.spec.ts:197` ("says calmly when a document is nested too deeply to preview")** fails now and then under the whole suite's load (fresh look, from Task 10 on) and passes alone every time. Not yet looked into.
+- Firefox palette: Enter sometimes doesn't run the highlighted command (also with Take snapshot…, older than drafts); drafts.spec retries.

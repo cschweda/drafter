@@ -69,13 +69,26 @@ export function cleanWorkName(work: string): string {
 }
 
 /**
+ * A draft's number as it is written everywhere (the maintainer, 2026-11-01): two digits, three
+ * only past 99: "01", "12", "100". The app's labels, the cuts file and the file names all use it.
+ */
+export function padDraft(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+/** "Draft 01": a draft as it is named. */
+export function draftName(n: number): string {
+  return `Draft ${padDraft(n)}`;
+}
+
+/**
  * The draft's file name: `Boca – Draft 01.fountain`, two digits, three past 99, the work's name
  * cleaned by `cleanWorkName`.
  */
 export function draftFileName(work: string, n: number, kind: WorkKind): string {
   if (!isDraftNumber(n)) throw new RangeError(`Not a draft number: ${n}`);
   const ext = kind === 'fountain' ? 'fountain' : 'md';
-  return `${cleanWorkName(work)} – Draft ${String(n).padStart(2, '0')}.${ext}`;
+  return `${cleanWorkName(work)} – ${draftName(n)}.${ext}`;
 }
 
 /** What is wrong with these facts, or null when nothing is. */

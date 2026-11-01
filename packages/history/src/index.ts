@@ -1,4 +1,5 @@
 export { type Anchor, sceneAnchors } from './anchors';
+export { CUT_KEEP_SHARE, CUT_MIN_WORDS, type FoundCut, findCuts } from './cuts';
 export {
   type CutEntry,
   cutsFile,
@@ -16,7 +17,9 @@ export {
   type DraftFacts,
   draftFile,
   draftFileName,
+  draftName,
   MAX_WORK_NAME,
+  padDraft,
   readDraftFile,
   type WorkKind,
 } from './draft-file';

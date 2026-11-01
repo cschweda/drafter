@@ -8,6 +8,8 @@ import {
   type DraftFacts,
   draftFile,
   draftFileName,
+  draftName,
+  padDraft,
   readDraftFile,
   type WorkKind,
 } from '../src';
@@ -70,6 +72,16 @@ const anyNote = fc.oneof(
   fc.constant('/* drafter */ and <!-- drafter {} -->'),
   fc.string({ maxLength: 20 }).filter((s) => !/[\r\n\u2028\u2029]/.test(s)),
 );
+
+describe('draftName', () => {
+  test('pads to two digits, three past 99', () => {
+    expect(padDraft(1)).toBe('01');
+    expect(padDraft(12)).toBe('12');
+    expect(padDraft(100)).toBe('100');
+    expect(draftName(3)).toBe('Draft 03');
+    expect(draftName(120)).toBe('Draft 120');
+  });
+});
 
 describe('draftFileName', () => {
   test('names drafts with two digits, three past 99', () => {

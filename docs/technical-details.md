@@ -57,7 +57,6 @@ flowchart BT
   fountain["@drafter/fountain"]
   cast --> web
   cm_fountain --> web
-  compare --> web
   history --> web
   render_html --> web
   render_html_file --> web
@@ -71,6 +70,7 @@ flowchart BT
   layout --> outline
   notes --> outline
   layout --> compare
+  compare --> history
   markdown --> history
   outline --> history
   outline --> cast
