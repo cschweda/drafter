@@ -27,11 +27,11 @@ describe('figures', () => {
 
   test('dialogue share uses both sides of a dual pair', () => {
     expect(figures('TOM')).toMatchObject({ speeches: 2, words: 2, speaksIn: 2 });
-    expect(figures('MCCLANE')).toMatchObject({ speeches: 2, words: 4, speaksIn: 2 });
+    expect(figures('MCBRIDE')).toMatchObject({ speeches: 2, words: 4, speaksIn: 2 });
     // The cold open's and the section's speeches count too.
     expect(figures('WILL')).toMatchObject({ speeches: 4, words: 16, speaksIn: 3 });
     expect(figures('HOPE')).toMatchObject({ speeches: 6, words: 29, speaksIn: 5 });
-    expect(figures('MCCLANE')?.share).toBeCloseTo(4 / 64, 10);
+    expect(figures('MCBRIDE')?.share).toBeCloseTo(4 / 64, 10);
     const total = [...cast.figures.values()].reduce((sum, f) => sum + f.share, 0);
     expect(total).toBeCloseTo(1, 10);
   });
@@ -53,12 +53,12 @@ describe('figures', () => {
   test('shares scenes with, most first, ties by speeches', () => {
     expect(figures('WILL')?.sharedWith).toEqual([
       { key: 'HOPE', scenes: 1 },
-      { key: 'MCCLANE', scenes: 1 },
+      { key: 'MCBRIDE', scenes: 1 },
       { key: 'THE DRIVER', scenes: 1 },
     ]);
     expect(figures('TOM')?.sharedWith).toEqual([
       { key: 'ANN', scenes: 2 },
-      { key: 'MCCLANE', scenes: 1 },
+      { key: 'MCBRIDE', scenes: 1 },
     ]);
     expect(figures('ANN')?.sharedWith).toEqual([
       { key: 'TOM', scenes: 2 },
@@ -79,7 +79,7 @@ describe('figures', () => {
       [0, ['HOPE', 'WILL']],
       [1, ['ANN', 'TOM']],
       [2, ['ANN LEE']],
-      [3, ['MCCLANE']],
+      [3, ['MCBRIDE']],
       [4, ['THE DRIVER']],
     ]);
   });

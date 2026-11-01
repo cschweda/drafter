@@ -28,7 +28,7 @@ export const noWords: IsWord = () => false;
 
 /**
  * Fourteen scenes at a harbor. A cold open with a speech; a section with a speech of its own
- * before its first scene; WILL, HOPE, ANN, ANN LEE, TOM, McCLANE (a forced cue), and THE DRIVER
+ * before its first scene; WILL, HOPE, ANN, ANN LEE, TOM, McBRIDE (a forced cue), and THE DRIVER
  * speak; a GUARD is only ever in the action; a dual pair (scene 4) and a lyric (scene 6).
  */
 export const HARBOR = `Title: Low Water
@@ -70,7 +70,7 @@ Tom waits by the bollard with two coffees.
 TOM
 Morning.
 
-@McCLANE ^
+@McBRIDE ^
 Is it?
 
 INT. HARBOR OFFICE - DAY
@@ -107,7 +107,7 @@ INT. HOUSE - KITCHEN - NIGHT
 
 = WILL broods over the plan.
 
-McCLANE's coffee goes cold on the sill. [[TOM should be here too.]]
+McBRIDE's coffee goes cold on the sill. [[TOM should be here too.]]
 
 /* ANN LEE used to come in here. */
 
@@ -125,7 +125,7 @@ EXT. HOUSE - NIGHT
 
 WILL'S truck idles at the curb.
 
-@McCLANE
+@McBRIDE
 Get in.
 
 INT./EXT. TRUCK - MOVING - NIGHT

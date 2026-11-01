@@ -62,7 +62,7 @@ The **cast** is every name that has a cue in the script, in any scene or before 
 A character is **in** a scene when either is true (Phase 2 design §16, Decided):
 
 1. They **speak** in it: a cue of theirs is in the scene.
-2. Their **name appears in its action** as a whole word or words, written either in capitals (`TOM`) or with only the first letter of each word capitalised (`Tom`), or as the cue itself spells it (`McCLANE`). A possessive (`TOM'S`, `Tom’s`) counts.
+2. Their **name appears in its action** as a whole word or words, written either in capitals (`TOM`) or with only the first letter of each word capitalised (`Tom`), or as the cue itself spells it (`McBRIDE`). A possessive (`TOM'S`, `Tom’s`) counts.
 
 The exception: **a name that is also an ordinary word** ("Will", "Hope", "Grace", "The Driver") counts in the action **only in capitals**. A name is an ordinary word when **every word** of it, lowercased, is a dictionary word (§3.3).
 

@@ -274,7 +274,7 @@ The messages name the thing in plain language. For example: `"MARGARET" looks li
   miss('THE END\n');                                                                      // nothing after
   // manual-contd
   fixesTo("MARGARET (CONT'D)\nStill here.\n", 'MARGARET\nStill here.\n');
-  fixesTo('@McCLANE (V.O.) (cont’d)\nGot it.\n', '@McCLANE (V.O.)\nGot it.\n');
+  fixesTo('@McBRIDE (V.O.) (cont’d)\nGot it.\n', '@McBRIDE (V.O.)\nGot it.\n');
   miss('MARGARET (V.O.)\nHi.\n');
   miss("MARGARET\nHe said (CONT'D) twice.\n");                                            // in dialogue, not a cue
   // heading-no-time
@@ -326,7 +326,7 @@ The messages name the thing in plain language. For example: `"MARGARET" looks li
   it.each([['MAX', 'MAC'], ['ANN', 'ANNA'], ['DANNY', 'DANNYS']])('leaves %s and %s alone', …); // too short, or a prefix
   it('leaves two common names alone', () => { /* each cued 3 or more times */ });
   it('leaves names marked as distinct alone', () => { /* meta.distinctNames [["margaret", "margeret"]] */ });
-  it('treats names that differ only in case as one name', () => { /* @McCLANE and MCCLANE */ });
+  it('treats names that differ only in case as one name', () => { /* @McBRIDE and MCBRIDE */ });
 
   // complexity.test.ts
   it('checks 20,000 names in under a second', () => { /* 20,000 distinct random six-letter cues */ });
@@ -473,7 +473,7 @@ export function fountainHighlighting(): Extension;
   it('classes each line by its block kind', () => { /* INT. HALL - DAY → cm-f-scene_heading; MARGARET → cm-f-character; … */ });
   it('marks emphasis runs', () => { /* "**bold** and *it*" → cm-f-b over "bold", cm-f-i over "it" */ });
   it('dims markers and leaves printed text alone', () => {
-    // "!SILENCE." → the "!" ; "@McCLANE" → the "@" ; "INT. HALL - DAY #12#" → "#12#" ; "**bold**" → each "**"
+    // "!SILENCE." → the "!" ; "@McBRIDE" → the "@" ; "INT. HALL - DAY #12#" → "#12#" ; "**bold**" → each "**"
   });
   it('classes notes and boneyard', () => { /* "A [[n]] B" → cm-f-note over "[[n]]" */ });
   it('decorates only the given range', () => { /* 5,000-line script: a 50-line range gets fewer than 120 line decorations */ });

@@ -301,3 +301,17 @@ Documentation only, in one commit:
 - **The maintainer's outline** was checked by markers, not against its text, which this audit deliberately never opened. A line of it that matches none of the markers wouldn't be found.
 - **Point in time.** This covers the commits above. The published npm tarballs, the signed desktop installers, and the GitHub Releases' files were not unpacked; the shipped-assets list comes from the source, the build, and `check-asar.mjs`.
 - **Not legal advice.** Licence classifications rely on the packages' declared licence fields and the files read here.
+
+## Follow-up, the same day
+
+Fixed after the audit, in the commit that follows it on this branch:
+
+- **Must fix 1, the catchphrase:** gone. The test now uses an original line, and the film character's name used across tests, the cheat sheet, and the forced-character fixture is now an original one, `@McBRIDE` (same length, so no test's positions moved).
+- **Must fix 2, Final Draft settings names:** sourced. They come from the structure of Final Draft's own published sample scripts, supplied by the maintainer for structure only and never committed. The source is now stated in `packages/fdx/src/import.ts` and in `docs/DECISIONS.md` ("Clean room").
+- **Recommended, the film title:** "Big Fish" in `apps/web/test/text.test.ts` is now an original title, "Small Hours".
+- **Recommended, the hash:** `packages/history/src/hash.ts` now names the public-domain techniques it follows (the MurmurHash3 finaliser and the cyrb53 shape).
+- **Recommended, EPUB:** the DECISIONS entry now cites the W3C EPUB 3.3 Recommendation.
+- **Recommended, Classic Mode:** `docs/ROADMAP.md` repeats the commitment to build it from the shared convention, never by copying an app's screens.
+
+Still open: third-party notices for the web bundle, a LICENSE in each npm package, and keeping the plans' constraints files.
+

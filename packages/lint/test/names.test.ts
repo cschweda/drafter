@@ -432,8 +432,8 @@ describe('similar-names', () => {
 
   describe('names are compared in upper case', () => {
     it('treats names that differ only in case as one name', () => {
-      expect(found(`${cued('@McCLANE')}${cued('MCCLANE')}`)).toEqual([]);
-      expect(found(`${cued('MCCLANE')}${cued('@McCLANE')}`)).toEqual([]);
+      expect(found(`${cued('@McBRIDE')}${cued('MCBRIDE')}`)).toEqual([]);
+      expect(found(`${cued('MCBRIDE')}${cued('@McBRIDE')}`)).toEqual([]);
       expect(found(`${cued('@Margaret', 2)}${cued('MARGARET')}${cued('@margaret')}`)).toEqual([]);
     });
 
@@ -497,14 +497,14 @@ describe('similar-names', () => {
     });
 
     it('points at a forced cue from its marker', () => {
-      const source = `${cued('@McCLANE', 5)}${cued('@McLANE')}`;
-      const at = source.indexOf('@McLANE');
+      const source = `${cued('@McBRIDE', 5)}${cued('@McBIDE')}`;
+      const at = source.indexOf('@McBIDE');
       expect(found(source)).toEqual([
         {
           ruleId: 'similar-names',
           severity: 'info',
-          span: { from: at, to: at + '@McLANE'.length },
-          message: '"MCLANE" is one letter from "MCCLANE", which has 5 cues. A typo?',
+          span: { from: at, to: at + '@McBIDE'.length },
+          message: '"MCBIDE" is one letter from "MCBRIDE", which has 5 cues. A typo?',
         },
       ]);
     });

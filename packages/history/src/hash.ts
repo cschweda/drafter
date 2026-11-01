@@ -3,7 +3,9 @@
 // each is finished by the usual xor-shift and multiply rounds, so every input bit reaches every
 // output bit. A scene version is named by 53 bits of the two (all a double holds exactly); a
 // shingle by one lane's 32. Not for anything secret: a collision only makes two versions read
-// as one.
+// as one. The finishing rounds follow the public-domain MurmurHash3 finaliser (fmix32), and the
+// two-lane, 53-bit shape follows the public-domain cyrb53 idea; both are well-known techniques,
+// written here from their description, not copied.
 
 const SEED_A = 0x2f6b_7a11;
 const SEED_B = 0x5c3d_91e7;

@@ -19,7 +19,7 @@ import { ReferenceTally } from './timing-reference';
 /** Speeches with lyrics, and quiet blocks inside and after them, the case `spokenBy` must get right. */
 const lyricWord = fc.constantFrom('la', 'happy', 'birthday', 'oh');
 const lyric = fc.array(lyricWord, { minLength: 1, maxLength: 4 }).map((w) => `~${w.join(' ')}`);
-const speaker = fc.constantFrom('ANN', 'BEN', '@McCLANE');
+const speaker = fc.constantFrom('ANN', 'BEN', '@McBRIDE');
 const quiet = fc.constantFrom(
   '= A synopsis.',
   '\n[[A note.]]',

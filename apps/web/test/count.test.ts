@@ -129,8 +129,8 @@ describe('countScript', () => {
       '',
       `${'x'.repeat(61)}`,
       '',
-      '@McCLANE',
-      'Yippee ki-yay.',
+      '@McBRIDE',
+      'Mind out.',
       '',
     ].join('\n');
     const doc = parse(source);

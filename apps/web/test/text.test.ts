@@ -30,7 +30,7 @@ describe('decodeFile and encodeFile', () => {
   });
 
   test('round-trips a CRLF file through decode and encode', () => {
-    const original = '﻿Title: Big Fish\r\n\r\nINT. HALL - DAY\r\n\r\nHello.\r\n';
+    const original = '﻿Title: Small Hours\r\n\r\nINT. HALL - DAY\r\n\r\nHello.\r\n';
     const { text, lineBreak, bom } = decodeFile(bytes(original));
     expect(text).not.toContain('\r');
     expect(encodeFile(text, lineBreak, bom)).toBe(original);
@@ -49,16 +49,16 @@ describe('decodeFile and encodeFile', () => {
 
 describe('titleOf', () => {
   test('reads the title from the title page', () => {
-    expect(titleOf(parse('Title: Big Fish\nAuthor: A. Writer\n\nINT. HALL - DAY\n'))).toBe(
-      'Big Fish',
+    expect(titleOf(parse('Title: Small Hours\nAuthor: A. Writer\n\nINT. HALL - DAY\n'))).toBe(
+      'Small Hours',
     );
-    expect(titleOf(parse('title: Big Fish\n\nINT. HALL - DAY\n'))).toBe('Big Fish');
+    expect(titleOf(parse('title: Small Hours\n\nINT. HALL - DAY\n'))).toBe('Small Hours');
   });
 
   test('joins a multi-line title into one line of plain text', () => {
-    expect(titleOf(parse('Title:\n    _**BIG FISH**_\n    The Sequel\nAuthor: A\n\nHi.\n'))).toBe(
-      'BIG FISH The Sequel',
-    );
+    expect(
+      titleOf(parse('Title:\n    _**SMALL HOURS**_\n    The Sequel\nAuthor: A\n\nHi.\n')),
+    ).toBe('SMALL HOURS The Sequel');
   });
 
   test('falls back when there is no title page, no Title, or an empty one', () => {
@@ -70,7 +70,7 @@ describe('titleOf', () => {
 
 describe('fileNameFor', () => {
   test('makes a safe file name', () => {
-    expect(fileNameFor('Big Fish', '.fountain')).toBe('Big Fish.fountain');
+    expect(fileNameFor('Small Hours', '.fountain')).toBe('Small Hours.fountain');
     expect(fileNameFor('A/B\\C:D*E?F"G<H>I|J', '.pdf')).toBe('ABCDEFGHIJ.pdf');
     expect(fileNameFor('  spaced   out  ', '.txt')).toBe('spaced out.txt');
     expect(fileNameFor('x'.repeat(300), '.fountain')).toBe(`${'x'.repeat(120)}.fountain`);
