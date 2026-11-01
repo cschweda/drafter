@@ -145,6 +145,28 @@ describe('scaling', () => {
     SCALING_TIMEOUT,
   );
 
+  test(
+    'deletedScenes stays linear on nearly identical scenes',
+    () => {
+      const text = (n: number, end: string) =>
+        `${Array.from({ length: n }, (_, i) => `INT. ROOM - DAY\n\nThe same long line of words, the same as the others are, scene ${i}${end}`).join('\n\n')}\n`;
+      const same = (n: number) => {
+        const past = scenePrints(text(n, '.'));
+        const prints = new Map(past.prints.map((p) => [p.hash, p]));
+        const snapshots: PastSnapshot[] = [{ id: 's0', at: 1, slots: past.slots }];
+        return { snapshots, prints, current: scenePrints(text(n, ', now.')).prints };
+      };
+      const result = scaling(
+        same,
+        ({ snapshots, prints, current }) => deletedScenes(snapshots, prints, current),
+        1000,
+        3,
+      );
+      expect(result.growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
+
   test('matching 150 scenes now against cached prints of 300 snapshots finishes', () => {
     const { snapshots, prints, current } = history(300);
     expect(new Set(current.map((p) => p.headingKey)).size).toBe(HEADINGS);

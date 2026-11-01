@@ -310,9 +310,28 @@ describe('findCuts in a Markdown document', () => {
     const before = keeper(['# A', `${start} ${middle} ${end}`]);
     const after = keeper(['# A', `${start} ${end}`]);
     const cuts = findCuts(before, after, 'markdown');
-    expect(cuts).toHaveLength(1);
-    expect(before).toContain(cuts[0]?.text);
-    expect(cuts[0]?.text).toContain(middle.slice(0, -1));
+    expect(cuts.map((c) => c.text)).toEqual([middle]);
+  });
+
+  test('a sentence under 50 words deleted from the end of the last paragraph is no cut', () => {
+    const kept = prose(40, 30);
+    const gone = prose(46, 31);
+    const before = keeper(['# A', KEEPER.intro, `${kept} ${gone}`]);
+    expect(findCuts(before, keeper(['# A', KEEPER.intro, kept]), 'markdown')).toEqual([]);
+    // Just before a heading, too.
+    const mid = keeper(['# A', `${kept} ${gone}`, KEEPER.spring]);
+    expect(findCuts(mid, keeper(['# A', kept, KEEPER.spring]), 'markdown')).toEqual([]);
+  });
+
+  test('60 words deleted from the end of a 150-word last paragraph are exactly those 60', () => {
+    const kept = prose(90, 32);
+    const gone = prose(60, 33);
+    const before = keeper(['# A', KEEPER.intro, `${kept} ${gone}`]);
+    const cuts = findCuts(before, keeper(['# A', KEEPER.intro, kept]), 'markdown');
+    expect(cuts.map((c) => c.text)).toEqual([gone]);
+    const mid = keeper(['# A', `${kept} ${gone}`, KEEPER.spring]);
+    const there = findCuts(mid, keeper(['# A', kept, KEEPER.spring]), 'markdown');
+    expect(there.map((c) => c.text)).toEqual([gone]);
   });
 
   test('a paragraph moved elsewhere is not a cut', () => {
@@ -348,7 +367,8 @@ describe('findCuts in a Markdown document', () => {
     const crlf = (s: string) => s.replace(/\n/g, '\r\n');
     const cuts = findCuts(crlf(YEAR), crlf(after), 'markdown');
     expect(cuts.map((c) => c.title)).toEqual(['Summer']);
-    expect(cuts[0]?.text).toBe(crlf(KEEPER.summer));
+    // Kept with LF line breaks, so the cut has one ID wherever it was made.
+    expect(cuts[0]?.text).toBe(KEEPER.summer);
   });
 
   test('a section emptied to its heading loses its words as a cut; a bare heading cut is not one', () => {
@@ -356,6 +376,33 @@ describe('findCuts in a Markdown document', () => {
     expect(findCuts(YEAR, emptied, 'markdown').map((c) => c.text)).toEqual([KEEPER.summer]);
     const bare = keeper(['# A', '## Later', KEEPER.spring]);
     expect(findCuts(bare, keeper(['# A', KEEPER.spring]), 'markdown')).toEqual([]);
+  });
+
+  describe('a short section rewritten under its own heading is never lost', () => {
+    const body = prose(40, 40);
+    const notes = `## Notes\n\n${body}`;
+    const before = keeper(['# A', KEEPER.spring, notes, KEEPER.summer]);
+    const now = (newBody: string) =>
+      findCuts(
+        before,
+        keeper(['# A', KEEPER.spring, `## Notes\n\n${newBody}`, KEEPER.summer]),
+        'markdown',
+      );
+    test('replaced by a few words', () => {
+      expect(now('TBD more later.')).toEqual([
+        { title: 'Notes', text: notes, where: { after: 'Spring', before: 'Summer' } },
+      ]);
+    });
+    test('replaced by a different paragraph of the same length', () => {
+      expect(now(prose(40, 41)).map((c) => c.text)).toEqual([notes]);
+    });
+    test('trimmed to 10 words', () => {
+      expect(now(`${body.split(' ').slice(0, 10).join(' ')}.`).map((c) => c.text)).toEqual([notes]);
+    });
+    test('but grown, or lightly edited, it is no cut', () => {
+      expect(now(`${body} ${prose(200, 42)}`)).toEqual([]);
+      expect(now(body.replace(/^\S+/, 'And'))).toEqual([]);
+    });
   });
 
   test('nothing is reported when nothing left', () => {

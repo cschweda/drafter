@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { findCuts, type WorkKind } from '../src';
+import { cutText, findCuts, type WorkKind } from '../src';
 import { anyScript } from './arbitraries';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
@@ -63,13 +63,18 @@ const scriptPair = fc
   .tuple(anyScript, anyScript, fc.array(fc.nat(), { maxLength: 6 }))
   .map(([a, b, edits]) => {
     const items = a.split(/\r?\n\r?\n/);
+    // A closing metadata block stays last, as Drafter keeps it: it names the template.
+    const meta = items[items.length - 1]?.startsWith('/* drafter') ? items.pop() : undefined;
     for (const e of edits) {
       if (items.length <= 1) break;
       const [taken] = items.splice(1 + (e % (items.length - 1)), 1);
       if (e % 3 === 0 && taken !== undefined) items.splice(1 + ((e * 7) % items.length), 0, taken);
     }
-    const extra = b.split(/\r?\n\r?\n/).slice(1, 3);
-    return [a, [...items, ...extra].join('\n\n')] as const;
+    const extra = b
+      .split(/\r?\n\r?\n/)
+      .slice(1, 3)
+      .filter((p) => !p.startsWith('/* drafter'));
+    return [a, [...items, ...extra, ...(meta ? [meta] : [])].join('\n\n')] as const;
   });
 
 /**
@@ -112,7 +117,7 @@ describe('findCuts properties', () => {
     fc.assert(
       fc.property(scriptPair, ([before, after]) => {
         for (const cut of findCuts(before, after, 'fountain')) {
-          expect(before).toContain(cut.text);
+          expect(cutText(before)).toContain(cut.text);
           expect(cut.title).not.toBe('');
         }
       }),
@@ -125,10 +130,73 @@ describe('findCuts properties', () => {
         const cuts = findCuts(before, after, 'markdown');
         expect(new Set(cuts.map((c) => c.text)).size).toBe(cuts.length);
         for (const cut of cuts) {
-          expect(before).toContain(cut.text);
+          expect(cutText(before)).toContain(cut.text);
           expect(cut.text.trim()).toBe(cut.text);
           expect(cut.text).not.toBe('');
         }
+      }),
+    );
+  });
+
+  test('a cut’s text is never in after unchanged', () => {
+    const check = (before: string, after: string, kind: WorkKind) => {
+      for (const cut of findCuts(before, after, kind)) {
+        expect(cutText(after).includes(cut.text), cut.text).toBe(false);
+      }
+    };
+    fc.assert(fc.property(markdownPair, ([before, after]) => check(before, after, 'markdown')));
+    fc.assert(fc.property(scriptPair, ([before, after]) => check(before, after, 'fountain')));
+  });
+
+  test('removing a section of words found nowhere else always gives a cut that holds it', () => {
+    const unique = fc
+      .tuple(fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 70 }), fc.nat())
+      .map(([level, n, seed]) => {
+        const body = `${words(n, seed + 1)}.`;
+        return { section: `${'#'.repeat(level)} ${words(2, seed + 2)}\n\n${body}`, body };
+      });
+    fc.assert(
+      fc.property(blocks, unique, fc.nat(), fc.boolean(), (parts, { section, body }, at, crlf) => {
+        // Where a section ends: before a heading (levels 1 to 3), or at the end.
+        const places = parts
+          .map((p, i) => (/^#{1,3}( |$)/.test(p) ? i : -1))
+          .filter((i) => i >= 0)
+          .concat(parts.length);
+        const k = places[at % places.length] as number;
+        const after = finish(parts, crlf, true);
+        const before = finish([...parts.slice(0, k), section, ...parts.slice(k)], crlf, true);
+        const cuts = findCuts(before, after, 'markdown');
+        expect(cuts.some((c) => c.text.includes(body))).toBe(true);
+      }),
+    );
+  });
+
+  test('moving paragraphs or sections never gives a cut (markdown)', () => {
+    fc.assert(
+      fc.property(
+        blocks,
+        fc.array(fc.nat(), { minLength: 1, maxLength: 4 }),
+        fc.boolean(),
+        (parts, moves, crlf) => {
+          const later = [...parts];
+          for (const m of moves) {
+            if (later.length < 2) break;
+            const [taken] = later.splice(m % later.length, 1);
+            later.splice((m * 7 + 3) % (later.length + 1), 0, taken as string);
+          }
+          expect(
+            findCuts(finish(parts, crlf, true), finish(later, crlf, true), 'markdown'),
+          ).toEqual([]);
+        },
+      ),
+    );
+  });
+
+  test('moving scenes never gives a cut (fountain)', () => {
+    const scenes = Array.from({ length: 8 }, (_, i) => `INT. ROOM ${i} - DAY\n\n${words(30, i)}.`);
+    fc.assert(
+      fc.property(fc.shuffledSubarray(scenes, { minLength: 8, maxLength: 8 }), (order) => {
+        expect(findCuts(scenes.join('\n\n'), order.join('\n\n'), 'fountain')).toEqual([]);
       }),
     );
   });
@@ -287,6 +355,28 @@ describe('findCuts on long texts', () => {
       };
       const { growth } = scaling(notes, ([a, b]) => findCuts(a, b, 'markdown'), 400);
       expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  test(
+    'nearly identical sections and scenes stay linear',
+    () => {
+      const body = words(40, 7);
+      const make =
+        (heading: string) =>
+        (n: number): [string, string] => {
+          const all = Array.from({ length: n }, (_, i) => `${heading}\n\n${body} ${i}.`);
+          const later = all.filter((_, i) => i % 3 !== 1).map((s) => `${s} more`);
+          return [all.join('\n\n'), later.join('\n\n')];
+        };
+      for (const [heading, kind] of [
+        ['## Notes', 'markdown'],
+        ['INT. ROOM - DAY', 'fountain'],
+      ] as const) {
+        const { growth } = scaling(make(heading), ([a, b]) => findCuts(a, b, kind), 1000, 3);
+        expect(growth, kind).toBeLessThan(MAX_GROWTH);
+      }
     },
     SCALING_TIMEOUT,
   );

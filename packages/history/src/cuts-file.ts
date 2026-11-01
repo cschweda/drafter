@@ -294,11 +294,20 @@ async function sha256(text: string): Promise<string> {
 }
 
 /**
+ * A cut's text as it is kept and hashed: line breaks as `\n`, as a draft's ID is, so the same cut
+ * made on Windows and on a Mac is one entry with one ID (`findCuts` gives its texts this way).
+ */
+export function cutText(text: string): string {
+  return text.replace(/\r\n?/g, '\n');
+}
+
+/**
  * The cuts whose text gives their ID (its SHA-256), and how many didn't. Run it on every list
  * read from outside Drafter's own storage (a cuts file beside the work, from another computer, or
  * edited by hand) before `mergeCuts`: a merge keeps one text per ID and can't hash, so an entry
  * with someone else's text under a good cut's ID would otherwise take that cut's place. Async,
- * because SHA-256 in the browser is (Web Crypto).
+ * because SHA-256 in the browser is (Web Crypto). The ID is of the text with `\n` line breaks
+ * (`cutText`), and the entries kept come back with their text that way.
  */
 export async function verifyCuts(
   entries: readonly CutEntry[],
@@ -306,7 +315,8 @@ export async function verifyCuts(
   const kept: CutEntry[] = [];
   let skipped = 0;
   for (const entry of entries) {
-    if (ID.test(entry.id) && (await sha256(entry.text)) === entry.id) kept.push(entry);
+    const text = cutText(entry.text);
+    if (ID.test(entry.id) && (await sha256(text)) === entry.id) kept.push({ ...entry, text });
     else skipped++;
   }
   return { entries: kept, skipped };

@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import {
   type CutEntry,
   cutsFile,
+  cutText,
   MAX_CUTS_PER_ENTRY,
   MAX_VERSIONS_PER_ID,
   mergeCuts,
@@ -12,7 +13,9 @@ import {
 } from '../src';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
-const hashText = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
+const sha = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
+/** A cut's ID: the hash of its text with `\n` line breaks. */
+const hashText = (text: string) => sha(cutText(text));
 
 const scene = (text: string, title: string, at: string, draft: number | null = 12): CutEntry => ({
   id: hashText(text),
@@ -442,6 +445,19 @@ describe('review fixes', () => {
     }
   });
 
+  test('a cut’s ID is of its text with LF line breaks, on Windows as on a Mac', async () => {
+    const lf = scene(
+      'INT. ATTIC - NIGHT\n\nDust.',
+      'INT. ATTIC - NIGHT',
+      '2026-11-03T10:00:00.000Z',
+    );
+    const crlf = { ...lf, text: lf.text.replace(/\n/g, '\r\n') };
+    expect(lf.id).toBe(sha('INT. ATTIC - NIGHT\n\nDust.'));
+    expect(await verifyCuts([crlf, lf])).toEqual({ entries: [lf, lf], skipped: 0 });
+    const raw = { ...crlf, id: sha(crlf.text) };
+    expect(await verifyCuts([raw])).toEqual({ entries: [], skipped: 1 });
+  });
+
   test('verifyCuts keeps only cuts whose text gives their id', async () => {
     const good = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z');
     const forged = { ...good, text: 'Something else.', title: 'Forged' };
@@ -452,7 +468,7 @@ describe('review fixes', () => {
   test('a forged text under a good id never replaces the good text', async () => {
     await fc.assert(
       fc.asyncProperty(anyEntry, anyText, fc.boolean(), async (good, other, first) => {
-        fc.pre(other !== good.text);
+        fc.pre(cutText(other) !== cutText(good.text));
         // The forgery claims the good cut's id, and to be cut earlier, so it would win unverified.
         const forged: CutEntry = {
           ...good,
@@ -466,7 +482,7 @@ describe('review fixes', () => {
           ? mergeCuts(mine.entries, theirs.entries, { ...OPTS, kind: good.kind })
           : mergeCuts(theirs.entries, mine.entries, { ...OPTS, kind: good.kind });
         expect(merged).toHaveLength(1);
-        expect(merged[0]?.text).toBe(good.text);
+        expect(merged[0]?.text).toBe(cutText(good.text));
       }),
       { numRuns: 100 },
     );

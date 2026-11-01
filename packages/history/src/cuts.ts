@@ -1,6 +1,7 @@
 import { diffLines, MAX_TOKENS, markdownAnchors, splitLines } from '@drafter/compare';
 import { wordsIn } from '@drafter/markdown';
-import { Candidates } from './candidates';
+import { CANDIDATES_MAX, Candidates } from './candidates';
+import { cutText } from './cuts-file';
 import type { WorkKind } from './draft-file';
 import { hash32, hash53 } from './hash';
 import { coveredBy } from './match';
@@ -48,11 +49,12 @@ function sceneCuts(before: string, after: string): FoundCut[] {
   const candidates = new Candidates<ScenePrint>();
   for (const p of now.prints) candidates.add(p, p);
   const coverOf = new Map<string, ScenePrint | null>();
-  const cover = (print: ScenePrint): ScenePrint | null => {
+  const scale = now.prints.length / Math.max(1, was.slots.length);
+  const cover = (print: ScenePrint, near: number): ScenePrint | null => {
     let found = coverOf.get(print.hash);
     if (found === undefined) {
       found = null;
-      for (const p of candidates.of(print)) {
+      for (const p of candidates.of(print, near)) {
         if (coveredBy(print, p)) {
           found = p;
           break;
@@ -62,14 +64,19 @@ function sceneCuts(before: string, after: string): FoundCut[] {
     }
     return found;
   };
-  const covers = was.slots.map((slot) => cover(wasPrints.get(slot.hash) as ScenePrint));
+  const covers = was.slots.map((slot, i) =>
+    cover(wasPrints.get(slot.hash) as ScenePrint, i * scale),
+  );
   const names = covers.map((p) => p?.heading ?? null);
   const { prev, next } = neighbours(names);
   const out: FoundCut[] = [];
   const seen = new Set<string>();
+  const nowLines = new Set(splitLines(after).lines.filter((line) => HAS_WORD.test(line)));
   was.slots.forEach((slot, i) => {
     if (covers[i] !== null) return;
-    const text = before.slice(slot.from, slot.to);
+    const text = cutText(before.slice(slot.from, slot.to));
+    // Every line of it is still in the text, elsewhere: nothing of it left.
+    if (splitLines(text).lines.every((line) => !HAS_WORD.test(line) || nowLines.has(line))) return;
     if (seen.has(text)) return;
     seen.add(text);
     const heading = (wasPrints.get(slot.hash) as ScenePrint).heading.trim();
@@ -214,7 +221,7 @@ function shared(a: Unit, b: Unit): number {
  * alike at 0.75 or more, or, for a body of 8 words or more, three quarters of `was`'s words in it
  * (merged into another, or the half of a split moved under a new heading).
  */
-function holds(was: Unit, now: Unit): number | null {
+function holds(was: Unit, now: Unit): Held | null {
   const a = was.words.length;
   const b = now.words.length;
   if (b === 0) return null;
@@ -230,11 +237,24 @@ function holds(was: Unit, now: Unit): number | null {
   const n = shared(was, now);
   const dice = (2 * n) / (a + b);
   const contain = n / a;
-  if (same && (dice >= 0.5 || contain >= 0.5)) return 2 + dice;
-  if (same && b >= 8 && pairShare(now, was) >= 0.75) return 1 + dice;
-  if (dice >= 0.75 || (a >= 8 && contain >= 0.75)) return dice;
+  if (same && (dice >= 0.5 || contain >= 0.5)) return { score: 2 + dice, sure: dice >= 0.5 };
+  if (same && b >= 8 && pairShare(now, was) >= 0.75) return { score: 1 + dice, sure: false };
+  if (dice >= 0.75 || (a >= 8 && contain >= 0.75)) return { score: dice, sure: dice >= 0.5 };
   return null;
 }
+
+/**
+ * How a unit is held: `score` ranks the units that hold it; `sure` is false when the rule that
+ * matched lets most of its words go (it grew, was cut down, or was merged, by words alone, or is
+ * the only unit under its heading). Such a unit is checked again once its passages are known.
+ */
+interface Held {
+  score: number;
+  sure: boolean;
+}
+
+/** A score past which no other unit is looked at: under its heading, and alike at 0.9 or more. */
+const SURE_SCORE = 2.9;
 
 function pairsOf(unit: Unit): number[] {
   unit.pairs ??= grams(
@@ -290,17 +310,25 @@ function pairsKept(text: string, pairs: ReadonlySet<number>): number {
   return n / mine.length;
 }
 
-/** The parts of a text either side of what changed: the common start and end, cut at a space. */
+/** Whether `at` falls inside a word of `s`: between two characters that aren't spaces. */
+function midWord(s: string, at: number): boolean {
+  return (
+    at > 0 && at < s.length && !/\s/u.test(s[at - 1] as string) && !/\s/u.test(s[at] as string)
+  );
+}
+
+/**
+ * The parts of two texts either side of what changed, without the start and end they share:
+ * cut back to a word's edge, so a word changed at its start or end isn't split.
+ */
 function trimCommon(a: string, b: string): { a: [number, number]; b: [number, number] } {
   const max = Math.min(a.length, b.length);
   let p = 0;
   while (p < max && a.charCodeAt(p) === b.charCodeAt(p)) p++;
-  // Back to a space, so a word changed at its end isn't split.
-  if (p < a.length || p < b.length) while (p > 0 && !/\s/u.test(a[p - 1] as string)) p--;
+  while (p > 0 && (midWord(a, p) || midWord(b, p))) p--;
   let s = 0;
   while (s < max - p && a.charCodeAt(a.length - 1 - s) === b.charCodeAt(b.length - 1 - s)) s++;
-  if (s < a.length - p || s < b.length - p)
-    while (s > 0 && !/\s/u.test(a[a.length - s] as string)) s--;
+  while (s > 0 && (midWord(a, a.length - s) || midWord(b, b.length - s))) s--;
   return { a: [p, a.length - s], b: [p, b.length - s] };
 }
 
@@ -325,6 +353,7 @@ function markdownCuts(before: string, after: string): FoundCut[] {
   const was = parseMarkdown(before);
   const now = parseMarkdown(after);
   const nowUnits = now.units;
+  const indexOf = new Map(nowUnits.map((u, i) => [u, i]));
   const byHash = new Map<string, Unit>();
   const candidates = new Candidates<Unit>();
   const byKey = new Map<string, number[]>();
@@ -339,21 +368,21 @@ function markdownCuts(before: string, after: string): FoundCut[] {
   const wasKeys = new Map<string, number>();
   for (const u of was.units) wasKeys.set(u.key, (wasKeys.get(u.key) ?? 0) + 1);
   const scale = nowUnits.length / Math.max(1, was.units.length);
-  const matchOf = (u: Unit, index: number): Unit | null => {
+  const matchOf = (u: Unit, index: number): { unit: Unit; sure: boolean } | null => {
     const exact = byHash.get(u.print.hash);
-    if (exact) return exact;
+    if (exact) return { unit: exact, sure: true };
     if (u.words.length === 0) {
       // Nothing to lose: there while its heading is.
       const same = byKey.get(u.key);
-      return same ? (nowUnits[same[0] as number] as Unit) : null;
+      return same ? { unit: nowUnits[same[0] as number] as Unit, sure: true } : null;
     }
-    const look = new Set(candidates.of(u.print));
+    const target = index * scale;
+    const look = new Set(candidates.of(u.print, target));
     const same = byKey.get(u.key) ?? [];
     if (same.length > 0) {
       // The nearest under the same heading, by where it would be now.
       let lo = 0;
       let hi = same.length;
-      const target = index * scale;
       while (lo < hi) {
         const mid = (lo + hi) >> 1;
         if ((same[mid] as number) < target) lo = mid + 1;
@@ -368,24 +397,34 @@ function markdownCuts(before: string, after: string): FoundCut[] {
         look.add(nowUnits[same[takeRight ? right++ : left--] as number] as Unit);
       }
     }
-    let best: Unit | null = null;
-    let bestScore = -1;
-    for (const c of look) {
-      const score = holds(u, c);
-      if (score !== null && score > bestScore) {
-        best = c;
-        bestScore = score;
+    // Nearest first, at most CANDIDATES_MAX, and none after one that is surely it.
+    const order = [...look].sort(
+      (a, b) =>
+        Math.abs((indexOf.get(a) as number) - target) -
+        Math.abs((indexOf.get(b) as number) - target),
+    );
+    let best: { unit: Unit; held: Held } | null = null;
+    for (const c of order.slice(0, CANDIDATES_MAX)) {
+      const held = holds(u, c);
+      if (held !== null && (best === null || held.score > best.held.score)) {
+        best = { unit: c, held };
+        if (held.score >= SURE_SCORE) break;
       }
     }
-    if (best) return best;
+    if (best) return { unit: best.unit, sure: best.held.sure };
     // A heading only one unit has on each side is that unit, however much of it was rewritten,
     // while it has words: the passages that left it are found apart.
     const only = same.length === 1 ? (nowUnits[same[0] as number] as Unit) : null;
-    return only && only.words.length > 0 && wasKeys.get(u.key) === 1 ? only : null;
+    return only && only.words.length > 0 && wasKeys.get(u.key) === 1
+      ? { unit: only, sure: false }
+      : null;
   };
 
   const units = was.units;
-  const matches = units.map((u, i) => (u.level === 0 ? (nowUnits[0] as Unit) : matchOf(u, i)));
+  const held = units.map((u, i) =>
+    u.level === 0 ? { unit: nowUnits[0] as Unit, sure: true } : matchOf(u, i),
+  );
+  const matches = held.map((h) => h?.unit ?? null);
   /** A unit's name now, for its neighbours: the heading of the unit that holds it. */
   const names = units.map((u, i) => {
     const m = matches[i];
@@ -412,6 +451,29 @@ function markdownCuts(before: string, after: string): FoundCut[] {
 
   const found: { at: number; cut: FoundCut }[] = [];
   const inCut = new Array<boolean>(units.length).fill(false);
+  const nowLines = new Set(now.lines.filter((line) => HAS_WORD.test(line)));
+  /** Whether every line with words of `was`'s lines `[first, end)` is a line of `after` too. */
+  const linesThere = (first: number, end: number): boolean => {
+    for (let k = first; k < end; k++) {
+      const line = was.lines[k] as string;
+      if (HAS_WORD.test(line) && !nowLines.has(line)) return false;
+    }
+    return true;
+  };
+  /** A unit (and those under it to `last`) as a cut, unless all its words moved elsewhere. */
+  const sectionCut = (i: number, last: number) => {
+    const u = units[i] as Unit;
+    if (linesThere(u.first + 1, (units[last] as Unit).end)) return;
+    const text = before.slice(u.from, (units[last] as Unit).to);
+    found.push({
+      at: u.from,
+      cut: {
+        title: u.title.trim() || firstWords(text),
+        text,
+        where: { after: prev[i] ?? null, before: next[last] ?? null },
+      },
+    });
+  };
   for (let i = 1; i < units.length; i++) {
     if (matches[i] || inCut[i]) continue;
     const u = units[i] as Unit;
@@ -425,19 +487,10 @@ function markdownCuts(before: string, after: string): FoundCut[] {
       continue;
     }
     for (let k = i; k <= last; k++) inCut[k] = true;
-    const text = before.slice(u.from, (units[last] as Unit).to);
-    found.push({
-      at: u.from,
-      cut: {
-        title: u.title.trim() || firstWords(text),
-        text,
-        where: { after: prev[i] ?? null, before: next[last] ?? null },
-      },
-    });
+    sectionCut(i, last);
   }
 
   // Passages, in the units still there.
-  const nowLines = new Set(now.lines.filter((line) => HAS_WORD.test(line)));
   let triples: Set<number> | null = null;
   const moved = (text: string): boolean => {
     const mine = grams(lowerWords(text), 3);
@@ -449,24 +502,33 @@ function markdownCuts(before: string, after: string): FoundCut[] {
   };
   units.forEach((u, i) => {
     const m = matches[i];
-    if (!m || inCut[i] || wordsIn(before.slice(u.from, u.to)) < CUT_MIN_WORDS) return;
+    if (!m || inCut[i]) return;
     const where = {
       after: u.level === 0 ? null : (names[i] ?? null),
       before: next[i] ?? null,
     };
-    for (const [from, text] of passages(was, u, now, m, nowLines)) {
-      if (moved(text)) continue;
-      found.push({ at: from, cut: { title: firstWords(text), text, where } });
+    let any = false;
+    if (wordsIn(before.slice(u.from, u.to)) >= CUT_MIN_WORDS) {
+      for (const [from, text] of passages(was, u, now, m, nowLines)) {
+        if (moved(text)) continue;
+        found.push({ at: from, cut: { title: firstWords(text), text, where } });
+        any = true;
+      }
     }
+    // Held only by a rule that lets most of its words go, with no passage long enough to keep:
+    // when under half its word pairs are still in the unit that holds it, the unit is the cut,
+    // so a short section rewritten or cut down under its own heading is never lost.
+    if (!any && held[i]?.sure === false && pairShare(u, m) < CUT_KEEP_SHARE) sectionCut(i, i);
   });
 
   found.sort((a, b) => a.at - b.at);
   const seen = new Set<string>();
   const out: FoundCut[] = [];
   for (const { cut } of found) {
-    if (seen.has(cut.text)) continue;
-    seen.add(cut.text);
-    out.push(cut);
+    const text = cutText(cut.text);
+    if (seen.has(text)) continue;
+    seen.add(text);
+    out.push({ ...cut, text });
   }
   return out;
 }
@@ -492,7 +554,8 @@ function passages(
 
   /** Lines `[i0, i1)` of `was` removed, `[j0, j1)` of `now` added in their place. */
   const change = (i0: number, i1: number, j0: number, j1: number) => {
-    const added = j1 > j0 ? now.text.slice(now.starts[j0], endOfLine(now, j1 - 1)) : '';
+    // Blank lines at either end of what was added are where the change met unchanged ones.
+    const added = j1 > j0 ? now.text.slice(now.starts[j0], endOfLine(now, j1 - 1)).trim() : '';
     let addedPairs: Set<number> | null = null;
     // Runs of lines gone from everywhere; a blank line neither breaks nor starts one.
     let start = -1;

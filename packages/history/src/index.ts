@@ -3,6 +3,7 @@ export { CUT_KEEP_SHARE, CUT_MIN_WORDS, type FoundCut, findCuts } from './cuts';
 export {
   type CutEntry,
   cutsFile,
+  cutText,
   FUTURE_SLACK_MS,
   MAX_CUTS_PER_ENTRY,
   MAX_VERSIONS_PER_ID,
