@@ -1,0 +1,13 @@
+flowchart LR
+  subgraph local["On the maintainer's computer"]
+    direction TB
+    check["pnpm check<br/>format and lint"] --> build["Build<br/>the packages and the site"]
+    build --> tests["Tests<br/>unit, browser, and trap tests"]
+  end
+  subgraph online["On GitHub, then Netlify"]
+    direction TB
+    tag["Push a tag<br/>vX.Y.Z"] --> ci["GitHub Actions<br/>desktop builds and tests"]
+    ci --> release["GitHub Release<br/>only if every job passed"]
+    release --> deploy["Push main<br/>Netlify deploys drafter.dev"]
+  end
+  local --> online

@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!pnpm-lock.yaml", "!**/*.md", "!docs/phase1"]
+    "includes": [
+      "**",
+      "!pnpm-lock.yaml",
+      "!**/*.md",
+      "!docs/phase1",
+      "!apps/web/app/assets/diagrams/*.svg"
+    ]
   },
   "formatter": {
     "enabled": true,

@@ -7,11 +7,13 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: why Drafter, a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
 const about: Record<string, string> = {
+  'help-what-is':
+    'What Drafter is, in one minute; why a writer might choose it over Final Draft; what it offers productions; whether you can trust it; and, for technical people, how it is built and tested.',
   'help-why':
     'Free with no catch, no login ever, the big features, and how Drafter compares with other screenwriting apps.',
   'help-fountain':
@@ -26,13 +28,16 @@ const about: Record<string, string> = {
     'The spellchecker, its dictionaries, and the fonts inside Drafter, each with its licence.',
   'help-technical':
     'How Drafter is put together, for the curious: its packages, workers, storage, offline use, the desktop app, releases, and dependencies, with diagrams.',
+  'help-whats-new': 'What has changed in Drafter, newest first, in plain words.',
 };
 </script>
 
 <template>
   <article>
     <h1>Help</h1>
-    <p class="docs-lead">Eight short pages: why Drafter, writing in Fountain, and how Drafter works.</p>
+    <p class="docs-lead">
+      Ten short pages: what Drafter is, writing in Fountain, how Drafter works, and what’s new.
+    </p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
         <a :href="helpHref(page)">{{ page.title }}</a>: {{ about[page.id] }}

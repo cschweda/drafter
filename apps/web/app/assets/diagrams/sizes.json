@@ -1,0 +1,42 @@
+{
+  "release": {
+    "dark": {
+      "width": 601,
+      "height": 491
+    },
+    "light": {
+      "width": 601,
+      "height": 491
+    }
+  },
+  "safe-open": {
+    "dark": {
+      "width": 439,
+      "height": 474
+    },
+    "light": {
+      "width": 439,
+      "height": 474
+    }
+  },
+  "saving": {
+    "dark": {
+      "width": 569,
+      "height": 261
+    },
+    "light": {
+      "width": 569,
+      "height": 261
+    }
+  },
+  "script-flow": {
+    "dark": {
+      "width": 553,
+      "height": 355
+    },
+    "light": {
+      "width": 553,
+      "height": 355
+    }
+  }
+}

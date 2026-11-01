@@ -312,6 +312,7 @@ test.describe('the Help menu', () => {
     );
     const expected = [
       /^Take the tour/,
+      /^What is Drafter\?/,
       /^Why Drafter/,
       /^Fountain cheat sheet/,
       /^Saving and your browser/,
@@ -320,6 +321,7 @@ test.describe('the Help menu', () => {
       /^Open formats/,
       /^Third-party licences/,
       /^Technical details/,
+      /^What’s new/,
       /^Download the desktop app/,
       /^Sample scripts/,
       /^Reset sample/,

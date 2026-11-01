@@ -1,0 +1,8 @@
+flowchart TD
+  pick["You open a file"] --> size["1. Size<br/>checked before it is read"]
+  size --> kind["2. What is it?<br/>by its first bytes and name"]
+  kind --> read["3. A text-only reader<br/>strict UTF-8, text only"]
+  read --> opens["Opens as text<br/>nothing in it runs"]
+  size -. "too big" .-> refuse["Refused<br/>with a plain message"]
+  kind -. "not a script" .-> refuse
+  read -. "fails a check" .-> refuse
