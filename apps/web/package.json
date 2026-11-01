@@ -45,7 +45,7 @@
     "@iconify-json/lucide": "^1.2.147",
     "@nuxt/ui": "^4.12.0",
     "@vite-pwa/nuxt": "1.1.1",
-    "@vueuse/core": "^14.4.0",
+    "@vueuse/core": "^15.0.0",
     "dexie": "^4.4.7",
     "nuxt": "^4.6.3",
     "nuxt-guided-tour": "0.5.1",
