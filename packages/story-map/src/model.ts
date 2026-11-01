@@ -27,6 +27,7 @@ import type {
 } from './types';
 import {
   dateWords,
+  followOn,
   initialsOf,
   insideWords,
   minutesWords,
@@ -67,7 +68,7 @@ const SLOTS = 7;
  * linear in the title.
  */
 const ACT_LABEL =
-  /^act\s+(?:\d+|[ivxlc]+|one|two|three|four|five|six|seven|eight|nine|ten)\b\s*[:.\-–—]?\s*/i;
+  /^act\s+(?:\d+|(?=[ivx]+\b)x{0,3}(?:ix|iv|v?i{0,3})|one|two|three|four|five|six|seven|eight|nine|ten)\b\s*[:.\-–—]?\s*/i;
 
 /** An extension that means the speaker is only heard. */
 const VOICE = /V\.O\.|O\.S\./i;
@@ -122,12 +123,35 @@ function displayName(name: string): string {
   return mixed ? name : titleCase(name);
 }
 
-/** The first word, and the rest. */
+/** Titles that stay with the name after them (`Mrs. Aubert`), lowercased, without a period. */
+const TITLES = new Set([
+  'mr',
+  'mrs',
+  'ms',
+  'mx',
+  'miss',
+  'dr',
+  'prof',
+  'rev',
+  'fr',
+  'capt',
+  'sgt',
+  'lt',
+  'col',
+  'gen',
+  'sir',
+  'dame',
+  'lord',
+  'lady',
+]);
+
+/** The first word (with a title before it: `Dr. Rhee`), and the rest. */
 function splitName(name: string): { first: string; rest: string } {
-  const trimmed = name.trim();
-  const space = trimmed.search(/\s/);
-  if (space < 0) return { first: trimmed, rest: '' };
-  return { first: trimmed.slice(0, space), rest: trimmed.slice(space).trim() };
+  const words = name.trim().split(/\s+/);
+  const titled =
+    words.length > 1 && TITLES.has((words[0] as string).toLowerCase().replace(/\.$/, ''));
+  const take = titled ? 2 : 1;
+  return { first: words.slice(0, take).join(' '), rest: words.slice(take).join(' ') };
 }
 
 /** The `p`th percentile (0–1) of sorted `values`, between neighbours. */
@@ -212,11 +236,16 @@ function charactersOf(cast: Cast, index: SceneIndex, doc: Doc, scenes: readonly 
 
 /** The places, by time spent there, the top 24 sized in five steps; and how many more. */
 function placesOf(cast: Cast, scenes: readonly MapScene[]): { places: MapPlace[]; more: number } {
-  const all = [...cast.locations.values()].map((loc) => ({
-    name: placeWords(loc.location),
-    scenes: loc.scenes.length,
-    minutes: loc.scenes.reduce((n, s) => n + (scenes[s]?.minutes ?? 0), 0),
-  }));
+  // A place with a follow-on time in its heading (`GARAGE - LATER THAT NIGHT`) is the same place.
+  const byName = new Map<string, { name: string; scenes: number; minutes: number }>();
+  for (const loc of cast.locations.values()) {
+    const name = placeWords(followOn(loc.location).location);
+    const place = byName.get(name) ?? { name, scenes: 0, minutes: 0 };
+    place.scenes += loc.scenes.length;
+    place.minutes += loc.scenes.reduce((n, s) => n + (scenes[s]?.minutes ?? 0), 0);
+    byName.set(name, place);
+  }
+  const all = [...byName.values()];
   // Stable: ties keep the cast's key order.
   all.sort((a, b) => b.minutes - a.minutes || b.scenes - a.scenes);
   const top = all[0]?.minutes ?? 0;
@@ -297,10 +326,11 @@ export function buildStoryMap(input: MapInput): StoryMap {
       kind === 'play'
         ? estimateSeconds(scene.timing, wordsPerMinute) / 60
         : ((scene.pages?.eighths ?? 0) / 8) * minutesPerPage;
-    const time = timeOf(place?.time ?? null, before);
+    const follow = place?.time ? null : followOn(place?.location ?? '');
+    const time = timeOf(place?.time ?? follow?.time ?? null, before);
     before = time.kind;
     const [from, to] = spans[s] ?? [0, 0];
-    const location = place?.location ? placeWords(place.location) : '';
+    const location = place?.location ? placeWords(follow ? follow.location : place.location) : '';
     return {
       n: s + 1,
       act: sections.length > 0 ? actIndexOf(scene.block) + 1 : null,

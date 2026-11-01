@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   dateWords,
+  followOn,
   initialsOf,
   insideWords,
   minutesWords,
@@ -22,6 +23,15 @@ describe('plain words', () => {
     expect(placeWords('  ')).toBe('');
   });
 
+  test('a heading of two places drops each part’s INT. or EXT.', () => {
+    expect(placeWords('HOUSE - KITCHEN / EXT. GARDEN')).toBe('House, Kitchen, Garden');
+    expect(placeWords('CAR / INT. GARAGE - LATER')).toBe('Car, Garage, Later');
+    expect(placeWords('BARN - I/E. HAYLOFT')).toBe('Barn, Hayloft');
+    expect(placeWords('INT./EXT. VAN')).toBe('Van');
+    // A slash inside a name stays.
+    expect(placeWords('24/7 DINER')).toBe('24/7 Diner');
+  });
+
   test('INT., EXT., INT./EXT. become Inside, Outside, Inside and out', () => {
     expect(insideWords('inside')).toBe('Inside');
     expect(insideWords('outside')).toBe('Outside');
@@ -35,6 +45,22 @@ describe('plain words', () => {
     expect(timeOf('SAME', null)).toEqual({ time: null, kind: null });
     expect(timeOf('moments  later', 'twilight')).toEqual({ time: null, kind: 'twilight' });
     expect(timeOf(null, 'night')).toEqual({ time: null, kind: null });
+    // Later that night still follows on: the scene before's colour, the words kept.
+    expect(timeOf('LATER THAT NIGHT', 'day')).toEqual({ time: 'Later That Night', kind: 'day' });
+    expect(timeOf('MOMENTS LATER', 'night').kind).toBe('night');
+    // The cast reads only its own times; a longer follow-on is split off the place here.
+    expect(followOn('CAR / INT. GARAGE - LATER THAT NIGHT')).toEqual({
+      location: 'CAR / INT. GARAGE',
+      time: 'LATER THAT NIGHT',
+    });
+    expect(followOn('PIER - A FEW MINUTES LATER')).toEqual({
+      location: 'PIER',
+      time: 'A FEW MINUTES LATER',
+    });
+    expect(followOn('LATERAL HALL - EAST')).toEqual({
+      location: 'LATERAL HALL - EAST',
+      time: null,
+    });
   });
 
   test('EVENING is twilight, MORNING is day', () => {

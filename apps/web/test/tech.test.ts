@@ -212,7 +212,7 @@ describe('directUses', () => {
     // A drawing that stays readable: 32 lines since the CLI writes the HTML export too, and one
     // more since the draft and cuts files (history reads Markdown's metadata comment), and two more
     // since the story map (the app and the CLI both make one).
-    expect(edges).toBeLessThanOrEqual(36);
+    expect(edges).toBeLessThanOrEqual(35);
   });
 });
 

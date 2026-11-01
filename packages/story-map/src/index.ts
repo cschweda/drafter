@@ -33,6 +33,7 @@ export type {
 } from './types';
 export {
   dateWords,
+  followOn,
   initialsOf,
   insideWords,
   minutesWords,

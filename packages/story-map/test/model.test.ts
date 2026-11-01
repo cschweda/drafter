@@ -82,6 +82,10 @@ describe('the story map model', () => {
     expect(titled('Act One').acts[0]?.title).toBe('');
     expect(titled('Actors Arrive').acts[0]?.title).toBe('Actors Arrive');
     expect(titled('Act Ivy').acts[0]?.title).toBe('Act Ivy');
+    expect(titled('Act Civil War').acts[0]?.title).toBe('Act Civil War');
+    expect(titled('Act Victory').acts[0]?.title).toBe('Act Victory');
+    expect(titled('Act XIV: Late').acts[0]?.title).toBe('Late');
+    expect(titled('Act iv').acts[0]?.title).toBe('');
   });
 
   test('a script with no acts is one run', () => {
@@ -214,8 +218,14 @@ describe('the story map model', () => {
       'Scene 5',
       'Scene 6',
     ]);
-    expect(byKey(map, 'MRS. AUBERT')).toMatchObject({ name: 'Mrs. Aubert', first: 'Mrs.' });
-    expect(byKey(map, 'MRS. AUBERT')?.rest).toBe('Aubert');
+    // A title stays with the name.
+    expect(byKey(map, 'MRS. AUBERT')).toMatchObject({
+      name: 'Mrs. Aubert',
+      first: 'Mrs. Aubert',
+      rest: '',
+    });
+    const doctor = build('INT. CLINIC - DAY\n\nDR. RHEE OKAFOR\nSit down.\n').map;
+    expect(doctor.characters[0]).toMatchObject({ first: 'Dr. Rhee', rest: 'Okafor' });
   });
 
   test('places are sized in five steps, the largest 5', () => {
@@ -260,6 +270,100 @@ describe('the story map model', () => {
     const banned = /\b(INT|EXT)\.|\bV\.O\.|\bO\.S\.|CONT'D|slugline|eighths/i;
     for (const { map } of [harbour, play, build(NO_ACTS), build(generated(20, 12, 5))]) {
       for (const s of strings(map)) expect(s, s).not.toMatch(banned);
+    }
+  });
+
+  test('no screenwriting words come through from the action or the headings', () => {
+    const banned = /\b(INT|EXT|EST)\.|\bI\/E\b|\bV\.O\.|\bO\.S\.|\bO\.C\.|CONT['’]?D|\(MORE\)/i;
+    const hostile = `INT. HOUSE - KITCHEN / EXT. GARDEN - DAY
+
+A phone rings O.S. ANNA (30s), a nurse who hears the V.O. of her past, turns.
+
+ANNA
+Who is it this time?
+
+EXT. CAR / INT. GARAGE - LATER THAT NIGHT
+= Anna (CONT'D) talks to the dark, and a voice (O.C.) answers.
+
+ANNA (CONT'D)
+I can hear you breathing.
+
+INT./EXT. VAN - NIGHT
+
+BEN (O.S.) knocks twice. ANNA'S keys drop. (MORE)
+
+BEN (O.S.)
+Open the door, please.
+`;
+    const { map } = build(hostile);
+    for (const s of strings(map)) expect(s, s).not.toMatch(banned);
+    expect(map.scenes.map((s) => s.place)).toEqual([
+      'House, Kitchen, Garden',
+      'Car, Garage',
+      'Van',
+    ]);
+    // Later that night: the scene before's colour, and one place, not two.
+    expect(map.scenes[1]).toMatchObject({ time: 'Later That Night', timeKind: 'day' });
+    expect(map.places.map((p) => p.name)).not.toContain('Car, Garage, Later That Night');
+    expect(map.scenes[0]?.what).toBe('A phone rings.');
+    expect(map.characters.find((c) => c.key === 'ANNA')).toMatchObject({ age: '30s' });
+  });
+
+  test('nothing private reaches the model: notes, the boneyard, and the marks', () => {
+    const secret = ' [[SECRET]] /* BONE */';
+    const screen = `Title: Hidden${secret}
+Author: Ivo Marsh${secret}
+Contact: ivo@example.com${secret}
+
+# Act One: Dark${secret}
+= The lights go out.${secret}
+
+## A part${secret}
+
+INT. CELLAR${secret} - NIGHT
+
+= Ivo counts the jars.${secret} Then he stops.
+
+IVO (30s)${secret}, a cellarman, counts jars.${secret}
+
+IVO${secret}
+(quietly)${secret}
+Forty jars, and one of them is singing.${secret} [[Quote]]
+[[No quote]]
+
+~Down in the cellar the jars all sing.${secret}
+
+> THE END${secret} <
+`;
+    const stage = `Title: Hidden Stage
+Author: Ivo Marsh
+
+# Act One${secret}
+
+## The cellar${secret}
+
+IVO enters.${secret}
+
+IVO
+The jars are quiet tonight, thank goodness.${secret}
+
+/* drafter
+{"v":1,"template":"stage-play-standard"}
+*/
+`;
+    const banned = /SECRET|BONE|\[\[|\]\]|\/\*|\*\/|\bquote\b/i;
+    for (const source of [screen, stage]) {
+      const all = {
+        a: build(source),
+        b: build(source, {
+          include: { summaries: true, lines: true, threads: true, contact: true },
+          contact: 'ivo@example.com',
+        }),
+      };
+      for (const { map } of Object.values(all)) {
+        expect(map.scenes.length).toBeGreaterThan(0);
+        for (const s of strings(map)) expect(s, s).not.toMatch(banned);
+      }
     }
   });
 

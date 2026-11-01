@@ -14,6 +14,8 @@ const SUMMARY_WORDS = 12;
 const HOOK_WORDS = 8;
 /** An age's parenthesis, inside, in characters at most. */
 const AGE_CHARS = 12;
+/** A short aside after a name (`(barefoot)`), in characters at most, that a hook passes over. */
+const ASIDE_CHARS = 40;
 
 /** Words a period after doesn't end a sentence (`Dr. Rhee`), lowercased. */
 const ABBREVIATIONS = new Set([
@@ -58,7 +60,7 @@ function abbreviation(text: string, i: number): boolean {
 }
 
 /** Where the sentence that starts at `from` ends: just past its stop and any closing quote. */
-function sentenceEnd(text: string, from = 0): number {
+export function sentenceEnd(text: string, from = 0): number {
   for (let i = from; i < text.length; i++) {
     if (!isStop(text[i])) continue;
     let j = i + 1;
@@ -94,6 +96,18 @@ function clampWords(text: string, most: number): string {
 const capitalsMap = (names: Iterable<string>) =>
   nameMap([...names].map((name) => ({ name, word: true })));
 
+/** Each set of names `sceneLine` is given, made into a map once, not once a scene. */
+const MAPS = new WeakMap<ReadonlySet<string>, { list: string[]; map: NameMap }>();
+function mapOf(names: ReadonlySet<string>): { list: string[]; map: NameMap } {
+  let found = MAPS.get(names);
+  if (!found) {
+    const list = [...names];
+    found = { list, map: capitalsMap(list) };
+    MAPS.set(names, found);
+  }
+  return found;
+}
+
 /** Each name `map` finds in `text`: where it starts, and just past its last word. */
 function nameRuns(
   text: string,
@@ -113,13 +127,26 @@ function nameRuns(
   return out;
 }
 
-/** An age's parenthesis at `j` (`(71)`, `(late 30s)`): at most 12 characters inside, holding a digit. */
+/** Just past the parenthesis that opens at `j`, nested ones in it, within 40 characters; else -1. */
+function asideEnd(text: string, j: number): number {
+  if (text[j] !== '(') return -1;
+  let depth = 0;
+  for (let k = j; k < text.length && k - j <= ASIDE_CHARS; k++) {
+    if (text[k] === '(') depth++;
+    else if (text[k] === ')' && --depth === 0) return k + 1;
+  }
+  return -1;
+}
+
+/**
+ * An age's parenthesis at `j` (`(71)`, `(late 30s)`): at most 12 characters inside, holding a
+ * digit, and no parenthesis of its own.
+ */
 function ageAt(text: string, j: number): { age: string; end: number } | null {
-  if (text[j] !== '(') return null;
-  const close = text.indexOf(')', j + 1);
-  if (close < 0 || close - j - 1 > AGE_CHARS) return null;
-  const age = text.slice(j + 1, close).trim();
-  return /\p{N}/u.test(age) ? { age, end: close + 1 } : null;
+  const end = asideEnd(text, j);
+  if (end < 0 || end - j - 2 > AGE_CHARS) return null;
+  const age = text.slice(j + 1, end - 1).trim();
+  return /\p{N}/u.test(age) && !age.includes('(') ? { age, end } : null;
 }
 
 /**
@@ -147,14 +174,46 @@ function nameCase(text: string, map: NameMap, names: readonly string[], ages = t
   return out + text.slice(at);
 }
 
-/** A block's printed text, its lines joined by spaces. */
-function printed(block: Block): string {
-  return block.lines
-    .filter((line) => !line.transparent)
-    .map((line) => line.inline.map((run) => run.text).join(''))
-    .join(' ')
+/**
+ * The screenwriting marks a writer may type in the action: `(V.O.)`, `(O.S.)`, `(O.C.)`,
+ * `(CONT'D)`, `(MORE)`, and the bare `V.O.`, `O.S.`, `O.C.`, `CONT'D`. Alternatives of fixed
+ * text, so linear.
+ */
+const SCREEN_MARKS =
+  /\((?:V\.O\.|O\.S\.|O\.C\.|CONT['’]?D|MORE)\)|(?<![\p{L}.])(?:V\.O\.|O\.S\.|O\.C\.)|(?<![\p{L}])CONT['’]?D(?![\p{L}])/giu;
+/** Where a bare mark ended a sentence (`A phone rings O.S. ANNA …`): it keeps the stop. */
+const STOP_KEPT = '\uE000';
+/** Where any other mark was. Private-use characters, which never print. */
+const GONE = '\uE001';
+
+/** `text` without screenwriting marks (design §5): a bare mark that ended a sentence leaves its stop. */
+function withoutMarks(text: string): string {
+  const out = text.replace(SCREEN_MARKS, (mark, at: number) => {
+    if (mark.startsWith('(') || !mark.endsWith('.')) return GONE;
+    let next = at + mark.length;
+    while (isSpace(text[next])) next++;
+    const c = text[next];
+    const ends = c === undefined || (c !== c.toLowerCase() && c === c.toUpperCase());
+    return ends ? STOP_KEPT : GONE;
+  });
+  // Only where a mark was: no space left before the comma after it.
+  return out
+    .replace(/\s+/g, ' ')
+    .replace(/ ?\uE001(?=[,.;:!?])/g, '')
+    .replace(/\uE001/g, '')
+    .replace(/ ?\uE000/g, '.')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** A block's printed text, its lines joined by spaces, without screenwriting marks. */
+function printed(block: Block): string {
+  return withoutMarks(
+    block.lines
+      .filter((line) => !line.transparent)
+      .map((line) => line.inline.map((run) => run.text).join(''))
+      .join(' '),
+  );
 }
 
 /**
@@ -175,11 +234,8 @@ export function sceneLine(scene: Scene, doc: Doc, names: ReadonlySet<string>): s
     if (block.kind === 'action') text = printed(block);
   }
   if (text === '') return null;
-  const list = [...names];
-  const line = clampWords(
-    nameCase(firstSentence(text), capitalsMap(list), list, false),
-    SUMMARY_WORDS,
-  );
+  const { list, map } = mapOf(names);
+  const line = clampWords(nameCase(firstSentence(text), map, list, false), SUMMARY_WORDS);
   return line === '' ? null : line;
 }
 
@@ -229,13 +285,23 @@ function pastCapitals(text: string, at: number): number {
   }
 }
 
-/** The hook from an introduction: what follows the name at `at` in `text`. */
-function hookFrom(text: string, at: number, map: NameMap, names: readonly string[]): Hook {
+/**
+ * The hook from a mention: what follows the name at `at` in `text`; and whether it is an
+ * introduction (an age, a comma, or a dash just after the name).
+ */
+function hookFrom(
+  text: string,
+  at: number,
+  map: NameMap,
+  names: readonly string[],
+): Hook & { introduced: boolean } {
   let i = pastCapitals(text, at);
   let j = i;
   while (isSpace(text[j])) j++;
   const aged = ageAt(text, j);
-  if (aged) i = aged.end;
+  // A short aside that isn't an age (`(barefoot)`) is passed over.
+  const aside = aged ? aged.end : asideEnd(text, j);
+  if (aside >= 0) i = aside;
   const age = aged?.age ?? null;
   const end = sentenceEnd(text, i);
   let rest = text.slice(i, end).trim();
@@ -255,12 +321,13 @@ function hookFrom(text: string, at: number, map: NameMap, names: readonly string
   }
   rest = rest.trim().replace(/\.$/, '').trim();
   const hook = rest === '' ? null : clampWords(nameCase(rest, map, names), HOOK_WORDS);
-  return { hook, age };
+  return { hook, age, introduced: age !== null || lead !== '' };
 }
 
 /**
  * Every speaker's hook and age (Call 13), by key, from the first action paragraph that names them
- * in capitals: an age from a parenthesis just after the name (at most 12 characters, holding a
+ * in capitals with an age, a comma, or a dash after the name (else the first that names them
+ * at all, never as a possessive): an age from a parenthesis just after the name (at most 12 characters, holding a
  * digit), and the rest of that sentence, or the phrase a comma or dash sets off, at most 8 words.
  */
 export function hooksOf(doc: Doc, index: SceneIndex): Map<string, Hook> {
@@ -268,20 +335,32 @@ export function hooksOf(doc: Doc, index: SceneIndex): Map<string, Hook> {
   const keys = [...byKey.keys()];
   const names = keys.map((k) => byKey.get(k) as string);
   const map = capitalsMap(names);
-  const out = new Map<string, Hook>();
+  const introduced = new Map<string, Hook>();
+  const plain = new Map<string, Hook>();
   for (const block of doc.blocks) {
-    if (out.size === keys.length) break;
+    if (introduced.size === keys.length) break;
     if (block.kind !== 'action') continue;
     const text = printed(block);
     for (const run of nameRuns(text, map, names)) {
       const key = keys[run.character] as string;
-      if (!out.has(key)) out.set(key, hookFrom(text, run.to, map, names));
+      if (introduced.has(key)) continue;
+      // A possessive (`SAM'S dog`) is no introduction, nor a hook.
+      const after = text.slice(run.to, run.to + 2);
+      if (after === "'S" || after === '’S' || after === "'s" || after === '’s') continue;
+      const { introduced: intro, ...hook } = hookFrom(text, run.to, map, names);
+      if (intro) introduced.set(key, hook);
+      else if (!plain.has(key)) plain.set(key, hook);
     }
+  }
+  const out = new Map<string, Hook>();
+  for (const key of keys) {
+    const hook = introduced.get(key) ?? plain.get(key);
+    if (hook) out.set(key, hook);
   }
   return out;
 }
 
-/** One character's hook and age; `key` is their name in capitals. */
+/** One character's hook and age; `key` is their name in capitals. For every character, `hooksOf` once. */
 export function hookOf(doc: Doc, index: SceneIndex, key: string): Hook {
   return hooksOf(doc, index).get(key) ?? { hook: null, age: null };
 }
@@ -292,11 +371,21 @@ export function hookOf(doc: Doc, index: SceneIndex, key: string): Hook {
  * scene counts for nothing; a label with no setup in a scene is left out. In scene order.
  */
 export function threadsOf(doc: Doc, index: SceneIndex): MapThread[] {
+  // The scenes are in source order: a binary search for the last one starting at or before.
+  const scenes = index.scenes;
   const sceneAt = (offset: number) => {
-    const s = index.scenes.findIndex(
-      (scene) => scene.span.from <= offset && offset < scene.span.to,
-    );
-    return s < 0 ? null : s + 1;
+    let lo = 0;
+    let hi = scenes.length - 1;
+    let found = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if ((scenes[mid] as Scene).span.from <= offset) {
+        found = mid;
+        lo = mid + 1;
+      } else hi = mid - 1;
+    }
+    const scene = scenes[found];
+    return scene && offset < scene.span.to ? found + 1 : null;
   };
   const out: MapThread[] = [];
   for (const thread of setupsAndPayoffs(noteEntries(doc))) {

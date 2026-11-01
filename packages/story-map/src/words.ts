@@ -60,6 +60,27 @@ function withoutNumber(text: string): string {
   return open < 0 ? trimmed : trimmed.slice(0, open).trimEnd();
 }
 
+/** A heading's parts after a slash with a space beside it (`KITCHEN / EXT. GARDEN`); `24/7` stays. */
+function slashParts(part: string): string[] {
+  const out: string[] = [];
+  let from = 0;
+  for (let i = 0; i < part.length; i++) {
+    if (part[i] === '/' && (isSpace(part[i - 1]) || isSpace(part[i + 1]))) {
+      out.push(part.slice(from, i));
+      from = i + 1;
+    }
+  }
+  out.push(part.slice(from));
+  return out;
+}
+
+/** `INT.`, `EXT.`, `EST.`, `INT./EXT.`, `I/E` at a part's start: anchored, one pass. */
+const PREFIX =
+  /^(?:int\.?\s*\/\s*ext|ext\.?\s*\/\s*int|i\s*\/\s*e|e\s*\/\s*i|int|ext|est)\.?(?=\s|$)/i;
+
+/** A part without a leading `INT.` or `EXT.` (a heading of two places names it for each), trimmed. */
+const withoutPrefix = (part: string) => part.trim().replace(PREFIX, '').trim();
+
 /** A heading's location in plain words: "HALL HOUSE - BACK ROOM #3#" → "Hall House, Back Room". */
 export function placeWords(location: string): string {
   const text = withoutNumber(location);
@@ -73,10 +94,30 @@ export function placeWords(location: string): string {
   }
   parts.push(text.slice(from));
   return parts
-    .map((part) => part.trim())
+    .flatMap(slashParts)
+    .map(withoutPrefix)
     .filter((part) => part !== '')
     .map(titleCase)
     .join(', ');
+}
+
+/** Whether a time follows on from the scene before (`LATER THAT NIGHT`, `MOMENTS LATER`). */
+const followsOn = (key: string) => key.startsWith('LATER ') || key.endsWith(' LATER');
+
+/**
+ * A location's last part when it is a follow-on time the cast doesn't read as one
+ * (`GARAGE - LATER THAT NIGHT`): split off, as typed. Otherwise the location as it is.
+ */
+export function followOn(location: string): { location: string; time: string | null } {
+  const text = location.trimEnd();
+  for (let i = text.length - 2; i > 0; i--) {
+    if (DASHES.has(text[i] as string) && isSpace(text[i - 1]) && isSpace(text[i + 1])) {
+      const part = text.slice(i + 1).trim();
+      if (!followsOn(part.toUpperCase().split(/\s+/).join(' '))) break;
+      return { location: text.slice(0, i).trimEnd(), time: part };
+    }
+  }
+  return { location, time: null };
 }
 
 const DAY = new Set(['DAY', 'MORNING', 'AFTERNOON']);
@@ -96,6 +137,10 @@ export function timeOf(
   if (time === null) return { time: null, kind: null };
   const key = time.trim().toUpperCase().split(/\s+/).join(' ');
   if (FOLLOWS.has(key)) return { time: null, kind: before };
+  // `LATER THAT NIGHT`, `MOMENTS LATER`: it follows on, so the colour is the scene before's.
+  if (followsOn(key)) {
+    return { time: titleCase(time.trim()), kind: before };
+  }
   const kind = DAY.has(key)
     ? 'day'
     : NIGHT.has(key)

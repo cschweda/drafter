@@ -1,7 +1,7 @@
 import { parse } from '@drafter/fountain';
 import { sceneIndex } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { actMood, hookOf, sceneLine } from '../src';
+import { actMood, hookOf, hooksOf, sceneLine } from '../src';
 import { build, HARBOUR, screenplay } from './scripts';
 
 // What happens in each scene, an act's mood, a character's hook, and the threads (story-map
@@ -147,8 +147,45 @@ describe('hooks', () => {
       'INT. HUT - DAY\n\nJUNE (late 30s) mends a sail. KIT (barefoot) sweeps. LOU (a very long aside here), sings.\n\nJUNE\nHold still.\n\nKIT\nI am still.\n\nLOU\nI am singing.\n',
     );
     expect(hookOf(doc, index, 'JUNE')).toEqual({ age: 'late 30s', hook: 'mends a sail' });
-    expect(hookOf(doc, index, 'KIT').age).toBeNull();
+    expect(hookOf(doc, index, 'KIT')).toEqual({ age: null, hook: 'sweeps' });
     expect(hookOf(doc, index, 'LOU').age).toBeNull();
+  });
+
+  test('an age never holds a parenthesis, and a short aside before the hook is passed over', () => {
+    const { doc, index } = read(
+      'INT. HUT - DAY\n\nQUINN (35 (or so)), a sailor with one boot, rows. PIP (twenty-two) — a runner — waits.\n\nQUINN\nRow.\n\nPIP\nRun.\n',
+    );
+    expect(hookOf(doc, index, 'QUINN')).toEqual({ age: null, hook: 'a sailor with one boot' });
+    expect(hookOf(doc, index, 'PIP')).toEqual({ age: null, hook: 'a runner' });
+  });
+
+  test('the introduction is the mention with an age, a comma, or a dash; never a possessive', () => {
+    const { doc, index } = read(
+      "INT. YARD - DAY\n\nSAM'S dog barks. TESS sweeps.\n\nSAM (9), a kid with a kite, runs. TESS (40s) — the landlady — watches.\n\nSAM\nWatch me.\n\nTESS\nI am.\n",
+    );
+    const hooks = hooksOf(doc, index);
+    expect(hooks.get('SAM')).toEqual({ age: '9', hook: 'a kid with a kite' });
+    expect(hooks.get('TESS')).toEqual({ age: '40s', hook: 'the landlady' });
+    // With no introduction, the first plain mention.
+    const plain = read('INT. YARD - DAY\n\nMOSS sweeps the step.\n\nMOSS\nDone.\n');
+    expect(hookOf(plain.doc, plain.index, 'MOSS')).toEqual({ age: null, hook: 'sweeps the step' });
+  });
+
+  test('screenwriting marks in the action never reach a hook or a scene line', () => {
+    const { doc, index } = read(
+      'INT. WARD - NIGHT\n\nA phone rings O.S. ANNA (30s), a nurse who hears the V.O. of her past, turns.\n\nANNA\nHello?\n',
+    );
+    expect(sceneLine(index.scenes[0] as never, doc, new Set(['ANNA']))).toBe('A phone rings.');
+    const aside = read(
+      "INT. WARD - NIGHT\n\nA voice (O.C.), low, calls her! ANNA (CONT'D) waits.\n",
+    );
+    expect(sceneLine(aside.index.scenes[0] as never, aside.doc, new Set(['ANNA']))).toBe(
+      'A voice, low, calls her!',
+    );
+    expect(hookOf(doc, index, 'ANNA')).toEqual({
+      age: '30s',
+      hook: 'a nurse who hears the of her past',
+    });
   });
 
   test('an edited hook wins and an empty one hides it', () => {
