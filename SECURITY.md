@@ -10,8 +10,7 @@ Please report a security problem privately, not in a public issue:
 2. Choose **Report a vulnerability**, and say what you found, how to make it happen (a small file
    that shows it is ideal), and what it lets someone do.
 
-If the **Report a vulnerability** button isn't there, or you'd rather not use GitHub:
-Email cschweda@gmail.com with the details.
+Or, if you'd rather not use GitHub: Email cschweda@gmail.com with the details.
 
 Please don't open a public issue for a security problem. Drafter's Help → Report a problem… opens
 a public one, so it points here instead. Only the maintainer sees a private report or an email.
