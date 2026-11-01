@@ -44,7 +44,19 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
   ).toEqual({
     version: VERSION,
     platform: process.platform,
-    files: ['pathOfDropped', 'read', 'realPath', 'showOpen', 'showSave', 'watch', 'write'],
+    // Files, and drafts and cuts beside a granted script (beside.ts).
+    files: [
+      'listBeside',
+      'pathOfDropped',
+      'read',
+      'readBeside',
+      'realPath',
+      'showOpen',
+      'showSave',
+      'watch',
+      'write',
+      'writeBeside',
+    ],
     // The modules folder: its list, and the origins agreed to for a module. Nothing more.
     modules: ['list', 'setNetwork'],
     updates: ['check', 'install', 'onAvailable', 'openReleasePage', 'setEnabled'],

@@ -10,6 +10,12 @@ export const CHANNELS = {
   filesRead: 'drafter:files:read',
   filesWrite: 'drafter:files:write',
   filesRealPath: 'drafter:files:real-path',
+  /** Drafts and cuts beside a granted script (beside.ts): `(script, rel, bytes, mode)`. */
+  filesWriteBeside: 'drafter:files:write-beside',
+  /** `(script, rel)`: the bytes, or null. */
+  filesReadBeside: 'drafter:files:read-beside',
+  /** `(script, folder)`: the draft files' names in the drafts folder. */
+  filesListBeside: 'drafter:files:list-beside',
   /** preload → main: a dropped file's path, to be granted if it is a script (grants.ts). */
   filesGrantDropped: 'drafter:files:grant-dropped',
   /** preload → main: watch `(id, path)`; stop `(id)`. */

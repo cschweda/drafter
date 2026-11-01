@@ -54,6 +54,16 @@ function fakeBridge() {
       if (path.startsWith('/broken')) throw new Error('failed');
       return realPaths.get(path) ?? path;
     },
+    // Drafts and cuts beside the script: the app's side of these comes with Task 7.
+    async writeBeside() {
+      throw new Error('not-allowed');
+    },
+    async readBeside() {
+      return null;
+    },
+    async listBeside() {
+      return [];
+    },
     pathOfDropped(file) {
       return dropped.get(file) ?? '';
     },
