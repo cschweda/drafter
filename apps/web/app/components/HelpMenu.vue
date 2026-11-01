@@ -9,7 +9,8 @@ import { STARTER_KINDS } from '~/editor/starter-kinds';
 // times and not part of another (much larger) dropdown"): a button of its own in the top bar,
 // after Focus. Take the tour; the help pages (each opens in a new tab, named by its title); the
 // Sample scripts submenu (a tiny sample of each kind, then the guided starters, each opened as a
-// new script); Reset sample (off unless a sample is open); Check for updates…; and About Drafter.
+// new script); Reset sample (off unless a sample is open); Report a problem… and Suggest an idea…;
+// Check for updates…; and About Drafter.
 // Each item runs its registered command (`useCommandMenu`), as the Drafter menu's do. On a wide
 // screen the button says Help with the Drafter menu's chevron; below 1024px it is a question mark.
 const button = ref<HTMLElement | null>(null);
@@ -57,6 +58,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
     item('take-the-tour'),
     pages.flatMap(item),
     [sampleScripts.value, ...item('reset-sample')],
+    [...item('report-problem'), ...item('suggest-idea')],
     [...item('check-for-updates'), ...item('about-drafter')],
   ];
 });

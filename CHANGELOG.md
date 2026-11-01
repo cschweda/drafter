@@ -8,7 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Report a problem… and Suggest an idea…**, in Help, the search, About, and the desktop app's Help menu. A dialog asks for a title and a few lines (what happened and what you expected, or what you'd like), adds your version info if you leave it on, and shows exactly what will be sent. **Open on GitHub** opens GitHub's new-issue page with it filled in, through new issue forms (`.github/ISSUE_TEMPLATE/bug.yml`, `idea.yml`, and `config.yml`), and you submit it there with a free GitHub account. Drafter sends nothing itself and never includes your script. A long report is trimmed to fit the link, and **Copy** has all of it; offline, it says to copy it and file it later, and what you typed is kept for the visit. No GitHub account? Email cschweda@gmail.com from your own email app (the desktop app hands that one address to the email app, and no other `mailto:`). About has a contact line, and the help index and Privacy say what leaves your device, and when.
+
 - **An animated banner at the top of the README:** the script page fans out into the colored revision pages, once. It's an SVG with CSS only, so it plays on GitHub, and it holds still for anyone who asks their computer for less motion.
+
+### Changed
+
+- **SECURITY.md's fallback is an email now:** if GitHub's private report isn't there, email cschweda@gmail.com with the details, never a public issue. The README's Security section, What is Drafter?, and the new dialog say the same.
 
 ## [0.23.3] - 2026-11-01
 

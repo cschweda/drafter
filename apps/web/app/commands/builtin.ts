@@ -51,6 +51,7 @@ import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
 import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
+import { reportOpen } from '~/report/dialog';
 import { showScaffold } from '~/scaffold/show';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
@@ -469,6 +470,17 @@ export function registerBuiltinCommands(): void {
     'about-drafter': {
       run: () => {
         aboutOpen.value = true;
+      },
+    },
+    // Help → Report a problem… and Suggest an idea…: the dialog that fills in GitHub's page.
+    'report-problem': {
+      run: () => {
+        reportOpen.value = 'problem';
+      },
+    },
+    'suggest-idea': {
+      run: () => {
+        reportOpen.value = 'idea';
       },
     },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind

@@ -405,6 +405,29 @@ for (const theme of THEMES) {
       await clean(page, 'the Export options dialog');
     });
 
+    test(`has no accessibility violations in Report a problem and Suggest an idea (${theme})`, async ({
+      page,
+    }) => {
+      await command(page, 'Report a problem…');
+      const report = page.getByRole('dialog', { name: 'Report a problem' });
+      await expect(report).toBeVisible();
+      await report.getByRole('textbox', { name: 'Title' }).fill('Export & #1');
+      await report.getByRole('textbox', { name: 'What happened' }).fill('x'.repeat(9000));
+      await expect(report.locator('[data-report-trimmed]')).toBeVisible();
+      await report.getByRole('button', { name: 'Copy address' }).click();
+      await clean(page, 'Report a problem, trimmed');
+      await report
+        .getByRole('group', { name: 'Kind' })
+        .getByRole('button', { name: 'Idea' })
+        .click();
+      await expect(page.getByRole('dialog', { name: 'Suggest an idea' })).toBeVisible();
+      await clean(page, 'Suggest an idea');
+      await page.context().setOffline(true);
+      await expect(page.locator('[data-report-offline]')).toBeVisible();
+      await clean(page, 'Suggest an idea, offline');
+      await page.context().setOffline(false);
+    });
+
     test(`has no accessibility violations in a Markdown document's Export options dialog (${theme})`, async ({
       page,
     }) => {

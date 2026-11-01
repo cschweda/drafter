@@ -42,6 +42,17 @@ const release = (version: string): WhatsNewLink => ({
 
 /** Every item, newest first: by release, and in each release the most important first. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  // Unreleased: its version is the next release's, and the release sets its date (a test lets an
+  // entry newer than the CHANGELOG's newest release wait for its section).
+  {
+    id: 'v0.24.0-report-a-problem',
+    date: '2026-11-01',
+    version: '0.24.0',
+    kind: 'New',
+    title: 'Report a problem or suggest an idea',
+    text: 'Help \u2192 Report a problem\u2026 and Suggest an idea\u2026 fill in a GitHub issue for you to check and submit, with your version info if you like, and never your script. Without a GitHub account, copy it, or email it from your own email app.',
+    link: { href: '/docs/#reporting', label: 'Reporting a problem' },
+  },
   {
     id: 'v0.23.3-what-is-drafter',
     date: '2026-11-01',

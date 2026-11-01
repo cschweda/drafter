@@ -199,6 +199,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'new-guided-stage-play': 'Guided first stage play',
       },
     },
+    { pick: ['report-problem', 'suggest-idea'] },
     { pick: ['check-for-updates'] },
   ],
 };
@@ -216,6 +217,8 @@ const LABELS: Record<string, string> = {
   'help-licences': 'Third-party Licences',
   'help-technical': 'Technical Details',
   'help-whats-new': 'What’s New',
+  'report-problem': 'Report a Problem…',
+  'suggest-idea': 'Suggest an Idea…',
   'check-for-updates': 'Check for Updates…',
   'open-as-screenplay': 'Open as Screenplay…',
 };

@@ -306,9 +306,9 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a href="#traps">More below</a>.
         </li>
         <li>
-          <strong>Found a problem?</strong> Please report it privately:
+          <strong>Found a security problem?</strong> Please report it privately:
           <a :href="repoHref('SECURITY.md')" target="_blank" rel="noopener noreferrer">SECURITY.md</a>
-          says how.
+          says how. Or email cschweda@gmail.com with the details. Never in a public issue.
         </li>
       </ul>
       <p>

@@ -447,6 +447,47 @@ test('opens the releases page in the browser, not the app', async ({ desktop, pr
   expect(app.windows()).toHaveLength(1);
 });
 
+test('Help → Report a Problem… fills in GitHub’s page, in the browser, and emails through the email app', async ({
+  desktop,
+  profile,
+}) => {
+  const { app, page } = await desktop();
+  await expect
+    .poll(async () => (await menuItems(app)).some((i) => i.id === 'report-problem'), {
+      timeout: 15_000,
+    })
+    .toBe(true);
+  const items = new Map((await menuItems(app)).map((i) => [i.id, i]));
+  expect(items.get('report-problem')?.label).toBe('Report a Problem…');
+  expect(items.get('suggest-idea')?.label).toBe('Suggest an Idea…');
+  await chooseMenuItem(app, ['Help', 'Report a Problem…']);
+  const report = dialog(page, 'Report a problem');
+  await expect(report).toBeVisible();
+  await expect(report).toContainText('App: desktop app');
+  await report.getByRole('textbox', { name: 'Title' }).fill('Menu & keys');
+  await report.getByRole('textbox', { name: 'What happened' }).fill('It hung.');
+  await report.getByRole('link', { name: 'Open on GitHub' }).click();
+  await expect.poll(() => openedExternally(profile)).toHaveLength(1);
+  const [opened] = openedExternally(profile);
+  const url = new URL(opened as string);
+  expect(`${url.origin}${url.pathname}`).toBe('https://github.com/cschweda/drafter/issues/new');
+  expect(url.searchParams.get('template')).toBe('bug.yml');
+  expect(url.searchParams.get('title')).toBe('Menu & keys');
+  expect(url.searchParams.get('what-happened')).toBe('It hung.');
+  expect(url.searchParams.get('version')).toContain('App: desktop app');
+  // The email goes to the system's email app, the app's window stays put.
+  await report.getByRole('link', { name: 'Write an email' }).click();
+  await expect.poll(() => openedExternally(profile)).toHaveLength(2);
+  expect(openedExternally(profile)[1]).toMatch(/^mailto:cschweda@gmail\.com\?subject=/);
+  expect(page.url()).toBe('app://drafter/');
+  expect(app.windows()).toHaveLength(1);
+  await page.keyboard.press('Escape');
+  await expect(report).toBeHidden();
+  // Suggest an Idea… opens it as an idea.
+  await chooseMenuItem(app, ['Help', 'Suggest an Idea…']);
+  await expect(dialog(page, 'Suggest an idea')).toBeVisible();
+});
+
 test('quits through app.quit(), where Task 5 can stop it', async ({ desktop }) => {
   const { app } = await desktop();
   // Held on every quit, not once: the app's own close flow asks, finds nothing unsaved, and

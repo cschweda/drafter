@@ -79,6 +79,25 @@ useDocsHead({
       remove the saved files, along with the worker, by clearing this site’s data.
     </p>
 
+    <h2 id="reporting">Reporting a problem or suggesting an idea</h2>
+    <p>
+      <strong>Help → Report a problem…</strong> and <strong>Suggest an idea…</strong> send nothing
+      by themselves. What you type stays on this device (kept for the visit in the browser’s
+      sessionStorage, so closing the dialog loses nothing) until you choose
+      <strong>Open on GitHub</strong>. Only then does it leave, and only the text the dialog shows
+      you: GitHub’s new-issue page opens with it filled in, in your browser, and you review it and
+      submit it there yourself, with your own GitHub account. Drafter has no server and no token, so
+      it can’t post anything for you. Your script is never included: not its text, its title, its
+      file name, or your notes. <strong>Include version info</strong> adds only what About’s
+      <strong>Copy version info</strong> copies (the version, the app, the system, and the browser),
+      and you can turn it off.
+    </p>
+    <p>
+      With no GitHub account, you can email cschweda@gmail.com instead. That email goes from your
+      own email app, like any other, and Drafter itself sends nothing. <strong>Copy</strong> puts the
+      same text on your clipboard, to paste wherever you like.
+    </p>
+
     <h2 id="updates">Updates in the desktop app</h2>
     <p>
       When it starts, the desktop app makes a few requests to GitHub: the release information, and,

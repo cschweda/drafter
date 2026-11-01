@@ -470,11 +470,13 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
     cmd('sample-script-screenplay', 'Help', 'Sample script: Screenplay'),
     cmd('sample-script-stage-play', 'Help', 'Sample script: Stage play'),
     cmd('sample-script-markdown', 'Help', 'Sample script: Markdown'),
+    cmd('report-problem', 'Help', 'Report a problem…'),
+    cmd('suggest-idea', 'Help', 'Suggest an idea…'),
     cmd('check-for-updates', 'Help', 'Check for updates…'),
     cmd('about-drafter', 'Help', 'About Drafter'),
   ];
 
-  test('puts the sample scripts in a submenu, then Check for updates, then the app’s own items', () => {
+  test('puts the sample scripts in a submenu, then Report a problem and Suggest an idea, then Check for updates, then the app’s own items', () => {
     const help = submenu(menus(menuTemplate(HELP, () => {}, { platform: 'linux' })).Help);
     const samples = help.find((i) => i.label === 'Sample Scripts');
     expect(submenu(samples).map((i) => [i.id, i.label])).toEqual([
@@ -488,12 +490,25 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       'help-privacy',
       'help-licences',
       'take-the-tour',
+      'report-problem',
+      'suggest-idea',
       'check-for-updates',
       'modules-folder',
       'releases',
       'about-drafter',
     ]);
     expect(help.find((i) => i.id === 'check-for-updates')?.label).toBe('Check for Updates…');
+    expect(help.find((i) => i.id === 'report-problem')?.label).toBe('Report a Problem…');
+    expect(help.find((i) => i.id === 'suggest-idea')?.label).toBe('Suggest an Idea…');
+    // In a section of their own, between the separators.
+    const ids = help.map((i) => i.id ?? i.type);
+    const at = ids.indexOf('report-problem');
+    expect(ids.slice(at - 1, at + 3)).toEqual([
+      'separator',
+      'report-problem',
+      'suggest-idea',
+      'separator',
+    ]);
   });
 
   test('lists New guided screenplay and New guided stage play in File, after New stage play, and in Help → Sample Scripts', () => {
