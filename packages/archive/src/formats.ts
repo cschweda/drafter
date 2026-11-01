@@ -20,22 +20,25 @@ const PDF: Refusal = {
 };
 
 /**
- * A web page, Drafter's own HTML export among them: opened as a script, its markup would become
- * the script, and saving would write Fountain over the page.
+ * What a web page or an e-book Drafter can't reopen is told (reopenable exports): only Drafter's
+ * own HTML and EPUB exports, saved with "Let Drafter reopen this file" on, carry a script to open.
+ * It is true of a damaged Drafter export too, whose script can't be read.
  */
-const WEB_PAGE: Refusal = {
-  format: 'a web page',
-  advice: 'Open the script it was made from instead.',
-};
+export const REOPEN_ADVICE =
+  'Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.';
 
 /**
- * An e-book, Drafter's own EPUB export among them: a zip of web pages, which would open as the
- * packed file it is, or, named as a script, as its bytes.
+ * A web page with no script inside (another app's or site's, or a Drafter export made without
+ * "Let Drafter reopen this file"): opened as a script, its markup would become the script, and
+ * saving would write Fountain over the page.
  */
-const E_BOOK: Refusal = {
-  format: 'an e-book',
-  advice: 'Open the script it was made from instead.',
-};
+const WEB_PAGE: Refusal = { format: 'a web page', advice: REOPEN_ADVICE };
+
+/**
+ * An e-book with no script inside: a zip of web pages, which would open as the packed file it
+ * is, or, named as a script, as its bytes.
+ */
+const E_BOOK: Refusal = { format: 'an e-book', advice: REOPEN_ADVICE };
 
 /** By extension, lowercased, without its dot. */
 const BY_EXTENSION = new Map<string, Refusal>(
@@ -104,7 +107,7 @@ const EPUB_MIMETYPE = ascii('application/epub+zip');
  * `application/epub+zip` (EPUB's own rule, so that its kind can be read at a fixed place), the
  * entry's content after its name and any extra field.
  */
-function isEBook(bytes: Uint8Array): boolean {
+export function isEBook(bytes: Uint8Array): boolean {
   if (!startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]) || bytes.byteLength < 30) return false;
   const nameLength = (bytes[26] as number) | ((bytes[27] as number) << 8);
   const extraLength = (bytes[28] as number) | ((bytes[29] as number) << 8);
@@ -116,7 +119,7 @@ function isEBook(bytes: Uint8Array): boolean {
  * Whether the text starts as a web page does: `<!DOCTYPE html` or `<html` (any case, then a space,
  * `>`, or the end), after a byte order mark and white space. Only the first bytes are read.
  */
-function isWebPage(bytes: Uint8Array): boolean {
+export function isWebPage(bytes: Uint8Array): boolean {
   let start = 0;
   if (startsWith(bytes, [0xef, 0xbb, 0xbf])) start = 3;
   const head = String.fromCharCode(...bytes.subarray(start, start + 256))

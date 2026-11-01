@@ -1,17 +1,20 @@
 import {
   ArchiveError,
+  embeddedSource,
   fromFadeIn,
   fromHighland,
   MAX_SCRIPT_BYTES as MAX_BYTES,
   notAScript,
+  REOPEN_MAX_BYTES,
   refusalMessage,
+  reopenFormatOf,
   SNIFF_BYTES,
 } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
 import { desktop } from '../desktop';
 import { useEditor } from '../editor/session';
-import { type ImportKind, importKindOf, kindOfFileName } from '../markdown/kind';
+import { type DocumentKind, type ImportKind, importKindOf, kindOfFileName } from '../markdown/kind';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { nameOfPath } from './desktop-files';
 import { sayInToast } from './export';
@@ -52,6 +55,9 @@ function ask(title: string): Promise<SameTitleChoice> {
 const MESSAGES = {
   tooBig: 'This file is too big to be a script (over 5 MB), so Drafter didn’t open it.',
   importTooBig: 'The script in this file is too big (over 5 MB), so Drafter didn’t open it.',
+  exportTooBig:
+    'This file is too big to be a Drafter export (over 32 MB), so Drafter didn’t open it.',
+  unreadable: 'This file is too big to open (over 32 MB), so Drafter didn’t open it.',
   binary: 'This file isn’t a script: it holds more than text, so Drafter didn’t open it.',
   notUtf8:
     'This file isn’t UTF-8 text, so Drafter didn’t open it: saving would change its characters. Save it as UTF-8 in the app that made it, then open it again.',
@@ -118,7 +124,7 @@ async function openAsNewScript(
   text: string,
   name: string,
   message: string,
-  format: { lineBreak?: LineBreak; bom?: boolean } = {},
+  format: { lineBreak?: LineBreak; bom?: boolean; kind?: DocumentKind } = {},
 ): Promise<void> {
   if (!(await useScript().openImported(text, name, format))) {
     await say(openError, MESSAGES.busy);
@@ -162,6 +168,37 @@ async function importerFor(
   if (kind === 'fadein') return () => fromFadeIn(bytes);
   const decoded = await textOf(bytes);
   return decoded ? () => fromFdx(decoded.text) : null;
+}
+
+/**
+ * Reopens a Drafter HTML or EPUB export made with "Let Drafter reopen this file" (reopenable
+ * exports): the script inside, read only as text, opens as a new script with no file, as an
+ * import does, so Save never writes over the page or the book. Its text passes Open's own checks
+ * (no NUL, strict UTF-8, 5 MB), and keeps its line break and BOM; nothing in the file is run or
+ * drawn. A page or a book with no script inside, or a malformed one, is refused, said in the
+ * status bar.
+ */
+async function reopenExport(file: PickedFile): Promise<void> {
+  if (file.bytes.byteLength > REOPEN_MAX_BYTES) {
+    await say(openError, MESSAGES.exportTooBig);
+    return;
+  }
+  const found = await embeddedSource(file.bytes);
+  if (!found) {
+    // By its content or its name, it is a web page or an e-book (`reopenFormatOf`).
+    const refusal = notAScript(file.name, file.bytes) ?? notAScript(file.name, new Uint8Array());
+    if (refusal) await say(openError, refusalMessage(file.name, refusal));
+    else await say(openError, MESSAGES.failed);
+    return;
+  }
+  const decoded = await textOf(found.bytes);
+  if (!decoded) return;
+  await ready();
+  await openAsNewScript(decoded.text, file.name, `Reopened “${file.name}”.`, {
+    lineBreak: decoded.lineBreak,
+    bom: decoded.bom,
+    kind: found.kind,
+  });
 }
 
 /** The script already open for this file, if it came from the same file on disk. */
@@ -208,6 +245,16 @@ export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void
     // A tab that only shows a script may show old text, and opening replaces what it shows.
     if (useGuard().readOnly.value) {
       await say(readOnlyHint, READ_ONLY_HINT);
+      return;
+    }
+    // Too big to read at all: its bytes were never read (`MAX_OPEN_BYTES`).
+    if (file.tooBig) {
+      await say(openError, MESSAGES.unreadable);
+      return;
+    }
+    // A web page or an e-book is a Drafter export with its script inside, or refused.
+    if (reopenFormatOf(file.name, file.bytes)) {
+      await reopenExport(file);
       return;
     }
     // A known kind that isn't a script (a Word document, an RTF file) is named, with what to do.

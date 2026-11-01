@@ -351,7 +351,7 @@ test.describe('a Markdown document', () => {
     await typeAtEnd(page, 'Body text.');
     await page.getByRole('button', { name: 'Export' }).click();
     const menu = page.getByRole('group', { name: 'Export' });
-    // Export options… ends the menu, off for a Markdown document (export.spec.ts says why).
+    // Export options… ends the menu; for a Markdown document it offers only Let Drafter reopen this file.
     await expect(menu.getByRole('button')).toHaveText([
       'PDF',
       'HTML (.html)',

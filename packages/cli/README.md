@@ -22,6 +22,7 @@ In this repository, run it from the root as `pnpm drafter …` after `pnpm -r bu
 |---|---|
 | `--pdf <file>` | Write a PDF, with Courier Prime embedded. With no output named, `script.fountain` becomes `script.pdf`. |
 | `--html <file>` | Write one self-contained HTML page: the printed pages and a reading view, dark by default with a light switch, Courier Prime embedded, no network needed. The running time in its header is a page a minute, since the command line has no per-script rate. Notes are left out (there is no notes option here; the app's Export as HTML can include them). |
+| `--reopenable` | With `--html`: let Drafter reopen the page. It carries the full script, notes and all, exactly as the file has it, so `drafter convert` or the app's Open can get it back. Off unless you ask: leave it off for a page you send to someone. A script that isn't UTF-8 text is refused, since it couldn't come back as it is. |
 | `--txt <file>` | Write fixed-width text: each page the full width and height of its grid, margins included, pages separated by form feeds. |
 | `--json <file>` | Write the parsed script as JSON (`toJSON` from `@drafter/fountain`). |
 | `--template <id\|file>` | A built-in template (`us-screenplay`, `stage-play-standard`) or a template JSON file. |
@@ -46,6 +47,8 @@ Each diagnostic is `file:line:column: severity: message [code]`, a form terminal
 Converts Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) files to Fountain, with the same functions the app's Open uses (`fromFdx` from `@drafter/fdx`, `fromHighland` and `fromFadeIn` from `@drafter/archive`), so each `.fountain` holds exactly the text the app would import: UTF-8, every line ending a line feed, with what Drafter has no element for kept as notes (`[[fdx: …]]`, `[[highland: …]]`, `[[osf: …]]`).
 
 Each path is a file or a folder. A folder's `.fdx`, `.highland`, and `.fadein` files are converted, in name order; its other files, and names starting with `.` (such as macOS's `._` files), are left alone.
+
+It also gets the script back out of a Drafter HTML or EPUB export made with **Let Drafter reopen this file** (or `drafter build --html --reopenable`), named on its own: `script.html` or `script.epub` becomes `script.fountain`, or `script.md` for a Markdown document, holding exactly the text that went in (its line breaks and byte order mark too). The script is read only as text, and nothing in the page is run. Drafter can only reopen HTML or EPUB files it saved itself, with that option on: a page or a book from another app or site, or a Drafter export made with it off, is refused. A folder is never searched for them.
 
 | Option | What it does |
 |---|---|

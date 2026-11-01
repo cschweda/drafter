@@ -717,11 +717,11 @@ describe('choosing a file to open in a browser', () => {
       click.mockRestore();
     }
     expect(accept).toBe(
-      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown',
+      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,.html,.htm,.epub,text/plain,text/markdown',
     );
   });
 
-  test('the picker offers every type Drafter opens, as one', async () => {
+  test('the picker offers every type Drafter opens: scripts and imports, then its own exports', async () => {
     const { browserFiles } = await import('../app/storage/files');
     let asked: unknown;
     vi.stubGlobal('showOpenFilePicker', async (options: unknown) => {
@@ -740,7 +740,41 @@ describe('choosing a file to open in a browser', () => {
             'application/zip': ['.highland', '.fadein'],
           },
         },
+        {
+          description: 'Drafter HTML or EPUB export',
+          accept: { 'text/html': ['.html', '.htm'], 'application/epub+zip': ['.epub'] },
+        },
       ],
     });
+  });
+
+  test('never reads a file over 32 MB: it comes back too big, with no bytes', async () => {
+    const { browserFiles, MAX_OPEN_BYTES } = await import('../app/storage/files');
+    expect(MAX_OPEN_BYTES).toBe(32 * 1024 * 1024);
+    const read = vi.fn(async () => new ArrayBuffer(0));
+    const huge = {
+      name: 'Huge.html',
+      size: MAX_OPEN_BYTES + 1,
+      lastModified: 5,
+      arrayBuffer: read,
+    };
+    const handle = { kind: 'file', getFile: async () => huge };
+    vi.stubGlobal('showOpenFilePicker', async () => [handle]);
+    const picked = await browserFiles.pickToOpen();
+    expect(picked?.tooBig).toBe(true);
+    expect(picked?.bytes.byteLength).toBe(0);
+    // Dropped, and read again from its handle, it is never read either.
+    const dropped = await browserFiles.fromDrop({
+      getAsFile: () => huge,
+      getAsFileSystemHandle: async () => handle,
+    } as unknown as DataTransferItem);
+    expect(dropped?.tooBig).toBe(true);
+    await expect(browserFiles.read(handle as never)).rejects.toThrow(/larger than 32 MB/);
+    expect(read).not.toHaveBeenCalled();
+    // At the cap exactly, it is read.
+    const big = { ...huge, size: MAX_OPEN_BYTES };
+    vi.stubGlobal('showOpenFilePicker', async () => [{ kind: 'file', getFile: async () => big }]);
+    expect((await browserFiles.pickToOpen())?.tooBig).toBeUndefined();
+    expect(read).toHaveBeenCalledTimes(1);
   });
 });

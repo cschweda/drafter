@@ -360,6 +360,67 @@ describe('exporting', () => {
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.epub, with notes.');
   });
 
+  test('with Let Drafter reopen this file, the HTML page and the EPUB carry the exact text', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { reopenable: true }, lineBreak: '\r\n', bom: true };
+    // As Save would write it: the file's line breaks and byte order mark.
+    const saved = `\uFEFF${TEXT.replace(/\n/g, '\r\n')}`;
+    render.mockResolvedValue('<!DOCTYPE html>\n');
+    expect(await t.exportScript('html')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'html', source: TEXT, embed: saved }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe(
+      'Exported The Call Part 1.html, with the full script inside.',
+    );
+    render.mockResolvedValue(new Uint8Array([0x50, 0x4b, 3, 4]));
+    expect(await t.exportScript('epub')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'epub', embed: saved }),
+      expect.any(Function),
+    );
+    // Never in any other export.
+    for (const kind of ['pdf', 'txt', 'fdx', 'md'] as const) {
+      render.mockResolvedValue('x');
+      expect(await t.exportScript(kind)).toBe('saved');
+      expect(render.mock.lastCall?.[0]).not.toHaveProperty('embed');
+      expect(t.exportNotice.value).not.toMatch(/script inside/);
+    }
+  });
+
+  test('a Markdown document carries its text too, when asked', async () => {
+    const t = await load({ inPlace: false });
+    shown.text = '# The Treatment\n\nWords. [[A note.]]\n';
+    shown.kind = 'markdown';
+    shown.project = { exportOptions: { reopenable: true } };
+    render.mockResolvedValue('<!DOCTYPE html>\n');
+    expect(await t.exportScript('html')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'markdown-html', embed: shown.text }),
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe('Exported The Treatment.html, with the full script inside.');
+    render.mockResolvedValue(new Uint8Array([0x50, 0x4b, 3, 4]));
+    expect(await t.exportScript('epub')).toBe('saved');
+    expect(render).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'markdown-epub', embed: shown.text }),
+      expect.any(Function),
+    );
+  });
+
+  test('an export with the script inside is never joined to one without', async () => {
+    const t = await load({ inPlace: true });
+    render.mockResolvedValue('<!DOCTYPE html>\n');
+    const first = t.exportScript('html');
+    shown.project = { exportOptions: { reopenable: true } };
+    const second = t.exportScript('html');
+    await Promise.all([first, second]);
+    // Two exports, not one joined: each reads the options as its turn comes.
+    expect(render).toHaveBeenCalledTimes(2);
+    expect(render.mock.calls[1]?.[0]).toHaveProperty('embed', TEXT);
+  });
+
   test('says only a screenplay or a stage play exports as Final Draft, before any picker', async () => {
     const t = await load({ inPlace: true });
     shown.text = '# The Treatment\n';

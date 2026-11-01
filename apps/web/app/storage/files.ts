@@ -1,3 +1,4 @@
+import { ZIP_LIMITS } from '@drafter/archive';
 /**
  * The one module that touches files: the File System Access API, file inputs, drops, and
  * downloads. Everything else reads and writes files through `FileAccess`, so the desktop app
@@ -22,7 +23,15 @@ export interface PickedFile {
   lastModified: number;
   /** Said in the status bar after the file opens (the desktop app: why it is not tied to its file). */
   notice?: string;
+  /** Over `MAX_OPEN_BYTES`: never read, so `bytes` is empty, and Open refuses it. */
+  tooBig?: true;
 }
+
+/**
+ * The largest file Open reads at all: the archive's cap (32 MB), which a Highland or Fade In file
+ * and a Drafter HTML or EPUB export share; a script's own text is capped lower (5 MB) once read.
+ */
+export const MAX_OPEN_BYTES = ZIP_LIMITS.maxArchiveBytes;
 
 /** The file was moved or deleted, or its drive is gone. */
 export class FileGoneError extends Error {
@@ -112,6 +121,16 @@ const isGone = (error: unknown) =>
   (error.name === 'NotFoundError' || error.name === 'NotReadableError');
 
 async function pickedFrom(file: File, ref: FileRef | null): Promise<PickedFile> {
+  // Its size first: a file too big to open is never read into memory.
+  if (file.size > MAX_OPEN_BYTES) {
+    return {
+      ref,
+      name: file.name,
+      bytes: new Uint8Array(),
+      lastModified: file.lastModified,
+      tooBig: true,
+    };
+  }
   return {
     ref,
     name: file.name,
@@ -125,7 +144,8 @@ function pickWithInput(): Promise<PickedFile | null> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,text/plain,text/markdown';
+    input.accept =
+      '.fountain,.txt,.md,.markdown,.fdx,.highland,.fadein,.html,.htm,.epub,text/plain,text/markdown';
     input.hidden = true;
     const done = () => input.remove();
     input.addEventListener('change', () => {
@@ -166,6 +186,11 @@ export const browserFiles: FileAccess = {
               'application/xml': ['.fdx'],
               'application/zip': ['.highland', '.fadein'],
             },
+          },
+          // Drafter's own exports, made with "Let Drafter reopen this file": the script inside opens.
+          {
+            description: 'Drafter HTML or EPUB export',
+            accept: { 'text/html': ['.html', '.htm'], 'application/epub+zip': ['.epub'] },
           },
         ],
       });
@@ -209,6 +234,7 @@ export const browserFiles: FileAccess = {
   async read(ref) {
     try {
       const file = await (ref as FileSystemFileHandle).getFile();
+      if (file.size > MAX_OPEN_BYTES) throw new FileProblemError('it is larger than 32 MB');
       return { bytes: new Uint8Array(await file.arrayBuffer()), lastModified: file.lastModified };
     } catch (error) {
       if (isGone(error)) throw new FileGoneError();

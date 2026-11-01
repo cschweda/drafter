@@ -181,7 +181,38 @@ The media type `application/vnd.drafter.package+zip` is not yet registered. The 
 ## 14. Change log
 
 - **0.1 (2026-10-30):** first draft, written ahead of Drafter's implementation (planned v0.28.0) so other applications can comment and implement.
+- **0.1.1 (2026-11-01):** the appendix, the script inside an HTML or EPUB export (Drafter v0.23.1), added. It is in use now, so its names are stable. The package itself is unchanged.
 
 ## 15. Feedback
 
 Open an issue at https://github.com/cschweda/drafter/issues with "Package format" in the title. Implementations in other applications are welcome — tell us and we'll list them here.
+
+## Appendix: The script inside an HTML or EPUB export
+
+Drafter's HTML and EPUB exports can carry the work's main file, so the export can be opened again as the work ("Let Drafter reopen this file", Drafter v0.23.1). This is not part of a package; it is written down here so that every way Drafter stores a writer's text is in one open document. The id and the file names below are **stable**: they will not change.
+
+**What is carried.** The main file's exact text, as Drafter would save it: Fountain for a script, Markdown for a document, with every note, the boneyard, Drafter's metadata block, its line breaks, and a leading byte order mark if it has one. Nothing is left out, whatever the export's own options leave off the page.
+
+**HTML.** One element, the last in `<body>`, written exactly so:
+
+```html
+<script type="text/plain" id="drafter-source" data-kind="fountain" data-encoding="base64">
+…base64…
+</script>
+```
+
+- `type="text/plain"` makes it a data block: no browser runs it, so it needs nothing from the file's content security policy.
+- `data-kind` is `fountain` or `markdown`.
+- The content is the UTF-8 bytes of the text in standard base64 (RFC 4648 §4, with padding, and padding bits zero), in lines of 76 characters separated by line feeds. A writer writes only line feeds between the lines; a reader **MUST** accept, and skip, any of space (U+0020), tab (U+0009), line feed (U+000A), form feed (U+000C), and carriage return (U+000D) anywhere in the content, and nothing else. Base64 holds no `<`, `>`, or `&`, so nothing in the text (`</script>`, `<!--`) can end the element or be read as markup.
+- A page holds exactly one such element. Its opening tag is written with exactly these attributes, in this order, and that opening text, `<script type="text/plain" id="drafter-source" data-kind="`, **MUST NOT** appear anywhere else in the file: not in the page's own text, an attribute, a comment, a stylesheet, or a script's strings. A writer **MUST** escape every `<` in the page's own text (as `&lt;`), so a writer's words can never spell it, and **MUST NOT** write it in a comment or a script; a reader that finds it twice refuses the file.
+
+**EPUB.** One more file in the zip: `EPUB/drafter-source.fountain` for a script, or `EPUB/drafter-source.md` for a document, holding the text's UTF-8 bytes as they are. Drafter stores it uncompressed; a reader **MUST** accept it stored or deflated (zip methods 0 and 8), and may refuse any other method. A reader knows the file for an EPUB by EPUB's own rule, which it relies on: the zip's first entry is named `mimetype`, is stored, and holds exactly `application/epub+zip`. It is listed in the package document's manifest as `<item id="drafter-source" href="drafter-source.fountain" media-type="text/plain"/>` (or `.md`), and is not in the spine, so e-readers never show it.
+
+**Readers.**
+
+- A reader **MUST** read the text only as text: never execute it, render it as HTML, or parse the page as HTML to find it. Drafter looks for the element's exact opening text.
+- A reader **MUST** refuse, and not repair, a page with no such element, more than one, an unknown `data-kind` or `data-encoding`, a missing `</script>`, or content that is not strict base64 (white space between characters aside); and a book with no such file, or both.
+- A reader **SHOULD** cap what it reads (Drafter: the HTML or EPUB file at 32 MiB, the text at 5 MiB) and then check the text as any opened file: Drafter refuses one with a NUL byte in its first 8 KiB, or that is not valid UTF-8.
+- A reader **SHOULD** open the text as a new work, not as the export's own file, so saving never writes over the export.
+
+There is no checksum. Anyone can edit the file and work out a new one, so it would stop nothing; what keeps a file safe is reading the text only as text.

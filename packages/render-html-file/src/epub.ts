@@ -4,7 +4,7 @@
 // and, for a script, the Courier Prime styles it uses. No script, no network, no light/dark
 // switch: the e-reader sets the theme and the type size.
 
-import { zipStored } from '@drafter/archive';
+import { SOURCE_ENTRY, type SourceKind, zipStored } from '@drafter/archive';
 import type { Doc } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
 import { type DocumentHtmlInput, documentParts } from './document';
@@ -283,7 +283,12 @@ function book(o: {
   parts: Part[];
   css: string;
   fonts: FontFile[];
+  /** The script's exact text, to carry for Drafter to reopen, or absent. */
+  source?: string;
 }): Uint8Array {
+  const kind: SourceKind = o.bodyClass === 'script' ? 'fountain' : 'markdown';
+  const sourcePath = SOURCE_ENTRY[kind];
+  const sourceHref = sourcePath.slice(ROOT.length);
   const modified = modifiedOf(o.modified);
   const lang = langOf(o.lang);
   const title = shownTitle(o.title);
@@ -334,6 +339,10 @@ function book(o: {
     ...o.fonts.map((font, i) =>
       x('item', { id: `font-${i + 1}`, href: font.path, 'media-type': font.type }),
     ),
+    // The script itself, for Drafter to reopen: listed, as every file must be, but never read.
+    ...(o.source === undefined
+      ? []
+      : [x('item', { id: 'drafter-source', href: sourceHref, 'media-type': 'text/plain' })]),
   ];
   const metadata = [
     x('dc:identifier', { id: 'uid' }, escapeHtml(o.id)),
@@ -386,6 +395,7 @@ function book(o: {
     })),
     { name: `${ROOT}style.css`, data: encoder.encode(css) },
     ...o.fonts.map((font) => ({ name: `${ROOT}${font.path}`, data: font.data })),
+    ...(o.source === undefined ? [] : [{ name: sourcePath, data: encoder.encode(o.source) }]),
   ]);
 }
 

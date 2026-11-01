@@ -115,6 +115,60 @@ describe('exportOptionsOf', () => {
   });
 });
 
+describe('Let Drafter reopen this file', () => {
+  test('is off unless it was turned on: only true reads as on', () => {
+    expect(exportOptionsOf({}).reopenable).toBeUndefined();
+    for (const reopenable of [false, 'true', 1, null, 'on']) {
+      expect(
+        exportOptionsOf({ exportOptions: { reopenable } as never }),
+        String(reopenable),
+      ).toEqual({
+        sceneNumbers: 'none',
+        titlePage: 'full',
+        notes: 'leave-out',
+      });
+    }
+    expect(exportOptionsOf({ exportOptions: { reopenable: true } })).toEqual({
+      sceneNumbers: 'none',
+      titlePage: 'full',
+      notes: 'leave-out',
+      reopenable: true,
+    });
+  });
+
+  test('its help says plainly what goes in, and which files Drafter can reopen', async () => {
+    const { REOPEN_LABEL, REOPEN_HINT } = await import('../app/storage/export-options');
+    expect(REOPEN_LABEL).toBe(
+      'Let Drafter reopen this file (includes the full script, notes and all)',
+    );
+    expect(REOPEN_HINT).toMatch(/full script/);
+    expect(REOPEN_HINT).toMatch(/can only reopen HTML or EPUB files it saved itself/);
+    expect(REOPEN_HINT).toMatch(/other apps or sites/);
+  });
+
+  test('the toast says the script is inside', () => {
+    expect(
+      optionsPhrase({
+        sceneNumbers: 'none',
+        titlePage: 'full',
+        notes: 'leave-out',
+        reopenable: true,
+      }),
+    ).toBe('with the full script inside');
+    expect(
+      optionsPhrase({ sceneNumbers: 'all', titlePage: 'full', notes: 'include', reopenable: true }),
+    ).toBe('with every scene numbered, notes, and the full script inside');
+  });
+
+  test('setExportOption keeps it, and off is the default again', async () => {
+    const t = await visit();
+    await t.setExportOption('reopenable', true);
+    expect(exportOptionsOf(t.session.project.value).reopenable).toBe(true);
+    await t.setExportOption('reopenable', false);
+    expect(exportOptionsOf(t.session.project.value).reopenable).toBeUndefined();
+  });
+});
+
 describe('optionsPhrase', () => {
   test('optionsPhrase is empty for the defaults and names each other choice', () => {
     const phrase = (sceneNumbers: string, titlePage: string) =>

@@ -166,7 +166,7 @@ for (const theme of THEMES) {
       // Its footnote's reference and the notes at the end are checked too.
       await expect(page.getByRole('region', { name: 'Notes' })).toContainText('A footnote.');
       await clean(page, 'a Markdown document, in the Preview');
-      // Its Export menu, with Export options… off and the reason under it; or, where a full phone
+      // Its Export menu, whose Export options… offers only Let Drafter reopen this file; or, where a full phone
       // bar folded Export into More actions (Task 9), that menu's Export submenu.
       await settled(page);
       const exportButton = page.getByRole('button', { name: 'Export', exact: true });
@@ -176,7 +176,7 @@ for (const theme of THEMES) {
           page
             .getByRole('group', { name: 'Export' })
             .getByRole('button', { name: 'Export options…' }),
-        ).toHaveAttribute('aria-disabled', 'true');
+        ).not.toHaveAttribute('aria-disabled');
       } else {
         await page.getByRole('button', { name: 'More actions', exact: true }).click();
         await page.getByRole('menuitem', { name: 'Export', exact: true }).focus();
@@ -403,6 +403,26 @@ for (const theme of THEMES) {
         options.getByRole('group', { name: 'Include notes (Markdown, HTML, and EPUB)' }),
       ).toBeVisible();
       await clean(page, 'the Export options dialog');
+    });
+
+    test(`has no accessibility violations in a Markdown document's Export options dialog (${theme})`, async ({
+      page,
+    }) => {
+      await runCommand(page, 'Sample script: Markdown');
+      await expect(page.locator('.cm-content')).toContainText('# Sample: Markdown');
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await page
+        .getByRole('group', { name: 'Export' })
+        .getByRole('button', { name: 'Export options…' })
+        .click();
+      const options = page.getByRole('dialog', { name: 'Export options' });
+      await expect(options).toBeVisible();
+      await expect(
+        options.getByRole('checkbox', {
+          name: 'Let Drafter reopen this file (includes the full script, notes and all)',
+        }),
+      ).toBeEnabled();
+      await clean(page, 'a Markdown document’s Export options dialog');
     });
 
     test(`has no accessibility violations in Settings and its modules (${theme})`, async ({

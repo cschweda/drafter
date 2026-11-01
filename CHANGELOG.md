@@ -6,8 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-11-01
+
+**Exports Drafter can reopen, and dark by default.** An HTML or EPUB export can carry the full script, so Drafter can open it again exactly as it was; it's off by default. Drafter opens dark again on a first visit.
+
+### Added
+
+- **HTML and EPUB exports Drafter can reopen.** Export options has a new choice, **Let Drafter reopen this file (includes the full script, notes and all)**, for the HTML and EPUB exports, Markdown documents' too. With it on, the file carries your whole script exactly as you wrote it, and Open brings it back as a new script: notes, boneyard, the metadata block, line breaks, and every character. It is off by default, because an export is often sent to someone with the notes left out, and with it on everything goes in. Drafter can only reopen HTML or EPUB files it saved itself, with this turned on. It can't open HTML or EPUB files made by other apps or sites, or Drafter exports made with it off, and says so. It reads the script inside only as plain text and never runs anything in the file.
+- **The desktop app** opens a reopenable `.html` or `.epub` from Open, a drop, or the command line, and its Open dialog lists them.
+- **The command line:** `drafter build --html <file> --reopenable` makes a page Drafter can reopen, and `drafter convert script.html` (or `.epub`) writes the script back out, as `.fountain` or `.md`.
+- The open spec (`docs/spec/drafter-package.md`) says where the script sits in an HTML or EPUB export: a `<script type="text/plain" id="drafter-source">` element, in base64, or the file `EPUB/drafter-source.fountain` (or `.md`).
+
 ### Changed
 
+- The message for a web page or an e-book Drafter can't open now says that Drafter can only reopen HTML or EPUB files it saved itself, with "Let Drafter reopen this file" turned on.
+- **Export options… is on for a Markdown document**, offering only Let Drafter reopen this file; its scene numbers, title page, and notes choices stay off, with the reason.
 - **Drafter opens dark again on a first visit,** whatever your computer is set to. Pick light with the theme button, or turn on **Match system appearance** in Settings to follow your computer. This undoes v0.23.0's first visit that followed the system.
 
 ## [0.23.0] - 2026-11-01
@@ -1000,7 +1013,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/cschweda/drafter/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/cschweda/drafter/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/cschweda/drafter/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/cschweda/drafter/compare/v0.22.0...v0.22.1

@@ -43,6 +43,12 @@ export interface ExportOptions {
   sceneNumbers: SceneNumbering;
   titlePage: TitlePageMode;
   notes: 'leave-out' | 'include';
+  /**
+   * "Let Drafter reopen this file" (reopenable exports): an HTML file and an EPUB carry the whole
+   * script, notes and all, so Open can read it back. Absent is off, the default: an export is
+   * often sent to someone with the notes left out.
+   */
+  reopenable?: true;
 }
 
 /**
@@ -64,7 +70,9 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptions = Object.freeze({
  * writes from the pages it lays out; a Markdown document's HTML file is its text, title,
  * language, and generator. An EPUB (§10a), a script's or a document's, is asked for as the HTML
  * file is, without the page rate and with the time it was asked for (milliseconds since 1970),
- * its package's modified date.
+ * its package's modified date. With "Let Drafter reopen this file", each of those four carries
+ * `embed`, the text as Save would write it (its line breaks and byte order mark), which goes
+ * inside the file whole.
  */
 export type ExportRequest =
   | {
@@ -82,6 +90,8 @@ export type ExportRequest =
       lang: string;
       generator: string;
       minutesPerPage: number;
+      /** The text to carry inside the file, for Drafter to reopen (`ExportOptions.reopenable`). */
+      embed?: string;
     }
   | {
       kind: 'epub';
@@ -94,9 +104,17 @@ export type ExportRequest =
       modified: number;
       /** The project's id, the book's identity (`epubIdentifier`); none for a script not saved. */
       projectId?: string;
+      embed?: string;
     }
   | { kind: 'markdown-pdf'; source: string; paper: Paper; title: string; lang: string }
-  | { kind: 'markdown-html'; source: string; title: string; lang: string; generator: string }
+  | {
+      kind: 'markdown-html';
+      source: string;
+      title: string;
+      lang: string;
+      generator: string;
+      embed?: string;
+    }
   | {
       kind: 'markdown-epub';
       source: string;
@@ -106,6 +124,7 @@ export type ExportRequest =
       modified: number;
       /** The project's id, as a script's EPUB's. */
       projectId?: string;
+      embed?: string;
     };
 /** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
 export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
@@ -173,6 +192,9 @@ const rendering =
     else report.step(stage, done, total);
   };
 
+/** A renderer's `source`, the text to carry inside the file, when there is one. */
+const embedded = (embed: string | undefined) => (embed === undefined ? {} : { source: embed });
+
 /** Loads something once and keeps it; a failed load is tried again next time. */
 function once<T>(load: () => Promise<T>): () => Promise<T> {
   let kept: Promise<T> | undefined;
@@ -212,7 +234,13 @@ export function createExporter(
       const { parseMarkdown } = await parserOnce();
       const { title, lang, generator } = request;
       return {
-        data: renderDocumentHtml({ tree: parseMarkdown(request.source), title, lang, generator }),
+        data: renderDocumentHtml({
+          tree: parseMarkdown(request.source),
+          title,
+          lang,
+          generator,
+          ...embedded(request.embed),
+        }),
       };
     }
     if (request.kind === 'markdown-epub') {
@@ -227,6 +255,7 @@ export function createExporter(
           modified: new Date(request.modified),
           // The same work is the same book, so a re-export replaces the old one on an e-reader.
           id: epubIdentifier({ project: request.projectId, title }),
+          ...embedded(request.embed),
         }),
       };
     }
@@ -267,6 +296,7 @@ export function createExporter(
           lang: request.lang,
           generator: request.generator,
           kindLine: kindLine(layout, template, request.minutesPerPage),
+          ...embedded(request.embed),
         }),
       };
     }
@@ -293,6 +323,7 @@ export function createExporter(
             title: request.title,
             author: scriptAuthor(parsed),
           }),
+          ...embedded(request.embed),
         }),
       };
     }
