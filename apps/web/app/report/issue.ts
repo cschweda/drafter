@@ -72,7 +72,7 @@ export const KINDS: Record<
   idea: {
     name: 'Idea',
     template: 'idea.yml',
-    label: 'idea',
+    label: 'enhancement',
     fields: [{ id: 'idea', label: "What you'd like", key: 'idea' }],
   },
 };

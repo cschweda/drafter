@@ -60,7 +60,7 @@ describe('the new-issue link', () => {
 
     const idea = params(issueLink(draft({ kind: 'idea', idea: 'Cards in colour' }), VERSION).url);
     expect(idea.get('template')).toBe('idea.yml');
-    expect(idea.get('labels')).toBe('idea');
+    expect(idea.get('labels')).toBe('enhancement');
     expect(idea.get('idea')).toBe('Cards in colour');
     expect(idea.has('what-happened')).toBe(false);
   });
@@ -150,7 +150,7 @@ describe('the new-issue link', () => {
   });
 
   test('is built from the fields given, nothing else', () => {
-    expect(issueUrl('idea', '', [])).toBe(`${NEW_ISSUE_URL}?template=idea.yml&labels=idea`);
+    expect(issueUrl('idea', '', [])).toBe(`${NEW_ISSUE_URL}?template=idea.yml&labels=enhancement`);
   });
 });
 

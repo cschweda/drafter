@@ -3,7 +3,7 @@
 # apps/web/app/report/issue.ts must match (apps/web/test/report-issue.test.ts).
 name: Suggest an idea
 description: Something you'd like Drafter to do.
-labels: [idea]
+labels: [enhancement]
 body:
   - type: markdown
     attributes:
