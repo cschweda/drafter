@@ -1,4 +1,5 @@
 import { ref, watch } from 'vue';
+import { useCutRecorder } from '../cuts/use-recorder';
 import { replaceText } from '../editor/replace-text';
 import { useEditor } from '../editor/session';
 import { kindOfFileName } from '../markdown/kind';
@@ -255,5 +256,8 @@ export function revertToSaved(): void {
   if (view.state.readOnly) return;
   useSnapshots().before('before-revert');
   if (!replaceText(view, target)) return;
+  // A whole-text replacement makes no cuts (drafts-and-cuts design §3.1).
+  const id = script.project.value?.id;
+  if (id) void useCutRecorder().replaced(id, target);
   void announceRevert(`Reverted to the text last saved to ${file}. Undo brings your changes back.`);
 }

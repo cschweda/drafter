@@ -42,6 +42,10 @@ const files: DesktopFilesBridge = {
   read: (path) => invoke(CHANNELS.filesRead, path),
   write: (path, bytes) => invoke(CHANNELS.filesWrite, path, bytes),
   realPath: (path) => invoke(CHANNELS.filesRealPath, path),
+  writeBeside: (script, rel, bytes, mode) =>
+    invoke(CHANNELS.filesWriteBeside, script, rel, bytes, mode),
+  readBeside: (script, rel) => invoke(CHANNELS.filesReadBeside, script, rel),
+  listBeside: (script, folder) => invoke(CHANNELS.filesListBeside, script, folder),
   // A dropped file's path is known only here, in the renderer (Electron removed `File.path`), and
   // only for a real file on disk: a page can't make a File with a path. The main process is told,
   // so it may grant it (if it is a script) before the page reads it; the read waits for that.

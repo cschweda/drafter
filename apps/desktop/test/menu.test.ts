@@ -36,6 +36,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('take-the-tour', 'Help', 'Take the tour'),
   cmd('help-shortcuts', 'Help', 'Open the page: Keyboard shortcuts'),
   cmd('help-saving', 'Help', 'Open the page: Saving and your browser'),
+  cmd('help-drafts-and-cuts', 'Help', 'Open the page: Drafts and cuts'),
   cmd('help-privacy', 'Help', 'Open the page: Privacy'),
   cmd('help-licences', 'Help', 'Open the page: Third-party licences'),
   cmd('go-to-scene', 'Go', 'Go to scene…'),
@@ -88,6 +89,32 @@ describe('menuTemplate', () => {
       .map((i) => i.id)
       .filter((id): id is string => !!id && COMMANDS.some((c) => c.id === id));
     expect(ids.sort()).toEqual(COMMANDS.map((c) => c.id).sort());
+  });
+
+  test('File lists Start New Draft…, Drafts… and Cuts… after Revert to Saved, in a section of their own', () => {
+    const m = menus(
+      menuTemplate(
+        [
+          ...COMMANDS,
+          cmd('revert-to-saved', 'File', 'Revert to Saved'),
+          cmd('start-draft', 'File', 'Start new draft…'),
+          cmd('drafts', 'File', 'Drafts…'),
+          cmd('cuts', 'File', 'Cuts…'),
+        ],
+        () => {},
+        { platform: 'linux' },
+      ),
+    );
+    const file = submenu(m.File);
+    const at = file.findIndex((i) => i.id === 'revert-to-saved');
+    expect(file[at + 1]?.type).toBe('separator');
+    expect(file[at + 2]?.id).toBe('start-draft');
+    expect(file[at + 3]?.id).toBe('drafts');
+    expect(labelOf(file[at + 2] as MenuItemConstructorOptions)).toBe('Start New Draft…');
+    expect(labelOf(file[at + 3] as MenuItemConstructorOptions)).toBe('Drafts…');
+    expect(file[at + 4]?.id).toBe('cuts');
+    expect(labelOf(file[at + 4] as MenuItemConstructorOptions)).toBe('Cuts…');
+    expect(file[at + 5]?.type).toBe('separator');
   });
 
   test('File lists Open as Screenplay… after Open', () => {
@@ -184,6 +211,7 @@ describe('menuTemplate', () => {
     expect(help.map((i) => i.id).filter(Boolean)).toEqual([
       'help-shortcuts',
       'help-saving',
+      'help-drafts-and-cuts',
       'help-privacy',
       'help-licences',
       'take-the-tour',
@@ -230,6 +258,7 @@ describe('menuTemplate', () => {
     const t = menuTemplate(COMMANDS, () => {}, { platform: 'linux' });
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');
     expect(named(t, 'help-saving')?.label).toBe('Saving');
+    expect(named(t, 'help-drafts-and-cuts')?.label).toBe('Drafts and Cuts');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
     expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
@@ -470,11 +499,13 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
     cmd('sample-script-screenplay', 'Help', 'Sample script: Screenplay'),
     cmd('sample-script-stage-play', 'Help', 'Sample script: Stage play'),
     cmd('sample-script-markdown', 'Help', 'Sample script: Markdown'),
+    cmd('report-problem', 'Help', 'Report a problem…'),
+    cmd('suggest-idea', 'Help', 'Suggest an idea…'),
     cmd('check-for-updates', 'Help', 'Check for updates…'),
     cmd('about-drafter', 'Help', 'About Drafter'),
   ];
 
-  test('puts the sample scripts in a submenu, then Check for updates, then the app’s own items', () => {
+  test('puts the sample scripts in a submenu, then Report a problem and Suggest an idea, then Check for updates, then the app’s own items', () => {
     const help = submenu(menus(menuTemplate(HELP, () => {}, { platform: 'linux' })).Help);
     const samples = help.find((i) => i.label === 'Sample Scripts');
     expect(submenu(samples).map((i) => [i.id, i.label])).toEqual([
@@ -485,15 +516,29 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
     expect(help.map((i) => i.id).filter(Boolean)).toEqual([
       'help-shortcuts',
       'help-saving',
+      'help-drafts-and-cuts',
       'help-privacy',
       'help-licences',
       'take-the-tour',
+      'report-problem',
+      'suggest-idea',
       'check-for-updates',
       'modules-folder',
       'releases',
       'about-drafter',
     ]);
     expect(help.find((i) => i.id === 'check-for-updates')?.label).toBe('Check for Updates…');
+    expect(help.find((i) => i.id === 'report-problem')?.label).toBe('Report a Problem…');
+    expect(help.find((i) => i.id === 'suggest-idea')?.label).toBe('Suggest an Idea…');
+    // In a section of their own, between the separators.
+    const ids = help.map((i) => i.id ?? i.type);
+    const at = ids.indexOf('report-problem');
+    expect(ids.slice(at - 1, at + 3)).toEqual([
+      'separator',
+      'report-problem',
+      'suggest-idea',
+      'separator',
+    ]);
   });
 
   test('lists New guided screenplay and New guided stage play in File, after New stage play, and in Help → Sample Scripts', () => {

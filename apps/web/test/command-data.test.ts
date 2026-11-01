@@ -17,12 +17,15 @@ describe('the command data', () => {
     }
   });
 
-  test('Deleted scenes is in File, after History, and found by "show all versions"', () => {
+  test('Cuts is in File, after History, and found by "deleted scenes" and "show all versions"', () => {
     const ids = COMMAND_DATA.map((c) => c.id);
-    expect(ids.indexOf('deleted-scenes')).toBe(ids.indexOf('history') + 1);
-    const deleted = COMMAND_DATA.find((c) => c.id === 'deleted-scenes');
-    expect(deleted).toMatchObject({ title: 'Deleted scenes', group: 'File' });
-    expect(deleted?.keywords).toEqual(expect.arrayContaining(['show all versions', 'versions']));
+    expect(ids).not.toContain('deleted-scenes');
+    expect(ids.indexOf('cuts')).toBe(ids.indexOf('history') + 1);
+    const cuts = COMMAND_DATA.find((c) => c.id === 'cuts');
+    expect(cuts).toMatchObject({ title: 'Cuts…', group: 'File' });
+    expect(cuts?.keywords).toEqual(
+      expect.arrayContaining(['deleted scenes', 'show all versions', 'versions', 'cuts']),
+    );
   });
 
   test('has Show Scaffold after Show stats, found by its words, and Scaffold for this scene in Go', () => {
@@ -103,12 +106,13 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the ten help pages, in the Help group', () => {
+  test('has the eleven help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/what-is-drafter',
       '/docs/why',
       '/docs/fountain',
       '/docs/saving',
+      '/docs/drafts-and-cuts',
       '/docs/shortcuts',
       '/docs/privacy',
       '/docs/open-formats',
@@ -130,6 +134,8 @@ describe('the command data', () => {
       expect.arrayContaining([
         ['about-drafter', 'About Drafter'],
         ['check-for-updates', 'Check for updates…'],
+        ['report-problem', 'Report a problem…'],
+        ['suggest-idea', 'Suggest an idea…'],
         ['sample-script-screenplay', 'Sample script: Screenplay'],
         ['sample-script-stage-play', 'Sample script: Stage play'],
         ['sample-script-markdown', 'Sample script: Markdown'],
@@ -166,6 +172,7 @@ describe('the command data', () => {
       '/docs/why/',
       '/docs/fountain/',
       '/docs/saving/',
+      '/docs/drafts-and-cuts/',
       '/docs/shortcuts/',
       '/docs/privacy/',
       '/docs/open-formats/',

@@ -7,7 +7,8 @@ export type Entry =
   | 'cli-convert'
   | 'cli-build'
   | 'package'
-  | 'desktop-modules';
+  | 'desktop-modules'
+  | 'beside-read';
 
 export interface EntryPoint {
   id: Entry;
@@ -56,6 +57,12 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     id: 'desktop-modules',
     what: 'The desktop app’s modules folder: each `<userData>/modules/<folder>/module.json`, read once at start.',
     code: 'apps/desktop/src/module-folder.ts (`readModulesFolder`)',
+    harness: 'fixtures/trap/harness.test.ts',
+  },
+  {
+    id: 'beside-read',
+    what: 'Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), its entries checked by their IDs and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), their IDs checked against their text. They may have been edited anywhere (another computer, a text editor), so they are untrusted.',
+    code: 'apps/web/app/beside/read.ts (`readCutsBytes`, `readDraftBytes`) → @drafter/history (`readCutsFile`, `verifyCuts`, `mergeCuts`, `readDraftFile`)',
     harness: 'fixtures/trap/harness.test.ts',
   },
 ];

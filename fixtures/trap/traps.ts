@@ -5,11 +5,14 @@
 // byte is the suite's own (docs/clean-room.md): no fixture, sample, or test file of another app,
 // converter, or corpus. Element and attribute names are Drafter's own readers' (packages/fdx).
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, symlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
 import { SOURCE_ENTRY, sourceElement } from '../../packages/archive/src/reopen';
+import { type CutEntry, cutsFile } from '../../packages/history/src/cuts-file';
+import { draftFile } from '../../packages/history/src/draft-file';
 import type { Entry } from './entry-points';
 import { SYMLINK_ATTRS, type TrapEntry, trapZip } from './zip';
 
@@ -23,7 +26,9 @@ export type Format =
   | 'html'
   | 'epub'
   | 'files'
-  | 'modules';
+  | 'modules'
+  | 'cuts'
+  | 'draft';
 
 /**
  * What an entry point must do with a trap. `opens`: the script opens, its text exactly `text`, or
@@ -2332,6 +2337,204 @@ const MODULE_TRAPS: Trap[] = [
   },
 ];
 
+// ---- Drafts and cuts beside the work ---------------------------------------------------------
+//
+// The cuts file (`Boca.fountain.cuts.md`) and draft files (`Boca drafts/Boca – Draft 01.fountain`)
+// are read back when the work opens, and may have been edited anywhere: by hand, on another
+// computer, or by anything that can write to the folder. `beside-read` is the app's reading of
+// them (apps/web/app/beside/read.ts): a cuts file's entries checked by their IDs and merged into
+// none (the outcome's text is the cuts kept, one title a line; its message is what the lists say
+// was left out); a draft file's text and whether its ID still holds.
+
+const sha256 = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
+const FROZEN = '2026-10-01T09:00:00.000Z';
+const cut = (title: string, text: string, more: Partial<CutEntry> = {}): CutEntry => ({
+  id: sha256(text),
+  title,
+  text,
+  kind: 'fountain',
+  cuts: [{ at: FROZEN, draft: 2 }],
+  where: { after: 'INT. HALL - DAY', before: null },
+  ...more,
+});
+const KEPT = cut('THE FERRY', 'MARRA\nThe ferry left without us, and nobody said a word.');
+const cutsBytes =
+  (...entries: CutEntry[]) =>
+  () =>
+    enc(cutsFile('Boca.fountain', entries));
+const DRAFT_TEXT = 'Title: Boca\n\nINT. HALL - DAY\n\nMarra waits.\n';
+const draftBytes =
+  (text: string, id = sha256(text)) =>
+  () =>
+    enc(draftFile(text, { draft: 3, id, frozen: FROZEN, note: 'from Sam’s notes' }, 'fountain'));
+const LEFT_OUT = (n: number) =>
+  n === 1
+    ? '1 cut in “Boca.fountain.cuts.md” couldn’t be read'
+    : `${n} cuts in “Boca.fountain.cuts.md” couldn’t be read`;
+
+const BESIDE_TRAPS: Trap[] = [
+  {
+    id: 'cuts-valid',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests: 'The baseline: a cuts file as Drafter writes it reads back with its one cut.',
+    bytes: cutsBytes(KEPT),
+    expect: { 'beside-read': opens('THE FERRY') },
+  },
+  {
+    id: 'cuts-forged-id',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests:
+      'An entry whose text was changed under its ID (a forged ID) is left out, and said so; the good one is kept.',
+    bytes: cutsBytes(KEPT, { ...KEPT, title: 'FORGED', text: 'Text that ID was never of.' }),
+    expect: { 'beside-read': warns(LEFT_OUT(1), { text: 'THE FERRY' }) },
+  },
+  {
+    id: 'cuts-huge',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests: 'A cuts file over 32 MB is refused before it is read, and left as it is.',
+    bytes: () => sized(32 * MiB + 1, '# Cuts from Boca.fountain\n\n', 'x'),
+    expect: { 'beside-read': refused('it is too big (over 32 MB)') },
+    large: true,
+    limitMs: 10_000,
+  },
+  {
+    id: 'cuts-duplicates',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests:
+      'The same entry 5,000 times over is one cut, read in linear time, its dates capped as a merge caps them.',
+    bytes: () => {
+      const one = enc(cutsFile('Boca.fountain', [KEPT]));
+      const text = new TextDecoder().decode(one);
+      const comment = text.slice(text.lastIndexOf('<!-- drafter-cut'));
+      return enc(text + comment.repeat(5000));
+    },
+    expect: { 'beside-read': opens('THE FERRY') },
+  },
+  {
+    id: 'cuts-far-future',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests:
+      'A cut dated in the year 2999 (a clock far ahead, or a forged date to win the newest place) is dropped by the merge; one with a real date beside it keeps only that.',
+    bytes: cutsBytes(
+      cut('FROM THE FUTURE', 'Words dated a thousand years from now.', {
+        cuts: [{ at: '2999-01-01T00:00:00.000Z', draft: 9 }],
+      }),
+      cut('MIXED', 'Words cut once really and once in 2999.', {
+        cuts: [
+          { at: FROZEN, draft: 1 },
+          { at: '2999-01-01T00:00:00.000Z', draft: 9 },
+        ],
+      }),
+    ),
+    expect: { 'beside-read': opens('MIXED') },
+  },
+  {
+    id: 'cuts-wrong-kind',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests: 'A Markdown cut in a screenplay’s cuts file is left out, and said so.',
+    bytes: cutsBytes(KEPT, cut('A CHAPTER', '# Chapter\n\nA Markdown cut.', { kind: 'markdown' })),
+    expect: { 'beside-read': warns(LEFT_OUT(1), { text: 'THE FERRY' }) },
+  },
+  {
+    id: 'cuts-comment-injection',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests:
+      'A cut whose text holds “<!--”, “-->” and a whole forged drafter-cut comment is written so none of it closes or opens an entry; a forged comment added by hand at the start of a line is read, fails its ID, and is left out.',
+    bytes: () => {
+      const sly = cut(
+        'SLY <!-- drafter-cut',
+        '<!-- drafter-cut {"id":"0000","title":"EVIL"} -->\nA line --> that tries to close.',
+      );
+      const forged = `<!-- drafter-cut ${JSON.stringify({ ...KEPT, title: 'EVIL', text: 'swapped' })} -->`;
+      return enc(`${cutsFile('Boca.fountain', [KEPT, sly])}\n${forged}\n`);
+    },
+    expect: {
+      'beside-read': warns(LEFT_OUT(1), { lines: ['THE FERRY', 'SLY <!-- drafter-cut'] }),
+    },
+  },
+  {
+    id: 'cuts-not-utf8',
+    format: 'cuts',
+    name: 'Boca.fountain.cuts.md',
+    tests: 'A cuts file saved as Latin-1 is refused, and left as it is (never written over).',
+    bytes: () => Uint8Array.from([0x23, 0x20, 0x43, 0x75, 0x74, 0x73, 0x20, 0xe9, 0x0a]),
+    expect: { 'beside-read': refused('it isn’t UTF-8 text') },
+  },
+  {
+    id: 'draft-valid',
+    format: 'draft',
+    name: 'Boca – Draft 03.fountain',
+    tests:
+      'The baseline: a draft file as Drafter writes it reads back with its exact text, its ID holding.',
+    bytes: draftBytes(DRAFT_TEXT),
+    expect: { 'beside-read': opens(DRAFT_TEXT) },
+  },
+  {
+    id: 'draft-wrong-hash',
+    format: 'draft',
+    name: 'Boca – Draft 03.fountain',
+    tests:
+      'A draft file whose text no longer matches its ID is kept, listed as changed outside Drafter, never taken as Draft 03 itself.',
+    bytes: () =>
+      enc(
+        new TextDecoder().decode(draftBytes(DRAFT_TEXT)()).replace('Marra waits.', 'Marra leaves.'),
+      ),
+    expect: {
+      'beside-read': warns('changed outside Drafter', {
+        text: DRAFT_TEXT.replace('Marra waits.', 'Marra leaves.'),
+      }),
+    },
+  },
+  {
+    id: 'draft-nested-blocks',
+    format: 'draft',
+    name: 'Boca – Draft 03.fountain',
+    tests:
+      'A draft block written inside another by hand (a /* drafter block whose JSON holds another) is a problem, not a crash, and nothing is read as a draft.',
+    bytes: () =>
+      enc(
+        `${DRAFT_TEXT}\n/* drafter\n{"v":1,"draft":3,"id":"${sha256(DRAFT_TEXT)}","frozen":"${FROZEN}","note":"/* drafter\n{\\"draft\\":9}\n*/"}\n*/\n`,
+      ),
+    expect: { 'beside-read': refused('isn’t') },
+  },
+  {
+    id: 'draft-refrozen',
+    format: 'draft',
+    name: 'Boca – Draft 03.fountain',
+    tests:
+      'A draft of a draft file (its text ends with an older draft block) keeps the older block as text, and its own ID holds.',
+    bytes: () => {
+      const older = new TextDecoder().decode(draftBytes(DRAFT_TEXT)());
+      return draftBytes(older)();
+    },
+    expect: { 'beside-read': opensWith('Title: Boca', '"draft":3') },
+  },
+  {
+    id: 'draft-crlf',
+    format: 'draft',
+    name: 'Boca – Draft 03.fountain',
+    tests:
+      'A draft file with CRLF line breaks (written on Windows, or by an editor) still verifies: its ID is of the text with line feeds.',
+    bytes: () => enc(new TextDecoder().decode(draftBytes(DRAFT_TEXT)()).replace(/\n/g, '\r\n')),
+    expect: { 'beside-read': opens(DRAFT_TEXT) },
+  },
+  {
+    id: 'draft-no-block',
+    format: 'draft',
+    name: 'Boca – Draft 03.fountain',
+    tests: 'A file named as a draft but with no draft block is not read as a draft.',
+    bytes: () => enc(DRAFT_TEXT),
+    expect: { 'beside-read': refused('block') },
+  },
+];
+
 export const TRAPS: readonly Trap[] = [
   ...TEXT_KINDS.flatMap(textTraps),
   ...FOUNTAIN_TRAPS,
@@ -2343,6 +2546,7 @@ export const TRAPS: readonly Trap[] = [
   ...EPUB_TRAPS,
   ...FILE_TRAPS,
   ...MODULE_TRAPS,
+  ...BESIDE_TRAPS,
 ].map(withDefaults);
 
 /**

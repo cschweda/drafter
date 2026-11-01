@@ -18,7 +18,9 @@ export type SnapshotReason =
   | 'before-revert'
   | 'before-restore'
   | 'before-reload'
-  | 'before-scene-restore'; // 'before-merge' arrives with Plan G
+  | 'before-scene-restore'
+  // Start new draft (drafts-and-cuts §3.1): what was cut is recorded with the draft it was cut in.
+  | 'before-draft'; // 'before-merge' arrives with Plan G
 
 export interface SnapshotInfo {
   id: string;

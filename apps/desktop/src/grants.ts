@@ -16,6 +16,11 @@
 // account can read. That is accepted: it takes a compromised renderer to begin with (the CSP, the
 // absence of v-html, and the network block make that hard), and only script-type files are within
 // reach, never ~/.ssh or ~/.bashrc.
+// A granted script also lets the page write its own drafts and cuts beside it (beside.ts), and
+// nothing else there: the names are worked out in main from the script's real name (its cuts
+// file, `<name>.cuts.md`; its drafts folder, `<stem> drafts`; and draft files in it named
+// `<stem> – Draft NN`), never taken from the page, so a page granted one script can't reach the
+// drafts or cuts of another work in the same folder, nor make a file there of any other name.
 // Each grant records the file's real path (every link followed). Every use works the real path
 // out again and refuses if it changed: a chosen file swapped for a link to another (or a folder on
 // its way swapped for one) is not the file the writer chose.

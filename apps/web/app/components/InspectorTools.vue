@@ -11,7 +11,7 @@ import { TOOLS_COMPACT } from '~/utils/tools';
 
 // The active view's few tools (fresh-look design §3.3, Call 15): the Script's page, Changes, and
 // Fit · 100%; the Outline's and the Cards' counts and sizes; Scaffold's Back,
-// Follow, and Pages; Compare's and Deleted scenes' own. One component, so the Inspector's header
+// Follow, and Pages; Compare's, Cuts', and the drafts' own. One component, so the Inspector's header
 // stays one component and each view keeps its tools' code (OutlineSlim, CardsSlim, …). On a wide
 // screen it sits in the header's `#inspector-tools` (INSPECTOR_TOOLS_ID), and folds into the
 // header's "⋯" when the header is too narrow; on a phone it is the one pane's slim bar.
@@ -81,7 +81,10 @@ const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props
   <NotesSlim v-else-if="props.selected === 'notes'" />
   <ScaffoldSlim v-else-if="props.selected === 'scaffold'" />
   <CompareSlim v-else-if="props.selected === 'compare'" />
-  <DeletedSlim v-else-if="props.selected === 'deleted'" />
+  <CutsSlim v-else-if="props.selected === 'cuts'" />
+  <DraftsSlim v-else-if="props.selected === 'drafts'" tab="drafts" />
+  <DraftsSlim v-else-if="props.selected === 'draft'" tab="draft" />
+  <DraftStepsSlim v-else-if="props.selected === 'draft-steps'" />
   <template v-else-if="props.selected === 'problems'">
     <span v-if="problemsSummary">{{ problemsSummary }}</span>
     <template v-if="canFixAll">

@@ -7,7 +7,11 @@ import {
   usePalette,
 } from '~/commands/palette';
 import { type Command, type CommandGroup, useCommands } from '~/commands/registry';
+import { findDrafts } from '~/drafts/find';
+import { paletteLabel } from '~/drafts/labels';
+import { useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
+import { useScript } from '~/storage/script';
 
 // The command palette (Phase 1 design §6): scenes by name, "Go to line N" when the query is a
 // number, and every command that applies, each with its keys. Nuxt UI's palette draws the labels
@@ -104,6 +108,37 @@ const lineItem = computed<Item[]>(() => {
   ];
 });
 
+// Open draft by ID (drafts-and-cuts design §2.2): 4 or more hex characters list every draft whose
+// ID begins with them, of any script still here, and a number ("2", "Draft 02") the open script's
+// ("Draft 02 · a3f9c2e · 12 Oct 2026"), each opening read-only (`findDrafts`).
+const drafts = useDrafts();
+const script = useScript();
+const draftItems = shallowRef<Item[]>([]);
+let lookups = 0;
+
+async function readDraft(projectId: string, n: number) {
+  if (script.project.value?.id !== projectId) {
+    await script.open(projectId);
+    if (script.project.value?.id !== projectId) return;
+    await drafts.load();
+  }
+  await drafts.read(n);
+}
+
+watch([search, open, mode], async ([typed, on, shownMode]) => {
+  const mine = ++lookups;
+  const openId = script.project.value?.id ?? null;
+  const found = on && shownMode === 'all' ? await findDrafts(typed, openId).catch(() => []) : [];
+  if (mine !== lookups) return;
+  // A new empty list would draw the palette's rows again, and lose the row the keys highlighted.
+  if (found.length === 0 && draftItems.value.length === 0) return;
+  draftItems.value = found.map(({ projectId, row, title }) => ({
+    label: paletteLabel(row, title),
+    icon: 'i-lucide-milestone',
+    onSelect: () => choose(() => void readDraft(projectId, row.n).catch(() => {})),
+  }));
+});
+
 const available = computed(() => {
   asked.value;
   return commands.value.filter((c) => c.id !== 'palette' && (c.enabled?.() ?? true));
@@ -124,6 +159,10 @@ const groups = computed(() => {
   if (mode.value !== 'scene' && lineItem.value.length) {
     out.push({ id: 'line', label: 'Line', ignoreFilter: true, items: lineItem.value });
   }
+  // After Go to line: a number typed is a line first, and its draft second.
+  if (mode.value === 'all' && draftItems.value.length) {
+    out.push({ id: 'drafts', label: 'Drafts', ignoreFilter: true, items: draftItems.value });
+  }
   if (mode.value !== 'line' && kind.value === 'fountain') {
     out.push({ id: 'scenes', label: 'Scenes', items: scenes.value });
   }
@@ -141,7 +180,7 @@ const groups = computed(() => {
 });
 
 // Every group is searched by its label, and a command by its keywords too ("show all versions"
-// finds Deleted scenes, Call 39); a scene's line number is not part of the search, and a long
+// finds Cuts, Call 39); a scene's line number is not part of the search, and a long
 // script's scenes all show: Nuxt UI's own limit is twelve.
 const FUSE = {
   resultLimit: 1000,

@@ -238,5 +238,18 @@ export function navigationFor(url: string): 'app' | 'external' | 'refuse' {
   if (parsed.protocol === 'https:' && parsed.username === '' && parsed.password === '') {
     return 'external';
   }
+  // And an email to the maintainer (Help → Report a problem…, About), which the system's own
+  // email app opens: only to that address, and only with a subject and a body, so a link can't
+  // add anyone else (`to`, `cc`, `bcc`) or attach anything.
+  if (
+    parsed.protocol === 'mailto:' &&
+    parsed.pathname.toLowerCase() === CONTACT_EMAIL &&
+    [...parsed.searchParams.keys()].every((key) => ['subject', 'body'].includes(key.toLowerCase()))
+  ) {
+    return 'external';
+  }
   return 'refuse';
 }
+
+/** The maintainer's address, the one `mailto:` the app hands to the system (apps/web/app/report/issue.ts). */
+export const CONTACT_EMAIL = 'cschweda@gmail.com';

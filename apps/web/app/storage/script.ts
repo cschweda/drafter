@@ -12,6 +12,7 @@ import {
   watch,
 } from 'vue';
 import { applyingUpdate } from '~/update/state';
+import { useCutRecorder } from '../cuts/use-recorder';
 import { desktop } from '../desktop';
 import { firstSceneStart } from '../editor/first-scene';
 import { SAMPLE_SCREENPLAY, SAMPLE_TEXT, type SampleKind } from '../editor/samples';
@@ -985,14 +986,15 @@ function create(): ScriptSession {
   }
 
   async function openedFile(file: OpenedFile): Promise<boolean> {
-    const hash = await hashText(file.text);
+    const onDisk = file.text;
+    const hash = await hashText(onDisk);
     let made: string | undefined;
     const opened = await switchTo(async () => {
       const handleId = file.ref ? await putHandle(crypto.randomUUID(), file.ref) : undefined;
       try {
         const created = await createProject({
           source: file.text,
-          baseline: file.text,
+          baseline: onDisk,
           kind: file.kind ?? 'fountain',
           lineBreak: file.lineBreak,
           bom: file.bom,
@@ -1001,7 +1003,7 @@ function create(): ScriptSession {
           savedAt: Date.now(),
           ...(handleId ? { fsHandleId: handleId } : {}),
         });
-        await setSavedText(created.id, file.text);
+        await setSavedText(created.id, onDisk);
         made = created.id;
         return created;
       } catch (error) {
@@ -1047,6 +1049,8 @@ function create(): ScriptSession {
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
       annotations: [isolateHistory.of('full'), appChange.of(true)],
     });
+    // A whole-text replacement makes no cuts (drafts-and-cuts design §3.1).
+    void useCutRecorder().replaced(id, file.text);
     await saved(file);
     return 'replaced';
   }

@@ -1,4 +1,12 @@
 export { containerDepth, MAX_NESTING } from './depth';
+export {
+  appendMarkdownMeta,
+  commentJson,
+  findMarkdownMeta,
+  type MarkdownMetaBlock,
+  readMarkdownMeta,
+  setMarkdownMeta,
+} from './meta';
 export { type FootnoteNode, type Footnotes, footnotes } from './notes';
 export { NestedTooDeeply, parseMarkdown } from './parse';
 export { markdownTitle, retitleMarkdown } from './title';

@@ -22,6 +22,7 @@ const DIALOGS = [
   'NoteCategoryDialog',
   'NoteFiltersDialog',
   'RemoveDialog',
+  'ReportDialog',
   'SameTitleDialog',
   'SceneDetailsDialog',
   'SceneHistoryDialog',
@@ -354,7 +355,7 @@ describe('DEmpty', () => {
     expect(styleOf(vue)).toMatch(/width: 20px;\s*height: 20px;\s*color: var\(--muted\)/);
     expect(templateOf(vue)).toMatch(/aria-hidden="true"/);
   });
-  const PANES = ['ProblemsPane', 'CardsPane', 'OutlinePane', 'NotesPane', 'DeletedPane'];
+  const PANES = ['ProblemsPane', 'CardsPane', 'OutlinePane', 'NotesPane', 'CutsPane', 'DraftsPane'];
   test.each(PANES)('%s draws its empty states with it', (name) => {
     const template = templateOf(read(`components/${name}.vue`));
     expect(template).toMatch(/<DEmpty/);

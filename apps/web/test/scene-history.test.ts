@@ -175,9 +175,7 @@ describe('History of this scene', () => {
 
     const gone = setup({ target: { snapshot: 's1', slot: 0, heading: 'INT. CELLAR - NIGHT' } });
     expect(await gone.use(version())).toBe(false);
-    expect(gone.said).toEqual([
-      'That scene isn’t in the script now. Put it back from Deleted scenes.',
-    ]);
+    expect(gone.said).toEqual(['That scene isn’t in the script now. Put it back from Cuts.']);
     expect(gone.steps).toEqual([]);
 
     const unreadable = setup({ text: null });

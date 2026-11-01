@@ -1,13 +1,11 @@
 import {
-  deletedScenes,
-  type NowScene,
   type PastSnapshot,
-  putBackPlace,
   type ScenePrint,
   type SceneSlot,
   scenePrints,
   sceneVersions,
 } from '@drafter/history';
+import { stepCounts } from '../drafts/steps';
 import {
   type HistoryReply,
   type HistoryRequest,
@@ -16,6 +14,7 @@ import {
 } from '../history/protocol';
 import { db } from '../storage/db';
 import { canDecompress, gunzip } from '../storage/gzip';
+import { backfill, foundCuts } from './cuts-compute';
 
 // The history worker's logic (version-history design §3.4, Calls 9 and 10), kept apart from the
 // worker so it runs in Node: snapshots are read newest first, and only on a miss in the cache is a
@@ -91,8 +90,7 @@ interface Memory {
   prints: Map<string, ScenePrint>;
 }
 
-type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' }>;
-type Place = NonNullable<Extract<HistoryReply, { kind: 'place' }>['place']>;
+type Scan = Extract<HistoryRequest, { kind: 'versions' }>;
 
 export interface HistoryCompute {
   /** Runs `request`, posting its replies; resolves when it is done or stopped. */
@@ -107,7 +105,7 @@ export function createHistoryCompute(
 ): HistoryCompute {
   let cache = store;
   /** The request running in each kind's lane. */
-  const lanes = new Map<Scan['kind'], number>();
+  const lanes = new Map<Scan['kind'] | 'backfill', number>();
   /** One script's at a time: another script's request starts over. */
   let memory: Memory | null = null;
   /** What was read and isn't in the cache yet. */
@@ -245,8 +243,7 @@ export function createHistoryCompute(
     const reading = capped ? refs.slice(0, MAX_SNAPSHOTS) : refs;
     const m = await memoryOf(projectId);
     if (!live()) return;
-    const now = request.kind === 'deleted' ? scenePrints(request.now).prints : [];
-    const start = request.kind === 'versions' ? await startOf(request, m) : null;
+    const start = await startOf(request, m);
     if (!live()) return;
 
     const past: PastSnapshot[] = [];
@@ -255,16 +252,13 @@ export function createHistoryCompute(
     let lastPost = Number.NEGATIVE_INFINITY;
     const update = (done: boolean) => {
       post({ seq, kind: 'progress', read, total: reading.length, unreadable, capped });
-      if (request.kind === 'deleted')
-        post({ seq, kind: 'deleted', scenes: deletedScenes(past, m.prints, now), done });
-      else
-        post({
-          seq,
-          kind: 'versions',
-          rows: start ? sceneVersions(start, past, m.prints) : [],
-          start: start?.hash ?? null,
-          done,
-        });
+      post({
+        seq,
+        kind: 'versions',
+        rows: start ? sceneVersions(start, past, m.prints) : [],
+        start: start?.hash ?? null,
+        done,
+      });
       lastPost = clock();
     };
 
@@ -288,36 +282,32 @@ export function createHistoryCompute(
     if (cache) await cache.sweep(projectId, liveIds).catch(drop);
   }
 
-  /** Answers a place request: where Put back puts the scene, from the snapshot's scenes and prints. */
-  async function place(
-    request: Extract<HistoryRequest, { kind: 'place' }>,
-    post: (reply: HistoryReply) => void,
-  ) {
-    const { seq, projectId, now: text, snapshot, slot } = request;
-    let found: Place | null = null;
-    try {
-      const m = await memoryOf(projectId);
-      const slots = await slotsOf(m, snapshot);
-      if (slots?.[slot]) {
-        const now = scenePrints(text);
-        const byHash = new Map(now.prints.map((p) => [p.hash, p]));
-        const nowScenes: NowScene[] = [];
-        for (const s of now.slots) {
-          const print = byHash.get(s.hash);
-          if (print) nowScenes.push({ print, from: s.from, to: s.to });
-        }
-        found = putBackPlace(slots, slot, m.prints, nowScenes, text.length, now.sections);
-      }
-      await flush();
-    } catch {
-      found = null;
-    }
-    post({ seq, kind: 'place', place: found });
-  }
-
   return {
     async handle(request, post) {
-      if (request.kind === 'place') return place(request, post);
+      if (request.kind === 'cuts' || request.kind === 'step') {
+        try {
+          post(
+            request.kind === 'cuts'
+              ? {
+                  seq: request.seq,
+                  kind: 'cuts',
+                  cuts: foundCuts(request.before, request.after, request.docKind),
+                }
+              : {
+                  seq: request.seq,
+                  kind: 'step',
+                  counts: stepCounts(request.before, request.after, request.docKind),
+                },
+          );
+        } catch (error) {
+          post({
+            seq: request.seq,
+            kind: 'error',
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+        return;
+      }
       if (request.kind === 'cancel') {
         for (const [kind, seq] of lanes) if (seq === request.seq) lanes.delete(kind);
         return;
@@ -326,7 +316,8 @@ export function createHistoryCompute(
       lanes.set(kind, seq);
       const live = () => lanes.get(kind) === seq;
       try {
-        await scan(request, post, live);
+        if (request.kind === 'backfill') await backfill(request, source, post, live);
+        else await scan(request, post, live);
       } catch (error) {
         if (live())
           post({

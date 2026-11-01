@@ -23,8 +23,12 @@ export async function stubPickers(page: Page): Promise<void> {
       const name = w.__nextFileName ?? options?.suggestedName ?? 'Untitled.fountain';
       w.__nextFileName = undefined;
       w.__picks.push(name);
-      const root = await navigator.storage.getDirectory();
-      const handle = await root.getFileHandle(name, { create: true });
+      // A name with folders in it (`one/Scripts/Boca.fountain`) picks a file in those folders.
+      let dir = await navigator.storage.getDirectory();
+      const parts = name.split('/');
+      for (const part of parts.slice(0, -1))
+        dir = await dir.getDirectoryHandle(part, { create: true });
+      const handle = await dir.getFileHandle(parts.at(-1) as string, { create: true });
       if (w.__failWrites) {
         // A file the page may not write to; the app's write is refused, and nothing is stored.
         return Object.assign(handle, {
@@ -35,13 +39,91 @@ export async function stubPickers(page: Page): Promise<void> {
     };
     w.showSaveFilePicker = pick;
     w.showOpenFilePicker = async (options?: { suggestedName?: string }) => [await pick(options)];
+    // The folder picker (drafts and cuts beside the work): the stand-in file system's root, which
+    // holds every file the pickers made, or the folder `nextFolder` names in it.
+    const dirs = w as unknown as { __nextFolder?: string; __folderPicks: number };
+    dirs.__folderPicks = 0;
+    w.showDirectoryPicker = async () => {
+      if (w.__cancelPick) {
+        w.__cancelPick = false;
+        throw new DOMException('The user aborted a request.', 'AbortError');
+      }
+      dirs.__folderPicks++;
+      let dir = await navigator.storage.getDirectory();
+      const name = dirs.__nextFolder;
+      dirs.__nextFolder = undefined;
+      for (const part of name ? name.split('/') : [])
+        dir = await dir.getDirectoryHandle(part, { create: true });
+      return dir;
+    };
   });
+}
+
+/** The next folder pick answers with this folder of the stand-in file system (not its root). */
+export function nextFolder(page: Page, name: string): Promise<void> {
+  return page.evaluate((n) => {
+    (window as unknown as { __nextFolder: string }).__nextFolder = n;
+  }, name);
+}
+
+/** How many times the folder picker has been shown. */
+export function folderPicks(page: Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as { __folderPicks: number }).__folderPicks);
+}
+
+/** A file's text at a path (`Boca drafts/Boca – Draft 01.fountain`) in the stand-in file system. */
+export function textAt(page: Page, path: string): Promise<string | null> {
+  return page.evaluate(async (p) => {
+    let dir = await navigator.storage.getDirectory();
+    const parts = p.split('/');
+    try {
+      for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
+      const file = await (await dir.getFileHandle(parts.at(-1) as string)).getFile();
+      return await file.text();
+    } catch {
+      return null;
+    }
+  }, path);
+}
+
+/** Puts a file at a path (folders made as needed) in the stand-in file system. */
+export function putAt(page: Page, path: string, text: string): Promise<void> {
+  return page.evaluate(
+    async ({ p, t }) => {
+      let dir = await navigator.storage.getDirectory();
+      const parts = p.split('/');
+      for (const part of parts.slice(0, -1))
+        dir = await dir.getDirectoryHandle(part, { create: true });
+      const handle = await dir.getFileHandle(parts.at(-1) as string, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(t);
+      await writable.close();
+    },
+    { p: path, t: text },
+  );
+}
+
+/** The names in a folder of the stand-in file system. */
+export function filesIn(page: Page, path: string): Promise<string[]> {
+  return page.evaluate(async (p) => {
+    let dir = await navigator.storage.getDirectory();
+    try {
+      for (const part of p.split('/')) dir = await dir.getDirectoryHandle(part);
+    } catch {
+      return [];
+    }
+    const names: string[] = [];
+    for await (const name of (dir as unknown as { keys(): AsyncIterable<string> }).keys()) {
+      names.push(name);
+    }
+    return names.sort();
+  }, path);
 }
 
 /** Browsers without the File System Access API: Save downloads. */
 export async function removePickers(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    for (const name of ['showSaveFilePicker', 'showOpenFilePicker']) {
+    for (const name of ['showSaveFilePicker', 'showOpenFilePicker', 'showDirectoryPicker']) {
       Object.defineProperty(window, name, { value: undefined, configurable: true });
     }
   });

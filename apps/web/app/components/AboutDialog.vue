@@ -16,8 +16,12 @@ import { createAboutCheck } from '~/about/update-check';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { commandById } from '~/commands/registry';
 import DDialog from '~/components/ui/DDialog.vue';
+import { desktop } from '~/desktop';
+import { reportOpen } from '~/report/dialog';
+import { CONTACT_EMAIL } from '~/report/issue';
 import { actionLabel } from '~/update/flow';
 import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
+import { writeClipboard } from '~/utils/clipboard';
 
 // Help → About Drafter: the version (for a bug report, with Copy version info, and Check for
 // updates… beside it), which app this is, and the links. Every link leaves the app: a new tab on
@@ -26,6 +30,8 @@ import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
 const dialog = ref<InstanceType<typeof DDialog>>();
 const info = ref<AboutInfo | null>(null);
 const copied = ref('');
+/** As Report a problem's email link: a new window in the desktop app, which hands it to the email app. */
+const mailTarget = desktop() ? '_blank' : undefined;
 
 // Check for updates…, beside the version (Task 3b): the one check the Help menu's command runs,
 // said here under the version, so focus stays in About. A new version is offered by its own
@@ -62,34 +68,16 @@ function onClose() {
   info.value = null;
 }
 
-/** The text on the clipboard: the async API, else the browser's own Copy of a selected field. */
-async function writeClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Refused (no permission, an insecure page): the page's own copy below.
-  }
-  const field = document.createElement('textarea');
-  field.value = text;
-  field.setAttribute('readonly', '');
-  field.style.position = 'fixed';
-  field.style.opacity = '0';
-  (dialog.value?.el ?? document.body).append(field);
-  field.select();
-  try {
-    return document.execCommand('copy');
-  } catch {
-    return false;
-  } finally {
-    field.remove();
-  }
-}
-
 async function copy() {
   if (!info.value) return;
-  const ok = await writeClipboard(versionText(info.value));
+  const ok = await writeClipboard(versionText(info.value), dialog.value?.el);
   copied.value = ok ? 'Copied.' : 'Couldn’t copy. Select the text above and copy it.';
+}
+
+/** Report a problem or Suggest an idea: About closes, and that dialog opens in its place. */
+function report(kind: 'problem' | 'idea') {
+  dialog.value?.close();
+  reportOpen.value = kind;
 }
 
 /** A help page opens as its command opens it (a window of the app's own, which Back to Drafter closes). */
@@ -145,10 +133,17 @@ function openHelp(id: string) {
         <dd>{{ ABOUT_LICENSE }}</dd>
       </dl>
       <MadeBy />
+      <p class="contact" data-about-contact>
+        Contact: <a :href="`mailto:${CONTACT_EMAIL}`" :target="mailTarget">{{ CONTACT_EMAIL }}</a>
+      </p>
       <p class="trademark" data-about-trademark>{{ ABOUT_TRADEMARK }}</p>
       <div class="copy">
         <DButton @click="copy">Copy version info</DButton>
         <span role="status" aria-live="polite" class="copied" data-about-copied>{{ copied }}</span>
+      </div>
+      <div class="report">
+        <DButton @click="report('problem')">Report a problem…</DButton>
+        <DButton @click="report('idea')">Suggest an idea…</DButton>
       </div>
       <h3>Links</h3>
       <ul class="links">
@@ -241,6 +236,20 @@ p {
 }
 .copied {
   color: var(--muted);
+}
+.report {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.contact {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.contact a {
+  color: var(--text);
+  text-decoration: underline;
 }
 .links {
   display: flex;

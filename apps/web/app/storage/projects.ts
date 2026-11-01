@@ -1,4 +1,6 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
+import { cutsBackfillKey, cutsFirstPointKey, cutsPointKey } from '../cuts/store';
+import { draftFromKey } from '../drafts/store';
 import type { SampleKind } from '../editor/sample-kinds';
 import type { StarterKind } from '../editor/starter-kinds';
 import { type TemplateId, templateIdOf } from '../editor/template';
@@ -198,9 +200,14 @@ export async function writeSource(
   });
 }
 
-/** Also deletes its snapshots, its file handle, its goal, its days’ counts, its writing time, and its rows in the prints cache; never touches the file. */
+/**
+ * Also deletes its snapshots, its drafts and cuts, its file handle, its goal, its days’ counts, its
+ * writing time, and its rows in the prints cache; never touches the file (nor any draft or cuts
+ * file beside it).
+ */
 export async function removeProject(id: string): Promise<void> {
-  await db.transaction('rw', db.projects, db.snapshots, db.handles, db.settings, async () => {
+  const tables = [db.projects, db.snapshots, db.drafts, db.cuts, db.handles, db.settings];
+  await db.transaction('rw', tables, async () => {
     await db.settings.delete(goalKey(id));
     await db.settings
       .where('key')
@@ -213,6 +220,10 @@ export async function removeProject(id: string): Promise<void> {
     const project = await db.projects.get(id);
     if (project?.fsHandleId) await db.handles.delete(project.fsHandleId);
     await db.snapshots.where('projectId').equals(id).delete();
+    await db.drafts.where('projectId').equals(id).delete();
+    await db.cuts.where('projectId').equals(id).delete();
+    await db.settings.delete(draftFromKey(id));
+    await db.settings.bulkDelete([cutsPointKey(id), cutsFirstPointKey(id), cutsBackfillKey(id)]);
     await db.projects.delete(id);
   });
   // The prints cache is another database, so it's cleared after (version-history design §3.6): it

@@ -1,0 +1,12 @@
+# The new-issue chooser: the two forms (bug.yml, idea.yml), a blank issue, and these links.
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem
+    url: https://github.com/cschweda/drafter/blob/main/SECURITY.md
+    about: Please report it privately, never in a public issue. SECURITY.md says how.
+  - name: What is Drafter?
+    url: https://drafter.dev/docs/what-is-drafter/
+    about: What Drafter is, whether you can trust it, and how it works.
+  - name: Help pages
+    url: https://drafter.dev/docs/
+    about: Saving, the Fountain cheat sheet, keyboard shortcuts, privacy, and more.

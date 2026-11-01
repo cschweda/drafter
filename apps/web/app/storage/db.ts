@@ -1,4 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { CutRow } from '../cuts/store';
+import type { DraftRow } from '../drafts/store';
 import type { FileRef } from './files';
 import type { Project } from './projects';
 import type { SnapshotReason } from './snapshots';
@@ -41,6 +43,12 @@ export interface HandleRow {
   ref: FileRef;
 }
 
+/**
+ * A cut (drafts-and-cuts design §3): something that left the text, kept for good (`cuts/store.ts`).
+ * Keyed `${projectId}:${id}`, where `id` is the SHA-256 of its text; its other fields are unindexed.
+ */
+export type { CutRow };
+
 export interface SettingRow {
   key: string;
   value: unknown;
@@ -52,16 +60,25 @@ class DrafterDb extends Dexie {
   templates!: EntityTable<UserTemplate, 'id'>;
   handles!: EntityTable<HandleRow, 'id'>;
   settings!: EntityTable<SettingRow, 'key'>;
+  drafts!: EntityTable<DraftRow, 'key'>;
+  cuts!: EntityTable<CutRow, 'key'>;
 
   constructor() {
     super('drafter');
-    // The whole of technical design §8.1's version 1, so later plans add no migration.
+    // Technical design §8.1's version 1, which held every table until drafts and cuts.
     this.version(1).stores({
       projects: 'id, title, updatedAt',
       snapshots: 'id, projectId, createdAt',
       templates: 'id',
       handles: 'id',
       settings: 'key',
+    });
+    // Version 2 (v0.24.0, drafts-and-cuts design §2, §3): two new tables, and nothing else changes,
+    // so the upgrade only adds them; every row of version 1 stays as it is. A draft is keyed
+    // `${projectId}:${n}` and found by its ID's prefix (`id`); a cut, `${projectId}:${id}`.
+    this.version(2).stores({
+      drafts: 'key, projectId, [projectId+n], id',
+      cuts: 'key, projectId, id',
     });
   }
 }

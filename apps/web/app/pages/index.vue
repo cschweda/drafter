@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { EditorView } from '@codemirror/view';
+import { installBeside } from '~/beside/use-beside';
 import { installTestCastProbe } from '~/cast/probe-hook';
 import { registerBuiltinCommands } from '~/commands/builtin';
 import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
 import { commandById, installGlobalKeys } from '~/commands/registry';
+import { installCuts } from '~/cuts/install';
 import { isDesktopBuild } from '~/desktop';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
@@ -80,6 +82,9 @@ const stripShown = computed(
 );
 // Starts taking the script's snapshots as the writer works, saves, and opens files (§11.1).
 useSnapshots();
+// Cuts are recorded at each snapshot, and those from before drafts are found once (drafts-and-cuts §3.1).
+installCuts();
+installBeside();
 // Starts the spellcheck, which makes its worker once the settings are read and the first script is
 // open (Plan D): the Source pane's spelling marks.
 useSpell();
@@ -193,6 +198,7 @@ onBeforeUnmount(() => {
       <StorageWarning />
       <SampleBar />
       <StartBlankBar />
+      <DraftFileBar />
       <!-- Its region has no height; the offer itself is fixed in place. In the shell's grid it would be a row. -->
       <UpdatePrompt />
       <WhatsNewBanner />
@@ -215,9 +221,12 @@ onBeforeUnmount(() => {
     <NewNoteDialog />
     <SettingsDialog />
     <HistoryDialog />
+    <StartDraftDialog />
+    <BesideDialog />
     <SceneHistoryDialog />
     <AboutDialog />
     <UpdateCheckDialog />
+    <ReportDialog />
     <AppTour />
     <SprintNotice />
     <!-- Focus mode: the Source alone, in a column, with the marker in the corner. -->

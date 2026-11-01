@@ -44,6 +44,24 @@ export interface DesktopFilesBridge {
   write(path: string, bytes: Uint8Array): Promise<void>;
   /** The path with every symlink followed; a path that doesn't exist, as it is. */
   realPath(path: string): Promise<string>;
+  /**
+   * Writes a draft file or the cuts file beside `script` (a granted script's path): `rel` is
+   * `Boca.fountain.cuts.md`, or `Boca drafts/Boca – Draft 01.fountain` (`.md` too), each part a
+   * name `cleanWorkName` leaves as it is. The drafts folder is made if it isn't there. `create`
+   * writes only where nothing is (`exists` otherwise, the file untouched); `replace`, for the cuts
+   * file only, swaps it in whole (a temp file renamed over it). Never through a symbolic link: a
+   * link at the file or the folder is refused (`not-allowed`), and so is any other name.
+   */
+  writeBeside(
+    script: string,
+    rel: string,
+    bytes: Uint8Array,
+    mode: 'create' | 'replace',
+  ): Promise<'written' | 'exists'>;
+  /** The bytes of `rel` beside `script` (as `writeBeside` names it), or null when it isn't there. */
+  readBeside(script: string, rel: string): Promise<Uint8Array | null>;
+  /** The draft files' names in the drafts folder `folder` (`Boca drafts`) beside `script`, sorted. */
+  listBeside(script: string, folder: string): Promise<string[]>;
   /** The path on disk of a dropped (or input-picked) file; empty for one that has none. */
   pathOfDropped(file: File): string;
   /**

@@ -1,6 +1,6 @@
 # Drafts and Cuts — Design
 
-**Status:** designed 2026-10-30; not built. Ships as **v0.23.0**, after Export as HTML and EPUB (v0.22.0) and before Novel (v0.24.0). For screenplays, stage plays, and Markdown documents (so novels too, when the Novel release lands).
+**Status:** designed 2026-10-30; built 2026-11-01, ready for **v0.24.0**, not yet released (the plan is [`docs/plans/2026-10-30-drafts-and-cuts.md`](plans/2026-10-30-drafts-and-cuts.md); the Calls as they landed are in `docs/DECISIONS.md`, under "Drafts and cuts"). Ships as **v0.24.0** (planned as v0.23.0; the fresh look took that number), after Export as HTML and EPUB (v0.22.0) and before Classic Mode (v0.25.0) and Novel (v0.26.0). For screenplays, stage plays, and Markdown documents (so novels too, when the Novel release lands).
 
 **Asked for (maintainer, 2026-10-30), in their words:**
 - "the ability to … delete a section but save it -- sort of like github (you can always see what was added or deleted). I don't want anything lost -- even chapters i delete -- since they may still be useful at a later point … I'd want this for all types -- play, screen, novel -- since I tend to delete things and then two weeks later want them back but in a different place -- or at least have the ability to read them again and copy-and-paste into another spot."
@@ -36,49 +36,52 @@ Each choice open to the designer is marked **Call:**; they are listed in §11.
 ## 2. Drafts
 
 ### 2.1 Starting a draft
-- **Start new draft…** (File menu, palette, desktop File menu; no default key) freezes the text as it is now as **Draft N** and the writer carries on in **Draft N+1**. A script with no drafts yet is in Draft 1; starting the first new draft freezes Draft 1.
-- **A work in progress works the same way.** Open any existing script or Markdown file — one written before this release, in another app, or imported from Final Draft, Highland, or Fade In — and choose Start new draft: what is there becomes **Draft 1**, and the writer carries on in **Draft 2**. Nothing has to be set up first.
-- **The draft marker.** Starting a draft records a **marker**: "Draft 2 begins — builds on Draft 1 (a3f9c2e)", with the writer's note ("from Sam's notes"). The marker is what says *this is a new version*: it heads the draft in the Drafts list, and appears as a milestone wherever versions are listed (History's list of snapshots, Compare's version pickers), so the major shifts stand out from the automatic snapshots between them.
+- **Start new draft…** (File menu, palette, desktop File menu; no default key) freezes the text as it is now as **Draft N** and the writer carries on in **Draft N+1**. A script with no drafts yet is in Draft 01; starting the first new draft freezes Draft 01.
+- **A work in progress works the same way.** Open any existing script or Markdown file — one written before this release, in another app, or imported from Final Draft, Highland, or Fade In — and choose Start new draft: what is there becomes **Draft 01**, and the writer carries on in **Draft 02**. Nothing has to be set up first.
+- **The draft marker.** Starting a draft records a **marker**: "Draft 02 begins — builds on Draft 01 (a3f9c2e)", with the writer's note ("from Sam's notes"). The marker is what says *this is a new version*: it heads the draft in the Drafts list, and appears as a milestone wherever versions are listed (History's list of snapshots, Compare's version pickers), so the major shifts stand out from the automatic snapshots between them.
 - A small dialog offers a **note** for the draft being frozen ("sent to Sam for notes"), optional, one line, editable later. Confirm with Enter; Escape cancels and nothing changes.
 - **Call:** Drafter never starts a draft by itself. The number only goes up; it is never reused or renumbered.
 - **Call:** freezing an unchanged text (the same ID as the last draft) asks "This text is the same as Draft N. Start Draft N+1 anyway?" — allowed (the writer may want a fresh number after notes), recorded as the same ID.
 
 ### 2.2 The ID
 - **Call:** a draft's ID is the **SHA-256** of its exact text as UTF-8 (the text Save writes, line endings as stored), written in lowercase hex. The UI shows the first **7** characters; the full ID is stored and copied with "Copy full ID". Identical text always gives the same ID; any change gives another. It is the same hash every snapshot row already stores (`hash`, from `storage/hash.ts`'s `hashText`, Web Crypto), so a draft frozen from a snapshot's text has that snapshot's hash as its ID; no new hashing code.
-- **Open by ID:** typing at least 4 hex characters of an ID in the palette lists the matching drafts ("Draft 2 · a3f9c2e · 12 Oct"); an ambiguous prefix lists all matches.
+- **Open by ID:** typing at least 4 hex characters of an ID in the palette lists the matching drafts ("Draft 02 · a3f9c2e · 12 Oct"); an ambiguous prefix lists all matches.
 
 ### 2.3 The Drafts list
 **Drafts…** (File menu, palette, the status bar's draft label) opens a list, newest first: number, short ID, date and time, words (scripts also pages), note, and the current draft at the top marked "now". For each frozen draft:
-- **Read** — opens it read-only beside the current text (the second pane), so any passage can be selected and copied across; its header says "Draft 2 · a3f9c2e · read-only".
+- **Read** — opens it read-only beside the current text (the second pane), so any passage can be selected and copied across; its header says "Draft 02 · a3f9c2e · read-only".
 - **Compare** — with now, or with another draft (a second picker), in Compare's Changes view (v0.18.0), GitHub-style.
-- **Restore as a new draft** — **Call:** never overwrites: the current text is first frozen as a draft (note "before restoring Draft 3"), then Draft 3's text becomes the current text in a new number, noted "from Draft 3 (a3f9c2e)". One undo reverses it.
+- **Restore as a new draft** — **Call:** never overwrites: the current text is first frozen as a draft (note "before restoring Draft 03"), then Draft 03's text becomes the current text in a new number, noted "from Draft 03 (a3f9c2e)". One undo reverses it.
 - **Copy full ID**, **Edit note**.
 - **Call:** **no Delete for drafts** in this release. A draft is the writer's milestone; deleting it is the failure the anti-goals name. (Deleting a whole script's history stays where it is today, with its confirmation.)
 
 ### 2.4 Draft by draft: how the work changed over time
 
-**Draft by draft…** (the Drafts list's header, the palette) steps through the drafts in order — Draft 1 → 2, 2 → 3, 3 → 4 … up to now — one change at a time:
+**Draft by draft…** (the Drafts list's header, the palette) steps through the drafts in order — Draft 01 → 02, 02 → 03, 03 → 04 … up to now — one change at a time:
 - A **summary row for each step**: the marker and note, the date, and what changed in numbers — words and pages (scripts) or words (documents), scenes / chapters and sections added, cut, and changed, the share of the text that is new — so the whole history reads as a short timeline at a glance.
 - **Open a step** to see it in Compare's Changes view (red/green, grouped by scene or section), with **Next step** / **Previous step** to walk the history, and the step's cuts listed beside it (from Cuts, §3).
-- **Call:** steps are always between consecutive drafts; comparing any two (Draft 1 with Draft 5) stays in the Drafts list's Compare (§2.3).
+- **Call:** steps are always between consecutive drafts; comparing any two (Draft 01 with Draft 05) stays in the Drafts list's Compare (§2.3).
 
 ### 2.5 Draft, or version?
 
-**Call:** the interface says **Draft**, the writer's word: "Start new draft", "Draft 3", "Drafts". Help and the first Start-new-draft dialog say once what it means: "A draft is a version you name: Drafter keeps it exactly as it is, for good." Search finds the commands by "version" and "new version" too (palette keywords).
+**Call:** the interface says **Draft**, the writer's word: "Start new draft", "Draft 03", "Drafts". Help and the first Start-new-draft dialog say once what it means: "A draft is a version you name: Drafter keeps it exactly as it is, for good." Search finds the commands by "version" and "new version" too (palette keywords). **Numbers have a leading zero** (the maintainer, 2026-11-01): "Draft 01", "Draft 02" … two digits, and three only past 99, everywhere a draft is named (the Drafts list, the reader, the status bar, History, the palette, Start new draft, the cuts' "cut while writing Draft 08"), as the files are named. Typing "2", "02", "draft 2" or "Draft 02" finds Draft 02.
 
 ### 2.6 Where the draft shows
-- Outside Zen, the status bar shows **Draft 8** quietly (a button that opens the Drafts list). Never in Zen, never on the pages, never in exports.
+- Outside Zen, the status bar shows **Draft 08** quietly (a button that opens the Drafts list). Never in Zen, never on the pages, never in exports.
 - **Call:** exports are unchanged. (A "draft line" on a title page is a writer's own text, already possible in Fountain's title page; Drafter adds nothing automatically.)
 
 ## 3. Cuts
 
 ### 3.1 What counts as a cut
-- **Scripts:** a scene that was in the text and is no longer — the same matching Deleted scenes uses today (`@drafter/history`'s anchors and shingles), so a moved or lightly edited scene is not a cut.
-- **Markdown documents:** a chapter (`#`) or section (`##`, `###`) that left the text, matched the same way by heading and content; and any **passage of 50 words or more** removed, so prose cut without a heading is kept too. **Call:** "removed" means a contiguous run of at least 50 words present in the comparison point (the last snapshot) and absent now, by a word-level diff of the two texts; a paragraph replaced by a different one counts when the removed side is 50+ words and shares under half its word pairs with what replaced it (so a light rewrite isn't a cut). Smaller deletions stay in snapshots only.
-- **When:** **Call:** a cut is found whenever a snapshot is kept (every 10 minutes of active writing, on save and open, on Take snapshot, and before bulk operations — `keepSnapshot`'s moments), by comparing the snapshot's text with the comparison point (the previous kept text); never on every keystroke. A snapshot whose reason is a whole-text replacement (`before-restore`, `before-reload`, `opened`, `imported`, and a restored draft) moves the comparison point without looking for cuts. A cut is recorded once; if the same text comes back and is cut again later, it is one entry with both dates.
-- Each cut records: its text, a title (the scene heading, chapter or section heading, or the first words of a passage), **the draft number it was cut while writing** ("cut while writing Draft 8"; the current draft has no ID until it is frozen, so a cut names the number, and the Cuts list adds that draft's short ID once it is frozen), when, and where it was (the neighbours, as Put back already uses).
+- **Call: every real cut is kept** (the maintainer, 2026-11-01: "I've found myself always going back to what I've cut for ideas of what to include. So 'cuts' should include all cuts.").
+- **Scripts:** a scene that was in the text and is no longer — the same matching Deleted scenes uses today (`@drafter/history`'s anchors and shingles), so a moved or lightly edited scene is not a cut. **And what left a scene that is still there**, by the passage rule below: a trimmed scene's removed speeches and paragraphs are cuts too.
+- **Markdown documents:** a chapter (`#`) or section (`##`, `###`) that left the text, matched the same way by heading and content; and what left a chapter or section that is still there, by the passage rule.
+- **Passages. Call:** within a scene or section still there, a removal is a cut when it is either **(a) a whole element or paragraph** taken out with nothing in its place — a speech (the character and their dialogue), an action paragraph, a transition, a Markdown paragraph or list item — whatever its length; or **(b) a run of 12 or more words** (`CUT_MIN_WORDS`) removed from inside one, by a word-level diff against the comparison point (the last snapshot). A run of 12+ words replaced by different text counts as a cut of the old text when it shares under half its word pairs with what replaced it. Word-level tweaks, typo fixes, rewordings under 12 words, and light rewrites are not cuts, and neither is text moved elsewhere. A cut's text is an exact slice of the earlier text (with `\n` line breaks), never with kept text in it, and the same text is one cut.
+- **Grouping:** a passage records the scene or section it was cut from (its heading and its number), so the Cuts list can group passages under their scene or chapter, and the line it followed (`where.lineAfter`), so Put back can put it back exactly while that line is there.
+- **When:** **Call:** a cut is found whenever a snapshot is kept (every 10 minutes of active writing, on save and open, on Take snapshot, and before bulk operations — `keepSnapshot`'s moments), by comparing the snapshot's text with the comparison point (the previous kept text); never on every keystroke. A snapshot whose reason is a whole-text replacement (`before-restore`, `before-reload`, `opened`, `imported`, and a restored draft) moves the comparison point without looking for cuts. (As built, Task 4: a snapshot of a text that arrived whole, `opened` or `imported`, only moves the point; the `before-…` snapshot is of the writer's own text and is compared, and the replacement after it is never compared, so a cut made just before a restore is kept. See DECISIONS.) A cut is recorded once; if the same text comes back and is cut again later, it is one entry with both dates.
+- Each cut records: its text, a title (the scene heading, chapter or section heading, or the first words of a passage), **the draft number it was cut while writing** ("cut while writing Draft 08"; the current draft has no ID until it is frozen, so a cut names the number, and the Cuts list adds that draft's short ID once it is frozen), when, and where it was (the neighbours, as Put back already uses).
 - **Call:** a cut's own ID is the **SHA-256 of its text alone**, so the same text cut again (in this draft or a later one) is one entry with every date and draft it was cut in, and copies of the cuts file from two computers merge by that ID.
-- **Call: nothing before this release is lost either.** On the first run of v0.23.0, Drafter scans each script's existing snapshots once (in the history worker, as Deleted scenes does today) and records every scene, chapter, or section found there but not in the text now as a cut, marked "cut before drafts" (draft number none). After that, cuts are recorded as they happen.
+- **Call: nothing before this release is lost either.** On the first run of v0.24.0, Drafter scans each script's existing snapshots once (in the history worker, as Deleted scenes does today) and records every scene, chapter, or section found there but not in the text now as a cut, marked "cut before drafts" (draft number none). After that, cuts are recorded as they happen.
 - **Call: a whole-text replacement makes no cuts.** Restore as a new draft, Restore from a snapshot (`snapshots/restore.ts`), Open, reload, an import, and New all reset the comparison point to the new text instead of comparing with the old: what left is already safe in the frozen draft or snapshot taken just before, and recording it would flood Cuts with a whole draft.
 
 ### 3.2 The Cuts list
@@ -106,7 +109,7 @@ The heart of "nothing lost": everything above is also kept as ordinary text file
 
 ### 4.2 Opening a work that has them
 - Opening `Boca.fountain` (desktop, or web with folder access) reads `Boca drafts/` and `Boca.fountain.cuts.md` if they are there and merges them into the lists (by ID: nothing duplicated, nothing dropped). A draft file whose text no longer matches its ID is listed with a warning ("changed outside Drafter") and kept.
-- Opening a draft file itself (`Boca – Draft 03.fountain`) opens it as a normal script, read-write — it is just a file — with a note bar: "This is Draft 3 of Boca. Open Boca instead?".
+- Opening a draft file itself (`Boca – Draft 03.fountain`) opens it read-only, as it was frozen, as a copy never bound to the file, with a note bar: "This is Draft 03 of Boca. It is read-only, as it was frozen.", Open a copy to keep writing, and Open Boca instead. (As built: the design first had it read-write; the final review found that saving it stripped its facts block. DECISIONS.)
 
 ## 5. Retention
 
@@ -128,7 +131,7 @@ No new default keys (as v0.18.0). Help: a "Drafts and cuts" page in the writer's
 
 ## 7. Accessibility
 
-As the rest of the app: WCAG 2.2 AA, axe in both themes on every project, every action by keyboard, lists as real lists with named actions ("Read Draft 3", "Insert cut 'The ferry' at the cursor"), focus returned sensibly after each dialog, the read-only draft pane announced as read-only, and nothing conveyed by colour alone (Compare's existing rules).
+As the rest of the app: WCAG 2.2 AA, axe in both themes on every project, every action by keyboard, lists as real lists with named actions ("Read Draft 03", "Insert cut 'The ferry' at the cursor"), focus returned sensibly after each dialog, the read-only draft pane announced as read-only, and nothing conveyed by colour alone (Compare's existing rules).
 
 ## 8. Safety
 
@@ -138,7 +141,7 @@ As the rest of the app: WCAG 2.2 AA, axe in both themes on every project, every 
 
 ## 9. Testing
 
-- Unit: the ID (known vectors; same text → same ID; one character → different); draft numbering never reuses; restore freezes first; cut detection (scene moved ≠ cut; scene cut → one entry; section cut; 50-word passage cut; re-cut → one entry two dates); the cuts file round-trips and merges two copies without loss or duplicates; metadata parsing refuses bad fields; linear-time parsing on hostile input.
+- Unit: the ID (known vectors; same text → same ID; one character → different); draft numbering never reuses; restore freezes first; cut detection (scene moved ≠ cut; scene cut → one entry; section cut; a dropped speech or paragraph, and 12 words removed, are passage cuts, 11 words and a typo fix are not; re-cut → one entry two dates); the cuts file round-trips and merges two copies without loss or duplicates; metadata parsing refuses bad fields; linear-time parsing on hostile input.
 - e2e: start a draft with a note; the list shows it with its short ID; open by ID from the palette; Read beside, copy a line across; Compare two drafts; Restore as a new draft and undo; cut a scene, find it in Cuts, Insert at cursor elsewhere, Put back; on the desktop, the drafts folder and cuts file appear beside the script, and reopening merges them; on web Chromium with folder access granted (the existing file-picker stubs); in Firefox, the "In this browser only — Export" state and the zip export.
 - Desktop e2e: files written atomically; a pre-existing draft file is never overwritten; a symlinked target isn't followed.
 
@@ -154,7 +157,7 @@ Deleting drafts or cuts; branching; per-draft revision colours or printed marks 
 4. Restore never overwrites: freeze first, then a new number "from Draft N" (§2.3).
 5. No Delete for drafts or cuts (§2.3, §3.2).
 6. Exports unchanged by drafts (§2.4).
-7. A Markdown passage of 50+ words removed in one change is a cut (§3.1).
+7. A passage is a cut when it is a whole element or paragraph removed, or 12+ words removed from inside one, in scripts and Markdown alike (§3.1; the maintainer, 2026-11-01, replacing "a Markdown passage of 50+ words").
 8. Cuts found when the text settles, not per keystroke (§3.1).
 9. Put back leaves the cut in the list, marked (§3.2).
 10. A script cut inserted at the cursor goes in at the nearest scene boundary after it (§3.2).
@@ -167,7 +170,7 @@ Deleting drafts or cuts; branching; per-draft revision colours or printed marks 
 17. A cut names the draft number it was cut while writing; its ID is the SHA-256 of its text alone (§3.1).
 18. Existing snapshots are scanned once on first run, so cuts from before this release are kept, "cut before drafts" (§3.1).
 19. A whole-text replacement (restore, open, import, New) resets the comparison point and makes no cuts (§3.1).
-20. "Removed 50+ words": a contiguous run absent now by a word-level diff; a rewritten paragraph counts only if it shares under half its word pairs with its replacement (§3.1).
+20. "Removed": a whole element absent now, or a contiguous run of 12+ words absent now by a word-level diff; a replaced run counts only if it shares under half its word pairs with its replacement (§3.1).
 21. Draft facts live in Drafter's existing `/* drafter … */` metadata block (Markdown: a trailing comment); the ID is of the editor text; one fixed blank line before the block (§4).
 22. The cuts file is named after the whole file name (`Boca.fountain.cuts.md`) (§4).
 23. Drafts and cuts belong to the project; Save As writes the full set beside the new file and leaves the old (§4).

@@ -128,6 +128,8 @@ const LAYOUT: Record<Group, Section[]> = {
       strip: /^(Template|Document): /,
     },
     { pick: ['save', 'save-as', 'revert-to-saved'] },
+    // Drafts and Cuts (drafts-and-cuts design §6): after Revert to Saved.
+    { pick: ['start-draft', 'drafts', 'cuts'] },
     { pick: prefix('export-'), submenu: 'Export', strip: /^Export as / },
     { pick: ['remove'] },
     { pick: ['settings'] },
@@ -183,6 +185,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'help-fountain',
         'help-shortcuts',
         'help-saving',
+        'help-drafts-and-cuts',
         'help-privacy',
         'help-licences',
         'help-technical',
@@ -199,6 +202,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'new-guided-stage-play': 'Guided first stage play',
       },
     },
+    { pick: ['report-problem', 'suggest-idea'] },
     { pick: ['check-for-updates'] },
   ],
 };
@@ -212,12 +216,16 @@ const LABELS: Record<string, string> = {
   'help-fountain': 'Fountain Cheat Sheet',
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
+  'help-drafts-and-cuts': 'Drafts and Cuts',
   'help-privacy': 'Privacy',
   'help-licences': 'Third-party Licences',
   'help-technical': 'Technical Details',
   'help-whats-new': 'What’s New',
+  'report-problem': 'Report a Problem…',
+  'suggest-idea': 'Suggest an Idea…',
   'check-for-updates': 'Check for Updates…',
   'open-as-screenplay': 'Open as Screenplay…',
+  'start-draft': 'Start New Draft…',
 };
 
 /**

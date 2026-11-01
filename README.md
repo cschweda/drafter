@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.23.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Next up is Drafts and Cuts (v0.24.0); see the [roadmap](#roadmap).
+> **Status: v0.24.0.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Drafts and Cuts is out; next up is Story map (v0.24.1), a visual page of your script to send to anyone. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -49,7 +49,8 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Write.** The editor and its live, industry-standard pages, with page counts you can trust. An element bar writes Fountain for you, with a cheat sheet. Screenplay and Stage play templates, and Markdown documents with footnotes. A command palette, a Problems pane, offline spellcheck in US or British English, focus mode, typewriter scrolling, a daily goal, sprints, and writing stats.
 - **Shape the story.** **Outline** (scenes and sections as a tree, with synopses, colors, running times, and a treatment export) and **Cards**, both rearranged by drag or keys. **Notes**, with categories, readers' names, and open or resolved status. Scene goals, setups and payoffs, and the **Structure strip**, a band of blocks above the panes to click and go.
-- **Look back.** **History**, with every version restorable in one undo. **Compare**, with a GitHub-style view of what changed. **Show changes**, marked on the pages. **Deleted scenes** you can put back, and the history of one scene.
+- **Look back.** **History**, with every version restorable in one undo. **Compare**, with a GitHub-style view of what changed. **Show changes**, marked on the pages, and the history of one scene.
+- **Drafts and Cuts.** Start a new draft when you choose: Draft 01, Draft 02, each kept for good with an ID of its own, to read, compare, or restore, and **Draft by draft** to see how the work changed. **Cuts** keeps everything you cut, a scene, a speech, or a paragraph, to browse for ideas, copy, or put back. Both sit as plain files beside your script.
 - **See the script.** **Scaffold** follows your cursor and shows who is in the scene, where, and for how long, with a page for each character and place. The **Stats tab** has each character's screen time and dialogue share, and a character-by-scene grid that shows who vanishes for 20 pages. Running times by scene and act, at your own minutes a page or from the dialogue.
 - **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, with a recovery copy kept as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, and EPUB out. See [Formats](#formats).
 - **Make it yours.** A calm dark theme by default, or light, or one that follows your system. Paper pages or a dark page for night, five text sizes, and optional script modules. Below 1024 pixels, one pane at a time, made for a phone.
@@ -100,8 +101,8 @@ Drafter is built to open files from anyone without putting you at risk.
 - **Size limits are checked before anything is unpacked.** A Highland, Fade In, or EPUB file's entries can't point outside their archive. A Final Draft file never makes Drafter fetch or read anything else: the outside references XML allows are refused.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
-- **The trap documents.** Drafter is tested against [244 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
-- **Found a security problem?** Please report it privately: see [SECURITY.md](SECURITY.md).
+- **The trap documents.** Drafter is tested against [258 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
+- **Found a security problem?** Please report it privately: see [SECURITY.md](SECURITY.md), or email cschweda@gmail.com with the details. Never in a public issue.
 
 The [Technical details](docs/technical-details.md#security) give the specifics.
 
@@ -184,6 +185,7 @@ Fountain is where you write. Everything else is a door in or a door out.
 
 - **In:** Fountain (`.fountain`, `.txt`) opens as it is. Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) open as a new script. Markdown (`.md`) opens as a document, or as a screenplay. Drafter's own HTML and EPUB exports open again when saved with **Let Drafter reopen this file**. Anything else (Word, RTF, PDF, other web pages and e-books, an image) is refused, with a sentence saying what to do instead.
 - **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a self-contained web page (HTML), and an e-book (EPUB). Export options per script set the scene numbers, the title page, and whether your notes go along.
+- **Beside your script:** a drafts folder (`Boca drafts/Boca – Draft 01.fountain`, each draft a complete Fountain or Markdown file) and a cuts file (`Boca.fountain.cuts.md`, plain Markdown), written by the desktop app and by Chrome and Edge once you allow the folder; elsewhere, a zip to download.
 
 The file you open is never changed, and no words go missing silently: text Fountain has no element for comes in as a note, listed in Problems.
 
@@ -198,11 +200,10 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, and HTML and EPUB export.
+**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, and Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut.
 
 **Next:**
 
-- **v0.24.0: Drafts and Cuts.** Numbered drafts, and a permanent file of everything you cut.
 - **v0.24.1: Story map**, a visual page of your script or play to send to anyone.
 - **v0.24.2: Drafter for Claude**, a local MCP server so Claude (or another AI app you use) can read your scripts, drafts, and cuts: storyboards, notes, and insights across a series. Nothing in Drafter itself ever calls an AI.
 - **v0.25.0: Classic Mode**, for writers who know Final Draft rather than Fountain. Enter and Tab move between elements the way most screenwriting apps work, and the left side looks like a script, with the marks hidden. It's not Fountain typing, but the file is still plain Fountain underneath. Fountain Mode stays the default, and one switch changes it.
@@ -229,6 +230,8 @@ pnpm -r build
 pnpm -r test
 pnpm dev              # the app, at http://localhost:3000
 ```
+
+Found a bug or have an idea? **Help → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or email cschweda@gmail.com; security problems go through [SECURITY.md](SECURITY.md).
 
 [How Drafter works](docs/HOW-IT-WORKS.md) has four diagrams of it. [Developing Drafter](docs/DEVELOPMENT.md) has how it works, the packages, the stack, storage and browsers, every command, the samples, contributing (commits, the changelog, releasing), and the design documents. [Why Drafter](docs/WHY.md) has the idea behind it and its principles, and [`docs/DECISIONS.md`](docs/DECISIONS.md) records the choices along the way.
 

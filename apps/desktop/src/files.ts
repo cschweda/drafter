@@ -184,7 +184,7 @@ export const hasExtension = (path: string, extensions: readonly string[]) =>
   extensions.includes(extname(basename(path)).toLowerCase());
 
 /** Flushes a folder's entries (the rename) to disk where the OS can; Windows can't, and needn't. */
-async function syncFolder(folder: string): Promise<void> {
+export async function syncFolder(folder: string): Promise<void> {
   let handle: FileHandle | undefined;
   try {
     handle = await open(folder, 'r');
@@ -197,7 +197,7 @@ async function syncFolder(folder: string): Promise<void> {
 }
 
 /** Writes all of `chunk`, however many calls it takes. */
-async function writeAll(handle: FileHandle, chunk: Uint8Array): Promise<void> {
+export async function writeAll(handle: FileHandle, chunk: Uint8Array): Promise<void> {
   let offset = 0;
   while (offset < chunk.byteLength) {
     const { bytesWritten } = await handle.write(chunk, offset, chunk.byteLength - offset);
@@ -235,6 +235,10 @@ function truncateBytes(name: string, bytes: number): string {
 const tempPrefix = (target: string) =>
   `.${truncateBytes(basename(target), MAX_TEMP_BASE_BYTES)}${TEMP_MARK}`;
 
+/** A new temp file's path for a write to `target`, beside it: `.<name>.drafter-tmp-<12 hex>`. */
+export const tempPathFor = (target: string) =>
+  join(dirname(target), `${tempPrefix(target)}${randomBytes(6).toString('hex')}`);
+
 /** The folders whose old temp files have been looked for in this run of the app. */
 const sweptFolders = new Set<string>();
 /** Any temp file of ours: `.<name>.drafter-tmp-<12 hex>`. */
@@ -245,7 +249,7 @@ const TEMP_NAME = /^\..+\.drafter-tmp-[0-9a-f]{12}$/;
  * any file in it. Once per folder in a run of the app, not at every save: a save is not made to
  * read the folder each time, and the files such a write leaves are found at the next start.
  */
-async function sweepTemps(folder: string): Promise<void> {
+export async function sweepTemps(folder: string): Promise<void> {
   if (sweptFolders.has(folder)) return;
   sweptFolders.add(folder);
   try {
@@ -291,7 +295,7 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
     if (mode !== undefined) await access(target, constants.W_OK);
 
     const folder = dirname(target);
-    temp = join(folder, `${tempPrefix(target)}${randomBytes(6).toString('hex')}`);
+    temp = tempPathFor(target);
     // `wx`: never an existing file. A new file gets the usual permissions (0666 less the umask).
     handle = await open(temp, 'wx', mode ?? 0o666);
     // The umask applied to `open`'s mode; the file's own permissions are put back exactly.
@@ -311,6 +315,14 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
   }
 }
 
+/** How `readFileAt` opens a file: more flags (`O_NOFOLLOW`), and the file it must turn out to be. */
+export interface ReadOptions {
+  /** Added to the open's flags. */
+  flags?: number;
+  /** The file's identity as an `lstat` gave it (`bigint`): the open handle's must be the same. */
+  same?: { dev: bigint; ino: bigint };
+}
+
 /**
  * A file's bytes and modification time (whole milliseconds, as a browser's `File` gives it): a
  * regular file only, at most `MAX_READ_BYTES`. It is opened without blocking, so a pipe (or one put
@@ -320,11 +332,22 @@ export async function writeAtomic(path: string, data: Bytes): Promise<void> {
  */
 export async function readFileAt(
   path: string,
+  options: ReadOptions = {},
 ): Promise<{ bytes: Uint8Array; lastModified: number }> {
   let handle: FileHandle | undefined;
   try {
-    handle = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
+    handle = await open(
+      path,
+      constants.O_RDONLY | (constants.O_NONBLOCK ?? 0) | (options.flags ?? 0),
+    );
     const info = await handle.stat();
+    if (options.same) {
+      // The file opened must be the one looked at: on a system that follows a link here (Windows
+      // has no O_NOFOLLOW), a file swapped for a link after the look opens something else.
+      const opened = await handle.stat({ bigint: true });
+      if (opened.dev !== options.same.dev || opened.ino !== options.same.ino)
+        throw new FileError('not-allowed', 'it changed after it was checked');
+    }
     if (!info.isFile()) throw new FileError('not-a-file');
     if (info.size > MAX_READ_BYTES) throw new FileError('too-big');
     const buffer = new Uint8Array(info.size + 1);

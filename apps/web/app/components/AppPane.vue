@@ -2,9 +2,12 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useCompare } from '~/compare/use-compare';
 import { useScriptTitle } from '~/composables/useScriptTitle';
+import { CUTS_TAB, useCuts } from '~/cuts/use-cuts';
+import { draftName } from '~/drafts/labels';
+import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
+import { STEPS_TAB, useDraftSteps } from '~/drafts/use-steps';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
-import { useDeleted } from '~/history/deleted';
 import { contextGeneration } from '~/modules/context';
 import { useModuleTabs } from '~/modules/host';
 import { openCount } from '~/notes/filter';
@@ -15,7 +18,6 @@ import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import {
   COMPARE_TAB,
-  DELETED_TAB,
   INSPECTOR_TOOLS_ID,
   inspectorTabs,
   TABS,
@@ -65,7 +67,10 @@ const ICONS: Record<string, string> = {
   notes: 'i-lucide-notebook-pen',
   problems: 'i-lucide-triangle-alert',
   compare: 'i-lucide-git-compare',
-  deleted: 'i-lucide-archive-restore',
+  cuts: 'i-lucide-scissors',
+  drafts: 'i-lucide-milestone',
+  'draft-steps': 'i-lucide-git-commit-vertical',
+  draft: 'i-lucide-book-open',
   module: 'i-lucide-puzzle',
 };
 const iconOf = (tab: Tab) =>
@@ -76,18 +81,26 @@ const iconOf = (tab: Tab) =>
 // The Notes tab's badge is the open notes in My notes and Readers (Call 15), named "Notes, 3 open".
 const { entries: noteEntries } = useNotes();
 const openNotes = computed(() => openCount(noteEntries.value));
-// Compare and Deleted scenes exist only while open (Phase 2 design §5.8, Call 16; version-history
-// design §9, Call 34).
+// Compare and Cuts exist only while open (Phase 2 design §5.8, Call 16; drafts-and-cuts design
+// §3.2).
 const { current: comparison } = useCompare();
-const { isOpen: deletedOpen } = useDeleted();
+const { isOpen: cutsOpen } = useCuts();
+// The Drafts list and the draft being read, while open (drafts-and-cuts design §2.3).
+const { isOpen: draftsOpen, reading } = useDrafts();
+const { isOpen: stepsOpen } = useDraftSteps();
 const moduleTabs = useModuleTabs();
 const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
 
 /** Every tab's label, by its id. */
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB].map((tab) => [tab.id, tab.label]),
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB, STEPS_TAB, READER_TAB].map((tab) => [
+    tab.id,
+    tab.label,
+  ]),
 );
 function tabOf(id: TabId): Tab {
+  // The draft being read is named by its number: "Draft 3".
+  if (id === READER_TAB.id && reading.value) return { id, label: draftName(reading.value.row.n) };
   if (id === 'notes' && openNotes.value > 0) {
     return {
       id,
@@ -108,8 +121,14 @@ const inspectorSet = computed(() => {
     kind.value,
     moduleTabs.value.map((tab) => tab.id),
   );
-  const open = (id: TabId) =>
-    id === COMPARE_TAB.id ? !!comparison.value : id === DELETED_TAB.id ? deletedOpen.value : true;
+  const open = (id: TabId) => {
+    if (id === COMPARE_TAB.id) return !!comparison.value;
+    if (id === CUTS_TAB.id) return cutsOpen.value;
+    if (id === DRAFTS_TAB.id) return draftsOpen.value;
+    if (id === STEPS_TAB.id) return stepsOpen.value;
+    if (id === READER_TAB.id) return !!reading.value;
+    return true;
+  };
   return { row: row.map(tabOf), more: more.filter(open).map(tabOf) };
 });
 /** The tabs drawn in the Inspector's row: the row's own, and the view showing if it isn't one. */
@@ -783,7 +802,10 @@ function onPanelKeydown(event: KeyboardEvent) {
       <StatsPane v-else-if="props.selected === 'stats'" />
       <ScaffoldPane v-else-if="props.selected === 'scaffold'" />
       <ComparePane v-else-if="props.selected === 'compare'" />
-      <DeletedPane v-else-if="props.selected === 'deleted'" />
+      <CutsPane v-else-if="props.selected === 'cuts'" />
+      <DraftsPane v-else-if="props.selected === 'drafts'" />
+      <DraftStepsPane v-else-if="props.selected === 'draft-steps'" />
+      <DraftReader v-else-if="props.selected === 'draft'" />
       <ProblemsPane v-else />
     </div>
     <BottomTabBar

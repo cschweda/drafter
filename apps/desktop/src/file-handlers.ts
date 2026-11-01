@@ -9,6 +9,7 @@
 // only where the writer chose one in a Save dialog (an export, never an imported file). A Highland
 // or Fade In file is never written at all.
 import { dirname, join } from 'node:path';
+import { besideHandlers } from './beside';
 import {
   checkBytes,
   checkPath,
@@ -108,6 +109,7 @@ async function coded<T>(work: () => Promise<T>): Promise<T> {
 
 export function fileHandlers(deps: FileHandlerDeps) {
   const { grants } = deps;
+  const beside = besideHandlers(grants);
   const folder = () => startFolder(deps.settingsFile, deps.documents(), deps.home);
   const remember = (path: string) =>
     rememberFolder(deps.settingsFile, dirname(path)).catch(() => {});
@@ -220,6 +222,19 @@ export function fileHandlers(deps: FileHandlerDeps) {
       }),
 
     realPath: (_event: FileEvent, path: unknown) => coded(async () => grants.allowed(path)),
+
+    /** Drafts and cuts beside a granted script, never through a link (beside.ts). */
+    writeBeside: (
+      _event: FileEvent,
+      script: unknown,
+      rel: unknown,
+      bytes: unknown,
+      mode: unknown,
+    ) => beside.writeBeside(script, rel, bytes, mode),
+    readBeside: (_event: FileEvent, script: unknown, rel: unknown) =>
+      beside.readBeside(script, rel),
+    listBeside: (_event: FileEvent, script: unknown, folder: unknown) =>
+      beside.listBeside(script, folder),
 
     watch: (event: FileEvent, id: unknown, path: unknown) =>
       coded(async () => {

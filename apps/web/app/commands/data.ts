@@ -39,6 +39,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
+  { id: 'help-drafts-and-cuts', path: '/docs/drafts-and-cuts', title: 'Drafts and cuts' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
   { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },
@@ -128,16 +129,49 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'save-as', title: 'Save As…', group: 'File', keys: 'Mod-Shift-s', global: true },
   { id: 'revert-to-saved', title: 'Revert to Saved', group: 'File' },
   { id: 'history', title: 'History…', group: 'File', icon: 'i-lucide-history' },
-  // Deleted scenes (version-history design §3.3, §8, §9): a tab, opened and closed from here. The
-  // maintainer looks for it as "show all versions".
+  // Cuts (drafts-and-cuts design §3.2, §6, Call 16): a tab, opened and closed from here. It
+  // replaced Deleted scenes, whose name it keeps as a keyword; the maintainer looks for it as
+  // "show all versions".
   {
-    id: 'deleted-scenes',
-    title: 'Deleted scenes',
+    id: 'cuts',
+    title: 'Cuts…',
     group: 'File',
-    icon: 'i-lucide-archive-restore',
-    keywords: ['show all versions', 'versions', 'deleted', 'cut scenes', 'put back'],
+    icon: 'i-lucide-scissors',
+    keywords: [
+      'deleted scenes',
+      'show all versions',
+      'versions',
+      'deleted',
+      'cut scenes',
+      'cuts',
+      'put back',
+    ],
   },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
+  // Drafts (drafts-and-cuts design §2, §6): the writer's word is Draft, and the palette finds them
+  // by "version" too (§2.5, Call 26). No default key (as v0.18.0).
+  {
+    id: 'start-draft',
+    title: 'Start new draft…',
+    group: 'File',
+    icon: 'i-lucide-milestone',
+    keywords: ['new version', 'version', 'freeze', 'milestone'],
+  },
+  {
+    id: 'drafts',
+    title: 'Drafts…',
+    group: 'File',
+    icon: 'i-lucide-milestone',
+    keywords: ['versions', 'version', 'open draft by ID', 'draft history'],
+  },
+  // Draft by draft (drafts-and-cuts design §2.4, §6): the steps from one draft to the next.
+  {
+    id: 'draft-steps',
+    title: 'Draft by draft…',
+    group: 'File',
+    icon: 'i-lucide-git-commit-vertical',
+    keywords: ['versions', 'version', 'how it changed', 'what changed', 'timeline', 'drafts'],
+  },
   ...SAMPLES.map(
     (sample): CommandData => ({
       id: `open-sample-${sample.kind}`,
@@ -160,6 +194,22 @@ export const COMMAND_DATA: readonly CommandData[] = [
       group: 'Help',
     }),
   ),
+  // Report a problem and Suggest an idea: a dialog that fills in GitHub's new-issue page (or an
+  // email), which the writer submits there themselves. Drafter never sends anything.
+  {
+    id: 'report-problem',
+    title: 'Report a problem…',
+    group: 'Help',
+    icon: 'i-lucide-bug',
+    keywords: ['bug', 'issue', 'feedback', 'github', 'contact', 'email'],
+  },
+  {
+    id: 'suggest-idea',
+    title: 'Suggest an idea…',
+    group: 'Help',
+    icon: 'i-lucide-lightbulb',
+    keywords: ['feature', 'request', 'feedback', 'github', 'contact', 'email'],
+  },
   { id: 'check-for-updates', title: 'Check for updates…', group: 'Help' },
   { id: 'about-drafter', title: 'About Drafter', group: 'Help', icon: 'i-lucide-info' },
   { id: 'export-pdf', title: 'Export as PDF', group: 'File' },

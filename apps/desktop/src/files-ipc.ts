@@ -123,6 +123,13 @@ export function registerFileIpc(): FileAccessMain {
   handle(CHANNELS.filesRead, (event, path) => handlers.read(event, path));
   handle(CHANNELS.filesWrite, (event, path, bytes) => handlers.write(event, path, bytes));
   handle(CHANNELS.filesRealPath, (event, path) => handlers.realPath(event, path));
+  handle(CHANNELS.filesWriteBeside, (event, script, rel, bytes, mode) =>
+    handlers.writeBeside(event, script, rel, bytes, mode),
+  );
+  handle(CHANNELS.filesReadBeside, (event, script, rel) => handlers.readBeside(event, script, rel));
+  handle(CHANNELS.filesListBeside, (event, script, folder) =>
+    handlers.listBeside(event, script, folder),
+  );
   handle(CHANNELS.filesWatch, (event, id, path) => handlers.watch(event, id, path));
   handle(CHANNELS.filesUnwatch, (event, id) => handlers.unwatch(event, id));
 

@@ -125,12 +125,8 @@ const groups = shortcutGroups(COMMAND_DATA);
           snapshot’s menu.
         </li>
         <li>
-          In the Deleted scenes tab (File’s Deleted scenes, or History’s Deleted scenes button),
-          <kbd>↑</kbd> and <kbd>↓</kbd> move between the scenes, and <kbd>Home</kbd> and
-          <kbd>End</kbd> go to the first and last. On a scene, <kbd>Enter</kbd> shows or hides its
-          text, <kbd>P</kbd> puts it back where it was, and <kbd>H</kbd> opens History of this
-          scene. The context-menu key or <kbd>Shift+F10</kbd> opens the scene’s menu, which compares
-          that version with now or copies its text.
+          In Cuts (File’s Cuts…, or History’s Cuts button), every cut’s buttons are in the
+          <kbd>Tab</kbd> order: Show all for a long one, Put back, Insert at cursor, and Copy.
         </li>
         <li>
           In History of this scene (a scene’s menu in the Outline, the Cards, or the Structure

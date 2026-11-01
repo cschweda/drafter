@@ -28,14 +28,25 @@ export type InspectorTabId =
   | 'notes'
   | 'problems'
   | 'compare'
-  | 'deleted'
+  | 'cuts'
+  | 'drafts'
+  | 'draft-steps'
+  | 'draft'
   | `module-${string}`;
+
+/**
+ * Cuts, the Drafts list, Draft by draft, and the draft being read (drafts-and-cuts design §2.3,
+ * §2.4, §3.2): tabs that
+ * exist only while open, as Compare is, for scripts and Markdown documents alike.
+ */
+const DRAFT_TABS: InspectorTabId[] = ['cuts', 'drafts', 'draft-steps', 'draft'];
 
 /**
  * The Inspector's tabs for a document of `kind` (Call 14): the row, and More with the rest, in
  * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Problems, Compare,
- * Deleted scenes, then the modules' tabs (`modules`) under More. A Markdown document: Preview and
- * Stats; Problems, Compare, and the modules' tabs under More. Compare and Deleted scenes are listed only while open
+ * Cuts, Drafts, the draft being read, then the modules' tabs (`modules`) under More. A Markdown
+ * document: Preview and Stats; Problems, Compare, Cuts, Drafts, the draft being read, and the
+ * modules' tabs under More. Compare, Cuts, and the drafts' two are listed only while open
  * (AppPane leaves them out otherwise); when the Inspector is too narrow for its row, AppPane moves
  * tabs from the row's right end into More, measured.
  */
@@ -45,10 +56,10 @@ export function inspectorTabs(
 ): { row: InspectorTabId[]; more: InspectorTabId[] } {
   const own = modules as InspectorTabId[];
   if (kind === 'markdown')
-    return { row: ['script', 'stats'], more: ['problems', 'compare', ...own] };
+    return { row: ['script', 'stats'], more: ['problems', 'compare', ...DRAFT_TABS, ...own] };
   return {
     row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-    more: ['notes', 'problems', 'compare', 'deleted', ...own],
+    more: ['notes', 'problems', 'compare', ...DRAFT_TABS, ...own],
   };
 }
 
@@ -113,12 +124,6 @@ export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
 export const COMPARE_TAB: Tab = { id: 'compare', label: 'Compare' };
 
 /**
- * Deleted scenes (version-history design §9, Call 34): a tab that exists only while it is open, as
- * Compare is, placed as Compare is, so the script can be seen beside it as scenes come back.
- */
-export const DELETED_TAB: Tab = { id: 'deleted', label: 'Deleted scenes' };
-
-/**
  * The view tabs a document of `kind` has, before any module's. A Markdown document has no scenes or
  * notes, so no Cards, Notes, or Scaffold; it has Stats, with its words, headings, and reading time.
  */
@@ -162,15 +167,27 @@ export const HISTORY_ITEM = 'history';
 /**
  * The bottom tab bar (fresh-look design §6): Write, Script (a Markdown document's Preview), and
  * Outline (not in a Markdown document), then More with Cards, Stats, Scaffold, Notes, Problems,
- * the modules' tabs, and History, which opens its dialog. Compare and Deleted scenes lead More
- * while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
+ * the modules' tabs, and History, which opens its dialog. Compare, Cuts, Drafts, and the draft
+ * being read lead More while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
  */
 export function phoneTabs(
   kind: 'fountain' | 'markdown',
   modules: ReadonlyArray<string> = [],
-  open: { compare?: boolean; deleted?: boolean } = {},
+  open: {
+    compare?: boolean;
+    cuts?: boolean;
+    drafts?: boolean;
+    steps?: boolean;
+    draft?: boolean;
+  } = {},
 ): { row: TabId[]; more: TabId[] } {
-  const lead = [...(open.compare ? ['compare'] : []), ...(open.deleted ? ['deleted'] : [])];
+  const lead = [
+    ...(open.compare ? ['compare'] : []),
+    ...(open.cuts ? ['cuts'] : []),
+    ...(open.drafts ? ['drafts'] : []),
+    ...(open.steps ? ['draft-steps'] : []),
+    ...(open.draft ? ['draft'] : []),
+  ];
   if (kind === 'markdown') {
     return {
       row: ['source', 'script'],

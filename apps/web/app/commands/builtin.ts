@@ -32,7 +32,10 @@ import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
+import { useCuts } from '~/cuts/use-cuts';
 import { isDesktopBuild } from '~/desktop';
+import { useDrafts } from '~/drafts/use-drafts';
+import { useDraftSteps } from '~/drafts/use-steps';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
 import { firstSceneStart } from '~/editor/first-scene';
@@ -42,7 +45,6 @@ import { useEditor } from '~/editor/session';
 import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
-import { useDeleted } from '~/history/deleted';
 import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
@@ -51,6 +53,7 @@ import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
 import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
+import { reportOpen } from '~/report/dialog';
 import { showScaffold } from '~/scaffold/show';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
@@ -120,12 +123,9 @@ export function registerBuiltinCommands(): void {
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
   const showChanges = useShowChanges();
-  const deleted = useDeleted();
-  /** Whether a pane shows the Deleted scenes tab. */
-  const deletedShown = () =>
-    window.matchMedia(WIDE_QUERY).matches
-      ? panes.tabs.value.right === 'deleted'
-      : panes.phoneTab.value === 'deleted';
+  const cuts = useCuts();
+  const drafts = useDrafts();
+  const steps = useDraftSteps();
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -364,15 +364,37 @@ export function registerBuiltinCommands(): void {
         historyOpen.value = { focusLabel: false };
       },
     },
-    // Deleted scenes (version-history design §8, §9): opens the tab, or shows it; shown, it closes.
-    'deleted-scenes': {
-      enabled: () => hasScript() && isFountain(),
-      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
-      liveTitle: () =>
-        deleted.isOpen.value && deletedShown() ? 'Close Deleted scenes' : 'Deleted scenes',
+    // Cuts (drafts-and-cuts design §3.2): opens the list, or shows it; shown, it closes. Scripts
+    // and Markdown documents alike.
+    cuts: {
+      enabled: hasScript,
+      liveTitle: () => (cuts.shown() ? 'Close Cuts' : 'Cuts…'),
       run: () => {
-        if (deleted.isOpen.value && deletedShown()) deleted.close(true);
-        else deleted.open();
+        if (cuts.shown()) cuts.close(true);
+        else cuts.open();
+      },
+    },
+    // Start new draft… (drafts-and-cuts design §2.1): its dialog; for a sample or in a read-only
+    // tab it says why. Drafts… opens the list, or shows it; shown, it closes.
+    'start-draft': {
+      enabled: hasScript,
+      run: () => drafts.ask(),
+    },
+    drafts: {
+      enabled: hasScript,
+      liveTitle: () => (drafts.shown() ? 'Close Drafts' : 'Drafts…'),
+      run: () => {
+        if (drafts.shown()) drafts.close(true);
+        else drafts.open();
+      },
+    },
+    // Draft by draft… (§2.4): opens the steps, or shows them; shown, they close.
+    'draft-steps': {
+      enabled: hasScript,
+      liveTitle: () => (steps.shown() ? 'Close Draft by draft' : 'Draft by draft…'),
+      run: () => {
+        if (steps.shown()) steps.close(true);
+        else steps.open();
       },
     },
     'take-snapshot': {
@@ -469,6 +491,17 @@ export function registerBuiltinCommands(): void {
     'about-drafter': {
       run: () => {
         aboutOpen.value = true;
+      },
+    },
+    // Help → Report a problem… and Suggest an idea…: the dialog that fills in GitHub's page.
+    'report-problem': {
+      run: () => {
+        reportOpen.value = 'problem';
+      },
+    },
+    'suggest-idea': {
+      run: () => {
+        reportOpen.value = 'idea';
       },
     },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind

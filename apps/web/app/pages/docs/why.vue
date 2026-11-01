@@ -266,8 +266,8 @@ function parts(cell: string): Part[] {
       </li>
       <li>
         <strong>Every draft kept.</strong> Version history, Compare with a GitHub-style view of what
-        changed, Show changes on the pages, deleted scenes you can put back, and the history of one
-        scene.
+        changed, Show changes on the pages, and the history of one scene. Numbered drafts, each kept
+        for good, and Cuts, which keeps everything you cut to read, copy, or put back.
       </li>
       <li>
         <strong>Production, coming free in v0.27.0.</strong> Colored revision sets with marks in the

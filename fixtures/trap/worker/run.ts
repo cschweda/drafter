@@ -18,11 +18,13 @@ import {
 import { run } from '@drafter/cli';
 import { FdxError, fromFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
+import { mergeCuts } from '@drafter/history';
 import { paginate } from '@drafter/layout';
 import { NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 import { builtins, type Template } from '@drafter/templates';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
+import { readCutsBytes, readDraftBytes, skippedLine } from '../../../apps/web/app/beside/read';
 import type { Happened } from '../check';
 
 setFlagsFromString('--expose-gc');
@@ -36,7 +38,8 @@ const used = () => {
 export type Job =
   | { kind: 'package'; format: string; bytes: Uint8Array; inert: boolean }
   | { kind: 'cli'; cwd: string; args: string[] }
-  | { kind: 'modules'; dir: string };
+  | { kind: 'modules'; dir: string }
+  | { kind: 'beside'; format: string; bytes: Uint8Array };
 
 export interface Answer {
   happened: Happened;
@@ -189,7 +192,36 @@ async function drafter(cwd: string, args: string[]) {
   return { code, out: out.join(''), err: err.join('') };
 }
 
+/** The fixed moment the beside traps are read at, so a date's place in time never drifts. */
+const BESIDE_NOW = new Date('2026-11-01T12:00:00.000Z');
+
+/**
+ * The app's reading of a file beside the work (apps/web/app/beside/read.ts): a cuts file's entries
+ * checked and merged into none, given as their titles, one a line, with what the lists say was
+ * left out; a draft file's text, with "changed outside Drafter" when its ID no longer holds.
+ */
+async function readBeside(format: string, bytes: Uint8Array): Promise<Happened> {
+  if (format === 'cuts') {
+    const read = await readCutsBytes(bytes, 'fountain');
+    if (read.problem) return { kind: 'refused', message: read.problem };
+    const merged = mergeCuts([], read.entries, { kind: 'fountain', now: BESIDE_NOW });
+    return {
+      kind: 'opened',
+      text: merged.map((entry) => entry.title).join('\n'),
+      message: skippedLine(read.skipped, 'Boca.fountain.cuts.md'),
+    };
+  }
+  const read = await readDraftBytes(bytes, 'fountain');
+  if (read.facts === null) return { kind: 'refused', message: read.problem };
+  return {
+    kind: 'opened',
+    text: read.text,
+    message: read.matches ? '' : 'changed outside Drafter',
+  };
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
+  if (job.kind === 'beside') return { happened: await readBeside(job.format, job.bytes) };
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);
     if (!job.inert || happened.kind !== 'opened') return { happened };

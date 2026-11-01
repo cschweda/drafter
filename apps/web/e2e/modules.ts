@@ -292,8 +292,15 @@ export function stored(page: Page): Promise<Record<string, unknown>> {
             resolve(
               Object.fromEntries(
                 (request.result as Array<{ key: string; value: unknown }>)
-                  // The samples met, which the tests start with (playwright.config.ts), are not settings.
-                  .filter((r) => !r.key.startsWith('sample-seen:'))
+                  // The samples met, which the tests start with (playwright.config.ts), are not
+                  // settings, nor is what Drafts and Cuts keeps for itself (the first run's date,
+                  // each script's comparison point, backfill, draft origin, and folder answer).
+                  .filter(
+                    (r) =>
+                      !/^(sample-seen|cuts-point|cuts-first|cuts-backfill|draft-from|beside-declined):/.test(
+                        r.key,
+                      ) && r.key !== 'cuts-since',
+                  )
                   .map((r) => [r.key, r.value]),
               ),
             );

@@ -1,0 +1,33 @@
+# Report a problem. Drafter's Help → Report a problem… fills these fields from the link it opens
+# (`?template=bug.yml&title=…&what-happened=…&expected=…&version=…`), by each field's id, so the
+# ids here and in apps/web/app/report/issue.ts must match (apps/web/test/report-issue.test.ts).
+name: Report a problem
+description: Something in Drafter didn't work the way you expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please don't paste your script, or anything private.
+        For a security problem, don't open a public issue: see [SECURITY.md](https://github.com/cschweda/drafter/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, and what Drafter did. A tiny example script that shows it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: false
+  - type: textarea
+    id: version
+    attributes:
+      label: Version info
+      description: Help → About Drafter → Copy version info, or Report a problem… adds it for you.
+      render: text
+    validations:
+      required: false

@@ -2,15 +2,17 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { commandById } from '~/commands/registry';
 import { useCompare } from '~/compare/use-compare';
+import { CUTS_TAB, useCuts } from '~/cuts/use-cuts';
+import { draftName } from '~/drafts/labels';
+import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
+import { STEPS_TAB, useDraftSteps } from '~/drafts/use-steps';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
-import { useDeleted } from '~/history/deleted';
 import { useModuleTabs } from '~/modules/host';
 import { openCount } from '~/notes/filter';
 import { useNotes } from '~/notes/use-notes';
 import {
   COMPARE_TAB,
-  DELETED_TAB,
   HISTORY_ITEM,
   PHONE_LABELS,
   phoneTabs,
@@ -42,7 +44,9 @@ const { count } = useProblems();
 const { entries: noteEntries } = useNotes();
 const openNotes = computed(() => openCount(noteEntries.value));
 const { current: comparison } = useCompare();
-const { isOpen: deletedOpen } = useDeleted();
+const { isOpen: cutsOpen } = useCuts();
+const { isOpen: draftsOpen, reading } = useDrafts();
+const { isOpen: stepsOpen } = useDraftSteps();
 const moduleTabs = useModuleTabs();
 
 const ICONS: Record<string, string> = {
@@ -50,16 +54,22 @@ const ICONS: Record<string, string> = {
   script: 'i-lucide-file-text',
   preview: 'i-lucide-eye',
   outline: 'i-lucide-list-tree',
+  cuts: 'i-lucide-scissors',
   more: 'i-lucide-ellipsis',
 };
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, DELETED_TAB].map((tab) => [tab.id, tab.label]),
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB, STEPS_TAB].map((tab) => [
+    tab.id,
+    tab.label,
+  ]),
 );
 
 /** A tab's label on the bar and in More: Write for the Source, Preview for a Markdown Script. */
 function labelOf(id: TabId): string {
   if (id === 'script' && markdown.value) return 'Preview';
   if (id === HISTORY_ITEM) return 'History';
+  if (id === READER_TAB.id)
+    return reading.value ? draftName(reading.value.row.n) : READER_TAB.label;
   return (
     PHONE_LABELS[id] ?? moduleTabs.value.find((tab) => tab.id === id)?.label ?? LABELS[id] ?? id
   );
@@ -71,7 +81,13 @@ const set = computed(() =>
   phoneTabs(
     kind.value,
     moduleTabs.value.map((tab) => tab.id),
-    { compare: !!comparison.value, deleted: deletedOpen.value },
+    {
+      compare: !!comparison.value,
+      cuts: cutsOpen.value,
+      drafts: draftsOpen.value,
+      steps: stepsOpen.value,
+      draft: !!reading.value,
+    },
   ),
 );
 /** The bar's tabs: its own, then the one showing, if it came from More. */

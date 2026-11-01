@@ -454,14 +454,17 @@ useDocsHead({
       <strong>Blue and orange</strong> under <strong>Colors for changes</strong> in Settings.
     </p>
 
-    <h3 id="deleted-scenes">Deleted scenes</h3>
+    <h3 id="cuts">Drafts and Cuts</h3>
     <p>
-      <strong>Deleted scenes</strong> (in the app menu after History…, in History, or in the command
-      palette) lists every scene that is in one of your snapshots but not in the script now, the most
-      recently cut first, with when it was last there and its first lines.
-      <strong>Put back</strong> puts a scene back where it was, after the scene that came before it;
-      one undo takes it out again. It reads your snapshots in the background, and keeps a note of each
-      scene in them in this browser, so the next look is quick.
+      Snapshots come and go as they age; drafts and cuts are kept for good.
+      <strong>Start new draft…</strong> keeps the script as it is now as a numbered draft (Draft 01,
+      Draft 02, …) that you can read, compare, or restore at any time. <strong>Cuts…</strong> (in the
+      app menu after History…, in History, or in the command palette, where “deleted scenes” finds it
+      too) keeps everything you cut: a whole scene, chapter, or section, and a speech, a paragraph, or
+      12 words or more taken out of one, to read again for ideas, copy, insert at the cursor, or put
+      back where it was. It replaces the Deleted scenes list of earlier versions. Both can be written
+      as plain files next to your script. <a href="/docs/drafts-and-cuts/">Drafts and cuts</a> has
+      the whole story.
     </p>
 
     <h3 id="show-changes">Show changes</h3>
@@ -477,8 +480,7 @@ useDocsHead({
     <h3 id="scene-history">History of this scene</h3>
     <p>
       <strong>History of this scene</strong> (a scene’s menu in the Outline or the Cards, the
-      Structure strip’s menu on a scene, the command palette for the scene your cursor is in, or
-      Deleted scenes) lists every different version of one scene in your snapshots, newest first,
+      Structure strip’s menu on a scene, or the command palette for the scene your cursor is in) lists every different version of one scene in your snapshots, newest first,
       and shows what changed against now or against the version before.
       <strong>Use this version</strong> puts the scene back as it was, after keeping a snapshot
       called “Before restoring a scene”; one undo brings back what it replaced.

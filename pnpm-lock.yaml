@@ -294,9 +294,15 @@ importers:
 
   packages/history:
     dependencies:
+      '@drafter/compare':
+        specifier: workspace:*
+        version: link:../compare
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      '@drafter/markdown':
+        specifier: workspace:*
+        version: link:../markdown
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline

@@ -231,13 +231,15 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <strong>Export options for each script.</strong> Scene numbers (none, as written, or every
           scene), the title page, and whether notes go along.
         </li>
+        <li>
+          <strong>Numbered drafts, and every cut kept.</strong> Start new draft keeps Draft 01, 02,
+          and so on, and Cuts keeps everything you cut, for good. Both are saved beside the script as
+          plain files, on the desktop and in Chrome or Edge.
+          <a :href="help('help-drafts-and-cuts')">Drafts and cuts</a>
+        </li>
       </ul>
       <h3 id="coming-soon">Coming soon</h3>
       <ul>
-        <li>
-          <strong>Drafts and Cuts</strong> (v0.24.0): numbered drafts, and a permanent file of
-          everything you cut.
-        </li>
         <li>
           <strong>Story map</strong> (v0.24.1): a visual page of your script or play, to send to
           anyone.
@@ -306,9 +308,9 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a href="#traps">More below</a>.
         </li>
         <li>
-          <strong>Found a problem?</strong> Please report it privately:
+          <strong>Found a security problem?</strong> Please report it privately:
           <a :href="repoHref('SECURITY.md')" target="_blank" rel="noopener noreferrer">SECURITY.md</a>
-          says how.
+          says how. Or email cschweda@gmail.com with the details. Never in a public issue.
         </li>
       </ul>
       <p>

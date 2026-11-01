@@ -3,10 +3,10 @@ import { snapshotText } from '../storage/snapshots';
 import type { HistoryReply, HistoryRequest } from './protocol';
 
 // The talk with the history worker (version-history design §3.4, Call 9). One worker, made on the
-// first request of a view (Deleted scenes, History of this scene) and ended when the last view
+// first request of a view (History of this scene, Cuts) and ended when the last view
 // releases, as Compare's layout worker is. Each request hears only its own replies.
 
-type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' | 'place' }>;
+type Scan = Extract<HistoryRequest, { kind: 'versions' | 'cuts' | 'step' | 'backfill' }>;
 /** A scan as a view asks for it: the client numbers it. */
 export type HistoryAsk = Scan extends infer R ? (R extends Scan ? Omit<R, 'seq'> : never) : never;
 
@@ -30,6 +30,9 @@ interface Listening {
 }
 
 const STOPPED = 'The history worker stopped.';
+
+/** The requests answered once, beside the scans: none stops another. */
+const ONCE: ReadonlySet<Scan['kind']> = new Set(['cuts', 'step']);
 
 /** Views of one worker, made by `make` when needed (tests pass a fake). */
 export function createHistoryClients(make: () => WorkerLike) {
@@ -61,7 +64,8 @@ export function createHistoryClients(make: () => WorkerLike) {
         if (!to) return;
         if (
           reply.kind === 'error' ||
-          reply.kind === 'place' ||
+          reply.kind === 'cuts' ||
+          reply.kind === 'step' ||
           (reply.kind !== 'progress' && reply.done)
         )
           listening.delete(reply.seq);
@@ -90,8 +94,10 @@ export function createHistoryClients(make: () => WorkerLike) {
         request(ask, on) {
           views.add(view);
           const mine = ++seq;
-          // The worker stops the older scan of this kind, which so has no last reply.
-          for (const [n, l] of listening) if (l.kind === ask.kind) listening.delete(n);
+          // The worker stops the older scan of this kind, which so has no last reply. A question
+          // answered once (Put back's place, a recording's cuts) runs beside the others, stopping none.
+          if (!ONCE.has(ask.kind))
+            for (const [n, l] of listening) if (l.kind === ask.kind) listening.delete(n);
           listening.set(mine, { view, kind: ask.kind, on });
           const to = start();
           if (!to) return mine;
