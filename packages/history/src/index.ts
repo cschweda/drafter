@@ -3,8 +3,10 @@ export { CANDIDATES_MAX, Candidates } from './candidates';
 export { CUT_KEEP_SHARE, CUT_MIN_WORDS, type FoundCut, findCuts } from './cuts';
 export {
   type CutEntry,
+  type CutsFileBlock,
   type CutWhere,
   cutsFile,
+  cutsFileBlocks,
   cutText,
   FUTURE_SLACK_MS,
   MAX_CUTS_PER_ENTRY,

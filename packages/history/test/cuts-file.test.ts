@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import {
   type CutEntry,
   cutsFile,
+  cutsFileBlocks,
   cutText,
   MAX_CUTS_PER_ENTRY,
   MAX_VERSIONS_PER_ID,
@@ -628,4 +629,48 @@ describe('review fixes', () => {
     },
     SCALING_TIMEOUT,
   );
+});
+
+describe('cutsFileBlocks and carried blocks', () => {
+  const a = scene(
+    'INT. HALL - DAY\n\n# Not a title\n\nGone.',
+    'INT. HALL - DAY',
+    '2026-11-01T10:00:00.000Z',
+  );
+  const b = scene(
+    'EXT. PORCH - NIGHT\n\nAlso gone.',
+    'EXT. PORCH - NIGHT',
+    '2026-11-02T10:00:00.000Z',
+  );
+
+  test('splits a file into each cut’s block, heading to comment, with its entry', () => {
+    const file = cutsFile('Boca.fountain', [a, b]);
+    const blocks = cutsFileBlocks(file);
+    expect(blocks.map((x) => x.entry?.title)).toEqual(['EXT. PORCH - NIGHT', 'INT. HALL - DAY']);
+    expect(blocks[0]?.body.startsWith('## EXT. PORCH - NIGHT\n')).toBe(true);
+    expect(blocks[1]?.body.startsWith('## INT. HALL - DAY\n')).toBe(true);
+    for (const x of blocks) expect(x.body.endsWith(' -->')).toBe(true);
+    expect(file).toContain(blocks[0]?.body);
+    expect(file).toContain(blocks[1]?.body);
+  });
+
+  test('a damaged comment gives a block with no entry', () => {
+    const file = cutsFile('Boca.fountain', [a]).replace('"kind":"fountain"', '"kind":"fountain"x');
+    const [block] = cutsFileBlocks(file);
+    expect(block?.entry).toBeNull();
+    expect(block?.body.startsWith('## INT. HALL - DAY')).toBe(true);
+  });
+
+  test('carried blocks are written at the end as they were, and read back as they were', () => {
+    const [carried] = cutsFileBlocks(cutsFile('Boca.fountain', [a]));
+    const file = cutsFile('Boca.fountain', [b], [carried?.body as string]);
+    expect(file.endsWith(`${carried?.body}\n`)).toBe(true);
+    const again = cutsFileBlocks(file);
+    expect(again.map((x) => x.body)).toEqual([
+      cutsFileBlocks(cutsFile('Boca.fountain', [b]))[0]?.body,
+      carried?.body,
+    ]);
+    // Rewriting with the same carried block gives the same bytes.
+    expect(cutsFile('Boca.fountain', [b], [again[1]?.body as string])).toBe(file);
+  });
 });

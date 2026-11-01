@@ -7,13 +7,13 @@
 //   (`ignoreBOM`), as `drafter convert` does, so a draft's hash still matches.
 // - The cuts file is read with `readCutsFile` (a linear scan), then every entry is checked by
 //   `verifyCuts` (its ID must be the SHA-256 of its text), and entries of another kind are left
-//   out. What was left out is counted, never thrown.
+//   out. What was left out is counted, never thrown, and its block kept for the rewrite to carry.
 // - A draft file's line breaks are made line feeds before its ID is checked: a draft's ID is of
 //   the editor's text, which always has line feeds (the file's own line break is kept apart).
 import {
   type CutEntry,
+  cutsFileBlocks,
   type DraftFacts,
-  readCutsFile,
   readDraftFile,
   verifyCuts,
   type WorkKind,
@@ -44,21 +44,33 @@ export interface CutsRead {
   skipped: number;
   /** Why none could be read at all (too big, not UTF-8), or null. */
   problem: string | null;
+  /**
+   * Every cut's block, exactly as the file has it, with its entry when it passed (else null), so
+   * a rewrite can carry what it couldn't read.
+   */
+  blocks: { body: string; entry: CutEntry | null }[];
 }
 
 /** Reads the cuts file's bytes for a work of `kind`: only entries whose IDs check out. */
 export async function readCutsBytes(bytes: Uint8Array, kind: WorkKind): Promise<CutsRead> {
-  if (bytes.byteLength > MAX_BESIDE_BYTES) return { entries: [], skipped: 0, problem: TOO_BIG };
+  if (bytes.byteLength > MAX_BESIDE_BYTES)
+    return { entries: [], skipped: 0, problem: TOO_BIG, blocks: [] };
   const file = decodeBeside(bytes);
-  if (file === null) return { entries: [], skipped: 0, problem: NOT_UTF8 };
-  const read = readCutsFile(file);
-  const verified = await verifyCuts(read.entries);
-  const entries = verified.entries.filter((entry) => entry.kind === kind);
-  return {
-    entries,
-    skipped: read.skipped + verified.skipped + (verified.entries.length - entries.length),
-    problem: null,
-  };
+  if (file === null) return { entries: [], skipped: 0, problem: NOT_UTF8, blocks: [] };
+  const blocks: CutsRead['blocks'] = [];
+  const entries: CutEntry[] = [];
+  let skipped = 0;
+  for (const block of cutsFileBlocks(file)) {
+    let entry: CutEntry | null = null;
+    if (block.entry) {
+      const [verified] = (await verifyCuts([block.entry])).entries;
+      if (verified && verified.kind === kind) entry = verified;
+    }
+    if (entry) entries.push(entry);
+    else skipped++;
+    blocks.push({ body: block.body, entry });
+  }
+  return { entries, skipped, problem: null, blocks };
 }
 
 /** A draft file, read and checked. */
@@ -89,8 +101,8 @@ export async function readDraftBytes(bytes: Uint8Array, kind: WorkKind): Promise
 export function skippedLine(skipped: number, file: string): string {
   if (skipped === 0) return '';
   return skipped === 1
-    ? `1 cut in “${file}” couldn’t be read, so it was left out.`
-    : `${skipped} cuts in “${file}” couldn’t be read, so they were left out.`;
+    ? `1 cut in “${file}” couldn’t be read. It stays in the file, but isn’t listed.`
+    : `${skipped} cuts in “${file}” couldn’t be read. They stay in the file, but aren’t listed.`;
 }
 
 /** Said of a draft file whose text no longer matches its ID. */

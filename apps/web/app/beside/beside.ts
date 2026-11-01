@@ -11,7 +11,9 @@
 //   the editor's text, which has them (DECISIONS).
 // - The cuts file is only ever grown: the file is read, its entries checked (`read.ts`), merged
 //   with the stored cuts (the trusted side), and the whole written back; what the file had that
-//   storage hadn't is merged into storage too.
+//   storage hadn't is merged into storage too. A block the merge can't hold whole (damaged,
+//   forged, of another kind, or dated ahead of this clock) is carried to the end of the file byte
+//   for byte, so the file never loses anything it held (DECISIONS).
 import {
   type CutEntry,
   cleanWorkName,
@@ -128,7 +130,7 @@ export async function writeDraft(
 export interface CutsMerged {
   /** The file's entries that passed its checks. */
   incoming: CutEntry[];
-  /** Entries left out of the file: damaged, forged, or of another kind. */
+  /** Entries left out of the list (damaged, forged, or of another kind); they stay in the file. */
   skipped: number;
   /** Whether the file was written. */
   written: boolean;
@@ -157,18 +159,46 @@ export async function mergeCutsFile(
   }
   let incoming: CutEntry[] = [];
   let skipped = 0;
+  let blocks: { body: string; entry: CutEntry | null }[] = [];
   if (there) {
     const read = await readCutsBytes(there, kind);
     if (read.problem) return { incoming: [], skipped: 0, written: false, problem: read.problem };
     incoming = read.entries;
     skipped = read.skipped;
+    blocks = read.blocks;
   }
   const merged = mergeCuts(local, incoming, { kind, now });
   if (merged.length === 0 && !there) return { incoming, skipped, written: false, problem: null };
-  const bytes = new TextEncoder().encode(cutsFile(names.file, merged));
+  const bytes = new TextEncoder().encode(
+    cutsFile(names.file, merged, carriedBlocks(blocks, merged)),
+  );
   if (there && sameBytes(there, bytes)) return { incoming, skipped, written: false, problem: null };
   await folder.replace(names.cuts, bytes);
   return { incoming, skipped, written: true, problem: null };
+}
+
+/**
+ * The file's blocks the merged list doesn't hold whole: unreadable or unverified ones, ones of
+ * another kind, and ones with a date the merge left out (ahead of the clock, or past the cap).
+ * Each once, in the file's order.
+ */
+export function carriedBlocks(
+  blocks: readonly { body: string; entry: CutEntry | null }[],
+  merged: readonly CutEntry[],
+): string[] {
+  const dates = new Map<string, Set<string>>();
+  for (const entry of merged)
+    dates.set(entry.id, new Set(entry.cuts.map((c) => `${c.at}|${c.draft}`)));
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const { body, entry } of blocks) {
+    const held = entry ? dates.get(entry.id) : undefined;
+    if (held && entry?.cuts.every((c) => held.has(`${c.at}|${c.draft}`))) continue;
+    if (seen.has(body)) continue;
+    seen.add(body);
+    out.push(body);
+  }
+  return out;
 }
 
 function sameBytes(a: Uint8Array, b: Uint8Array): boolean {

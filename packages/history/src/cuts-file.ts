@@ -255,7 +255,11 @@ function entryJson(entry: CutEntry): string {
  * entry, newest cut first. An entry with no dates, or a date not written as `toISOString` writes
  * it, is refused with a TypeError: the file never holds an entry Drafter would skip.
  */
-export function cutsFile(work: string, entries: readonly CutEntry[]): string {
+export function cutsFile(
+  work: string,
+  entries: readonly CutEntry[],
+  carried: readonly string[] = [],
+): string {
   const name = oneLine(work) || 'this work';
   const parts = [
     `# Cuts from ${name}`,
@@ -280,7 +284,65 @@ export function cutsFile(work: string, entries: readonly CutEntry[]): string {
       `${COMMENT_OPENER}${entryJson(entry)}${COMMENT_CLOSER}`,
     );
   }
+  // Blocks from the file as it was that this rewrite couldn't hold (damaged, forged, another
+  // kind, dates ahead of the clock): kept at the end exactly as they were, so the file never loses
+  // anything it held.
+  for (const block of carried) parts.push(block);
   return `${parts.join('\n\n')}\n`;
+}
+
+/** One cut's block in a cuts file: its text as the file has it, and what its comment holds. */
+export interface CutsFileBlock {
+  /**
+   * The block exactly as the file has it, from its `## ` heading (or, with none since the last
+   * comment, its first line that isn't blank) to the end of its comment.
+   */
+  body: string;
+  /** The entry its comment holds, or null when the comment doesn't read. */
+  entry: CutEntry | null;
+}
+
+/**
+ * Every cut's block in a cuts file, in the file's order: each ends with a `<!-- drafter-cut … -->`
+ * comment at a line's start, and starts after the previous one (the first, at the first `## `
+ * heading in the file, or its comment when that comes first). One pass over the lines: linear.
+ */
+export function cutsFileBlocks(file: string): CutsFileBlock[] {
+  const blocks: CutsFileBlock[] = [];
+  let from = -1;
+  let start = 0;
+  while (start < file.length) {
+    let end = file.indexOf('\n', start);
+    if (end < 0) end = file.length;
+    if (file.startsWith(COMMENT_OPENER, start)) {
+      let lineEnd = end;
+      if (lineEnd > start && file.charCodeAt(lineEnd - 1) === 13) lineEnd--;
+      let entry: CutEntry | null = null;
+      if (file.startsWith(COMMENT_CLOSER, lineEnd - COMMENT_CLOSER.length)) {
+        try {
+          entry = entryOf(
+            JSON.parse(file.slice(start + COMMENT_OPENER.length, lineEnd - COMMENT_CLOSER.length)),
+          );
+        } catch {
+          entry = null;
+        }
+      }
+      let first: number;
+      if (from < 0) {
+        // The first `## ` heading in the file: the title of the first cut (a cut's own text,
+        // which may hold headings too, comes after it).
+        const heading = file.startsWith('## ') ? -1 : file.indexOf('\n## ');
+        first = heading < 0 ? (file.startsWith('## ') ? 0 : start) : Math.min(heading + 1, start);
+      } else {
+        first = from;
+        while (first < start && (file[first] === '\n' || file[first] === '\r')) first++;
+      }
+      blocks.push({ body: file.slice(first, lineEnd), entry });
+      from = end;
+    }
+    start = end + 1;
+  }
+  return blocks;
 }
 
 /** The entry an entry's comment holds, or null when its fields don't read strictly. */

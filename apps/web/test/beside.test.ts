@@ -201,6 +201,94 @@ describe('writing beside the work', () => {
     expect(rows[0]?.text).toBe('A speech cut here on this computer today.');
   });
 
+  test('a damaged cut only another computer had is still in the file after a sync', async () => {
+    const p = await createProject({ source: ONE });
+    await recordCuts(
+      p.id,
+      'fountain',
+      [
+        {
+          title: 'MINE',
+          text: 'A speech cut here on this computer today.',
+          where: { after: null, before: null },
+        },
+      ],
+      1,
+      NOW - 1000,
+    );
+    const theirs = await cutEntry('A speech cut on the other computer yesterday.', 'THEIRS');
+    const good = await cutEntry('Another speech the other computer cut, intact.', 'GOOD');
+    // One character changed inside the damaged cut's comment: its ID no longer checks out.
+    const file = cutsFile(NAMES.file, [theirs, good]);
+    const damaged = file.replace(
+      '"text":"A speech cut on the other',
+      '"text":"A speech cut on thE other',
+    );
+    expect(damaged).not.toBe(file);
+    const block = damaged.slice(
+      damaged.indexOf('## THEIRS'),
+      damaged.indexOf(' -->', damaged.indexOf('## THEIRS')) + 4,
+    );
+    const { folder, files } = memoryFolder();
+    files.set(NAMES.cuts, enc(damaged));
+    const out = await sync(p.id, folder);
+    expect(out.skipped).toBe(1);
+    const after = dec(files.get(NAMES.cuts) as Uint8Array);
+    // Kept byte for byte, and MINE added.
+    expect(after).toContain(block);
+    expect(
+      readCutsFile(after)
+        .entries.map((e) => e.title)
+        .sort(),
+    ).toEqual(['GOOD', 'MINE', 'THEIRS']);
+    // A second sync changes nothing more: the carried block isn't doubled.
+    await sync(p.id, folder);
+    const again = dec(files.get(NAMES.cuts) as Uint8Array);
+    expect(again).toBe(after);
+    expect(again.split(block).length).toBe(2);
+  });
+
+  test('forged, foreign and future entries stay in the file, byte for byte', async () => {
+    const p = await createProject({ source: ONE });
+    await recordCuts(
+      p.id,
+      'fountain',
+      [
+        {
+          title: 'MINE',
+          text: 'A speech cut here on this computer today.',
+          where: { after: null, before: null },
+        },
+      ],
+      1,
+      NOW - 1000,
+    );
+    const forged = {
+      ...(await cutEntry('Something else entirely, put in by hand.', 'FORGED')),
+      id: await hashText('Not this text at all, but another.'),
+    };
+    const foreign = {
+      ...(await cutEntry('# A heading\n\nA Markdown cut.', 'MD')),
+      kind: 'markdown' as const,
+    };
+    const future = await cutEntry(
+      'From a clock far ahead of this one.',
+      'FUTURE',
+      NOW + 30 * 86_400_000,
+    );
+    const before = cutsFile(NAMES.file, [forged, foreign, future]);
+    const blocks = ['FORGED', 'MD', 'FUTURE'].map((t) => {
+      const at = before.indexOf(`## ${t}`);
+      return before.slice(at, before.indexOf(' -->', at) + 4);
+    });
+    const { folder, files } = memoryFolder();
+    files.set(NAMES.cuts, enc(before));
+    await sync(p.id, folder);
+    const after = dec(files.get(NAMES.cuts) as Uint8Array);
+    for (const block of blocks) expect(after).toContain(block);
+    expect(readCutsFile(after).entries.map((e) => e.title)).toContain('MINE');
+  });
+
   test('a cuts file that can’t be read is never written over', async () => {
     const p = await createProject({ source: ONE });
     await recordCuts(
