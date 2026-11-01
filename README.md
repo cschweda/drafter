@@ -106,6 +106,8 @@ Drafter is built to open files from anyone without putting you at risk.
 
 The [Technical details](docs/technical-details.md#security) give the specifics. [Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
 
+The latest security audit: [1 November 2026](docs/security-audit-2026-11-01.md), no exploitable hole found.
+
 ## How Drafter compares
 
 What each app's maker says on its own site, as of October 2026, at list prices (sales come and go). ✓ means it's there; *paid* means a higher plan; ? means the maker doesn't say. Drafter's not-yet-shipped features show the version they're planned for, never a ✓. Corrections are welcome: [open an issue](https://github.com/cschweda/drafter/issues). The same table is on [Why Drafter](https://drafter.dev/docs/why/), with the reasons behind it.

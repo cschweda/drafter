@@ -4,10 +4,9 @@ Every audit and review of Drafter, newest first in each section. Each newer audi
 
 ## Security audits
 
-A formal security audit is next, and will be listed here, at the top of this section, when it is written (`docs/security-audit-2026-11-01.md`).
-
 | Date | Covers | Result | Record |
 |---|---|---|---|
+| 2026-11-01 | `9cd506d` (v0.24.0 and the clean-room audit), and the `story-map` branch at `04f4306`: the first formal security audit, of the web app, the desktop app, the command line, the build, and the docs | **Pass with findings.** No exploitable hole; nothing leaves the device (no outside request in three browsers); the trap suite passes. To fix: private vulnerability reporting is still off. Recommended: narrow the desktop's drop grant, update Nuxt, add Dependabot, and reword one sentence about `v-html`. Compares itself with the three reviews below, area by area | [The audit](security-audit-2026-11-01.md) |
 | 2026-11-01 | v0.23.2: the trap documents, and the hardening they led to | 258 deliberately broken and hostile files, in every format Drafter opens; each must open with its text or be refused with a plain message, and nothing may crash, run, fetch, or use unbounded memory. Run in CI on every push and release | [The trap documents](../fixtures/trap/README.md); the README's [Security](../README.md#security) section; [`DECISIONS.md`](DECISIONS.md), "The trap documents" |
 | 2026-11-01 | v0.23.1: reopenable HTML and EPUB exports | A review of reading a script back out of an export: only the embedded source is read, as text, with size caps before anything is unpacked; its fixes landed before the release | [`DECISIONS.md`](DECISIONS.md), "Reopenable HTML and EPUB exports" |
 | 2026-10-27 | v0.4.0: the desktop app's modules folder and updates | A review of the desktop app before its first release: WebRTC closed for every renderer, folder modules kept apart from built-in ones, and unsigned updates checked by SHA-512 | [`DECISIONS.md`](DECISIONS.md), "After the security review (2026-10-27)" |
