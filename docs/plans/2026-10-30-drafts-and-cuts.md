@@ -70,7 +70,7 @@ export function readDraftFile(file: string, kind: WorkKind): { text: string; fac
 export interface CutEntry { id: string; title: string; text: string; kind: WorkKind; cuts: { at: string /*ISO*/; draft: number | null }[]; where: { after: string | null; before: string | null }; putBack?: string /*ISO*/ }
 export function cutsFile(work: string, entries: readonly CutEntry[]): string;   // newest first
 export function readCutsFile(file: string): { entries: CutEntry[]; skipped: number };
-export function mergeCuts(a: readonly CutEntry[], b: readonly CutEntry[]): CutEntry[]; // by id; union of cuts dates; earliest putBack kept
+export function mergeCuts(local: readonly CutEntry[], incoming: readonly CutEntry[], options: { kind: WorkKind; now: Date }): CutEntry[]; // by id; union of dates; local wins title/kind/where/putBack (as built, after the Task 1 security fixes)
 // @drafter/markdown
 export function readMarkdownMeta(text: string): { body: string; meta: Record<string, unknown> | null };
 export function setMarkdownMeta(text: string, meta: Record<string, unknown>): string;
@@ -220,7 +220,8 @@ export interface Beside { where: 'beside' | 'browser'; writeDraft(row: DraftRow,
 export function besideFor(projectId: string): Promise<Beside>;
 export async function exportDraftsAndCuts(projectId: string): Promise<Uint8Array>; // zipStored: "<Work> drafts/…", "<work>.cuts.md"
 ```
-- Cuts file writing: read the current file, `mergeCuts(file entries, stored entries)`, write the result with `replace` (desktop) or `createWritable` (web), so another computer's entries are kept; also merge the file's entries into storage.
+Uses from `@drafter/history` (Task 1): `readCutsFile(file) → { entries, skipped }`, `verifyCuts(entries) → Promise<{ entries, skipped }>`, `mergeCuts(local, incoming, { kind, now }) → CutEntry[]`, `cutsFile(work, entries)`, `draftFile`/`readDraftFile`, `draftFileName`, `cleanWorkName`.
+- Cuts file writing: read the current file, `readCutsFile`, then `verifyCuts` on its entries, then `mergeCuts(stored entries, verified file entries, { kind: the work's kind, now: new Date() })` (stored is the local, trusted side: for a cut on both, its title, kind, place and Put back win; a Put back only in the file is advice; file entries of another kind and dates more than a day ahead are dropped), write the result with `replace` (desktop) or `createWritable` (web), so another computer's entries are kept; also merge the file's entries into storage.
 - Draft files: `create` only; a name that exists with a different ID (another computer's Draft 4) keeps both: the second is written as `Boca – Draft 04 (2).fountain` and listed as Draft 4 (from another computer) with its own ID — never overwritten.
 - Web Chromium: `askForFolder()` runs `showDirectoryPicker`, checks the folder contains the script's file (`isSameEntry` over its entries), else explains and asks again; remembers it per project; the first freeze or cut that needs writing asks once ("Keep drafts and cuts next to Boca.fountain?"). Declined or other browsers: `where = 'browser'`, and the panes offer **Export drafts and cuts** (`files.download`).
 - Opening a work merges what's beside it: draft files verified by ID (a mismatch is listed "changed outside Drafter", kept), cuts merged by ID.

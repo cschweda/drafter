@@ -340,3 +340,28 @@ describe('freezing again, dates, and the byte order mark', () => {
     }
   });
 });
+
+describe('stale draft keys', () => {
+  test('a block with from, frozen or note but no draft or id doesn’t pass them on', () => {
+    const stale = {
+      template: 'stage-play',
+      from: { draft: 1, id: 'b'.repeat(64) },
+      frozen: '2020-01-01T00:00:00.000Z',
+      note: 'old note',
+    };
+    const texts = {
+      fountain: `INT. FERRY - DAWN\n\n/* drafter\n${JSON.stringify(stale)}\n*/\n`,
+      markdown: `The pier.\n\n<!-- drafter ${JSON.stringify(stale)} -->\n`,
+    };
+    for (const kind of ['fountain', 'markdown'] as const) {
+      const text = texts[kind];
+      const f = facts(text, { note: 'new note' });
+      const file = draftFile(text, f, kind);
+      // The facts read back are the new ones alone, and the text is exact.
+      expect(readDraftFile(file, kind)).toEqual({ text, facts: f });
+      const meta = kind === 'fountain' ? parse(file).meta : readMarkdownMeta(file).meta;
+      expect(meta).not.toHaveProperty('from');
+      expect(meta).toMatchObject({ template: 'stage-play', note: 'new note', frozen: f.frozen });
+    }
+  });
+});

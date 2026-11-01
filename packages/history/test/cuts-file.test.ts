@@ -210,55 +210,162 @@ describe('the cuts file', () => {
   );
 });
 
+/** The merge's options in tests: a script, and a "now" after every generated date. */
+const OPTS = { kind: 'fountain' as const, now: new Date('2031-01-01T00:00:00.000Z') };
+const dates = (e: CutEntry | undefined) => (e ? e.cuts.map((c) => `${c.at}|${c.draft}`) : []);
+const shuffled = <T>(xs: readonly T[]) => fc.shuffledSubarray([...xs], { minLength: xs.length });
+
 describe('mergeCuts', () => {
   test('merge is a union by id with every cut date and no duplicates', () => {
     const here = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z', 12);
     const there = { ...here, cuts: [{ at: '2026-11-09T10:00:00.000Z', draft: 14 }] };
     const other = scene('Other.', 'Other', '2026-11-04T10:00:00.000Z');
-    const merged = mergeCuts([here], [there, other]);
+    const merged = mergeCuts([here], [there, other], OPTS);
     expect(merged.map((e) => e.id)).toEqual([here.id, other.id]);
     expect(merged[0]?.cuts).toEqual([
       { at: '2026-11-03T10:00:00.000Z', draft: 12 },
       { at: '2026-11-09T10:00:00.000Z', draft: 14 },
     ]);
     // The same cut on both sides is one date, not two.
-    expect(mergeCuts([here], [here])).toEqual([here]);
+    expect(mergeCuts([here], [here], OPTS)).toEqual([here]);
   });
 
-  test('keeps the earliest Put back', () => {
-    const a = {
-      ...scene('X.', 'X', '2026-11-03T10:00:00.000Z'),
+  test('the local side\u2019s title, kind, place and Put back win; an incoming Put back is advisory', () => {
+    const mine = {
+      ...scene('X.', 'Mine', '2026-11-03T10:00:00.000Z'),
       putBack: '2026-11-08T10:00:00.000Z',
     };
-    const b = { ...a, putBack: '2026-11-05T10:00:00.000Z' };
-    const c = scene('X.', 'X', '2026-11-03T10:00:00.000Z');
-    expect(mergeCuts([a], [b])[0]?.putBack).toBe('2026-11-05T10:00:00.000Z');
-    expect(mergeCuts([a], [c])[0]?.putBack).toBe('2026-11-08T10:00:00.000Z');
+    const theirs = {
+      ...mine,
+      title: 'Theirs',
+      where: { after: 'ELSEWHERE', before: null },
+      cuts: [{ at: '2026-01-01T10:00:00.000Z', draft: 1 }],
+      putBack: '2026-11-05T10:00:00.000Z',
+    };
+    const [m] = mergeCuts([mine], [theirs], OPTS);
+    expect(m).toMatchObject({ title: 'Mine', where: mine.where, putBack: mine.putBack });
+    expect(m?.cuts).toHaveLength(2);
+    const { putBack: _p, ...unplaced } = mine;
+    expect(mergeCuts([unplaced], [theirs], OPTS)[0]).not.toHaveProperty('putBack');
+    // Only on the other side, its Put back is all there is.
+    expect(mergeCuts([], [theirs], OPTS)[0]?.putBack).toBe(theirs.putBack);
   });
 
-  test('is commutative, associative and idempotent, and loses nothing', () => {
+  test('drops an incoming cut of the wrong kind, never a local one', () => {
+    const script = scene('X.', 'X', '2026-11-03T10:00:00.000Z');
+    const doc: CutEntry = { ...scene('Y.', 'Y', '2026-11-03T10:00:00.000Z'), kind: 'markdown' };
+    expect(mergeCuts([], [script, doc], OPTS).map((e) => e.id)).toEqual([script.id]);
+    expect(mergeCuts([doc], [], OPTS).map((e) => e.id)).toEqual([doc.id]);
+    expect(mergeCuts([script], [{ ...script, kind: 'markdown' }], OPTS)).toEqual([script]);
+  });
+
+  test('ignores incoming dates more than a day past now', () => {
+    const now = new Date('2026-11-03T12:00:00.000Z');
+    const mine = scene('X.', 'X', '2026-11-03T10:00:00.000Z');
+    const soon = { at: '2026-11-04T06:00:00.000Z', draft: 2 };
+    const far = { at: '2099-01-01T00:00:00.000Z', draft: 3 };
+    const [m] = mergeCuts([mine], [{ ...mine, cuts: [soon, far] }], { kind: 'fountain', now });
+    expect(m?.cuts).toEqual([...mine.cuts, soon]);
+    // An incoming cut with only far-future dates, or a far-future Put back, is ignored.
+    const other = scene('Y.', 'Y', '2099-01-01T00:00:00.000Z');
+    expect(mergeCuts([], [other], { kind: 'fountain', now })).toEqual([]);
+    const later = { ...scene('Z.', 'Z', '2026-11-01T00:00:00.000Z'), putBack: far.at };
+    expect(mergeCuts([], [later], { kind: 'fountain', now })[0]).not.toHaveProperty('putBack');
+    // A flood of future dates can't push the local ones out of the cap.
+    const flood = Array.from({ length: MAX_CUTS_PER_ENTRY }, (_, i) => ({
+      at: new Date(Date.UTC(2090, 0, 1) + i * 1000).toISOString(),
+      draft: 1,
+    }));
+    expect(
+      mergeCuts([mine], [{ ...mine, cuts: flood }], { kind: 'fountain', now })[0]?.cuts,
+    ).toEqual(mine.cuts);
+  });
+
+  test('the order of either list never changes the merge, even past the caps', () => {
     // Shared texts make clashing IDs likely.
     const shared = fc.array(
       anyEntry.chain((e) =>
         fc.constantFrom('a', 'b', 'c').map((t) => ({ ...e, id: hashText(t), text: t })),
       ),
-      { maxLength: 5 },
+      { maxLength: 6 },
     );
     const side = fc.oneof(anyEntries, shared);
     fc.assert(
+      fc.property(
+        side.chain((l) => fc.tuple(fc.constant(l), shuffled(l))),
+        side.chain((i) => fc.tuple(fc.constant(i), shuffled(i))),
+        ([l, l2], [i, i2]) => {
+          expect(mergeCuts(l2, i2, OPTS)).toEqual(mergeCuts(l, i, OPTS));
+        },
+      ),
+      { numRuns: 300 },
+    );
+    // Past the version cap: many versions of one cut, in any order.
+    const base = scene('Flood.', 'Flood', '2026-11-03T10:00:00.000Z');
+    const versions = Array.from({ length: MAX_VERSIONS_PER_ID + 20 }, (_, i) => ({
+      ...base,
+      title: `Version ${i}`,
+      cuts: [{ at: new Date(Date.UTC(2026, 0, 1) + (i % 37) * 1000).toISOString(), draft: 1 }],
+    }));
+    fc.assert(
+      fc.property(shuffled(versions), shuffled(versions), (x, y) => {
+        expect(mergeCuts([], x, OPTS)).toEqual(mergeCuts([], y, OPTS));
+        expect(mergeCuts(x, [], OPTS)).toEqual(mergeCuts(y, [], OPTS));
+      }),
+      { numRuns: 50 },
+    );
+  });
+
+  test('a flood of versions from one side can\u2019t evict the other side\u2019s cut', () => {
+    fc.assert(
+      fc.property(anyEntry, fc.integer({ min: 1, max: 3 * MAX_VERSIONS_PER_ID }), (e, n) => {
+        const mine = { ...e, kind: 'fountain' as const };
+        const flood = Array.from({ length: n }, (_, k) => ({
+          ...mine,
+          title: `Forged ${k}`,
+          where: { after: `X${k}`, before: null },
+          cuts: [{ at: new Date(Date.UTC(2020, 0, 1) + k).toISOString(), draft: 1 }],
+        }));
+        const [m] = mergeCuts([mine], flood, OPTS);
+        expect(m).toMatchObject({ title: mine.title, kind: mine.kind, where: mine.where });
+        for (const cut of mine.cuts) expect(m?.cuts).toContainEqual(cut);
+        expect(m?.putBack).toBe(mine.putBack);
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  test('swapping the sides keeps the same cuts and dates, merging again changes nothing, and nothing is lost', () => {
+    const shared = fc.array(
+      anyEntry.chain((e) =>
+        fc
+          .constantFrom('a', 'b', 'c')
+          .map((t) => ({ ...e, kind: 'fountain' as const, id: hashText(t), text: t })),
+      ),
+      { maxLength: 5 },
+    );
+    const scripts = anyEntries.map((es) => es.map((e) => ({ ...e, kind: 'fountain' as const })));
+    const side = fc.oneof(scripts, shared);
+    fc.assert(
       fc.property(side, side, side, (a, b, c) => {
-        const ab = mergeCuts(a, b);
-        expect(mergeCuts(b, a)).toEqual(ab);
-        expect(mergeCuts(ab, c)).toEqual(mergeCuts(a, mergeCuts(b, c)));
-        expect(mergeCuts(ab, ab)).toEqual(ab);
-        expect(mergeCuts(ab, b)).toEqual(ab);
+        const ab = mergeCuts(a, b, OPTS);
+        const ba = mergeCuts(b, a, OPTS);
+        // Dates and the set of cuts don't depend on which side is local; the local fields do.
+        expect(ba.map((e) => e.id).sort()).toEqual(ab.map((e) => e.id).sort());
+        for (const e of ab) expect(dates(ba.find((x) => x.id === e.id))).toEqual(dates(e));
+        const left = mergeCuts(mergeCuts(a, b, OPTS), c, OPTS);
+        const right = mergeCuts(a, mergeCuts(b, c, OPTS), OPTS);
+        expect(right.map((e) => e.id).sort()).toEqual(left.map((e) => e.id).sort());
+        for (const e of left) expect(dates(right.find((x) => x.id === e.id))).toEqual(dates(e));
+        expect(mergeCuts(ab, ab, OPTS)).toEqual(ab);
+        expect(mergeCuts(ab, b, OPTS)).toEqual(ab);
         // Every ID and every cut date of either side is in the merge, once.
         const ids = new Set([...a, ...b].map((e) => e.id));
         expect(ab.map((e) => e.id).sort()).toEqual([...ids].sort());
         for (const e of [...a, ...b]) {
           const m = ab.find((x) => x.id === e.id) as CutEntry;
           for (const cut of e.cuts) expect(m.cuts).toContainEqual(cut);
-          const keys = m.cuts.map((x) => `${x.at}|${x.draft}`);
+          const keys = dates(m);
           expect(new Set(keys).size).toBe(keys.length);
         }
         // And the merge is newest first.
@@ -278,12 +385,14 @@ describe('review fixes', () => {
   test('the same moment at another precision is one date, not two', () => {
     const a = scene('Gone.', 'Gone', '2026-11-03T10:00:00.000Z');
     const b = { ...a, cuts: [{ at: '2026-11-03T10:00:00Z', draft: 12 }] };
-    expect(mergeCuts([a], [b])[0]?.cuts).toEqual([{ at: '2026-11-03T10:00:00.000Z', draft: 12 }]);
+    expect(mergeCuts([a], [b], OPTS)[0]?.cuts).toEqual([
+      { at: '2026-11-03T10:00:00.000Z', draft: 12 },
+    ]);
     // Read from a file edited by hand, the date comes back as toISOString writes it.
     const file = cutsFile('Boca.fountain', [a]).replace('10:00:00.000Z', '10:00:00Z');
     const read = readCutsFile(file);
     expect(read.entries[0]?.cuts[0]?.at).toBe('2026-11-03T10:00:00.000Z');
-    expect(mergeCuts(read.entries, [a])[0]?.cuts).toHaveLength(1);
+    expect(mergeCuts(read.entries, [a], OPTS)[0]?.cuts).toHaveLength(1);
   });
 
   test('an impossible date is skipped, and isn\u2019t written', () => {
@@ -321,8 +430,8 @@ describe('review fixes', () => {
         const theirs = await verifyCuts([forged]);
         expect(theirs).toEqual({ entries: [], skipped: 1 });
         const merged = first
-          ? mergeCuts(mine.entries, theirs.entries)
-          : mergeCuts(theirs.entries, mine.entries);
+          ? mergeCuts(mine.entries, theirs.entries, { ...OPTS, kind: good.kind })
+          : mergeCuts(theirs.entries, mine.entries, { ...OPTS, kind: good.kind });
         expect(merged).toHaveLength(1);
         expect(merged[0]?.text).toBe(good.text);
       }),
@@ -343,7 +452,7 @@ describe('review fixes', () => {
     // A merge never holds more dates than the cap, keeping the newest.
     const left = { ...a, cuts: many.slice(0, MAX_CUTS_PER_ENTRY) };
     const right = { ...a, cuts: many.slice(1) };
-    const merged = mergeCuts([left], [right])[0] as CutEntry;
+    const merged = mergeCuts([left], [right], OPTS)[0] as CutEntry;
     expect(merged.cuts).toHaveLength(MAX_CUTS_PER_ENTRY);
     expect(merged.cuts.at(-1)).toEqual(many.at(-1));
     // Versions past the cap are ignored.
@@ -351,7 +460,7 @@ describe('review fixes', () => {
       ...a,
       cuts: [{ at: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(), draft: 1 }],
     }));
-    expect(mergeCuts(versions, [])[0]?.cuts).toHaveLength(MAX_VERSIONS_PER_ID);
+    expect(mergeCuts(versions, [], OPTS)[0]?.cuts).toHaveLength(MAX_VERSIONS_PER_ID);
   });
 
   test(
@@ -368,7 +477,7 @@ describe('review fixes', () => {
             cuts: [{ at: '2026-11-03T10:00:00.000Z', draft: (i % 50) + 1 }],
             where: { after: null, before: null },
           })),
-        (entries) => mergeCuts(entries, entries),
+        (entries) => mergeCuts(entries, entries, OPTS),
         2_000,
         3,
       );
@@ -378,7 +487,7 @@ describe('review fixes', () => {
           Array.from({ length: n }, (_, i) =>
             scene(`Scene ${i}.`, `S${i}`, new Date(Date.UTC(2026, 0, 1) + i).toISOString()),
           ),
-        (entries) => mergeCuts(entries, entries),
+        (entries) => mergeCuts(entries, entries, OPTS),
         5_000,
         3,
       );

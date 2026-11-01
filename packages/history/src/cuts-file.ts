@@ -310,60 +310,120 @@ export async function verifyCuts(
   return { entries: kept, skipped };
 }
 
+/** How far past the merge's `now` an incoming date may be before it is ignored: a day. */
+export const FUTURE_SLACK_MS = 24 * 60 * 60 * 1000;
+
+/** What a merge needs to know besides the two lists. */
+export interface MergeCutsOptions {
+  /** The local work's kind: an incoming cut of another kind is dropped. */
+  kind: WorkKind;
+  /** The time of the merge: incoming dates more than `FUTURE_SLACK_MS` past it are ignored. */
+  now: Date;
+}
+
 /** One version of a cut, with what choosing among versions needs, worked out once. */
 interface Version {
   entry: CutEntry;
+  cuts: { at: string; draft: number | null }[];
+  putBack: string | undefined;
   earliest: string;
   json: string;
 }
 
-/** The version first cut; the same moment, the smaller JSON. A total order, so any order of input agrees. */
-function earlier(a: Version, b: Version): Version {
-  if (a.earliest !== b.earliest) return a.earliest < b.earliest ? a : b;
-  return a.json <= b.json ? a : b;
+/** The version first cut; the same moment, the smaller JSON. A total order. */
+function compareVersions(a: Version, b: Version): number {
+  if (a.earliest !== b.earliest) return a.earliest < b.earliest ? -1 : 1;
+  return a.json < b.json ? -1 : a.json > b.json ? 1 : 0;
 }
 
 /**
- * Two lists of cuts as one (two computers' copies of a cuts file, say): every entry of either, one
- * per ID, with every date it was cut on either side (once each, oldest first, the newest
- * `MAX_CUTS_PER_ENTRY` kept), the earliest Put back, and the title, text and place of the version
- * first cut. Newest cut first. The same whichever way round, and merging again changes nothing.
- * Dates are compared as the moments they name. At most `MAX_VERSIONS_PER_ID` versions of one ID
- * are looked at. Linear in the size of the lists (each version's JSON is made once).
- *
- * Both lists must be verified (`verifyCuts`) when either came from outside Drafter's storage.
+ * One side's versions of each cut: identical ones once, then at most `MAX_VERSIONS_PER_ID` of an
+ * ID, chosen by `compareVersions`, so the list's order never matters. An incoming side's dates past
+ * `limit` are dropped (and a version left with none), and so is a version of another kind.
  */
-export function mergeCuts(a: readonly CutEntry[], b: readonly CutEntry[]): CutEntry[] {
-  const byId = new Map<string, CutEntry[]>();
-  for (const entry of [...a, ...b]) {
-    const list = byId.get(entry.id);
-    if (!list) byId.set(entry.id, [entry]);
-    else if (list.length < MAX_VERSIONS_PER_ID) list.push(entry);
-  }
-  const merged: CutEntry[] = [];
-  for (const versions of byId.values()) {
-    const seen = new Map<string, { at: string; draft: number | null }>();
-    let putBack: string | undefined;
-    let base: Version | null = null;
-    for (const v of versions) {
-      const cuts = v.cuts.map((c) => ({ at: isoInstant(c.at) ?? c.at, draft: c.draft }));
-      for (const c of cuts) seen.set(`${c.at}|${c.draft}`, c);
-      const back = v.putBack === undefined ? undefined : (isoInstant(v.putBack) ?? v.putBack);
-      if (back !== undefined && (putBack === undefined || back < putBack)) putBack = back;
-      const version: Version = {
-        entry: v,
-        earliest: span({ ...v, cuts }).earliest,
-        json: entryJson(v),
-      };
-      base = base === null ? version : earlier(base, version);
+function sideVersions(
+  list: readonly CutEntry[],
+  incoming: { kind: WorkKind; limit: string } | null,
+): Map<string, Version[]> {
+  const byId = new Map<string, Map<string, Version>>();
+  for (const entry of list) {
+    if (incoming && entry.kind !== incoming.kind) continue;
+    let cuts = entry.cuts.map((c) => ({ at: isoInstant(c.at) ?? c.at, draft: c.draft }));
+    let putBack =
+      entry.putBack === undefined ? undefined : (isoInstant(entry.putBack) ?? entry.putBack);
+    if (incoming) {
+      cuts = cuts.filter((c) => isoInstant(c.at) !== null && c.at <= incoming.limit);
+      if (cuts.length === 0) continue;
+      if (putBack !== undefined && (isoInstant(putBack) === null || putBack > incoming.limit)) {
+        putBack = undefined;
+      }
     }
-    if (base === null) continue;
+    const json = entryJson(entry);
+    let versions = byId.get(entry.id);
+    if (!versions) {
+      versions = new Map();
+      byId.set(entry.id, versions);
+    }
+    if (!versions.has(json)) {
+      versions.set(json, {
+        entry,
+        cuts,
+        putBack,
+        earliest: span({ ...entry, cuts }).earliest,
+        json,
+      });
+    }
+  }
+  const out = new Map<string, Version[]>();
+  for (const [id, versions] of byId) {
+    out.set(id, [...versions.values()].sort(compareVersions).slice(0, MAX_VERSIONS_PER_ID));
+  }
+  return out;
+}
+
+/**
+ * The cuts kept on this computer (`local`, Drafter's own storage, trusted) merged with a list from
+ * elsewhere (`incoming`: the cuts file beside the work, perhaps written by another computer or
+ * edited by hand). Every entry of either, one per ID, with every date it was cut on either side
+ * (once each, oldest first, the newest `MAX_CUTS_PER_ENTRY` kept), newest cut first.
+ *
+ * For an ID on both sides, the title, text, kind, place and Put back are the local entry's: an
+ * incoming Put back is advice, used only for a cut this computer doesn't have. An incoming entry of
+ * another kind than `options.kind`, and incoming dates more than a day past `options.now`, are
+ * ignored, so they can't push real dates out of the cap. Each side keeps at most
+ * `MAX_VERSIONS_PER_ID` versions of one ID, chosen by a fixed order, so one side can't crowd out
+ * the other and neither list's order changes the result. Swapping the sides keeps the same cuts
+ * and dates; only the local-wins fields can differ. Linear in the size of the lists, but for
+ * sorting.
+ *
+ * Run `verifyCuts` on `incoming` first: a merge can't hash.
+ */
+export function mergeCuts(
+  local: readonly CutEntry[],
+  incoming: readonly CutEntry[],
+  options: MergeCutsOptions,
+): CutEntry[] {
+  const limit = new Date(options.now.getTime() + FUTURE_SLACK_MS).toISOString();
+  const mine = sideVersions(local, null);
+  const theirs = sideVersions(incoming, { kind: options.kind, limit });
+  const merged: CutEntry[] = [];
+  for (const id of new Set([...mine.keys(), ...theirs.keys()])) {
+    const ours = mine.get(id) ?? [];
+    const other = theirs.get(id) ?? [];
+    const trusted = ours.length > 0 ? ours : other;
+    const first = (trusted[0] as Version).entry;
+    const seen = new Map<string, { at: string; draft: number | null }>();
+    for (const v of [...ours, ...other]) for (const c of v.cuts) seen.set(`${c.at}|${c.draft}`, c);
+    let putBack: string | undefined;
+    for (const v of trusted) {
+      if (v.putBack !== undefined && (putBack === undefined || v.putBack < putBack))
+        putBack = v.putBack;
+    }
     const cuts = [...seen.values()]
       .sort((x, y) => (x.at !== y.at ? (x.at < y.at ? -1 : 1) : (x.draft ?? 0) - (y.draft ?? 0)))
       .slice(-MAX_CUTS_PER_ENTRY);
-    const { entry: first } = base;
     const entry: CutEntry = {
-      id: first.id,
+      id,
       title: first.title,
       text: first.text,
       kind: first.kind,

@@ -117,8 +117,9 @@ function factsOf(value: DraftFacts | Record<string, unknown>): DraftFacts {
 }
 
 /**
- * A block's keys without any draft facts already in it (a draft file reopened and frozen again):
- * the new facts replace them whole, so an old `from` can't outlive its draft.
+ * A block's keys without any draft facts already in it (`draft`, `id`, `frozen`, `note`, `from`,
+ * `ownBlock`): the new facts replace them whole, on every path, so an old `from` or note can't
+ * outlive its draft. The text's own block is still kept exactly, in `ownBlock`.
  */
 function withoutFacts(meta: Record<string, unknown>): Record<string, unknown> {
   const { draft: _d, id: _i, frozen: _f, note: _n, from: _from, [OWN_BLOCK]: _o, ...rest } = meta;
@@ -160,7 +161,11 @@ function fountainDraft(text: string, facts: DraftFacts): string {
   const own = (doc.meta ?? {}) as Record<string, unknown>;
   if (span && !holdsFacts(own)) {
     const block = text.slice(span.from, span.to);
-    const [change] = setMeta(doc, { ...own, ...factsOf(facts), [OWN_BLOCK]: block });
+    const [change] = setMeta(doc, {
+      ...withoutFacts(own),
+      ...factsOf(facts),
+      [OWN_BLOCK]: block,
+    });
     if (change && change.from === span.from && change.to === span.to) {
       return text.slice(0, change.from) + change.insert + text.slice(change.to);
     }
@@ -182,7 +187,7 @@ function markdownDraft(text: string, facts: DraftFacts): string {
     return appendMarkdownMeta(text, { ...withoutFacts(own.meta), ...factsOf(facts) });
   }
   return setMarkdownMeta(text, {
-    ...own.meta,
+    ...withoutFacts(own.meta),
     ...factsOf(facts),
     [OWN_BLOCK]: text.slice(own.from, own.to),
   });

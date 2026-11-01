@@ -2,8 +2,10 @@ export { type Anchor, sceneAnchors } from './anchors';
 export {
   type CutEntry,
   cutsFile,
+  FUTURE_SLACK_MS,
   MAX_CUTS_PER_ENTRY,
   MAX_VERSIONS_PER_ID,
+  type MergeCutsOptions,
   mergeCuts,
   readCutsFile,
   verifyCuts,
