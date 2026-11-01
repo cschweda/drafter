@@ -164,7 +164,10 @@ test('counts problems on the tab and in the status bar', async ({ page }) => {
   // Below 1024px the text is typed on Write, and Problems' tab is on the bar while it shows.
   await showProblems(page);
   await expect(problemsTab(page)).toHaveText(/^Problems\s+2$/, { timeout: 1000 });
-  await expect(problemsTab(page)).toHaveAccessibleName('Problems 2');
+  // The Inspector's tab says "Problems 2"; below 1024px the bar's tab is named as More's item
+  // is, "Problems, 2".
+  const narrow = (page.viewportSize()?.width ?? 1280) < 1024;
+  await expect(problemsTab(page)).toHaveAccessibleName(narrow ? 'Problems, 2' : 'Problems 2');
   await expect(status).toContainText('2 problems');
 
   await setText(page, 'INT. HALL\n\nShe waits.');

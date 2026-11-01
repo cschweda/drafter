@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, removePickers, stubPickers } from './fs-stub';
-import { showView } from './modules';
+import { pressToolbarButton, showView } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const SAMPLE = readFileSync(
@@ -109,7 +109,7 @@ async function setText(page: Page, text: string) {
 }
 
 async function useLightTheme(page: Page) {
-  await page.getByRole('button', { name: 'Switch to light theme' }).click();
+  await pressToolbarButton(page, 'Switch to light theme');
   await expect(page.locator('html')).toHaveClass(/\blight\b/);
 }
 

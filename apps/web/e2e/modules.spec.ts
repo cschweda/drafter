@@ -6,12 +6,14 @@ import {
   countScenes,
   editor,
   expectTabOffered,
+  expectToolbarButton,
   fixtureSwitch,
   fixtureTab,
   lastPane,
   openSettings,
   palette,
   paletteInput,
+  pressToolbarButton,
   problemsList,
   problemsTab,
   runCommand,
@@ -72,7 +74,7 @@ test.describe('script modules', () => {
     await closeSettings(page);
 
     // Its parts: the button, the tab, and the command.
-    await expect(countScenes(page)).toBeVisible();
+    await expectToolbarButton(page, 'Count scenes');
     // Offered in the tab row, under More until it is chosen (Phase 2 design §5.8).
     await expectTabOffered(page, 'Fixture');
     await page.keyboard.press('ControlOrMeta+k');
@@ -87,7 +89,7 @@ test.describe('script modules', () => {
     await expect(palette(page)).toBeHidden();
 
     // Its problems go with it.
-    await countScenes(page).click();
+    await pressToolbarButton(page, 'Count scenes');
     await showProblems(page);
     await expect(
       problemsList(page).getByRole('button', { name: /Fixture Info: Scene 1/ }),
@@ -139,7 +141,7 @@ test.describe('script modules', () => {
     await showProblems(page);
     const before = await problemsTab(page).textContent();
 
-    await countScenes(page).click();
+    await pressToolbarButton(page, 'Count scenes');
     await showProblems(page);
     const list = problemsList(page);
     await expect(list.getByRole('button', { name: 'Fixture Info: Scene 1 Line 1' })).toBeVisible();
@@ -164,7 +166,7 @@ test.describe('script modules', () => {
     await start(page);
     await turnOnFixture(page);
     await setText(page, "INT. HALL - DAY\n\nMARGARET\nHi.\n\nMARGARET (CONT'D)\nHi again.\n");
-    await countScenes(page).click();
+    await pressToolbarButton(page, 'Count scenes');
     await showProblems(page);
     const fix = problemsList(page).getByRole('button', { name: "Remove (CONT'D)" });
     await fix.focus();
@@ -213,7 +215,7 @@ test.describe('script modules', () => {
     await turnOnFixture(page);
     await page.reload();
     await expect(editor(page)).toBeAttached();
-    await expect(countScenes(page)).toBeVisible();
+    await expectToolbarButton(page, 'Count scenes');
     await expectTabOffered(page, 'Fixture');
     await openSettings(page);
     await expect(fixtureSwitch(page)).toBeChecked();
@@ -250,14 +252,14 @@ test.describe('script modules', () => {
     await setText(page, SCRIPT);
 
     // The button: Enter runs it.
-    await countScenes(page).focus();
+    await pressToolbarButton(page, 'Count scenes', { focus: true });
     await page.keyboard.press('Enter');
     await showProblems(page);
     await expect(
       problemsList(page).getByRole('button', { name: 'Fixture Info: Scene 1 Line 1' }),
     ).toBeVisible();
     // Space does too.
-    await countScenes(page).focus();
+    await pressToolbarButton(page, 'Count scenes', { focus: true });
     await page.keyboard.press('Space');
     await expect(
       problemsList(page).getByRole('button', { name: 'Fixture Info: Scene 1 Line 1' }),
@@ -414,7 +416,7 @@ test.describe('script modules', () => {
     await consentDialog(page).getByRole('button', { name: 'Turn on' }).click();
     await expect(fixtureSwitch(page)).toBeChecked();
     await closeSettings(page);
-    await expect(countScenes(page)).toBeVisible();
+    await expectToolbarButton(page, 'Count scenes');
   });
 
   test('gives a module no scenes and no pages in a Markdown document', async ({ page }) => {
@@ -426,7 +428,7 @@ test.describe('script modules', () => {
     await chooseTab(page, 'Fixture');
     const panel = page.getByRole('tabpanel', { name: 'Fixture' });
     await expect(panel).toContainText('Untitled');
-    await countScenes(page).click();
+    await pressToolbarButton(page, 'Count scenes');
     // With spellcheck off there are no checks at all for a Markdown document.
     await openSettings(page);
     await settingsDialog(page).getByRole('switch', { name: 'Spellcheck', exact: true }).uncheck();
@@ -441,15 +443,17 @@ test.describe('script modules', () => {
     await page.setViewportSize({ width: 320, height: 640 });
     await start(page);
     await turnOnFixture(page);
+    // On the bar, an icon button the size of the others and at least a 24px target; or, with no
+    // room for it beside the title (Task 9), an item of More actions.
+    await expectToolbarButton(page, 'Count scenes');
     const button = countScenes(page);
-    await expect(button).toBeVisible();
-    const box = await button.boundingBox();
-    expect(box).not.toBeNull();
-    // An icon button, the size of the others, and at least a 24px target.
-    const open = await page.getByRole('button', { name: 'Open', exact: true }).boundingBox();
-    expect(Math.round(box?.width ?? 0)).toBe(Math.round(open?.width ?? -1));
-    expect(Math.round(box?.height ?? 0)).toBe(Math.round(open?.height ?? -1));
-    expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(24);
+    if (await button.isVisible()) {
+      const box = await button.boundingBox();
+      const open = await page.getByRole('button', { name: 'Open', exact: true }).boundingBox();
+      expect(Math.round(box?.width ?? 0)).toBe(Math.round(open?.width ?? -1));
+      expect(Math.round(box?.height ?? 0)).toBe(Math.round(open?.height ?? -1));
+      expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(24);
+    }
     const overflow = await page.evaluate(() => {
       const toolbar = document.querySelector('header.toolbar') as HTMLElement;
       const right = Math.max(
@@ -486,7 +490,7 @@ test.describe('script modules', () => {
       if (url.protocol.startsWith('http') && url.origin !== home) outside.push(request.url());
     });
     await turnOnFixture(page);
-    await countScenes(page).click();
+    await pressToolbarButton(page, 'Count scenes');
     await runCommand(page, 'Fixture: add a note');
     expect(outside).toEqual([]);
   });

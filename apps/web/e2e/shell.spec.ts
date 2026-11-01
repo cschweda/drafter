@@ -4,6 +4,7 @@ import { newScreenplay } from './bulk-snapshot';
 import {
   closeSettings,
   openSettings,
+  pressToolbarButton,
   runCommand,
   setText,
   settingsDialog,
@@ -391,7 +392,7 @@ test.describe('on a desktop', () => {
   });
 
   test('switches to the light theme and remembers it', async ({ page }) => {
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pressToolbarButton(page, 'Switch to light theme');
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
     await page.reload();
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
@@ -400,7 +401,7 @@ test.describe('on a desktop', () => {
 
   test('has no accessibility violations in either theme', async ({ page }) => {
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pressToolbarButton(page, 'Switch to light theme');
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
     expect(await violations(page)).toEqual([]);
   });
@@ -732,9 +733,12 @@ test.describe('on a phone', () => {
     };
     const open = await size(banner.getByRole('button', { name: 'Open', exact: true }));
     expect(await size(banner.getByRole('button', { name: /^Go to scene or command/ }))).toBe(open);
-    expect(await size(banner.getByRole('button', { name: /^Switch to (light|dark) theme$/ }))).toBe(
-      open,
-    );
+    // The theme, or More actions where a full phone bar folded it (Task 9).
+    const theme = banner
+      .getByRole('button', { name: /^Switch to (light|dark) theme$/ })
+      .or(banner.getByRole('button', { name: 'More actions', exact: true }))
+      .first();
+    expect(await size(theme)).toBe(open);
   });
 
   test('has no accessibility violations on a phone', async ({ page }) => {

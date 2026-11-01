@@ -10,9 +10,12 @@ vi.mock('@drafter/cm-fountain', async (importOriginal) => ({
 }));
 
 const { builtins } = await import('@drafter/templates');
-const { editorExtensions, relint } = await import('../app/editor/extensions');
+const { COMPOSITION_CHECK_MS, editorExtensions, relint } = await import('../app/editor/extensions');
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
+});
 
 const extensions = () =>
   editorExtensions({
@@ -34,5 +37,49 @@ describe('relint', () => {
     view.setState(EditorState.create({ doc: 'Another script.\n', extensions: shared }));
     relint();
     expect(fountain.relint).toHaveBeenCalledWith(view);
+  });
+
+  /** A view whose input method composition is under the test's control. */
+  function composingView() {
+    const view = new EditorView({ doc: 'One.\n', extensions: extensions() });
+    const state = { composing: true };
+    Object.defineProperty(view, 'composing', { get: () => state.composing });
+    Object.defineProperty(view, 'compositionStarted', { get: () => false });
+    return { view, state };
+  }
+
+  test('waits for a composition to end, then lints once', async () => {
+    vi.useFakeTimers();
+    const { view, state } = composingView();
+    relint();
+    relint();
+    expect(fountain.relint).not.toHaveBeenCalled();
+    state.composing = false;
+    view.contentDOM.dispatchEvent(new Event('compositionend'));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fountain.relint).toHaveBeenCalledTimes(1);
+  });
+
+  test('lints when the editor loses focus mid-composition', async () => {
+    vi.useFakeTimers();
+    const { view, state } = composingView();
+    relint();
+    state.composing = false;
+    view.contentDOM.dispatchEvent(new Event('blur'));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fountain.relint).toHaveBeenCalledTimes(1);
+  });
+
+  test('a composition abandoned with no end or blur does not leave relint stuck', async () => {
+    vi.useFakeTimers();
+    const { state } = composingView();
+    relint();
+    await vi.advanceTimersByTimeAsync(COMPOSITION_CHECK_MS * 2);
+    expect(fountain.relint).not.toHaveBeenCalled();
+    state.composing = false;
+    await vi.advanceTimersByTimeAsync(COMPOSITION_CHECK_MS + 1);
+    expect(fountain.relint).toHaveBeenCalledTimes(1);
+    relint();
+    expect(fountain.relint).toHaveBeenCalledTimes(2);
   });
 });

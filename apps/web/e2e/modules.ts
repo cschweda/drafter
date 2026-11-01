@@ -61,7 +61,102 @@ export async function turnOnFixture(page: Page) {
   await consentDialog(page).getByRole('button', { name: 'Turn on' }).click();
   await expect(fixtureSwitch(page)).toBeChecked();
   await closeSettings(page);
-  await expect(countScenes(page)).toBeVisible();
+  // On a full phone bar its button folds into More actions (Task 9).
+  await expect(
+    countScenes(page)
+      .or(page.getByRole('button', { name: 'More actions', exact: true }))
+      .first(),
+  ).toBeVisible();
+}
+
+/** Two frames: the top bar folds what doesn't fit a frame after it changes. */
+export const settled = (page: Page) =>
+  page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+
+/** The Export menu's buttons and the commands More actions' Export submenu lists for them. */
+const EXPORT_COMMANDS: Record<string, string> = {
+  PDF: 'Export as PDF',
+  'HTML (.html)': 'Export as HTML',
+  'Plain text (.txt)': 'Export as plain text',
+  'Final Draft (.fdx)': 'Export as Final Draft (.fdx)',
+  'EPUB (.epub)': 'Export as EPUB',
+};
+
+/**
+ * Chooses an export, as a writer would: from the Export menu, or, where a full phone bar has folded
+ * Export into More actions (Task 9), from its Export submenu, which runs the same commands.
+ */
+export async function chooseExport(page: Page, name: string | RegExp) {
+  const bar = page.locator('header.toolbar');
+  const button = bar.getByRole('button', { name: 'Export', exact: true });
+  const more = bar.getByRole('button', { name: 'More actions', exact: true });
+  await expect(button.or(more).first()).toBeVisible();
+  await settled(page);
+  if (await button.isVisible()) {
+    await button.click();
+    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name }).click();
+    return;
+  }
+  await more.click();
+  // The submenu opens from the keyboard (ArrowRight), as it does with a tap on a phone.
+  await page
+    .getByRole('menu', { name: 'More actions' })
+    .getByRole('menuitem', { name: 'Export', exact: true })
+    .focus();
+  await page.keyboard.press('ArrowRight');
+  const command = typeof name === 'string' ? (EXPORT_COMMANDS[name] ?? name) : name;
+  await page.getByRole('menuitem', { name: command }).click();
+}
+
+/**
+ * A top-bar button is there: on the bar, or, folded on a full phone bar (Task 9), an item of More
+ * actions (the menu is opened to see it, and closed again).
+ */
+export async function expectToolbarButton(page: Page, name: string) {
+  const bar = page.locator('header.toolbar');
+  const button = bar.getByRole('button', { name, exact: true });
+  const more = bar.getByRole('button', { name: 'More actions', exact: true });
+  await expect(button.or(more).first()).toBeVisible();
+  await settled(page);
+  if (await button.isVisible()) return;
+  await more.click();
+  const menu = page.getByRole('menu', { name: 'More actions' });
+  await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+}
+
+/**
+ * A top-bar button by its name, as a writer reaches it: on the bar, or, when a full phone bar has
+ * folded it into More actions (Task 9), that menu's item. Clicked, or focused (`focus: true`).
+ */
+export async function pressToolbarButton(
+  page: Page,
+  name: string,
+  options: { focus?: boolean } = {},
+) {
+  const bar = page.locator('header.toolbar');
+  const button = bar.getByRole('button', { name, exact: true });
+  const more = bar.getByRole('button', { name: 'More actions', exact: true });
+  await expect(button.or(more).first()).toBeVisible();
+  await settled(page);
+  if (await button.isVisible()) {
+    if (options.focus) await button.focus();
+    else await button.click();
+    return;
+  }
+  await more.click();
+  const item = page
+    .getByRole('menu', { name: 'More actions' })
+    .getByRole('menuitem', { name, exact: true });
+  if (options.focus) await item.focus();
+  else {
+    await item.click();
+    // Closed, and its motion over, before anything is measured or checked.
+    await expect(page.getByRole('menu', { name: 'More actions' })).toBeHidden();
+  }
 }
 
 /** Replaces the script with `text`, typed in one go. */

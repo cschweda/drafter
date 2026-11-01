@@ -14,6 +14,7 @@ import { HELP_PAGES, helpHref } from '~/commands/data';
 import { isApple } from '~/commands/keys';
 import { commandById } from '~/commands/registry';
 import { useElementBarShown } from '~/composables/useElementBarShown';
+import { useOnScreenKeyboard } from '~/composables/useOnScreenKeyboard';
 import { useWideScreen } from '~/composables/useWideScreen';
 import {
   type BarButton,
@@ -279,7 +280,7 @@ const order = computed(() =>
     ...(markdown.value ? [] : ['here']),
     ...buttons.value.map((button) => button.command),
     ...(spellingShown.value ? [SPELLING_BUTTON.command] : []),
-    ...(moreShown.value ? ['more'] : []),
+    ...(moreShown.value && !moreHidden.value ? ['more'] : []),
     ...(markdown.value ? [] : ['help']),
     'options',
   ].filter((id) => !isFolded(id)),
@@ -320,15 +321,22 @@ const descId = (button: BarButton) => `element-bar-${button.command}-tip`;
 
 /** How many buttons have folded, from the right. */
 const fold = ref(0);
+// On a phone the row scrolls sideways, except over the on-screen keyboard, where it is the row a
+// writer types with: there it folds into More as the header's does, so no button is cut off
+// mid-word at the window's edge (Task 9 review).
+const keyboard = useOnScreenKeyboard();
+const folds = computed(() => !!props.inHeader || keyboard.open.value);
 const foldOrder = computed<string[]>(() =>
-  props.inHeader ? buttons.value.map((button) => button.command).reverse() : [],
+  folds.value ? buttons.value.map((button) => button.command).reverse() : [],
 );
 const foldedIds = computed(() => new Set(foldOrder.value.slice(0, fold.value)));
 /** Side by side the cheat sheet's ? and the ⋯ menu are in More (the chip opens the sheet too). */
 const isFolded = (id: string) =>
   (!!props.inHeader && (id === 'help' || id === 'options')) || foldedIds.value.has(id);
-/** Side by side More is always there: it holds the ? and ⋯ items. A phone's Markdown bar has none. */
-const moreShown = computed(() => !markdown.value || !!props.inHeader);
+/** Side by side More is always there: it holds the ? and ⋯ items. A phone's Markdown bar has none,
+ * except over the keyboard, where it is laid out (to be measured) and seen once something folds. */
+const moreShown = computed(() => !markdown.value || folds.value);
+const moreHidden = computed(() => markdown.value && !props.inHeader && fold.value === 0);
 /** The chip's least width, so it stays as wide whatever the cursor is in (0: its own). */
 const hereMin = ref(0);
 const hereStyle = computed(() => (hereMin.value ? { minWidth: `${hereMin.value}px` } : undefined));
@@ -350,7 +358,12 @@ const capital = (name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1
 
 function measure() {
   const el = toolbar.value;
-  if (!props.inHeader || !el) return;
+  if (!el) return;
+  if (!folds.value) {
+    fold.value = 0;
+    hereMin.value = 0;
+    return;
+  }
   const style = getComputedStyle(el);
   const room =
     el.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
@@ -381,7 +394,9 @@ function measure() {
       Number.parseFloat(box.paddingRight) +
       Number.parseFloat(box.borderLeftWidth) +
       Number.parseFloat(box.borderRightWidth);
-    const width = (n: string) => Math.ceil(textWidth(capital(n), font) + edges);
+    // On a phone the chip's lead ("You're in: ") shows before the name.
+    const lead = props.inHeader ? 0 : textWidth(here.value.lead, font);
+    const width = (n: string) => Math.ceil(textWidth(capital(n), font) + lead + edges);
     widest = Math.max(...hereNames.value.map(width));
     own = width(here.value.name);
   }
@@ -393,7 +408,13 @@ function measure() {
       if (!gone.has(button.command)) parts.push(item(button.command));
     }
     if (spellingShown.value) parts.push(item(SPELLING_BUTTON.command));
-    parts.push(item('more'), SPACER);
+    if (!markdown.value || props.inHeader || k > 0) parts.push(item('more'));
+    parts.push(SPACER);
+    // A phone's row keeps its ? and ⋯ at the right.
+    if (!props.inHeader) {
+      if (!markdown.value) parts.push(item('help'));
+      parts.push(item('options'));
+    }
     return parts.reduce((sum, w) => sum + w, 0) + (parts.length - 1) * gap;
   };
   // A pixel to spare: widths are fractions, and a scroll width is rounded.
@@ -411,7 +432,6 @@ let observer: ResizeObserver | undefined;
 let frame = 0;
 /** Measured in the next frame: never inside the observer's own callback (WebKit calls that a loop). */
 function measureSoon() {
-  if (!props.inHeader) return;
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(measure);
 }
@@ -423,7 +443,6 @@ function observe(el: HTMLElement | undefined) {
 // A web font that arrives late changes every width.
 const onFonts = () => measureSoon();
 onMounted(() => {
-  if (!props.inHeader) return;
   if (typeof ResizeObserver !== 'undefined') observer = new ResizeObserver(measureSoon);
   observe(toolbar.value);
   document.fonts?.addEventListener('loadingdone', onFonts);
@@ -450,6 +469,7 @@ watch(
     spellingShown.value,
     settings.value.textSize,
     hereMin.value === 0 ? here.value.name : '',
+    folds.value,
   ],
   () => void nextTick(measureSoon),
 );
@@ -574,6 +594,7 @@ watch(
         type="button"
         class="button more"
         data-bar-item="more"
+        :data-folded="moreHidden ? '' : undefined"
         :tabindex="stopOf('more')"
         :aria-label="markdown ? 'More formatting' : 'More elements'"
       >
@@ -615,6 +636,7 @@ watch(
 
 <style scoped>
 .element-bar {
+  position: relative;
   display: flex;
   flex: none;
   align-items: center;
@@ -654,8 +676,9 @@ watch(
 .element-bar.in-header::-webkit-scrollbar {
   display: none;
 }
-/* A folded item: still laid out, to be measured, but neither seen nor reached; More holds it. */
-.element-bar.in-header [data-folded] {
+/* A folded item: still laid out, to be measured, but neither seen nor reached; More holds it.
+   (Side by side, and on a phone over the keyboard.) */
+.element-bar [data-folded] {
   position: absolute;
   top: 0;
   left: 0;

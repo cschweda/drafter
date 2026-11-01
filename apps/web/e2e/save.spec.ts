@@ -13,7 +13,14 @@ import {
   textOf,
   watchAlerts,
 } from './fs-stub';
-import { expectSaved, expectUnsaved, openSettings, saveState, settingsDialog } from './modules';
+import {
+  expectSaved,
+  expectUnsaved,
+  openSettings,
+  pressToolbarButton,
+  saveState,
+  settingsDialog,
+} from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -471,7 +478,7 @@ test.describe('saving where the browser can’t save in place', () => {
     await typeAtEnd(page, 'B');
     await expectUnsaved(page);
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pressToolbarButton(page, 'Switch to light theme');
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
     expect(await violations(page)).toEqual([]);
   });
@@ -642,7 +649,7 @@ test.describe('the unsaved indicator', () => {
     await page.mouse.move(2, 400);
     await expect(page.getByRole('tooltip')).toHaveCount(0);
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pressToolbarButton(page, 'Switch to light theme');
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
     expect(await violations(page)).toEqual([]);
   });

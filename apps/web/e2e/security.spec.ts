@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { HELP_PAGES } from '../app/commands/data';
-import { countScenes, runCommand, start, turnOnFixture } from './modules';
+import { pressToolbarButton, runCommand, start, turnOnFixture } from './modules';
 
 declare global {
   interface Window {
@@ -36,7 +36,7 @@ test('loads and runs a module with no CSP violations', async ({ page }) => {
   });
   await start(page);
   await turnOnFixture(page);
-  await countScenes(page).click();
+  await pressToolbarButton(page, 'Count scenes');
   await runCommand(page, 'Fixture: add a note');
   await page.waitForLoadState('networkidle');
   expect(await page.evaluate(() => window.__violations)).toEqual([]);

@@ -103,7 +103,8 @@ let chosenTab: TabId | null = null;
 const moreItems = computed<DropdownMenuItem[][]>(() => {
   const views = moreIds.value.filter((id) => id !== HISTORY_ITEM);
   const history = commandById('history');
-  return [
+  // No History command: no second group, so no separator is drawn under the views.
+  const groups: DropdownMenuItem[][] = [
     views.map((id) => ({
       label: nameOf(id),
       onSelect: () => {
@@ -124,6 +125,7 @@ const moreItems = computed<DropdownMenuItem[][]>(() => {
         ]
       : [],
   ];
+  return groups.filter((group) => group.length > 0);
 });
 function onMoreCloseAutoFocus(event: Event) {
   const tab = chosenTab;
@@ -170,15 +172,17 @@ const keyboard = useOnScreenKeyboard();
         :class="{ on: id === props.selected }"
         :aria-selected="id === props.selected ? 'true' : 'false'"
         :aria-controls="props.shown.includes(id) ? `panel-${id}` : undefined"
-        :aria-label="id === 'notes' && nameOf(id) !== labelOf(id) ? nameOf(id) : undefined"
+        :aria-label="nameOf(id) !== labelOf(id) ? nameOf(id) : undefined"
         :tabindex="id === props.selected ? 0 : -1"
         @click="emit('choose', id)"
         @keydown="onKeydown($event)"
       >
         <UIcon :name="iconOf(id)" class="tab-icon" aria-hidden="true" />
         <span class="tab-label">{{ labelOf(id) }}</span>
-        <!-- Problems' count is part of its name, "Problems 2", as the Inspector's tab says it. -->
-        {{ ' ' }}<span v-if="id === 'problems' && count > 0" class="badge">{{ count }}</span>
+        <!-- A count is in the tab's name as More's item says it: "Problems, 2", "Notes, 3 open". -->
+        {{ ' ' }}<span v-if="id === 'problems' && count > 0" class="badge" aria-hidden="true">{{
+          count
+        }}</span>
         <span v-else-if="id === 'notes' && openNotes > 0" class="badge" aria-hidden="true">{{
           openNotes
         }}</span>
@@ -206,11 +210,12 @@ const keyboard = useOnScreenKeyboard();
 </template>
 
 <style scoped>
-/* 56px with its hairline, on --surface, across the window, under the pane. */
+/* 56px (--bottom-bar-h) with its hairline, on --surface, across the window, under the pane. A
+   phone's safe-area inset is added below the tabs, so they keep their 44px over a home indicator. */
 .bottom-bar {
   display: flex;
   box-sizing: border-box;
-  height: 56px;
+  min-height: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom));
   padding: 0 4px env(safe-area-inset-bottom);
   border-top: 1px solid var(--border);
   background: var(--surface);

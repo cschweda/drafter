@@ -2,7 +2,15 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
-import { editor, expectSaved, runCommand, setText, showSource, start } from './modules';
+import {
+  chooseExport,
+  editor,
+  expectSaved,
+  runCommand,
+  setText,
+  showSource,
+  start,
+} from './modules';
 import { stateWithSettings } from './seed';
 
 // Show changes on the Script pane (version-history design §4): off on every visit; on, the pages
@@ -295,12 +303,8 @@ test.describe('Show changes on the Script pane', () => {
   test('off leaves the pages clean and the PDF unchanged', async ({ page }) => {
     await savedThenChanged(page, BASE, CHANGED.replace('Nobody answers it.\n\n', ''));
     const pdf = async () => {
-      await page.getByRole('button', { name: 'Export', exact: true }).click();
       const download = page.waitForEvent('download');
-      await page
-        .getByRole('group', { name: 'Export' })
-        .getByRole('button', { name: 'PDF' })
-        .click();
+      await chooseExport(page, 'PDF');
       return readFile(await (await download).path());
     };
     const off = await pdf();

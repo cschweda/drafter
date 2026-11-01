@@ -731,6 +731,52 @@ test.describe('the Stats page, as designed', () => {
     await expect(about).toHaveAttribute('aria-expanded', 'true');
   });
 
+  // Find in page on every browser that has hidden="until-found" (Task 9 review): the browser's own
+  // find reveals a closed explanation, fires beforematch, and the (i) button says it is open. A
+  // text fragment is the browser's find-in-page reveal; where window.find() reveals too (Firefox),
+  // it is tried first. A browser without until-found (WebKit, so far) skips.
+  test('find in page opens a closed explanation, on every browser with until-found', async ({
+    page,
+  }) => {
+    await start(page);
+    const supported = await page.evaluate(() => 'onbeforematch' in document.body);
+    test.skip(!supported, 'no hidden="until-found" in this browser');
+    await runCommand(page, 'Show stats');
+    const about = stats(page).getByRole('button', { name: 'About the Characters table' });
+    const text = stats(page).getByText(/Scenes counts every scene a character is in/);
+    await expect(about).toHaveAttribute('aria-expanded', 'false');
+    const panel = page.locator(`[id="${await about.getAttribute('aria-controls')}"]`);
+    await expect(panel).toHaveAttribute('hidden', 'until-found');
+    const matched = page.evaluate(
+      (id) =>
+        new Promise<boolean>((resolve) => {
+          document.getElementById(id)?.addEventListener('beforematch', () => resolve(true), {
+            once: true,
+          });
+          setTimeout(() => resolve(false), 5000);
+        }),
+      (await about.getAttribute('aria-controls')) ?? '',
+    );
+    const found = await page.evaluate(() => {
+      const find = (window as { find?: (text: string) => boolean }).find;
+      return typeof find === 'function' && find.call(window, 'counts every scene a character');
+    });
+    if (!found || !(await panel.evaluate((el) => !el.hasAttribute('hidden')))) {
+      await page.evaluate(() => {
+        const link = document.createElement('a');
+        link.href = '#:~:text=counts%20every%20scene%20a%20character';
+        link.id = 'find-link';
+        link.textContent = 'Find';
+        link.style.cssText = 'position: fixed; top: 0; left: 0; z-index: 9999';
+        document.body.append(link);
+      });
+      await page.locator('#find-link').click();
+    }
+    expect(await matched, 'beforematch fired').toBe(true);
+    await expect(text).toBeVisible();
+    await expect(about).toHaveAttribute('aria-expanded', 'true');
+  });
+
   test('the Characters table fits its column at 1440 by 900, with no sideways scroll', async ({
     page,
     isMobile,

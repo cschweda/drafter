@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
-import { runCommand, setText, showSource } from './modules';
+import { pressToolbarButton, runCommand, setText, showSource } from './modules';
 
 // Phone sizes (Phase 1 design §12): the toolbar is icons below 1024px, and the template chip does not
 // fit among them, so the app menu holds the template choice. The icon toolbar plus the app menu is
@@ -66,17 +66,17 @@ test.describe('the toolbar at 320px', () => {
     });
     expect(layout.page).toBeLessThanOrEqual(320);
     expect(layout.bar[0]).toBeLessThanOrEqual(layout.bar[1] as number);
-    // The mark (the app menu), Open, Save, Export, the palette, Focus, Help, and the theme (the
-    // top bar's order; Structure has no strip to show here).
+    // The mark (the app menu), Open, Save, Export, the palette, Help, and More actions (the top
+    // bar's order; Structure has no strip to show here). The title keeps a few letters, so the
+    // theme and Focus fold into More actions first (Task 9 review).
     expect(layout.buttons.map((b) => b.name)).toEqual([
       'Drafter menu',
       'Open',
       'Save',
       'Export',
       'Go to scene or command',
-      'Focus',
       'Help',
-      'Switch to light theme',
+      'More actions',
     ]);
     for (const b of layout.buttons) {
       expect(b.left, `${b.name} left`).toBeGreaterThanOrEqual(0);
@@ -133,7 +133,7 @@ test.describe('the toolbar at 320px', () => {
     expect((await download).suggestedFilename()).toBe('The Call.fountain');
 
     // Focus mode on, and off with its own button.
-    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await pressToolbarButton(page, 'Focus');
     await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('group', { name: 'Focus mode' })).toBeHidden();
@@ -145,8 +145,8 @@ test.describe('the toolbar at 320px', () => {
     await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeHidden();
 
     // The theme.
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
-    await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible();
+    await pressToolbarButton(page, 'Switch to light theme');
+    await expect(page.locator('html')).toHaveClass(/light/);
 
     // The app menu.
     await openAppMenu(page);

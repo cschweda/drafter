@@ -89,6 +89,11 @@
   --r-lg: 12px;
   --dur: 140ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Below 1024px (Task 9): the bottom tab bar's height (its 44px tabs and their padding, before
+     a phone's safe-area inset), and the shadow a bottom sheet (a menu, the palette) casts upward.
+     A sheet stops this far short of the top of what is seen. */
+  --bottom-bar-h: 56px;
+  --bottom-sheet-shadow: 0 -8px 32px rgb(0 0 0 / 0.3);
   /* Unsaved changes (Task 6): the top bar's dot and the favicon's (public/favicon-unsaved.svg),
      one clear red at 3:1 or more on every surface of both themes. */
   --unsaved: #e03e44;

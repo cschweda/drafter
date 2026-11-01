@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { pressToolbarButton } from './modules';
 
 // The welcome dialog and the guided tour (Phase 1 design §4.4). playwright.config.ts marks the tour
 // as seen for every other test; these start with an empty storage, so each is a true first visit.
@@ -40,6 +41,16 @@ function plan(bar: boolean) {
     ['Focus', 'focus'],
     ['Go anywhere', 'palette'],
   ] as const;
+}
+
+/**
+ * What a step lights: its target, or More actions when a full top bar below 1024px has folded the
+ * target's button into it (Task 9; the title keeps a few letters, so a phone folds Focus).
+ */
+async function litTarget(page: Page, target: string) {
+  if (!['save', 'export', 'focus'].includes(target)) return target;
+  const button = page.locator(`header.toolbar [data-tour="${target}"]`);
+  return (await button.isVisible()) ? target : 'toolbar-more';
 }
 
 async function visit(page: Page) {
@@ -85,7 +96,7 @@ test.describe('the welcome and the tour', () => {
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
       // The step's target, and only it, is lit, and it is on the screen.
       await expect(lit(page)).toHaveCount(1);
-      await expect(lit(page)).toHaveAttribute('data-tour', target);
+      await expect(lit(page)).toHaveAttribute('data-tour', await litTarget(page, target));
       await expect(lit(page)).toBeVisible();
       if (index < steps.length - 1) await page.keyboard.press('ArrowRight');
     }
@@ -187,7 +198,7 @@ test.describe('the welcome and the tour', () => {
   test('leaves focus mode for the tour, and the tour lights its targets', async ({ page }) => {
     await skipWelcome(page);
     // Focus mode has no toolbar or status bar, which most of the steps point at.
-    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await pressToolbarButton(page, 'Focus');
     await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
 
     await page.keyboard.press('ControlOrMeta+k');
@@ -201,14 +212,19 @@ test.describe('the welcome and the tour', () => {
     await expect(palette(page)).toBeHidden();
     await expect(intro(page)).toBeVisible();
     await expect(page.getByRole('group', { name: 'Focus mode' })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Focus', exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole('button', { name: 'Focus', exact: true })
+        .or(page.getByRole('button', { name: 'More actions', exact: true }))
+        .first(),
+    ).toBeVisible();
 
     await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
     const steps = plan(statusBar(page));
     for (const [index, [title, target]] of steps.entries()) {
       await expect(step(page)).toContainText(`${index + 1} / 10`);
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
-      await expect(lit(page)).toHaveAttribute('data-tour', target);
+      await expect(lit(page)).toHaveAttribute('data-tour', await litTarget(page, target));
       await expect(lit(page)).toBeVisible();
       await step(page)
         .getByRole('button', {
@@ -407,7 +423,7 @@ test.describe('on a phone', () => {
     for (const [index, [title, target]] of steps.entries()) {
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
       await expect(lit(page)).toHaveCount(1);
-      await expect(lit(page)).toHaveAttribute('data-tour', target);
+      await expect(lit(page)).toHaveAttribute('data-tour', await litTarget(page, target));
       await expect(lit(page)).toBeVisible();
       // Below 1024px the bottom tab bar calls the Source "Write" (Task 9).
       if (target === 'source') await expect(selected('Write')).toBeVisible();

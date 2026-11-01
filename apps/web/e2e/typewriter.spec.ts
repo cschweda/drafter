@@ -4,6 +4,7 @@ import {
   openSettings,
   palette,
   paletteInput,
+  pressToolbarButton,
   settingsDialog,
   showSource,
   start,
@@ -13,7 +14,6 @@ const scroller = (page: Page) => page.locator('.cm-scroller');
 const barButton = (page: Page) => page.getByRole('button', { name: 'Typewriter', exact: true });
 const switchOf = (page: Page) =>
   settingsDialog(page).getByRole('switch', { name: 'Typewriter scrolling' });
-const focusButton = (page: Page) => page.getByRole('button', { name: 'Focus', exact: true });
 
 /** How far the cursor's line is from the middle of the pane, and the height of a line. */
 async function offCenter(page: Page, target: 'cursor' | 'first') {
@@ -282,7 +282,7 @@ test.describe('typewriter scrolling', () => {
 
   test('works in focus mode', async ({ page }) => {
     await turnOn(page);
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
     await typeLines(page, 60);
     await expect

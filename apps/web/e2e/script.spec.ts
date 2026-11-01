@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
+import { pressToolbarButton } from './modules';
 import { drafterDatabase, sampleSeenRows, stateWithSettings } from './seed';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -36,7 +37,7 @@ const writeTab = (page: Page) =>
   page.locator('[data-bottom-bar]').getByRole('tab', { name: 'Write' });
 
 async function useLightTheme(page: Page) {
-  await page.getByRole('button', { name: 'Switch to light theme' }).click();
+  await pressToolbarButton(page, 'Switch to light theme');
   await expect(page.locator('html')).toHaveClass(/\blight\b/);
 }
 

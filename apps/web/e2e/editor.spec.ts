@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { pressToolbarButton } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const SAMPLE = readFileSync(
@@ -197,7 +198,7 @@ test.describe('on a desktop', () => {
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.type('\n\nINT. HALL - DAY');
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pressToolbarButton(page, 'Switch to light theme');
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
     expect(await violations(page)).toEqual([]);
   });
@@ -215,7 +216,7 @@ test.describe('on a desktop', () => {
     });
 
     test('has no accessibility violations in the light theme', async ({ page }) => {
-      await page.getByRole('button', { name: 'Switch to light theme' }).click();
+      await pressToolbarButton(page, 'Switch to light theme');
       await expect(page.locator('html')).toHaveClass(/\blight\b/);
       await openList(page);
       expect(await violations(page)).toEqual([]);
@@ -244,7 +245,7 @@ test.describe('on a phone', () => {
     await page.getByRole('tablist', { name: 'Panes' }).getByRole('tab', { name: 'Write' }).click();
     await expect(page.locator('.cm-content')).toBeVisible();
     expect(await violations(page)).toEqual([]);
-    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pressToolbarButton(page, 'Switch to light theme');
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
     expect(await violations(page)).toEqual([]);
   });

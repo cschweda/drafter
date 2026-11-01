@@ -13,7 +13,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { fileNameFor } from '../app/storage/text';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
-import { setText } from './modules';
+import { chooseExport, setText } from './modules';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 // pdf-lib and pdfjs are render-pdf's, so they are found from there.
@@ -85,9 +85,8 @@ async function openMarkdownSample(page: Page) {
 
 /** Exports the open document as a PDF, from the Export menu, and answers the downloaded bytes. */
 async function downloadPdf(page: Page): Promise<{ name: string; bytes: Buffer }> {
-  await exportButton(page).click();
   const download = page.waitForEvent('download');
-  await pdfItem(page).click();
+  await chooseExport(page, 'PDF');
   const file = await download;
   return { name: file.suggestedFilename(), bytes: await readFile(await file.path()) };
 }
@@ -1138,8 +1137,7 @@ test.describe('Export as HTML', () => {
 
   const fromExportMenu = (page: Page) =>
     downloaded(page, async () => {
-      await exportButton(page).click();
-      await htmlItem(page).click();
+      await chooseExport(page, 'HTML (.html)');
     });
 
   test('exports HTML from the Export menu, the app menu, and the palette', async ({ page }) => {
@@ -1446,8 +1444,7 @@ test.describe('Export as EPUB', () => {
     );
     await expect(editor(page)).toContainText('[^1]: Every night.');
     const { name, bytes } = await downloaded(page, async () => {
-      await exportButton(page).click();
-      await epubItem(page).click();
+      await chooseExport(page, 'EPUB (.epub)');
     });
     expect(name).toBe('Harbour Notes.epub');
     const files = await unpacked(bytes);

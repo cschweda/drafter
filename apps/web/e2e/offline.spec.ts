@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { HELP_PAGES } from '../app/commands/data';
 import { removePickers, stubPickers, textOf } from './fs-stub';
+import { pressToolbarButton } from './modules';
 
 // Offline use and updates (Phase 1 design §11), on Chromium with the service worker allowed (every
 // other spec blocks it: playwright.config.ts). The build is the production one that
@@ -374,7 +375,7 @@ test.describe('a new version', () => {
     await later(page).click();
     await expect(update(page)).toHaveCount(0);
     // In and out of focus mode: the toolbar (and the offer with it) goes and comes back.
-    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await pressToolbarButton(page, 'Focus');
     await expect(page.locator('[data-focus-layout]')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-focus-layout]')).toHaveCount(0);
@@ -538,7 +539,7 @@ test.describe('a new version', () => {
     await download;
     const downloading = 'Your script is downloading. Reload when it has finished.';
     await expect(update(page)).toContainText(downloading);
-    await page.getByRole('button', { name: 'Focus', exact: true }).click();
+    await pressToolbarButton(page, 'Focus');
     await expect(page.locator('[data-focus-layout]')).toBeVisible();
     await expect(update(page)).toHaveCount(0);
     await page.keyboard.press('Escape');

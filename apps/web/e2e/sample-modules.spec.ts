@@ -7,6 +7,7 @@ import {
   openSettings,
   palette,
   paletteInput,
+  pressToolbarButton,
   problemsList,
   runCommand,
   setText,
@@ -53,12 +54,21 @@ async function turnOn(page: Page, name: string) {
   await sceneSwitch(page, name).click();
   await expect(sceneSwitch(page, name)).toBeChecked();
   await closeSettings(page);
-  // Its button is in the top bar, or folded into More actions on a full phone bar (Task 9).
-  await expect(
-    button(page, name === 'Scene list' ? 'Scenes' : name)
-      .or(button(page, 'More actions'))
-      .first(),
-  ).toBeVisible();
+  // Its button is in the top bar, or folded into More actions on a full phone bar (Task 9): then
+  // its item is in that menu. The bar is measured a frame after it changes, so two frames pass.
+  const label = name === 'Scene list' ? 'Scenes' : name;
+  const more = button(page, 'More actions');
+  await expect(button(page, label).or(more).first()).toBeVisible();
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  if (!(await button(page, label).isVisible())) {
+    await more.click();
+    const menu = page.getByRole('menu', { name: 'More actions' });
+    await expect(menu.getByRole('menuitem', { name: label, exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+  }
 }
 
 /**
@@ -101,7 +111,7 @@ test.describe('sample modules', () => {
   test('turns on each sample module and uses it: Scene list', async ({ page }) => {
     await openScript(page);
     await turnOn(page, 'Scene list');
-    await button(page, 'Scenes').click();
+    await pressToolbarButton(page, 'Scenes');
 
     // The button opens the tab, and focus goes into it.
     const panel = modulePanel(page, 'Scenes');
@@ -126,7 +136,7 @@ test.describe('sample modules', () => {
     test.skip(!!isMobile, 'a phone shows one tab at a time, so the tab is drawn again anyway');
     await openScript(page);
     await turnOn(page, 'Scene list');
-    await button(page, 'Scenes').click();
+    await pressToolbarButton(page, 'Scenes');
     const panel = modulePanel(page, 'Scenes');
     await expect(panel.getByRole('button')).toHaveCount(2);
 
@@ -149,7 +159,7 @@ test.describe('sample modules', () => {
   test('turns on each sample module and uses it: Cast', async ({ page }) => {
     await openScript(page);
     await turnOn(page, 'Cast');
-    await button(page, 'Cast').click();
+    await pressToolbarButton(page, 'Cast');
 
     const panel = modulePanel(page, 'Cast');
     await expect(panel).toBeVisible();
@@ -194,7 +204,7 @@ test.describe('sample modules', () => {
   test('turns on each sample module and uses it: Notes', async ({ page }) => {
     await openScript(page);
     await turnOn(page, 'Notes');
-    await button(page, 'Notes').click();
+    await pressToolbarButton(page, 'Notes');
     await expect(toast(page)).toContainText('2 notes are listed in Problems.');
 
     await showProblems(page);
@@ -213,7 +223,7 @@ test.describe('sample modules', () => {
   test("undoes Notes' removal in one step", async ({ page }) => {
     await openScript(page);
     await turnOn(page, 'Notes');
-    await button(page, 'Notes').click();
+    await pressToolbarButton(page, 'Notes');
 
     // The question says how many, and Cancel (focused first) changes nothing.
     await askToRemoveNotes(page);
@@ -263,7 +273,7 @@ test.describe('sample modules', () => {
     await expect(settingsDialog(page)).toBeHidden();
 
     // The button: Enter opens the tab and moves focus into its panel.
-    await button(page, 'Scenes').focus();
+    await pressToolbarButton(page, 'Scenes', { focus: true });
     await page.keyboard.press('Enter');
     const panel = modulePanel(page, 'Scenes');
     await expect(panel).toBeFocused();
@@ -339,7 +349,7 @@ test.describe('sample modules', () => {
     await turnOn(page, 'Notes');
     await runCommand(page, 'New Markdown document');
     await expect(editor(page)).toBeFocused();
-    await button(page, 'Notes').click();
+    await pressToolbarButton(page, 'Notes');
     await expect(toast(page)).toContainText('Not available for Markdown documents.');
     await showProblems(page);
     await expect(problemsList(page).getByRole('button')).toHaveCount(0);

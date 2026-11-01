@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { editor, start, turnOnFixture } from './modules';
+import { editor, setText, start, turnOnFixture } from './modules';
 
 // One pane below 1024px, made for a phone (fresh-look design §3.1, §6; Task 9): a 56px bottom tab
 // bar of Write, Script, Outline, and More; a phone opens on Write; from 640px up a status bar under
@@ -210,6 +210,44 @@ test.describe('with the on-screen keyboard', () => {
     const text = await page.locator('.cm-scroller').boundingBox();
     expect(row?.y ?? 0).toBeLessThan(text?.y ?? 0);
   });
+
+  // Over the keyboard the row folds into its own More, as the header's does (Task 4's rule), so
+  // no button is cut off mid-word at the window's edge (the Pixel 7 shot ended at "Parenth").
+  test('the element row over the keyboard folds into More, never cut off', async ({ page }) => {
+    await start(page);
+    await editor(page).click();
+    await keyboard(page, 300);
+    await expectAttached(page, 300);
+    const row = elementBar(page);
+    await expect.poll(() => row.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    // Every item seen is wholly inside the row.
+    const cut = await row.evaluate((el) => {
+      const edge = el.getBoundingClientRect();
+      return [...el.querySelectorAll<HTMLElement>('[data-bar-item]:not([data-folded])')]
+        .filter((item) => {
+          const box = item.getBoundingClientRect();
+          return box.left < edge.left - 0.5 || box.right > edge.right + 0.5;
+        })
+        .map((item) => item.textContent?.trim());
+    });
+    expect(cut).toEqual([]);
+    // What folded is in More.
+    const folded = (await row.locator('button[data-folded]').allTextContents()).map((t) =>
+      t.trim(),
+    );
+    expect(folded.length).toBeGreaterThan(0);
+    await row.getByRole('button', { name: 'More elements' }).click();
+    const menu = page.getByRole('menu', { name: 'More elements' });
+    await expect(menu).toBeVisible();
+    for (const label of folded) {
+      await expect(menu.getByRole('menuitem', { name: label, exact: true })).toBeVisible();
+    }
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    // The keyboard goes: the row is at the top again, and scrolls sideways as before.
+    await keyboard(page, 0);
+    await expect(row.locator('[data-folded]')).toHaveCount(0);
+  });
 });
 
 test.describe('menus and the palette', () => {
@@ -295,4 +333,69 @@ test.describe('the top bar on a phone', () => {
     await page.setViewportSize({ width: 800, height: 800 });
     await expect(overflow).toBeHidden();
   });
+
+  // The title used to give way first, down to "T…", and nothing ever folded (Task 9 review): it
+  // keeps a few letters, and the buttons fold into More actions before it is cut down further.
+  for (const width of [390, 320]) {
+    test(`keeps a few letters of a long title at ${width}px, folding buttons first`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await start(page);
+      // A long title, and the unsaved dot beside it.
+      await setText(
+        page,
+        'Title: The Extraordinarily Long Adventures of a Very Patient Screenwriter\n\nINT. ROOM - DAY\n\nShe waits.\n',
+      );
+      const toolbar = page.locator('header.toolbar');
+      const title = toolbar.locator('[data-tour="title"]');
+      await expect(title).toHaveText(/^The Extraordinarily Long/);
+      await expect(toolbar.getByRole('button', { name: /^Unsaved changes/ })).toBeVisible();
+      await expect
+        .poll(() => toolbar.evaluate((el) => el.scrollWidth <= el.clientWidth))
+        .toBe(true);
+      // At least four letters and the ellipsis are seen.
+      const room = await title.evaluate((el) => {
+        const style = getComputedStyle(el);
+        const context = document.createElement('canvas').getContext('2d');
+        if (!context) return { shown: 0, needed: 1 };
+        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        const text = el.textContent ?? '';
+        return { shown: el.clientWidth, needed: context.measureText(`${text.slice(0, 4)}…`).width };
+      });
+      expect(room.shown).toBeGreaterThanOrEqual(room.needed);
+      // Cut down to its floor: the buttons had to give way first, so something is in More actions.
+      const atFloor = await title.evaluate(
+        (el) =>
+          el.scrollWidth > el.clientWidth &&
+          el.getBoundingClientRect().width <= Number.parseFloat(getComputedStyle(el).minWidth) + 1,
+      );
+      if (atFloor) {
+        await expect(toolbar.getByRole('button', { name: 'More actions' })).toBeVisible();
+      }
+      if (width === 320) {
+        await expect(toolbar.getByRole('button', { name: 'More actions' })).toBeVisible();
+      }
+      // Every control's focus ring (2px, 2px out) is inside the bar, which clips what overflows.
+      const clipped = await toolbar.evaluate((bar) => {
+        const edge = bar.getBoundingClientRect();
+        const out: string[] = [];
+        for (const el of bar.querySelectorAll<HTMLElement>('button, a[href], [tabindex="0"]')) {
+          const box = el.getBoundingClientRect();
+          if (box.width === 0 || getComputedStyle(el).visibility === 'hidden') continue;
+          const ring = 4;
+          if (
+            box.left - ring < edge.left ||
+            box.right + ring > edge.right ||
+            box.top - ring < edge.top ||
+            box.bottom + ring > edge.bottom
+          ) {
+            out.push(el.getAttribute('aria-label') ?? el.title ?? el.textContent ?? '?');
+          }
+        }
+        return out;
+      });
+      expect(clipped).toEqual([]);
+    });
+  }
 });

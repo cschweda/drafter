@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { alertsHeard, watchAlerts } from './fs-stub';
-import { runCommand, start } from './modules';
+import { pressToolbarButton, runCommand, start } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -424,7 +424,7 @@ test.describe('the read-only bar', () => {
       const b = await openTab(context);
       await expect(bar(b)).toBeVisible();
       if (theme === 'light') {
-        await b.getByRole('button', { name: 'Switch to light theme' }).click();
+        await pressToolbarButton(b, 'Switch to light theme');
         await expect(b.locator('html')).toHaveClass(/\blight\b/);
       }
       expect(await violations(b)).toEqual([]);

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { showView, stored } from './modules';
+import { pressToolbarButton, showView, stored } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
@@ -435,7 +435,7 @@ test.describe('the appearance', () => {
     await toggle(page, 'matchSystem').check();
     await closeSettings(page);
     await expect(page.locator('html')).toHaveClass(/\blight\b/);
-    await page.getByRole('button', { name: 'Switch to dark theme' }).click();
+    await pressToolbarButton(page, 'Switch to dark theme');
     await expect(page.locator('html')).toHaveClass(/\bdark\b/);
     await expect.poll(async () => (await stored(page)).matchSystem).toBe(false);
     await openSettings(page);

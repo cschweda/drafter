@@ -429,6 +429,11 @@ kbd {
   .sep.before-actions {
     display: none;
   }
+  /* The title keeps a few letters (with its dot, which never shrinks): the buttons fold into More
+     actions before it is cut down to "T…" (`fit` folds while the bar is still too wide). */
+  .title {
+    min-width: 6ch;
+  }
   .label {
     position: absolute;
     width: 1px;

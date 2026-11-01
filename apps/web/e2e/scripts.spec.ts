@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { pressToolbarButton } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -104,7 +105,7 @@ const asks = (page: Page) =>
   });
 
 async function useLightTheme(page: Page) {
-  await page.getByRole('button', { name: 'Switch to light theme' }).click();
+  await pressToolbarButton(page, 'Switch to light theme');
   await expect(page.locator('html')).toHaveClass(/\blight\b/);
 }
 

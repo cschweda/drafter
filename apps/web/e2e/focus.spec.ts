@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { failWrites, nextFileName, putFile, stubPickers } from './fs-stub';
-import { showSource, showView } from './modules';
+import { pressToolbarButton, showSource, showView } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const focusButton = (page: Page) => page.getByRole('button', { name: 'Focus', exact: true });
@@ -19,9 +19,15 @@ async function setText(page: Page, text: string) {
   await page.keyboard.insertText(text);
 }
 
+/** The Focus button, or More actions where a full phone bar folded it (Task 9). */
+const focusOrMore = (page: Page) =>
+  focusButton(page)
+    .or(page.getByRole('button', { name: 'More actions', exact: true }))
+    .first();
+
 async function start(page: Page) {
   await page.goto('/');
-  await expect(focusButton(page)).toBeVisible();
+  await expect(focusOrMore(page)).toBeVisible();
   await expect(editor(page)).toBeAttached();
 }
 
@@ -36,7 +42,7 @@ test.describe('focus mode', () => {
     await start(page);
 
     // The toolbar's Focus button, left by Esc.
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await on(page);
     await expect(editor(page)).toBeVisible();
     await expect(editor(page)).toBeFocused();
@@ -53,7 +59,7 @@ test.describe('focus mode', () => {
     await off(page);
 
     // The button enters, and the shortcut leaves.
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await on(page);
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await off(page);
@@ -81,13 +87,13 @@ test.describe('focus mode', () => {
     // A phone opens on Write (Task 9): the Script is shown instead.
     await showView(page, 'Script');
     await expect(editor(page)).toBeHidden();
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await on(page);
     await expect(editor(page)).toBeFocused();
     await page.keyboard.press('Escape');
     await off(page);
     await expect(editor(page)).toBeHidden();
-    await expect(focusButton(page)).toBeFocused();
+    await expect(focusOrMore(page)).toBeFocused();
   });
 
   test('keeps what was typed', async ({ page }) => {
@@ -111,7 +117,7 @@ test.describe('focus mode', () => {
     await start(page);
     await expect(toolbar(page)).toBeVisible();
     await expect(page.locator('[data-tour="status"]')).toBeVisible();
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await on(page);
 
     await expect(toolbar(page)).toHaveCount(0);
@@ -288,7 +294,7 @@ test.describe('focus mode', () => {
   test('does not animate under reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await start(page);
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await on(page);
     const calm = await layout(page).evaluate((el) => {
       const style = getComputedStyle(el);
@@ -301,7 +307,7 @@ test.describe('focus mode', () => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.keyboard.press('Escape');
     await off(page);
-    await focusButton(page).click();
+    await pressToolbarButton(page, 'Focus');
     await on(page);
     expect(await layout(page).evaluate((el) => getComputedStyle(el).animationName)).not.toBe(
       'none',

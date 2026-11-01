@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { type Browser, expect, type Locator, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
 import {
+  chooseExport,
   chooseTab,
   closeSettings,
   consentDialog,
@@ -12,9 +13,11 @@ import {
   openSettings,
   palette,
   paletteInput,
+  pressToolbarButton,
   runCommand,
   setText,
   settingsDialog,
+  settled,
   showSource,
   start,
   viewTool,
@@ -163,13 +166,23 @@ for (const theme of THEMES) {
       // Its footnote's reference and the notes at the end are checked too.
       await expect(page.getByRole('region', { name: 'Notes' })).toContainText('A footnote.');
       await clean(page, 'a Markdown document, in the Preview');
-      // Its Export menu, with Export options… off and the reason under it.
-      await page.getByRole('button', { name: 'Export', exact: true }).click();
-      await expect(
-        page
-          .getByRole('group', { name: 'Export' })
-          .getByRole('button', { name: 'Export options…' }),
-      ).toHaveAttribute('aria-disabled', 'true');
+      // Its Export menu, with Export options… off and the reason under it; or, where a full phone
+      // bar folded Export into More actions (Task 9), that menu's Export submenu.
+      await settled(page);
+      const exportButton = page.getByRole('button', { name: 'Export', exact: true });
+      if (await exportButton.isVisible()) {
+        await exportButton.click();
+        await expect(
+          page
+            .getByRole('group', { name: 'Export' })
+            .getByRole('button', { name: 'Export options…' }),
+        ).toHaveAttribute('aria-disabled', 'true');
+      } else {
+        await page.getByRole('button', { name: 'More actions', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Export', exact: true }).focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.getByRole('menuitem', { name: /^Export as PDF/ })).toBeVisible();
+      }
       await clean(page, 'a Markdown document’s Export menu');
     });
 
@@ -233,7 +246,7 @@ for (const theme of THEMES) {
       await clean(page, 'a sprint in the status bar');
 
       // Focus mode, with the sprint in its marker.
-      await page.getByRole('button', { name: 'Focus', exact: true }).click();
+      await pressToolbarButton(page, 'Focus');
       await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
       await clean(page, 'focus mode');
     });
@@ -406,7 +419,7 @@ for (const theme of THEMES) {
       await clean(page, 'Settings with a module on');
       await closeSettings(page);
       // The module's button, and its tab.
-      await page.getByRole('button', { name: 'Count scenes' }).click();
+      await pressToolbarButton(page, 'Count scenes');
       await chooseTab(page, 'Fixture');
       await expect(page.getByRole('tabpanel', { name: 'Fixture' })).toBeVisible();
       await clean(page, "a module's button and tab");
@@ -767,12 +780,8 @@ test.describe('an exported HTML file', () => {
 
   /** Exports the open document as HTML from the Export menu, and answers its text. */
   async function exportHtml(page: Page): Promise<string> {
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
     const download = page.waitForEvent('download');
-    await page
-      .getByRole('group', { name: 'Export' })
-      .getByRole('button', { name: 'HTML (.html)' })
-      .click();
+    await chooseExport(page, 'HTML (.html)');
     const file = await download;
     return await readFile(await file.path(), 'utf8');
   }

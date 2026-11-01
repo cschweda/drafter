@@ -246,17 +246,20 @@
     min-width: 0 !important;
     /* biome-ignore lint/complexity/noImportantStyles: and its transform. */
     transform: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: over a toast (z-40, app.vue), which shares the
+       bottom edge with the sheet; the popper's own z-index is an inline style too. */
+    z-index: 50 !important;
   }
   .d-menu:not([data-side="left"], [data-side="right"]):not(:has([aria-haspopup="menu"])) {
     box-sizing: border-box;
     width: 100vw;
     max-width: none;
-    max-height: calc(var(--vv-height, 100dvh) - 56px);
+    max-height: calc(var(--vv-height, 100dvh) - var(--bottom-bar-h));
     overflow-y: auto;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     border-width: 1px 0 0;
     border-radius: var(--r-lg) var(--r-lg) 0 0;
-    box-shadow: 0 -8px 32px rgb(0 0 0 / 0.3);
+    box-shadow: var(--bottom-sheet-shadow);
   }
   .d-menu [data-slot="item"] {
     min-height: 44px;
@@ -270,7 +273,7 @@
     left: 0;
     width: 100vw;
     max-width: none;
-    height: min(32rem, calc(var(--vv-height, 100dvh) - 56px));
+    height: min(32rem, calc(var(--vv-height, 100dvh) - var(--bottom-bar-h)));
     max-height: none;
     translate: none;
     border-width: 1px 0 0;

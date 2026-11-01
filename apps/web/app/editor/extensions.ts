@@ -114,24 +114,36 @@ export function relint(): void {
   // then the new text) is one composition that first empties the document, which changes the
   // template the text names (a stage play's goes back to the default), and that calls this
   // (Task 9, c). It lints a task after the composition ends, once the editor has read it.
-  if (view.composing || view.compositionStarted) {
+  if (composing(view)) {
     if (waiting) return;
     waiting = true;
-    view.contentDOM.addEventListener(
-      'compositionend',
-      () =>
-        setTimeout(() => {
-          waiting = false;
-          relint();
-        }),
-      { once: true },
-    );
+    // The composition's end, or the editor losing focus, lints again. A composition can also be
+    // abandoned with neither (an input method switched off mid-word), so a check every so often
+    // finds it over too: the relint never stays stuck waiting.
+    const dom = view.contentDOM;
+    const done = () => {
+      dom.removeEventListener('compositionend', done);
+      dom.removeEventListener('blur', done);
+      clearInterval(check);
+      setTimeout(() => {
+        waiting = false;
+        relint();
+      });
+    };
+    const check = setInterval(() => {
+      if (!composing(view) || active !== view) done();
+    }, COMPOSITION_CHECK_MS);
+    dom.addEventListener('compositionend', done, { once: true });
+    dom.addEventListener('blur', done, { once: true });
     return;
   }
   relintView(view);
 }
+const composing = (view: EditorView) => view.composing || view.compositionStarted;
 /** A relint waits for a composition to end. */
 let waiting = false;
+/** How often a waiting relint checks that the composition is still going. */
+export const COMPOSITION_CHECK_MS = 500;
 
 const LINE_NUMBERS = lineNumbers();
 

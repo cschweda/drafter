@@ -43,7 +43,10 @@ async function startFromPanel(page: Page, name: string) {
 
 /**
  * Runs a palette command with the clock stopped: the palette waits on timers and frames to
- * highlight a row, so the clock is moved a little (100 ms) where it needs them, and the row is clicked.
+ * highlight a row, and its search is filtered a timer after the typing (a debounce of 0 is still a
+ * timer), so the clock is moved a little (100 ms) where it needs them, and the row is clicked. (Left
+ * unfiltered, the row is a hundred rows down a phone's sheet, and a tap scrolled to it lands on
+ * another.)
  */
 async function runCommand(page: Page, title: string) {
   await page.keyboard.press('ControlOrMeta+k');
@@ -51,11 +54,13 @@ async function runCommand(page: Page, title: string) {
   await page.clock.runFor(100);
   await expect(paletteInput(page)).toBeFocused();
   await page.keyboard.insertText(title);
+  await page.clock.runFor(100);
+  await expect(palette(page).getByRole('option').first()).toHaveAccessibleName(
+    new RegExp(`^${title}`),
+  );
   const row = palette(page).getByRole('option', { name: title, exact: true });
   await expect(row).toBeVisible();
-  // Clicked as the row itself: with the clock stopped, a phone's palette (a bottom sheet, Task 9)
-  // can leave the rows filtered away drawn over it, so a click at its place lands on one of them.
-  await row.dispatchEvent('click');
+  await row.click();
   await expect(palette(page)).toBeHidden();
 }
 
@@ -332,6 +337,8 @@ test.describe('sprints', () => {
     await startFromPanel(page, '15 minutes');
     await typeAtEnd(page, '\n\nA few words typed in the first script.');
     await runCommand(page, 'New Markdown document');
+    // The new document is open (its title heading drawn) before the sprint ends.
+    await expect(page.locator('.cm-content')).toContainText('# Untitled');
     await expect(inBar(page)).toContainText('left');
     await page.clock.fastForward(15 * MINUTE);
     await expect(noticeText(page)).toHaveText(

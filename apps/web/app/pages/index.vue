@@ -135,7 +135,12 @@ watch(
           settings.value.typewriter ? { y: 'center' } : undefined,
         ),
       });
-    } else document.getElementById('focus-button')?.focus();
+    } else {
+      // The Focus button, or More actions where a full phone bar folded it (Task 9).
+      const button = document.getElementById('focus-button');
+      const shown = button && button.getClientRects().length > 0 ? button : null;
+      (shown ?? document.querySelector<HTMLElement>('[data-tour="toolbar-more"]'))?.focus();
+    }
   },
 );
 
