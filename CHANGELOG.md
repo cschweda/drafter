@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.23.2] - 2026-11-01
+
+**Tested against hostile files, and security up front.** Drafter now runs 244 deliberately broken and hostile files through every way a file comes in, and fixes what they found. The README and the Technical details page have a Security section, and SECURITY.md says how to report a problem.
+
 ### Added
 
 - **Drafter is now tested against a set of deliberately broken and hostile files**, the trap documents: 244 of them, for every format it opens (Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB), and the pipes, links, and folders a desktop meets. Each has the one outcome it must have, opened with its text or refused with a plain message, and the tests check that none of them crashes, hangs, runs anything, fetches anything, or uses too much memory, in the web app, the desktop app, and the command line. See `fixtures/trap/README.md`.
@@ -1027,7 +1031,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.2...HEAD
+[0.23.2]: https://github.com/cschweda/drafter/compare/v0.23.1...v0.23.2
 [0.23.1]: https://github.com/cschweda/drafter/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/cschweda/drafter/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/cschweda/drafter/compare/v0.22.1...v0.22.2
