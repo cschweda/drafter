@@ -104,7 +104,7 @@ Drafter is built to open files from anyone without putting you at risk.
 - **The trap documents.** Drafter is tested against [258 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
 - **Found a security problem?** Please report it privately: see [SECURITY.md](SECURITY.md), or email cschweda@gmail.com with the details. Never in a public issue.
 
-The [Technical details](docs/technical-details.md#security) give the specifics.
+The [Technical details](docs/technical-details.md#security) give the specifics. [Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
 
 ## How Drafter compares
 
@@ -239,7 +239,9 @@ Found a bug or have an idea? **Help → Report a problem…** or **Suggest an id
 
 Drafter is written from scratch, from public specifications, without reading anyone else's implementation. Nobody working on the code reads the source of other screenwriting apps or Fountain libraries, and none of them is a dependency. Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library. That keeps the MIT license sound, and lets people trust where the engine came from.
 
-A repository-wide audit on 27 October 2026 found no copied code. The rule binds every contributor, AI coding assistants included. [The clean-room rules](docs/DEVELOPMENT.md#clean-room-implementation) are in Developing Drafter, [Clean-room implementation](docs/clean-room.md) has the whole statement, and [the full audit](docs/clean-room-audit.md) has its evidence.
+A repository-wide audit on 27 October 2026 found no copied code, and [a second on 1 November 2026](docs/clean-room-audit-2026-11-01.md), over everything since, found none either. The rule binds every contributor, AI coding assistants included. [The clean-room rules](docs/DEVELOPMENT.md#clean-room-implementation) are in Developing Drafter, and [Clean-room implementation](docs/clean-room.md) has the whole statement.
+
+[Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
 
 ---
 

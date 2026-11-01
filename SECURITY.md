@@ -31,4 +31,4 @@ The latest release is the one supported: fixes go into the next release.
 ## How Drafter defends itself
 
 The README's [Security](README.md#security) section says it in plain words, and
-[Technical details](docs/technical-details.md#security) gives the specifics.
+[Technical details](docs/technical-details.md#security) gives the specifics. [Audits](docs/AUDITS.md) lists the security and clean-room audits, newest first.

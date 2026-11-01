@@ -177,9 +177,9 @@ Drafter is written from scratch, from public specifications, without reading any
 
 **The short version: Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library.**
 
-On 27 October 2026 the whole repository was audited against these rules. It found no code from screenwriting software and no Fountain or screenwriting package among more than 700 installed, no copied code from anywhere, general-purpose libraries only, each declared in [`docs/DEPENDENCIES.md`](DEPENDENCIES.md) with no GPL code in the app, and original test content. Most of Drafter's code was written by an AI coding assistant working under these rules and reviewed by the maintainer. An audit finds copying that leaves traces; it can't prove that something was never read or remembered, or rule out what an AI model learned in training.
+Drafter was audited against these rules on 27 October 2026, and again on 1 November 2026, over everything added since (v0.3.1 to v0.24.0). Both found no code from screenwriting software, no Fountain or screenwriting package among the 1,200 installed, no copied code from anywhere, general-purpose libraries only, each declared in [`docs/DEPENDENCIES.md`](DEPENDENCIES.md) with no GPL code in the app, and original test content; the second also found that every Final Draft, Highland, and Fade In test file is synthetic, and listed two small fixes. Most of Drafter's code was written by AI coding assistants working under these rules and reviewed by the maintainer. An audit finds copying that leaves traces; it can't prove that something was never read or remembered, or rule out what an AI model learned in training.
 
-The [summary of findings](clean-room.md#clean-room-verification) names the commits audited, and [the full audit](clean-room-audit.md) has the method and evidence for each check.
+The [summary of findings](clean-room.md#clean-room-verification) names the commits audited. The full audits, [1 November 2026](clean-room-audit-2026-11-01.md) and [27 October 2026](clean-room-audit-2026-10-27.md), have the method and evidence for each check, and [Audits](AUDITS.md) lists every audit, security and clean-room, newest first.
 
 ## Contributing
 
