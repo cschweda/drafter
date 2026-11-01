@@ -43,6 +43,7 @@ flowchart BT
   compare["@drafter/compare"]
   history["@drafter/history"]
   cast["@drafter/cast"]
+  story_map["@drafter/story-map"]
   render_pdf["@drafter/render-pdf"]
   render_html["@drafter/render-html"]
   render_html_file["@drafter/render-html-file"]
@@ -56,17 +57,16 @@ flowchart BT
   spell["@drafter/spell"]
   markdown["@drafter/markdown"]
   fountain["@drafter/fountain"]
-  cast --> web
   cm_fountain --> web
   history --> web
   render_html --> web
-  render_html_file --> web
   render_pdf --> web
   render_text --> web
   spell --> web
-  render_html_file --> cli
+  story_map --> web
   render_pdf --> cli
   render_text --> cli
+  story_map --> cli
   lint --> cm_fountain
   layout --> outline
   notes --> outline
@@ -75,6 +75,8 @@ flowchart BT
   markdown --> history
   outline --> history
   outline --> cast
+  cast --> story_map
+  render_html_file --> story_map
   layout --> render_pdf
   markdown --> render_pdf
   layout --> render_html

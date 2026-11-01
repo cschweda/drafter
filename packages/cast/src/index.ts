@@ -19,3 +19,4 @@ export {
 } from './names';
 export { dayOrNight, insideOf, locationKey, type Place, placeOf, TIMES_OF_DAY } from './place';
 export { type IsWord, mentions, type Presence, sceneBlocks } from './presence';
+export { shares } from './shares';

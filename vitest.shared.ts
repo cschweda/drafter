@@ -18,6 +18,7 @@ const packages = [
   'archive',
   'spell',
   'outline',
+  'story-map',
   'fdx',
   'cm-fountain',
   'cli',

@@ -1,6 +1,9 @@
-import type { Cast } from '@drafter/cast';
+import { type Cast, shares } from '@drafter/cast';
 import { lengthLabel, lengthWords } from '~/outline/labels';
 import { pageSeconds, type Rates, shortTime, timeWords } from './time-format';
+
+// Moved to @drafter/cast for the story map; re-exported so the app's imports still read it here.
+export { shares };
 
 // The Stats tab's Characters table (seeing-the-script design §4.3): a row per speaking character,
 // most speeches first, every figure read from the cast, so the tab, Scaffold, and the grid agree.
@@ -22,28 +25,6 @@ export interface CharacterRowView {
   screen: { text: string; words: string } | null;
   /** "PIA (3), RUFUS (2), MAEVE (1)": the three they share most scenes with; empty for none. */
   often: string;
-}
-
-/**
- * Whole percents of `amounts`' total, by largest remainder, so they add up to 100: each is rounded
- * down, then the points left go one each to the largest remainders, the earlier first on a tie.
- * All zeros (or none) share nothing.
- */
-export function shares(amounts: readonly number[]): number[] {
-  const total = amounts.reduce((sum, n) => sum + n, 0);
-  if (total <= 0) return amounts.map(() => 0);
-  const exact = amounts.map((n) => (n * 100) / total);
-  const whole = exact.map(Math.floor);
-  let left = 100 - whole.reduce((sum, n) => sum + n, 0);
-  const order = exact
-    .map((n, i) => ({ i, rest: n - (whole[i] as number) }))
-    .sort((a, b) => b.rest - a.rest || a.i - b.i);
-  for (const { i } of order) {
-    if (left <= 0) break;
-    whole[i] = (whole[i] as number) + 1;
-    left--;
-  }
-  return whole;
 }
 
 /** A screen time in pages and in minutes at the script's page rate. */

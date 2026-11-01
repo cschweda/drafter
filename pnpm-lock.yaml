@@ -132,6 +132,9 @@ importers:
       '@drafter/spell':
         specifier: workspace:*
         version: link:../../packages/spell
+      '@drafter/story-map':
+        specifier: workspace:*
+        version: link:../../packages/story-map
       '@drafter/templates':
         specifier: workspace:*
         version: link:../../packages/templates
@@ -231,6 +234,9 @@ importers:
       '@drafter/render-text':
         specifier: workspace:*
         version: link:../render-text
+      '@drafter/story-map':
+        specifier: workspace:*
+        version: link:../story-map
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -477,6 +483,30 @@ importers:
       '@types/nspell':
         specifier: 2.1.6
         version: 2.1.6
+
+  packages/story-map:
+    dependencies:
+      '@drafter/cast':
+        specifier: workspace:*
+        version: link:../cast
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@drafter/notes':
+        specifier: workspace:*
+        version: link:../notes
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
+      '@drafter/render-html-file':
+        specifier: workspace:*
+        version: link:../render-html-file
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
 
   packages/templates:
     dependencies:

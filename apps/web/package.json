@@ -40,6 +40,7 @@
     "@drafter/render-pdf": "workspace:*",
     "@drafter/render-text": "workspace:*",
     "@drafter/spell": "workspace:*",
+    "@drafter/story-map": "workspace:*",
     "@drafter/templates": "workspace:*",
     "@iconify-json/heroicons": "^1.2.3",
     "@iconify-json/lucide": "^1.2.147",

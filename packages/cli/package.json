@@ -38,6 +38,7 @@
     "@drafter/render-html-file": "workspace:*",
     "@drafter/render-pdf": "workspace:*",
     "@drafter/render-text": "workspace:*",
+    "@drafter/story-map": "workspace:*",
     "@drafter/templates": "workspace:*",
     "commander": "^15.0.0"
   }

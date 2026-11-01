@@ -4,7 +4,7 @@ import { paginate } from '@drafter/layout';
 import { linesPerPage, sceneIndex } from '@drafter/outline';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { characterRows, shares } from '../app/stats/characters';
+import { characterRows } from '../app/stats/characters';
 
 // The Stats tab's Characters table (seeing-the-script design §4.3): one row per speaking
 // character, read from the cast, so the tab, Scaffold, and the grid never disagree.
@@ -137,35 +137,5 @@ And me.
     // 15, 11, and 5 words of 31: 48.4, 35.5, and 16.1 round down to 48, 35, and 16, and the point
     // left goes to the largest remainder, 35.5 (rounding each would make 48, 35, and 16: 99).
     expect(rows.map((r) => r.share)).toEqual(['48%', '36%', '16%']);
-  });
-});
-
-describe('shares by largest remainder', () => {
-  test('sum to 100', () => {
-    expect(shares([1, 1, 1])).toEqual([34, 33, 33]);
-    expect(shares([2, 1, 1, 1, 1, 1])).toEqual([29, 15, 14, 14, 14, 14]);
-    expect(shares([7, 0, 3])).toEqual([70, 0, 30]);
-  });
-
-  test('ties go to the earlier row', () => {
-    // Four equal speakers: exact. Six: 16.67 each, and the four left go to the first four.
-    expect(shares([5, 5, 5, 5])).toEqual([25, 25, 25, 25]);
-    expect(shares([1, 1, 1, 1, 1, 1])).toEqual([17, 17, 17, 17, 16, 16]);
-  });
-
-  test('a single speaker has it all, and no words share nothing', () => {
-    expect(shares([12])).toEqual([100]);
-    expect(shares([0, 0])).toEqual([0, 0]);
-    expect(shares([])).toEqual([]);
-  });
-
-  test('any words add up to 100', () => {
-    for (let n = 1; n <= 40; n++) {
-      const words = Array.from({ length: n }, (_, i) => ((i * 7919 + n * 104729) % 97) + 1);
-      expect(
-        shares(words).reduce((a, b) => a + b, 0),
-        String(n),
-      ).toBe(100);
-    }
   });
 });
