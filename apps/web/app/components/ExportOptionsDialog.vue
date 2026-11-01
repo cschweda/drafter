@@ -10,6 +10,7 @@ import {
   FDX_NOTE,
   NOTES_LEGEND,
   NOTES_ONLY_MARKDOWN,
+  OPTIONS_INTRO_MARKDOWN,
   OPTIONS_NOT_FOR_MARKDOWN,
   OPTIONS_READ_ONLY,
   REOPEN_HINT,
@@ -33,9 +34,16 @@ const { readOnly } = useGuard();
 const { kind, view } = useEditor();
 const options = computed(() => exportOptionsOf(script.project.value));
 const markdown = computed(() => kind.value === 'markdown');
-/** Why the choices can't be changed here, or null when they can. */
+/**
+ * Why the script's choices can't be changed here, each said: a Markdown document has none of
+ * them, and a read-only tab can change nothing (Let Drafter reopen this file included, which
+ * then points at that reason). Both, when a Markdown document is read-only here.
+ */
 const why = computed(() =>
-  markdown.value ? OPTIONS_NOT_FOR_MARKDOWN : readOnly.value ? OPTIONS_READ_ONLY : null,
+  [
+    markdown.value ? OPTIONS_NOT_FOR_MARKDOWN : null,
+    readOnly.value ? OPTIONS_READ_ONLY : null,
+  ].filter((reason): reason is string => reason !== null),
 );
 const failed = ref(false);
 
@@ -94,12 +102,14 @@ async function choose<K extends keyof ExportOptions>(
     @close="onClose"
   >
     <h2 id="export-options-title" class="d-dialog-title">Export options</h2>
-    <p id="export-options-what">
+    <p v-if="markdown" id="export-options-what">{{ OPTIONS_INTRO_MARKDOWN }}</p>
+    <p v-else id="export-options-what">
       How this script prints and exports: as a PDF, an HTML page, an EPUB, plain text, a Final Draft
       file, or Markdown. The script itself doesn’t change.
     </p>
-    <p v-if="why" class="why">{{ why }}</p>
-    <fieldset :key="`scene-${drawn}`" :disabled="!!why">
+    <p v-if="markdown" class="why">{{ OPTIONS_NOT_FOR_MARKDOWN }}</p>
+    <p v-if="readOnly" id="export-options-read-only" class="why">{{ OPTIONS_READ_ONLY }}</p>
+    <fieldset :key="`scene-${drawn}`" :disabled="why.length > 0">
       <legend>Scene numbers</legend>
       <div v-for="choice in SCENE_CHOICES" :key="choice" class="choice">
         <input
@@ -119,7 +129,7 @@ async function choose<K extends keyof ExportOptions>(
         </div>
       </div>
     </fieldset>
-    <fieldset :key="`title-${drawn}`" :disabled="!!why">
+    <fieldset :key="`title-${drawn}`" :disabled="why.length > 0">
       <legend>Title page</legend>
       <div v-for="choice in TITLE_CHOICES" :key="choice" class="choice">
         <input
@@ -139,7 +149,7 @@ async function choose<K extends keyof ExportOptions>(
         </div>
       </div>
     </fieldset>
-    <fieldset :key="`notes-${drawn}`" :disabled="!!why" aria-describedby="export-notes-what">
+    <fieldset :key="`notes-${drawn}`" :disabled="why.length > 0" aria-describedby="export-notes-what">
       <legend>{{ NOTES_LEGEND }}</legend>
       <p id="export-notes-what" class="fieldset-note">{{ NOTES_ONLY_MARKDOWN }}</p>
       <div v-for="choice in NOTES_CHOICES" :key="choice" class="choice">
@@ -160,7 +170,12 @@ async function choose<K extends keyof ExportOptions>(
         </div>
       </div>
     </fieldset>
-    <fieldset :key="`reopen-${drawn}`" :disabled="readOnly" class="reopen">
+    <fieldset
+      :key="`reopen-${drawn}`"
+      :disabled="readOnly"
+      :aria-describedby="readOnly ? 'export-options-read-only' : undefined"
+      class="reopen"
+    >
       <legend>HTML and EPUB</legend>
       <div class="choice">
         <input
@@ -176,7 +191,7 @@ async function choose<K extends keyof ExportOptions>(
         </div>
       </div>
     </fieldset>
-    <p class="note">{{ FDX_NOTE }}</p>
+    <p v-if="!markdown" class="note">{{ FDX_NOTE }}</p>
     <p v-if="failed" role="alert" class="failed">
       Couldn’t keep that choice in this browser. Try again.
     </p>

@@ -520,12 +520,12 @@ test.describe('opening a file where there is no picker', () => {
     const PAGE = '<!DOCTYPE html>\n<html lang="en"><head><title>The Call</title></head></html>\n';
     await chooseWithInput(page, 'The Call.html', PAGE);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open a web page (The Call.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open a web page (The Call.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
     // Named as a script, it is still known by its first text.
     await chooseWithInput(page, 'The Call.fountain', PAGE);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open a web page (The Call.fountain). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open a web page (The Call.fountain). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
     expect((await stored(page)).length).toBe(before);
     await expect(editor(page)).not.toContainText('DOCTYPE');
@@ -546,12 +546,12 @@ test.describe('opening a file where there is no picker', () => {
     ];
     await chooseWithInput(page, 'The Call.epub', BOOK);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open an e-book (The Call.epub). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open an e-book (The Call.epub). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
     // Named as a script, it is still known by its mimetype entry.
     await chooseWithInput(page, 'The Call.fountain', BOOK);
     await expect(alert(page)).toContainText(
-      'Drafter can’t open an e-book (The Call.fountain). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open an e-book (The Call.fountain). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
     expect((await stored(page)).length).toBe(before);
     await expect(editor(page)).not.toContainText('epub');

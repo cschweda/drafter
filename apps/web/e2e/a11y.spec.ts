@@ -405,6 +405,26 @@ for (const theme of THEMES) {
       await clean(page, 'the Export options dialog');
     });
 
+    test(`has no accessibility violations in a Markdown document's Export options dialog (${theme})`, async ({
+      page,
+    }) => {
+      await runCommand(page, 'Sample script: Markdown');
+      await expect(page.locator('.cm-content')).toContainText('# Sample: Markdown');
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await page
+        .getByRole('group', { name: 'Export' })
+        .getByRole('button', { name: 'Export options…' })
+        .click();
+      const options = page.getByRole('dialog', { name: 'Export options' });
+      await expect(options).toBeVisible();
+      await expect(
+        options.getByRole('checkbox', {
+          name: 'Let Drafter reopen this file (includes the full script, notes and all)',
+        }),
+      ).toBeEnabled();
+      await clean(page, 'a Markdown document’s Export options dialog');
+    });
+
     test(`has no accessibility violations in Settings and its modules (${theme})`, async ({
       page,
     }) => {

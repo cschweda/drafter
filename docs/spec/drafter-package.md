@@ -181,7 +181,7 @@ The media type `application/vnd.drafter.package+zip` is not yet registered. The 
 ## 14. Change log
 
 - **0.1 (2026-10-30):** first draft, written ahead of Drafter's implementation (planned v0.28.0) so other applications can comment and implement.
-- **0.1 (2026-11-01):** the appendix, the script inside an HTML or EPUB export (Drafter v0.23.1), added. It is in use now, so its names are stable.
+- **0.1.1 (2026-11-01):** the appendix, the script inside an HTML or EPUB export (Drafter v0.23.1), added. It is in use now, so its names are stable. The package itself is unchanged.
 
 ## 15. Feedback
 
@@ -203,10 +203,10 @@ Drafter's HTML and EPUB exports can carry the work's main file, so the export ca
 
 - `type="text/plain"` makes it a data block: no browser runs it, so it needs nothing from the file's content security policy.
 - `data-kind` is `fountain` or `markdown`.
-- The content is the UTF-8 bytes of the text in standard base64 (RFC 4648 §4, with padding), in lines of 76 characters separated by line feeds. Base64 holds no `<`, `>`, or `&`, so nothing in the text (`</script>`, `<!--`) can end the element or be read as markup.
-- A page holds at most one such element. Its opening tag is written with exactly these attributes, in this order.
+- The content is the UTF-8 bytes of the text in standard base64 (RFC 4648 §4, with padding, and padding bits zero), in lines of 76 characters separated by line feeds. A writer writes only line feeds between the lines; a reader **MUST** accept, and skip, any of space (U+0020), tab (U+0009), line feed (U+000A), form feed (U+000C), and carriage return (U+000D) anywhere in the content, and nothing else. Base64 holds no `<`, `>`, or `&`, so nothing in the text (`</script>`, `<!--`) can end the element or be read as markup.
+- A page holds exactly one such element. Its opening tag is written with exactly these attributes, in this order, and that opening text, `<script type="text/plain" id="drafter-source" data-kind="`, **MUST NOT** appear anywhere else in the file: not in the page's own text, an attribute, a comment, a stylesheet, or a script's strings. A writer **MUST** escape every `<` in the page's own text (as `&lt;`), so a writer's words can never spell it, and **MUST NOT** write it in a comment or a script; a reader that finds it twice refuses the file.
 
-**EPUB.** One more file in the zip: `EPUB/drafter-source.fountain` for a script, or `EPUB/drafter-source.md` for a document, holding the text's UTF-8 bytes as they are. It is listed in the package document's manifest as `<item id="drafter-source" href="drafter-source.fountain" media-type="text/plain"/>` (or `.md`), and is not in the spine, so e-readers never show it.
+**EPUB.** One more file in the zip: `EPUB/drafter-source.fountain` for a script, or `EPUB/drafter-source.md` for a document, holding the text's UTF-8 bytes as they are. Drafter stores it uncompressed; a reader **MUST** accept it stored or deflated (zip methods 0 and 8), and may refuse any other method. A reader knows the file for an EPUB by EPUB's own rule, which it relies on: the zip's first entry is named `mimetype`, is stored, and holds exactly `application/epub+zip`. It is listed in the package document's manifest as `<item id="drafter-source" href="drafter-source.fountain" media-type="text/plain"/>` (or `.md`), and is not in the spine, so e-readers never show it.
 
 **Readers.**
 

@@ -97,7 +97,7 @@ describe('notAScript', () => {
       expect(notAScript('a.fountain', text(script)), script).toBeNull();
     }
     expect(refusalMessage('The Call.html', notAScript('The Call.html', PLAIN) as never)).toBe(
-      'Drafter can’t open a web page (The Call.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open a web page (The Call.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
   });
 
@@ -129,7 +129,7 @@ describe('notAScript', () => {
     const notEpub = zipStored([{ name: 'mimetype', data: text('application/zip') }]);
     expect(notAScript('a.highland', notEpub)).toBeNull();
     expect(refusalMessage('The Call.epub', notAScript('The Call.epub', PLAIN) as never)).toBe(
-      'Drafter can’t open an e-book (The Call.epub). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open an e-book (The Call.epub). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
   });
 

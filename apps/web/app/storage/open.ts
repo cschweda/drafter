@@ -57,6 +57,7 @@ const MESSAGES = {
   importTooBig: 'The script in this file is too big (over 5 MB), so Drafter didn’t open it.',
   exportTooBig:
     'This file is too big to be a Drafter export (over 32 MB), so Drafter didn’t open it.',
+  unreadable: 'This file is too big to open (over 32 MB), so Drafter didn’t open it.',
   binary: 'This file isn’t a script: it holds more than text, so Drafter didn’t open it.',
   notUtf8:
     'This file isn’t UTF-8 text, so Drafter didn’t open it: saving would change its characters. Save it as UTF-8 in the app that made it, then open it again.',
@@ -244,6 +245,11 @@ export async function openFile(file: PickedFile, how: OpenAs = {}): Promise<void
     // A tab that only shows a script may show old text, and opening replaces what it shows.
     if (useGuard().readOnly.value) {
       await say(readOnlyHint, READ_ONLY_HINT);
+      return;
+    }
+    // Too big to read at all: its bytes were never read (`MAX_OPEN_BYTES`).
+    if (file.tooBig) {
+      await say(openError, MESSAGES.unreadable);
       return;
     }
     // A web page or an e-book is a Drafter export with its script inside, or refused.

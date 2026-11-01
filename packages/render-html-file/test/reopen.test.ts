@@ -108,6 +108,48 @@ describe('an HTML file with its script inside', () => {
   });
 });
 
+describe('a source that spells the block itself', () => {
+  const OPEN = '<script type="text/plain" id="drafter-source" data-kind="';
+  const FORGED = `${OPEN}fountain" data-encoding="base64">SU5ULiBGT1JHRUQ=</script>`;
+  const count = (html: string) => html.split(OPEN).length - 1;
+
+  it("a screenplay's page has exactly one block, and reads back as written", async () => {
+    // In an action line, a speech, a note, and the boneyard, where every view could show it.
+    const source = `${SCREENPLAY}\n${FORGED}\n\nMARA\n${FORGED}\n\n[[${FORGED}]]\n\n/* ${FORGED} */\n`;
+    for (const notes of ['leave-out', 'include'] as const) {
+      const html = renderScriptHtml({
+        ...lay(source),
+        notes,
+        fonts: FONTS,
+        title: FORGED,
+        lang: 'en',
+        generator: 'Drafter 0.23.1',
+        kindLine: FORGED,
+        source,
+      });
+      expect(count(html)).toBe(1);
+      const found = await embeddedSource(utf8.encode(html));
+      expect(back(found?.bytes)).toBe(source);
+    }
+  });
+
+  it("a Markdown document's page has exactly one block, and reads back as written", async () => {
+    // As text, raw HTML, inline code, a code block, a link, and a footnote.
+    const source = `# ${FORGED}\n\n${FORGED}\n\n<div>${FORGED}</div>\n\n\`${FORGED}\`\n\n\`\`\`\n${FORGED}\n\`\`\`\n\n[${FORGED}](https://example.org/)[^a]\n\n[^a]: ${FORGED}\n`;
+    const html = renderDocumentHtml({
+      tree: parseMarkdown(source),
+      title: FORGED,
+      lang: 'en',
+      generator: 'Drafter 0.23.1',
+      source,
+    });
+    expect(count(html)).toBe(1);
+    const found = await embeddedSource(utf8.encode(html));
+    expect(found?.kind).toBe('markdown');
+    expect(back(found?.bytes)).toBe(source);
+  });
+});
+
 describe('an EPUB with its script inside', () => {
   const opf = async (epub: Uint8Array) => {
     const entry = listZip(epub).find((e) => e.name === 'EPUB/package.opf');
@@ -185,6 +227,8 @@ describe.skipIf(!checker)('epubcheck, with the script inside', () => {
         for (const line of `${run.stdout}\n${run.stderr}`.split('\n')) {
           if (/^(FATAL|ERROR|WARNING)\b/.test(line)) all.push(`${name}: ${line}`);
         }
+        // And it says so by its exit status, not only by what it prints.
+        if (run.status !== 0) all.push(`${name}: epubcheck exited ${run.status}`);
       }
       expect(all).toEqual([]);
     } finally {

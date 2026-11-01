@@ -772,6 +772,11 @@ test.describe('export options', () => {
     await expect(titlePage(page).getByRole('radio').first()).toBeDisabled();
     await expect(reopenBox(page)).toBeEnabled();
     await expect(reopenBox(page)).not.toBeChecked();
+    // Its own intro, and no word of Final Draft, which a document never exports to.
+    await expect(optionsDialog(page)).toContainText(
+      'How this document’s HTML page and EPUB come out. The document itself doesn’t change.',
+    );
+    await expect(optionsDialog(page)).not.toContainText('Final Draft');
     await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
     await expect(optionsDialog(page)).toBeHidden();
   });
@@ -884,12 +889,41 @@ test.describe('export options', () => {
     for (const radio of await optionsDialog(other).getByRole('radio').all()) {
       await expect(radio).toBeDisabled();
     }
+    // Let Drafter reopen this file too, and it says why.
+    await expect(reopenBox(other)).toBeDisabled();
+    await expect(
+      optionsDialog(other).getByRole('group', { name: 'HTML and EPUB' }),
+    ).toHaveAccessibleDescription(
+      'Another tab has this script open, so its export options can’t be changed here.',
+    );
     // The stored choice shows, and is the one the export uses.
     await expect(titlePage(other).getByRole('radio', { name: 'None', exact: true })).toBeChecked();
     await optionsDialog(other).getByRole('button', { name: 'Done' }).click();
     const { bytes } = await downloadPdf(other);
     expect(await pagesOf(bytes)).toHaveLength(2);
     await expect(ready(other)).toHaveText('Exported The Call.pdf, with no title page.');
+  });
+
+  test('a Markdown document in a read-only tab says both reasons', async ({
+    context,
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'two tabs are the same on a phone');
+    await start(page);
+    await openMarkdownSample(page);
+    const other = await context.newPage();
+    await removePickers(other);
+    await other.goto('/');
+    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await openOptions(other);
+    await expect(optionsDialog(other)).toContainText(
+      'A Markdown document has no scene numbers, title page, or notes to choose; it can still carry its text for Drafter to reopen.',
+    );
+    await expect(optionsDialog(other)).toContainText(
+      'Another tab has this script open, so its export options can’t be changed here.',
+    );
+    await expect(reopenBox(other)).toBeDisabled();
   });
 
   test('the script is unchanged by choosing options', async ({ page, isMobile }) => {

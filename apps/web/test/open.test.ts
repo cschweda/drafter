@@ -1103,7 +1103,7 @@ describe('reopening a Drafter HTML or EPUB export', () => {
       t.picked('Site.html', '<!DOCTYPE html><html><body><p>From a site.</p></body></html>'),
     );
     expect(t.openError.value).toBe(
-      'Drafter can’t open a web page (Site.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.',
+      'Drafter can’t open a web page (Site.html). Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.',
     );
     const { zipStored } = await import('@drafter/archive');
     await t.openFile(
@@ -1127,6 +1127,16 @@ describe('reopening a Drafter HTML or EPUB export', () => {
       'This file isn’t a script: it holds more than text, so Drafter didn’t open it.',
     );
     expect(await t.mine()).toHaveLength(0);
+  });
+
+  test('refuses a file too big to read, without reading it', async () => {
+    const t = await fresh();
+    const was = t.script.project.value?.id;
+    await t.openFile({ ...t.picked('Huge.html', ''), tooBig: true });
+    expect(t.openError.value).toBe(
+      'This file is too big to open (over 32 MB), so Drafter didn’t open it.',
+    );
+    expect(t.script.project.value?.id).toBe(was);
   });
 
   test('a read-only tab reopens nothing', async () => {

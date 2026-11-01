@@ -22,9 +22,10 @@ const PDF: Refusal = {
 /**
  * What a web page or an e-book Drafter can't reopen is told (reopenable exports): only Drafter's
  * own HTML and EPUB exports, saved with "Let Drafter reopen this file" on, carry a script to open.
+ * It is true of a damaged Drafter export too, whose script can't be read.
  */
 export const REOPEN_ADVICE =
-  'Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one wasn’t, so open the script it was made from instead.';
+  'Drafter can only reopen HTML or EPUB files it saved itself, with “Let Drafter reopen this file” turned on. This one doesn’t carry a script Drafter can read, so open the script it was made from instead.';
 
 /**
  * A web page with no script inside (another app's or site's, or a Drafter export made without

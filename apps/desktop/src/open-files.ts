@@ -29,7 +29,7 @@ export interface OpenRequests {
 }
 
 export const NOT_A_SCRIPT =
-  'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html or .epub export)';
+  'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html, .htm, or .epub export)';
 
 /** The status-bar message for a refusal. */
 export const refusalMessage = ({ name, reason }: Refusal) =>

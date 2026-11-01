@@ -144,11 +144,11 @@ describe('requestsFromArgv', () => {
     expect(refused.map((r) => r.name)).toEqual(['ok.fountain', 'picture.png', 'missing.md']);
     expect(refused.map((r) => r.reason)).toEqual([
       'it isn’t there',
-      'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html or .epub export)',
+      'it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html, .htm, or .epub export)',
       'it isn’t there',
     ]);
     expect(refusalMessage(refused[1] as Refusal)).toBe(
-      'Drafter can’t open “picture.png”: it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html or .epub export).',
+      'Drafter can’t open “picture.png”: it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html, .htm, or .epub export).',
     );
   });
 
@@ -211,7 +211,7 @@ describe('names that are not ASCII', () => {
     touch('写真.png');
     const png = requestsFromArgv(['x', '写真.png'], dir).refused;
     expect(refusalMessage(png[0] as Refusal)).toBe(
-      'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html or .epub export).',
+      'Drafter can’t open “写真.png”: it isn’t a script (.fountain, .md, .markdown, .txt, .fdx, .highland, .fadein, or a Drafter .html, .htm, or .epub export).',
     );
   });
 });
