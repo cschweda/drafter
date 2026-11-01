@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- `.gitignore` also allows a `.env.sample` (as well as `.env.example`); every other `.env` file stays out of the repository.
 - **An animated banner at the top of the README:** the script page fans out into the colored revision pages, once. It's an SVG with CSS only, so it plays on GitHub, and it holds still for anyone who asks their computer for less motion.
 
 ## [0.23.3] - 2026-11-01

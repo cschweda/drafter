@@ -23,7 +23,9 @@ fixtures/**/*.pdf
 # Environment
 .env
 .env.*
+# Secrets never go in the repository; a sample with no real values may.
 !.env.example
+!.env.sample
 
 # OS
 .DS_Store
