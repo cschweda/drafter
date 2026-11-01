@@ -23,7 +23,9 @@ test.beforeEach(async ({ page }) => {
   await removePickers(page);
   await page.setViewportSize({ width: 320, height: 640 });
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  // A phone opens on Write, at the sample's first scene (Task 9): its title page may be past the
+  // lines the editor draws, so the first scene says the sample is in.
+  await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
 });
 
 /** The text of the script, even when the Source tab is not the one showing. */

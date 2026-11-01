@@ -297,7 +297,10 @@ test.describe('a Markdown document', () => {
     await page.waitForTimeout(800);
     await showTab(page, 'Source');
     await expect(page.locator('.cm-lint-marker, .cm-diagnostic')).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: /^Problems/ }).first()).toHaveText('Problems');
+    // No count: on Problems' tab, or below 1024px on More, which holds it (Task 9).
+    const problemsTab = page.getByRole('tab', { name: /^Problems/ });
+    if ((await problemsTab.count()) > 0) await expect(problemsTab.first()).toHaveText('Problems');
+    else await expect(page.locator('[data-more]').last()).toHaveAccessibleName('More tabs');
   });
 
   test('turns Fountain’s keys, completion, and lint off', async ({ page }) => {

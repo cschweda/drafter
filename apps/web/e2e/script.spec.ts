@@ -24,6 +24,16 @@ const lineOf = (page: Page, text: string) =>
 const slim = (page: Page) =>
   page.locator('.slim').filter({ has: page.getByRole('group', { name: 'Zoom' }) });
 const status = (page: Page) => page.locator('[data-tour="status"]');
+/** Below 1024px the one pane opens on Write (fresh-look Task 9): the Script is its tab. */
+async function toScript(page: Page) {
+  if ((page.viewportSize()?.width ?? 0) >= 1024) return;
+  const tab = page.locator('[data-bottom-bar]').getByRole('tab', { name: 'Script' });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
+/** The Source's tab below 1024px, Write on the bottom tab bar. */
+const writeTab = (page: Page) =>
+  page.locator('[data-bottom-bar]').getByRole('tab', { name: 'Write' });
 
 async function useLightTheme(page: Page) {
   await page.getByRole('button', { name: 'Switch to light theme' }).click();
@@ -120,6 +130,7 @@ test.describe('the Script pane on a desktop', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await toScript(page);
     await expect(pages(page).first()).toBeVisible();
     // The first visit has opened the sample and put the cursor on its first scene heading (page 1):
     // the session is ready. A jump made before then is not what these tests are about.
@@ -431,11 +442,12 @@ test.describe('when the pages cannot be laid out', () => {
   test('says so when the layout worker fails to load', async ({ page }) => {
     await page.route(/layout\.worker.*\.js/, (route) => route.abort());
     await page.goto('/');
+    await toScript(page);
     await expect(page.getByText(MESSAGE)).toBeVisible();
     await expect(pages(page)).toHaveCount(0);
     // The editor still works.
     if (!(await page.locator('.cm-content').isVisible())) {
-      await page.getByRole('tab', { name: 'Source' }).click();
+      await writeTab(page).click();
     }
     await page.locator('.cm-content').click();
     await page.keyboard.insertText('still typing');
@@ -453,6 +465,7 @@ test.describe('when the pages cannot be laid out', () => {
       } as unknown as typeof Worker;
     });
     await page.goto('/');
+    await toScript(page);
     await expect(page.getByText(MESSAGE)).toBeVisible();
     // The page loads and the editor is there.
     await expect(page.locator('.cm-content')).toBeAttached();
@@ -464,13 +477,14 @@ test.describe('the Script pane on a phone', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await toScript(page);
     await expect(pages(page).first()).toBeVisible();
     // The first visit has opened the sample and put the cursor on its first scene heading (page 1):
     // the session is ready. A jump made before then is not what these tests are about.
     await expect(slim(page).filter({ hasText: 'Page 1 of' }).first()).toBeAttached();
   });
 
-  test('opens on the script, fitted to the screen', async ({ page }) => {
+  test('shows the script fitted to the screen', async ({ page }) => {
     await expect(page.getByRole('tab', { name: 'Script' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -487,10 +501,7 @@ test.describe('the Script pane on a phone', () => {
 
   test('jumps to the Source tab when a line is clicked', async ({ page }) => {
     await lineOf(page, 'EXT. BACK PORCH - LATER').click();
-    await expect(page.getByRole('tab', { name: 'Source' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    await expect(writeTab(page)).toHaveAttribute('aria-selected', 'true');
     await page.keyboard.insertText('ZZ');
     await expect(page.locator('.cm-line', { hasText: 'ZZEXT. BACK PORCH - LATER' })).toBeVisible();
     // Back on the Script tab, the page that line is on shows in the bar.
@@ -525,9 +536,9 @@ test.describe('a short script', () => {
     const width = isMobile ? (page.viewportSize()?.width ?? 390) : 1440;
     await page.setViewportSize({ width, height: isMobile ? 900 : 1500 });
     await page.goto('/');
+    await toScript(page);
     await expect(pages(page).first()).toBeVisible();
-    if (!(await page.locator('.cm-content').isVisible()))
-      await page.getByRole('tab', { name: 'Source' }).click();
+    if (!(await page.locator('.cm-content').isVisible())) await writeTab(page).click();
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.insertText('INT. HALL - DAY\n\nShe waits.\n');
@@ -575,6 +586,7 @@ test.describe('a short script, at Fit width in odd sizes', () => {
     // a pixel past the pane's bottom.
     await page.setViewportSize({ width: 1440, height: 1500 });
     await page.goto('/');
+    await toScript(page);
     await expect(pages(page).first()).toBeVisible();
     await page.locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+A');
@@ -618,6 +630,7 @@ test.describe('with Page colour Dark stored', () => {
     page,
   }) => {
     await page.goto('/');
+    await toScript(page);
     await expect(pages(page).first()).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('data-page-color', 'dark');
     await expect.poll(async () => (await pageColors(page)).paper).toBe('rgb(27, 30, 37)');

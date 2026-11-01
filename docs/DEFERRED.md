@@ -230,5 +230,5 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 
 ## Fresh look
 
-- **The phone's top bar scrolls sideways when it's full** (a module's buttons and the unsaved dot). That's a stopgap until Task 9 gives the phone layout an overflow menu.
+- **Dialogs aren't full-height sheets on a phone** (design §6). Menus and the palette are bottom sheets below 640px (Task 9); the dialogs are still centred cards, as wide as the screen less 32px.
 - **There's no "Saving…" state** (design §3.4). Saves are near-instant, so the top bar goes straight from "Unsaved" to "✓ Saved".

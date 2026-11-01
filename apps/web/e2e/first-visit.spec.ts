@@ -95,8 +95,9 @@ test.describe('a first visit', () => {
     expect(HEADING_LINE).toBeGreaterThan(1);
     await start(page);
 
-    // The Script pane (the tab a phone starts on) shows the heading.
+    // The Script pane shows the heading (on a phone, which opens on Write, its tab: Task 9).
     // (The heading's block has no box of its own; its line does.)
+    await showView(page, 'Script');
     const heading = script(page).locator('.drafter-line', { hasText: HEADING }).first();
     await expect(heading).toBeInViewport();
 

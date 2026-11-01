@@ -31,6 +31,22 @@ describe('the tour’s steps', () => {
     );
   });
 
+  // Fresh-look Task 9: a toolbar button the phone's top bar folded into More actions isn't on
+  // screen, so its step points at More actions instead, where it went; no step is dropped.
+  test('point at More actions for a toolbar button that is folded, and keep ten steps', () => {
+    const steps = buildSteps(false, false, new Set(['save', 'export', 'focus']));
+    expect(steps).toHaveLength(10);
+    expect(new Set(steps.map((s) => s.id)).size).toBe(10);
+    const at = (id: string) => steps.find((s) => s.id === id)?.target;
+    for (const id of ['save', 'export', 'focus']) expect(at(id)).toBe('[data-tour="toolbar-more"]');
+    expect(at('palette')).toBe('[data-tour="palette"]');
+    expect(steps.find((s) => s.id === 'save')?.content).toMatch(/More actions/);
+    // Nothing folded: their own buttons.
+    expect(buildSteps(false, false, new Set()).find((s) => s.id === 'save')?.target).toBe(
+      '[data-tour="save"]',
+    );
+  });
+
   test('have their own ids, a title, and text that fits the card', () => {
     for (const wide of [true, false]) {
       const steps = buildSteps(wide);

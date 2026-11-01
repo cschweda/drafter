@@ -202,7 +202,9 @@ test.describe('importing a Final Draft file where there is no picker', () => {
     const before = (await mine(page)).length;
     await drop(page, 'broken.fdx', '<FinalDraft><Content></FinalDraft>');
     await expect(alert(page)).toContainText('This isn’t a Final Draft file:');
-    await expect(editor(page)).toContainText('The Call');
+    // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+    // title page's lines may be past the lines the editor draws.
+    await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     expect((await mine(page)).length).toBe(before);
   });
 });

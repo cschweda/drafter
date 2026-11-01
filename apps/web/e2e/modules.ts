@@ -284,9 +284,12 @@ export async function viewTool(
  * Inspector's tabs, in its row or under More (fresh-look design §3.2, §3.3); on a phone, the one
  * pane's tabs.
  */
-export async function showView(page: Page, name: string) {
+export async function showView(page: Page, view: string) {
   // A wide screen's editor is always there (it may still be mounting after a reload).
-  if (name === 'Source' && (page.viewportSize()?.width ?? 0) >= 1024) return;
+  const wide = (page.viewportSize()?.width ?? 0) >= 1024;
+  if (view === 'Source' && wide) return;
+  // Below 1024px the bottom tab bar calls the Source "Write" (fresh-look design §6, Task 9).
+  const name = view === 'Source' ? 'Write' : view;
   const pane = lastPane(page);
   const pattern = new RegExp(`^${name}\\b`);
   const shown = pane.getByRole('tab', { name: pattern, selected: true });

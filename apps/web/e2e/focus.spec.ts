@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { failWrites, nextFileName, putFile, stubPickers } from './fs-stub';
-import { showSource } from './modules';
+import { showSource, showView } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const focusButton = (page: Page) => page.getByRole('button', { name: 'Focus', exact: true });
@@ -76,8 +76,10 @@ test.describe('focus mode', () => {
     page,
     isMobile,
   }) => {
-    test.skip(!isMobile, 'a phone opens on the Script tab; a wide screen shows the Source');
+    test.skip(!isMobile, 'a wide screen always shows the Source');
     await start(page);
+    // A phone opens on Write (Task 9): the Script is shown instead.
+    await showView(page, 'Script');
     await expect(editor(page)).toBeHidden();
     await focusButton(page).click();
     await on(page);

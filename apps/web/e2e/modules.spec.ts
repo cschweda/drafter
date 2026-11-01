@@ -101,12 +101,12 @@ test.describe('script modules', () => {
     await closeSettings(page);
     await expect(countScenes(page)).toHaveCount(0);
     await expect(fixtureTab(page)).toHaveCount(0);
-    // Nor under More, which has only the app's own tabs now: Cards, Notes, Stats, and Scaffold on a
-    // phone; Notes in the Inspector, with Problems showing (fresh-look design §3.3).
+    // Nor under More, which has only the app's own now, with Problems showing: below 1024px Cards,
+    // Stats, Scaffold, Notes, and History (Task 9); Notes in the Inspector (design §3.3).
     await page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' }).click();
     const wide = (page.viewportSize()?.width ?? 0) >= 1024;
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
-      wide ? [/^Notes, \d+ open$/] : ['Cards', /^Notes, \d+ open$/, 'Stats', 'Scaffold'],
+      wide ? [/^Notes, \d+ open$/] : ['Cards', 'Stats', 'Scaffold', /^Notes, \d+ open$/, 'History'],
     );
     await page.keyboard.press('Escape');
     await expect(page.getByText('Fixture Info:')).toHaveCount(0);
@@ -275,6 +275,8 @@ test.describe('script modules', () => {
       name: 'Fixture',
     });
     await page.keyboard.press('End');
+    // Below 1024px History ends More, after the modules' tabs (Task 9).
+    if ((page.viewportSize()?.width ?? 0) < 1024) await page.keyboard.press('ArrowUp');
     await expect(item).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(fixtureTab(page).last()).toBeFocused();

@@ -43,14 +43,26 @@ export const INTRO_SLIDES: IntroSlide[] = [
 /** The part of the screen a step's target is, from its `data-tour` value. */
 const target = (name: string) => `[data-tour="${name}"]`;
 
+/** Where a top-bar button folded into More actions now is (AppToolbar.vue, Task 9). */
+const FOLDED_TARGET = target('toolbar-more');
+
 /**
  * The ten steps. The template step points at the Drafter menu's mark on every screen (fresh-look
  * design §10): the template chip has left the top bar, and the menu's Template section chooses it.
  * `wide` is kept for the steps that will differ by screen. The status step points at the status bar
  * from 640px up and, below that (where there is none, Task 6), at the title, whose red dot says
- * there are unsaved changes.
+ * there are unsaved changes. A top-bar button that is `folded` into More actions (a phone's full top
+ * bar, Task 9) isn't on screen: its step points at More actions, where it went, and says so; no
+ * step is dropped.
  */
-export function buildSteps(_wide: boolean, statusBar = true): TourStep[] {
+export function buildSteps(
+  _wide: boolean,
+  statusBar = true,
+  folded: ReadonlySet<string> = new Set(),
+): TourStep[] {
+  const at = (name: string) => (folded.has(name) ? FOLDED_TARGET : target(name));
+  const where = (name: string) =>
+    folded.has(name) ? ' It is under More actions, at the right.' : '';
   return [
     {
       id: 'source-write',
@@ -88,12 +100,12 @@ export function buildSteps(_wide: boolean, statusBar = true): TourStep[] {
     },
     {
       id: 'save',
-      target: target('save'),
+      target: at('save'),
       title: 'Save',
       // Below 640px the status step says what the red dot means; from 640px up, this step does.
       content: `Saves a .fountain file. In Chrome and Edge on a computer it saves straight back to the file, so a script in a Dropbox or Google Drive folder syncs. Other browsers, and phones, download a copy.${
         statusBar ? ' A red dot by the title means unsaved changes; click it to save.' : ''
-      }`,
+      }${where('save')}`,
     },
     statusBar
       ? {
@@ -112,17 +124,20 @@ export function buildSteps(_wide: boolean, statusBar = true): TourStep[] {
         },
     {
       id: 'export',
-      target: target('export'),
+      target: at('export'),
       title: 'Export, and open almost anything',
-      content:
-        'Export a PDF, a Final Draft file (.fdx), Markdown, plain text, a web page, or an e-book. Open, in the Drafter menu, reads Final Draft, Highland, Fade In, Markdown, and plain text, so a script can come from the apps people use and go back to them.',
+      // Folded, the card says where it went in place of the last clause, to fit the card.
+      content: `Export a PDF, a Final Draft file (.fdx), Markdown, plain text, a web page, or an e-book. Open, in the Drafter menu, reads Final Draft, Highland, Fade In, Markdown, and plain text${
+        folded.has('export')
+          ? `.${where('export')}`
+          : ', so a script can come from the apps people use and go back to them.'
+      }`,
     },
     {
       id: 'focus',
-      target: target('focus'),
+      target: at('focus'),
       title: 'Focus',
-      content:
-        'Focus mode, for when you only want the page. Typewriter scrolling, which keeps your line in the middle, is the Typewriter button on the Source pane’s bar.',
+      content: `Focus mode, for when you only want the page. Typewriter scrolling, which keeps your line in the middle, is the Typewriter button on the Source pane’s bar.${where('focus')}`,
     },
     {
       id: 'palette',

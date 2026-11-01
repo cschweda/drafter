@@ -1,8 +1,7 @@
 // Which tab each pane shows, and how wide the left pane is. On a wide screen the left pane is
 // always the editor and every other view lives in the right one, the Inspector (fresh-look design
-// §3.2, §3.3, Calls 4, 5, 13, 14): there is no swap rule and no choice of tab on the left. A phone
-// still shows one pane with the tab row below (`coreTabs`, `tabRow`), until its bottom tab bar
-// replaces it (Task 9).
+// §3.2, §3.3, Calls 4, 5, 13, 14): there is no swap rule and no choice of tab on the left. Below
+// 1024px one pane shows, switched by the bottom tab bar (`phoneTabs`, design §6, Task 9).
 
 /** A tab's id: one of the core four, a view tab (Cards, Notes, Stats), or a script module's (`moduleTabId`). */
 export type TabId = string;
@@ -148,8 +147,41 @@ export function tabRow(
 
 export const DEFAULT_TABS: PaneTabs = { left: 'source', right: 'script' };
 
-/** A first visit on a phone opens on the formatted script (design §12). */
-export const PHONE_DEFAULT_TAB: CoreTabId = 'script';
+/**
+ * A phone, and every width below 1024px, opens on Write, the Source (fresh-look design §6, Call 19:
+ * it opened on the Script). The tab isn't stored between visits.
+ */
+export const PHONE_DEFAULT_TAB: CoreTabId = 'source';
+
+/** The bottom tab bar's own words for a tab: the Source is where one writes. */
+export const PHONE_LABELS: Readonly<Record<string, string>> = { source: 'Write' };
+
+/** More's last item on the bottom tab bar: History, a dialog rather than a tab. */
+export const HISTORY_ITEM = 'history';
+
+/**
+ * The bottom tab bar (fresh-look design §6): Write, Script (a Markdown document's Preview), and
+ * Outline (not in a Markdown document), then More with Cards, Stats, Scaffold, Notes, Problems,
+ * the modules' tabs, and History, which opens its dialog. Compare and Deleted scenes lead More
+ * while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
+ */
+export function phoneTabs(
+  kind: 'fountain' | 'markdown',
+  modules: ReadonlyArray<string> = [],
+  open: { compare?: boolean; deleted?: boolean } = {},
+): { row: TabId[]; more: TabId[] } {
+  const lead = [...(open.compare ? ['compare'] : []), ...(open.deleted ? ['deleted'] : [])];
+  if (kind === 'markdown') {
+    return {
+      row: ['source', 'script'],
+      more: [...lead, 'stats', 'problems', ...modules, HISTORY_ITEM],
+    };
+  }
+  return {
+    row: ['source', 'script', 'outline'],
+    more: [...lead, 'cards', 'stats', 'scaffold', 'notes', 'problems', ...modules, HISTORY_ITEM],
+  };
+}
 
 /** The left pane's share of the width. */
 export const SPLIT = { min: 0.25, max: 0.75, step: 0.05, initial: 0.5 } as const;

@@ -469,8 +469,13 @@ test.describe('the tab row’s slot', () => {
     await expect(row.getByRole('tab', { name: /^Notes/ })).toHaveCount(0);
   });
 
-  test('chooses Cards from More, which then takes the slot', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'a phone has the slot');
+  // Below 1024px the bottom tab bar (fresh-look design §6, Task 9): a view chosen from More shows
+  // on the bar while it is the one showing, then goes back under More.
+  test('chooses Cards from More, which shows on the bar while it is chosen', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'the bottom tab bar is below 1024px');
     await start(page);
     const pane = page.locator('[data-pane]').first();
     const row = pane.getByRole('tablist');
@@ -483,17 +488,18 @@ test.describe('the tab row’s slot', () => {
         if (!(await menu.isVisible())) await more.click();
         await expect(menu).toBeVisible({ timeout: 1000 });
       }).toPass();
-    // No tab in the slot yet: Cards, Notes, Stats, and Scaffold are first in More (controller
-    // ruling 4). The sample has open notes, so Notes is named with their count.
-    await expect(row.getByRole('tab')).toHaveText(['Source', 'Script', /^Problems/, 'Outline']);
+    // The sample has open notes, so Notes is named with their count.
+    await expect(row.getByRole('tab')).toHaveText(['Write', 'Script', 'Outline']);
     await openMore();
     await expect(menu.getByRole('menuitem')).toHaveText([
       'Cards',
-      /^Notes, \d+ open$/,
       'Stats',
       'Scaffold',
+      /^Notes, \d+ open$/,
+      /^Problems(, \d+)?$/,
+      'History',
     ]);
-    // Cards from More: it takes the slot, and focus goes to its tab.
+    // Cards from More: it shows on the bar, and focus goes to its tab.
     await menu.getByRole('menuitem', { name: 'Cards' }).click();
     await expect(menu).toBeHidden();
     const cards = row.getByRole('tab', { name: 'Cards' });
@@ -501,12 +507,18 @@ test.describe('the tab row’s slot', () => {
     await expect(cards).toBeFocused();
     await expect(page.getByRole('listbox', { name: 'Cards' })).toBeVisible();
     await openMore();
-    await expect(menu.getByRole('menuitem')).toHaveText([/^Notes, \d+ open$/, 'Stats', 'Scaffold']);
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      'Stats',
+      'Scaffold',
+      /^Notes, \d+ open$/,
+      /^Problems(, \d+)?$/,
+      'History',
+    ]);
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
-    // Back to a core tab: Cards keeps the slot.
+    // Another tab chosen: Cards goes back under More.
     await row.getByRole('tab', { name: 'Outline' }).click();
-    await expect(row.getByRole('tab').last()).toHaveText('Cards');
+    await expect(row.getByRole('tab')).toHaveText(['Write', 'Script', 'Outline']);
   });
 
   test('Compare is in no row or More until a comparison opens', async ({ page, isMobile }) => {

@@ -453,4 +453,9 @@ const urgent = computed(
     min-height: 24px;
   }
 }
+/* Under the on-screen keyboard (useOnScreenKeyboard) the row gives way, as the bottom tab bar
+   does, unless something can't wait. The errors' region above it stays, to be announced. */
+:root.keyboard-open .status:not(.urgent) {
+  display: none;
+}
 </style>

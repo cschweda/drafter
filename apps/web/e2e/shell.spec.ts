@@ -652,16 +652,15 @@ test.describe('on a phone', () => {
     await expect(page.getByRole('tablist')).toBeVisible();
   });
 
-  test('shows one pane with all four tabs, and More, on a phone', async ({ page }) => {
+  // The bottom tab bar (fresh-look design §6, Task 9): Write, Script, Outline, and More, and a phone
+  // opens on Write.
+  test('shows one pane with Write, Script, Outline, and More, on a phone', async ({ page }) => {
     await expect(page.getByRole('tablist')).toHaveCount(1);
     const tabs = page.getByRole('tablist', { name: 'Panes' }).getByRole('tab');
-    await expect(tabs).toHaveText(['Source', 'Script', /^Problems(\s+\d+)?\s*$/, 'Outline']);
+    await expect(tabs).toHaveText(['Write', 'Script', 'Outline']);
     await expect(page.getByRole('button', { name: 'More tabs' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Script' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    await expect(page.getByRole('tabpanel', { name: 'Script' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Write' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tabpanel', { name: 'Write' })).toBeVisible();
   });
 
   // How far the page is wider than the screen at `width`. It loads at that
@@ -679,26 +678,24 @@ test.describe('on a phone', () => {
     });
   }
 
-  test('keeps More on a 375px screen, with the Problems count showing and a tab in the slot', async ({
+  test('keeps More on a 375px screen, with the Problems count on it and a view from More on the bar', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 740 });
     await page.reload();
-    // Twelve headings with no time of day: a count of two digits on the Problems tab.
+    // Twelve headings with no time of day: a count of two digits, on More, which holds Problems.
     const scenes = Array.from({ length: 12 }, (_, i) => `INT. ROOM ${i + 1}\n\nWaiting.\n`);
     await setText(page, scenes.join('\n'));
-    const problems = page.getByRole('tab', { name: /^Problems/ });
-    await expect(problems).toHaveText(/^Problems\s+\d\d$/);
-    const more = page.getByRole('button', { name: 'More tabs' });
+    const more = page.getByRole('button', { name: /^More tabs, \d\d problems$/ });
     await expect(more).toBeVisible();
-    const box = await more.boundingBox();
+    await expect(more.locator('[data-more-count]')).toHaveText(/^\d\d$/);
     const width = await page.evaluate(() => document.documentElement.clientWidth);
+    const box = await more.boundingBox();
     expect(box).not.toBeNull();
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
-    // And with a tab in the slot: More is its chevron alone there, still named "More tabs".
+    // A view from More is on the bar while it shows, and More still fits.
     await runCommand(page, 'Show Cards');
     await expect(page.getByRole('tab', { name: 'Cards' })).toHaveAttribute('aria-selected', 'true');
-    await expect(problems).toHaveText(/^Problems\s+\d\d$/);
     const filled = await more.boundingBox();
     expect((filled?.x ?? 0) + (filled?.width ?? 0)).toBeLessThanOrEqual(width);
   });
@@ -745,10 +742,11 @@ test.describe('on a phone', () => {
   });
 });
 
-// The tab row. On a phone (Phase 2 design §5.8): Source, Script, Problems, and Outline, then one
-// slot for another tab (a module's), then More with the rest. On a wide screen the Inspector's
-// (fresh-look design §3.3, Call 14): Script, Outline, Cards, Stats, Scaffold, then More with Notes,
-// Problems, and the modules' tabs; a tab from More shows after the row while it is the one showing.
+// The tab row. Below 1024px the bottom tab bar (fresh-look design §6, Task 9): Write, Script, and
+// Outline, then More with Cards, Stats, Scaffold, Notes, Problems, the modules' tabs, and History.
+// On a wide screen the Inspector's (fresh-look design §3.3, Call 14): Script, Outline, Cards, Stats,
+// Scaffold, then More with Notes, Problems, and the modules' tabs. Either way a tab from More shows
+// after the row while it is the one showing.
 test.describe('the tab row', () => {
   /** Turns sample modules on in Settings. */
   async function turnOn(page: Page, names: string[]) {
@@ -771,19 +769,22 @@ test.describe('the tab row', () => {
     await expect(page.getByRole('tablist')).toHaveCount(1);
     await expect(row(page).getByRole('tab')).toHaveText(
       isMobile
-        ? ['Source', 'Script', /^Problems(\s+\d+)?\s*$/, 'Outline']
+        ? ['Write', 'Script', 'Outline']
         : ['Script', 'Outline', 'Cards', 'Stats', 'Scaffold'],
     );
     // The rest wait under More until one is chosen (controller ruling 4).
     await expect(page.getByRole('button', { name: 'More tabs' })).toHaveCount(1);
   });
 
-  test('chooses a module tab from More, which then takes the slot', async ({ page, isMobile }) => {
+  test('chooses a module tab from More, which shows after the row while it is chosen', async ({
+    page,
+    isMobile,
+  }) => {
     await start(page);
     await turnOn(page, ['Scene list', 'Cast']);
     const tabs = row(page).getByRole('tab');
     const own = isMobile
-      ? [/^Source/, /^Script/, /^Problems/, /^Outline/]
+      ? [/^Write/, /^Script/, /^Outline/]
       : [/^Script/, /^Outline/, /^Cards/, /^Stats/, /^Scaffold/];
     // No tab holds the slot until one is chosen; the others, then the modules' tabs, are in More.
     await expect(tabs).toHaveText(own);
@@ -793,12 +794,14 @@ test.describe('the tab row', () => {
       isMobile
         ? [
             'Cards',
-            // The sample's open notes are counted in Notes' name.
-            /^Notes, \d+ open$/,
             'Stats',
             'Scaffold',
+            // The sample's open notes are counted in Notes' name.
+            /^Notes, \d+ open$/,
+            /^Problems(, \d+)?$/,
             /^(Scenes|Cast)$/,
             /^(Scenes|Cast)$/,
+            'History',
           ]
         : [/^Notes, \d+ open$/, /^Problems(, \d+)?$/, /^(Scenes|Cast)$/, /^(Scenes|Cast)$/],
     );
@@ -809,13 +812,8 @@ test.describe('the tab row', () => {
     await expect(chosen).toBeFocused();
     await expect(tabs).toHaveCount(own.length + 1);
     await row(page).getByRole('tab', { name: 'Outline' }).click();
-    if (isMobile) {
-      // Back to a core tab: the one chosen keeps the slot.
-      await expect(tabs.last()).toHaveText('Cast');
-    } else {
-      // In the Inspector it goes back under More.
-      await expect(tabs).toHaveText(own);
-    }
+    // Another chosen: it goes back under More.
+    await expect(tabs).toHaveText(own);
   });
 
   test('More works from the keyboard, and Escape returns focus', async ({ page, isMobile }) => {
@@ -833,7 +831,7 @@ test.describe('the tab row', () => {
     await expect(items.first()).toBeFocused();
     await page.keyboard.press('ArrowDown');
     await expect(items.nth(1)).toBeFocused();
-    const name = ((await items.nth(1).textContent()) ?? '').trim().replace(/, \d+$/, '');
+    const name = ((await items.nth(1).textContent()) ?? '').trim().replace(/, \d+( open)?$/, '');
     await page.keyboard.press('Enter');
     await expect(row(page).getByRole('tab', { name: new RegExp(`^${name}`) })).toHaveAttribute(
       'aria-selected',

@@ -345,7 +345,8 @@ test.describe('scroll sync, on a phone', () => {
     const script = (await scriptTop(page)) ?? 0;
     expect(script).toBeGreaterThan(at + 1000);
 
-    await page.getByRole('tab', { name: 'Source' }).click();
+    // Write, the Source's tab on the bottom tab bar (Task 9).
+    await page.getByRole('tab', { name: 'Write' }).click();
     await expect
       .poll(async () => Math.abs(((await sourceTop(page, SCRIPT)) ?? -9999) - script))
       .toBeLessThan(TOLERANCE);

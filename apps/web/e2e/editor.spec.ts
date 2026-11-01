@@ -20,14 +20,13 @@ const drawn = (page: Page) =>
 /** Replaces the text with `text`, typed in one go (a paste's clipboard can't be built in Firefox). */
 /**
  * Moves the one editor out of the page and back (the pane model has no swap now, fresh-look design
- * §3.2): at a phone's width the one pane shows the Script and the editor is parked; wide again, it
- * is mounted in the left pane.
+ * §3.2): at a phone's width the one pane shows Write (Task 9), so the editor moves into it; wide
+ * again, it is mounted in the left pane.
  */
 async function moveEditor(page: Page) {
   const size = page.viewportSize() ?? { width: 1280, height: 720 };
   await page.setViewportSize({ width: 700, height: size.height });
-  await expect(page.locator('[data-pane="phone"]')).toBeVisible();
-  await expect(page.locator('[data-editor-holder] .cm-content')).toBeAttached();
+  await expect(page.locator('[data-pane="phone"] .cm-content')).toBeVisible();
   await page.setViewportSize(size);
   await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
 }
@@ -229,7 +228,7 @@ test.describe('on a phone', () => {
 
   test('edits on a phone', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('tablist', { name: 'Panes' }).getByRole('tab', { name: 'Source' }).click();
+    await page.getByRole('tablist', { name: 'Panes' }).getByRole('tab', { name: 'Write' }).click();
     await expect(page.locator('.cm-content')).toBeVisible();
     await page.locator('.cm-content').click();
     // The click lands on whatever line is under it (a first visit scrolls to a scene heading, whose
@@ -242,7 +241,7 @@ test.describe('on a phone', () => {
 
   test('has no accessibility violations in the Source tab on a phone', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('tablist', { name: 'Panes' }).getByRole('tab', { name: 'Source' }).click();
+    await page.getByRole('tablist', { name: 'Panes' }).getByRole('tab', { name: 'Write' }).click();
     await expect(page.locator('.cm-content')).toBeVisible();
     expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Switch to light theme' }).click();

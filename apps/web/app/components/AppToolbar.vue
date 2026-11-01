@@ -1,12 +1,18 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
 import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
+import { runContextFor } from '~/modules/context';
+import { useModuleButtons } from '~/modules/host';
+import { runModuleAction } from '~/modules/registry';
 import { useSettings } from '~/settings/settings';
+import { EXPORTS } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
+import { TOOLBAR_FOLD_ORDER, type ToolbarItem, useToolbarFolded } from '~/utils/toolbar-fold';
 
 // The top bar (fresh-look design §3.1): one quiet 44px row. The Drafter mark and wordmark open the
 // app menu, as they always have; then the script's title, whether it has unsaved changes (Task 6),
@@ -38,10 +44,125 @@ function toggleStructure() {
   const command = commandById('toggle-structure-strip');
   if (command && (!command.enabled || command.enabled())) void command.run();
 }
+
+// Below 1024px the bar is icons; when even they don't fit (a phone at 320px with a module's buttons
+// and the unsaved dot, say), they fold into "More actions" at the bar's end, one at a time in
+// TOOLBAR_FOLD_ORDER (the theme first, Open last), measured, never counted. The mark (the Drafter
+// menu), the title and its dot, the search, and Help never fold. A folded button's tour step points
+// at More actions (tour.config.ts). The bar never scrolls sideways or widens the page (Task 6's
+// stopgap did).
+const bar = ref<HTMLElement>();
+const folded = useToolbarFolded();
+const moduleButtons = useModuleButtons();
+function applyFold(items: readonly ToolbarItem[]) {
+  const el = bar.value;
+  if (!el) return;
+  for (const item of TOOLBAR_FOLD_ORDER) el.classList.toggle(`fold-${item}`, items.includes(item));
+  el.classList.toggle('folding', items.length > 0);
+}
+function fit() {
+  const el = bar.value;
+  if (!el) return;
+  const items: ToolbarItem[] = [];
+  applyFold(items);
+  if (!wide.value) {
+    for (const item of TOOLBAR_FOLD_ORDER) {
+      if (el.scrollWidth <= el.clientWidth) break;
+      if (item === 'modules' && moduleButtons.value.length === 0) continue;
+      items.push(item);
+      applyFold(items);
+    }
+  }
+  if (items.join() !== folded.value.join()) folded.value = items;
+}
+let observer: ResizeObserver | undefined;
+let frame = 0;
+function fitSoon() {
+  cancelAnimationFrame(frame);
+  frame = requestAnimationFrame(fit);
+}
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined') {
+    // The bar's width, and its parts' (a dot, a module's button, a chip coming or going).
+    observer = new ResizeObserver(fitSoon);
+    const el = bar.value;
+    if (el) {
+      observer.observe(el);
+      for (const child of el.children) observer.observe(child);
+    }
+  }
+  fit();
+});
+onUpdated(fitSoon);
+onBeforeUnmount(() => {
+  observer?.disconnect();
+  cancelAnimationFrame(frame);
+});
+watch([wide, () => moduleButtons.value.length], fitSoon);
+
+// The folded buttons' items, in the bar's order; each runs what its button does. Export is a
+// submenu of the exports, as its button's menu is.
+const overflowButton = ref<HTMLElement | null>(null);
+const { entry, choose, onCloseAutoFocus } = useCommandMenu(overflowButton);
+const exportIds = computed(() =>
+  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].map(
+    (kind) => `export-${kind}`,
+  ),
+);
+const overflowItems = computed<DropdownMenuItem[]>(() => {
+  const out: DropdownMenuItem[] = [];
+  const has = (item: ToolbarItem) => folded.value.includes(item);
+  if (has('open')) out.push(...entry('open', 'i-lucide-folder-open'));
+  if (has('save')) out.push(...entry('save', 'i-lucide-save'));
+  if (has('export')) {
+    out.push({
+      label: 'Export',
+      icon: 'i-lucide-file-output',
+      children: [
+        ...exportIds.value.flatMap((id) => entry(id, 'i-lucide-file-output')),
+        ...entry('export-options', 'i-lucide-sliders-horizontal'),
+      ],
+    });
+  }
+  if (has('modules')) {
+    for (const module of moduleButtons.value) {
+      const action = module.action;
+      out.push({
+        label: action?.label ?? module.name,
+        icon: module.icon,
+        onSelect: () => {
+          choose(false);
+          if (action) void runModuleAction(module.name, () => action.run(runContextFor(module)));
+        },
+      });
+    }
+  }
+  if (has('focus')) {
+    out.push({
+      label: 'Focus',
+      icon: 'i-lucide-scan',
+      onSelect: () => {
+        choose(true);
+        focus.toggle();
+      },
+    });
+  }
+  if (has('theme')) {
+    out.push({
+      label: dark.value ? 'Switch to light theme' : 'Switch to dark theme',
+      icon: dark.value ? 'i-lucide-sun' : 'i-lucide-moon',
+      onSelect: () => {
+        choose(false);
+        toggleTheme();
+      },
+    });
+  }
+  return out;
+});
 </script>
 
 <template>
-  <header class="toolbar">
+  <header ref="bar" class="toolbar">
     <h1 class="sr-only">Drafter</h1>
     <!-- The mark opens the app menu; its chevron says so, on every screen. Below 400px the wordmark
          gives way to the mark, so the bar fits a 320px screen (WCAG 1.4.10). -->
@@ -62,7 +183,7 @@ function toggleStructure() {
       <ScriptsMenu v-slot="{ toggle, expanded, controls }">
         <button
           type="button"
-          class="act"
+          class="act fold-open-item"
           title="Open"
           :aria-expanded="expanded ? 'true' : 'false'"
           :aria-controls="expanded ? controls : undefined"
@@ -74,7 +195,7 @@ function toggleStructure() {
       </ScriptsMenu>
       <button
         type="button"
-        class="act"
+        class="act fold-save-item"
         title="Save"
         :aria-disabled="readOnly ? 'true' : undefined"
         data-tour="save"
@@ -86,7 +207,7 @@ function toggleStructure() {
       <ExportMenu v-slot="{ toggle, expanded, controls }">
         <button
           type="button"
-          class="act"
+          class="act fold-export-item"
           title="Export"
           :aria-expanded="expanded ? 'true' : 'false'"
           :aria-controls="expanded ? controls : undefined"
@@ -128,7 +249,7 @@ function toggleStructure() {
     <button
       id="focus-button"
       type="button"
-      class="ib"
+      class="ib fold-focus-item"
       aria-label="Focus"
       title="Focus"
       data-tour="focus"
@@ -140,13 +261,26 @@ function toggleStructure() {
     <HelpMenu />
     <button
       type="button"
-      class="ib"
+      class="ib fold-theme-item"
       :aria-label="dark ? 'Switch to light theme' : 'Switch to dark theme'"
       :title="dark ? 'Switch to light theme' : 'Switch to dark theme'"
       @click="toggleTheme"
     >
       <UIcon :name="dark ? 'i-lucide-sun' : 'i-lucide-moon'" class="icon" />
     </button>
+    <!-- What didn't fit, below 1024px: shown only while something is folded into it. -->
+    <MenuButton :items="overflowItems" :content="{ align: 'end', onCloseAutoFocus }">
+      <button
+        ref="overflowButton"
+        type="button"
+        class="ib overflow"
+        aria-label="More actions"
+        title="More actions"
+        data-tour="toolbar-more"
+      >
+        <UIcon name="i-lucide-ellipsis" class="icon" />
+      </button>
+    </MenuButton>
   </header>
 </template>
 
@@ -287,16 +421,10 @@ kbd {
 
 /* One pane, and a bar of icons, below 1024px: the labels drop and the tooltips name the buttons. */
 @media (max-width: 1023.98px) {
-  /* The bar never widens the page: with a module's buttons and the unsaved dot it may hold more
-     than a phone's width once the title has given way, and then it scrolls sideways itself. */
+  /* The bar never widens the page: what doesn't fit folds into More actions (`fit`). */
   .toolbar {
     padding: 0 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  /* Safari has no scrollbar-width. */
-  .toolbar::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
   }
   .sep.before-actions {
     display: none;
@@ -328,6 +456,23 @@ kbd {
   kbd {
     display: none;
   }
+}
+
+/* More actions shows only while something is folded into it; a folded button is gone from the
+   bar (and from the tab order), and its item is in the menu. */
+.overflow {
+  display: none;
+}
+.toolbar.folding .overflow {
+  display: flex;
+}
+.toolbar.fold-open .fold-open-item,
+.toolbar.fold-save .fold-save-item,
+.toolbar.fold-export .fold-export-item,
+.toolbar.fold-focus .fold-focus-item,
+.toolbar.fold-theme .fold-theme-item,
+.toolbar.fold-modules :deep(.modules > button) {
+  display: none;
 }
 
 /* The narrowest phones (320px, WCAG 1.4.10): a little less room for each button, never under 24px. */

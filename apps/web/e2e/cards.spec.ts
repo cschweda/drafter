@@ -211,13 +211,13 @@ test.describe('the Cards tab', () => {
     await expect(cards(page)).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Cards' })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Notes' })).toHaveCount(0);
-    // Its one view tab is Stats: under More on a phone, in the Inspector's row on a wide screen
-    // (Preview and Stats, with Problems under More).
+    // Its one view tab is Stats: under More on a phone (with Problems and History), in the
+    // Inspector's row on a wide screen (Preview and Stats, with Problems under More).
     await expect(page.getByRole('tab', { name: 'Stats' })).toHaveCount(isMobile ? 0 : 1);
     const more = page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' });
     await more.click();
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
-      isMobile ? ['Stats'] : [/^Problems/],
+      isMobile ? ['Stats', /^Problems/, 'History'] : [/^Problems/],
     );
     await page.keyboard.press('Escape');
     await page.keyboard.press('ControlOrMeta+k');

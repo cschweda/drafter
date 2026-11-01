@@ -11,6 +11,7 @@ import { restoreSelection } from '~/editor/restore-selection';
 import { sourcePane } from '~/editor/scroll-sync';
 import { useEditor } from '~/editor/session';
 import { useScrollSync } from '~/editor/use-scroll-sync';
+import { EditorView } from '@codemirror/view';
 
 // The one editor lives in module state (editor/session.ts), so it keeps its
 // text, its undo history, and its cursor wherever the Source tab goes. This
@@ -22,6 +23,18 @@ const { view } = useEditor();
 const host = ref<HTMLElement>();
 const sync = useScrollSync();
 let detach: (() => void) | undefined;
+
+// With the on-screen keyboard up (below 1024px), the element row goes under the text, on the
+// keyboard's top edge, and the line being typed is brought into view above it (Review Focus 5).
+const keyboard = useOnScreenKeyboard();
+watch([keyboard.open, keyboard.inset], async () => {
+  await nextTick();
+  if (!host.value?.contains(view.dom)) return;
+  view.requestMeasure();
+  if (view.hasFocus) {
+    view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'nearest' }) });
+  }
+});
 
 onMounted(() => {
   host.value?.append(view.dom);
@@ -48,7 +61,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="source">
+  <div class="source" :class="{ keyboard: keyboard.open.value }">
     <ElementBar v-if="props.bar" />
     <div ref="host" class="host" />
     <ElementAnnouncer />
@@ -65,5 +78,11 @@ onBeforeUnmount(() => {
 .host {
   flex: 1 1 0;
   min-height: 0;
+}
+/* The keyboard is up: the element row is the bottom row, over the keyboard. */
+.source.keyboard > :deep([data-element-bar]) {
+  order: 2;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
 }
 </style>

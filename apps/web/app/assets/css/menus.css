@@ -224,3 +224,69 @@
     animation: none;
   }
 }
+
+/* ---- Bottom sheets below 640px (fresh-look design §6; Task 9) -------------------------------- */
+
+/* On a phone every menu and the palette rise from the bottom edge, across the window, with rows
+   a finger can take (44px). A menu's popper places it beside its button with an inline transform;
+   these win over that (!important beats an inline style that isn't). The palette's search field
+   keeps focus, and Escape and a press outside close them, as before. A sheet stops short of the
+   top of what is seen, the keyboard's top edge too (`--vv-height`, useOnScreenKeyboard). A menu
+   with a submenu (an Outline row's Color…) and the submenu itself (Reka places it at a side) stay
+   popovers: a submenu laid over its sheet came and went under the pointer. */
+@media (max-width: 639.98px) {
+  [data-reka-popper-content-wrapper]:has(> .d-menu):not(
+    :has(> .d-menu[data-side="left"], > .d-menu[data-side="right"], [aria-haspopup="menu"])
+  ) {
+    /* biome-ignore lint/complexity/noImportantStyles: the popper's own place is an inline style. */
+    position: fixed !important;
+    /* biome-ignore lint/complexity/noImportantStyles: as is its inset, */
+    inset: auto 0 0 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: its least width, */
+    min-width: 0 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: and its transform. */
+    transform: none !important;
+  }
+  .d-menu:not([data-side="left"], [data-side="right"]):not(:has([aria-haspopup="menu"])) {
+    box-sizing: border-box;
+    width: 100vw;
+    max-width: none;
+    max-height: calc(var(--vv-height, 100dvh) - 56px);
+    overflow-y: auto;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    box-shadow: 0 -8px 32px rgb(0 0 0 / 0.3);
+  }
+  .d-menu [data-slot="item"] {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  /* A fixed height, so the rows don't move as the list is filtered: the field at the top of the
+     sheet, the list under it. */
+  .palette-modal {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    max-width: none;
+    height: min(32rem, calc(var(--vv-height, 100dvh) - 56px));
+    max-height: none;
+    translate: none;
+    border-width: 1px 0 0;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .palette-modal .palette {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .palette [data-slot="content"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+  .palette [data-slot="item"] {
+    min-height: 44px;
+  }
+}

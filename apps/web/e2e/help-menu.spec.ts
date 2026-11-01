@@ -134,7 +134,9 @@ test.describe('Technical details', () => {
     await expect(tab.locator('main figure')).toHaveCount(5);
     await tab.close();
     // The editor is as it was: the page is never on the writing screen.
-    await expect(editor(page)).toContainText('The Call');
+    // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+    // title page's lines may be past the lines the editor draws.
+    await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     await expect(page.locator('figure[data-diagram]')).toHaveCount(0);
   });
 });

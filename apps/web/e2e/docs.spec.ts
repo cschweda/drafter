@@ -527,7 +527,9 @@ test.describe('from the app', () => {
       await tab.close();
       // The writer's tab is where it was: the app, its script, and no leave prompt.
       await expect(page).toHaveURL(/\/$/);
-      await expect(editor(page)).toContainText('The Call');
+      // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+      // title page's lines may be past the lines the editor draws.
+      await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     }
     expect(asked).toBe(false);
   });
@@ -595,7 +597,9 @@ test.describe('from the app', () => {
     // One tab, the editor, as it was.
     expect(page.context().pages()).toEqual([page]);
     await expect(page).toHaveURL(/\/$/);
-    await expect(editor(page)).toContainText('The Call');
+    // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+    // title page's lines may be past the lines the editor draws.
+    await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
   });
 
   test('keeps what was being written, unsaved, when a page is read', async ({ page }) => {

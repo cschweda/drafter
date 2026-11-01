@@ -405,9 +405,10 @@ test.describe('Scaffold', () => {
     // Not under More, and not in the palette.
     await expect(page.getByRole('tab', { name: 'Scaffold' })).toHaveCount(0);
     await page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' }).click();
-    // A phone has Stats under More; the Inspector has it in its row, and Problems under More.
+    // Below 1024px More has Stats, Problems, and History; the Inspector has Stats in its row, and
+    // Problems under More.
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
-      isMobile ? ['Stats'] : [/^Problems/],
+      isMobile ? ['Stats', /^Problems/, 'History'] : [/^Problems/],
     );
     await page.keyboard.press('Escape');
     await page.keyboard.press('ControlOrMeta+k');

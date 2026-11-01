@@ -15,23 +15,20 @@ import { useSettings } from '~/settings/settings';
 import { useScript } from '~/storage/script';
 import {
   COMPARE_TAB,
-  coreTabs,
   DELETED_TAB,
   INSPECTOR_TOOLS_ID,
   inspectorTabs,
   TABS,
   type Tab,
   type TabId,
-  tabRow,
   VIEW_TABS,
-  viewTabs,
 } from '~/utils/panes';
 
 // A pane (fresh-look design §3.2, §3.3). Side by side, the left one (`left`) is the editor: a 36px
 // header with the script's name and the editor's toggles, the element bar, then the Source. The
 // right one (`right`) is the Inspector: a 36px header with its own tabs, More, and the view's tools,
-// then the view. A phone (`phone`) still shows one pane with the core tabs, a slot, and More, and a
-// slim bar under them (Task 9 gives it the bottom tab bar).
+// then the view. Below 1024px (`phone`) one pane shows: a slim bar with the view's tools, the view,
+// and the bottom tab bar under it (BottomTabBar, fresh-look design §6, Task 9).
 
 const props = defineProps<{
   /** `left` (the editor), `right` (the Inspector), or `phone`; it names the tabs' ids. */
@@ -103,32 +100,6 @@ function tabOf(id: TabId): Tab {
   return { id, label: module?.label ?? LABELS[id] ?? id };
 }
 
-// The phone: the core tabs (no Outline in a Markdown document), then one slot for another tab
-// (Cards, Notes, Stats, Scaffold, or a module's), then More with the rest (Phase 2 design §5.8).
-const last = useTabSlot();
-const phoneCore = computed(() => {
-  const tabs = coreTabs(kind.value);
-  // A pane still showing a tab the document has no more of keeps its button until it moves on.
-  const own = TABS.find((tab) => tab.id === props.selected);
-  return own && !tabs.includes(own) ? [...tabs, own] : tabs;
-});
-const phoneOthers = computed<Tab[]>(() => [
-  ...(comparison.value ? [COMPARE_TAB] : []),
-  ...(deletedOpen.value ? [DELETED_TAB] : []),
-  ...viewTabs(kind.value).map((tab) => tabOf(tab.id)),
-  ...moduleTabs.value.map(({ id, label }) => ({ id, label })),
-]);
-// A tab other than the core ones that the phone shows keeps the slot when it moves on.
-watch(
-  () => props.selected,
-  (tab) => {
-    if (props.pane === 'phone' && phoneOthers.value.some((other) => other.id === tab)) {
-      last.value = tab;
-    }
-  },
-  { immediate: true },
-);
-
 // The Inspector (Call 14): its row and More by the document's kind; the view it shows, when that is
 // one from More, after the row's tabs; and tabs from the row's right end into More when the header
 // is too narrow for them (`fit`, measured below).
@@ -152,9 +123,6 @@ const fit = ref(Number.POSITIVE_INFINITY);
 const folded = (tab: Tab, index: number) => index >= fit.value && tab.id !== props.selected;
 
 const row = computed(() => {
-  if (props.pane === 'phone') {
-    return tabRow(phoneCore.value, phoneOthers.value, props.selected, last.value);
-  }
   const all = inspectorRow.value;
   const out = all.filter((tab, index) => folded(tab, index));
   return {
@@ -207,7 +175,6 @@ const moreItems = computed<DropdownMenuItem[]>(() =>
 let chosenTab: TabId | null = null;
 
 function chooseMore(tab: TabId) {
-  if (props.pane === 'phone') last.value = tab;
   chosenTab = tab;
   emit('choose', tab);
 }
@@ -652,10 +619,10 @@ function onPanelKeydown(event: KeyboardEvent) {
   <section
     v-else
     class="pane"
-    :class="{ side: props.pane !== 'phone', barred, inspector }"
+    :class="{ side: props.pane !== 'phone', phone: props.pane === 'phone', barred, inspector }"
     :data-pane="props.pane"
   >
-    <div ref="head" class="tabs" :class="{ head: inspector }">
+    <div v-if="inspector" ref="head" class="tabs head">
       <div ref="tablist" role="tablist" :aria-label="props.label" class="tablist">
         <button
           v-for="(tab, index) in row.row"
@@ -794,6 +761,12 @@ function onPanelKeydown(event: KeyboardEvent) {
       <DeletedPane v-else-if="props.selected === 'deleted'" />
       <ProblemsPane v-else />
     </div>
+    <BottomTabBar
+      v-if="props.pane === 'phone'"
+      :selected="props.selected"
+      :shown="props.shown"
+      @choose="emit('choose', $event)"
+    />
   </section>
 </template>
 
@@ -882,18 +855,9 @@ function onPanelKeydown(event: KeyboardEvent) {
     border: 1px solid CanvasText;
   }
 }
-/* The phone's row of tabs, as before (Task 9 replaces it). */
-.tabs:not(.head) {
-  /* Holds the More button's hidden words, which are positioned, inside the row's own scrolling:
-     else they would stick out past the row and widen the page on a narrow phone. */
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 7px 10px 0;
-  overflow-x: auto;
-  background: var(--chrome);
-  border-bottom: 1px solid var(--line);
+/* One pane below 1024px: the slim bar, the view, and the bottom tab bar. */
+.pane.phone {
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 .tablist {
   position: relative;
@@ -910,21 +874,6 @@ function onPanelKeydown(event: KeyboardEvent) {
 .chevron {
   width: 12px;
   height: 12px;
-}
-/* A narrow phone: the row holds four tabs, the slot, and More at 375px (controller ruling 4), so
-   More is its chevron alone, still named "More tabs", and the tabs sit closer. */
-@media (max-width: 479.98px) {
-  .tabs .tab {
-    padding-inline: 7px;
-  }
-  .more-word {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
 }
 .tab {
   padding: 7px 10px 9px;

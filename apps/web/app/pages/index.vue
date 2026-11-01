@@ -26,6 +26,9 @@ const { tabs, phoneTab, split, inspect, resize } = usePanes();
 const wide = useWideScreen();
 const focus = useFocusMode();
 const shown = computed(() => (wide.value ? [tabs.value.left, tabs.value.right] : [phoneTab.value]));
+// The on-screen keyboard (below 1024px): the shell fits what is still seen above it (the root's
+// `keyboard-open`); the status bar's row and the bottom tab bar give way.
+useOnScreenKeyboard();
 
 // The skip link: the first Tab stop, which puts the cursor in the editor (Show Source, which also
 // brings the Source up on a phone) past the toolbar and the bars under it.
@@ -275,6 +278,15 @@ onBeforeUnmount(() => {
 .top {
   /* As wide as the window, never its content: a long title is cut short, not the window widened. */
   min-width: 0;
+}
+/* Fitted to the visual viewport while the on-screen keyboard is up (useOnScreenKeyboard). Fixed,
+   so a browser that pans the page to the caret moves nothing under it. */
+:root.keyboard-open .shell {
+  position: fixed;
+  top: var(--vv-top, 0);
+  right: 0;
+  left: 0;
+  height: var(--vv-height, 100dvh);
 }
 .shell.focusing {
   grid-template-rows: minmax(0, 1fr);

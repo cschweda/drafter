@@ -409,7 +409,8 @@ test.describe('on a phone', () => {
       await expect(lit(page)).toHaveCount(1);
       await expect(lit(page)).toHaveAttribute('data-tour', target);
       await expect(lit(page)).toBeVisible();
-      if (target === 'source') await expect(selected('Source')).toBeVisible();
+      // Below 1024px the bottom tab bar calls the Source "Write" (Task 9).
+      if (target === 'source') await expect(selected('Write')).toBeVisible();
       if (target === 'script') await expect(selected('Script')).toBeVisible();
       if (target === 'problems') await expect(selected('Problems')).toBeVisible();
       if (index === 4) {
@@ -422,9 +423,40 @@ test.describe('on a phone', () => {
         .click();
     }
     await expect(step(page)).toBeHidden();
-    // The tab the phone was on (the Script, on a first visit) comes back.
-    await expect(page.getByRole('tab', { name: 'Script', selected: true })).toBeVisible();
+    // The tab the phone was on (Write, on a first visit: fresh-look design §6) comes back.
+    await expect(page.getByRole('tab', { name: 'Write', selected: true })).toBeVisible();
   });
+});
+
+test.describe('on a phone, ten steps', () => {
+  // Fresh-look Task 9: the tour keeps its ten steps on a phone, and each lights something that is
+  // on the screen, inside the window, at 320px too (a folded top-bar button's step lights More
+  // actions, where it went; tour.config.ts).
+  for (const width of [320, 390]) {
+    test(`the tour keeps ten steps on a phone, each pointing at something on screen (${width}px)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await visit(page);
+      await welcome(page).getByRole('button', { name: 'Take the tour' }).click();
+      await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
+      for (let index = 0; index < 10; index++) {
+        await expect(step(page)).toContainText(`${index + 1} / 10`);
+        await expect(lit(page)).toHaveCount(1);
+        await expect(lit(page)).toBeVisible();
+        const box = await lit(page).boundingBox();
+        expect(box, `step ${index + 1}`).toBeTruthy();
+        expect(box?.x ?? -1, `step ${index + 1} left`).toBeGreaterThanOrEqual(0);
+        expect((box?.x ?? 0) + (box?.width ?? 0), `step ${index + 1} right`).toBeLessThanOrEqual(
+          width + 1,
+        );
+        await step(page)
+          .getByRole('button', { name: index === 9 ? 'Finish' : 'Next' })
+          .click();
+      }
+      await expect(step(page)).toBeHidden();
+    });
+  }
 });
 
 test.describe('on a wide screen', () => {

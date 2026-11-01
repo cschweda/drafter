@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import {
+  chooseTab,
   editor,
   palette,
   paletteInput,
@@ -310,7 +311,8 @@ test.describe('Deleted scenes', () => {
   test('a Markdown document says it has no scenes', async ({ page }) => {
     await deletedSince(page);
     await newScript(page, 'New Markdown document');
-    await page.getByRole('tab', { name: 'Deleted scenes', exact: true }).first().click();
+    // Its tab in the row, or below 1024px under More once another view shows (Task 9).
+    await chooseTab(page, 'Deleted scenes');
     await expect(panel(page)).toContainText('A Markdown document has no scenes.');
     await expect(entries(page)).toHaveCount(0);
   });
@@ -368,13 +370,15 @@ test.describe('Deleted scenes', () => {
     expect(overflow).toBe(0);
   });
 
-  test('Close puts focus on the tab that replaces it', async ({ page }) => {
+  test('Close puts focus on the tab that replaces it', async ({ page, isMobile }) => {
     await deletedSince(page);
     await (
       await viewTool(page, page.getByRole('button', { name: 'Close Deleted scenes' }))
     ).click();
     await expect(page.getByRole('tab', { name: 'Deleted scenes' })).toHaveCount(0);
-    await expect(page.locator('#panel-script')).toBeFocused();
+    // The Inspector's Script; below 1024px Write, the editor (Task 9).
+    if (isMobile) await expect(page.locator('.cm-content')).toBeFocused();
+    else await expect(page.locator('#panel-script')).toBeFocused();
   });
 
   test('Find in Deleted scenes from a Compare group focuses the entry', async ({ page }) => {

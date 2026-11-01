@@ -53,7 +53,9 @@ async function runCommand(page: Page, title: string) {
   await page.keyboard.insertText(title);
   const row = palette(page).getByRole('option', { name: title, exact: true });
   await expect(row).toBeVisible();
-  await row.click();
+  // Clicked as the row itself: with the clock stopped, a phone's palette (a bottom sheet, Task 9)
+  // can leave the rows filtered away drawn over it, so a click at its place lands on one of them.
+  await row.dispatchEvent('click');
   await expect(palette(page)).toBeHidden();
 }
 

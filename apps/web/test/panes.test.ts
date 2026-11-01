@@ -7,6 +7,8 @@ import {
   INSPECTOR_TOOLS_ID,
   inspectorTabs,
   PHONE_DEFAULT_TAB,
+  PHONE_LABELS,
+  phoneTabs,
   SPLIT,
   showInInspector,
   TABS,
@@ -54,8 +56,41 @@ describe('panes', () => {
     });
   });
 
-  test('opens on the Script pane on a phone', () => {
-    expect(PHONE_DEFAULT_TAB).toBe('script');
+  // Fresh-look design §6 (Task 9): a phone opens on Write, which fixes "the phone opened on the
+  // Script tab"; the tab isn't stored.
+  test('opens on Write (the Source) on a phone', () => {
+    expect(PHONE_DEFAULT_TAB).toBe('source');
+    expect(PHONE_LABELS.source).toBe('Write');
+  });
+
+  describe('the bottom tab bar (fresh-look design §6)', () => {
+    test("a script's bar is Write, Script, Outline; More holds Cards, Stats, Scaffold, Notes, Problems, then History", () => {
+      expect(phoneTabs('fountain')).toEqual({
+        row: ['source', 'script', 'outline'],
+        more: ['cards', 'stats', 'scaffold', 'notes', 'problems', 'history'],
+      });
+    });
+    test("a Markdown document's bar is Write and Preview; More holds Stats, Problems, History", () => {
+      expect(phoneTabs('markdown')).toEqual({
+        row: ['source', 'script'],
+        more: ['stats', 'problems', 'history'],
+      });
+    });
+    test("the modules' tabs follow Problems, and Compare and Deleted scenes lead while open", () => {
+      expect(phoneTabs('fountain', ['module-a--t'], { compare: true, deleted: true }).more).toEqual(
+        [
+          'compare',
+          'deleted',
+          'cards',
+          'stats',
+          'scaffold',
+          'notes',
+          'problems',
+          'module-a--t',
+          'history',
+        ],
+      );
+    });
   });
 
   describe('the Inspector (fresh-look design §3.3, Call 14)', () => {

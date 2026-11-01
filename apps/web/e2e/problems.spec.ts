@@ -161,11 +161,14 @@ test('counts problems on the tab and in the status bar', async ({ page }) => {
   // The Inspector keeps Problems under More: shown, its tab is in the row with its count.
   await showProblems(page);
   await setText(page, 'INT. HALL\n\nShe waits.\n\nINT. YARD\n\nHe waits.');
+  // Below 1024px the text is typed on Write, and Problems' tab is on the bar while it shows.
+  await showProblems(page);
   await expect(problemsTab(page)).toHaveText(/^Problems\s+2$/, { timeout: 1000 });
   await expect(problemsTab(page)).toHaveAccessibleName('Problems 2');
   await expect(status).toContainText('2 problems');
 
   await setText(page, 'INT. HALL\n\nShe waits.');
+  await showProblems(page);
   await expect(problemsTab(page)).toHaveText(/^Problems\s+1$/, { timeout: 1000 });
   await expect(status).toContainText('1 problem');
   await expect(status).not.toContainText('1 problems');

@@ -739,7 +739,9 @@ test.describe('on a phone', () => {
   test('is not shown on a phone, and neither is its button', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await start(page);
-    await expect(editor(page)).toContainText('The Call');
+    // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+    // title page's lines may be past the lines the editor draws.
+    await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     await expect(strip(page)).toHaveCount(0);
     // The button is there, but the phone's styles hide it.
     const button = page.getByRole('banner').locator('button.structure');

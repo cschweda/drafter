@@ -215,7 +215,9 @@ test.describe('importing a Highland or Fade In file where there is no picker', (
     await expect(alert(page)).toContainText(
       'This isn’t a Highland file Drafter can read: it isn’t a zip archive.',
     );
-    await expect(editor(page)).toContainText('The Call');
+    // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+    // title page's lines may be past the lines the editor draws.
+    await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     expect((await mine(page)).length).toBe(before);
   });
 
@@ -226,7 +228,9 @@ test.describe('importing a Highland or Fade In file where there is no picker', (
     await expect(alert(page)).toContainText(
       'This isn’t a Fade In file Drafter can read: it holds no script.',
     );
-    await expect(editor(page)).toContainText('The Call');
+    // The sample's first scene: on a phone, which opens on Write at that scene (Task 9), the
+    // title page's lines may be past the lines the editor draws.
+    await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     expect((await mine(page)).length).toBe(before);
   });
 });
