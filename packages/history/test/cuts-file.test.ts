@@ -318,6 +318,21 @@ describe('mergeCuts', () => {
     expect(mergeCuts([], [theirs], OPTS)[0]?.putBack).toBe(theirs.putBack);
   });
 
+  test('the place is the newest version’s, on either side, as the app records it', () => {
+    const mine = scene('X.', 'Mine', '2026-11-03T10:00:00.000Z');
+    const later = {
+      ...mine,
+      title: 'Theirs',
+      where: { after: 'INT. LATER - DAY', before: null },
+      cuts: [{ at: '2026-11-05T10:00:00.000Z', draft: 4 }],
+    };
+    const [m] = mergeCuts([mine], [later], OPTS);
+    expect(m).toMatchObject({ title: 'Mine', where: later.where });
+    // The same moment: the local one.
+    const same = { ...later, cuts: mine.cuts };
+    expect(mergeCuts([mine], [same], OPTS)[0]?.where).toEqual(mine.where);
+  });
+
   test('drops an incoming cut of the wrong kind, never a local one', () => {
     const script = scene('X.', 'X', '2026-11-03T10:00:00.000Z');
     const doc: CutEntry = { ...scene('Y.', 'Y', '2026-11-03T10:00:00.000Z'), kind: 'markdown' };
@@ -412,7 +427,8 @@ describe('mergeCuts', () => {
           ...mine,
           title: `Forged ${k}`,
           where: { after: `X${k}`, before: null },
-          cuts: [{ at: new Date(Date.UTC(2020, 0, 1) + k).toISOString(), draft: 1 }],
+          // Older than any local date: the newest place wins, so these never do.
+          cuts: [{ at: new Date(Date.UTC(2019, 0, 1) + k).toISOString(), draft: 1 }],
         }));
         const [m] = mergeCuts([mine], flood, OPTS);
         expect(m).toMatchObject({ title: mine.title, kind: mine.kind, where: mine.where });

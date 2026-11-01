@@ -474,8 +474,9 @@ function sideVersions(
  * list already at the cap takes no incoming dates. So an incoming file, even one crafted with
  * dates inside the day's slack, can never push a local date out.
  *
- * For an ID on both sides, the title, text, kind, place and Put back are the local entry's: an
- * incoming Put back is advice, used only for a cut this computer doesn't have. An incoming entry of
+ * For an ID on both sides, the title, text, kind and Put back are the local entry's: an incoming
+ * Put back is advice, used only for a cut this computer doesn't have. The place is the newest
+ * version's (by its latest date, the local one on a tie), as the app records a cut again. An incoming entry of
  * another kind than `options.kind`, and incoming dates more than a day past `options.now`, are
  * ignored. Each side keeps at most
  * `MAX_VERSIONS_PER_ID` versions of one ID, chosen by a fixed order, so one side can't crowd out
@@ -520,13 +521,24 @@ export function mergeCuts(
         putBack = v.putBack;
     }
     const cuts = byDate(kept);
+    // The place is the newest version's, on either side (as the app records it): the text now
+    // moves on, and Put back wants where it was last. The same moment, the trusted side's.
+    let place = first.where;
+    let placeAt = span({ ...first, cuts: (trusted[0] as Version).cuts }).latest;
+    for (const v of [...trusted, ...(trusted === ours ? other : [])]) {
+      const at = span({ ...v.entry, cuts: v.cuts }).latest;
+      if (at > placeAt) {
+        place = v.entry.where;
+        placeAt = at;
+      }
+    }
     const entry: CutEntry = {
       id,
       title: first.title,
       text: first.text,
       kind: first.kind,
       cuts,
-      where: whereJson(first.where),
+      where: whereJson(place),
     };
     if (putBack !== undefined) entry.putBack = putBack;
     merged.push(entry);
