@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+- **Every pull request is checked automatically** on GitHub (lint, build, every test suite, the trap documents, and the browser tests in Chromium), Dependabot's included.
+
 - **A second clean-room audit** (1 November 2026, `docs/clean-room-audit-2026-11-01.md`), with an index of every audit, newest first (`docs/AUDITS.md`). What it asked for is done: a film line and a film's names in tests are original now, and the Final Draft settings names say where they come from.
 
 ### Added
