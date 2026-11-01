@@ -149,11 +149,14 @@ export function desktopFiles(bridge: DesktopFilesBridge): FileAccess {
       // handler returns.
       const file = item.getAsFile();
       if (!file) return null;
+      // The drop's grant id (the preload saw the drop and told the main process), claimed for its
+      // path: the page never names a dropped file's path itself.
       let path = '';
       try {
-        path = bridge.pathOfDropped(file);
+        const id = await bridge.dropGrant(file);
+        if (id) path = await bridge.claimDrop(id);
       } catch {
-        // No path: opened from the file itself, below.
+        // Not granted (not a script, or not a real drop): opened from the file itself, below.
       }
       if (path) {
         try {

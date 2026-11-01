@@ -24,6 +24,7 @@ function fakeBridge() {
     save: [] as { name: string; extension: string }[],
     watched: [] as string[],
     stopped: [] as string[],
+    claimed: [] as string[],
   };
   const answers: (string | null)[] = [];
   const dropped = new Map<File, string>();
@@ -64,8 +65,15 @@ function fakeBridge() {
     async listBeside() {
       return [];
     },
-    pathOfDropped(file) {
-      return dropped.get(file) ?? '';
+    // A real drop's file has a grant id (`drop:<path>` here); claiming it gives the path.
+    async dropGrant(file) {
+      const path = dropped.get(file);
+      return path ? `drop:${path}` : '';
+    },
+    async claimDrop(id) {
+      asked.claimed.push(id);
+      if (!id.startsWith('drop:')) throw new Error('not-allowed: not dropped');
+      return id.slice('drop:'.length);
     },
     watch(path, onChange) {
       asked.watched.push(path);
@@ -313,12 +321,24 @@ describe('desktopFiles', () => {
       bytes: new TextEncoder().encode('Title: Dropped\n'),
       lastModified: 1234,
     });
+    // Claimed by its grant id, never by a path the page sends.
+    expect(fake.asked.claimed).toEqual(['drop:/home/w/Dropped.fountain']);
     // A dropped file with no path on disk (from another app's memory) opens, unbound.
     const loose = new File(['Title: Loose\n'], 'Loose.fountain', { lastModified: 7 });
     const picked = await files.fromDrop(itemOf(loose));
     expect(picked?.ref).toBeNull();
     expect(decoder.decode(picked?.bytes)).toBe('Title: Loose\n');
     expect(await files.fromDrop(itemOf(null))).toBeNull();
+  });
+
+  test('opens a dropped file from its bytes when its claim is refused', async () => {
+    const fake = fakeBridge();
+    const files = desktopFiles(fake.bridge);
+    const file = new File(['# Notes\n'], 'README.md', { lastModified: 3 });
+    fake.bridge.dropGrant = async () => 'stale-id';
+    const picked = await files.fromDrop(itemOf(file));
+    expect(picked).toMatchObject({ ref: null, name: 'README.md', lastModified: 3 });
+    expect(fake.asked.claimed).toEqual(['stale-id']);
   });
 
   test('opens a dropped file the desktop app won’t grant from its bytes, unbound', async () => {

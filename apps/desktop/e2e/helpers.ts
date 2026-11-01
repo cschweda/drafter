@@ -165,6 +165,54 @@ export interface Launched {
 export const editor = (page: Page) => page.locator('.cm-content');
 
 /**
+ * Drops files from disk on the window as the OS would: Chromium's own drag events (CDP's
+ * `Input.dispatchDragEvent`), trusted, with the files' paths, so the preload's listener sees a
+ * real drop.
+ */
+export async function dropFiles(page: Page, paths: string[]): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const size =
+      page.viewportSize() ??
+      (await page.evaluate(() => ({ width: innerWidth, height: innerHeight })));
+    const at = { x: Math.round(size.width / 2), y: Math.round(size.height / 2) };
+    const data = { items: [], files: paths, dragOperationsMask: 1 };
+    for (const type of ['dragEnter', 'dragOver', 'drop'] as const) {
+      await cdp.send('Input.dispatchDragEvent', { type, ...at, data });
+    }
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
+}
+
+/**
+ * A drop the page makes up itself: a file from disk (a file input gives the page a real one) in
+ * drag events the page dispatches. Untrusted, so the main process is never told of it.
+ */
+export async function dispatchDropFromPage(page: Page, path: string): Promise<void> {
+  await page.evaluate(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'e2e-drop-source';
+    input.hidden = true;
+    document.body.append(input);
+  });
+  await page.setInputFiles('#e2e-drop-source', path);
+  await page.evaluate(() => {
+    const input = document.getElementById('e2e-drop-source') as HTMLInputElement;
+    const file = input.files?.[0] as File;
+    input.remove();
+    const data = new DataTransfer();
+    data.items.add(file);
+    for (const type of ['dragenter', 'dragover', 'drop']) {
+      document.body.dispatchEvent(
+        new DragEvent(type, { dataTransfer: data, bubbles: true, cancelable: true }),
+      );
+    }
+  });
+}
+
+/**
  * Chooses the tab called `name` in the last pane (beside the Source): from the tab row, or from More when it isn't in
  * the row (a module's tab takes the slot only once it is chosen).
  */

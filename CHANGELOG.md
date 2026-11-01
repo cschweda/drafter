@@ -22,6 +22,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The desktop build makes the history package and the packages it needs before the desktop tests, which read it from its source.
 - The desktop menu test for Report a Problem… types the report before it looks for the version info, which the preview shows once there is something to send.
 
+### Security
+
+- Desktop: a dropped file is granted only when the preload saw the browser's own drop event and told the main process; the page then claims it by an opaque id, once, and can no longer hand the main process a path for a drop (security audit F2).
+
 ## [0.24.0] - 2026-11-01
 
 **Drafts and Cuts.** Start new draft keeps your script as Draft 01, 02, and so on, each with an ID of its own, and Draft by draft shows how it changed. Cuts keeps everything you cut, for good, to browse for ideas, and replaces Deleted scenes. **The desktop app now writes `<script>.cuts.md` and a `<script> drafts` folder beside your script, without asking** (for `Boca.fountain`: `Boca.fountain.cuts.md` and `Boca drafts/`); Chrome and Edge ask once for the script's folder, and other browsers keep them in the browser, with Export drafts and cuts.

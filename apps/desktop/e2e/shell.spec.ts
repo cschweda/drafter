@@ -46,8 +46,9 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
     platform: process.platform,
     // Files, and drafts and cuts beside a granted script (beside.ts).
     files: [
+      'claimDrop',
+      'dropGrant',
       'listBeside',
-      'pathOfDropped',
       'read',
       'readBeside',
       'realPath',
