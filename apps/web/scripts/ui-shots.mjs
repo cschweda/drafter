@@ -15,9 +15,10 @@
 // With `--readme`, it takes only the README's screenshots, into `<folder>` (docs/images from the
 // repository root): `drafter-<shot>-<dark|light>.png` for the editor and the page at twice the
 // pixels, Outline, Cards, the Stats grid, a Scaffold character page, Compare, and a phone, and
-// `drafter-pdf-page.png`, the sample's first script page as the PDF prints it (it needs the CLI
-// built, `pnpm -r build`, and pdftoppm). Each is squeezed with pngquant when it is installed, to
-// keep it under about 400 KB. Every shot uses Drafter's own sample, "The Call".
+// `drafter-pdf-page.png`, the script's first page as the PDF prints it (it needs the CLI built,
+// `pnpm -r build`, and pdftoppm). Each is squeezed with pngquant when it is installed, to keep it
+// under about 165 KB. Every shot uses `ui-shots-script.fountain`, "Signal Hill", an original
+// script written for these shots alone; it is not an in-app sample.
 import { execFile } from 'node:child_process';
 import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -191,7 +192,7 @@ async function squeeze(file) {
     if (error?.code === 'ENOENT') console.warn('  (pngquant is not installed; not squeezed)');
   }
   const { size } = await stat(file);
-  if (size > 400 * 1024) console.warn(`  ${file} is ${Math.round(size / 1024)} KB`);
+  if (size > 165 * 1024) console.warn(`  ${file} is ${Math.round(size / 1024)} KB`);
 }
 
 /** The view behind the editor, for a change made as typing would make it. */
@@ -219,6 +220,37 @@ const scrollSourceTo = (page, selector) =>
 
 /** The README's screenshots (see the top of this file). */
 async function readmeShots() {
+  // The screenshots' own script, written for them (ui-shots-script.fountain), longer than the
+  // sample, so the Outline, Cards, and Stats have something to show. It goes in as a writer's own
+  // script: the sample's Start your own → New screenplay, then the text, as one change.
+  const script = await readFile(resolve(import.meta.dirname, 'ui-shots-script.fountain'), 'utf8');
+  const load = async (page) => {
+    // The chip's menu can miss a click made while the page is still settling, so it tries again.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await page
+          .getByRole('button', { name: /^Sample: start your own$|^Start your own$/ })
+          .first()
+          .click();
+        await page.getByRole('menuitem', { name: 'New screenplay' }).click({ timeout: 5000 });
+        await page.locator('[data-sample-chip]').waitFor({ state: 'detached', timeout: 5000 });
+        break;
+      } catch (error) {
+        if (attempt === 3) throw error;
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(1000);
+      }
+    }
+    await page.waitForTimeout(400);
+    await page.evaluate((text) => {
+      const content = document.querySelector('.cm-content');
+      const view = (content?.cmTile ?? content?.cmView)?.view;
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+      view.dispatch({ selection: { anchor: 0 } });
+    }, script);
+    await page.waitForTimeout(800);
+  };
+  const FIRST_SCENE = "INT. JUNE'S KITCHEN - NIGHT";
   const GALLERY = [
     ['outline', (page) => run(page, 'Show Outline')],
     ['cards', (page) => run(page, 'Show Cards')],
@@ -234,31 +266,14 @@ async function readmeShots() {
       'scaffold',
       async (page) => {
         await run(page, 'Show the cast');
-        await page.getByRole('link', { name: 'MARGARET' }).first().click();
+        await page.getByRole('link', { name: 'JUNE', exact: true }).first().click();
         await page.waitForTimeout(400);
       },
     ],
     [
       'compare',
       async (page) => {
-        // A sample keeps no snapshots, so the sample's text goes into a new script of one's own
-        // first. Then a snapshot, a few changed lines, and Compare with now (History's newest).
-        const sample = await readFile(
-          resolve(import.meta.dirname, '../../../samples/screenplay.fountain'),
-          'utf8',
-        );
-        await page
-          .getByRole('banner')
-          .getByRole('button', { name: 'Sample: start your own' })
-          .click();
-        await page.getByRole('menu').getByRole('menuitem', { name: 'New screenplay' }).click();
-        await page.locator('.cm-content').filter({ hasText: 'Title:' }).waitFor();
-        await page.evaluate((text) => {
-          const content = document.querySelector('.cm-content');
-          const view = (content?.cmTile ?? content?.cmView)?.view;
-          view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
-        }, sample);
-        await page.waitForTimeout(600);
+        // A snapshot, a few changed lines, and Compare with now (History's newest).
         await run(page, 'Take snapshot…');
         const history = page.getByRole('dialog', { name: 'History' });
         await history.getByRole('textbox', { name: 'Label' }).fill('First draft');
@@ -268,14 +283,18 @@ async function readmeShots() {
         await history.waitFor({ state: 'hidden' });
         await replaceInSource(
           page,
-          'She scrapes the plate into the trash and sets it in the sink harder than she needs to.',
-          'She scrapes the plate into the trash. The fork goes in too. She leaves it there.',
+          "She writes it on the back of an envelope. Her hand is steady. Her breathing isn't.",
+          'She writes it on the back of an envelope, then underlines it twice.',
         );
-        await replaceInSource(page, 'Of course you did.', 'Of course you did. You always do.');
         await replaceInSource(
           page,
-          'A small kitchen, cleaner than it needs to be.',
-          'A small kitchen, scrubbed to within an inch of its life.',
+          "You've been off the air since 1996.",
+          'You burned down in 1996.',
+        );
+        await replaceInSource(
+          page,
+          'A farmhouse kitchen. A shortwave set on the counter, older than the fridge.',
+          'A farmhouse kitchen. A shortwave set on the counter, older than the house.',
         );
         await run(page, 'History…');
         const first = history
@@ -299,7 +318,8 @@ async function readmeShots() {
       const page = await ctx.newPage();
       await open(page);
       await shoot(page, `drafter-ide-${theme}`, async () => {
-        await run(page, 'INT. KITCHEN');
+        await load(page);
+        await run(page, FIRST_SCENE);
         await scrollSourceTo(page, '.cm-line.cm-f-scene_heading');
         await page.waitForTimeout(1200);
       });
@@ -310,7 +330,8 @@ async function readmeShots() {
       const page = await ctx.newPage();
       await open(page);
       await shoot(page, `drafter-${shot}-${theme}`, async () => {
-        await run(page, 'INT. KITCHEN');
+        await load(page);
+        await run(page, FIRST_SCENE);
         await scrollSourceTo(page, '.cm-line.cm-f-scene_heading');
         await page.waitForTimeout(300);
         await prepare(page);
@@ -326,21 +347,22 @@ async function readmeShots() {
     const page = await ctx.newPage();
     await open(page);
     await shoot(page, `drafter-phone-${theme}`, async () => {
-      await run(page, 'INT. KITCHEN');
+      await load(page);
+      await run(page, FIRST_SCENE);
       await scrollSourceTo(page, '.cm-line.cm-f-scene_heading');
       await page.waitForTimeout(600);
     });
     await ctx.close();
   }
   await safari.close();
-  // The sample's first script page as the PDF prints it (page 1 is the title page).
+  // The script's first page as the PDF prints it (page 1 is the title page).
   try {
     const root = resolve(import.meta.dirname, '../../..');
     const pdf = join(tmpdir(), `drafter-readme-${process.pid}.pdf`);
     await run$('node', [
       join(root, 'packages/cli/dist/index.js'),
       'build',
-      join(root, 'samples/screenplay.fountain'),
+      resolve(import.meta.dirname, 'ui-shots-script.fountain'),
       '--pdf',
       pdf,
     ]);

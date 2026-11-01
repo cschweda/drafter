@@ -9,7 +9,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-ide-light.png">
-  <img src="docs/images/drafter-ide-dark.png" alt="Drafter with a short screenplay open. On the left, the Fountain source, with the scene heading, notes, and character names in color and the element bar above. On the right, the same scene laid out on a sheet of paper in the Script tab.">
+  <img src="docs/images/drafter-ide-dark.png" alt="Drafter with a screenplay open. On the left, the Fountain source, with the scene heading, the synopsis, the scene color, and character names in color, and the element bar above. On the right, the same scene laid out on a sheet of paper in the Script tab.">
 </picture>
 
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[Why Drafter](https://drafter.dev/docs/why/)**
@@ -58,32 +58,32 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 ### A look around
 
-Each shot shows "The Call", Drafter's own sample, in your GitHub theme.
+Each shot shows "Signal Hill", a short screenplay written for these pictures, in your GitHub theme.
 
 <p>
-<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-outline-light.png"><img src="docs/images/drafter-outline-dark.png" width="49%" alt="The Outline tab beside the source: Act One, holding two numbered scenes, each with its page, length, running time, and the characters in it."></picture>
-<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-cards-light.png"><img src="docs/images/drafter-cards-dark.png" width="49%" alt="The Cards tab beside the source: an index card for each of the two scenes, with its heading, the first lines of the scene, and its length in pages."></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-outline-light.png"><img src="docs/images/drafter-outline-dark.png" width="49%" alt="The Outline tab beside the source: three acts of numbered scenes, each with its synopsis, its color, its page, length, and running time, and the characters in it."></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-cards-light.png"><img src="docs/images/drafter-cards-dark.png" width="49%" alt="The Cards tab beside the source: an index card for each scene, grouped by act, each with a colored band, its heading, its synopsis, and its length in pages."></picture>
 </p>
 
 **Outline and Cards.** Move a scene in either one, and the Fountain source is rewritten.
 
 <p>
-<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-stats-light.png"><img src="docs/images/drafter-stats-dark.png" width="49%" alt="The Stats tab: bars for interior and exterior, day and night scenes; a table of each character's speeches, scenes, words, dialogue share, and screen time; and a character-by-scene grid."></picture>
-<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-scaffold-light.png"><img src="docs/images/drafter-scaffold-dark.png" width="49%" alt="Scaffold's page for the character Margaret: her screen time, dialogue, and absences, who she shares scenes with, her locations, her scenes, and her lines."></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-stats-light.png"><img src="docs/images/drafter-stats-dark.png" width="49%" alt="The Stats tab: a table of each character's speeches, scenes, words, dialogue share, and screen time, and a character-by-scene grid showing who appears in each of thirteen scenes."></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-scaffold-light.png"><img src="docs/images/drafter-scaffold-dark.png" width="49%" alt="Scaffold's page for the character June: her screen time, dialogue, and longest absence, the characters she shares scenes with, and the places she appears."></picture>
 </p>
 
 **Stats and Scaffold.** Who speaks, how much, where, and for how long.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-compare-light.png">
-  <img src="docs/images/drafter-compare-dark.png" alt="The Compare tab: the kitchen scene's three changed lines since a snapshot, each old line in red with removed words struck through, and each new line in green with added words underlined.">
+  <img src="docs/images/drafter-compare-dark.png" alt="The Compare tab: the opening kitchen scene's three changed lines since a snapshot, each old line in red with removed words struck through, and each new line in green with added words underlined.">
 </picture>
 
 **Compare.** What changed since any earlier version, scene by scene.
 
 <p>
-<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-phone-light.png"><img src="docs/images/drafter-phone-dark.png" width="30%" alt="Drafter on a phone: the Fountain source of the kitchen scene, the element bar above it, and Write, Script, Outline, and More along the bottom."></picture>
-<img src="docs/images/drafter-pdf-page.png" width="39%" alt="The kitchen scene as Drafter's PDF prints it: the scene heading, action, and dialogue in Courier on a white US Letter page.">
+<picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-phone-light.png"><img src="docs/images/drafter-phone-dark.png" width="30%" alt="Drafter on a phone: the Fountain source of the opening kitchen scene, the element bar above it, and Write, Script, Outline, and More along the bottom."></picture>
+<img src="docs/images/drafter-pdf-page.png" width="39%" alt="The script's first page as Drafter's PDF prints it: two scenes of headings, action, and dialogue in Courier on a white US Letter page.">
 </p>
 
 **On a phone, and on paper.** One pane at a time on a small screen, and a PDF that looks like what readers, agents, and productions expect.
@@ -234,6 +234,10 @@ Drafter is written from scratch, from public specifications, without reading any
 
 A repository-wide audit on 27 October 2026 found no copied code. The rule binds every contributor, AI coding assistants included. [The clean-room rules](docs/DEVELOPMENT.md#clean-room-implementation) are in Developing Drafter, [Clean-room implementation](docs/clean-room.md) has the whole statement, and [the full audit](docs/clean-room-audit.md) has its evidence.
 
+---
+
+Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also builds [metaincognita](https://metaincognita.com): open-source casino simulators that show the math behind the games.
+
 ## Acknowledgments
 
 - [Fountain](https://fountain.io), the plain-text screenplay format created by John August and Stu Maschwitz, with many contributors.
@@ -245,5 +249,3 @@ A repository-wide audit on 27 October 2026 found no copied code. The rule binds 
 [MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/). See the [Changelog](CHANGELOG.md) for every release.
 
 **Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own.
-
-Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also builds [metaincognita](https://metaincognita.com): open-source casino simulators that show the math behind the games.
