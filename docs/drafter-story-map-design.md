@@ -147,6 +147,15 @@ The page is for people who have never seen a script. **Call:** none of these wor
 
 A stage play gets the same page: its acts are acts and its scenes (`##` sections, or scene headings when the play uses them) are scenes. A play's scenes usually carry no inside/outside or time of day, so **Call:** when fewer than half of the scenes have one, the strip has a **single lane**, coloured by act, the donuts are left out, and the scene rows drop the icon; a place shows when a heading or the scene's first line names one (`placeOf`), else the row is just the number, the scene's title if it has one, and what happens. Running time uses the script's rates (the dialogue estimate), as Stats does for plays.
 
+A play also changes these, in plain words:
+
+- **The label** reads "A stage play in progress" or "A finished stage play".
+- **The interval.** Between two acts, the act band has a narrow dashed "Interval" column, the strip leaves a visible gap marked "Interval" on its ruler, and the scene list has a dashed "Interval" divider. The running time says so: "about 1 hr 45 min with an interval" (in progress: "1 hr 20 min so far, plus an interval"). **Call:** a play with two or more acts has one interval, between Acts 1 and 2. A `[[Interval]]` note marks a different place, and `[[No interval]]` turns it off.
+- **Settings, not places.** Each setting is a tag sized by stage time, in the play's own words with a capital ("The front room", "The garden"). The facts grid counts settings.
+- **Who's on stage.** See below.
+
+**Call: who's on stage.** Each scene row in a play shows, in place of the chips, one short line per character on stage. Each line starts with the character's chip, and its bar runs across the scene from when they arrive to when they go. A full-width bar means they are there throughout. A bar that starts late means they enter; one that stops early means they leave. Under the lines, one plain sentence says what changed: "Dev enters halfway", "Josie comes in, then leaves", "Mr. Fell leaves near the end" (early, halfway, late or near the end, by quarter). Drafter works out the span from the scene's lines. A character arrives at the earliest of their first speech, their name in capitals in the action, or an action line that names them with "enters", "comes in", "appears" or "arrives". They go at an action line that names them with "exits", "leaves", "goes" or "goes out", or else stay to the end of the scene. "Exeunt" and "All exit" end everyone. Each moment is placed as a share of the scene's lines. The rows are a list labelled for screen readers ("On stage: Margit, Josie, Mr. Fell. Josie comes in, then leaves. Mr. Fell leaves halfway."). The bars are decoration beside that label, and colour is never the only signal, because each bar starts with a chip. The character cards' presence strips use the same spans, and so does **Who shares the stage most**: a ranked list of pairs, each with its two chips and a bar for the scenes they share. A play has fewer characters, so this list replaces the screenplay's matrix. Screenplays keep their chips. A screenplay's scene is short and cut, not staged, so arrivals and departures matter less there.
+
 ### 5.2 A script with no acts
 
 No act band and no act cards: the scenes are one run under a heading "The story", with the strip, pace, and everything else unchanged; the nav reads Shape · Characters · Scenes · Places · Threads. A script with sections at a lower level (sequences, without acts) shows its top level as the acts.
@@ -261,7 +270,7 @@ Every piece of the writer's text — title, names, places, synopses, hooks, line
 
 ## 11. What the mockup shows
 
-An invented feature, *Signal Hill* by an invented writer, Dana Morrow: three acts, 47 scenes in the in-progress version (two planned and an unwritten ending in Act 3, with a planned length of 120 pages), 50 in the finished one, twelve characters, fifteen places, eight threads (one never paid off), and eleven lines of dialogue. Its 1440 and 390 px screenshots were the review copy. The mockup links Google Fonts for convenience; the export embeds them (§10.2). It leaves out the "Show as a table" disclosures for brevity; the export has them.
+A second mockup, for a play, shows *Low Season* by an invented writer, Sam Ferris: two acts, 12 scenes (one planned and an unwritten ending), six characters, three settings and who's on stage in each scene. The first is an invented feature, *Signal Hill* by an invented writer, Dana Morrow: three acts, 47 scenes in the in-progress version (two planned and an unwritten ending in Act 3, with a planned length of 120 pages), 50 in the finished one, twelve characters, fifteen places, eight threads (one never paid off), and eleven lines of dialogue. Its 1440 and 390 px screenshots were the review copy. The mockup links Google Fonts for convenience; the export embeds them (§10.2). It leaves out the "Show as a table" disclosures for brevity; the export has them.
 
 ## 12. Testing
 
@@ -306,3 +315,5 @@ Every fixture, mockup, and screenshot uses original text written for Drafter. No
 24. Under 400 KB at 120 pages, never over 1 MB (§10.3).
 25. Over 80 scenes, each act's scene list folds into a `<details>` (§10.4).
 26. A small light print stylesheet (§10.6).
+27. A play has one interval, between Acts 1 and 2, unless a `[[Interval]]` or `[[No interval]]` note says otherwise. It shows on the act band, the strip, the scene list and the running time (§5.1).
+28. **Who's on stage:** a play's scene rows show one chip-led bar per character, from entrance to exit, with one plain sentence ("Dev enters halfway"). Spans come from first speech or mention, and from "enters" and "leaves" in the action. Pairs are ranked in a list instead of a matrix (§5.1).
