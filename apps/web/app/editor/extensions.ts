@@ -107,8 +107,31 @@ const remember = ViewPlugin.define((view) => {
  * template change call this to have the new ones read.
  */
 export function relint(): void {
-  if (active) relintView(active);
+  const view = active;
+  if (!view) return;
+  // Not in the middle of an input method's composition: the lint's dispatch would redraw the text
+  // being composed, and drop what the editor hasn't read yet. A whole replacement (select all,
+  // then the new text) is one composition that first empties the document, which changes the
+  // template the text names (a stage play's goes back to the default), and that calls this
+  // (Task 9, c). It lints a task after the composition ends, once the editor has read it.
+  if (view.composing || view.compositionStarted) {
+    if (waiting) return;
+    waiting = true;
+    view.contentDOM.addEventListener(
+      'compositionend',
+      () =>
+        setTimeout(() => {
+          waiting = false;
+          relint();
+        }),
+      { once: true },
+    );
+    return;
+  }
+  relintView(view);
 }
+/** A relint waits for a composition to end. */
+let waiting = false;
 
 const LINE_NUMBERS = lineNumbers();
 

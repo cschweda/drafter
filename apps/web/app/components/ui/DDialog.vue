@@ -54,9 +54,10 @@ function canTake(target: Element | null): target is HTMLElement {
 const passing = (target: Element) => target.closest('[role="menu"]') !== null;
 
 // The browser puts focus back itself, as a rule; this catches the case where it can't (focus was
-// left on nothing), or where it put it on a menu's row that is about to go (a quick Escape, while
-// the menu that opened the dialog is still closing), after the dialog's own close listeners have
-// had their turn.
+// left on nothing), or where it put it back on the menu's row that opened the dialog, which is
+// about to go (a quick Escape, while that menu is still closing), after the dialog's own close
+// listeners have had their turn. A row of any other menu was focused since, on purpose (More,
+// opened at once after Settings closed), and keeps it.
 function onClose() {
   const back = opener;
   setTimeout(() => {
@@ -64,7 +65,7 @@ function onClose() {
     if (dialog?.open) return;
     const active = document.activeElement;
     const placed = active && active !== document.body && !dialog?.contains(active);
-    if (placed && !passing(active)) return;
+    if (placed && (active !== back || !passing(active))) return;
     if (canTake(back) && !passing(back)) {
       back.focus();
       return;

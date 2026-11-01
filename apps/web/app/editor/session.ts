@@ -121,8 +121,11 @@ function create(): EditorSession {
     if (next !== template.value) {
       template.value = next;
       // The rules the template turns off are linted again now, not after the next edit. Not in
-      // this update: a listener may not dispatch.
-      queueMicrotask(relint);
+      // this update: a listener may not dispatch. And not in a microtask: when an input method's
+      // composition ends, the editor reads what it typed in a microtask of its own, and a dispatch
+      // before that throws the typed text away (Firefox, a stage play replaced by a stage play:
+      // the text went, Task 9). A task runs after it.
+      setTimeout(relint);
     }
   }
 

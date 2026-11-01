@@ -168,6 +168,31 @@ describe('DDialog, when it closes', () => {
     expect(document.activeElement).toBe(fallback);
   });
 
+  test('leaves focus on the row of a menu opened since it closed (phone shell:821)', async () => {
+    // Settings, opened from the Drafter menu, closes; More opens at once and its first row takes
+    // focus before the dialog's own turn comes. That row isn't the one that opened the dialog.
+    button('fallback');
+    const drafterMenu = document.createElement('div');
+    drafterMenu.setAttribute('role', 'menu');
+    document.body.append(drafterMenu);
+    const opener = button('settings', drafterMenu);
+    opener.setAttribute('role', 'menuitem');
+    const dialog = mount({ fallback: '#fallback' });
+    opener.focus();
+    dialog.showModal();
+    document.getElementById('inside')?.focus();
+    drafterMenu.remove();
+    dialog.close();
+    const more = document.createElement('div');
+    more.setAttribute('role', 'menu');
+    document.body.append(more);
+    const row = button('cards', more);
+    row.setAttribute('role', 'menuitem');
+    row.focus();
+    await afterClose();
+    expect(document.activeElement).toBe(row);
+  });
+
   test('passes over a fallback that cannot take focus (a disabled button)', async () => {
     const fallback = button('fallback');
     fallback.disabled = true;
