@@ -275,7 +275,8 @@ test.describe('drafts', () => {
     await expect(history(page).getByRole('textbox', { name: 'Label' })).toBeFocused();
     await page.keyboard.press('Enter');
     const options = history(page).getByRole('listbox', { name: 'Snapshots' }).getByRole('option');
-    await expect(options.first()).toBeVisible();
+    // The snapshot just taken, above the one Start new draft kept: the first must be the new one.
+    await expect(options).toHaveCount(2);
     const milestones = history(page).getByRole('region', { name: 'Drafts' });
     const milestone = milestones.getByRole('button', {
       name: new RegExp(`^Draft 01 · ${short(ONE)} — from Sam’s notes \\d+ \\w+ 20\\d\\d`),
