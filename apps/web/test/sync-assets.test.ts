@@ -12,7 +12,7 @@ const spell = join(repoRoot, 'packages/spell/package.json');
 const ALL = ASSETS.length + PACKAGE_ASSETS.length;
 
 describe('syncAssets', () => {
-  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, both fonts’ licenses, and the brand files', () => {
+  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, every font’s license, and the brand files', () => {
     expect(ASSETS.map(({ to }) => to)).toEqual([
       'fonts/courier-prime/CourierPrime-Regular.ttf',
       'fonts/courier-prime/CourierPrime-Bold.ttf',
@@ -24,6 +24,8 @@ describe('syncAssets', () => {
       'fonts/inter-tight/InterTight-SemiBold.ttf',
       'fonts/inter-tight/InterTight-SemiBoldItalic.ttf',
       'fonts/inter-tight/OFL.txt',
+      'fonts/anton/OFL.txt',
+      'fonts/archivo/OFL.txt',
       'favicon.svg',
       'favicon.ico',
       'favicon-unsaved.svg',

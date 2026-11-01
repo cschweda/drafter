@@ -13,6 +13,7 @@ import { scriptAuthor } from '@drafter/render-html-file';
 import type { Template } from '@drafter/templates';
 import { defaultStatus, finishedMap, gapsOf, isPlanned, isStub } from './gaps';
 import { pickQuotes, quoteCandidates, signatureLines } from './lines';
+import { mailtoOf } from './mailto';
 import { intervalOf, movesSentence, pairsOf, settingOf, stageLines, topSections } from './stage';
 import { actMood, hooksOf, sceneLine, threadsOf } from './summaries';
 import type {
@@ -177,14 +178,6 @@ function paceOf(scenes: readonly MapScene[]): string {
 
 /** Whole percents, `part` of `whole`; 0 for nothing. */
 const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
-
-/** A mail address the page may link: one `@`, no spaces, no `?` or `&`. */
-function mailOf(text: string): string | null {
-  const at = text.indexOf('@');
-  if (at <= 0 || at !== text.lastIndexOf('@') || at === text.length - 1) return null;
-  if (/[\s?&]/.test(text)) return null;
-  return `mailto:${text}`;
-}
 
 /** The characters the page shows, by screen time, with their leads, colours, and shares. */
 function charactersOf(cast: Cast, index: SceneIndex, doc: Doc, scenes: readonly MapScene[]) {
@@ -512,7 +505,9 @@ export function buildStoryMap(input: MapInput): StoryMap {
     gaps,
     interval: kind === 'play' ? intervalOf(doc, index, acts) : null,
     contact:
-      options.include.contact && contact !== '' ? { text: contact, mailto: mailOf(contact) } : null,
+      options.include.contact && contact !== ''
+        ? { text: contact, mailto: mailtoOf(contact) }
+        : null,
   };
   // Last, so every index above is the in-progress one until then.
   return status === 'finished' ? finishedMap(map) : map;

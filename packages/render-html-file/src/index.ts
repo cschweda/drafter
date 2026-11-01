@@ -14,7 +14,7 @@ export {
 export type { AttrValue } from './escape';
 export { el, escapeHtml, safeHref } from './escape';
 export type { FontStyle } from './fonts';
-export { fontFaces, stylesUsed } from './fonts';
+export { fontFaces, fontKind, stylesUsed } from './fonts';
 export { kindLine, runningTime } from './kind';
 export type { PagesHtml } from './pages';
 export { pagesHtml } from './pages';
@@ -33,7 +33,8 @@ export {
 } from './rules';
 export type { ScriptHtmlInput } from './script';
 export { renderScriptHtml } from './script';
+export { base64, cspHash } from './sha256';
 export type { ShellInput } from './shell';
-export { headerHtml, htmlShell } from './shell';
+export { headerHtml, htmlShell, langOf } from './shell';
 export type { Palette } from './style';
 export { PALETTES, STYLESHEET } from './style';

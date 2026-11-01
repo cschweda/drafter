@@ -255,6 +255,8 @@ test.describe('offline', () => {
     const links = page.locator('main a[href$=".txt"]');
     const hrefs = await links.evaluateAll((all) => all.map((a) => a.getAttribute('href') ?? ''));
     expect([...new Set(hrefs)].sort()).toEqual([
+      '/fonts/anton/OFL.txt',
+      '/fonts/archivo/OFL.txt',
       '/fonts/courier-prime/OFL.txt',
       '/fonts/inter-tight/OFL.txt',
       '/licenses/dictionary-en-gb.txt',

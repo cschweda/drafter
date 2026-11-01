@@ -14,7 +14,16 @@ export {
   quoteCandidates,
   signatureLines,
 } from './lines';
+export { mailtoOf } from './mailto';
 export { actTitle, buildStoryMap, type MapInput, STORY_MAP_LIMITS } from './model';
+export {
+  type RenderInput,
+  renderStoryMap,
+  STORY_MAP_FONT_FILES,
+  type StoryMapFace,
+  type StoryMapFonts,
+  storyMapFontFaces,
+} from './render';
 export {
   intervalOf,
   movesSentence,

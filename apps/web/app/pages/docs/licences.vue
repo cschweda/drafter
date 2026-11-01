@@ -86,7 +86,7 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
     <section>
       <h3>Courier Prime</h3>
       <p>
-        The script’s typeface, on screen and in a PDF, and the code in a Markdown document’s PDF.
+        The script’s typeface, on screen and in a PDF, the code in a Markdown document’s PDF, and the labels and lines of dialogue in a story map.
         Under the SIL Open Font License, Version 1.1.
       </p>
       <p>Copyright 2015 The Courier Prime Project Authors</p>
@@ -108,6 +108,34 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
         Terms: the same as Courier Prime’s: use, embed, and share it freely; it may not be sold by
         itself, and a changed version must take another name.
         <a href="/fonts/inter-tight/OFL.txt">Inter Tight’s licence (full text)</a>
+      </p>
+    </section>
+
+    <section>
+      <h3>Anton</h3>
+      <p>
+        The big type of a story map: its title, headings, and numbers. Under the SIL Open Font
+        License, Version 1.1, the same licence as Courier Prime’s.
+      </p>
+      <p>Copyright 2020 The Anton Project Authors</p>
+      <p>
+        Terms: the same as Courier Prime’s: use, embed, and share it freely; it may not be sold by
+        itself, and a changed version must take another name.
+        <a href="/fonts/anton/OFL.txt">Anton’s licence (full text)</a>
+      </p>
+    </section>
+
+    <section>
+      <h3>Archivo</h3>
+      <p>
+        The text of a story map. Under the SIL Open Font License, Version 1.1, the same licence as
+        Courier Prime’s.
+      </p>
+      <p>Copyright 2020 The Archivo Project Authors</p>
+      <p>
+        Terms: the same as Courier Prime’s: use, embed, and share it freely; it may not be sold by
+        itself, and a changed version must take another name.
+        <a href="/fonts/archivo/OFL.txt">Archivo’s licence (full text)</a>
       </p>
     </section>
   </article>

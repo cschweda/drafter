@@ -206,6 +206,10 @@ test.describe('without JavaScript', () => {
       'Copyright (c) Feross Aboukhadijeh',
       'Courier Prime',
       'Inter Tight',
+      'Anton',
+      'Archivo',
+      'Copyright 2020 The Anton Project Authors',
+      'Copyright 2020 The Archivo Project Authors',
       'SIL Open Font License',
     ]) {
       expect(text, line).toContain(line);
@@ -219,6 +223,20 @@ test.describe('without JavaScript', () => {
       'href',
       '/fonts/inter-tight/OFL.txt',
     );
+    // The story map's Anton and Archivo, whose licences travel with every story map's fonts.
+    for (const [name, file, from] of [
+      ['Anton', '/fonts/anton/OFL.txt', 'OFL-Anton.txt'],
+      ['Archivo', '/fonts/archivo/OFL.txt', 'OFL-Archivo.txt'],
+    ] as const) {
+      await expect(
+        page.getByRole('link', { name: new RegExp(`^${name}.*licence`, 'i') }),
+      ).toHaveAttribute('href', file);
+      const served = await page.request.get(file);
+      expect(served.ok(), file).toBe(true);
+      expect(await served.text(), file).toBe(
+        readFileSync(new URL(`../../../packages/story-map/fonts/${from}`, import.meta.url), 'utf8'),
+      );
+    }
     const ofl = await page.request.get('/fonts/inter-tight/OFL.txt');
     expect(ofl.ok()).toBe(true);
     expect(await ofl.text()).toBe(

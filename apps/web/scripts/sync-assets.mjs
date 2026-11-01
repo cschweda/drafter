@@ -43,6 +43,9 @@ export const ASSETS = [
   })),
   // Inter Tight's own licence, served verbatim (the interface's font is a Vite asset, hashed).
   { from: 'apps/web/app/assets/fonts/inter-tight/OFL.txt', to: 'fonts/inter-tight/OFL.txt' },
+  // The story map's two other typefaces' licences (its fonts are inside each story map it makes).
+  { from: 'packages/story-map/fonts/OFL-Anton.txt', to: 'fonts/anton/OFL.txt' },
+  { from: 'packages/story-map/fonts/OFL-Archivo.txt', to: 'fonts/archivo/OFL.txt' },
   ...BRAND.map((name) => ({ from: `brand/${name}`, to: name })),
 ];
 

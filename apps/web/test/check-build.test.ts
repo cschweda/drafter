@@ -196,6 +196,8 @@ describe('checking the service worker’s precache', () => {
       'licenses/dictionary-en-gb.txt',
       'fonts/courier-prime/OFL.txt',
       'fonts/inter-tight/OFL.txt',
+      'fonts/anton/OFL.txt',
+      'fonts/archivo/OFL.txt',
     ]);
   });
 
@@ -251,14 +253,17 @@ describe('checking the files the build must have', () => {
     }
     expect(REQUIRED_FILES).toContain('licenses/nspell.txt');
     expect(REQUIRED_FILES).toContain('licenses/is-buffer.txt');
-    // Both typefaces' licences, which the OFL asks to travel with the fonts.
+    // Every typeface's licence, which the OFL asks to travel with the fonts: the story map's
+    // Anton and Archivo too, since every story map carries them.
     expect(REQUIRED_FILES).toContain('fonts/courier-prime/OFL.txt');
     expect(REQUIRED_FILES).toContain('fonts/inter-tight/OFL.txt');
+    expect(REQUIRED_FILES).toContain('fonts/anton/OFL.txt');
+    expect(REQUIRED_FILES).toContain('fonts/archivo/OFL.txt');
     // Inter Tight's four styles, which a Markdown document's PDF fetches.
     for (const style of ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic']) {
       expect(REQUIRED_FILES).toContain(`fonts/inter-tight/InterTight-${style}.ttf`);
     }
-    expect(REQUIRED_FILES).toHaveLength(14);
+    expect(REQUIRED_FILES).toHaveLength(16);
   });
 
   test('passes when every one is there', async () => {
