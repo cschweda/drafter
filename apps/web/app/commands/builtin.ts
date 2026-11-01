@@ -32,6 +32,7 @@ import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
+import { isDesktopBuild } from '~/desktop';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
 import { firstSceneStart } from '~/editor/first-scene';
@@ -75,7 +76,14 @@ import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { requestTour } from '~/tour/state';
 import { updateCheckOpen } from '~/update/use-check';
 import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
-import { COMMAND_DATA, HELP_PAGES, helpHref, MARKDOWN_ACTIONS } from './data';
+import {
+  COMMAND_DATA,
+  commandsFor,
+  DOWNLOAD_PAGE,
+  HELP_PAGES,
+  helpHref,
+  MARKDOWN_ACTIONS,
+} from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
@@ -409,6 +417,8 @@ export function registerBuiltinCommands(): void {
         { run: () => void window.open(helpHref(page), '_blank') },
       ]),
     ),
+    // Help → Download the desktop app: the Download page, in a new tab like the help pages. Web only.
+    [DOWNLOAD_PAGE.id]: { run: () => void window.open(helpHref(DOWNLOAD_PAGE), '_blank') },
     // Help → Sample scripts: a tiny sample of each kind, as a new script of the writer's own with no file, opened
     // unchanged (its text is where "changed" is measured from). The script that was open is kept, as for any switch.
     ...Object.fromEntries(
@@ -878,8 +888,9 @@ export function registerBuiltinCommands(): void {
   for (const id of Object.keys(behaviors)) {
     if (!known.has(id)) throw new Error(`The command “${id}” has behavior but no data (data.ts).`);
   }
+  // The desktop app leaves out what is only for the web (Download the desktop app).
   registerCommands(
-    COMMAND_DATA.map((data): Command => {
+    commandsFor(isDesktopBuild() ? 'desktop' : 'web').map((data): Command => {
       const behavior = behaviors[data.id];
       if (!behavior) throw new Error(`The command “${data.id}” has data but no behavior.`);
       const { liveTitle, ...rest } = behavior;

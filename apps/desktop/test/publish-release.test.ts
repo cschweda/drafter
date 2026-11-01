@@ -108,10 +108,7 @@ const calls = () =>
 /** A release's files, as the Linux and Windows jobs leave them, with feeds that agree. */
 function files(version = '1.2.3', skip: string[] = []) {
   const linux = { image: 'Drafter-x86_64.AppImage', deb: `Drafter-${version}-linux-amd64.deb` };
-  const windows = [
-    `Drafter-${version}-windows-x64-setup.exe`,
-    `Drafter-${version}-windows-arm64-setup.exe`,
-  ];
+  const windows = [`Drafter-${version}-windows-x64-setup.exe`];
   const write = (name: string, text: string) => {
     if (!skip.includes(name)) writeFileSync(join(release, name), text);
   };
@@ -155,7 +152,6 @@ describe.skipIf(!runnable)('publish-release.sh', () => {
     expect(made?.assets.map((a) => a.name).sort()).toEqual(
       [
         'Drafter-1.2.3-linux-amd64.deb',
-        'Drafter-1.2.3-windows-arm64-setup.exe',
         'Drafter-1.2.3-windows-x64-setup.exe',
         'Drafter-x86_64.AppImage',
         'latest-linux.yml',
@@ -172,31 +168,29 @@ describe.skipIf(!runnable)('publish-release.sh', () => {
   });
 
   test('makes nothing when the Windows files are missing (the Linux ones alone are no release)', () => {
-    files('1.2.3', ['Drafter-1.2.3-windows-arm64-setup.exe']);
+    files('1.2.3', ['Drafter-1.2.3-windows-x64-setup.exe']);
     // latest.yml names it, so the feed check is the first to refuse.
     let run = publish('v1.2.3');
     expect(run.status).not.toBe(0);
-    expect(run.stderr).toMatch(/arm64-setup\.exe: named in latest\.yml but not in/);
-    for (const name of ['Drafter-1.2.3-windows-x64-setup.exe', 'latest.yml']) {
-      execFileSync('rm', ['-f', join(release, name)]);
-    }
+    expect(run.stderr).toMatch(/x64-setup\.exe: named in latest\.yml but not in/);
+    execFileSync('rm', ['-f', join(release, 'latest.yml')]);
     run = publish('v1.2.3');
     expect(run.status).not.toBe(0);
     expect(calls()).toEqual([]);
     expect(state().releases).toEqual([]);
   });
 
-  test('makes nothing when latest.yml lists only one processor’s installer', () => {
+  test('makes nothing when latest.yml lists no x64 installer', () => {
     files();
     const feed = readFileSync(join(release, 'latest.yml'), 'utf8');
-    // The arm64 entry dropped from the feed (its file still in the folder).
+    // The x64 entry dropped from the feed (its file still in the folder).
     writeFileSync(
       join(release, 'latest.yml'),
-      feed.replace(/ {2}- url: Drafter-1\.2\.3-windows-arm64-setup\.exe\n(?: {4}.*\n)+/, ''),
+      feed.replace(/ {2}- url: Drafter-1\.2\.3-windows-x64-setup\.exe\n(?: {4}.*\n)+/, ''),
     );
     const run = publish('v1.2.3');
     expect(run.status).not.toBe(0);
-    expect(run.stderr).toMatch(/names no installer for arm64/);
+    expect(run.stderr).toMatch(/names no installer for x64/);
     expect(calls()).toEqual([]);
   });
 

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { HELP_PAGES } from '../app/commands/data';
+import { DOWNLOAD_PAGE, HELP_PAGES } from '../app/commands/data';
 import { HELP_MENU_COMMANDS, HELP_MENU_ICONS } from '../app/commands/help-menu';
 
 // Help is its own menu in the top bar (fresh-look Task 3b; the maintainer, 2026-10-31: "should be
@@ -11,10 +11,11 @@ const source = (name: string) =>
   readFileSync(new URL(`../app/components/${name}`, import.meta.url), 'utf8');
 
 describe('the Help menu', () => {
-  test('lists the tour, every help page, the samples, Check for updates, and About, in that order', () => {
+  test('lists the tour, every help page, Download, the samples, Check for updates, and About, in that order', () => {
     expect(HELP_MENU_COMMANDS).toEqual([
       'take-the-tour',
       ...HELP_PAGES.map((page) => page.id),
+      DOWNLOAD_PAGE.id,
       'reset-sample',
       'check-for-updates',
       'about-drafter',

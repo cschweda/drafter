@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { listZip, readEntry } from '../../../packages/archive/src/zip';
-import { COMMAND_DATA } from '../../web/app/commands/data';
+import { COMMAND_DATA, commandsFor } from '../../web/app/commands/data';
 import {
   ABOUT_PATH,
   aboutShown,
@@ -35,18 +35,21 @@ test('has File, Edit, View, Go, and Help, with an item for every command', async
   // The page's list has arrived: every command Drafter has is in the menu, once.
   await expect
     .poll(async () => (await menuItems(app)).map((i) => i.id), { timeout: 15_000 })
-    .toEqual(expect.arrayContaining(COMMAND_DATA.map((c) => c.id)));
+    .toEqual(expect.arrayContaining(commandsFor('desktop').map((c) => c.id)));
   const ids = (await menuItems(app)).map((i) => i.id);
   expect(new Set(ids).size).toBe(ids.length);
   // Keys are shown, not registered, so the page's own handlers keep them.
   const items = new Map((await menuItems(app)).map((i) => [i.id, i]));
-  for (const data of COMMAND_DATA.filter((c) => c.keys)) {
+  for (const data of commandsFor('desktop').filter((c) => c.keys)) {
     const item = items.get(data.id);
     expect(item?.accelerator, data.id).not.toBe('');
     expect(item?.registerAccelerator, data.id).toBe(false);
   }
   expect(items.get('save')?.accelerator).toBe('CmdOrCtrl+S');
   expect(items.get('new-screenplay')?.accelerator).toBe('CmdOrCtrl+Alt+N');
+  // Web-only commands (Download the desktop app) stay out of the desktop menu.
+  for (const data of COMMAND_DATA.filter((c) => c.webOnly))
+    expect(items.has(data.id), data.id).toBe(false);
   expect(errors).toEqual([]);
 });
 

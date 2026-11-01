@@ -664,7 +664,9 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 **Built (2026-10-31): the fresh look, v0.23.0** ([its design](drafter-fresh-look-design.md); the calls as they landed are in `docs/DECISIONS.md`, under "A fresh look"). Calm, paper-first colours with one goldenrod accent; a 44px top bar with the Drafter menu, a Help menu of its own, and an **Unsaved** mark after the title; the editor always on the left and every other view in the Inspector, whose tools fold into "⋯" when tight; the element bar in the editor's header, folding into More instead of clipping; paper pages at full height, with a Page colour setting; a quiet status bar; one button, menu, and dialog style, and Settings in sections (a jump list over one column, so nothing is hidden); Stats and Scaffold as designed pages; and below 1024px one pane with a bottom tab bar (Write, Script, Outline, More), bottom-sheet menus, More actions in the top bar, and the element row above the on-screen keyboard. Focus mode fits the window, and a fresh visit follows the system's appearance. The design's six bugs are fixed, with a Firefox blank-editor bug, a focus slip after a dialog closes, and the Export submenu's mouse bug found on the way. Left for later (`docs/DEFERRED.md`): dialogs as full-height sheets on a phone, and a check of the element row on a real phone's keyboard. No plan's number changes.
 
-**The `.drafter` project package (v0.28.0), optional:** one file holding a whole project for sharing or archiving: a documented, open zip (as a `.highland` file is) with the `.fountain` file, its drafts folder, its Cuts file, its workbook, and its voice notes' audio. File → **Export project…** writes one and **Open project…** reads one. It is never the default: writing and Save stay a plain `.fountain` file, and every file inside the package is plain text or audio, readable without Drafter. To be designed after the Workbook, whose files it carries.
+**Decided (2026-10-31, the maintainer's word: "add the production features even in this free version. Let's make it for pros"): Production is v0.26.0, free, after Novel.** Revision colors and marks, locked pages and scene numbers, OMITTED scenes, a revised-pages PDF, the breakdown report, and sides move up from Phase 4. Everything after moves down one: Plan E part 2 is **v0.27.0**, the Workbook (Plan F) **v0.28.0**, the `.drafter` package **v0.29.0**, and Plans G and H **v0.30.0** and **v0.31.0**. There is no paid version (the maintainer, 2026-10-31: "I'm making this all free").
+
+**The `.drafter` project package (v0.29.0), optional:** one file holding a whole project for sharing or archiving: a documented, open zip (as a `.highland` file is) with the `.fountain` file, its drafts folder, its Cuts file, its workbook, and its voice notes' audio. File → **Export project…** writes one and **Open project…** reads one. It is never the default: writing and Save stay a plain `.fountain` file, and every file inside the package is plain text or audio, readable without Drafter. To be designed after the Workbook, whose files it carries.
 
 ### Plan E, part 1 — v0.21.0: Scaffold and the Stats tab
 
@@ -686,7 +688,11 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Scaffold's figures match the Stats tab's and the scene index's on fixtures, and its panel and its character and location pages work fully by keyboard.
 - axe passes on every Stats section, the grid, and Scaffold, in both themes at both widths.
 
-### Plan E, part 2 — v0.26.0: Storylines, the map, and pacing
+### Production — v0.26.0: Revisions, locked pages, breakdowns, and sides
+
+**Status:** to be designed (decided 2026-10-31, above). **Scope:** colored revision sets in the industry order, with a mark in the margin by each changed line, set from History or Compare; locked pages, with added pages numbered 12A and 12B; locked scene numbers, with added scenes numbered 5A and removed ones kept as OMITTED; scene numbers that start anywhere; a PDF of only the revised pages, each with its color and date in the header; a breakdown report (each scene's location, time of day, cast, and length) to export; and sides, one character's scenes for an actor. The marks are kept in the file as Fountain-compatible metadata (§5.3). Final Draft round-trip of revisions follows only what public documentation describes.
+
+### Plan E, part 2 — v0.27.0: Storylines, the map, and pacing
 
 **Scope:** storylines (§13) with the Timeline view and the margin marks; the script map (§14), as the Structure strip's **Color by** (Call 38); the pacing view and its guides (§15), Drafter's own and generic (the controller overruled a fifteen-mark guide); and the Stats tab's Storylines and Pacing sections (§16).
 
@@ -696,7 +702,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The strip's Color by, the Timeline, and the pacing table work fully by keyboard, and each chart has its table.
 - axe passes on the Storylines and Pacing sections, the Timeline, the margin marks, and the strip's Color by, in both themes at both widths.
 
-### Plan F — v0.27.0: The Workbook (was the Beat Board)
+### Plan F — v0.28.0: The Workbook (was the Beat Board)
 
 **Status:** to be designed (decided 2026-10-30, above): the story bible and scene cards, the pasted-notes landing spot, the watched notes folder, and on-device voice notes. Its design replaces the Beat Board scope below, which it takes in.
 
@@ -709,7 +715,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - Placing a card makes a scene or a synopsis in one undo.
 - axe passes on the board and the list, in both themes at both widths.
 
-### Plan G — v0.29.0: Reader notes
+### Plan G — v0.30.0: Reader notes
 
 **Scope:** Send for notes (§18.1); reader mode and `/read` (§18.2); the comment margin, also in the writer's Script pane; replies; the merge with its preview (§18.3).
 
@@ -720,7 +726,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The round trip (send, comment, merge, reply, send back) works end to end in a test.
 - axe passes on reader mode, the margin, and the merge preview.
 
-### Plan H — v0.30.0: Reference
+### Plan H — v0.31.0: Reference
 
 **Scope:** the Reference tab (§19), the cheat sheet made from the same source, the template's rules, and Reference topics in the palette.
 

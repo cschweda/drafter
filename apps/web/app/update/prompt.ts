@@ -1,9 +1,9 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useFiles } from '~/storage/files';
 import { save } from '~/storage/save';
 import { useScript } from '~/storage/script';
 import { createUpdateFlow } from './flow';
-import { applyUpdate } from './state';
+import { applyingUpdate, applyUpdate, setBeforeReload } from './state';
 
 // What "A new version of Drafter is ready" has been told, kept for the visit and not by the
 // component: `UpdatePrompt` sits in the toolbar's part of the page, which focus mode takes away,
@@ -28,6 +28,15 @@ export function useUpdateFlow(): ReturnType<typeof createUpdateFlow> {
       flush,
       apply: applyUpdate,
     });
+    setBeforeReload(flush);
+    // Nothing typed while the new version is fetched and takes over is lost to the reload.
+    watch(
+      flow.stage,
+      (stage) => {
+        applyingUpdate.value = stage === 'applying';
+      },
+      { flush: 'sync' },
+    );
   }
   return flow;
 }

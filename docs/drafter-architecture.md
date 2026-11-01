@@ -168,7 +168,7 @@ Drafter saves the way a desktop app does: the file is the document, and Drafter 
 
 1. **The file** — a script is a `.fountain` file you save, like any document. `Mod+S` saves and `Mod+Shift+S` saves as. Where the browser allows it, Drafter writes straight back to the file you opened or saved, such as `~/scripts/boca.fountain`. Where it doesn't, Save downloads a fresh copy of the file.
 2. **The recovery copy: IndexedDB (Dexie)** — kept in every browser, whether or not the script has a file, and written as you type. Holds the project list, each project's source, a rolling snapshot history, templates, and UI state. It's what brings your work back after a crash, a killed tab, or a closed window, and it makes "close the tab, come back tomorrow" work without any file dialog.
-3. **Export** — one-click to `.fountain` (canonical), `.fdx` (Final Draft), `.pdf`, `.html` (standalone, self-contained), `.txt` (fixed-width), `.md` outline, `.json` (CST). Import from `.fountain`, `.fdx`, `.txt`. PDF import is out of scope through Phase 4 — it is a bottomless well.
+3. **Export** — one-click to `.fountain` (canonical), `.fdx` (Final Draft), `.pdf`, `.html` (standalone, self-contained), `.txt` (fixed-width), `.md` outline, `.json` (CST). Import from `.fountain`, `.fdx`, `.txt`. PDF import, for a script PDF with real text (not a scan), is planned for Phase 3 (the maintainer, 2026-10-31: every app Drafter is compared with imports PDF); scanned PDFs and OCR stay out of scope.
 
 **6.1 The honest browser table.** "Local-first forever" is only as strong as the browser's storage guarantees, and those differ a lot. This table is also user documentation; it should appear in the app's docs.
 
@@ -335,7 +335,7 @@ Honest competitive framing — Beat already does a lot, and does it well on macO
 
 The ordering principle: **the reasons to choose Drafter over Beat must be on screen at the first public release.** That means the Problems pane, the stage-play template, and accessibility move up, Final Draft files follow the outline, and radio and TV formats come later. The [README's roadmap](../README.md#roadmap) has the summary, with what has shipped.
 
-**Not planned:** accounts, a Drafter server, or sync through Drafter. From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6). PDF import is out of scope through Phase 4.
+**Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. (Later, free: real-time co-writing through a relay that passes only end-to-end encrypted changes, opt-in, self-hostable; the maintainer, 2026-10-31.) From Phase 1, a script saved in a folder that Dropbox, Google Drive, iCloud, or Syncthing keeps in sync syncs like any other file, in browsers that save in place (§6).
 
 ### Phase 0 — Engine (no UI)
 
@@ -410,10 +410,11 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - **A fresh look** (v0.23.0, [its design](drafter-fresh-look-design.md)): calm and paper-first, two bars, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, and a tab bar on a phone.
 - **Drafts and Cuts** (v0.24.0, [its design](drafter-drafts-and-cuts-design.md)): numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind.
 - **Novel** (v0.25.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
-- Plan E, part 2 (v0.26.0): storylines, the script map as the Structure strip's Color by, and pacing.
-- **The Workbook** (v0.27.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
-- **The `.drafter` project package** (v0.28.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
-- Plans G and H (v0.29.0 and v0.30.0; Phase 2 design §22): reader notes and the Reference tab.
+- **Production** (v0.26.0), free for everyone: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (A-scenes), scenes marked OMITTED, scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides (one character's scenes for an actor). Moved up from Phase 4 at the maintainer's word (2026-10-31: "Let's make it for pros"). To be designed.
+- Plan E, part 2 (v0.27.0): storylines, the script map as the Structure strip's Color by, and pacing.
+- **The Workbook** (v0.28.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
+- **The `.drafter` project package** (v0.29.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
+- Plans G and H (v0.30.0 and v0.31.0; Phase 2 design §22): reader notes and the Reference tab.
 
 **To come**
 
@@ -440,16 +441,13 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 4 — Craft
 
 - The remaining lint rules.
-- Revision marks and colored-page PDF.
-- Production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere.
+- (Revision marks, colored-page PDF, and production revisions moved up to Phase 2 as v0.26.0.)
 - Alternate versions of a line, switchable in place.
 - A "clean" display mode that hides Fountain markers without changing the file.
 - Table read, using speech synthesis with a different voice per character.
 - A character pass: one character's lines alone, with their cues and context, to read a voice straight through.
 - Story order and script order: arrange the scenes of a nonlinear script in story time, and compare the two orders.
-- A breakdown report: locations, time of day, and cast for each scene, to export for production.
 - Accept or reject a co-writer's edited copy change by change, from Compare.
-- One character's dialogue, exported for an actor.
 - A PWA install flow. (Offline dictionary caching, planned here, shipped early with spellcheck in v0.14.0.)
 
 ### Phase 5 — Community

@@ -38,6 +38,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **The guided tour** still has ten steps, now pointing at the new places. On a phone, a step whose button has folded away points at More actions.
 - `modules`: a module's frame gets the new colour names (`--surface`, `--raised`, `--border`, `--accent-text`), and still gets the old ones (`--chrome`, `--chrome-2`, `--line`, `--heading`), so older modules keep their colours. The app itself no longer has the old names.
 - README: new screenshots of the fresh look.
+- `docs/DEFERRED.md`: a **Flaky tests seen in CI** list, starting with the desktop Linux accessibility test for the modules folder's settings, which failed once on the v0.22.2 tag and passed on a re-run.
 
 ### Fixed
 
@@ -49,6 +50,41 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **In Firefox, replacing a stage play's text no longer leaves the editor blank.** Pasting or typing over the whole of a stage play, which Firefox sends as one composition, lost the new text.
 - **Focus stays in a menu you open just as a dialog closes**, instead of jumping to the Drafter menu.
 - **The Export submenu in More actions opens with a mouse.** On a phone-sized window it opens to the left, and a mouse that went straight to it, or a click in Firefox, closed it again. A tap and the keyboard always worked.
+
+## [0.22.2] - 2026-10-31
+
+**Free, with no catch, and a page to download it.** A Why Drafter page says what Drafter is (free, no login, private, offline) and how it compares with Final Draft and the others; a Download page has the Windows and Linux apps, ready for a Mac one; and the roadmap brings production features forward, free.
+
+### Added
+
+- `apps/web`: a **Download page** ([drafter.dev/docs/download](https://drafter.dev/docs/download/)) for Windows (the x64 installer, with Windows on Arm and SmartScreen explained) and Linux (the `.deb` and the AppImage, each with its one-line how-to), and the Mac's build-it-yourself steps until a signed download comes. The links are made at build time from the version, so the page asks nothing of GitHub when it loads, with the latest release beside them; the reader's own system is outlined. **Help → Download the desktop app** opens it, on the web only (the desktop app leaves the entry out), and the help index lists it. README's Platforms badge and its Linux and Windows sections link to it.
+- `apps/web`: a **Why Drafter** help page ([drafter.dev/docs/why](https://drafter.dev/docs/why/)): free with no catch, no login ever, the big features, and How Drafter compares, the README's table as a real table that scrolls sideways on a phone, with ✓ and ✗ read as "yes" and "no". It is first in the help pages, so the help index, the docs bar, Help in the menu, and the palette list it. README's comparison links to it.
+
+### Changed
+
+- `apps/desktop`: the menu test expects every command but the web-only ones (Download the desktop app), and checks those stay out of the desktop menu.
+- Roadmap: **production features are free, and come early**: revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides move from Phase 4 to **v0.26.0**, after Novel. Storylines and pacing, the Workbook, the `.drafter` package, and Plans G and H each move down one (v0.27.0 to v0.31.0). README, the architecture document, the Phase 2 design, and DECISIONS say so.
+- README: **"Open it and write"** near the top, saying plainly that Drafter is free with no catch (no tier, trial, ads, or data collected), and: no login ever, instant, open, private (no cookies, analytics, tracking, or telemetry), offline, no forced updates, and Final Draft files in and out.
+- README: a **Made by Christopher Schweda (cschweda)** line under the screenshot, linking to [metaincognita](https://metaincognita.com), the maintainer's other open-source projects.
+- README: **Drafter™**: the name is marked as a trademark at its first mention, and the License section says the MIT License covers the code, not the Drafter name or logo, so a changed copy needs a name of its own.
+- README: **the big features**, near the top, and **How Drafter compares**, a table of Drafter beside Final Draft 13, WriterDuet, Fade In, Highland Pro, Arc Studio, and Celtx from each maker's own pages (price, sign-in, open source, platforms, formats, production, writing tools, co-writing), with Drafter's planned features marked by version.
+- Roadmap: **PDF import** (a script PDF with real text) is planned for Phase 3, no longer out of scope.
+- Roadmap: **real-time co-writing, free**, as a Later item: an invite link, no account, and a relay that passes only end-to-end encrypted changes and that anyone can run.
+- README: **no paid version, ever**: everything Drafter does is free, so "Not planned" now lists a paid version alongside accounts and a Drafter server.
+
+## [0.22.1] - 2026-10-31
+
+**Reload lands on the newest version, and says so.** Choosing Reload on "A new version of Drafter is ready" no longer seems to do nothing; and the Windows on Arm installer is no longer built.
+
+### Changed
+
+- `apps/desktop`: **the Windows on Arm (arm64) installer is no longer built**, for now; it may come back later. Windows 11 on Arm PCs (a Snapdragon laptop, or Windows 11 in a VM on an Apple silicon Mac) can use the x64 installer, which Windows runs under its built-in emulation. CI drops the `windows-arm` job, so a release waits for the Linux and Windows jobs and carries five files.
+- README: **badges at the top**: the latest release, the desktop build, the Netlify deploy, the licence (MIT), drafter.dev, the platforms, and Fountain.
+- `apps/desktop`: the spelling test no longer looks for the dictionary's request, which the checker could make before the test was listening (it failed now and then on the Mac and Windows runners); the misspelling mark still shows the bundled dictionary loaded.
+
+### Fixed
+
+- **Reload on "A new version of Drafter is ready" now always lands on the new version.** drafter.dev is updated often, and a tab that offered one version could find a newer one on the server by the time you chose Reload, Reload anyway, or Save first: the page reloaded into the version it had been offered, then found the newer one and made the same offer again, with your text back as it was, so it looked as if the button had done nothing. Reload now fetches the newest version first (waiting at most a few seconds, and going on with the one it has when offline), and if the new version doesn't take over within a few seconds the page reloads anyway, so a choice to reload is never left looking ignored. While it works, the toast says **Getting the newest version…** (its buttons can't be pressed twice, and the script can't be typed in, so nothing typed is lost to the reload), and once the page is back on the new version a brief note, **Drafter is up to date.**, says it worked and fades after a few seconds (it just goes, with reduced motion); an ordinary reload, or one that didn't reach the new version, says nothing. Your unsaved changes are still kept in the recovery copy, and the browser's own "leave this page?" question still doesn't appear after Reload anyway.
 
 ## [0.22.0] - 2026-10-30
 
@@ -949,7 +985,9 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.2...HEAD
+[0.22.2]: https://github.com/cschweda/drafter/compare/v0.22.1...v0.22.2
+[0.22.1]: https://github.com/cschweda/drafter/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/cschweda/drafter/compare/v0.21.1...v0.22.0
 [0.21.1]: https://github.com/cschweda/drafter/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/cschweda/drafter/compare/v0.20.0...v0.21.0

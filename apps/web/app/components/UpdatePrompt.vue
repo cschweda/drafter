@@ -4,6 +4,7 @@ import { modalOpen, tourShowing } from '~/tour/state';
 import {
   actionLabel,
   anywayLabel,
+  applyingMessage,
   DOWNLOADING_MESSAGE,
   INSTALL_FAILED,
   offerText,
@@ -11,6 +12,7 @@ import {
 } from '~/update/flow';
 import { clear, later, useUpdateFlow } from '~/update/prompt';
 import { installError, needRefresh, updateKind } from '~/update/state';
+import { justUpdated, UP_TO_DATE } from '~/update/updated';
 import { takeUpdate } from '~/update/use-check';
 
 // "A new version of Drafter is ready" (Phase 1 design §11): a toast with Reload (Restart on the desktop app, Get it for a .deb), shown when the
@@ -67,6 +69,33 @@ watch(flow.stage, async (now) => {
   (now === 'confirm' ? saveButton.value : reloadButton.value)?.focus();
 });
 
+// After a reload the writer chose, a brief note that it worked. Never while an offer is up: then
+// this is not the newest version (the new one never took over, or there is a newer one still).
+/** How long the note stays before it goes (it fades out, but not with reduced motion). */
+const UPDATED_MS = 4000;
+let updatedTimer: ReturnType<typeof setTimeout> | undefined;
+watch(
+  justUpdated,
+  (now) => {
+    clearTimeout(updatedTimer);
+    if (now) {
+      updatedTimer = setTimeout(() => {
+        justUpdated.value = false;
+      }, UPDATED_MS);
+    }
+  },
+  { immediate: true },
+);
+onBeforeUnmount(() => clearTimeout(updatedTimer));
+
+const applying = computed(() => flow.stage.value === 'applying');
+
+function message(): string {
+  if (flow.stage.value === 'downloading') return DOWNLOADING_MESSAGE;
+  if (applying.value) return applyingMessage(updateKind.value);
+  return offerText(updateKind.value);
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || flow.stage.value !== 'confirm' || flow.saving.value) return;
   event.preventDefault();
@@ -99,13 +128,22 @@ function onKeydown(event: KeyboardEvent) {
             </button>
           </div>
         </template>
-        <template v-else-if="flow.stage.value === 'toast' || flow.stage.value === 'downloading'">
-          <p>{{ flow.stage.value === 'downloading' ? DOWNLOADING_MESSAGE : offerText(updateKind) }}</p>
+        <template v-else-if="flow.stage.value !== 'confirm'">
+          <p>{{ message() }}</p>
+          <!-- While the new version is applied, the buttons stay where they were, and can't be pressed. -->
           <div class="actions">
-            <button ref="reloadButton" type="button" class="action" @click="choose">
+            <button
+              ref="reloadButton"
+              type="button"
+              class="action"
+              :disabled="applying"
+              @click="choose"
+            >
               {{ actionLabel(updateKind) }}
             </button>
-            <button type="button" class="action quiet" @click="putOff">Later</button>
+            <button type="button" class="action quiet" :disabled="applying" @click="putOff">
+              Later
+            </button>
           </div>
         </template>
         <template v-else>
@@ -139,6 +177,18 @@ function onKeydown(event: KeyboardEvent) {
           </div>
         </template>
       </section>
+    </div>
+    <div role="status" data-updated-region>
+      <Transition name="updated">
+        <section
+          v-if="justUpdated && !needRefresh"
+          class="update updated"
+          aria-label="Updated"
+          data-updated
+        >
+          <p>{{ UP_TO_DATE }}</p>
+        </section>
+      </Transition>
     </div>
   </div>
 </template>
@@ -196,6 +246,17 @@ p {
 .action:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.updated-leave-active {
+  transition: opacity 0.6s ease;
+}
+.updated-leave-to {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .updated-leave-active {
+    transition: none;
+  }
 }
 @media (max-width: 1023px) {
   .update {

@@ -22,6 +22,8 @@ export interface CommandData {
   global?: boolean;
   /** More words the palette's search finds it by, beside its title (Call 39). */
   keywords?: readonly string[];
+  /** Only on the web: the desktop app doesn't register it. */
+  webOnly?: boolean;
 }
 
 export interface HelpPage {
@@ -33,6 +35,7 @@ export interface HelpPage {
 
 /** The help pages (Phase 1 design §4.5): prerendered at `path`, and opened from Help and the palette. */
 export const HELP_PAGES: readonly HelpPage[] = [
+  { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
@@ -41,6 +44,13 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
   { id: 'help-technical', path: '/docs/technical', title: 'Technical details' },
 ];
+
+/** The Download page: a help page, but not listed with them; Help's entry for it is web-only. */
+export const DOWNLOAD_PAGE: HelpPage = {
+  id: 'download-desktop',
+  path: '/docs/download',
+  title: 'Download Drafter',
+};
 
 /** The address a link uses: the page's directory, which is where a static host serves it (no redirect). */
 export const helpHref = (page: Pick<HelpPage, 'path'>): string => `${page.path}/`;
@@ -139,6 +149,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   ...HELP_PAGES.map(
     (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
   ),
+  { id: DOWNLOAD_PAGE.id, title: 'Download the desktop app', group: 'Help', webOnly: true },
   // Help → Sample scripts: a tiny sample of each kind, opened as a new script of the writer's own.
   ...SAMPLES.map(
     (sample): CommandData => ({
@@ -350,3 +361,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
     }),
   ),
 ];
+
+/** The commands the app registers: all of them on the web, and all but the web-only ones in the desktop app. */
+export const commandsFor = (app: 'web' | 'desktop'): readonly CommandData[] =>
+  app === 'desktop' ? COMMAND_DATA.filter((c) => !c.webOnly) : COMMAND_DATA;

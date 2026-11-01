@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { HELP_PAGES } from '~/commands/data';
+import { DOWNLOAD_PAGE, HELP_PAGES } from '~/commands/data';
 import { HELP_MENU_COMMANDS, HELP_MENU_ICONS } from '~/commands/help-menu';
 import { SAMPLES } from '~/editor/samples';
 import { STARTER_KINDS } from '~/editor/starter-kinds';
@@ -48,7 +48,8 @@ const sampleScripts = computed<DropdownMenuItem>(() => ({
   ],
 }));
 
-const pageIds = new Set(HELP_PAGES.map((page) => page.id));
+// The help pages, then Download the desktop app (named by its command, not the page's title).
+const pageIds = new Set([...HELP_PAGES.map((page) => page.id), DOWNLOAD_PAGE.id]);
 const items = computed<DropdownMenuItem[][]>(() => {
   const ids = HELP_MENU_COMMANDS;
   const pages = ids.filter((id) => pageIds.has(id));

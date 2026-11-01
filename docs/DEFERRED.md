@@ -197,7 +197,7 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 
 - **Images embedded as base64** (design §11, Call 8): a Markdown image is shown as its description in the HTML file and the EPUB, as the Preview does; when Drafter has images of its own, they can go in as `data:` URIs (allowed by the file's CSP already) and as EPUB manifest items.
 - **Search inside the file, a contents sidebar, and per-reader comments** (design §11): the HTML file has the browser's own Find, the band (a script) or the headings (a document) to move by, and no comments; a reader file to comment in is Phase 3's self-contained reader file.
-- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.27.0) exports as its own page in its own release.
+- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.28.0) exports as its own page in its own release.
 - **The CLI has no EPUB option** (`drafter build --epub`): `--html` is there; an EPUB from the command line would take its identifier from the title and author, as the app does for a script with no project.
 - **A real-device check of the downloads**: on an iPhone, that downloading the `.html` file saves it rather than opening it, and that an `.epub` reaches Books; to do in the release pass.
 
@@ -218,7 +218,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Grouping sub-locations.** HOUSE - KITCHEN and HOUSE - HALL are two locations (Call 15); the Places list sorts them together but adds nothing up.
 - **Sorting the Characters table** (Call 19). It keeps the cast's order (most speeches first); sorting by a column, as a table's header buttons would, comes later.
 - **Exporting the Stats tab's tables** (Characters, the grid's List, Long absences), as CSV or Markdown.
-- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.26.0) adds storylines without either.
+- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.27.0) adds storylines without either.
 - **A per-scene history link from Scaffold.** History of this scene is in the scene menus already.
 - **The Stats tab opening over its budget in Firefox and WebKit** (243 to 502 ms against 300 ms, which the design sets for Chromium; DECISIONS has the profile). Most of WebKit's time is the tab switch itself; mounting the Overview later, or drawing the tab's shell first, would bring it under.
 - **The spare words worker retries every 5 seconds** (`SPARE_RETRY_MS`) while a dictionary fails to load with spellcheck off, or at once for another language. A dictionary that never loads (a broken download) is asked again every 5 s while a view holds the cast; a longer wait after each failure would cost less, if it ever shows. (The spare itself ends 30 s after no view needs the cast.)
@@ -240,3 +240,12 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **A fresh visit on a light system paints dark for a moment** before the scripts are read and Match system appearance turns on. It happens once, on a first visit only.
 - **Submenus that open on the left.** Reka keeps a submenu open as the pointer leaves its item only if the pointer last moved toward it, which starts as "right". More actions' Export submenu is patched for this (DECISIONS, Task 10); another submenu that opens on the left in a narrow window (Help's Sample scripts, an Outline row's Color…) could close the same way under a mouse that goes straight to it. A fix in Reka, or one shared helper, would cover them all.
 - **Bottom sheets override Reka's popper placement** with `!important` on its wrapper (Task 9). A Nuxt UI or Reka upgrade that changes the wrapper's attribute would undo them; the sheet test would catch it.
+
+## The desktop app's future
+
+- **A Windows on Arm (arm64) installer: a possible future addition.** Not built since 2026-10-31 (`docs/DECISIONS.md`, "Windows on Arm set aside"): it served only Windows 11 in a VM on an Apple silicon Mac and cost about 34 minutes of CI per release. Windows 11 on Arm runs the x64 installer emulated meanwhile.
+- **A Tauri desktop shell: possible, not planned.** Smaller downloads and less memory than Electron, but on Linux it would use WebKitGTK rather than Chromium. Revisit if download size matters, or when the signed Mac app is serious. The shell is kept thin (file access behind `FileAccess`) so this stays open.
+
+## Flaky tests seen in CI
+
+- **Desktop, Linux: `a11y.spec.ts:78` (the modules folder's settings, light)** failed twice in one run on the v0.22.2 tag (Done didn't close Settings within 10 s, just after the "Broken code couldn't start" alert), while the same commit passed on main and on a re-run. Look at whether the alert or a module's start steals the click before Done.

@@ -3,12 +3,19 @@ import { createRequire } from 'node:module';
 import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
-import { COMMAND_DATA, HELP_PAGES, helpHref } from '../app/commands/data';
+import { COMMAND_DATA, DOWNLOAD_PAGE, HELP_PAGES, helpHref } from '../app/commands/data';
 import { showView } from './modules';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
 // They are prerendered, so they read without JavaScript, and they share the app's theme.
 // (Their accessibility checks are in a11y.spec.ts.)
+
+/** The version the site is built from: the desktop app's, which the release files are named for. */
+const VERSION = (
+  JSON.parse(readFileSync(new URL('../../desktop/package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  }
+).version;
 
 const editor = (page: Page) => page.locator('.cm-content');
 // The help pages are in the Help menu, in the top bar (fresh-look Task 3b).
@@ -339,6 +346,123 @@ test.describe('without JavaScript', () => {
     }
   });
 
+  test('the Why Drafter page has its parts and the comparison as a real table', async ({
+    page,
+  }) => {
+    await page.goto('/docs/why');
+    await expect(heading(page)).toHaveText('Why Drafter');
+    await expect(page.locator('.docs-lead')).toContainText('Drafter™');
+    for (const [id, name] of [
+      ['free', 'Free, with no catch'],
+      ['no-login', 'No login, ever'],
+      ['big-features', 'The big features'],
+      ['compares', 'How Drafter compares'],
+      ['made-by', 'Made by'],
+    ]) {
+      await expect(
+        page.getByRole('heading', { level: 2, name, exact: true }),
+        name,
+      ).toHaveAttribute('id', id);
+    }
+    // The table scrolls inside its own region, has a caption, and labels its columns and rows.
+    const region = page.getByRole('region', { name: /How Drafter compares/ });
+    const table = region.getByRole('table');
+    await expect(table.locator('caption')).not.toBeEmpty();
+    await expect(table.locator('thead th[scope="col"]')).toHaveCount(8);
+    await expect(table.locator('tbody th[scope="row"]')).toHaveCount(25);
+    const row = (name: string) => table.getByRole('row').filter({ hasText: name });
+    await expect(row('Price')).toContainText('Free, forever');
+    await expect(row('Price')).toContainText('$249.99 once, or $99.99/yr');
+    // A planned feature shows its version, never a ✓.
+    await expect(row('Revision colors and marks').locator('td').first()).toHaveText(
+      'v0.26.0, free',
+    );
+    // ✓ and ✗ are read as words.
+    const open = row('Open source');
+    await expect(open.locator('td').first()).toContainText('yes');
+    await expect(open.locator('td').nth(1)).toContainText('no');
+    await expect(open.locator('[aria-hidden="true"]').first()).toHaveText('✓');
+    // The credit and the trademark line, with outside links that open safely.
+    for (const href of ['https://metaincognita.com', 'https://github.com/cschweda']) {
+      const link = page.locator(`main a[href="${href}"]`);
+      await expect(link, href).toHaveAttribute('rel', /noopener/);
+    }
+    expect(await mainText(page)).toContain(
+      'Drafter™ and the Drafter logo are trademarks of Christopher Schweda.',
+    );
+  });
+
+  test('the Download page has the three platforms and links the current release’s files', async ({
+    page,
+  }) => {
+    await page.goto('/docs/download');
+    await expect(page).toHaveTitle('Download Drafter — Drafter');
+    await expect(heading(page)).toHaveText('Download Drafter');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'https://drafter.dev/docs/download/',
+    );
+    for (const [id, name] of [
+      ['windows', 'Windows'],
+      ['linux', 'Linux'],
+      ['mac', 'Mac'],
+    ]) {
+      await expect(page.getByRole('region', { name, exact: true }), name).toHaveAttribute(
+        'data-platform',
+        id,
+      );
+    }
+    const base = `https://github.com/cschweda/drafter/releases/download/v${VERSION}`;
+    await expect(
+      page.getByRole('link', { name: 'Download the Windows installer' }),
+    ).toHaveAttribute('href', `${base}/Drafter-${VERSION}-windows-x64-setup.exe`);
+    await expect(page.getByRole('link', { name: 'Download the .deb' })).toHaveAttribute(
+      'href',
+      `${base}/Drafter-${VERSION}-linux-amd64.deb`,
+    );
+    await expect(page.getByRole('link', { name: 'Download the AppImage' })).toHaveAttribute(
+      'href',
+      `${base}/Drafter-x86_64.AppImage`,
+    );
+    // The latest release too, for the minutes before a new release's files are up.
+    expect(
+      await page
+        .locator('main a[href="https://github.com/cschweda/drafter/releases/latest"]')
+        .count(),
+    ).toBeGreaterThanOrEqual(2);
+    const text = await mainText(page);
+    for (const phrase of [
+      `Drafter ${VERSION}`,
+      'SmartScreen',
+      'Run anyway',
+      'Windows 11 on Arm',
+      'Coming: a signed Mac download.',
+      'pnpm desktop:mac',
+      'Check for updates',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+    // The Mac has no download yet, only the steps to build it.
+    await expect(
+      page
+        .getByRole('region', { name: 'Mac', exact: true })
+        .locator('a[href*="/releases/download/"]'),
+    ).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'All releases on GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/cschweda/drafter/releases',
+    );
+    await expect(page.getByRole('link', { name: 'The changelog' })).toHaveAttribute(
+      'href',
+      'https://github.com/cschweda/drafter/blob/main/CHANGELOG.md',
+    );
+    // The help index lists it.
+    await page.goto('/docs/');
+    await expect(
+      page.locator('main').getByRole('link', { name: DOWNLOAD_PAGE.title }),
+    ).toHaveAttribute('href', '/docs/download/');
+  });
+
   test('explains saving: the browser table, synced folders, the recovery copy, and installing', async ({
     page,
   }) => {
@@ -466,6 +590,30 @@ test.describe('without JavaScript', () => {
 });
 
 test.describe('with JavaScript', () => {
+  test('the Download page asks nothing of another site, and marks the reader’s system without moving anything', async ({
+    page,
+  }) => {
+    const elsewhere: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).host !== new URL(page.url() || 'http://localhost').host) {
+        elsewhere.push(request.url());
+      }
+    });
+    await page.goto('/docs/download');
+    await expect(heading(page)).toHaveText('Download Drafter');
+    await page.waitForLoadState('networkidle');
+    expect(elsewhere.filter((url) => !url.startsWith('http://localhost'))).toEqual([]);
+    // Every platform is there, whatever the system; at most one is marked as the reader’s.
+    await expect(page.locator('section[data-platform]')).toHaveCount(3);
+    expect(await page.locator('section[data-yours="true"]').count()).toBeLessThanOrEqual(1);
+    const ua = await page.evaluate(() => navigator.userAgent);
+    if (/Android|iPhone/.test(ua)) {
+      await expect(page.locator('section[data-yours="true"]')).toHaveCount(0);
+    } else {
+      await expect(page.locator('section[data-yours="true"]')).toHaveCount(1);
+    }
+  });
+
   test('uses the app’s dark theme to begin with, and its light theme when that is chosen', async ({
     page,
   }) => {
@@ -529,6 +677,14 @@ test.describe('from the app', () => {
     await tab.waitForLoadState();
     return tab;
   }
+
+  test('Help has Download the desktop app, which opens the Download page', async ({ page }) => {
+    await start(page);
+    const tab = await fromMenu(page, 'Download the desktop app', 'click');
+    await expect(tab).toHaveURL(/\/docs\/download\/?$/);
+    await expect(heading(tab)).toHaveText('Download Drafter');
+    await tab.close();
+  });
 
   test('reaches the pages from Help, each in a new tab, and leaves the editor tab as it was', async ({
     page,

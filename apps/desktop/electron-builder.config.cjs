@@ -3,8 +3,9 @@
 // Linux first: an AppImage and a .deb, x64. docs/DECISIONS.md (apps/desktop) explains the choices.
 // macOS (`pnpm package:mac`, from `pnpm desktop:mac`): Drafter.app built on the writer's own Mac,
 // for its own processor, signed ad hoc and published nowhere (docs/desktop-install-macos.md).
-// Windows (`pnpm package:win`, on GitHub's Windows runner): an NSIS installer per processor, x64
-// and arm64, unsigned for now, with latest.yml for the updater (docs/desktop-install-windows.md).
+// Windows (`pnpm package:win`, on GitHub's Windows runner): an NSIS installer for x64, unsigned for
+// now, with latest.yml for the updater (docs/desktop-install-windows.md). No arm64 installer for
+// now: Windows 11 on Arm runs the x64 one emulated (docs/DECISIONS.md).
 const path = require('node:path');
 
 /**
@@ -159,10 +160,9 @@ module.exports = {
     artifactName: 'Drafter-${version}-mac-${arch}.${ext}',
   },
   win: {
-    // An installer per processor: x64, and arm64 for Windows on Arm (a Snapdragon laptop, or
-    // Windows 11 in a VM on an Apple silicon Mac). Built on GitHub's Windows runner
-    // (`pnpm package:win`).
-    target: [{ target: 'nsis', arch: ['x64', 'arm64'] }],
+    // An installer for x64, built on GitHub's Windows runner (`pnpm package:win`). Windows on Arm
+    // (arm64) is not built for now: Windows 11 on Arm runs the x64 installer and app emulated.
+    target: [{ target: 'nsis', arch: ['x64'] }],
     // 16 to 256 pixels, from the brand folder (brand/build.mjs). The installer, the uninstaller,
     // Drafter.exe, and its files' icons in Explorer are all this one.
     icon: path.resolve(__dirname, '../../brand/icon-windows.ico'),
@@ -179,9 +179,9 @@ module.exports = {
     // electron-builder writes the name and every later update must carry that signature.
   },
   nsis: {
-    // One installer per processor, each with its processor in its name: one installer holding both
-    // would be twice the download for everyone. latest.yml lists both, and electron-updater picks
-    // the one whose name holds the running app's processor (`x64` or `arm64`).
+    // One installer per processor, each with its processor in its name (only x64 for now): one
+    // installer holding several would be a bigger download for everyone. electron-updater picks the
+    // installer in latest.yml whose name holds the running app's processor, or else the first.
     buildUniversalInstaller: false,
     // The version stays in the name (unlike the AppImage's): an update downloads the new installer
     // to electron-updater's own cache folder and runs it there, so the name the writer downloaded

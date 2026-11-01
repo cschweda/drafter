@@ -2,7 +2,7 @@ import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { HELP_PAGES } from './app/commands/data';
+import { DOWNLOAD_PAGE, HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
 import { TOUR_ICONS } from './scripts/tour-icons.mjs';
 import { buildCommit, drafterVersion } from './scripts/version.mjs';
@@ -183,7 +183,7 @@ export default defineNuxtConfig({
   // netlify.toml's publish directory and scripts/csp.mjs don't read.
   nitro: {
     preset: 'static',
-    prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path)] },
+    prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path), DOWNLOAD_PAGE.path] },
   },
   hooks: {
     // The desktop build has no PWA module, so the plugin that registers its worker (and imports

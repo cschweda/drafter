@@ -552,6 +552,8 @@ for (const theme of THEMES) {
   test.describe(`the help pages in the ${theme} theme`, () => {
     for (const path of [
       '/docs/',
+      '/docs/why/',
+      '/docs/download/',
       '/docs/fountain/',
       '/docs/saving/',
       '/docs/privacy/',

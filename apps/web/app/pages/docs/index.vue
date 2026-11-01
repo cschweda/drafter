@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HELP_PAGES, helpHref } from '~/commands/data';
+import { DOWNLOAD_PAGE, HELP_PAGES, helpHref } from '~/commands/data';
 import { PRESENCE_NOTE } from '~/scaffold/presence-note';
 
 definePageMeta({ layout: 'docs' });
@@ -7,11 +7,13 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: why Drafter, a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
 const about: Record<string, string> = {
+  'help-why':
+    'Free with no catch, no login ever, the big features, and how Drafter compares with other screenwriting apps.',
   'help-fountain':
     'Every Fountain element with its mark, its rule, and an example: what the element bar writes for you.',
   'help-saving':
@@ -30,10 +32,14 @@ const about: Record<string, string> = {
 <template>
   <article>
     <h1>Help</h1>
-    <p class="docs-lead">Seven short pages about writing in Fountain and how Drafter works.</p>
+    <p class="docs-lead">Eight short pages: why Drafter, writing in Fountain, and how Drafter works.</p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
         <a :href="helpHref(page)">{{ page.title }}</a>: {{ about[page.id] }}
+      </li>
+      <li>
+        <a :href="helpHref(DOWNLOAD_PAGE)">{{ DOWNLOAD_PAGE.title }}</a>: the desktop app for Windows
+        and Linux, and how to build it on a Mac.
       </li>
     </ul>
     <p>
