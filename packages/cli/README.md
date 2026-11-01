@@ -30,6 +30,8 @@ In this repository, run it from the root as `pnpm drafter …` after `pnpm -r bu
 
 An output of `-` goes to standard output; only one output can. Errors and warnings print to standard error as the script builds, and a summary line follows. `build` still writes its outputs when the script has errors, since an unclosed boneyard, say, still lays out; `check` is the command that fails.
 
+The input (and a template JSON file) must be a regular file of at most 5 MB, the app's own limit for a script: a folder, a named pipe, or a device such as `/dev/zero` is refused at once, without waiting or reading on. Its text is read as UTF-8, a byte that isn't UTF-8 read as U+FFFD (`--reopenable` refuses such a file, since it couldn't carry it exactly).
+
 ### `drafter check <input> [--template <id|file>]`
 
 Prints the page count and template, then every parse and layout diagnostic, then a summary:

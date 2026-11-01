@@ -80,12 +80,16 @@ interface Job {
   targetShown: string;
 }
 
-/** A file that isn't converted, and why, in words. */
-class Refused extends Error {}
+/** A file that isn't converted (or, for `build`, read), and why, in words. */
+export class Refused extends Error {}
 
+/**
+ * What became of one file. A converted or skipped one says the file it wrote or found, as printed:
+ * a Markdown document from an export goes to `.md`, not the `.fountain` the job first named.
+ */
 type Outcome =
-  | { kind: 'converted'; notes: number }
-  | { kind: 'skipped' }
+  | { kind: 'converted'; notes: number; targetShown?: string }
+  | { kind: 'skipped'; targetShown?: string }
   | { kind: 'refused'; reason: string };
 
 /**
@@ -118,8 +122,13 @@ export async function convert(
     counts[outcome.kind]++;
     if (outcome.kind === 'refused') io.out(`${job.shown}: refused: ${outcome.reason}\n`);
     else if (outcome.kind === 'skipped')
-      io.out(`${job.shown}: skipped: ${job.targetShown} is already there (--force replaces it)\n`);
-    else io.out(`${job.shown} → ${job.targetShown}${notesSaid(outcome.notes)}\n`);
+      io.out(
+        `${job.shown}: skipped: ${outcome.targetShown ?? job.targetShown} is already there (--force replaces it)\n`,
+      );
+    else
+      io.out(
+        `${job.shown} → ${outcome.targetShown ?? job.targetShown}${notesSaid(outcome.notes)}\n`,
+      );
   };
 
   for (const path of paths) {
@@ -212,7 +221,7 @@ async function convertOnce(given: Job, force: boolean, written: Written): Promis
     const made = await lstat(job.target, { bigint: true }).catch(() => null);
     if (made) written.files.set(fileKey(made), job.shown);
   }
-  return outcome;
+  return outcome.kind === 'refused' ? outcome : { ...outcome, targetShown: job.targetShown };
 }
 
 /** `rel`'s Fountain: beside the source, or under `--out` with the folders under the argument kept. */
@@ -438,8 +447,15 @@ function fdxText(bytes: Uint8Array): string {
   return text.replace(/\r\n?/g, '\n');
 }
 
-/** The file's bytes, or a refusal when it is over `cap`: never more than `cap` + 1 bytes are read. */
-async function readCapped(source: string, cap: number, tooBig: () => Error): Promise<Uint8Array> {
+/**
+ * The file's bytes, or a refusal when it is over `cap`, a folder, or anything but a regular file (a
+ * pipe, a device such as /dev/zero): never more than `cap` + 1 bytes are read, and nothing waits.
+ */
+export async function readCapped(
+  source: string,
+  cap: number,
+  tooBig: () => Error,
+): Promise<Uint8Array> {
   let handle: Awaited<ReturnType<typeof open>>;
   try {
     // Non-blocking, so a pipe put in the file's place after it was checked can't hang the open;
@@ -450,6 +466,7 @@ async function readCapped(source: string, cap: number, tooBig: () => Error): Pro
   }
   try {
     const info = await handle.stat();
+    if (info.isDirectory()) throw new Refused("it's a folder");
     if (!info.isFile()) throw new Refused('it isn’t a file');
     if (info.size > cap) throw tooBig();
     // The size can change after the stat: read one byte more than it said, and no further.
