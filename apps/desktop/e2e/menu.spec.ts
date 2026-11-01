@@ -269,9 +269,10 @@ test('opens a help page in its own window', async ({ desktop }) => {
   // The editor is still there, and untouched.
   expect(page.url()).toBe('app://drafter/');
   expect(app.windows()).toHaveLength(2);
-  // The other two pages.
+  // The other pages.
   for (const [label, path] of [
     ['Saving', '/docs/saving/'],
+    ['Drafts and Cuts', '/docs/drafts-and-cuts/'],
     ['Privacy', '/docs/privacy/'],
   ] as const) {
     const next = app.waitForEvent('window');

@@ -38,6 +38,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
+  { id: 'help-drafts-and-cuts', path: '/docs/drafts-and-cuts', title: 'Drafts and cuts' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
   { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },

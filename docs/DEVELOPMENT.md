@@ -69,13 +69,13 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 2 (setups and payoffs, and duplicate scene fields), 4 (the rest) |
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
 | `@drafter/compare` | The line diff behind Compare: what changed between two versions of a script, and where it sits in the newer one; the rows, word marks, folds, and scene groups of the Changes view | 2 (built in Plan C; the Changes view in version history) |
-| `@drafter/history` | Version history: which scenes of past versions are gone now, every version of one scene, and where Put back puts a scene | 2 (built in version history) |
+| `@drafter/history` | Version history and Drafts and Cuts: every version of one scene, what left a text between two versions (scenes, sections, and passages), and the draft and cuts files: their names, writing, reading, and merging | 2 (built in version history) |
 | `@drafter/outline` | Condense and expand, scene reordering, synopsis, color, and Scene details edits, the Structure strip's geometry, each scene's timing, and the whole script as Markdown | 2 (built in Plans A and B, and the Structure strip) |
 | `@drafter/spell` | Offline spellcheck (nspell): the words worth checking, the two bundled English dictionaries, and a per-script dictionary | 2 (built in Plan D) |
 | `@drafter/fdx` | Final Draft (`.fdx`) import and export, and Open Screenplay Format import | 2 (built in Plan FD; OSF in v0.19.0) |
 | `@drafter/archive` | Highland and Fade In files: a strict read-only zip reader, and the script inside each; and a small stored-zip writer for the EPUB export | 2 (built in v0.19.0; the writer in v0.22.0) |
 | `@drafter/cast` | Who is in each scene and where: presence (a name in the action counts), locations, each character's screen time, dialogue share, and long absences, and the character grid | 2 (built in Plan E, part 1) |
-| `@drafter/markdown` | Markdown documents: the parser (CommonMark with GitHub's footnotes), footnote numbering, the title, and the word count, shared by the Preview and the PDF (which takes only the footnote walk, `@drafter/markdown/notes`, and never loads the parser) | 2 (moved out of the app in v0.22.0) |
+| `@drafter/markdown` | Markdown documents: the parser (CommonMark with GitHub's footnotes), footnote numbering, the title, the word count, and a document's trailing metadata comment, shared by the Preview and the PDF (which takes only the footnote walk, `@drafter/markdown/notes`, and never loads the parser) | 2 (moved out of the app in v0.22.0) |
 | `@drafter/stats` | Script statistics | 2 (planned) |
 
 Repository layout:
@@ -209,9 +209,10 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Structure strip design](drafter-structure-strip-design.md): the band of sections and scenes above the panes, its rows, sizes, keys, and how Phase 2's script map and Timeline build on it.
 - [Markdown PDF design](drafter-markdown-pdf-design.md): a Markdown document as a printable PDF: what prints, line and page breaks, paper, and page numbers.
 - [Getting a script out the door](drafter-out-the-door-design.md): the guided starters, export options, running times, and the Technical details page.
-- [Version history design](drafter-version-history-design.md): Deleted scenes, Show changes, Compare's Changes view, History of this scene, and matching a scene across versions.
+- [Version history design](drafter-version-history-design.md): Deleted scenes (replaced by Cuts in v0.24.0), Show changes, Compare's Changes view, History of this scene, and matching a scene across versions.
 - [Seeing the script design](drafter-seeing-the-script-design.md): who is in a scene, the Stats tab and the character grid, Scaffold and its pages, and, next, storylines, the strip's Color by, and pacing.
 - [HTML and EPUB export design](drafter-html-export-design.md): one offline web page with Pages and Reading views, dark by default, and an EPUB e-book from the same Reading view.
+- [Drafts and Cuts design](drafter-drafts-and-cuts-design.md): numbered drafts with content-hash IDs, Draft by draft, Cuts (what counts as one, and where it goes back), and the drafts folder and cuts file beside the work.
 - **[The `.drafter` package format](spec/drafter-package.md)** — an open specification (CC0) for a whole project in one file, so any screenwriting app can read and write it.
 - [Technical details](technical-details.md): how Drafter is put together, in plain words first, with diagrams: the packages, from a keystroke to the page, storage, export, offline use, the desktop app, security, the clean-room rule, releases, and every dependency. The same page is in the app, under Help.
 

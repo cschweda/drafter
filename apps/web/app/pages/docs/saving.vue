@@ -454,20 +454,17 @@ useDocsHead({
       <strong>Blue and orange</strong> under <strong>Colors for changes</strong> in Settings.
     </p>
 
-    <h3 id="cuts">Cuts</h3>
+    <h3 id="cuts">Drafts and Cuts</h3>
     <p>
-      <strong>Cuts…</strong> (in the app menu after History…, in History, or in the command palette,
-      where “deleted scenes” finds it too) keeps everything you cut, for good: a whole scene, chapter,
-      or section, and a speech, a paragraph, or a dozen words or more taken out of one. A cut is
-      found each time a snapshot is kept, by comparing it with the snapshot before, so text you type
-      and take out again in between isn’t one. Each cut is listed under the scene or chapter it came
-      from, newest first, with when it was cut and the draft you were writing then, so you can look
-      back through them for ideas. The filter finds words, headings, and draft numbers.
-      <strong>Put back</strong> puts a cut back where it was, <strong>Insert at cursor</strong> puts it
-      in at the next scene or paragraph after your cursor, and one undo takes either out again. A cut
-      you put back stays in the list, marked. Restoring a draft or a snapshot, opening a file, and
-      reloading it make no cuts. The first time this version runs, it looks through the snapshots you
-      already have, and keeps what was cut there too, as “cut before drafts”.
+      Snapshots come and go as they age; drafts and cuts are kept for good.
+      <strong>Start new draft…</strong> keeps the script as it is now as a numbered draft (Draft 01,
+      Draft 02, …) that you can read, compare, or restore at any time. <strong>Cuts…</strong> (in the
+      app menu after History…, in History, or in the command palette, where “deleted scenes” finds it
+      too) keeps everything you cut: a whole scene, chapter, or section, and a speech, a paragraph, or
+      12 words or more taken out of one, to read again for ideas, copy, insert at the cursor, or put
+      back where it was. It replaces the Deleted scenes list of earlier versions. Both can be written
+      as plain files next to your script. <a href="/docs/drafts-and-cuts/">Drafts and cuts</a> has
+      the whole story.
     </p>
 
     <h3 id="show-changes">Show changes</h3>

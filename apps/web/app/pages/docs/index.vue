@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: why Drafter, a Fountain cheat sheet, saving and your browser, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: why Drafter, a Fountain cheat sheet, saving and your browser, drafts and cuts, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -18,6 +18,8 @@ const about: Record<string, string> = {
     'Every Fountain element with its mark, its rule, and an example: what the element bar writes for you.',
   'help-saving':
     'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
+  'help-drafts-and-cuts':
+    'Numbered drafts you can read, compare, and restore, and everything you cut, kept for ideas.',
   'help-shortcuts': 'Every command and its keys, for a Mac and for Windows and Linux.',
   'help-privacy': 'No account, no analytics, no telemetry: your script never leaves your device.',
   'help-open-formats':
@@ -32,7 +34,7 @@ const about: Record<string, string> = {
 <template>
   <article>
     <h1>Help</h1>
-    <p class="docs-lead">Eight short pages: why Drafter, writing in Fountain, and how Drafter works.</p>
+    <p class="docs-lead">Nine short pages: why Drafter, writing in Fountain, and how Drafter works.</p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
         <a :href="helpHref(page)">{{ page.title }}</a>: {{ about[page.id] }}

@@ -123,7 +123,7 @@ flowchart TD
 
 ## Where your script is kept
 
-While you write, your browser keeps a recovery copy of the script, updated as you type, so a crash or a closed tab loses almost nothing. When you save, Drafter writes your script to a file on your computer: a plain `.fountain` file that any text editor can open. Along the way it keeps snapshots, earlier copies you can go back to.
+While you write, your browser keeps a recovery copy of the script, updated as you type, so a crash or a closed tab loses almost nothing. When you save, Drafter writes your script to a file on your computer: a plain `.fountain` file that any text editor can open. Along the way it keeps snapshots, earlier copies you can go back to. The drafts you start and everything you cut are kept for good, and can sit as plain files next to your script.
 
 *Where your script is kept: the text in the editor goes three ways, each in its own time: a recovery copy as you type, your file when you save, and snapshots along the way.*
 
@@ -138,11 +138,12 @@ flowchart TD
   s1 --> s4
 ```
 
-- **The recovery copy** is in the browser’s IndexedDB, through Dexie. It is written 750 ms after you stop typing, or every 5 seconds while you keep going. The database has five tables: `projects`, `snapshots`, `templates`, `handles`, and `settings`.
+- **The recovery copy** is in the browser’s IndexedDB, through Dexie. It is written 750 ms after you stop typing, or every 5 seconds while you keep going. The database has seven tables: `projects`, `snapshots`, `templates`, `handles`, `settings`, and, since v0.24.0, `drafts` and `cuts`.
 - **Only one tab edits a script.** A second tab with the same script open shows it read-only, so two tabs never write one recovery copy.
 - **Save** goes through one interface, `FileAccess`. In Chrome and Edge it uses the File System Access API to save back to the file you opened; Firefox and Safari can’t, so Save downloads a complete copy. The desktop app reads and writes files by path, through its main process.
 - **Snapshots** are copies of the whole text, in the `snapshots` table: after every 10 minutes of writing, when you save or open a file, before a change that rewrites much of it, and when you ask for one. They are compressed where the browser can, and thinned out as they age.
 - **Version history** reads the snapshots in a worker of its own (`history.worker.ts`), newest first: `@drafter/history` parses each one, notes each scene’s heading, a hash of its text, and a sketch of its wording, and matches scenes across versions, for History of this scene; it also finds what left the text between two snapshots, for Cuts, and looks through the snapshots kept before v0.24.0 once, for the cuts made before drafts. The notes are cached in a second database, `drafter-cache`, so no snapshot is read twice, and removing a script removes them. Show changes and Compare’s Changes view are `@drafter/compare`’s line and word diff; Show changes’ marks come from the layout worker, after the pages.
+- **Drafts and cuts** are kept for good, never thinned. A draft is the whole text, compressed, under its ID, the SHA-256 of its exact text (`hashText`, Web Crypto). A cut is its own text, keyed by the SHA-256 of that text, with every date and draft it was cut in. Where a folder can be written (always in the desktop app; in Chrome and Edge once you allow the script’s folder), they are also plain files beside the script: `Boca drafts/Boca – Draft 01.fountain`, with the draft’s facts in Drafter’s metadata block at its end, and `Boca.fountain.cuts.md`. A draft file is only ever created, never written over; the cuts file is read, its entries checked against their IDs, merged with the stored cuts, and written whole to a temporary file that is then renamed over it. The desktop app does this through calls of its own that write only those names, beside a script you opened, and never follow a link. Elsewhere, Export drafts and cuts downloads them as a zip.
 
 ## Exporting
 

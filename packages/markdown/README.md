@@ -1,6 +1,6 @@
 # @drafter/markdown
 
-Markdown documents for [Drafter](https://github.com/cschweda/drafter): reads a document into a CommonMark syntax tree with GitHub's footnotes, numbers its footnotes, finds its title, and counts its words. The app's Preview, its word count, and the Markdown PDF all read a document through it, so they agree. It touches no DOM and reads no files, so it runs in Node, in a browser, and in a worker; drawing the tree is the caller's.
+Markdown documents for [Drafter](https://github.com/cschweda/drafter): reads a document into a CommonMark syntax tree with GitHub's footnotes, numbers its footnotes, finds its title, counts its words, and reads and writes the metadata comment at its end (where a draft file keeps its facts, since v0.24.0). The app's Preview, its word count, and the Markdown PDF all read a document through it, so they agree. It touches no DOM and reads no files, so it runs in Node, in a browser, and in a worker; drawing the tree is the caller's.
 
 ```ts
 import { countWords, footnotes, markdownTitle, parseMarkdown } from '@drafter/markdown';
@@ -23,6 +23,9 @@ footnotes(tree).numbers; // Map { '1' => 1 }
 | `retitleMarkdown(source, title)` | The text with its first ATX heading's words replaced, or a `# title` heading put in front. |
 | `countWords(tree)`, `wordsIn(text)`, `isSpace(code)` | Words as they're read: runs of characters between what `/\s/` calls a space, footnotes included once, markup not at all. |
 | `MdNode` | The fields of an mdast node Drafter reads, a structural type. |
+| `readMarkdownMeta(text)`, `findMarkdownMeta(text)` | The document's metadata block: its last line, at the line's start, as `<!-- drafter {json} -->` holding a JSON object. `readMarkdownMeta` gives the body without it (and the one blank line before it) and the object, or the whole text and `null`; `findMarkdownMeta` gives where it is (`MarkdownMetaBlock`). One backwards scan and one parse: linear. |
+| `setMarkdownMeta(text, meta)`, `appendMarkdownMeta(text, meta)` | The text with `meta` as its block: replaced where it is, or put at the end after one blank line, with the text's own line break, so the body reads back byte for byte. `appendMarkdownMeta` always adds a new block, leaving one already there as the writer's text. |
+| `commentJson(value)` | JSON that can sit inside an HTML comment or a Fountain boneyard without closing it: `/` as `\/`, `<` and `>` as `\u003c` and `\u003e`, and the second `-` of every `--` as `\u002d`. `@drafter/history`'s cuts file writes its entries with it too. |
 
 `@drafter/markdown/notes` exports `footnotes` and its types alone, and `@drafter/markdown/words` exports `countWords`, `wordsIn`, and `isSpace`: the walk and the word count without the parser, for a reader that never parses (`@drafter/render-pdf`, `@drafter/render-html-file`), so importing them loads no `mdast` or `micromark` module.
 

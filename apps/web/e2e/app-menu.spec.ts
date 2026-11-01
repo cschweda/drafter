@@ -315,6 +315,7 @@ test.describe('the Help menu', () => {
       /^Why Drafter/,
       /^Fountain cheat sheet/,
       /^Saving and your browser/,
+      /^Drafts and cuts/,
       /^Keyboard shortcuts/,
       /^Privacy/,
       /^Open formats/,

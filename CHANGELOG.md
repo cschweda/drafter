@@ -6,10 +6,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Drafts.** **Start new draft…** (the Drafter menu, the command palette, the Drafts list, and the desktop app's File menu) keeps your script as it is now as a numbered draft, with an optional note such as "sent to Sam for notes", and you carry on writing the next one. Drafts are numbered Draft 01, Draft 02, and so on; a number is never used twice, and Drafter never starts a draft by itself. Any script works this way, including one written before this release or opened from Final Draft, Highland, or Fade In: what is there becomes Draft 01. Freezing text that hasn't changed since the last draft asks first.
+- **Every draft has an ID** worked out from its exact text (SHA-256), shown as seven characters such as `a3f9c2e`. Typing four or more of them in the command palette finds the draft, in any of your scripts.
+- **The Drafts list** (**Drafts…**, or the "Draft 03" in the status bar) shows each draft, newest first, with its ID, date, words, note, and a line such as "Draft 03 begins — builds on Draft 02 (a3f9c2e)". **Read** opens a draft read-only beside your script, to copy from; **Compare** shows what changed against now or another draft; **Restore as a new draft** keeps what you have as a draft first, then brings the old text back as the draft you are writing, in one undo; and each has **Copy full ID** and **Edit note…**. Its filter finds a draft by number ("2", "02", "draft 2"), ID, or note. Drafts can't be deleted, and they show in History above the snapshots.
+- **Draft by draft…** shows how the work changed, one draft to the next: for each step, its note and date, the words added or taken out, the scenes (or chapters and sections) added, cut, and changed, and how much of the text is new. Open a step in Compare and walk with **Previous step** and **Next step**; beside the changes, "Cut while writing Draft 02" lists that step's cuts, with **Show in Cuts**.
+- **Cuts.** **Cuts…** keeps everything you cut, for good, in screenplays, stage plays, and Markdown documents alike: a whole scene, chapter, or section; a whole speech, action paragraph, transition, paragraph, or list item taken out of one that is still there, at any length; and any run of 12 or more words taken out, or replaced by quite different words. Typo fixes, small rewordings, and moved text are not cuts. Cuts are found each time a snapshot is kept, never as you type, and restoring, opening, or reloading a script makes none.
+- **The Cuts list is for browsing for ideas.** Group cuts by **Scene** (or **Section**), so a scene trimmed over several drafts reads as one group, or by **Draft**. Each cut says when it was cut and in which draft ("Cut while writing Draft 03"), and has **Put back** (where it was: a scene between its old neighbours, a passage after the line it followed), **Insert at cursor** (at the next scene or paragraph after your cursor), and **Copy**. One undo takes back a Put back or an Insert. A cut you put back stays listed, marked. The filter finds words, headings, and draft numbers, and the list stays quick with thousands of cuts. In Compare, a scene or section that is gone has **Find in Cuts**.
+- **Cut before drafts.** The first time v0.24.0 runs, it looks once through the snapshots you already have, in the background, and keeps what was cut there too, marked "Cut before drafts".
+- **Drafts and cuts as plain files beside your script.** For `Boca.fountain`: a folder `Boca drafts` with `Boca – Draft 01.fountain` and so on (each your script as it was, with the draft's number, ID, date, and note in a short block at the end that other Fountain apps don't print), and `Boca.fountain.cuts.md`, a readable Markdown file of every cut. A draft file is never written over and none is ever deleted; the cuts file is read and merged before it is written again. Save As writes the whole set beside the new file and leaves the old one. The Drafts and Cuts lists always say where they are: "Saved beside Boca.fountain." or "In this browser only."
+  - **The desktop app** writes them beside the script, always (an unsaved script's when it is first saved).
+  - **Chrome and Edge on a computer** ask once, at your first new draft, for the folder that holds the script ("Keep drafts and cuts next to Boca.fountain?"), check that it does, and remember it for that script. Not now keeps them in the browser, and the lists' **Keep next to Boca.fountain…** asks again.
+  - **Firefox, Safari, and phones** keep them in the browser. **Export drafts and cuts**, in both lists and in every browser, downloads `Boca drafts and cuts.zip`.
+- **Two computers.** Opening a script, or coming back to Drafter after a while away, reads its drafts folder and cuts file and adds what another computer kept, through Dropbox, Google Drive, OneDrive, or any synced folder: every cut once, and every draft. If both computers started a Draft 04, both are kept ("Draft 04 (from another computer)", written as `Boca – Draft 04 (2).fountain`), and a draft file changed in another program is listed as "changed outside Drafter". Opening a draft file itself says "This is Draft 03 of Boca." and offers **Open Boca instead**.
+- **A help page, Drafts and cuts** (Help, and the desktop app's Help menu), in plain words.
+- 14 more trap documents, for hostile and damaged draft and cuts files (258 in all).
+
 ### Changed
 
+- **Cuts replaces Deleted scenes**, in the More menu, the command palette ("deleted scenes" still finds it), the Drafter menu, History, and the phone's More. It keeps passages and Markdown sections as well as scenes, keeps them for good, and puts a cut back by its old neighbours' headings rather than from a snapshot.
+- Drafter's database gains two tables, `drafts` and `cuts`. Every script, snapshot, and setting from v0.23 is kept as it is, and a tab of v0.23 left open still reads it.
+- Drafter keeps a snapshot just before it starts a draft ("Before starting a draft") and before Restore as a new draft keeps your text as a draft, so cuts made just before are kept, with the draft they were made in.
+- The Saving and your browser help page's Deleted scenes section is now Drafts and Cuts, and points to the new page; Why Drafter and Technical details say where drafts and cuts are kept.
 - The README is shorter, with a screenshot gallery; the roadmap and developer notes moved to docs/ROADMAP.md and docs/DEVELOPMENT.md.
 - The roadmap names **Story map** (v0.24.1) and adds **Drafter for Claude** (v0.24.2), a local MCP server so Claude or another AI app can read your scripts, drafts, and cuts.
+
+### Removed
+
+- **Deleted scenes**, replaced by Cuts (above). Its tab, its command, and its pane are gone; the command palette's "deleted scenes" opens Cuts.
+- **The P and H keys** in the Deleted scenes list (Put back, and History of this scene). Each cut's Put back, Insert at cursor, and Copy are ordinary buttons in the Tab order.
+- **History of this scene from that list.** A cut is kept apart from the snapshots, so it has no scene history to open; History of this scene is still in a scene's menu in the Outline, the Cards, and the Structure strip, and in the command palette.
+- **Compare that version with now**, from the same list: Find in Cuts goes the other way, from Compare to the cut.
+
+### Fixed
+
+- **Nothing you cut ages out any more.** Deleted scenes could list a scene only while a snapshot still held it, so a scene cut months ago was lost once its last snapshot was thinned away. Cuts keeps every cut for good, with its own text.
+- **Markdown documents keep what you cut too.** Deleted scenes worked only for screenplays and stage plays.
 
 ## [0.23.2] - 2026-11-01
 
