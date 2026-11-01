@@ -152,7 +152,8 @@ const countHere: CountStep = async (before, after, kind) => stepCounts(before, a
 
 /**
  * The steps between consecutive drafts (`rows` in any order), oldest first, then the last draft to
- * `nowText`. `texts` reads a draft's text, only for a step not counted before; `count` counts one
+ * `nowText`. Only the script's own drafts are steps: an outside one (another computer's Draft 04,
+ * or a draft file changed outside Drafter) is left out, so each number is one step. `texts` reads a draft's text, only for a step not counted before; `count` counts one
  * (the app's runs in the history worker).
  */
 export async function draftSteps(
@@ -162,7 +163,7 @@ export async function draftSteps(
   nowText: string,
   count: CountStep = countHere,
 ): Promise<DraftStep[]> {
-  const ordered = [...rows].sort((a, b) => a.n - b.n);
+  const ordered = rows.filter((row) => !row.outside).sort((a, b) => a.n - b.n);
   if (ordered.length === 0) return [];
   const nowId = await hashText(nowText);
   const read = new Map<number, Promise<string>>();

@@ -47,6 +47,20 @@ function draft(n: number, extra: Partial<DraftRow> = {}): DraftRow {
 beforeEach(() => forgetSteps());
 
 describe('draftSteps', () => {
+  test('a draft from another computer is no step: 01 → 02 → now only', async () => {
+    const theirs = draft(2, { key: 'p:2:abcdef0123456789', outside: 'another-computer' });
+    const rows = [draft(1), draft(2), theirs];
+    const texts: Record<number, string> = { 1: script(HALL), 2: script(HALL, CELLAR) };
+    const steps = await draftSteps(
+      rows,
+      async (n) => texts[n] as string,
+      'fountain',
+      script(HALL, CELLAR, YARD),
+    );
+    expect(steps.map(stepTitle)).toEqual(['Draft 01 → Draft 02', 'Draft 02 → now']);
+    expect(steps.some((s) => s.from === theirs || s.to === theirs)).toBe(false);
+  });
+
   test('steps are consecutive drafts then the last to now', async () => {
     const rows = [draft(3), draft(1), draft(2)];
     const texts: Record<number, string> = {

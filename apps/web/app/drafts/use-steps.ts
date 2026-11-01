@@ -100,7 +100,9 @@ function create(): StepsSession {
       return;
     }
     state.value = 'counting';
-    const rows = drafts.rows.value.filter((row) => row.projectId === projectId);
+    // The script's own drafts only: an outside one (another computer's, or changed outside
+    // Drafter) shares a number with one of them, and is no step.
+    const rows = drafts.rows.value.filter((row) => row.projectId === projectId && !row.outside);
     try {
       const found = await draftSteps(
         rows,
@@ -146,10 +148,16 @@ function create(): StepsSession {
     return true;
   }
 
+  /** The step Compare shows: both ends must agree (the last step's end is the draft being written). */
+  const indexOf = (at: { from: number; to: number } | null): number => {
+    if (!at) return -1;
+    return steps.value.findIndex(
+      (s) => s.from.n === at.from && (s.to === 'now' ? at.to > s.from.n : s.to.n === at.to),
+    );
+  };
+
   const shownStep = computed(() => {
-    const at = compare.draftStep.value;
-    if (!at) return null;
-    const index = steps.value.findIndex((s) => s.from.n === at.from);
+    const index = indexOf(compare.draftStep.value);
     return index < 0 ? null : index;
   });
 
@@ -157,7 +165,7 @@ function create(): StepsSession {
     const at = compare.draftStep.value;
     if (!at) return;
     if (state.value !== 'ready' || steps.value.length === 0) await load();
-    const index = steps.value.findIndex((s) => s.from.n === at.from);
+    const index = indexOf(at);
     if (index < 0) return;
     const next = index + direction;
     if (next < 0) return say('This is the first step.');
