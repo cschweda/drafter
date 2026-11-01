@@ -4,10 +4,13 @@
 // ipcMain would, with a stand-in event, so they are what a compromised page could ask for.
 //
 // Every argument is checked before anything touches the disk, and every path must have been
-// granted (grants.ts): chosen in a dialog, dropped, or named on the command line. A write also
+// granted (grants.ts): chosen in a dialog, dropped, or named on the command line. A drop is never
+// granted by a path the page sends: the preload's own listener tells main what was dropped
+// (`registerDrop`), and the page can only claim one of those by the opaque id it was given. A write also
 // goes only to a regular file with a script's or an export's extension, and a Final Draft file
 // only where the writer chose one in a Save dialog (an export, never an imported file). A Highland
 // or Fade In file is never written at all.
+import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { besideHandlers } from './beside';
 import {
@@ -98,6 +101,11 @@ function checkId(value: unknown): number {
 /** How many files one page may watch at once (it watches one: the open script's). */
 const MAX_WATCHES = 32;
 
+/** How many files one drop may hand over, and how many unclaimed drops a page may hold. */
+const MAX_DROPS = 64;
+/** How long a drop waits to be claimed: the page claims it in the same event, at once. */
+const DROP_LIFETIME_MS = 60_000;
+
 /** Runs `work`, turning whatever it throws into a `FileError`. */
 async function coded<T>(work: () => Promise<T>): Promise<T> {
   try {
@@ -136,6 +144,15 @@ export function fileHandlers(deps: FileHandlerDeps) {
   // `.epub` was opened by mistake (Open refuses it), and none is ever written: a script saves as a
   // .fountain.
   const exportsChosen = new Set<string>();
+
+  // Drops the preload saw, by the id the page was given for each: whose page, which file, when.
+  // Claimed once, by that page, within DROP_LIFETIME_MS.
+  const drops = new Map<string, { sender: FileSender; path: string; at: number }>();
+  const forgetStaleDrops = (now: number) => {
+    for (const [id, drop] of drops) {
+      if (now - drop.at > DROP_LIFETIME_MS || drop.sender.isDestroyed()) drops.delete(id);
+    }
+  };
 
   // Watches, by page: each stops when the page asks, reloads, or goes.
   const watches = new Map<FileSender, Map<number, () => void>>();
@@ -193,10 +210,43 @@ export function fileHandlers(deps: FileHandlerDeps) {
       }),
 
     /**
-     * The preload's: a dropped file's path. Granted only if it is an existing script; the read
-     * that follows it waits for this (`Grants.pend`).
+     * The preload's, from its own listener on the native `drop` event (a trusted one, run before
+     * the page's): the dropped files' paths. Answers an opaque id for each (`''` for one that isn't
+     * an absolute path); nothing is granted until the page claims the id. The page's bridge has no
+     * way to call this.
      */
-    grantDropped: (_event: FileEvent, path: unknown) => grants.pend(grantScript(path)),
+    registerDrop(event: FileEvent, paths: unknown): string[] {
+      if (!Array.isArray(paths)) return [];
+      const now = Date.now();
+      forgetStaleDrops(now);
+      const ids = paths.slice(0, MAX_DROPS).map((path) => {
+        try {
+          const id = randomUUID();
+          drops.set(id, { sender: event.sender, path: checkPath(path), at: now });
+          return id;
+        } catch {
+          return '';
+        }
+      });
+      // At most MAX_DROPS waiting per page: the oldest go first.
+      const mine = [...drops].filter(([, drop]) => drop.sender === event.sender);
+      for (const [id] of mine.slice(0, Math.max(0, mine.length - MAX_DROPS))) drops.delete(id);
+      return ids;
+    },
+
+    /**
+     * The page's: claims a drop by its id, once. Granted only if it is an existing script (or a
+     * file to import); resolves with its path, which the page then reads like an Open's.
+     */
+    claimDrop: (event: FileEvent, id: unknown) =>
+      coded(async () => {
+        forgetStaleDrops(Date.now());
+        const drop = typeof id === 'string' ? drops.get(id) : undefined;
+        if (!drop || drop.sender !== event.sender)
+          throw new FileError('not-allowed', 'not dropped');
+        drops.delete(id as string);
+        return grantScript(drop.path);
+      }),
 
     read: (_event: FileEvent, path: unknown) =>
       coded(async () => readFileAt(await grants.allowed(path))),

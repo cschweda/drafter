@@ -58,7 +58,7 @@ const centered = sentence.map((text) => `> ${text} <`);
 const lyric = lines(2).map((ls) => ls.map((l) => `~${l}`).join('\n'));
 const note = sentence.map((text) => `[[${text}]]`);
 const boneyard = lines(3).map((ls) => `/* ${ls.join('\n\n')} */`);
-const forced = fc.constantFrom('!LOUD NOISE.\nThe walls shake.', '.FLASHBACK', '@McCLANE\nHello.');
+const forced = fc.constantFrom('!LOUD NOISE.\nThe walls shake.', '.FLASHBACK', '@McBRIDE\nHello.');
 
 const block = fc.oneof(
   sceneHeading,

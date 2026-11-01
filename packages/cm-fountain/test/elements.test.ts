@@ -121,7 +121,7 @@ describe('Character', () => {
     ['丽丽|', '@丽丽|'],
     // A cue already: an `@` it doesn't need comes off, and else nothing changes.
     ['@MARGARET|\nHello.', 'MARGARET|\nHello.'],
-    ['@McCLANE|\nHello.', '@McCLANE|\nHello.'],
+    ['@McBRIDE|\nHello.', '@McBRIDE|\nHello.'],
     ['MARG|ARET\nHello.', 'MARG|ARET\nHello.'],
     ['MARGARET ^|\nHi.', 'MARGARET ^|\nHi.'],
   ]);

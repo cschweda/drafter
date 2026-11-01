@@ -110,7 +110,7 @@ describe('blockTiming', () => {
   });
 
   test("a forced name's speech is spoken", () => {
-    expect(timed('@McCLANE\nYippee ki-yay.\n')).toEqual([
+    expect(timed('@McBRIDE\nMind out.\n')).toEqual([
       ['character', NONE],
       ['dialogue', { spoken: 2, actionLines: 0 }],
     ]);
@@ -163,10 +163,10 @@ describe('dual dialogue', () => {
 
   test('each speaker is credited with their own words, a pair included', () => {
     const t = tally(
-      'ANN\nOne two three.\n\nBEN ^\nFour five.\n\nAnn sits.\n\n@Ann\nSix.\n\n@McCLANE\n(dry)\n',
+      'ANN\nOne two three.\n\nBEN ^\nFour five.\n\nAnn sits.\n\n@Ann\nSix.\n\n@McBRIDE\n(dry)\n',
     );
     // By the cue's name in capitals; a speaker with only a parenthetical has spoken nothing.
-    expect(Object.fromEntries(t.spokenBy())).toEqual({ ANN: 4, BEN: 2, MCCLANE: 0 });
+    expect(Object.fromEntries(t.spokenBy())).toEqual({ ANN: 4, BEN: 2, MCBRIDE: 0 });
     expect(t.timing().spoken).toBe(4);
     // A lyric with no cue before it is spoken, by no one.
     const lyric = tally('~Happy birthday to you\n');
@@ -235,8 +235,8 @@ describe('speeches', () => {
   });
 
   test('a cue with only a parenthetical is a speech of 0 words', () => {
-    expect(speeches('@McCLANE\n(dry)\n\nANN\n(beat)\n')).toEqual([
-      { key: 'MCCLANE', block: 0, words: 0 },
+    expect(speeches('@McBRIDE\n(dry)\n\nANN\n(beat)\n')).toEqual([
+      { key: 'MCBRIDE', block: 0, words: 0 },
       { key: 'ANN', block: 2, words: 0 },
     ]);
   });

@@ -42,7 +42,7 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     name: 'Character',
     mark: 'capitals, or a leading @',
     rule: 'A name in capitals on its own line, after a blank line and with dialogue straight under it, says who speaks. It can end with an extension such as (V.O.) for a voice over or (O.S.) for off screen. An @ makes a name a character even when it isn’t all capitals.',
-    example: 'MARGARET (V.O.)\nYou said seven.\n\n@McCLANE\nI did.',
+    example: 'MARGARET (V.O.)\nYou said seven.\n\n@McBRIDE\nI did.',
     reads: ['character', 'dialogue', 'character', 'dialogue'],
   },
   {

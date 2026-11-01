@@ -3,7 +3,16 @@ import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { sourceElement } from '../../../packages/archive/src/reopen';
 import { makeZip } from '../../../packages/archive/test/make-zip';
-import { answerDialogs, dialogsAsked, editor, expect, type Profile, stored, test } from './helpers';
+import {
+  answerDialogs,
+  dialogsAsked,
+  dropFiles,
+  editor,
+  expect,
+  type Profile,
+  stored,
+  test,
+} from './helpers';
 
 // Highland and Fade In files in the desktop app (Imports and Markdown out): one named on the
 // command line or dropped is imported as a new script that is not the file's, and the file is
@@ -71,27 +80,8 @@ test('imports a dropped Fade In file', async ({ desktop, profile }) => {
   writeFileSync(file, FADE_IN);
   const { page } = await desktop();
   await expect(editor(page)).toContainText('The Call');
-  // A file from disk, as the OS hands one to a drop: a file input gives the page a real one.
-  await page.evaluate(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.id = 'e2e-drop-source';
-    input.hidden = true;
-    document.body.append(input);
-  });
-  await page.setInputFiles('#e2e-drop-source', file);
-  await page.evaluate(() => {
-    const input = document.getElementById('e2e-drop-source') as HTMLInputElement;
-    const dropped = input.files?.[0] as File;
-    input.remove();
-    const data = new DataTransfer();
-    data.items.add(dropped);
-    for (const type of ['dragenter', 'dragover', 'drop']) {
-      document.body.dispatchEvent(
-        new DragEvent(type, { dataTransfer: data, bubbles: true, cancelable: true }),
-      );
-    }
-  });
+  // A real drop, as the OS hands one over.
+  await dropFiles(page, [file]);
   await expect(editor(page)).toContainText('INT. FERRY CABIN - NIGHT');
   await expect(editor(page)).toContainText('ABEL, a deckhand [[osf: Cast List]]');
   await expect(toast(page)).toHaveText(

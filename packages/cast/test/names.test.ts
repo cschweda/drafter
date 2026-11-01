@@ -21,7 +21,7 @@ function invented(seed: number) {
 
 describe('names', () => {
   test('capitals, capitalised, and as the cue spells it', () => {
-    expect(spellings('McCLANE', false)).toEqual(['MCCLANE', 'Mcclane', 'McCLANE']);
+    expect(spellings('McBRIDE', false)).toEqual(['MCBRIDE', 'Mcbride', 'McBRIDE']);
     expect(spellings('ANN LEE', false)).toEqual(['ANN LEE', 'Ann Lee']);
     expect(spellings('MARY-JO', false)).toEqual(['MARY-JO', 'Mary-Jo']);
     expect(spellings("O'NEIL", false)).toEqual(["O'NEIL", "O'Neil"]);

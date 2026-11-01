@@ -28,7 +28,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 - **Private.** No cookies, no analytics, no tracking, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. See [Privacy](https://drafter.dev/docs/privacy/).
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
-- **No forced updates.** The web app updates when you reload. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
+- **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
 - **Built for working writers.** The production features a greenlit script needs come to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors.
 
@@ -102,9 +102,11 @@ Drafter is built to open files from anyone without putting you at risk.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
 - **The trap documents.** Drafter is tested against [258 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
-- **Found a security problem?** Please report it privately: see [SECURITY.md](SECURITY.md), or email cschweda@gmail.com with the details. Never in a public issue.
+- **Found a security problem?** Please report it privately: choose **Report a vulnerability** on the repository's [Security tab](https://github.com/cschweda/drafter/security) ([SECURITY.md](SECURITY.md) says what to include), or email cschweda@gmail.com with the details. Never in a public issue.
 
-The [Technical details](docs/technical-details.md#security) give the specifics.
+The [Technical details](docs/technical-details.md#security) give the specifics. [Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
+
+The latest security audit: [1 November 2026](docs/security-audit-2026-11-01.md), no exploitable hole found.
 
 ## How Drafter compares
 
@@ -239,7 +241,9 @@ Found a bug or have an idea? **Help → Report a problem…** or **Suggest an id
 
 Drafter is written from scratch, from public specifications, without reading anyone else's implementation. Nobody working on the code reads the source of other screenwriting apps or Fountain libraries, and none of them is a dependency. Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library. That keeps the MIT license sound, and lets people trust where the engine came from.
 
-A repository-wide audit on 27 October 2026 found no copied code. The rule binds every contributor, AI coding assistants included. [The clean-room rules](docs/DEVELOPMENT.md#clean-room-implementation) are in Developing Drafter, [Clean-room implementation](docs/clean-room.md) has the whole statement, and [the full audit](docs/clean-room-audit.md) has its evidence.
+A repository-wide audit on 27 October 2026 found no copied code, and [a second on 1 November 2026](docs/clean-room-audit-2026-11-01.md), over everything since, found none either. The rule binds every contributor, AI coding assistants included. [The clean-room rules](docs/DEVELOPMENT.md#clean-room-implementation) are in Developing Drafter, and [Clean-room implementation](docs/clean-room.md) has the whole statement.
+
+[Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
 
 ---
 

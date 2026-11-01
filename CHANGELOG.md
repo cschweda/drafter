@@ -6,11 +6,33 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+- **A second clean-room audit** (1 November 2026, `docs/clean-room-audit-2026-11-01.md`), with an index of every audit, newest first (`docs/AUDITS.md`). What it asked for is done: a film line and a film's names in tests are original now, and the Final Draft settings names say where they come from.
+
+### Added
+
+- `docs`: a second clean-room audit, 1 November 2026 (`docs/clean-room-audit-2026-11-01.md`), over everything since the first (v0.3.1 to v0.24.0, and the Story map plan): no copied code, no screenwriting package, no GPL code shipped, and every Final Draft, Highland, and Fade In test file synthetic. It compares itself with the first audit check by check, and lists two small fixes (a film catchphrase back in one test, and an unrecorded source for 18 Final Draft element names). The first audit is now `docs/clean-room-audit-2026-10-27.md`. A new index, `docs/AUDITS.md`, lists every security, clean-room, and accessibility audit, newest first, linked from the README, Developing Drafter, and SECURITY.md.
+- What is Drafter? links Audits from **Can I trust this?** and from its technical links.
+- `docs`: Drafter's first formal security audit, 1 November 2026 (`docs/security-audit-2026-11-01.md`), of the web app, the desktop app, the command line, the build, and the security claims in the docs: no exploitable hole, and nothing leaves the device. To fix: turn on GitHub's private vulnerability reporting. It compares itself with the earlier security reviews, area by area, and is listed in `docs/AUDITS.md`, SECURITY.md, and the README.
+
 ### Changed
+
+- `docs/DEPENDENCIES.md` names every workspace edge its rows had missed (history, lint, the editor package, and the command line) and two tools: axe in the desktop tests, and the Mermaid command line the diagrams are drawn with (through `npx`, never installed).
 
 - The Story map design (docs/drafter-story-map-design.md), approved with mockups for a screenplay and a stage play, is in the repository; Story map ships in v0.24.1.
 - The desktop build makes the history package and the packages it needs before the desktop tests, which read it from its source.
 - The desktop menu test for Report a Problem… types the report before it looks for the version info, which the preview shows once there is something to send.
+
+### Security
+
+- Desktop: a dropped file is granted only when the preload saw the browser's own drop event and told the main process; the page then claims it by an opaque id, once, and can no longer hand the main process a path for a drop (security audit F2).
+- CI: the Linux, Windows, and Mac jobs check out with `persist-credentials: false`, as `publish` already did, so no job leaves its token in `.git/config`. The workflow stays `contents: read`, with `contents: write` on `publish` alone, which makes the release (security audit F7).
+- Dependabot: weekly version updates for npm and GitHub Actions, minor and patch grouped into one PR each (`.github/dependabot.yml`). Dependabot alerts and security updates are on in the repository's settings (security audit F4).
+- Nuxt 4.6.3 (from 4.6.2), which clears its five advisories (the dev server's file reads and config, and `server/middleware` dot segments; none reached drafter.dev, a static site). `pnpm audit --prod` goes from 25 advisories to 20; the rest are in build and dev-server tooling (security audit F3).
+- Technical details no longer says the app has no `v-html`: Drafter's own code has none, and the one library component that does, Nuxt UI's palette, has its label slot replaced with text. The palette test now also searches inside the tag, and says it pins this (security audit F5).
+- The README, What is Drafter?, Why Drafter, and Technical details say the web app updates when you reload, or the next time you open it after closing every Drafter tab, as a service worker does (security audit F10).
+- GitHub's private vulnerability reporting is on (turned on at the maintainer's request), so SECURITY.md, the README, and What is Drafter? name **Report a vulnerability** on the Security tab plainly, with the email beside it, and DEFERRED no longer lists it (security audit F1).
+- DEFERRED lists what the security audit left as known limits: HSTS is Netlify's default (F6), desktop updates are checked by SHA-512 but not signed (F8), what the drop grant still trusts, the advisories left in tooling, and Dependabot PRs running no CI.
+- `docs`: the security audit ends with a Follow-up listing each finding's status, and `docs/AUDITS.md`'s result says all were addressed the same day.
 
 ## [0.24.0] - 2026-11-01
 

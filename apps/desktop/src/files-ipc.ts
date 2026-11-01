@@ -116,10 +116,15 @@ export function registerFileIpc(): FileAccessMain {
   handle(CHANNELS.filesShowSave, (event, name, extension) =>
     handlers.showSave(event, name, extension),
   );
-  // Answered at once (the grant is kept pending); a refused drop opens unbound, from its bytes.
-  handle(CHANNELS.filesGrantDropped, (event, path) => {
-    void handlers.grantDropped(event, path);
+  // A drop: the preload's listener says what was dropped (only from a page's main frame, where the
+  // preload runs), and the page claims each file by the id it was given. A refused claim opens the
+  // file unbound, from its bytes.
+  handle(CHANNELS.filesDropped, (event, paths) => {
+    const invoked = event as unknown as IpcMainInvokeEvent;
+    if (invoked.senderFrame !== invoked.sender.mainFrame) throw new Error('not-allowed');
+    return handlers.registerDrop(event, paths);
   });
+  handle(CHANNELS.filesClaimDrop, (event, id) => handlers.claimDrop(event, id));
   handle(CHANNELS.filesRead, (event, path) => handlers.read(event, path));
   handle(CHANNELS.filesWrite, (event, path, bytes) => handlers.write(event, path, bytes));
   handle(CHANNELS.filesRealPath, (event, path) => handlers.realPath(event, path));

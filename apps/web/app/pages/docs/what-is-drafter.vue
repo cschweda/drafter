@@ -270,12 +270,18 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         <li>
           <strong>Open source.</strong> The code is MIT-licensed and
           <a :href="REPO" target="_blank" rel="noopener noreferrer">on GitHub</a>, for anyone to
-          read. It is written from scratch, with no code from any other screenwriting app.
+          read. It is written from scratch, with no code from any other screenwriting app, and
+          audits check that it stays so:
+          <a :href="repoHref('docs/AUDITS.md')" target="_blank" rel="noopener noreferrer"
+            >Audits</a
+          >
+          lists every one, newest first.
         </li>
         <li>
-          <strong>No forced updates.</strong> The web app updates when you reload. The desktop app
-          asks GitHub once at start-up whether there’s a new version, never installs or restarts by
-          itself, and can be told not to check at all.
+          <strong>No forced updates.</strong> The web app updates when you reload, or the next time
+          you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up
+          whether there’s a new version, never installs or restarts by itself, and can be told not
+          to check at all.
         </li>
       </ul>
       <p>
@@ -308,9 +314,14 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a href="#traps">More below</a>.
         </li>
         <li>
-          <strong>Found a security problem?</strong> Please report it privately:
-          <a :href="repoHref('SECURITY.md')" target="_blank" rel="noopener noreferrer">SECURITY.md</a>
-          says how. Or email cschweda@gmail.com with the details. Never in a public issue.
+          <strong>Found a security problem?</strong> Please report it privately: choose
+          <strong>Report a vulnerability</strong> on the repository’s
+          <a :href="`${REPO}/security`" target="_blank" rel="noopener noreferrer">Security tab</a>
+          (<a :href="repoHref('SECURITY.md')" target="_blank" rel="noopener noreferrer"
+            >SECURITY.md</a
+          >
+          says what to include), or email cschweda@gmail.com with the details. Never in a public
+          issue.
         </li>
       </ul>
       <p>
@@ -439,6 +450,11 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a :href="repoHref('docs/DEVELOPMENT.md')" target="_blank" rel="noopener noreferrer"
             >Developing Drafter</a
           >: building it, the packages, and releasing.
+        </li>
+        <li>
+          <a :href="repoHref('docs/AUDITS.md')" target="_blank" rel="noopener noreferrer"
+            >Audits</a
+          >: every security, clean-room, and accessibility audit, newest first.
         </li>
         <li>
           <a :href="repoHref('docs/ROADMAP.md')" target="_blank" rel="noopener noreferrer"

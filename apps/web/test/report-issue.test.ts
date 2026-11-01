@@ -230,8 +230,11 @@ describe('the GitHub issue forms', () => {
     expect(SECURITY_URL).toContain('SECURITY.md');
   });
 
-  test('SECURITY.md gives the email as the route when private reporting is off', () => {
+  test('SECURITY.md gives GitHub’s private report first, and the email beside it', () => {
     const security = repoFile('SECURITY.md');
+    expect(security).toContain('Choose **Report a vulnerability**');
+    // Private reporting is on (2026-11-01): no wording hedges on the button being missing.
+    expect(security).not.toContain('button isn');
     expect(security).toContain(`Email ${CONTACT_EMAIL} with the details`);
     expect(security).not.toContain('please contact me');
   });

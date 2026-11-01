@@ -274,13 +274,13 @@ describe('sceneIndex', () => {
     ]);
   });
 
-  test('a forced @McCLANE keeps its name', () => {
-    const { index } = indexOf('INT. A - DAY\n\n@McCLANE\nYippee.\n\nMCCLANE\nAgain.\n');
+  test('a forced @McBRIDE keeps its name', () => {
+    const { index } = indexOf('INT. A - DAY\n\n@McBRIDE\nHello.\n\nMCBRIDE\nAgain.\n');
     expect(index.scenes[0]?.speeches).toEqual([
-      { name: 'McCLANE', block: 1, words: 1 },
-      { name: 'McCLANE', block: 3, words: 1 },
+      { name: 'McBRIDE', block: 1, words: 1 },
+      { name: 'McBRIDE', block: 3, words: 1 },
     ]);
-    expect(index.scenes[0]?.spokenBy).toEqual({ McCLANE: 2 });
+    expect(index.scenes[0]?.spokenBy).toEqual({ McBRIDE: 2 });
   });
 
   test('places scenes on pages and counts eighths when the layout matches', () => {

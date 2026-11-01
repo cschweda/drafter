@@ -117,7 +117,7 @@ describe('character-without-dialogue', () => {
     hit('BRICK ^\n\n(quietly)\nHi.\n');
     hit('BRICK (V.O.) ^\n\n(quietly)\nHi.\n');
     hit('  NARRATOR\n\n(quietly)\nHi.\n');
-    hit('MCCLANE JR.\n\n(quietly)\nHi.\n');
+    hit('MCBRIDE JR.\n\n(quietly)\nHi.\n');
     hit('R2-D2 ()\n\n(quietly)\nHi.\n');
     hit('\ufeffNARRATOR\n\n(quietly)\nHi.\n');
   });
@@ -311,8 +311,8 @@ describe('manual-contd', () => {
       'MARGARET\nHi.\n\nShe sits.\n\nMARGARET\nStill here.\n',
     );
     fixesTo(
-      '@McCLANE\nHi.\n\nShe sits.\n\n@McCLANE (V.O.) (cont’d)\nGot it.\n',
-      '@McCLANE\nHi.\n\nShe sits.\n\n@McCLANE (V.O.)\nGot it.\n',
+      '@McBRIDE\nHi.\n\nShe sits.\n\n@McBRIDE (V.O.) (cont’d)\nGot it.\n',
+      '@McBRIDE\nHi.\n\nShe sits.\n\n@McBRIDE (V.O.)\nGot it.\n',
     );
   });
 
@@ -409,7 +409,7 @@ describe('manual-contd', () => {
     fixesLater("  MARGARET (CONT'D)", '  MARGARET');
     fixesTo(`\ufeff${later("MARGARET (CONT'D)")}`, `\ufeff${later('MARGARET')}`);
     // A dual cue with action before it is laid out like any other, so it can be continued.
-    fixesTo(later("@McCLANE (CONT'D) ^", '@McCLANE'), later('@McCLANE ^', '@McCLANE'));
+    fixesTo(later("@McBRIDE (CONT'D) ^", '@McBRIDE'), later('@McBRIDE ^', '@McBRIDE'));
   });
 
   it('removes every one the cue has', () => {

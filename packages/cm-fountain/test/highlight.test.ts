@@ -106,7 +106,7 @@ describe('fountainDecorations', () => {
   describe('markers', () => {
     it('dims markers and leaves printed text alone', () => {
       expect(marked('!SILENCE.', 'cm-f-marker')).toEqual(['!']);
-      expect(marked('@McCLANE', 'cm-f-marker')).toEqual(['@']);
+      expect(marked('@McBRIDE', 'cm-f-marker')).toEqual(['@']);
       expect(marked('INT. HALL - DAY #12#', 'cm-f-marker')).toEqual(['#12#']);
       expect(marked('**bold**', 'cm-f-marker')).toEqual(['**', '**']);
     });
@@ -151,7 +151,7 @@ describe('fountainDecorations', () => {
     it('never marks whitespace, whether it leads, trails, or sits between markers', () => {
       for (const source of [
         '  !LOUD  ',
-        '\t@McCLANE\t',
+        '\t@McBRIDE\t',
         '#   Spaced   ',
         'INT. HALL - DAY   #12#   ',
       ]) {

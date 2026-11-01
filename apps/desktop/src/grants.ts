@@ -3,19 +3,28 @@
 // run someone else's script, the main process must not become a way to read ~/.ssh or rewrite
 // ~/.bashrc. So a path is granted only by the main process itself, when:
 //   - the Open or Save dialog returns it;
-//   - the preload hands over a dropped file's path (`webUtils.getPathForFile`: a page can't make a
-//     File with a path on disk) and it is an existing script;
+//   - a drop: the preload's own listener, on the window in the capture phase and added before the
+//     page's scripts run, sees the browser's trusted `drop` event and tells main the dropped files'
+//     paths (`webUtils.getPathForFile`; a page can't make a File with a path). Main answers an
+//     opaque id for each, and grants the file only when the page claims that id, once, from the
+//     same window, within a minute, and only if it is an existing script or a file to import. The
+//     page's bridge has no call that takes a dropped path (file-handlers.ts `registerDrop`,
+//     `claimDrop`; the security audit of 2026-11-01, F2);
 //   - the command line or a second launch names it (Task 3, through `grant`).
 // A dropped or named file is a script by where it leads, not by its name: a link `x.md` to a
 // private key has the name of a script and is refused (the real path's extension is checked, and
 // recorded, in one step). A file the writer picked in a dialog is theirs whatever its kind.
 //
-// What this does not stop: main cannot tell that a drop came from a person. The preload runs in
-// the renderer's process, so a compromised renderer could call the drop channel itself and be
-// granted any script, Markdown, or text file (and any link leading to one) that the writer's own
-// account can read. That is accepted: it takes a compromised renderer to begin with (the CSP, the
-// absence of v-html, and the network block make that hard), and only script-type files are within
-// reach, never ~/.ssh or ~/.bashrc.
+// What this does not stop: main still can't see the drop itself (Electron gives the main process
+// no drop event for a page), so it trusts the preload to report only real ones. Script in the
+// page can't reach that report (context isolation; a drop it dispatches is untrusted, and the
+// preload ignores it), but a renderer process compromised below the page (a bug in Chromium
+// itself) could send it. That would put in reach any file with a script's or an import's
+// extension that the writer's own account can read: `.fountain` and `.md`, `.markdown`, and `.txt`
+// of every kind (a project’s README, notes, an AI tool’s instructions) to read and rewrite, and
+// `.fdx`, `.highland`, and `.fadein` to read; never ~/.ssh or ~/.bashrc. That is accepted: it takes a compromised renderer
+// to begin with, which the sandbox, the CSP, the absence of v-html in Drafter's own code (the one
+// library component that has it is given text only), and the network block all stand against.
 // A granted script also lets the page write its own drafts and cuts beside it (beside.ts), and
 // nothing else there: the names are worked out in main from the script's real name (its cuts
 // file, `<name>.cuts.md`; its drafts folder, `<stem> drafts`; and draft files in it named
@@ -73,8 +82,6 @@ export class Grants {
   readonly #windows: boolean;
   /** By path, oldest first. */
   #entries: Map<string, Grant> | undefined;
-  /** Grants under way (a drop's), which a check waits for. */
-  readonly #pending = new Set<Promise<unknown>>();
   #saving: Promise<void> = Promise.resolve();
 
   constructor(file: string, options: { max?: number; platform?: string } = {}) {
@@ -148,20 +155,12 @@ export class Grants {
     return key;
   }
 
-  /** Keeps a grant under way (a drop's) for the checks that follow it to wait for. */
-  pend(grant: Promise<unknown>): Promise<unknown> {
-    const kept = grant.catch(() => {}).finally(() => this.#pending.delete(kept));
-    this.#pending.add(kept);
-    return kept;
-  }
-
   /**
    * The real path to use for `path`, if it was granted and still leads where it did; otherwise a
    * `FileError('not-allowed')`.
    */
   async allowed(path: unknown): Promise<string> {
     const key = resolve(checkPath(path));
-    await Promise.all(this.#pending);
     const entry = this.#load().get(key);
     await this.#saving.catch(() => {});
     if (!entry) throw new FileError('not-allowed', 'not chosen');
