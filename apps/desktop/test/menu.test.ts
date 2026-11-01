@@ -279,6 +279,29 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-technical')?.label).toBe('Technical Details');
   });
 
+  test('puts What Is Drafter? first in Help, and What’s New after Technical Details', () => {
+    const t = menuTemplate(
+      [
+        ...COMMANDS,
+        cmd('help-what-is', 'Help', 'Open the page: What is Drafter?'),
+        cmd('help-technical', 'Help', 'Open the page: Technical details'),
+        cmd('help-whats-new', 'Help', 'Open the page: What’s new'),
+      ],
+      () => {},
+      { platform: 'linux' },
+    );
+    const ids = submenu(menus(t).Help)
+      .map((i) => i.id)
+      .filter(Boolean);
+    expect(ids[0]).toBe('help-what-is');
+    expect(ids.slice(ids.indexOf('help-technical'), ids.indexOf('help-technical') + 2)).toEqual([
+      'help-technical',
+      'help-whats-new',
+    ]);
+    expect(named(t, 'help-what-is')?.label).toBe('What Is Drafter?');
+    expect(named(t, 'help-whats-new')?.label).toBe('What’s New');
+  });
+
   test('sends the command’s id when an item is chosen', () => {
     const run = vi.fn();
     const t = menuTemplate(COMMANDS, run, { platform: 'linux' });

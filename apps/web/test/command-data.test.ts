@@ -106,8 +106,9 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the nine help pages, in the Help group', () => {
+  test('has the eleven help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
+      '/docs/what-is-drafter',
       '/docs/why',
       '/docs/fountain',
       '/docs/saving',
@@ -117,6 +118,7 @@ describe('the command data', () => {
       '/docs/open-formats',
       '/docs/licences',
       '/docs/technical',
+      '/docs/whats-new',
     ]);
     for (const page of HELP_PAGES) {
       const command = COMMAND_DATA.find((c) => c.id === page.id);
@@ -164,6 +166,7 @@ describe('the command data', () => {
 
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
+      '/docs/what-is-drafter/',
       '/docs/why/',
       '/docs/fountain/',
       '/docs/saving/',
@@ -173,7 +176,14 @@ describe('the command data', () => {
       '/docs/open-formats/',
       '/docs/licences/',
       '/docs/technical/',
+      '/docs/whats-new/',
     ]);
+  });
+
+  test('opens What is Drafter? and What’s new on the desktop too', () => {
+    for (const id of ['help-what-is', 'help-whats-new']) {
+      expect(COMMAND_DATA.find((c) => c.id === id)?.webOnly, id).toBeUndefined();
+    }
   });
 });
 

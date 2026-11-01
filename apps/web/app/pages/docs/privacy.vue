@@ -54,8 +54,8 @@ useDocsHead({
         and a fingerprint of its wording) in a second IndexedDB database, <code>drafter-cache</code>;
         removing the script removes its notes there too. The stats are, for each day you write, the time
         you spent editing the script and how many words and pages it grew; nothing about what you
-        typed, and nothing for a sample. Removing a script removes them. The theme you chose, and whether you have seen the tour, are in the
-        browser’s localStorage, a small store for a website’s own notes. So, for a moment while a
+        typed, and nothing for a sample. Removing a script removes them. The theme you chose, whether you have seen the tour, and which
+        What’s new notes you have seen are in the browser’s localStorage, a small store for a website’s own notes. So, for a moment while a
         page closes, is any text not yet written to the recovery copy; the next visit moves it there.
         None of it is a cookie, and none of it leaves this device.
       </li>

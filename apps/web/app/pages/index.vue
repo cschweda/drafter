@@ -201,6 +201,7 @@ onBeforeUnmount(() => {
       <DraftFileBar />
       <!-- Its region has no height; the offer itself is fixed in place. In the shell's grid it would be a row. -->
       <UpdatePrompt />
+      <WhatsNewBanner />
       <StructureStrip v-if="stripShown" />
     </div>
     <DropZone />

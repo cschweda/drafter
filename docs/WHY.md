@@ -1,6 +1,6 @@
 # Why Drafter
 
-The [Why Drafter](https://drafter.dev/docs/why/) page on drafter.dev makes the case for writers. This page keeps the longer notes behind it: the idea Drafter is built on, its principles, what makes it different, and the whole list of what it does today. How the code works is in [Developing Drafter](DEVELOPMENT.md#how-it-works).
+The [What is Drafter?](https://drafter.dev/docs/what-is-drafter/) page on drafter.dev starts at the beginning, for writers, productions, and technical people, and the [Why Drafter](https://drafter.dev/docs/why/) page makes the case for writers, with the full comparison. This page keeps the longer notes behind it: the idea Drafter is built on, its principles, what makes it different, and the whole list of what it does today. How the code works is in [Developing Drafter](DEVELOPMENT.md#how-it-works).
 
 ## Contents
 
@@ -98,7 +98,7 @@ The README's opening, as it read at v0.23.2, before it was cut down to one list.
 - **Private.** No cookies, no analytics, no tracking, and no telemetry. Your script never leaves your device: Drafter has no server that could receive it. See [Privacy](https://drafter.dev/docs/privacy/).
 - **Works offline.** Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
-- **Built for working writers, free.** Production features, the kind a script needs once it's greenlit, come to the free app in v0.26.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers, OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. There is no paid version, and there won't be one.
+- **Built for working writers, free.** Production features, the kind a script needs once it's greenlit, come to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers, OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. There is no paid version, and there won't be one.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
 
 **The big features, all free**
@@ -108,7 +108,7 @@ The README's opening, as it read at v0.23.2, before it was cut down to one list.
 - **Structure tools.** Outline, index cards, the Structure strip, scene colors, synopses, notes with readers' names, setups and payoffs, and running times by scene and act.
 - **See the script.** Scaffold follows your cursor and shows who is in the scene; the Stats tab has each character's screen time, dialogue share, and a character-by-scene grid.
 - **Every draft kept.** Version history, Compare with a GitHub-style view of what changed, Show changes on the pages, and the history of one scene; numbered drafts, each kept for good; and Cuts, everything you cut, to read, copy, or put back.
-- **Production, coming free in v0.26.0.** Colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides.
+- **Production, coming free in v0.27.0.** Colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides.
 - **Writing help.** Focus mode, typewriter scrolling, daily goals, sprints, writing stats, and its own offline spellcheck.
 - **Everywhere you write.** A web app, desktop apps for Windows and Linux (and a Mac build), and it works on a phone, offline.
 

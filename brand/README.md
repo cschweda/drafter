@@ -1,6 +1,6 @@
 # Drafter's brand
 
-![Drafter: Fountain first, for screenplays, stage plays, and novels](og-image.svg)
+![Drafter: Fountain first, a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon](og-image.svg)
 
 ## The mark
 

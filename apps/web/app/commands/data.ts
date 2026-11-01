@@ -35,6 +35,7 @@ export interface HelpPage {
 
 /** The help pages (Phase 1 design §4.5): prerendered at `path`, and opened from Help and the palette. */
 export const HELP_PAGES: readonly HelpPage[] = [
+  { id: 'help-what-is', path: '/docs/what-is-drafter', title: 'What is Drafter?' },
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
@@ -44,6 +45,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },
   { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
   { id: 'help-technical', path: '/docs/technical', title: 'Technical details' },
+  { id: 'help-whats-new', path: '/docs/whats-new', title: 'What’s new' },
 ];
 
 /** The Download page: a help page, but not listed with them; Help's entry for it is web-only. */

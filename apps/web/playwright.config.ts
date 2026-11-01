@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+import { WHATS_NEW_SEEN } from './app/whats-new/banner';
+import { WHATS_NEW } from './app/whats-new/entries';
 import { drafterDatabase, sampleSeenRows } from './e2e/seed';
 
 // The tests run against the generated site (`pnpm e2e` builds it first),
@@ -35,6 +37,10 @@ export default defineConfig({
     // holding the settings rows that say the samples were met (`sampleSeenRows`);
     // e2e/first-samples.spec.ts starts without them.
     //
+    // What's new's banner (app/whats-new/banner.ts) shows on a returning visit until it is dismissed,
+    // and a test that stores a script before the page opens is a returning visit: every entry is
+    // stored as seen, as the tour is; e2e/whats-new.spec.ts starts without it.
+    //
     // A fresh visit follows the system's appearance (fresh-look design §9), and every test is a
     // first visit, so the theme is stored as Drafter's default, dark, as a returning writer's
     // would be; e2e/settings.spec.ts's "a fresh visit" tests start without it. The system is dark
@@ -51,6 +57,10 @@ export default defineConfig({
             { name: 'drafter-tour-v1', value: 'true' },
             { name: 'drafter-storage-toast-v1', value: 'true' },
             { name: 'nuxt-color-mode', value: 'dark' },
+            {
+              name: WHATS_NEW_SEEN,
+              value: JSON.stringify(WHATS_NEW.filter((e) => e.banner).map((e) => e.id)),
+            },
           ],
           indexedDB: [drafterDatabase(sampleSeenRows)],
         },

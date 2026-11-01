@@ -22,6 +22,12 @@ describe('the Help menu', () => {
     ]);
   });
 
+  test('starts the help pages with What is Drafter? and ends them with What’s new', () => {
+    const pages = HELP_MENU_COMMANDS.filter((id) => HELP_PAGES.some((page) => page.id === id));
+    expect(pages[0]).toBe('help-what-is');
+    expect(pages.at(-1)).toBe('help-whats-new');
+  });
+
   test('gives every item an icon of its own', () => {
     const icons = HELP_MENU_COMMANDS.map((id) => HELP_MENU_ICONS[id]);
     expect(icons.filter((icon) => !icon)).toEqual([]);

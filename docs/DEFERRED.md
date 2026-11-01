@@ -197,7 +197,7 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 
 - **Images embedded as base64** (design §11, Call 8): a Markdown image is shown as its description in the HTML file and the EPUB, as the Preview does; when Drafter has images of its own, they can go in as `data:` URIs (allowed by the file's CSP already) and as EPUB manifest items.
 - **Search inside the file, a contents sidebar, and per-reader comments** (design §11): the HTML file has the browser's own Find, the band (a script) or the headings (a document) to move by, and no comments; a reader file to comment in is Phase 3's self-contained reader file.
-- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.28.0) exports as its own page in its own release.
+- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.29.0) exports as its own page in its own release.
 - **The CLI has no EPUB option** (`drafter build --epub`): `--html` is there; an EPUB from the command line would take its identifier from the title and author, as the app does for a script with no project.
 - **A real-device check of the downloads**: on an iPhone, that downloading the `.html` file saves it rather than opening it, and that an `.epub` reaches Books; to do in the release pass.
 
@@ -220,7 +220,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Grouping sub-locations.** HOUSE - KITCHEN and HOUSE - HALL are two locations (Call 15); the Places list sorts them together but adds nothing up.
 - **Sorting the Characters table** (Call 19). It keeps the cast's order (most speeches first); sorting by a column, as a table's header buttons would, comes later.
 - **Exporting the Stats tab's tables** (Characters, the grid's List, Long absences), as CSV or Markdown.
-- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.27.0) adds storylines without either.
+- **Storyline rows in the strip**, and **the Beat Board's storylines in rename** (Plan F): Plan E's second part (v0.28.0) adds storylines without either.
 - **A per-scene history link from Scaffold.** History of this scene is in the scene menus already.
 - **The Stats tab opening over its budget in Firefox and WebKit** (243 to 502 ms against 300 ms, which the design sets for Chromium; DECISIONS has the profile). Most of WebKit's time is the tab switch itself; mounting the Overview later, or drawing the tab's shell first, would bring it under.
 - **The spare words worker retries every 5 seconds** (`SPARE_RETRY_MS`) while a dictionary fails to load with spellcheck off, or at once for another language. A dictionary that never loads (a broken download) is asked again every 5 s while a view holds the cast; a longer wait after each failure would cost less, if it ever shows. (The spare itself ends 30 s after no view needs the cast.)
@@ -262,10 +262,10 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Not in this release (Drafts and Cuts design §10):**
   - **Deleting a draft or a cut.** Neither has Delete: a draft is the writer's milestone, and the Cuts list is a record. A way to hide cuts the writer is done with, kept per script, is for when a long list gets in the way.
   - **Branching** (two lines of drafts from one), and merging them back.
-  - **Revision colors and printed marks per draft**, which come with Production (v0.26.0).
+  - **Revision colors and printed marks per draft**, which come with Production (v0.27.0).
   - **A graphical timeline** beyond Draft by draft's list of steps.
   - **Syncing through a cloud service's API.** The files beside the work, synced by the writer's own Dropbox, Google Drive, or OneDrive, are the sync; nothing is uploaded by Drafter.
-  - **Drafts for the Workbook** (v0.28.0), which can adopt this when it is built.
+  - **Drafts for the Workbook** (v0.29.0), which can adopt this when it is built.
 - **Pages in the Drafts list and in Draft by draft.** Both count words only (`pages: null`): laying out every draft each time the list is read would cost too much. Caching each draft's page count when it is frozen would add them.
 - **A renamed script's files.** A script renamed outside Drafter opens as a new script, holding no drafts of its own, so the old name's drafts folder is not read and nothing says so once (Drafts and Cuts design §4). Finding the folder by the drafts' own IDs would bring them in.
 - **Open Boca instead** (the note bar on a draft file opened itself) opens the work only when this browser or app already has it, and otherwise Open: neither the browser nor the desktop's grants can reach a file beside another by its name alone.

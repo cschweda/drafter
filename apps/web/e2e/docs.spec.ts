@@ -375,7 +375,7 @@ test.describe('without JavaScript', () => {
     await expect(row('Price')).toContainText('$249.99 once, or $99.99/yr');
     // A planned feature shows its version, never a ✓.
     await expect(row('Revision colors and marks').locator('td').first()).toHaveText(
-      'v0.26.0, free',
+      'v0.27.0, free',
     );
     // ✓ and ✗ are read as words.
     const open = row('Open source');

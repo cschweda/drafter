@@ -204,7 +204,7 @@ for (const [name, color] of [
     REVISION.goldenrod,
     REVISION.salmon,
   ]
-    .map((color, i) => `<circle cx="${78 + i * 20}" cy="548" r="7" fill="${color}"/>`)
+    .map((color, i) => `<circle cx="${78 + i * 20}" cy="562" r="7" fill="${color}"/>`)
     .join('');
   files['og-image.svg'] = svg(
     1200,
@@ -218,34 +218,41 @@ for (const [name, color] of [
       mark({ x: 76, y: 76, size: 48, id: 'g' }) +
       text(FONTS.extraBold, 'drafter', {
         x: 72,
-        y: 318,
+        y: 296,
         size: 124,
         fill: '#FFFFFF',
         tracking: -5,
       }) +
-      // Fountain first, in the mark's colors; then who it's for, and where the work can go.
-      text(FONTS.extraBold, 'Fountain first.', { x: 76, y: 382, size: 36, fill: 'url(#g)' }) +
-      text(FONTS.semiBold, 'Screenplays, stage plays,', {
+      // Fountain first, in the mark's colors, said plainly for anyone who hasn't met Fountain; then
+      // who it's for, and Classic mode to come (v0.25.0; the maintainer asked for "coming soon").
+      text(FONTS.extraBold, 'Fountain first.', { x: 76, y: 356, size: 36, fill: 'url(#g)' }) +
+      text(FONTS.semiBold, 'Fountain: a plain-text script format', {
         x: 76,
-        y: 428,
-        size: 30,
+        y: 396,
+        size: 25,
         fill: '#AEB4C0',
       }) +
-      text(FONTS.semiBold, 'and novels, in plain text.', {
+      text(FONTS.semiBold, 'for screenplays and stage plays.', {
         x: 76,
-        y: 466,
-        size: 30,
+        y: 430,
+        size: 25,
         fill: '#AEB4C0',
       }) +
-      text(FONTS.semiBold, 'Out to PDF, Final Draft, and Markdown.', {
+      text(FONTS.semiBold, 'Novels and notes in Markdown.', {
         x: 76,
-        y: 506,
-        size: 21,
-        fill: '#7D8492',
+        y: 464,
+        size: 25,
+        fill: '#AEB4C0',
+      }) +
+      text(FONTS.semiBold, 'Classic mode: coming soon.', {
+        x: 76,
+        y: 513,
+        size: 23,
+        fill: '#E8EAEE',
       }) +
       dots +
-      text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 557, size: 24, fill: '#E8EAEE' }),
-    'Drafter: Fountain first, for screenplays, stage plays, and novels',
+      text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 571, size: 24, fill: '#E8EAEE' }),
+    'Drafter: Fountain first, a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon',
   );
 }
 

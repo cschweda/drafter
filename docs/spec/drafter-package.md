@@ -2,7 +2,7 @@
 
 **Version:** 0.1 (draft) · **Date:** 2026-10-30 · **Editor:** the Drafter project (https://github.com/cschweda/drafter)
 
-**Status:** a draft for comment. It may change until Drafter ships the format (planned for Drafter v0.28.0); from version 1.0 it changes only as §11 allows.
+**Status:** a draft for comment. It may change until Drafter ships the format (planned for Drafter v0.29.0); from version 1.0 it changes only as §11 allows.
 
 **Licence:** this specification is dedicated to the public domain under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/). Anyone may read, copy, implement, extend, or publish it, in any application, open or closed, free or paid, without asking and without attribution (attribution is welcome, not required). The Drafter project claims no patent on anything here and will not assert one.
 
@@ -146,7 +146,7 @@ A CommonMark document: the story's bible and plan.
 - Other `## ` sections (for example Cast, Motifs, Open questions) are the **bible**, free-form.
 - A card **MAY** end with a status comment `<!-- drafter-card {"status":"mine"|"suggested"|"open"} -->`.
 - An `## Unplaced` section holds cards and snippets not yet placed in the structure.
-- The workbook format will be finalised when Drafter ships its Workbook (planned v0.27.0); until then readers **SHOULD** treat it as plain Markdown.
+- The workbook format will be finalised when Drafter ships its Workbook (planned v0.28.0); until then readers **SHOULD** treat it as plain Markdown.
 
 ## 9. Voice notes: `audio/`
 
@@ -180,7 +180,7 @@ The media type `application/vnd.drafter.package+zip` is not yet registered. The 
 
 ## 14. Change log
 
-- **0.1 (2026-10-30):** first draft, written ahead of Drafter's implementation (planned v0.28.0) so other applications can comment and implement.
+- **0.1 (2026-10-30):** first draft, written ahead of Drafter's implementation (planned v0.29.0) so other applications can comment and implement.
 - **0.1.1 (2026-11-01):** the appendix, the script inside an HTML or EPUB export (Drafter v0.23.1), added. It is in use now, so its names are stable. The package itself is unchanged.
 
 ## 15. Feedback

@@ -1,0 +1,7 @@
+flowchart TD
+  type["You type<br/>plain Fountain, in the editor"] --> parse["The parser<br/>reads the whole script"]
+  parse --> views["The editor's views<br/>Problems, Outline, Stats"]
+  parse --> layout["Layout<br/>puts it on pages"]
+  parse --> fdx["Final Draft<br/>an .fdx file"]
+  layout --> pane["The Script pane<br/>pages as you type"]
+  layout --> files["Exports<br/>PDF, text, HTML, EPUB"]

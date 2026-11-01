@@ -181,6 +181,7 @@ const LAYOUT: Record<Group, Section[]> = {
   Help: [
     {
       pick: [
+        'help-what-is',
         'help-fountain',
         'help-shortcuts',
         'help-saving',
@@ -188,6 +189,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'help-privacy',
         'help-licences',
         'help-technical',
+        'help-whats-new',
       ],
     },
     { pick: ['take-the-tour'] },
@@ -209,6 +211,7 @@ const LAYOUT: Record<Group, Section[]> = {
  * commands named in Title Case.
  */
 const LABELS: Record<string, string> = {
+  'help-what-is': 'What Is Drafter?',
   'help-fountain': 'Fountain Cheat Sheet',
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
@@ -216,6 +219,7 @@ const LABELS: Record<string, string> = {
   'help-privacy': 'Privacy',
   'help-licences': 'Third-party Licences',
   'help-technical': 'Technical Details',
+  'help-whats-new': 'What’s New',
   'check-for-updates': 'Check for Updates…',
   'open-as-screenplay': 'Open as Screenplay…',
   'start-draft': 'Start New Draft…',

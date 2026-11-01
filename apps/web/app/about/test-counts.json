@@ -1,0 +1,35 @@
+{
+  "version": "0.23.2",
+  "date": "2026-11-01",
+  "unit": {
+    "packages": 2484,
+    "packageCount": 19,
+    "web": 2099,
+    "desktop": 406,
+    "modules": 58,
+    "trapHarness": 386,
+    "total": 5433
+  },
+  "e2e": {
+    "web": 1199,
+    "webProjects": ["chromium", "firefox", "webkit", "phone", "phone-webkit"],
+    "webRuns": 5995,
+    "desktop": 125
+  },
+  "trap": {
+    "traps": 244,
+    "checks": 834,
+    "byFormat": {
+      "fountain": 39,
+      "markdown": 31,
+      "text": 20,
+      "fdx": 30,
+      "highland": 42,
+      "fadein": 11,
+      "html": 31,
+      "epub": 18,
+      "files": 13,
+      "modules": 9
+    }
+  }
+}
