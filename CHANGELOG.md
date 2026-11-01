@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **`drafter build` and `drafter check` no longer hang on a named pipe**, or read an endless device such as `/dev/zero` until they run out of memory. They take a regular file of at most 5 MB, the app's own limit for a script, and say why when it isn't one; a very large file no longer crashes them.
 - **`drafter build` and `drafter check` are fast again on a script with thousands of problems on one line**, such as many unclosed notes: 50,000 of them took about nine seconds, and now take a moment.
 - **`drafter convert` names the file it really wrote** for a Markdown document from an HTML or EPUB export (`notes.md`, not `notes.fountain`).
+- **A Drafter HTML or EPUB export whose script is over 5 MB** is now said to be too big to open, rather than not being a Drafter export, in the app and in `drafter convert`.
+- **The desktop app says a file over 64 MB is too big** when it is named on the command line or by a second launch, instead of "it can’t be read", and reads a file in a way that can't be made to wait (a file swapped for a pipe just as it is opened).
 - **A UTF-16 file is now said to be "not UTF-8 text"**, with how to fix it, instead of "it holds more than text", in the app and in `drafter convert`.
 
 ## [0.23.1] - 2026-11-01

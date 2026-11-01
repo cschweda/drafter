@@ -7,6 +7,7 @@ import {
   SOURCE_ENTRY,
   SOURCE_ID,
   sourceElement,
+  sourceTooBig,
   zipStored,
 } from '../src';
 import { makeZip } from './make-zip';
@@ -208,5 +209,32 @@ describe('reopenFormatOf', () => {
     expect(
       reopenFormatOf('a.highland', zipStored([{ name: 'text.md', data: text('A') }])),
     ).toBeNull();
+  });
+});
+
+describe('sourceTooBig', () => {
+  const page = (body: string) => text(`<!DOCTYPE html><html><body>${body}</body></html>`);
+  test('is true only for a Drafter export whose script is over 5 MB', () => {
+    expect(sourceTooBig(page(sourceElement('fountain', 'a'.repeat(MAX_SCRIPT_BYTES + 1))))).toBe(
+      true,
+    );
+    expect(sourceTooBig(page(sourceElement('fountain', 'a'.repeat(MAX_SCRIPT_BYTES))))).toBe(false);
+    expect(sourceTooBig(page('<p>no block</p>'))).toBe(false);
+    // Two blocks, or white space that only pads a small script, aren't a script too big.
+    const small = sourceElement('fountain', 'INT. HALL\n');
+    expect(sourceTooBig(page(`${small}${small}`))).toBe(false);
+    expect(
+      sourceTooBig(page(small.replace('\n</script>', `${' '.repeat(8 * 1024 * 1024)}</script>`))),
+    ).toBe(false);
+  });
+
+  test('reads an EPUB source entry by its declared size', () => {
+    const book = (size: number) =>
+      makeZip([
+        { name: 'mimetype', data: 'application/epub+zip', method: 0 },
+        { name: SOURCE_ENTRY.fountain, data: 'x', declaredSize: size },
+      ]);
+    expect(sourceTooBig(book(MAX_SCRIPT_BYTES + 1))).toBe(true);
+    expect(sourceTooBig(book(MAX_SCRIPT_BYTES))).toBe(false);
   });
 });

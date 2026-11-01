@@ -129,6 +129,8 @@ async function expectOutcome(page: Page, trap: Trap, watch: Watch) {
       ? page.getByRole('article', { name: 'Preview' })
       : page.getByRole('region', { name: 'Script' });
     await expect(view.locator('img, iframe, object, embed, script').first()).toHaveCount(0);
+    // The Preview shows a link's text, never a link (javascript:, data:, or any other).
+    if (markdown) await expect(view.locator('a[href]')).toHaveCount(0);
   }
   expect(await page.evaluate(() => (window as { __trapped?: unknown }).__trapped)).toBeUndefined();
   expect(watch.dialogs, 'no dialog opened').toEqual([]);

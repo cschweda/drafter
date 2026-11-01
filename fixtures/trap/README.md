@@ -23,13 +23,28 @@ cd apps/web && rm -rf .output && DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm build 
 cd apps/desktop && npx tsdown && npx playwright test e2e/trap.spec.ts
 ```
 
-`pnpm test` runs both Vitest parts with everything else. In CI, the desktop workflow runs the Electron part on every push to `main` (docs/DEFERRED.md, Trap documents, has the rest).
+`pnpm test` runs both Vitest parts with everything else, once the packages are built
+(`pnpm -r build`: the special files go to the built `drafter`, and the harness refuses to start
+without it). In CI, the desktop workflow's Linux job runs both Vitest parts after its build, and
+the Electron part with the desktop e2e, on every push to `main` and every release.
 
 Each trap at each entry point is checked for its outcome (the text, the key lines, or the
 message), that nothing threw, that it finished within its time (2 seconds unless the trap says
-more), and that the memory it kept, measured with `gc` after it ran, stays within a few copies
-of its size (or the trap's own allowance, for the few a parser's tree makes larger). The peak,
-garbage and all, must stay under 3 GB.
+more), and that the memory it kept, measured after a `gc`, stays within a few copies of its size
+(or the trap's own allowance, for the few a parser's tree makes larger).
+
+**What is enforced, and what is only measured.** In `harness.test.ts` (`package`, `cli-convert`,
+`cli-build`, `desktop-modules`) each trap runs in a worker thread (`pool.ts`, `worker/run.ts`)
+that is terminated at the trap's time limit, or when its heap, sampled from outside while it runs
+(synchronous parsing included), grows past 3 GB: a hang, a quadratic regression, or an unbounded
+parse there fails its test. The special files go to the built `drafter` in a process of its own,
+killed after 10 seconds. The browser and Electron runs (`e2e/trap.spec.ts`) are separate
+processes too, so a page that hangs fails on Playwright's timeout. **Not enforced:** the jsdom
+harness, `apps/web/test/trap-open.test.ts` (`web-open` and `desktop-open`), runs the app's real
+Open in the test's own thread, where Vue, the database, and jsdom make a worker impractical; its
+time and memory are measured after each trap and checked, but a trap that never returned would
+stall it until Vitest's test timeout, which can't interrupt synchronous code. The same readers run
+enforced in `harness.test.ts`, and a few of each kind in real browsers.
 
 ## The entry points
 

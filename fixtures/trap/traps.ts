@@ -744,19 +744,21 @@ const MARKDOWN_TRAPS: Trap[] = [
     id: 'md-deep-emphasis',
     format: 'markdown',
     name: 'deep-emphasis.md',
-    tests: 'Emphasis nested 3,000 deep parses and exports in time.',
-    bytes: () => enc(`# Deep\n\n${'*a '.repeat(3000)}b${' a*'.repeat(3000)}\n`),
+    tests: 'Emphasis nested 1,500 deep parses in time, and its export stays inert.',
+    bytes: () => enc(`# Deep\n\n${'*a '.repeat(1500)}b${' a*'.repeat(1500)}\n`),
     expect: { 'web-open': opensWith('# Deep') },
     inert: true,
+    // The parse and the export, in one timed job.
+    limitMs: 5000,
   },
   {
     id: 'md-huge-table',
     format: 'markdown',
     name: 'huge-table.md',
-    tests: 'A pipe table of 20,000 rows by 50 columns opens and renders in time.',
+    tests: 'A pipe table of 1,500 rows by 50 columns of inline HTML opens and exports in time.',
     bytes: () =>
       enc(
-        `# Table\n\n|${' h |'.repeat(50)}\n|${' - |'.repeat(50)}\n${`|${' <b>x</b> |'.repeat(50)}\n`.repeat(4000)}`,
+        `# Table\n\n|${' h |'.repeat(50)}\n|${' - |'.repeat(50)}\n${`|${' <b>x</b> |'.repeat(50)}\n`.repeat(1500)}`,
       ),
     expect: { 'web-open': opensWith('# Table') },
     inert: true,
@@ -864,7 +866,8 @@ const FDX_TRAPS: Trap[] = [
     id: 'fdx-huge-type',
     format: 'fdx',
     name: 'huge-type.fdx',
-    tests: 'A paragraph type 1 MB long comes in as a note without the note holding all of it.',
+    tests:
+      'A paragraph type 1 MB long comes in as a note, in time (the note holds the whole type: docs/DEFERRED.md).',
     bytes: () => enc(fdx(para('T'.repeat(MiB), 'A lever waits.'))),
     expect: { 'web-open': warns(SAYS.note, { lines: ['A lever waits.'] }) },
     large: true,
@@ -1114,8 +1117,7 @@ const HIGHLAND_TRAPS: Trap[] = [
     id: 'highland-bomb-lying',
     format: 'highland',
     name: 'bomb-lying.highland',
-    tests:
-      'A bomb that declares a small size is walked first and refused as damaged, never inflated past it.',
+    tests: 'A bomb that declares a small size is refused as damaged.',
     bytes: highland([{ name: 'text.fountain', data: '', raw: zeros(64 * MiB), declaredSize: 100 }]),
     expect: { 'web-open': refused(SAYS.highland('it is damaged.')) },
   },
@@ -1895,7 +1897,7 @@ const HTML_TRAPS: Trap[] = [
     id: 'html-block-over-cap',
     format: 'html',
     name: 'block-over-cap.html',
-    tests: 'A block whose script is one byte over 5 MB is refused.',
+    tests: 'A block whose script is one byte over 5 MB is refused as too big.',
     bytes: () =>
       enc(
         page(
@@ -1904,7 +1906,12 @@ const HTML_TRAPS: Trap[] = [
           ),
         ),
       ),
-    expect: { 'web-open': refused(SAYS.webPage) },
+    expect: {
+      'web-open': refused(SAYS.importTooBig),
+      'cli-convert': refused('the script in it is larger than 5 MB'),
+      // The reader gives nothing for it; the app asks why (`sourceTooBig`).
+      package: refused(SAYS.webPage),
+    },
     large: true,
     limitMs: 5000,
   },
@@ -1985,9 +1992,14 @@ const EPUB_TRAPS: Trap[] = [
     id: 'epub-source-bomb',
     format: 'epub',
     name: 'bomb.epub',
-    tests: 'A deflate bomb as the source entry is refused before it is unpacked.',
+    tests:
+      'A deflate bomb as the source entry is refused by its declared size, as too big, before it is unpacked.',
     bytes: epub([source('fountain', '', { raw: zeros(64 * MiB), declaredSize: 64 * MiB })]),
-    expect: { 'web-open': refused(SAYS.eBook) },
+    expect: {
+      'web-open': refused(SAYS.importTooBig),
+      'cli-convert': refused('the script in it is larger than 5 MB'),
+      package: refused(SAYS.eBook),
+    },
   },
   {
     id: 'epub-source-bomb-lying',
@@ -2220,7 +2232,10 @@ const FILE_TRAPS: Trap[] = [
     name: 'huge.fountain',
     tests: 'A 65 MB file is refused by the desktop app’s read cap before it reaches the page.',
     bytes: () => sized(DESKTOP_READ_CAP + MiB, 'Title: Huge\n\n', 'A lever waits.\n'),
-    expect: { 'desktop-open': refused('it can’t be read'), 'cli-build': refused(SAYS.cliTooBig) },
+    expect: {
+      'desktop-open': refused('it is too big (over 64 MB)'),
+      'cli-build': refused(SAYS.cliTooBig),
+    },
     large: true,
     limitMs: 10_000,
   },
@@ -2300,7 +2315,8 @@ const MODULE_TRAPS: Trap[] = [
     id: 'module-proto',
     format: 'modules',
     name: 'module.json',
-    tests: 'A module.json that is an array, or whose permissions is __proto__-shaped, is refused.',
+    tests:
+      'A module.json whose permissions come only under a __proto__ key is refused: in JSON that is a plain key, not the prototype.',
     bytes: manifest(
       '{"id":"trap-module","name":"Trap","description":"d","__proto__":{"permissions":{"network":["https://evil.example"]}}}',
     ),

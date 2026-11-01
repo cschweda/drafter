@@ -1,7 +1,9 @@
 // What every harness shares: running one trap at one entry point within its time and memory, and
 // comparing what happened with what the manifest says must.
 import { expect } from 'vitest';
+import type { Ran } from './pool';
 import { LIMIT_MS, type Outcome, type Trap } from './traps';
+import type { Answer } from './worker/run';
 
 /** What an entry point did with a trap. */
 export type Happened =
@@ -26,8 +28,10 @@ const used = () => {
 const collect = (globalThis as { gc?: () => void }).gc;
 
 /**
- * Runs `work`, timing it and sampling memory every few milliseconds while it awaits. A throw is
- * the test's failure: an entry point must never throw at the person opening a file.
+ * Runs `work` in this thread, timing it and sampling memory every few milliseconds while it awaits
+ * (the jsdom harness, trap-open.test.ts, whose app can't run in a worker). It can't stop synchronous
+ * work that never returns: the worker pool (pool.ts) is what enforces a limit. A throw is the
+ * test's failure: an entry point must never throw at the person opening a file.
  */
 export async function measured<T>(work: () => Promise<T>): Promise<Measured<T>> {
   collect?.();
@@ -98,4 +102,21 @@ export function checkCost(trap: Trap, size: number, cost: Measured<unknown>, whe
   // Without `gc`, the peak is all there is to go on.
   const kept = cost.kept ?? cost.peak;
   expect(kept, `${label} kept ${kept} bytes`).toBeLessThan(memoryBound(trap, size));
+}
+
+/**
+ * Checks a trap that ran in a worker (pool.ts): it wasn't stopped at its time limit or for its
+ * memory, didn't throw, finished within its limit, and kept what it may.
+ */
+export function checkRan(trap: Trap, size: number, ran: Ran, where: string): Answer {
+  const label = `${trap.id} at ${where}`;
+  const limit = trap.limitMs ?? LIMIT_MS;
+  expect(ran.timedOut ?? false, `${label}: stopped after ${limit} ms, its limit`).toBe(false);
+  expect(ran.overMemory ?? false, `${label}: stopped when it grew past ${PEAK_BOUND} bytes`).toBe(
+    false,
+  );
+  expect(ran.error, `${label}: threw`).toBeUndefined();
+  const answer = ran.answer as Answer;
+  checkCost(trap, size, { value: answer, ms: answer.ms, peak: ran.peak, kept: answer.kept }, where);
+  return answer;
 }

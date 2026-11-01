@@ -10,6 +10,7 @@ import {
   refusalMessage,
   reopenFormatOf,
   SNIFF_BYTES,
+  sourceTooBig,
 } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
 import { ref, watch } from 'vue';
@@ -188,6 +189,11 @@ async function reopenExport(file: PickedFile): Promise<void> {
   }
   const found = await embeddedSource(file.bytes);
   if (!found) {
+    // A Drafter export, but its script is past Open's own 5 MB.
+    if (sourceTooBig(file.bytes)) {
+      await say(openError, MESSAGES.importTooBig);
+      return;
+    }
     // By its content or its name, it is a web page or an e-book (`reopenFormatOf`).
     const refusal = notAScript(file.name, file.bytes) ?? notAScript(file.name, new Uint8Array());
     if (refusal) await say(openError, refusalMessage(file.name, refusal));

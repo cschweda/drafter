@@ -172,12 +172,11 @@ function onDisk(trap: Trap): { dir: string; name: string } {
  * reads it through the grant and opens it.
  */
 async function desktopApp(t: App, cwd: string): Promise<(args: string[]) => Promise<void>> {
-  const { requestsFromArgs, refusalsMessage, NOT_A_SCRIPT } = await import(
+  const { requestsFromArgs, refusalsMessage, grantRefusal } = await import(
     '../../desktop/src/open-files'
   );
   const { fileHandlers } = await import('../../desktop/src/file-handlers');
   const { Grants } = await import('../../desktop/src/grants');
-  const { FileError } = await import('../../desktop/src/files');
   const { desktopFiles } = await import('../app/storage/desktop-files');
   const { say } = await import('../app/storage/say');
   const handlers = fileHandlers({
@@ -224,11 +223,7 @@ async function desktopApp(t: App, cwd: string): Promise<(args: string[]) => Prom
         await handlers.grantScript(path);
         granted.push(path);
       } catch (error) {
-        const notScript = error instanceof FileError && error.code === 'not-allowed';
-        refused.push({
-          name: basename(path),
-          reason: notScript ? NOT_A_SCRIPT : 'it can’t be read',
-        });
+        refused.push({ name: basename(path), reason: grantRefusal(error) });
       }
     }
     for (const path of granted) await t.open.openPath(path);
@@ -242,18 +237,21 @@ describe('desktop-open: a file named on the desktop app’s command line', () =>
   beforeAll(async () => {
     t = await app();
   });
-  test.each(trapsFor('desktop-open').map((t) => [t.id, t] as const))('%s', async (_id, trap) => {
-    if (trap.place && !posix) return;
-    t.exportNotice.value = '';
-    const { dir, name } = onDisk(trap);
-    const launch = await desktopApp(t, dir);
-    const was = t.script.project.value?.id;
-    const cost = await measured(async () => {
-      await launch([name]);
-      return happened(t, was);
-    });
-    checkOutcome(trap, trap.expect['desktop-open'] as never, cost.value, 'desktop-open');
-    expect(fetched, `${trap.id}: fetched something`).toEqual([]);
-    checkCost(trap, trap.bytes ? (trap.bytes().length as number) : 0, cost, 'desktop-open');
-  });
+  test.for(trapsFor('desktop-open').map((t) => [t.id, t] as const))(
+    '%s',
+    async ([, trap], { skip }) => {
+      if (trap.place && !posix) skip('a special file of POSIX’s');
+      t.exportNotice.value = '';
+      const { dir, name } = onDisk(trap);
+      const launch = await desktopApp(t, dir);
+      const was = t.script.project.value?.id;
+      const cost = await measured(async () => {
+        await launch([name]);
+        return happened(t, was);
+      });
+      checkOutcome(trap, trap.expect['desktop-open'] as never, cost.value, 'desktop-open');
+      expect(fetched, `${trap.id}: fetched something`).toEqual([]);
+      checkCost(trap, trap.bytes ? (trap.bytes().length as number) : 0, cost, 'desktop-open');
+    },
+  );
 });

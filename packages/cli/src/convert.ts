@@ -31,6 +31,7 @@ import {
   refusalMessage,
   reopenFormatOf,
   SNIFF_BYTES,
+  sourceTooBig,
   ZIP_LIMITS,
 } from '@drafter/archive';
 import { FdxError, type FdxImport, fromFdx } from '@drafter/fdx';
@@ -323,6 +324,7 @@ async function reopenFile(source: string): Promise<Read | undefined> {
   );
   const found = await embeddedSource(bytes);
   if (!found) {
+    if (sourceTooBig(bytes)) throw new Refused('the script in it is larger than 5 MB');
     const refusal = notAScript(name, bytes) ?? notAScript(name, new Uint8Array(0));
     throw new Refused(refusal ? refusalMessage(name, refusal) : WHAT_IT_READS);
   }

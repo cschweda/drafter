@@ -16,7 +16,6 @@ import {
 import { CHANNELS, type RendererReport } from './channels';
 import { type Closing, setUpClosing } from './close';
 import { contextMenuTemplate } from './context-menu';
-import { FileError } from './files';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { heldLaunches, onSecondInstance, takeInstanceLock } from './instance';
 import { setUpMenu } from './menu-main';
@@ -30,8 +29,8 @@ import {
 } from './module-folder';
 import { refuseNetwork } from './network';
 import {
+  grantRefusal,
   heldOpenFiles,
-  NOT_A_SCRIPT,
   OpenInbox,
   refusalsMessage,
   requestsFromArgs,
@@ -215,11 +214,7 @@ function start() {
             await files.grant(path);
             inbox.add({ path });
           } catch (error) {
-            const notScript = error instanceof FileError && error.code === 'not-allowed';
-            refused.push({
-              name: basename(path),
-              reason: notScript ? NOT_A_SCRIPT : 'it can’t be read',
-            });
+            refused.push({ name: basename(path), reason: grantRefusal(error) });
           }
         }
         // After the files: opening one clears the status bar's message. One message for all

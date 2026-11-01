@@ -146,7 +146,8 @@ export function reopenFormatOf(
   return null;
 }
 
-function fromHtml(bytes: Uint8Array): EmbeddedSource | null {
+/** The one well-formed block's kind and base64 text, or null (none, two, or malformed). */
+function htmlBlock(bytes: Uint8Array): { kind: SourceKind; body: string } | null {
   const page = new TextDecoder('utf-8').decode(bytes);
   const start = page.indexOf(OPEN_START);
   if (start < 0) return null;
@@ -161,8 +162,13 @@ function fromHtml(bytes: Uint8Array): EmbeddedSource | null {
   const bodyStart = kindEnd + OPEN_END.length;
   const bodyEnd = page.indexOf(CLOSE, bodyStart);
   if (bodyEnd < 0) return null;
-  const decoded = fromBase64(page.slice(bodyStart, bodyEnd), MAX_SCRIPT_BYTES);
-  return decoded ? { kind, bytes: decoded } : null;
+  return { kind, body: page.slice(bodyStart, bodyEnd) };
+}
+
+function fromHtml(bytes: Uint8Array): EmbeddedSource | null {
+  const block = htmlBlock(bytes);
+  const decoded = block && fromBase64(block.body, MAX_SCRIPT_BYTES);
+  return block && decoded ? { kind: block.kind, bytes: decoded } : null;
 }
 
 async function fromEpub(bytes: Uint8Array): Promise<EmbeddedSource | null> {
@@ -193,5 +199,32 @@ export async function embeddedSource(bytes: Uint8Array): Promise<EmbeddedSource 
     return isEBook(bytes) ? await fromEpub(bytes) : fromHtml(bytes);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Whether a file `embeddedSource` gave nothing for is a Drafter export whose script is over 5 MB,
+ * so it can be said to be too big rather than not an export: one well-formed block (or the one
+ * EPUB source entry) whose text, by its length alone, is past the cap. Never throws.
+ */
+export function sourceTooBig(bytes: Uint8Array): boolean {
+  if (bytes.byteLength > REOPEN_MAX_BYTES) return false;
+  try {
+    if (isEBook(bytes)) {
+      const found = listZip(bytes).filter(
+        (e) => e.name === SOURCE_ENTRY.fountain || e.name === SOURCE_ENTRY.markdown,
+      );
+      return found.length === 1 && (found[0]?.size as number) > MAX_SCRIPT_BYTES;
+    }
+    const block = htmlBlock(bytes);
+    if (!block) return false;
+    let chars = 0;
+    for (let i = 0; i < block.body.length; i++) {
+      const c = block.body.charCodeAt(i);
+      if (c !== 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c && c !== 0x0d && c !== 0x3d) chars++;
+    }
+    return Math.floor((chars * 3) / 4) > MAX_SCRIPT_BYTES;
+  } catch {
+    return false;
   }
 }

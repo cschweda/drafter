@@ -10,6 +10,9 @@ Please report a security problem privately, not in a public issue:
 2. Choose **Report a vulnerability**, and say what you found, how to make it happen (a small file
    that shows it is ideal), and what it lets someone do.
 
+If the **Report a vulnerability** button isn't there, open an issue that says only "Security
+report: please contact me" (no details), and the maintainer will reach you privately.
+
 Only the maintainer sees the report. You'll hear back there, and the fix and its credit, if you'd
 like it, go in the changelog once it is out.
 

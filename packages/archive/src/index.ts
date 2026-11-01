@@ -22,6 +22,7 @@ export {
   SOURCE_ID,
   type SourceKind,
   sourceElement,
+  sourceTooBig,
 } from './reopen';
 export { candidates, pickEntry, scriptText } from './text';
 export {
