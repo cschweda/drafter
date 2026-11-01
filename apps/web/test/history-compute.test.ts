@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import type { DeletedScene, SceneVersion, VersionRow } from '@drafter/history';
+import type { SceneVersion, VersionRow } from '@drafter/history';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { cacheDb, cacheStore, clearProjectCache } from '../app/history/cache';
 import {
@@ -34,6 +34,8 @@ const B = scene('EXT. FERN BRIDGE - NIGHT', 'fer');
 const C = scene('INT. LOW ATTIC - DAWN', 'att');
 const D = scene('EXT. CHALK ROAD - DAY', 'cha');
 const E = scene('INT. QUIET VAULT - NIGHT', 'vau');
+/** A, a little longer: another version of it. */
+const A2 = A.replace('mila0', 'mila0 mila0x');
 const script = (...scenes: string[]) => `Title: Copper Mill\n\n${scenes.join('\n')}`;
 
 const T0 = new Date(2026, 9, 30, 9, 0, 0).getTime();
@@ -67,10 +69,19 @@ async function run(
   return replies;
 }
 
-const deletedReplies = (replies: HistoryReply[]) =>
-  replies.filter((r): r is Extract<HistoryReply, { kind: 'deleted' }> => r.kind === 'deleted');
+/** A scan of the versions of scene A, which every `now` here has, by its span. */
+const scan = (seq: number, projectId: string, now: string): HistoryRequest => {
+  const from = now.indexOf('INT. COPPER MILL - DAY');
+  return { seq, kind: 'versions', projectId, now, scene: { from, to: from + A.trimEnd().length } };
+};
+const versionReplies = (replies: HistoryReply[]) =>
+  replies.filter((r): r is Extract<HistoryReply, { kind: 'versions' }> => r.kind === 'versions');
 const last = <T>(list: readonly T[]): T => list[list.length - 1] as T;
-const headings = (scenes: readonly DeletedScene[]) => scenes.map((s) => s.newest.print.heading);
+/** The snapshots each row of the last list names, as `shape` in the versions test. */
+const rowsShape = (replies: HistoryReply[]) =>
+  last(versionReplies(replies)).rows.map((r) =>
+    'gap' in r ? `gap ${r.snapshots}` : `${r.snapshots}`,
+  );
 
 /** The Dexie source, counting the rows it reads. */
 function counted(source: SnapshotSource) {
@@ -121,31 +132,22 @@ describe('a step of Draft by draft', () => {
 });
 
 describe('the history scan', () => {
-  test('lists deleted scenes newest first as it reads', async () => {
-    // Now: A and E. The newest snapshot had B; the one before it C; the oldest D.
+  test('lists versions newest first as it reads', async () => {
+    // Now: A and E. The newest snapshot had A as it is; the one before it a longer A; the oldest
+    // no A at all.
     await seed('p1', 's1', T0, script(A, B, E));
-    await seed('p1', 's2', T0 - MIN, script(A, C, E));
-    await seed('p1', 's3', T0 - 2 * MIN, script(A, D, E));
+    await seed('p1', 's2', T0 - MIN, script(A2, C, E));
+    await seed('p1', 's3', T0 - 2 * MIN, script(D, E));
     let time = 0;
     const compute = createHistoryCompute(dexieSource(), cacheStore(), () => (time += STREAM_MS));
-    const replies = await run(compute, {
-      seq: 1,
-      kind: 'deleted',
-      projectId: 'p1',
-      now: script(A, E),
-    });
-    const lists = deletedReplies(replies);
-    // The first list came after the first snapshot: only B.
-    expect(headings(lists[0]?.scenes ?? [])).toEqual(['EXT. FERN BRIDGE - NIGHT']);
+    const replies = await run(compute, scan(1, 'p1', script(A, E)));
+    const lists = versionReplies(replies);
+    // The first list came after the first snapshot: only s1.
+    expect(lists[0]?.rows.map((r) => `${r.snapshots}`)).toEqual(['s1']);
     expect(lists[0]?.done).toBe(false);
     const final = last(lists);
     expect(final.done).toBe(true);
-    expect(headings(final.scenes)).toEqual([
-      'EXT. FERN BRIDGE - NIGHT',
-      'INT. LOW ATTIC - DAWN',
-      'EXT. CHALK ROAD - DAY',
-    ]);
-    expect(final.scenes[0]?.newest.snapshot).toBe('s1');
+    expect(rowsShape(replies)).toEqual(['s1', 's2', 'gap s3']);
     const progress = replies.filter((r) => r.kind === 'progress');
     expect(last(progress)).toEqual({
       seq: 1,
@@ -159,28 +161,22 @@ describe('the history scan', () => {
 
   test('reads each snapshot once, then from the cache', async () => {
     await seed('p1', 's1', T0, script(A, B));
-    await seed('p1', 's2', T0 - MIN, script(A, C));
+    await seed('p1', 's2', T0 - MIN, script(A2, C));
     const now = script(A);
     const first = counted(dexieSource());
     const compute = createHistoryCompute(first.source, cacheStore());
-    const cold = await run(compute, { seq: 1, kind: 'deleted', projectId: 'p1', now });
+    const cold = await run(compute, scan(1, 'p1', now));
     expect(first.reads.sort()).toEqual(['s1', 's2']);
     // Again in the same worker: nothing is read.
-    const again = await run(compute, { seq: 2, kind: 'deleted', projectId: 'p1', now });
+    const again = await run(compute, scan(2, 'p1', now));
     expect(first.reads).toHaveLength(2);
     // A new worker reads the cache, not the snapshots.
     const second = counted(dexieSource());
-    const warm = await run(createHistoryCompute(second.source, cacheStore()), {
-      seq: 3,
-      kind: 'deleted',
-      projectId: 'p1',
-      now,
-    });
+    const warm = await run(createHistoryCompute(second.source, cacheStore()), scan(3, 'p1', now));
     expect(second.reads).toEqual([]);
-    const scenesOf = (replies: HistoryReply[]) => headings(last(deletedReplies(replies)).scenes);
-    expect(scenesOf(again)).toEqual(scenesOf(cold));
-    expect(scenesOf(warm)).toEqual(scenesOf(cold));
-    expect(scenesOf(cold)).toEqual(['EXT. FERN BRIDGE - NIGHT', 'INT. LOW ATTIC - DAWN']);
+    expect(rowsShape(again)).toEqual(rowsShape(cold));
+    expect(rowsShape(warm)).toEqual(rowsShape(cold));
+    expect(rowsShape(cold)).toEqual(['s1', 's2']);
   });
 
   test('skips an unreadable snapshot and counts it', async () => {
@@ -194,21 +190,16 @@ describe('the history scan', () => {
     });
     await db.snapshots.put({ id: 's3', projectId: 'p1', createdAt: T0 - 2 * MIN, reason: 'timed' });
     await seed('p1', 's4', T0 - 3 * MIN, script(A, C));
-    const replies = await run(createHistoryCompute(dexieSource(), cacheStore()), {
-      seq: 1,
-      kind: 'deleted',
-      projectId: 'p1',
-      now: script(A),
-    });
+    const replies = await run(
+      createHistoryCompute(dexieSource(), cacheStore()),
+      scan(1, 'p1', script(A)),
+    );
     expect(last(replies.filter((r) => r.kind === 'progress'))).toMatchObject({
       read: 4,
       total: 4,
       unreadable: 2,
     });
-    expect(headings(last(deletedReplies(replies)).scenes)).toEqual([
-      'EXT. FERN BRIDGE - NIGHT',
-      'INT. LOW ATTIC - DAWN',
-    ]);
+    expect(last(versionReplies(replies)).done).toBe(true);
   });
 
   test('stops at 1,000 snapshots and says so', async () => {
@@ -216,12 +207,7 @@ describe('the history scan', () => {
       i === MAX_SNAPSHOTS + 2 ? script(A, B) : script(A),
     );
     const { source, reads } = memorySource(texts);
-    const replies = await run(createHistoryCompute(source, null), {
-      seq: 1,
-      kind: 'deleted',
-      projectId: 'p1',
-      now: script(A),
-    });
+    const replies = await run(createHistoryCompute(source, null), scan(1, 'p1', script(A)));
     expect(reads).toHaveLength(MAX_SNAPSHOTS);
     expect(Math.max(...reads)).toBe(MAX_SNAPSHOTS - 1);
     expect(last(replies.filter((r) => r.kind === 'progress'))).toMatchObject({
@@ -229,8 +215,7 @@ describe('the history scan', () => {
       total: MAX_SNAPSHOTS,
       capped: true,
     });
-    // B was only in a snapshot past the newest 1,000.
-    expect(last(deletedReplies(replies)).scenes).toEqual([]);
+    expect(last(versionReplies(replies)).done).toBe(true);
   });
 
   test('a newer request stops the older', async () => {
@@ -251,27 +236,20 @@ describe('the history scan', () => {
     const compute = createHistoryCompute(source, null);
     const older: HistoryReply[] = [];
     const newer: HistoryReply[] = [];
-    const first = compute.handle(
-      { seq: 1, kind: 'deleted', projectId: 'p1', now: script(A) },
-      (r) => older.push(r),
-    );
+    const first = compute.handle(scan(1, 'p1', script(A)), (r) => older.push(r));
     while (!gated) await new Promise((resolve) => setTimeout(resolve, 0));
-    const second = compute.handle(
-      { seq: 2, kind: 'deleted', projectId: 'p1', now: script(A, B, C) },
-      (r) => newer.push(r),
-    );
+    const second = compute.handle(scan(2, 'p1', script(A, B, C)), (r) => newer.push(r));
     release();
     await Promise.all([first, second]);
-    expect(older.some((r) => r.kind === 'deleted' && r.done)).toBe(false);
+    expect(older.some((r) => r.kind === 'versions' && r.done)).toBe(false);
     expect(older.every((r) => r.seq === 1)).toBe(true);
-    const done = last(deletedReplies(newer));
+    const done = last(versionReplies(newer));
     expect(done.done).toBe(true);
-    expect(done.scenes).toEqual([]);
     // The older read nothing after the newer came, and nothing was read twice: the snapshot the
     // older was reading when it stopped is the newer's from memory.
     expect([...reads].sort()).toEqual([0, 1, 2, 3, 4, 5]);
     // The older's one update was after its first snapshot.
-    expect(older.map((r) => r.kind)).toEqual(['progress', 'deleted']);
+    expect(older.map((r) => r.kind)).toEqual(['progress', 'versions']);
   });
 
   test('a cancel stops a scan', async () => {
@@ -284,14 +262,9 @@ describe('the history scan', () => {
       },
     });
     compute = createHistoryCompute(source, null);
-    const replies = await run(compute, {
-      seq: 1,
-      kind: 'deleted',
-      projectId: 'p1',
-      now: script(A),
-    });
+    const replies = await run(compute, scan(1, 'p1', script(A)));
     expect(reads).toEqual([0, 1]);
-    expect(replies.some((r) => r.kind === 'deleted' && r.done)).toBe(false);
+    expect(replies.some((r) => r.kind === 'versions' && r.done)).toBe(false);
   });
 
   test('never answers for another project', async () => {
@@ -299,24 +272,17 @@ describe('the history scan', () => {
     await seed('p2', 't1', T0 + MIN, script(A, C, D));
     const compute = createHistoryCompute(dexieSource(), cacheStore());
     // Another script's scan fills the cache first.
-    await run(compute, { seq: 1, kind: 'deleted', projectId: 'p2', now: script(A) });
-    const replies = await run(compute, {
-      seq: 2,
-      kind: 'deleted',
-      projectId: 'p1',
-      now: script(A),
-    });
+    await run(compute, scan(1, 'p2', script(A)));
+    const replies = await run(compute, scan(2, 'p1', script(A)));
     expect(replies.every((r) => r.seq === 2)).toBe(true);
-    expect(headings(last(deletedReplies(replies)).scenes)).toEqual(['EXT. FERN BRIDGE - NIGHT']);
+    expect(rowsShape(replies)).toEqual(['s1']);
     expect(last(replies.filter((r) => r.kind === 'progress'))).toMatchObject({ total: 1 });
     // A fresh worker, reading p1 from the cache, still sees only p1's.
-    const warm = await run(createHistoryCompute(dexieSource(), cacheStore()), {
-      seq: 3,
-      kind: 'deleted',
-      projectId: 'p1',
-      now: script(A),
-    });
-    expect(headings(last(deletedReplies(warm)).scenes)).toEqual(['EXT. FERN BRIDGE - NIGHT']);
+    const warm = await run(
+      createHistoryCompute(dexieSource(), cacheStore()),
+      scan(3, 'p1', script(A)),
+    );
+    expect(rowsShape(warm)).toEqual(['s1']);
   });
 
   test('streams no more often than every 100 ms', async () => {
@@ -331,9 +297,9 @@ describe('the history scan', () => {
     const posted: number[] = [];
     const compute = createHistoryCompute(source, null, () => time);
     const replies: HistoryReply[] = [];
-    await compute.handle({ seq: 1, kind: 'deleted', projectId: 'p1', now: script(A) }, (r) => {
+    await compute.handle(scan(1, 'p1', script(A)), (r) => {
       replies.push(r);
-      if (r.kind === 'deleted' && !r.done) posted.push(time);
+      if (r.kind === 'versions' && !r.done) posted.push(time);
     });
     expect(posted.length).toBeGreaterThan(2);
     // The first comes with the first snapshot read.
@@ -343,7 +309,7 @@ describe('the history scan', () => {
     // Each list comes with its progress, just before it.
     const kinds = replies.map((r) => r.kind);
     expect(kinds.filter((k) => k === 'progress')).toHaveLength(
-      kinds.filter((k) => k === 'deleted').length,
+      kinds.filter((k) => k === 'versions').length,
     );
   });
 
@@ -433,8 +399,8 @@ describe('the history scan', () => {
       },
     };
     compute = createHistoryCompute(source, cacheStore());
-    const replies = await run(compute, { seq: 1, kind: 'deleted', projectId, now: script(A) });
-    expect(replies.some((r) => r.kind === 'deleted' && r.done)).toBe(false);
+    const replies = await run(compute, scan(1, projectId, script(A)));
+    expect(replies.some((r) => r.kind === 'versions' && r.done)).toBe(false);
     return compute;
   }
 
@@ -445,7 +411,7 @@ describe('the history scan', () => {
     const compute = await cancelledScan(a.id);
     await clearProjectCache(a.id);
     // Another script's scan, in the same worker, stores only its own.
-    await run(compute, { seq: 2, kind: 'deleted', projectId: b.id, now: script(A) });
+    await run(compute, scan(2, b.id, script(A)));
     expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
     expect((await rowsOf(b.id)).scenes).toEqual(['b-0']);
   });
@@ -456,7 +422,7 @@ describe('the history scan', () => {
     await seed(b.id, 'b-0', T0, script(A, D));
     const compute = await cancelledScan(a.id);
     await removeProject(a.id);
-    await run(compute, { seq: 2, kind: 'deleted', projectId: b.id, now: script(A) });
+    await run(compute, scan(2, b.id, script(A)));
     expect(await rowsOf(a.id)).toEqual({ scenes: [], prints: 0 });
   });
 
@@ -492,14 +458,9 @@ describe('the history scan', () => {
     let t = 0;
     compute = createHistoryCompute(source, cacheStore(), () => (t += STREAM_MS));
     // The worker's first scan, which prunes.
-    await run(compute, { seq: 1, kind: 'deleted', projectId: 'p1', now: script(A) });
-    const replies = await run(compute, {
-      seq: 2,
-      kind: 'deleted',
-      projectId: a.id,
-      now: script(A),
-    });
-    expect(replies.some((r) => r.kind === 'deleted' && r.done)).toBe(!stop);
+    await run(compute, scan(1, 'p1', script(A)));
+    const replies = await run(compute, scan(2, a.id, script(A)));
+    expect(replies.some((r) => r.kind === 'versions' && r.done)).toBe(!stop);
     return a.id;
   }
 
@@ -517,12 +478,7 @@ describe('the history scan', () => {
     // Rows left by a script removed while a worker was still writing for it.
     const { slots, prints } = (await import('@drafter/history')).scenePrints(script(A, B));
     await cacheStore()?.put('gone', [{ id: 'g-0', slots }], prints);
-    await run(createHistoryCompute(dexieSource(), cacheStore()), {
-      seq: 1,
-      kind: 'deleted',
-      projectId: b.id,
-      now: script(A),
-    });
+    await run(createHistoryCompute(dexieSource(), cacheStore()), scan(1, b.id, script(A)));
     expect(await rowsOf('gone')).toEqual({ scenes: [], prints: 0 });
     expect((await rowsOf(b.id)).scenes).toEqual(['b-0']);
   });
@@ -549,38 +505,27 @@ describe('the history scan', () => {
     };
     const compute = createHistoryCompute(dexieSource(), store);
     const nowA = script(A, B);
-    const first = compute.handle(
-      { seq: 1, kind: 'deleted', projectId: a.id, now: nowA },
-      () => undefined,
-    );
-    const versions: HistoryReply[] = [];
-    const second = compute.handle(
-      { seq: 2, kind: 'versions', projectId: a.id, now: nowA, scene: { snapshot: 'a-0', slot: 1 } },
-      (r) => versions.push(r),
-    );
+    const first = compute.handle(scan(1, a.id, nowA), () => undefined);
     while (!asked.includes(a.id)) await new Promise((resolve) => setTimeout(resolve, 0));
-    // B's scan stops A's deleted scan; A's versions scan goes on.
-    const third = compute.handle(
-      { seq: 3, kind: 'deleted', projectId: b.id, now: script(A) },
-      () => undefined,
-    );
+    // B's scan stops A's, waiting on the cache, and takes the worker's memory for B.
+    const second = compute.handle(scan(2, b.id, script(A)), () => undefined);
     while (!asked.includes(b.id)) await new Promise((resolve) => setTimeout(resolve, 0));
     release();
-    await Promise.all([first, second, third]);
-    // A's snapshot is A's in the cache, never B's.
+    await Promise.all([first, second]);
+    // A's later scan reads A's own snapshot, never B's.
+    const versions = await run(compute, scan(3, a.id, nowA));
+    expect(rowsShape(versions)).toEqual(['a-0']);
     expect((await rowsOf(b.id)).scenes).toEqual(['b-0']);
     expect((await rowsOf(a.id)).scenes).toEqual(['a-0']);
-    const final = versions.filter((r) => r.kind === 'versions').at(-1);
-    expect(final && 'rows' in final && final.rows.length).toBe(1);
   });
 
   test("scans without a cache when it can't open, with the same results", async () => {
     await seed('p1', 's1', T0, script(A, B, E));
     await seed('p1', 's2', T0 - MIN, script(A, C, E));
     await seed('p1', 's3', T0 - 2 * MIN, script(D, E));
-    const request: HistoryRequest = { seq: 1, kind: 'deleted', projectId: 'p1', now: script(A, E) };
+    const request: HistoryRequest = scan(1, 'p1', script(A, E));
     const finalOf = async (store: PrintStore | null) =>
-      last(deletedReplies(await run(createHistoryCompute(dexieSource(), store), request)));
+      last(versionReplies(await run(createHistoryCompute(dexieSource(), store), request)));
     const failing: PrintStore = {
       scenes: () => Promise.reject(new Error('closed')),
       prints: () => Promise.reject(new Error('closed')),
@@ -589,47 +534,8 @@ describe('the history scan', () => {
       prune: () => Promise.reject(new Error('closed')),
     };
     const cached = await finalOf(cacheStore());
-    expect(cached.scenes).toHaveLength(3);
+    expect(cached.rows.length).toBeGreaterThan(0);
     expect(await finalOf(null)).toEqual(cached);
     expect(await finalOf(failing)).toEqual(cached);
-  });
-
-  test('place says where a deleted scene goes back, in the script now', async () => {
-    // The snapshot had A, B, C; now B is gone and A has moved after C.
-    const { source } = memorySource([script(A, B, C)]);
-    const compute = createHistoryCompute(source, null);
-    const now = script(C, A);
-    const replies = await run(compute, { seq: 1, kind: 'deleted', projectId: 'p1', now });
-    const entry = last(deletedReplies(replies)).scenes[0] as DeletedScene;
-    expect(entry.newest.print.heading).toBe('EXT. FERN BRIDGE - NIGHT');
-    const placed = await run(compute, {
-      seq: 2,
-      kind: 'place',
-      projectId: 'p1',
-      now,
-      snapshot: entry.newest.snapshot,
-      slot: entry.newest.slot.ordinal - 1,
-    });
-    expect(placed).toEqual([
-      {
-        seq: 2,
-        kind: 'place',
-        place: {
-          at: now.indexOf(A) + A.trimEnd().length,
-          side: 'after',
-          anchor: 'INT. COPPER MILL - DAY',
-        },
-      },
-    ]);
-    // A snapshot that is gone has no place.
-    const gone = await run(compute, {
-      seq: 3,
-      kind: 'place',
-      projectId: 'p1',
-      now,
-      snapshot: 'nowhere',
-      slot: 0,
-    });
-    expect(gone).toEqual([{ seq: 3, kind: 'place', place: null }]);
   });
 });

@@ -6,10 +6,7 @@ import type { HistoryReply, HistoryRequest } from './protocol';
 // first request of a view (History of this scene, Cuts) and ended when the last view
 // releases, as Compare's layout worker is. Each request hears only its own replies.
 
-type Scan = Extract<
-  HistoryRequest,
-  { kind: 'deleted' | 'versions' | 'place' | 'cuts' | 'step' | 'backfill' }
->;
+type Scan = Extract<HistoryRequest, { kind: 'versions' | 'cuts' | 'step' | 'backfill' }>;
 /** A scan as a view asks for it: the client numbers it. */
 export type HistoryAsk = Scan extends infer R ? (R extends Scan ? Omit<R, 'seq'> : never) : never;
 
@@ -35,7 +32,7 @@ interface Listening {
 const STOPPED = 'The history worker stopped.';
 
 /** The requests answered once, beside the scans: none stops another. */
-const ONCE: ReadonlySet<Scan['kind']> = new Set(['place', 'cuts', 'step']);
+const ONCE: ReadonlySet<Scan['kind']> = new Set(['cuts', 'step']);
 
 /** Views of one worker, made by `make` when needed (tests pass a fake). */
 export function createHistoryClients(make: () => WorkerLike) {
@@ -67,7 +64,6 @@ export function createHistoryClients(make: () => WorkerLike) {
         if (!to) return;
         if (
           reply.kind === 'error' ||
-          reply.kind === 'place' ||
           reply.kind === 'cuts' ||
           reply.kind === 'step' ||
           (reply.kind !== 'progress' && reply.done)

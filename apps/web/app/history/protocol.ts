@@ -1,4 +1,4 @@
-import type { DeletedScene, Place, VersionRow, WorkKind } from '@drafter/history';
+import type { VersionRow, WorkKind } from '@drafter/history';
 import type { FoundCutAt } from '../cuts/store';
 import type { StepCounts } from '../drafts/steps';
 
@@ -9,7 +9,6 @@ import type { StepCounts } from '../drafts/steps';
  * older at its next snapshot; a cancel stops the request whose number it carries.
  */
 export type HistoryRequest =
-  | { seq: number; kind: 'deleted'; projectId: string; now: string }
   | {
       seq: number;
       kind: 'versions';
@@ -18,11 +17,6 @@ export type HistoryRequest =
       /** The scene: by its span in `now`, or by its place (`slot`, an index) in a snapshot. */
       scene: { from: number; to: number } | { snapshot: string; slot: number };
     }
-  /**
-   * Where the scene at index `slot` of snapshot `snapshot` goes back in `now` (Put back, design
-   * §3.5): answered once, from what the worker has read. It runs beside the scans, stopping none.
-   */
-  | { seq: number; kind: 'place'; projectId: string; now: string; snapshot: string; slot: number }
   /**
    * What left `before` in `after` (drafts-and-cuts design §3.1): the cuts recorder's question at
    * each kept snapshot, answered once, beside the scans.
@@ -66,11 +60,8 @@ export type HistoryReply =
       /** The script has more snapshots than `MAX_SNAPSHOTS`, and the older ones aren't read. */
       capped: boolean;
     }
-  | { seq: number; kind: 'deleted'; scenes: DeletedScene[]; done: boolean }
   /** `start`: the hash of the version followed (the scene now's, or the slot's); null when none. */
   | { seq: number; kind: 'versions'; rows: VersionRow[]; start: string | null; done: boolean }
-  /** Where Put back puts the scene; null when the snapshot is gone or can't be read. */
-  | { seq: number; kind: 'place'; place: Place | null }
   | { seq: number; kind: 'cuts'; cuts: FoundCutAt[] }
   | { seq: number; kind: 'step'; counts: StepCounts }
   /**

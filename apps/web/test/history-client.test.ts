@@ -32,7 +32,20 @@ function setup() {
   return { workers, clients };
 }
 
-const deleted = { kind: 'deleted', projectId: 'p1', now: '' } as const;
+const versions = {
+  kind: 'versions',
+  projectId: 'p1',
+  now: '',
+  scene: { from: 0, to: 1 },
+} as const;
+const backfill = {
+  kind: 'backfill',
+  projectId: 'p1',
+  docKind: 'fountain',
+  since: 1,
+  upTo: null,
+  end: null,
+} as const;
 
 describe('the history client', () => {
   test('makes the worker on first request and ends it when the last view releases', () => {
@@ -40,34 +53,16 @@ describe('the history client', () => {
     const one = clients.use();
     const two = clients.use();
     expect(workers).toHaveLength(0);
-    one.request(deleted, () => undefined);
-    two.request(deleted, () => undefined);
+    one.request(versions, () => undefined);
+    two.request(versions, () => undefined);
     expect(workers).toHaveLength(1);
     one.release();
     expect(workers[0]?.ended).toBe(false);
     two.release();
     expect(workers[0]?.ended).toBe(true);
     // A view opened later gets a new worker.
-    clients.use().request(deleted, () => undefined);
+    clients.use().request(versions, () => undefined);
     expect(workers).toHaveLength(2);
-  });
-
-  test("a place request is answered once, and leaves the deleted scan's listener alone", () => {
-    const { workers, clients } = setup();
-    const view = clients.use();
-    const scan: HistoryReply[] = [];
-    const placed: HistoryReply[] = [];
-    const n = view.request(deleted, (r) => scan.push(r));
-    const p = view.request(
-      { kind: 'place', projectId: 'p1', now: '', snapshot: 's1', slot: 0 },
-      (r) => placed.push(r),
-    );
-    const worker = workers[0] as FakeWorker;
-    worker.reply({ seq: p, kind: 'place', place: null });
-    worker.reply({ seq: p, kind: 'place', place: null });
-    worker.reply({ seq: n, kind: 'deleted', scenes: [], done: true });
-    expect(placed).toHaveLength(1);
-    expect(scan).toHaveLength(1);
   });
 
   test('two cuts questions at once are both answered: neither stops the other', () => {
@@ -122,32 +117,31 @@ describe('the history client', () => {
     const { workers, clients } = setup();
     const view = clients.use();
     const heard: HistoryReply[] = [];
-    const first = view.request(deleted, (r) => heard.push(r));
-    const second = view.request(
-      { kind: 'versions', projectId: 'p1', now: '', scene: { from: 0, to: 1 } },
-      () => undefined,
-    );
+    const first = view.request(versions, (r) => heard.push(r));
+    const second = view.request(backfill, () => undefined);
     expect(second).toBeGreaterThan(first);
     const worker = workers[0] as FakeWorker;
     expect(worker.posted).toEqual([
-      { seq: first, ...deleted },
-      { seq: second, kind: 'versions', projectId: 'p1', now: '', scene: { from: 0, to: 1 } },
+      { seq: first, ...versions },
+      { seq: second, ...backfill },
     ]);
-    worker.reply({ seq: second, kind: 'versions', rows: [], start: null, done: false });
-    worker.reply({ seq: first, kind: 'deleted', scenes: [], done: true });
-    worker.reply({ seq: first, kind: 'deleted', scenes: [], done: true });
-    expect(heard).toEqual([{ seq: first, kind: 'deleted', scenes: [], done: true }]);
+    const pair = { seq: second, kind: 'backfill', at: 1, cuts: [], read: 1, total: 2 } as const;
+    worker.reply({ ...pair, done: false });
+    const done = { seq: first, kind: 'versions', rows: [], start: null, done: true } as const;
+    worker.reply(done);
+    worker.reply(done);
+    expect(heard).toEqual([done]);
   });
 
   test('a newer request of a kind replaces the older, as the worker stops it', () => {
     const { workers, clients } = setup();
     const view = clients.use();
     const heard: number[] = [];
-    const older = view.request(deleted, (r) => heard.push(r.seq));
-    const newer = view.request(deleted, (r) => heard.push(r.seq));
+    const older = view.request(versions, (r) => heard.push(r.seq));
+    const newer = view.request(versions, (r) => heard.push(r.seq));
     const worker = workers[0] as FakeWorker;
-    worker.reply({ seq: older, kind: 'deleted', scenes: [], done: false });
-    worker.reply({ seq: newer, kind: 'deleted', scenes: [], done: true });
+    worker.reply({ seq: older, kind: 'versions', rows: [], start: null, done: false });
+    worker.reply({ seq: newer, kind: 'versions', rows: [], start: null, done: true });
     expect(heard).toEqual([newer]);
   });
 
@@ -159,7 +153,7 @@ describe('the history client', () => {
       { kind: 'versions', projectId: 'p1', now: '', scene: { snapshot: 's1', slot: 0 } },
       () => undefined,
     );
-    const gone = leave.request(deleted, () => undefined);
+    const gone = leave.request(backfill, () => undefined);
     leave.release();
     const worker = workers[0] as FakeWorker;
     expect(worker.posted.at(-1)).toEqual({ seq: gone, kind: 'cancel' });
@@ -169,7 +163,7 @@ describe('the history client', () => {
   test('a worker that fails answers each request with an error', () => {
     const { workers, clients } = setup();
     const heard: HistoryReply[] = [];
-    const seq = clients.use().request(deleted, (r) => heard.push(r));
+    const seq = clients.use().request(versions, (r) => heard.push(r));
     workers[0]?.dispatchEvent(new Event('error'));
     expect(heard).toEqual([{ seq, kind: 'error', message: 'The history worker stopped.' }]);
   });
@@ -179,7 +173,7 @@ describe('the history client', () => {
       throw new Error('blocked');
     });
     const heard: HistoryReply[] = [];
-    const seq = clients.use().request(deleted, (r) => heard.push(r));
+    const seq = clients.use().request(versions, (r) => heard.push(r));
     await Promise.resolve();
     expect(heard).toEqual([{ seq, kind: 'error', message: 'blocked' }]);
   });

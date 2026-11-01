@@ -9,9 +9,11 @@ import { editor, start } from './modules';
 // A test build puts `drafterHistoryProbe` on the page to drive the worker (app/history/probe.ts).
 
 const SNAPSHOTS = 300;
-/** Scenes the script no longer has: every snapshot has them, so each is listed. */
+/** Scenes the script no longer has. */
 const CUT = [20, 75, 130];
 const NOW = longScript(LONG_SCENES.filter((_, n) => !CUT.includes(n)));
+/** The scene followed: the first, which snapshots 0 and 150 changed (and 300, 450 … of 1,000). */
+const FIRST = LONG_SCENES[0] as string;
 
 type ProbeWindow = Window & { drafterHistoryProbe: HistoryProbe; scanning?: Promise<ProbeScan> };
 
@@ -47,15 +49,16 @@ async function longHistory(page: Page, count = SNAPSHOTS): Promise<string> {
   return projectId;
 }
 
+/** The versions scan (History of this scene) of the first scene, by its span in `now`. */
+const ask = (projectId: string, now: string) => {
+  const from = now.indexOf(FIRST);
+  return { kind: 'versions', projectId, now, scene: { from, to: from + FIRST.length } } as const;
+};
+
 const scan = (page: Page, projectId: string, now: string) =>
   page.evaluate(
-    ({ projectId, now }) =>
-      (window as unknown as ProbeWindow).drafterHistoryProbe.scan({
-        kind: 'deleted',
-        projectId,
-        now,
-      }),
-    { projectId, now },
+    (request) => (window as unknown as ProbeWindow).drafterHistoryProbe.scan(request),
+    ask(projectId, now),
   );
 
 const release = (page: Page) =>
@@ -101,10 +104,10 @@ async function workerHeapMb(page: Page): Promise<number | null> {
   return usedSize === undefined ? null : usedSize / 2 ** 20;
 }
 
-/** The three cut scenes are listed, and all 300 snapshots were read. */
+/** The first scene's versions are listed, and all 300 snapshots were read. */
 function expectFound(result: ProbeScan) {
   expect(result.error).toBeNull();
-  expect(result.rows).toBe(CUT.length);
+  expect(result.rows).toBeGreaterThan(1);
   expect(result.progress).toMatchObject({
     read: SNAPSHOTS,
     total: SNAPSHOTS,
@@ -147,7 +150,8 @@ test.describe('the history worker on a long history', () => {
       `[${testInfo.project.name}] warm scan of ${SNAPSHOTS}: ${warm.doneMs.toFixed(0)} ms; matching again after an edit: ${again.doneMs.toFixed(0)} ms (${browserName})`,
     );
     expectFound(warm);
-    expect(again.rows).toBe(CUT.length + 1);
+    expect(again.error).toBeNull();
+    expect(again.rows).toBeGreaterThan(1);
     // Budgets: a warm scan 500 ms, matching now 50 ms.
     expect(warm.doneMs).toBeLessThan(5_000);
     expect(again.doneMs).toBeLessThan(500);
@@ -178,7 +182,7 @@ test.describe('the history worker on a long history', () => {
       `[${testInfo.project.name}] scan of ${THOUSAND}: first rows ${cold.firstRowsMs?.toFixed(0)} ms, cold ${cold.doneMs.toFixed(0)} ms, warm (same worker) ${warm.doneMs.toFixed(0)} ms; worker heap ${mb(workerHeap)}, page heap ${mb(pageBefore)} → ${mb(pageAfter)} (${browserName})`,
     );
     expect(cold.error).toBeNull();
-    expect(cold.rows).toBe(CUT.length);
+    expect(cold.rows).toBeGreaterThan(1);
     expect(cold.progress).toMatchObject({ read: THOUSAND, total: THOUSAND, capped: false });
     expect(cold.doneMs).toBeLessThan(guardMs);
     expect(warm.doneMs).toBeLessThan(guardMs);
@@ -217,11 +221,11 @@ test.describe('the history worker on a long history', () => {
       await editor(page).click();
       await page.keyboard.press('ControlOrMeta+End');
       await page.evaluate(
-        ({ projectId, now }) => {
+        (request) => {
           const w = window as unknown as ProbeWindow;
-          w.scanning = w.drafterHistoryProbe.scan({ kind: 'deleted', projectId, now });
+          w.scanning = w.drafterHistoryProbe.scan(request);
         },
-        { projectId, now: NOW },
+        ask(projectId, NOW),
       );
       await page.keyboard.type('\nTyping while the history is read, a letter at a time.', {
         delay: 40,

@@ -1,8 +1,5 @@
 import {
-  deletedScenes,
-  type NowScene,
   type PastSnapshot,
-  putBackPlace,
   type ScenePrint,
   type SceneSlot,
   scenePrints,
@@ -93,8 +90,7 @@ interface Memory {
   prints: Map<string, ScenePrint>;
 }
 
-type Scan = Extract<HistoryRequest, { kind: 'deleted' | 'versions' }>;
-type Place = NonNullable<Extract<HistoryReply, { kind: 'place' }>['place']>;
+type Scan = Extract<HistoryRequest, { kind: 'versions' }>;
 
 export interface HistoryCompute {
   /** Runs `request`, posting its replies; resolves when it is done or stopped. */
@@ -247,8 +243,7 @@ export function createHistoryCompute(
     const reading = capped ? refs.slice(0, MAX_SNAPSHOTS) : refs;
     const m = await memoryOf(projectId);
     if (!live()) return;
-    const now = request.kind === 'deleted' ? scenePrints(request.now).prints : [];
-    const start = request.kind === 'versions' ? await startOf(request, m) : null;
+    const start = await startOf(request, m);
     if (!live()) return;
 
     const past: PastSnapshot[] = [];
@@ -257,16 +252,13 @@ export function createHistoryCompute(
     let lastPost = Number.NEGATIVE_INFINITY;
     const update = (done: boolean) => {
       post({ seq, kind: 'progress', read, total: reading.length, unreadable, capped });
-      if (request.kind === 'deleted')
-        post({ seq, kind: 'deleted', scenes: deletedScenes(past, m.prints, now), done });
-      else
-        post({
-          seq,
-          kind: 'versions',
-          rows: start ? sceneVersions(start, past, m.prints) : [],
-          start: start?.hash ?? null,
-          done,
-        });
+      post({
+        seq,
+        kind: 'versions',
+        rows: start ? sceneVersions(start, past, m.prints) : [],
+        start: start?.hash ?? null,
+        done,
+      });
       lastPost = clock();
     };
 
@@ -290,36 +282,8 @@ export function createHistoryCompute(
     if (cache) await cache.sweep(projectId, liveIds).catch(drop);
   }
 
-  /** Answers a place request: where Put back puts the scene, from the snapshot's scenes and prints. */
-  async function place(
-    request: Extract<HistoryRequest, { kind: 'place' }>,
-    post: (reply: HistoryReply) => void,
-  ) {
-    const { seq, projectId, now: text, snapshot, slot } = request;
-    let found: Place | null = null;
-    try {
-      const m = await memoryOf(projectId);
-      const slots = await slotsOf(m, snapshot);
-      if (slots?.[slot]) {
-        const now = scenePrints(text);
-        const byHash = new Map(now.prints.map((p) => [p.hash, p]));
-        const nowScenes: NowScene[] = [];
-        for (const s of now.slots) {
-          const print = byHash.get(s.hash);
-          if (print) nowScenes.push({ print, from: s.from, to: s.to });
-        }
-        found = putBackPlace(slots, slot, m.prints, nowScenes, text.length, now.sections);
-      }
-      await flush();
-    } catch {
-      found = null;
-    }
-    post({ seq, kind: 'place', place: found });
-  }
-
   return {
     async handle(request, post) {
-      if (request.kind === 'place') return place(request, post);
       if (request.kind === 'cuts' || request.kind === 'step') {
         try {
           post(

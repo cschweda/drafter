@@ -11,9 +11,8 @@ export interface ProbeScan {
   /** When the first list holding a row came, in milliseconds; null when none did. */
   firstRowsMs: number | null;
   doneMs: number;
-  /** The last list's length, and its headings. */
+  /** The last list's length. */
   rows: number;
-  headings: string[];
   progress: Extract<HistoryReply, { kind: 'progress' }> | null;
   updates: number;
   error: string | null;
@@ -36,7 +35,6 @@ export function installHistoryProbe(): void {
         firstRowsMs: null,
         doneMs: 0,
         rows: 0,
-        headings: [],
         progress: null,
         updates: 0,
         error: null,
@@ -54,14 +52,11 @@ export function installHistoryProbe(): void {
             resolve(result);
             return;
           }
-          // The probe times the two scans; any other reply (a place, cuts, a step) is not one.
-          if (reply.kind !== 'deleted' && reply.kind !== 'versions') return;
+          // The probe times the versions scan; any other reply (cuts, a step) is not one.
+          if (reply.kind !== 'versions') return;
           result.updates++;
-          const list = reply.kind === 'deleted' ? reply.scenes : reply.rows;
-          if (list.length > 0 && result.firstRowsMs === null) result.firstRowsMs = at;
-          result.rows = list.length;
-          result.headings =
-            reply.kind === 'deleted' ? reply.scenes.map((s) => s.newest.print.heading) : [];
+          if (reply.rows.length > 0 && result.firstRowsMs === null) result.firstRowsMs = at;
+          result.rows = reply.rows.length;
           if (reply.done) {
             result.doneMs = at;
             resolve(result);
