@@ -208,6 +208,8 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 - **The app imports `markdownTitle` and the footnote walk from `@drafter/markdown`'s root**, which re-exports the parser; tree-shaking keeps it out of the shell (and `check-build` guards it). `./title` and `./notes` subpaths would make that sturdier.
 - **An empty title becomes "Untitled" only in the EPUB**; the HTML shell would write an empty `<title>` (nothing reaches it today: the app and CLI always pass a title).
 - **Web-page detection by content** recognises `<!doctype html` and `<html` at the start only; a UTF-16 page or an `.xhtml` starting `<?xml` is caught by its name, not its content.
+
+- **Reopenable exports, left over** (v0.23.1): the CLI's `--reopenable` is for `--html` only, since the CLI has no EPUB; `drafter convert` reads an `.html` or `.epub` only when it is named, never from a folder; the desktop app registers neither as a file type, so a double-click opens a browser (Open, a drop, or the command line reopens one). A reopened script doesn't remember the export it came from, so reopening the same file twice gives two scripts, as an import does.
 ## Seeing the script
 
 What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character grid) leaves for later. The design's §14 has the reasons.

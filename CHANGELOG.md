@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **HTML and EPUB exports Drafter can reopen.** Export options has a new choice, **Let Drafter reopen this file (includes the full script, notes and all)**, for the HTML and EPUB exports, Markdown documents' too. With it on, the file carries your whole script exactly as you wrote it, and Open brings it back as a new script: notes, boneyard, the metadata block, line breaks, and every character. It is off by default, because an export is often sent to someone with the notes left out, and with it on everything goes in. Drafter can only reopen HTML or EPUB files it saved itself, with this turned on. It can't open HTML or EPUB files made by other apps or sites, or Drafter exports made with it off, and says so. It reads the script inside only as plain text and never runs anything in the file.
+- **The desktop app** opens a reopenable `.html` or `.epub` from Open, a drop, or the command line, and its Open dialog lists them.
+- **The command line:** `drafter build --html <file> --reopenable` makes a page Drafter can reopen, and `drafter convert script.html` (or `.epub`) writes the script back out, as `.fountain` or `.md`.
+- The open spec (`docs/spec/drafter-package.md`) says where the script sits in an HTML or EPUB export: a `<script type="text/plain" id="drafter-source">` element, in base64, or the file `EPUB/drafter-source.fountain` (or `.md`).
+
+### Changed
+
+- The message for a web page or an e-book Drafter can't open now says that Drafter can only reopen HTML or EPUB files it saved itself, with "Let Drafter reopen this file" turned on.
+- **Export options… is on for a Markdown document**, offering only Let Drafter reopen this file; its scene numbers, title page, and notes choices stay off, with the reason.
+
 ## [0.23.0] - 2026-11-01
 
 **A fresh look.** The script sits on paper pages, the status bar goes quiet, and "Unsaved" shows right after the title. Dialogs, menus and Settings share one style. Stats, Scaffold and Cards are easier to read. On a phone or a narrow window there is one pane at a time and a bottom tab bar, and the element row stays above the keyboard. Drafter now follows your system's light or dark setting on a first visit, and icons show in high-contrast mode.

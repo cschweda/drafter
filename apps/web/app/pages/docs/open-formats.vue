@@ -53,6 +53,28 @@ useDocsHead({
       </li>
     </ul>
 
+    <h2 id="reopening-exports">Opening an HTML or EPUB file again</h2>
+    <p>
+      Drafter can only reopen HTML or EPUB files it saved itself, with
+      <strong>Let Drafter reopen this file</strong> turned on in Export options. It can’t open HTML
+      or EPUB files made by other apps or sites, or Drafter exports made with the option off.
+    </p>
+    <p>
+      With the option on, the file carries your whole script, notes and all, as plain text. In an
+      HTML file it is one <code>&lt;script type="text/plain" id="drafter-source"&gt;</code>
+      element, which no browser runs, holding the script in base64. In an EPUB it is the file
+      <code>EPUB/drafter-source.fountain</code> (or <code>.md</code> for a Markdown document).
+      These names are part of the open specification and won’t change, so any program
+      can get your script back out.
+    </p>
+    <p class="docs-note">
+      When Drafter reopens one of these files, it reads only the script inside, as plain text, and
+      never runs anything in it. An HTML export is still an ordinary web page: double-click it and
+      your browser opens it like any other page, where Drafter’s checks don’t apply, so treat an
+      HTML file someone sent you like any page you download. An EPUB opens in whatever e-book app
+      you use.
+    </p>
+
     <h2 id="the-drafter-package">The <code>.drafter</code> package: an open specification</h2>
     <p>
       Some projects grow beyond one file: numbered drafts, the material you cut, a workbook, voice

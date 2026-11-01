@@ -49,7 +49,7 @@
 - **Check spelling:** Drafter's own spellcheck, offline, in US or British English, with a dictionary of your own and one for each script.
 - **Keep going:** focus mode, typewriter scrolling, counts, a daily goal, sprints, and writing stats.
 - **Time it:** the running time at your own minutes a page and an estimate from the dialogue, set per script in Stats, with each scene's and act's time in the Outline and the Structure strip.
-- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; every main format in and out, from Final Draft to Markdown, and `drafter convert` for a folder at once (see [Formats](#formats)); **Export as HTML**, one page that opens in any browser with no connection, and **Export as EPUB**, an e-book for an e-reader or a tablet; a progress bar on a long export; and **export options** per script for scene numbers, the title page, and notes.
+- **Files:** Save and Open for real `.fountain` files (saved straight back to the file in Chrome and Edge on a computer, downloaded elsewhere), with a recovery copy kept in your browser as you type; every main format in and out, from Final Draft to Markdown, and `drafter convert` for a folder at once (see [Formats](#formats)); **Export as HTML**, one page that opens in any browser with no connection, and **Export as EPUB**, an e-book for an e-reader or a tablet, either of which Drafter can reopen when you turn on **Let Drafter reopen this file**; a progress bar on a long export; and **export options** per script for scene numbers, the title page, and notes.
 - **Get started:** a welcome and a guided tour on a first visit; a **guided first screenplay** and **stage play** (File → New guided screenplay) that teach each element as you read; offline use and installing as an app; help pages, among them **Technical details** (how Drafter is built, with diagrams); and, in the **Help** menu at the top right, **About Drafter** (the version, for a bug report, and the links), [**Sample scripts**](#samples), and **Check for updates**.
 - **Make it yours:** a calm light or dark theme (a first visit follows your system), paper pages or a dark page for night, five text sizes, and Settings in sections; below 1024 pixels, one pane at a time with Write, Script, Outline, and More along the bottom, made for a phone.
 - **On the desktop:** an app for Linux (an AppImage or a `.deb`) and Windows (an installer) that always saves in place and loads script modules from a folder. It builds on a Mac with one command.
@@ -206,7 +206,8 @@ Fountain is where you write. Everything else is a door in or a door out.
 | Highland (`.highland`) | Opens the script inside as a new script. |
 | Fade In (`.fadein`) | Opens a copy as a new script, read from its Open Screenplay Format. |
 | Markdown (`.md`) | Opens as a Markdown document (a treatment, notes, or a novel), or, with **Open as screenplay…**, as a script typed in Fountain. |
-| Anything else (Word, RTF, PDF, a web page, an e-book, an image) | Refused, with a sentence saying what to do instead. |
+| Drafter's own HTML or EPUB export, saved with **Let Drafter reopen this file** | Opens the script inside as a new script, exactly as you wrote it. |
+| Anything else (Word, RTF, PDF, other web pages and e-books, an image) | Refused, with a sentence saying what to do instead. |
 
 The file you open is never changed. Text that Fountain has no element for (hidden text, an omitted scene, a paragraph style of the writer's own) comes in as a note, such as `[[fdx: …]]` or `[[osf: …]]`, listed in Problems, so no words go missing silently. Formatting with no place in Fountain, such as fonts and revision colors, is left behind.
 
@@ -225,6 +226,8 @@ The file you open is never changed. Text that Fountain has no element for (hidde
 
 Export options, per script, set the scene numbers (none, as written, or every scene), how much of the title page prints, and whether a Markdown, HTML, or EPUB export carries your notes. Drafter doesn't write Highland or Fade In files: Highland opens Fountain directly, and Fade In opens Final Draft.
 
+**Reopening an HTML or EPUB file.** Drafter can only reopen HTML or EPUB files it saved itself, with **Let Drafter reopen this file (includes the full script, notes and all)** turned on in Export options. It can't open HTML or EPUB files made by other apps or sites, or Drafter exports made with the option off. The option is off by default, because a file with it on carries your whole script, notes and boneyard too, and anyone you send it to can read them. Drafter reads the script inside only as plain text and never runs anything in the file; an HTML export opened in a browser is an ordinary web page, so treat one someone sent you like any downloaded page. The [open spec](docs/spec/drafter-package.md#appendix-the-script-inside-an-html-or-epub-export) says where the script sits.
+
 ### From the command line
 
 The same code runs in a terminal ([Development](#development) shows how to build it):
@@ -232,6 +235,8 @@ The same code runs in a terminal ([Development](#development) shows how to build
 ```sh
 drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text
 drafter build script.fountain --html script.html   # one HTML page, pages and reading view, to open anywhere
+drafter build script.fountain --html script.html --reopenable   # with the script inside, for Drafter to reopen
+drafter convert script.html                        # the script back out of a reopenable export
 drafter convert MyScript.fdx                      # MyScript.fountain, beside it
 drafter convert ~/Scripts                         # every .fdx, .highland, and .fadein in the folder
 drafter convert ~/Scripts --recursive             # and in its subfolders

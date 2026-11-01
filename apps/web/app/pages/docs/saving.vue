@@ -284,13 +284,27 @@ useDocsHead({
     <p>
       A Word document, an RTF file, a PDF, an OpenDocument or Pages document, an older Final Draft
       file (<code>.fdr</code>), a Celtx project, a zip archive, a web page (an <code>.html</code>
-      file, Drafter’s own HTML export among them), and an e-book (an <code>.epub</code> file,
-      Drafter’s own EPUB export among them) aren’t scripts Drafter can read, so Open turns them
-      away, says what the file is, and says what to do instead: for most, save it as plain text or
-      Fountain in the app that made it, then open that; for a web page, an e-book, or a PDF, open
-      the script it was made from. An RTF file, a PDF, a web page, or an e-book is known by what’s
+      file), and an e-book (an <code>.epub</code> file) aren’t scripts Drafter can read, so Open
+      turns them away, says what the file is, and says what to do instead: for most, save it as
+      plain text or Fountain in the app that made it, then open that; for a web page, an e-book, or
+      a PDF, open the script it was made from. The one exception is an HTML or EPUB file Drafter
+      saved itself with <a href="#reopen">Let Drafter reopen this file</a> turned on. An RTF file, a PDF, a web page, or an e-book is known by what’s
       inside it even when its name ends in <code>.txt</code>. Nothing opens, and the
       script you have open is left alone. Any other file of plain text opens as a Fountain script.
+    </p>
+
+    <h3 id="reopen">Opening an HTML or EPUB export again</h3>
+    <p>
+      Drafter can only reopen HTML or EPUB files it saved itself, with
+      <strong>Let Drafter reopen this file</strong> turned on in Export options. It can’t open HTML
+      or EPUB files made by other apps or sites, or Drafter exports made with the option off. Those
+      are turned away, with a message that says so.
+    </p>
+    <p>
+      Open such a file and the script inside it opens as a new script, exactly as you wrote it,
+      notes and all. Like an import, it isn’t the file’s script: Save asks for a
+      <code>.fountain</code> (or a <code>.md</code>), and the HTML or EPUB file is never written.
+      Drafter reads the script as plain text and never runs anything in the file.
     </p>
 
     <h2 id="export-options">Export options</h2>
@@ -306,12 +320,21 @@ useDocsHead({
       and EPUB exports alone.
     </p>
     <p>
+      <strong>Let Drafter reopen this file (includes the full script, notes and all)</strong>, for
+      the HTML and EPUB exports: off unless you turn it on. When it is on, the file carries your
+      whole script as you wrote it, so Drafter can <a href="#reopen">open it again</a> later. That
+      means everything goes in, your notes and the boneyard too, even when Include notes leaves
+      them off the page, and anyone you send the file to can read them. Leave it off for a file
+      you send to someone. Drafter can only reopen HTML or EPUB files it saved itself, with this
+      turned on: not files from other apps or sites, and not Drafter exports made with it off.
+    </p>
+    <p>
       Each script keeps its own choices, in this browser, and the script itself never changes: they
       aren’t in its file, so another browser or computer starts with the usual ones. The export’s
       message names any choice that isn’t the usual one. A Final Draft file gets the title page you
       choose, and always keeps the scene numbers written in the script, since Final Draft decides
       whether to print them. A Markdown document has no scene numbers, title page, or notes to
-      choose, so its Export options is off.
+      choose, so its Export options offers only Let Drafter reopen this file.
     </p>
 
     <h3 id="export-markdown">Export as Markdown</h3>
