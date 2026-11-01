@@ -8,6 +8,7 @@ import {
   scenePrints,
   sceneVersions,
 } from '@drafter/history';
+import { stepCounts } from '../drafts/steps';
 import {
   type HistoryReply,
   type HistoryRequest,
@@ -319,13 +320,21 @@ export function createHistoryCompute(
   return {
     async handle(request, post) {
       if (request.kind === 'place') return place(request, post);
-      if (request.kind === 'cuts') {
+      if (request.kind === 'cuts' || request.kind === 'step') {
         try {
-          post({
-            seq: request.seq,
-            kind: 'cuts',
-            cuts: foundCuts(request.before, request.after, request.docKind),
-          });
+          post(
+            request.kind === 'cuts'
+              ? {
+                  seq: request.seq,
+                  kind: 'cuts',
+                  cuts: foundCuts(request.before, request.after, request.docKind),
+                }
+              : {
+                  seq: request.seq,
+                  kind: 'step',
+                  counts: stepCounts(request.before, request.after, request.docKind),
+                },
+          );
         } catch (error) {
           post({
             seq: request.seq,

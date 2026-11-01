@@ -5,6 +5,7 @@ import { useCompare } from '~/compare/use-compare';
 import { CUTS_TAB, useCuts } from '~/cuts/use-cuts';
 import { draftName } from '~/drafts/labels';
 import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
+import { STEPS_TAB, useDraftSteps } from '~/drafts/use-steps';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { useModuleTabs } from '~/modules/host';
@@ -45,6 +46,7 @@ const openNotes = computed(() => openCount(noteEntries.value));
 const { current: comparison } = useCompare();
 const { isOpen: cutsOpen } = useCuts();
 const { isOpen: draftsOpen, reading } = useDrafts();
+const { isOpen: stepsOpen } = useDraftSteps();
 const moduleTabs = useModuleTabs();
 
 const ICONS: Record<string, string> = {
@@ -56,7 +58,10 @@ const ICONS: Record<string, string> = {
   more: 'i-lucide-ellipsis',
 };
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB].map((tab) => [tab.id, tab.label]),
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB, STEPS_TAB].map((tab) => [
+    tab.id,
+    tab.label,
+  ]),
 );
 
 /** A tab's label on the bar and in More: Write for the Source, Preview for a Markdown Script. */
@@ -80,6 +85,7 @@ const set = computed(() =>
       compare: !!comparison.value,
       cuts: cutsOpen.value,
       drafts: draftsOpen.value,
+      steps: stepsOpen.value,
       draft: !!reading.value,
     },
   ),

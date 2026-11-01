@@ -84,6 +84,7 @@ const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props
   <CutsSlim v-else-if="props.selected === 'cuts'" />
   <DraftsSlim v-else-if="props.selected === 'drafts'" tab="drafts" />
   <DraftsSlim v-else-if="props.selected === 'draft'" tab="draft" />
+  <DraftStepsSlim v-else-if="props.selected === 'draft-steps'" />
   <template v-else-if="props.selected === 'problems'">
     <span v-if="problemsSummary">{{ problemsSummary }}</span>
     <template v-if="canFixAll">

@@ -1,5 +1,6 @@
 import type { DeletedScene, Place, VersionRow, WorkKind } from '@drafter/history';
 import type { FoundCutAt } from '../cuts/store';
+import type { StepCounts } from '../drafts/steps';
 
 // What the page and the history worker say to each other (version-history design §3.4).
 
@@ -27,6 +28,11 @@ export type HistoryRequest =
    * each kept snapshot, answered once, beside the scans.
    */
   | { seq: number; kind: 'cuts'; before: string; after: string; docKind: WorkKind }
+  /**
+   * What changed in one step of Draft by draft (§2.4): `stepCounts` of two drafts' texts (or the
+   * last and now), answered once, beside the scans.
+   */
+  | { seq: number; kind: 'step'; before: string; after: string; docKind: WorkKind }
   /**
    * The first-run backfill (§3.1, Call 18): the cuts between each two consecutive snapshots taken
    * before `since` (v0.24.0's first run), oldest first, skipping pairs whose later snapshot is at
@@ -66,6 +72,7 @@ export type HistoryReply =
   /** Where Put back puts the scene; null when the snapshot is gone or can't be read. */
   | { seq: number; kind: 'place'; place: Place | null }
   | { seq: number; kind: 'cuts'; cuts: FoundCutAt[] }
+  | { seq: number; kind: 'step'; counts: StepCounts }
   /**
    * One pair of a backfill: its cuts, and `at`, when the later version of the pair was taken (the
    * cuts' date, and the progress to store). `read` of `total` pairs are done.

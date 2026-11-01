@@ -14,6 +14,7 @@ import {
 } from '~/drafts/labels';
 import { type DraftRow, isIdPrefix, NOTE_MAX } from '~/drafts/store';
 import { useDrafts } from '~/drafts/use-drafts';
+import { useDraftSteps } from '~/drafts/use-steps';
 import { useEditor } from '~/editor/session';
 import { sayOutline } from '~/outline/notice';
 import { historyReadOnly } from '~/snapshots/restore';
@@ -25,11 +26,13 @@ import { historyReadOnly } from '~/snapshots/restore';
 // it), and under More: Compare with another draft, Copy full ID, Edit note…. No Delete (Call 5).
 // Words only, not pages: laying out every draft's text to count its pages costs a layout per draft
 // each time the list is read (Task 2's call). The filter finds a draft by its number, ID, or note.
+// Its header links to Draft by draft (§2.4), the steps from one draft to the next.
 
 const drafts = useDrafts();
 const { rows, current, from, notKept } = drafts;
 const editor = useEditor();
 const compare = useCompare();
+const steps = useDraftSteps();
 const uid = useId();
 
 const filter = ref('');
@@ -217,6 +220,9 @@ const metaOf = (row: DraftRow) =>
     <template v-else>
       <div class="tools">
         <p class="where">{{ KEPT_HERE }}</p>
+        <DButton v-if="rows.length > 0" variant="borderless" class="steps-link" @click="steps.open()">
+          <UIcon name="i-lucide-git-commit-vertical" aria-hidden="true" />Draft by draft
+        </DButton>
         <label v-if="rows.length > 0" class="filter">
           <span>Filter</span>
           <input

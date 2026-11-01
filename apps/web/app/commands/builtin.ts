@@ -35,6 +35,7 @@ import { usePanes } from '~/composables/usePanes';
 import { useCuts } from '~/cuts/use-cuts';
 import { isDesktopBuild } from '~/desktop';
 import { useDrafts } from '~/drafts/use-drafts';
+import { useDraftSteps } from '~/drafts/use-steps';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
 import { firstSceneStart } from '~/editor/first-scene';
@@ -123,6 +124,7 @@ export function registerBuiltinCommands(): void {
   const showChanges = useShowChanges();
   const cuts = useCuts();
   const drafts = useDrafts();
+  const steps = useDraftSteps();
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -383,6 +385,15 @@ export function registerBuiltinCommands(): void {
       run: () => {
         if (drafts.shown()) drafts.close(true);
         else drafts.open();
+      },
+    },
+    // Draft by draft… (§2.4): opens the steps, or shows them; shown, they close.
+    'draft-steps': {
+      enabled: hasScript,
+      liveTitle: () => (steps.shown() ? 'Close Draft by draft' : 'Draft by draft…'),
+      run: () => {
+        if (steps.shown()) steps.close(true);
+        else steps.open();
       },
     },
     'take-snapshot': {

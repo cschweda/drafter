@@ -6,7 +6,6 @@ import {
   cutName,
   cutsCount,
   filterIndexed,
-  type GroupBy,
   groupIndexed,
   indexCuts,
   matchesLabel,
@@ -30,12 +29,11 @@ import { sayOutline } from '~/outline/notice';
 // in reading order, so every action is a Tab away and named for its cut.
 
 const cuts = useCuts();
-const { rows, loaded, filter, notKept, readOnly, pendingFind } = cuts;
+const { rows, loaded, filter, groupBy: by, notKept, readOnly, pendingFind } = cuts;
 const drafts = useDrafts();
 const editor = useEditor();
 const uid = useId();
 
-const by = ref<GroupBy>('scene');
 const GROUP_BY = [
   { value: 'scene' as const, label: 'Scene', name: 'Group by scene' },
   { value: 'draft' as const, label: 'Draft', name: 'Group by draft' },

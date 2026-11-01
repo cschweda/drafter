@@ -1,4 +1,5 @@
 export { type Anchor, sceneAnchors } from './anchors';
+export { CANDIDATES_MAX, Candidates } from './candidates';
 export { CUT_KEEP_SHARE, CUT_MIN_WORDS, type FoundCut, findCuts } from './cuts';
 export {
   type CutEntry,

@@ -105,6 +105,21 @@ function memorySource(
   return { source, reads };
 }
 
+describe('a step of Draft by draft', () => {
+  test('is counted in the worker and answered once', async () => {
+    const replies = await run(createHistoryCompute(memorySource([]).source, null), {
+      seq: 7,
+      kind: 'step',
+      before: script(A, B),
+      after: script(A, C),
+      docKind: 'fountain',
+    });
+    expect(replies).toEqual([
+      { seq: 7, kind: 'step', counts: expect.objectContaining({ added: 1, cut: 1, changed: 0 }) },
+    ]);
+  });
+});
+
 describe('the history scan', () => {
   test('lists deleted scenes newest first as it reads', async () => {
     // Now: A and E. The newest snapshot had B; the one before it C; the oldest D.

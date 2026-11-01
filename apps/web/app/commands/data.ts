@@ -161,6 +161,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
     icon: 'i-lucide-milestone',
     keywords: ['versions', 'version', 'open draft by ID', 'draft history'],
   },
+  // Draft by draft (drafts-and-cuts design §2.4, §6): the steps from one draft to the next.
+  {
+    id: 'draft-steps',
+    title: 'Draft by draft…',
+    group: 'File',
+    icon: 'i-lucide-git-commit-vertical',
+    keywords: ['versions', 'version', 'how it changed', 'what changed', 'timeline', 'drafts'],
+  },
   ...SAMPLES.map(
     (sample): CommandData => ({
       id: `open-sample-${sample.kind}`,

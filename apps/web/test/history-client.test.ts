@@ -84,6 +84,24 @@ describe('the history client', () => {
     expect(heard).toEqual([two, one]);
   });
 
+  test('a step of Draft by draft is answered once, beside a cuts question', () => {
+    const { workers, clients } = setup();
+    const view = clients.use();
+    const heard: number[] = [];
+    const cuts = view.request({ kind: 'cuts', before: 'a', after: 'b', docKind: 'fountain' }, (r) =>
+      heard.push(r.seq),
+    );
+    const step = view.request({ kind: 'step', before: 'a', after: 'b', docKind: 'markdown' }, (r) =>
+      heard.push(r.seq),
+    );
+    const worker = workers[0] as FakeWorker;
+    const counts = { words: 1, pages: null, added: 0, cut: 0, changed: 1, newShare: 1 };
+    worker.reply({ seq: step, kind: 'step', counts });
+    worker.reply({ seq: step, kind: 'step', counts });
+    worker.reply({ seq: cuts, kind: 'cuts', cuts: [] });
+    expect(heard).toEqual([step, cuts]);
+  });
+
   test('a backfill streams its pairs until the last', () => {
     const { workers, clients } = setup();
     const view = clients.use();

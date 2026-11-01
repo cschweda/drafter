@@ -8,7 +8,7 @@ import type { HistoryReply, HistoryRequest } from './protocol';
 
 type Scan = Extract<
   HistoryRequest,
-  { kind: 'deleted' | 'versions' | 'place' | 'cuts' | 'backfill' }
+  { kind: 'deleted' | 'versions' | 'place' | 'cuts' | 'step' | 'backfill' }
 >;
 /** A scan as a view asks for it: the client numbers it. */
 export type HistoryAsk = Scan extends infer R ? (R extends Scan ? Omit<R, 'seq'> : never) : never;
@@ -35,7 +35,7 @@ interface Listening {
 const STOPPED = 'The history worker stopped.';
 
 /** The requests answered once, beside the scans: none stops another. */
-const ONCE: ReadonlySet<Scan['kind']> = new Set(['place', 'cuts']);
+const ONCE: ReadonlySet<Scan['kind']> = new Set(['place', 'cuts', 'step']);
 
 /** Views of one worker, made by `make` when needed (tests pass a fake). */
 export function createHistoryClients(make: () => WorkerLike) {
@@ -69,6 +69,7 @@ export function createHistoryClients(make: () => WorkerLike) {
           reply.kind === 'error' ||
           reply.kind === 'place' ||
           reply.kind === 'cuts' ||
+          reply.kind === 'step' ||
           (reply.kind !== 'progress' && reply.done)
         )
           listening.delete(reply.seq);

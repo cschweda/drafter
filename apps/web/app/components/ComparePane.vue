@@ -1,18 +1,49 @@
 <script setup lang="ts">
 import { buildPage, speechRoles } from '@drafter/render-html';
 import '@drafter/render-html/style.css';
+import { draftName } from '@drafter/history';
 import { markPage } from '~/compare/draw';
 import { useCompare } from '~/compare/use-compare';
+import { wholeLabel } from '~/cuts/labels';
+import type { CutRow } from '~/cuts/store';
+import { useCuts } from '~/cuts/use-cuts';
+import { stepLine } from '~/drafts/steps';
+import { useDraftSteps } from '~/drafts/use-steps';
 import { sayOutline } from '~/outline/notice';
 
 // The Compare tab (Phase 2 design §11.2): the Changes list above the view the slim bar chose
 // (version-history design §5.1): the Changes view (`DiffView`), or the newer version's pages, drawn
 // with `buildPage` and marked by `markPage` (Call 17). Read-only: nothing here edits. N and Shift+N
 // go to the next and previous change while focus is in the tab (Call 21); a change gets focus and
-// its label is said once. On a phone the Changes list is a collapsed `<details>` at the top.
+// its label is said once. On a phone the Changes list is a collapsed `<details>` at the top. A step
+// of Draft by draft (drafts-and-cuts design §2.4) leads with its own bar, the step and its numbers
+// with Previous step and Next step (in the pane, not the slim bar, which folds its tools behind ⋯
+// at most widths), and lists, beside the changes, the cuts made while writing its later draft
+// (from Cuts, §3), with Show in Cuts for the list grouped by draft.
 
 const compare = useCompare();
-const { current, pages, view, layout, stops, groupList, layoutFailed } = compare;
+const { current, pages, view, layout, stops, groupList, layoutFailed, draftStep } = compare;
+const cuts = useCuts();
+const steps = useDraftSteps();
+/** The step shown, as counted for Draft by draft, or null. */
+const shownStep = computed(() => {
+  const index = steps.shownStep.value;
+  return index === null ? null : (steps.steps.value[index] ?? null);
+});
+const firstStep = computed(() => steps.shownStep.value === 0);
+const lastStep = computed(() => current.value?.newer.at === null);
+
+/** The cuts made while writing the step's later draft, newest first; most shown here, all in Cuts. */
+const stepCuts = computed(() => {
+  const step = draftStep.value;
+  if (!step) return [];
+  return cuts.rows.value.filter((row) => row.cuts.some((c) => c.draft === step.to));
+});
+const STEP_CUTS_SHOWN = 12;
+const opening = computed(() => (current.value?.kind === 'markdown' ? 'the opening' : 'a scene'));
+/** "Whole scene", or "From INT. HALL - DAY": what a cut was, in a few words. */
+const cutKind = (row: CutRow) =>
+  wholeLabel(row) ?? `From ${row.where.within?.heading || opening.value}`;
 const wide = useWideScreen();
 const diffView = ref<{
   revealChange(change: number): Promise<HTMLElement | null>;
@@ -155,6 +186,36 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
 <template>
   <div ref="root" class="compare-host">
     <template v-if="current">
+      <div v-if="draftStep" role="group" aria-labelledby="compare-step-name" class="changes step-bar">
+        <p class="step-text">
+          <span id="compare-step-name" class="step-name">
+            {{ draftName(draftStep.from) }} <span aria-hidden="true">→</span
+            ><span class="sr-only">to</span>
+            {{ current.newer.at === null ? 'now' : draftName(draftStep.to) }}
+          </span>
+          <span v-if="shownStep" class="step-numbers">{{
+            stepLine(shownStep, steps.kind.value)
+          }}</span>
+        </p>
+        <div class="step-buttons">
+          <button
+            type="button"
+            class="step-button"
+            :aria-disabled="firstStep ? 'true' : undefined"
+            @click="steps.walk(-1)"
+          >
+            <UIcon name="i-lucide-chevron-left" aria-hidden="true" />Previous step
+          </button>
+          <button
+            type="button"
+            class="step-button"
+            :aria-disabled="lastStep ? 'true' : undefined"
+            @click="steps.walk(1)"
+          >
+            Next step<UIcon name="i-lucide-chevron-right" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
       <details v-if="!wide" class="changes">
         <summary>Changes ({{ entries.length }})</summary>
         <ul v-if="entries.length > 0">
@@ -171,6 +232,36 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
           </li>
         </ul>
       </section>
+      <component
+        :is="wide ? 'section' : 'details'"
+        v-if="draftStep"
+        class="changes step-cuts"
+        aria-labelledby="compare-step-cuts-title"
+      >
+        <component :is="wide ? 'h2' : 'summary'" id="compare-step-cuts-title" class="changes-title">
+          Cut while writing {{ draftName(draftStep.to) }} ({{ stepCuts.length }})
+        </component>
+        <p v-if="stepCuts.length === 0" class="none">
+          Nothing was kept in Cuts while writing {{ draftName(draftStep.to) }}.
+        </p>
+        <ul v-else>
+          <li v-for="row in stepCuts.slice(0, STEP_CUTS_SHOWN)" :key="row.id" class="cut">
+            <span class="cut-title">{{ row.title || 'Untitled cut' }}</span>
+            <span class="cut-kind">{{ cutKind(row) }}</span>
+          </li>
+        </ul>
+        <p v-if="stepCuts.length > STEP_CUTS_SHOWN" class="none">
+          And {{ (stepCuts.length - STEP_CUTS_SHOWN).toLocaleString('en-US') }} more.
+        </p>
+        <button
+          v-if="stepCuts.length > 0"
+          type="button"
+          class="change show-cuts"
+          @click="cuts.showDraft(draftStep.to)"
+        >
+          Show in Cuts
+        </button>
+      </component>
       <DiffView
         v-if="view === 'changes'"
         ref="diffView"
@@ -254,6 +345,84 @@ watch([compare.pendingGroup, diffView], () => void focusListedGroup(), { flush: 
 }
 .change:hover {
   background: var(--surface);
+}
+.step-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+.step-name {
+  font-weight: 700;
+}
+.step-numbers {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.step-buttons {
+  display: flex;
+  gap: 4px;
+}
+.step-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.step-button:hover {
+  background: var(--overlay);
+}
+.step-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.step-button[aria-disabled='true'] {
+  cursor: not-allowed;
+  color: var(--muted);
+}
+.step-cuts .none {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.step-cuts .cut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 2px 6px;
+}
+.cut-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cut-kind {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.show-cuts {
+  width: auto;
+  margin-top: 4px;
+  font-weight: 600;
 }
 .note {
   margin: 0 auto 12px;

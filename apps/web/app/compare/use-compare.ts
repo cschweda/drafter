@@ -94,10 +94,29 @@ export interface CompareStop {
   label: string;
 }
 
+/**
+ * A step of Draft by draft (drafts-and-cuts design §2.4): the comparison is Draft `from` with
+ * Draft `to` (the draft being written, when the newer is now), so the slim bar offers Previous step
+ * and Next step, and the pane lists the cuts made while writing Draft `to`.
+ */
+export interface CompareStep {
+  from: number;
+  to: number;
+}
+
+export interface OpenOptions {
+  /** The comparison is a step of Draft by draft. */
+  step?: CompareStep;
+  /** Focus goes to the tab's panel (the default); false leaves it where it is (Next step). */
+  focus?: boolean;
+}
+
 export interface CompareSession {
   current: Readonly<ShallowRef<Comparison | null>>;
   /** Orders the two by time (now is newest), diffs them, and shows the tab. */
-  open(a: Version, b: Version): void;
+  open(a: Version, b: Version, options?: OpenOptions): void;
+  /** The step of Draft by draft this comparison is, or null. */
+  draftStep: Readonly<Ref<CompareStep | null>>;
   /**
    * Opens on the Changes view at the group of the scene headed `heading` (from History of this
    * scene): the view scrolls to it and focuses its header.
@@ -186,6 +205,7 @@ function create(): CompareSession {
   const { settings, set } = useSettings();
 
   const current = shallowRef<Comparison | null>(null);
+  const draftStep = shallowRef<CompareStep | null>(null);
   const pages = shallowRef<ComparePages | null>(null);
   const failed = ref(false);
   const at = ref<number | null>(null);
@@ -300,6 +320,7 @@ function create(): CompareSession {
     endWorker();
     laidOut = null;
     current.value = null;
+    draftStep.value = null;
     pages.value = null;
     failed.value = false;
     at.value = null;
@@ -404,15 +425,18 @@ function create(): CompareSession {
 
   return {
     current,
-    open(a, b) {
+    open(a, b, options = {}) {
       asked.value = null;
       const { older, newer } = orderVersions(a, b);
+      draftStep.value = options.step ? { ...options.step } : null;
       compare(older, newer);
-      show();
+      show(options.focus ?? true);
     },
+    draftStep,
     openAt(a, b, heading) {
       // The group is in the Changes view; the writer's remembered view is theirs, kept for next time.
       asked.value = 'changes';
+      draftStep.value = null;
       const { older, newer } = orderVersions(a, b);
       compare(older, newer);
       focusScene.value = heading;

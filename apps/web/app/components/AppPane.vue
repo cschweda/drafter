@@ -5,6 +5,7 @@ import { useScriptTitle } from '~/composables/useScriptTitle';
 import { CUTS_TAB, useCuts } from '~/cuts/use-cuts';
 import { draftName } from '~/drafts/labels';
 import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
+import { STEPS_TAB, useDraftSteps } from '~/drafts/use-steps';
 import { useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { contextGeneration } from '~/modules/context';
@@ -68,6 +69,7 @@ const ICONS: Record<string, string> = {
   compare: 'i-lucide-git-compare',
   cuts: 'i-lucide-scissors',
   drafts: 'i-lucide-milestone',
+  'draft-steps': 'i-lucide-git-commit-vertical',
   draft: 'i-lucide-book-open',
   module: 'i-lucide-puzzle',
 };
@@ -85,12 +87,13 @@ const { current: comparison } = useCompare();
 const { isOpen: cutsOpen } = useCuts();
 // The Drafts list and the draft being read, while open (drafts-and-cuts design §2.3).
 const { isOpen: draftsOpen, reading } = useDrafts();
+const { isOpen: stepsOpen } = useDraftSteps();
 const moduleTabs = useModuleTabs();
 const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
 
 /** Every tab's label, by its id. */
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB, READER_TAB].map((tab) => [
+  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB, STEPS_TAB, READER_TAB].map((tab) => [
     tab.id,
     tab.label,
   ]),
@@ -122,6 +125,7 @@ const inspectorSet = computed(() => {
     if (id === COMPARE_TAB.id) return !!comparison.value;
     if (id === CUTS_TAB.id) return cutsOpen.value;
     if (id === DRAFTS_TAB.id) return draftsOpen.value;
+    if (id === STEPS_TAB.id) return stepsOpen.value;
     if (id === READER_TAB.id) return !!reading.value;
     return true;
   };
@@ -800,6 +804,7 @@ function onPanelKeydown(event: KeyboardEvent) {
       <ComparePane v-else-if="props.selected === 'compare'" />
       <CutsPane v-else-if="props.selected === 'cuts'" />
       <DraftsPane v-else-if="props.selected === 'drafts'" />
+      <DraftStepsPane v-else-if="props.selected === 'draft-steps'" />
       <DraftReader v-else-if="props.selected === 'draft'" />
       <ProblemsPane v-else />
     </div>

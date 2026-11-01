@@ -86,6 +86,12 @@ describe('panes', () => {
         'history',
       ]);
     });
+    test('Draft by draft leads More while open, after the Drafts list', () => {
+      expect(phoneTabs('markdown', [], { drafts: true, steps: true }).more.slice(0, 2)).toEqual([
+        'drafts',
+        'draft-steps',
+      ]);
+    });
     test("the modules' tabs follow Problems, and Compare and Cuts lead while open", () => {
       expect(phoneTabs('fountain', ['module-a--t'], { compare: true, cuts: true }).more).toEqual([
         'compare',
@@ -105,7 +111,7 @@ describe('panes', () => {
     test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Problems, Compare, Cuts, and module tabs", () => {
       expect(inspectorTabs('fountain')).toEqual({
         row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-        more: ['notes', 'problems', 'compare', 'cuts', 'drafts', 'draft'],
+        more: ['notes', 'problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
       });
       expect(inspectorTabs('fountain', ['module-a--x', 'module-b--y']).more).toEqual([
         'notes',
@@ -113,6 +119,7 @@ describe('panes', () => {
         'compare',
         'cuts',
         'drafts',
+        'draft-steps',
         'draft',
         'module-a--x',
         'module-b--y',
@@ -123,7 +130,7 @@ describe('panes', () => {
       // The Preview is the Script tab's id in a Markdown document (its panel is #panel-script).
       expect(inspectorTabs('markdown')).toEqual({
         row: ['script', 'stats'],
-        more: ['problems', 'compare', 'cuts', 'drafts', 'draft'],
+        more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
       });
       // A module's tab, which a module may draw for any document, goes after them.
       expect(inspectorTabs('markdown', ['module-a--x']).more).toEqual([
@@ -131,6 +138,7 @@ describe('panes', () => {
         'compare',
         'cuts',
         'drafts',
+        'draft-steps',
         'draft',
         'module-a--x',
       ]);

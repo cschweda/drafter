@@ -30,14 +30,16 @@ export type InspectorTabId =
   | 'compare'
   | 'cuts'
   | 'drafts'
+  | 'draft-steps'
   | 'draft'
   | `module-${string}`;
 
 /**
- * Cuts, the Drafts list, and the draft being read (drafts-and-cuts design §2.3, §3.2): tabs that
+ * Cuts, the Drafts list, Draft by draft, and the draft being read (drafts-and-cuts design §2.3,
+ * §2.4, §3.2): tabs that
  * exist only while open, as Compare is, for scripts and Markdown documents alike.
  */
-const DRAFT_TABS: InspectorTabId[] = ['cuts', 'drafts', 'draft'];
+const DRAFT_TABS: InspectorTabId[] = ['cuts', 'drafts', 'draft-steps', 'draft'];
 
 /**
  * The Inspector's tabs for a document of `kind` (Call 14): the row, and More with the rest, in
@@ -171,12 +173,19 @@ export const HISTORY_ITEM = 'history';
 export function phoneTabs(
   kind: 'fountain' | 'markdown',
   modules: ReadonlyArray<string> = [],
-  open: { compare?: boolean; cuts?: boolean; drafts?: boolean; draft?: boolean } = {},
+  open: {
+    compare?: boolean;
+    cuts?: boolean;
+    drafts?: boolean;
+    steps?: boolean;
+    draft?: boolean;
+  } = {},
 ): { row: TabId[]; more: TabId[] } {
   const lead = [
     ...(open.compare ? ['compare'] : []),
     ...(open.cuts ? ['cuts'] : []),
     ...(open.drafts ? ['drafts'] : []),
+    ...(open.steps ? ['draft-steps'] : []),
     ...(open.draft ? ['draft'] : []),
   ];
   if (kind === 'markdown') {

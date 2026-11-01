@@ -1,3 +1,4 @@
+import { draftName } from '@drafter/history';
 import {
   type ComputedRef,
   computed,
@@ -17,7 +18,7 @@ import { useOutline } from '../outline/use-outline';
 import { historyReadOnly } from '../snapshots/restore';
 import { useScript } from '../storage/script';
 import { createCutInsert } from './insert';
-import { cutName, NOT_KEPT_SAMPLE } from './labels';
+import { cutName, type GroupBy, NOT_KEPT_SAMPLE } from './labels';
 import { type CutRow, cutRow, listCuts, markPutBack } from './store';
 import { cutsRecorded } from './use-recorder';
 
@@ -34,6 +35,8 @@ export interface CutsSession {
   /** They have been read for the open script. */
   loaded: Readonly<Ref<boolean>>;
   filter: Ref<string>;
+  /** How the list groups them: by scene or chapter (the default), or by draft. */
+  groupBy: Ref<GroupBy>;
   /** Where they are kept: in this browser until Task 7 writes them beside the work. */
   where: Readonly<Ref<'beside' | 'browser'>>;
   /** Why no cuts are kept here (none open, a sample), or null. */
@@ -47,6 +50,11 @@ export interface CutsSession {
   shown(): boolean;
   /** Opens the list filtered to `heading` (Find in Cuts, from a Compare group). */
   find(heading: string): void;
+  /**
+   * Opens the list on the cuts made while writing Draft `n`, grouped by draft (from a step of
+   * Draft by draft).
+   */
+  showDraft(n: number): void;
   /** The cut to focus once it is listed (Find in Cuts); the list clears it. */
   pendingFind: Ref<string | null>;
   load(): Promise<void>;
@@ -65,6 +73,7 @@ function create(): CutsSession {
   const rows = shallowRef<CutRow[]>([]);
   const loaded = ref(false);
   const filter = ref('');
+  const groupBy = ref<GroupBy>('scene');
   const where = ref<'beside' | 'browser'>('browser');
   const isOpen = ref(false);
   const pendingFind = ref<string | null>(null);
@@ -150,6 +159,7 @@ function create(): CutsSession {
     rows,
     loaded,
     filter,
+    groupBy,
     where,
     notKept,
     readOnly,
@@ -173,6 +183,13 @@ function create(): CutsSession {
       pendingFind.value = heading.trim();
       void load();
       showTempTab(CUTS_TAB.id, false);
+    },
+    showDraft(n) {
+      isOpen.value = true;
+      filter.value = draftName(n);
+      groupBy.value = 'draft';
+      void load();
+      showTempTab(CUTS_TAB.id, true);
     },
     pendingFind,
     load,
