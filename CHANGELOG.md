@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The README is shorter, with a screenshot gallery; the roadmap and developer notes moved to docs/ROADMAP.md and docs/DEVELOPMENT.md.
+
 ## [0.23.2] - 2026-11-01
 
 **Tested against hostile files, and security up front.** Drafter now runs 244 deliberately broken and hostile files through every way a file comes in, and fixes what they found. The README and the Technical details page have a Security section, and SECURITY.md says how to report a problem.
