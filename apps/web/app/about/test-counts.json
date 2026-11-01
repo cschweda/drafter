@@ -17,8 +17,8 @@
     "desktop": 125
   },
   "trap": {
-    "traps": 244,
-    "checks": 834,
+    "traps": 258,
+    "checks": 848,
     "byFormat": {
       "fountain": 39,
       "markdown": 31,
@@ -29,7 +29,9 @@
       "html": 31,
       "epub": 18,
       "files": 13,
-      "modules": 9
+      "modules": 9,
+      "cuts": 8,
+      "draft": 6
     }
   }
 }
