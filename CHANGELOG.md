@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-01
+
 **Drafts and Cuts.** Start new draft keeps your script as Draft 01, 02, and so on, each with an ID of its own, and Draft by draft shows how it changed. Cuts keeps everything you cut, for good, to browse for ideas, and replaces Deleted scenes. **The desktop app now writes `<script>.cuts.md` and a `<script> drafts` folder beside your script, without asking** (for `Boca.fountain`: `Boca.fountain.cuts.md` and `Boca drafts/`); Chrome and Edge ask once for the script's folder, and other browsers keep them in the browser, with Export drafts and cuts.
 
 ### Added
@@ -1096,7 +1098,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.3...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/cschweda/drafter/compare/v0.23.3...v0.24.0
 [0.23.3]: https://github.com/cschweda/drafter/compare/v0.23.2...v0.23.3
 [0.23.2]: https://github.com/cschweda/drafter/compare/v0.23.1...v0.23.2
 [0.23.1]: https://github.com/cschweda/drafter/compare/v0.23.0...v0.23.1

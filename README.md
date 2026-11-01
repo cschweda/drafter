@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.23.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Next up is Drafts and Cuts (v0.24.0); see the [roadmap](#roadmap).
+> **Status: v0.24.0.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Drafts and Cuts is out; next up is Story map (v0.24.1), a visual page of your script to send to anyone. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
