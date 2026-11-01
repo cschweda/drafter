@@ -1,4 +1,12 @@
 export {
+  defaultStatus,
+  finishedMap,
+  gapsOf,
+  isPlanned,
+  isStub,
+  todoScenes,
+} from './gaps';
+export {
   cleanSpeech,
   lineTarget,
   pickQuotes,
@@ -7,6 +15,14 @@ export {
   signatureLines,
 } from './lines';
 export { actTitle, buildStoryMap, type MapInput, STORY_MAP_LIMITS } from './model';
+export {
+  intervalOf,
+  movesSentence,
+  pairsOf,
+  settingOf,
+  stageLines,
+  topSections,
+} from './stage';
 export {
   actMood,
   type Hook,

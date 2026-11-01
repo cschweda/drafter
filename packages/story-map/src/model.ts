@@ -1,4 +1,4 @@
-import { type Cast, castOf, shares } from '@drafter/cast';
+import { type Cast, castOf, locationKey, nameMap, shares } from '@drafter/cast';
 import type { Doc } from '@drafter/fountain';
 import type { Layout } from '@drafter/layout';
 import {
@@ -11,12 +11,13 @@ import {
 } from '@drafter/outline';
 import { scriptAuthor } from '@drafter/render-html-file';
 import type { Template } from '@drafter/templates';
+import { defaultStatus, finishedMap, gapsOf, isPlanned, isStub } from './gaps';
 import { pickQuotes, quoteCandidates, signatureLines } from './lines';
+import { intervalOf, movesSentence, pairsOf, settingOf, stageLines, topSections } from './stage';
 import { actMood, hooksOf, sceneLine, threadsOf } from './summaries';
 import type {
   MapAct,
   MapCharacter,
-  MapGaps,
   MapKind,
   MapOptions,
   MapPlace,
@@ -39,7 +40,8 @@ import {
 // The story-map model (story-map design §3–§5): what Drafter already computes for the Script tab,
 // Stats, and Scaffold (the scene index, its pages, and the cast), turned into one plain object of
 // numbers, short strings, and indexes in plain words, with the lines of dialogue, the scene
-// summaries, the hooks, and the threads. Gaps and a play's own parts are filled by the later steps.
+// summaries, the hooks, and the threads; the gaps and the status; and a play's interval,
+// settings, who's on stage, and pairs.
 
 export interface MapInput {
   doc: Doc;
@@ -76,13 +78,6 @@ const VOICE = /V\.O\.|O\.S\./i;
 /** The section's title without its "Act One:" label. */
 export function actTitle(section: Section): string {
   return section.title.trim().replace(ACT_LABEL, '').trim();
-}
-
-/** The acts: the top-level sections (the smallest depth used), in order. */
-function topSections(index: SceneIndex): Section[] {
-  if (index.sections.length === 0) return [];
-  const depth = Math.min(...index.sections.map((s) => s.depth));
-  return index.sections.filter((s) => s.depth === depth);
 }
 
 /** Each scene's place on the page axis: the Structure strip's, else end to end by length. */
@@ -234,19 +229,27 @@ function charactersOf(cast: Cast, index: SceneIndex, doc: Doc, scenes: readonly 
   return characters;
 }
 
-/** The places, by time spent there, the top 24 sized in five steps; and how many more. */
-function placesOf(cast: Cast, scenes: readonly MapScene[]): { places: MapPlace[]; more: number } {
-  // A place with a follow-on time in its heading (`GARAGE - LATER THAT NIGHT`) is the same place.
-  const byName = new Map<string, { name: string; scenes: number; minutes: number }>();
-  for (const loc of cast.locations.values()) {
-    const name = placeWords(followOn(loc.location).location);
-    const place = byName.get(name) ?? { name, scenes: 0, minutes: 0 };
-    place.scenes += loc.scenes.length;
-    place.minutes += loc.scenes.reduce((n, s) => n + (scenes[s]?.minutes ?? 0), 0);
-    byName.set(name, place);
+/**
+ * The places (a play's settings), by time spent there, the top 24 sized in five steps; and how
+ * many more. Scenes are grouped by their place in plain words (`locationKey`), each shown as first
+ * written; a place with a follow-on time in its heading (`GARAGE - LATER THAT NIGHT`) is already
+ * the same place. Scenes `skip` says are left out.
+ */
+function placesOf(
+  scenes: readonly MapScene[],
+  skip: (scene: MapScene) => boolean,
+): { places: MapPlace[]; more: number } {
+  const byKey = new Map<string, { name: string; scenes: number; minutes: number }>();
+  for (const scene of scenes) {
+    if (scene.place === null || skip(scene)) continue;
+    const key = locationKey(scene.place);
+    const place = byKey.get(key) ?? { name: scene.place, scenes: 0, minutes: 0 };
+    place.scenes += 1;
+    place.minutes += scene.minutes;
+    byKey.set(key, place);
   }
-  const all = [...byName.values()];
-  // Stable: ties keep the cast's key order.
+  const all = [...byKey.values()];
+  // Stable: ties keep the order they are first visited in.
   all.sort((a, b) => b.minutes - a.minutes || b.scenes - a.scenes);
   const top = all[0]?.minutes ?? 0;
   const places = all.slice(0, STORY_MAP_LIMITS.places).map((p) => ({
@@ -318,19 +321,40 @@ export function buildStoryMap(input: MapInput): StoryMap {
     return at;
   };
 
+  // A play's settings (Call 16): "The same" takes the scene before's.
+  const settings: Array<{ name: string; time: string | null } | null> = [];
+  if (kind === 'play') {
+    for (const scene of index.scenes) {
+      settings.push(settingOf(scene, doc, template, settings.at(-1)?.name ?? null));
+    }
+  }
+
   const spans = spansOf(index, perPage);
   let before: TimeKind | null = null;
   const scenes: MapScene[] = index.scenes.map((scene, s) => {
-    const place = cast.places[s];
-    const minutes =
-      kind === 'play'
+    // Expand outline's stand-in heading names no place and no time.
+    const stub = isStub(scene);
+    const place = stub ? undefined : cast.places[s];
+    const setting = settings[s] ?? null;
+    // A planned scene counts no time (design §6.1.2).
+    const planned = isPlanned(scene);
+    const minutes = planned
+      ? 0
+      : kind === 'play'
         ? estimateSeconds(scene.timing, wordsPerMinute) / 60
         : ((scene.pages?.eighths ?? 0) / 8) * minutesPerPage;
     const follow = place?.time ? null : followOn(place?.location ?? '');
-    const time = timeOf(place?.time ?? follow?.time ?? null, before);
-    before = time.kind;
+    const time = timeOf(place?.time ?? follow?.time ?? setting?.time ?? null, before);
+    if (!stub) before = time.kind;
     const [from, to] = spans[s] ?? [0, 0];
-    const location = place?.location ? placeWords(follow ? follow.location : place.location) : '';
+    const location =
+      kind === 'play'
+        ? (setting?.name ?? '')
+        : place?.location
+          ? placeWords(follow ? follow.location : place.location)
+          : '';
+    const named = place?.location ? placeWords(place.location) : '';
+    const heading = scene.heading.trim();
     return {
       n: s + 1,
       act: sections.length > 0 ? actIndexOf(scene.block) + 1 : null,
@@ -338,16 +362,20 @@ export function buildStoryMap(input: MapInput): StoryMap {
       to,
       minutes,
       place: location === '' ? null : location,
+      // A play's title, unless it names a place or is the setting itself.
       title:
-        kind === 'play' && location === '' && scene.heading.trim() !== ''
-          ? scene.heading.trim()
+        kind === 'play' &&
+        named === '' &&
+        heading !== '' &&
+        !(setting && locationKey(setting.name) === locationKey(heading))
+          ? heading
           : null,
       time: time.time,
       timeKind: time.kind,
       inside: insideWords(place?.inside ?? 'none'),
       what: null,
       chips: [],
-      planned: false,
+      planned,
       todo: false,
       quote: null,
       stage: null,
@@ -362,7 +390,12 @@ export function buildStoryMap(input: MapInput): StoryMap {
       title: actTitle(section),
       mood: options.include.summaries ? actMood(section, doc) : null,
       scenes: mine,
-      pages: mine.reduce((n, s) => n + (index.scenes[s]?.pages?.eighths ?? 0), 0) / 8,
+      // A planned scene counts no pages.
+      pages:
+        mine.reduce(
+          (n, s) => n + (scenes[s]?.planned ? 0 : (index.scenes[s]?.pages?.eighths ?? 0)),
+          0,
+        ) / 8,
       minutes: mine.reduce((n, s) => n + (scenes[s]?.minutes ?? 0), 0),
       empty: mine.length === 0,
     };
@@ -397,44 +430,58 @@ export function buildStoryMap(input: MapInput): StoryMap {
 
   const quotes = options.include.lines ? quotesOf(doc, index, scenes, characters, at) : [];
 
+  // Who's on stage in a play (Call 28), by the page's characters, in the chips' order.
+  if (kind === 'play') {
+    const spelled = nameMap(cast.characters.map((c) => ({ name: c.name, word: false })));
+    const shown = characters.map((c) => c.name);
+    scenes.forEach((scene, s) => {
+      const lines = scene.planned
+        ? []
+        : stageLines(doc, index, s, spelled, cast)
+            .flatMap((line) => {
+              const i = at.get(cast.characters[line.character]?.key ?? '');
+              return i === undefined ? [] : [{ ...line, character: i }];
+            })
+            .sort((x, y) => x.character - y.character);
+      scene.stage = lines;
+      scene.moves = movesSentence(lines, shown);
+    });
+  }
+
   // Two lanes when at least half the scenes say inside or outside, or a time.
-  const placed = index.scenes.filter((_, s) => {
+  const placed = index.scenes.filter((scene, s) => {
     const p = cast.places[s];
-    return p !== undefined && (p.inside !== 'none' || p.time !== null);
+    return p !== undefined && !isStub(scene) && (p.inside !== 'none' || p.time !== null);
   }).length;
   const lanes = scenes.length > 0 && placed * 2 >= scenes.length ? 'two' : 'one';
   const sum = (list: readonly MapScene[]) => list.reduce((n, s) => n + s.minutes, 0);
   const known = scenes.filter((s) => s.inside !== null);
   const timed = scenes.filter((s) => s.timeKind !== null);
+  // Nothing written yet: no split to draw.
   const split =
-    lanes === 'two'
+    lanes === 'two' && sum(scenes) > 0
       ? {
           indoors: percent(sum(known.filter((s) => s.inside === 'Inside')), sum(known)),
           night: percent(sum(timed.filter((s) => s.timeKind === 'night')), sum(timed)),
         }
       : null;
 
-  const { places, more } = placesOf(cast, scenes);
+  // The gaps, and the status they give unless the writer chose one (design §6).
+  const pages = layout.pages.filter((p) => p.number > 0).length;
+  const gaps = gapsOf(index, doc, acts, scenes, options.plannedPages, pages);
+  const status = options.status ?? defaultStatus(gaps);
+  const todo = new Set(gaps.todo);
+  for (const scene of scenes) scene.todo = todo.has(scene.n);
+
+  // Finished leaves the planned scenes out, and so their places.
+  const { places, more } = placesOf(scenes, (scene) => status === 'finished' && scene.planned);
   const author = scriptAuthor(doc).trim();
   const contact = options.contact?.trim() ?? '';
-  const emptyActs = acts.filter((a) => a.empty).map((a) => a.n);
-  const pages = layout.pages.filter((p) => p.number > 0).length;
-  const gaps: MapGaps = {
-    found: emptyActs.length > 0,
-    planned: [],
-    todo: [],
-    emptyActs,
-    tail: null,
-    percent: null,
-    written: pages,
-    plannedPages: options.plannedPages,
-    sentence: '',
-  };
   const draft = Math.max(1, Math.floor(options.draft.number));
 
-  return {
+  const map: StoryMap = {
     kind,
-    status: options.status ?? (gaps.found ? 'in-progress' : 'finished'),
+    status,
     title: options.title,
     writer: author === '' ? null : { name: author, initials: initialsOf(author) },
     greeting: options.greeting,
@@ -455,16 +502,18 @@ export function buildStoryMap(input: MapInput): StoryMap {
     axis: scenes.at(-1)?.to ?? 0,
     lanes,
     split,
-    pace: paceOf(scenes),
+    pace: paceOf(scenes.filter((scene) => !scene.planned)),
     characters,
-    pairs: [],
+    pairs: pairsOf(kind, characters, cast),
     places,
     placesMore: more,
     quotes,
     threads: options.include.threads ? threadsOf(doc, index) : [],
     gaps,
-    interval: null,
+    interval: kind === 'play' ? intervalOf(doc, index, acts) : null,
     contact:
       options.include.contact && contact !== '' ? { text: contact, mailto: mailOf(contact) } : null,
   };
+  // Last, so every index above is the in-progress one until then.
+  return status === 'finished' ? finishedMap(map) : map;
 }

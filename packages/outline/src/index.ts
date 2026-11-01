@@ -39,6 +39,7 @@ export {
   type TalliedSpeech,
   type Timing,
   TimingTally,
+  wordsIn,
 } from './timing';
 export { markdownText, treatment } from './treatment';
 export type {
