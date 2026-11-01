@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **What is Drafter?**, a help page for everyone (`/docs/what-is-drafter/`): what Drafter is in one minute, and what a screenplay and a stage play are; for writers, why Drafter over Final Draft, and what Final Draft has that Drafter doesn't yet, with when each is planned; for producers, directors, and script coordinators; Can I trust this?, with the security section; and for technical people, how many tests there are of each kind, the stack, four diagrams of how it works, and the trap documents. It is first in Help, in the help pages' list, in About, and in the desktop app's Help menu, and the README links it at the top. Why Drafter stays as the full comparison, and links to it.
+- **What's new**, a help page (`/docs/whats-new/`) with every release's changes in plain words, newest first, each marked New, Improved, Fixed, or Security, back to v0.1.0. It is last in Help, and the README links it at the top.
+- **A What's new banner** on the writing screen: after a big change or a security update, one line at the top with its kind, its title, a What's new link, and ✕. It shows once, until dismissed; never on a first visit, in focus mode, during the tour, or while an update is offered; and in the desktop app too. Privacy says the browser remembers which ones you've seen.
+- `docs/HOW-IT-WORKS.md`: how a script flows, how saving works, how a file is opened safely, and how a release is made, as Mermaid diagrams GitHub draws. The What is Drafter? page shows them as images drawn ahead of time (`pnpm diagrams`), so the app never loads Mermaid.
+- `pnpm test-counts` (`scripts/test-counts.mjs`) runs the unit tests once, lists the browser and desktop tests, and writes the counts the What is Drafter? page shows; it is now a release step (docs/DEVELOPMENT.md).
+
 ### Changed
 
 - The README is shorter, with a screenshot gallery; the roadmap and developer notes moved to docs/ROADMAP.md and docs/DEVELOPMENT.md.

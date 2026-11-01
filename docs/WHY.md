@@ -1,6 +1,6 @@
 # Why Drafter
 
-The [Why Drafter](https://drafter.dev/docs/why/) page on drafter.dev makes the case for writers. This page keeps the longer notes behind it: the idea Drafter is built on, its principles, what makes it different, and the whole list of what it does today. How the code works is in [Developing Drafter](DEVELOPMENT.md#how-it-works).
+The [What is Drafter?](https://drafter.dev/docs/what-is-drafter/) page on drafter.dev starts at the beginning, for writers, productions, and technical people, and the [Why Drafter](https://drafter.dev/docs/why/) page makes the case for writers, with the full comparison. This page keeps the longer notes behind it: the idea Drafter is built on, its principles, what makes it different, and the whole list of what it does today. How the code works is in [Developing Drafter](DEVELOPMENT.md#how-it-works).
 
 ## Contents
 

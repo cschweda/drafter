@@ -187,6 +187,11 @@ function parts(cell: string): Part[] {
       Open it and write. Drafter™ is free, and there’s no catch: no sign-up, no sign-in, no licence
       key, no activation, ever. It’s ready the moment the page loads or the app starts.
     </p>
+    <p class="docs-note">
+      New to Drafter, or deciding whether to trust it?
+      <a href="/docs/what-is-drafter/">What is Drafter?</a> starts at the beginning, for writers,
+      for productions, and for technical people. This page has the full comparison.
+    </p>
 
     <h2 id="free">Free, with no catch</h2>
     <ul>

@@ -13,6 +13,7 @@ How Drafter is built, how to build it yourself, and how to help. The [README](..
 - [Clean-room implementation](#clean-room-implementation)
   - [Clean-room verification](#clean-room-verification)
 - [Contributing](#contributing)
+- [Test counts and diagrams](#test-counts-and-diagrams)
 - [Design documents](#design-documents)
 
 ## How it works
@@ -192,12 +193,18 @@ The [summary of findings](clean-room.md#clean-room-verification) names the commi
 
 **Releasing.** In this order, and never by hand before the tag:
 
-1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, and commit. Don't push `main` yet: pushing it deploys drafter.dev, whose Saving page links to the latest release.
+1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, add the release's plain-language items to What's new (`apps/web/app/whats-new/entries.ts`, `banner: true` for a big change or a security update), run `pnpm test-counts` (below) after the e2e build, and commit. Don't push `main` yet: pushing it deploys drafter.dev, whose Saving page links to the latest release.
 2. Push the tag first: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must match `apps/desktop/package.json`'s version, or the workflow stops.
 3. Let `.github/workflows/desktop.yml` make the release. After every check passes, its `publish` job creates the GitHub Release as a draft, uploads the AppImage, the `.deb`, `latest-linux.yml`, the two Windows installers, and `latest.yml`, checks them, and only then publishes it. It waits for the Linux job and both Windows jobs; if any of them fails, nothing is published. Once it is published, push `main`, so the site's download link never points at a release without packages.
 4. Then edit the release's notes on GitHub (the workflow writes a one-line placeholder).
 
 Don't create the release on GitHub (or with `gh release create`) before the workflow does: the workflow never uploads to a release that is already published, so a hand-made release would be left with no packages and no update feed, and the desktop apps would find no update.
+
+## Test counts and diagrams
+
+**`pnpm test-counts`** (`scripts/test-counts.mjs`) writes `apps/web/app/about/test-counts.json`, which the [What is Drafter?](https://drafter.dev/docs/what-is-drafter/#numbers) page shows with the version and date. It runs every Vitest project once with the JSON reporter (a run is the only way to count the tests a suite makes as it goes, such as one for each trap at each way in) and stops if any fails; it lists the browser tests (once, and in each of the five projects) and the desktop app's end-to-end tests with Playwright's `--list`, without running them; and it counts the trap documents and their checks from `fixtures/trap/MANIFEST.md`. Playwright reads the built site to list its tests, so build the packages (`pnpm -r build`) and the e2e site (`DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm --filter @drafter/web build`) first. Run it at each release, after the version is set, and commit the file with the release.
+
+**`pnpm diagrams`** (`scripts/diagrams.mjs`) draws the Mermaid diagrams in [`docs/diagrams/`](diagrams/) as SVG, one for each theme, in `apps/web/app/assets/diagrams/`, with their sizes in `sizes.json`. The What is Drafter? page shows those files as images, so the app never loads Mermaid. It fetches `@mermaid-js/mermaid-cli` (pinned, with its own headless Chrome) through `npx` the first time. After changing a diagram, copy its source into [How Drafter works](HOW-IT-WORKS.md), where GitHub draws it, run `pnpm diagrams`, and commit the `.mmd`, the page, and the SVGs together; `apps/web/test/diagrams.test.ts` fails if they disagree, or if an SVG was drawn from an older source. Each diagram's text for a screen reader is in `apps/web/app/about/diagrams.ts`.
 
 ## Design documents
 
@@ -213,6 +220,7 @@ Don't create the release on GitHub (or with `gh release create`) before the work
 - [Seeing the script design](drafter-seeing-the-script-design.md): who is in a scene, the Stats tab and the character grid, Scaffold and its pages, and, next, storylines, the strip's Color by, and pacing.
 - [HTML and EPUB export design](drafter-html-export-design.md): one offline web page with Pages and Reading views, dark by default, and an EPUB e-book from the same Reading view.
 - **[The `.drafter` package format](spec/drafter-package.md)** — an open specification (CC0) for a whole project in one file, so any screenwriting app can read and write it.
+- [How Drafter works](HOW-IT-WORKS.md): four Mermaid diagrams, how a script flows, how saving works, how a file is opened safely, and how a release is made.
 - [Technical details](technical-details.md): how Drafter is put together, in plain words first, with diagrams: the packages, from a keystroke to the page, storage, export, offline use, the desktop app, security, the clean-room rule, releases, and every dependency. The same page is in the app, under Help.
 
 The architecture and technical design are drafts (v0.2) and will change as each phase settles open questions.

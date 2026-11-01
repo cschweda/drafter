@@ -21,6 +21,7 @@ export const HELP_MENU_COMMANDS: readonly string[] = [
 /** Each Help item's icon. */
 export const HELP_MENU_ICONS: Record<string, string> = {
   'take-the-tour': 'i-lucide-compass',
+  'help-what-is': 'i-lucide-feather',
   'help-why': 'i-lucide-heart',
   'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
@@ -29,6 +30,7 @@ export const HELP_MENU_ICONS: Record<string, string> = {
   'help-open-formats': 'i-lucide-lock-open',
   'help-licences': 'i-lucide-scale',
   'help-technical': 'i-lucide-cpu',
+  'help-whats-new': 'i-lucide-sparkles',
   [DOWNLOAD_PAGE.id]: 'i-lucide-download',
   'reset-sample': 'i-lucide-rotate-ccw',
   'check-for-updates': 'i-lucide-refresh-cw',

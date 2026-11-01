@@ -12,7 +12,7 @@
   <img src="docs/images/drafter-ide-dark.png" alt="Drafter with a screenplay open. On the left, the Fountain source, with the scene heading, the synopsis, the scene color, and character names in color, and the element bar above. On the right, the same scene laid out on a sheet of paper in the Script tab.">
 </picture>
 
-**[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[Why Drafter](https://drafter.dev/docs/why/)**
+**[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
 > **Status: v0.23.2.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Next up is Drafts and Cuts (v0.24.0); see the [roadmap](#roadmap).
@@ -227,7 +227,7 @@ pnpm -r test
 pnpm dev              # the app, at http://localhost:3000
 ```
 
-[Developing Drafter](docs/DEVELOPMENT.md) has how it works, the packages, the stack, storage and browsers, every command, the samples, contributing (commits, the changelog, releasing), and the design documents. [Why Drafter](docs/WHY.md) has the idea behind it and its principles, and [`docs/DECISIONS.md`](docs/DECISIONS.md) records the choices along the way.
+[How Drafter works](docs/HOW-IT-WORKS.md) has four diagrams of it. [Developing Drafter](docs/DEVELOPMENT.md) has how it works, the packages, the stack, storage and browsers, every command, the samples, contributing (commits, the changelog, releasing), and the design documents. [Why Drafter](docs/WHY.md) has the idea behind it and its principles, and [`docs/DECISIONS.md`](docs/DECISIONS.md) records the choices along the way.
 
 ## Clean-room implementation
 

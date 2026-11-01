@@ -23,7 +23,8 @@ const text = (page: Page) => editor(page).evaluate((el) => el.textContent ?? '')
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  // The sample's first scene: a phone opens there, and the title page may be past the lines drawn.
+  await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
 }
 
 async function runCommand(page: Page, title: string) {
@@ -110,6 +111,14 @@ test.describe('About Drafter', () => {
     await expect(dialog.getByRole('link', { name: 'Technical details' })).toHaveAttribute(
       'href',
       '/docs/technical/',
+    );
+    await expect(dialog.getByRole('link', { name: 'What is Drafter?' })).toHaveAttribute(
+      'href',
+      '/docs/what-is-drafter/',
+    );
+    await expect(dialog.getByRole('link', { name: 'What’s new' })).toHaveAttribute(
+      'href',
+      '/docs/whats-new/',
     );
     // Escape closes it, as every dialog's does.
     await page.keyboard.press('Escape');
@@ -428,4 +437,25 @@ test.describe('Check for updates in About', () => {
       /^This copy of Drafter has no service worker/,
     );
   });
+});
+
+test.describe('What is Drafter? and What’s new', () => {
+  for (const [name, path, title] of [
+    [/^What is Drafter\?/, '/docs/what-is-drafter/', 'What is Drafter?'],
+    [/^What’s new/, '/docs/whats-new/', 'What’s new'],
+  ] as const) {
+    test(`Help → ${title} opens the page in a new tab`, async ({ page }) => {
+      await start(page);
+      await helpButton(page).click();
+      await expect(helpMenu(page)).toBeVisible();
+      const opened = page.context().waitForEvent('page');
+      await item(page, name).click();
+      const tab = await opened;
+      await tab.waitForLoadState();
+      expect(new URL(tab.url()).pathname).toBe(path);
+      await expect(tab.getByRole('heading', { level: 1 })).toHaveText(title);
+      await tab.close();
+      await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
+    });
+  }
 });

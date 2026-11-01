@@ -572,6 +572,7 @@ for (const theme of THEMES) {
   test.describe(`the help pages in the ${theme} theme`, () => {
     for (const path of [
       '/docs/',
+      '/docs/what-is-drafter/',
       '/docs/why/',
       '/docs/download/',
       '/docs/fountain/',
@@ -579,6 +580,7 @@ for (const theme of THEMES) {
       '/docs/privacy/',
       '/docs/shortcuts/',
       '/docs/technical/',
+      '/docs/whats-new/',
     ]) {
       test(`has no accessibility violations on ${path} (${theme})`, async ({ page }) => {
         await useTheme(page, theme);
