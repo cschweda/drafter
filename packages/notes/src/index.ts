@@ -24,6 +24,8 @@ export {
   STARTING_CATEGORIES,
   safeBody,
   safeLine,
+  type WholeMark,
+  wholeMarkOf,
   writeNote,
 } from './keyed';
 export { markLabels, type SetupThread, setupsAndPayoffs } from './setups';

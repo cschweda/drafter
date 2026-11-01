@@ -67,7 +67,7 @@ export interface MapScene {
   time: string | null;
   timeKind: TimeKind | null;
   inside: 'Inside' | 'Outside' | 'Inside and out' | null;
-  /** What happens (Task 2). */
+  /** What happens: its first synopsis, else its first action sentence (design §3.2). */
   what: string | null;
   /** Indexes into `StoryMap.characters`, leads first. */
   chips: number[];
@@ -102,7 +102,7 @@ export interface MapCharacter {
   share: number;
   hook: string | null;
   age: string | null;
-  /** Index into `StoryMap.quotes` (Task 2). */
+  /** Index into `StoryMap.quotes`: their best line (design §4.4). */
   signature: number | null;
   presence: Array<{ scene: number; speaking: boolean }>;
 }
@@ -123,17 +123,26 @@ export interface MapPair {
   scenes: number;
 }
 
-/** A line of dialogue on the page (Task 2). */
+/**
+ * A line of dialogue on the page (design §3.1, §4.4): the lines picked for the scenes first, in
+ * scene order, then the signature lines that aren't one of them.
+ */
 export interface MapQuote {
+  /** Index into `StoryMap.scenes`. */
   scene: number;
+  /** Index into `StoryMap.characters`. */
   character: number;
+  /** Cleaned: no cue, extension, parenthetical, note, or emphasis mark. */
   text: string;
   /** The cue's block. */
   cue: number;
+  /** Marked `[[Quote]]`. */
   marked: boolean;
+  /** Shown in its scene (the scene's `quote` is it); false for a signature line only. */
+  inScene: boolean;
 }
 
-/** A setup and its payoff, by scene numbers; `to` null: not yet paid off (Task 2). */
+/** A setup and its payoff, by scene numbers (1-based); `to` null: not yet paid off. */
 export interface MapThread {
   label: string;
   from: number;

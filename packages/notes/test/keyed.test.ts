@@ -9,6 +9,7 @@ import {
   STARTING_CATEGORIES,
   safeBody,
   safeLine,
+  wholeMarkOf,
   writeNote,
 } from '../src';
 
@@ -265,5 +266,28 @@ describe('readKeyedNote', () => {
     [': no key', null],
   ])('%j', (text, expected) => {
     expect(readKeyedNote(text)).toEqual(expected);
+  });
+});
+
+describe('wholeMarkOf', () => {
+  const mark = (inner: string) => wholeMarkOf(readNote(inner));
+
+  test('whole marks are read in any case and spacing', () => {
+    expect(mark('Quote')).toBe('quote');
+    expect(mark('quote')).toBe('quote');
+    expect(mark(' No  Quote ')).toBe('no-quote');
+    expect(mark('NO QUOTE')).toBe('no-quote');
+    expect(mark('Interval')).toBe('interval');
+    expect(mark('no\tinterval')).toBe('no-interval');
+    expect(wholeMarkOf(null)).toBeNull();
+  });
+
+  test('a mark with a colon or a head is not a whole mark', () => {
+    expect(mark('Quote: x')).toBeNull();
+    expect(mark('TODO: quote')).toBeNull();
+    expect(mark('Quote this')).toBeNull();
+    expect(mark('Quote #dialogue')).toBeNull();
+    expect(mark('Quotes')).toBeNull();
+    expect(mark('')).toBeNull();
   });
 });

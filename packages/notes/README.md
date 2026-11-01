@@ -18,6 +18,8 @@ writeNote('goal', 'Margaret wants Tom to admit he lied.');
 
 Reading is lenient (any case, extra spaces); writing is exact (title case, one space, the body on one line, `]]` written as `] ]`). See the [Phase 2 design](../../docs/drafter-phase2-design.md), §5.3 and §5.4.
 
+**Whole marks.** `wholeMarkOf(readNote(text))` reads the Story map's marks, notes with no head whose whole body is `Quote`, `No quote`, `Interval`, or `No interval` in any case and spacing: `'quote'`, `'no-quote'`, `'interval'`, `'no-interval'`, or null. `[[Quote: x]]` and `[[TODO: quote]]` are not marks.
+
 ## License
 
 MIT

@@ -239,6 +239,26 @@ export function normalizeLabel(label: string): string {
   return label.toLowerCase().replace(/\s+/gu, ' ').trim();
 }
 
+/** A note that is one of Drafter's whole-body marks (story-map design §3.1, §5.1). */
+export type WholeMark = 'quote' | 'no-quote' | 'interval' | 'no-interval';
+
+const WHOLE_MARKS: ReadonlyMap<string, WholeMark> = new Map([
+  ['quote', 'quote'],
+  ['no quote', 'no-quote'],
+  ['interval', 'interval'],
+  ['no interval', 'no-interval'],
+]);
+
+/**
+ * The whole-body mark a note is: no head, and a body that is exactly `Quote`, `No quote`,
+ * `Interval`, or `No interval` in any case and spacing. Anything else (`[[Quote: x]]`,
+ * `[[TODO: quote]]`, a tag after it) is no mark.
+ */
+export function wholeMarkOf(note: KeyedNote | null): WholeMark | null {
+  if (note === null || note.head !== null) return null;
+  return WHOLE_MARKS.get(normalizeLabel(note.body)) ?? null;
+}
+
 /**
  * The head (lowercased) and body of a note's inner text, or null when it has no head: no colon,
  * nothing before it, a head longer than 40 characters, or one that spans lines. Plan A's reading,

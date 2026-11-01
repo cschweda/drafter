@@ -11,6 +11,8 @@ import {
 } from '@drafter/outline';
 import { scriptAuthor } from '@drafter/render-html-file';
 import type { Template } from '@drafter/templates';
+import { pickQuotes, quoteCandidates, signatureLines } from './lines';
+import { actMood, hooksOf, sceneLine, threadsOf } from './summaries';
 import type {
   MapAct,
   MapCharacter,
@@ -18,6 +20,7 @@ import type {
   MapKind,
   MapOptions,
   MapPlace,
+  MapQuote,
   MapScene,
   StoryMap,
   TimeKind,
@@ -34,8 +37,8 @@ import {
 
 // The story-map model (story-map design §3–§5): what Drafter already computes for the Script tab,
 // Stats, and Scaffold (the scene index, its pages, and the cast), turned into one plain object of
-// numbers, short strings, and indexes in plain words. Lines of dialogue, summaries, hooks, threads,
-// gaps, and a play's own parts are filled by the later steps; here they are empty.
+// numbers, short strings, and indexes in plain words, with the lines of dialogue, the scene
+// summaries, the hooks, and the threads. Gaps and a play's own parts are filled by the later steps.
 
 export interface MapInput {
   doc: Doc;
@@ -226,6 +229,46 @@ function placesOf(cast: Cast, scenes: readonly MapScene[]): { places: MapPlace[]
   return { places, more: all.length - places.length };
 }
 
+/**
+ * The lines of dialogue (design §3.1, §4.4): the picks, each pointed at from its scene, then each
+ * character's signature line when it isn't one of them.
+ */
+function quotesOf(
+  doc: Doc,
+  index: SceneIndex,
+  scenes: readonly MapScene[],
+  characters: readonly MapCharacter[],
+  at: ReadonlyMap<string, number>,
+): MapQuote[] {
+  const candidates = quoteCandidates(doc, index).filter((c) => at.has(c.character));
+  const picks = pickQuotes(candidates, scenes.length, (s) => scenes[s]?.act ?? null);
+  const quotes: MapQuote[] = [];
+  const byCue = new Map<number, number>();
+  const add = (c: (typeof candidates)[number], inScene: boolean) => {
+    byCue.set(c.cue, quotes.length);
+    quotes.push({
+      scene: c.scene,
+      character: at.get(c.character) as number,
+      text: c.text,
+      cue: c.cue,
+      marked: c.marked === 'quote',
+      inScene,
+    });
+  };
+  for (const pick of picks) {
+    (scenes[pick.scene] as MapScene).quote = quotes.length;
+    add(pick, true);
+  }
+  const signatures = signatureLines(candidates);
+  for (const character of characters) {
+    const line = signatures.get(character.key);
+    if (!line) continue;
+    if (!byCue.has(line.cue)) add(line, false);
+    character.signature = byCue.get(line.cue) ?? null;
+  }
+  return quotes;
+}
+
 /** The story map's model of `input`: the same input gives the same model. */
 export function buildStoryMap(input: MapInput): StoryMap {
   const { doc, template, layout, options } = input;
@@ -287,7 +330,7 @@ export function buildStoryMap(input: MapInput): StoryMap {
     return {
       n: a + 1,
       title: actTitle(section),
-      mood: null,
+      mood: options.include.summaries ? actMood(section, doc) : null,
       scenes: mine,
       pages: mine.reduce((n, s) => n + (index.scenes[s]?.pages?.eighths ?? 0), 0) / 8,
       minutes: mine.reduce((n, s) => n + (scenes[s]?.minutes ?? 0), 0),
@@ -303,6 +346,26 @@ export function buildStoryMap(input: MapInput): StoryMap {
       .filter((i): i is number => i !== undefined)
       .sort((x, y) => x - y);
   });
+
+  // What happens in each scene, with the speakers' names in capitals in title case.
+  if (options.include.summaries) {
+    const names = new Set(cast.characters.map((c) => c.key));
+    index.scenes.forEach((scene, s) => {
+      (scenes[s] as MapScene).what = sceneLine(scene, doc, names);
+    });
+  }
+
+  // Hooks: an edited one wins, and an empty one means none.
+  const hooks = hooksOf(doc, index);
+  for (const character of characters) {
+    const found = hooks.get(character.key);
+    const edited = options.hooks[character.key];
+    character.age = found?.age ?? null;
+    character.hook =
+      edited !== undefined ? (edited.trim() === '' ? null : edited.trim()) : (found?.hook ?? null);
+  }
+
+  const quotes = options.include.lines ? quotesOf(doc, index, scenes, characters, at) : [];
 
   // Two lanes when at least half the scenes say inside or outside, or a time.
   const placed = index.scenes.filter((_, s) => {
@@ -367,8 +430,8 @@ export function buildStoryMap(input: MapInput): StoryMap {
     pairs: [],
     places,
     placesMore: more,
-    quotes: [],
-    threads: [],
+    quotes,
+    threads: options.include.threads ? threadsOf(doc, index) : [],
     gaps,
     interval: null,
     contact:
