@@ -1,5 +1,13 @@
 export { type Anchor, sceneAnchors } from './anchors';
+export { type CutEntry, cutsFile, mergeCuts, readCutsFile } from './cuts-file';
 export { type DeletedScene, deletedScenes, type PastSnapshot } from './deleted';
+export {
+  type DraftFacts,
+  draftFile,
+  draftFileName,
+  readDraftFile,
+  type WorkKind,
+} from './draft-file';
 export { hash53 } from './hash';
 export { coveredBy, MATCH, sameScene, similarity } from './match';
 export {

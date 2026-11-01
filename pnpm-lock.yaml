@@ -297,6 +297,9 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      '@drafter/markdown':
+        specifier: workspace:*
+        version: link:../markdown
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline

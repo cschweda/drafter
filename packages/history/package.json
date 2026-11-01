@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@drafter/fountain": "workspace:*",
+    "@drafter/markdown": "workspace:*",
     "@drafter/outline": "workspace:*",
     "@drafter/templates": "workspace:*"
   }
