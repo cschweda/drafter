@@ -14,6 +14,10 @@ const SUMMARY_WORDS = 12;
 const HOOK_WORDS = 8;
 /** An age's parenthesis, inside, in characters at most. */
 const AGE_CHARS = 12;
+/** How far past a name a hook's sentence is read, in characters. */
+const HOOK_CHARS = 300;
+/** The words in capitals after a name that count as the rest of it, at most. */
+const NAME_WORDS = 3;
 /** A short aside after a name (`(barefoot)`), in characters at most, that a hook passes over. */
 const ASIDE_CHARS = 40;
 
@@ -59,9 +63,13 @@ function abbreviation(text: string, i: number): boolean {
   return ABBREVIATIONS.has(word.toLowerCase());
 }
 
-/** Where the sentence that starts at `from` ends: just past its stop and any closing quote. */
-export function sentenceEnd(text: string, from = 0): number {
-  for (let i = from; i < text.length; i++) {
+/**
+ * Where the sentence that starts at `from` ends: just past its stop and any closing quote. Read no
+ * further than `limit` (it ends there when no stop comes first).
+ */
+export function sentenceEnd(text: string, from = 0, limit = text.length): number {
+  const last = Math.min(limit, text.length);
+  for (let i = from; i < last; i++) {
     if (!isStop(text[i])) continue;
     let j = i + 1;
     while (j < text.length && isStop(text[j])) j++;
@@ -73,7 +81,7 @@ export function sentenceEnd(text: string, from = 0): number {
     if (j === i + 1 && text[i] === '.' && abbreviation(text, i)) continue;
     return j;
   }
-  return text.length;
+  return last;
 }
 
 /** The first sentence of `text`, its spaces collapsed. */
@@ -273,7 +281,8 @@ function speakerNames(index: SceneIndex): Map<string, string> {
 /** Just past a run of words in capitals after `at` (the rest of a name: `ODILE` `VANCE`). */
 function pastCapitals(text: string, at: number): number {
   let i = at;
-  for (;;) {
+  // At most a few words, so a run of names (`ZED ZED ZED …`) costs each mention only these.
+  for (let n = 0; n < NAME_WORDS; n++) {
     let j = i;
     while (isSpace(text[j])) j++;
     let k = j;
@@ -283,6 +292,23 @@ function pastCapitals(text: string, at: number): number {
     if (j === i || letters.length < 2 || letters.some((c) => c === c.toLowerCase())) return i;
     i = j + word.length;
   }
+  return i;
+}
+
+/**
+ * Whether the mention whose name ends at `at` is an introduction, by a bounded peek: an age, or a
+ * comma or dash after the name (past a short aside). What `hookFrom` calls `introduced`, without
+ * reading on to the sentence's end.
+ */
+function introducedAt(text: string, at: number): boolean {
+  let j = pastCapitals(text, at);
+  while (isSpace(text[j])) j++;
+  if (ageAt(text, j)) return true;
+  const aside = asideEnd(text, j);
+  if (aside >= 0) j = aside;
+  while (isSpace(text[j])) j++;
+  const c = text[j];
+  return c === ',' || c === '-' || (c !== undefined && DASHES.has(c));
 }
 
 /**
@@ -303,7 +329,8 @@ function hookFrom(
   const aside = aged ? aged.end : asideEnd(text, j);
   if (aside >= 0) i = aside;
   const age = aged?.age ?? null;
-  const end = sentenceEnd(text, i);
+  // A hook is a few words: the sentence is read no further than HOOK_CHARS.
+  const end = sentenceEnd(text, i, i + HOOK_CHARS);
   let rest = text.slice(i, end).trim();
   // Set off by a comma or a dash, the hook is that phrase: up to the next comma or dash.
   const lead = LEAD.exec(rest)?.[0] ?? '';
@@ -344,10 +371,14 @@ export function hooksOf(doc: Doc, index: SceneIndex): Map<string, Hook> {
     for (const run of nameRuns(text, map, names)) {
       const key = keys[run.character] as string;
       if (introduced.has(key)) continue;
+      // Only an introduction, or the first plain mention, is read in full.
+      const intro = introducedAt(text, run.to);
+      if (!intro && plain.has(key)) continue;
       // A possessive (`SAM'S dog`) is no introduction, nor a hook.
       const after = text.slice(run.to, run.to + 2);
       if (after === "'S" || after === '’S' || after === "'s" || after === '’s') continue;
-      const { introduced: intro, ...hook } = hookFrom(text, run.to, map, names);
+      const { hook: words, age } = hookFrom(text, run.to, map, names);
+      const hook = { hook: words, age };
       if (intro) introduced.set(key, hook);
       else if (!plain.has(key)) plain.set(key, hook);
     }
