@@ -210,11 +210,12 @@ describe('the words of a step', () => {
 
   test('says the numbers in words', () => {
     expect(stepLine(step({}), 'fountain')).toBe(
-      '+1,240 words · 3 scenes added · 2 cut · 5 changed · 18% new',
+      '+1,240 words · 3 scenes added · 2 scenes cut · 5 changed · 18% new',
     );
     expect(stepLine(step({ words: -35, added: 1, cut: 0, changed: 1 }), 'markdown')).toBe(
-      '−35 words · 1 section added · 0 cut · 1 changed · 18% new',
+      '−35 words · 1 section added · 0 sections cut · 1 changed · 18% new',
     );
+    expect(stepLine(step({ cut: 1 }), 'fountain')).toContain(' · 1 scene cut · ');
     expect(stepLine(step({ newShare: 0.001 }), 'fountain')).toContain('under 1% new');
     expect(
       stepLine(step({ words: 0, added: 0, cut: 0, changed: 0, newShare: 0 }), 'fountain'),

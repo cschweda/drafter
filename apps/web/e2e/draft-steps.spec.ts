@@ -122,13 +122,13 @@ test.describe('Draft by draft', () => {
     await expect(first).toContainText(`Draft 02 begins — builds on Draft 01 (${short(ONE)})`);
     await expect(first).toContainText('for Sam');
     await expect(first.locator('.numbers')).toHaveText(
-      /^[+−]\d+ words · 1 scene added · 1 cut · 1 changed · \d+% new$/,
+      /^[+−]\d+ words · 1 scene added · 1 scene cut · 1 changed · \d+% new$/,
     );
     const last = stepItem(page, 2);
     await expect(last).toContainText(`Draft 03 begins — builds on Draft 02 (${short(TWO)})`);
     await expect(last).toContainText('Draft 03, being written now');
     await expect(last.locator('.numbers')).toHaveText(
-      /^−\d+ words · 0 scenes added · 1 cut · 0 changed · 0% new$/,
+      /^−\d+ words · 0 scenes added · 1 scene cut · 0 changed · 0% new$/,
     );
     // Its name, for the Open button.
     await expect(
@@ -151,7 +151,7 @@ test.describe('Draft by draft', () => {
     await expect(compare(page)).toContainText('EXT. ROOF - NIGHT');
     // The step's own bar, in the pane: the step, its numbers, Previous step and Next step.
     const bar = compare(page).getByRole('group', { name: 'Draft 01 to Draft 02' });
-    await expect(bar).toContainText('1 scene added · 1 cut · 1 changed');
+    await expect(bar).toContainText('1 scene added · 1 scene cut · 1 changed');
     await expect(bar.getByRole('button', { name: 'Previous step' })).toHaveAttribute(
       'aria-disabled',
       'true',

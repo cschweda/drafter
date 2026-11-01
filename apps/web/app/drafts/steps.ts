@@ -212,8 +212,8 @@ function shareOf(share: number): string {
 }
 
 /**
- * The numbers in words (§2.4): "+1,240 words · 3 scenes added · 2 cut · 5 changed · 18% new", a
- * document's in sections; "No changes" when the two are the same.
+ * The numbers in words (§2.4): "+1,240 words · 3 scenes added · 2 scenes cut · 5 changed · 18% new", a
+ * document's in sections ("2 sections cut": whole ones only, beside a Cuts list of every cut); "No changes" when the two are the same.
  */
 export function stepLine(step: StepCounts, kind: WorkKind): string {
   const { words, pages, added, cut, changed, newShare } = step;
@@ -224,7 +224,7 @@ export function stepLine(step: StepCounts, kind: WorkKind): string {
   if (pages !== null) parts.push(`${signed(pages)} ${Math.abs(pages) === 1 ? 'page' : 'pages'}`);
   parts.push(
     `${number(added)} ${added === 1 ? unit : `${unit}s`} added`,
-    `${number(cut)} cut`,
+    `${number(cut)} ${cut === 1 ? unit : `${unit}s`} cut`,
     `${number(changed)} changed`,
     shareOf(newShare),
   );
