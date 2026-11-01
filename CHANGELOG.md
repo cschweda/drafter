@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-01
+
+**A fresh look.** The script sits on paper pages, the status bar goes quiet, and "Unsaved" shows right after the title. Dialogs, menus and Settings share one style. Stats, Scaffold and Cards are easier to read. On a phone or a narrow window there is one pane at a time and a bottom tab bar, and the element row stays above the keyboard. Drafter now follows your system's light or dark setting on a first visit, and icons show in high-contrast mode.
+
 ### Added
 
 - **Paper pages.** The Script tab, Compare's Pages, and Show changes draw each page as a sheet of paper on a desk, at its full height, so the paper always runs to the bottom of the window. A new setting, **Page colour** (Paper or Dark), keeps the dark page for writing at night. Printing, the PDF, and every export are still on white paper.
@@ -992,7 +996,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.22.2...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/cschweda/drafter/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/cschweda/drafter/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/cschweda/drafter/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/cschweda/drafter/compare/v0.21.1...v0.22.0
