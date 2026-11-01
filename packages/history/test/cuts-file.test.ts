@@ -281,6 +281,27 @@ describe('mergeCuts', () => {
     ).toEqual(mine.cuts);
   });
 
+  test('incoming dates inside the slack can\u2019t push out any local date', () => {
+    const now = new Date('2026-11-03T12:00:00.000Z');
+    const mine = {
+      ...scene('X.', 'X', '2026-10-01T10:00:00.000Z'),
+      cuts: Array.from({ length: 5 }, (_, i) => ({
+        at: new Date(Date.UTC(2026, 9, 1 + i)).toISOString(),
+        draft: i + 1,
+      })),
+    };
+    // A crafted file: more than the cap of dates, all newer than mine, all within the day's slack.
+    const crafted = Array.from({ length: MAX_CUTS_PER_ENTRY + 50 }, (_, i) => ({
+      at: new Date(now.getTime() + i * 60).toISOString(),
+      draft: 1,
+    }));
+    const [m] = mergeCuts([mine], [{ ...mine, cuts: crafted }], { kind: 'fountain', now });
+    expect(m?.cuts).toHaveLength(MAX_CUTS_PER_ENTRY);
+    for (const cut of mine.cuts) expect(m?.cuts).toContainEqual(cut);
+    // The rest are the newest incoming ones.
+    expect(m?.cuts.at(-1)).toEqual(crafted.at(-1));
+  });
+
   test('the order of either list never changes the merge, even past the caps', () => {
     // Shared texts make clashing IDs likely.
     const shared = fc.array(
@@ -449,12 +470,19 @@ describe('review fixes', () => {
     expect(readCutsFile(`<!-- drafter-cut ${json} -->\n`)).toEqual({ entries: [], skipped: 1 });
     const exact = JSON.stringify({ ...a, cuts: many.slice(1) });
     expect(readCutsFile(`<!-- drafter-cut ${exact} -->\n`).entries).toHaveLength(1);
-    // A merge never holds more dates than the cap, keeping the newest.
+    // A merge never holds more dates than the cap. A local list already at the cap takes no
+    // incoming dates, even newer ones.
     const left = { ...a, cuts: many.slice(0, MAX_CUTS_PER_ENTRY) };
     const right = { ...a, cuts: many.slice(1) };
     const merged = mergeCuts([left], [right], OPTS)[0] as CutEntry;
-    expect(merged.cuts).toHaveLength(MAX_CUTS_PER_ENTRY);
-    expect(merged.cuts.at(-1)).toEqual(many.at(-1));
+    expect(merged.cuts).toEqual(left.cuts);
+    // Room left is filled with the newest incoming dates.
+    const some = { ...a, cuts: many.slice(0, 10) };
+    const filled = mergeCuts([some], [right], OPTS)[0] as CutEntry;
+    expect(filled.cuts).toHaveLength(MAX_CUTS_PER_ENTRY);
+    for (const cut of some.cuts) expect(filled.cuts).toContainEqual(cut);
+    expect(filled.cuts.at(-1)).toEqual(many.at(-1));
+    expect(filled.cuts).not.toContainEqual(many[10]);
     // Versions past the cap are ignored.
     const versions = Array.from({ length: MAX_VERSIONS_PER_ID + 5 }, (_, i) => ({
       ...a,

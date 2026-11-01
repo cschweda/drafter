@@ -321,6 +321,15 @@ export interface MergeCutsOptions {
   now: Date;
 }
 
+/** Dates oldest first; the same moment, by draft number (none first). */
+function byDate(
+  cuts: { at: string; draft: number | null }[],
+): { at: string; draft: number | null }[] {
+  return cuts.sort((x, y) =>
+    x.at !== y.at ? (x.at < y.at ? -1 : 1) : (x.draft ?? 0) - (y.draft ?? 0),
+  );
+}
+
 /** One version of a cut, with what choosing among versions needs, worked out once. */
 interface Version {
   entry: CutEntry;
@@ -385,15 +394,20 @@ function sideVersions(
  * The cuts kept on this computer (`local`, Drafter's own storage, trusted) merged with a list from
  * elsewhere (`incoming`: the cuts file beside the work, perhaps written by another computer or
  * edited by hand). Every entry of either, one per ID, with every date it was cut on either side
- * (once each, oldest first, the newest `MAX_CUTS_PER_ENTRY` kept), newest cut first.
+ * (once each, oldest first), newest cut first.
+ *
+ * The date cap, `MAX_CUTS_PER_ENTRY`, keeps every local date first (the newest that many, should
+ * local alone hold more), then fills whatever room is left with the newest incoming dates. A local
+ * list already at the cap takes no incoming dates. So an incoming file, even one crafted with
+ * dates inside the day's slack, can never push a local date out.
  *
  * For an ID on both sides, the title, text, kind, place and Put back are the local entry's: an
  * incoming Put back is advice, used only for a cut this computer doesn't have. An incoming entry of
  * another kind than `options.kind`, and incoming dates more than a day past `options.now`, are
- * ignored, so they can't push real dates out of the cap. Each side keeps at most
+ * ignored. Each side keeps at most
  * `MAX_VERSIONS_PER_ID` versions of one ID, chosen by a fixed order, so one side can't crowd out
  * the other and neither list's order changes the result. Swapping the sides keeps the same cuts
- * and dates; only the local-wins fields can differ. Linear in the size of the lists, but for
+ * and, under the date cap, the same dates; only the local-wins fields can differ. Linear in the size of the lists, but for
  * sorting.
  *
  * Run `verifyCuts` on `incoming` first: a merge can't hash.
@@ -412,16 +426,27 @@ export function mergeCuts(
     const other = theirs.get(id) ?? [];
     const trusted = ours.length > 0 ? ours : other;
     const first = (trusted[0] as Version).entry;
-    const seen = new Map<string, { at: string; draft: number | null }>();
-    for (const v of [...ours, ...other]) for (const c of v.cuts) seen.set(`${c.at}|${c.draft}`, c);
+    // Every local date first (the newest MAX_CUTS_PER_ENTRY, if a damaged store holds more), then
+    // the newest incoming dates in whatever room is left: an incoming file can never push a local
+    // date out.
+    const localDates = new Map<string, { at: string; draft: number | null }>();
+    for (const v of ours) for (const c of v.cuts) localDates.set(`${c.at}|${c.draft}`, c);
+    const incomingDates = new Map<string, { at: string; draft: number | null }>();
+    for (const v of other) {
+      for (const c of v.cuts) {
+        const key = `${c.at}|${c.draft}`;
+        if (!localDates.has(key)) incomingDates.set(key, c);
+      }
+    }
+    const kept = byDate([...localDates.values()]).slice(-MAX_CUTS_PER_ENTRY);
+    const room = MAX_CUTS_PER_ENTRY - kept.length;
+    if (room > 0) kept.push(...byDate([...incomingDates.values()]).slice(-room));
     let putBack: string | undefined;
     for (const v of trusted) {
       if (v.putBack !== undefined && (putBack === undefined || v.putBack < putBack))
         putBack = v.putBack;
     }
-    const cuts = [...seen.values()]
-      .sort((x, y) => (x.at !== y.at ? (x.at < y.at ? -1 : 1) : (x.draft ?? 0) - (y.draft ?? 0)))
-      .slice(-MAX_CUTS_PER_ENTRY);
+    const cuts = byDate(kept);
     const entry: CutEntry = {
       id,
       title: first.title,
