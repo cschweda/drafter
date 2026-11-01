@@ -5,9 +5,11 @@ import {
   cutLine,
   cutName,
   cutsCount,
-  filterCuts,
+  filterIndexed,
   type GroupBy,
-  groupCuts,
+  groupIndexed,
+  indexCuts,
+  matchesLabel,
   NO_CUTS,
   NO_CUTS_MARKDOWN,
   wholeLabel,
@@ -49,8 +51,50 @@ const groupBy = computed(() =>
 
 /** The frozen drafts' IDs by number, for "Draft 03 (a3f9c2e)". */
 const ids = computed(() => new Map(drafts.rows.value.map((d) => [d.n, d.id])));
-const shown = computed(() => filterCuts(rows.value, filter.value));
-const groups = computed<CutGroup<CutRow>[]>(() => groupCuts(shown.value, by.value, ids.value));
+// Thousands of cuts stay quick: each is read once when the list is (its folded text, its newest
+// date), the filter waits for typing to pause, and the list draws a page at a time.
+const indexed = computed(() => indexCuts(rows.value));
+const FILTER_MS = 150;
+/** The filter as last applied: 150 ms after typing pauses, at once when it is cleared. */
+const applied = ref(filter.value);
+let filterTimer: ReturnType<typeof setTimeout> | undefined;
+watch(filter, (typed) => {
+  clearTimeout(filterTimer);
+  if (typed.trim() === '') applied.value = typed;
+  else filterTimer = setTimeout(() => (applied.value = typed), FILTER_MS);
+});
+onBeforeUnmount(() => clearTimeout(filterTimer));
+const shown = computed(() => filterIndexed(indexed.value, applied.value));
+const groups = computed<CutGroup<CutRow>[]>(() => groupIndexed(shown.value, by.value, ids.value));
+
+/** How many cuts are drawn: a page, and a page more at each Show more. */
+const PAGE = 100;
+const limit = ref(PAGE);
+watch([applied, by, () => rows.value.length === 0], () => (limit.value = PAGE));
+/** The groups as drawn: their cuts up to `limit` in all (each group's count is of all of them). */
+const drawn = computed(() => {
+  let left = limit.value;
+  const out: { group: CutGroup<CutRow>; rows: CutRow[] }[] = [];
+  for (const group of groups.value) {
+    if (left <= 0) break;
+    out.push({ group, rows: group.rows.slice(0, left) });
+    left -= group.rows.length;
+  }
+  return out;
+});
+const hidden = computed(() => Math.max(0, shown.value.length - limit.value));
+async function showMore() {
+  const next = shown.value[limit.value]?.row;
+  limit.value += PAGE;
+  // Focus goes to the first cut just drawn, so the keyboard carries on from there.
+  await nextTick();
+  if (next) document.querySelector<HTMLElement>(`#panel-cuts [data-cut="${next.id}"]`)?.focus();
+}
+
+/** What the filter found, said politely once it is applied. */
+const matches = computed(() =>
+  loaded.value && applied.value.trim() !== '' ? matchesLabel(shown.value.length) : '',
+);
 
 // ---- Each cut's text: a few lines, and all of it on asking --------------------------------------
 
@@ -58,7 +102,9 @@ const groups = computed<CutGroup<CutRow>[]>(() => groupCuts(shown.value, by.valu
 const SHORT_LINES = 8;
 const SHORT_CHARS = 600;
 const isLong = (row: CutRow) =>
-  row.text.length > SHORT_CHARS || row.text.split('\n').length > SHORT_LINES;
+  row.text.length > SHORT_CHARS || row.text.split('\n', SHORT_LINES + 1).length > SHORT_LINES;
+/** A long cut's first lines, until Show all: only those are drawn. */
+const startOf = (row: CutRow) => row.text.split('\n', SHORT_LINES).join('\n').slice(0, SHORT_CHARS);
 const opened = ref(new Set<string>());
 function toggle(row: CutRow) {
   const next = new Set(opened.value);
@@ -84,9 +130,10 @@ const copy = (row: CutRow) => act(() => cuts.copy(row.id));
 
 // Find in Cuts (from a Compare group): the first cut found gets focus once listed; none, and it says so.
 watch(
-  [groups, loaded, pendingFind],
+  [groups, loaded, pendingFind, applied],
   async ([now, ready, wanted]) => {
-    if (wanted === null || !ready) return;
+    // Once the filter it set has been applied.
+    if (wanted === null || !ready || applied.value !== filter.value) return;
     pendingFind.value = null;
     await nextTick();
     const first = now[0]?.rows[0];
@@ -132,10 +179,10 @@ const textId = (row: CutRow) => `${titleId(row)}-text`;
         {{ markdown ? NO_CUTS_MARKDOWN : NO_CUTS }}
       </DEmpty>
       <DEmpty v-else-if="loaded && shown.length === 0" icon="i-lucide-search">
-        No cut matches “{{ filter.trim() }}”.
+        No cut matches “{{ applied.trim() }}”.
       </DEmpty>
       <section
-        v-for="(group, i) in groups"
+        v-for="({ group, rows: showing }, i) in drawn"
         :key="group.key"
         class="group"
         :aria-labelledby="groupId(i)"
@@ -146,7 +193,7 @@ const textId = (row: CutRow) => `${titleId(row)}-text`;
         </h3>
         <ol class="list" :aria-labelledby="groupId(i)">
           <li
-            v-for="row in group.rows"
+            v-for="row in showing"
             :key="row.id"
             class="item"
             :data-cut="row.id"
@@ -163,7 +210,7 @@ const textId = (row: CutRow) => `${titleId(row)}-text`;
               class="text"
               :class="{ fountain: row.kind === 'fountain', short: isLong(row) && !opened.has(row.id) }"
             >
-              <pre>{{ row.text }}</pre>
+              <pre>{{ isLong(row) && !opened.has(row.id) ? startOf(row) : row.text }}</pre>
             </div>
             <div class="buttons">
               <button
@@ -211,10 +258,15 @@ const textId = (row: CutRow) => `${titleId(row)}-text`;
           </li>
         </ol>
       </section>
+      <div v-if="hidden > 0" class="more">
+        <DButton @click="showMore">Show more</DButton>
+        <span class="more-count">{{ hidden.toLocaleString('en-US') }} more</span>
+      </div>
       <p v-if="by === 'draft' && groups.length > 0" class="foot">
         The draft being written is {{ draftName(drafts.current.value) }}.
       </p>
     </template>
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ matches }}</p>
   </div>
 </template>
 
@@ -248,6 +300,17 @@ const textId = (row: CutRow) => `${titleId(row)}-text`;
 }
 .foot {
   padding: 12px 16px 0;
+}
+.more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+.more-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 .controls {
   display: flex;

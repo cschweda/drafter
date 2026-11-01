@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   type BackfillDeps,
   CUTS_SINCE_KEY,
@@ -18,6 +18,19 @@ import { createHistoryCompute, dexieSource } from '../app/workers/history-comput
 
 // The first-run backfill (drafts-and-cuts design §3.1, Call 18): old snapshots' cuts become cuts
 // "before drafts", once, in the history worker, resumable, and the page never blocks writing them.
+
+/** A text `findCuts` throws on, standing for any comparison that fails. */
+const THROWS = 'FINDCUTS-THROWS-HERE';
+vi.mock('@drafter/history', async (actual) => {
+  const real = await actual<typeof import('@drafter/history')>();
+  return {
+    ...real,
+    findCuts: (before: string, after: string, kind: 'fountain' | 'markdown') => {
+      if (after.includes(THROWS)) throw new Error('findCuts failed');
+      return real.findCuts(before, after, kind);
+    },
+  };
+});
 
 const scene = (heading: string, body: string) => `${heading}\n\n${body}\n`;
 const HALL = scene(
@@ -155,6 +168,73 @@ describe('the backfill', () => {
     // Only s0 is old: its pair is with the end (the script now), which lost CELLAR.
     expect((await listCuts(id)).map((r) => [r.title, r.cuts[0]?.at])).toEqual([
       ['INT. CELLAR - NIGHT', new Date(T0 + HOUR / 2).toISOString()],
+    ]);
+  });
+
+  test('a script that fails is left as it was, the next goes on, and after 3 tries it is given up', async () => {
+    const bad = await createProject({ source: script(HALL) });
+    const good = await createProject({ source: script(HALL) });
+    await seed(bad.id, [script(HALL, CELLAR), script(HALL)]);
+    for (const [i, text] of [script(HALL, YARD), script(HALL)].entries())
+      await db.snapshots.put({
+        id: `g${i}`,
+        projectId: good.id,
+        createdAt: T0 + i * HOUR,
+        gz: await gzip(text),
+        reason: 'timed',
+      });
+    await db.settings.put({ key: CUTS_SINCE_KEY, value: T0 + 10 * HOUR });
+    const base = deps();
+    const failing: BackfillDeps = {
+      ...base,
+      run(request, on) {
+        if (request.projectId === bad.id) on({ seq: 1, kind: 'error', message: 'stopped' });
+        else base.run(request, on);
+      },
+    };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await runBackfill(failing);
+    expect((await db.settings.get(`cuts-backfill:${bad.id}`))?.value).toEqual({ tries: 1 });
+    expect(await listCuts(bad.id)).toEqual([]);
+    expect((await listCuts(good.id)).map((r) => r.title)).toEqual(['EXT. COAL YARD - DAWN']);
+    await runBackfill(failing);
+    await runBackfill(failing);
+    expect((await db.settings.get(`cuts-backfill:${bad.id}`))?.value).toEqual({ tries: 3 });
+    await runBackfill(failing);
+    expect((await db.settings.get(`cuts-backfill:${bad.id}`))?.value).toEqual({
+      done: true,
+      gaveUp: true,
+    });
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+
+  test('a comparison that throws stops the run without moving its progress on', async () => {
+    const { id } = await createProject({ source: script(HALL) });
+    // The third snapshot is one findCuts can't take (see the mock above).
+    await seed(id, [script(HALL, CELLAR), script(HALL), `${script(YARD)}\n${THROWS}`]);
+    await db.settings.put({ key: CUTS_SINCE_KEY, value: T0 + 10 * HOUR });
+    await runBackfill(deps());
+    const progress = (await db.settings.get(`cuts-backfill:${id}`))?.value as { upTo?: number };
+    expect(progress).toEqual({ upTo: T0 + HOUR, tries: 1 });
+  });
+
+  test('resumed later, it still ends where the recorder took over, not at today’s text', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR, YARD) });
+    await seed(id, [script(HALL, CELLAR, YARD, ROOF)]);
+    await db.settings.put({ key: CUTS_SINCE_KEY, value: T0 + 10 * HOUR });
+    // The recorder took over at HALL CELLAR YARD, then recorded CELLAR itself.
+    const recorder = createCutRecorder({
+      ...storageDeps(),
+      find: async (a, b, k) => foundCuts(a, b, k),
+    });
+    await recorder.kept(id, script(HALL, CELLAR, YARD), 'timed');
+    await recorder.kept(id, script(HALL, YARD), 'timed');
+    await runBackfill(deps());
+    const rows = await listCuts(id);
+    expect(rows.map((r) => [r.title, r.cuts.map((c) => c.draft)]).sort()).toEqual([
+      ['EXT. ROOF - NIGHT', [null]],
+      ['INT. CELLAR - NIGHT', [1]],
     ]);
   });
 

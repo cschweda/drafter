@@ -1,12 +1,12 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createCutRecorder } from '../app/cuts/recorder';
-import { listCuts } from '../app/cuts/store';
+import { isPutBack, listCuts, markPutBack } from '../app/cuts/store';
 import { storageDeps } from '../app/cuts/use-recorder';
 import { freezeDraft } from '../app/drafts/store';
 import { db } from '../app/storage/db';
 import { createProject } from '../app/storage/projects';
-import { takeSnapshot } from '../app/storage/snapshots';
+import { deleteSnapshot, listSnapshots, takeSnapshot } from '../app/storage/snapshots';
 import { foundCuts } from '../app/workers/cuts-compute';
 
 // Recording cuts as they happen (drafts-and-cuts design §3.1): found between kept snapshots, with
@@ -155,13 +155,99 @@ describe('the cuts recorder', () => {
     expect((await listCuts(id)).map((row) => row.title)).toEqual(['EXT. ROOF - NIGHT']);
   });
 
-  test('a point that can’t be found again records nothing, and moves on', async () => {
+  test('the point is kept with its own text: a deleted snapshot loses no cut', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR) });
+    await keep(recorder().recorder, id, script(HALL, CELLAR));
+    // The newest snapshot is deleted in History, the script autosaves, and the page reloads.
+    for (const s of await listSnapshots(id)) await deleteSnapshot(s.id);
+    await db.projects.update(id, { source: script(HALL) });
+    const { recorder: again } = recorder();
+    await keep(again, id, script(HALL));
+    expect((await listCuts(id)).map((row) => row.title)).toEqual(['INT. CELLAR - NIGHT']);
+  });
+
+  test('a snapshot that failed to write loses no cut either', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR) });
+    // The recorder is told; the snapshot itself is never written (storage full).
+    const r = recorder().recorder;
+    await r.kept(id, script(HALL, CELLAR), 'timed');
+    expect(await listSnapshots(id)).toEqual([]);
+    const { recorder: again } = recorder();
+    await again.kept(id, script(HALL), 'timed');
+    expect((await listCuts(id)).map((row) => row.title)).toEqual(['INT. CELLAR - NIGHT']);
+  });
+
+  test('a damaged stored point records nothing, and moves on', async () => {
     const { id } = await createProject({ source: 'INT. A - DAY\n\nSomething else entirely.\n' });
     await db.settings.put({ key: `cuts-point:${id}`, value: { hash: 'f'.repeat(64) } });
     const { recorder: r } = recorder();
     await keep(r, id, script(HALL, CELLAR));
     await keep(r, id, script(HALL));
     expect((await listCuts(id)).map((row) => row.title)).toEqual(['INT. CELLAR - NIGHT']);
+  });
+
+  test('a cut is dated with the draft being written when its snapshot was taken', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR) });
+    let draft = 1;
+    const r = createCutRecorder({
+      ...storageDeps(),
+      draftNow: () => draft,
+      find: async (a, b, k) => foundCuts(a, b, k),
+    });
+    await keep(r, id, script(HALL, CELLAR));
+    // Cut while writing Draft 01, then Start new draft: the snapshot is taken first, and the
+    // draft number moves on before the comparison has run.
+    const kept = r.kept(id, script(HALL), 'before-draft');
+    draft = 2;
+    await freezeDraft(id, script(HALL), 'first');
+    await kept;
+    expect((await listCuts(id)).map((row) => row.cuts.map((c) => c.draft))).toEqual([[1]]);
+  });
+
+  test('a restore undone after a save records nothing new', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR) });
+    const { recorder: r } = recorder();
+    await keep(r, id, script(HALL, CELLAR));
+    await keep(r, id, script(HALL, CELLAR), 'before-restore');
+    await r.replaced(id, script(YARD, ROOF));
+    await keep(r, id, script(YARD, ROOF), 'saved');
+    // Undo, and on writing.
+    await keep(r, id, script(HALL, CELLAR), 'timed');
+    await keep(r, id, script(HALL, CELLAR), 'saved');
+    expect(await listCuts(id)).toEqual([]);
+  });
+
+  test('a second tab handed the editing compares with the point the first tab left', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR, YARD) });
+    const one = recorder().recorder;
+    const two = recorder().recorder;
+    await keep(one, id, script(HALL, CELLAR, YARD));
+    await keep(two, id, script(HALL, YARD));
+    await keep(one, id, script(HALL));
+    const rows = await listCuts(id);
+    expect(rows.map((row) => [row.title, row.cuts.length]).sort()).toEqual([
+      ['EXT. COAL YARD - DAWN', 1],
+      ['INT. CELLAR - NIGHT', 1],
+    ]);
+  });
+
+  test('an undone Put back loses its mark at the next snapshot', async () => {
+    const { id } = await createProject({ source: script(HALL, CELLAR) });
+    const { recorder: r } = recorder();
+    await keep(r, id, script(HALL, CELLAR));
+    await keep(r, id, script(HALL));
+    const [row] = await listCuts(id);
+    await markPutBack(id, row?.id as string, Date.now() + 1000);
+    // Put back and undone before any snapshot: the next one (of the same text) takes the mark off.
+    await keep(r, id, script(HALL), 'saved');
+    const [after] = await listCuts(id);
+    expect(after && isPutBack(after)).toBe(false);
+    expect(after?.cuts).toHaveLength(1);
+    // Put back and kept: the mark stays.
+    await markPutBack(id, row?.id as string, Date.now() + 2000);
+    await keep(r, id, script(HALL, CELLAR));
+    const [back] = await listCuts(id);
+    expect(back && isPutBack(back)).toBe(true);
   });
 
   test('a failed comparison leaves the point, so the next snapshot finds the cut', async () => {

@@ -2,6 +2,7 @@ import { findCuts } from '@drafter/history';
 import { describe, expect, test } from 'vitest';
 import { createCutInsert } from '../app/cuts/insert';
 import { cutChanges, cutOrdinal, insertPlace, putBackPlace, unitsOf } from '../app/cuts/place';
+import { foundCuts } from '../app/workers/cuts-compute';
 
 // Where a cut goes back (drafts-and-cuts design §3.2): Put back between its old neighbours, the
 // one nearest its old place when headings repeat; Insert at cursor at the next scene or paragraph.
@@ -64,6 +65,29 @@ describe('Put back', () => {
     expect(cut.where.before).toBe('INT. CAR - NIGHT');
     const place = putBackPlace(cut.where, now, 'fountain');
     expect(apply(now, cutChanges(now, place, cut.text, 'fountain'))).toBe(before);
+  });
+
+  test('a passage goes back right after the line it followed, while that line is there', () => {
+    const middle =
+      'Osken shrugs and pockets the key before anyone else can claim it for themselves.';
+    const before = script(
+      scene('INT. HALL - DAY', `Marra waits by the door.\n\n${middle}\n\nThe clock strikes six.`),
+      YARD,
+    );
+    const now = script(
+      scene('INT. HALL - DAY', 'Marra waits by the door.\n\nThe clock strikes six.'),
+      YARD,
+    );
+    const [cut] = foundCuts(before, now, 'fountain');
+    expect(cut?.where.lineAfter).toBe('Marra waits by the door.');
+    const place = putBackPlace(cut?.where as never, now, 'fountain');
+    expect(place.said).toBe('in INT. HALL - DAY, where it was');
+    expect(apply(now, cutChanges(now, place, cut?.text as string, 'fountain'))).toBe(before);
+    // That line gone: at the end of the scene.
+    const changed = now.replace('Marra waits by the door.', 'Marra sits.');
+    expect(putBackPlace(cut?.where as never, changed, 'fountain').said).toBe(
+      'at the end of INT. HALL - DAY',
+    );
   });
 
   test('a passage goes back at the end of the scene it was cut from', () => {

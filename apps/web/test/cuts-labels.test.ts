@@ -1,6 +1,16 @@
 import type { CutEntry } from '@drafter/history';
 import { describe, expect, test } from 'vitest';
-import { cutLine, cutsCount, filterCuts, groupCuts, wholeLabel } from '../app/cuts/labels';
+import {
+  cutLine,
+  cutsCount,
+  filterCuts,
+  filterIndexed,
+  groupCuts,
+  groupIndexed,
+  indexCuts,
+  matchesLabel,
+  wholeLabel,
+} from '../app/cuts/labels';
 import { newestFirst } from '../app/cuts/store';
 
 // The Cuts list's words and order (drafts-and-cuts design §3.2): passages under the scene or
@@ -43,6 +53,41 @@ describe('the Cuts list', () => {
       ['INT. HALL - DAY', ['Osken shrugs…', 'Marra keeps the key…']],
       ['INT. CELLAR - NIGHT', ['INT. CELLAR - NIGHT', 'The lamp swings…']],
     ]);
+  });
+
+  test('a heading at more than one place is a group per place, "(scene 4)"', () => {
+    const car = (title: string, ordinal: number, day: number): CutEntry => ({
+      ...row(title, 'INT. CAR - NIGHT', [{ at: at(day), draft: 1 }]),
+      where: { after: null, before: null, within: { heading: 'INT. CAR - NIGHT', ordinal } },
+    });
+    const rows = newestFirst([car('A', 2, 3), car('B', 4, 4), car('C', 2, 5)]);
+    expect(groupCuts(rows, 'scene').map((g) => [g.label, g.rows.map((r) => r.title)])).toEqual([
+      ['INT. CAR - NIGHT (scene 2)', ['C', 'A']],
+      ['INT. CAR - NIGHT (scene 4)', ['B']],
+    ]);
+  });
+
+  test('2,000 cuts: read once, then filtered and grouped quickly', () => {
+    const many = Array.from({ length: 2000 }, (_, i) =>
+      row(
+        `Cut ${i}`,
+        `INT. ROOM ${i % 40} - NIGHT`,
+        [{ at: at(1 + (i % 28), i % 12), draft: 1 + (i % 9) }],
+        {
+          text: `Words of cut ${i}, about the ferry and the pier, `.repeat(20),
+        },
+      ),
+    );
+    const indexed = indexCuts(newestFirst(many));
+    let slowest = 0;
+    for (const typed of ['f', 'fe', 'fer', 'ferr', 'ferry', 'cut 1999', 'draft 3', '']) {
+      const started = performance.now();
+      const found = filterIndexed(indexed, typed);
+      groupIndexed(found, 'scene');
+      groupIndexed(found, 'draft');
+      slowest = Math.max(slowest, performance.now() - started);
+    }
+    expect(slowest).toBeLessThan(50);
   });
 
   test('groups by draft, with "before drafts" for the backfill’s', () => {
@@ -97,5 +142,10 @@ describe('the Cuts list', () => {
     expect(wholeLabel(row('A', 'B', []))).toBeNull();
     expect(cutsCount(1)).toBe('1 cut');
     expect(cutsCount(1200)).toBe('1,200 cuts');
+    expect([0, 1, 2000].map(matchesLabel)).toEqual([
+      'No cut matches.',
+      '1 cut matches.',
+      '2,000 cuts match.',
+    ]);
   });
 });

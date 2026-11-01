@@ -16,6 +16,7 @@ describe('snapshot labels', () => {
       'before-restore': 'Before restoring a snapshot',
       'before-reload': 'Before reloading the file',
       'before-scene-restore': 'Before restoring a scene',
+      'before-draft': 'Before starting a draft',
     };
     const detail: Partial<Record<SnapshotReason, string>> = {
       opened: 'The Call.fountain',

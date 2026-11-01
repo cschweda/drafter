@@ -52,6 +52,7 @@ const ICONS: Record<string, string> = {
   script: 'i-lucide-file-text',
   preview: 'i-lucide-eye',
   outline: 'i-lucide-list-tree',
+  cuts: 'i-lucide-scissors',
   more: 'i-lucide-ellipsis',
 };
 const LABELS: Record<string, string> = Object.fromEntries(

@@ -3,7 +3,7 @@ import type { HistoryReply, HistoryRequest } from '../history/protocol';
 import { db } from '../storage/db';
 import { kindOf } from '../storage/projects';
 import { cutsBackfillKey, type FoundCutAt, recordCuts } from './store';
-import { storedPoint, storePoint } from './use-recorder';
+import { firstPoint, storedPoint, storePoint } from './use-recorder';
 
 // The first-run backfill (drafts-and-cuts design §3.1, Call 18): nothing cut before v0.24.0 is
 // lost. Once per script, the history worker compares each two consecutive snapshots taken before
@@ -17,13 +17,24 @@ import { storedPoint, storePoint } from './use-recorder';
 /** When v0.24.0 first ran here: snapshots before it are the backfill's, after it the recorder's. */
 export const CUTS_SINCE_KEY = 'cuts-since';
 
-export type BackfillProgress = { done: true } | { upTo: number };
+/**
+ * How far a script's backfill got: the later snapshot of the last pair written (`upTo`), and how
+ * many runs failed (`tries`); or done (`gaveUp` after `MAX_TRIES` failures).
+ */
+export type BackfillProgress = { done: true; gaveUp?: true } | { upTo?: number; tries?: number };
 
-const isProgress = (value: unknown): value is BackfillProgress =>
-  typeof value === 'object' &&
-  value !== null &&
-  ((value as { done?: unknown }).done === true ||
-    typeof (value as { upTo?: unknown }).upTo === 'number');
+/** A script whose backfill fails this many times is given up (a known limit, in DEFERRED). */
+export const MAX_TRIES = 3;
+
+const isProgress = (value: unknown): value is BackfillProgress => {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as { done?: unknown; upTo?: unknown; tries?: unknown };
+  if (v.done === true) return true;
+  return (
+    (v.upTo === undefined || typeof v.upTo === 'number') &&
+    (v.tries === undefined || (typeof v.tries === 'number' && Number.isInteger(v.tries)))
+  );
+};
 
 export interface BackfillDeps {
   /** The scripts to backfill: every one of the writer's own (not the samples). */
@@ -31,8 +42,8 @@ export interface BackfillDeps {
   since(): Promise<number>;
   progress(projectId: string): Promise<BackfillProgress | null>;
   /**
-   * The text the last pair ends at: the recorder's point, else the script's text (then made the
-   * point); null when the script has no snapshot from before `since`, so nothing to carry on from.
+   * The text the last pair ends at: the recorder's first point, else the script's text (then
+   * made the point); null when the script has no snapshot from before `since`, so nothing to carry on from.
    */
   end(projectId: string, since: number): Promise<string | null>;
   /** Runs the request in the history worker, calling `on` with each reply until the last. */
@@ -53,19 +64,43 @@ export interface BackfillDeps {
 }
 
 /**
- * Backfills every script not done yet, one at a time; resolves when all are, or the first that
- * fails (the worker stopped) is left for the next visit. Never throws.
+ * Backfills every script not done yet, one at a time. A script whose run fails (the worker
+ * stopped, a write failed) keeps its progress where it was, counts a try, and the next script is
+ * done; after `MAX_TRIES` failures it is given up. Never throws.
  */
 export async function runBackfill(deps: BackfillDeps): Promise<void> {
+  let since: number;
+  let scripts: { id: string; kind: WorkKind }[];
   try {
-    const since = await deps.since();
-    for (const script of await deps.scripts()) {
+    since = await deps.since();
+    scripts = await deps.scripts();
+  } catch {
+    return; // Left for the next visit.
+  }
+  for (const script of scripts) {
+    try {
       const progress = await deps.progress(script.id);
       if (progress && 'done' in progress) continue;
-      if (!(await backfillOne(deps, script, since, progress?.upTo ?? null))) return;
+      const upTo = progress?.upTo ?? null;
+      const tries = progress?.tries ?? 0;
+      if (tries >= MAX_TRIES) {
+        console.warn(
+          `Drafter: gave up finding the cuts in the old snapshots of script ${script.id}.`,
+        );
+        await deps.write(script.id, script.kind, [], since, { done: true, gaveUp: true });
+        continue;
+      }
+      if (await backfillOne(deps, script, since, upTo, tries)) continue;
+      // Failed: one more try counted, the progress as it was.
+      const now = await deps.progress(script.id);
+      const at = now && !('done' in now) ? now.upTo : upTo;
+      await deps.write(script.id, script.kind, [], since, {
+        ...(at == null ? {} : { upTo: at }),
+        tries: tries + 1,
+      });
+    } catch {
+      // This script is left for the next visit; the others go on.
     }
-  } catch {
-    // Left for the next visit.
   }
 }
 
@@ -75,9 +110,11 @@ async function backfillOne(
   script: { id: string; kind: WorkKind },
   since: number,
   upTo: number | null,
+  tries: number,
 ): Promise<boolean> {
   const end = await deps.end(script.id, since);
-  // Each pair's write waits for the one before, so progress is stored in order.
+  // Each pair's write waits for the one before, so progress is stored in order; after a failed
+  // write nothing more is written, so the progress never passes a pair that wasn't kept.
   let writes: Promise<unknown> = Promise.resolve();
   let failed = false;
   const finished = await new Promise<boolean>((resolve) => {
@@ -89,7 +126,9 @@ async function backfillOne(
           return;
         }
         if (reply.kind !== 'backfill') return;
-        const progress: BackfillProgress = reply.done ? { done: true } : { upTo: reply.at };
+        const progress: BackfillProgress = reply.done
+          ? { done: true }
+          : { upTo: reply.at, ...(tries > 0 ? { tries } : {}) };
         const { cuts, at, done } = reply;
         writes = writes.then(async () => {
           if (failed) return;
@@ -135,12 +174,14 @@ export function storageBackfill(): Omit<BackfillDeps, 'run' | 'recorded'> {
         .filter((row) => row.createdAt < since && !row.id.startsWith('saved:'))
         .first();
       if (!old) return null;
-      const point = await storedPoint(projectId);
-      if (point !== null) return point;
+      // Where the recorder took over, not where it is now: a run resumed weeks later never
+      // compares with today's text, so it never dates the recorder's cuts "before drafts".
+      const first = (await firstPoint(projectId)) ?? (await storedPoint(projectId));
+      if (first !== null) return first;
       const project = await db.projects.get(projectId);
       if (!project) return null;
       // The recorder carries on from the script's text as it is now.
-      await storePoint(projectId, project.source, false);
+      await storePoint(projectId, project.source);
       return project.source;
     },
     async write(projectId, kind, cuts, at, progress) {

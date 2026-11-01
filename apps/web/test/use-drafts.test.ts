@@ -47,7 +47,7 @@ async function setup(text = ONE, options: { readOnly?: string; notKept?: string 
     readOnly: () => options.readOnly ?? null,
     notKept: () => options.notKept ?? null,
     replace: (target) => replaceText(view, target),
-    before: () => events.push('before-restore'),
+    before: (reason) => events.push(reason),
     replaced: () => events.push('replaced'),
     say: (message) => said.push(message),
     showReader: () => events.push('reader'),
@@ -81,6 +81,20 @@ describe('the drafts session', () => {
     expect(await draftText(p.id, 2)).toBe(`${ONE}More.\n`);
   });
 
+  test('the text is kept as a snapshot before any draft is frozen, so its cuts are dated right', async () => {
+    const { drafts, events, view } = await setup();
+    const frozen = () => events.push('frozen');
+    db.drafts.hook('creating', frozen);
+    try {
+      await drafts.start('first');
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: TWO } });
+      await drafts.restore(1);
+    } finally {
+      db.drafts.hook('creating').unsubscribe(frozen);
+    }
+    expect(events).toEqual(['before-draft', 'frozen', 'before-restore', 'frozen', 'replaced']);
+  });
+
   test('the same text asks before a new number', async () => {
     const { drafts, type } = await setup();
     expect(await drafts.sameAs()).toBeNull();
@@ -109,7 +123,7 @@ describe('the drafts session', () => {
     expect(drafts.current.value).toBe(3);
     expect(drafts.from.value).toEqual({ n: 1, id: one?.id });
     expect(await draftFrom(p.id)).toEqual({ n: 1, id: one?.id });
-    expect(events).toEqual(['before-restore', 'replaced']);
+    expect(events).toEqual(['before-draft', 'before-restore', 'replaced']);
     expect(said.at(-1)).toBe('Draft 01’s text is now Draft 03. Undo brings back what it replaced.');
     // The next draft frozen records where it came from.
     await drafts.start('');

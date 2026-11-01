@@ -1,13 +1,20 @@
-import type { WorkKind } from '@drafter/history';
+import { cutText, type WorkKind } from '@drafter/history';
 import { shallowRef } from 'vue';
 import { listDrafts } from '../drafts/store';
 import { useHistoryClient } from '../history/client';
 import { db } from '../storage/db';
-import { canDecompress, gunzip } from '../storage/gzip';
-import { hashText } from '../storage/hash';
+import { canCompress, canDecompress, gunzip, gzip } from '../storage/gzip';
 import { kindOf } from '../storage/projects';
 import { type CutRecorder, createCutRecorder, type RecorderDeps } from './recorder';
-import { cutsPointKey, type FoundCutAt, recordCuts } from './store';
+import {
+  type CutRow,
+  cutKey,
+  cutsFirstPointKey,
+  cutsPointKey,
+  type FoundCutAt,
+  isPutBack,
+  recordCuts,
+} from './store';
 
 // The app's cuts recorder (`recorder.ts`): the comparison runs in the history worker, the cuts and
 // the point are kept in the `drafter` database, and the Cuts list hears when cuts were recorded.
@@ -22,58 +29,70 @@ export function sayRecorded(projectId: string): void {
   cutsRecorded.value = { projectId, n: recordings };
 }
 
-/**
- * What a point is kept as: the hash of its text, found again in the snapshots (a kept snapshot's
- * text is one), or with the text itself when it is in no snapshot (a replacement, the backfill's).
- */
+/** A comparison point as stored: its own text, gzip-compressed as snapshots are (or plain). */
 export interface StoredPoint {
-  hash: string;
-  text?: string;
+  gz?: Uint8Array;
+  source?: string;
 }
 
-const isPoint = (value: unknown): value is StoredPoint =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as StoredPoint).hash === 'string' &&
-  /^[0-9a-f]{64}$/.test((value as StoredPoint).hash) &&
-  ((value as StoredPoint).text === undefined || typeof (value as StoredPoint).text === 'string');
+async function pointValue(text: string): Promise<StoredPoint> {
+  return canCompress() ? { gz: await gzip(text) } : { source: text };
+}
 
-/** The stored point's text, or null when there is none or it can't be found. */
+/** A stored point's text, or null when there is none or it can't be read. */
+async function pointText(value: unknown): Promise<string | null> {
+  if (typeof value !== 'object' || value === null) return null;
+  const { gz, source } = value as StoredPoint;
+  try {
+    if (gz instanceof Uint8Array) return canDecompress() ? await gunzip(gz) : null;
+  } catch {
+    return null;
+  }
+  return typeof source === 'string' ? source : null;
+}
+
+/** The recorder's point for the script, or null. */
 export async function storedPoint(projectId: string): Promise<string | null> {
-  const value = (await db.settings.get(cutsPointKey(projectId)))?.value;
-  if (!isPoint(value)) return null;
-  if (value.text !== undefined && (await hashText(value.text)) === value.hash) return value.text;
-  return textWithHash(projectId, value.hash);
+  return pointText((await db.settings.get(cutsPointKey(projectId)))?.value);
 }
 
-/** Stores the point: its hash, and its text too unless a snapshot (`kept`) holds it. */
-export async function storePoint(projectId: string, text: string, kept: boolean): Promise<void> {
-  const value: StoredPoint = { hash: await hashText(text), ...(kept ? {} : { text }) };
+/**
+ * The script's first point: where the recorder took over from the snapshots before v0.24.0, so a
+ * backfill run later still ends there (and never dates the recorder's cuts "before drafts").
+ */
+export async function firstPoint(projectId: string): Promise<string | null> {
+  return pointText((await db.settings.get(cutsFirstPointKey(projectId)))?.value);
+}
+
+/** Stores the point, with its text, and the first point too if there is none yet. */
+export async function storePoint(projectId: string, text: string): Promise<void> {
+  const value = await pointValue(text);
   // Not for a script removed meanwhile: nothing of it is left behind.
   await db.transaction('rw', db.projects, db.settings, async () => {
-    if (await db.projects.get(projectId))
-      await db.settings.put({ key: cutsPointKey(projectId), value });
+    if (!(await db.projects.get(projectId))) return;
+    await db.settings.put({ key: cutsPointKey(projectId), value });
+    if (!(await db.settings.get(cutsFirstPointKey(projectId))))
+      await db.settings.put({ key: cutsFirstPointKey(projectId), value });
   });
 }
 
-/** The text with this hash, from a snapshot of the script that has it, or the script's own text. */
-async function textWithHash(projectId: string, hash: string): Promise<string | null> {
-  const row = await db.snapshots
-    .where('projectId')
-    .equals(projectId)
-    .filter((r) => r.hash === hash)
-    .first();
-  if (row) {
-    try {
-      if (row.gz) return canDecompress() ? await gunzip(row.gz) : null;
-      if (typeof row.source === 'string') return row.source;
-    } catch {
-      // Unreadable: try the script's own text.
-    }
+/** Takes the mark off the script's cuts marked put back that `text` doesn't hold (an undone Put back). */
+async function checkMarks(projectId: string, text: string): Promise<void> {
+  const rows = (await db.cuts.where('projectId').equals(projectId).toArray()) as CutRow[];
+  const marked = rows.filter(isPutBack);
+  if (marked.length === 0) return;
+  const now = cutText(text);
+  for (const row of marked) {
+    // Dexie deletes a field updated to `undefined`.
+    if (!now.includes(row.text))
+      await db.cuts.update(cutKey(projectId, row.id), { putBack: undefined });
   }
-  const project = await db.projects.get(projectId);
-  if (project && (await hashText(project.source)) === hash) return project.source;
-  return null;
+}
+
+/** Where the app's draft being written comes from, set by `installCuts` (null until then). */
+let draftNow: (projectId: string) => number | null = () => null;
+export function setDraftNow(read: (projectId: string) => number | null): void {
+  draftNow = read;
 }
 
 /** The recorder's storage, the draft being written, and the script's kind, from the database. */
@@ -83,6 +102,7 @@ export function storageDeps(): Omit<RecorderDeps, 'find'> {
       const project = await db.projects.get(projectId);
       return project ? kindOf(project) : null;
     },
+    draftNow: (projectId) => draftNow(projectId),
     async draftOf(projectId) {
       return ((await listDrafts(projectId))[0]?.n ?? 0) + 1;
     },
@@ -91,6 +111,7 @@ export function storageDeps(): Omit<RecorderDeps, 'find'> {
     },
     readPoint: storedPoint,
     writePoint: storePoint,
+    checkMarks,
     now: () => Date.now(),
     recorded: (projectId) => sayRecorded(projectId),
   };

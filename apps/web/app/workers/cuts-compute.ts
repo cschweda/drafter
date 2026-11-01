@@ -1,5 +1,5 @@
-import { findCuts, type WorkKind } from '@drafter/history';
-import { cutOrdinal } from '../cuts/place';
+import { cutText, findCuts, type WorkKind } from '@drafter/history';
+import { cutOrdinal, passageLine, type Unit, unitsOf } from '../cuts/place';
 import type { FoundCutAt } from '../cuts/store';
 import type { HistoryReply, HistoryRequest } from '../history/protocol';
 import type { SnapshotSource } from './history-compute';
@@ -8,16 +8,26 @@ import type { SnapshotSource } from './history-compute';
 // versions, for the recorder, and the first-run backfill over a script's old snapshots, so the page
 // never runs `findCuts` on a long text itself.
 
-/** The cuts between two texts, each with its own place (`where.ordinal`). */
+/** The cuts between two texts, each with its own place (`where.ordinal`) and, for a passage, the line it followed. */
 export function foundCuts(before: string, after: string, kind: WorkKind): FoundCutAt[] {
+  const lf = cutText(before);
+  let units: Unit[] | null = null;
   return findCuts(before, after, kind).map((cut) => {
-    const ordinal = cut.where.within
-      ? cut.where.within.ordinal
-      : cutOrdinal(before, cut.text, kind);
+    const within = cut.where.within;
+    const ordinal = within ? within.ordinal : cutOrdinal(before, cut.text, kind);
+    let lineAfter: string | undefined;
+    if (within) {
+      units ??= unitsOf(lf, kind);
+      lineAfter = passageLine(lf, cut.text, kind, within.ordinal, units);
+    }
     return {
       title: cut.title,
       text: cut.text,
-      where: { ...cut.where, ...(ordinal === undefined ? {} : { ordinal }) },
+      where: {
+        ...cut.where,
+        ...(ordinal === undefined ? {} : { ordinal }),
+        ...(lineAfter === undefined ? {} : { lineAfter }),
+      },
     };
   });
 }
@@ -26,7 +36,8 @@ type Backfill = Extract<HistoryRequest, { kind: 'backfill' }>;
 
 /**
  * Runs a backfill, posting one reply per pair, until done or `live` says it was stopped. A
- * snapshot that can't be read is passed over: the pair spans it. With nothing to compare (no old
+ * snapshot that can't be read is passed over: the pair spans it. A comparison that throws stops
+ * the run (the worker replies with the error), so the page never stores progress past it. With nothing to compare (no old
  * snapshots), the one reply is the last.
  */
 export async function backfill(
@@ -56,25 +67,14 @@ export async function backfill(
       continue;
     }
     if (previous !== null && (upTo === null || ref.at > upTo)) {
-      let cuts: FoundCutAt[] = [];
-      try {
-        cuts = foundCuts(previous, text, docKind);
-      } catch {
-        cuts = [];
-      }
-      reply(ref.at, cuts, false);
+      // A pair that can't be compared throws: the run stops there, and its progress stays.
+      reply(ref.at, foundCuts(previous, text, docKind), false);
     }
     previous = text;
   }
   if (end !== null && previous !== null) {
     read++;
-    let cuts: FoundCutAt[] = [];
-    try {
-      cuts = foundCuts(previous, end, docKind);
-    } catch {
-      cuts = [];
-    }
-    reply(since, cuts, true);
+    reply(since, foundCuts(previous, end, docKind), true);
     return;
   }
   reply(since, [], true);

@@ -81,6 +81,53 @@ export function cutOrdinal(before: string, text: string, kind: WorkKind): number
   return kind === 'fountain' ? found + 1 : found;
 }
 
+/** Where the first line of `unit` that reads `line` (trimmed) ends, or null. Linear in the unit. */
+function lineEnd(text: string, unit: Unit, line: string): number | null {
+  const wanted = line.trim();
+  if (!wanted) return null;
+  let start = unit.from;
+  while (start < unit.to) {
+    let end = text.indexOf('\n', start);
+    if (end < 0 || end > unit.to) end = unit.to;
+    const shown = text.slice(start, end).replace(/\r$/, '');
+    if (shown.trim() === wanted) return start + shown.length;
+    start = end + 1;
+  }
+  return null;
+}
+
+/** The line a passage at `at` followed (trimmed, one line), or undefined: mid-line, or none. */
+export function lineBefore(text: string, at: number, from = 0): string | undefined {
+  if (at > 0 && text[at - 1] !== '\n') return undefined;
+  let end = at - 1;
+  while (end > from) {
+    const start = text.lastIndexOf('\n', end - 1) + 1;
+    const line = text.slice(Math.max(start, from), end).trim();
+    if (line) return line.length <= LINE_MAX ? line : undefined;
+    end = start - 1;
+  }
+  return undefined;
+}
+
+/** The longest line `lineBefore` gives (as the cuts file reads it). */
+const LINE_MAX = 500;
+
+/** Where a passage stood in `before` and the line it followed (for `where.lineAfter`). */
+export function passageLine(
+  before: string,
+  text: string,
+  kind: WorkKind,
+  ordinal: number,
+  units: readonly Unit[] = unitsOf(before, kind),
+): string | undefined {
+  const unit = units[indexOf(ordinal, kind)];
+  const from = unit?.from ?? 0;
+  let at = before.indexOf(text, from);
+  if (at < 0) at = before.indexOf(text);
+  if (at < 0) return undefined;
+  return lineBefore(before, at, from);
+}
+
 /** The unit with `heading`'s key nearest index `near` (the first, without one); or null. */
 function nearest(units: readonly Unit[], heading: string, near: number | undefined): number | null {
   const key = headingKey(heading);
@@ -119,7 +166,11 @@ export function putBackPlace(where: CutWhere, now: string, kind: WorkKind): CutP
       const i = heading === '' && kind === 'markdown' ? 0 : nearest(units, heading, near);
       if (i === null) continue;
       const unit = units[i] as Unit;
-      return { at: unit.to, said: `at the end of ${unit.heading || 'the opening'}` };
+      const name = unit.heading || 'the opening';
+      // Right after the line it followed, while that line is still there in the unit.
+      const after = where.lineAfter ? lineEnd(now, unit, where.lineAfter) : null;
+      if (after !== null) return { at: after, said: `in ${name}, where it was` };
+      return { at: unit.to, said: `at the end of ${name}` };
     }
     if (within.heading === '' && kind === 'markdown')
       return { at: (units[0] as Unit).to, said: 'at the end of the opening' };

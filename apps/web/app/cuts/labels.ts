@@ -54,65 +54,128 @@ export interface CutGroup<T> {
   rows: T[];
 }
 
-/** The heading a cut is listed under: the scene or section it was cut from, or its own. */
-function homeOf(row: Pick<CutEntry, 'where' | 'title' | 'kind'>): string {
-  const within = row.where.within;
-  if (within) return within.heading;
-  return row.title;
+type Listed = Pick<CutEntry, 'where' | 'title' | 'text' | 'kind' | 'cuts'>;
+
+/**
+ * A cut as the list uses it, worked out once when the list is read (so a filter or a regrouping of
+ * thousands of cuts folds no text again): its newest date and that date's draft, its text folded
+ * for the filter, and the heading (and number) it is listed under.
+ */
+export interface IndexedCut<T> {
+  row: T;
+  latest: string;
+  latestDraft: number | null;
+  /** The drafts it was cut in. */
+  drafts: ReadonlySet<number | null>;
+  fold: string;
+  home: string;
+  homeKey: string;
+  /** The number of the scene or section it is listed under, when known. */
+  homeOrdinal: number | undefined;
+}
+
+export function indexCuts<T extends Listed>(rows: readonly T[]): IndexedCut<T>[] {
+  return rows.map((row) => {
+    let latest = '';
+    let latestDraft: number | null = null;
+    for (const c of row.cuts) {
+      if (c.at > latest) {
+        latest = c.at;
+        latestDraft = c.draft;
+      }
+    }
+    const within = row.where.within;
+    const home = (within ? within.heading : row.title).trim();
+    return {
+      row,
+      latest,
+      latestDraft,
+      drafts: new Set(row.cuts.map((c) => c.draft)),
+      fold: foldText(`${row.title}\n${within?.heading ?? ''}\n${row.text}`),
+      home,
+      homeKey: headingKey(home),
+      homeOrdinal: within ? within.ordinal : row.where.ordinal,
+    };
+  });
 }
 
 const openingLabel = (kind: WorkKind) => (kind === 'markdown' ? 'The opening' : 'Untitled scene');
 
 /**
- * The cuts in groups (`rows` newest first, as `listCuts` gives them): by scene or chapter, each
- * passage under the heading it was cut from and a whole scene or section under its own, so a scene
- * cut down over several drafts reads as one group; or by the draft each was last cut in. Groups
+ * The cuts in groups (newest first, as `listCuts` gives them): by scene or chapter, each passage
+ * under the heading it was cut from and a whole scene or section under its own, so a scene cut down
+ * over several drafts reads as one group; or by the draft each was last cut in. A heading the list
+ * holds at more than one place (five `INT. CAR - NIGHT`) is a group per place, "(scene 4)". Groups
  * are newest first, and so are the cuts in each.
  */
-export function groupCuts<T extends Pick<CutEntry, 'where' | 'title' | 'kind' | 'cuts'>>(
+export function groupIndexed<T extends Listed>(
+  cuts: readonly IndexedCut<T>[],
+  by: GroupBy,
+  ids: ReadonlyMap<number, string> = new Map(),
+): CutGroup<T>[] {
+  // The headings held at more than one place.
+  const places = new Map<string, Set<number>>();
+  if (by === 'scene') {
+    for (const c of cuts) {
+      if (c.homeOrdinal === undefined) continue;
+      const set = places.get(c.homeKey) ?? new Set();
+      set.add(c.homeOrdinal);
+      places.set(c.homeKey, set);
+    }
+  }
+  const groups = new Map<string, CutGroup<T>>();
+  for (const c of cuts) {
+    let key: string;
+    let label: string;
+    if (by === 'draft') {
+      const n = c.latestDraft;
+      key = n === null ? 'before' : `draft-${n}`;
+      label = n === null ? 'Before drafts' : draftLabel(n, ids);
+    } else {
+      label = c.home || openingLabel(c.row.kind);
+      key = `h:${c.homeKey}`;
+      if ((places.get(c.homeKey)?.size ?? 0) > 1 && c.homeOrdinal !== undefined) {
+        key += `#${c.homeOrdinal}`;
+        label += ` (${c.row.kind === 'fountain' ? 'scene' : 'section'} ${c.homeOrdinal})`;
+      }
+    }
+    const group = groups.get(key);
+    if (group) group.rows.push(c.row);
+    else groups.set(key, { key, label, rows: [c.row] });
+  }
+  // The cuts came newest first, so each group's first is its newest, and the map is in that order.
+  return [...groups.values()];
+}
+
+/** `groupIndexed` of plain rows. */
+export function groupCuts<T extends Listed>(
   rows: readonly T[],
   by: GroupBy,
   ids: ReadonlyMap<number, string> = new Map(),
 ): CutGroup<T>[] {
-  const groups = new Map<string, CutGroup<T>>();
-  for (const row of rows) {
-    let key: string;
-    let label: string;
-    if (by === 'draft') {
-      const latest = [...row.cuts].sort((a, b) => (a.at < b.at ? 1 : -1))[0];
-      const n = latest?.draft ?? null;
-      key = n === null ? 'before' : `draft-${n}`;
-      label = n === null ? 'Before drafts' : draftLabel(n, ids);
-    } else {
-      const home = homeOf(row).trim();
-      key = `h:${headingKey(home)}`;
-      label = home || openingLabel(row.kind);
-    }
-    const group = groups.get(key);
-    if (group) group.rows.push(row);
-    else groups.set(key, { key, label, rows: [row] });
-  }
-  // Rows came newest first, so each group's first row is its newest, and the map is in that order.
-  return [...groups.values()];
+  return groupIndexed(indexCuts(rows), by, ids);
 }
 
 /**
  * The cuts a filter finds: words in the text, title, or the heading it was cut from, case and
- * accents folded; a
- * draft number ("3", "draft 03") finds the cuts cut while writing it.
+ * accents folded; a draft number ("3", "draft 03") finds the cuts cut while writing it.
  */
-export function filterCuts<T extends Pick<CutEntry, 'where' | 'title' | 'text' | 'cuts'>>(
-  rows: readonly T[],
-  typed: string,
-): T[] {
+export function filterIndexed<T>(cuts: readonly IndexedCut<T>[], typed: string): IndexedCut<T>[] {
   const words = foldText(typed);
-  if (!words) return [...rows];
+  if (!words) return [...cuts];
   const n = typedDraftNumber(words);
-  return rows.filter(
-    (row) =>
-      (n !== null && row.cuts.some((c) => c.draft === n)) ||
-      foldText(`${row.title}\n${row.where.within?.heading ?? ''}\n${row.text}`).includes(words),
-  );
+  return cuts.filter((c) => (n !== null && c.drafts.has(n)) || c.fold.includes(words));
+}
+
+/** `filterIndexed` of plain rows. */
+export function filterCuts<T extends Listed>(rows: readonly T[], typed: string): T[] {
+  return filterIndexed(indexCuts(rows), typed).map((c) => c.row);
+}
+
+/** What the list says, politely, of a filter: "3 cuts match.", "No cut matches." */
+export function matchesLabel(n: number): string {
+  if (n === 0) return 'No cut matches.';
+  return n === 1 ? '1 cut matches.' : `${n.toLocaleString('en-US')} cuts match.`;
 }
 
 /** A cut's name for its actions: "“INT. HALL - DAY”", "“Marra keeps the key…”". */

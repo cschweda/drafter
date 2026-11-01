@@ -1,5 +1,5 @@
 import { type DrafterMeta, parse } from '@drafter/fountain';
-import { cutsBackfillKey, cutsPointKey } from '../cuts/store';
+import { cutsBackfillKey, cutsFirstPointKey, cutsPointKey } from '../cuts/store';
 import { draftFromKey } from '../drafts/store';
 import type { SampleKind } from '../editor/sample-kinds';
 import type { StarterKind } from '../editor/starter-kinds';
@@ -223,7 +223,7 @@ export async function removeProject(id: string): Promise<void> {
     await db.drafts.where('projectId').equals(id).delete();
     await db.cuts.where('projectId').equals(id).delete();
     await db.settings.delete(draftFromKey(id));
-    await db.settings.bulkDelete([cutsPointKey(id), cutsBackfillKey(id)]);
+    await db.settings.bulkDelete([cutsPointKey(id), cutsFirstPointKey(id), cutsBackfillKey(id)]);
     await db.projects.delete(id);
   });
   // The prints cache is another database, so it's cleared after (version-history design §3.6): it

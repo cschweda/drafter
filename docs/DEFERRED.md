@@ -256,7 +256,8 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **M5: Put back with duplicate headings.** Done in Task 4: Put back takes the neighbour nearest the cut's old place (`where.ordinal`).
 - **History of this scene from Cuts.** Deleted scenes had a History button (and H) on each scene; Cuts lists cuts without a snapshot to start from, so it has none. A whole scene cut could find its newest snapshot by its text's hash, and open History of this scene there.
 - **The history worker's `place` request** (Put back from a snapshot) has no caller since Cuts replaced Deleted scenes; it is kept, tested, for now.
-- **A passage put back** goes at the end of the scene or section it was cut from, not between the lines either side of it: a cut doesn't keep the words around it. Keeping a line of context with each passage would put it back exactly.
+- **A passage put back** goes right after the line it followed (`where.lineAfter`) while that line is still in its scene or section; otherwise at the end of the scene or section. A passage cut from the middle of a line goes back as its own paragraph.
+- **The first-run backfill gives up on a script after 3 failed runs** (`MAX_TRIES`: the history worker stopped, or a comparison threw, each time). It logs a warning and marks the script done, so the old snapshots' cuts of that script stay unfound; the snapshots themselves are untouched. A later release could offer to try again.
 
 ## Flaky tests seen in CI
 

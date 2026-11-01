@@ -234,6 +234,182 @@ test.describe('Cuts', () => {
   });
 });
 
+/** Opens the `drafter` database in the page, for a test's seeding and reading. */
+declare global {
+  interface Window {
+    openDrafterDb(): Promise<IDBDatabase>;
+  }
+}
+async function withDb(page: Page) {
+  await page.addInitScript(() => {
+    window.openDrafterDb = () =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('drafter');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => resolve(open.result);
+      });
+  });
+}
+/** The open script of the writer's own: its id. */
+const scriptId = (page: Page) =>
+  page.evaluate(async () => {
+    const db = await window.openDrafterDb();
+    const all = db.transaction('projects').objectStore('projects').getAll();
+    const rows = await new Promise<{ id: string; sample?: string }[]>((r) => {
+      all.onsuccess = () => r(all.result);
+    });
+    db.close();
+    return rows.find((p) => !p.sample)?.id as string;
+  });
+
+/** The script's backfill progress. */
+const progressOf = (page: Page, id: string) =>
+  page.evaluate(async (pid) => {
+    const db = await window.openDrafterDb();
+    const get = db.transaction('settings').objectStore('settings').get(`cuts-backfill:${pid}`);
+    const row = await new Promise<{ value?: unknown } | undefined>((r) => {
+      get.onsuccess = () => r(get.result);
+    });
+    db.close();
+    return row?.value ?? null;
+  }, id);
+
+test.describe('Cuts, more', () => {
+  test('a scene cut just before restoring Draft 01 is in Cuts, cut while writing Draft 02', async ({
+    page,
+  }) => {
+    await written(page, [script(HALL, CELLAR, ROOF)]);
+    await command(page, 'Start new draft…');
+    await expect(startDialog(page)).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(startDialog(page)).toBeHidden();
+    // Cut, with no snapshot since, then straight to Restore.
+    await setText(page, script(HALL, ROOF));
+    await command(page, 'Drafts…');
+    await page
+      .locator('#panel-drafts [data-draft="1"]')
+      .getByRole('button', { name: 'Restore Draft 01 as a new draft' })
+      .click();
+    await expect.poll(() => wholeText(page)).toBe(script(HALL, CELLAR, ROOF));
+    await openCuts(page);
+    await expect(titles(page)).toHaveText(['INT. CELLAR - NIGHT']);
+    await expect(itemOf(page, 'INT. CELLAR - NIGHT').locator('.meta')).toContainText(
+      'Cut while writing Draft 02',
+    );
+  });
+
+  test('2,000 cuts: a page at a time, and the filter keeps up', async ({ page }) => {
+    await withDb(page);
+    await written(page, [script(HALL)]);
+    const id = await scriptId(page);
+    await page.evaluate(async (pid) => {
+      const db = await window.openDrafterDb();
+      const tx = db.transaction('cuts', 'readwrite');
+      const store = tx.objectStore('cuts');
+      for (let i = 0; i < 2000; i++) {
+        const cutId = i.toString(16).padStart(64, '0');
+        store.put({
+          key: `${pid}:${cutId}`,
+          projectId: pid,
+          id: cutId,
+          title: `Cut ${i}`,
+          kind: 'fountain',
+          text: `The ferry leaves at six, cut number ${i}. `.repeat(30),
+          cuts: [
+            { at: new Date(Date.UTC(2026, 9, 1) + i * 60_000).toISOString(), draft: 1 + (i % 5) },
+          ],
+          where: {
+            after: null,
+            before: null,
+            within: { heading: `INT. ROOM ${i % 50} - NIGHT`, ordinal: 1 + (i % 50) },
+          },
+        });
+      }
+      await new Promise((r) => {
+        tx.oncomplete = r;
+      });
+      db.close();
+    }, id);
+    await openCuts(page);
+    await expect(items(page)).toHaveCount(100);
+    await expect(panel(page).locator('.more-count')).toHaveText('1,900 more');
+    await panel(page).getByRole('button', { name: 'Show more' }).click();
+    await expect(items(page)).toHaveCount(200);
+    const started = Date.now();
+    await filterBox(page).fill('cut number 1999.');
+    await expect(items(page)).toHaveCount(1);
+    expect(Date.now() - started).toBeLessThan(2000);
+    await expect(titles(page)).toHaveText(['Cut 1999']);
+    await expect(panel(page).getByRole('status')).toHaveText('1 cut matches.');
+  });
+
+  test('a backfill interrupted by a reload resumes, with no duplicates', async ({ page }) => {
+    await withDb(page);
+    await written(page, [script(ROOF)]);
+    const id = await scriptId(page);
+    const T = Date.UTC(2026, 0, 1);
+    const HOUR = 3_600_000;
+    // Snapshots from before v0.24.0: HALL, CELLAR and YARD each cut in turn.
+    const texts = [
+      script(HALL, CELLAR, YARD, ROOF),
+      script(CELLAR, YARD, ROOF),
+      script(YARD, ROOF),
+      script(ROOF),
+    ];
+    await page.evaluate(
+      async ({ pid, texts, T, HOUR }) => {
+        const db = await window.openDrafterDb();
+        const tx = db.transaction(['snapshots', 'settings'], 'readwrite');
+        texts.forEach((source, i) => {
+          tx.objectStore('snapshots').put({
+            id: `old-${i}`,
+            projectId: pid,
+            createdAt: T + i * HOUR,
+            source,
+            reason: 'timed',
+          });
+        });
+        tx.objectStore('settings').delete(`cuts-backfill:${pid}`);
+        await new Promise((r) => {
+          tx.oncomplete = r;
+        });
+        db.close();
+      },
+      { pid: id, texts, T, HOUR },
+    );
+    await page.reload();
+    await expect.poll(() => progressOf(page, id), { timeout: 20_000 }).toEqual({ done: true });
+    // As if the tab had closed after the first pair: the progress goes back, and the page reloads.
+    await page.evaluate(
+      async ({ pid, upTo }) => {
+        const db = await window.openDrafterDb();
+        const tx = db.transaction('settings', 'readwrite');
+        tx.objectStore('settings').put({ key: `cuts-backfill:${pid}`, value: { upTo } });
+        await new Promise((r) => {
+          tx.oncomplete = r;
+        });
+        db.close();
+      },
+      { pid: id, upTo: T + HOUR },
+    );
+    await page.reload();
+    await expect.poll(() => progressOf(page, id), { timeout: 20_000 }).toEqual({ done: true });
+    const dates = await page.evaluate(async (pid) => {
+      const db = await window.openDrafterDb();
+      const all = db.transaction('cuts').objectStore('cuts').getAll();
+      const rows = await new Promise<{ projectId: string; cuts: unknown[] }[]>((r) => {
+        all.onsuccess = () => r(all.result);
+      });
+      db.close();
+      return rows.filter((c) => c.projectId === pid).map((c) => c.cuts.length);
+    }, id);
+    expect(dates).toEqual([1, 1, 1]);
+    await openCuts(page);
+    await expect(titles(page)).toHaveCount(3);
+    await expect(panel(page).locator('.meta').first()).toContainText('Cut before drafts');
+  });
+});
+
 test.describe("Cuts' accessibility", () => {
   for (const theme of ['dark', 'light'] as const) {
     test(`has no accessibility violations (${theme})`, async ({ page }) => {

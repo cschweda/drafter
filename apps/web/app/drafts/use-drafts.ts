@@ -58,8 +58,12 @@ export interface DraftsDeps {
   notKept(): string | null;
   /** Puts `text` in the editor as one change one undo takes back; false when it can't. */
   replace(text: string): boolean;
-  /** Keeps a `before-restore` snapshot of the text now, in the background. */
-  before(): void;
+  /**
+   * Keeps a snapshot of the text now, in the background, before a draft is frozen (`before-draft`)
+   * or a draft restored (`before-restore`), so the cuts made so far are dated with the draft they
+   * were made in (drafts-and-cuts design §3.1).
+   */
+  before(reason: 'before-draft' | 'before-restore'): void;
   /** The text was replaced whole: the cuts recorder moves its comparison point (Task 4). */
   replaced(): void;
   say(message: string): void;
@@ -147,6 +151,7 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
     if (projectId === null) return false;
     busy = true;
     try {
+      deps.before('before-draft');
       const out = await freezeDraft(projectId, deps.text(), note);
       if (out.result === 'failed') {
         deps.say(out.why);
@@ -175,6 +180,8 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
       // The reads took a moment: the script and the tab are checked again before anything changes.
       if (deps.projectId() !== projectId || refused()) return false;
       const now = deps.text();
+      // A snapshot of it first, before any draft moves the number on: its cuts are this draft's.
+      deps.before('before-restore');
       // The text now is kept first, as a draft, unless it is the last draft already (it is safe).
       const last = (await listDrafts(projectId))[0];
       if (!last || (await hashText(now)) !== last.id) {
@@ -190,7 +197,6 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
         deps.say('The script changed meanwhile, so its text was kept as a draft and not replaced.');
         return false;
       }
-      deps.before();
       if (!deps.replace(target)) {
         await load();
         deps.say('The script can’t be changed now.');
@@ -297,7 +303,7 @@ function createApp(): AppDrafts {
       historyReadOnly() ?? (editor.view.state.readOnly ? 'The script can’t be changed now.' : null),
     notKept: () => notKept.value,
     replace: (text) => replaceText(editor.view, text),
-    before: () => snapshots.before('before-restore'),
+    before: (reason) => snapshots.before(reason),
     replaced: () => {
       for (const listener of replacedListeners) listener();
     },

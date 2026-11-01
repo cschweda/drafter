@@ -30,6 +30,9 @@ export const cutKey = (projectId: string, id: string): string => `${projectId}:$
 /** The settings row holding the recorder's comparison point for a script (`recorder.ts`). */
 export const cutsPointKey = (projectId: string): string => `cuts-point:${projectId}`;
 
+/** The settings row holding the recorder's first point for a script, where the backfill ends. */
+export const cutsFirstPointKey = (projectId: string): string => `cuts-first:${projectId}`;
+
 /** The settings row holding how far the first-run backfill of a script has got (`backfill.ts`). */
 export const cutsBackfillKey = (projectId: string): string => `cuts-backfill:${projectId}`;
 
@@ -51,8 +54,8 @@ export function newestFirst<T extends CutEntry>(rows: readonly T[]): T[] {
 /**
  * Records `cuts`, cut at `at` while writing Draft `draft` (null: before drafts), in one
  * transaction, together with `extra` (a backfill's progress) so neither is written without the
- * other. A text already kept gains the date (once: the same date and draft twice is one) and its
- * newest place; its title, kind and first dates stay. Resolves with the rows as written: none for a
+ * other. A text already kept gains the date (once: the same date and draft twice is one), and the
+ * place if this date is its newest; its title, kind and first dates stay. Resolves with the rows as written: none for a
  * script that isn't there. Cuts found together (`findCuts` gives them in the text's order) are
  * dated a millisecond apart, the first latest, so newest first lists them as they stood.
  */
@@ -87,7 +90,13 @@ export async function recordCuts(
           ? had.cuts
           : [...had.cuts, { at: when, draft }];
         dates.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-        row = { ...had, cuts: dates.slice(-MAX_CUTS_PER_ENTRY), where: cut.where };
+        // The newest place wins (as `mergeCuts`): a backfill writing an older date keeps it.
+        const newest = when >= lastCut(had);
+        row = {
+          ...had,
+          cuts: dates.slice(-MAX_CUTS_PER_ENTRY),
+          where: newest ? cut.where : had.where,
+        };
       } else {
         row = {
           key,
