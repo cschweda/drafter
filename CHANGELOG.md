@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **An animated banner at the top of the README:** the script page fans out into the colored revision pages, once. It's an SVG with CSS only, so it plays on GitHub, and it holds still for anyone who asks their computer for less motion.
+
 ## [0.23.3] - 2026-11-01
 
 **What is Drafter?, and What's new.** A help page for anyone: why writers choose Drafter, what industry readers get, whether you can trust it, and how it works for technical people, with live test counts and diagrams. A What's new page keeps every change, and a one-line banner on the writing screen mentions a big change or a security update once.

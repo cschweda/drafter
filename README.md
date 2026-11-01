@@ -1,5 +1,7 @@
 # Drafter
 
+![Drafter: Fountain first. Fountain is a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon. A script page fans out into a stack of colored revision pages.](brand/og-image-animated.svg)
+
 **Drafter™ is a free, open-source writing app for screenplays and stage plays in plain-text [Fountain](https://fountain.io), and for novels and treatments in Markdown: you write on the left, and the formatted pages build on the right as you type.**
 
 [![Latest release](https://img.shields.io/github/v/release/cschweda/drafter?label=release)](https://github.com/cschweda/drafter/releases/latest)

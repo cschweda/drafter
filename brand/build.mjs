@@ -184,7 +184,7 @@ for (const [name, color] of [
     bar(878, 382, 200) +
     bar(962, 416, 70) +
     bar(912, 432, 170);
-  const fan = [
+  const sheets = [
     [-22, REVISION.cherry],
     [-19, REVISION.salmon],
     [-16, REVISION.buff],
@@ -193,9 +193,26 @@ for (const [name, color] of [
     [-7, REVISION.yellow],
     [-4, REVISION.pink],
     [-1, REVISION.blue],
-  ]
-    .map(([angle, color]) => page(angle, color))
+  ];
+  const fan = sheets.map(([angle, color]) => page(angle, color)).join('');
+  // The animated share image (og-image-animated.svg): the script starts as one page, then the
+  // revision pages fan out behind it, once, and stay. Each page rests at its angle, so a viewer that
+  // can't animate, or asks for less motion, sees the finished fan; CSS only, no script.
+  const fanAnimated = sheets
+    .map(
+      ([, color], i) =>
+        `<g class="p p${i}"><rect x="850" y="140" width="320" height="440" rx="10" fill="${color}"/></g>`,
+    )
     .join('');
+  const fanStyle =
+    '<style>.p{transform-origin:1010px 720px;transform-box:view-box}' +
+    sheets
+      .map(
+        ([angle], i) =>
+          `.p${i}{transform:rotate(${angle}deg);animation:f${i} ${(0.7 + Math.abs(angle) * 0.03).toFixed(2)}s cubic-bezier(.2,.8,.2,1) .6s both}@keyframes f${i}{from{transform:rotate(2deg)}}`,
+      )
+      .join('') +
+    '@media (prefers-reduced-motion:reduce){.p{animation:none}}</style>';
   const dots = [
     REVISION.blue,
     REVISION.pink,
@@ -206,54 +223,58 @@ for (const [name, color] of [
   ]
     .map((color, i) => `<circle cx="${78 + i * 20}" cy="562" r="7" fill="${color}"/>`)
     .join('');
-  files['og-image.svg'] = svg(
-    1200,
-    630,
-    '<defs>' +
-      '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#121318"/><stop offset="1" stop-color="#0B0C0F"/></linearGradient>' +
-      '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/></filter>' +
-      `${gradient('g')}</defs>` +
-      '<rect width="1200" height="630" fill="url(#bg)"/>' +
-      `<g filter="url(#shadow)">${fan}${page(2, REVISION.white, script)}</g>` +
-      mark({ x: 76, y: 76, size: 48, id: 'g' }) +
-      text(FONTS.extraBold, 'drafter', {
-        x: 72,
-        y: 296,
-        size: 124,
-        fill: '#FFFFFF',
-        tracking: -5,
-      }) +
-      // Fountain first, in the mark's colors, said plainly for anyone who hasn't met Fountain; then
-      // who it's for, and Classic mode to come (v0.25.0; the maintainer asked for "coming soon").
-      text(FONTS.extraBold, 'Fountain first.', { x: 76, y: 356, size: 36, fill: 'url(#g)' }) +
-      text(FONTS.semiBold, 'Fountain: a plain-text script format', {
-        x: 76,
-        y: 396,
-        size: 25,
-        fill: '#AEB4C0',
-      }) +
-      text(FONTS.semiBold, 'for screenplays and stage plays.', {
-        x: 76,
-        y: 430,
-        size: 25,
-        fill: '#AEB4C0',
-      }) +
-      text(FONTS.semiBold, 'Novels and notes in Markdown.', {
-        x: 76,
-        y: 464,
-        size: 25,
-        fill: '#AEB4C0',
-      }) +
-      text(FONTS.semiBold, 'Classic mode: coming soon.', {
-        x: 76,
-        y: 513,
-        size: 23,
-        fill: '#E8EAEE',
-      }) +
-      dots +
-      text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 571, size: 24, fill: '#E8EAEE' }),
-    'Drafter: Fountain first, a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon',
-  );
+  const share = (fanMarkup, style = '') =>
+    svg(
+      1200,
+      630,
+      '<defs>' +
+        '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#121318"/><stop offset="1" stop-color="#0B0C0F"/></linearGradient>' +
+        '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/></filter>' +
+        `${gradient('g')}</defs>` +
+        '<rect width="1200" height="630" fill="url(#bg)"/>' +
+        style +
+        `<g filter="url(#shadow)">${fanMarkup}${page(2, REVISION.white, script)}</g>` +
+        mark({ x: 76, y: 76, size: 48, id: 'g' }) +
+        text(FONTS.extraBold, 'drafter', {
+          x: 72,
+          y: 296,
+          size: 124,
+          fill: '#FFFFFF',
+          tracking: -5,
+        }) +
+        // Fountain first, in the mark's colors, said plainly for anyone who hasn't met Fountain; then
+        // who it's for, and Classic mode to come (v0.25.0; the maintainer asked for "coming soon").
+        text(FONTS.extraBold, 'Fountain first.', { x: 76, y: 356, size: 36, fill: 'url(#g)' }) +
+        text(FONTS.semiBold, 'Fountain: a plain-text script format', {
+          x: 76,
+          y: 396,
+          size: 25,
+          fill: '#AEB4C0',
+        }) +
+        text(FONTS.semiBold, 'for screenplays and stage plays.', {
+          x: 76,
+          y: 430,
+          size: 25,
+          fill: '#AEB4C0',
+        }) +
+        text(FONTS.semiBold, 'Novels and notes in Markdown.', {
+          x: 76,
+          y: 464,
+          size: 25,
+          fill: '#AEB4C0',
+        }) +
+        text(FONTS.semiBold, 'Classic mode: coming soon.', {
+          x: 76,
+          y: 513,
+          size: 23,
+          fill: '#E8EAEE',
+        }) +
+        dots +
+        text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 571, size: 24, fill: '#E8EAEE' }),
+      'Drafter: Fountain first, a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon',
+    );
+  files['og-image.svg'] = share(fan);
+  files['og-image-animated.svg'] = share(fanAnimated, fanStyle);
 }
 
 /** Square art for launchers that mask icons themselves (iOS, Android's maskable icons). */
