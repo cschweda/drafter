@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - The README is shorter, with a screenshot gallery; the roadmap and developer notes moved to docs/ROADMAP.md and docs/DEVELOPMENT.md.
+- The roadmap names **Story map** (v0.24.1) and adds **Drafter for Claude** (v0.24.2), a local MCP server so Claude or another AI app can read your scripts, drafts, and cuts.
 
 ## [0.23.2] - 2026-11-01
 

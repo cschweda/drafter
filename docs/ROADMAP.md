@@ -19,13 +19,14 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 Next, in order:
 
 1. **Drafts and Cuts** (v0.24.0).
-2. **A visual page of your script to send to anyone** (v0.24.1; a working name).
-3. **Novel**, for drafting a novel in Markdown (v0.25.0).
-4. **Production**, free: revision colors, locked pages, OMITTED scenes, revised pages, breakdowns, and sides (v0.26.0).
-5. Storylines and pacing (v0.27.0).
-6. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.28.0).
-7. An optional one-file `.drafter` project (v0.29.0, open spec).
-8. Plans G and H (v0.30.0 and v0.31.0).
+2. **Story map**, a visual page of your script or play to send to anyone (v0.24.1).
+3. **Drafter for Claude** (v0.24.2): a local, read-only MCP server, so Claude Desktop, Claude Code, or any app that speaks MCP can read the scripts, drafts, and cuts in a folder you choose. Ask it for a storyboard (a shot list per scene, drawn as a simple visual page), a reader's notes, character arcs, pacing, threads never paid off, ideas from your cuts, or continuity across a series of episodes or plays. It runs on your computer with your own AI subscription and no API key; what the AI reads goes to that AI service, as if you'd pasted it in. Drafter itself never calls an AI.
+4. **Novel**, for drafting a novel in Markdown (v0.25.0).
+5. **Production**, free: revision colors, locked pages, OMITTED scenes, revised pages, breakdowns, and sides (v0.26.0).
+6. Storylines and pacing (v0.27.0).
+7. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.28.0).
+8. An optional one-file `.drafter` project (v0.29.0, open spec).
+9. Plans G and H (v0.30.0 and v0.31.0).
 
 A signed macOS download follows. The phases below have the detail.
 

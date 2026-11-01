@@ -201,7 +201,8 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 **Next:**
 
 - **v0.24.0: Drafts and Cuts.** Numbered drafts, and a permanent file of everything you cut.
-- **v0.24.1: a visual page of your script to send to anyone.**
+- **v0.24.1: Story map**, a visual page of your script or play to send to anyone.
+- **v0.24.2: Drafter for Claude**, a local MCP server so Claude (or another AI app you use) can read your scripts, drafts, and cuts: storyboards, notes, and insights across a series. Nothing in Drafter itself ever calls an AI.
 - **v0.25.0: Novel**, a comfortable place to draft a novel in Markdown.
 
 **Later:**
