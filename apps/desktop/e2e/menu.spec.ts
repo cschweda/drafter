@@ -464,9 +464,10 @@ test('Help → Report a Problem… fills in GitHub’s page, in the browser, and
   await chooseMenuItem(app, ['Help', 'Report a Problem…']);
   const report = dialog(page, 'Report a problem');
   await expect(report).toBeVisible();
-  await expect(report).toContainText('App: desktop app');
+  // The preview fills in as the writer types; the version info comes with it.
   await report.getByRole('textbox', { name: 'Title' }).fill('Menu & keys');
   await report.getByRole('textbox', { name: 'What happened' }).fill('It hung.');
+  await expect(report).toContainText('App: desktop app');
   await report.getByRole('link', { name: 'Open on GitHub' }).click();
   await expect.poll(() => openedExternally(profile)).toHaveLength(1);
   const [opened] = openedExternally(profile);

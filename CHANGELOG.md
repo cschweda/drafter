@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - The desktop build makes the history package and the packages it needs before the desktop tests, which read it from its source.
+- The desktop menu test for Report a Problem… types the report before it looks for the version info, which the preview shows once there is something to send.
 
 ## [0.24.0] - 2026-11-01
 
