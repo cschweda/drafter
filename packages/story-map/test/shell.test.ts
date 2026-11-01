@@ -207,7 +207,10 @@ describe('the page frame', () => {
     ]);
     expect(doc.querySelector('style')?.textContent).toContain('.x1{color:red}');
     // With no sections, no nav at all.
-    expect(dom(HARBOUR).querySelector('nav')).toBeNull();
+    const bare = new JSDOM(
+      pageHtml({ map, fonts: fakeFonts(), lang: 'en', generator: 'Drafter' }, []),
+    ).window.document;
+    expect(bare.querySelector('nav') === null).toBe(true);
   });
 
   it('contact is off by default, a mailto only when it validates', () => {

@@ -1,3 +1,5 @@
+import { TABLE_RULES } from './table';
+
 // The story map's fixed stylesheet: phone first (390 px, 16 px gutters), dark only on screen, a
 // light sheet for print. What varies per script is a generated rule appended after it, in the
 // same `<style>`: the CSP allows no style attribute. Later sections add their own fixed rules
@@ -95,4 +97,6 @@ section{padding-top:24pt}
 a{text-decoration:none}
 }`;
 
-export const STORY_MAP_STYLESHEET = [ROOT, BASE, HERO, NAV, CLOSE, WIDE, PRINT].join('\n');
+export const STORY_MAP_STYLESHEET = [ROOT, BASE, HERO, NAV, TABLE_RULES, CLOSE, WIDE, PRINT].join(
+  '\n',
+);

@@ -55,6 +55,9 @@ const VOID = new Set(['br', 'hr', 'img', 'meta', 'link', 'wbr', 'col', 'source']
 /** A name as the file's own code writes one; an optional prefix is for the EPUB's `epub:type`. */
 const NAME = /^[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?$/;
 
+/** SVG's attributes spelled in camel case that the story map's charts write; no other. */
+const SVG_CAMEL = new Set(['viewBox', 'preserveAspectRatio', 'pathLength']);
+
 /**
  * Attributes never written: an event handler (`on…`, matched separately) or `formaction` would be
  * script or a request the CSP doesn't cover, `style` would be inline style it has no hash for, and
@@ -124,7 +127,7 @@ export function el(name: string, attributes: Record<string, AttrValue>, content 
   if (!NAME.test(name)) throw new RangeError(`Not an element name: ${name}`);
   let out = `<${name}`;
   for (const [key, value] of Object.entries(attributes)) {
-    if (!NAME.test(key) || key.startsWith('on') || REFUSED.has(key)) {
+    if (!(NAME.test(key) || SVG_CAMEL.has(key)) || key.startsWith('on') || REFUSED.has(key)) {
       throw new RangeError(`Not an attribute the file writes: ${key}`);
     }
     if (value === undefined || value === false) continue;

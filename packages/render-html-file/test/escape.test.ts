@@ -167,6 +167,20 @@ describe('el, the one place markup is written', () => {
     );
   });
 
+  it('takes the three SVG attributes spelled in camel case, and no other', () => {
+    expect(
+      el(
+        'svg',
+        { viewBox: '0 0 10 10', preserveAspectRatio: 'none' },
+        el('circle', { pathLength: 100 }),
+      ),
+    ).toBe(
+      '<svg viewBox="0 0 10 10" preserveAspectRatio="none"><circle pathLength="100"></circle></svg>',
+    );
+    expect(() => el('p', { onClick: 'y' }, '')).toThrow(RangeError);
+    expect(() => el('p', { Style: 'y' }, '')).toThrow(RangeError);
+  });
+
   it('refuses style, srcdoc, formaction, srcset, and ping, as it refuses event handlers', () => {
     for (const key of ['style', 'srcdoc', 'formaction', 'srcset', 'ping', 'onload', 'onerror']) {
       expect(() => el('p', { [key]: 'x' }, ''), key).toThrow(RangeError);

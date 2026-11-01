@@ -164,6 +164,8 @@ The maintainer, 2026-11-01: "Maybe be cautious in dividing into acts until more 
 
 No acts, or exactly one: no act band and no act cards; the scenes are one run under a heading "The story", with the strip, pace, and everything else unchanged; the nav reads Shape · Characters · Scenes · Places · Threads. The progress sentence speaks of the whole ("The play is under way: …", "The script is written."), and a play has no interval unless one is marked (§5.1). The only act words a one-act play shows are its label, "A one-act play" (§5.1).
 
+**Call: early drafts keep the shape simple.** With acts marked but under 10 pages or 6 written scenes, there is no act band (small blocks of one scene each read as noise): the strip shows the acts as small "Act 1", "Act 2" markers above it, and the scenes stay one colour scheme (time of day, or one colour for a play). Act colours appear only with two acts or more; two acts take coral and ember, so they stay apart.
+
 ## 6. In progress or finished, and the gaps
 
 The reader should see at a glance what isn't written yet, drawn as **unfinished, not broken**: dashed outlines, quiet colour, and plain words.
