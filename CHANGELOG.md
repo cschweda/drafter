@@ -22,6 +22,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Two computers.** Opening a script, or coming back to Drafter after a while away, reads its drafts folder and cuts file and adds what another computer kept, through Dropbox, Google Drive, OneDrive, or any synced folder: every cut once, and every draft. If both computers started a Draft 04, both are kept ("Draft 04 (from another computer)", written as `Boca – Draft 04 (2).fountain`), and a draft file changed in another program is listed as "changed outside Drafter". Opening a draft file itself says "This is Draft 03 of Boca." and offers **Open Boca instead**.
 - **A help page, Drafts and cuts** (Help, and the desktop app's Help menu), in plain words.
 - 14 more trap documents, for hostile and damaged draft and cuts files (258 in all).
+- **An animated banner at the top of the README:** the script page fans out into the colored revision pages, once. It's an SVG with CSS only, so it plays on GitHub, and it holds still for anyone who asks their computer for less motion.
+
+### Changed
+
+- **Cuts replaces Deleted scenes**, in the More menu, the command palette ("deleted scenes" still finds it), the Drafter menu, History, and the phone's More. It keeps passages and Markdown sections as well as scenes, keeps them for good, and puts a cut back by its old neighbours' headings rather than from a snapshot.
+- Drafter's database gains two tables, `drafts` and `cuts`. Every script, snapshot, and setting from v0.23 is kept as it is, and a tab of v0.23 left open still reads it.
+- Drafter keeps a snapshot just before it starts a draft ("Before starting a draft") and before Restore as a new draft keeps your text as a draft, so cuts made just before are kept, with the draft they were made in.
+- The Saving and your browser help page's Deleted scenes section is now Drafts and Cuts, and points to the new page; Why Drafter and Technical details say where drafts and cuts are kept.
+
+### Removed
+
+- **Deleted scenes**, replaced by Cuts (above). Its tab, its command, and its pane are gone; the command palette's "deleted scenes" opens Cuts.
+- **The P and H keys** in the Deleted scenes list (Put back, and History of this scene). Each cut's Put back, Insert at cursor, and Copy are ordinary buttons in the Tab order.
+- **History of this scene from that list.** A cut is kept apart from the snapshots, so it has no scene history to open; History of this scene is still in a scene's menu in the Outline, the Cards, and the Structure strip, and in the command palette.
+- **Compare that version with now**, from the same list: Find in Cuts goes the other way, from Compare to the cut.
+
+### Fixed
+
+- **Nothing you cut ages out any more.** Deleted scenes could list a scene only while a snapshot still held it, so a scene cut months ago was lost once its last snapshot was thinned away. Cuts keeps every cut for good, with its own text.
+- **Markdown documents keep what you cut too.** Deleted scenes worked only for screenplays and stage plays.
 
 ## [0.23.3] - 2026-11-01
 
@@ -42,24 +62,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- **Cuts replaces Deleted scenes**, in the More menu, the command palette ("deleted scenes" still finds it), the Drafter menu, History, and the phone's More. It keeps passages and Markdown sections as well as scenes, keeps them for good, and puts a cut back by its old neighbours' headings rather than from a snapshot.
-- Drafter's database gains two tables, `drafts` and `cuts`. Every script, snapshot, and setting from v0.23 is kept as it is, and a tab of v0.23 left open still reads it.
-- Drafter keeps a snapshot just before it starts a draft ("Before starting a draft") and before Restore as a new draft keeps your text as a draft, so cuts made just before are kept, with the draft they were made in.
-- The Saving and your browser help page's Deleted scenes section is now Drafts and Cuts, and points to the new page; Why Drafter and Technical details say where drafts and cuts are kept.
 - The README is shorter, with a screenshot gallery; the roadmap and developer notes moved to docs/ROADMAP.md and docs/DEVELOPMENT.md.
 - The roadmap names **Story map** (v0.24.1) and adds **Drafter for Claude** (v0.24.2), a local MCP server so Claude or another AI app can read your scripts, drafts, and cuts.
-
-### Removed
-
-- **Deleted scenes**, replaced by Cuts (above). Its tab, its command, and its pane are gone; the command palette's "deleted scenes" opens Cuts.
-- **The P and H keys** in the Deleted scenes list (Put back, and History of this scene). Each cut's Put back, Insert at cursor, and Copy are ordinary buttons in the Tab order.
-- **History of this scene from that list.** A cut is kept apart from the snapshots, so it has no scene history to open; History of this scene is still in a scene's menu in the Outline, the Cards, and the Structure strip, and in the command palette.
-- **Compare that version with now**, from the same list: Find in Cuts goes the other way, from Compare to the cut.
-
-### Fixed
-
-- **Nothing you cut ages out any more.** Deleted scenes could list a scene only while a snapshot still held it, so a scene cut months ago was lost once its last snapshot was thinned away. Cuts keeps every cut for good, with its own text.
-- **Markdown documents keep what you cut too.** Deleted scenes worked only for screenplays and stage plays.
 
 ## [0.23.2] - 2026-11-01
 
