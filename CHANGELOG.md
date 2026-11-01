@@ -31,6 +31,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Technical details no longer says the app has no `v-html`: Drafter's own code has none, and the one library component that does, Nuxt UI's palette, has its label slot replaced with text. The palette test now also searches inside the tag, and says it pins this (security audit F5).
 - The README, What is Drafter?, Why Drafter, and Technical details say the web app updates when you reload, or the next time you open it after closing every Drafter tab, as a service worker does (security audit F10).
 - GitHub's private vulnerability reporting is on (turned on at the maintainer's request), so SECURITY.md, the README, and What is Drafter? name **Report a vulnerability** on the Security tab plainly, with the email beside it, and DEFERRED no longer lists it (security audit F1).
+- DEFERRED lists what the security audit left as known limits: HSTS is Netlify's default (F6), desktop updates are checked by SHA-512 but not signed (F8), what the drop grant still trusts, the advisories left in tooling, and Dependabot PRs running no CI.
 
 ## [0.24.0] - 2026-11-01
 
