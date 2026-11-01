@@ -151,6 +151,12 @@ async function exists(dir: FileSystemDirectoryHandle, name: string): Promise<boo
   }
 }
 
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  for (let i = 0; i < a.byteLength; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 async function writeWhole(handle: FileSystemFileHandle, bytes: Uint8Array): Promise<void> {
   const writable = await handle.createWritable();
   try {
@@ -193,8 +199,14 @@ export function webFolder(root: FileSystemDirectoryHandle): BesideFolder {
         name: string;
       };
       if (await exists(at.dir, at.name)) return 'exists';
-      await writeWhole(await at.dir.getFileHandle(at.name, { create: true }), bytes);
-      return 'written';
+      // The File System Access API has no exclusive create, and `move()` may replace a file of
+      // that name, so a temp file and a move can't close the gap either. So the file is read back:
+      // when another writer (another tab) wrote the same new name meanwhile, whichever text is
+      // left there is the one written, and the other is told `exists` and goes to `(2)`.
+      const handle = await at.dir.getFileHandle(at.name, { create: true });
+      await writeWhole(handle, bytes);
+      const there = new Uint8Array(await (await handle.getFile()).arrayBuffer());
+      return sameBytes(there, bytes) ? 'written' : 'exists';
     },
     async replace(rel, bytes) {
       const at = (await fileIn(root, rel, true)) as {
