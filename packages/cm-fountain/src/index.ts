@@ -1,12 +1,15 @@
 export { fountainKeymap } from './bindings';
-export { fountainCompletion, fountainCompletionSource } from './complete';
+export { type ClassicOptions, classic } from './classic';
+export { completionOverride, fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';
 export {
+  blocked,
   canMakeParenthetical,
   type ElementKind,
   type ElementStructure,
   elementHint,
   elementStructure,
+  elementTemplate,
   insertMark,
   insertPageBreak,
   MARK_REFUSED,
@@ -20,7 +23,12 @@ export {
 } from './elements';
 export { fountainFolding } from './fold';
 export { type FountainOptions, fountain } from './fountain';
-export { fountainDecorations, fountainHighlighting } from './highlight';
+export {
+  fountainDecorations,
+  fountainHighlighting,
+  type LineMark,
+  lineMarks,
+} from './highlight';
 export { barCue, cueMode, fountainInput } from './input';
 export {
   convertToAction,
@@ -58,4 +66,4 @@ export {
   stepSpellMark,
   unmarkWord,
 } from './spell';
-export { parsedDoc } from './state';
+export { appChange, parsedDoc } from './state';

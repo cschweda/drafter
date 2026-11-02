@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The editor package has the seams **Classic Mode** will use, with Fountain Mode pinned by a snapshot test so it can't change; nothing a writer sees is different.
+
 ### Added
 
 - The implementation plan for **Classic Mode** (`docs/plans/2026-11-02-classic-mode.md`), for v0.25.0, with the places the design needed changing against the real code.

@@ -1,5 +1,13 @@
-import { StateField } from '@codemirror/state';
+import { Annotation, type AnnotationType, StateField } from '@codemirror/state';
 import { type Doc, parse, type Region, reparse, type TextChange } from '@drafter/fountain';
+
+/**
+ * Marks a transaction as the app's own, not the writer's: a template block written, a fix applied,
+ * a module's changes, a file's text put in. These carry the same `input` user event typing does
+ * (that is how they take their place in the undo history), so what follows the writer's typing is
+ * told which they are.
+ */
+export const appChange: AnnotationType<boolean> = Annotation.define<boolean>();
 
 /**
  * The parse of the editor's text: `parse` at creation, `reparse(doc, changes)` on every change

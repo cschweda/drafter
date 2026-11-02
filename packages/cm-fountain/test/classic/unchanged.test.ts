@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { CompletionContext } from '@codemirror/autocomplete';
 import { EditorState, type StateCommand } from '@codemirror/state';
 import {
+  completionOverride,
   fountainCompletionSource,
   fountainEnter,
   fountainInput,
@@ -73,6 +74,10 @@ function offered(doc: string, pos: number, explicit: boolean): string {
 }
 
 describe('Fountain Mode is unchanged', () => {
+  it('has no completion override', () => {
+    expect(stateAt('', 0).facet(completionOverride)).toBeNull();
+  });
+
   it.each(FILES)('the decorations of %s', (path) => {
     const doc = read(path);
     const lines = decorate(stateAt(doc, 0)).map((d) => `${d.from}-${d.to} ${d.class}`);

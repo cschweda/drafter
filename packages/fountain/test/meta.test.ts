@@ -1,4 +1,4 @@
-import { type DrafterMeta, parse, setMeta, type TextChange } from '@drafter/fountain';
+import { type DrafterMeta, metadataSpan, parse, setMeta, type TextChange } from '@drafter/fountain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
@@ -210,5 +210,24 @@ describe('setMeta', () => {
     expect(written(source, { template: 'stage-play-standard' })).toBe(source);
     // The error that tells the writer to close it is still reported.
     expect(parse(source).diagnostics.map((d) => d.code)).toContain('unclosed-boneyard');
+  });
+});
+
+describe('metadataSpan', () => {
+  it('metadataSpan is the block doc.meta reads', () => {
+    const block = '/* drafter\n{"v":1,"template":"t"}\n*/';
+    const source = `${script}\n/* a note to self */\n\n${block}\n`;
+    const doc = parse(source);
+    expect(doc.meta?.template).toBe('t');
+    const span = metadataSpan(doc);
+    expect(span && source.slice(span.from, span.to)).toBe(block);
+  });
+
+  it('null for a damaged block', () => {
+    expect(metadataSpan(parse(`${script}\n/* drafter\n{not json\n*/\n`))).toBeNull();
+  });
+
+  it('null with no block', () => {
+    expect(metadataSpan(parse(script))).toBeNull();
   });
 });

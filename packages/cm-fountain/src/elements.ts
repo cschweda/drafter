@@ -110,6 +110,17 @@ export const elementStructure = Facet.define<() => ElementStructure, () => Eleme
 
 const structureIn = (state: EditorState) => state.facet(elementStructure)();
 
+/**
+ * The template, for what needs more than the structure. `fountain({ template })` provides it, and
+ * a state without it has null. A function, as the template can change.
+ */
+export const elementTemplate: Facet<() => Template, (() => Template) | null> = Facet.define<
+  () => Template,
+  (() => Template) | null
+>({
+  combine: (values) => values[0] ?? null,
+});
+
 /** Sent by a command that leaves the cursor where completion has something to offer. */
 const askCompletion = StateEffect.define<null>();
 
@@ -185,7 +196,7 @@ interface Here {
 }
 
 /** Where no command acts: the title page, and a note or boneyard. */
-function blocked(state: EditorState, pos: number): 'title page' | 'region' | null {
+export function blocked(state: EditorState, pos: number): 'title page' | 'region' | null {
   const doc = state.field(parsedDoc);
   const line = state.doc.lineAt(pos);
   const { titlePage } = doc;

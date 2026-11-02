@@ -6,15 +6,16 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import type {
-  Block,
-  BlockKind,
-  Doc,
-  InlineRun,
-  Line,
-  Region,
-  Span,
-  TitleField,
+import {
+  type Block,
+  type BlockKind,
+  type Doc,
+  type InlineRun,
+  type Line,
+  type Region,
+  type Span,
+  sceneNumber,
+  type TitleField,
 } from '@drafter/fountain';
 import { parsedDoc } from './state';
 
@@ -209,6 +210,7 @@ const COLON = 58;
 const ASTERISK = 42;
 const UNDERSCORE = 95;
 const BACKSLASH = 92;
+const NUMBER_SIGN = 35;
 const SPACE = /\s/;
 
 /** Whitespace as the parser trims it, so what it leaves out of the text is what stays unmarked. */
@@ -217,36 +219,29 @@ function isSpace(raw: string, at: number): boolean {
   return (code <= 32 || code >= 127) && SPACE.test(raw.charAt(at));
 }
 
-/**
- * The marks in one line that starts at `from`: the key of a title field, the styles of its runs,
- * and `cm-f-marker` on every other character that is neither whitespace nor in a note or boneyard
- * (the forced markers, `#`, `=`, emphasis markers, scene numbers, and escapes). The notes and
- * boneyard get their own marks, once each, from `fountainDecorations`.
- */
-function decorateLine(
-  out: Range<Decoration>[],
+/** One stretch of a line that the parser reads and doesn't print. */
+export interface LineMark {
+  from: number;
+  to: number;
+  kind: 'mark' | 'scene_number';
+}
+
+/** What each character of a line is, and where a title field's key is. */
+function claims(
   from: number,
   raw: string,
   runs: readonly InlineRun[],
   regions: readonly Region[],
   hasKey: boolean,
-): void {
+): { chars: Uint8Array; key: Span | null } {
   const chars = new Uint8Array(raw.length);
   for (const { span } of regions) {
     chars.fill(CLAIMED, Math.max(span.from - from, 0), Math.max(span.to - from, 0));
   }
-  if (hasKey) {
-    const key = titleKey(raw, chars, from);
-    if (key) {
-      chars.fill(CLAIMED, key.from - from, key.to - from);
-      out.push(TITLE_KEY.range(key.from, key.to));
-    }
-  }
+  const key = hasKey ? titleKey(raw, chars, from) : null;
+  if (key) chars.fill(CLAIMED, key.from - from, key.to - from);
   for (const run of runs) {
     const { span } = run;
-    if (run.bold) out.push(BOLD.range(span.from, span.to));
-    if (run.italic) out.push(ITALIC.range(span.from, span.to));
-    if (run.underline) out.push(UNDERLINE.range(span.from, span.to));
     let printed = 0;
     for (let at = span.from - from; at < span.to - from; at++) {
       if (chars[at] !== CLAIMED) {
@@ -260,6 +255,41 @@ function decorateLine(
       releaseUnprinted(chars, raw, span.from - from, span.to - from, run.text);
     }
   }
+  return { chars, key };
+}
+
+/**
+ * Where a scene number starts in a line, by the parser's own rule, on the line without its notes
+ * and boneyard. Only a scene heading leaves a trailing `#…#` out of what it prints, so a number
+ * with a printed character in it is some other line's text, and no number.
+ */
+function numberStart(raw: string, chars: Uint8Array): number | null {
+  let end = raw.length;
+  while (end > 0 && (chars[end - 1] === CLAIMED || isSpace(raw, end - 1))) end--;
+  if (end === 0 || chars[end - 1] !== UNCLAIMED || raw.charCodeAt(end - 1) !== NUMBER_SIGN) {
+    return null;
+  }
+  const kept: number[] = [];
+  let text = '';
+  for (let at = 0; at < end; at++) {
+    if (chars[at] !== CLAIMED) {
+      kept.push(at);
+      text += raw.charAt(at);
+    }
+  }
+  const found = sceneNumber(text);
+  if (!found) return null;
+  const open = kept.length - found.number.length - 2;
+  for (let i = open; i < kept.length; i++) {
+    if (chars[kept[i] as number] === PRINTED) return null;
+  }
+  return kept[open] as number;
+}
+
+/** Every character that is neither whitespace, printed, nor claimed: a mark or a scene number. */
+function marksIn(from: number, raw: string, chars: Uint8Array): LineMark[] {
+  const number = numberStart(raw, chars);
+  const marks: LineMark[] = [];
   for (let at = 0; at < raw.length; ) {
     if (chars[at] !== UNCLAIMED || isSpace(raw, at)) {
       at++;
@@ -267,8 +297,49 @@ function decorateLine(
     }
     const start = at;
     while (at < raw.length && chars[at] === UNCLAIMED && !isSpace(raw, at)) at++;
-    out.push(MARKER.range(from + start, from + at));
+    const kind = number !== null && start >= number ? 'scene_number' : 'mark';
+    marks.push({ from: from + start, to: from + at, kind });
   }
+  return marks;
+}
+
+/**
+ * The stretches of one line that starts at `from` which the parser reads and doesn't print: the
+ * forced markers, `#`, `=`, emphasis markers, and escapes (`mark`), and a scene number
+ * (`scene_number`). `regions` are the notes and boneyard that touch the line, and `hasKey` says
+ * the line starts a title field; neither of those is a mark.
+ */
+export function lineMarks(
+  from: number,
+  raw: string,
+  runs: readonly InlineRun[],
+  regions: readonly Region[],
+  hasKey: boolean,
+): LineMark[] {
+  return marksIn(from, raw, claims(from, raw, runs, regions, hasKey).chars);
+}
+
+/**
+ * The marks in one line that starts at `from`: the key of a title field, the styles of its runs,
+ * and `cm-f-marker` on each of its `lineMarks`, whichever kind. The notes and boneyard get their
+ * own marks, once each, from `fountainDecorations`.
+ */
+function decorateLine(
+  out: Range<Decoration>[],
+  from: number,
+  raw: string,
+  runs: readonly InlineRun[],
+  regions: readonly Region[],
+  hasKey: boolean,
+): void {
+  const { chars, key } = claims(from, raw, runs, regions, hasKey);
+  if (key) out.push(TITLE_KEY.range(key.from, key.to));
+  for (const { span, bold, italic, underline } of runs) {
+    if (bold) out.push(BOLD.range(span.from, span.to));
+    if (italic) out.push(ITALIC.range(span.from, span.to));
+    if (underline) out.push(UNDERLINE.range(span.from, span.to));
+  }
+  for (const mark of marksIn(from, raw, chars)) out.push(MARKER.range(mark.from, mark.to));
 }
 
 /**

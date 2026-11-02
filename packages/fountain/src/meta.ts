@@ -1,4 +1,4 @@
-import type { Doc, DrafterMeta, TextChange } from './types';
+import type { Doc, DrafterMeta, Span, TextChange } from './types';
 
 const OPENER = '/* drafter';
 
@@ -18,11 +18,11 @@ function jsonOf(meta: DrafterMeta): string {
 }
 
 /**
- * Where the existing block is: the `/* drafter … *\/` boneyard that `parse` reads as `doc.meta`,
- * the last block and alone in it. Only the boneyard itself, so the blank lines and indent around
- * it stay as they were.
+ * The `/* drafter … *\/` boneyard that `parse` reads as `doc.meta`, the last block and alone in it,
+ * or null when there is none. Only the boneyard itself, so the blank lines and indent around it
+ * stay as they were.
  */
-function existingBlock(doc: Doc): { from: number; to: number } | null {
+export function metadataSpan(doc: Doc): Span | null {
   if (doc.meta === null) return null;
   const last = doc.blocks[doc.blocks.length - 1];
   if (last?.kind !== 'boneyard') return null;
@@ -56,7 +56,7 @@ export function setMeta(doc: Doc, meta: DrafterMeta): TextChange[] {
   const nl = lineBreakOf(source);
   const block = `${OPENER}${nl}${json}${nl}*/`;
 
-  const existing = existingBlock(doc);
+  const existing = metadataSpan(doc);
   if (existing) {
     // The same settings, however the block is laid out, are left as they are.
     if (jsonOf(doc.meta as DrafterMeta) === json) return [];

@@ -6,7 +6,7 @@ import {
   insertCompletionText,
   pickedCompletion,
 } from '@codemirror/autocomplete';
-import type { EditorState, Extension, Line } from '@codemirror/state';
+import { type EditorState, type Extension, Facet, type Line } from '@codemirror/state';
 import { type Block, characters, type Doc, locations } from '@drafter/fountain';
 import { markLabels } from '@drafter/notes';
 import { parsedDoc } from './state';
@@ -43,6 +43,20 @@ interface Target {
 }
 
 /**
+ * What answers in place of `fountainCompletionSource`, for a mode with its own lists. With none,
+ * nothing about completion changes.
+ */
+export const completionOverride: Facet<
+  (context: CompletionContext) => CompletionResult | null,
+  ((context: CompletionContext) => CompletionResult | null) | null
+> = Facet.define<
+  (context: CompletionContext) => CompletionResult | null,
+  ((context: CompletionContext) => CompletionResult | null) | null
+>({
+  combine: (values) => values[0] ?? null,
+});
+
+/**
  * Completes character names, locations, times, transitions, and section titles (technical design
  * §3.4). Typing opens a list once what is being completed has two characters; asking for one
  * (`context.explicit`) opens it at any length. What is offered is matched against the start of the
@@ -58,6 +72,8 @@ interface Target {
  */
 export function fountainCompletionSource(context: CompletionContext): CompletionResult | null {
   const { state, pos, explicit } = context;
+  const override = state.facet(completionOverride);
+  if (override) return override(context);
   const doc = state.field(parsedDoc);
   for (const { from, labels, mark } of targets(state, pos, explicit)) {
     const query = state.sliceDoc(from, pos);
@@ -99,7 +115,7 @@ export function fountainCompletion(): Extension {
  * may already read it as a cue, a heading, or a section: it must not be a label, or the text
  * typed would always equal one.
  */
-function withoutLine(doc: Doc, line: Line): Doc {
+export function withoutLine(doc: Doc, line: Line): Doc {
   const blocks = doc.blocks.filter(
     (block) => block.span.to < line.from || block.span.from > line.to,
   );
@@ -112,7 +128,7 @@ function withoutLine(doc: Doc, line: Line): Doc {
  * with a longer one selected, so that Enter lengthened the name instead of going on. To reach the
  * longer name the writer types another letter.
  */
-function optionsAfter(query: string, labels: readonly string[]): Completion[] {
+export function optionsAfter(query: string, labels: readonly string[]): Completion[] {
   const start = query.toLowerCase();
   const options: Completion[] = [];
   for (const label of labels) {
@@ -261,7 +277,7 @@ const isUpper = (name: string) => /\p{Lu}/u.test(name) && !/\p{Ll}/u.test(name);
  * the number of cues. Without an `@` only the names that read as a cue alone are offered: a name
  * with lower case, or with no case at all, would not make the line a cue.
  */
-function names(doc: Doc, lineFrom: number, forced: boolean): string[] {
+export function names(doc: Doc, lineFrom: number, forced: boolean): string[] {
   // `characters` gives the last cue in the whole script, and the ranking wants the last one
   // before the cursor, so the cues before it are walked once.
   const lastCue = new Map<string, number>();
@@ -298,7 +314,7 @@ function usedThenStock(used: Map<string, number>, stock: readonly string[]): str
   return labels;
 }
 
-const times = (doc: Doc) =>
+export const times = (doc: Doc) =>
   usedThenStock(
     tally(doc, (block) =>
       block.kind === 'scene_heading' && block.sem.time ? [block.sem.time] : NONE,
@@ -306,14 +322,14 @@ const times = (doc: Doc) =>
     TIMES,
   );
 
-const transitions = (doc: Doc) =>
+export const transitions = (doc: Doc) =>
   usedThenStock(
     tally(doc, (block) => (block.kind === 'transition' ? [block.sem.text] : NONE)),
     TRANSITIONS,
   );
 
 /** Each extension on its own, though a cue may have several: `(V.O.) (SUBTITLED)` is two. */
-const extensions = (doc: Doc) =>
+export const extensions = (doc: Doc) =>
   usedThenStock(
     tally(doc, (block) =>
       block.kind === 'character' ? (block.sem.extension?.match(/\([^)]*\)/g) ?? NONE) : NONE,
@@ -322,6 +338,6 @@ const extensions = (doc: Doc) =>
   );
 
 /** The titles of the sections, each once, in the order of the script. */
-const sectionTitles = (doc: Doc) => [
+export const sectionTitles = (doc: Doc) => [
   ...tally(doc, (block) => (block.kind === 'section' ? [block.sem.text] : NONE)).keys(),
 ];

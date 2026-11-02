@@ -3,7 +3,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EditorState } from '@codemirror/state';
 import * as api from '@drafter/cm-fountain';
-import { fountainDecorations, fountainHighlighting, parsedDoc } from '@drafter/cm-fountain';
+import {
+  fountainDecorations,
+  fountainHighlighting,
+  type LineMark,
+  lineMarks,
+  parsedDoc,
+} from '@drafter/cm-fountain';
+import { parse } from '@drafter/fountain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { fountainScript } from '../../../fixtures/generators/fountain';
@@ -627,5 +634,74 @@ describe('fountainHighlighting', () => {
     });
     expect(state.field(parsedDoc).blocks).toHaveLength(1);
     expect(found(fountainDecorations(state, [{ from: 0, to: 15 }]))).toHaveLength(1);
+  });
+});
+
+describe('lineMarks', () => {
+  const marksIn = (doc: ReturnType<typeof parse>): LineMark[] =>
+    doc.blocks.flatMap((block) =>
+      block.lines.flatMap((line) =>
+        lineMarks(line.span.from, line.raw, line.inline, doc.regions, false),
+      ),
+    );
+  /** The first line's marks, each as `[its text, its kind]`. */
+  const marks = (source: string) =>
+    marksIn(parse(source)).map(({ from, to, kind }) => [source.slice(from, to), kind]);
+
+  it('lineMarks: scene numbers are their own kind', () => {
+    expect(marks('INT. X #12#')).toEqual([['#12#', 'scene_number']]);
+  });
+
+  it('a forced heading has both kinds', () => {
+    expect(marks('.THE WELL #3A#')).toEqual([
+      ['.', 'mark'],
+      ['#3A#', 'scene_number'],
+    ]);
+  });
+
+  it('a note inside a scene number leaves the number its kind', () => {
+    expect(marks('INT. X #1[[a note]]2#')).toEqual([
+      ['#1', 'scene_number'],
+      ['2#', 'scene_number'],
+    ]);
+  });
+
+  it('a stray ** is no mark', () => {
+    expect(marks('She waits ** by the door.')).toEqual([]);
+  });
+
+  it('a forced @ and a closing < are marks', () => {
+    expect(marks('@June')).toEqual([['@', 'mark']]);
+    expect(marks('> THE END <')).toEqual([
+      ['>', 'mark'],
+      ['<', 'mark'],
+    ]);
+  });
+
+  it('a # that closes other text is no scene number', () => {
+    expect(marks('#1#')).toEqual([['#', 'mark']]);
+    expect(marks('She waits #12#')).toEqual([]);
+    expect(marks('### ')).toEqual([['###', 'mark']]);
+  });
+
+  it('gives a scene number only on a scene heading', () => {
+    fc.assert(
+      fc.property(fountainScript, (source) => {
+        const doc = parse(source);
+        for (const block of doc.blocks) {
+          for (const line of block.lines) {
+            const { from, raw, inline } = {
+              from: line.span.from,
+              raw: line.raw,
+              inline: line.inline,
+            };
+            const numbered = lineMarks(from, raw, inline, doc.regions, false).some(
+              (mark) => mark.kind === 'scene_number',
+            );
+            if (numbered) expect(block.kind).toBe('scene_heading');
+          }
+        }
+      }),
+    );
   });
 });

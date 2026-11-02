@@ -1,14 +1,9 @@
-import { Annotation, type Extension, type Transaction } from '@codemirror/state';
+import type { Extension, Transaction } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { appChange } from '@drafter/cm-fountain';
 import { isApple } from '../commands/keys';
 
-/**
- * Marks a transaction as the app's own, not the writer's: a template block written, a fix applied,
- * a module's changes, a file's text put in. These carry the same `input` user event typing does
- * (that is how they take their place in the undo history), so typewriter scrolling is told which
- * they are.
- */
-export const appChange = Annotation.define<boolean>();
+export { appChange };
 
 /**
  * Whether a transaction is the writer's own typing, deleting, pasting, undoing, or cursor move,

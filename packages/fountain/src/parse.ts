@@ -126,7 +126,7 @@ function readKeyLine(text: string): { key: string; value: string } | null {
  * Finds a trailing scene number such as ` #12A#`: its text, and how many
  * characters it occupies at the end of `text`, counting the spaces before it.
  */
-function sceneNumber(text: string): { number: string; length: number } | null {
+export function sceneNumber(text: string): { number: string; length: number } | null {
   if (text.length < 3 || !text.endsWith('#')) return null;
   const open = text.lastIndexOf('#', text.length - 2);
   if (open === -1) return null;
