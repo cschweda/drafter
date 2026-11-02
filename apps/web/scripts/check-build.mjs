@@ -70,6 +70,10 @@ export const REQUIRED_FILES = [
   'fonts/inter-tight/InterTight-Italic.ttf',
   'fonts/inter-tight/InterTight-SemiBold.ttf',
   'fonts/inter-tight/InterTight-SemiBoldItalic.ttf',
+  'fonts/story-map/Anton-Regular.woff2',
+  'fonts/story-map/Archivo-Regular.woff2',
+  'fonts/story-map/Archivo-SemiBold.woff2',
+  'fonts/story-map/CourierPrime-Regular.woff2',
 ];
 
 /**

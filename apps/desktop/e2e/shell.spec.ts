@@ -36,6 +36,7 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
         files: Object.keys(bridge?.files ?? {}).sort(),
         modules: Object.keys(bridge?.modules ?? {}).sort(),
         updates: Object.keys(bridge?.updates ?? {}).sort(),
+        editor: Object.keys(bridge?.editor ?? {}).sort(),
         // For About Drafter: plain strings, nothing to call.
         runtime: Object.entries(bridge?.runtime ?? {}).map(([k, v]) => [k, typeof v]),
         keys: Object.keys(bridge ?? {}).sort(),
@@ -61,6 +62,8 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
     // The modules folder: its list, and the origins agreed to for a module. Nothing more.
     modules: ['list', 'setNetwork'],
     updates: ['check', 'install', 'onAvailable', 'openReleasePage', 'setEnabled'],
+    // The right-click menu's story-map items: which speech is under a click, and the mark chosen.
+    editor: ['onMarkSpeech', 'onSpeechAt'],
     runtime: [
       ['arch', 'string'],
       ['electron', 'string'],
@@ -68,6 +71,7 @@ test('opens the editor with the sample on a first run', async ({ desktop }) => {
     ],
     keys: [
       'backToEditor',
+      'editor',
       'files',
       'menu',
       'modules',

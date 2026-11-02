@@ -78,6 +78,12 @@ function chooseOptions() {
   commandById('export-options')?.run();
 }
 
+/** The story map asks a few things first, in its own dialog (story-map design §7). */
+function chooseStoryMap() {
+  close(true);
+  commandById('export-story-map')?.run();
+}
+
 /** The treatment asks a question first, in its own dialog (Phase 2 design §6.4). */
 function chooseTreatment() {
   close(true);
@@ -127,6 +133,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <!-- The same reflowed for an e-reader or a tablet: beside the page (design §10a). -->
       <button type="button" class="item" @click="choose('epub')">
         <UIcon name="i-lucide-book" class="icon" />EPUB (.epub)
+      </button>
+      <!-- A picture of a script for a non-writer: one page, after its dialog (story-map design §1.1). -->
+      <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseStoryMap">
+        <UIcon name="i-lucide-map" class="icon" />Story map (.html)…
       </button>
       <button v-if="kind === 'markdown'" type="button" class="item" @click="choose('md')">
         <UIcon name="i-lucide-file-text" class="icon" />Markdown (.md)

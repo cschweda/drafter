@@ -1,7 +1,7 @@
 // Copies the files drafter.dev serves as-is into `public/`: Courier Prime, the
 // same TTF files the PDF embeds, so the screen and the printed page share
 // their metrics; Inter Tight's four static styles, which a Markdown document's
-// PDF embeds (the export worker fetches them); the brand's icons, logos, and share image; and the
+// PDF embeds (the export worker fetches them); the story map's four WOFF2 faces (the same); the brand's icons, logos, and share image; and the
 // spellchecker's dictionaries with the licence of each package it uses, served
 // verbatim (the dictionaries' UKACD notice asks for its text "verbatim"). The
 // copies are ignored by Git, so `brand/`, `packages/render-pdf/fonts/`, and the
@@ -15,6 +15,13 @@ import { fileURLToPath } from 'node:url';
 const STYLES = ['Regular', 'Bold', 'Italic', 'BoldItalic'];
 /** Inter Tight's styles in `packages/render-pdf/fonts/inter-tight/` (render-pdf's DOCUMENT_FONT_FILES). */
 const DOCUMENT_STYLES = ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic'];
+/** The story map's faces in `packages/story-map/fonts/` (story-map's STORY_MAP_FONT_FILES). */
+const STORY_MAP_FONTS = [
+  'Anton-Regular.woff2',
+  'Archivo-Regular.woff2',
+  'Archivo-SemiBold.woff2',
+  'CourierPrime-Regular.woff2',
+];
 const BRAND = [
   'favicon.svg',
   'favicon.ico',
@@ -46,6 +53,11 @@ export const ASSETS = [
   // The story map's two other typefaces' licences (its fonts are inside each story map it makes).
   { from: 'packages/story-map/fonts/OFL-Anton.txt', to: 'fonts/anton/OFL.txt' },
   { from: 'packages/story-map/fonts/OFL-Archivo.txt', to: 'fonts/archivo/OFL.txt' },
+  // The story map's four faces, which the export worker fetches and embeds in each page.
+  ...STORY_MAP_FONTS.map((name) => ({
+    from: `packages/story-map/fonts/${name}`,
+    to: `fonts/story-map/${name}`,
+  })),
   ...BRAND.map((name) => ({ from: `brand/${name}`, to: name })),
 ];
 

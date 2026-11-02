@@ -5,6 +5,7 @@ export { parse } from './parse';
 export { print } from './print';
 export { blockAt, characters, locations } from './query';
 export { reparse } from './reparse';
+export { setTitleField } from './title-edit';
 export type {
   Block,
   BlockKind,

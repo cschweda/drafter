@@ -36,6 +36,14 @@ export const CHANNELS = {
   menuCommands: 'drafter:menu:commands',
   /** main → preload: the id of the command a menu item stands for, chosen in the menu bar. */
   menuRun: 'drafter:menu:run',
+  /**
+   * The right-click menu's story-map items (context-menu.ts). main → preload: `(id, x, y)`, which
+   * speech is under the click; preload → main: `(id, at)`, its editor offset or null; main →
+   * preload: `(at, 'quote' | 'no-quote')`, the item chosen.
+   */
+  editorSpeechAt: 'drafter:editor:speech-at',
+  editorSpeechReply: 'drafter:editor:speech-reply',
+  editorMarkSpeech: 'drafter:editor:mark-speech',
   /** preload → main: whether the page answers close requests (`true` once it listens, `false` when it stops). */
   closeReady: 'drafter:close:ready',
   /** main → preload: `(id, 'state' | 'save' | 'flush')`: a question for the page before the window closes. */

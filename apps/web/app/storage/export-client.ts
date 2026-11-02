@@ -12,13 +12,40 @@ function workerOf(): Worker {
   return worker;
 }
 
+/** The request the worker is on, until it answers: the next one waits its turn. */
+let inFlight: Promise<unknown> | undefined;
+
 /**
  * Renders `request` in the worker: the file, and the characters its fonts lack (only a Markdown
  * PDF names any). Rejects with the worker's message if the export failed, or if the worker could
  * not be made or died (it is made again next time). `onProgress` hears how far it is as it goes
- * (0 to 1, or null while the worker can't say), before the reply.
+ * (0 to 1, or null while the worker can't say), before the reply. One request at a time: the worker
+ * answers in order but every listener hears every reply, so a second request (the story map
+ * dialog's picks while an export runs) waits for the first one's answer; a lone one goes at once.
  */
 export function renderExport(
+  request: ExportRequest,
+  onProgress?: (fraction: number | null) => void,
+): Promise<{ data: Uint8Array | string; missing: string[] }> {
+  const before = inFlight;
+  const mine = before
+    ? before.then(
+        () => send(request, onProgress),
+        () => send(request, onProgress),
+      )
+    : send(request, onProgress);
+  const settled = mine.then(
+    () => {},
+    () => {},
+  );
+  inFlight = settled;
+  void settled.then(() => {
+    if (inFlight === settled) inFlight = undefined;
+  });
+  return mine;
+}
+
+function send(
   request: ExportRequest,
   onProgress?: (fraction: number | null) => void,
 ): Promise<{ data: Uint8Array | string; missing: string[] }> {

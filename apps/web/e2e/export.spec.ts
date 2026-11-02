@@ -10,8 +10,9 @@ import { paginate } from '@drafter/layout';
 import { renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
 import { FONT_FILES } from '@drafter/render-pdf';
 import { builtins, type Template } from '@drafter/templates';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { fileNameFor } from '../app/storage/text';
+import { openExported } from './exported';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
 import { chooseExport, setText } from './modules';
 
@@ -664,6 +665,7 @@ test.describe('export options', () => {
       'PDF',
       'HTML (.html)',
       'EPUB (.epub)',
+      'Story map (.html)…',
       'Plain text (.txt)',
       'Final Draft (.fdx)',
       'Markdown (.md)',
@@ -1118,63 +1120,6 @@ test.describe('a script as Markdown', () => {
     await expect(page).toHaveTitle('The Call — Drafter');
   });
 });
-
-/** Where an exported HTML file is opened: an address no server answers, which the test answers. */
-const OPENED_AT = 'http://exported.drafter.test/file.html';
-
-/**
- * Opens `html` in a page of `context` as a reader would open the file, with every other request
- * refused, and answers what was asked for besides the file (a `data:` font is in the file, and is
- * no request).
- */
-async function openExported(context: BrowserContext, html: string, { script = true } = {}) {
-  const asked: string[] = [];
-  context.on('request', (request) => {
-    if (!request.url().startsWith('data:')) asked.push(request.url());
-  });
-  await context.route('**/*', (route) =>
-    route.request().url() === OPENED_AT
-      ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html })
-      : route.abort(),
-  );
-  // Anything the file's Content-Security-Policy refused (its own style or script among them),
-  // so a blocked resource can't pass unnoticed: the event, and the console's word for it. Firefox
-  // asks for the address's /favicon.ico itself, and the policy refuses it: that one is the
-  // browser's, not the file's (a file opened from disk has no such address).
-  if (script) {
-    await context.addInitScript(() => {
-      const seen: string[] = [];
-      (window as unknown as { cspSeen: string[] }).cspSeen = seen;
-      document.addEventListener('securitypolicyviolation', (event) => {
-        if (!event.blockedURI.endsWith('/favicon.ico')) {
-          seen.push(`${event.violatedDirective} ${event.blockedURI}`);
-        }
-      });
-    });
-  }
-  const page = await context.newPage();
-  const said: string[] = [];
-  page.on('console', (message) => {
-    const text = message.text();
-    if (/content[- ]security[- ]policy|\bCSP\b/i.test(text) && !text.includes('favicon.ico')) {
-      said.push(text);
-    }
-  });
-  await page.goto(OPENED_AT);
-  // With JavaScript off there is nothing to evaluate in (Firefox waits for ever).
-  if (script) await page.evaluate(() => document.fonts.ready);
-  return {
-    page,
-    others: () => asked.filter((url) => url !== OPENED_AT),
-    /** What the policy refused, as events and console messages; [] with JavaScript off. */
-    refused: async () => [
-      ...(script
-        ? await page.evaluate(() => (window as unknown as { cspSeen?: string[] }).cspSeen ?? [])
-        : []),
-      ...said,
-    ],
-  };
-}
 
 test.describe('Export as HTML', () => {
   test.beforeEach(async ({ page }) => {

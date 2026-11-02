@@ -263,7 +263,16 @@ describe('checking the files the build must have', () => {
     for (const style of ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic']) {
       expect(REQUIRED_FILES).toContain(`fonts/inter-tight/InterTight-${style}.ttf`);
     }
-    expect(REQUIRED_FILES).toHaveLength(16);
+    // The story map's four faces, which its export fetches and embeds.
+    for (const face of [
+      'Anton-Regular',
+      'Archivo-Regular',
+      'Archivo-SemiBold',
+      'CourierPrime-Regular',
+    ]) {
+      expect(REQUIRED_FILES).toContain(`fonts/story-map/${face}.woff2`);
+    }
+    expect(REQUIRED_FILES).toHaveLength(20);
   });
 
   test('passes when every one is there', async () => {

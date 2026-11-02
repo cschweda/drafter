@@ -150,6 +150,34 @@ describe('menuTemplate', () => {
     expect(labelOf(items.at(-1) as MenuItemConstructorOptions)).toBe('Export options…');
   });
 
+  test('lists Story map… in File → Export after EPUB, and the story map’s two line commands in Edit', () => {
+    const more = [
+      cmd('export-epub', 'File', 'Export as EPUB'),
+      cmd('export-story-map', 'File', 'Export as Story map…'),
+      cmd('export-options', 'File', 'Export options…'),
+      cmd('dual-dialogue', 'Edit', 'Dual dialogue'),
+      cmd('story-map-use-line', 'Edit', 'Use in story map'),
+      cmd('story-map-never-line', 'Edit', 'Never use in story map'),
+      cmd('mark-setup', 'Edit', 'Mark a setup'),
+      cmd('markdown-list', 'Edit', 'Markdown: List'),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...more], () => {}, { platform: 'linux' }));
+    const exportMenu = submenu(m.File).find((i) => labelOf(i) === 'Export');
+    const items = submenu(exportMenu).filter((i) => i.type !== 'separator');
+    const at = items.findIndex((i) => i.id === 'export-epub');
+    expect(items[at + 1]?.id).toBe('export-story-map');
+    expect(labelOf(items[at + 1] as MenuItemConstructorOptions)).toBe('Story map…');
+    const edit = submenu(m.Edit).map((i) => i.id ?? i.type);
+    const use = edit.indexOf('story-map-use-line');
+    expect(use).toBeGreaterThan(edit.indexOf('dual-dialogue'));
+    expect(edit[use + 1]).toBe('story-map-never-line');
+    expect(edit[use - 1]).toBe('separator');
+    // Their own section, after the Fountain commands: before Markdown, never with the leftovers.
+    expect(edit[use + 2]).toBe('separator');
+    expect(use).toBeLessThan(edit.indexOf('mark-setup'));
+    expect(edit.indexOf('markdown-list')).toBe(-1);
+  });
+
   test('puts the spelling commands in Edit and Go', () => {
     const spelling = [
       cmd('check-spelling', 'Edit', 'Check spelling'),

@@ -75,14 +75,18 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
 // Final Draft and Markdown commands are off in the other kind, and the palette hides them; here
 // the other kind's items are left out.)
 const exportIds = computed(() =>
-  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].map(
-    (kind) => `export-${kind}`,
+  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
+    // A script's story map follows its EPUB (story-map design §1.1).
+    kind === 'epub' && editor.kind.value !== 'markdown'
+      ? [`export-${kind}`, 'export-story-map']
+      : [`export-${kind}`],
   ),
 );
 const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',
   'export-html': 'i-lucide-globe',
   'export-epub': 'i-lucide-book',
+  'export-story-map': 'i-lucide-map',
   'export-md': 'i-lucide-file-output',
   'export-txt': 'i-lucide-file-type',
   'export-fdx': 'i-lucide-file-code',

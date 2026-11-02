@@ -40,6 +40,8 @@ A desktop `FileAccess` (`apps/web/app/storage/files.ts` is the only seam) replac
 
 The app menu bar (File, Edit, View, Go, Help; on macOS the app menu too) is built from the same command data the palette and the Keyboard shortcuts page use (`app/commands/data.ts`), so every menu item runs its registered command and shows its keys. The in-page Drafter menu stays. Global keys that the OS menu owns (Save, Open, New) go through the menu, never twice.
 
+File → Export lists every export command, in the palette's order (PDF, Markdown, HTML, EPUB, **Story map…**, plain text, Final Draft, treatment), then Export options…. Edit has **Use in story map** and **Never use in story map** in their own section after the Fountain commands (v0.24.1). The editor's right-click menu is spelling, then those two on a speech (main asks the page which speech is under the click, `drafter:editor:speech-at`, and shows them only when it answers within 200 ms), then Cut, Copy, Paste, and Select All.
+
 ## 5. Closing and the recovery copy
 
 Closing the window with changes not in a file asks first, in a native dialog ("Save", "Don't Save", "Cancel"), using the same `dirty` state as the web's leave warning. The recovery copy lives in the app's profile and is kept on quit.

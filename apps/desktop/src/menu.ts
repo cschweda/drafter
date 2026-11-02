@@ -151,6 +151,8 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: prefix('emphasis-'), submenu: 'Emphasis', strip: /^Emphasis: / },
     { pick: prefix('make-'), submenu: 'Force', strip: /^Force / },
     { pick: ['dual-dialogue', 'wrap-in-note', 'cut-to-boneyard'] },
+    // The story map's lines (story-map design §3.1): the speech at the cursor.
+    { pick: ['story-map-use-line', 'story-map-never-line'] },
     { pick: prefix('markdown-'), submenu: 'Markdown', strip: /^Markdown: / },
   ],
   View: [

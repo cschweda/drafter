@@ -63,6 +63,27 @@ test('the File menu has Open as Screenplay…', async ({ desktop }) => {
   expect(items[at + 1]).toMatchObject({ id: 'open-as-screenplay', label: 'Open as Screenplay…' });
 });
 
+test('File › Export lists Story map…, and Edit the story map’s two line commands', async ({
+  desktop,
+}) => {
+  const { app } = await desktop();
+  const label = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.label;
+  await expect.poll(() => label('export-story-map'), { timeout: 15_000 }).toBe('Story map…');
+  const ids = (await menuItems(app)).map((i) => i.id);
+  // After EPUB, in File → Export.
+  expect(ids.indexOf('export-story-map')).toBe(ids.indexOf('export-epub') + 1);
+  expect(await label('story-map-use-line')).toBe('Use in story map');
+  expect(await label('story-map-never-line')).toBe('Never use in story map');
+  // In Edit, one after the other.
+  expect(ids.indexOf('story-map-never-line')).toBe(ids.indexOf('story-map-use-line') + 1);
+  const edit = await app.evaluate(({ Menu }) =>
+    (Menu.getApplicationMenu()?.items ?? [])
+      .find((item) => item.label.replace(/&/g, '') === 'Edit')
+      ?.submenu?.items.map((item) => item.id),
+  );
+  expect(edit).toEqual(expect.arrayContaining(['story-map-use-line', 'story-map-never-line']));
+});
+
 test('runs a command from the menu', async ({ desktop }) => {
   const { app, page } = await desktop();
   await expect

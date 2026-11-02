@@ -221,6 +221,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: ['e-book', 'ebook', 'e-reader', 'tablet'],
   },
+  // A picture of the script for a non-writer (story-map design §1.1): its dialog, then one page.
+  {
+    id: 'export-story-map',
+    title: 'Export as Story map…',
+    group: 'File',
+    icon: 'i-lucide-map',
+    keywords: ['visual', 'teaser', 'share', "what I'm writing"],
+  },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },
   { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },
@@ -402,6 +410,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
   fountain('mark-setup', 'Mark a setup'),
   fountain('mark-payoff', 'Mark a payoff'),
+  // The story map's lines of dialogue (story-map design §3.1, Call 6): the speech at the cursor.
+  fountain('story-map-use-line', 'Use in story map'),
+  fountain('story-map-never-line', 'Never use in story map'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
 
   // Edit, the element bar's buttons for a Markdown document (the design, §5)

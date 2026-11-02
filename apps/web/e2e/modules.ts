@@ -82,6 +82,7 @@ const EXPORT_COMMANDS: Record<string, string> = {
   'Plain text (.txt)': 'Export as plain text',
   'Final Draft (.fdx)': 'Export as Final Draft (.fdx)',
   'EPUB (.epub)': 'Export as EPUB',
+  'Story map (.html)…': 'Export as Story map…',
 };
 
 /**

@@ -75,6 +75,8 @@ import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { storyMapOpen } from '~/story-map/options';
+import { markSpeech, speechAt } from '~/story-map/quote-marks';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { requestTour } from '~/tour/state';
 import { updateCheckOpen } from '~/update/use-check';
@@ -226,6 +228,27 @@ export function registerBuiltinCommands(): void {
       void nextTick().then(() => {
         if (!withCompletion(insertMark(head))(view)) void sayElement(MARK_REFUSED);
       });
+    },
+  });
+
+  /**
+   * Use in story map and Never use in story map (story-map design §3.1, Call 6): a `[[Quote]]` or
+   * `[[No quote]]` mark on the speech holding the cursor, as one undo. Off where the cursor isn't
+   * in a speech (or is in dual dialogue, which is never a line on its own).
+   */
+  const speechHere = () => speechAt(editor.doc.value, view.state.selection.main.head);
+  const markLine = (mark: 'quote' | 'no-quote'): Behavior => ({
+    enabled: () => canEdit() && isFountain() && speechHere() !== null,
+    run: () => {
+      const cue = speechHere();
+      if (cue === null) return;
+      const changes = markSpeech(editor.doc.value, cue, mark);
+      if (changes.length > 0 && !applyTextChanges(view, changes)) return;
+      void sayElement(
+        mark === 'quote'
+          ? 'This line will be in the story map.'
+          : 'This line won’t be in the story map.',
+      );
     },
   });
 
@@ -515,6 +538,13 @@ export function registerBuiltinCommands(): void {
     'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
     'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
     'export-txt': { run: () => void exportScript('txt') },
+    // The story map (story-map design §1.1): a script's, after its dialog.
+    'export-story-map': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => {
+        storyMapOpen.value = true;
+      },
+    },
     'export-treatment': {
       enabled: isFountain,
       run: () => {
@@ -902,6 +932,8 @@ export function registerBuiltinCommands(): void {
     'make-lyric': fountain(forceKind('lyric')),
     'mark-setup': mark('Setup'),
     'mark-payoff': mark('Payoff'),
+    'story-map-use-line': markLine('quote'),
+    'story-map-never-line': markLine('no-quote'),
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),

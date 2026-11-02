@@ -107,8 +107,11 @@ watch([wide, () => moduleButtons.value.length], fitSoon);
 const overflowButton = ref<HTMLElement | null>(null);
 const { entry, choose, onCloseAutoFocus } = useCommandMenu(overflowButton);
 const exportIds = computed(() =>
-  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].map(
-    (kind) => `export-${kind}`,
+  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
+    // A script's story map follows its EPUB, as in the Export menu (story-map design §1.1).
+    kind === 'epub' && editor.kind.value !== 'markdown'
+      ? [`export-${kind}`, 'export-story-map']
+      : [`export-${kind}`],
   ),
 );
 /** The class on More actions' Export item, which opens the exports as a submenu. */

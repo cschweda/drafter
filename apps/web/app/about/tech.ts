@@ -91,6 +91,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/fdx',
       '@drafter/fountain',
       '@drafter/layout',
+      '@drafter/outline',
       '@drafter/render-html-file',
       '@drafter/render-pdf',
       '@drafter/render-text',

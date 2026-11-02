@@ -1,3 +1,4 @@
+import type { MapOptions } from '@drafter/story-map';
 import type { Template } from '@drafter/templates';
 import { ref } from 'vue';
 import { buildInfo } from '../about/info';
@@ -34,9 +35,10 @@ import { whenIdle } from './turn';
  * Markdown, written in the worker) are a screenplay's or a stage play's; a Markdown document's are
  * `pdf` (drawn in Inter Tight, Markdown PDF design), `html` (the document as the Preview draws
  * it, in one page), `epub` (the same, as an e-book), `md` (its own text), and `txt` (the same
- * text, as a plain text file).
+ * text, as a plain text file). `story-map` (story-map design) is a script's too, but made after
+ * its dialog (`exportStoryMap`), so it isn't one of `EXPORTS`' files.
  */
-export type ExportKind = 'pdf' | 'html' | 'epub' | 'txt' | 'md' | 'fdx';
+export type ExportKind = 'pdf' | 'html' | 'epub' | 'txt' | 'md' | 'fdx' | 'story-map';
 
 /**
  * What each kind of document exports, in the order the menus list them: the PDF first in both,
@@ -92,6 +94,7 @@ const MIME: Record<ExportKind, string> = {
   txt: 'text/plain',
   md: 'text/markdown',
   fdx: 'application/xml',
+  'story-map': 'text/html',
 };
 const EXTENSION = {
   pdf: '.pdf',
@@ -100,7 +103,17 @@ const EXTENSION = {
   txt: '.txt',
   md: '.md',
   fdx: '.fdx',
+  'story-map': '.html',
 } as const satisfies Record<ExportKind, string>;
+
+/** What a save picker offers each kind as. */
+const PICKER_KIND = { md: 'markdown', 'story-map': 'html' } as const;
+
+/** "Signal Hill – story map.html" (design §1.1); the other kinds are the title and the extension. */
+function exportName(title: string, kind: ExportKind): string {
+  const name = fileNameFor(title, EXTENSION[kind]);
+  return kind === 'story-map' ? `${name.slice(0, -'.html'.length)} – story map.html` : name;
+}
 
 /** "Drafter 0.22.0", an HTML file's generator line; "Drafter" where the build named no version. */
 const generator = () => `Drafter ${buildInfo().version}`.trim();
@@ -123,6 +136,9 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
   if (markdown && kind === 'fdx') {
     return 'Only a screenplay or a stage play exports as a Final Draft file.';
   }
+  if (markdown && kind === 'story-map') {
+    return 'Only a screenplay or a stage play makes a story map.';
+  }
   return null;
 }
 
@@ -134,6 +150,8 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
  * HTML export design §3.3, §10a), so only their toasts say "notes".
  */
 function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
+  // A story map has its own choices, in its dialog, and never carries the script (Call 20).
+  if (kind === 'story-map') return '';
   // Only an HTML file and an EPUB carry the script inside (reopenable exports), a document's too.
   const inside = options.reopenable && carriesSource(kind) ? { reopenable: true as const } : {};
   if (markdown) {
@@ -176,6 +194,8 @@ function requestFor(
   },
 ): ExportRequest {
   const { kind } = asked;
+  // Made by `storyMapRequest`, after its dialog's changes.
+  if (kind === 'story-map') throw new Error('A story map is made from its dialog.');
   const { source, template, options, title, markdown } = open;
   // Only when there is one, so a request without a project has no such key.
   const work = {
@@ -220,7 +240,19 @@ function requestFor(
   return { kind, source, template, options };
 }
 
-async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
+/**
+ * A story map's part of an export (`exportStoryMap`): the text changes its dialog asked for, made
+ * after the picker (it needs the click) and before the page is made; and the page's options, from
+ * the text as it then is. `write` answers what the toast adds after "Exported …." ('' for nothing).
+ */
+export interface StoryMapJob {
+  /** The dialog's choices, so two different maps are never joined as one export. */
+  key: string;
+  write(): string;
+  options(source: string, title: string): Promise<MapOptions>;
+}
+
+async function run(asked: Asked, job?: StoryMapJob): Promise<'saved' | 'cancelled'> {
   const { kind } = asked;
   const files = useFiles();
   const editor = useEditor();
@@ -238,7 +270,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
   const title = markdown
     ? (markdownTitle(source) ?? fallback)
     : titleOf(editor.doc.value, fallback);
-  const name = fileNameFor(title, EXTENSION[kind]);
+  const name = exportName(title, kind);
   exportNotice.value = '';
   exportError.value = '';
   let slow: ReturnType<typeof setTimeout> | undefined;
@@ -284,9 +316,14 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
     // The picker comes first: it needs the click that started this, which a long render could outlast.
     let target: Awaited<ReturnType<typeof files.pickToSave>> = null;
     if (files.canSaveInPlace) {
-      target = await files.pickToSave(name, kind === 'md' ? 'markdown' : kind);
+      target = await files.pickToSave(
+        name,
+        kind === 'md' || kind === 'story-map' ? PICKER_KIND[kind] : kind,
+      );
       if (!target) return 'cancelled';
     }
+    // A story map's text changes, after the picker and before the page (one undo).
+    const after = job ? job.write() : '';
     let data: Uint8Array | string;
     let missing: string[] = [];
     if (markdown && (kind === 'md' || kind === 'txt')) {
@@ -301,18 +338,22 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
       const project = script.project.value;
       const projectId = project?.id;
       // "Let Drafter reopen this file": the text as Save would write it, line breaks and BOM too.
-      const embed = options.reopenable
-        ? encodeFile(source, project?.lineBreak ?? '\n', project?.bom ?? false)
-        : undefined;
-      const request = requestFor(asked, {
-        source,
-        template,
-        options,
-        title,
-        markdown,
-        projectId,
-        embed,
-      });
+      // Never a story map's: it never carries the script (Call 20).
+      const embed =
+        options.reopenable && !job
+          ? encodeFile(source, project?.lineBreak ?? '\n', project?.bom ?? false)
+          : undefined;
+      const request: ExportRequest = job
+        ? await storyMapRequest(asked, job, editor.view.state.doc.toString(), template, title)
+        : requestFor(asked, {
+            source,
+            template,
+            options,
+            title,
+            markdown,
+            projectId,
+            embed,
+          });
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -329,7 +370,7 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
     const lacking =
       missing.length > 0 ? ` ${MISSING_GLYPHS}${missing.slice(0, MISSING_SHOWN).join(', ')}.` : '';
     await announceReady(
-      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options)}.${lacking}`,
+      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options)}.${lacking}${after}`,
     );
     return 'saved';
   } catch (error) {
@@ -339,6 +380,25 @@ async function run(asked: Asked): Promise<'saved' | 'cancelled'> {
     await announceError(`Couldn’t export ${name}${reason(error)}`);
     return 'cancelled';
   }
+}
+
+/** A story map's request: the text as it is after its changes, never with the script inside. */
+async function storyMapRequest(
+  asked: Asked,
+  job: StoryMapJob,
+  source: string,
+  template: Template,
+  title: string,
+): Promise<ExportRequest> {
+  return {
+    kind: 'story-map',
+    source,
+    template,
+    title,
+    lang: asked.lang,
+    generator: generator(),
+    options: await job.options(source, title),
+  };
 }
 
 /** Says `message` in the Export toast, as a finished export does (an import's "Imported …"). */
@@ -365,9 +425,11 @@ interface Asked {
   lang: Settings['spellLanguage'];
   /** The script's own page rate, for an HTML file's running time. */
   minutesPerPage: number;
+  /** A story map's choices (`StoryMapJob.key`); '' for the other kinds. */
+  storyMap: string;
 }
 
-function askedFor(kind: ExportKind): Asked {
+function askedFor(kind: ExportKind, job?: StoryMapJob): Asked {
   const editor = useEditor();
   const project = useScript().project.value;
   const { settings } = useSettings();
@@ -384,6 +446,7 @@ function askedFor(kind: ExportKind): Asked {
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
     minutesPerPage: ratesOf(project).minutesPerPage,
+    storyMap: job?.key ?? '',
   };
 }
 
@@ -400,12 +463,26 @@ let last: { asked: Asked; done: Promise<'saved' | 'cancelled'> } | undefined;
  * repeated, and any other waits its turn, so another script's PDF is its own (and an export asked
  * for after the options changed is its own too).
  */
-export function exportScript(kind: ExportKind): Promise<'saved' | 'cancelled'> {
-  const asked = askedFor(kind);
+export function exportScript(
+  kind: Exclude<ExportKind, 'story-map'>,
+): Promise<'saved' | 'cancelled'> {
+  return queued(askedFor(kind));
+}
+
+/**
+ * Exports the open script's story map (story-map design §7), after its dialog: the picker, then
+ * `job`'s text changes, then the page, in the same turn as the other exports, with the same
+ * progress bar and toast.
+ */
+export function exportStoryMap(job: StoryMapJob): Promise<'saved' | 'cancelled'> {
+  return queued(askedFor('story-map', job), job);
+}
+
+function queued(asked: Asked, job?: StoryMapJob): Promise<'saved' | 'cancelled'> {
   if (last && sameExport(last.asked, asked)) return last.done;
   const entry = {
     asked,
-    done: (last?.done ?? Promise.resolve('cancelled' as const)).then(() => run(asked)),
+    done: (last?.done ?? Promise.resolve('cancelled' as const)).then(() => run(asked, job)),
   };
   last = entry;
   entry.done.finally(() => {

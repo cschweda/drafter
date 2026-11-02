@@ -6,22 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-- **Every pull request is checked automatically** on GitHub (lint, build, every test suite, the trap documents, and the browser tests in Chromium), Dependabot's included.
-- The spellcheck's budget for a check after a one-letter edit is 150 ms, generous enough for a shared CI machine, as its own comment intends.
-- The outline's twenty-thousand-run Markdown property test has a minute to finish, not the default five seconds.
-- The pull-request checks skip the tests with a fixed time limit, which the release gates still run; the tests that compare a script with one 4 or 8 times its size run everywhere.
-- The tests that copy the fonts, dictionaries, and icons into the web app have half a minute each (set with `vi.setConfig`, which the linter accepts).
-
-- **A second clean-room audit** (1 November 2026, `docs/clean-room-audit-2026-11-01.md`), with an index of every audit, newest first (`docs/AUDITS.md`). What it asked for is done: a film line and a film's names in tests are original now, and the Final Draft settings names say where they come from.
-
 ### Added
 
+- **Story map** in the app: **Export → Story map…** (the toolbar's Export menu, the app menu, the palette, and the desktop app's File → Export) opens **Make a story map**, a short dialog (status, planned length, logline, the line under your name, what goes in, and a quick look at the lines and hooks), then saves one `.html` page made in the export worker. The logline is written to the title page as `Logline:`, the planned length and edited hooks to the metadata block, and the page's other choices are kept per script in this browser. **Use in story map** and **Never use in story map** mark the speech at the cursor with `[[Quote]]` or `[[No quote]]` (the palette, the desktop Edit menu, and the desktop right-click menu). On a phone the dialog is a sheet. The help page comes with the release.
 - `docs`: a second clean-room audit, 1 November 2026 (`docs/clean-room-audit-2026-11-01.md`), over everything since the first (v0.3.1 to v0.24.0, and the Story map plan): no copied code, no screenwriting package, no GPL code shipped, and every Final Draft, Highland, and Fade In test file synthetic. It compares itself with the first audit check by check, and lists two small fixes (a film catchphrase back in one test, and an unrecorded source for 18 Final Draft element names). The first audit is now `docs/clean-room-audit-2026-10-27.md`. A new index, `docs/AUDITS.md`, lists every security, clean-room, and accessibility audit, newest first, linked from the README, Developing Drafter, and SECURITY.md.
 - What is Drafter? links Audits from **Can I trust this?** and from its technical links.
 - `docs`: Drafter's first formal security audit, 1 November 2026 (`docs/security-audit-2026-11-01.md`), of the web app, the desktop app, the command line, the build, and the security claims in the docs: no exploitable hole, and nothing leaves the device. To fix: turn on GitHub's private vulnerability reporting. It compares itself with the earlier security reviews, area by area, and is listed in `docs/AUDITS.md`, SECURITY.md, and the README.
 
 ### Changed
 
+- **Every pull request is checked automatically** on GitHub (lint, build, every test suite, the trap documents, and the browser tests in Chromium), Dependabot's included.
+- The spellcheck's budget for a check after a one-letter edit is 150 ms, generous enough for a shared CI machine, as its own comment intends.
+- The outline's twenty-thousand-run Markdown property test has a minute to finish, not the default five seconds.
+- The pull-request checks skip the tests with a fixed time limit, which the release gates still run; the tests that compare a script with one 4 or 8 times its size run everywhere.
+- The tests that copy the fonts, dictionaries, and icons into the web app have half a minute each (set with `vi.setConfig`, which the linter accepts).
+- **A second clean-room audit** (1 November 2026, `docs/clean-room-audit-2026-11-01.md`), with an index of every audit, newest first (`docs/AUDITS.md`). What it asked for is done: a film line and a film's names in tests are original now, and the Final Draft settings names say where they come from.
 - `docs/DEPENDENCIES.md` names every workspace edge its rows had missed (history, lint, the editor package, and the command line) and two tools: axe in the desktop tests, and the Mermaid command line the diagrams are drawn with (through `npx`, never installed).
 
 - The Story map design (docs/drafter-story-map-design.md), approved with mockups for a screenplay and a stage play, is in the repository; Story map ships in v0.24.1.

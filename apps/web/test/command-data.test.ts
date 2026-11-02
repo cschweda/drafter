@@ -90,6 +90,30 @@ describe('the command data', () => {
     }
   });
 
+  test('Export as Story map… follows export-epub, in File, found by what it is for', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('export-story-map')).toBe(ids.indexOf('export-epub') + 1);
+    const command = COMMAND_DATA.find((c) => c.id === 'export-story-map');
+    expect(command).toMatchObject({ title: 'Export as Story map…', group: 'File' });
+    expect(command?.keywords).toEqual(
+      expect.arrayContaining(['visual', 'teaser', 'share', "what I'm writing"]),
+    );
+    // Made after its dialog, so not one of the files the export menus list by kind.
+    expect(EXPORTS.fountain).not.toContain('story-map');
+    expect(EXPORTS.markdown).not.toContain('story-map');
+  });
+
+  test('Use in story map and Never use in story map are Edit commands with no key', () => {
+    for (const [id, title] of [
+      ['story-map-use-line', 'Use in story map'],
+      ['story-map-never-line', 'Never use in story map'],
+    ]) {
+      const command = COMMAND_DATA.find((c) => c.id === id);
+      expect(command, id).toMatchObject({ title, group: 'Edit' });
+      expect(command?.keys).toBeUndefined();
+    }
+  });
+
   test('export-html follows export-md, in File, and applies to every kind', () => {
     const ids = COMMAND_DATA.map((c) => c.id);
     expect(ids.indexOf('export-html')).toBe(ids.indexOf('export-md') + 1);

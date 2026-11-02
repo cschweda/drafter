@@ -19,6 +19,7 @@ import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
+import { installSpeechMenu } from '~/story-map/desktop-speech';
 import { installDesktopUpdates } from '~/update/desktop-source';
 import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
 import { dropTab, PHONE_DEFAULT_TAB } from '~/utils/panes';
@@ -118,6 +119,7 @@ let stopModules: (() => void) | undefined;
 let removeFileCheck: (() => void) | undefined;
 let removeSystemOpen: (() => void) | undefined;
 let removeDesktopMenu: (() => void) | undefined;
+let removeSpeechMenu: (() => void) | undefined;
 let removeDesktopClose: (() => void) | undefined;
 let removeDesktopUpdates: (() => void) | undefined;
 let removeSelectionGuard: (() => void) | undefined;
@@ -159,6 +161,7 @@ onMounted(() => {
   removeFileCheck = installFileCheck();
   removeSystemOpen = installSystemOpen();
   removeDesktopMenu = installDesktopMenu();
+  removeSpeechMenu = installSpeechMenu();
   removeDesktopClose = installDesktopClose();
   removeDesktopUpdates = installDesktopUpdates(useSettings());
   // Safari would type into the script with focus anywhere else (decided 2026-10-29).
@@ -176,6 +179,7 @@ onBeforeUnmount(() => {
   removeFileCheck?.();
   removeSystemOpen?.();
   removeDesktopMenu?.();
+  removeSpeechMenu?.();
   removeDesktopClose?.();
   removeDesktopUpdates?.();
   removeSelectionGuard?.();
@@ -216,6 +220,7 @@ onBeforeUnmount(() => {
     <OutlineAnnouncer />
     <SpellMenu />
     <TreatmentDialog />
+    <StoryMapDialog />
     <ExportOptionsDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />

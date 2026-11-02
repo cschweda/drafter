@@ -6,6 +6,7 @@ import {
   app,
   BrowserWindow,
   dialog,
+  type IpcMainEvent,
   ipcMain,
   Menu,
   protocol,
@@ -15,7 +16,7 @@ import {
 } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { type Closing, setUpClosing } from './close';
-import { contextMenuTemplate } from './context-menu';
+import { contextMenuTemplate, speechAsker } from './context-menu';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { heldLaunches, onSecondInstance, takeInstanceLock } from './instance';
 import { setUpMenu } from './menu-main';
@@ -41,7 +42,7 @@ import { CONTINUE, QUIT, rememberAnswer, sandboxNotice } from './sandbox';
 import { type Spellcheck, seedDictionaries, setUpSpellcheck } from './spellcheck';
 import { setUpUpdates } from './updates-main';
 import { proxyForGrants, WEBRTC_POLICY } from './webrtc';
-import { createMainWindow, fromApp, guard } from './window';
+import { createMainWindow, fromApp, fromEditor, guard } from './window';
 
 // The app's name, before anything asks for it: the profile folder (userData), the macOS menu's
 // Hide/Quit items, and About. package.json's productName says the same; this holds however the app
@@ -296,17 +297,36 @@ function start() {
   // Closing the editor's window and quitting ask the page first (close.ts). Set up on `ready`.
   let closing: Closing | null = null;
 
+  // The right-click menu asks the editor's page which speech is under a click (a few ms; none after
+  // 200), for Use in story map and Never use in story map (context-menu.ts).
+  const speech = speechAsker((id, x, y) => {
+    const contents = main?.webContents;
+    if (contents && !contents.isDestroyed()) contents.send(CHANNELS.editorSpeechAt, id, x, y);
+  });
+  ipcMain.on(CHANNELS.editorSpeechReply, (event: IpcMainEvent, id: unknown, at: unknown) => {
+    if (fromEditor(event, main?.webContents)) speech.reply(id, at);
+  });
+
   /** Opens the editor's window, and keeps it as the one a second launch brings forward. */
   const openMain = () => {
     const window = createMainWindow(PRELOAD);
     closing?.attach(window);
     // The right-click menu (context-menu.ts), in the editor's window only.
     const contents = window.webContents;
-    contents.on('context-menu', (_event, params) => {
-      const template = contextMenuTemplate(params, {
-        replace: (word) => contents.replaceMisspelling(word),
-        addWord: (word) => contents.session.addWordToSpellCheckerDictionary(word),
-      });
+    contents.on('context-menu', async (_event, params) => {
+      const at = params.isEditable ? await speech.ask(params.x, params.y) : null;
+      if (window.isDestroyed()) return;
+      const mark = (kind: 'quote' | 'no-quote') => () => {
+        if (!contents.isDestroyed()) contents.send(CHANNELS.editorMarkSpeech, at, kind);
+      };
+      const template = contextMenuTemplate(
+        params,
+        {
+          replace: (word) => contents.replaceMisspelling(word),
+          addWord: (word) => contents.session.addWordToSpellCheckerDictionary(word),
+        },
+        at === null ? null : { use: mark('quote'), never: mark('no-quote') },
+      );
       if (template.length === 0) return;
       const menu = Menu.buildFromTemplate(template);
       if (!app.isPackaged) lastContextMenu = menu;

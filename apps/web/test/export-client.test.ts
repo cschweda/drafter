@@ -67,4 +67,18 @@ describe('the export client', () => {
     worker.send({ data: 'file', missing: ['漢'] });
     expect(await done).toEqual({ data: 'file', missing: ['漢'] });
   });
+
+  test('a second request waits for the first one’s reply, so each gets its own', async () => {
+    const { renderExport } = await import('../app/storage/export-client');
+    const first = renderExport(request);
+    const second = renderExport({ ...request, kind: 'txt' });
+    const worker = FakeWorker.last as FakeWorker;
+    // Only the first is sent until it is answered.
+    expect(worker.posted).toHaveLength(1);
+    worker.send({ data: 'one' });
+    expect(await first).toEqual({ data: 'one', missing: [] });
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(2));
+    worker.send({ data: 'two' });
+    expect(await second).toEqual({ data: 'two', missing: [] });
+  });
 });

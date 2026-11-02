@@ -160,6 +160,35 @@ const bridge: DesktopBridge = {
       };
     },
   },
+  // The right-click menu: main asks which speech is under a click (the page answers at once, from
+  // the editor), and sends back the story-map item chosen for it.
+  editor: {
+    onSpeechAt(answer) {
+      const listener = (_event: unknown, id: unknown, x: unknown, y: unknown) => {
+        if (typeof id !== 'number' || typeof x !== 'number' || typeof y !== 'number') return;
+        let at: number | null = null;
+        try {
+          at = answer(x, y);
+        } catch {
+          at = null;
+        }
+        ipcRenderer.send(CHANNELS.editorSpeechReply, id, at);
+      };
+      ipcRenderer.on(CHANNELS.editorSpeechAt, listener);
+      return () => {
+        ipcRenderer.removeListener(CHANNELS.editorSpeechAt, listener);
+      };
+    },
+    onMarkSpeech(run) {
+      const listener = (_event: unknown, at: unknown, mark: unknown) => {
+        if (typeof at === 'number' && (mark === 'quote' || mark === 'no-quote')) run(at, mark);
+      };
+      ipcRenderer.on(CHANNELS.editorMarkSpeech, listener);
+      return () => {
+        ipcRenderer.removeListener(CHANNELS.editorMarkSpeech, listener);
+      };
+    },
+  },
   // Closing: main asks, the page answers (and Saves or flushes when told to). Telling main we
   // answer is what lets it ask rather than close at once.
   onCloseRequest(handlers) {

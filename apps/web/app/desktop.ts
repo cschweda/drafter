@@ -96,6 +96,20 @@ export interface DesktopMenuBridge {
   onCommand(onRun: (id: string) => void): () => void;
 }
 
+/**
+ * The editor's right-click menu (story-map design §3.1): the desktop app asks which speech is
+ * under a right-click, and runs Use in story map or Never use in story map on it.
+ */
+export interface DesktopEditorBridge {
+  /**
+   * `answer(x, y)` gives the editor offset of a point (in the window's CSS pixels) that is in a
+   * speech the story map can use, or null. Returns the function that stops answering.
+   */
+  onSpeechAt(answer: (x: number, y: number) => number | null): () => void;
+  /** Calls `run` with the offset `onSpeechAt` answered, and the mark chosen in the menu. */
+  onMarkSpeech(run: (at: number, mark: 'quote' | 'no-quote') => void): () => void;
+}
+
 /** What the page says when the desktop app is about to close its window (docs/drafter-desktop-design.md §5). */
 export interface DesktopCloseState {
   /** The script has changes that are in no file (not a sample, not a read-only tab). */
@@ -193,6 +207,8 @@ export interface DesktopBridge {
   files: DesktopFilesBridge;
   /** The menu bar. */
   menu: DesktopMenuBridge;
+  /** The editor's right-click menu (a desktop app from before the story map has none). */
+  editor?: DesktopEditorBridge;
   /**
    * Calls `onPath` with the path of each script the system asks Drafter to open: named on the
    * command line, in a second launch, or double-clicked in a file manager. The desktop app has

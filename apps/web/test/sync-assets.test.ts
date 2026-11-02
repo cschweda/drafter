@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOCUMENT_FONT_FILES } from '@drafter/render-pdf';
 import { DICTIONARIES } from '@drafter/spell';
+import { STORY_MAP_FONT_FILES } from '@drafter/story-map';
 import { describe, expect, test, vi } from 'vitest';
 import { ASSETS, PACKAGE_ASSETS, packageDir, syncAssets } from '../scripts/sync-assets.mjs';
 
@@ -16,7 +17,7 @@ const ALL = ASSETS.length + PACKAGE_ASSETS.length;
 vi.setConfig({ testTimeout: 30_000 });
 
 describe('syncAssets', () => {
-  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, every font’s license, and the brand files', () => {
+  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, the story map’s four, every font’s license, and the brand files', () => {
     expect(ASSETS.map(({ to }) => to)).toEqual([
       'fonts/courier-prime/CourierPrime-Regular.ttf',
       'fonts/courier-prime/CourierPrime-Bold.ttf',
@@ -30,6 +31,10 @@ describe('syncAssets', () => {
       'fonts/inter-tight/OFL.txt',
       'fonts/anton/OFL.txt',
       'fonts/archivo/OFL.txt',
+      'fonts/story-map/Anton-Regular.woff2',
+      'fonts/story-map/Archivo-Regular.woff2',
+      'fonts/story-map/Archivo-SemiBold.woff2',
+      'fonts/story-map/CourierPrime-Regular.woff2',
       'favicon.svg',
       'favicon.ico',
       'favicon-unsaved.svg',
@@ -49,6 +54,10 @@ describe('syncAssets', () => {
         ...['Regular', 'Bold', 'Italic', 'BoldItalic'].map((s) => `CourierPrime-${s}.ttf`),
         ...Object.values(DOCUMENT_FONT_FILES).filter((file) => file.startsWith('inter-tight/')),
       ].map((file) => `packages/render-pdf/fonts/${file}`),
+    );
+    // The story map's faces are its package's own, the ones the worker embeds.
+    expect(ASSETS.filter(({ to }) => to.endsWith('.woff2')).map(({ from }) => from)).toEqual(
+      Object.values(STORY_MAP_FONT_FILES).map((file) => `packages/story-map/fonts/${file}`),
     );
   });
 

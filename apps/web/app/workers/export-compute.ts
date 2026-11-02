@@ -25,6 +25,17 @@ import {
   renderPdf,
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
+import {
+  buildStoryMap,
+  type MapOptions,
+  type QuoteCandidate,
+  quoteCandidates,
+  renderStoryMap,
+  STORY_MAP_FONT_FILES,
+  type StoryMapFace,
+  type StoryMapFonts,
+  storyMapMeta,
+} from '@drafter/story-map';
 import type { Paper, Template } from '@drafter/templates';
 import {
   type ProgressReporter,
@@ -125,7 +136,41 @@ export type ExportRequest =
       /** The project's id, as a script's EPUB's. */
       projectId?: string;
       embed?: string;
-    };
+    }
+  /**
+   * A story map (story-map design §10): the page the dialog's choices make. Never `embed`: a story
+   * map never carries the script, whatever "Let Drafter reopen this file" says (Call 20).
+   */
+  | {
+      kind: 'story-map';
+      source: string;
+      template: Template;
+      title: string;
+      lang: string;
+      generator: string;
+      options: MapOptions;
+    }
+  /** What the Make a story map dialog shows (`StoryMapPicks`, as JSON). */
+  | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions };
+
+/**
+ * The Make a story map dialog's quick look (design §7): the lines of dialogue the page would use,
+ * each with its speaker, the next line in its scene for Pick another (`next`, null with none),
+ * and every line its scene offers (`choices`, in order, the pick among them; never a `[[No quote]]`
+ * one); each lead's hook, as found (`found`) and as the metadata block has it edited (`hook`);
+ * and whether any gap was found (the status's default, Call 18).
+ */
+export interface StoryMapPicks {
+  quotes: Array<
+    QuoteCandidate & {
+      speaker: string;
+      next: number | null;
+      choices: Array<{ cue: number; text: string; speaker: string }>;
+    }
+  >;
+  hooks: Array<{ key: string; name: string; hook: string | null; found: string | null }>;
+  gapsFound: boolean;
+}
 /** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
 export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
 /**
@@ -140,6 +185,8 @@ export interface ExportProgress {
 const FONT_FOLDER = '/fonts/courier-prime/';
 /** Where the app serves Inter Tight's four static styles, for a Markdown document's PDF. */
 const DOCUMENT_FONT_FOLDER = '/fonts/inter-tight/';
+/** Where the app serves the story map's four WOFF2 faces (`@drafter/story-map`'s `fonts/`). */
+const STORY_MAP_FONT_FOLDER = '/fonts/story-map/';
 
 /** A font file from the app's own origin, which `connect-src 'self'` allows. */
 async function fontFile(
@@ -184,6 +231,57 @@ export async function fetchDocumentFonts(
   return Object.fromEntries(loaded) as unknown as DocumentFontSet;
 }
 
+/** Fetches Anton, Archivo (two weights), and Courier Prime for a story map, from the app's own origin. */
+export async function fetchStoryMapFonts(
+  fetcher: (url: string) => Promise<Response> = (url) => fetch(url),
+): Promise<StoryMapFonts> {
+  const faces = Object.keys(STORY_MAP_FONT_FILES) as StoryMapFace[];
+  const loaded = await Promise.all(
+    faces.map(
+      async (face) =>
+        [face, await fontFile(fetcher, STORY_MAP_FONT_FOLDER, STORY_MAP_FONT_FILES[face])] as const,
+    ),
+  );
+  return Object.fromEntries(loaded) as StoryMapFonts;
+}
+
+/**
+ * The dialog's picks (`StoryMapPicks`) for `source`: the model as the page would draw it with every
+ * line of dialogue in and no hook edited, so the dialog shows what was found.
+ */
+function storyMapPicks(source: string, template: Template, options: MapOptions): StoryMapPicks {
+  const doc = parse(source);
+  const layout = paginate(doc, template, { sceneNumbers: 'none' });
+  const map = buildStoryMap({
+    doc,
+    template,
+    layout,
+    options: { ...options, status: null, include: { ...options.include, lines: true }, hooks: {} },
+  });
+  const candidates = quoteCandidates(doc, sceneIndex(doc, template, layout));
+  const nameOf = (key: string) => map.characters.find((c) => c.key === key)?.name ?? key;
+  const quotes = map.quotes.flatMap((quote) => {
+    const pick = candidates.find((c) => c.cue === quote.cue);
+    if (!quote.inScene || !pick) return [];
+    const choices = candidates
+      .filter((c) => c.scene === pick.scene && c.marked !== 'no-quote')
+      .map((c) => ({ cue: c.cue, text: c.text, speaker: nameOf(c.character) }));
+    const at = choices.findIndex((c) => c.cue === pick.cue);
+    const next = choices.length > 1 ? (choices[(at + 1) % choices.length]?.cue ?? null) : null;
+    return [{ ...pick, speaker: map.characters[quote.character]?.name ?? '', next, choices }];
+  });
+  const edited = storyMapMeta(doc.meta).hooks;
+  const hooks = map.characters
+    .filter((c) => c.lead)
+    .map((c) => ({
+      key: c.key,
+      name: c.name,
+      found: c.hook,
+      hook: Object.hasOwn(edited, c.key) ? (edited[c.key] as string) : c.hook,
+    }));
+  return { quotes, hooks, gapsFound: map.gaps.found };
+}
+
 /** A render's progress as the export's: saving says nothing until it ends, so it is unknown. */
 const rendering =
   (report: ProgressReporter) =>
@@ -219,17 +317,41 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
  * worker never throws. With `onProgress`, each export says how far it is as it goes: unknown
  * while it fetches, parses, and (for a script) lays out; by blocks and pages as it lays out and
  * draws a PDF; unknown again while pdf-lib saves; and 1 at the end. Plain text, Final Draft,
- * Markdown, HTML, and EPUB files are quick: unknown, then 1.
+ * Markdown, HTML, and EPUB files are quick: unknown, then 1. A story map is the model of the script
+ * (`@drafter/story-map`) drawn as one page with its own fonts, loaded once; its dialog's picks are
+ * the same model, as JSON.
  */
 export function createExporter(
   loadFonts: () => Promise<FontSet> = fetchFonts,
   loadDocumentFonts: () => Promise<DocumentFontSet> = fetchDocumentFonts,
+  loadStoryMapFonts: () => Promise<StoryMapFonts> = fetchStoryMapFonts,
 ) {
   const fontsOnce = once(loadFonts);
   const documentFontsOnce = once(loadDocumentFonts);
+  const storyMapFontsOnce = once(loadStoryMapFonts);
   const parserOnce = once(() => import('../markdown/parse'));
 
   async function exportOne(request: ExportRequest, report: ProgressReporter): Promise<ExportReply> {
+    if (request.kind === 'story-map-picks') {
+      return {
+        data: JSON.stringify(storyMapPicks(request.source, request.template, request.options)),
+      };
+    }
+    if (request.kind === 'story-map') {
+      const { source, template, options } = request;
+      const doc = parse(source);
+      // The page's own numbering, never the export options' (design §8).
+      const layout = paginate(doc, template, { sceneNumbers: 'none' });
+      const map = buildStoryMap({ doc, template, layout, options });
+      return {
+        data: renderStoryMap({
+          map,
+          fonts: await storyMapFontsOnce(),
+          lang: request.lang,
+          generator: request.generator,
+        }),
+      };
+    }
     if (request.kind === 'markdown-html') {
       const { parseMarkdown } = await parserOnce();
       const { title, lang, generator } = request;

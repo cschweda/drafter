@@ -145,7 +145,7 @@ export interface ScriptSession {
    * open.
    */
   keepOnProject(
-    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing'>,
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing' | 'storyMap'>,
   ): Promise<void>;
   /** Opens a sample: this browser's copy of it, with any edits made to it, or a fresh one. */
   openSample(kind: SampleKind): Promise<void>;
@@ -754,7 +754,7 @@ function create(): ScriptSession {
   }
 
   async function keepOnProject(
-    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing'>,
+    change: (project: Project) => Pick<Partial<Project>, 'exportOptions' | 'timing' | 'storyMap'>,
   ) {
     const current = project.value;
     if (!current || guard.readOnly.value) return;

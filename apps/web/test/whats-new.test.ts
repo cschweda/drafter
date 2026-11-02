@@ -98,8 +98,9 @@ describe('What’s new', () => {
     }
   });
 
-  test('puts the banner on Drafts and Cuts, the v0.23.2 security work, and v0.23.0’s fresh look', () => {
+  test('puts the banner on Story map, Drafts and Cuts, the v0.23.2 security work, and v0.23.0’s fresh look', () => {
     expect(WHATS_NEW.filter((entry) => entry.banner).map((entry) => entry.id)).toEqual([
+      'v0.24.1-story-map',
       'v0.24.0-drafts-and-cuts',
       'v0.23.2-trap-documents',
       'v0.23.0-fresh-look',

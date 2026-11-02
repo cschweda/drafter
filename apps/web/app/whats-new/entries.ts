@@ -44,6 +44,18 @@ const release = (version: string): WhatsNewLink => ({
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // Unreleased: its version is the next release's, and the release sets its date (a test lets an
   // entry newer than the CHANGELOG's newest release wait for its section).
+  {
+    id: 'v0.24.1-story-map',
+    date: '2026-11-01',
+    version: '0.24.1',
+    kind: 'New',
+    title: 'Story map: a picture of your script to send to anyone',
+    text: 'Export → Story map… makes one page that shows a non-writer your story’s shape, its people, and every scene so far, with a few lines of dialogue. It works on a phone and holds no notes.',
+    // The help page comes with the release (the Story map plan's Task 9), which adds the link
+    // `{ href: '/docs/story-map/', label: 'Story map' }` here: a link to a page not built yet
+    // fails the prerender.
+    banner: true,
+  },
 
   {
     id: 'v0.24.0-drafts-and-cuts',
