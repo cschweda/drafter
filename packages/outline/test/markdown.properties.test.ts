@@ -276,7 +276,8 @@ describe('scriptMarkdown, read back', () => {
       }),
       { numRuns: 20_000 },
     );
-  });
+    // Twenty thousand runs: a few seconds here, longer on a shared CI machine.
+  }, 60_000);
 
   test('pairs dual dialogue exactly as paginate pairs it', () => {
     fc.assert(
