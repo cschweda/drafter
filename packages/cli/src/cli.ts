@@ -190,6 +190,9 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
   if (options.reopenable && options.html === undefined) {
     throw new CliError('--reopenable needs --html: only the HTML page can carry the script');
   }
+  if (options.status !== undefined && options.storyMap === undefined) {
+    throw new CliError('--status needs --story-map: only a story map has a status');
+  }
   const status = statusOf(options.status);
   if (outputs.length === 0) outputs.push(['pdf', defaultPdf(input)]);
   if (outputs.filter(([, target]) => target === '-').length > 1) {

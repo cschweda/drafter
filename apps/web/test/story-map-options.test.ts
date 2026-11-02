@@ -74,6 +74,10 @@ describe('story map options', () => {
     expect(storyMapOptionsOf({ storyMap: kept })).toEqual(kept);
   });
 
+  test('an emptied contact is kept empty', () => {
+    expect(storyMapOptionsOf({ storyMap: { contact: '' } }).contact).toBe('');
+  });
+
   test('unknown values read as defaults', () => {
     const odd = {
       status: 'done',

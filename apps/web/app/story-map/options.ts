@@ -18,7 +18,7 @@ export interface StoryMapProjectOptions {
   /** Null: the explaining line is hidden. */
   explain: string | null;
   include: MapOptions['include'];
-  /** Null: the title page's `Contact`. */
+  /** Null: the title page's `Contact`; '' (emptied in the dialog): none. */
   contact: string | null;
 }
 

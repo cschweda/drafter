@@ -32,7 +32,9 @@ const { view, doc } = useEditor();
 const script = useScript();
 const { readOnly } = useGuard();
 
+/** "From the gaps", the default: in progress while anything is still to write (Call 18). */
 const STATUS_CHOICES = [
+  { value: 'gaps' as const, label: 'From the gaps' },
   { value: 'in-progress' as const, label: 'In progress' },
   { value: 'finished' as const, label: 'Finished' },
 ];
@@ -44,9 +46,14 @@ let initial = {
   contact: '',
   stored: storyMapOptionsOf(null),
 };
-const status = ref<MapStatus>('in-progress');
-/** The writer chose a status here: it is kept; else the gaps decide each time (Call 18). */
-const statusChosen = ref(false);
+/** The status as chosen; 'gaps' decides it each time from what isn't written yet. */
+const status = ref<MapStatus | 'gaps'>('gaps');
+/** What the gaps say, once the worker has looked: null until then. */
+const gapsSay = ref<MapStatus | null>(null);
+/** The status the page will have. */
+const shown = computed<MapStatus | null>(() =>
+  status.value === 'gaps' ? gapsSay.value : status.value,
+);
 const planned = ref('');
 const logline = ref('');
 const greeting = ref('');
@@ -81,8 +88,8 @@ function reset() {
     contact: titleContact(current),
     stored,
   };
-  status.value = stored.status ?? 'in-progress';
-  statusChosen.value = false;
+  status.value = stored.status ?? 'gaps';
+  gapsSay.value = null;
   planned.value = meta.plannedPages === null ? '' : String(meta.plannedPages);
   logline.value = initial.logline;
   greeting.value = stored.greeting;
@@ -110,10 +117,7 @@ async function loadPicks() {
       on: true,
     }));
     hooks.value = Object.fromEntries(found.hooks.map((h) => [h.key, h.hook ?? '']));
-    // The default status, from the gaps, unless one was kept or chosen.
-    if (initial.stored.status === null && !statusChosen.value) {
-      status.value = found.gapsFound ? 'in-progress' : 'finished';
-    }
+    gapsSay.value = found.gapsFound ? 'in-progress' : 'finished';
   } catch {
     if (mine === opening) picks.value = 'failed';
   }
@@ -139,11 +143,6 @@ function onClose() {
   if (opener?.isConnected) opener.focus();
   else if (view.dom.offsetParent !== null) view.focus();
   opener = null;
-}
-
-function chooseStatus(next: MapStatus) {
-  status.value = next;
-  statusChosen.value = true;
 }
 
 /** Pick another (§3.1): the next line in the same scene, round to the first. */
@@ -191,11 +190,12 @@ function hookChanges(): StoryMapChanges['hooks'] {
 function make() {
   const typedContact = contact.value.trim();
   const page: StoryMapProjectOptions = {
-    status: statusChosen.value ? status.value : initial.stored.status,
+    status: status.value === 'gaps' ? null : status.value,
     greeting: greeting.value.trim() === '' ? initial.stored.greeting : greeting.value.trim(),
     explain: explainOn.value ? explain.value.trim() || DEFAULT_EXPLAIN : null,
     include: { ...include },
-    contact: typedContact === initial.contact ? null : typedContact || null,
+    // The title page's, unless typed here; emptied stays empty.
+    contact: typedContact === initial.contact ? null : typedContact,
   };
   const changes: StoryMapChanges = {
     logline: logline.value.trim() === '' ? null : logline.value.trim(),
@@ -232,14 +232,16 @@ function make() {
 
       <div class="row">
         <span class="label" aria-hidden="true">Status</span>
-        <DSegmented
-          :model-value="status"
-          label="Status"
-          :options="STATUS_CHOICES"
-          @update:model-value="chooseStatus"
-        />
+        <DSegmented v-model="status" label="Status" :options="STATUS_CHOICES" />
       </div>
-      <div v-if="status === 'in-progress'" class="field">
+      <p v-if="status === 'gaps' && gapsSay" class="hint gaps-say">
+        {{
+          gapsSay === 'in-progress'
+            ? 'Something is still to write, so the page says it is in progress.'
+            : 'Nothing is still to write, so the page says it is finished.'
+        }}
+      </p>
+      <div v-if="shown !== 'finished'" class="field">
         <label for="story-map-planned">Planned length, in pages (optional)</label>
         <input
           id="story-map-planned"
@@ -310,7 +312,7 @@ function make() {
           placeholder="you@example.com"
         />
         <span id="story-map-contact-hint" class="hint">
-          Off unless you turn it on. When on, it is shown on the page, with a link to email you.
+          Off unless you turn it on. When on, it is shown on the page, with a link to email you. It starts as your title page’s Contact; what you type here is kept.
         </span>
       </fieldset>
 
@@ -381,6 +383,9 @@ p {
 }
 .why {
   color: var(--text);
+}
+.gaps-say {
+  margin: -6px 0 12px;
 }
 .row {
   display: flex;

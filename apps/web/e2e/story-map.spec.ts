@@ -200,6 +200,15 @@ test('dialog choices are kept for the script', async ({ page }) => {
   await expect(dialog(page).getByLabel('Threads (your setups and payoffs)')).not.toBeChecked();
   await expect(dialog(page).getByLabel('The line under your name')).toHaveValue(
     'My first screenplay',
+  ); // Back to the default: the gaps decide again, and that is kept too.
+  await dialog(page).getByRole('button', { name: 'From the gaps' }).click();
+  await downloaded(page, async () => {
+    await makeButton(page).click();
+  });
+  await openDialog(page);
+  await expect(dialog(page).getByRole('button', { name: 'From the gaps' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
   );
 });
 
@@ -299,12 +308,13 @@ test('axe has no violations at 390 and 1440 px, in progress and finished', async
   browser,
 }) => {
   await start(page);
-  // The sample has no gaps, so it is Finished unless the writer says otherwise.
+  // From the gaps by default: the sample has none, so it reads as finished.
   await openDialog(page);
-  await expect(dialog(page).getByRole('button', { name: 'Finished' })).toHaveAttribute(
+  await expect(dialog(page).getByRole('button', { name: 'From the gaps' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
+  await expect(dialog(page)).toContainText('Nothing is still to write');
   await dialog(page).getByRole('button', { name: 'In progress' }).click();
   const inProgress = await downloaded(page, async () => {
     await makeButton(page).click();

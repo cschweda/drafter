@@ -126,7 +126,8 @@ export async function makeStoryMap(
         else hooks[key] = hook.trim();
       }
       const logline = (changes.logline ?? '').trim();
-      const contact = page.contact?.trim() || titleContact(doc);
+      // Null: the title page's; a contact emptied in the dialog stays empty.
+      const contact = page.contact === null ? titleContact(doc) : page.contact.trim();
       return {
         status: page.status,
         plannedPages: changes.plannedPages,

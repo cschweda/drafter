@@ -1,6 +1,7 @@
 Title: The Bell </text><script>alert(1)</script> Tower </title>
 Author: Wren "><svg onload=alert(1)> Abernathy
 Logline: A keeper writes </style> on the lamp and nobody minds.
+Contact: wren@example.com </title><script>alert(1)</script>
 
 INT. </text><script>alert(1)</script> SIGNAL BOX - NIGHT
 
@@ -55,3 +56,7 @@ It burns because <foreignObject> somebody stayed awake.
 
 @Odette <foreignObject>
 Then let somebody else stay awake tomorrow.
+
+/* drafter
+{"v":1,"storyMap":{"plannedPages":120,"hooks":{"PIM ]]>":"a ringer who writes <\/text><script>alert(1)<\/script>"}}}
+*/

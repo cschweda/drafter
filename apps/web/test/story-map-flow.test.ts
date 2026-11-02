@@ -290,6 +290,17 @@ describe('making a story map', () => {
     expect(await embeddedSource(new TextEncoder().encode(html))).toBeNull();
   });
 
+  test('a contact emptied in the dialog stays empty, not the title page’s', async () => {
+    const t = await load(SCRIPT);
+    await t.makeStoryMap(NO_CHANGES, {
+      ...t.page,
+      include: { ...t.page.include, contact: true },
+      contact: '',
+    });
+    expect(mapRequests()[0]?.options.contact).toBeNull();
+    expect(t.written[0]?.data as string).not.toContain('ines@example.com');
+  });
+
   test('the draft number and ID come from Drafts', async () => {
     const t = await load(SCRIPT);
     await t.makeStoryMap(NO_CHANGES, t.page);

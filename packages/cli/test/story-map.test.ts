@@ -79,6 +79,10 @@ describe('drafter build --story-map', () => {
     const wrong = await drafter('build', input, '--story-map', '-', '--status', 'done');
     expect(wrong.code).toBe(1);
     expect(wrong.err).toContain('--status is in-progress or finished');
+    // Only a story map has a status.
+    const alone = await drafter('build', input, '--txt', '-', '--status', 'finished');
+    expect(alone.code).toBe(1);
+    expect(alone.err).toContain('--status needs --story-map');
   });
 
   it('a draft file’s number and id are on the last line', async () => {

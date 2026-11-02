@@ -10,7 +10,8 @@ describe('storyMapMeta', () => {
     ).toEqual({ plannedPages: 95, hooks: { WREN: 'keeps the lamp' } });
     expect(storyMapMeta({ storyMap: { plannedPages: 1 } }).plannedPages).toBe(1);
     expect(storyMapMeta({ storyMap: { plannedPages: 999 } }).plannedPages).toBe(999);
-    expect(storyMapMeta({ storyMap: { plannedPages: 87.5 } }).plannedPages).toBe(87.5);
+    // A planned length is a whole number of pages.
+    expect(storyMapMeta({ storyMap: { plannedPages: 87.5 } }).plannedPages).toBeNull();
   });
 
   it('leaves out anything that is not a number from 1 to 999, or a string of 200 at most', () => {

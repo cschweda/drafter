@@ -243,6 +243,26 @@ function expectInertStoryMap(trap: Trap, html: string) {
   expect(document.querySelectorAll('h1').length, `${trap.id}: story map h1`).toBe(1);
 }
 
+/**
+ * What the story-map traps say they test, checked in the page's text: the hostile file's logline,
+ * contact, and edited hook are there as words, and the huge name is drawn whole.
+ */
+function expectStoryMapWords(trap: Trap, html: string) {
+  // The page keeps a line's last words together with no-break spaces.
+  const text = (new JSDOM(html).window.document.body.textContent ?? '').replace(/\u00a0/g, ' ');
+  if (trap.id === 'fountain-story-map-hostile') {
+    // Its U+2028 stays in it, as the writer's.
+    expect(text, 'logline').toContain(
+      'A keeper writes </style> on the lamp\u2028and nobody minds.',
+    );
+    expect(text, 'contact').toContain('wren@example.com </title><script>alert(1)</script>');
+    expect(text, 'edited hook').toContain('a ringer who writes </text><script>alert(1)</script>');
+  }
+  if (trap.id === 'fountain-story-map-huge-name') {
+    expect(/QUILL(?:LONGNAME){12500}/i.test(text), 'the whole name').toBe(true);
+  }
+}
+
 // The `package` entry point decodes the bytes with the worker's own `decoded()`, a copy of Open's
 // rules, so each reader is tried on its own; the app's real decoding and routing are what
 // `web-open` and `desktop-open` run (apps/web/test/trap-open.test.ts).
@@ -259,6 +279,7 @@ describe('package: each format’s reader on its own', () => {
     if (trap.inert && answer.happened.kind === 'opened') {
       expect(answer.storyMap, `${trap.id}: a story map`).toBeTypeOf('string');
       expectInertStoryMap(trap, answer.storyMap as string);
+      expectStoryMapWords(trap, answer.storyMap as string);
     }
   });
 });

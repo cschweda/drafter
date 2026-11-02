@@ -681,7 +681,7 @@ const FOUNTAIN_TRAPS: Trap[] = [
     format: 'fountain',
     name: 'story-map-hostile.fountain',
     tests:
-      'Markup, `]]>`, `</style>`, `</title>`, bidi overrides, U+2028, and a 5,000-character name in the title, names, places, summaries, a marked line, hooks, and threads stay text in the story map.',
+      'Markup, `]]>`, `</style>`, `</title>`, bidi overrides, U+2028, and a 5,000-character name in the title, logline, contact, names, places, summaries, a marked line, an edited hook from the metadata block, and threads stay text in the story map.',
     bytes: file('fountain/story-map-hostile.fountain'),
     expect: { 'web-open': opens(text('fountain/story-map-hostile.fountain')) },
     inert: true,

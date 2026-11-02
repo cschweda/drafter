@@ -9,7 +9,7 @@ const FEWEST_PAGES = 1;
 const MOST_PAGES = 999;
 
 export interface StoryMapMeta {
-  /** A number from 1 to 999, else null. */
+  /** A whole number from 1 to 999, else null. */
   plannedPages: number | null;
   /** Each key's string of at most 200 characters; an object with no prototype. */
   hooks: Record<string, string>;
@@ -25,7 +25,12 @@ export function storyMapMeta(meta: unknown): StoryMapMeta {
   if (!isRecord(part)) return { plannedPages: null, hooks };
   const pages = part.plannedPages;
   const plannedPages =
-    typeof pages === 'number' && pages >= FEWEST_PAGES && pages <= MOST_PAGES ? pages : null;
+    typeof pages === 'number' &&
+    Number.isInteger(pages) &&
+    pages >= FEWEST_PAGES &&
+    pages <= MOST_PAGES
+      ? pages
+      : null;
   if (isRecord(part.hooks)) {
     for (const [key, hook] of Object.entries(part.hooks)) {
       if (typeof hook === 'string' && hook.length <= MOST_HOOK) hooks[key] = hook;

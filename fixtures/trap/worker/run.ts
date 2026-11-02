@@ -22,7 +22,12 @@ import { mergeCuts } from '@drafter/history';
 import { paginate } from '@drafter/layout';
 import { NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
-import { buildStoryMap, renderStoryMap, type StoryMapFonts } from '@drafter/story-map';
+import {
+  buildStoryMap,
+  renderStoryMap,
+  type StoryMapFonts,
+  storyMapMeta,
+} from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
 import { readCutsBytes, readDraftBytes, skippedLine } from '../../../apps/web/app/beside/read';
@@ -192,9 +197,20 @@ const MAP_FONTS: StoryMapFonts = {
   courier: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 4]),
 };
 
-/** The opened text's story map, with the dialog's defaults, as a writer would make it. */
+/** A title page field's text, its lines joined, or null. */
+function titleField(doc: ReturnType<typeof parse>, key: string): string | null {
+  const field = doc.titlePage?.fields.find((f) => f.key.trim().toLowerCase() === key);
+  return field ? field.value.join(' ') : null;
+}
+
+/**
+ * The opened text's story map, as a writer would make it with every choice that carries their own
+ * words on: the title page's logline, its contact (Your contact on), and the metadata block's
+ * planned length and edited hooks.
+ */
 function storyMapOf(text: string): string {
   const doc = parse(text);
+  const meta = storyMapMeta(doc.meta);
   const template = builtins['us-screenplay'] as Template;
   const map = buildStoryMap({
     doc,
@@ -202,13 +218,13 @@ function storyMapOf(text: string): string {
     layout: paginate(doc, template),
     options: {
       status: null,
-      plannedPages: null,
-      logline: null,
+      plannedPages: meta.plannedPages,
+      logline: titleField(doc, 'logline'),
       greeting: "What I'm writing",
       explain: null,
-      include: { summaries: true, lines: true, threads: true, contact: false },
-      contact: null,
-      hooks: {},
+      include: { summaries: true, lines: true, threads: true, contact: true },
+      contact: titleField(doc, 'contact'),
+      hooks: meta.hooks,
       rates: { minutesPerPage: 1, wordsPerMinute: 150 },
       draft: { number: 1, id: '0123456789abcdef' },
       updated: null,
