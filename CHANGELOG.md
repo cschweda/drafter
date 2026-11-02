@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- DEFERRED's list of flaky CI tests notes the Linux AppImage self-update test, which failed once on the v0.24.1 tag and passed on its rerun.
+
 ## [0.24.1] - 2026-11-01
 
 **Story map, and the security audit's fixes.** Export → Story map makes one dark, phone-first page that answers "What are you writing?" in pictures: the shape of the story, its people, and every scene so far, with a few lines of dialogue. It runs no code and fetches nothing, and your notes never go in. The desktop app takes a dropped file only from a real drop, and every pull request is checked on GitHub.
