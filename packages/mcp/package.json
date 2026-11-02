@@ -1,5 +1,6 @@
 {
   "name": "drafter-mcp",
+  "private": true,
   "version": "0.24.1",
   "description": "Drafter for Claude: a local, read-only MCP server that lets an AI app read the scripts in the folders the writer names.",
   "license": "MIT",
@@ -12,21 +13,22 @@
     "url": "git+https://github.com/cschweda/drafter.git",
     "directory": "packages/mcp"
   },
+  "homepage": "https://drafter.dev/docs/drafter-for-claude/",
+  "keywords": [
+    "mcp",
+    "fountain",
+    "screenwriting",
+    "claude"
+  ],
   "bin": {
-    "drafter-mcp": "./dist/index.js"
-  },
-  "exports": {
-    ".": {
-      "source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
+    "drafter-mcp": "./dist/drafter-mcp.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsdown",
+    "stage": "node scripts/stage.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

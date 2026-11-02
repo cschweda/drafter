@@ -3,8 +3,9 @@
 #
 #   publish-release.sh <tag> <folder with the release's files>
 #
-# The folder holds the Linux packages (the .AppImage, the .deb, latest-linux.yml) and the Windows
-# installer (x64, latest.yml), every one of them (apps/desktop/scripts/check-release-assets.mjs):
+# The folder holds the Linux packages (the .AppImage, the .deb, latest-linux.yml), the Windows
+# installer (x64, latest.yml), and Drafter for Claude (drafter-mcp-<version>.js and
+# drafter-mcp-<version>.js.sha256), every one of them (apps/desktop/scripts/check-release-assets.mjs):
 # a release with one system's files missing is never made.
 #
 # Needs GH_TOKEN (contents: write), GH_REPO (owner/name), and jq, and runs from the repository root.

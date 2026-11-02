@@ -6,7 +6,7 @@ import { homedir } from 'node:os';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import pkg from '../package.json' with { type: 'json' };
 import { parseOptions, USAGE } from './options';
-import { ReaderPool, type WorkerSpec } from './pool';
+import { callLimitMs, ReaderPool, type WorkerSpec } from './pool';
 import { resolveRoots, StartError } from './roots';
 import { createServer } from './server';
 
@@ -50,12 +50,11 @@ export async function main(
     }
     throw error;
   }
-  const pool = new ReaderPool(worker, {
-    roots,
-    options: parsed,
-    key: new Uint8Array(randomBytes(32)),
-    platform,
-  });
+  const pool = new ReaderPool(
+    worker,
+    { roots, options: parsed, key: new Uint8Array(randomBytes(32)), platform },
+    callLimitMs(process.env),
+  );
   const count = `${roots.length} ${roots.length === 1 ? 'folder' : 'folders'}`;
   io.err(`drafter-mcp ${VERSION}: reading ${count}: ${roots.map((root) => root.name).join(', ')}`);
   serveStdio(() =>

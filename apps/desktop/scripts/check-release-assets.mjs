@@ -1,6 +1,7 @@
 // What a release carries, and whether a GitHub Release holds it. A release is the Linux packages
-// (the AppImage, the .deb, latest-linux.yml) and the Windows installer (x64, latest.yml): five files,
-// all built from one tag, and nothing goes up unless all of them are there.
+// (the AppImage, the .deb, latest-linux.yml), the Windows installer (x64, latest.yml), and Drafter
+// for Claude (drafter-mcp-<version>.js, with its SHA-256 in drafter-mcp-<version>.js.sha256): seven
+// files, all built from one tag, and nothing goes up unless all of them are there.
 //   node scripts/check-release-assets.mjs --list <folder>
 //     checks the folder holds exactly one of each and prints their names, one a line (the files
 //     .github/scripts/publish-release.sh uploads)
@@ -21,6 +22,8 @@ export const RELEASE_FILES = [
   { what: 'latest-linux.yml', test: (name) => name === 'latest-linux.yml' },
   { what: 'the x64 Windows installer', test: (name) => /-windows-x64-setup\.exe$/.test(name) },
   { what: 'latest.yml', test: (name) => name === 'latest.yml' },
+  { what: 'Drafter for Claude', test: (n) => /^drafter-mcp-\d+\.\d+\.\d+(-[\w.]+)?\.js$/.test(n) },
+  { what: 'its SHA-256', test: (n) => /^drafter-mcp-.*\.js\.sha256$/.test(n) },
 ];
 
 /** The files in the folder that a release carries, by name. */
@@ -36,7 +39,8 @@ export function folderProblems(dir) {
   const problems = [];
   for (const kind of RELEASE_FILES) {
     const found = files.filter((name) => kind.test(name));
-    if (found.length === 0) problems.push(`${dir} has no ${kind.what.replace(/^(an?|the) /, '')}`);
+    if (found.length === 0)
+      problems.push(`${dir} has no ${kind.what.replace(/^(an?|the|its) /, '')}`);
     if (found.length > 1)
       problems.push(`${dir} has more than one of ${kind.what}: ${found.join(', ')}`);
   }

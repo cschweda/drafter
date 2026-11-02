@@ -26,6 +26,17 @@ export interface Job {
 export type JobResult = { ok: object } | { refused: string; extra?: object };
 
 export const CALL_LIMIT_MS = 10_000;
+
+/**
+ * The call limit: 10 seconds, except in a test (NODE_ENV=test), where DRAFTER_MCP_LIMIT_MS may
+ * shorten it, so a test of the built program can see a call stopped without waiting 10 seconds.
+ */
+export function callLimitMs(env: Readonly<Record<string, string | undefined>>): number {
+  const wanted = env.DRAFTER_MCP_LIMIT_MS;
+  if (env.NODE_ENV !== 'test' || !wanted || !/^[1-9]\d*$/.test(wanted)) return CALL_LIMIT_MS;
+  const ms = Number(wanted);
+  return ms <= CALL_LIMIT_MS ? ms : CALL_LIMIT_MS;
+}
 /** How long a new reader may take to start, apart from the call's own limit. */
 const START_LIMIT_MS = 10_000;
 

@@ -47,3 +47,6 @@ Thumbs.db
 # Other apps' files, which only the maintainer's local tests may read (DRAFTER_REAL_FILES)
 *.highland
 *.fadein
+
+# Drafter for Claude's npm package, staged from its bundle (packages/mcp/scripts/stage.mjs)
+packages/mcp/stage/

@@ -35,6 +35,7 @@ export {
 } from './paths';
 export {
   CALL_LIMIT_MS,
+  callLimitMs,
   type Job,
   type JobResult,
   ReaderPool,

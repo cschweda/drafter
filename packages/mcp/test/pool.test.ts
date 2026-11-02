@@ -1,6 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ReaderPool, STOPPED, TOO_LONG, type WorkerData } from '../src/pool';
+import {
+  CALL_LIMIT_MS,
+  callLimitMs,
+  ReaderPool,
+  STOPPED,
+  TOO_LONG,
+  type WorkerData,
+} from '../src/pool';
 import type { ToolName } from '../src/tools/index';
 
 const SPIN = {
@@ -100,5 +107,22 @@ describe('closing the reader pool', () => {
     const first = closing.run(job('thread'));
     await closing.close();
     expect(await first).toEqual({ refused: STOPPED });
+  });
+});
+
+describe('the call limit', () => {
+  it('is 10 seconds, shortened by DRAFTER_MCP_LIMIT_MS only in a test', () => {
+    expect(CALL_LIMIT_MS).toBe(10_000);
+    expect(callLimitMs({})).toBe(CALL_LIMIT_MS);
+    expect(callLimitMs({ DRAFTER_MCP_LIMIT_MS: '200' })).toBe(CALL_LIMIT_MS);
+    expect(callLimitMs({ NODE_ENV: 'production', DRAFTER_MCP_LIMIT_MS: '200' })).toBe(
+      CALL_LIMIT_MS,
+    );
+    expect(callLimitMs({ NODE_ENV: 'test', DRAFTER_MCP_LIMIT_MS: '200' })).toBe(200);
+  });
+
+  it('a value that isn’t a whole number of milliseconds from 1 to 10 seconds is ignored', () => {
+    for (const value of ['', '0', '-5', '1.5', 'abc', '20000', '1e3'])
+      expect(callLimitMs({ NODE_ENV: 'test', DRAFTER_MCP_LIMIT_MS: value })).toBe(CALL_LIMIT_MS);
   });
 });

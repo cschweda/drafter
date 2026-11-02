@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // The program's entry: the server in the main thread, and the reader when the server starts this
 // same file as its worker.
 import { isMainThread } from 'node:worker_threads';

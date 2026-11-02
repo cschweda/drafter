@@ -13,7 +13,11 @@ beforeEach(async () => {
   await writeFile(join(dir, 'latest-linux.yml'), 'feed');
   await writeFile(join(dir, X64), 'x64 setup');
   await writeFile(join(dir, 'latest.yml'), 'win feed');
+  await writeFile(join(dir, MCP), 'bundle');
+  await writeFile(join(dir, `${MCP}.sha256`), 'hash');
 });
+
+const MCP = 'drafter-mcp-1.0.0.js';
 
 const X64 = 'Drafter-1.0.0-windows-x64-setup.exe';
 afterEach(() => rm(dir, { recursive: true, force: true }));
@@ -31,6 +35,8 @@ const assets = (over: Record<string, object> = {}) =>
     { name: 'latest-linux.yml', size: 4, state: 'uploaded', digest: sha('feed') },
     { name: X64, size: 9, state: 'uploaded', digest: sha('x64 setup') },
     { name: 'latest.yml', size: 8, state: 'uploaded', digest: sha('win feed') },
+    { name: MCP, size: 6, state: 'uploaded', digest: sha('bundle') },
+    { name: `${MCP}.sha256`, size: 4, state: 'uploaded', digest: sha('hash') },
   ].map((asset) => ({ ...asset, ...over[asset.name] }));
 
 describe('compareAssets', () => {
@@ -90,9 +96,10 @@ describe('compareAssets', () => {
 });
 
 describe('the folder a release is made from', () => {
-  test('lists the five files, and nothing else there', async () => {
+  test('seven files: the packages, the feeds, and Drafter for Claude with its SHA-256', async () => {
     await writeFile(join(dir, 'builder-debug.yml'), 'x');
     await writeFile(join(dir, `${X64}.blockmap`), 'x');
+    await writeFile(join(dir, 'drafter-mcp.js'), 'x');
     expect(folderProblems(dir)).toEqual([]);
     expect(packageFiles(dir)).toEqual(
       [
@@ -101,8 +108,22 @@ describe('the folder a release is made from', () => {
         'Drafter-x86_64.AppImage',
         'latest-linux.yml',
         'latest.yml',
+        MCP,
+        `${MCP}.sha256`,
       ].sort(),
     );
+  });
+
+  test('a release without Drafter for Claude, or without its SHA-256, is refused', async () => {
+    await rm(join(dir, `${MCP}.sha256`));
+    expect(folderProblems(dir).join('\n')).toMatch(/has no SHA-256/);
+    await rm(join(dir, MCP));
+    expect(folderProblems(dir).join('\n')).toMatch(/has no Drafter for Claude/);
+  });
+
+  test('a pre-release bundle counts, and two bundles are refused', async () => {
+    await writeFile(join(dir, 'drafter-mcp-0.9.0-rc.1.js'), 'old');
+    expect(folderProblems(dir).join('\n')).toMatch(/more than one of Drafter for Claude/);
   });
 
   test('a release with only Linux, or only Windows, is refused', async () => {
