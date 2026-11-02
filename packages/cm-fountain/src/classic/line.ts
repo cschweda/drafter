@@ -37,6 +37,8 @@ export interface StoredLine {
   dismissed: boolean;
   /** The line was empty when it was stored, so what's on it was typed in this stay. */
   beganEmpty: boolean;
+  /** What the line was before any shape typed on it (§4.2), which it goes back to when the shape ends. */
+  arrivedAs: ClassicKind;
 }
 
 export interface ClassicElement {
@@ -257,6 +259,7 @@ function arrival(state: EditorState): StoredLine | null {
     made: null,
     dismissed: false,
     beganEmpty: true,
+    arrivedAs: kind,
   };
 }
 
@@ -318,6 +321,8 @@ function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | nu
         beganEmpty: isBlank(tr.newDoc.lineAt(from).text),
         ...base,
         ...effect.value,
+        // Naming an element replaces what the line arrived as, unless the mark filter says so.
+        arrivedAs: effect.value.arrivedAs ?? effect.value.kind,
         ...(effect.value.chosen ? { soft: false } : null),
         from,
       };

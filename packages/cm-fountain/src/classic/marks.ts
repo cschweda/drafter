@@ -95,20 +95,42 @@ function blockIs(block: Block, kind: ClassicKind, structure: ElementStructure): 
   return block.kind === kind;
 }
 
-/** The words a line of a block prints: its text without the block's forcing `!`. */
+/** The words a line of a block prints: its text without the mark that made it the block's kind. */
 function printed(block: Block, at: number): string {
   const found = block.lines.find((line) => line.span.from === at);
   const text = (found?.raw ?? '').trim();
-  return block.forced && found === block.lines[0] ? text.slice(1) : text;
+  switch (block.kind) {
+    case 'lyric':
+      return text.slice(1);
+    case 'centered':
+      return text.slice(1, -1).trim();
+    case 'section':
+      return text.replace(/^#+/, '').trimStart();
+    case 'synopsis':
+      return text.slice(1).trimStart();
+    default:
+      return block.forced && found === block.lines[0] ? text.slice(1) : text;
+  }
 }
 
+/** The last full parse of line 1, by the parse it was made from, as one key asks twice. */
+const lastFirstLine = new WeakMap<Doc, { text: string; doc: Doc }>();
+
 /** The parse of the script with `text` as line 1, for what only a full parse can see. */
-const withFirstLine = (state: EditorState, line: Line, text: string): Doc =>
-  reparse(state.field(parsedDoc), [{ from: line.from, to: line.to, insert: text }]);
+function withFirstLine(state: EditorState, line: Line, text: string): Doc {
+  const parsed = state.field(parsedDoc);
+  const known = lastFirstLine.get(parsed);
+  if (known?.text === text) return known.doc;
+  const doc = reparse(parsed, [{ from: line.from, to: line.to, insert: text }]);
+  lastFirstLine.set(parsed, { text, doc });
+  return doc;
+}
 
 /**
- * Would the parser read `text` at this line as `kind`? Action reads `words` too, since a line that
- * opens with `!` is Action with the `!` gone. It parses `\n` and the run, as a paragraph on its own
+ * Would the parser read `text` at this line as `kind`, printing `words`? A mark's character the
+ * writer typed would otherwise vanish from the page. Character and Scene heading don't compare
+ * words: a typed `@` and `.` are the same mark (§4.2), and those lines print what the parser makes
+ * of them. It parses `\n` and the run, as a paragraph on its own
  * would read as a title page; line 1 with a colon can be one, so it asks the full parse. Past the
  * cap the answer is yes, so no new mark is written.
  */
@@ -133,11 +155,19 @@ export function readsAs(
   // A line that's all note or boneyard is no element, and a mark would make it one.
   if (block.kind === 'note' || block.kind === 'boneyard') return true;
   if (!blockIs(block, kind, state.facet(elementStructure)())) return false;
-  return kind !== 'action' || printed(block, at) === words.trim();
+  if (kind === 'character' || block.kind === 'scene_heading') return true;
+  return printed(block, at) === words.trim();
 }
 
 /** The worked-out element of a line typed in this stay, not one chosen. */
 const isWorkedOut = (own: StoredLine) => own.beganEmpty && !own.chosen;
+
+/** Whether the line is soft Action: an element named on a soft line ends that. */
+const isSoft = (own: StoredLine) => own.soft && own.arrivedAs === 'action';
+
+/** Whether a line starts its paragraph, where alone a shape can read as one to the parser. */
+const opensParagraph = (state: EditorState, line: Line) =>
+  line.number === 1 || isBlank(state.doc.line(line.number - 1).text);
 
 /** A heading's or a transition's shape, for a line typed on in this stay (§4.2). */
 function headingOrTransition(
@@ -146,17 +176,17 @@ function headingOrTransition(
   text: string,
   own: StoredLine,
 ): 'scene_heading' | 'transition' | null {
-  if (!isWorkedOut(own) || MARK_START.test(text)) return null;
+  if (!isWorkedOut(own) || MARK_START.test(text) || !opensParagraph(state, line)) return null;
   const words = text.trimStart();
   // The maintainer's ruling: a prefix is no plausible name, so after a speech it starts a scene.
   if (
     state.facet(elementStructure)().headings &&
     HEADING_START.test(words) &&
-    (own.soft || pendingAt(state, line.from) === 'character')
+    (isSoft(own) || own.arrivedAs === 'character')
   ) {
     return 'scene_heading';
   }
-  const transition = own.soft && text.endsWith('TO:') && HAS_UPPER.test(text);
+  const transition = isSoft(own) && text.endsWith('TO:') && HAS_UPPER.test(text);
   return transition && !HAS_LOWER.test(text) ? 'transition' : null;
 }
 
@@ -169,12 +199,12 @@ function shapeWith(
 ): 'scene_heading' | 'transition' | 'title_page' | null {
   const body = text.startsWith(BOM) ? text.slice(1) : text;
   const shape = headingOrTransition(state, line, body, own);
-  if (shape || !own.soft || line.number !== 1 || !body.includes(':')) return shape;
+  if (shape || !isSoft(own) || line.number !== 1 || !body.includes(':')) return shape;
   if (MARK_START.test(body) || !runAround(state, line, text.length)) return null;
   return withFirstLine(state, line, text).titlePage ? 'title_page' : null;
 }
 
-const NO_LINE: Omit<StoredLine, 'from' | 'kind'> = {
+const NO_LINE: Omit<StoredLine, 'from' | 'kind' | 'arrivedAs'> = {
   soft: false,
   chosen: false,
   added: [],
@@ -238,10 +268,6 @@ function without(text: string, from: number, spans: readonly Span[]): string {
   return out + text.slice(at);
 }
 
-/** The element of a line with no shape: a worked-out one is worked out again, as a shape can end. */
-const baseKind = (state: EditorState, line: Line, own: StoredLine): ClassicKind =>
-  isWorkedOut(own) ? pendingAt(state, line.from) : own.kind;
-
 /** The heading's prefix in capitals, and nothing else. */
 function upperPrefix(body: string): string {
   const lead = body.length - body.trimStart().length;
@@ -265,7 +291,7 @@ export function settleLine(
   const bare = without(text, line.from, stored.added);
   const bom = bare.startsWith(BOM) ? BOM : '';
   const shape = shapeWith(state, line, bare, stored);
-  const kind = shape === 'title_page' ? 'action' : (shape ?? baseKind(state, line, stored));
+  const kind = shape === 'title_page' ? 'action' : (shape ?? stored.arrivedAs);
   const body = shape === 'scene_heading' ? bom + upperPrefix(bare.slice(bom.length)) : bare;
   const words = body.slice(bom.length);
   const asTyped = { text: body, kind, added: [] };
@@ -274,24 +300,34 @@ export function settleLine(
   const structure = state.facet(elementStructure)();
   const mark = markOf(kind, structure);
   if (!mark) return asTyped;
-  // A `!` that was there before this keystroke and isn't ours came with the file.
-  if (kind === 'action' && !stored.added.length && /^[\s﻿]*!/.test(line.text)) return asTyped;
-  // `.` is the mark itself, and in front of anything but a letter or a number it isn't one.
-  if (kind === 'scene_heading' && structure.headings && !/^\s*[\p{L}\p{N}]/u.test(words)) {
-    return asTyped;
-  }
-  if (readsAs(state, line, body, kind, body)) return asTyped;
   const [open, close] = mark;
-  const start = line.from + bom.length;
-  const end = start + open.length + words.length;
-  return {
-    text: bom + open + words + close,
-    kind,
-    added: [
-      { from: start, to: start + open.length },
-      ...(close ? [{ from: end, to: end + close.length }] : []),
-    ],
-  };
+  // A mark that was there before this keystroke and isn't ours came with the file.
+  if (!stored.added.length && line.text.trimStart().startsWith(open.trimEnd())) return asTyped;
+  const heading = kind === 'scene_heading' && structure.headings;
+  // A typed `.` is the same mark.
+  if (heading && words.trimStart().startsWith('.')) return asTyped;
+  // Some lines no mark can make the element: `.` needs a letter or number after it, and `>…<` is
+  // Centered. They stay the writer's words, as Action.
+  if (
+    (heading && !/^\s*[\p{L}\p{N}]/u.test(words)) ||
+    (kind === 'transition' && words.trimEnd().endsWith('<'))
+  ) {
+    return readsAs(state, line, body, 'action', body) ? asTyped : marked('!', '');
+  }
+  return readsAs(state, line, body, kind, body) ? asTyped : marked(open, close);
+
+  function marked(lead: string, tail: string) {
+    const start = line.from + bom.length;
+    const end = start + lead.length + words.length;
+    return {
+      text: bom + lead + words + tail,
+      kind,
+      added: [
+        { from: start, to: start + lead.length },
+        ...(tail ? [{ from: end, to: end + tail.length }] : []),
+      ],
+    };
+  }
 }
 
 /** The one change that turns `from` into `to`, in a text where they start at `at`. */
@@ -333,6 +369,8 @@ function typedOnLine(tr: Transaction): { line: Line; at: number; from: number; t
   return last > line.to ? null : { line, at: first, from: start, to: end };
 }
 
+const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
+
 const sameSpans = (a: readonly Span[], b: readonly Span[]) =>
   a.length === b.length && a.every((span, i) => span.from === b[i]?.from && span.to === b[i]?.to);
 
@@ -361,7 +399,7 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
       : {
           ...NO_LINE,
           from: line.from,
-          kind: lineKindAt(state, line) ?? pendingAt(state, line.from),
+          ...kindsOf(lineKindAt(state, line) ?? pendingAt(state, line.from)),
         };
   const added = own.added.flatMap((span) => mapSpan(span, tr.changes) ?? []);
 
@@ -371,7 +409,7 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
     line.to + tr.changes.newLength - tr.changes.length,
   );
   const bare = without(rawText, line.from, added);
-  const element = headingOrTransition(state, line, bare, own) ?? baseKind(state, line, own);
+  const element = headingOrTransition(state, line, bare, own) ?? own.arrivedAs;
   const fix =
     CAPITALS.has(element) && !inNote(state, line, typed.at)
       ? upperFix(tr.newDoc, typed.from, tr.newDoc.sliceString(typed.from, typed.to))
@@ -410,7 +448,12 @@ function applySettled(
         ? { selection: { anchor: head - gone + (lead ? lead.to - lead.from : 0) } }
         : null),
       effects: noted
-        ? setStored.of({ from: line.from, kind: settled.kind, added: settled.added })
+        ? setStored.of({
+            from: line.from,
+            kind: settled.kind,
+            added: settled.added,
+            arrivedAs: own.arrivedAs,
+          })
         : [],
       sequential: true,
     });

@@ -19,7 +19,7 @@ const SCREENPLAY = builtins['us-screenplay'] as Template;
 /** The editor's state with Classic Mode on, a screenplay's unless a template is given. `|` marks as `editor` does. */
 export function classicEditor(
   marked: string,
-  { template = SCREENPLAY }: { template?: Template } = {},
+  { template = SCREENPLAY, with: more = [] }: { template?: Template; with?: Extension[] } = {},
 ): EditorState {
   const extensions: Extension[] = [
     parsedDoc,
@@ -28,6 +28,7 @@ export function classicEditor(
     elementTemplate.of(() => template),
     // Ahead of Fountain's input filters, as the app's compartment is: filters run last to first.
     Prec.high(classic()),
+    ...more,
   ];
   return editor(marked, extensions);
 }

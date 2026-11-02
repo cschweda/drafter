@@ -1,3 +1,4 @@
+import { history, undo, undoDepth } from '@codemirror/commands';
 import type { EditorState } from '@codemirror/state';
 import { makeElement } from '@drafter/cm-fountain';
 import { builtins, type Template } from '@drafter/templates';
@@ -123,6 +124,7 @@ describe('§4.2, the table, row by row', () => {
       made: null,
       dismissed: false,
       beganEmpty: false,
+      arrivedAs: 'action',
     };
     const settled = settleLine(state, line(state), 'BANG', own);
     expect(settled).toMatchObject({ text: '!BANG', kind: 'action' });
@@ -376,16 +378,19 @@ describe('capitals and code points', () => {
 
 describe('the transaction', () => {
   test('the mark and the letter are one undo step', () => {
-    const before = choose(classicEditor(SOFT), 'lyric');
-    const { from } = before.selection.main;
-    const tr = before.update({
-      changes: { from, insert: 'l' },
-      selection: { anchor: from + 1 },
-      userEvent: 'input.type',
-    });
-    expect(tr.newDoc.toString()).toBe('She waits.\n\n~l');
-    expect(tr.changes.invert(before.doc).apply(tr.newDoc).toString()).toBe(before.sliceDoc());
-    expect(tr.isUserEvent('input.type')).toBe(true);
+    const before = choose(classicEditor(SOFT, { with: [history()] }), 'lyric');
+    const typed = type(before, 'l');
+    expect(typed.sliceDoc()).toBe('She waits.\n\n~l');
+    expect(undoDepth(typed)).toBe(1);
+    expect(apply(typed, undo).sliceDoc()).toBe(before.sliceDoc());
+    expect(typed.field(classicLine)).not.toBeNull();
+  });
+
+  test('a capital, a mark, and a letter undo together, and the kept text comes back', () => {
+    const before = choose(classicEditor(SOFT, { with: [history()] }), 'character');
+    const typed = type(before, '李');
+    expect(typed.doc.line(3).text).toBe('@李');
+    expect(apply(typed, undo).sliceDoc()).toBe(before.sliceDoc());
   });
 
   test.each(['input.paste', 'input.type.compose', 'undo', 'redo', 'input.replace', 'input'])(
@@ -443,6 +448,66 @@ describe('makeElement on the cursor’s line', () => {
       kind: 'action',
       chosen: false,
     });
+  });
+});
+
+describe('fix round 1', () => {
+  test('Action under an action paragraph after a speech stays Action', () => {
+    expect(typedOn(classicEditor('JUNE\nHello.\n\nShe leaves.\n|'), 'She waits for him')).toBe(
+      'She waits for him',
+    );
+    const between = classicEditor('JUNE\nHello.\n\nOne.\n|\nTwo.');
+    expect(typedOn(between, 'She waits for him')).toBe('She waits for him');
+    expect(elementAt(type(between, 'She'))?.kind).toBe('action');
+  });
+
+  test.each([
+    ['She waits.\n|', 'int. x', 'int. x'],
+    ['She waits.\n|', 'CUT TO:', 'CUT TO:'],
+    ['One.\n|\nTwo.', 'int. x', 'int. x'],
+    ['One.\n|\nTwo.', 'CUT TO:', 'CUT TO:'],
+  ])('a shape needs a blank line above: %j + %s stays Action', (marked, text, written) => {
+    const state = classicEditor(marked);
+    expect(typedOn(state, text)).toBe(written);
+    expect(elementAt(type(state, text))?.kind).toBe('action');
+  });
+
+  test('a shape on line 1 needs no blank line above', () => {
+    expect(typedOn(classicEditor('|'), 'int. x')).toBe('INT. X');
+  });
+
+  test('a stored element that was not chosen outlives the first letter', () => {
+    const lyric = classicEditor(SOFT).update({ effects: setStored.of({ kind: 'lyric' }) }).state;
+    expect(lettering(lyric, 'la')).toEqual(['~l', '~la']);
+    expect(elementAt(type(lyric, 'la'))?.kind).toBe('lyric');
+    expect(typedOn(lyric, 'int. x')).toBe('~int. x');
+    const play = classicEditor('# ONE\n\n|', { template: PLAY }).update({
+      effects: setStored.of({ kind: 'scene_heading' }),
+    }).state;
+    expect(typedOn(play, 'two')).toBe('## TWO');
+  });
+
+  test.each([
+    ['lyric', '~la', ['~~', '~~l', '~~la']],
+    ['transition', '>x', ['>>', '>>X']],
+    ['synopsis', '=x', ['= =', '= =x']],
+    ['section', '#x', ['# #', '# #x']],
+  ] as const)('a mark’s character typed on %s is kept: %s', (kind, text, steps) => {
+    expect(lettering(choose(classicEditor(SOFT), kind), text)).toEqual(steps);
+  });
+
+  test('those marks from a file are still left alone', () => {
+    expect(typedOn(returned('She waits.\n\n= plan|'), 'x')).toBe('= planx');
+    expect(typedOn(returned('She waits.\n\n# Part|'), 'x')).toBe('# Partx');
+  });
+
+  test('#X on a chosen Scene heading is not read as a Section', () => {
+    expect(typedOn(choose(classicEditor(SOFT), 'scene_heading'), '#x')).toBe('!#X');
+  });
+
+  test('FADE< on a Transition is not Centered and keeps its <', () => {
+    const steps = lettering(choose(classicEditor(SOFT), 'transition'), 'FADE<X');
+    expect(steps.slice(-3)).toEqual(['>FADE', 'FADE<', '>FADE<X']);
   });
 });
 

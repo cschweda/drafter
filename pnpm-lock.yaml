@@ -276,6 +276,10 @@ importers:
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
+    devDependencies:
+      '@codemirror/commands':
+        specifier: ^6.11.1
+        version: 6.11.1
 
   packages/compare:
     dependencies:

@@ -38,5 +38,8 @@
     "@drafter/lint": "workspace:*",
     "@drafter/notes": "workspace:*",
     "@drafter/templates": "workspace:*"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.11.1"
   }
 }
