@@ -82,7 +82,7 @@ export function fountainDecorations(
  * The ranges widened to whole lines, sorted, and merged where they share a line. A range is cut
  * off at the ends of the text, and one that is left with nothing, or runs backwards, is dropped.
  */
-function wholeLines(text: Text, ranges: readonly Span[]): Span[] {
+export function wholeLines(text: Text, ranges: readonly Span[]): Span[] {
   const lines: Span[] = [];
   for (const range of ranges) {
     if (range.from > range.to || range.to < 0 || range.from > text.length) continue;

@@ -6,6 +6,23 @@ import { EditorView } from '@codemirror/view';
 // CodeMirror's own rules for the selection and the completion list name the
 // light or the dark variant, so these repeat their selectors to match their
 // weight; a theme's rules come after the base theme's, and so win.
+//
+// Classic Mode's rules (design §8.2) are all under `.cm-classic`, which only the mode puts on the
+// editor, so none of them applies in Fountain Mode. Nothing there moves: no `transition` or
+// `animation` property, in any motion setting.
+const CLASSIC = '&.cm-classic';
+
+/** The line's own 8 px, then the template's indent, as a share of a pane too narrow to hold it. */
+const classicRole = (role: string, share: number) => ({
+  paddingLeft: `calc(8px + min(calc(var(--c-${role}-indent, 0) * 1ch), ${share}%))`,
+  maxWidth: `calc(var(--c-${role}-width, 60) * 1ch)`,
+});
+
+const HEADING = { fontWeight: '700' };
+
+/** Space above a scene, for the second blank line the page has and the text doesn't (§8.2). */
+const SCENE_START = { paddingTop: 'calc(10px * var(--text-scale, 1))' };
+
 export const theme = EditorView.theme({
   '&': {
     height: '100%',
@@ -39,7 +56,6 @@ export const theme = EditorView.theme({
     to: { backgroundColor: 'var(--current-line)' },
   },
   '@media (prefers-reduced-motion: reduce)': { '.cm-revealed': { animation: 'none' } },
-  '@media (forced-colors: active)': { '.cm-revealed': { outline: '2px solid Highlight' } },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
   '.cm-content': { padding: '12px 0', caretColor: 'var(--focus)' },
   '.cm-line': { padding: '0 16px 0 8px' },
@@ -128,4 +144,87 @@ export const theme = EditorView.theme({
   },
   '.cm-completionDetail': { color: 'var(--muted)' },
   '.cm-diagnostic': { borderLeftColor: 'var(--border)' },
+
+  // Classic Mode: no colour per element, and the weight and slant are the role's.
+  [`${CLASSIC} .cm-f-scene_heading, ${CLASSIC} .cm-f-character, ${CLASSIC} .cm-f-transition`]: {
+    color: 'var(--text)',
+    fontWeight: 'inherit',
+  },
+  [`${CLASSIC} .cm-f-section`]: { color: 'var(--text)' },
+  [`${CLASSIC} .cm-f-parenthetical`]: { color: 'var(--text)', fontStyle: 'inherit' },
+
+  // Each role, from the template's numbers. A pane under 60 characters takes the share.
+  [`${CLASSIC} .cm-c-scene_heading`]: {
+    ...classicRole('scene_heading', 0),
+    ...HEADING,
+    ...SCENE_START,
+  },
+  [`${CLASSIC} .cm-c-action`]: classicRole('action', 0),
+  [`${CLASSIC} .cm-c-character`]: classicRole('character', 30),
+  [`${CLASSIC} .cm-c-parenthetical`]: classicRole('parenthetical', 26),
+  [`${CLASSIC} .cm-c-dialogue`]: classicRole('dialogue', 16),
+  [`${CLASSIC} .cm-c-lyric`]: classicRole('lyric', 16),
+  [`${CLASSIC} .cm-c-transition`]: classicRole('transition', 45),
+  [`${CLASSIC} .cm-c-centered`]: classicRole('centered', 0),
+  [`${CLASSIC} .cm-c-stage_direction`]: classicRole('stage_direction', 16),
+  [`${CLASSIC} .cm-c-act_heading`]: {
+    ...classicRole('act_heading', 0),
+    ...HEADING,
+    textTransform: 'uppercase',
+  },
+  [`${CLASSIC} .cm-c-scene_heading_play`]: { ...classicRole('scene_heading_play', 0), ...HEADING },
+
+  [`${CLASSIC} .cm-c-page_break`]: { maxWidth: 'calc(var(--c-action-width, 60) * 1ch)' },
+
+  // What a role's alignment and style ask for.
+  [`${CLASSIC} .cm-c-center`]: { textAlign: 'center' },
+  [`${CLASSIC} .cm-c-right`]: { textAlign: 'right' },
+  [`${CLASSIC} .cm-c-italic`]: { fontStyle: 'italic' },
+  [`${CLASSIC} .cm-c-bold`]: { fontWeight: '700' },
+  [`${CLASSIC} .cm-c-underline`]: { textDecoration: 'underline' },
+
+  // A section's depth is its size and weight; its mark is hidden.
+  [`${CLASSIC} .cm-c-section`]: { fontWeight: '700' },
+  [`${CLASSIC} .cm-c-depth-1`]: { fontSize: '1.25em' },
+  [`${CLASSIC} .cm-c-depth-2`]: { fontSize: '1.125em' },
+
+  // What stands for a hidden mark. The rule at each end shows where a note or a cut stops, and
+  // keeps apart the two places a cursor can be at its end, which would look the same without it.
+  [`${CLASSIC} .cm-c-note-rule, ${CLASSIC} .cm-c-boneyard-rule`]: {
+    display: 'inline-block',
+    height: '1em',
+    margin: '0 3px',
+    verticalAlign: '-0.15em',
+    borderLeft: '2px solid var(--note)',
+  },
+  [`${CLASSIC} .cm-c-boneyard-rule`]: { borderLeftColor: 'var(--muted)' },
+  [`${CLASSIC} .cm-c-page-break`]: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '1ch',
+    width: '100%',
+    color: 'var(--muted)',
+    fontStyle: 'normal',
+  },
+  [`${CLASSIC} .cm-c-page-break::after`]: {
+    content: '""',
+    flex: '1',
+    borderTop: '1px solid var(--muted)',
+  },
+  [`${CLASSIC} .cm-c-dual`]: {
+    marginLeft: '0.5ch',
+    padding: '0 0.5ch',
+    border: '1px solid var(--muted)',
+    borderRadius: '3px',
+    color: 'var(--muted)',
+    fontSize: '0.8em',
+    fontWeight: '400',
+  },
+  '@media (forced-colors: active)': {
+    '.cm-revealed': { outline: '2px solid Highlight' },
+    [`${CLASSIC} .cm-c-note-rule, ${CLASSIC} .cm-c-boneyard-rule`]: {
+      borderLeftColor: 'CanvasText',
+    },
+    [`${CLASSIC} .cm-c-page-break::after`]: { borderTopColor: 'CanvasText' },
+  },
 });

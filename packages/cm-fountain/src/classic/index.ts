@@ -12,6 +12,7 @@ import {
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory } from './line';
 import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
+import { classicView } from './view';
 
 export {
   classicArrows,
@@ -58,6 +59,7 @@ export {
   shapeOf,
   tidyLeft,
 } from './marks';
+export { classicView, lineClassOf, roleVariables } from './view';
 
 /** At `Prec.highest`, ahead of `language`, as CodeMirror's completion keys are at that level too (§6). */
 const classicKeys = Prec.highest(
@@ -97,5 +99,6 @@ export function classic(_options: ClassicOptions = {}): Extension {
     tidyLeft,
     classicLine,
     keepLineInHistory,
+    classicView,
   ];
 }
