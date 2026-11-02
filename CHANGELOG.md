@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- The implementation plan for **Classic Mode** (`docs/plans/2026-11-02-classic-mode.md`), for v0.25.0, with the places the design needed changing against the real code.
 - The design for **Classic Mode** (`docs/drafter-classic-mode-design.md`) is in the repository, for the maintainer’s review: Enter and Tab typing, autofill, and a Fountain or Classic switch in the top bar, for v0.25.0, over a file that stays plain Fountain.
 
 ## [0.24.3] - 2026-11-02
