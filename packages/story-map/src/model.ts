@@ -237,11 +237,16 @@ function placesOf(
   // Stable: ties keep the order they are first visited in.
   all.sort((a, b) => b.minutes - a.minutes || b.scenes - a.scenes);
   const top = all[0]?.minutes ?? 0;
+  // Two places or more that all take the same time (as the page shows it, in whole minutes, or
+  // none at all): none is bigger than another, so all take the middle size.
+  const even = all.length > 1 && all.every((p) => Math.round(p.minutes) === Math.round(top));
   const places = all.slice(0, STORY_MAP_LIMITS.places).map((p) => ({
     ...p,
-    size: (top > 0
-      ? Math.min(5, Math.max(1, Math.ceil((p.minutes / top) * 5)))
-      : 5) as MapPlace['size'],
+    size: (even
+      ? 3
+      : top > 0
+        ? Math.min(5, Math.max(1, Math.ceil((p.minutes / top) * 5)))
+        : 5) as MapPlace['size'],
   }));
   return { places, more: all.length - places.length };
 }

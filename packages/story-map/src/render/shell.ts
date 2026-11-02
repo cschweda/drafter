@@ -19,8 +19,14 @@ export interface RenderInput {
  * its markup, with every piece of the writer's text escaped; and its generated CSS rules, which go
  * in the one `<style>` (no `<` and no carriage return).
  */
+export interface NavLink {
+  id: string;
+  label: string;
+}
+
 export type Section = (map: StoryMap) => {
-  nav: { id: string; label: string } | null;
+  /** One link, several (the acts), or none. */
+  nav: NavLink | readonly NavLink[] | null;
   html: string;
   rules: string;
 };
@@ -191,7 +197,7 @@ export function pageHtml(input: RenderInput, sections: readonly Section[]): stri
     { class: 'wrap' },
     el('header', { class: 'hero' }, greetingHtml(map) + meterHtml(map) + factsHtml(map)),
   );
-  const nav = navHtml(parts.flatMap((part) => (part.nav ? [part.nav] : [])));
+  const nav = navHtml(parts.flatMap((part) => (part.nav === null ? [] : [part.nav].flat())));
   const main = el(
     'main',
     { class: 'wrap' },

@@ -228,6 +228,15 @@ describe('the story map model', () => {
     expect(doctor.characters[0]).toMatchObject({ first: 'Dr. Rhee', rest: 'Okafor' });
   });
 
+  test('places with equal time take the middle size, not the largest', () => {
+    // Every place here has one scene of the same length.
+    const even = build(generated(40, 20, 6)).map;
+    expect(new Set(even.places.map((p) => Math.round(p.minutes * 100))).size).toBe(1);
+    expect(even.places.map((p) => p.size)).toEqual(even.places.map(() => 3));
+    // One place alone is still the biggest.
+    expect(build('INT. BARN - DAY\n\nHAL waits.\n\nHAL\nWell.\n').map.places[0]?.size).toBe(5);
+  });
+
   test('places are sized in five steps, the largest 5', () => {
     const { map } = harbour;
     expect(map.places[0]?.size).toBe(5);
