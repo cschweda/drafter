@@ -194,6 +194,22 @@ describe('hooks', () => {
     expect(map.characters.find((c) => c.key === 'PIP')).toMatchObject({ hook: null, age: '9' });
   });
 
+  test('a name with angle brackets is matched as written, so its hook reads whole', () => {
+    const source = `INT. LAMP ROOM - NIGHT
+
+NELL <THE KEEPER> (40s), a keeper of the old lamp, climbs the stairs.
+
+NELL <THE KEEPER>
+The lamp is lit for the night.
+`;
+    const doc = parse(source);
+    const index = sceneIndex(doc, screenplay);
+    expect(hooksOf(doc, index).get('NELL <THE KEEPER>')).toEqual({
+      hook: 'a keeper of the old lamp',
+      age: '40s',
+    });
+  });
+
   test('no capitals, no hook', () => {
     const { doc, index } = read('INT. HUT - DAY\n\nMara walks in, tired.\n\nMARA\nHello again.\n');
     expect(hookOf(doc, index, 'MARA')).toEqual({ hook: null, age: null });

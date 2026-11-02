@@ -120,8 +120,8 @@ function stageHtml(map: StoryMap, scene: MapScene): string {
 function rowHtml(map: StoryMap, s: number): string {
   const scene = map.scenes[s] as MapScene;
   const name = scene.place ?? scene.title ?? '';
-  const h4 = el(
-    'h4',
+  const h3 = el(
+    'h3',
     {},
     el('span', { class: 'sr' }, `Scene ${scene.n}${name ? ': ' : ''}`) + escapeHtml(name),
   );
@@ -134,7 +134,7 @@ function rowHtml(map: StoryMap, s: number): string {
         el(
           'div',
           { class: 'body' },
-          h4 +
+          h3 +
             el('p', { class: 'meta' }, el('span', { class: 'todo' }, 'Planned, not written yet')) +
             what,
         ),
@@ -150,21 +150,11 @@ function rowHtml(map: StoryMap, s: number): string {
             scene.chips.map((c) => chip(map.characters[c] ?? null, c, { tag: 'li' })).join(''),
           )
         : '';
-  const row = el(
-    'li',
-    { class: scene.stage !== null ? 'sc play' : 'sc', id: `s${scene.n}` },
-    el('span', { class: 'num', 'aria-hidden': 'true' }, String(scene.n)) +
-      el('div', { class: 'body' }, h4 + metaHtml(map, scene) + what + who),
-  );
+  // A line of dialogue sits inside its scene's row, so a list holds only scenes.
   const quote = scene.quote === null ? undefined : map.quotes[scene.quote];
-  if (!quote?.inScene) return row;
-  const speaker = map.characters[quote.character] ?? null;
-  return (
-    row +
-    el(
-      'li',
-      { class: 'qrow' },
-      el(
+  const speaker = quote ? (map.characters[quote.character] ?? null) : null;
+  const pull = quote?.inScene
+    ? el(
         'figure',
         { class: `pq ${toneClass(speaker)}` },
         el('blockquote', {}, el('p', {}, escapeHtml(quote.text))) +
@@ -173,8 +163,14 @@ function rowHtml(map: StoryMap, s: number): string {
             {},
             el('span', { class: 'dot', 'aria-hidden': 'true' }) + escapeHtml(speaker?.name ?? ''),
           ),
-      ),
-    )
+      )
+    : '';
+  return el(
+    'li',
+    { class: scene.stage !== null ? 'sc play' : 'sc', id: `s${scene.n}` },
+    el('span', { class: 'num', 'aria-hidden': 'true' }, String(scene.n)) +
+      el('div', { class: 'body' }, h3 + metaHtml(map, scene) + what + who) +
+      pull,
   );
 }
 
@@ -190,7 +186,7 @@ function tailHtml(map: StoryMap): string {
       el(
         'div',
         { class: 'body' },
-        el('h4', {}, 'The ending') +
+        el('h3', {}, 'The ending') +
           el('p', { class: 'meta' }, el('span', { class: 'todo' }, 'Still to write')) +
           el('p', { class: 'what' }, `About ${plural(pages, 'page')} to go.`),
       ),
@@ -204,15 +200,17 @@ const INTERVAL = el(
   el('span', { 'aria-hidden': 'true' }, 'Interval'),
 );
 
+/** A disclosure a long list folds into (Call 25): open or not, and its summary. */
+interface Fold {
+  open: boolean;
+  summary: string;
+}
+
 /**
  * A list of scenes, cut where a one-act play's interval falls; the tail after the map's last
- * scene. `fold`: inside a closed (or open) disclosure, past 80 scenes.
+ * scene. `fold`: inside a disclosure, past 80 scenes.
  */
-function listHtml(
-  map: StoryMap,
-  scenes: readonly number[],
-  fold: 'open' | 'closed' | null,
-): string {
+function listHtml(map: StoryMap, scenes: readonly number[], fold: Fold | null): string {
   const last = map.scenes.length - 1;
   const cut =
     map.interval && map.interval.afterAct === null && map.interval.afterScene > 0
@@ -235,19 +233,11 @@ function listHtml(
     .map((l) => el('ol', { class: 'scenes' }, l))
     .join(INTERVAL);
   if (!fold) return html;
-  return el(
-    'details',
-    { class: 'fold', open: fold === 'open' },
-    el(
-      'summary',
-      {},
-      `${plural(scenes.length, 'scene')}${el('span', { class: 'show' }, ' — show')}`,
-    ) + html,
-  );
+  return el('details', { class: 'fold', open: fold.open }, el('summary', {}, fold.summary) + html);
 }
 
 /** An act's card and its scenes (design §2.7). */
-function actHtml(map: StoryMap, act: MapAct, fold: 'open' | 'closed' | null): string {
+function actHtml(map: StoryMap, act: MapAct, fold: boolean | null): string {
   const done = map.status === 'finished';
   const empty = act.scenes.length === 0;
   const id = `act${act.n}`;
@@ -280,9 +270,24 @@ function actHtml(map: StoryMap, act: MapAct, fold: 'open' | 'closed' | null): st
       id,
       'aria-labelledby': `${id}-h`,
     },
-    head + (empty ? '' : listHtml(map, act.scenes, fold)),
+    head +
+      (empty
+        ? ''
+        : listHtml(
+            map,
+            act.scenes,
+            fold === null
+              ? null
+              : {
+                  open: fold,
+                  summary: `${plural(act.scenes.length, 'scene')}${el('span', { class: 'show' }, ' — show')}`,
+                },
+          )),
   );
 }
+
+/** How many scenes each fold of a long run holds. */
+const RUN_BLOCK = 50;
 
 /** The one run (design §5.2): "The story", with small act labels in an early draft with acts. */
 function runHtml(map: StoryMap): string {
@@ -300,11 +305,18 @@ function runHtml(map: StoryMap): string {
       if (map.interval?.afterAct === act.n && a < map.acts.length - 1) body += INTERVAL;
     });
   } else {
-    body = listHtml(
-      map,
-      map.scenes.map((_, s) => s),
-      null,
-    );
+    const all = map.scenes.map((_, s) => s);
+    if (all.length <= STORY_MAP_LIMITS.foldOver) body = listHtml(map, all, null);
+    else {
+      // A long run folds in blocks of 50, the first open, as acts fold (decided 2026-11-01).
+      const cut = map.interval?.afterAct === null ? map.interval.afterScene - 1 : -1;
+      for (let from = 0; from < all.length; from += RUN_BLOCK) {
+        const block = all.slice(from, from + RUN_BLOCK);
+        const to = from + block.length;
+        body += listHtml(map, block, { open: from === 0, summary: `Scenes ${from + 1}–${to}` });
+        if (cut === to - 1 && to < all.length) body += INTERVAL;
+      }
+    }
   }
   return el(
     'section',
@@ -328,7 +340,7 @@ const RULES = `.act{padding-top:64px}
 .scenes{list-style:none;margin:16px 0 0;padding:0}
 .sc{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 12px;padding:16px 0;border-top:1px solid var(--line)}
 .sc .num{font-family:var(--display);font-size:40px;line-height:.9;color:var(--dim)}
-.sc h4{font-size:22px;line-height:1;overflow-wrap:anywhere}
+.sc h3{font-size:22px;line-height:1;overflow-wrap:anywhere}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:8px 0 0;font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
 .meta .sep::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--dim);margin-right:10px;vertical-align:middle}
 .ti{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
@@ -341,8 +353,8 @@ const RULES = `.act{padding-top:64px}
 .sc.stub .num,.sc.gaprow .num{color:var(--coral)}
 .sc.stub .body,.sc.gaprow .body{border:1.5px dashed var(--line);padding:12px;margin-top:-4px}
 .sc.gaprow .body{border-color:rgb(255 123 107 / .55);background:rgb(255 123 107 / .05)}
-.sc.stub h4,.sc.stub .what{color:var(--mute)}
-.qrow{list-style:none;padding:8px 0 20px}
+.sc.stub h3,.sc.stub .what{color:var(--mute)}
+.sc>.pq{grid-column:1/-1;margin:16px 0 4px}
 .pq{margin:0;background:var(--panel);border-left:4px solid var(--c);padding:22px 20px 18px}
 .pq blockquote{margin:0}
 .pq p{margin:0;font-family:var(--mono);font-size:24px;line-height:1.3;text-wrap:pretty;overflow-wrap:anywhere}
@@ -365,15 +377,15 @@ main>.intermission{margin-top:64px}
 @media (min-width:700px){
 .sc{grid-template-columns:96px minmax(0,1fr)}
 .sc .num{font-size:56px}
-.sc h4{font-size:28px}
-.qrow{padding:12px 0 28px 96px}
+.sc h3{font-size:28px}
+.sc>.pq{grid-column:2;margin:20px 0 8px}
 .pq{padding:30px 34px 26px}
 .pq p{font-size:32px;max-width:28ch}
 .acthead .num{font-size:220px}
 }
 @media (min-width:1100px){
 .sc .body{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr) minmax(0,3fr);gap:4px 28px;align-items:start}
-.sc .body h4{grid-column:1}.sc .body .meta{grid-column:1;grid-row:2}
+.sc .body h3{grid-column:1}.sc .body .meta{grid-column:1;grid-row:2}
 .sc .body .what{grid-column:2;grid-row:1/span 2;margin:0;font-size:18px}
 .sc .body .chips{grid-column:3;grid-row:1/span 2;margin:0;justify-content:flex-end}
 .sc.play .body{grid-template-columns:minmax(0,4fr) minmax(0,4fr) minmax(0,5fr)}
@@ -381,7 +393,7 @@ main>.intermission{margin-top:64px}
 .sc.stub .body,.sc.gaprow .body{grid-template-columns:minmax(0,5fr) minmax(0,9fr)}
 .sc.stub .body .what,.sc.gaprow .body .what{grid-column:2}
 }
-@media print{.fold>summary{display:none}.qrow,.sc{break-inside:avoid}}`;
+@media print{.fold>summary{display:none}.sc{break-inside:avoid}}`;
 
 /** Every scene: the act cards, or one run; left out when there is nothing at all. */
 export const scenesSection: Section = (map) => {
@@ -398,7 +410,7 @@ export const scenesSection: Section = (map) => {
     const empty = act.scenes.length === 0;
     if (empty && map.status === 'finished') return;
     nav.push({ id: `act${act.n}`, label: `Act ${act.n}` });
-    html += actHtml(map, act, folds ? (a === firstOpen ? 'open' : 'closed') : null);
+    html += actHtml(map, act, folds ? a === firstOpen : null);
     if (map.interval?.afterAct === act.n && a < map.acts.length - 1) html += INTERVAL;
   });
   return { nav, html, rules: RULES };

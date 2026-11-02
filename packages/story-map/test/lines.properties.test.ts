@@ -3,6 +3,7 @@ import { sceneIndex } from '@drafter/outline';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import { pickQuotes, type QuoteCandidate, quoteCandidates } from '../src';
+import { quoteKey } from '../src/lines';
 import { screenplay } from './scripts';
 
 // The spread's rules hold for any candidates (story-map design §3.1, Call 5).
@@ -59,9 +60,17 @@ function check(
   expect(new Set(picks.map((p) => p.scene)).size).toBe(picks.length);
   // In script order.
   expect(picks.map((p) => p.scene)).toEqual([...picks.map((p) => p.scene)].sort((a, b) => a - b));
-  // Every first wanted line in a scene is in, when there are twelve or fewer.
+  // No words twice: a refrain is picked once.
+  expect(new Set(picks.map((p) => quoteKey(p.text))).size).toBe(picks.length);
+  // Every first wanted line in a scene is in, when there are twelve or fewer (a repeat of words
+  // already wanted aside).
   const wanted = new Map<number, QuoteCandidate>();
-  for (const c of list) if (c.marked === 'quote' && !wanted.has(c.scene)) wanted.set(c.scene, c);
+  const words = new Set<string>();
+  for (const c of list) {
+    if (c.marked !== 'quote' || wanted.has(c.scene) || words.has(quoteKey(c.text))) continue;
+    wanted.set(c.scene, c);
+    words.add(quoteKey(c.text));
+  }
   if (wanted.size <= 12) for (const c of wanted.values()) expect(picks).toContain(c);
   // The rest keep three scenes from every other pick, and three a speaker.
   const free = picks.filter((p) => p.marked !== 'quote');

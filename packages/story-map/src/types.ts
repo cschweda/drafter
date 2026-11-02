@@ -82,7 +82,7 @@ export interface MapScene {
 
 export interface MapCharacter {
   key: string;
-  /** As typed when it has small letters (`McCLANE`), else in title case. */
+  /** As typed when it has small letters (`McBRIDE`), else in title case. */
   name: string;
   /** The first word of `name`, and the rest; an uncased name of one word is all `first`. */
   first: string;
@@ -195,8 +195,8 @@ export interface StoryMap {
   /** The pages the strip spans. */
   axis: number;
   lanes: 'two' | 'one';
-  /** Whole percents, by minutes; null with one lane. */
-  split: { indoors: number; night: number } | null;
+  /** Whole percents, by minutes; null with one lane, and each half null when no scene gives it. */
+  split: { indoors: number | null; night: number | null } | null;
   /** The pace chart's caption. */
   pace: string;
   /** By screen time, most first: the leads, then the rest. */

@@ -42,7 +42,8 @@ export const CHIP_RULES = `.k0{--c:#f28fc0}.k1{--c:#6fb7ff}.k2{--c:#b9a2ff}.k3{-
 .chip{width:26px;height:26px;border-radius:50%;background:var(--c);color:var(--ink);display:inline-grid;place-items:center;font-family:var(--display);font-size:13px;line-height:1;flex:none;list-style:none}
 .chip.big{width:40px;height:40px;font-size:20px}
 .chip.voice{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 2px var(--fg)}
-.chip.lesser{background:var(--panel2);color:var(--mute);box-shadow:inset 0 0 0 1.5px var(--dim)}`;
+.chip.lesser{background:var(--panel2);color:var(--mute);box-shadow:inset 0 0 0 1.5px var(--dim)}
+@media print{.chip{color:#0c1315}.chip.voice,.chip.lesser{color:#111}}`;
 
 /** Whole minutes as a big number with a small unit: "62 min", "<1 min". */
 function bigMinutes(minutes: number): string {
@@ -217,11 +218,20 @@ function matrixHtml(map: StoryMap): string {
       escapeHtml(Array.from(name).length > 10 ? `${Array.from(name).slice(0, 9).join('')}…` : name),
     );
   }
+  // Column letters: the initial, or the first two letters when two leads share one.
+  const initials = leads.map((i) => map.characters[i]?.initial ?? '');
   for (let k = 0; k < n - 1; k++) {
+    const c = map.characters[leads[k] as number];
+    const shared = initials.filter((x) => x === initials[k]).length > 1;
+    const letters = shared
+      ? Array.from(c?.first || c?.name || '')
+          .slice(0, 2)
+          .join('')
+      : initials[k];
     out += el(
       'text',
-      { class: 'ml', x: LABEL + k * STEP + CELL / 2, y: height - 2, 'text-anchor': 'middle' },
-      escapeHtml(map.characters[leads[k] as number]?.initial ?? ''),
+      { class: 'ml col', x: LABEL + k * STEP + CELL / 2, y: height - 2, 'text-anchor': 'middle' },
+      escapeHtml(letters ?? ''),
     );
   }
   for (const p of map.pairs) {
@@ -347,7 +357,7 @@ const RULES = `${CHIP_RULES}
 .mpanel{max-width:520px}
 .mat{display:block;height:auto}
 .mat .ml{font-family:var(--mono);font-size:11px;fill:var(--mute)}
-.mat .l0{fill:var(--panel2)}.mat .l1{fill:#3a2a2a}.mat .l2{fill:#7a3f39}.mat .l3{fill:#c45449}.mat .l4{fill:var(--coral)}
+.mat .l0{fill:var(--panel2)}.mat .l1{fill:#3a2a2a}.mat .l2{fill:#7a3f39}.mat .l3{fill:#e2675a}.mat .l4{fill:var(--coral)}
 .mat .mv{font-family:var(--mono);font-size:12px;fill:var(--fg)}.mat .mv.hi{fill:var(--ink);font-weight:700}
 .mpanel .cap{margin:10px 0 0;font-size:14px}
 .shares ol{list-style:none;margin:0;padding:0;display:grid;gap:10px}

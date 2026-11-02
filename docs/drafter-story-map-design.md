@@ -250,7 +250,7 @@ Markdown documents and novels (chapters as acts, sections as scenes: a later rel
 
 At 120 pages, 200 scenes, and 60 characters:
 - **Strip and pace:** blocks are as wide as their scenes; a block narrower than 0.15% is drawn at 0.15%, so every scene stays visible as a sliver. The pace chart's bars stay one per scene.
-- **Scenes:** every scene has its row. **Call:** with more than **80 scenes**, each act's scene list is a `<details>` element (open for the first act, closed for the rest, a summary line "42 scenes — show") so a phone isn't a 30,000-pixel scroll; the act card above it stays.
+- **Scenes:** every scene has its row. **Call:** with more than **80 scenes**, each act's scene list is a `<details>` element (open for the first act, closed for the rest, a summary line "42 scenes — show") so a phone isn't a 30,000-pixel scroll; the act card above it stays. A script with no acts (or one) folds the same way, in blocks of 50 scenes, each a `<details>` labelled "Scenes 51–100", the first open (decided at review, 2026-11-01).
 - **Characters:** the ranking shows the top **12** and "and 48 more"; cards stay at eight; the shares matrix stays at the eight leads; the short list holds the next eight with "and N more".
 - **Places:** the top **24** tags and "and N more".
 - **Threads:** up to **12** arcs; the rest only in the list.
@@ -267,7 +267,7 @@ At 120 pages, 200 scenes, and 60 characters:
 ### 10.7 Accessibility
 
 WCAG 2.2 AA on the dark palette, as the rest of Drafter:
-- **Real headings:** one `h1` (the title), `h2` for each section and act, `h3` for characters, `h4` for scenes.
+- **Real headings:** one `h1` (the title), `h2` for each section and act, `h3` for characters and for scenes (a scene row sits under its act's or the story's `h2`, so no level is skipped; review, 2026-11-01).
 - **Every chart has a text equivalent.** Each SVG is `role="img"` with a `<title>` saying what it shows, followed by a `<details>` "Show as a table" holding the same figures (scenes by act and time of day; screen time and share; pairs who share scenes; places; threads), so nothing is only a picture. Purely decorative SVG (icons beside words, the ruler) is `aria-hidden`.
 - **Contrast:** text uses `--fg` (#e7efed) or `--mute` (#8ba19d), both AA on every surface; `--dim` (#5d7672) only for large display numbers and decoration. Dark text on the act band's colours is checked per colour (the mockup's first deep-coral act colour failed axe and was replaced with ember).
 - **Colour is never alone:** lanes carry inside/outside, icons and words carry time, initials and names carry characters, dashes and words carry gaps.
@@ -324,7 +324,7 @@ Every fixture, mockup, and screenshot uses original text written for Drafter. No
 22. A new package, `@drafter/story-map`, and `drafter build --story-map` (§10.1).
 23. Anton, Archivo (400, 600), and Courier Prime Regular, subsetted WOFF2, embedded as base64, about 71 KB (§10.2).
 24. Under 400 KB at 120 pages, never over 1 MB (§10.3).
-25. Over 80 scenes, each act's scene list folds into a `<details>` (§10.4).
+25. Over 80 scenes, each act's scene list folds into a `<details>`; with no acts, the run folds in blocks of 50 (§10.4).
 26. A small light print stylesheet (§10.6).
 27. A play has one interval, between Acts 1 and 2, unless a `[[Interval]]` or `[[No interval]]` note says otherwise. It shows on the act band, the strip, the scene list and the running time (§5.1).
 28. **Who's on stage:** a play's scene rows show one chip-led bar per character, from entrance to exit, with one plain sentence ("Dev enters halfway"). Spans come from first speech or mention, and from "enters" and "leaves" in the action. Pairs are ranked in a list instead of a matrix (§5.1).

@@ -252,7 +252,7 @@ function stripHtml(map: StoryMap, axis: Axis): string {
       );
     }
   }
-  if (hasActs(map)) {
+  if (showsBand(map)) {
     for (const start of axis.starts) {
       extra += el('rect', {
         class: 'actline',
@@ -347,7 +347,7 @@ function stripHtml(map: StoryMap, axis: Axis): string {
       list.length,
     ];
   };
-  const rows = hasActs(map)
+  const rows = showsBand(map)
     ? [
         ...map.acts.map((act) =>
           row(
@@ -360,7 +360,15 @@ function stripHtml(map: StoryMap, axis: Axis): string {
     : [row('All scenes', map.scenes)];
   const table = chartTable(
     'Scenes by time of day',
-    [hasActs(map) ? 'Act' : 'Scenes', 'Day', 'Night', 'Dawn or dusk', 'No time', 'Planned', 'All'],
+    [
+      showsBand(map) ? 'Act' : 'Scenes',
+      'Day',
+      'Night',
+      'Dawn or dusk',
+      'No time',
+      'Planned',
+      'All',
+    ],
     rows,
   );
   return el(
@@ -410,56 +418,74 @@ function donutHtml(
 const share = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 const mins = (list: readonly MapScene[]) => list.reduce((n, s) => n + s.minutes, 0);
 
-function donutsHtml(map: StoryMap): string {
-  if (!map.split) return '';
+/** Minutes for a donut's table: "<1 min" when there is some time but under half a minute. */
+const tableMinutes = (minutes: number) =>
+  minutes > 0 && Math.round(minutes) === 0 ? '<1 min' : String(Math.round(minutes));
+
+/** The donuts: each only when some scene gives what it counts (never "100% by day" from nothing). */
+function donutsHtml(map: StoryMap): { html: string; count: number } {
+  if (!map.split) return { html: '', count: 0 };
   const written = map.scenes.filter((s) => !s.planned);
+  let html = '';
+  let count = 0;
+
   const known = written.filter((s) => s.inside !== null);
   const kinds = ['Inside', 'Outside', 'Inside and out'] as const;
   const inMins = kinds.map((k) => mins(known.filter((s) => s.inside === k)));
   const indoors = map.split.indoors;
-  const outdoors = Math.min(100 - indoors, share(inMins[1] as number, mins(known)));
-  const both = Math.max(0, 100 - indoors - outdoors);
-  const where = donutHtml(
-    indoors,
-    'indoors',
-    `${indoors}% of the time is spent indoors, ${100 - indoors}% outdoors or both.`,
-    [
-      { cls: 'inn', share: indoors },
-      { cls: 'outn', share: 100 - indoors },
-    ],
-    chartTable(
-      'Time inside and outside',
-      ['Where', 'Minutes', 'Share'],
-      kinds.map((k, i) => [k, Math.round(inMins[i] as number), `${[indoors, outdoors, both][i]}%`]),
-    ),
-  );
+  if (indoors !== null && mins(known) > 0) {
+    const outdoors = Math.min(100 - indoors, share(inMins[1] as number, mins(known)));
+    const both = Math.max(0, 100 - indoors - outdoors);
+    count++;
+    html += donutHtml(
+      indoors,
+      'indoors',
+      `${indoors}% of the time is spent indoors, ${100 - indoors}% outdoors or both.`,
+      [
+        { cls: 'inn', share: indoors },
+        { cls: 'outn', share: 100 - indoors },
+      ],
+      chartTable(
+        'Time inside and outside',
+        ['Where', 'Minutes', 'Share'],
+        kinds.map((k, i) => [
+          k,
+          tableMinutes(inMins[i] as number),
+          `${[indoors, outdoors, both][i]}%`,
+        ]),
+      ),
+    );
+  }
 
   const timed = written.filter((s) => s.timeKind !== null);
   const times = ['day', 'night', 'twilight'] as const;
   const timeMins = times.map((t) => mins(timed.filter((s) => s.timeKind === t)));
   const night = map.split.night;
-  const dusk = Math.min(100 - night, share(timeMins[2] as number, mins(timed)));
-  const day = Math.max(0, 100 - night - dusk);
-  const when = donutHtml(
-    night,
-    'at night',
-    `${night}% of the time is at night, ${day}% by day, ${dusk}% at dawn or dusk.`,
-    [
-      { cls: 'day', share: day },
-      { cls: 'night', share: night },
-      { cls: 'dusk', share: dusk },
-    ],
-    chartTable(
-      'Time of day',
-      ['When', 'Minutes', 'Share'],
-      ['Day', 'Night', 'Dawn or dusk'].map((name, i) => [
-        name,
-        Math.round(timeMins[i] as number),
-        `${[day, night, dusk][i]}%`,
-      ]),
-    ),
-  );
-  return where + when;
+  if (night !== null && mins(timed) > 0) {
+    const dusk = Math.min(100 - night, share(timeMins[2] as number, mins(timed)));
+    const day = Math.max(0, 100 - night - dusk);
+    count++;
+    html += donutHtml(
+      night,
+      'at night',
+      `${night}% of the time is at night, ${day}% by day, ${dusk}% at dawn or dusk.`,
+      [
+        { cls: 'day', share: day },
+        { cls: 'night', share: night },
+        { cls: 'dusk', share: dusk },
+      ],
+      chartTable(
+        'Time of day',
+        ['When', 'Minutes', 'Share'],
+        ['Day', 'Night', 'Dawn or dusk'].map((name, i) => [
+          name,
+          tableMinutes(timeMins[i] as number),
+          `${[day, night, dusk][i]}%`,
+        ]),
+      ),
+    );
+  }
+  return { html, count };
 }
 
 /** How long each scene runs (design §2.5): a bar per scene, as tall as it is long, at most 96 px. */
@@ -474,31 +500,25 @@ function paceHtml(map: StoryMap, axis: Axis): string {
     if (!span) return;
     if (scene.planned) {
       if (!wip) return;
-      bars += rect(
-        {
-          class: 'b stub',
-          x: pct(span.x + 0.1),
-          y: BASE - 13,
-          width: pct(Math.max(MIN_WIDTH, span.w - 0.2)),
-          height: 12,
-        },
-        `Scene ${scene.n}: planned, not written yet`,
-      );
+      bars += rect({
+        class: 'b stub',
+        x: pct(span.x + 0.1),
+        y: BASE - 13,
+        width: pct(Math.max(MIN_WIDTH, span.w - 0.2)),
+        height: 12,
+      });
       return;
     }
     const box = drawn(span);
     const h = most > 0 ? Math.max(2, Math.round((scene.minutes / most) * 96 * 10) / 10) : 2;
-    bars += rect(
-      {
-        class: `b ${colouring === 'act' ? toneOf(map, scene.act ?? 1) : 'one'}`,
-        x: pct(box.x),
-        y: Math.round((BASE - h) * 10) / 10,
-        width: pct(box.w),
-        height: h,
-        rx: 1,
-      },
-      `Scene ${scene.n}: ${minutesWords(scene.minutes)}`,
-    );
+    bars += rect({
+      class: `b ${colouring === 'act' ? toneOf(map, scene.act ?? 1) : 'one'}`,
+      x: pct(box.x),
+      y: Math.round((BASE - h) * 10) / 10,
+      width: pct(box.w),
+      height: h,
+      rx: 1,
+    });
   });
   if (wip) {
     for (const slot of axis.slots) {
@@ -608,6 +628,7 @@ const RULES = `.band{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none}
 .donut svg{width:min(132px,100%)}
 .donut .tbl{align-self:stretch}
 .splits.solo{grid-template-columns:minmax(0,1fr)}
+.splits.d1{grid-template-columns:220px minmax(0,1fr)}
 .pacefig{grid-column:auto}
 }
 @media print{.ab{color:#111;border:1px solid #999}.ab.empty{color:var(--coral)}}`;
@@ -621,6 +642,7 @@ export const shapeSection: Section = (map) => {
   if (nothing) return { nav: null, html: '', rules: '' };
   const axis = axisOf(map);
   const band = bandHtml(map);
+  const donuts = donutsHtml(map);
   const html = el(
     'section',
     { id: 'shape', 'aria-labelledby': 'shape-h' },
@@ -629,8 +651,8 @@ export const shapeSection: Section = (map) => {
       stripHtml(map, axis) +
       el(
         'div',
-        { class: map.split ? 'splits' : 'splits solo' },
-        donutsHtml(map) + paceHtml(map, axis),
+        { class: `splits${donuts.count === 0 ? ' solo' : donuts.count === 1 ? ' d1' : ''}` },
+        donuts.html + paceHtml(map, axis),
       ),
   );
   return {

@@ -219,7 +219,11 @@ export function placeLabels(
 
 /** The page numbers a ruler names: about five at most, at a round step. */
 export function rulerSteps(pages: number): { step: number; tick: number } {
-  const steps = [5, 10, 20, 30, 60, 120, 300, 600, 1200];
+  const steps = [5, 10, 20, 30, 50, 60, 100, 120, 200, 300, 600, 1200];
   const step = steps.find((s) => pages / s <= 5) ?? Math.ceil(pages / 5);
-  return { step, tick: step >= 30 ? step / 3 : step >= 10 ? step / 2 : step };
+  // A tick between numbers that divides the step evenly: thirds of 30, 60, 120…; fifths of 50,
+  // 100, 200; halves of 10 and 20.
+  const tick =
+    step >= 30 && step % 3 === 0 ? step / 3 : step >= 50 ? step / 5 : step >= 10 ? step / 2 : step;
+  return { step, tick };
 }

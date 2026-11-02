@@ -35,7 +35,8 @@ export function chartTable(
   return el(
     'details',
     { class: 'tbl' },
-    el('summary', {}, 'Show as a table') +
+    // The chart's name for a screen reader, so each "Show as a table" says which.
+    el('summary', {}, `Show as a table${el('span', { class: 'sr' }, `: ${cell(caption)}`)}`) +
       el('table', {}, el('caption', {}, cell(caption)) + thead + tbody),
   );
 }

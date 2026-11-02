@@ -30,10 +30,11 @@ function rota(scenes: number, speakers: readonly string[]): string {
   return out.join('\n');
 }
 
+// Each its own words: the same words are picked only once.
 const candidate = (over: Partial<QuoteCandidate> & { scene: number }): QuoteCandidate => ({
   cue: over.scene * 10,
   character: 'ADA',
-  text: 'The kettle is still warm.',
+  text: `The kettle is still warm in scene ${over.scene + 1}.`,
   marked: null,
   score: 3,
   ...over,

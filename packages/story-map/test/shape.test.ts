@@ -103,8 +103,10 @@ describe('the act band', () => {
     const marks = doc.querySelector('svg.marks');
     expect(marks?.getAttribute('aria-hidden')).toBe('true');
     expect(marks?.querySelectorAll('text').length).toBeGreaterThan(0);
-    // The strip still marks where each act after the first starts.
-    expect(doc.querySelectorAll('svg.strip rect.actline')).toHaveLength(2);
+    // No act lines on the strip and no act rows in its table: it is one run, with markers.
+    expect(doc.querySelectorAll('svg.strip rect.actline')).toHaveLength(0);
+    const rows = [...doc.querySelectorAll('.chart.strips details tbody th')].map((th) => text(th));
+    expect(rows).toEqual(['All scenes']);
   });
 
   it('an empty act and an act under way look unfinished, not broken', () => {
@@ -252,7 +254,11 @@ describe('the charts and their tables', () => {
     for (const svg of charts) {
       expect(text(svg.querySelector(':scope > title'))).not.toBe('');
       const holder = svg.closest('.chart');
-      expect(text(holder?.querySelector('details > summary'))).toBe('Show as a table');
+      const summary = holder?.querySelector('details > summary');
+      // Each says which chart it is to a screen reader.
+      const caption = text(holder?.querySelector('details table caption'));
+      expect(text(summary)).toBe(`Show as a table: ${caption}`);
+      expect(text(summary?.querySelector('.sr'))).toBe(`: ${caption}`);
       expect(holder?.querySelector('details table caption')).not.toBeNull();
     }
 

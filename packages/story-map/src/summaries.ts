@@ -129,7 +129,16 @@ function nameRuns(
     while (w < words.length && (words[w] as { at: number }).at < at) w++;
     const length = Math.max(1, tokens(names[character] ?? '').length);
     const last = words[w + length - 1] ?? words[w];
-    const to = last ? last.at + last.word.length : at;
+    let to = last ? last.at + last.word.length : at;
+    // The name as written, marks and all (`NELL <THE KEEPER>`): when the text holds it whole at
+    // the match, the mention runs to its end, so no part of the name is read as the hook.
+    const written = names[character] ?? '';
+    if (
+      written.length > to - at &&
+      text.slice(at, at + written.length).toUpperCase() === written.toUpperCase()
+    ) {
+      to = at + written.length;
+    }
     out.push({ character, from: at, to });
   });
   return out;

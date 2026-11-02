@@ -87,12 +87,12 @@ describe('plain words', () => {
     expect(placeWords('東京 - 駅')).toBe('東京, 駅');
     expect(titleCase('بيت - مطبخ')).toBe('بيت - مطبخ');
     expect(initialsOf('李 小龍')).toBe('李小');
-    expect(initialsOf('@McCLANE')).toBe('M');
+    expect(initialsOf('@McBRIDE')).toBe('M');
     expect(initialsOf('Wren Abernathy')).toBe('WA');
     expect(initialsOf('a. b. c.')).toBe('ab');
     expect(initialsOf('')).toBe('');
     // A word typed in mixed case keeps its capitals; one in capitals or lower case is title-cased.
-    expect(titleCase('McCLANE')).toBe('McCLANE');
+    expect(titleCase('McBRIDE')).toBe('McBRIDE');
     expect(titleCase("MRS. AUBERT'S ROOM")).toBe("Mrs. Aubert's Room");
     expect(titleCase('the old mill')).toBe('The Old Mill');
   });

@@ -42,14 +42,16 @@ const WORDS =
 
 describe('the page structure', () => {
   it.each(CASES)(
-    'the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (%s)',
+    'the heading outline is h1, then h2 per section and act, h3 per card and per scene (%s)',
     (_, map) => {
       const doc = docOf(map);
       expect(doc.querySelectorAll('h1')).toHaveLength(1);
-      // Every h3 is a card's, every h4 a scene's.
-      for (const h of doc.querySelectorAll('h3')) expect(h.closest('article.card')).not.toBeNull();
-      for (const h of doc.querySelectorAll('h4')) expect(h.closest('li.sc')).not.toBeNull();
-      expect(doc.querySelectorAll('h4')).toHaveLength(
+      // Every h3 is a card's or a scene's, and there is no h4.
+      for (const h of doc.querySelectorAll('h3')) {
+        expect(h.closest('article.card, li.sc')).not.toBeNull();
+      }
+      expect(doc.querySelector('h4')).toBeNull();
+      expect(doc.querySelectorAll('li.sc h3')).toHaveLength(
         map.scenes.length + doc.querySelectorAll('li.sc.gaprow').length,
       );
       // Every h2 is a section's or an act's.

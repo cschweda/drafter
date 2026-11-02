@@ -184,18 +184,22 @@ export function pickQuotes(
   const picks: QuoteCandidate[] = [];
   const taken = new Set<number>();
   const per = new Map<string, number>();
+  // Words already on the page: a refrain is picked once.
+  const said = new Set<string>();
   const take = (c: QuoteCandidate) => {
     picks.push(c);
     taken.add(c.scene);
+    said.add(quoteKey(c.text));
     per.set(c.character, (per.get(c.character) ?? 0) + 1);
   };
   for (const c of candidates) {
     if (picks.length >= MOST) break;
-    if (c.marked === 'quote' && !taken.has(c.scene)) take(c);
+    if (c.marked === 'quote' && !taken.has(c.scene) && !said.has(quoteKey(c.text))) take(c);
   }
 
   const free = candidates.filter((c) => c.marked === null);
   const fits = (c: QuoteCandidate) =>
+    !said.has(quoteKey(c.text)) &&
     (per.get(c.character) ?? 0) < PER_SPEAKER &&
     picks.every((p) => Math.abs(p.scene - c.scene) >= APART);
   /** The best that fits among `list`: by score, a new speaker 2 more; ties to the first. */
@@ -242,12 +246,27 @@ export function pickQuotes(
 }
 
 /**
- * Each speaker's own best line by the same score (design §4.4): a `[[Quote]]` line first; ties to
- * the earlier. By the speaker's key.
+ * A line's words for telling repeats apart: lower case, letters and digits only, single spaces.
+ * One pass over the text, so linear.
  */
-export function signatureLines(candidates: readonly QuoteCandidate[]): Map<string, QuoteCandidate> {
+export function quoteKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Each speaker's own best line by the same score (design §4.4): a line whose words `used` doesn't
+ * say are elsewhere first, then a `[[Quote]]` line; ties to the earlier. By the speaker's key.
+ */
+export function signatureLines(
+  candidates: readonly QuoteCandidate[],
+  used: (c: QuoteCandidate) => boolean = () => false,
+): Map<string, QuoteCandidate> {
   const out = new Map<string, QuoteCandidate>();
-  const rank = (c: QuoteCandidate) => (c.marked === 'quote' ? 1000 : 0) + c.score;
+  const rank = (c: QuoteCandidate) =>
+    (used(c) ? 0 : 10_000) + (c.marked === 'quote' ? 1000 : 0) + c.score;
   for (const c of candidates) {
     if (c.marked === 'no-quote') continue;
     const held = out.get(c.character);

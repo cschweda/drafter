@@ -17,7 +17,7 @@ const isSpace = (c: string | undefined) => c !== undefined && c !== '' && c.trim
 /** One word in title case: its first letter, and the first after a hyphen, in capitals. */
 function titleWord(word: string, first: boolean): string {
   const chars = Array.from(word);
-  // Typed in mixed case (`McCLANE`, `iPhone`): the writer chose it.
+  // Typed in mixed case (`McBRIDE`, `iPhone`): the writer chose it.
   if (chars.some(isUpper) && chars.some(isLower)) return word;
   const lower = word.toLowerCase();
   if (!first && SMALL.has(lower)) return lower;

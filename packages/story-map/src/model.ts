@@ -13,7 +13,7 @@ import { scriptAuthor } from '@drafter/render-html-file';
 import type { Template } from '@drafter/templates';
 import { defaultStatus, finishedMap, gapsOf, isPlanned, isStub } from './gaps';
 import { STORY_MAP_LIMITS } from './limits';
-import { pickQuotes, quoteCandidates, signatureLines } from './lines';
+import { pickQuotes, quoteCandidates, quoteKey, signatureLines } from './lines';
 import { mailtoOf } from './mailto';
 import { intervalOf, movesSentence, pairsOf, settingOf, stageLines, topSections } from './stage';
 import { actMood, hooksOf, sceneLine, threadsOf } from './summaries';
@@ -193,7 +193,8 @@ function charactersOf(cast: Cast, index: SceneIndex, doc: Doc, scenes: readonly 
     const name = displayName(k.character.name);
     const lead = i < STORY_MAP_LIMITS.leads;
     const voice = lead && voices.get(k.character.key) === true;
-    const color = lead && !voice ? slot++ % SLOTS : null;
+    // Seven colours; a lead past them is grey, never a repeat.
+    const color = lead && !voice && slot < SLOTS ? slot++ : null;
     return {
       key: k.character.key,
       name,
@@ -281,12 +282,32 @@ function quotesOf(
     (scenes[pick.scene] as MapScene).quote = quotes.length;
     add(pick, true);
   }
-  const signatures = signatureLines(candidates);
+  // A card's line is never words already on the page under another cue: it prefers fresh words,
+  // may point at its own speaker's line in a scene, and else has none.
+  const byKey = new Map<string, number>();
+  quotes.forEach((q, i) => {
+    byKey.set(quoteKey(q.text), i);
+  });
+  const elsewhere = (c: (typeof candidates)[number]) => {
+    const at = byKey.get(quoteKey(c.text));
+    return at !== undefined && quotes[at]?.cue !== c.cue;
+  };
   for (const character of characters) {
-    const line = signatures.get(character.key);
+    const mine = candidates.filter((c) => c.character === character.key);
+    const line = signatureLines(mine, elsewhere).get(character.key);
     if (!line) continue;
-    if (!byCue.has(line.cue)) add(line, false);
-    character.signature = byCue.get(line.cue) ?? null;
+    const key = quoteKey(line.text);
+    const twin = byKey.get(key);
+    if (byCue.has(line.cue)) {
+      character.signature = byCue.get(line.cue) ?? null;
+    } else if (twin !== undefined) {
+      // The same words are already on the page: this speaker's own, or none.
+      character.signature = quotes[twin]?.character === at.get(character.key) ? twin : null;
+    } else {
+      add(line, false);
+      byKey.set(key, quotes.length - 1);
+      character.signature = quotes.length - 1;
+    }
   }
   return quotes;
 }
@@ -448,11 +469,18 @@ export function buildStoryMap(input: MapInput): StoryMap {
   const known = scenes.filter((s) => s.inside !== null);
   const timed = scenes.filter((s) => s.timeKind !== null);
   // Nothing written yet: no split to draw.
+  // Each half only when some scene gives it: no times, no "100% by day".
   const split =
     lanes === 'two' && sum(scenes) > 0
       ? {
-          indoors: percent(sum(known.filter((s) => s.inside === 'Inside')), sum(known)),
-          night: percent(sum(timed.filter((s) => s.timeKind === 'night')), sum(timed)),
+          indoors:
+            sum(known) > 0
+              ? percent(sum(known.filter((s) => s.inside === 'Inside')), sum(known))
+              : null,
+          night:
+            sum(timed) > 0
+              ? percent(sum(timed.filter((s) => s.timeKind === 'night')), sum(timed))
+              : null,
         }
       : null;
 

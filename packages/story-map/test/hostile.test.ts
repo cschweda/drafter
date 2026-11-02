@@ -69,7 +69,7 @@ describe('hostile text', () => {
         ),
         'a chart title',
       );
-      has(doc.querySelector('li.sc h4'), 'the first scene');
+      has(doc.querySelector('li.sc h3'), 'the first scene');
       has(doc.querySelector('li.sc .what'), 'its summary');
       has(doc.querySelector('figure.pq'), 'the marked line');
       if (!h.includes(']]')) has(doc.querySelector('#threads'), 'the threads');

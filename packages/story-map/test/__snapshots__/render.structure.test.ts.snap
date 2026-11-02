@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (harbour, finished) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (harbour, finished) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -13,25 +13,25 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Pim
     h3 Ruth
   h2 The story
-      h4 Scene 1: Breakwater
-      h4 Scene 2: Lighthouse, Lamp Room
-      h4 Scene 3: Harbour Office
-      h4 Scene 4: Fish Market
-      h4 Scene 5: Lighthouse, Keeper's Kitchen
-      h4 Scene 6: Breakwater
-      h4 Scene 7: Harbour Office
-      h4 Scene 8: Ferry Deck
-      h4 Scene 9: Lighthouse, Lamp Room
-      h4 Scene 10: Fish Market
-      h4 Scene 11: Lighthouse, Keeper's Kitchen
-      h4 Scene 12: Breakwater
-      h4 Scene 13: Ferry Deck
-      h4 Scene 14: Lighthouse, Lamp Room
+    h3 Scene 1: Breakwater
+    h3 Scene 2: Lighthouse, Lamp Room
+    h3 Scene 3: Harbour Office
+    h3 Scene 4: Fish Market
+    h3 Scene 5: Lighthouse, Keeper's Kitchen
+    h3 Scene 6: Breakwater
+    h3 Scene 7: Harbour Office
+    h3 Scene 8: Ferry Deck
+    h3 Scene 9: Lighthouse, Lamp Room
+    h3 Scene 10: Fish Market
+    h3 Scene 11: Lighthouse, Keeper's Kitchen
+    h3 Scene 12: Breakwater
+    h3 Scene 13: Ferry Deck
+    h3 Scene 14: Lighthouse, Lamp Room
   h2 Places
   h2 The end"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (harbour, in-progress) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (harbour, in-progress) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -44,25 +44,25 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Pim
     h3 Ruth
   h2 The story
-      h4 Scene 1: Breakwater
-      h4 Scene 2: Lighthouse, Lamp Room
-      h4 Scene 3: Harbour Office
-      h4 Scene 4: Fish Market
-      h4 Scene 5: Lighthouse, Keeper's Kitchen
-      h4 Scene 6: Breakwater
-      h4 Scene 7: Harbour Office
-      h4 Scene 8: Ferry Deck
-      h4 Scene 9: Lighthouse, Lamp Room
-      h4 Scene 10: Fish Market
-      h4 Scene 11: Lighthouse, Keeper's Kitchen
-      h4 Scene 12: Breakwater
-      h4 Scene 13: Ferry Deck
-      h4 Scene 14: Lighthouse, Lamp Room
+    h3 Scene 1: Breakwater
+    h3 Scene 2: Lighthouse, Lamp Room
+    h3 Scene 3: Harbour Office
+    h3 Scene 4: Fish Market
+    h3 Scene 5: Lighthouse, Keeper's Kitchen
+    h3 Scene 6: Breakwater
+    h3 Scene 7: Harbour Office
+    h3 Scene 8: Ferry Deck
+    h3 Scene 9: Lighthouse, Lamp Room
+    h3 Scene 10: Fish Market
+    h3 Scene 11: Lighthouse, Keeper's Kitchen
+    h3 Scene 12: Breakwater
+    h3 Scene 13: Ferry Deck
+    h3 Scene 14: Lighthouse, Lamp Room
   h2 Places
   h2 More soon"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (long screenplay, finished) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (long screenplay, finished) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -75,53 +75,53 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Kaka
     h3 Loka
   h2 Act 1: Rising
-      h4 Scene 1: Place Number 1
-      h4 Scene 2: Place Number 2
-      h4 Scene 3: Place Number 3
-      h4 Scene 4: Place Number 4
-      h4 Scene 5: Place Number 5
-      h4 Scene 6: Place Number 6
-      h4 Scene 7: Place Number 7
-      h4 Scene 8: Place Number 8
-      h4 Scene 9: Place Number 9
-      h4 Scene 10: Place Number 10
-      h4 Scene 11: Place Number 11
-      h4 Scene 12: Place Number 12
-      h4 Scene 13: Place Number 13
-      h4 Scene 14: Place Number 14
+    h3 Scene 1: Place Number 1
+    h3 Scene 2: Place Number 2
+    h3 Scene 3: Place Number 3
+    h3 Scene 4: Place Number 4
+    h3 Scene 5: Place Number 5
+    h3 Scene 6: Place Number 6
+    h3 Scene 7: Place Number 7
+    h3 Scene 8: Place Number 8
+    h3 Scene 9: Place Number 9
+    h3 Scene 10: Place Number 10
+    h3 Scene 11: Place Number 11
+    h3 Scene 12: Place Number 12
+    h3 Scene 13: Place Number 13
+    h3 Scene 14: Place Number 14
   h2 Act 2: Turning
-      h4 Scene 15: Place Number 15
-      h4 Scene 16: Place Number 16
-      h4 Scene 17: Place Number 17
-      h4 Scene 18: Place Number 18
-      h4 Scene 19: Place Number 19
-      h4 Scene 20: Place Number 20
-      h4 Scene 21: Place Number 21
-      h4 Scene 22: Place Number 22
-      h4 Scene 23: Place Number 23
-      h4 Scene 24: Place Number 24
-      h4 Scene 25: Place Number 25
-      h4 Scene 26: Place Number 26
-      h4 Scene 27: Place Number 27
+    h3 Scene 15: Place Number 15
+    h3 Scene 16: Place Number 16
+    h3 Scene 17: Place Number 17
+    h3 Scene 18: Place Number 18
+    h3 Scene 19: Place Number 19
+    h3 Scene 20: Place Number 20
+    h3 Scene 21: Place Number 21
+    h3 Scene 22: Place Number 22
+    h3 Scene 23: Place Number 23
+    h3 Scene 24: Place Number 24
+    h3 Scene 25: Place Number 25
+    h3 Scene 26: Place Number 26
+    h3 Scene 27: Place Number 27
   h2 Act 3: Falling
-      h4 Scene 28: Place Number 28
-      h4 Scene 29: Place Number 29
-      h4 Scene 30: Place Number 30
-      h4 Scene 31: Place Number 31
-      h4 Scene 32: Place Number 32
-      h4 Scene 33: Place Number 33
-      h4 Scene 34: Place Number 34
-      h4 Scene 35: Place Number 35
-      h4 Scene 36: Place Number 36
-      h4 Scene 37: Place Number 37
-      h4 Scene 38: Place Number 38
-      h4 Scene 39: Place Number 39
-      h4 Scene 40: Place Number 40
+    h3 Scene 28: Place Number 28
+    h3 Scene 29: Place Number 29
+    h3 Scene 30: Place Number 30
+    h3 Scene 31: Place Number 31
+    h3 Scene 32: Place Number 32
+    h3 Scene 33: Place Number 33
+    h3 Scene 34: Place Number 34
+    h3 Scene 35: Place Number 35
+    h3 Scene 36: Place Number 36
+    h3 Scene 37: Place Number 37
+    h3 Scene 38: Place Number 38
+    h3 Scene 39: Place Number 39
+    h3 Scene 40: Place Number 40
   h2 Places
   h2 The end"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (long screenplay, in-progress) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (long screenplay, in-progress) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -134,53 +134,53 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Kaka
     h3 Loka
   h2 Act 1: Rising
-      h4 Scene 1: Place Number 1
-      h4 Scene 2: Place Number 2
-      h4 Scene 3: Place Number 3
-      h4 Scene 4: Place Number 4
-      h4 Scene 5: Place Number 5
-      h4 Scene 6: Place Number 6
-      h4 Scene 7: Place Number 7
-      h4 Scene 8: Place Number 8
-      h4 Scene 9: Place Number 9
-      h4 Scene 10: Place Number 10
-      h4 Scene 11: Place Number 11
-      h4 Scene 12: Place Number 12
-      h4 Scene 13: Place Number 13
-      h4 Scene 14: Place Number 14
+    h3 Scene 1: Place Number 1
+    h3 Scene 2: Place Number 2
+    h3 Scene 3: Place Number 3
+    h3 Scene 4: Place Number 4
+    h3 Scene 5: Place Number 5
+    h3 Scene 6: Place Number 6
+    h3 Scene 7: Place Number 7
+    h3 Scene 8: Place Number 8
+    h3 Scene 9: Place Number 9
+    h3 Scene 10: Place Number 10
+    h3 Scene 11: Place Number 11
+    h3 Scene 12: Place Number 12
+    h3 Scene 13: Place Number 13
+    h3 Scene 14: Place Number 14
   h2 Act 2: Turning
-      h4 Scene 15: Place Number 15
-      h4 Scene 16: Place Number 16
-      h4 Scene 17: Place Number 17
-      h4 Scene 18: Place Number 18
-      h4 Scene 19: Place Number 19
-      h4 Scene 20: Place Number 20
-      h4 Scene 21: Place Number 21
-      h4 Scene 22: Place Number 22
-      h4 Scene 23: Place Number 23
-      h4 Scene 24: Place Number 24
-      h4 Scene 25: Place Number 25
-      h4 Scene 26: Place Number 26
-      h4 Scene 27: Place Number 27
+    h3 Scene 15: Place Number 15
+    h3 Scene 16: Place Number 16
+    h3 Scene 17: Place Number 17
+    h3 Scene 18: Place Number 18
+    h3 Scene 19: Place Number 19
+    h3 Scene 20: Place Number 20
+    h3 Scene 21: Place Number 21
+    h3 Scene 22: Place Number 22
+    h3 Scene 23: Place Number 23
+    h3 Scene 24: Place Number 24
+    h3 Scene 25: Place Number 25
+    h3 Scene 26: Place Number 26
+    h3 Scene 27: Place Number 27
   h2 Act 3: Falling
-      h4 Scene 28: Place Number 28
-      h4 Scene 29: Place Number 29
-      h4 Scene 30: Place Number 30
-      h4 Scene 31: Place Number 31
-      h4 Scene 32: Place Number 32
-      h4 Scene 33: Place Number 33
-      h4 Scene 34: Place Number 34
-      h4 Scene 35: Place Number 35
-      h4 Scene 36: Place Number 36
-      h4 Scene 37: Place Number 37
-      h4 Scene 38: Place Number 38
-      h4 Scene 39: Place Number 39
-      h4 Scene 40: Place Number 40
+    h3 Scene 28: Place Number 28
+    h3 Scene 29: Place Number 29
+    h3 Scene 30: Place Number 30
+    h3 Scene 31: Place Number 31
+    h3 Scene 32: Place Number 32
+    h3 Scene 33: Place Number 33
+    h3 Scene 34: Place Number 34
+    h3 Scene 35: Place Number 35
+    h3 Scene 36: Place Number 36
+    h3 Scene 37: Place Number 37
+    h3 Scene 38: Place Number 38
+    h3 Scene 39: Place Number 39
+    h3 Scene 40: Place Number 40
   h2 Places
   h2 More soon"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (sample screenplay, finished) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (sample screenplay, finished) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -188,13 +188,13 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Theo
     h3 Neighbour
   h2 The story
-      h4 Scene 1: Apartment Stairwell
-      h4 Scene 2: Balconies
+    h3 Scene 1: Apartment Stairwell
+    h3 Scene 2: Balconies
   h2 Places
   h2 The end"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (sample screenplay, in-progress) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (sample screenplay, in-progress) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -202,39 +202,39 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Theo
     h3 Neighbour
   h2 The story
-      h4 Scene 1: Apartment Stairwell
-      h4 Scene 2: Balconies
+    h3 Scene 1: Apartment Stairwell
+    h3 Scene 2: Balconies
   h2 Places
   h2 More soon"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (sample stage play, finished) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (sample stage play, finished) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
     h3 June
     h3 Arlo
   h2 The story
-      h4 Scene 1: A bus shelter
-      h4 Scene 2: A bus shelter
+    h3 Scene 1: A bus shelter
+    h3 Scene 2: A bus shelter
   h2 Settings
   h2 The end"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (sample stage play, in-progress) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (sample stage play, in-progress) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
     h3 June
     h3 Arlo
   h2 The story
-      h4 Scene 1: A bus shelter
-      h4 Scene 2: A bus shelter
+    h3 Scene 1: A bus shelter
+    h3 Scene 2: A bus shelter
   h2 Settings
   h2 More soon"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (two-act play, finished) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (two-act play, finished) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -243,24 +243,24 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Cass
     h3 Teodor
   h2 Act one
-      h4 Scene 1: The front room
-      h4 Scene 2: The porch
-      h4 Scene 3: The cellar
-      h4 Scene 4: The attic
-      h4 Scene 5: The front room
-      h4 Scene 6: The porch
+    h3 Scene 1: The front room
+    h3 Scene 2: The porch
+    h3 Scene 3: The cellar
+    h3 Scene 4: The attic
+    h3 Scene 5: The front room
+    h3 Scene 6: The porch
   h2 Act two
-      h4 Scene 7: The cellar
-      h4 Scene 8: The attic
-      h4 Scene 9: The front room
-      h4 Scene 10: The porch
-      h4 Scene 11: The cellar
-      h4 Scene 12: The attic
+    h3 Scene 7: The cellar
+    h3 Scene 8: The attic
+    h3 Scene 9: The front room
+    h3 Scene 10: The porch
+    h3 Scene 11: The cellar
+    h3 Scene 12: The attic
   h2 Settings
   h2 The end"
 `;
 
-exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card, h4 per scene (two-act play, in-progress) 1`] = `
+exports[`the page structure > the heading outline is h1, then h2 per section and act, h3 per card and per scene (two-act play, in-progress) 1`] = `
 "h1 Test Title
   h2 The shape
   h2 Characters
@@ -269,19 +269,19 @@ exports[`the page structure > the heading outline is h1, then h2 per section and
     h3 Cass
     h3 Teodor
   h2 Act one
-      h4 Scene 1: The front room
-      h4 Scene 2: The porch
-      h4 Scene 3: The cellar
-      h4 Scene 4: The attic
-      h4 Scene 5: The front room
-      h4 Scene 6: The porch
+    h3 Scene 1: The front room
+    h3 Scene 2: The porch
+    h3 Scene 3: The cellar
+    h3 Scene 4: The attic
+    h3 Scene 5: The front room
+    h3 Scene 6: The porch
   h2 Act two
-      h4 Scene 7: The cellar
-      h4 Scene 8: The attic
-      h4 Scene 9: The front room
-      h4 Scene 10: The porch
-      h4 Scene 11: The cellar
-      h4 Scene 12: The attic
+    h3 Scene 7: The cellar
+    h3 Scene 8: The attic
+    h3 Scene 9: The front room
+    h3 Scene 10: The porch
+    h3 Scene 11: The cellar
+    h3 Scene 12: The attic
   h2 Settings
   h2 More soon"
 `;

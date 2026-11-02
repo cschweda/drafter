@@ -29,9 +29,9 @@ describe('the rows', () => {
         map.scenes.map((s) => String(s.n)),
       );
       expect(list.map((r) => r.id)).toEqual(map.scenes.map((s) => `s${s.n}`));
-      // Each has its h4, which names the scene for screen readers.
+      // Each has its h3, which names the scene for screen readers.
       for (const [i, r] of list.entries()) {
-        expect(text(r.querySelector('h4 .sr'))).toMatch(new RegExp(`^Scene ${i + 1}\\b`));
+        expect(text(r.querySelector('h3 .sr'))).toMatch(new RegExp(`^Scene ${i + 1}\\b`));
       }
     }
   });
@@ -40,7 +40,7 @@ describe('the rows', () => {
     const doc = docOf(MID);
     const scene = MID.scenes[0];
     const row = rows(doc)[0];
-    expect(text(row?.querySelector('h4'))).toBe(`Scene 1: ${scene?.place}`);
+    expect(text(row?.querySelector('h3'))).toBe(`Scene 1: ${scene?.place}`);
     const meta = text(row?.querySelector('.meta'));
     expect(meta).toContain(scene?.time as string);
     expect(meta).toContain(scene?.inside as string);
@@ -98,15 +98,17 @@ describe('the rows', () => {
     const doc = docOf(MID);
     const shown = MID.quotes.filter((q) => q.inScene);
     expect(shown.length).toBeGreaterThan(0);
-    const figures = [...doc.querySelectorAll('ol.scenes > li.qrow > figure.pq')];
+    const figures = [...doc.querySelectorAll('ol.scenes > li.sc > figure.pq')];
+    // Screen readers count only the scenes: every item of a scene list is a scene.
+    for (const li of doc.querySelectorAll('ol.scenes > li'))
+      expect(li.classList.contains('sc')).toBe(true);
     expect(figures).toHaveLength(shown.length);
     shown.forEach((q, i) => {
       const fig = figures[i];
       expect(text(fig?.querySelector('blockquote p'))).toBe(q.text);
       expect(text(fig?.querySelector('figcaption'))).toBe(MID.characters[q.character]?.name);
-      // Right after its scene's row.
-      const before = fig?.closest('li')?.previousElementSibling;
-      expect(before?.id).toBe(`s${q.scene + 1}`);
+      // Inside its scene's row.
+      expect(fig?.closest('li')?.id).toBe(`s${q.scene + 1}`);
     });
   });
 
