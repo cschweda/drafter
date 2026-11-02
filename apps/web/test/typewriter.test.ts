@@ -2,7 +2,7 @@
 import { selectAll } from '@codemirror/commands';
 import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
   appChange,
   centersOn,
@@ -74,6 +74,14 @@ describe('centersOn', () => {
 
 describe('typewriterScrolling', () => {
   const views: EditorView[] = [];
+  // jsdom's Range has no getClientRects, and on a slow turn its animation frame fires while a test
+  // waits, so CodeMirror measures.
+  beforeAll(() => {
+    Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+  });
+  afterAll(() => {
+    delete (Range.prototype as Partial<Range>).getClientRects;
+  });
   afterEach(() => {
     for (const view of views.splice(0)) view.destroy();
   });
