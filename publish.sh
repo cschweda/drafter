@@ -361,15 +361,27 @@ read -r -p "npm's 6-digit two-factor code: " OTP || OTP=""
 # The tarball that was installed and run above, not a new one packed from the folder.
 npm publish "$TARBALL" --access public --ignore-scripts --otp "$OTP" ${NPM_TAG[@]+"${NPM_TAG[@]}"}
 
-# The registry can take a moment to answer for a new version.
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-  if [[ "$(npm view "$PACKAGE_NAME@$VERSION" version 2>/dev/null || true)" == "$VERSION" ]]; then
-    break
+# npm publish exited 0, so the release is published (a failed publish stopped the script above).
+# The registry can take 5 to 10 minutes to list a new version: ask every 20 seconds for up to 15
+# minutes, saying so each minute. If it still isn't listed, that's a warning, never a failure.
+POLL_SECONDS=20
+POLL_FOR_SECONDS=900
+listed() {
+  [[ "$(npm view "$PACKAGE_NAME@$VERSION" version 2>/dev/null || true)" == "$VERSION" ]]
+}
+waited=0
+until listed; do
+  if ((waited >= POLL_FOR_SECONDS)); then
+    echo ""
+    warn "npm accepted the publish, but doesn’t list it yet; that can take a while. Check https://www.npmjs.com/package/$PACKAGE_NAME later. Don’t run ./publish.sh again for this version."
+    exit 0
   fi
-  sleep 3
+  if ((waited % 60 == 0)); then
+    info "Published. Waiting for npm to list it (this can take 5–10 minutes)…"
+  fi
+  sleep "$POLL_SECONDS"
+  waited=$((waited + POLL_SECONDS))
 done
-[[ "$(npm view "$PACKAGE_NAME@$VERSION" version 2>/dev/null || true)" == "$VERSION" ]] ||
-  die "npm took the publish, but doesn't list $PACKAGE_NAME@$VERSION yet. Look at https://www.npmjs.com/package/$PACKAGE_NAME before running this again."
 
 echo ""
 info "Published $PACKAGE_NAME@$VERSION."

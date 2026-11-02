@@ -51,6 +51,20 @@ describe.skipIf(!bash)('publish.sh', () => {
     expect(text).toMatch(/^set -euo pipefail$/m);
   });
 
+  it('once npm publish succeeds, waits up to 15 minutes for npm to list it, and never fails', () => {
+    const at = text.indexOf('npm publish "$TARBALL" --access public');
+    expect(at).toBeGreaterThan(0);
+    const after = text.slice(at);
+    // The publish worked: nothing after it stops the script with a failure.
+    expect(after).not.toMatch(/^\s*die\b|\|\|\s*die\b|\bexit [1-9]/m);
+    expect(after).toMatch(/^POLL_SECONDS=20$/m);
+    expect(after).toMatch(/^POLL_FOR_SECONDS=900$/m);
+    expect(after).toContain('Published. Waiting for npm to list it (this can take 5–10 minutes)…');
+    expect(after).toContain(
+      'npm accepted the publish, but doesn’t list it yet; that can take a while. Check https://www.npmjs.com/package/$PACKAGE_NAME later. Don’t run ./publish.sh again for this version.',
+    );
+  });
+
   it.skipIf(!shellcheck)('passes shellcheck', () => {
     const check = spawnSync('shellcheck', [SCRIPT], { encoding: 'utf8' });
     expect(check.status, check.stdout).toBe(0);
