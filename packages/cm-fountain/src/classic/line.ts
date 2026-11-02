@@ -1,8 +1,10 @@
+import { invertedEffects } from '@codemirror/commands';
 import {
   Annotation,
   type AnnotationType,
   type ChangeDesc,
   type EditorState,
+  type Extension,
   type Line,
   StateEffect,
   StateField,
@@ -60,6 +62,11 @@ export const classicEdit: AnnotationType<true> = Annotation.define<true>();
  * name stays as it was on that line; on any other line it starts empty. An element chosen isn't soft.
  */
 export const setStored = StateEffect.define<Partial<StoredLine> & { kind: ClassicKind }>();
+
+/** The stored line as it was before a change, put back by undo and redo. */
+export const restoreLine = StateEffect.define<StoredLine>({
+  map: (line, changes) => mapLine(line, changes),
+});
 
 /** Autofill dismissed on the stored line, or not. */
 export const setDismissed = StateEffect.define<boolean>();
@@ -341,7 +348,9 @@ const remade = (tr: Transaction) =>
 function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | null {
   let next = line;
   for (const effect of tr.effects) {
-    if (effect.is(setStored)) {
+    if (effect.is(restoreLine)) {
+      next = effect.value;
+    } else if (effect.is(setStored)) {
       const from = effect.value.from ?? tr.newDoc.lineAt(tr.newSelection.main.head).from;
       const base = next?.from === from ? next : null;
       next = {
@@ -365,6 +374,24 @@ function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | nu
   return next;
 }
 
+/**
+ * Keeps what can't be worked out in the undo history: a made line must be tidied after undo or redo
+ * brings the cursor back to it, and a mark this stay wrote must still come off. Only a change adds
+ * to the history, so a move or a row walk stays out of it.
+ */
+export const keepLineInHistory: Extension = invertedEffects.of((tr) => {
+  const line = tr.docChanged ? tr.startState.field(classicLine, false) : null;
+  return line && (line.made || line.added.length) ? [restoreLine.of(line)] : [];
+});
+
+/**
+ * A redo that opens a line just before the cursor leaves the cursor past it, and history takes no
+ * filter, so it can't be moved back. The line stays stored, and the next move or letter tidies it.
+ */
+const justPast = (line: StoredLine, tr: Transaction) =>
+  tr.effects.some((effect) => effect.is(restoreLine)) &&
+  tr.newSelection.main.head === tr.newDoc.lineAt(line.from).to + 1;
+
 const isEmptied = (line: StoredLine, tr: Transaction) => isBlank(tr.newDoc.lineAt(line.from).text);
 
 /** What Classic Mode remembers of the line being typed (§5). It's never saved. */
@@ -381,7 +408,14 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
     line = applyEffects(line, tr);
     // A line that had text is deleted to nothing: it's an empty line now, as a click would find it.
     if (line && !line.beganEmpty && tr.isUserEvent('delete') && isEmptied(line, tr)) line = null;
-    if (line && tr.newDoc.lineAt(tr.newSelection.main.head).from !== line.from) line = null;
+    if (line && line.from > tr.newDoc.length) line = null;
+    if (
+      line &&
+      !justPast(line, tr) &&
+      tr.newDoc.lineAt(tr.newSelection.main.head).from !== line.from
+    ) {
+      line = null;
+    }
     return line ?? arrival(tr.state);
   },
 });

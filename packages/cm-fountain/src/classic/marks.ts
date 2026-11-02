@@ -380,16 +380,19 @@ export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
   const held = tr.startState.field(classicLine, false);
   if (!held?.made || tr.annotation(appChange)) return tr;
   const event = tr.annotation(Transaction.userEvent);
-  if (!event || /^(?:input\.replace|undo|redo)/.test(event)) return tr;
+  // A bare selection is a move (`goto`, `reveal`); a bare change is the app's.
+  if (event ? /^(?:input\.replace|undo|redo)/.test(event) : tr.docChanged) return tr;
   const from = tr.changes.mapPos(held.from, -1);
   if (tr.newDoc.lineAt(tr.newSelection.main.head).from === tr.newDoc.lineAt(from).from) return tr;
   const made = mapSpan(held.made, tr.changes);
   if (!made) return tr;
   const line = tr.newDoc.lineAt(from);
-  const empty = isBlank(line.text) && line.number < tr.newDoc.lines;
+  const empty = !line.text.trim() && line.number < tr.newDoc.lines;
   if (!empty && line.text.trim() !== '()') return tr;
   const mark = held.madeMark && mapSpan(held.madeMark, tr.changes);
-  return [tr, { changes: [made, ...(mark ? [mark] : [])], sequential: true }];
+  // The line goes whole, with anything but words left on it.
+  const whole = { from: made.from, to: Math.max(made.to, line.to) };
+  return [tr, { changes: [whole, ...(mark ? [mark] : [])], sequential: true }];
 });
 
 const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
@@ -429,11 +432,13 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
     line.from,
     line.to + tr.changes.newLength - tr.changes.length,
   );
-  // Words typed on a blank speech line take its place, wherever the caret stood in the two spaces.
-  const spaces =
-    line.text === BLANK_SPEECH && rawText.trim()
-      ? [line.from, line.from + 1].map((from) => ({ from, to: from + 1 }))
-      : own.added;
+  // Words typed on a blank speech line take its place, wherever the caret stood in the two spaces,
+  // and a space does nothing, as a third would make it a blank line that cuts the speech.
+  const blankSpeech = line.text === BLANK_SPEECH;
+  if (blankSpeech && !rawText.trim()) return {};
+  const spaces = blankSpeech
+    ? [line.from, line.from + 1].map((from) => ({ from, to: from + 1 }))
+    : own.added;
   const added = spaces.flatMap((span) => mapSpan(span, tr.changes) ?? []);
   const bare = without(rawText, line.from, added);
   const element = headingOrTransition(state, line, bare, own) ?? own.arrivedAs;

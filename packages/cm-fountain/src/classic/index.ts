@@ -1,7 +1,7 @@
 import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
-import { classicLine } from './line';
+import { classicLine, keepLineInHistory } from './line';
 import { classicMarks, tidyLeft } from './marks';
 
 export {
@@ -47,5 +47,5 @@ export interface ClassicOptions {
 
 /** Classic Mode: Enter and Tab typing over plain Fountain. Each part is added here as it is built. */
 export function classic(_options: ClassicOptions = {}): Extension {
-  return [classicKeys, classicMarks, tidyLeft, classicLine];
+  return [classicKeys, classicMarks, tidyLeft, classicLine, keepLineInHistory];
 }

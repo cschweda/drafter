@@ -804,8 +804,12 @@ describe('what a key leaves reads right', () => {
       );
     });
 
-    test('a space typed on them keeps them', () => {
-      expect(type(classicEditor('JUNE\n  |'), ' ').sliceDoc()).toBe('JUNE\n   ');
+    test('a space typed on them changes nothing, so it can’t cut the speech', () => {
+      expect(render(type(classicEditor('JUNE\n  |'), ' '))).toBe('JUNE\n  |');
+      const between = 'JUNE\nHi.\n |\nAgain.'.replace(' |', '  ');
+      const state = classicEditor(between);
+      const at = state.update({ selection: { anchor: 'JUNE\nHi.\n '.length } }).state;
+      expect(type(at, ' ').sliceDoc()).toBe('JUNE\nHi.\n  \nAgain.');
     });
 
     test('a deliberate blank speech line stays when it’s left', () => {
