@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
+import { symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { cutsFile, cutText } from '@drafter/history';
 import { afterEach, describe, expect, it } from 'vitest';
+import { OUTSIDE } from '../src/paths';
 import { answerOf, type Connected, connect, refusalOf } from './connect';
 import { CUTS_101, EPISODE_101, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
@@ -52,7 +54,11 @@ describe('list_cuts', () => {
     await library();
     const result = await (open as Connected).call('list_cuts', { script: EP101 });
     const got = answerOf<Cuts>(result);
-    expect(titles(got)).toEqual(['June hums', 'Wes takes his hat off', 'EXT. WATER TOWER - NIGHT']);
+    expect(titles(got)).toEqual([
+      'June hums the station’s old jingle, off key.…',
+      'WES (taking off his hat) Morning, June.',
+      'EXT. WATER TOWER - NIGHT',
+    ]);
     expect(got.skipped).toBe(1);
     expect((result.content[0] as { text: string }).text).not.toContain('List every file');
     const [hums, , tower] = got.cuts;
@@ -86,18 +92,18 @@ describe('list_cuts', () => {
   it('by draft and by scene', async () => {
     await library();
     expect(titles(await cuts({ group: 'draft' }))).toEqual([
-      'June hums',
-      'Wes takes his hat off',
+      'June hums the station’s old jingle, off key.…',
+      'WES (taking off his hat) Morning, June.',
       'EXT. WATER TOWER - NIGHT',
     ]);
     expect(titles(await cuts({ group: 'scene' }))).toEqual([
-      'June hums',
+      'June hums the station’s old jingle, off key.…',
       'EXT. WATER TOWER - NIGHT',
-      'Wes takes his hat off',
+      'WES (taking off his hat) Morning, June.',
     ]);
     expect(titles(await cuts({ scene: '2' }))).toEqual(['EXT. WATER TOWER - NIGHT']);
     expect(titles(await cuts({ scene: 'pruitt farm continuous' }))).toEqual([
-      'Wes takes his hat off',
+      'WES (taking off his hat) Morning, June.',
       'EXT. WATER TOWER - NIGHT',
     ]);
     expect(titles(await cuts({ act: 1 }))).toHaveLength(3);
@@ -108,15 +114,27 @@ describe('list_cuts', () => {
     await library();
     expect(titles(await cuts({ words: 'whole COUNTY' }))).toEqual(['EXT. WATER TOWER - NIGHT']);
     expect(titles(await cuts({ words: 'count' }))).toEqual([]);
-    expect(titles(await cuts({ draft: 3 }))).toEqual(['June hums']);
-    expect(titles(await cuts({ draft: 2 }))).toEqual(['June hums', 'Wes takes his hat off']);
+    expect(titles(await cuts({ draft: 3 }))).toEqual([
+      'June hums the station’s old jingle, off key.…',
+    ]);
+    expect(titles(await cuts({ draft: 2 }))).toEqual([
+      'June hums the station’s old jingle, off key.…',
+      'WES (taking off his hat) Morning, June.',
+    ]);
     expect(titles(await cuts({ kind: 'scene' }))).toEqual(['EXT. WATER TOWER - NIGHT']);
-    expect(titles(await cuts({ kind: 'passage' }))).toEqual(['June hums', 'Wes takes his hat off']);
+    expect(titles(await cuts({ kind: 'passage' }))).toEqual([
+      'June hums the station’s old jingle, off key.…',
+      'WES (taking off his hat) Morning, June.',
+    ]);
     expect(titles(await cuts({ character: 'eli' }))).toEqual(['EXT. WATER TOWER - NIGHT']);
-    expect(titles(await cuts({ character: 'June (V.O.)' }))).toEqual(['June hums']);
+    expect(titles(await cuts({ character: 'June (V.O.)' }))).toEqual([
+      'June hums the station’s old jingle, off key.…',
+    ]);
     // A note's words aren't searched unless notes are included.
     expect(titles(await cuts({ words: 'finale' }))).toEqual([]);
-    expect(titles(await cuts({ words: 'finale', include: ['notes'] }))).toEqual(['June hums']);
+    expect(titles(await cuts({ words: 'finale', include: ['notes'] }))).toEqual([
+      'June hums the station’s old jingle, off key.…',
+    ]);
   });
 
   it('a long cut is trimmed in a list and whole by id', async () => {
@@ -182,9 +200,9 @@ describe('list_cuts', () => {
   it('put back shows when', async () => {
     await library();
     const got = await cuts({});
-    expect(got.cuts.find((c) => c.title === 'Wes takes his hat off')?.put_back).toBe(
-      '2026-10-06T08:00:00.000Z',
-    );
+    expect(
+      got.cuts.find((c) => c.title === 'WES (taking off his hat) Morning, June.')?.put_back,
+    ).toBe('2026-10-06T08:00:00.000Z');
     expect(got.cuts.filter((c) => c.put_back !== null)).toHaveLength(1);
   });
 
@@ -197,6 +215,105 @@ describe('list_cuts', () => {
       cuts: [],
       skipped: 0,
       note: 'No cuts file beside this script.',
+    });
+  });
+
+  describe('a pilot with cuts of its own', () => {
+    const passage = (
+      title: string,
+      text: string,
+      within: string,
+      at: string,
+    ): Parameters<typeof cutsFile>[1][number] => ({
+      id: sha256(cutText(text)),
+      title,
+      text: cutText(text),
+      kind: 'fountain',
+      cuts: [{ at, draft: 1 }],
+      where: { after: null, before: null, within: { heading: within, ordinal: 1 } },
+    });
+    async function pilot(entries: Parameters<typeof cutsFile>[1]) {
+      const dir = tempFolder();
+      const scripts = join(dir, 'Scripts');
+      put(
+        join(scripts, 'Pilot.fountain'),
+        'INT. HALL - DAY #7#\n\nEmpty.\n\nEXT. YARD - NIGHT\n\nWind.\n',
+      );
+      put(join(scripts, 'Pilot.fountain.cuts.md'), cutsFile('Pilot.fountain', entries));
+      open = await connect({ folders: [scripts] });
+      return dir;
+    }
+    const pilotCuts = (args: object) => cuts({ script: 'Scripts/Pilot.fountain', ...args });
+
+    it('a cut finds its scene though the heading was edited', async () => {
+      await pilot([
+        passage('Hall', 'Mira sweeps.\n', 'int. hall – day.', '2026-10-01T10:00:00.000Z'),
+        passage('Yard', 'Mira shivers.\n', 'EXT. YARD  -  NIGHT #12#', '2026-10-02T10:00:00.000Z'),
+      ]);
+      expect((await pilotCuts({ scene: '1' })).cuts.map((c) => c.text)).toEqual(['Mira sweeps.\n']);
+      expect((await pilotCuts({ scene: 'yard' })).cuts.map((c) => c.text)).toEqual([
+        'Mira shivers.\n',
+      ]);
+      expect((await pilotCuts({ group: 'scene' })).cuts.map((c) => c.text)).toEqual([
+        'Mira sweeps.\n',
+        'Mira shivers.\n',
+      ]);
+    });
+
+    it('a passage is titled by what is shown of it, never a stored title', async () => {
+      await pilot([
+        passage(
+          'secret plan for the ending',
+          '[[secret plan for the ending]]\n\nMira waves from the porch.\n',
+          'INT. HALL - DAY',
+          '2026-10-01T10:00:00.000Z',
+        ),
+      ]);
+      const result = await (open as Connected).call('list_cuts', {
+        script: 'Scripts/Pilot.fountain',
+      });
+      expect((result.content[0] as { text: string }).text).not.toContain('secret');
+      expect(answerOf<Cuts>(result).cuts[0]?.title).toBe('Mira waves from the porch.');
+      const asked = await pilotCuts({ include: ['notes'] });
+      expect(asked.cuts[0]?.title).toContain('secret plan');
+    });
+
+    it('a cue in a left-out boneyard or note doesn’t make a character speak', async () => {
+      await pilot([
+        passage(
+          'Hidden',
+          'Mira waits.\n\n/*\n\nMARCUS\nLeave it.\n\n*/\n\n[[\nTOBY\nNot yet.\n]]\n',
+          'INT. HALL - DAY',
+          '2026-10-01T10:00:00.000Z',
+        ),
+        passage(
+          'Said',
+          'MARCUS\nI said leave it.\n',
+          'INT. HALL - DAY',
+          '2026-10-02T10:00:00.000Z',
+        ),
+      ]);
+      expect(titles(await pilotCuts({ character: 'marcus' }))).toEqual(['MARCUS I said leave it.']);
+      expect(titles(await pilotCuts({ character: 'toby' }))).toEqual([]);
+    });
+
+    it('a cuts file that is a link out is refused', async () => {
+      const dir = tempFolder();
+      const scripts = join(dir, 'Scripts');
+      put(join(scripts, 'Pilot.fountain'), 'INT. HALL - DAY\n\nEmpty.\n');
+      const outside = put(
+        join(dir, 'Private', 'cuts.md'),
+        cutsFile('Pilot.fountain', [
+          passage('Away', 'Mira leaves.\n', 'INT. HALL - DAY', '2026-10-01T10:00:00.000Z'),
+        ]),
+      );
+      symlinkSync(outside, join(scripts, 'Pilot.fountain.cuts.md'));
+      open = await connect({ folders: [scripts] });
+      const result = await open.call('list_cuts', { script: 'Scripts/Pilot.fountain' });
+      expect(refusalOf(result).error).toBe(OUTSIDE);
+      const body = (result.content[0] as { text: string }).text;
+      expect(body).not.toContain(dir);
+      expect(body).not.toContain('Mira');
     });
   });
 });

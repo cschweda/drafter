@@ -192,4 +192,18 @@ describe('compare_drafts', () => {
     expect(got.groups).toEqual([]);
     expect(got.note).toBeDefined();
   });
+
+  it('a draft file without its facts refuses in a plain sentence', async () => {
+    const dir = tempFolder();
+    const scripts = join(dir, 'Scripts');
+    put(join(scripts, 'Pilot.fountain'), 'INT. HALL - DAY\n\nEmpty.\n');
+    put(join(scripts, 'Pilot drafts', draftFileName('Pilot', 1, 'fountain')), 'INT. HALL - DAY\n');
+    open = await connect({ folders: [scripts] });
+    const refusal = refusalOf(
+      await open.call('compare_drafts', { script: 'Scripts/Pilot.fountain', from: 1, to: 'now' }),
+    );
+    expect(refusal.error).toBe(
+      'Draft 01 can’t be read: there’s no Drafter metadata block at the end of the file.',
+    );
+  });
 });

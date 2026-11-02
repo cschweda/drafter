@@ -157,4 +157,19 @@ describe('visibleMarkdown', () => {
     expect(visibleMarkdown(text, 0, text.length)).toBe('# Bible\n\nJune.');
     expect(visibleMarkdown('# Bible\n\nJune.\n', 0, 15)).toBe('# Bible\n\nJune.\n');
   });
+
+  it('every drafter comment is cut, an older one, an indented one, and an unclosed one too', () => {
+    const text =
+      '# Bible\n\n<!-- drafter {"draft":1,"note":"older"} -->\n\nJune.\n\n  <!-- drafter {"x":"indented"} -->\nEli.\n\n<!-- drafter {"v":1} -->\n';
+    const shown = visibleMarkdown(text, 0, text.length);
+    expect(shown).not.toContain('drafter');
+    expect(shown).not.toContain('older');
+    expect(shown).toContain('June.');
+    expect(shown).toContain('Eli.');
+    expect(visibleMarkdown('# A\n\n<!-- drafter {"broken": \nsecret\n', 0, 30)).toBe('# A\n\n');
+    // A comment of the writer's own, or one not at a line's start, stays.
+    expect(visibleMarkdown('<!-- mine -->\nx <!-- drafter {} -->\n', 0, 36)).toBe(
+      '<!-- mine -->\nx <!-- drafter {} -->\n',
+    );
+  });
 });

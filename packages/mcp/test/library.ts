@@ -174,7 +174,7 @@ I can see the whole county from here.
     },
   ),
   cut(
-    'June hums',
+    'June hums the station’s old jingle, off key.…',
     `June hums the station’s old jingle, off key.
 
 [[Too cute? Keep for the finale maybe.]]
@@ -195,7 +195,7 @@ Ninety-nine point one.
     },
   ),
   cut(
-    'Wes takes his hat off',
+    'WES (taking off his hat) Morning, June.',
     `WES
 (taking off his hat)
 Morning, June.

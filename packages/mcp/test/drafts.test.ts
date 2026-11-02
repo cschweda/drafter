@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, renameSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { draftFile, draftFileName } from '@drafter/history';
 import { afterEach, describe, expect, it } from 'vitest';
 import { __setBudgetForTests } from '../src/paging';
@@ -20,8 +21,9 @@ interface Drafts {
     note: string;
     note_cut?: true;
     pages: number | null;
-    scenes: number;
-    words: number;
+    scenes: number | null;
+    words: number | null;
+    figures?: false;
     matches: boolean;
   }>;
   unreadable: number;
@@ -190,4 +192,49 @@ describe('list_drafts', () => {
     } while (cursor);
     expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   });
+
+  it('a 32 MB draft is listed without figures, and every page of large drafts ends quickly', async () => {
+    const dir = tempFolder();
+    const scripts = join(dir, 'Scripts');
+    put(join(scripts, 'Pilot.fountain'), 'INT. HALL - DAY\n\nEmpty.\n');
+    const unit =
+      'INT. ROOM - DAY\n\nA chair sits by the window, and the light comes in slow.\n\nJUNE\nIt is late.\n\n';
+    const sized = (bytes: number) => unit.repeat(Math.floor(bytes / unit.length));
+    const write = (n: number, text: string) =>
+      put(
+        join(scripts, 'Pilot drafts', draftFileName('Pilot', n, 'fountain')),
+        draftFile(
+          text,
+          { draft: n, id: sha256(text), frozen: '2026-10-01T09:00:00.000Z', note: `Take ${n}` },
+          'fountain',
+        ),
+      );
+    write(1, sized(32 * 1024 * 1024 - 4096));
+    const five = sized(MAX_SCRIPT_BYTES - 4096);
+    for (let n = 2; n <= 6; n++) write(n, five);
+    open = await connect({ folders: [scripts] });
+    const seen: DraftsLike[] = [];
+    let cursor: string | undefined;
+    let calls = 0;
+    do {
+      const began = Date.now();
+      const page = await drafts({
+        script: 'Scripts/Pilot.fountain',
+        ...(cursor ? { cursor } : {}),
+      });
+      // Well inside the 10-second limit: at most one 5 MB draft is parsed a page.
+      expect(Date.now() - began).toBeLessThan(5_000);
+      expect(page.restarted).toBeUndefined();
+      seen.push(...page.drafts);
+      cursor = page.next;
+      calls++;
+    } while (cursor && calls < 20);
+    expect(seen.map((d) => d.number)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(seen[0]).toMatchObject({ pages: null, scenes: null, words: null, figures: false });
+    expect(seen[1]?.figures).toBeUndefined();
+    expect(seen[1]?.scenes).toBeGreaterThan(1_000);
+    expect(calls).toBeGreaterThan(2);
+  }, 60_000);
 });
+
+type DraftsLike = Drafts['drafts'][number];

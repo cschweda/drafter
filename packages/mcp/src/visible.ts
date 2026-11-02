@@ -172,9 +172,44 @@ export function visible(
   return { text, leftOut };
 }
 
-/** A Markdown document from `from` to `to`, with its trailing metadata comment cut. */
+const MD_META_OPENER = '<!-- drafter ';
+
+/**
+ * Every `<!-- drafter ` comment at a line's start (spaces and tabs before it aside): Drafter's own
+ * storage in a Markdown work, the trailing block and any older or broken one, from its opener to
+ * just past the `-->` after it, or to the end when none closes it.
+ */
+export function drafterComments(text: string): Cut[] {
+  const cuts: Cut[] = [];
+  let at = text.indexOf(MD_META_OPENER);
+  while (at >= 0) {
+    const after = at + MD_META_OPENER.length;
+    if (atLineStart(text, at)) {
+      const close = text.indexOf('-->', after);
+      const to = close < 0 ? text.length : close + 3;
+      cuts.push([at, to]);
+      if (close < 0) break;
+      at = text.indexOf(MD_META_OPENER, to);
+    } else at = text.indexOf(MD_META_OPENER, after);
+  }
+  return cuts;
+}
+
+/**
+ * A Markdown document from `from` to `to`, with its trailing metadata comment (and the space
+ * before it) cut, and every other Drafter comment in the range cut too.
+ */
 export function visibleMarkdown(text: string, from: number, to: number): string {
   const meta = findMarkdownMeta(text);
   const end = meta ? Math.min(to, backOverSpace(text, meta.from)) : to;
-  return text.slice(Math.min(from, end), end);
+  let at = Math.min(Math.max(0, from), end);
+  let out = '';
+  for (const [cutFrom, cutTo] of drafterComments(text)) {
+    if (cutTo <= at) continue;
+    if (cutFrom >= end) break;
+    if (cutFrom > at) out += text.slice(at, cutFrom);
+    at = Math.max(at, cutTo);
+  }
+  if (at < end) out += text.slice(at, end);
+  return out;
 }

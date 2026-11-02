@@ -14,6 +14,7 @@ import {
   type CutEntry,
   type DraftFacts,
   draftName,
+  headingKey,
   MAX_BESIDE_BYTES,
   padDraft,
   readCutsBytes,
@@ -34,7 +35,6 @@ import { type Checked, Missing, Refusal, resolvePath } from '../paths';
 import { headingsOf, oneScene, wordsOf } from '../scenes';
 import { visible, visibleMarkdown } from '../visible';
 import type { ToolContext, ToolDef } from './index';
-import { LIST_READ_LIMIT } from './list';
 import {
   characterName,
   cursor,
@@ -55,6 +55,13 @@ export const NO_CUTS = 'No cuts file beside this script.';
 export const MAX_DRAFTS = 999;
 /** The most draft files one list_drafts page reads. */
 export const DRAFTS_PAGE = 50;
+/**
+ * The most bytes of drafts one list_drafts page parses for its figures (a draft larger than a
+ * script may be is listed without them), and the most it reads: so a page always ends well
+ * inside the 10-second limit, and the cursor moves on.
+ */
+export const PAGE_PARSE_BYTES = MAX_SCRIPT_BYTES;
+export const PAGE_READ_BYTES = 2 * MAX_BESIDE_BYTES;
 /** The longest draft note shown, JSON-escaped. */
 export const NOTE_LIMIT = 500;
 /** A cut's text in a list is trimmed to this many characters (`id` brings it whole). */
@@ -187,10 +194,12 @@ const draftItem = z.object({
   note: z.string(),
   /** The note was longer than an answer holds: this is its start. */
   note_cut: z.literal(true).optional(),
-  /** Printed pages (a script's; null for a Markdown document). */
+  /** Printed pages (a script's; null for a Markdown document, or without figures). */
   pages: z.number().int().nullable(),
-  scenes: z.number().int(),
-  words: z.number().int(),
+  scenes: z.number().int().nullable(),
+  words: z.number().int().nullable(),
+  /** False when the draft is larger than a script may be (5 MB): listed without its figures. */
+  figures: z.literal(false).optional(),
   matches: z.boolean(),
 });
 type DraftItem = z.infer<typeof draftItem>;
@@ -225,6 +234,10 @@ function figures(
   };
 }
 
+/** Whether a draft's summary is kept already (so reading it again costs nothing). */
+const summarised = (file: Checked) =>
+  draftSummaries.get(file.real, file.size, file.mtimeMs) !== undefined;
+
 async function summaryOf(file: Checked, kind: WorkKind): Promise<DraftSummary> {
   const cached = draftSummaries.get(file.real, file.size, file.mtimeMs);
   if (cached !== undefined) return cached;
@@ -242,7 +255,9 @@ async function summaryOf(file: Checked, kind: WorkKind): Promise<DraftSummary> {
         frozen: facts.frozen,
         note: note.text,
         ...(note.cut ? { note_cut: true as const } : {}),
-        ...figures(read.text, kind),
+        ...(file.size > MAX_SCRIPT_BYTES
+          ? { pages: null, scenes: null, words: null, figures: false as const }
+          : figures(read.text, kind)),
         matches: read.matches,
       },
     };
@@ -272,12 +287,23 @@ async function listDrafts(args: DraftsInput, ctx: ToolContext): Promise<DraftsOu
   let unreadable = 0;
   let used = overhead + 2;
   let read = 0;
+  let parsed = 0;
   let i = start.at;
   for (let examined = 0; i < files.length && examined < DRAFTS_PAGE; i++, examined++) {
     const file = files[i] as DraftFile;
-    if (examined > 0 && file.checked && read + file.checked.size > LIST_READ_LIMIT) break;
-    const summary = file.checked ? await summaryOf(file.checked, kind) : null;
-    read += file.checked?.size ?? 0;
+    const checked = file.checked;
+    // What reading this one costs: nothing when it is kept already.
+    const fresh = checked !== null && !summarised(checked);
+    const size = fresh ? checked.size : 0;
+    const parse = fresh && checked.size <= MAX_SCRIPT_BYTES ? checked.size : 0;
+    if (
+      examined > 0 &&
+      (read + size > PAGE_READ_BYTES || (parsed > 0 && parsed + parse > PAGE_PARSE_BYTES))
+    )
+      break;
+    const summary = checked ? await summaryOf(checked, kind) : null;
+    read += size;
+    parsed += parse;
     if (!summary) {
       unreadable++;
       continue;
@@ -305,7 +331,7 @@ export const listDraftsTool: ToolDef<DraftsInput, DraftsOutput> = {
   name: 'list_drafts',
   title: 'List drafts',
   description:
-    'The drafts the writer froze of one script, from the drafts folder Drafter keeps beside it: each draft’s number (“Draft 03”), short and full ID, when it was frozen, the writer’s one-line note, its pages, scenes, and words, and whether its text still matches its ID (false when the file was changed outside Drafter). Never a draft’s text: use compare_drafts for what changed. `unreadable` counts the draft files on this page that couldn’t be read. Pass `next` back as `cursor` for more.',
+    'The drafts the writer froze of one script, from the drafts folder Drafter keeps beside it: each draft’s number (“Draft 03”), short and full ID, when it was frozen, the writer’s one-line note, its pages, scenes, and words (null, with `figures: false`, for a draft over 5 MB), and whether its text still matches its ID (false when the file was changed outside Drafter). Never a draft’s text: use compare_drafts for what changed. `unreadable` counts the draft files on this page that couldn’t be read. Pass `next` back as `cursor` for more.',
   input: draftsInput,
   output: draftsOutput,
   run: listDrafts,
@@ -388,7 +414,7 @@ async function draftText(
     if (each.checked.size > MAX_SCRIPT_BYTES)
       throw new Refusal(`${draftName(n)} is larger than 5 MB, too large to compare.`);
     const read = await readDraft(each.checked, kind);
-    if (!('facts' in read)) problem = read.problem;
+    if (!('facts' in read)) problem = read.problem.charAt(0).toLowerCase() + read.problem.slice(1);
     else if (read.facts.draft === n) return { text: read.text, file: each.checked };
     else problem = `its file says it is ${draftName(read.facts.draft)}`;
   }
@@ -612,7 +638,7 @@ export const compareDraftsTool: ToolDef<CompareInput, CompareOutput> = {
   name: 'compare_drafts',
   title: 'Compare drafts',
   description:
-    'What changed between two of a script’s frozen drafts (`from` and `to`, draft numbers), or between a draft and the script as it is now (`to: "now"`), grouped by scene: each new, deleted, renamed, or changed scene with its removed and added lines, and totals (unchanged scenes are only counted). A scene with more than 400 changed lines comes as counts (`summarised`); name it with `scene` (its place in the newer version, or words from its heading) for its lines. Notes and the boneyard are left out unless include asks for them. Pass `next` back as `cursor` for more.',
+    'What changed between two of a script’s frozen drafts (`from` and `to`, draft numbers), or between a draft and the script as it is now (`to: "now"`), grouped by scene: each new, deleted, renamed, or changed scene with its removed and added lines, and totals (unchanged scenes are only counted). A scene with more than 400 changed lines comes as counts (`summarised`); name it with `scene` (its place in the newer version, or words from its heading) for its lines. Notes and the boneyard are left out unless include asks for them; `left_out` counts them in both versions together. Pass `next` back as `cursor` for more.',
   input: compareInput,
   output: compareOutput,
   run: compareDrafts,
@@ -706,10 +732,12 @@ function cutKind(entry: CutEntry): 'scene' | 'passage' {
 
 /** The scenes of the script as it is now that a cut was in or beside (1-based). */
 function placesOf(entry: CutEntry, kind: 'scene' | 'passage', loaded: Loaded): number[] {
-  const headings = headingsOf(loaded).map((h) => h.heading.trim().toLocaleLowerCase('und'));
+  // Headings as Drafter matches scenes across versions: case, a locked number, dashes, spaces,
+  // and closing punctuation aside.
+  const headings = headingsOf(loaded).map((h) => headingKey(h.heading));
   const locate = (name: string | null | undefined, hint: number | undefined): number | null => {
     if (!name) return null;
-    const key = name.trim().toLocaleLowerCase('und');
+    const key = headingKey(name);
     let best: number | null = null;
     headings.forEach((h, i) => {
       if (h !== key) return;
@@ -779,11 +807,12 @@ async function cutsOf(args: CutsInput, ctx: ToolContext): Promise<CutsOutput> {
       !places.some((p) => loaded.map.scenes[p - 1]?.act === args.act)
     )
       continue;
+    const shown = shownOf(entry.text, entry.kind, include);
+    // Who speaks in what is shown: a cue in a left-out note or boneyard doesn't count.
     if (key !== null) {
-      const doc = parse(entry.text);
+      const doc = parse(shown.text);
       if (!doc.blocks.some((b) => b.kind === 'character' && castKey(b.sem.name) === key)) continue;
     }
-    const shown = shownOf(entry.text, entry.kind, include);
     if (wanted.length > 0) {
       const have = new Set(wordsOf(shown.text));
       if (!wanted.every((word) => have.has(word))) continue;
@@ -791,11 +820,10 @@ async function cutsOf(args: CutsInput, ctx: ToolContext): Promise<CutsOutput> {
     left.notes += shown.leftOut.notes;
     left.boneyard += shown.leftOut.boneyard;
 
-    // A passage titled by its first words is titled by what is shown of them.
+    // A passage is titled by the first words of what is shown of it, never by its stored title,
+    // which may hold a note's words.
     const titleText =
-      kindHere === 'passage' && entry.title === firstWords(entry.text)
-        ? firstWords(shown.text)
-        : entry.title;
+      kindHere === 'passage' ? firstWords(shown.text) || 'Untitled cut' : entry.title;
     const title = clipText(titleText, TEXT_LIMITS.heading);
     const dates = [...entry.cuts].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
     const text = byId ? { text: shown.text, cut: false } : clipText(shown.text, CUT_TRIM);
