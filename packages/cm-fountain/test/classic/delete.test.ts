@@ -384,4 +384,26 @@ describe('§6.4, Backspace and Delete', () => {
   test('an unclosed boneyard is left alone', () => {
     expect(back('/* cut\n|more')).toBe('/* cut|more');
   });
+
+  describe('Classic’s own blank line taken', () => {
+    test.each([
+      ['JUNE\nA|\nb', ['Enter', 'Backspace'], 'JUNE\nA|\nb'],
+      ['JUNE\nA|\nb', ['Enter', 'Delete'], 'JUNE\nA\n|b'],
+      ['JUNE\nH|\nb', ['Backspace', 'Backspace'], 'JUNE|\nb'],
+      ['JUNE\n(beat)\nH|\nb', ['Backspace', 'Backspace'], 'JUNE\n(beat)|\nb'],
+      ['JUNE\nA\nB|\n(beat)\nc', ['Backspace', 'Backspace'], 'JUNE\nA|\n(beat)\nc'],
+    ])('leaves the speech held: %s', (marked, steps, after) => {
+      expect(render(keys(classicEditor(marked), ...steps))).toBe(after);
+    });
+
+    test('a blank line of the file still takes the mark', () => {
+      expect(back('NOW\n|\nnext')).toBe('!NOW|\nnext');
+      expect(back('JUNE\n|\nb')).toBe('!JUNE|\nb');
+    });
+  });
+
+  test('a line inside a note across lines stores nothing', () => {
+    const state = keys(classicEditor('JUNE\nHi\n[[a\nb|\nc]]\nmore'), 'Backspace', 'x');
+    expect(state.sliceDoc()).toBe('JUNE\nHi\n[[a\nx\nc]]\nmore');
+  });
 });

@@ -19,7 +19,7 @@ import {
 } from '../elements';
 import { inNote, upperFix } from '../input';
 import { BOM } from '../keymap';
-import { appChange, parsedDoc } from '../state';
+import { appChange, insideRegion, parsedDoc } from '../state';
 import {
   BLANK_SPEECH,
   type ClassicKind,
@@ -497,6 +497,7 @@ export const settleDeletes: Extension = EditorState.transactionFilter.of((tr) =>
  * is, so a letter goes on with the speech and leaving takes the line.
  */
 function keptOnLine(state: EditorState, line: Line, own: StoredLine, text: string) {
+  if (insideRegion(state.field(parsedDoc), line.from)) return null;
   const { doc } = state;
   const under = line.number < doc.lines && !isBlank(doc.line(line.number + 1).text);
   if (isBlank(text) && under && line.number > 1 && underSpeech(state, line.from)) {
@@ -541,6 +542,9 @@ export const settleBreaks: Extension = EditorState.transactionFilter.of((tr) => 
   if (!tr.docChanged || !tr.isUserEvent('delete') || tr.annotation(appChange)) return tr;
   const start = tr.startState;
   if (start.selection.ranges.length > 1) return tr;
+  // A made line isn't the file's: the break it takes back was never a cut.
+  const held = start.field(classicLine, false);
+  if (held?.made && held.from === start.doc.lineAt(start.selection.main.head).from) return tr;
   const crossed = typedOnLine(tr) === null;
   if (crossed && (tr.isUserEvent('delete.selection') || tr.isUserEvent('delete.cut'))) return tr;
   const here = tr.newDoc.lineAt(tr.newSelection.main.head);
